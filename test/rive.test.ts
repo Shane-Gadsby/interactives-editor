@@ -662,3 +662,18 @@ describe.skipIf(!samples.length)('Rive import against the safe expression evalua
     });
   }
 });
+
+describe.skipIf(!existsSync(dir + '262426_-_breathing_for_calm.riv'))('Rive nested artboards', () => {
+  it('a nested artboard with no artboard set shows nothing, rather than the artboard it sits in', async () => {
+    const res = await importRive(new Uint8Array(readFileSync(dir + '262426_-_breathing_for_calm.riv')), 'b');
+    const selfRefs: string[] = [];
+    const walk = (ns: SceneNode[], abId: string) => {
+      for (const n of ns) {
+        if (n.type === 'instance' && n.artboardId === abId) selfRefs.push(n.name);
+        if ('children' in n) walk((n as { children: SceneNode[] }).children, abId);
+      }
+    };
+    for (const ab of res.artboards) walk(ab.children, ab.id);
+    expect(selfRefs).toEqual([]);
+  });
+});

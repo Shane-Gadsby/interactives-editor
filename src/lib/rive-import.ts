@@ -784,7 +784,7 @@ function nestedRef(ac: ArtboardCtx, slot: number): NestedRef | null {
   const na = ac.rab.slots[naSlot];
   const inst = ac.nodeBySlot.get(naSlot);
   if (!na || !isA(na.type, 'NestedArtboard') || inst?.type !== 'instance') return null;
-  return { inst, artboard: Number(get(na, 'artboardId')), machine: Number(get(sm, 'animationId')), input: Number(get(o, 'inputId')), kind };
+  return { inst, artboard: na.props.artboardId === undefined ? -1 : Number(na.props.artboardId), machine: Number(get(sm, 'animationId')), input: Number(get(o, 'inputId')), kind };
 }
 
 /** sourcePathIds: varuints, the view model index then property indexes (through nested view model properties). */
@@ -1979,8 +1979,10 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
   else if (t === 'Text') node = convertText(ac, fc, slot);
   else if (t === 'Image') node = convertImage(ac, fc, slot);
   else if (isA(t, 'NestedArtboard')) {
-    // A nested artboard is an instance of that artboard: it runs on its own in the player
-    const target = Number(get(o, 'artboardId'));
+    // A nested artboard is an instance of that artboard: it runs on its own in the player. Rive's default artboardId is
+    // "none" (-1), not 0: one left unset (an empty slot, or one a data bind fills in) must not become the first artboard,
+    // which is usually the one it sits in, and would then draw itself inside itself
+    const target = o.props.artboardId === undefined ? -1 : Number(o.props.artboardId);
     const tab = fc.file.artboards[target]?.obj;
     const tw = tab ? get(tab, 'width') : 100;
     const th = tab ? get(tab, 'height') : 100;
