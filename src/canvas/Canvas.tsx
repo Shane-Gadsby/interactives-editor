@@ -10,6 +10,8 @@ import {
   starPoints,
   subPathsToD,
   sampleArtboard,
+  uid,
+  defaultParams,
   applyConstraints,
   type Artboard,
   type Matrix,
@@ -22,7 +24,10 @@ import { store, useEditor, type Tool } from '../store/store';
 import { getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, topmost, type Rect } from '../store/doc';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
-import { prefs, usePrefs } from '../lib/prefs';
+import { prefs, setPrefs, usePrefs } from '../lib/prefs';
+import { ContextMenu, type MenuItem } from '../components/ContextMenu';
+import { copySelection, pasteNodes } from '../lib/clipboard';
+import { openHelp } from '../help/Help';
 import { Rulers } from './Rulers';
 import { Icons } from '../components/icons';
 import { freehandToPath } from './freehand';
@@ -96,6 +101,7 @@ export function Canvas() {
   const spaceDown = useRef(false);
   const [hover, setHover] = useState<string | null>(null);
   const [pencil, setPencil] = useState<Pt[] | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [lockedHover, setLockedHover] = useState<{ abId: string; id: string } | null>(null);
   const lockedSeen = useRef<number | null>(null);
   const [box, setBoxState] = useState<{ abId: string | null; rect: Rect } | null>(null); // marquee / create preview
@@ -1099,6 +1105,147 @@ export function Canvas() {
     }
   }
 
+  // ---------------------------------------------------------------- right-click menus
+
+  function openMenu(e: React.MouseEvent) {
+    e.preventDefault();
+    const st = store().get();
+    const w = toWorld(e.clientX, e.clientY);
+    const hab = abAt(w);
+    const s2 = store();
+    const NEW: { type: NodeType; label: string }[] = [
+      { type: 'rect', label: 'Rectangle' },
+      { type: 'ellipse', label: 'Ellipse' },
+      { type: 'polygon', label: 'Polygon' },
+      { type: 'star', label: 'Star' },
+      { type: 'text', label: 'Text' },
+      { type: 'frame', label: 'Frame' },
+      { type: 'button', label: 'Button' },
+      { type: 'input', label: 'Input field' },
+      { type: 'link', label: 'Link' },
+      { type: 'embed', label: 'Embed' },
+      { type: 'video', label: 'Video' },
+    ];
+    const newHere = (ab: Artboard): MenuItem => ({
+      label: 'New',
+      items: NEW.map((t) => ({
+        label: t.label,
+        onClick: () => {
+          const p = local(ab, w);
+          const proto = createNode(t.type);
+          const node = createNode(t.type, { x: round(p.x - (t.type === 'text' ? 0 : proto.width / 2)), y: round(p.y - (t.type === 'text' ? 0 : proto.height / 2)) } as never);
+          s2.set({ activeArtboardId: ab.id });
+          s2.addNodes([node], { artboardId: ab.id });
+          if (node.type === 'text') s2.set({ editingTextId: node.id });
+        },
+      })),
+    });
+    const paste: MenuItem = {
+      label: 'Paste',
+      hint: 'Ctrl+V',
+      onClick: () => {
+        void (navigator.clipboard?.readText?.() ?? Promise.resolve('')).then((t) => pasteNodes(t), () => pasteNodes());
+      },
+    };
+    let items: MenuItem[];
+    const hit = hab ? pickFromHit(hitTest(hab, local(hab, w).x, local(hab, w).y), e.ctrlKey || e.metaKey) : null;
+    if (hab && hit) {
+      // A layer: select it (keeping a multi-selection it belongs to), then act on the selection
+      if (!(st.activeArtboardId === hab.id && st.selection.includes(hit.id))) s2.select([hit.id], { artboardId: hab.id });
+      const sel = s2.selectedNodes();
+      const one = sel.length === 1 ? sel[0] : null;
+      items = [
+        { heading: one ? one.name : `${sel.length} layers` },
+        { label: 'Cut', hint: 'Ctrl+X', onClick: () => copySelection(true) },
+        { label: 'Copy', hint: 'Ctrl+C', onClick: () => copySelection() },
+        paste,
+        { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => s2.duplicateSelection() },
+        { label: 'Delete', hint: 'Del', danger: true, onClick: () => s2.deleteSelection() },
+        { separator: true },
+        {
+          label: 'Order',
+          items: [
+            { label: 'Bring to front', hint: 'Ctrl+]', onClick: () => s2.reorder(Infinity) },
+            { label: 'Bring forward', hint: ']', onClick: () => s2.reorder(1) },
+            { label: 'Send backward', hint: '[', onClick: () => s2.reorder(-1) },
+            { label: 'Send to back', hint: 'Ctrl+[', onClick: () => s2.reorder(-Infinity) },
+          ],
+        },
+        { label: 'Group', hint: 'Ctrl+G', onClick: () => s2.groupSelection() },
+        ...(one && (one.type === 'group' || one.type === 'frame') ? [{ label: 'Ungroup', hint: 'Ctrl+Shift+G', onClick: () => s2.ungroupSelection() } as MenuItem] : []),
+        ...(sel.length > 1
+          ? [
+              {
+                label: 'Combine shapes',
+                items: (['union', 'subtract', 'intersect', 'exclude'] as const).map((op) => ({ label: op[0].toUpperCase() + op.slice(1), onClick: () => s2.booleanSelection(op) })),
+              } as MenuItem,
+            ]
+          : []),
+        { separator: true },
+        { label: one?.visible === false ? 'Show' : 'Hide', onClick: () => s2.setProps(sel.map((n) => n.id), { visible: one?.visible === false }) },
+        { label: 'Lock', onClick: () => s2.setProps(sel.map((n) => n.id), { locked: true }) },
+        ...(one
+          ? [
+              {
+                label: 'Add interaction',
+                items: [
+                  { label: 'On click…', onClick: () => addInteraction(hab, one.id, 'click') },
+                  { label: 'On hover…', onClick: () => addInteraction(hab, one.id, 'pointerenter') },
+                ],
+              } as MenuItem,
+              ...(one.type === 'text' || one.type === 'button' || one.type === 'link' ? [{ label: 'Edit text', hint: 'Enter', onClick: () => s2.set({ editingTextId: one.id }) } as MenuItem] : []),
+            ]
+          : []),
+        { separator: true },
+        newHere(hab),
+      ];
+    } else if (hab) {
+      // An artboard's empty area
+      s2.set({ activeArtboardId: hab.id, artboardSelected: true, selection: [] });
+      items = [
+        { heading: hab.name },
+        newHere(hab),
+        paste,
+        { separator: true },
+        { label: 'Make start artboard', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) },
+        { label: 'Duplicate artboard', onClick: () => s2.duplicateArtboard(hab.id) },
+        { label: 'Zoom to artboard', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) },
+        { separator: true },
+        { label: 'Delete artboard', danger: true, onClick: () => s2.deleteArtboard(hab.id) },
+      ];
+    } else {
+      items = [
+        { label: 'New artboard here', onClick: () => s2.addArtboard({ canvasX: round(w.x), canvasY: round(w.y) }) },
+        paste,
+        { separator: true },
+        { label: 'Zoom to fit everything', hint: 'Shift+1', onClick: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })) },
+        { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: 'Shift+R', onClick: () => setPrefs({ rulers: !prefs().rulers }) },
+        { label: 'Help', hint: 'F1', onClick: () => openHelp('canvas') },
+      ];
+    }
+    setMenu({ x: e.clientX, y: e.clientY, items });
+  }
+
+  /** Add an "On pointer" event for a layer with an action to fill in, and open the Interactions tab on it. */
+  function addInteraction(ab: Artboard, nodeId: string, type: 'click' | 'pointerenter') {
+    const ev = { id: uid('lg'), kind: 'event.pointer', x: 40, y: 40 + ab.logic.nodes.length * 30, params: { ...defaultParams('event.pointer'), target: nodeId, type } };
+    const act = { id: uid('lg'), kind: 'action.timeline', x: 300, y: ev.y, params: defaultParams('action.timeline') };
+    store().update((d) => {
+      const a = d.artboards.find((x) => x.id === ab.id);
+      if (!a) return;
+      a.logic.nodes.push(ev, act);
+      a.logic.edges.push({ id: uid('e'), from: ev.id, fromPort: 'out', to: act.id, toPort: 'in' });
+    });
+    store().set({ bottomTab: 'logic', logicSelection: act.id });
+  }
+
+  function zoomToBox(b: Rect) {
+    const el = vp.current;
+    if (!el) return;
+    const z = Math.min(8, Math.min(el.clientWidth / (b.width + 80), el.clientHeight / (b.height + 80)));
+    store().set({ zoom: z, panX: el.clientWidth / 2 - (b.x + b.width / 2) * z, panY: el.clientHeight / 2 - (b.y + b.height / 2) * z });
+  }
+
   const showRulers = usePrefs().rulers;
   const cursor = s.tool === 'hand' ? 'grab' : s.tool === 'select' ? 'default' : s.tool === 'text' ? 'text' : 'crosshair';
 
@@ -1114,7 +1261,7 @@ export function Canvas() {
       onDoubleClick={onDoubleClick}
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={openMenu}
     >
       <div className="world" style={{ transform: `translate(${panX}px, ${panY}px) scale(${zoom})` }}>
         {project.artboards.map((ab) => (
@@ -1159,6 +1306,7 @@ export function Canvas() {
             </button>
           );
         })()}
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} />}
     </div>

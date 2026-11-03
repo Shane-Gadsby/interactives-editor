@@ -78,7 +78,7 @@ Drawing tools, then the web-element tools, then **Help** at the bottom. Hover a 
 - **Artboards**: every artboard; click one to open it.
 
 ## Canvas
-All artboards side by side. See [Moving around the canvas](canvas).
+All artboards side by side. See [Moving around the canvas](canvas). Right-click a layer for cut, copy, order, group, hide, lock and *Add interaction*; right-click an artboard to add a new layer where you clicked, or to duplicate, delete or zoom to it; right-click empty canvas for a new artboard there.
 
 ## Inspector (right)
 Settings for the selection. With nothing selected it shows the artboard and the project settings. Section titles with a **?** link to the page in these docs.
