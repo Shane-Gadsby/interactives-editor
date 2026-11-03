@@ -15,6 +15,25 @@ const CONTINUE = [
   },
   { key: "continueAt", label: "At (%)", type: "number", default: 50, showIf: { key: "continue", values: ["percent"] }, help: "How far through, 0 to 100" }
 ];
+const MIX_OPS = ["play", "restart", "reverse"];
+const mixParams = (ops) => {
+  const only = ops ? { showIf: { key: "op", values: ops } } : {};
+  return [
+    { key: "fade", label: "Blend in (ms)", type: "expr", default: "0", ...only },
+    { key: "fadeEase", label: "Blend easing", type: "easing", default: "linear", help: "Shapes the blend-in: how fast the new look takes over. Linear is an even cross-fade.", ...only },
+    {
+      key: "outgoing",
+      label: "Blend out of",
+      type: "expr",
+      default: "",
+      placeholder: '"Idle"',
+      help: 'The timelines and blends this replaces, by name: "Idle" or ["Idle", "Walk"]. They keep running while the new look blends in over them, then stop. With no blend-in time they stop straight away.',
+      ...only
+    },
+    { key: "hold", label: "Freeze while blending out", type: "boolean", default: false, help: "The timelines and blends being replaced stop where they are instead of running on while the new look blends in", ...only },
+    { key: "earlyExit", label: "Can be left early", type: "boolean", default: false, help: "Another change (a Wait for blend-in node) may cut in before this blend-in is done", ...only }
+  ];
+};
 const LINK_TARGETS = [
   { value: "_blank", label: "New tab (_blank)" },
   { value: "_self", label: "Same frame (_self)" },
@@ -212,7 +231,7 @@ const CATALOG = [
         default: "play"
       },
       { key: "time", label: "Time (ms)", type: "expr", default: "0", showIf: { key: "op", values: ["seek"] } },
-      { key: "fade", label: "Blend in (ms)", type: "expr", default: "0", showIf: { key: "op", values: ["play", "restart", "reverse"] } },
+      ...mixParams(MIX_OPS),
       ...CONTINUE.map((c2) => c2.key === "continue" ? { ...c2, showIf: { key: "op", values: ["play", "restart", "reverse", "toggle"] } } : c2)
     ]
   },
@@ -220,10 +239,10 @@ const CATALOG = [
     kind: "action.blendPlay",
     label: "Play blend",
     category: "action",
-    description: "Start a blend: its timelines play together and are mixed by the weights from its number variables, until it is stopped. Does nothing if it is already playing.",
+    description: 'Start a blend: its timelines play together and are mixed by the weights from its number variables, until it is stopped. Does nothing if it is already playing. "Blend in" fades its pose in over the pose the layers have now.',
     outputs: OUT,
     hasInput: true,
-    params: [{ key: "blend", label: "Blend", type: "blend" }]
+    params: [{ key: "blend", label: "Blend", type: "blend" }, ...mixParams(null)]
   },
   {
     kind: "action.blendStop",
@@ -480,6 +499,41 @@ const CATALOG = [
     params: [{ key: "ms", label: "Milliseconds", type: "number", default: 500 }]
   },
   {
+    kind: "action.waitBlendIn",
+    label: "Wait for blend-in",
+    category: "action",
+    description: 'Holds the flow while a timeline or blend is still blending in (see "Blend in" on Control timeline), unless that blend-in is marked "Can be left early". Use it in front of a change that should not cut a blend-in short. With "Give up" the flow just stops there instead of waiting.',
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "timeline", label: "Timeline", type: "timeline" },
+      { key: "blend", label: "Or blend", type: "blend" },
+      { key: "drop", label: "Give up instead of waiting", type: "boolean", default: false }
+    ]
+  },
+  {
+    kind: "action.waitTimeline",
+    label: "Wait for time in timeline",
+    category: "action",
+    description: "Holds the flow until a timeline has played to a point (an exit time). Carries on at once if it is already past it, and a looping timeline that comes round counts as past. Nothing happens while the timeline is paused short of it.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "timeline", label: "Timeline", type: "timeline" },
+      {
+        key: "unit",
+        label: "Measured in",
+        type: "select",
+        options: [
+          { value: "ms", label: "Milliseconds" },
+          { value: "percent", label: "Percent of the timeline" }
+        ],
+        default: "ms"
+      },
+      { key: "at", label: "At", type: "number", default: 500 }
+    ]
+  },
+  {
     kind: "action.log",
     label: "Log",
     category: "action",
@@ -512,6 +566,18 @@ const CATALOG = [
     ],
     hasInput: true,
     params: []
+  },
+  {
+    kind: "logic.random",
+    label: "Random",
+    category: "logic",
+    description: 'Continues down one of its outputs, picked at random. "Weights" gives each output its chance (a list, in output order: [1, 3] makes output 2 three times as likely). "Only if" is a list of conditions in the same order; an output whose condition is false cannot be picked. Nothing continues when none can.',
+    outputs: [1, 2, 3, 4, 5, 6].map((n) => ({ id: String(n), label: String(n) })),
+    hasInput: true,
+    params: [
+      { key: "weights", label: "Weights", type: "expr", default: "[1, 1]", help: "One number per output, in order. 0 never gets picked (unless nothing else can be)." },
+      { key: "valid", label: "Only if", type: "expr", default: "[true, true]", help: "One condition per output, in order, e.g. [score > 3, true]" }
+    ]
   },
   {
     kind: "logic.once",
@@ -4222,7 +4288,27 @@ Choose **Design view (no timeline)** in the same dropdown to go back. Record tur
 Two properties are not numbers. **Solo: active child** on a [solo group](groups-frames) switches which child shows, and **Draw order (children)** changes which child is in front. Both step at their keys instead of blending. Key them from the group's Solo and Draw order sections in the inspector.
 
 ## Playing from interactions
-**Control timeline** plays, restarts, pauses, stops, reverses, toggles or jumps to a time in a timeline. Give *Play*, *Restart* or *Reverse* a **Blend in** time (ms) to fade the timeline's pose in over the pose the layers have now instead of cutting to it: numbers and colours mix, anything else switches once the new pose weighs more. That is how to switch between looks (idle to wave) smoothly; the timeline that was playing should be paused first, and stays where it was while the new one fades in. Blend-in is off with reduced motion. From scripts: \`ix.timeline('Intro').play()\`. **On timeline end** fires when one finishes, and **On timeline marker** fires at each [marker](timelines#markers).`
+**Control timeline** plays, restarts, pauses, stops, reverses, toggles or jumps to a time in a timeline. Give *Play*, *Restart* or *Reverse* a **Blend in** time (ms) to fade the timeline's pose in over the pose the layers have now instead of cutting to it: numbers and colours mix, anything else switches once the new pose weighs more. That is how to switch between looks (idle to wave) smoothly. Blend-in is off with reduced motion. For what the look being left does meanwhile, the easing of the blend and cutting in on one, see [Transitions between looks](timelines#transitions-between-looks). From scripts: \`ix.timeline('Intro').play()\`. **On timeline end** fires when one finishes, and **On timeline marker** fires at each [marker](timelines#markers).
+
+## Transitions between looks
+A transition is a **Blend in** on the node that starts the next look (**Control timeline**, or **Play blend** for a [blend](blends)). These settings shape it:
+
+| Setting | What it does |
+|---|---|
+| Blend in (ms) | How long the new look takes to take over. 0 cuts straight to it |
+| Blend easing | The curve of the take-over. Linear is an even cross-fade; *Ease in* starts slowly, *Ease out* starts fast, or draw a bezier curve |
+| Blend out of | The timelines and blends being replaced, by name: \`"Idle"\` or \`["Idle", "Walk"]\`. They **keep running** under the blend-in, so a walk cycle does not freeze mid-step while the wave fades in, and stop when it is done. With no blend-in time they stop at once. Leave it empty to leave things as they are (pause the old timeline yourself) |
+| Freeze while blending out | The ones being replaced stand still where they are instead of running on |
+| Can be left early | Another change is allowed to cut in before this blend-in has finished |
+
+A blend works as a look too: a timeline can blend into a blend, a blend into a timeline, or a blend into another blend. Into a blend, its whole pose fades in (numbers and colours mix; anything else switches once the new pose weighs more).
+
+Two more nodes make a state machine out of these:
+
+- **Wait for blend-in** holds the flow while a timeline or blend is still blending in, so a change does not cut it short. It lets the flow through at once if the blend-in is marked *Can be left early* or nothing is blending in. With **Give up instead of waiting** the change is dropped instead, like a button press that is ignored during a transition.
+- **Wait for time in timeline** holds the flow until a timeline has played to a time in milliseconds or a percentage of its length (an exit time: leave the idle only after it has played half through). It carries on at once if the timeline is already past that time.
+
+Put **Wait for time in timeline** after a condition to leave "no sooner than" a point in the animation, and **Wait for blend-in** just before a change of look that should not interrupt the last one. **Random** (in the [interaction graph](interactions)) picks the next look.`
   },
   {
     id: "shape-morphing",
@@ -4362,8 +4448,8 @@ Importing a Rive file turns its 1D and direct blend states into blends. Entering
     body: `Open the **Interactions** tab. Each artboard has its own graph.
 
 - **Events** (green) start a flow: a click, a key, a timer, a variable changing, a timeline ending, a message from the host page, scrolling, data loading, or the artboard starting.
-- **Actions** (blue) do something and continue: **Control timeline**, **Play blend**, **Set variable**, **Set property**, **Animate property**, **Show / hide**, **Go to artboard**, **Open URL**, **Play sound**, **Run script**, **Send message**, **Wait** and more.
-- **Logic** (purple) chooses where to go: **If** (a **true** and a **false** output), **Toggle** (alternates between **a** and **b**), **Once** and **Sequence** (runs **1**, then **2**, then **3**).
+- **Actions** (blue) do something and continue: **Control timeline**, **Play blend**, **Wait for blend-in**, **Wait for time in timeline**, **Set variable**, **Set property**, **Animate property**, **Show / hide**, **Go to artboard**, **Open URL**, **Play sound**, **Run script**, **Send message**, **Wait** and more.
+- **Logic** (purple) chooses where to go: **If** (a **true** and a **false** output), **Toggle** (alternates between **a** and **b**), **Once**, **Sequence** (runs **1**, then **2**, then **3**) and **Random** (continues down one of up to six outputs, picked at random; *Weights* is a list that sets each output's chance, [1, 3] making the second three times as likely, and *Only if* is a list of conditions, so an output whose condition is false is never picked).
 
 ![The Interactions tab: the node palette, the graph and the settings of the selected node.](help/interactions-panel.png)
 
@@ -4847,7 +4933,7 @@ Shape layers, groups, fills, strokes, gradients, transforms, trim paths and keyf
 ## Rive (.riv)
 ![A Rive file after import: each Rive artboard is an artboard, with its animations as timelines and its state machine as interactions.](help/rive-import-result.png)
 
-Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes (a clip shape that follows another shape keeps following it) and the translation, rotation, scale, transform and follow path constraints (with factors, limits and local space) are carried over, and so are bones, skins (weights), image meshes, and IK and distance constraints (see [Bones and skinning](bones)); other constraints are not. A transition's blend time becomes a **Blend in** on the next state's *Control timeline* (a percentage of the old animation is converted to milliseconds, disabled transitions are skipped). Layout padding, margins, gaps and absolute insets given as percentages are worked out against the layout's width the way Rive does (and fixed at the file's size); a layout's border widths take room inside it like padding, auto margins push a layer to the end, and a gap between wrapped lines keeps its own value. Rectangles and layouts with a different radius on each corner keep them, and dash lengths given as a share of the outline become pixels (fixed at the file's size). A fill and a stroke that Rive draws in a mixed order keep that [paint order](fill-stroke#paint-order). A text box's vertical alignment, overflow (clip, ellipsis) and no-wrap come in; paragraph spacing comes in too (as the layer's *Paragraph spacing*); shrink-to-fit does not. Rive centres a stroke on its outline, so a stroked rectangle or ellipse comes in a stroke-width bigger to keep the same outer edge. State machine layers that start an animation from any state with nothing to wait for (the looping animations of an icon) start when the artboard does.
+Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes (a clip shape that follows another shape keeps following it) and the translation, rotation, scale, transform and follow path constraints (with factors, limits and local space) are carried over, and so are bones, skins (weights), image meshes, and IK and distance constraints (see [Bones and skinning](bones)); other constraints are not. A transition's blend time becomes a **Blend in** on the next state's *Control timeline* or *Play blend* (a percentage of the old animation is converted to milliseconds, disabled transitions are skipped), with its mix curve as the blend easing, the state left running on under it (or frozen, for *pause on exit*) and *early exit* as *Can be left early*; a state that is being mixed into cannot be left until the mix is done, unless that allows it (a trigger pressed meanwhile is lost, as in Rive). An exit time becomes a **Wait for time in timeline**. Transitions out of one state that carry different random weights become one **Random** node (up to six; a weight of 0 is never picked). Transitions from the Any state are not held up by a mix in progress. Layout padding, margins, gaps and absolute insets given as percentages are worked out against the layout's width the way Rive does (and fixed at the file's size); a layout's border widths take room inside it like padding, auto margins push a layer to the end, and a gap between wrapped lines keeps its own value. Rectangles and layouts with a different radius on each corner keep them, and dash lengths given as a share of the outline become pixels (fixed at the file's size). A fill and a stroke that Rive draws in a mixed order keep that [paint order](fill-stroke#paint-order). A text box's vertical alignment, overflow (clip, ellipsis) and no-wrap come in; paragraph spacing comes in too (as the layer's *Paragraph spacing*); shrink-to-fit does not. Rive centres a stroke on its outline, so a stroked rectangle or ellipse comes in a stroke-width bigger to keep the same outer edge. State machine layers that start an animation from any state with nothing to wait for (the looping animations of an icon) start when the artboard does.
 
 Rive **listeners** import as events: pointer enter, exit, press, release, click, move and drag as *On pointer*, **keyboard listeners** as *On key* (the key, its modifiers, and the down, repeat and up phases; the key codes are the ones Rive uses, so letters, digits, arrows, function and numpad keys all map), and **focus** and **blur** listeners as *On focus*, with Rive's focus actions as *Focus layer* (focus traversal actions are not imported). A keyboard listener on a layer reacts to the key wherever the focus is. Rive has no scroll-wheel listener, so there is nothing to import there; gamepad, text input and semantic listeners are listed in the report. **Nested artboards** keep their starting inputs, and what Rive does to their inputs comes in too: a listener action that sets a nested number or bool or fires a nested trigger becomes *Set instance input* or *Fire instance trigger* (toggling a nested bool becomes setting it to true), and keys on nested inputs in an animation become [timeline markers](timelines) (named like *Badge: level = 7*) with an *On timeline marker* flow; a number animated between keys steps instead of tweening. A **9-slice image** (an image with slice axes) imports with its insets, and tile modes become **Fill edges**; Rive scales such an image to resize it, so the box is resized here and the corners keep their size (when the scale is animated the scale is kept instead). N-sliced groups, which resize a group's shapes, import as plain groups.
 
