@@ -440,7 +440,11 @@ Some things to build with it:
 Each paint's numbers can be animated: look for the diamond next to a field. The property names are \`fill.opacity\`, \`fills.0.color\`, \`fills.0.opacity\`, \`fills.0.feather\`, \`fills.0.offsetX\`, \`strokes.0.width\`, \`strokes.0.paint.color\`, \`strokes.0.trimEnd\` and so on (\`fills.0\` is the second fill, \`strokes.1\` the third stroke); bindings, **Set property** nodes and scripts use the same names. A shape with one plain fill and stroke is drawn as before; a shape with layers, or with opacity, blend, feather, an offset, a cap, join or align on a paint, is drawn as SVG. Buttons and inputs draw only their first fill and stroke. Lottie export keeps every fill and stroke with their opacity, and leaves out the blend modes, feathered and offset paints (shadows), which Lottie cannot hold.
 
 ### Paint order
-Some shapes need a stroke *under* a fill, or between two fills: an outline that shows only where a fill leaves it uncovered, or a fill that overlaps the inner half of its own stroke. When a shape has both fills and strokes, a **Paint order** section lists every paint in one list, front-most first. Press **↑** or **↓**, or drag a row, to move a paint in front of or behind the others. Each row shows a swatch and what the paint is (its colour, the kind of gradient, a stroke's width). Moving a fill past another fill swaps those two fills, so the numbers stay where they are while their colours trade places; the list in the **Fill** section follows. The moved row is highlighted and the arrow you pressed keeps the keyboard focus, so pressing it again keeps moving the same paint. A shape you have not reordered keeps all its fills under all its strokes, as before.
+Some shapes need a stroke *under* a fill, or between two fills: an outline that shows only where a fill leaves it uncovered, or a fill that overlaps the inner half of its own stroke. Select one shape that has both a fill and a stroke and a **Paint order** section appears under **Stroke**, listing every paint in one list, front-most first (buttons and inputs, and several layers selected at once, don't have it). Press **↑** or **↓**, or drag a row, to move a paint in front of or behind the others. Each row shows a swatch and what the paint is (its colour, the kind of gradient, a stroke's width). Moving a fill past another fill swaps those two fills, so the numbers stay where they are while their colours trade places; the list in the **Fill** section follows. The moved row is highlighted and the arrow you pressed keeps the keyboard focus, so pressing it again keeps moving the same paint. A shape you have not reordered keeps all its fills under all its strokes, as before.
+
+![Paint order of a shape with one fill and two strokes: the wide red stroke is moved under the yellow fill, so only its outer half shows. The list reads Stroke 2, Fill, Stroke 1 from the front.](help/paint-order.png)
+
+![Pressing the arrows in the Paint order list: the wide stroke goes under the fill and comes back, and the picture follows.](help/paint-order-reorder.mp4)
 
 On a frame, rectangle or ellipse the strokes that end up in front of the last fill are still drawn above the shape's children; strokes placed under a fill are drawn under the children with it. In a saved project the order is the shape's \`paintOrder\`, a list of \`"fill"\` and \`"stroke"\` entries from the bottom up (for example \`["fill", "stroke", "fill"]\`); it is left out when every fill is under every stroke. Rive files import with the order they were drawn in, and Lottie export follows it.
 
@@ -615,26 +619,45 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
 | Padding | Space inside the frame's edges |
 | Justify | Where children sit along the direction: start, centre, end, space between |
 | Align | Across the direction: start, centre, end, stretch |
-| Wrap | Start a new row/column when one is full. **Line gap** (shown with Wrap) is the space between the wrapped rows, when it differs from Gap |
+| Wrap | Start a new row/column when one is full (row or column layouts; a grid has no wrap). **Line gap** (shown while Wrap is ticked) is the space between the wrapped rows, or columns in a column layout. It starts out equal to Gap; type a different number to separate the rows more or less than the items in them |
 | Hug width / height | The frame shrinks or grows to fit its children |
-| Layout | *Row or column* (above), *Grid* or *Stack*. A grid puts children in the cells of **Columns** and **Rows**, written like \`100px 25% 1fr auto\` (px, a percent of the frame, \`fr\` for a share of what is left, or auto: as big as what is in it); *Column gap* and *Row gap* are the spaces between them. A stack puts every child in one cell as big as the frame, on top of each other |
-| Cell alignment / Stack position | A 3x3 picker: where a child that is smaller than its cell sits in it (a grid), or where the children sit in the frame (a stack). A child set to *Fill* stretches instead |
-| Justify content / Align content | A grid only: where the columns (start, centre, space between) and the rows (start, centre) sit when they don't fill the frame, e.g. fixed-size tracks in a bigger frame |
+| Layout | *Row or column* (above), *Grid* or *Stack*: see [Grids and stacks](#grids-and-stacks) below |
+
+![A frame whose Wrap is ticked: the nine cards fill a row, then continue on the next. Gap is 12 between cards and Line gap is 40 between the rows.](help/line-gap.png)
+
+![Changing Line gap and Gap: the rows move apart and the cards spread or regroup.](help/line-gap.mp4)
+
+## Grids and stacks
+Set **Layout** to **Grid** to put the children in the cells of a table instead of along a line, or to **Stack** to put them all on top of each other.
+
+- **Columns** and **Rows** list the size of each track, separated by spaces, like \`100px 25% 1fr auto\`. A track is a size in px (a bare number is px too), a percent of the frame's inner size, \`fr\` (a share of what is left once the other tracks are taken, so \`1fr 2fr\` gives the second twice the first), or \`auto\` (as big as the biggest thing in it). Rows past the ones you list are \`auto\`, so an empty **Rows** box makes a row for every line of children. Words that are not sizes are dropped. With no columns listed there is one column; a frame that hugs its width has \`%\` and \`fr\` tracks only as big as what is in them.
+- **Column gap** and **Row gap** are the spaces between tracks. (A grid has no **Wrap** or **Direction**: children fill the cells in layer order, left to right and then down, unless a child is given its own cell in **Layout item**.)
+- **Cell alignment** is a 3x3 picker. A child smaller than its cell sits where you click: the top left corner, the centre, the bottom right and so on. A child set to **Fill** stretches to the whole cell instead.
+- **Justify content** (*Start*, *Centre*, *Space between*) and **Align content** (*Start*, *Centre*) place the tracks when they don't add up to the frame's size, for example fixed-size tracks in a larger frame.
+- A **stack** has no tracks: every child goes in one cell as big as the frame. There the picker is called **Stack position** and says where the children sit in the frame (in the picture, the pink tag sits in the bottom right of the stack); a child set to **Fill** covers the frame. Going back from Stack to Grid finds the tracks you had.
+
+![A grid of 100px, 25%, 1fr and auto columns with the cell alignment picker at the centre, and a stack below it with its position at the bottom right.](help/grid-layout.png)
+
+![Editing the columns, then moving the 3x3 picker: the tiles shift inside their cells. Then the stack's picker moves the badge around the photo.](help/grid-layout.mp4)
 
 ## Child sizing
-Select a child of an auto-layout frame and its **Layout item** section says how it sits in the frame. Only the settings that frame's kind of layout reads are shown. With several children selected (from the same frame), a change applies to all of them, and a field shows *Mixed* where they differ.
+Select a child of an auto-layout frame and its **Layout item** section says how it sits in the frame; it sits right under the first section of the Inspector. Only the settings that frame's kind of layout reads are shown (a stack has no margins, wrapping or aspect, for example). With several children selected (from the same frame), a change applies to all of them, and a field shows *Mixed* where they differ. Select layers from different kinds of layout and the section only tells you so.
 
-- **Position**: *In flow* (laid out with its siblings), *Absolute* (placed by **Inset** from the frame's edges, e.g. pinned to the bottom right; set left and right, or top and bottom, to stretch it) or *Ignore* (keeps its own x/y and takes no room).
+![The Layout item section for the orange card: Fill width and fixed height, grow 2 from a zero basis. The dark button at the top right is pushed there by an auto margin.](help/layout-item.png)
+
+![Ticking Auto margin: Left on the button pushes it to the end of the toolbar. Then changing Grow on a card changes how much of the free room it takes.](help/layout-item.mp4)
+
+- **Position**: *In flow* (laid out with its siblings), *Absolute* (placed by **Inset** from the frame's edges, e.g. pinned to the bottom right; leave a side empty (*auto*) to leave that edge free, and set left and right, or top and bottom, to stretch a layer that isn't fixed size) or *Ignore* (keeps its own x/y and takes no room, and has no sizing fields).
 - **Width** and **Height**:
   - *Fixed*: its own size.
   - *Hug*: fits its own contents (frames and text).
   - *Fill*: along a row or column, shares the frame's free space with the other fill children; across it, stretches; in a grid, fills its cell.
   - *Percent*: a share of the frame's inner size (of the cell, in a grid).
-- **Grow** and **Basis** (row and column, on the axis the frame runs along, for a *Fill* layer): a fill layer starts from its basis (*Zero*, *Pixels*, *Percent* of the frame, or *Content*: as big as what is inside it), and the free space is shared on top of it by grow (default 1; 0 takes none). Layers that are over the line shrink in proportion to their basis.
-- **Aspect** (width over height, like 1.78): when one side hugs and the other is known, the hugging side follows the ratio instead of its content. *From size* takes the ratio from the layer's current size. **Derive** chooses between *Either side* and *Height only* (the width then keeps hugging). In a grid only the height is derived.
-- **Wrap text** (text in a row or column): a text that hugs its width (Sizing set to *Auto width*) wraps at the room its frame offers, and then shrinks to its widest line.
+- **Grow** and **Basis** (row and column, shown for a *Fill* layer on the axis the frame runs along): a fill layer starts from its basis (*Zero*, *Pixels*, *Percent* of the frame, or *Content*: as big as what is inside it), and the free space is shared on top of it by grow (default 1; 0 takes none). Layers that are over the line shrink in proportion to their basis.
+- **Aspect** (width over height, like 1.78): when one side hugs and the other is known, the hugging side follows the ratio instead of its content. The field shows up once a ratio is set or exactly one side is *Hug* (in a grid: the height); *From size* takes the ratio from the layer's current size, and 0 clears it. **Derive** chooses between *Either side* and *Height only* (the width then keeps hugging). In a grid only the height is derived.
+- **Wrap text** (text in a row or column): a text that hugs its width (Sizing set to *Auto width*; the section says so when it isn't) wraps at the room its frame offers, and then shrinks to its widest line.
 - **Column**, **Row**, **Col span**, **Row span** (grid): which cell it starts in (1 is the first, negative counts back from the last, 0 takes the next free cell) and how many tracks it covers. Layers without a cell fill the free cells in order.
-- **Margin** around it (top, right, bottom, left). In a row or column, **Auto margin** on a side makes that side take the free room of the line, split equally between the auto sides: it pushes a layer to the end or centres it, ahead of Justify. Across the line, auto on both sides centres the layer and on one side pushes it to the other edge.
+- **Margin** around it (top, right, bottom, left), in a row, column or grid. In a row or column, **Auto margin** on a side makes that side take the free room of the line, split equally between the auto sides: it pushes a layer to the end or centres it, ahead of Justify. Across the line, auto on both sides centres the layer and on one side pushes it to the other edge.
 
 These settings are not keyframed: they are part of the layout, not of an animation. Animate a layer's size or position with a timeline, or change the frame's layout from an action.
 
@@ -1107,6 +1130,10 @@ A \`/pattern/flags\` works with \`match\`, \`matchAll\`, \`search\`, \`replace\`
 
 The text a pattern runs over is limited too: 10,000 characters for a pattern with no more than one open-ended repetition, 1,000 with two and 200 with three. Patterns with bounded repetitions such as \`\\w{0,50}\` get a shorter limit still. Longer text gives an error rather than a freeze. Text you pass to \`match\`, \`matchAll\` and \`search\` is a pattern and follows the same rules; to \`replace\`, \`replaceAll\` and \`split\` it is plain text. The rules are cautious on purpose: some harmless patterns, like \`(\\.[a-z]+)+\`, are refused too.
 
+In a text layer, a slot whose pattern is refused (or whose text is too long for it) is left as written, braces and all, as in the last line below; elsewhere it gives nothing.
+
+![Three text slots with patterns: the first two work, the third, with a nested repetition, is refused and left as written.](help/patterns-refused.png)
+
 > Expressions are for values. For several steps, waiting or loops, use a [script](scripts).`,
   },
   {
@@ -1368,7 +1395,7 @@ Every data request, from a source, the **Load data** node or \`ix.loadData(name,
 - Only \`http:\` and \`https:\` addresses load, plus \`blob:\` and \`data:\` addresses up to 1,000,000 characters. \`file:\`, \`javascript:\` and anything else is refused.
 - Cookies and logins are sent only to the page's own site, never to another site.
 - Relative addresses and the page's own site always work.
-- **Allowed data hosts** (Project settings) is an optional list. Leave it empty to allow any http(s) host. Once it has entries, other sites must match one: \`api.example.com\`, \`*.example.com\` (its subdomains, not \`example.com\` itself), \`example.com:8080\`, or a full origin like \`https://api.example.com\`. A redirect to a site off the list is refused too. Files uploaded to the project are not affected.
+- **Allowed data hosts** (Project settings) is an optional list. Leave it empty to allow any http(s) host. Once it has entries, other sites must match one: \`api.example.com\`, \`*.example.com\` (its subdomains, not \`example.com\` itself), \`example.com:8080\` (an entry without a port matches any port), or a full origin like \`https://api.example.com\` (that scheme and port only). A redirect to a site off the list is refused too. Files uploaded to the project are not affected.
 
 A refused request loads nothing and writes a warning to the console; in a script, \`ix.loadData\` throws.
 
@@ -1396,7 +1423,7 @@ Clicks on a copy fire **On pointer** for the template layer with \`event.index\`
     group: 'Getting started',
     summary: 'Start artboard, fit, page title, fonts, sandbox and reduced motion.',
     keywords: 'settings start artboard fit scale page title background fonts sandbox reduced motion',
-    body: `![The Project section of the Inspector.](help/project-settings.png)
+    body: `![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
 
 Click an empty part of the canvas, or an artboard's name, to see the **Project** settings in the Inspector (below the artboard's own).
 
@@ -1408,7 +1435,9 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Fit | How the artboard scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
 | Page background | The colour around the artboard in the exported page |
 | Run scripts in the sandbox | See [Scripts](scripts) |
+| Run embedded HTML in the page | Only shown while the sandbox box above is off. Lets Embed layers with HTML reach the page, for HTML you wrote and trust. See [Web elements](web-elements) |
 | Allowed data hosts | Hosts that data may be loaded from, one per line (\`api.example.com\`, \`*.example.com\`). Empty allows any http(s) host. See [Data sources](data-sources#what-may-be-loaded) |
+| This project is a library | Shares the artboards you publish, with the project's styles and assets, as components for other projects. See [Libraries](libraries) |
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
 | Fonts | Google fonts by name (type one and press **Add**), or font files you upload in the **Assets** panel |`,
@@ -1788,8 +1817,8 @@ Browsers only autoplay *muted* video. Tick **Muted**.
 **Data from a web address doesn't load.**
 The address must allow cross-origin requests (CORS) from where the interactive is shown, and, if the project lists **Allowed data hosts**, its host must be on the list. See [Data sources](data-sources).
 
-**A formula with a pattern (\`/…/\`) says "Pattern not allowed".**
-The pattern could freeze the page on some text, so it is refused. See *Patterns* in [Expressions](expressions).
+**A formula with a pattern (\`/…/\`) says "Pattern not allowed", or its \`{…}\` shows as written in text.**
+The pattern could freeze the page on some text, so it is refused. See *Patterns* in [Expressions](expressions#patterns-regular-expressions).
 
 ## The editor itself
 **The page zooms when I scroll.**
