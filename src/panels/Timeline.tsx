@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ANIMATABLE_PROPS, EASING_NAMES, type Easing, type Keyframe, type Timeline as TL } from 'interactives-player';
+import { ANIMATABLE_PROPS, EASING_NAMES, ease, type Easing, type Keyframe, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
@@ -23,6 +23,8 @@ export function TimelinePanel() {
   const lane = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(600);
   const [addProp, setAddProp] = useState('x');
+  // The tween (span between a key and the next) whose easing is being edited, named by its starting key
+  const [tween, setTween] = useState<{ trackId: string; keyId: string } | null>(null);
 
   useEffect(() => {
     const el = lane.current;
@@ -122,6 +124,7 @@ export function TimelinePanel() {
     if (e.shiftKey) sel = sel.includes(ref) ? sel.filter((x) => x !== ref) : [...sel, ref];
     else if (!sel.includes(ref)) sel = [ref];
     store().set({ selectedKeys: sel, playhead: key.t, previewPlaying: false });
+    setTween(null);
     const startX = e.clientX;
     const el = e.currentTarget as HTMLElement;
     el.setPointerCapture(e.pointerId);
@@ -157,6 +160,17 @@ export function TimelinePanel() {
   }
 
   const selectedKey = s.selectedKeys.length === 1 ? findKey(tl, s.selectedKeys[0]) : null;
+  const selectedTween = (() => {
+    if (!tween) return null;
+    const track = tl.tracks.find((t) => t.id === tween.trackId);
+    const i = track ? track.keys.findIndex((k) => k.id === tween.keyId) : -1;
+    return track && i >= 0 && i < track.keys.length - 1 ? { track, key: track.keys[i], next: track.keys[i + 1] } : null;
+  })();
+  const setEase = (e: Easing) =>
+    setTl((d) => {
+      const k = d.tracks.find((t) => t.id === tween?.trackId)?.keys.find((x) => x.id === tween?.keyId);
+      if (k) k.ease = e;
+    });
   const ticks: number[] = [];
   const step = niceStep(tl.duration, width);
   for (let t = 0; t <= tl.duration + 0.1; t += step) ticks.push(t);
@@ -259,9 +273,25 @@ export function TimelinePanel() {
               </div>
               {tracks.map((tr) => (
                 <div key={tr.id} className="lane" onPointerDown={scrub}>
-                  {tr.keys.slice(0, -1).map((k, i) => (
-                    <span key={`seg-${k.id}`} className="segment" style={{ left: X(k.t), width: X(tr.keys[i + 1].t) - X(k.t) }} />
-                  ))}
+                  {tr.keys.slice(0, -1).map((k, i) => {
+                    const w = X(tr.keys[i + 1].t) - X(k.t);
+                    const sel = tween?.trackId === tr.id && tween.keyId === k.id;
+                    return (
+                      <span
+                        key={`seg-${k.id}`}
+                        className={`segment${sel ? ' selected' : ''}`}
+                        style={{ left: X(k.t), width: w }}
+                        title={`Tween ${k.t}–${tr.keys[i + 1].t} ms: ${easeLabel(k.ease)}. Click to change its easing`}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          setTween({ trackId: tr.id, keyId: k.id });
+                          store().set({ selectedKeys: [], previewPlaying: false });
+                        }}
+                      >
+                        {w > 28 && <EaseCurve ease={k.ease} width={w} />}
+                      </span>
+                    );
+                  })}
                   {tr.keys.map((k) => (
                     <span
                       key={k.id}
@@ -306,34 +336,47 @@ export function TimelinePanel() {
                 }, 'key-v')
               }
             />
+            <p className="hint">Easing belongs to the tweens: click the line between two keys to change how it moves.</p>
+          </div>
+        )}
+        {!selectedKey && selectedTween && (
+          <div className="key-editor">
+            <div className="field-label block">Tween</div>
+            <div className="small muted">
+              {ANIMATABLE_PROPS.find((a) => a.prop === selectedTween.track.prop)?.label ?? selectedTween.track.prop}: {String(selectedTween.key.value)} → {String(selectedTween.next.value)}, {selectedTween.key.t}–{selectedTween.next.t} ms
+            </div>
+            <EaseCurve ease={selectedTween.key.ease} width={196} height={70} big />
             <SelectField
               label="Ease"
-              value={Array.isArray(selectedKey.key.ease) ? 'custom' : selectedKey.key.ease}
+              title="How the value moves from the first key to the second"
+              value={Array.isArray(selectedTween.key.ease) ? 'custom' : selectedTween.key.ease}
               options={[...EASING_NAMES.map((e) => ({ value: e, label: e })), { value: 'custom', label: 'cubic-bezier…' }]}
-              onChange={(v) =>
-                setTl((d) => {
-                  const k = findKey(d, s.selectedKeys[0]);
-                  if (k) k.key.ease = v === 'custom' ? [0.25, 0.1, 0.25, 1] : (v as Easing);
-                })
-              }
+              onChange={(v) => setEase(v === 'custom' ? [0.25, 0.1, 0.25, 1] : (v as Easing))}
             />
-            {Array.isArray(selectedKey.key.ease) && (
+            {Array.isArray(selectedTween.key.ease) && (
               <TextField
                 label="Bezier"
                 mono
                 commitOnBlur
-                value={selectedKey.key.ease.join(', ')}
+                title="x1, y1, x2, y2 of the curve's two handles"
+                value={selectedTween.key.ease.join(', ')}
                 onChange={(v) => {
                   const n = v.split(/[\s,]+/).map(Number);
-                  if (n.length === 4 && n.every(Number.isFinite))
-                    setTl((d) => {
-                      const k = findKey(d, s.selectedKeys[0]);
-                      if (k) k.key.ease = n as [number, number, number, number];
-                    });
+                  if (n.length === 4 && n.every(Number.isFinite)) setEase(n as [number, number, number, number]);
                 }}
               />
             )}
-            <p className="hint">Easing applies from this key to the next.</p>
+            <button
+              className="btn small-btn"
+              title="Give every tween in this timeline the same easing"
+              onClick={() =>
+                setTl((d) => {
+                  for (const tr of d.tracks) for (const k of tr.keys.slice(0, -1)) k.ease = Array.isArray(selectedTween.key.ease) ? [...selectedTween.key.ease] as typeof k.ease : selectedTween.key.ease;
+                })
+              }
+            >
+              Use for all tweens
+            </button>
           </div>
         )}
       </div>
@@ -373,4 +416,26 @@ export function deleteSelectedKeys(): boolean {
   });
   store().set({ selectedKeys: [] });
   return true;
+}
+
+function easeLabel(e: Easing): string {
+  return Array.isArray(e) ? `cubic-bezier(${e.join(', ')})` : e;
+}
+
+/** The easing curve, drawn inside a tween (or larger in the tween panel). */
+function EaseCurve({ ease: e, width, height = 14, big }: { ease: Easing; width: number; height?: number; big?: boolean }) {
+  const pts: string[] = [];
+  const n = Math.max(8, Math.min(60, Math.round(width / 4)));
+  const pad = big ? 6 : 1;
+  const h = height - pad * 2;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const v = ease(e, t);
+    pts.push(`${(t * (width - pad * 2) + pad).toFixed(1)},${(pad + h - v * h).toFixed(1)}`);
+  }
+  return (
+    <svg className={big ? 'ease-curve big' : 'ease-curve'} width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      <polyline points={pts.join(' ')} />
+    </svg>
+  );
 }

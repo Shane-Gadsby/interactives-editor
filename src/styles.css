@@ -1085,9 +1085,49 @@ code,
 }
 .segment {
   position: absolute;
-  top: 11px;
+  top: 4px;
+  height: 16px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+/* The tween's line, with a curve showing its easing on top */
+.segment::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 7px;
   height: 2px;
   background: rgba(231, 177, 76, 0.4);
+}
+.segment:hover {
+  background: rgba(231, 177, 76, 0.12);
+}
+.segment.selected {
+  background: rgba(77, 124, 255, 0.18);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.ease-curve {
+  position: absolute;
+  left: 0;
+  top: 1px;
+  pointer-events: none;
+}
+.ease-curve polyline {
+  fill: none;
+  stroke: rgba(231, 177, 76, 0.9);
+  stroke-width: 1.2;
+}
+.ease-curve.big {
+  position: static;
+  display: block;
+  margin: 6px 0;
+  border-radius: 4px;
+  background: var(--bg);
+}
+.ease-curve.big polyline {
+  stroke: var(--accent);
+  stroke-width: 2;
 }
 .key {
   position: absolute;

@@ -1074,7 +1074,7 @@ The **Open URL** action does the same from an interaction.
 | Autoplay | Start when the artboard is shown |
 | Speed | Playback rate (2 is twice as fast, negative plays backwards) |
 
-Select a key to set its [easing](easing). Easing applies from that key to the next.
+The line between two keys is a **tween**: it shows its [easing](easing) as a little curve. Click it to choose how the value moves from the first key to the second (or *Use for all tweens*). Select a key to change its time or value.
 
 ## Design view
 Switching artboards opens them in **design view**: the canvas shows the layers as they are, not a frame of an animation. Choose a timeline in the Timeline tab to see and edit its frames; choose *Design view* again to go back.
