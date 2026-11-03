@@ -2389,3 +2389,34 @@ a.btn {
   pointer-events: none;
   user-select: none;
 }
+/* The events log keeps one size, so the preview above it never jumps */
+.preview-log {
+  flex: none;
+  height: 132px;
+  max-height: none;
+}
+
+/* Interface chrome isn't text: dragging across it shouldn't highlight it. Places with real text opt back in */
+#root {
+  user-select: none;
+  -webkit-user-select: none;
+}
+input,
+textarea,
+select,
+[contenteditable],
+.cm-editor,
+.help-article,
+.help-results,
+.help-code,
+.api-ref,
+.data-preview,
+.data-table,
+.preview-log .trace,
+.report-body,
+.share-url input,
+kbd,
+code {
+  user-select: text;
+  -webkit-user-select: text;
+}

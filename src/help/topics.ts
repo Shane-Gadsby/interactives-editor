@@ -434,6 +434,9 @@ The **Open URL** action does the same from an interaction.
 
 Select a key to set its [easing](easing). Easing applies from that key to the next.
 
+## Design view
+Switching artboards opens them in **design view**: the canvas shows the layers as they are, not a frame of an animation. Choose a timeline in the Timeline tab to see and edit its frames; choose *Design view* again to go back.
+
 ## Playing from interactions
 **Play timeline** plays, pauses, stops, restarts, reverses or seeks a timeline. From scripts: \`ix.timeline('Intro').play()\`. **On timeline end** fires when one finishes.`,
   },

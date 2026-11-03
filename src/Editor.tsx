@@ -784,7 +784,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
           )}
           {html ? <iframe key={nonce} ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : <div className="center-msg muted">Building…</div>}
         </div>
-        {showVars && (traces.length > 0 || log.length > 0) && (
+        {showVars && (
           <footer className="preview-log mono small">
             <div className="debug-log-head">
               <span>Events (newest last)</span>
@@ -802,6 +802,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
             {log.map((l, i) => (
               <div key={`m${i}`}>message to the page: {l}</div>
             ))}
+            {!traces.length && !log.length && <div className="muted">No events yet. Click, hover or type in the preview and they show here.</div>}
           </footer>
         )}
       </div>

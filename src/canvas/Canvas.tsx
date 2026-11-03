@@ -140,8 +140,12 @@ export function Canvas() {
     },
     [panX, panY, zoom],
   );
-  const abAt = (w: Pt): Artboard | undefined =>
-    [...project.artboards].reverse().find((a) => w.x >= a.canvasX && w.y >= a.canvasY && w.x <= a.canvasX + a.width && w.y <= a.canvasY + a.height);
+  // Hit tests use what's drawn: for the open artboard that's the timeline frame at the playhead (and constraints),
+  // not the layers' base values, or keyed layers couldn't be clicked once the playhead moved
+  const abAt = (w: Pt): Artboard | undefined => {
+    const ab = [...project.artboards].reverse().find((a) => w.x >= a.canvasX && w.y >= a.canvasY && w.x <= a.canvasX + a.width && w.y <= a.canvasY + a.height);
+    return ab && active && ab.id === active.id ? active : ab;
+  };
   const local = (ab: Artboard, w: Pt): Pt => ({ x: w.x - ab.canvasX, y: w.y - ab.canvasY });
   const screen = (ab: Artboard | { canvasX: number; canvasY: number } | null, p: Pt): Pt => ({
     x: panX + ((ab?.canvasX ?? 0) + p.x) * zoom,
@@ -277,7 +281,7 @@ export function Canvas() {
       const [kind, a, b] = handle.split(':');
       if (kind === 'ab') {
         const target = getArtboard(st.project, a)!;
-        store().set({ activeArtboardId: a, artboardSelected: true, selection: [], focusId: null, activeTimelineId: target.timelines[0]?.id ?? null });
+        store().set({ activeArtboardId: a, artboardSelected: true, selection: [], focusId: null, activeTimelineId: null });
         drag.current = { kind: 'moveAb', id: a, x0: target.canvasX, y0: target.canvasY, start: w };
         return;
       }
@@ -386,7 +390,7 @@ export function Canvas() {
       const frame = [...path].reverse().find((n) => n.type === 'frame');
       drag.current = { kind: 'create', tool, abId: cab.id, start: p, parentId: tool === 'frame' ? null : frame?.id ?? null };
       setBox({ abId: cab.id, rect: { x: p.x, y: p.y, width: 0, height: 0 } });
-      if (cab.id !== st.activeArtboardId) store().set({ activeArtboardId: cab.id, selection: [], activeTimelineId: cab.timelines[0]?.id ?? null });
+      if (cab.id !== st.activeArtboardId) store().set({ activeArtboardId: cab.id, selection: [], activeTimelineId: null });
       return;
     }
 
@@ -396,7 +400,7 @@ export function Canvas() {
       const p = local(hitAb, w);
       const hit = pickFromHit(hitTest(hitAb, p.x, p.y), e.ctrlKey || e.metaKey);
       if (hitAb.id !== st.activeArtboardId) {
-        store().set({ activeArtboardId: hitAb.id, selection: [], focusId: null, activeTimelineId: hitAb.timelines[0]?.id ?? null });
+        store().set({ activeArtboardId: hitAb.id, selection: [], focusId: null, activeTimelineId: null });
       }
       if (hit) {
         let sel = store().get().selection;

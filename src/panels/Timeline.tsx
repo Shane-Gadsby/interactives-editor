@@ -65,12 +65,29 @@ export function TimelinePanel() {
 
   if (!ab) return null;
   if (!tl) {
+    // Design view: the canvas shows the layers as they are. Picking a timeline shows its frames.
     return (
       <div className="panel-empty">
-        <p>Timelines animate layer properties with keyframes. Play them on start or from interactions.</p>
-        <button className="btn primary" onClick={() => store().addTimeline()}>
-          + New timeline
-        </button>
+        {ab.timelines.length ? (
+          <>
+            <p>Design view: the canvas shows the layers as they are. Choose a timeline to see and edit its animation.</p>
+            <div className="row">
+              <SelectField
+                value=""
+                title="Show and edit a timeline on the canvas"
+                options={[{ value: '', label: 'Choose a timeline…' }, ...ab.timelines.map((t) => ({ value: t.id, label: t.name })), { value: '__new', label: '+ New timeline' }]}
+                onChange={(v) => (v === '__new' ? store().addTimeline() : v && store().set({ activeTimelineId: v, playhead: 0, selectedKeys: [] }))}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <p>Timelines animate layer properties with keyframes. Play them on start or from interactions.</p>
+            <button className="btn primary" onClick={() => store().addTimeline()}>
+              + New timeline
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -150,8 +167,10 @@ export function TimelinePanel() {
       <div className="timeline-bar">
         <SelectField
           value={tl.id}
-          options={[...ab.timelines.map((t) => ({ value: t.id, label: t.name })), { value: '__new', label: '+ New timeline' }]}
-          onChange={(v) => (v === '__new' ? store().addTimeline() : store().set({ activeTimelineId: v, playhead: 0, selectedKeys: [] }))}
+          options={[{ value: '__design', label: 'Design view (no timeline)' }, ...ab.timelines.map((t) => ({ value: t.id, label: t.name })), { value: '__new', label: '+ New timeline' }]}
+          onChange={(v) =>
+            v === '__new' ? store().addTimeline() : store().set({ activeTimelineId: v === '__design' ? null : v, playhead: 0, selectedKeys: [], recording: v === '__design' ? false : store().get().recording })
+          }
         />
         <TextField value={tl.name} commitOnBlur onChange={(v) => setTl((d) => (d.name = v || d.name))} />
         <IconButton icon={s.playing ? <Icons.pause /> : <Icons.play />} title={s.playing ? 'Pause preview' : 'Play preview'} onClick={() => store().set({ previewPlaying: !s.playing, playhead: !s.playing && s.playhead >= tl.duration ? 0 : s.playhead })} />

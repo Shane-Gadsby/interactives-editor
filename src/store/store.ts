@@ -122,7 +122,7 @@ export class EditorStore {
       editingTextId: null,
       bottomTab: 'timeline',
       bottomHeight: 260,
-      activeTimelineId: first?.timelines[0]?.id ?? null,
+      activeTimelineId: null,
       playhead: 0,
       previewPlaying: false,
       recording: false,
@@ -272,7 +272,8 @@ export class EditorStore {
       activeArtboardId = ab?.id ?? '';
     }
     const selection = ab ? s.selection.filter((id) => locate(ab!, id)) : [];
-    const activeTimelineId = ab?.timelines.some((t) => t.id === s.activeTimelineId) ? s.activeTimelineId : ab?.timelines[0]?.id ?? null;
+    // No timeline is the design view (the canvas shows layers as they are, not a frame of an animation)
+    const activeTimelineId = ab?.timelines.some((t) => t.id === s.activeTimelineId) ? s.activeTimelineId : null;
     const focusId = ab && s.focusId && locate(ab, s.focusId) ? s.focusId : null;
     const editingPathId = ab && s.editingPathId && locate(ab, s.editingPathId) ? s.editingPathId : null;
     const logicSelection = ab?.logic.nodes.some((n) => n.id === s.logicSelection) ? s.logicSelection : null;

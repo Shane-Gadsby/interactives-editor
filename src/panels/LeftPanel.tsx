@@ -127,7 +127,7 @@ function Layers() {
       <div
         key={`ab-${ab.id}`}
         className={`artboard-row${active && s.artboardSelected ? ' selected' : ''}${active ? ' active' : ''}`}
-        onClick={() => store().set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? store().get().activeTimelineId : ab.timelines[0]?.id ?? null })}
+        onClick={() => store().set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? store().get().activeTimelineId : null })}
         onDragOver={(e) => {
           if (dragId && active) e.preventDefault();
         }}
@@ -194,7 +194,7 @@ function Layers() {
           let sel = ab.id === st.activeArtboardId ? st.selection : [];
           if (e.shiftKey || e.metaKey || e.ctrlKey) sel = sel.includes(n.id) ? sel.filter((x) => x !== n.id) : [...sel, n.id];
           else sel = [n.id];
-          store().set({ activeArtboardId: ab.id, selection: sel, artboardSelected: false, activeTimelineId: ab.id === st.activeArtboardId ? st.activeTimelineId : ab.timelines[0]?.id ?? null });
+          store().set({ activeArtboardId: ab.id, selection: sel, artboardSelected: false, activeTimelineId: ab.id === st.activeArtboardId ? st.activeTimelineId : null });
         }}
         onDoubleClick={() => setRenaming(n.id)}
       >
