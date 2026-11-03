@@ -35,7 +35,7 @@ import {
 import { toggleRunStyle, type ToggleKind } from '../lib/rich-text';
 import { paintRuns, readRuns, selectionOffsets, setSelectionOffsets } from '../lib/rich-text-dom';
 import { store, useEditor, type Tool } from '../store/store';
-import { getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, topmost, type Rect } from '../store/doc';
+import { drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
@@ -128,6 +128,9 @@ export function Canvas() {
     (fn) => dataCache.subscribe(fn),
     () => dataCache.version,
   );
+  // The selection outline uses where layers were drawn (doc.ts recordDrawnGeometry), which is known only after the artboard
+  // draws: redraw the overlay when that changes
+  useSyncExternalStore(subscribeDrawnGeometry, drawnGeometryVersion);
   useEffect(() => dataCache.sync(s.project), [s.project.dataSources, assetVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   const vp = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);

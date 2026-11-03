@@ -45,13 +45,86 @@ export function findArtboardOf(p: Project, nodeId: string): Artboard | undefined
   return p.artboards.find((a) => locate(a, nodeId));
 }
 
+// ---------------------------------------------------------------- where layers are actually drawn
+
+/**
+ * The canvas draws the prepared tree (bindings at their starting values, repeater copies, auto layout over those), so a
+ * frame that hugs a repeater, or holds layers a binding hides, is drawn at a different size than the document stores.
+ * The canvas records those differences here after drawing, and the selection outline and hit testing use them. A record
+ * only counts while the layer is the very object it was made from: any edit to it makes a new one, and the record is
+ * ignored until the next draw makes a fresh one.
+ */
+interface Drawn {
+  node: SceneNode;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+const drawnGeometry = new Map<string, Map<string, Drawn>>();
+// Bumped when a record changes what the outline would show, so the canvas overlay (drawn before the artboard is) redraws
+let drawnVersion = 0;
+const drawnSubs = new Set<() => void>();
+const sameDrawn = (a: Map<string, Drawn> | undefined, b: Map<string, Drawn>): boolean => {
+  if (!a || a.size !== b.size) return false;
+  for (const [id, x] of b) {
+    const y = a.get(id);
+    if (!y || y.node !== x.node || y.x !== x.x || y.y !== x.y || y.width !== x.width || y.height !== x.height) return false;
+  }
+  return true;
+};
+const bumpDrawn = () => {
+  drawnVersion++;
+  drawnSubs.forEach((f) => f());
+};
+export const drawnGeometryVersion = (): number => drawnVersion;
+export function subscribeDrawnGeometry(f: () => void): () => void {
+  drawnSubs.add(f);
+  return () => void drawnSubs.delete(f);
+}
+
+/** After drawing an artboard: remember where the prepared tree put the layers whose box differs from the document. */
+export function recordDrawnGeometry(artboardId: string, docNodes: SceneNode[], prepared: SceneNode[]): void {
+  if (docNodes === prepared) {
+    if (drawnGeometry.delete(artboardId)) bumpDrawn();
+    return;
+  }
+  const doc = new Map<string, SceneNode>();
+  const index = (list: SceneNode[]) => {
+    for (const n of list) {
+      doc.set(n.id, n);
+      if (isContainer(n)) index(n.children);
+    }
+  };
+  index(docNodes);
+  const out = new Map<string, Drawn>();
+  const walk = (list: SceneNode[]) => {
+    for (const p of list) {
+      const d = doc.get(p.id);
+      if (d && d !== p && (d.x !== p.x || d.y !== p.y || d.width !== p.width || d.height !== p.height)) out.set(p.id, { node: d, x: p.x, y: p.y, width: p.width, height: p.height });
+      if (isContainer(p)) walk(p.children);
+    }
+  };
+  walk(prepared);
+  if (sameDrawn(drawnGeometry.get(artboardId), out)) return;
+  if (out.size) drawnGeometry.set(artboardId, out);
+  else if (!drawnGeometry.delete(artboardId)) return;
+  bumpDrawn();
+}
+
+/** A layer with its box as drawn, when the canvas drew it differently from the document (else the layer itself). */
+export function drawnBox<T extends SceneNode>(artboard: Artboard, n: T): T {
+  const rec = drawnGeometry.get(artboard.id)?.get(n.id);
+  return rec && rec.node === n ? { ...n, x: rec.x, y: rec.y, width: rec.width, height: rec.height } : n;
+}
+
 /** Matrix from a node's local space to artboard space. */
 export function nodeToArtboard(artboard: Artboard, id: string): Matrix {
   const loc = locate(artboard, id);
   if (!loc) return [...IDENTITY];
   let m: Matrix = [...IDENTITY];
-  for (const a of loc.ancestors) m = multiply(m, nodeMatrix(a));
-  return multiply(m, nodeMatrix(loc.node));
+  for (const a of loc.ancestors) m = multiply(m, nodeMatrix(drawnBox(artboard, a)));
+  return multiply(m, nodeMatrix(drawnBox(artboard, loc.node)));
 }
 
 /** Matrix from a node's parent space to artboard space. */
@@ -59,7 +132,7 @@ export function parentToArtboard(artboard: Artboard, id: string): Matrix {
   const loc = locate(artboard, id);
   if (!loc) return [...IDENTITY];
   let m: Matrix = [...IDENTITY];
-  for (const a of loc.ancestors) m = multiply(m, nodeMatrix(a));
+  for (const a of loc.ancestors) m = multiply(m, nodeMatrix(drawnBox(artboard, a)));
   return m;
 }
 
@@ -67,7 +140,7 @@ export function nodeCorners(artboard: Artboard, id: string): { x: number; y: num
   const loc = locate(artboard, id);
   if (!loc) return [];
   const m = nodeToArtboard(artboard, id);
-  const { width: w, height: h } = loc.node;
+  const { width: w, height: h } = drawnBox(artboard, loc.node);
   return [apply(m, 0, 0), apply(m, w, 0), apply(m, w, h), apply(m, 0, h)];
 }
 
@@ -107,7 +180,8 @@ export function hitTest(artboard: Artboard, x: number, y: number, opts: { includ
     for (let i = list.length - 1; i >= 0; i--) {
       const n = list[i];
       if ((!n.visible && !opts.includeHidden) || (n.locked && !opts.includeLocked)) continue;
-      const m = multiply(parentM, nodeMatrix(n));
+      const box = drawnBox(artboard, n);
+      const m = multiply(parentM, nodeMatrix(box));
       if (isContainer(n)) {
         trail.push(n);
         const inner = walk(n.children, m);
@@ -119,7 +193,7 @@ export function hitTest(artboard: Artboard, x: number, y: number, opts: { includ
         }
       }
       const p = apply(invert(m), x, y);
-      if (p.x >= 0 && p.y >= 0 && p.x <= n.width && p.y <= n.height) return [...trail, n];
+      if (p.x >= 0 && p.y >= 0 && p.x <= box.width && p.y <= box.height) return [...trail, n];
     }
     return null;
   };

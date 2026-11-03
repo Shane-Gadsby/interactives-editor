@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { recordDrawnGeometry } from '../store/doc';
 import { flushSync } from 'react-dom';
 import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
@@ -150,6 +151,9 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       draw.current?.configure(timeline ? time / 1000 : 0, `${assetVersion}|${dataVersion}`);
       shader.current?.configure(timeline ? time / 1000 : 0, assetVersion);
       r.render(artboard, nodes, { vars });
+      // Where layers ended up after bindings, repeaters and layout, for the selection outline and hit testing (only for the
+      // design view: a timeline's pose is not where the document has the layer)
+      if (!timeline) recordDrawnGeometry(artboard.id, artboard.children, nodes);
       let plain = nodes === sampled;
       if (plain) walk(sampled, (n) => void (plain &&= !drawnDifferently(n)));
       lastDraw.current = { renderer: r, artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };
