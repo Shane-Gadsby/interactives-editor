@@ -31,6 +31,7 @@ function localRings(n: SceneNode): Pair[][] {
     case 'input':
     case 'embed':
     case 'draw':
+    case 'shader':
     case 'video': {
       const r = Math.min('cornerRadius' in n ? n.cornerRadius : 0, w / 2, h / 2);
       if (r <= 0)

@@ -1,4 +1,4 @@
-import { Renderer, prepareNodes, sampleArtboard, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, createStillShaders, prepareNodes, sampleArtboard, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { assetBytes } from './db';
 import { download, fileSafe } from './export';
 import { previewScope } from './data';
@@ -137,15 +137,41 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
   const host = document.createElement('div');
   Object.assign(host.style, { position: 'fixed', left: '-100000px', top: '0', width: `${ab.width}px`, height: `${ab.height}px` });
   document.body.appendChild(host);
+  let still: ReturnType<typeof createStillShaders> | null = null;
   try {
     const resolve = (id: string) => urls.get(id);
-    const r = new Renderer({ mode: 'play', resolveAsset: resolve, mountInstance: editInstanceMount(() => project, 0, resolve) });
+    // Shader layers are painted once, at the timeline's time, and end up in the picture as the image of their canvas
+    const shaders = (still = createStillShaders({
+      resolveImage: (key) => {
+        const a = project.assets.find((x) => x.id === key) ?? project.assets.find((x) => x.name === key);
+        return a ? urls.get(a.id) : undefined;
+      },
+      time: timeline ? time / 1000 : 0,
+      ratio: opts.fonts === false ? 1 : 2,
+    }));
+    const r = new Renderer({ mode: 'play', resolveAsset: resolve, mountInstance: editInstanceMount(() => project, 0, resolve), mountShader: shaders.mount });
     host.appendChild(r.root);
     const vars = previewScope(project);
     const sampled: SceneNode[] = timeline ? sampleArtboard(ab.children, timeline, time) : ab.children;
     r.render(ab, prepareNodes(sampled, { vars }), { vars });
     if (r.root.querySelector('iframe, video')) warnings.push('Embeds and video show as empty boxes in pictures.');
     if (r.root.querySelector('canvas.ix-draw')) warnings.push('Script layers show as empty boxes in pictures.');
+    if (r.root.querySelector('canvas.ix-shader')) {
+      await shaders.settled();
+      // A canvas's pixels don't survive serialising: each shader canvas becomes the picture it shows
+      for (const c of Array.from(r.root.querySelectorAll<HTMLCanvasElement>('canvas.ix-shader'))) {
+        try {
+          const img = document.createElement('img');
+          img.src = c.toDataURL();
+          img.className = c.className;
+          img.style.cssText = c.style.cssText;
+          c.replaceWith(img);
+        } catch {
+          /* a canvas the browser won't read: it is left out of the picture */
+        }
+      }
+      if (shaders.problems.length) warnings.push('Some shader layers could not be drawn (WebGL is unavailable or the shader has errors) and show as placeholders in pictures.');
+    }
     const html = new XMLSerializer().serializeToString(r.root);
     const css = opts.fonts === false ? '' : await fontCssCached(project);
     const svg =
@@ -154,6 +180,7 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
       `<foreignObject x="0" y="0" width="${ab.width}" height="${ab.height}">${html}</foreignObject></svg>`;
     return { svg, warnings };
   } finally {
+    still?.dispose();
     host.remove();
   }
 }

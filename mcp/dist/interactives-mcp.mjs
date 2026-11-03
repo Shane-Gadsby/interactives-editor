@@ -182,7 +182,7 @@ const CATALOG = [
         default: "play"
       },
       { key: "time", label: "Time (ms)", type: "expr", default: "0", showIf: { key: "op", values: ["seek"] } },
-      ...CONTINUE.map((c) => c.key === "continue" ? { ...c, showIf: { key: "op", values: ["play", "restart", "reverse", "toggle"] } } : c)
+      ...CONTINUE.map((c2) => c2.key === "continue" ? { ...c2, showIf: { key: "op", values: ["play", "restart", "reverse", "toggle"] } } : c2)
     ]
   },
   {
@@ -459,6 +459,11 @@ const CATALOG = [
   }
 ];
 Object.fromEntries(CATALOG.map((d) => [d.kind, d]));
+const SHADER_UNIFORM_TYPES = ["float", "vec2", "vec3", "vec4", "color", "image"];
+const SHADER_BUILTINS = ["u_time", "u_resolution", "u_mouse", "u_frame", "v_uv"];
+new Set(
+  "attribute uniform varying const in out inout centroid flat smooth layout float int uint bool void true false vec2 vec3 vec4 ivec2 ivec3 ivec4 uvec2 uvec3 uvec4 bvec2 bvec3 bvec4 mat2 mat3 mat4 sampler2D samplerCube if else for while do switch case default break continue return discard struct precision highp mediump lowp main mainImage texture texture2D".split(" ")
+);
 const ANIMATABLE_PROPS = [
   { prop: "x", label: "X", kind: "number" },
   { prop: "y", label: "Y", kind: "number" },
@@ -689,6 +694,277 @@ function draw(g) {
 `
   }
 ];
+const NOISE = `// Hash and gradient noise
+vec2 hash22(vec2 p) {
+  p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+  return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+}
+float hash21(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+float gnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(dot(hash22(i), f), dot(hash22(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)), u.x),
+    mix(dot(hash22(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)), dot(hash22(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0)), u.x),
+    u.y);
+}
+`;
+const DEMO = `// The picture to filter: u_image, or a test card while none is set
+vec4 demoCard(vec2 uv) {
+  vec3 c = mix(vec3(0.98, 0.62, 0.30), vec3(0.16, 0.22, 0.62), uv.y);
+  float sun = smoothstep(0.205, 0.195, length((uv - vec2(0.5, 0.58)) * vec2(1.7, 1.0)));
+  c = mix(c, vec3(1.0, 0.94, 0.78), sun);
+  float hill = smoothstep(0.02, 0.0, uv.y - (0.22 + 0.08 * sin(uv.x * 7.0) + 0.04 * sin(uv.x * 19.0)));
+  c = mix(c, vec3(0.08, 0.09, 0.16), hill);
+  return vec4(c, 1.0);
+}
+vec4 source(vec2 uv) {
+  return u_image_size.x > 0.5 ? texture2D(u_image, uv) : demoCard(uv);
+}
+`;
+const f = (name, value, min, max) => ({ name, type: "float", value, ...min !== void 0 ? { min } : {}, ...max !== void 0 ? { max } : {} });
+const c = (name, value) => ({ name, type: "color", value });
+const SHADER_PRESETS = [
+  {
+    id: "clouds",
+    name: "Clouds (gradient noise)",
+    description: "Soft drifting clouds from layered gradient noise.",
+    kind: "generator",
+    uniforms: [f("speed", 0.12, 0, 2), f("scale", 2.6, 0.5, 10), c("skyColor", "#1c3f8f"), c("cloudColor", "#f2f7ff")],
+    code: `// Soft drifting clouds: layered gradient noise, warped by itself
+${NOISE}
+float fbm(vec2 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 5; i++) {
+    v += a * gnoise(p);
+    p = p * 2.02 + vec2(17.3, 9.1);
+    a *= 0.5;
+  }
+  return v;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / u_resolution.y;
+  float t = u_time * speed;
+  vec2 p = uv * scale;
+  float q = fbm(p + vec2(t, t * 0.4));
+  float n = fbm(p + 2.0 * q + vec2(-t * 0.6, t * 0.2));
+  float cloud = smoothstep(-0.2, 0.55, n);
+  vec3 col = mix(skyColor.rgb, cloudColor.rgb, cloud);
+  col += 0.06 * (1.0 - fragCoord.y / u_resolution.y) * vec3(0.6, 0.7, 1.0);
+  fragColor = vec4(col, 1.0);
+}
+`
+  },
+  {
+    id: "plasma",
+    name: "Plasma",
+    description: "Classic colour-cycling plasma from summed sine waves.",
+    kind: "generator",
+    uniforms: [f("speed", 1, 0, 5), f("scale", 2, 0.5, 8), f("hue", 0, 0, 6.28)],
+    code: `// Plasma: sine waves summed, then run through a cosine palette
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 p = (fragCoord - 0.5 * u_resolution) / u_resolution.y * scale;
+  float t = u_time * speed;
+  float v = sin(p.x * 3.0 + t);
+  v += sin(p.y * 3.0 - t * 1.3);
+  v += sin((p.x + p.y) * 2.0 + t * 0.7);
+  v += sin(length(p) * 4.0 - t * 1.7);
+  vec3 col = 0.5 + 0.5 * cos(6.28318 * (v * 0.25 + vec3(0.0, 0.33, 0.67)) + hue);
+  fragColor = vec4(col, 1.0);
+}
+`
+  },
+  {
+    id: "ripples",
+    name: "Ripples",
+    description: "Rings spreading from the centre, or from the pointer while it is pressed.",
+    kind: "generator",
+    uniforms: [f("frequency", 28, 4, 80), f("speed", 3, 0, 10), c("deepColor", "#061a3a"), c("lightColor", "#5fd0ff")],
+    code: `// Ripples: rings spreading from the centre, or from the pointer while the button is down
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / u_resolution.xy;
+  vec2 centre = u_mouse.z > 0.5 ? u_mouse.xy : vec2(0.5);
+  vec2 d = (uv - centre) * vec2(u_resolution.x / u_resolution.y, 1.0);
+  float r = length(d);
+  float wave = sin(r * frequency - u_time * speed);
+  float fade = exp(-r * 2.2);
+  float shade = 0.5 + 0.5 * wave * fade;
+  vec3 col = mix(deepColor.rgb, lightColor.rgb, shade);
+  col += 0.25 * pow(max(wave, 0.0), 6.0) * fade;
+  fragColor = vec4(col, 1.0);
+}
+`
+  },
+  {
+    id: "glow",
+    name: "Glow backdrop",
+    description: "Soft drifting lights with a bloom-like roll-off, for backgrounds.",
+    kind: "generator",
+    uniforms: [f("speed", 0.5, 0, 3), f("intensity", 1.1, 0, 3), c("colorA", "#ff4f9a"), c("colorB", "#4f7bff")],
+    code: `// A glowing backdrop: a few drifting lights added together, then rolled off like bloom
+float blob(vec2 p, vec2 centre, float radius) {
+  float d = length(p - centre) / radius;
+  return 1.0 / (1.0 + d * d * d * d);
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / u_resolution.xy;
+  float aspect = u_resolution.x / u_resolution.y;
+  vec2 p = vec2(uv.x * aspect, uv.y);
+  float t = u_time * speed;
+  float a = blob(p, vec2(aspect * 0.30 + 0.20 * sin(t), 0.50 + 0.25 * cos(t * 1.3)), 0.45);
+  float b = blob(p, vec2(aspect * 0.70 + 0.20 * cos(t * 0.8), 0.45 + 0.30 * sin(t * 0.9)), 0.40);
+  float c = blob(p, vec2(aspect * 0.50 + 0.30 * sin(t * 0.6 + 2.0), 0.20 + 0.10 * cos(t)), 0.35);
+  vec3 light = colorA.rgb * a + colorB.rgb * b + mix(colorA.rgb, colorB.rgb, 0.5) * c;
+  vec3 col = vec3(0.03, 0.035, 0.07) + light * intensity;
+  col *= 1.0 - 0.35 * length(uv - 0.5);
+  col = 1.0 - exp(-col * 1.4);
+  fragColor = vec4(col, 1.0);
+}
+`
+  },
+  {
+    id: "voronoi",
+    name: "Voronoi cells",
+    description: "Animated cellular pattern with thin borders.",
+    kind: "generator",
+    uniforms: [f("scale", 6, 1, 30), f("speed", 0.6, 0, 3), f("edgeWidth", 0.06, 5e-3, 0.3), c("colorA", "#ffb347"), c("colorB", "#3a1c71"), c("lineColor", "#10061f")],
+    code: `// Voronoi: the nearest of a jittering point per grid cell, coloured by which cell it is
+${NOISE}
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / u_resolution.y * scale;
+  vec2 g = floor(uv);
+  vec2 f = fract(uv);
+  float d1 = 8.0;
+  float d2 = 8.0;
+  vec2 id = vec2(0.0);
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      vec2 o = vec2(float(i), float(j));
+      vec2 h = 0.5 + 0.5 * hash22(g + o);
+      vec2 r = o + 0.5 + 0.45 * sin(u_time * speed + 6.28318 * h) - f;
+      float d = dot(r, r);
+      if (d < d1) {
+        d2 = d1;
+        d1 = d;
+        id = g + o;
+      } else if (d < d2) {
+        d2 = d;
+      }
+    }
+  }
+  float edge = smoothstep(0.0, edgeWidth, sqrt(d2) - sqrt(d1));
+  vec3 cell = mix(colorA.rgb, colorB.rgb, hash21(id));
+  fragColor = vec4(mix(lineColor.rgb, cell, edge), 1.0);
+}
+`
+  },
+  {
+    id: "wave",
+    name: "Wave distortion (image)",
+    description: "Ripples an image sideways and up and down.",
+    kind: "filter",
+    uniforms: [f("amount", 0.012, 0, 0.1), f("frequency", 14, 1, 60), f("speed", 1.5, 0, 8)],
+    code: `// Wave distortion: the picture is sampled through a moving sine warp
+${DEMO}
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / u_resolution.xy;
+  float t = u_time * speed;
+  uv.x += sin(uv.y * frequency + t) * amount;
+  uv.y += cos(uv.x * frequency * 0.8 + t * 1.2) * amount * 0.6;
+  fragColor = source(clamp(uv, 0.0, 1.0));
+}
+`
+  },
+  {
+    id: "crt",
+    name: "CRT / scanlines (image)",
+    description: "Curved screen, scanlines, colour fringing and a vignette.",
+    kind: "filter",
+    uniforms: [f("curvature", 0.25, 0, 1), f("scanlines", 0.35, 0, 1), f("lines", 240, 60, 720), f("fringe", 2e-3, 0, 0.01)],
+    code: `// CRT: barrel distortion, scanlines that roll slowly, red and blue pulled apart, dark corners
+${DEMO}
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / u_resolution.xy;
+  vec2 cc = uv - 0.5;
+  uv = 0.5 + cc * (1.0 + curvature * dot(cc, cc));
+  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+    fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+  }
+  vec2 off = vec2(fringe, 0.0);
+  vec3 col = vec3(source(uv + off).r, source(uv).g, source(uv - off).b);
+  float line = 0.5 + 0.5 * sin(uv.y * lines * 6.28318 - u_time * 2.0);
+  col *= 1.0 - scanlines * line;
+  col *= 1.0 + 0.03 * sin(u_time * 60.0);
+  col *= 1.0 - 1.4 * dot(cc, cc);
+  fragColor = vec4(col, 1.0);
+}
+`
+  },
+  {
+    id: "halftone",
+    name: "Dot halftone (image)",
+    description: "Prints the picture as a grid of dots that grow where it is darker.",
+    kind: "filter",
+    uniforms: [f("dotSize", 9, 3, 40), f("colorMix", 0.4, 0, 1), c("inkColor", "#15151f"), c("paperColor", "#f4efe2")],
+    code: `// Halftone: a rotated grid of dots; each dot's size follows the brightness of the picture under it
+${DEMO}
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  float cell = max(dotSize, 2.0);
+  float ang = 0.5236;
+  mat2 R = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
+  vec2 gp = R * (fragCoord / cell);
+  vec2 id = floor(gp);
+  vec2 local = fract(gp) - 0.5;
+  vec2 centrePx = ((id + 0.5) * R) * cell;
+  vec4 src = source(clamp(centrePx / u_resolution.xy, 0.0, 1.0));
+  float lum = dot(src.rgb, vec3(0.299, 0.587, 0.114));
+  float radius = 0.72 * sqrt(1.0 - lum);
+  float aa = 1.5 / cell;
+  float dotMask = smoothstep(radius + aa, radius - aa, length(local));
+  vec3 ink = mix(inkColor.rgb, src.rgb, colorMix);
+  fragColor = vec4(mix(paperColor.rgb, ink, dotMask), 1.0);
+}
+`
+  },
+  {
+    id: "grain",
+    name: "Film grain (image)",
+    description: "Flickering film grain and a soft vignette over a picture.",
+    kind: "filter",
+    uniforms: [f("amount", 0.18, 0, 1), f("rate", 24, 1, 60), f("vignette", 0.5, 0, 1)],
+    code: `// Film grain: fresh noise every 1/rate of a second, strongest in the mid-tones, plus a vignette
+${NOISE}
+${DEMO}
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / u_resolution.xy;
+  vec4 col = source(uv);
+  float n = hash21(fragCoord + floor(u_time * rate) * vec2(17.0, 31.0)) - 0.5;
+  float lum = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+  col.rgb += n * amount * (1.0 - 0.6 * abs(lum - 0.5) * 2.0);
+  col.rgb *= 1.0 - vignette * dot(uv - 0.5, uv - 0.5) * 2.0;
+  fragColor = col;
+}
+`
+  }
+];
+const SHADER_PRESETS_BY_ID = Object.fromEntries(SHADER_PRESETS.map((p) => [p.id, p]));
+const IMAGE_UNIFORM = "u_image";
+function presetContent(preset, target) {
+  const uniforms = preset.uniforms.map((u) => ({ ...u, value: Array.isArray(u.value) ? [...u.value] : u.value }));
+  if (target === "layer" && preset.kind === "filter") uniforms.push({ name: IMAGE_UNIFORM, type: "image", value: "" });
+  return { code: preset.code, uniforms };
+}
+const DEFAULT_SHADER = presetContent(SHADER_PRESETS[0], "layer");
+({ ...presetContent(SHADER_PRESETS_BY_ID.wave, "filter") });
 const NAMES = {
   rect: "Rectangle",
   ellipse: "Ellipse",
@@ -705,7 +981,8 @@ const NAMES = {
   embed: "Embed",
   video: "Video",
   instance: "Instance",
-  draw: "Script layer"
+  draw: "Script layer",
+  shader: "Shader layer"
 };
 function base(type) {
   return {
@@ -821,6 +1098,15 @@ const FACTORIES = {
     fps: 0,
     pixelRatio: "auto",
     runInEditor: true,
+    width: 320,
+    height: 200
+  }),
+  shader: () => ({
+    code: DEFAULT_SHADER.code,
+    uniforms: structuredClone(DEFAULT_SHADER.uniforms),
+    fps: 0,
+    pixelRatio: "auto",
+    animateInEditor: false,
     width: 320,
     height: 200
   })
@@ -1721,6 +2007,7 @@ Use **+** in the **Effects** section to add a shadow or a layer blur; each one h
 
 - **Shadow**: **X**, **Y**, **Blur**, **Spread** and **Colour**. Tick **Inner** to draw the shadow inside the shape instead of behind it.
 - **Layer blur**: blurs the whole layer by an **Amount** in pixels.
+- **Shader filter** (image layers only): draws the picture through a GPU shader, such as wave distortion, CRT scanlines, halftone dots or film grain. See [Shader layers](shader-layers#shader-filter-on-an-image).
 
 Two related settings are in the top section of the Inspector, with the position fields:
 
@@ -2426,6 +2713,73 @@ The layer is an ordinary layer otherwise: move, rotate, fade, blend, mask and an
 - \`g.random()\` is seeded: the layer draws the same numbers on every run. Call \`g.seed(1)\` at the start of \`draw\` for a picture that stays the same from frame to frame.`
   },
   {
+    id: "shader-layers",
+    title: "Shader layers",
+    group: "Interactivity",
+    summary: "A layer painted by a GPU shader: clouds, plasma, ripples, glows, distortion of pictures, and your own GLSL.",
+    keywords: "shader glsl webgl gpu fragment effect filter noise clouds plasma ripples glow voronoi grain crt scanlines halftone wave distortion uniform u_time u_mouse u_resolution preset image texture bloom",
+    body: () => `A **Shader layer** is a box painted by a small program that runs on the graphics card for every pixel, many times a second. Use it for backgrounds that move, glows, noise, ripples and distortions of pictures: effects that shapes and timelines can't do.
+
+Pick the **Shader layer** tool in the toolbar and drag a box. It starts with drifting clouds, so you have a result at once. The **Start from** menu in the inspector replaces the shader with a preset: ${SHADER_PRESETS.map((p) => `**${p.name}**`).join(", ")}. The presets marked *(image)* filter a picture: choose an image for their \`u_image\` uniform (until you do, they show a built-in test picture).
+
+## The code
+
+You write one function. Everything else (precision, the built-in values, your uniforms) is added for you.
+
+\`\`\`
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord / u_resolution;          // 0 to 1 across the layer, y up
+  float glow = 0.5 + 0.5 * sin(u_time * speed + uv.x * 6.0);
+  fragColor = vec4(tint.rgb * glow, 1.0);      // straight alpha
+}
+\`\`\`
+
+- \`fragCoord\` is the pixel being painted, in canvas pixels with the origin at the **bottom-left**. \`fragColor\` is the colour to paint, with **straight** (not premultiplied) alpha.
+- It is GLSL ES: WebGL 2 (ES 3.00) when the browser has it, otherwise WebGL 1 (ES 1.00). Write code that works in both: \`texture2D\` and \`texture\` both work, and loops need constant limits.
+- Don't write \`main\` or declare \`uniform\`s for the built-ins: the player does.
+
+## Built-in values
+
+| Name | What |
+|---|---|
+| \`u_time\` | Seconds since the layer started. Frozen for viewers who prefer reduced motion. |
+| \`u_resolution\` | \`vec2\`: the canvas size in pixels. |
+| \`u_mouse\` | \`vec3\`: the pointer over the layer, x and y from 0 to 1 (y up), z is 1 while the button is down. Correct even if the layer is rotated or inside a group. |
+| \`u_frame\` | Frames drawn so far. |
+| \`v_uv\` | \`vec2\`: 0 to 1 across the layer, y up. |
+
+## Uniforms: your own values
+
+The **Uniforms** list gives the shader values you can change. Press **Add a uniform**, choose a type, and give it a **name**: that name is a variable in the code. Types: **float**, **vec2**, **vec3**, **vec4**, **color** (a \`vec4\` of red, green, blue and alpha, 0 to 1) and **image** (a \`sampler2D\`, with \`name_size\` as a \`vec2\` of its pixel size, 0 until it has loaded).
+
+- **Animate** them: the **◆** beside a value keys it at the playhead on the timeline. A vector keys each part (x, y, z, w) on its own track, a colour fades between colours, and an image uniform switches picture at each key. The tracks are \`uniforms.<number>.value\`, and \`uniforms.<number>.value.<part>\` for the parts of a vector, counting from 0 in list order.
+- **Bind** them to variables in **Data bindings**: pick the uniform from the property list (for example *Uniform speed*) and type an expression, such as \`score / 100\`.
+- A name has letters, digits and underscores, can't start with a digit, and can't be a built-in or a GLSL word. A uniform with a bad name is left out and the inspector says why.
+- Removing a uniform also removes the tracks and bindings that were aimed at it, and the ones after it move up.
+
+## Settings
+
+- **FPS**: a frame rate cap while it animates. 0 draws on every frame.
+- **Pixels**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 2. Shaders cost time for every pixel, so a layer is held to about 4 million pixels however large it is: past that it is drawn smaller and stretched.
+- **Animate while editing**: runs the shader live on the editor canvas. Off (the default) paints one still frame at the timeline's time (0 when none is showing), which keeps editing smooth. **Preview** always runs it.
+
+## Errors
+
+If the shader doesn't compile, the layer shows a placeholder and the inspector lists each problem with its **line number** in your code; those lines are marked in the editor. The same messages appear in Preview's event list. Other layers carry on. Fix the code and the shader starts again.
+
+## Limits and performance
+
+- All shader layers on a page share **one WebGL context**, so the browser's limit on contexts doesn't apply. Each layer is limited to 24 on a page; extra ones show a placeholder and a warning.
+- A shader is **paused while it is off screen** or the browser tab is hidden. A shader that reads neither \`u_time\` nor \`u_mouse\` (it only uses its uniforms) is drawn only when something changes.
+- Without WebGL (some remote desktops and very old devices) the layer shows a placeholder and says so.
+- **Pictures** you use as image uniforms must come from your project's assets (or a site that allows it); a picture the browser won't hand to WebGL is skipped with a warning.
+- **Export**: shader layers work in the single-file export, **.ixp** packages and the embeddable player. A **PNG or SVG picture** of an artboard shows the layer's current frame (at the timeline's time, or 0), not a running animation.
+
+## Shader filter on an image
+
+An **image** layer can draw itself through a shader: **+** in **Effects**, then **Shader filter**. It has the same code editor, uniforms and settings, and \`u_image\` (the layer's own picture, with its fit applied) and \`u_image_size\` are ready to use. The plain picture shows until the shader has drawn, and again if it fails. This works for **image layers only** (not with a 9-slice); other layers can't be filtered this way. To run a shader over something else, make it a **Shader layer** with an image uniform.`
+  },
+  {
     id: "usage",
     title: "Usage: what uses what",
     group: "Reference",
@@ -3004,6 +3358,8 @@ function outline(list, depth, maxDepth, out, limit) {
     if (n.type === "button") extra.push(JSON.stringify(n.label.slice(0, 40)));
     if (n.type === "instance") extra.push(`artboard=${n.artboardId}`);
     if (n.type === "draw") extra.push(`script layer${n.fps ? ` ${n.fps}fps` : ""}, ${n.code.split("\n").length} lines`);
+    if (n.type === "shader") extra.push(`shader layer, ${n.code.split("\n").length} lines, uniforms: ${(n.uniforms ?? []).map((u) => `${u.name}:${u.type}`).join(",") || "none"}`);
+    if (n.type === "image" && n.shaderFilter) extra.push(`shader filter, ${n.shaderFilter.code.split("\n").length} lines`);
     if (!n.visible) extra.push("hidden");
     if (n.locked) extra.push("locked");
     if (n.bindings && Object.keys(n.bindings).length) extra.push(`bindings: ${Object.keys(n.bindings).join(",")}`);
@@ -3094,14 +3450,14 @@ function applyChanges(p0, changes) {
     return ab;
   };
   const resolveRefs = (o) => typeof o === "string" ? ref(o) : Array.isArray(o) ? o.map(resolveRefs) : o && typeof o === "object" ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k, resolveRefs(v)])) : o;
-  for (const [i, c] of changes.entries()) {
-    const where = `change ${i + 1} (${c.op})`;
-    const key = typeof c.ref === "string" ? c.ref : void 0;
-    switch (c.op) {
+  for (const [i, c2] of changes.entries()) {
+    const where = `change ${i + 1} (${c2.op})`;
+    const key = typeof c2.ref === "string" ? c2.ref : void 0;
+    switch (c2.op) {
       case "set_props": {
-        const loc = locate(p, ref(c.id));
-        if (!loc) throw new Error(`${where}: no layer ${String(c.id)}`);
-        const props = resolveRefs(c.props);
+        const loc = locate(p, ref(c2.id));
+        if (!loc) throw new Error(`${where}: no layer ${String(c2.id)}`);
+        const props = resolveRefs(c2.props);
         for (const [k, v] of Object.entries(props)) {
           if (k === "id" || k === "type" || k === "children") continue;
           setPath(loc.node, k, v);
@@ -3111,24 +3467,24 @@ function applyChanges(p0, changes) {
         break;
       }
       case "add_layer": {
-        const ab = findAb(c.artboard_id);
-        const node = createNode(c.type, resolveRefs(c.props ?? {}));
-        if (isContainer(node) && Array.isArray(c.children)) node.children = [];
-        syncRuns(node, resolveRefs(c.props ?? {}));
+        const ab = findAb(c2.artboard_id);
+        const node = createNode(c2.type, resolveRefs(c2.props ?? {}));
+        if (isContainer(node) && Array.isArray(c2.children)) node.children = [];
+        syncRuns(node, resolveRefs(c2.props ?? {}));
         let list = ab.children;
-        if (c.parent_id) {
-          const parent = locate(p, ref(c.parent_id));
-          if (!parent || !isContainer(parent.node)) throw new Error(`${where}: parent ${String(c.parent_id)} is not a group or frame`);
+        if (c2.parent_id) {
+          const parent = locate(p, ref(c2.parent_id));
+          if (!parent || !isContainer(parent.node)) throw new Error(`${where}: parent ${String(c2.parent_id)} is not a group or frame`);
           list = parent.node.children;
         }
-        const index = typeof c.index === "number" ? Math.max(0, Math.min(list.length, c.index)) : list.length;
+        const index = typeof c2.index === "number" ? Math.max(0, Math.min(list.length, c2.index)) : list.length;
         list.splice(index, 0, node);
         if (key) created[key] = node.id;
         touched.push(node.id);
         break;
       }
       case "delete": {
-        const id = ref(c.id);
+        const id = ref(c2.id);
         const loc = locate(p, id);
         if (!loc) throw new Error(`${where}: no layer ${id}`);
         const list = loc.parent && isContainer(loc.parent) ? loc.parent.children : loc.ab.children;
@@ -3136,58 +3492,58 @@ function applyChanges(p0, changes) {
         break;
       }
       case "move": {
-        const id = ref(c.id);
+        const id = ref(c2.id);
         const loc = locate(p, id);
         if (!loc) throw new Error(`${where}: no layer ${id}`);
         const from = loc.parent && isContainer(loc.parent) ? loc.parent.children : loc.ab.children;
         from.splice(from.indexOf(loc.node), 1);
-        let to = c.artboard_id ? findAb(c.artboard_id).children : loc.ab.children;
-        if (c.parent_id) {
-          const parent = locate(p, ref(c.parent_id));
+        let to = c2.artboard_id ? findAb(c2.artboard_id).children : loc.ab.children;
+        if (c2.parent_id) {
+          const parent = locate(p, ref(c2.parent_id));
           if (!parent || !isContainer(parent.node)) throw new Error(`${where}: parent is not a group or frame`);
           to = parent.node.children;
         }
-        to.splice(typeof c.index === "number" ? c.index : to.length, 0, loc.node);
+        to.splice(typeof c2.index === "number" ? c2.index : to.length, 0, loc.node);
         touched.push(id);
         break;
       }
       case "add_artboard": {
         const right = Math.max(0, ...p.artboards.map((a) => a.canvasX + a.width));
-        const ab = createArtboard({ name: String(c.name ?? "Artboard"), width: Number(c.width ?? 800), height: Number(c.height ?? 600), canvasX: right + 100, canvasY: 0 });
+        const ab = createArtboard({ name: String(c2.name ?? "Artboard"), width: Number(c2.width ?? 800), height: Number(c2.height ?? 600), canvasX: right + 100, canvasY: 0 });
         p.artboards.push(ab);
         if (key) created[key] = ab.id;
         break;
       }
       case "set_artboard": {
-        const ab = findAb(c.id);
-        for (const [k, v] of Object.entries(resolveRefs(c.props ?? {}))) if (!["id", "children", "timelines", "logic"].includes(k)) ab[k] = v;
+        const ab = findAb(c2.id);
+        for (const [k, v] of Object.entries(resolveRefs(c2.props ?? {}))) if (!["id", "children", "timelines", "logic"].includes(k)) ab[k] = v;
         break;
       }
       case "add_variable": {
-        const v = { id: uid("v"), name: String(c.name), type: c.type ?? "number", initial: c.initial ?? 0 };
-        if (Array.isArray(c.options)) v.options = c.options.map(String);
-        if (c.shared) v.shared = true;
+        const v = { id: uid("v"), name: String(c2.name), type: c2.type ?? "number", initial: c2.initial ?? 0 };
+        if (Array.isArray(c2.options)) v.options = c2.options.map(String);
+        if (c2.shared) v.shared = true;
         if (p.variables.some((x) => x.name === v.name)) throw new Error(`${where}: a variable called ${v.name} already exists`);
         p.variables.push(v);
         if (key) created[key] = v.id;
         break;
       }
       case "set_variable": {
-        const v = p.variables.find((x) => x.id === ref(c.id) || x.name === c.id);
-        if (!v) throw new Error(`${where}: no variable ${String(c.id)}`);
-        Object.assign(v, resolveRefs(c.props ?? {}), { id: v.id });
+        const v = p.variables.find((x) => x.id === ref(c2.id) || x.name === c2.id);
+        if (!v) throw new Error(`${where}: no variable ${String(c2.id)}`);
+        Object.assign(v, resolveRefs(c2.props ?? {}), { id: v.id });
         break;
       }
       case "add_timeline": {
-        const ab = findAb(c.artboard_id);
+        const ab = findAb(c2.artboard_id);
         const tl = {
           id: uid("tl"),
-          name: String(c.name ?? `Timeline ${ab.timelines.length + 1}`),
-          duration: Number(c.duration ?? 1e3),
-          loop: c.loop ?? "once",
-          autoplay: !!c.autoplay,
+          name: String(c2.name ?? `Timeline ${ab.timelines.length + 1}`),
+          duration: Number(c2.duration ?? 1e3),
+          loop: c2.loop ?? "once",
+          autoplay: !!c2.autoplay,
           speed: 1,
-          tracks: (c.tracks ?? []).map((tr) => ({
+          tracks: (c2.tracks ?? []).map((tr) => ({
             id: uid("tr"),
             nodeId: ref(tr.node_id),
             prop: tr.prop,
@@ -3199,9 +3555,9 @@ function applyChanges(p0, changes) {
         break;
       }
       case "add_interactions": {
-        const ab = findAb(c.artboard_id);
+        const ab = findAb(c2.artboard_id);
         const localIds = {};
-        const nodes = c.nodes ?? [];
+        const nodes = c2.nodes ?? [];
         const baseY = 40 + Math.max(0, ...ab.logic.nodes.map((n) => n.y));
         nodes.forEach((n, j) => {
           const def = CATALOG.find((d) => d.kind === n.kind);
@@ -3212,7 +3568,7 @@ function applyChanges(p0, changes) {
           const defaults = Object.fromEntries(def.params.filter((pd) => pd.default !== void 0).map((pd) => [pd.key, pd.default]));
           ab.logic.nodes.push({ id, kind: n.kind, x: n.x ?? 40 + j * 260, y: n.y ?? baseY, params: { ...defaults, ...resolveRefs(n.params ?? {}) }, ...n.note ? { note: n.note } : {} });
         });
-        for (const e of c.edges ?? []) {
+        for (const e of c2.edges ?? []) {
           const from = localIds[e.from] ?? ref(e.from);
           const to = localIds[e.to] ?? ref(e.to);
           ab.logic.edges.push({ id: uid("e"), from, fromPort: e.from_port ?? "out", to, toPort: "in" });
@@ -3220,28 +3576,28 @@ function applyChanges(p0, changes) {
         break;
       }
       case "remove_interactions": {
-        const ab = findAb(c.artboard_id);
-        const ids = new Set((c.ids ?? []).map(ref));
+        const ab = findAb(c2.artboard_id);
+        const ids = new Set((c2.ids ?? []).map(ref));
         ab.logic.nodes = ab.logic.nodes.filter((n) => !ids.has(n.id));
         ab.logic.edges = ab.logic.edges.filter((e) => !ids.has(e.id) && !ids.has(e.from) && !ids.has(e.to));
         break;
       }
       case "add_script": {
-        const sc = { id: uid("s"), name: String(c.name ?? "Script"), code: String(c.code ?? ""), runOnStart: !!c.run_on_start };
+        const sc = { id: uid("s"), name: String(c2.name ?? "Script"), code: String(c2.code ?? ""), runOnStart: !!c2.run_on_start };
         p.scripts.push(sc);
         if (key) created[key] = sc.id;
         break;
       }
       case "set_script": {
-        const sc = p.scripts.find((x) => x.id === ref(c.id) || x.name === c.id);
-        if (!sc) throw new Error(`${where}: no script ${String(c.id)}`);
-        if (typeof c.code === "string") sc.code = c.code;
-        if (typeof c.name === "string") sc.name = c.name;
-        if (typeof c.run_on_start === "boolean") sc.runOnStart = c.run_on_start;
+        const sc = p.scripts.find((x) => x.id === ref(c2.id) || x.name === c2.id);
+        if (!sc) throw new Error(`${where}: no script ${String(c2.id)}`);
+        if (typeof c2.code === "string") sc.code = c2.code;
+        if (typeof c2.name === "string") sc.name = c2.name;
+        if (typeof c2.run_on_start === "boolean") sc.runOnStart = c2.run_on_start;
         break;
       }
       default:
-        throw new Error(`${where}: unknown op "${c.op}"`);
+        throw new Error(`${where}: unknown op "${c2.op}"`);
     }
   }
   return { project: p, created, touched };
@@ -3274,13 +3630,10 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   }
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n");
   if (topic === "layers") {
-    const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw"];
+    const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader"];
     return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t2) => `"${t2.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
-Paths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer's own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.
-
-Defaults per type (what add_layer fills in):
-` + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
+Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
   const t = TOPICS.find((x) => x.id === topic);
   if (t) return `# ${t.title}

@@ -566,6 +566,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
 function helpTopicForTool(tool: Tool): string {
   if (['button', 'input', 'link', 'embed', 'video'].includes(tool)) return 'web-elements';
   if (tool === 'draw') return 'script-layers';
+  if (tool === 'shader') return 'shader-layers';
   if (tool === 'text') return 'text';
   if (tool === 'artboard') return 'artboards';
   if (tool === 'frame') return 'groups-frames';
@@ -588,6 +589,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'bend', icon: 'bend', label: 'Bend (drag an edge into a curve; Alt bends one side)', key: 'W' },
   { tool: 'text', icon: 'text', label: 'Text', key: 'T' },
   { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
+  { tool: 'shader', icon: 'shader', label: 'Shader layer (GPU effects, backdrops)' },
 ];
 
 const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
@@ -689,7 +691,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
   const [dbg, setDbg] = useState<DebugState | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
   // Script layers that failed or hit a limit, as the player reports them (newest last)
-  const [scriptErrors, setScriptErrors] = useState<{ layer: string; message: string; kind: string }[]>([]);
+  const [scriptErrors, setScriptErrors] = useState<{ source?: string; layer: string; message: string; kind: string }[]>([]);
   const [varFilter, setVarFilter] = useState('');
   const t0 = useRef(performance.now());
   const [showVars, setShowVars] = useState(true);
@@ -822,8 +824,8 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
               </button>
             </div>
             {scriptErrors.map((x, i) => (
-              <div key={`e${i}`} className={x.kind === 'error' ? 'error' : undefined}>
-                Script layer “{x.layer}” {x.kind === 'error' ? 'stopped' : 'warning'}: {x.message}
+              <div key={`e${i}`} className={x.kind === 'error' ? 'error' : undefined} style={{ whiteSpace: 'pre-wrap' }}>
+                {x.source === 'shader' ? 'Shader layer' : 'Script layer'} “{x.layer}” {x.kind === 'error' ? 'stopped' : 'warning'}: {x.message}
               </div>
             ))}
             {traces.map((t, i) => (

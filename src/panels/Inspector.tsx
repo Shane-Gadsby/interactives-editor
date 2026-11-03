@@ -3,6 +3,7 @@ import {
   nodeTypeLabel,
   ANIMATABLE_PROPS,
   animatableProp,
+  nodeUniformProps,
   EASING_NAMES,
   MODIFIER_SHAPES,
   MODIFIER_UNITS,
@@ -16,6 +17,8 @@ import {
   createNode,
   type InstanceNode,
   type DrawNode,
+  type ImageNode,
+  type ShaderNode,
   DRAW_API,
   DRAW_TEMPLATES,
   type DrawTemplate,
@@ -64,6 +67,8 @@ import { applyDrawTemplate } from '../lib/draw-templates';
 import { useDrawProblem } from '../lib/draw-edit';
 import { confirmDialog } from '../components/dialogs';
 import { detach as detachFromLibrary } from '../lib/library-actions';
+import { ShaderFilterFields, ShaderSection } from './ShaderInspector';
+import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
 
 const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
 const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
@@ -108,7 +113,7 @@ function useShown(node: SceneNode) {
   };
 }
 
-function KeyButton({ node, prop }: { node: SceneNode; prop: string }) {
+export function KeyButton({ node, prop }: { node: SceneNode; prop: string }) {
   const s = useEditor((st) => ({ bottomTab: st.bottomTab, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
   if (s.bottomTab !== 'timeline' || !animatableProp(prop)) return null;
   const ab = store().artboard();
@@ -126,7 +131,7 @@ function KeyButton({ node, prop }: { node: SceneNode; prop: string }) {
   );
 }
 
-function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string }) {
+export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string }) {
   const shown = useShown(node);
   const set = useSetter(ids);
   const v = Number(shown(prop) ?? fallback);
@@ -138,7 +143,7 @@ function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, tit
   );
 }
 
-function Color({ node, ids, prop, label }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode }) {
+export function Color({ node, ids, prop, label }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode }) {
   const shown = useShown(node);
   const set = useSetter(ids);
   return (
@@ -570,21 +575,24 @@ function EffectsSection({ nodes }: { nodes: SceneNode[] }) {
     setBlurOn(true);
     set({ blur: 4 });
   };
+  // Shader filter: image layers only (the shader reads the picture), not with a 9-slice
+  const img = nodes.length === 1 && n.type === 'image' && !n.slice ? (n as ImageNode) : null;
+  const filter = img?.shaderFilter ?? null;
   return (
     <Section
       help="fill-stroke#effects"
       title="Effects"
-      defaultOpen={!!(sh || n.blur)}
+      defaultOpen={!!(sh || n.blur || filter)}
       actions={
-        !(sh && hasBlur) && (
+        !(sh && hasBlur && (filter || !img)) && (
           <AddMenu
             title="Add an effect"
-            items={[...(!sh ? [{ label: 'Shadow', onClick: addShadow }] : []), ...(!hasBlur ? [{ label: 'Layer blur', onClick: addBlur }] : [])]}
+            items={[...(!sh ? [{ label: 'Shadow', onClick: addShadow }] : []), ...(!hasBlur ? [{ label: 'Layer blur', onClick: addBlur }] : []), ...(img && !filter ? [{ label: 'Shader filter', onClick: () => addShaderFilter(img.id) }] : [])]}
           />
         )
       }
     >
-      {!sh && !hasBlur && <p className="hint">No effects. Use + to add a shadow or a blur.</p>}
+      {!sh && !hasBlur && !filter && <p className="hint">No effects. Use + to add a shadow or a blur{img ? ' (or a shader filter)' : ''}.</p>}
       {sh && (
         <div className="effect-item">
           <ItemHead label="Shadow" onRemove={() => set({ shadow: null })} />
@@ -610,6 +618,12 @@ function EffectsSection({ nodes }: { nodes: SceneNode[] }) {
             }}
           />
           <Num node={n} ids={ids} prop="blur" label="Amount" title="Blur radius in pixels" min={0} />
+        </div>
+      )}
+      {img && filter && (
+        <div className="effect-item">
+          <ItemHead label="Shader filter" onRemove={() => removeShaderFilter(img.id)} />
+          <ShaderFilterFields node={img} project={store().get().project} />
         </div>
       )}
     </Section>
@@ -1049,6 +1063,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return <InstanceSection node={n} project={project} />;
     case 'draw':
       return <DrawSection nodes={nodes as DrawNode[]} />;
+    case 'shader':
+      return nodes.length === 1 ? <ShaderSection node={n as ShaderNode} project={project} /> : <p className="hint">Select one shader layer to edit its code and uniforms.</p>;
     case 'group':
       return (
         <Section help="groups-frames" title="Group">
@@ -1126,7 +1142,7 @@ function BindingsSection({ node, project }: { node: SceneNode; project: Project 
     const keep = Object.fromEntries(Object.entries(conv).filter(([k, list]) => k in next && list.length));
     set({ bindings: Object.keys(next).length ? next : undefined, converters: Object.keys(keep).length ? keep : undefined }, `bind-${node.id}`);
   };
-  const kindOf = (p: string) => animatableProp(p)?.kind;
+  const kindOf = (p: string) => animatableProp(p, node)?.kind;
   return (
     <Section help="bindings" title="Data bindings" defaultOpen={entries.length > 0}>
       {entries.map(([p, expr]) => (
@@ -1150,7 +1166,7 @@ function BindingsSection({ node, project }: { node: SceneNode; project: Project 
         </div>
       ))}
       <Row>
-        <SelectField value={prop} options={ANIMATABLE_PROPS.map((a) => ({ value: a.prop, label: a.label }))} onChange={setProp} />
+        <SelectField value={prop} options={[...ANIMATABLE_PROPS, ...nodeUniformProps(node)].map((a) => ({ value: a.prop, label: a.label }))} onChange={setProp} />
         <button className="btn" disabled={prop in bindings} onClick={() => update({ ...bindings, [prop]: project.variables[0]?.name ?? '' })}>
           Bind
         </button>

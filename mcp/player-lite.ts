@@ -5,3 +5,5 @@ export { ANIMATABLE_PROPS } from '../../interactives-player/src/animation';
 export { PACKAGE_EXTENSION } from '../../interactives-player/src/package';
 export { DRAW_API } from '../../interactives-player/src/draw';
 export { DRAW_TEMPLATES } from '../../interactives-player/src/draw-templates';
+export { SHADER_PRESETS, SHADER_PRESETS_BY_ID } from '../../interactives-player/src/shader-presets';
+export { SHADER_BUILTINS, SHADER_UNIFORM_TYPES } from '../../interactives-player/src/shader-uniforms';

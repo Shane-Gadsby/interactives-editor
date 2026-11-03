@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ANIMATABLE_PROPS, animatableProp, EASING_NAMES, ease, pathPointProp, uid, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
+import { ANIMATABLE_PROPS, animatableProp, nodeUniformProps, EASING_NAMES, ease, pathPointProp, uid, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -48,8 +48,8 @@ export function trackRows(nodeId: string, tracks: TL['tracks'], toggled: Record<
 }
 
 /** A track's property name for people: the list's label, with the number of a later constraint or text modifier. */
-function animatableLabel(prop: string): string {
-  const label = animatableProp(prop)?.label;
+function animatableLabel(prop: string, node?: SceneNode): string {
+  const label = animatableProp(prop, node)?.label;
   if (!label) return prop;
   const m = /^(?:constraints|modifiers)\.(\d+)\./.exec(prop);
   return m && m[1] !== '0' ? `${label} #${Number(m[1]) + 1}` : label;
@@ -366,7 +366,7 @@ export function TimelinePanel() {
           <div className="ruler-spacer">
             {selNode ? (
               <div className="add-track">
-                <SelectField value={addProp} options={ANIMATABLE_PROPS.map((a) => ({ value: a.prop, label: a.label }))} onChange={setAddProp} />
+                <SelectField value={addProp} options={[...ANIMATABLE_PROPS, ...nodeUniformProps(selNode)].map((a) => ({ value: a.prop, label: a.label }))} onChange={setAddProp} />
                 <button className="btn" title={`Keyframe ${selNode.name}'s ${addProp} at the playhead`} onClick={() => store().keyCurrent(selNode.id, addProp)}>
                   + Key
                 </button>
@@ -404,7 +404,7 @@ export function TimelinePanel() {
                     </div>
                   ) : (
                     <div key={row.tr.id} className={`track-label${pathPointProp(row.tr.prop) ? ' point-part' : ''}`}>
-                      <span>{pathPointProp(row.tr.prop) ? POINT_PART_LABEL[pathPointProp(row.tr.prop)!.part] : animatableLabel(row.tr.prop)}</span>
+                      <span>{pathPointProp(row.tr.prop) ? POINT_PART_LABEL[pathPointProp(row.tr.prop)!.part] : animatableLabel(row.tr.prop, node)}</span>
                       <button
                         className="mini"
                         title="Remove track"
@@ -495,6 +495,7 @@ export function TimelinePanel() {
             />
             <KeyValueField
               prop={selectedKey.track.prop}
+              node={locate(ab, selectedKey.track.nodeId)?.node}
               value={selectedKey.key.value}
               kids={(() => {
                 const n = locate(ab, selectedKey.track.nodeId)?.node;
@@ -514,7 +515,7 @@ export function TimelinePanel() {
           <div className="key-editor">
             <div className="field-label block">Tween</div>
             <div className="small muted">
-              {animatableLabel(selectedTween.track.prop)}: {tweenValue(selectedTween.key.value)} → {tweenValue(selectedTween.next.value)}, {selectedTween.key.t}–{selectedTween.next.t} ms
+              {animatableLabel(selectedTween.track.prop, locate(ab, selectedTween.track.nodeId)?.node)}: {tweenValue(selectedTween.key.value)} → {tweenValue(selectedTween.next.value)}, {selectedTween.key.t}–{selectedTween.next.t} ms
             </div>
             <CurveEditor ease={selectedTween.key.ease} onChange={(e) => setEase(e)} />
             <SelectField
@@ -555,11 +556,11 @@ export function TimelinePanel() {
   );
 }
 
-function KeyValueField({ prop, value, kids, onChange }: { prop: string; value: Keyframe['value']; kids: SceneNode[]; onChange: (v: Keyframe['value']) => void }) {
+function KeyValueField({ prop, value, kids, node, onChange }: { prop: string; value: Keyframe['value']; kids: SceneNode[]; node?: SceneNode; onChange: (v: Keyframe['value']) => void }) {
   if (prop === 'drawOrder') return <ChildOrder children={kids} order={Array.isArray(value) ? value : []} onChange={onChange} />;
   if (prop === 'solo.active')
     return <SelectField label="Value" value={String(value)} options={[{ value: '', label: '(none)' }, ...kids.map((c) => ({ value: c.id, label: c.name }))]} onChange={onChange} />;
-  const kind = animatableProp(prop)?.kind ?? (typeof value === 'number' ? 'number' : 'string');
+  const kind = animatableProp(prop, node)?.kind ?? (typeof value === 'number' ? 'number' : 'string');
   if (kind === 'number') return <NumberField label="Value" value={Number(value)} step={prop === 'opacity' || prop.startsWith('scale') ? 0.05 : 1} onChange={onChange} />;
   if (kind === 'color') return <ColorField label="Value" value={String(value)} onChange={onChange} />;
   if (kind === 'boolean') return <CheckField label="Value" value={!!value} onChange={onChange} />;

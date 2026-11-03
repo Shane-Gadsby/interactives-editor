@@ -3,6 +3,7 @@ import { Renderer, measureTextExtent, prepareNodes, sampleArtboard, walk, type A
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
 import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
+import { createEditorShader, type EditorShader } from '../lib/shader-edit';
 import { assetUrls } from '../lib/assets';
 import { store } from '../store/store';
 
@@ -29,6 +30,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   const host = useRef<HTMLDivElement>(null);
   const renderer = useRef<Renderer | null>(null);
   const draw = useRef<EditorDraw | null>(null);
+  const shader = useRef<EditorShader | null>(null);
   // Instances draw other artboards, so they redraw when any artboard changes
   const depsKey = instanceDepsKey(project, artboard);
 
@@ -36,15 +38,20 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   useLayoutEffect(() => {
     // Script layers paint one still frame in the sandbox (loaded the first time a project has one)
     const d = createEditorDraw(() => store().get().project);
-    const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve, mountInstance: editInstanceMount(() => store().get().project), mountDraw: d.mount });
+    // Shaders paint a still frame each (or run live when the layer asks to), on one shared WebGL context
+    const sh = createEditorShader(() => store().get().project);
+    const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve, mountInstance: editInstanceMount(() => store().get().project), mountDraw: d.mount, mountShader: sh.mount });
     renderer.current = r;
     draw.current = d;
+    shader.current = sh;
     host.current!.appendChild(r.root);
     return () => {
       r.destroy();
       d.dispose();
+      sh.dispose();
       renderer.current = null;
       draw.current = null;
+      shader.current = null;
     };
   }, []);
 
@@ -57,6 +64,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     const nodes = prepareNodes(sampled, { vars });
     // Script layers paint at the timeline's time (0 when none is showing), again when assets or data change
     draw.current?.configure(timeline ? time / 1000 : 0, `${assetVersion}|${dataVersion}`);
+    shader.current?.configure(timeline ? time / 1000 : 0, assetVersion);
     r.render(artboard, nodes, { vars });
     // Auto-sized text: measure and write the size back (no undo step).
     const updates: { id: string; width?: number; height?: number }[] = [];

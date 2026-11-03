@@ -55,7 +55,8 @@ export type Tool =
   | 'link'
   | 'embed'
   | 'video'
-  | 'draw';
+  | 'draw'
+  | 'shader';
 
 export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage';
 
