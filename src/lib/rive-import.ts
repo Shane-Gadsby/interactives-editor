@@ -119,10 +119,12 @@ function classProps(cls: string): Map<number, PropDef> {
   return m;
 }
 
-const isACache = new Map<string, boolean>();
+// By class, then base: called for every object many times over, so no key string is built per call
+const isACache = new Map<string, Map<string, boolean>>();
 function isA(cls: string, base: string): boolean {
-  const key = `${cls}>${base}`;
-  let v = isACache.get(key);
+  let byBase = isACache.get(cls);
+  if (!byBase) isACache.set(cls, (byBase = new Map()));
+  let v = byBase.get(base);
   if (v === undefined) {
     let c: string | undefined = cls;
     v = false;
@@ -133,7 +135,7 @@ function isA(cls: string, base: string): boolean {
       }
       c = RIVE_CLASSES[c][1];
     }
-    isACache.set(key, v);
+    byBase.set(base, v);
   }
   return v;
 }
@@ -1151,74 +1153,108 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
 /** Rectangles/ellipses with an origin other than top-left: x/y keys that follow their animated size. */
 let sizeFollowers: { nodeId: string; pathSlot: number; ox: number; oy: number; sx: number; sy: number }[] = [];
 
+/** A font's tables read once, with the glyphs looked up so far (every text of a file with the same font measures against it). */
+interface MeasuredFont {
+  upm: number;
+  metrics: number;
+  hmtx: number;
+  dv: DataView;
+  glyphOf: (cp: number) => number;
+}
+const fontReaders = new WeakMap<Uint8Array, MeasuredFont | null>();
+
+function readMeasuredFont(bytes: Uint8Array): MeasuredFont | null {
+  if (fontReaders.has(bytes)) return fontReaders.get(bytes)!;
+  let out: MeasuredFont | null = null;
+  try {
+    out = parseMeasuredFont(bytes);
+  } catch {
+    out = null;
+  }
+  fontReaders.set(bytes, out);
+  return out;
+}
+
+function parseMeasuredFont(bytes: Uint8Array): MeasuredFont | null {
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const magic = dv.getUint32(0);
+  if (magic !== 0x00010000 && magic !== 0x4f54544f && magic !== 0x74727565) return null;
+  const tables = new Map<string, number>();
+  const n = dv.getUint16(4);
+  for (let i = 0; i < n; i++) {
+    const rec = 12 + i * 16;
+    tables.set(String.fromCharCode(bytes[rec], bytes[rec + 1], bytes[rec + 2], bytes[rec + 3]), dv.getUint32(rec + 8));
+  }
+  const head = tables.get('head');
+  const hhea = tables.get('hhea');
+  const hmtx = tables.get('hmtx');
+  const cmap = tables.get('cmap');
+  if (head === undefined || hhea === undefined || hmtx === undefined || cmap === undefined) return null;
+  const upm = dv.getUint16(head + 18);
+  const metrics = dv.getUint16(hhea + 34);
+  // The Unicode cmap subtable: format 12 (full range) or format 4 (BMP)
+  let sub = -1;
+  let fmt = 0;
+  const count = dv.getUint16(cmap + 2);
+  for (let i = 0; i < count; i++) {
+    const plat = dv.getUint16(cmap + 4 + i * 8);
+    const enc = dv.getUint16(cmap + 6 + i * 8);
+    const off = cmap + dv.getUint32(cmap + 8 + i * 8);
+    const f = dv.getUint16(off);
+    if ((plat === 3 && (enc === 1 || enc === 10)) || plat === 0) {
+      if (f === 12 || (f === 4 && fmt !== 12)) {
+        sub = off;
+        fmt = f;
+      }
+    }
+  }
+  if (sub < 0) return null;
+  const glyphs = new Map<number, number>();
+  const lookup = (cp: number): number => {
+    if (fmt === 12) {
+      const groups = dv.getUint32(sub + 12);
+      for (let g = 0; g < groups; g++) {
+        const o = sub + 16 + g * 12;
+        const start = dv.getUint32(o);
+        const end = dv.getUint32(o + 4);
+        if (cp >= start && cp <= end) return dv.getUint32(o + 8) + (cp - start);
+      }
+      return 0;
+    }
+    const segX2 = dv.getUint16(sub + 6);
+    const ends = sub + 14;
+    const starts = ends + segX2 + 2;
+    const deltas = starts + segX2;
+    const ranges = deltas + segX2;
+    for (let g = 0; g < segX2; g += 2) {
+      if (cp > dv.getUint16(ends + g)) continue;
+      if (cp < dv.getUint16(starts + g)) return 0;
+      const ro = dv.getUint16(ranges + g);
+      if (!ro) return (cp + dv.getInt16(deltas + g)) & 0xffff;
+      const gi = dv.getUint16(ranges + g + ro + (cp - dv.getUint16(starts + g)) * 2);
+      return gi ? (gi + dv.getInt16(deltas + g)) & 0xffff : 0;
+    }
+    return 0;
+  };
+  const glyphOf = (cp: number): number => {
+    let g = glyphs.get(cp);
+    if (g === undefined) glyphs.set(cp, (g = lookup(cp)));
+    return g;
+  };
+  return { upm, metrics, hmtx, dv, glyphOf };
+}
+
 /** Width of one line of text in a plain TrueType/OpenType font (advance widths only, no kerning), or null. */
 function fontLineWidth(bytes: Uint8Array, line: string, size: number): number | null {
   try {
-    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    const magic = dv.getUint32(0);
-    if (magic !== 0x00010000 && magic !== 0x4f54544f && magic !== 0x74727565) return null;
-    const tables = new Map<string, number>();
-    const n = dv.getUint16(4);
-    for (let i = 0; i < n; i++) {
-      const rec = 12 + i * 16;
-      tables.set(String.fromCharCode(bytes[rec], bytes[rec + 1], bytes[rec + 2], bytes[rec + 3]), dv.getUint32(rec + 8));
-    }
-    const head = tables.get('head');
-    const hhea = tables.get('hhea');
-    const hmtx = tables.get('hmtx');
-    const cmap = tables.get('cmap');
-    if (head === undefined || hhea === undefined || hmtx === undefined || cmap === undefined) return null;
-    const upm = dv.getUint16(head + 18);
-    const metrics = dv.getUint16(hhea + 34);
-    // The Unicode cmap subtable: format 12 (full range) or format 4 (BMP)
-    let sub = -1;
-    let fmt = 0;
-    const count = dv.getUint16(cmap + 2);
-    for (let i = 0; i < count; i++) {
-      const plat = dv.getUint16(cmap + 4 + i * 8);
-      const enc = dv.getUint16(cmap + 6 + i * 8);
-      const off = cmap + dv.getUint32(cmap + 8 + i * 8);
-      const f = dv.getUint16(off);
-      if ((plat === 3 && (enc === 1 || enc === 10)) || plat === 0) {
-        if (f === 12 || (f === 4 && fmt !== 12)) {
-          sub = off;
-          fmt = f;
-        }
-      }
-    }
-    if (sub < 0) return null;
-    const glyphOf = (cp: number): number => {
-      if (fmt === 12) {
-        const groups = dv.getUint32(sub + 12);
-        for (let g = 0; g < groups; g++) {
-          const o = sub + 16 + g * 12;
-          const start = dv.getUint32(o);
-          const end = dv.getUint32(o + 4);
-          if (cp >= start && cp <= end) return dv.getUint32(o + 8) + (cp - start);
-        }
-        return 0;
-      }
-      const segX2 = dv.getUint16(sub + 6);
-      const ends = sub + 14;
-      const starts = ends + segX2 + 2;
-      const deltas = starts + segX2;
-      const ranges = deltas + segX2;
-      for (let g = 0; g < segX2; g += 2) {
-        if (cp > dv.getUint16(ends + g)) continue;
-        if (cp < dv.getUint16(starts + g)) return 0;
-        const ro = dv.getUint16(ranges + g);
-        if (!ro) return (cp + dv.getInt16(deltas + g)) & 0xffff;
-        const gi = dv.getUint16(ranges + g + ro + (cp - dv.getUint16(starts + g)) * 2);
-        return gi ? (gi + dv.getInt16(deltas + g)) & 0xffff : 0;
-      }
-      return 0;
-    };
+    const f = readMeasuredFont(bytes);
+    if (!f) return null;
     let units = 0;
     for (const ch of line) {
-      const gid = glyphOf(ch.codePointAt(0)!);
-      units += dv.getUint16(hmtx + Math.min(gid, metrics - 1) * 4);
+      const gid = f.glyphOf(ch.codePointAt(0)!);
+      units += f.dv.getUint16(f.hmtx + Math.min(gid, f.metrics - 1) * 4);
     }
-    return (units / upm) * size;
+    return (units / f.upm) * size;
   } catch {
     return null;
   }

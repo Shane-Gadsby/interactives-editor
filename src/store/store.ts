@@ -157,17 +157,28 @@ interface HistoryEntry {
   project: Project;
   selection: string[];
   activeArtboardId: string;
+  /** How many remote batches (of `EditorStore.remoteTotal`) this snapshot has the changes of; the rest are put on when it is used. */
+  seen: number;
 }
 
 type Listener = () => void;
 
 const HISTORY_LIMIT = 200;
+/** Remote batches kept for undo steps that have not caught up with them yet; past this they are all caught up at once. */
+const REMOTE_LOG_LIMIT = 1000;
 
 export class EditorStore {
   private state: EditorState;
   private listeners = new Set<Listener>();
   private past: HistoryEntry[] = [];
   private future: HistoryEntry[] = [];
+  /**
+   * Other people's changes since the oldest undo step still lacking them. Their ops are put on a step when it is undone or
+   * redone, not on all (up to 200) of them every time something arrives. `remoteBase` is the number of the first one kept.
+   */
+  private remoteLog: Op[][] = [];
+  private remoteBase = 0;
+  private remoteTotal = 0;
   private lastCoalesce: { key: string; time: number } | null = null;
   private lastLockToast = 0;
   /** Bumped on each document change, for autosave. */
@@ -261,7 +272,7 @@ export class EditorStore {
     const t = Date.now();
     const merge = opts.coalesce && this.lastCoalesce && this.lastCoalesce.key === opts.coalesce && t - this.lastCoalesce.time < 1000;
     if (!merge) {
-      this.past.push({ project: before, selection: this.state.selection, activeArtboardId: this.state.activeArtboardId });
+      this.past.push({ project: before, selection: this.state.selection, activeArtboardId: this.state.activeArtboardId, seen: this.remoteTotal });
       if (this.past.length > HISTORY_LIMIT) this.past.shift();
     }
     this.lastCoalesce = opts.coalesce ? { key: opts.coalesce, time: t } : null;
@@ -288,28 +299,57 @@ export class EditorStore {
   }
 
   /**
-   * Someone else's ops. Applied to the document and to every undo/redo step, so undo only takes back your
-   * own changes. Not a local change: nothing is sent back.
+   * Someone else's ops. Applied to the document and, when it is next used, to every undo/redo step, so undo only takes back
+   * your own changes. Not a local change: nothing is sent back.
    */
   applyRemote(ops: Op[]): void {
-    const patch = (p: Project) =>
-      settleLayout(
-        produce(p, (d) => {
-          applyOps(d, ops);
-          sanitizeTouched(d as Project, ops);
-        }),
-      );
-    this.past = this.past.map((h) => ({ ...h, project: patch(h.project) }));
-    this.future = this.future.map((h) => ({ ...h, project: patch(h.project) }));
-    this.state = { ...this.state, project: patch(this.state.project) };
+    this.state = { ...this.state, project: this.patchRemote(this.state.project, ops) };
+    this.remoteLog.push(ops);
+    this.remoteTotal++;
+    if (this.remoteLog.length > 64) this.trimRemoteLog();
     this.sanitize();
     this.emit();
+  }
+
+  private patchRemote(p: Project, ops: Op[]): Project {
+    return settleLayout(
+      produce(p, (d) => {
+        applyOps(d, ops);
+        sanitizeTouched(d as Project, ops);
+      }),
+    );
+  }
+
+  /**
+   * The step with every remote batch since it was made put on it, in one go: the ops are all addressed by id and set absolute
+   * values, so they come out the same as batch by batch, and the layout is settled once.
+   */
+  private caughtUp(h: HistoryEntry): HistoryEntry {
+    if (h.seen >= this.remoteTotal) return h;
+    const ops = this.remoteLog.slice(h.seen - this.remoteBase).flat();
+    return { ...h, project: this.patchRemote(h.project, ops), seen: this.remoteTotal };
+  }
+
+  /** Forget the batches every step has caught up with; when too many are held for a few old steps, catch all of them up. */
+  private trimRemoteLog(): void {
+    let oldest = this.remoteTotal;
+    for (const h of this.past) oldest = Math.min(oldest, h.seen);
+    for (const h of this.future) oldest = Math.min(oldest, h.seen);
+    if (this.remoteLog.length - (oldest - this.remoteBase) > REMOTE_LOG_LIMIT) {
+      this.past = this.past.map((h) => this.caughtUp(h));
+      this.future = this.future.map((h) => this.caughtUp(h));
+      oldest = this.remoteTotal;
+    }
+    this.remoteLog.splice(0, oldest - this.remoteBase);
+    this.remoteBase = oldest;
   }
 
   /** Swap in a whole new copy of the document (it was replaced elsewhere); history starts over. */
   replaceProject(p: Project): void {
     this.past = [];
     this.future = [];
+    this.remoteLog = [];
+    this.remoteBase = this.remoteTotal;
     this.lastCoalesce = null;
     this.state = { ...this.state, project: p, saveState: 'saved' };
     this.sanitize();
@@ -331,15 +371,15 @@ export class EditorStore {
   undo(): void {
     const prev = this.past.pop();
     if (!prev) return;
-    this.future.push({ project: this.state.project, selection: this.state.selection, activeArtboardId: this.state.activeArtboardId });
-    this.restore(prev);
+    this.future.push({ project: this.state.project, selection: this.state.selection, activeArtboardId: this.state.activeArtboardId, seen: this.remoteTotal });
+    this.restore(this.caughtUp(prev));
   }
 
   redo(): void {
     const next = this.future.pop();
     if (!next) return;
-    this.past.push({ project: this.state.project, selection: this.state.selection, activeArtboardId: this.state.activeArtboardId });
-    this.restore(next);
+    this.past.push({ project: this.state.project, selection: this.state.selection, activeArtboardId: this.state.activeArtboardId, seen: this.remoteTotal });
+    this.restore(this.caughtUp(next));
   }
 
   private restore(h: HistoryEntry): void {

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Renderer, drawnDifferently, isContainer, measureTextExtent, prepareNodes, sampleArtboard, walk, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { flushSync } from 'react-dom';
+import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextExtent, prepareNodes, sampleArtboard, walk, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
 import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
@@ -18,6 +19,58 @@ interface Props {
   dataVersion: number;
   /** Keep the live DOM showing. Otherwise, once a still has been made, the artboard shows as that picture. */
   live: boolean;
+  /**
+   * Leave the live DOM for later: the artboard shows its background until the scheduler gets to it (see `scheduleView`), the nearest
+   * to the viewport first. Without it (and always for the active artboard) it is drawn at once. Stills wait for the DOM.
+   */
+  deferred?: boolean;
+  /** How far the artboard is from the viewport (0 when it is in it): the nearest deferred ones are drawn first. */
+  rank?: number;
+}
+
+interface ViewJob {
+  rank: number;
+  run: () => void;
+}
+const jobs = new Set<ViewJob>();
+let pumping = false;
+// A frame's worth of drawing: one artboard at least, then more while this much time is left
+const FRAME_BUDGET = 10;
+
+/**
+ * Deferred artboards draw one at a time between frames, nearest the viewport first, so a project with dozens of artboards
+ * opens on the active one and fills in around it instead of drawing everything in one long task.
+ */
+function scheduleView(job: ViewJob): () => void {
+  jobs.add(job);
+  if (!pumping) {
+    pumping = true;
+    nextFrame(pump);
+  }
+  return () => void jobs.delete(job);
+}
+
+function nextFrame(f: () => void): void {
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => f());
+  else setTimeout(f, 16);
+}
+
+function pump(): void {
+  const t0 = performance.now();
+  let ran = 0;
+  while (jobs.size && (!ran || performance.now() - t0 < FRAME_BUDGET)) {
+    let best: ViewJob | null = null;
+    for (const j of jobs) if (!best || j.rank < best.rank) best = j;
+    jobs.delete(best!);
+    ran++;
+    try {
+      best!.run();
+    } catch (err) {
+      console.warn('[interactives] artboard draw failed', err);
+    }
+  }
+  if (jobs.size) nextFrame(pump);
+  else pumping = false;
 }
 
 // One still at a time, when the browser is idle, so making them never holds up editing
@@ -26,13 +79,24 @@ const idle = () => new Promise<void>((r) => ((window as unknown as { requestIdle
 let snapSeq = 0;
 
 /** One artboard on the canvas, drawn by the player's own renderer in edit mode. */
-export function ArtboardView({ artboard, project, timeline, time, active, assetVersion, dataVersion, live }: Props) {
+export function ArtboardView({ artboard, project, timeline, time, active, assetVersion, dataVersion, live, deferred = false, rank = 0 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const renderer = useRef<Renderer | null>(null);
   const draw = useRef<EditorDraw | null>(null);
   const shader = useRef<EditorShader | null>(null);
   // Instances draw other artboards, so they redraw when any artboard changes
   const depsKey = instanceDepsKey(project, artboard);
+
+  // Whether the live DOM is being drawn. Once it is, it stays (stills are made from it, and switching back is instant)
+  const [started, setStarted] = useState(!deferred || active);
+  if (!started && (!deferred || active)) setStarted(true);
+  const job = useRef<ViewJob>({ rank, run: () => undefined });
+  job.current.rank = rank;
+  job.current.run = () => flushSync(() => setStarted(true));
+  useLayoutEffect(() => {
+    if (started) return;
+    return scheduleView(job.current);
+  }, [started]);
 
   // A layout effect, declared before the render one, so the renderer exists for the very first render.
   useLayoutEffect(() => {
@@ -60,7 +124,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
 
   useLayoutEffect(() => {
     const r = renderer.current;
-    if (!r) return;
+    if (!r || !started) return;
     const last = lastDraw.current;
     const sampled: SceneNode[] = timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children;
     let drawn = false;
@@ -88,30 +152,37 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     }
     // Auto-sized text: measure and write the size back (no undo step).
     const updates: { id: string; width?: number; height?: number }[] = [];
-    walk(artboard.children, (n) => {
-      if (n.type !== 'text' || n.autoSize === 'none') return;
-      // Measuring forces a layout: only layers whose text, styling or width changed since they were last measured
-      if (!r.textNeedsMeasure(n.id)) return;
-      const el = r.element(n.id);
-      const span = el?.querySelector('.ix-text > span') as HTMLElement | null;
-      if (!span) return;
-      // The span is a stretched flex item, so its own width is the box's. The text's real extent comes from a
-      // Range, scaled back out of the canvas zoom.
-      // Without text modifiers' offsets: the layout is measured, not how the units are moved
-      const rr = measureTextExtent(span);
-      const scale = ((r.root.getBoundingClientRect().width / (artboard.width || 1)) || 1) * (Math.abs(n.scaleX) || 1);
-      const h = Math.ceil(span.offsetHeight);
-      const before = updates.length;
-      if (n.autoSize === 'height') {
-        if (h > 0 && Math.abs(h - n.height) > 1) updates.push({ id: n.id, height: h });
-      } else {
-        const w = Math.ceil(rr.width / scale) + 1;
-        if (w > 1 && (Math.abs(w - n.width) > 1 || Math.abs(h - n.height) > 1)) updates.push({ id: n.id, width: w, height: h });
-      }
-      // Done with this layer, unless it was not laid out yet (hidden, or not attached) or its new size can't be written
-      // now (a timeline frame is showing): then it is measured again on a later render
-      if ((h > 0 || rr.width > 0) && (updates.length === before || !timeline)) r.textMeasured(n.id);
-    });
+    // Only on the artboard being worked on: the others are drawn for their stills (and, off screen, whenever the scheduler gets
+    // to them), and what they would measure there (at any zoom, as soon as fonts have loaded) is not a reason to change the
+    // document. Their text is measured when the artboard becomes the active one.
+    if (live)
+      walk(artboard.children, (n) => {
+        if (n.type !== 'text' || n.autoSize === 'none') return;
+        // Measuring forces a layout: only layers whose text, styling or width changed since they were last measured
+        if (!r.textNeedsMeasure(n.id)) return;
+        const el = r.element(n.id);
+        const span = el?.querySelector('.ix-text > span') as HTMLElement | null;
+        if (!span) return;
+        // The span is a stretched flex item, so its own width is the box's. The text's real extent comes from a
+        // Range, scaled back out of the canvas zoom.
+        // Without text modifiers' offsets: the layout is measured, not how the units are moved
+        const rr = measureTextExtent(span);
+        const scale = ((r.root.getBoundingClientRect().width / (artboard.width || 1)) || 1) * (Math.abs(n.scaleX) || 1);
+        const h = Math.ceil(span.offsetHeight);
+        const before = updates.length;
+        if (n.autoSize === 'height') {
+          if (h > 0 && Math.abs(h - n.height) > 1) updates.push({ id: n.id, height: h });
+        } else {
+          const w = Math.ceil(rr.width / scale) + 1;
+          // The extent is only as precise as the screen pixels it was measured in (a quarter of a pixel, scaled back out of the
+          // zoom): zoomed far out, a change smaller than that is noise, and writing it would measure differently the next time
+          const slack = Math.max(1, 0.5 / scale);
+          if (w > 1 && (Math.abs(w - n.width) > slack || Math.abs(h - n.height) > 1)) updates.push({ id: n.id, width: w, height: h });
+        }
+        // Done with this layer, unless it was not laid out yet (hidden, or not attached) or its new size can't be written
+        // now (a timeline frame is showing): then it is measured again on a later render
+        if ((h > 0 || rr.width > 0) && (updates.length === before || !timeline)) r.textMeasured(n.id);
+      });
     if (updates.length && !timeline) {
       queueMicrotask(() =>
         store().patchSilently((d) => {
@@ -125,7 +196,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, depsKey]);
+  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, depsKey, started, live]);
 
   // ---- stills: what the artboard looks like, as one image, while you work elsewhere
   const [snap, setSnap] = useState<{ url: string; key: string } | null>(null);
@@ -133,7 +204,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   const keyRef = useRef(key);
   keyRef.current = key;
   useEffect(() => {
-    if (live || snap?.key === key) return;
+    if (live || !started || snap?.key === key) return;
     let cancelled = false;
     const mine = ++snapSeq;
     queue = queue.then(async () => {
@@ -156,7 +227,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, live]);
+  }, [key, live, started]);
   // Each still's object URL is released when the next one replaces it, or the artboard goes
   useEffect(
     () => () => {
@@ -174,6 +245,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     >
       {/* The live DOM stays (hidden) under a still, so switching back is instant and stills can be remade from it */}
       <div ref={host} className="artboard-host" style={showStill ? { display: 'none' } : undefined} />
+      {/* Not drawn yet: the artboard's own background, so it is where it will be */}
+      {!started && <div className="artboard-pending" style={{ background: paintToCss(artboard.background, assetUrls.resolve) }} />}
       {showStill && <img className="artboard-still" src={snap!.url} alt="" draggable={false} />}
     </div>
   );

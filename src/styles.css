@@ -2944,6 +2944,11 @@ a.btn {
   width: 1px;
   height: 1px;
 }
+.artboard-pending {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
 .artboard-still {
   position: absolute;
   left: 0;

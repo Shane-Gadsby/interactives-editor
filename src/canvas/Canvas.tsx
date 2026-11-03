@@ -37,6 +37,7 @@ import { Rulers } from './Rulers';
 import { Icons } from '../components/icons';
 import { freehandToPath } from './freehand';
 import { ArtboardView } from './ArtboardView';
+import { viewPlan } from './viewPlan';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
 import { insertFiles } from '../lib/insert';
 import { captureDrop } from '../lib/links';
@@ -1599,6 +1600,9 @@ export function Canvas() {
     if (Math.abs(px - st.panX) > 1 || Math.abs(py - st.panY) > 1) store().set({ panX: px, panY: py });
   };
 
+  // Which artboards to draw at once and which to leave for the scheduler (see `viewPlan`)
+  const views = viewPlan(project.artboards, s.activeArtboardId, zoom, panX, panY, vp.current?.clientWidth || window.innerWidth, vp.current?.clientHeight || window.innerHeight);
+
   const showRulers = usePrefs().rulers;
   const cursor = s.tool === 'hand' ? 'grab' : s.tool === 'select' ? 'default' : s.tool === 'text' ? 'text' : 'crosshair';
 
@@ -1624,6 +1628,8 @@ export function Canvas() {
         {project.artboards.map((ab) => (
           <ArtboardView
             key={ab.id}
+            deferred={views.get(ab.id)!.deferred}
+            rank={views.get(ab.id)!.rank}
             artboard={ab}
             project={project}
             timeline={ab.id === s.activeArtboardId ? timeline : null}
