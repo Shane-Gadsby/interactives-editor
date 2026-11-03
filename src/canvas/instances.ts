@@ -73,7 +73,7 @@ export function editInstanceMount(getProject: () => Project, depth = 0, resolveA
       const key = `${refKey(ab)}|${instanceDepsKey(project, ab)}|${n.width}x${n.height}|${n.fit}|${JSON.stringify(n.inputs ?? null)}|${refKey(project.variables)}`;
       if (key === last) return;
       last = key;
-      const vars = previewScope(project);
+      const vars = previewScope(project, ab);
       for (const [k, v] of Object.entries(n.inputs ?? {})) vars[k] = v;
       r.render(ab, prepareNodes(ab.children, { vars }), { vars });
       const f = fitInBox(n.fit, n.width, n.height, ab.width, ab.height);

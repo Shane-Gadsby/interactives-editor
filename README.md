@@ -7,6 +7,7 @@ The browser editor for Interactives. You use it to build interactive 2D experien
 - a node-based interaction graph;
 - variables and data bindings;
 - custom JavaScript;
+- step-through explainers: a timeline's markers become steps (Next plays to the next marker, Back plays back, dots, a generated step bar, scroll to scrub);
 - script layers: a box painted by a script every frame (generative art, charts), with starter templates.
 - shader layers: a box painted by a GPU fragment shader (WebGL) with animatable, bindable uniforms, a library of starter presets, and a shader filter for image layers.
 

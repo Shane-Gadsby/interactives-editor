@@ -149,6 +149,10 @@ code,
 .btn:hover:not(:disabled) {
   border-color: #5a5e66;
 }
+.timeline-bar .btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .btn:disabled {
   opacity: 0.5;
   cursor: default;
@@ -1831,6 +1835,53 @@ button.twisty:hover {
 .marker.selected {
   opacity: 1;
   background: #ffc247;
+}
+.marker.not-step {
+  opacity: 0.35;
+}
+.marker-step {
+  position: absolute;
+  top: 1px;
+  margin-left: 7px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  color: #ffc247;
+  pointer-events: none;
+  z-index: 2;
+}
+.marker-editor {
+  width: 260px;
+}
+.marker-editor textarea {
+  min-height: 56px;
+}
+.steps-list {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+}
+.steps-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+}
+.steps-list .text-field {
+  flex: 1;
+  min-width: 0;
+}
+.steps-n {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--accent, #4f9dff);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
 }
 .lane {
   height: 24px;

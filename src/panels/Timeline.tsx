@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { ANIMATABLE_PROPS, animatableProp, nodeUniformProps, EASING_NAMES, ease, pathPointProp, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
+import { ANIMATABLE_PROPS, animatableProp, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -7,6 +7,9 @@ import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField
 import { Icons } from '../components/icons';
 import { ChildOrder } from '../components/ChildOrder';
 import { CurveEditor, bezierFor } from '../components/CurveEditor';
+import { MarkerStepFields } from './StepsSection';
+import { enableSteps } from '../lib/steps';
+import type { Project } from 'interactives-player';
 
 const LABEL_W = 220;
 
@@ -220,6 +223,16 @@ export function TimelinePanel() {
     el.addEventListener('pointerup', up);
   };
   const selMarker = tl.markers?.find((m) => m.id === markerId);
+  // When the artboard's Steps use this timeline, its markers are steps: numbered on the ruler, with a title and caption
+  const isSteps = ab.steps?.timeline === tl.id;
+  const stepNumber = new Map(stepList(isSteps ? tl : undefined).map((st) => [st.id, st.n]));
+  const toggleSteps = () =>
+    store().update((d) => {
+      const a = getArtboard(d as Project, ab.id);
+      if (!a) return;
+      if (isSteps) delete a.steps;
+      else enableSteps(d as Project, a, tl.id);
+    });
 
   const keyDown = (e: React.PointerEvent, trackId: string, key: Keyframe) => keysDown(e, [`${trackId}:${key.id}`], key.t);
 
@@ -309,6 +322,14 @@ export function TimelinePanel() {
         <button className="btn" title="Add a marker at the playhead. An On timeline marker node runs when playback passes it" onClick={addMarker}>
           + Marker
         </button>
+        <button
+          className={`btn${isSteps ? ' active' : ''}`}
+          aria-pressed={isSteps}
+          title={isSteps ? 'Steps are on: every marker on this timeline is a step (numbered on the ruler). Click to turn Steps off' : 'Make this timeline’s markers the steps of an explainer: Next plays to the next marker. Set it up in the artboard’s Steps section'}
+          onClick={toggleSteps}
+        >
+          Steps
+        </button>
         {selMarker && (
           <>
             <TextField value={selMarker.name} commitOnBlur onChange={(v) => setTl((d) => void (d.markers!.find((x) => x.id === selMarker.id)!.name = v || selMarker.name))} />
@@ -359,12 +380,25 @@ export function TimelinePanel() {
               </span>
             ))}
             {(tl.markers ?? []).map((m) => (
-              <span key={m.id} className={`marker${m.id === markerId ? ' selected' : ''}`} style={{ left: X(Math.min(m.time, tl.duration)) }} title={`${m.name} at ${m.time} ms. Drag to move it`} onPointerDown={(e) => markerDown(e, m.id)} />
+              <span key={m.id} className={`marker${m.id === markerId ? ' selected' : ''}${isSteps && !stepNumber.has(m.id) ? ' not-step' : ''}`} style={{ left: X(Math.min(m.time, tl.duration)) }} title={`${stepNumber.has(m.id) ? `Step ${stepNumber.get(m.id)}: ` : ''}${m.name} at ${m.time} ms. Drag to move it`} onPointerDown={(e) => markerDown(e, m.id)} />
             ))}
+            {(tl.markers ?? []).map((m) =>
+              stepNumber.has(m.id) ? (
+                <span key={`n-${m.id}`} className="marker-step" style={{ left: X(Math.min(m.time, tl.duration)) }} aria-hidden="true">
+                  {stepNumber.get(m.id)}
+                </span>
+              ) : null,
+            )}
           </div>
           <TrackLanes byNode={byNode} duration={tl.duration} pxPerMs={pxPerMs} selectedKeys={s.selectedKeys} tween={tween} pointsOpen={pointsOpen} h={{ scrub, keyDown, keysDown, setTween }} />
           <div className="playhead" style={{ left: X(Math.min(s.playhead, tl.duration)) }} />
         </div>
+        {selMarker && isSteps && (
+          <div className="key-editor marker-editor">
+            <div className="field-label block">Step: {selMarker.name}</div>
+            <MarkerStepFields abId={ab.id} tlId={tl.id} marker={selMarker} />
+          </div>
+        )}
         {selectedKey && (
           <div className="key-editor">
             <div className="field-label block">Keyframe</div>

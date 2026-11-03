@@ -22,6 +22,7 @@ export const COMPLETION_OPTIONS: { value: Completion; label: string }[] = [
   { value: 'artboard', label: 'Reaching an artboard' },
   { value: 'variable', label: 'A variable turns on' },
   { value: 'pass', label: 'Score meets the pass mark' },
+  { value: 'steps', label: 'A step-through artboard reaches its last step' },
 ];
 
 /** Project settings for results and resume: the score, the pass mark, when it counts as complete, and the results view. */
@@ -76,6 +77,7 @@ export function ReportingSection({ project }: { project: Project }) {
           onChange={(v) => set({ completionVariable: v })}
         />
       )}
+      {completion === 'steps' && !project.artboards.some((a) => a.steps) && <p className="hint">No artboard has Steps turned on yet (select an artboard, Steps section), or this never completes.</p>}
       {completion === 'pass' && !(r.scoreVariable && r.passMark !== undefined) && <p className="hint">Pick a score variable and set a pass mark above, or this never completes.</p>}
       <CheckField label="Resume on the same artboard" title="A learner who comes back opens on the artboard they left, not the start artboard" value={!!r.resumeArtboard} onChange={(v) => set({ resumeArtboard: v ? true : undefined })} />
       <p className="hint">

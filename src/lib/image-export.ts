@@ -151,7 +151,7 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
     }));
     const r = new Renderer({ mode: 'play', placeholderEmbeds: true, resolveAsset: resolve, mountInstance: editInstanceMount(() => project, 0, resolve), mountShader: shaders.mount });
     host.appendChild(r.root);
-    const vars = previewScope(project);
+    const vars = previewScope(project, ab);
     const sampled: SceneNode[] = timeline ? sampleArtboard(ab.children, timeline, time) : ab.children;
     r.render(ab, prepareNodes(sampled, { vars }), { vars });
     if (r.root.querySelector('iframe, video, [data-ix-embed]')) warnings.push('Embeds and video show as empty boxes in pictures.');

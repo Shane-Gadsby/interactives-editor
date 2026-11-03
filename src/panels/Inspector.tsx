@@ -64,6 +64,7 @@ import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
 import { GridAlignFields } from '../components/GridAlignFields';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
+import { StepsSection } from './StepsSection';
 import { blendExample } from '../lib/blend-example';
 import { BindingsSection as BindingsSectionView } from './BindingsSection';
 import { TEXT_PRESETS } from '../lib/text-modifiers';
@@ -381,6 +382,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         </Row>
       </Section>
       <TabOrderSection ab={ab} />
+      <StepsSection ab={ab} project={project} />
       <JoysticksSection ab={ab} />
       <BlendsSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">

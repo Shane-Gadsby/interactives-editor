@@ -1,4 +1,4 @@
-import { dataPolicyFor, enumOptions, fetchDataSource, initialValue, type DataPolicy, type DataSource, type Project } from 'interactives-player';
+import { dataPolicyFor, enumOptions, fetchDataSource, initialValue, stepList, stepsScope, stepsTimeline, type Artboard, type DataPolicy, type DataSource, type Project } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -72,9 +72,23 @@ class DataCache {
 export const dataCache = new DataCache();
 
 /** Variables (initial values) and data, the way the player scopes them. */
-export function previewScope(project: Project): Record<string, unknown> {
+export function previewScope(project: Project, artboard?: Artboard): Record<string, unknown> {
   const data = dataCache.scope(project);
   const vars: Record<string, unknown> = { ...data, data, enums: enumOptions(project.variables) };
   for (const v of project.variables) vars[v.name] = initialValue(v);
+  // An artboard with steps shows its first step: the dots of a step bar, and the variables the player would keep up to date
+  const cfg = artboard?.steps;
+  const list = cfg ? stepList(stepsTimeline(artboard!)) : [];
+  if (cfg && list.length) {
+    const put = (id: string | undefined, value: unknown) => {
+      const v = project.variables.find((x) => x.id === id);
+      if (v) vars[v.name] = value;
+    };
+    put(cfg.stepVar, 1);
+    put(cfg.countVar, list.length);
+    put(cfg.titleVar, list[0].title);
+    put(cfg.captionVar, list[0].caption);
+    if (!('steps' in data)) vars.steps = stepsScope(list, 0);
+  }
   return vars;
 }

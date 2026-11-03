@@ -143,7 +143,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       }
     }
     if (!drawn) {
-      const vars = previewScope(project);
+      const vars = previewScope(project, artboard);
       // Same bindings and repeaters the player applies, against initial variable values and the loaded data.
       const nodes = prepareNodes(sampled, { vars });
       // Script layers paint at the timeline's time (0 when none is showing), again when assets or data change
