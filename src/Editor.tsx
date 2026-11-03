@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, type Project } from 'interactives-player';
 import { EditorStore, setCurrentStore, store, useEditor, type BottomTab, type Tool } from './store/store';
 import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
-import { LiveSession, liveSession, setLiveSession } from './lib/live';
+import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
 import { downloadJson, downloadPackage, downloadStandalone, standaloneHtml } from './lib/export';
@@ -21,6 +21,7 @@ import { IconButton } from './components/ui';
 import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink, openHelp } from './help/Help';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrefsModal } from './components/PrefsModal';
 import { HistoryModal, ShareModal } from './components/ProjectModals';
 import { prefs, setPrefs } from './lib/prefs';
@@ -143,7 +144,16 @@ function useAutosave() {
       }
     };
     window.addEventListener('beforeunload', beforeUnload);
+    // A live session the server stopped accepting: take the server's current revision, then save the whole document
+    // the usual way (a conflict still shows the conflict bar)
+    const onLiveFallback = () => {
+      void loadProjectRecord(s.get().project.id)
+        .catch(() => null)
+        .then(() => save());
+    };
+    window.addEventListener(LIVE_FALLBACK_EVENT, onLiveFallback);
     return () => {
+      window.removeEventListener(LIVE_FALLBACK_EVENT, onLiveFallback);
       unsub();
       if (timer) {
         clearTimeout(timer);
@@ -379,6 +389,12 @@ function useThumbnails() {
   }, []);
 }
 
+/** An error boundary that tries its part again whenever the document changes (an undo, a remote edit that fixes it). */
+function Guard(props: { message: string; className?: string; children: React.ReactNode }) {
+  const project = useEditor((st) => st.project);
+  return <ErrorBoundary {...props} resetKey={project} />;
+}
+
 function Workspace({ home }: { home: () => void }) {
   const conflict = useAutosave();
   useThumbnails();
@@ -407,12 +423,20 @@ function Workspace({ home }: { home: () => void }) {
         <LinkBanner />
       </div>
       <Toolbar />
-      <LeftPanel />
+      <Guard message="This panel couldn't be shown." className="left-panel">
+        <LeftPanel />
+      </Guard>
       <main className="stage">
-        <Canvas />
+        <Guard message="Something on this artboard couldn't be drawn.">
+          <Canvas />
+        </Guard>
       </main>
-      <Inspector />
-      <BottomPanel />
+      <Guard message="This panel couldn't be shown." className="inspector">
+        <Inspector />
+      </Guard>
+      <Guard message="This panel couldn't be shown." className="bottom-dock">
+        <BottomPanel />
+      </Guard>
       {preview && <PreviewModal onClose={() => setPreview(false)} />}
       {s.toast && <div className={`toast ${s.toast.kind}`}>{s.toast.text}</div>}
       {s.report && <ReportModal title={s.report.title} lines={s.report.lines} />}

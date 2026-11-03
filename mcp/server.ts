@@ -18,6 +18,7 @@ import { DRAW_TEMPLATES } from '../../interactives-player/src/draw-templates';
 import { SHADER_PRESETS } from '../../interactives-player/src/shader-presets';
 import { SHADER_BUILTINS, SHADER_UNIFORM_TYPES } from '../../interactives-player/src/shader-uniforms';
 import { runsPatch } from '../../interactives-player/src/textruns';
+import { sanitizeLayerInPlace } from '../../interactives-player/src/sanitize';
 import { diff } from '../shared/ops.mjs';
 import { TOPICS, topicBody } from '../src/help/topics';
 
@@ -257,6 +258,8 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
           setPath(loc.node as unknown as Record<string, unknown>, k, v);
         }
         syncRuns(loc.node, props);
+        // An agent can set any value on any property: put wrong-typed ones right before the layer is shared
+        sanitizeLayerInPlace(loc.node);
         touched.push(loc.node.id);
         break;
       }
@@ -265,6 +268,7 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
         const node = createNode(c.type as NodeType, (resolveRefs(c.props ?? {}) as Partial<SceneNode>) as never) as SceneNode;
         if (isContainer(node) && Array.isArray(c.children)) node.children = [];
         syncRuns(node, (resolveRefs(c.props ?? {}) as Record<string, unknown>));
+        sanitizeLayerInPlace(node);
         let list = ab.children;
         if (c.parent_id) {
           const parent = locate(p, ref(c.parent_id));

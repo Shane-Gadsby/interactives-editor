@@ -1,4 +1,4 @@
-import { cloneWithNewIds, type SceneNode } from 'interactives-player';
+import { cloneWithNewIds, walk, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { selectionBounds, topmost, locate } from '../store/doc';
 
@@ -39,6 +39,15 @@ export function pasteNodes(text?: string): boolean {
       c.y += 16;
     }
   }
+  // A constraint follows another layer by id. Pasted into another artboard (or after the target was deleted) the target
+  // isn't there, and the constraint would point at nothing: drop those. Targets inside the pasted layers were
+  // already remapped to their copies.
+  const pasted = new Set<string>();
+  for (const c of copies) walk([c], (n) => void pasted.add(n.id));
+  for (const c of copies)
+    walk([c], (n) => {
+      if (n.constraints) n.constraints = n.constraints.filter((k) => pasted.has(k.target) || locate(ab, k.target));
+    });
   memory = JSON.parse(JSON.stringify(copies));
   store().addNodes(copies);
   return true;

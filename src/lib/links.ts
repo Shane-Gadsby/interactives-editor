@@ -13,7 +13,7 @@
 import { useSyncExternalStore } from 'react';
 import { uid, type Artboard, type ArtboardSource, type Asset, type Project } from 'interactives-player';
 import type { EditorStore } from '../store/store';
-import { deleteAsset, putAsset, session } from './db';
+import { putAsset, session } from './db';
 import { assetUrls } from './assets';
 import { describeStats, hashBytes, newSource, reconcileArtboard, type ReconcileResult, type ReconcileStats } from './link-reconcile';
 import type { AnimationImport } from './importers';
@@ -266,9 +266,7 @@ export async function reimportLink(st: EditorStore, linkId: string, file: File, 
   for (const r of results) stats = sum(stats, r.result.stats);
   const changed = results.some((r) => r.result.changed);
   const now = new Date().toISOString();
-  const released = [...new Set(results.flatMap((r) => r.result.releasedAssetIds))];
   const used = [...new Set(results.flatMap((r) => r.result.usedAssetIds))];
-  let dropped: string[] = [];
 
   const apply = (d: Project) => {
     for (const { abId, result } of results) {
@@ -282,20 +280,12 @@ export async function reimportLink(st: EditorStore, linkId: string, file: File, 
       if (a && !d.assets.some((x) => x.id === id)) d.assets.push({ id: a.id, name: a.name, mime: a.mime, size: a.bytes.byteLength } as Asset);
     }
     for (const f of imp.fonts ?? []) if (!d.fonts.some((x) => x.family === f.family)) d.fonts.push(f);
-    // pictures nothing refers to any more
-    const text = JSON.stringify(d.artboards) + JSON.stringify(d.fonts);
-    dropped = released.filter((id) => !text.includes(`"${id}"`));
-    if (dropped.length) d.assets = d.assets.filter((a) => !dropped.includes(a.id));
+    // Pictures nothing refers to any more (result.releasedAssetIds) stay in the project and on the server on purpose:
+    // the re-import is one undo step, and undoing it brings back layers that point at them. They show as unused in the
+    // Usage tab, whose "Remove unused assets" deletes them for good.
   };
   if (changed) st.update((d) => apply(d as Project));
   else st.patchSilently((d) => apply(d as Project));
-  for (const id of dropped) {
-    try {
-      await deleteAsset(projectId, id);
-    } catch {
-      /* already gone */
-    }
-  }
   const name = results[0]?.result.artboard.source?.fileName ?? file.name;
   return { stats, changed, message: describeStats(name, stats), missing };
 }

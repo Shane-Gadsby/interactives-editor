@@ -79,6 +79,24 @@ describe('library snapshot', () => {
     expect(snap.styles.colors[0].name).toBe('Brand');
   });
 
+  it('also takes assets named in a variable, a binding or a style, not only those layers use directly', () => {
+    const lib = makeLibrary();
+    lib.assets.push(
+      { id: 'as3', name: 'v.png', mime: 'image/png', size: 1 },
+      { id: 'as4', name: 'b.png', mime: 'image/png', size: 1 },
+      { id: 'as5', name: 's.png', mime: 'image/png', size: 1 },
+      { id: 'as6', name: 'dq.png', mime: 'image/png', size: 1 },
+      { id: 'as7', name: 'nope.png', mime: 'image/png', size: 1 },
+    );
+    lib.variables.push({ id: 'v3', name: 'skin', type: 'string', initial: 'as3' });
+    const label = lib.artboards[0].children.find((c) => c.name === 'Label')!;
+    label.bindings = { ...label.bindings, 'fill.assetId': "mode == 'a' ? 'as4' : 'x'", other: 'mode == "as6" ? 1 : 0' };
+    lib.styles!.colors.push({ id: 'c2', name: 'Tex', color: '#000', fill: { type: 'image', assetId: 'as5', fit: 'cover' } } as never);
+    // an id that is only part of a longer word is not a mention
+    lib.variables.push({ id: 'v4', name: 'long', type: 'string', initial: 'as7x' });
+    expect(buildSnapshot(lib).assets.map((a) => a.id).sort()).toEqual(['as1', 'as3', 'as4', 'as5', 'as6']);
+  });
+
   it('hashes content, not position, so a move is not a change', () => {
     const lib = makeLibrary();
     const a = buildSnapshot(lib).components[0].hash;

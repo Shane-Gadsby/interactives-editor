@@ -76,8 +76,17 @@ export const closureOf = (artboards, rootId) => {
 	return order
 }
 
-//Everything an asset id could be named in. An id is random, so finding it as a quoted string is exact enough
-const assetIdsIn = (assets, texts) => assets.filter((a) => texts.some((t) => t.includes(`"${a.id}"`)))
+//Which assets are named anywhere in the given texts: as an image paint or layer, in a variable's initial value, in a
+//binding or expression that names one in quotes ('id' or "id"). An id is random, so finding it as a whole token
+//(not a piece of a longer word) is exact enough. One pass over the texts, whatever the number of assets
+const TOKEN = /[A-Za-z0-9_-]+/g
+const assetIdsIn = (assets, texts) => {
+	let tokens = new Set()
+
+	for (let t of texts) for (let m of t.matchAll(TOKEN)) tokens.add(m[0])
+
+	return assets.filter((a) => tokens.has(a.id))
+}
 
 //What a publish stores. Components are the artboards marked publish, internals are the artboards they use but
 //that aren't published themselves. `artboards` holds both, `components`/`internals` are the light index
@@ -108,13 +117,14 @@ export const buildSnapshot = (project) => {
 		internals = members.filter((a) => !publishedIds.has(a.id)).map((a) => ({id: a.id, name: a.name, hash: hashes.get(a.id)})),
 		fonts = project.fonts || [],
 		dataSources = project.dataSources || [],
-		assets = assetIdsIn(project.assets || [], [stable(members), stable(fonts), stable(dataSources)]),
+		assets,
 		styles = project.styles || {colors: [], texts: []}
 
 	styles = {
 		colors: (styles.colors || []).map(({library, ...rest}) => rest),
 		texts: (styles.texts || []).map(({library, ...rest}) => rest)
 	}
+	assets = assetIdsIn(project.assets || [], [stable(members), stable(fonts), stable(dataSources), stable(project.variables || []), stable(styles)])
 
 	return {
 		components,

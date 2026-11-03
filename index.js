@@ -118,7 +118,7 @@ const rooms = new Map(),
 
 	//Writes the room's document back to mongo, bumping rev so plain (non-live) saves still see conflicts
 	persist = async (room) => {
-		if (!room.dirty) return
+		if (!room.dirty || room.deleted) return
 		room.dirty = false
 		clearTimeout(room.saveTimer)
 		room.rev++
@@ -161,7 +161,9 @@ const rooms = new Map(),
 		room.closeTimer = setTimeout(async () => {
 			if (room.clients.size) return
 			await persist(room)
-			rooms.delete(room.id)
+			//Someone may have joined while the save was running: the room stays, with them in it
+			if (room.clients.size) return
+			if (rooms.get(room.id) === room) rooms.delete(room.id)
 		}, 30 * 1000)
 	}
 
@@ -474,6 +476,17 @@ router.delete('/api/projects/:id', async (req, res) => {
 		return
 	}
 
+	//Drop the live room first: no pending autosave or close timer may write the project (or a revision of it) back
+	//after it is gone
+	let room = rooms.get(id)
+	if (room) {
+		room.deleted = true
+		room.dirty = false
+		clearTimeout(room.saveTimer)
+		clearTimeout(room.closeTimer)
+		rooms.delete(id)
+	}
+
 	await removeAssets(id)
 	await revisions.deleteMany({project: id})
 	await fs.promises.rm(thumbFile(id), {force: true})
@@ -482,11 +495,9 @@ router.delete('/api/projects/:id', async (req, res) => {
 	if (existing.share?.token) await fs.promises.rm(shareFile(existing.share.token), {force: true})
 	await projects.deleteOne({_id: id})
 
-	let room = rooms.get(id)
 	if (room) {
 		broadcast(room, 'deleted', {})
 		for (let c of room.clients) c.res.end()
-		rooms.delete(id)
 	}
 
 	res.json({ok: true})

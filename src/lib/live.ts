@@ -4,8 +4,13 @@
  * Events; remote ops are applied to the open document and its undo history.
  *
  * Last write wins per property in the server's order. A remote op on a path we
- * still have an unacknowledged op for is skipped: ours comes later on the
- * server, so it is the one that sticks everywhere.
+ * still have an op for that the server hasn't acknowledged (sent and waiting,
+ * or still queued to be sent) is skipped: ours comes later on the server, so it
+ * is the one that sticks everywhere.
+ *
+ * A batch the server refuses for good (a 4xx such as 413 or 400) is never retried:
+ * the session ends and the whole document is saved the normal way instead.
+ * Network errors and 5xx are retried with a growing delay.
  */
 import { sessionId, sessionUser } from './session';
 import { diff, opKey, type Op } from '../../shared/ops.mjs';
@@ -22,6 +27,19 @@ export interface Peer {
   selection?: string[];
 }
 
+/** Fired on `window` when a live session gave up and the editor should save the whole document. */
+export const LIVE_FALLBACK_EVENT = 'ix-live-fallback';
+
+class HttpError extends Error {
+  constructor(readonly status: number) {
+    super(`HTTP ${status}`);
+  }
+  /** Server trouble and "slow down" are worth trying again; any other 4xx will fail the same way every time. */
+  get retryable(): boolean {
+    return this.status >= 500 || this.status === 408 || this.status === 429;
+  }
+}
+
 const API = new URL('api/', document.baseURI).href;
 
 export class LiveSession {
@@ -36,6 +54,8 @@ export class LiveSession {
   private lastPresence: Partial<Peer> = {};
   private closed = false;
   private retry = 1000;
+  private flushRetry = 2000;
+  private backingOff = false;
 
   constructor(
     private readonly projectId: string,
@@ -82,7 +102,9 @@ export class LiveSession {
         if (!this.pending.size && !this.queue.length) this.store.set({ saveState: 'saved', saveError: null });
         return;
       }
-      const usable = d.ops.filter((op) => !this.pending.has(opKey(op)));
+      // Skip what we have our own newer op for: already sent (pending) or still waiting to be sent (queue)
+      const queued = new Set(this.queue.map(opKey));
+      const usable = d.ops.filter((op) => !this.pending.has(opKey(op)) && !queued.has(opKey(op)));
       if (usable.length) this.store.applyRemote(usable);
     });
     es.addEventListener('presence', (e) => {
@@ -126,7 +148,7 @@ export class LiveSession {
   }
 
   private schedule(): void {
-    if (this.flushTimer) return;
+    if (this.flushTimer || this.backingOff) return;
     this.flushTimer = setTimeout(() => {
       this.flushTimer = null;
       void this.flush();
@@ -151,7 +173,8 @@ export class LiveSession {
         credentials: 'same-origin',
         body: JSON.stringify({ clientId: this.clientId, ops: batch }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new HttpError(res.status);
+      this.flushRetry = 2000;
     } catch (err) {
       // Put them back at the front and try again shortly
       for (const op of batch) {
@@ -159,13 +182,39 @@ export class LiveSession {
         if (n <= 0) this.pending.delete(opKey(op));
         else this.pending.set(opKey(op), n);
       }
+      const message = err instanceof Error ? err.message : String(err);
+      if (err instanceof HttpError && !err.retryable) {
+        // The server won't take this batch however often it is sent, and it would block every edit after it
+        this.giveUp(message);
+        return;
+      }
       this.queue.unshift(...batch);
-      this.store.set({ saveState: 'error', saveError: `Live save failed: ${err instanceof Error ? err.message : err}` });
-      setTimeout(() => this.schedule(), 2000);
+      this.store.set({ saveState: 'error', saveError: `Live save failed: ${message}` });
+      // Backing off: 2 s, 4 s, ... up to 30 s
+      this.backingOff = true;
+      setTimeout(() => {
+        this.backingOff = false;
+        this.schedule();
+      }, this.flushRetry);
+      this.flushRetry = Math.min(30000, this.flushRetry * 2);
     } finally {
       this.sending = false;
       if (this.queue.length) this.schedule();
     }
+  }
+
+  /**
+   * Stop live syncing after the server refused a batch for good. Local edits stay in the document; the editor's
+   * normal whole-document save (with its revision check) takes over, and the person is told.
+   */
+  private giveUp(message: string): void {
+    this.queue = [];
+    this.pending.clear();
+    this.close();
+    if (current === this) current = null;
+    this.store.set({ live: null, saveState: 'error', saveError: `Live save failed: ${message}` });
+    this.store.toast(`Live editing stopped (${message}). Saving the whole project instead.`, 'error');
+    window.dispatchEvent(new CustomEvent(LIVE_FALLBACK_EVENT, { detail: { projectId: this.projectId } }));
   }
 
   /** Cursor (world coordinates), artboard and selection; sent at most ~12 times a second. */

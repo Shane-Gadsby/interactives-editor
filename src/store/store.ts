@@ -16,6 +16,7 @@ import {
   applyRunStyle,
   nodeRuns,
   retextRuns,
+  sanitizeLayerInPlace,
   type Artboard,
   type Keyframe,
   type Project,
@@ -31,9 +32,34 @@ import { lockViolation, unlinkStyleRef } from '../lib/libraries';
 import { addModifier, applyPreset, removeModifier, type TextPresetId } from '../lib/text-modifiers';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths, remapPointTracks, shapeToPaths } from '../lib/path-edit';
-import { apply as applyOps, type Op } from '../../shared/ops.mjs';
+import { apply as applyOps, type Op, type PathStep } from '../../shared/ops.mjs';
 import type { Peer } from '../lib/live';
 import { getArtboard, locate, parentToArtboard, selectionBounds, topmost, uniqueName, nodeNames } from './doc';
+
+/**
+ * Layers a batch of ops wrote to: the innermost layer on each op's path, or the layer an insert added. Ops come from
+ * other people and agents, so a layer they touched is checked for wrong-typed values (see the player's sanitizer)
+ * before it is drawn.
+ */
+function sanitizeTouched(d: Project, ops: Op[]): void {
+  const ids = new Set<string>();
+  for (const op of ops) {
+    const p = op.p as PathStep[];
+    for (let i = 0; i + 1 < p.length; i++) {
+      const next = p[i + 1];
+      if (p[i] === 'children' && typeof next === 'object') ids.add(next.i);
+    }
+    if (op.t === 'ins' && p[p.length - 1] === 'children') ids.add(op.v.id);
+  }
+  if (!ids.size) return;
+  for (const ab of d.artboards) {
+    for (const id of ids) {
+      const loc = locate(ab, id);
+      if (!loc) continue;
+      if (!sanitizeLayerInPlace(loc.node)) loc.siblings.splice(loc.siblings.indexOf(loc.node), 1);
+    }
+  }
+}
 
 export type Tool =
   | 'select'
@@ -248,6 +274,7 @@ export class EditorStore {
     const patch = (p: Project) =>
       produce(p, (d) => {
         applyOps(d, ops);
+        sanitizeTouched(d as Project, ops);
         for (const ab of d.artboards) relayoutTree(ab.children as SceneNode[]);
       });
     this.past = this.past.map((h) => ({ ...h, project: patch(h.project) }));
@@ -464,10 +491,21 @@ export class EditorStore {
     if (!ids.size) return;
     this.update((d) => {
       const dab = getArtboard(d as Project, ab.id)!;
+      // Everything that goes with the deleted layers: a deleted group or frame takes its descendants with it, and
+      // their animation tracks would otherwise be left pointing at nothing
+      const gone = new Set<string>();
+      const collect = (list: SceneNode[], inside: boolean) => {
+        for (const n of list) {
+          const doomed = inside || ids.has(n.id);
+          if (doomed) gone.add(n.id);
+          if (isContainer(n)) collect(n.children, doomed);
+        }
+      };
+      collect(dab.children as SceneNode[], false);
       const rec = (list: SceneNode[]): SceneNode[] =>
         list.filter((n) => !ids.has(n.id)).map((n) => (isContainer(n) ? { ...n, children: rec(n.children) } : n)) as SceneNode[];
       dab.children = rec(dab.children as SceneNode[]);
-      for (const tl of dab.timelines) tl.tracks = tl.tracks.filter((t) => !ids.has(t.nodeId));
+      for (const tl of dab.timelines) tl.tracks = tl.tracks.filter((t) => !gone.has(t.nodeId));
     });
     this.set({ selection: [] });
   }
@@ -551,6 +589,7 @@ export class EditorStore {
     const ab = this.artboard();
     if (!ab) return;
     const released: string[] = [];
+    const dropped: string[] = [];
     this.update((d) => {
       const dab = getArtboard(d as Project, ab.id)!;
       for (const id of this.state.selection) {
@@ -558,11 +597,34 @@ export class EditorStore {
         if (!loc || !isContainer(loc.node)) continue;
         const g = loc.node;
         if (g.rotation || g.scaleX !== 1 || g.scaleY !== 1) continue; // keep transformed groups intact
-        const kids = g.children.map((c) => ({ ...c, x: c.x + g.x, y: c.y + g.y, opacity: c.opacity * g.opacity }));
-        loc.siblings.splice(loc.index, 1, ...(kids as SceneNode[]));
+        // What the group did to everything inside it has to go onto the layers themselves: hidden, locked, blend mode,
+        // blur and shadow. A child that already has its own of those keeps it (and we say so), and a mask can't move
+        const lost = new Set<string>();
+        const kids = g.children.map((c) => {
+          const k = { ...c, x: c.x + g.x, y: c.y + g.y, opacity: c.opacity * g.opacity } as SceneNode;
+          if (g.visible === false) k.visible = false;
+          if (g.locked) k.locked = true;
+          if (g.blendMode && g.blendMode !== 'normal') {
+            if (!k.blendMode || k.blendMode === 'normal') k.blendMode = g.blendMode;
+            else lost.add('blend mode');
+          }
+          if (g.blur) {
+            if (!k.blur) k.blur = g.blur;
+            else lost.add('blur');
+          }
+          if (g.shadow) {
+            if (!k.shadow) k.shadow = { ...g.shadow };
+            else lost.add('shadow');
+          }
+          return k;
+        });
+        if (g.mask) lost.add('mask');
+        if (lost.size) dropped.push(`“${g.name}”: ${[...lost].join(', ')}`);
+        loc.siblings.splice(loc.index, 1, ...kids);
         released.push(...kids.map((k) => k.id));
       }
     });
+    if (dropped.length) this.toast(`Ungrouped, but some settings could not be kept on the layers: ${dropped.join('; ')}.`);
     if (released.length) this.select(released);
   }
 
@@ -790,6 +852,19 @@ export class EditorStore {
     }
     const remapParam = (v: unknown) => (typeof v === 'string' && idMap.has(v) ? idMap.get(v) : v);
     const tlMap = new Map(src.timelines.map((t, i) => [t.id, copy.timelines[i].id]));
+    // Keys that hold layer ids (a solo's active child, a draw order) follow the layers to their copies
+    for (const tl of copy.timelines)
+      for (const tr of tl.tracks)
+        for (const k of tr.keys) {
+          if (tr.prop === 'solo.active') k.value = remapParam(k.value) as typeof k.value;
+          else if (tr.prop === 'drawOrder' && Array.isArray(k.value)) k.value = k.value.map(remapParam) as typeof k.value;
+        }
+    // Joysticks drive the copy's own timelines
+    for (const j of copy.joysticks ?? []) {
+      j.id = uid('j');
+      if (j.xTimeline && tlMap.has(j.xTimeline)) j.xTimeline = tlMap.get(j.xTimeline)!;
+      if (j.yTimeline && tlMap.has(j.yTimeline)) j.yTimeline = tlMap.get(j.yTimeline)!;
+    }
     // Blends are copied with new ids, pointing at the copied timelines
     const blendMap = new Map<string, string>();
     for (const b of copy.blends ?? []) {

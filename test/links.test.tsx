@@ -82,7 +82,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------- the document side
 
 describe('re-importing a linked file', () => {
-  it('merges the changes in one undo step, uploads new pictures, deletes the old ones, and says what happened', async () => {
+  it('merges the changes in one undo step, uploads new pictures, keeps the old ones for undo, and says what happened', async () => {
     const { s } = await linkedStore({ Bg: 'bg', Hero: 'hero v1' });
     const before = s.get().project;
     const heroOld = (before.artboards[0].children.find((c) => c.name === 'Hero') as Extract<SceneNode, { type: 'image' }>).assetId!;
@@ -96,14 +96,18 @@ describe('re-importing a linked file', () => {
     expect(ab.children[1].id).toBe(before.artboards[0].children[1].id);
     expect(ab.source!.lastModified).toBe(200);
     expect(r.message).toBe('Poster.psd updated: 1 layer changed, 1 added');
-    // pictures: two uploads (the hero's new picture and the badge), the old hero deleted
+    // pictures: two uploads (the hero's new picture and the badge). The old hero is no longer used but is neither deleted
+    // on the server nor dropped from the project, so undoing the re-import doesn't leave layers pointing at a missing file
     expect(db.putAsset).toHaveBeenCalledTimes(2);
-    expect(db.deleteAsset).toHaveBeenCalledWith(before.id, heroOld);
+    expect(db.deleteAsset).not.toHaveBeenCalled();
     const ids = s.get().project.assets.map((a) => a.id);
-    expect(ids).not.toContain(heroOld);
-    expect(ids).toHaveLength(3);
+    expect(ids).toContain(heroOld);
+    expect(ids).toHaveLength(4);
     // one undo step takes it all back
     s.undo();
+    const heroLayer = s.get().project.artboards[0].children.find((c) => c.name === 'Hero') as Extract<SceneNode, { type: 'image' }>;
+    expect(heroLayer.assetId).toBe(heroOld);
+    expect(s.get().project.assets.some((a) => a.id === heroOld)).toBe(true);
     expect(s.get().project.artboards[0].children.map((c) => c.name)).toEqual(['Bg', 'Hero']);
     expect(s.get().project.artboards[0].source!.lastModified).toBe(100);
     expect(s.canUndo()).toBe(false);
