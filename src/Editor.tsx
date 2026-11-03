@@ -17,6 +17,7 @@ import { DataPanel } from './panels/DataPanel';
 import { Icons, type IconName } from './components/icons';
 import { IconButton } from './components/ui';
 import { getArtboard, selectionBounds } from './store/doc';
+import { exportActiveAsLottie } from './lib/importers';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
   const [ready, setReady] = useState<EditorStore | null>(null);
@@ -34,6 +35,11 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         setCurrentStore(s);
         // Handy from the devtools console (and for driving the editor in automated checks).
         (window as unknown as { interactivesEditor: unknown }).interactivesEditor = { store: s };
+        const pending = sessionStorage.getItem(`ix-import-report:${p.id}`);
+        if (pending) {
+          sessionStorage.removeItem(`ix-import-report:${p.id}`);
+          s.set({ report: JSON.parse(pending) });
+        }
         setReady(s);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
@@ -282,7 +288,7 @@ function zoomTo(mode: 'fit' | '100' | 'selection') {
 function Workspace({ home }: { home: () => void }) {
   const conflict = useAutosave();
   useShortcuts();
-  const s = useEditor((st) => ({ bottomTab: st.bottomTab, bottomHeight: st.bottomHeight, toast: st.toast }));
+  const s = useEditor((st) => ({ bottomTab: st.bottomTab, bottomHeight: st.bottomHeight, toast: st.toast, report: st.report }));
   const [preview, setPreview] = useState(false);
   useEffect(() => {
     requestAnimationFrame(() => zoomTo('fit'));
@@ -300,6 +306,7 @@ function Workspace({ home }: { home: () => void }) {
       <BottomPanel />
       {preview && <PreviewModal onClose={() => setPreview(false)} />}
       {s.toast && <div className={`toast ${s.toast.kind}`}>{s.toast.text}</div>}
+      {s.report && <ReportModal title={s.report.title} lines={s.report.lines} />}
     </div>
   );
 }
@@ -382,6 +389,14 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
             <button onClick={() => run(() => downloadJson(st.get().project))}>
               Project JSON
               <span className="muted small">Document only, no asset bytes</span>
+            </button>
+            <button onClick={() => run(() => exportActiveAsLottie('json'))}>
+              Lottie JSON (this artboard)
+              <span className="muted small">Shapes + the open timeline, no interactivity</span>
+            </button>
+            <button onClick={() => run(() => exportActiveAsLottie('lottie'))}>
+              dotLottie (this artboard)
+              <span className="muted small">.lottie package of the same</span>
             </button>
           </div>
         )}
@@ -540,6 +555,29 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
             ))}
           </footer>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ReportModal({ title, lines }: { title: string; lines: string[] }) {
+  const close = () => store().set({ report: null });
+  return (
+    <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && close()}>
+      <div className="modal report-modal">
+        <header>
+          <strong>{title}</strong>
+          <div className="spacer" />
+          <IconButton icon={<Icons.close />} title="Close" onClick={close} />
+        </header>
+        <div className="report-body">
+          <p className="muted">Done. These parts could not be carried over exactly:</p>
+          <ul>
+            {lines.map((l, i) => (
+              <li key={i}>{l}</li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

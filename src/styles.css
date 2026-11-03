@@ -1443,3 +1443,20 @@ code,
   background: rgba(231, 177, 76, 0.12);
   color: #f2d48a;
 }
+.report-modal {
+  width: min(640px, 92vw);
+  max-height: 80vh;
+}
+.report-modal header {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.report-body {
+  padding: 4px 16px 14px;
+  overflow-y: auto;
+}
+.report-body li {
+  margin: 4px 0;
+}

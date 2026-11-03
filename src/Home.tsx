@@ -69,9 +69,21 @@ export function Home({ open }: { open: (id: string) => void }) {
 
   const doImport = () =>
     run(async () => {
-      const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json`, false);
-      if (!files[0]) return;
-      const p = await importPackage(files[0]);
+      const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json,.lottie,.riv`, false);
+      const f = files[0];
+      if (!f) return;
+      // Lottie / Rive files become a new project; anything else is an Interactives package or project JSON.
+      const head = new Uint8Array(await f.slice(0, 4096).arrayBuffer());
+      const text = new TextDecoder().decode(head);
+      const animation = /\.(lottie|riv)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
+      if (animation) {
+        const { projectFromAnimation } = await import('./lib/importers');
+        const id = await projectFromAnimation(f);
+        await refresh();
+        open(id);
+        return;
+      }
+      const p = await importPackage(f);
       await refresh();
       open(p.id);
     });
@@ -88,7 +100,7 @@ export function Home({ open }: { open: (id: string) => void }) {
         <div className="home-actions">
           {who?.user && <span className="muted">{who.user.name ?? who.user.username}</span>}
           <button className="btn" onClick={doImport} disabled={busy}>
-            <Icons.upload width={14} /> Import {PACKAGE_EXTENSION}
+            <Icons.upload width={14} /> Import ({PACKAGE_EXTENSION}, Lottie, Rive)
           </button>
           <button className="btn primary" onClick={create} disabled={busy}>
             <Icons.plus width={14} /> New project

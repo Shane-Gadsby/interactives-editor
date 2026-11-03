@@ -66,6 +66,8 @@ export interface EditorState {
   saveState: 'saved' | 'saving' | 'dirty' | 'error';
   saveError: string | null;
   toast: { text: string; kind: 'info' | 'error' } | null;
+  /** A list worth reading (import/export notes), shown in a dialog. */
+  report: { title: string; lines: string[] } | null;
 }
 
 interface HistoryEntry {
@@ -120,6 +122,7 @@ export class EditorStore {
       saveState: 'saved',
       saveError: null,
       toast: null,
+      report: null,
     };
   }
 

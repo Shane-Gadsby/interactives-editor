@@ -5,6 +5,7 @@ import { Icons, type IconName } from '../components/icons';
 import { IconButton } from '../components/ui';
 import { assetKind, assetUrls } from '../lib/assets';
 import { insertFiles, pickFiles } from '../lib/insert';
+import { ANIMATION_ACCEPT, addImportedArtboard, readAnimationFile } from '../lib/importers';
 import { getArtboard, locate } from '../store/doc';
 import { deleteAsset } from '../lib/db';
 
@@ -223,6 +224,20 @@ function Layers() {
       })}
       <button className="link-btn add-artboard" onClick={() => store().addArtboard()}>
         + Add artboard
+      </button>
+      <button
+        className="link-btn add-artboard"
+        onClick={async () => {
+          const [file] = await pickFiles(ANIMATION_ACCEPT, false);
+          if (!file) return;
+          try {
+            await addImportedArtboard(await readAnimationFile(file));
+          } catch (err) {
+            store().toast(err instanceof Error ? err.message : String(err), 'error');
+          }
+        }}
+      >
+        + Import Lottie / Rive as artboard
       </button>
     </div>
   );
