@@ -4047,8 +4047,10 @@ Turn on **Animate changes** in the frame's Auto layout section and, while the pr
 | Duration | How long a glide takes, in milliseconds |
 | Easing | A preset, or *Custom* to drag the curve's handles |
 | Enter | How a layer looks as it appears (a layer shown, or a new list item): *None*, *Fade*, *Scale* (grows from nothing) or *Fade and scale* (from 80%) |
-| Exit | How a layer looks as it goes (hidden, or a list item removed): it fades or shrinks where it was, then goes |
+| Exit | How a layer looks as it goes (hidden, or a list item removed): it fades or shrinks where it was, then goes. Until it has gone it keeps its place in the layout, so the layers around it stay put and a frame that hugs its content keeps its size; then they glide together |
 
+- A frame that hugs its content on an axis glides its own size along with its children when the content changes size (a layer shown or hidden, a list gaining or losing items).
+- If a layer returns while it is still leaving, it fades back in from where it had got to and nothing moves. A layer that appears while another is still leaving waits until the layout is released. A solo swaps its layers at once with no hold.
 - **Timelines win.** If a timeline or an *Animate property* action is moving a layer's x, y, width or height, the frame follows it exactly rather than gliding behind it, and a property a timeline has a track on is never glided.
 - Text that sizes itself changes size at once (its position still glides), and layers set to *Ignore* are not moved by layout so they don't glide.
 - The editor canvas always snaps, so you can design without things moving. Scrubbing a timeline snaps too.
