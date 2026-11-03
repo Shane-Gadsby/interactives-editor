@@ -822,10 +822,10 @@ export function encodePng(width: number, height: number, rgba: Uint8Array): Uint
 // ---------------------------------------------------------------- fonts
 
 /** Google fonts a Photoshop file is likely to use. Keys are the name in lower case without spaces. */
-const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-const GOOGLE_BY_KEY = new Map(GOOGLE_FONT_FAMILIES.map((f) => [squash(f), f]));
+export const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+export const GOOGLE_BY_KEY = new Map(GOOGLE_FONT_FAMILIES.map((f) => [squash(f), f]));
 
-const WEIGHT_WORDS: [RegExp, number][] = [
+export const WEIGHT_WORDS: [RegExp, number][] = [
   [/hairline|thin/i, 100],
   [/extra\s*light|ultra\s*light/i, 200],
   [/light/i, 300],

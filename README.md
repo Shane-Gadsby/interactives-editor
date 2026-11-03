@@ -107,6 +107,7 @@ Access works like this:
 | `lib/rive-import.ts`, `lib/rive-defs.ts` | `.riv` import (view models become shared variables, DataBinds on layers become bindings with converters); defs generated from rive-runtime headers by `research/rive/gen_defs.py` |
 | `components/Converters.tsx` | the binding converters editor in the inspector's Data bindings section |
 | `lib/dxf-parse.ts`, `lib/dxf-import.ts`, `lib/dwg-import.ts` | AutoCAD `.dxf` import (ASCII and binary: tables, blocks / inserts, entities, hatches; model space fitted to a 1600 px artboard, one group per layer) and DWG version detection with a "save as DXF" message (no DWG reader). |
+| `lib/vectorcraft-import.ts`, `lib/photocraft-import.ts`, `lib/craft-shared.ts`, `lib/zstd.ts` | VectorCraft (`.vectorcraft`, JSON or gzip, pictures after a marker) and PhotoCraft (`.pcraft`, a ZIP of a JSON manifest and zstd-compressed pixel tiles) import. `craft-shared.ts` holds the matrices, colours, gradients and text placement both use; `zstd.ts` is a small zstd decoder because browsers have none. Format notes: `research/craft/FORMATS.md`; sample files in `research/craft/samples/` drive `test/craft.test.ts` |
 | `lib/boolean.ts` | union/subtract/intersect/exclude (polygon-clipping) |
 | `lib/svg-import.ts` | SVG files to editable layers (paths with transforms baked in, groups, gradients, text) |
 | `lib/image-export.ts` | PNG/SVG pictures of an artboard (the renderer inside `<foreignObject>`, assets and fonts inlined) |

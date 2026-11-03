@@ -21,12 +21,12 @@ import type { AnimationImport } from './importers';
 // ---------------------------------------------------------------- what can be linked
 
 /** Design files that can be linked: anything `readAnimationFile` turns into artboards from a file on disk. */
-export const DESIGN_EXTENSIONS = ['psd', 'ai', 'pdf', 'dxf', 'dwg'];
+export const DESIGN_EXTENSIONS = ['psd', 'ai', 'pdf', 'dxf', 'dwg', 'vectorcraft', 'drawcraft', 'pcraft'];
 const DESIGN_RE = new RegExp(`\\.(${DESIGN_EXTENSIONS.join('|')})$`, 'i');
 export const isDesignFile = (f: { name: string }): boolean => DESIGN_RE.test(f.name);
 export const designKind = (name: string): string => name.match(DESIGN_RE)?.[1]?.toLowerCase() ?? 'file';
 /** The importer's name for a file kind (for "Linked to ..."). */
-export const KIND_LABEL: Record<string, string> = { psd: 'Photoshop', ai: 'Illustrator', pdf: 'PDF', dxf: 'AutoCAD DXF', dwg: 'AutoCAD DWG' };
+export const KIND_LABEL: Record<string, string> = { psd: 'Photoshop', ai: 'Illustrator', pdf: 'PDF', dxf: 'AutoCAD DXF', dwg: 'AutoCAD DWG', vectorcraft: 'VectorCraft', drawcraft: 'VectorCraft', pcraft: 'PhotoCraft' };
 
 // ---------------------------------------------------------------- File System Access API (typed loosely)
 

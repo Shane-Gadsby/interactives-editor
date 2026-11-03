@@ -148,13 +148,13 @@ export function Home({ open }: { open: (id: string) => void }) {
 
   const doImport = () =>
     run(async () => {
-      const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json,.lottie,.riv,.psd,.ai,.pdf,.dxf,.dwg`, false);
+      const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json,.lottie,.riv,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft`, false);
       const f = files[0];
       if (!f) return;
-      // Lottie / Rive / Photoshop / Illustrator / PDF files become a new project; anything else is an Interactives package or project JSON.
+      // Lottie / Rive / Photoshop / Illustrator / PDF / VectorCraft / PhotoCraft files become a new project; anything else is an Interactives package or project JSON.
       const head = new Uint8Array(await f.slice(0, 4096).arrayBuffer());
       const text = new TextDecoder().decode(head);
-      const animation = /\.(lottie|riv|psd|ai|pdf|dxf|dwg)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
+      const animation = /\.(lottie|riv|psd|ai|pdf|dxf|dwg|vectorcraft|drawcraft|pcraft)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
       if (animation) {
         const { chooseLinking, projectFromAnimation } = await import('./lib/importers');
         const linking = await chooseLinking([f]);
@@ -272,7 +272,7 @@ export function Home({ open }: { open: (id: string) => void }) {
             <Icons.help width={14} /> Help
           </a>
           <button className="btn" onClick={doImport} disabled={busy}>
-            <Icons.upload width={14} /> Import ({PACKAGE_EXTENSION}, Lottie, Rive, PSD, AI, PDF)
+            <Icons.upload width={14} /> Import ({PACKAGE_EXTENSION}, Lottie, Rive, PSD, AI, PDF, VectorCraft, PhotoCraft)
           </button>
           <button className="btn primary" onClick={create} disabled={busy}>
             <Icons.plus width={14} /> New project
@@ -366,7 +366,7 @@ export function Home({ open }: { open: (id: string) => void }) {
               <div className="project-name">Create new project</div>
               <div className="muted small">
                 Or{' '}
-                <button className="link-btn inline" onClick={doImport} disabled={busy} title={`Import a ${PACKAGE_EXTENSION} package, project JSON, Lottie, Rive or Photoshop file`}>
+                <button className="link-btn inline" onClick={doImport} disabled={busy} title={`Import a ${PACKAGE_EXTENSION} package, project JSON, or a Lottie, Rive, Photoshop, Illustrator, PDF, VectorCraft or PhotoCraft file`}>
                   import a file
                 </button>
               </div>

@@ -292,7 +292,7 @@ function Layers() {
           for (const file of files) await importAnimationFile(file, linking);
         }}
       >
-        + Import Lottie / Rive / PSD / AI / PDF as artboard
+        + Import Lottie / Rive / PSD / AI / PDF / VectorCraft / PhotoCraft as artboard
       </button>
     </div>
   );
@@ -330,7 +330,7 @@ function Assets() {
   const sel = [...checked].filter((id) => live.has(id));
   const isUsed = (id: string) => JSON.stringify(s.project.artboards).includes(`"${id}"`) || s.project.fonts.some((f) => f.assetId === id);
   const upload = async () => {
-    const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
+    const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
     if (files.length) await insertFiles(files, null, null);
   };
   const removeIds = async (ids: string[]) => {

@@ -19,9 +19,9 @@ export interface AnimationImport {
   source: string;
 }
 
-export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.psd,.ai,.pdf,.dxf,.dwg';
+export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft';
 
-/** Read a Lottie (.json/.lottie), Rive (.riv), Photoshop (.psd), Illustrator (.ai), PDF or AutoCAD (.dxf/.dwg) file into artboards. */
+/** Read a Lottie (.json/.lottie), Rive (.riv), Photoshop (.psd), Illustrator (.ai), PDF, AutoCAD (.dxf/.dwg), VectorCraft (.vectorcraft) or PhotoCraft (.pcraft) file into artboards. */
 export async function readAnimationFile(file: File): Promise<AnimationImport> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const base = file.name.replace(/\.[^.]+$/, '');
@@ -42,6 +42,18 @@ export async function readAnimationFile(file: File): Promise<AnimationImport> {
   if (/\.dwg$/i.test(file.name)) {
     const { importDwg } = await import('./dwg-import');
     return { ...importDwg(bytes, base), source: 'AutoCAD DWG' };
+  }
+  // VectorCraft files are JSON (or gzip) and PhotoCraft files are ZIP archives, so besides the extension look inside
+  const zip = bytes[0] === 0x50 && bytes[1] === 0x4b;
+  const gzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
+  const jsonLike = bytes[0] === 0x7b || (bytes[0] === 0xef && bytes[1] === 0xbb) || bytes[0] === 0x20 || bytes[0] === 0x0a;
+  if (/\.(vectorcraft|drawcraft)$/i.test(file.name) || gzip || (jsonLike && /"format"\s*:\s*"(vectorcraft|drawcraft)"/.test(new TextDecoder().decode(bytes.subarray(0, 256))))) {
+    const { importVectorCraft, isVectorCraft } = await import('./vectorcraft-import');
+    if (/\.(vectorcraft|drawcraft)$/i.test(file.name) || isVectorCraft(bytes)) return { ...importVectorCraft(bytes, base), source: 'VectorCraft' };
+  }
+  if (/\.pcraft$/i.test(file.name) || zip) {
+    const { importPhotoCraft, isPhotoCraft } = await import('./photocraft-import');
+    if (/\.pcraft$/i.test(file.name) || isPhotoCraft(bytes)) return { ...importPhotoCraft(bytes, base), source: 'PhotoCraft' };
   }
   if (/\.riv$/i.test(file.name) || (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x56 && bytes[3] === 0x45)) {
     const { importRive } = await import('./rive-import');

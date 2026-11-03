@@ -800,7 +800,7 @@ const TOPICS = [
     body: `The projects page lists the projects you own, newest first.
 
 - **New project** makes an empty project with one artboard.
-- **Import** opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, a Lottie file, a Rive \`.riv\` file, a Photoshop \`.psd\` file, an Illustrator \`.ai\` file or a PDF. Lottie, Rive, Photoshop, Illustrator and PDF files become a new project.
+- **Import** opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, a Lottie file, a Rive \`.riv\` file, a Photoshop \`.psd\` file, an Illustrator \`.ai\` file, a PDF, a VectorCraft file (\`.vectorcraft\`) or a PhotoCraft file (\`.pcraft\`). Lottie, Rive, Photoshop, Illustrator, PDF, VectorCraft and PhotoCraft files become a new project.
 - Each card can be opened, **duplicated**, **downloaded** as a package or **deleted**. Deleting can't be undone, so download a package first if you might want it back.
 - Use the **Help** link at the top for these pages, or press <kbd>F1</kbd> anywhere.
 
@@ -1582,11 +1582,11 @@ Clicks on a copy fire **On pointer** for the template layer with \`event.index\`
   // ---------------------------------------------------------------- import/export
   {
     id: "import",
-    title: "Importing Lottie, Rive, Photoshop, Illustrator, PDF, AutoCAD and SVG",
+    title: "Importing Lottie, Rive, Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and SVG",
     group: "Import and export",
-    summary: "Bring in Lottie JSON / dotLottie, Rive .riv files, Photoshop .psd files, Illustrator .ai files, PDFs, AutoCAD DXF (and what to do with DWG), SVG and project packages.",
-    keywords: "import lottie dotlottie rive riv svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update changes reconnect",
-    body: `Lottie, Rive, Photoshop, Illustrator, PDF and AutoCAD (\`.dxf\`) files: use **Import** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
+    summary: "Bring in Lottie JSON / dotLottie, Rive .riv files, Photoshop .psd files, Illustrator .ai files, PDFs, AutoCAD DXF (and what to do with DWG), VectorCraft .vectorcraft and PhotoCraft .pcraft files, SVG and project packages.",
+    keywords: "import vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update changes reconnect",
+    body: `Lottie, Rive, Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft and PhotoCraft files: use **Import** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
 
 ## Lottie (.json, .lottie)
 Shape layers, groups, fills, strokes, gradients, transforms, trim paths, masks and keyframes with easing become layers and a timeline. Expressions, effects and text animators are not carried over.
@@ -1642,11 +1642,33 @@ Not carried over, and listed in the report: hatch pattern lines (a pattern hatch
 
 **DWG files** (the AutoCAD drawing format itself) can't be read directly: you'll see "DWG version AC1032 (AutoCAD 2018 and later): save it as DXF from your CAD program". In AutoCAD, BricsCAD, DraftSight, LibreCAD and similar, use **File > Save As > DXF** (any version; R2000 or later keeps the most) and import that file. Like Photoshop and Illustrator files, a DXF can be linked and watched for changes.
 
+## VectorCraft (.vectorcraft)
+A VectorCraft file (and the older \`.drawcraft\` name) is read as editable vector art. Each artboard in the file becomes an artboard (one artboard is named after the file, several are named *file - Artboard name*), holding the artwork that touches it.
+
+- **Layers and groups** become groups with the same name; hidden stays hidden, and opacity and these blend modes are kept: multiply, screen, overlay, darken, lighten, color dodge, color burn, difference and exclusion. A clip group or clipped layer becomes a [mask](groups-frames#masks) in front of what it clips.
+- **Paths and compound paths** become path layers. Solid, linear and radial gradient fills and strokes (width, caps, joins, dashes) are kept, and an object with several fills or strokes becomes a group with one path layer for each. CMYK, gray and Lab colours are converted to RGB with a simple formula, so print colours can look a little different.
+- **Live objects**: shapes keep their outline, symbols are placed as copies, Repeat objects (radial, grid, mirror) become copies, and a Blend between two paths with the same points gets its steps. Envelope distortions are not applied: the art stays undistorted. Gradient meshes become flat patches.
+- **Text** becomes text layers (font, size, colour, tracking, leading, alignment and style runs). Fonts are matched by name, so check the font field when a family is not one of the Google fonts.
+- **Pictures** become image layers. A picture linked to a file on disk comes across only when VectorCraft saved its preview in the file.
+- **Effects**: drop shadow and outer glow become the layer's shadow, and Gaussian blur its blur.
+
+Not carried over, and listed in the report: opacity masks, pattern fills, brushes and variable-width strokes, arrowheads, inside and outside stroke alignment, type on a path, other live effects, placed documents, and blend modes outside the list.
+
+## PhotoCraft (.pcraft)
+A PhotoCraft file is read like a Photoshop file: pixel layers become image layers (PNG assets), folders become groups, and an artboard folder becomes an artboard.
+
+- Opacity (times fill opacity), blend modes, visibility, **clipping layers** (as in Photoshop: a group with a copy of the base used as a mask), layer masks (baked into the pixels, or a mask picture for text, shapes and folders) and vector masks (a path used as a mask).
+- **Text** becomes text layers: font, size, colour, tracking, leading, alignment and style runs. Warped, vertical and on-a-path text keeps its rendered pixels.
+- **Shape layers** become path layers with fill, gradient and stroke; **fill layers** become a rectangle over the canvas. Smart objects use their rendered pixels.
+- A drop shadow becomes the layer's shadow.
+
+Not carried over, and listed in the report: adjustment layers, other layer styles, pattern fills, blend modes outside the list, and mask feather. A file that is a folder rather than a ZIP archive has to be zipped first. If nothing can be rebuilt, the flattened picture saved in the file is imported instead.
+
 ## SVG
 Drop an SVG file on the canvas, paste it, or pick it with the **Image** tool. It becomes a group of editable vector layers: shapes and paths (with their transforms applied), groups, solid and gradient fills, strokes and dashes, and simple text. Masks, filters, patterns and embedded images are listed as not carried over.
 
 ## Linking design files instead of embedding them
-When you drop (or pick) a Photoshop file, a dialog asks for each file whether to **Link** or **Embed** it, with **Link all** and **Embed all** for the lot. Embed copies the file in once. **Link** keeps a connection to the file on your computer: the editor checks it every couple of seconds while the tab is open and when you come back to it, and when you save it in the design app the changes come into the artboard.
+When you drop (or pick) a Photoshop, Illustrator, PDF, VectorCraft or PhotoCraft file, a dialog asks for each file whether to **Link** or **Embed** it, with **Link all** and **Embed all** for the lot. Embed copies the file in once. **Link** keeps a connection to the file on your computer: the editor checks it every couple of seconds while the tab is open and when you come back to it, and when you save it in the design app the changes come into the artboard.
 
 How a re-import merges (your edits are kept):
 - Layers are matched by name (in the same folder, the nth layer of a repeated name), and a layer renamed in the file is recognised by its picture or text and position.
