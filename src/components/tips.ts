@@ -89,6 +89,7 @@ export const FIELD_TIPS: Record<string, string> = {
   'Height %': "The height as a share of the frame's inner height (the cell's, in a grid)",
   Items: 'An expression that gives the list to repeat over, e.g. products',
   Cols: 'Columns in the grid',
+  'Fill order': 'Which way the copies fill the grid: across each row before the next (rows first), or down each column before the next (columns first)',
   'Repeat the first child for each item': 'Copies the first child once per item, with item and index in scope',
   'Clip content': 'Hide anything outside the frame',
   'Clip content to artboard': 'Hide anything outside the artboard in the player',

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, sampleArtboard, walk, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
 import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
@@ -155,12 +155,12 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       lastDraw.current = { renderer: r, artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };
     }
     // Auto-sized text: measure and write the size back (no undo step).
-    const updates: { id: string; width?: number; height?: number }[] = [];
+    const updates: { id: string; width?: number; height?: number; x?: number; y?: number }[] = [];
     // Only on the artboard being worked on: the others are drawn for their stills (and, off screen, whenever the scheduler gets
     // to them), and what they would measure there (at any zoom, as soon as fonts have loaded) is not a reason to change the
     // document. Their text is measured when the artboard becomes the active one.
     if (live)
-      walk(artboard.children, (n) => {
+      walk(artboard.children, (n, parent) => {
         if (n.type !== 'text' || n.autoSize === 'none') return;
         // Measuring forces a layout: only layers whose text, styling or width changed since they were last measured
         if (!r.textNeedsMeasure(n.id)) return;
@@ -181,7 +181,12 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
           // The extent is only as precise as the screen pixels it was measured in (a quarter of a pixel, scaled back out of the
           // zoom): zoomed far out, a change smaller than that is noise, and writing it would measure differently the next time
           const slack = Math.max(1, 0.5 / scale);
-          if (w > 1 && (Math.abs(w - n.width) > slack || Math.abs(h - n.height) > 1)) updates.push({ id: n.id, width: w, height: h });
+          if (w > 1 && (Math.abs(w - n.width) > slack || Math.abs(h - n.height) > 1)) {
+            // Centred and right-aligned text grows around its alignment point, so x moves with the width (not for a layer an
+            // auto layout places: its x comes from the layout)
+            const at = parent?.type === 'frame' && parent.layout ? null : textGrowShift(n, w);
+            updates.push({ id: n.id, width: w, height: h, ...(at && (at.x !== n.x || at.y !== n.y) ? at : {}) });
+          }
         }
         // Done with this layer, unless it was not laid out yet (hidden, or not attached) or its new size can't be written
         // now (a timeline frame is showing): then it is measured again on a later render
@@ -194,7 +199,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
           if (!ab) return;
           walk(ab.children as SceneNode[], (n) => {
             const u = updates.find((x) => x.id === n.id);
-            if (u) Object.assign(n, u.width !== undefined ? { width: u.width } : {}, u.height !== undefined ? { height: u.height } : {});
+            if (u) Object.assign(n, u.width !== undefined ? { width: u.width } : {}, u.height !== undefined ? { height: u.height } : {}, u.x !== undefined ? { x: u.x } : {}, u.y !== undefined ? { y: u.y } : {});
           });
         }),
       );

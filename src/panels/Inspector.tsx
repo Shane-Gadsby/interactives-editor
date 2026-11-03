@@ -1408,7 +1408,7 @@ function DrawOrderSection({ node }: { node: SceneNode & { children: SceneNode[];
   );
 }
 
-function RepeatSection({ node, project }: { node: SceneNode & { repeat?: Repeat | null; children: SceneNode[] }; project: Project }) {
+export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: Repeat | null; children: SceneNode[] }; project: Project }) {
   const set = useSetter([node.id]);
   const rep = node.repeat;
   const update = (patch: Partial<Repeat>) => set({ repeat: { ...(rep as Repeat), ...patch } }, `repeat-${node.id}`);
@@ -1440,6 +1440,19 @@ function RepeatSection({ node, project }: { node: SceneNode & { repeat?: Repeat 
             <NumberField label="Gap" value={rep.gap} min={0} onChange={(v) => update({ gap: v })} />
             {rep.layout === 'grid' && <NumberField label="Cols" value={rep.columns} min={1} onChange={(v) => update({ columns: Math.round(v) })} />}
           </Row>
+          {rep.layout === 'grid' && (
+            <Row>
+              <SelectField
+                label="Fill order"
+                value={rep.direction ?? 'rows'}
+                options={[
+                  { value: 'rows', label: 'Rows first' },
+                  { value: 'columns', label: 'Columns first' },
+                ]}
+                onChange={(v) => update({ direction: v === 'columns' ? 'columns' : undefined })}
+              />
+            </Row>
+          )}
           <p className="hint">
             Inside the copies, text slots and bindings can use <code>item</code> and <code>index</code>, e.g. <code>{'{item.name}'}</code>. Clicks on a copy put its position in <code>event.index</code>.
             {lists.length ? ` Data: ${lists.join(', ')}.` : ' Add a data source in the Data tab, or use any array expression.'}

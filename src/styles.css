@@ -2112,21 +2112,26 @@ button.twisty:hover {
   height: 12px;
   background: var(--cat);
   border: 2px solid var(--panel-2);
-  transition: transform 0.1s;
+  /* The scale property, not transform: transform is how the handle is placed on its edge, and replacing it made the port
+     grow from its top left corner. scale composes with it and grows from the centre */
+  transition: scale 0.1s;
 }
-/* An invisible ring makes the connector easy to grab without making the dot big */
+/* An invisible ring makes the connector easy to grab without making the dot big. Outputs are stacked 18px apart, so it is
+   as tall as the dot plus a few pixels (neighbouring rings then meet instead of one covering the next port) */
 .ix-graph-node .react-flow__handle::before {
   content: '';
   position: absolute;
-  inset: -10px;
+  inset: -3px -10px;
   border-radius: 50%;
 }
-.ix-graph-node .react-flow__handle:hover {
-  transform: scale(1.35);
-}
-.ix-graph-node .react-flow__handle.source:hover,
-.ix-graph-node .react-flow__handle.target:hover {
-  box-shadow: 0 0 0 4px rgb(255 255 255 / 0.12);
+/* Hovered, or the end a connection is being dragged from or onto: a slight grow from the centre. 1.25 of 12px plus the ring
+   still leaves the neighbouring port clear at their spacing */
+.ix-graph-node .react-flow__handle:hover,
+.ix-graph-node .react-flow__handle.connectingfrom,
+.ix-graph-node .react-flow__handle.connectingto {
+  scale: 1.25;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.14);
+  z-index: 1;
 }
 
 /* ---------------------------------------------------------------- usage (what uses what) */

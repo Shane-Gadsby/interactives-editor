@@ -103,6 +103,15 @@ export function LogicGraph() {
   const theme = usePrefs().theme;
   const ab = getArtboard(s.project, s.abId);
   const rf = useRef<ReactFlowInstance<Node<IxNodeData>, Edge> | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  //A menu pick (or a drop) leaves focus on a button that's just been removed, so on the page itself, where Delete and the
+  //other shortcuts mean the artboard's layers. Back into the graph, unless the person has gone to a field of their own
+  const focusGraph = () =>
+    requestAnimationFrame(() => {
+      const here = document.activeElement;
+      if (here && here !== document.body && !canvasRef.current?.contains(here)) return;
+      canvasRef.current?.focus({ preventScroll: true });
+    });
 
   const nodes: Node<IxNodeData>[] = useMemo(
     () =>
@@ -191,6 +200,7 @@ export function LogicGraph() {
     });
     store().set({ logicSelection: id });
     setSelEdges([]);
+    focusGraph();
     return id;
   };
 
@@ -241,6 +251,7 @@ export function LogicGraph() {
       a.logic.nodes.push({ ...structuredClone(n), id: nid, x: n.x + 30, y: n.y + 30 });
     });
     store().set({ logicSelection: nid });
+    focusGraph();
   };
 
   /** Node palette as menu items: categories with their nodes, each calling `pick(kind)`. */
@@ -357,6 +368,7 @@ export function LogicGraph() {
         ))}
       </div>
       <div
+        ref={canvasRef}
         className="logic-canvas"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
