@@ -594,7 +594,7 @@ Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video
     group: 'Design',
     summary: 'Grouping layers, frames that clip and lay out, masks, solo groups, draw order and scrolling frames.',
     keywords: 'group frame container clip mask masking clipping solo state switch draw order z-order nest focus scroll scrollable overflow',
-    body: `- A **group** (<kbd>Ctrl</kbd>+<kbd>G</kbd>) moves, scales and animates its layers together. Its size follows its contents.
+    body: `- A **group** (<kbd>Ctrl</kbd>+<kbd>G</kbd>) moves, scales and animates its layers together. Its box stays around its layers: move, resize, add or remove one and the group's box follows (nothing moves on the canvas, and keys on the layers' positions are adjusted to match). Untick **Size to contents** in the Group section to keep a box you set yourself. A rotated or scaled group, and a repeater, keep the box they have, since refitting would move the point they turn around.
 - A **frame** (<kbd>F</kbd>) is a box with its own fill, stroke and corner radius. It can **clip** its contents and can use [auto layout](auto-layout).
 
 Press <kbd>Enter</kbd> on a group or frame to work inside it; <kbd>Escape</kbd> goes back out.

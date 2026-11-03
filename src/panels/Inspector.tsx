@@ -30,6 +30,7 @@ import {
   getPath,
   sampleKeys,
   type Artboard,
+  type GroupNode,
   type Blend,
   type ColorStop,
   type FitMode,
@@ -1106,6 +1107,13 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'group':
       return (
         <Section help="groups-frames" title="Group">
+          <CheckField
+            label="Size to contents"
+            title="Keep the group's box around its layers as they move and change (nothing moves on the canvas). Rotated or scaled groups and repeaters keep the box they have"
+            value={(n as GroupNode).fitContents !== false}
+            onChange={(v) => set({ fitContents: v ? undefined : false })}
+          />
+          {(n as GroupNode).fitContents !== false && (n.rotation || n.scaleX !== 1 || n.scaleY !== 1) ? <p className="hint">This group is rotated or scaled, so its box stays as it is (refitting it would move its pivot).</p> : null}
           <p className="hint">Double-click to select inside. Ctrl/⌘-click selects deep layers directly.</p>
         </Section>
       );

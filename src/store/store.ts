@@ -1,4 +1,5 @@
 import { produce, type Draft } from 'immer';
+import { artboardNeedsFit, fitArtboardGroups } from './fit-groups';
 import { useSyncExternalStore, useRef } from 'react';
 import {
   animatableProp,
@@ -49,12 +50,29 @@ function hasAutoLayout(list: SceneNode[]): boolean {
 
 // Per artboard object (immer shares the ones a change didn't touch, so this is only worked out again for what changed)
 const layoutFlag = new WeakMap<object, boolean>();
+const fitChecked = new WeakSet<object>();
+
+/** Groups that size to their contents (fit-groups.ts), before auto layout so frames lay out the groups' real sizes. */
+function settleGroups(project: Project): Project {
+  const need = project.artboards.filter((ab) => !fitChecked.has(ab) && artboardNeedsFit(ab)).map((ab) => ab.id);
+  for (const ab of project.artboards) fitChecked.add(ab);
+  if (!need.length) return project;
+  const next = produce(project, (d) => {
+    for (const ab of d.artboards) if (need.includes(ab.id)) fitArtboardGroups(ab as Artboard);
+  });
+  for (const ab of next.artboards) fitChecked.add(ab);
+  return next;
+}
 
 /**
  * Lay out the auto-layout frames of a document after a change. Only artboards that have any are walked: doing it inside
  * the change's own draft would wrap every layer of every artboard in a proxy just to find there was nothing to lay out.
  */
-function settleLayout(project: Project): Project {
+function settleLayout(project: Project, fitGroups = false): Project {
+  // Groups are only fitted on this person's own edits (which are sent), never on load or on someone else's ops: refitting
+  // there would change the document here without telling anyone, and the next op about those layers would land in the
+  // wrong place. Fitting moves nothing on the canvas, so a group waiting for the next edit looks the same
+  if (fitGroups) project = settleGroups(project);
   const withLayout = new Set<string>();
   for (const ab of project.artboards) {
     let has = layoutFlag.get(ab);
@@ -274,7 +292,7 @@ export class EditorStore {
       }
     }
     // Auto-layout frames re-position their children after every change, in the same undo step.
-    const next = settleLayout(edited ?? produce(before, (d) => void recipe(d)));
+    const next = settleLayout(edited ?? produce(before, (d) => void recipe(d)), true);
     if (next === before) return;
     const t = Date.now();
     const merge = opts.coalesce && this.lastCoalesce && this.lastCoalesce.key === opts.coalesce && t - this.lastCoalesce.time < 1000;
@@ -296,7 +314,7 @@ export class EditorStore {
 
   /** Change the document without an undo step (derived data such as measured text size). */
   patchSilently(recipe: (draft: Draft<Project>) => void): void {
-    const next = settleLayout(produce(this.state.project, (d) => void recipe(d)));
+    const next = settleLayout(produce(this.state.project, (d) => void recipe(d)), true);
     if (next === this.state.project) return;
     this.revision++;
     const before = this.state.project;
