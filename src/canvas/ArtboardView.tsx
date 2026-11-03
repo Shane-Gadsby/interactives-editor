@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Renderer, prepareNodes, sampleArtboard, walk, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
+import { editInstanceMount } from './instances';
 import { assetUrls } from '../lib/assets';
 import { store } from '../store/store';
 
@@ -19,10 +20,18 @@ interface Props {
 export function ArtboardView({ artboard, project, timeline, time, active, assetVersion, dataVersion }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const renderer = useRef<Renderer | null>(null);
+  // Instances draw other artboards, so they redraw when any artboard changes
+  const hasInstances = useMemo(() => {
+    let found = false;
+    walk(artboard.children, (n) => {
+      if (n.type === 'instance') found = true;
+    });
+    return found;
+  }, [artboard]);
 
   // A layout effect, declared before the render one, so the renderer exists for the very first render.
   useLayoutEffect(() => {
-    const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve });
+    const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve, mountInstance: editInstanceMount(() => store().get().project) });
     renderer.current = r;
     host.current!.appendChild(r.root);
     return () => {
@@ -72,7 +81,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
         }),
       );
     }
-  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, hasInstances ? project.artboards : null]);
 
   return (
     <div

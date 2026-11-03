@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 import {
   ANIMATABLE_PROPS,
   CURSORS,
+  createNode,
+  type InstanceNode,
   defaultAutoLayout,
   type AutoLayout,
   type FrameNode,
@@ -225,6 +227,19 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             {project.settings.startArtboardId === ab.id ? 'Start artboard' : 'Make start artboard'}
           </button>
           <IconButton icon={<Icons.copy />} title="Duplicate artboard" onClick={() => store().duplicateArtboard(ab.id)} />
+        </Row>
+        <Row>
+          <SelectField
+            label="Use in"
+            value=""
+            options={[{ value: '', label: 'Place as an instance in…' }, ...project.artboards.filter((a) => a.id !== ab.id).map((a) => ({ value: a.id, label: a.name }))]}
+            onChange={(target) => {
+              if (!target) return;
+              const host = project.artboards.find((a) => a.id === target)!;
+              const inst = createNode('instance', { name: ab.name, artboardId: ab.id, width: ab.width, height: ab.height, x: Math.round((host.width - ab.width) / 2), y: Math.round((host.height - ab.height) / 2) });
+              store().addNodes([inst], { artboardId: target });
+            }}
+          />
           <IconButton icon={<Icons.trash />} title="Delete artboard" onClick={() => store().deleteArtboard(ab.id)} />
         </Row>
       </Section>
@@ -640,6 +655,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           {radius}
         </Section>
       );
+    case 'instance':
+      return <InstanceSection node={n} project={project} />;
     case 'group':
       return (
         <Section title="Group">
@@ -924,6 +941,61 @@ function AutoLayoutSection({ frame }: { frame: FrameNode }) {
           <p className="hint">Children are placed in layer order (reorder them in Layers). Hidden layers take no space, also at runtime.</p>
         </>
       )}
+    </Section>
+  );
+}
+
+function InstanceSection({ node, project }: { node: InstanceNode; project: Project }) {
+  const set = useSetter([node.id]);
+  const ab = store().artboard();
+  const target = project.artboards.find((a) => a.id === node.artboardId);
+  const [inputs, setInputs] = useState(JSON.stringify(node.inputs ?? {}, null, 0));
+  return (
+    <Section title="Instance">
+      <SelectField
+        label="Artboard"
+        value={node.artboardId}
+        options={[{ value: '', label: 'Choose…' }, ...project.artboards.filter((a) => a.id !== ab?.id).map((a) => ({ value: a.id, label: a.name }))]}
+        onChange={(v) => set({ artboardId: v })}
+      />
+      <SelectField
+        label="Fit"
+        value={node.fit}
+        options={[
+          { value: 'fill', label: 'Stretch to the box' },
+          { value: 'contain', label: 'Contain' },
+          { value: 'cover', label: 'Cover' },
+          { value: 'none', label: 'Actual size, centred' },
+        ]}
+        onChange={(v) => set({ fit: v })}
+      />
+      {target && (
+        <Row>
+          <button className="btn" onClick={() => set({ width: target.width, height: target.height })}>
+            Reset size
+          </button>
+          <button className="btn" onClick={() => store().set({ activeArtboardId: target.id, artboardSelected: true, selection: [] })}>
+            Edit {target.name}
+          </button>
+        </Row>
+      )}
+      <TextField
+        label="Inputs"
+        mono
+        commitOnBlur
+        value={inputs}
+        placeholder='{"level": 3}'
+        onChange={(v) => {
+          setInputs(v);
+          try {
+            const parsed = v.trim() ? JSON.parse(v) : {};
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) set({ inputs: Object.keys(parsed).length ? parsed : undefined });
+          } catch {
+            store().toast('Inputs must be JSON, e.g. {"level": 3}', 'error');
+          }
+        }}
+      />
+      <p className="hint">An instance runs its artboard on its own in the player: its timelines, interactions and variables. Inputs set its variables' starting values by name.</p>
     </Section>
   );
 }

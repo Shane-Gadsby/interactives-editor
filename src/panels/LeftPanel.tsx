@@ -41,6 +41,7 @@ const TYPE_ICON: Record<string, IconName> = {
   link: 'link',
   embed: 'embed',
   video: 'video',
+  instance: 'copy',
 };
 
 type DropPos = { id: string; where: 'before' | 'after' | 'inside' } | null;

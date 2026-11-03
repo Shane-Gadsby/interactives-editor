@@ -20,11 +20,11 @@ import {
   createArtboard,
   createNode,
   uid,
-  cloneWithNewIds,
   defaultParams,
   type Artboard,
   type Easing,
   type FontRef,
+  type InstanceNode,
   type Keyframe,
   type LogicEdge,
   type LogicNode,
@@ -493,6 +493,12 @@ interface FileCtx {
   fonts: FontRef[];
   built: Map<number, SceneNode[]>;
   building: Set<number>;
+  /** Our artboard id for each Rive artboard index (instances point at them before they are built). */
+  abIds: string[];
+  /** Instance input values, resolved to variable names once every artboard's state machines are converted. */
+  pendingInputs: { node: InstanceNode; artboard: number; machine: number; input: number; value: number | boolean }[];
+  /** Variable name for (artboard, state machine, input) indexes. */
+  inputNames: Map<string, string>;
 }
 
 function addTarget(ac: ArtboardCtx, slot: number, t: Target): void {
@@ -759,17 +765,32 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
   if (isA(t, 'Shape')) node = convertShape(ac, fc, slot);
   else if (t === 'Text') node = convertText(ac, fc, slot);
   else if (t === 'Image') node = convertImage(ac, fc, slot);
-  else if (t === 'NestedArtboard') {
+  else if (isA(t, 'NestedArtboard')) {
+    // A nested artboard is an instance of that artboard: it runs on its own in the player
     const target = Number(get(o, 'artboardId'));
-    const kids = fc.building.has(target) ? [] : buildArtboardNodes(fc, target).map((n) => cloneWithNewIds(JSON.parse(JSON.stringify(n)) as SceneNode));
-    if (fc.building.has(target)) fc.warnings.add('A nested artboard that contains itself was cut off');
-    fc.warnings.add('Nested artboards are copied in as static layers; their own animations and state machines do not run inside them');
-    const g = createNode('group', { name: String(o.props.name ?? 'Nested artboard'), children: kids });
-    // The nested artboard's own origin sits on this node, and its root layers are stored relative to that origin
-    placeAtOrigin(g, o, { x: 0, y: 0 }, 0, 0);
-    void abIndex;
-    addTarget(ac, slot, transformTarget(g, { x: 0, y: 0 }));
-    node = g;
+    const tab = fc.file.artboards[target]?.obj;
+    const tw = tab ? get(tab, 'width') : 100;
+    const th = tab ? get(tab, 'height') : 100;
+    const fitMap: Record<number, 'fill' | 'contain' | 'cover' | 'none'> = { 0: 'fill', 1: 'contain', 2: 'cover', 5: 'none' };
+    const fit = t === 'NestedArtboardLeaf' ? fitMap[get(o, 'fit')] ?? 'contain' : 'fill';
+    const inst = createNode('instance', { name: String(o.props.name ?? tab?.props.name ?? 'Nested artboard'), artboardId: fc.abIds[target] ?? '', fit });
+    // The nested artboard's origin sits on this node's origin
+    const b = { x: -tw * (tab ? get(tab, 'originX') : 0), y: -th * (tab ? get(tab, 'originY') : 0) };
+    placeAtOrigin(inst, o, b, tw, th);
+    addTarget(ac, slot, transformTarget(inst, b));
+    // Starting input values of the nested state machine
+    for (const ci of ac.children.get(slot) ?? []) {
+      const nsm = ac.rab.slots[ci];
+      if (nsm.type === 'NestedSimpleAnimation' || nsm.type === 'NestedRemapAnimation') fc.warnings.add('Nested artboards set to play a single animation run their own state machine instead');
+      if (nsm.type !== 'NestedStateMachine') continue;
+      for (const ii of ac.children.get(ci) ?? []) {
+        const inp = ac.rab.slots[ii];
+        if (inp.type === 'NestedBool' || inp.type === 'NestedNumber')
+          fc.pendingInputs.push({ node: inst, artboard: target, machine: Number(get(nsm, 'animationId')), input: Number(get(inp, 'inputId')), value: inp.type === 'NestedBool' ? !!get<boolean>(inp, 'nestedValue') : r2(get(inp, 'nestedValue')) });
+      }
+    }
+    if (get<boolean>(o, 'isPaused')) fc.warnings.add('Paused nested artboards play in the player');
+    node = inst;
   } else if (isA(t, 'Node') || isA(t, 'LayoutComponent')) {
     const g = createNode('group', { name: String(o.props.name ?? t) });
     placeAtOrigin(g, o, { x: 0, y: 0 }, isA(t, 'LayoutComponent') ? get(o, 'width') : 0, isA(t, 'LayoutComponent') ? get(o, 'height') : 0);
@@ -932,7 +953,7 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
 
 const identifier = (s: string) => s.replace(/[^\w$]+/g, '_').replace(/^(\d)/, '_$1') || 'input';
 
-function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Timeline[], names: Set<string>, variables: Variable[]): void {
+function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Timeline[], names: Set<string>, variables: Variable[], abIndex: number): void {
   const unique = (base: string) => {
     let n = identifier(base);
     let i = 2;
@@ -956,10 +977,11 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     return;
   }
   if (machines.length > 1) fc.warnings.add(`Artboard "${ab.name}" has ${machines.length} state machines; all were converted and run together`);
-  for (const sm of machines) {
+  for (const [smIndex, sm] of machines.entries()) {
     const smName = String(sm.obj.props.name ?? 'State Machine');
-    const inputVars = sm.inputs.map((inp) => {
+    const inputVars = sm.inputs.map((inp, inputIndex) => {
       const name = unique(String(inp.props.name ?? 'input'));
+      fc.inputNames.set(`${abIndex}/${smIndex}/${inputIndex}`, name);
       if (inp.type === 'StateMachineTrigger') return { kind: 'trigger' as const, name, id: '' };
       const v: Variable =
         inp.type === 'StateMachineBool'
@@ -1092,7 +1114,18 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
   const { objects } = readObjects(bytes);
   const s = structure(objects);
   contexts.clear();
-  const fc: FileCtx = { file: { artboards: s.artboards, assets: s.assets }, warnings: s.warnings, assets: [], assetIdByIndex: new Map(), fonts: [], built: new Map(), building: new Set() };
+  const fc: FileCtx = {
+    file: { artboards: s.artboards, assets: s.assets },
+    warnings: s.warnings,
+    assets: [],
+    assetIdByIndex: new Map(),
+    fonts: [],
+    built: new Map(),
+    building: new Set(),
+    abIds: s.artboards.map(() => uid('ab')),
+    pendingInputs: [],
+    inputNames: new Map(),
+  };
   if (!s.artboards.length) throw new Error('The .riv file has no artboards');
   // Embedded fonts become project fonts
   s.assets.forEach((a, i) => {
@@ -1124,6 +1157,7 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     const bg = (ac.children.get(0) ?? []).map((i) => ({ i, o: rab.slots[i] })).find((k) => k.o.type === 'Fill');
     const background = bg ? paintOf(ac, fc, bg.i, null).paint : null;
     const ab = createArtboard({
+      id: fc.abIds[index],
       name: String(rab.obj.props.name ?? `Artboard ${index + 1}`),
       width: Math.max(1, Math.round(w)),
       height: Math.max(1, Math.round(h)),
@@ -1135,9 +1169,14 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     });
     const timelines = rab.anims.map((a) => buildTimeline(ac, fc, a, (nodeId) => (root.has(nodeId) ? { x: ox, y: oy } : { x: 0, y: 0 })));
     ab.timelines = timelines;
-    buildMachines(ac, fc, ab, timelines, names, variables);
+    buildMachines(ac, fc, ab, timelines, names, variables, index);
     artboards.push(ab);
   });
+  // Instance inputs, now that every state machine input has a variable name
+  for (const p of fc.pendingInputs) {
+    const name = fc.inputNames.get(`${p.artboard}/${p.machine}/${p.input}`);
+    if (name) p.node.inputs = { ...(p.node.inputs ?? {}), [name]: p.value };
+  }
   void name;
   const start = artboards.find((a) => a.name === String(s.artboards[0].obj.props.name)) ?? artboards[0];
   return { artboard: start, artboards, assets: fc.assets, variables, fonts: fc.fonts, warnings: [...fc.warnings] };
