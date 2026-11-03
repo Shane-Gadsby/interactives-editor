@@ -429,7 +429,7 @@ A shape can have as many fills and strokes as you like. The **+** in the **Fill*
 - its own paint (solid, gradient or image) and, for a stroke, **W**idth, **Dash**, **Trim**, **Cap**, **Join** and **Align** (centre, inside or outside the outline; boxes default to inside, vector shapes to the centre);
 - **α** (the opacity of that paint alone), **Blend** (how it mixes with what is under it), **Feather** (a soft blur of that paint, in pixels) and an **X / Y** offset.
 
-All the fills are drawn under all the strokes. Layers are numbered from the bottom: **Fill 1** is the shape's own fill (the one \`fill.color\` and a style refer to), **Fill 2** the next, and so on.
+Fills are drawn under strokes unless you change the paint order (below). Layers are numbered from the bottom: **Fill 1** is the shape's own fill (the one \`fill.color\` and a style refer to), **Fill 2** the next, and so on.
 
 Some things to build with it:
 
@@ -438,6 +438,11 @@ Some things to build with it:
 - **A drop shadow that follows a shape's fill or stroke**: add a fill, make it dark and see-through (alpha in its colour or **α**), set **Feather** to 12 or so and **Y** to a few pixels, and move it down the list so it sits under the real fill. It is the way a Rive drop shadow is built, and Rive files import that way.
 
 Each paint's numbers can be animated: look for the diamond next to a field. The property names are \`fill.opacity\`, \`fills.0.color\`, \`fills.0.opacity\`, \`fills.0.feather\`, \`fills.0.offsetX\`, \`strokes.0.width\`, \`strokes.0.paint.color\`, \`strokes.0.trimEnd\` and so on (\`fills.0\` is the second fill, \`strokes.1\` the third stroke); bindings, **Set property** nodes and scripts use the same names. A shape with one plain fill and stroke is drawn as before; a shape with layers, or with opacity, blend, feather, an offset, a cap, join or align on a paint, is drawn as SVG. Buttons and inputs draw only their first fill and stroke. Lottie export keeps every fill and stroke with their opacity, and leaves out the blend modes, feathered and offset paints (shadows), which Lottie cannot hold.
+
+### Paint order
+Some shapes need a stroke *under* a fill, or between two fills: an outline that shows only where a fill leaves it uncovered, or a fill that overlaps the inner half of its own stroke. When a shape has both fills and strokes, a **Paint order** section lists every paint in one list, front-most first. Press **↑** or **↓**, or drag a row, to move a paint in front of or behind the others. Moving a fill past another fill swaps those two fills; the list in the **Fill** section follows. A shape you have not reordered keeps all its fills under all its strokes, as before.
+
+On a frame, rectangle or ellipse the strokes that end up in front of the last fill are still drawn above the shape's children; strokes placed under a fill are drawn under the children with it. In a saved project the order is the shape's \`paintOrder\`, a list of \`"fill"\` and \`"stroke"\` entries from the bottom up (for example \`["fill", "stroke", "fill"]\`); it is left out when every fill is under every stroke. Rive files import with the order they were drawn in, and Lottie export follows it.
 
 ## Stroke
 Colour, width, **cap** (butt, round, square), **join** (miter, round, bevel), **align** (centre, inside, outside) and **dash** (e.g. \`8 4\` for 8 on, 4 off).
@@ -610,7 +615,7 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
 | Padding | Space inside the frame's edges |
 | Justify | Where children sit along the direction: start, centre, end, space between |
 | Align | Across the direction: start, centre, end, stretch |
-| Wrap | Start a new row/column when one is full |
+| Wrap | Start a new row/column when one is full. **Line gap** (shown with Wrap) is the space between the wrapped rows, when it differs from Gap |
 | Hug width / height | The frame shrinks or grows to fit its children |
 
 ## Child sizing
@@ -620,7 +625,7 @@ Each child of an auto-layout frame gets a **Layout** section:
 - **Fill**: shares the frame's free space with other fill children.
 - **Hug**: fits its own contents (frames and text).
 - **Percent**: a percentage of the frame.
-- **Margin** around it.
+- **Margin** around it. A project can also give a margin *auto* (\`layoutItem.marginAuto\`): that side takes the free space of the line, so a layer is pushed to the end or centred, ahead of Justify.
 - **Position**: *In flow* (laid out), *Absolute* (placed by insets from the frame's edges, e.g. pinned to the bottom right) or *Ignore* (keeps its own x/y).
 
 Layout is worked out again whenever something changes, in the editor and in the player, so repeated lists and text that changes length reflow by themselves.
@@ -1425,7 +1430,7 @@ Shape layers, groups, fills, strokes, gradients, transforms, trim paths and keyf
 ## Rive (.riv)
 ![A Rive file after import: each Rive artboard is an artboard, with its animations as timelines and its state machine as interactions.](help/rive-import-result.png)
 
-Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes (a clip shape that follows another shape keeps following it) and the translation, rotation, scale, transform and follow path constraints (with factors, limits and local space) are carried over, and so are bones, skins (weights), image meshes, and IK and distance constraints (see [Bones and skinning](bones)); other constraints are not. A transition's blend time becomes a **Blend in** on the next state's *Control timeline* (a percentage of the old animation is converted to milliseconds, disabled transitions are skipped). A text box's vertical alignment, overflow (clip, ellipsis) and no-wrap come in; paragraph spacing and shrink-to-fit do not. Rive centres a stroke on its outline, so a stroked rectangle or ellipse comes in a stroke-width bigger to keep the same outer edge. State machine layers that start an animation from any state with nothing to wait for (the looping animations of an icon) start when the artboard does.
+Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes (a clip shape that follows another shape keeps following it) and the translation, rotation, scale, transform and follow path constraints (with factors, limits and local space) are carried over, and so are bones, skins (weights), image meshes, and IK and distance constraints (see [Bones and skinning](bones)); other constraints are not. A transition's blend time becomes a **Blend in** on the next state's *Control timeline* (a percentage of the old animation is converted to milliseconds, disabled transitions are skipped). Layout padding, margins, gaps and absolute insets given as percentages are worked out against the layout's width the way Rive does (and fixed at the file's size); a layout's border widths take room inside it like padding, auto margins push a layer to the end, and a gap between wrapped lines keeps its own value. Rectangles and layouts with a different radius on each corner keep them, and dash lengths given as a share of the outline become pixels (fixed at the file's size). A fill and a stroke that Rive draws in a mixed order keep that [paint order](fill-stroke#paint-order). A text box's vertical alignment, overflow (clip, ellipsis) and no-wrap come in; paragraph spacing and shrink-to-fit do not. Rive centres a stroke on its outline, so a stroked rectangle or ellipse comes in a stroke-width bigger to keep the same outer edge. State machine layers that start an animation from any state with nothing to wait for (the looping animations of an icon) start when the artboard does.
 
 Rive **events** become messages: a *Send message* node with the event's name, and its custom properties as the payload (an object, e.g. \`event.payload.power\`). An event keyed on an animation becomes a [timeline marker](timelines) with an *On timeline marker* node; events fired by listeners and by states or transitions (at their start or end) become *Send message* nodes in those flows, and Rive event listeners become *On message* nodes. An **audio event** also plays its embedded sound (a *Play sound* node, with the audio stored as a project asset), and an **open URL event** also opens its link (an *Open URL* node). Audio that is hosted on Rive's CDN instead of embedded is skipped, and the import report says so.
 

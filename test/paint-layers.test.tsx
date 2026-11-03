@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createNode, createProject, type RectNode } from 'interactives-player';
 import { EditorStore, setCurrentStore, useEditor } from '../src/store/store';
-import { FillSection, StrokeSection } from '../src/panels/PaintLayers';
+import { FillSection, PaintOrderSection, StrokeSection } from '../src/panels/PaintLayers';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -12,9 +12,10 @@ let host: HTMLElement;
 let s: EditorStore;
 let id: string;
 
-function Harness({ type }: { type: 'fill' | 'stroke' }) {
+function Harness({ type }: { type: 'fill' | 'stroke' | 'order' }) {
   const project = useEditor((st) => st.project);
   const node = useEditor((st) => st.project.artboards[0].children.find((c) => c.id === id)!);
+  if (type === 'order') return <PaintOrderSection nodes={[node]} />;
   return type === 'fill' ? <FillSection nodes={[node]} project={project} /> : <StrokeSection nodes={[node]} project={project} />;
 }
 const rect = () => s.get().project.artboards[0].children.find((c) => c.id === id) as RectNode;
@@ -26,7 +27,7 @@ const click = (title: string) => {
 const has = (title: string) => !!host.querySelector(`[title="${title}"]`);
 const colors = () => [rect().fill, ...(rect().fills ?? [])].map((p) => (p as { color: string } | null)?.color);
 
-function mount(type: 'fill' | 'stroke', props: Record<string, unknown> = {}) {
+function mount(type: 'fill' | 'stroke' | 'order', props: Record<string, unknown> = {}) {
   const p = createProject('T');
   const r = createNode('rect', { name: 'Card', ...props });
   id = r.id;
@@ -127,5 +128,75 @@ describe('Stroke list (inspector)', () => {
   it('offers cap, join and align for each stroke', () => {
     const text = host.textContent ?? '';
     for (const word of ['Cap', 'Join', 'Align']) expect(text).toContain(word);
+  });
+});
+
+describe('Paint order (inspector)', () => {
+  const solid = (color: string) => ({ type: 'solid' as const, color });
+  const order = () => (rect() as RectNode & { paintOrder?: string[] }).paintOrder;
+  const rows = () => Array.from(host.querySelectorAll('.paint-order-row .paint-head-name')).map((e) => e.textContent);
+
+  it('is not shown for a shape with only fills, or only a stroke', () => {
+    mount('order', { fill: solid('#111111'), fills: [solid('#222222')] });
+    expect(host.querySelector('.paint-order-row')).toBeNull();
+    act(() => root.unmount());
+    host.remove();
+    mount('order', { fill: null, stroke: { paint: solid('#111111'), width: 2 } });
+    expect(host.querySelector('.paint-order-row')).toBeNull();
+  });
+
+  it('lists every paint front-most first, and moves a stroke under the fill', () => {
+    mount('order', { fill: solid('#111111'), stroke: { paint: solid('#222222'), width: 2 } });
+    expect(rows()).toEqual(['Stroke (stroke)', 'Fill']);
+    expect(order()).toBeUndefined();
+    click('Move stroke down in the paint order (behind)');
+    expect(order()).toEqual(['stroke', 'fill']);
+    expect(rows()).toEqual(['Fill', 'Stroke (stroke)']);
+    // The plain order is not stored
+    click('Move stroke up in the paint order (in front)');
+    expect(order()).toBeUndefined();
+    act(() => s.undo());
+    expect(order()).toEqual(['stroke', 'fill']);
+  });
+
+  it('puts a stroke between two fills, and swapping two fills swaps their places in the fill list', () => {
+    mount('order', { fill: solid('#111111'), fills: [solid('#222222')], stroke: { paint: solid('#333333'), width: 2 } });
+    expect(rows()).toEqual(['Stroke (stroke)', 'Fill 2', 'Fill 1']);
+    click('Move stroke down in the paint order (behind)');
+    expect(order()).toEqual(['fill', 'stroke', 'fill']);
+    expect(colors()).toEqual(['#111111', '#222222']);
+    // Fill 2 down past the stroke: both fills are under it again, so no order is stored
+    click('Move fill 2 down in the paint order (behind)');
+    expect(order()).toBeUndefined();
+    expect(rect().stroke).not.toBeNull();
+    // and past fill 1: it becomes the first fill
+    click('Move fill 2 down in the paint order (behind)');
+    expect(colors()).toEqual(['#222222', '#111111']);
+  });
+
+  it('keeps a custom order when paints are added or removed in the Fill and Stroke sections', () => {
+    mount('order', { fill: solid('#111111'), stroke: { paint: solid('#222222'), width: 2 }, paintOrder: ['stroke', 'fill'] });
+    act(() => root.unmount());
+    host.remove();
+    // A fill added next to a stroke that sits under the first fill goes just above that fill
+    const p = createProject('T');
+    const r = createNode('rect', { fill: solid('#111111'), stroke: { paint: solid('#222222'), width: 2 }, paintOrder: ['stroke', 'fill'] });
+    id = r.id;
+    p.artboards[0].children.push(r);
+    s = new EditorStore(p);
+    setCurrentStore(s);
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    act(() => root.render(<Harness type="fill" />));
+    click('Add fill');
+    expect(order()).toEqual(['stroke', 'fill', 'fill']);
+    click('Remove fill 1');
+    expect(order()).toEqual(['stroke', 'fill']);
+    act(() => root.render(<Harness type="stroke" />));
+    click('Add stroke');
+    expect(order()).toEqual(['stroke', 'fill', 'stroke']);
+    click('Remove stroke 1');
+    expect(order()).toBeUndefined();
   });
 });

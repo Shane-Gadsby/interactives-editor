@@ -110,4 +110,20 @@ describe('ops', () => {
     apply(e, diff(b, d2));
     expect((e.artboards[0].children[0] as { fills?: unknown }).fills).toBeUndefined();
   });
+
+  it('carries a paint order, and its removal', () => {
+    const a = createProject('A');
+    a.artboards[0].children.push(createNode('rect', { name: 'r', fills: [{ type: 'solid', color: '#111111' }], stroke: { paint: { type: 'solid', color: '#000000' }, width: 2 } }));
+    const b = produce(a, (d) => {
+      (d.artboards[0].children[0] as unknown as { paintOrder?: string[] }).paintOrder = ['fill', 'stroke', 'fill'];
+    });
+    const c = clone(a);
+    apply(c, diff(a, b));
+    expect(c).toEqual(clone(b));
+    const d2 = produce(b, (d) => {
+      (d.artboards[0].children[0] as unknown as { paintOrder?: string[] }).paintOrder = undefined;
+    });
+    apply(c, diff(b, d2));
+    expect((c.artboards[0].children[0] as { paintOrder?: unknown }).paintOrder).toBeUndefined();
+  });
 });

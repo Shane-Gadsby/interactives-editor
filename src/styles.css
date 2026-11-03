@@ -3649,6 +3649,15 @@ code {
   cursor: pointer;
   padding: 0 3px;
 }
+.paint-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 2px;
+  border: 1px solid var(--line-2);
+  flex: none;
+}
 .paint-head .mini:disabled {
   opacity: 0.3;
   cursor: default;

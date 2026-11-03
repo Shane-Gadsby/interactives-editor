@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fillFields, fillList, fillPath, strokeFields, strokeList, strokePath, type BlendMode, type Paint, type Project, type SceneNode, type ShapeStyle, type Stroke } from 'interactives-player';
+import { fillList, fillPath, movePaint, orderedPaints, orderWithAdded, orderWithRemoved, paintFields, paintOrder, strokeList, strokePath, type BlendMode, type Paint, type PaintKind, type Project, type SceneNode, type ShapeStyle, type Stroke } from 'interactives-player';
 import { store } from '../store/store';
 import { IconButton, Row, Section, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
@@ -98,13 +98,6 @@ function FxFields({ n, ids, prefix, set }: { n: Painted; ids: string[]; prefix: 
   );
 }
 
-/** The fields to write for a changed list: the first entry is the base paint, the rest the extra ones (removed when none). */
-function listProps(kind: 'fill' | 'stroke', next: (Paint | Stroke)[]): Record<string, unknown> {
-  return kind === 'fill'
-    ? { ...fillFields(next as Paint[]), fills: next.length > 1 ? next.slice(1) : undefined }
-    : { ...strokeFields(next as Stroke[]), strokes: next.length > 1 ? next.slice(1) : undefined };
-}
-
 function moved<T>(list: T[], from: number, to: number): T[] {
   const next = [...list];
   const [x] = next.splice(from, 1);
@@ -120,17 +113,20 @@ export function FillSection({ nodes, project }: { nodes: SceneNode[]; project: P
   const shown = useShown(n);
   const list = fillList(n);
   const simple = single(n);
-  // Structure changes are undo steps of their own
-  const write = (next: Paint[]) => {
-    store().setProps(ids, listProps('fill', next));
+  // Structure changes are undo steps of their own; the paint order follows an added or removed paint
+  const strokes = strokeList(n);
+  const order = paintOrder(n);
+  const write = (next: Paint[], nextOrder: PaintKind[] = order) => {
+    store().setProps(ids, paintFields(next, strokes, nextOrder));
     store().commit();
   };
+  const remove = (i: number) => write(list.filter((_, j) => j !== i), orderWithRemoved(order, 'fill', i));
   const rows = list.map((p, i) => ({ p, i })).reverse();
   return (
     <Section
       help="fill-stroke"
       title="Fill"
-      actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add fill" onClick={() => write([...list, { type: 'solid', color: list.length ? '#ffffff' : '#d9d9d9' }])} />}
+      actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add fill" onClick={() => write([...list, { type: 'solid', color: list.length ? '#ffffff' : '#d9d9d9' }], orderWithAdded(order, 'fill'))} />}
     >
       {rows.map(({ p, i }) => {
         const prefix = fillPath(i);
@@ -148,13 +144,13 @@ export function FillSection({ nodes, project }: { nodes: SceneNode[]; project: P
               visible={p.visible !== false}
               onVisible={(v) => set({ [`${prefix}.visible`]: v ? undefined : false })}
               onMove={(from, to) => write(moved(list, from, to))}
-              onRemove={() => write(list.filter((_, j) => j !== i))}
+              onRemove={() => remove(i)}
             />
             <PaintField
               paint={paint}
               project={project}
               onChange={(np) => {
-                if (!np) write(list.filter((_, j) => j !== i));
+                if (!np) remove(i);
                 // Only the colour moved: set its colour, so recording turns it into a keyframe
                 else if (np.type === 'solid' && p.type === 'solid') set({ [`${prefix}.color`]: np.color }, `fill-${i}-${ids.join()}`);
                 else write(list.map((x, j) => (j === i ? np : x)));
@@ -181,8 +177,10 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
   const shown = useShown(n);
   const list = strokeList(n);
   const simple = single(n);
-  const write = (next: Stroke[]) => {
-    store().setProps(ids, listProps('stroke', next));
+  const fills = fillList(n);
+  const order = paintOrder(n);
+  const write = (next: Stroke[], nextOrder: PaintKind[] = order) => {
+    store().setProps(ids, paintFields(fills, next, nextOrder));
     store().commit();
   };
   const trimmable = n.type === 'path' || n.type === 'polygon' || n.type === 'star' || n.type === 'rect' || n.type === 'ellipse';
@@ -191,7 +189,7 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
     <Section
       help="fill-stroke#stroke"
       title="Stroke"
-      actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add stroke" onClick={() => write([...list, { paint: { type: 'solid', color: '#111111' }, width: 1 }])} />}
+      actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add stroke" onClick={() => write([...list, { paint: { type: 'solid', color: '#111111' }, width: 1 }], orderWithAdded(order, 'stroke'))} />}
     >
       {rows.map(({ s, i }) => {
         const prefix = strokePath(i);
@@ -208,7 +206,7 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
               visible={s.visible !== false}
               onVisible={(v) => set({ [`${prefix}.visible`]: v ? undefined : false })}
               onMove={(from, to) => write(moved(list, from, to))}
-              onRemove={() => write(list.filter((_, j) => j !== i))}
+              onRemove={() => write(list.filter((_, j) => j !== i), orderWithRemoved(order, 'stroke', i))}
             />
             <PaintField
               paint={s.paint.type === 'solid' && typeof color === 'string' ? { ...s.paint, color } : s.paint}
@@ -257,6 +255,87 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
       })}
       {!list.length && <p className="hint">No stroke. Use + to add one.</p>}
       {list.length > 0 && (n.type === 'path' || n.type === 'polygon' || n.type === 'star') && <p className="hint">Vector strokes are centred on the path unless you pick Inside or Outside; box strokes sit inside the edge.</p>}
+    </Section>
+  );
+}
+
+// The paint-order row being dragged: its position in the list (bottom to top)
+let draggingOrder: number | null = null;
+
+/** A small colour chip for a paint: its colour, or the first colour of a gradient. */
+function swatchOf(p: Paint | Stroke): string {
+  const paint = 'paint' in p ? p.paint : p;
+  if (paint.type === 'solid') return paint.color;
+  if (paint.type === 'image') return 'transparent';
+  return paint.stops[0]?.color ?? 'transparent';
+}
+
+/**
+ * Which paint is over which, for a shape with both fills and strokes. Fills and strokes are listed in their own
+ * sections; here they share one list, front-most first, so a stroke can go under a fill or between two fills
+ * (`paintOrder`). Moving a paint past one of its own kind swaps their places in that list.
+ */
+export function PaintOrderSection({ nodes }: { nodes: SceneNode[] }) {
+  const n = nodes[0] as Painted;
+  const ids = nodes.map((x) => x.id);
+  const [over, setOver] = useState<number | null>(null);
+  if (single(n)) return null;
+  const all = orderedPaints(n);
+  if (!all.some((e) => e.kind === 'fill') || !all.some((e) => e.kind === 'stroke')) return null;
+  const fills = all.filter((e) => e.kind === 'fill').length;
+  const strokes = all.length - fills;
+  const move = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= all.length) return;
+    store().setProps(ids, movePaint(n, from, to));
+    store().commit();
+  };
+  return (
+    <Section help="fill-stroke#paint-order" title="Paint order">
+      {all
+        .map((e, i) => ({ e, i }))
+        .reverse()
+        .map(({ e, i }) => {
+          const label = e.kind === 'fill' ? (fills > 1 ? `Fill ${e.index + 1}` : 'Fill') : strokes > 1 ? `Stroke ${e.index + 1}` : 'Stroke';
+          return (
+            <div
+              key={`${e.kind}${e.index}`}
+              className={`item-head paint-head paint-order-row${over === i ? ' drop' : ''}`}
+              draggable
+              onDragStart={(ev) => {
+                draggingOrder = i;
+                ev.dataTransfer?.setData('text/plain', `order:${i}`);
+              }}
+              onDragOver={(ev) => {
+                if (draggingOrder !== null) {
+                  ev.preventDefault();
+                  setOver(i);
+                }
+              }}
+              onDragLeave={() => setOver(null)}
+              onDrop={(ev) => {
+                ev.preventDefault();
+                setOver(null);
+                if (draggingOrder !== null) move(draggingOrder, i);
+                draggingOrder = null;
+              }}
+              onDragEnd={() => (draggingOrder = null)}
+            >
+              <span className="paint-head-name">
+                <span className="paint-swatch" style={{ background: swatchOf(e.paint) }} />
+                {label}
+                {e.kind === 'stroke' ? ' (stroke)' : ''}
+              </span>
+              <span className="paint-head-tools">
+                <button type="button" className="mini" title={`Move ${label.toLowerCase()} up in the paint order (in front)`} disabled={i === all.length - 1} onClick={() => move(i, i + 1)}>
+                  ↑
+                </button>
+                <button type="button" className="mini" title={`Move ${label.toLowerCase()} down in the paint order (behind)`} disabled={i === 0} onClick={() => move(i, i - 1)}>
+                  ↓
+                </button>
+              </span>
+            </div>
+          );
+        })}
     </Section>
   );
 }

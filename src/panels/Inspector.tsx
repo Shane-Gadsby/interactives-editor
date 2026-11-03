@@ -68,7 +68,7 @@ import { useDrawProblem } from '../lib/draw-edit';
 import { confirmDialog } from '../components/dialogs';
 import { detach as detachFromLibrary } from '../lib/library-actions';
 import { ShaderFilterFields, ShaderSection } from './ShaderInspector';
-import { FillSection, StrokeSection } from './PaintLayers';
+import { FillSection, PaintOrderSection, StrokeSection } from './PaintLayers';
 import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
 import { BindSelectionSection, BoneSection, SkinSection } from './RigSection';
 import { skinnable } from '../lib/rig';
@@ -514,6 +514,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {single && n.type === 'text' && <TextModifiersSection node={n} />}
       {sameType && 'fill' in n && <FillSection nodes={nodes} project={project} />}
       {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
+      {sameType && single && 'stroke' in n && <PaintOrderSection nodes={nodes} />}
       <EffectsSection nodes={nodes} />
       {single && <ConstraintsSection node={n} />}
       <LinkCursorSection nodes={nodes} project={project} />
@@ -1455,6 +1456,7 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
             <CheckField label="Hug width" value={L.hugWidth} onChange={(v) => update({ hugWidth: v })} />
             <CheckField label="Hug height" value={L.hugHeight} onChange={(v) => update({ hugHeight: v })} />
           </Row>
+          {L.wrap && <NumberField label="Line gap" title="The space between wrapped rows (or columns). Empty uses Gap" value={L.crossGap ?? L.gap} min={0} onChange={(v) => update({ crossGap: v === L.gap ? undefined : v })} />}
           <LayoutAnimateFields value={L.animate} onChange={(animate) => update({ animate })} />
           <Row>
             <button className="btn" onClick={() => set({ layout: null })}>

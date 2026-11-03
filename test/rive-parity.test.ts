@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { walk } from 'interactives-player';
-import { importRive } from '../src/lib/rive-import';
+import { readFileSync } from 'node:fs';
+import { relayoutTree, walk } from 'interactives-player';
+import { importRive, readRiveObjects } from '../src/lib/rive-import';
 import { propKey, writeRiv, type Spec } from './rive-writer';
+import { scenes as layoutScenes } from './rive-layout-scenes';
 
 describe('Rive copy constraints', () => {
   const file = (constraint: Spec) =>
@@ -270,5 +272,195 @@ describe('Rive text placement, weight and radial gradients', () => {
     expect(await stops(100)).toEqual([0, 0.71, 1]);
     // Reaching the corner or beyond needs no change
     expect(await stops(142)).toEqual([0, 1]);
+  });
+});
+
+// ---------------------------------------------------------------- layout styles
+// The scenes in rive-layout-scenes.ts were drawn by the Rive runtime and by our player side by side; the numbers below
+// are where Rive put each box (measured from its render, in artboard px), so these hold the importer and the layout
+// engine to what Rive does. A box is found by the name its layout has in the scene.
+
+type Box = { x: number; y: number; width: number; height: number };
+const near = (b: Box, x: number, y: number, w: number, h: number, tol = 1) => {
+  expect(Math.abs(b.x - x), `x ${b.x} vs ${x}`).toBeLessThanOrEqual(tol);
+  expect(Math.abs(b.y - y), `y ${b.y} vs ${y}`).toBeLessThanOrEqual(tol);
+  expect(Math.abs(b.width - w), `width ${b.width} vs ${w}`).toBeLessThanOrEqual(tol);
+  expect(Math.abs(b.height - h), `height ${b.height} vs ${h}`).toBeLessThanOrEqual(tol);
+};
+
+describe('Rive layout styles', () => {
+  const sceneOf = (name: string) => layoutScenes().find((d) => d.name === name)!;
+  /** Import one scene, lay it out as the editor and player do, and find boxes by name. */
+  const laid = async (name: string, mutate?: (specs: Spec[]) => void) => {
+    const specs = sceneOf(name).specs.slice();
+    mutate?.(specs);
+    const res = await importRive(writeRiv([['Backboard', {}], ...specs]), name);
+    const ab = res.artboards[0];
+    relayoutTree(ab.children);
+    const by = (n: string): Box & { layoutItem?: unknown; layout?: unknown } => {
+      let found: unknown;
+      walk(ab.children, (x) => x.name === n && (found = x));
+      if (!found) throw new Error(`no layer "${n}"`);
+      return found as Box;
+    };
+    return { res, by };
+  };
+
+  it('puts padding and a gap in px where Rive does', async () => {
+    const { by } = await laid('pad');
+    near(by('b0'), 20, 20, 60, 60);
+    near(by('b1'), 90, 20, 60, 60);
+    near(by('b2'), 160, 20, 60, 60);
+  });
+
+  it('ignores padding and gaps that have no unit, as Rive does', async () => {
+    const { by } = await laid('pad', (specs) => {
+      for (const s of specs) if (s[0] === 'LayoutComponentStyle') for (const k of Object.keys(s[1])) if (/UnitsValue$/.test(k)) delete s[1][k];
+    });
+    near(by('b0'), 0, 0, 60, 60);
+    near(by('b1'), 60, 0, 60, 60);
+  });
+
+  it('resolves percent padding, gaps and sizes against the width of the layout that owns them', async () => {
+    // Root 400 wide, padding 10% = 40 on every side (even the top), a gap of 5% = 20, children 20% of the 320 inside
+    const { by, res } = await laid('percent');
+    near(by('b0'), 40, 40, 64, 50);
+    near(by('b1'), 124, 40, 64, 50);
+    near(by('b2'), 208, 40, 64, 50);
+    expect(res.warnings.some((w) => /Percentage padding/.test(w))).toBe(false);
+  });
+
+  it('resolves percent margins against the parent\'s inner width, and keeps px and negative margins', async () => {
+    const { by } = await laid('margin');
+    near(by('m1'), 20, 20, 60, 60);
+    // 10% of the 390 px inside the root's 10 px padding
+    near(by('m2'), 129.3, 10, 60, 60);
+    near(by('m3'), 169.3, 50, 60, 60);
+  });
+
+  it('gives auto margins the free space of the line', async () => {
+    const { by } = await laid('auto');
+    near(by('x1'), 10, 10, 60, 60);
+    near(by('x2'), 270, 10, 60, 60);
+    near(by('x3'), 330, 10, 60, 60);
+  });
+
+  it('places absolute layers by px and percent insets from the layout\'s edges', async () => {
+    // Percent insets are shares of the inner size (360 x 180 inside the root's 40 / 20 padding), measured from the outer edge
+    const { by } = await laid('inset');
+    near(by('i1'), 36, 18, 60, 60);
+    near(by('i2'), 320, 122, 60, 60);
+    near(by('i3'), 40, 20, 60, 60);
+  });
+
+  it('uses the other axis\'s gap between wrapped lines', async () => {
+    const { by, res } = await laid('wrapgap');
+    near(by('w0'), 10, 10, 110, 40);
+    near(by('w2'), 250, 10, 110, 40);
+    near(by('w3'), 10, 80, 110, 40);
+    near(by('w4'), 130, 80, 110, 40);
+    expect(res.warnings).toEqual([]);
+  });
+
+  it('takes a layout\'s border widths as room inside it, like padding', async () => {
+    const { by } = await laid('border');
+    near(by('bd'), 10, 10, 120, 100);
+    // (the inner box's x and y are inside the border box: 10 border + 10 padding)
+    near(by('inner'), 20, 20, 40, 40);
+  });
+
+  it('resolves nested percent padding, margin and gap the way Rive does', async () => {
+    const { by } = await laid('nested');
+    near(by('p'), 20, 20, 190, 150);
+    // k1 and k2 are measured from the card: padding 10% of 380 = 38 on the left and top, k1 also a 10% margin of the card's inner width
+    near(by('k1'), 52.7, 38, 40, 30, 1);
+    near(by('k2'), 38, 91.3, 40, 30, 1);
+    near(by('q'), 220, 20, 60, 60);
+  });
+
+  it('centres, ends and spreads children by the 9 positions and space-between', async () => {
+    near((await laid('alignC')).by('a0'), 115, 80, 50, 40);
+    near((await laid('alignBR')).by('a2'), 350, 120, 50, 80);
+    const sb = (await laid('alignSB')).by;
+    near(sb('a0'), 0, 0, 50, 40);
+    near(sb('a2'), 350, 0, 50, 80);
+  });
+
+  it('keeps one radius when the corners are linked and four when they are not', async () => {
+    const linked = await laid('border');
+    expect((linked.by('bd') as unknown as { cornerRadius: number; cornerRadii?: unknown }).cornerRadius).toBe(30);
+    expect('cornerRadii' in linked.by('bd')).toBe(false);
+    const { by } = await laid('corners');
+    expect(by('c')).toMatchObject({ cornerRadii: [40, 0, 40, 0] });
+    expect(by('c2')).toMatchObject({ cornerRadii: [0, 50, 0, 10] });
+  });
+});
+
+describe('Rive dashes on layouts and shapes', () => {
+  const dashesOf = async (name: string, find: string) => {
+    const specs = layoutScenes().find((d) => d.name === name)!.specs;
+    const res = await importRive(writeRiv([['Backboard', {}], ...specs]), name);
+    let found: unknown;
+    walk(res.artboards[0].children, (x) => x.name === find && (found = x));
+    return { res, node: found as { stroke: { dash?: number[]; dashOffset?: number } | null; width: number; height: number } };
+  };
+
+  it('imports pixel dashes and an offset on a layout\'s border', async () => {
+    const { node, res } = await dashesOf('dashround', 'round');
+    expect(node.stroke).toMatchObject({ dash: [16, 10], dashOffset: 8 });
+    expect(res.warnings.some((w) => /Dash/.test(w))).toBe(false);
+  });
+
+  it('turns dash lengths given as a share of the outline into px, for a layout', async () => {
+    // 200 x 120 box: 640 px round, so 5% is 32 and 2.5% is 16, as Rive draws it
+    const { node, res } = await dashesOf('dashpct', 'pct');
+    expect(node.stroke!.dash).toEqual([32, 16]);
+    expect(res.warnings.some((w) => /Dash/.test(w))).toBe(false);
+  });
+
+  it('measures an ellipse and a rectangle shape for share dashes, and keeps their size (the dash sits on the outline)', async () => {
+    const { node } = await dashesOf('dashshape', 'r');
+    // The rectangle's dashes are 1000% of 460 px: a solid line (no gap is longer than the outline)
+    expect(node.stroke!.dash![0]).toBeCloseTo(4600, 0);
+    expect(node.width).toBe(130);
+    expect(node.height).toBe(100);
+    const e = await dashesOf('dashshape', 'e');
+    expect(e.node.stroke!.dash).toEqual([14, 8]);
+    expect(e.node.width).toBe(160);
+  });
+});
+
+describe('Rive text in layouts', () => {
+  // A text sits in a hugging layout, which sits in the column: wider than the column, it wraps at the column's width
+  const fontBytes = (): Uint8Array | null => {
+    try {
+      const objs = readRiveObjects(new Uint8Array(readFileSync('../research/rive/breathing_for_calm_TEST1.riv')));
+      const at = objs.findIndex((o) => o.type === 'FontAsset');
+      const contents = objs.slice(at).find((o) => o.type === 'FileAssetContents');
+      return (contents?.props.bytes as Uint8Array | undefined) ?? null;
+    } catch {
+      return null;
+    }
+  };
+  const textBox = async (wrapper: Record<string, unknown>) => {
+    const font = fontBytes();
+    if (!font) return null;
+    const d = layoutScenes().find((s) => s.name === 't_hug')!;
+    // Rebuild the scene with the wrapper's width setting and the font in the file
+    const specs = d.specs.map((s): Spec => (s[0] === 'LayoutComponentStyle' && s[1].intrinsicallySizedValue ? [s[0], { ...s[1], ...wrapper }] : s));
+    const res = await importRive(writeRiv([['Backboard', {}], ['FontAsset', { name: 'Inter.ttf', assetId: 0 }], ['FileAssetContents', { bytes: font }], ...specs]), 'text');
+    const ab = res.artboards[0];
+    relayoutTree(ab.children);
+    let wrapperNode: unknown;
+    let textNode: unknown;
+    walk(ab.children, (x) => (x.name === 'txt' ? (wrapperNode = x) : x.type === 'text' && (textNode = x)));
+    return { wrapper: wrapperNode as { layoutItem: { width: string } }, text: textNode as { autoSize: string; width: number; layoutItem: { width: string } } };
+  };
+
+  it('wraps a hugging text that is wider than its column, and lets a short one hug', async () => {
+    const long = await textBox({});
+    if (!long) return;
+    expect(long.wrapper.layoutItem.width).toBe('fill');
+    expect(long.text.autoSize).toBe('height');
   });
 });

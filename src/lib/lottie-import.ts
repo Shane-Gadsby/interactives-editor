@@ -12,11 +12,13 @@ import {
   createNode,
   uid,
   fillPath,
+  paintOrderField,
   strokePath,
   type Artboard,
   type Easing,
   type Keyframe,
   type Paint,
+  type PaintKind,
   type PathPoint,
   type SceneNode,
   type Stroke,
@@ -180,6 +182,8 @@ function applyTransform(ctx: Ctx, node: SceneNode, ks: Json, w: number, h: numbe
 interface Style {
   fills: { paint: Paint; keys?: Key[] | null }[];
   strokes: { stroke: Stroke; keys?: Key[] | null }[];
+  /** Fills and strokes interleaved, bottom to top (see ShapeStyle.paintOrder). */
+  order: PaintKind[];
 }
 
 const LOTTIE_CAP = [undefined, 'butt', 'round', 'square'] as const;
@@ -204,8 +208,7 @@ function gradientPaint(item: Json): Paint {
 function styleOf(ctx: Ctx, items: Json[]): Style {
   const fills: Style['fills'] = [];
   const strokes: Style['strokes'] = [];
-  let strokeSeen = false;
-  let fillOverStroke = false;
+  const order: PaintKind[] = [];
   for (const it of items) {
     if (it.hd) continue;
     const o = first(it.o, [100])[0] / 100;
@@ -214,10 +217,9 @@ function styleOf(ctx: Ctx, items: Json[]): Style {
       const paint: Paint = it.ty === 'fl' ? { type: 'solid', color: toHex(first(it.c, [0, 0, 0]), o) } : { ...gradientPaint(it), ...(o < 1 ? { opacity: r2(o) } : {}) };
       const ck = it.ty === 'fl' ? keysOf(it.c) : null;
       fills.push({ paint, keys: isAnimated(ck) ? ck!.map((k) => ({ ...k, v: [...k.v, o] })) : null });
-      // The strokes listed after (below) this fill are drawn under it in Lottie; here fills always sit under strokes
-      if (!strokeSeen && items.some((x, j) => j > items.indexOf(it) && (x.ty === 'st' || x.ty === 'gs') && !x.hd)) fillOverStroke = true;
+      order.push('fill');
     } else if (it.ty === 'st' || it.ty === 'gs') {
-      strokeSeen = true;
+      order.push('stroke');
       const paint: Paint = it.ty === 'gs' ? { ...gradientPaint(it), ...(o < 1 ? { opacity: r2(o) } : {}) } : { type: 'solid', color: toHex(first(it.c, [0, 0, 0]), o) };
       const stroke: Stroke = { paint, width: r2(first(it.w, [1])[0]) };
       const cap = LOTTIE_CAP[Number(it.lc)];
@@ -230,24 +232,26 @@ function styleOf(ctx: Ctx, items: Json[]): Style {
       ctx.warnings.add(`Shape modifier "${it.nm ?? it.ty}" (${it.ty}) is not supported and was skipped`);
     }
   }
-  if (fillOverStroke) ctx.warnings.add('A fill drawn over a stroke is drawn under it (fills always sit under strokes)');
   // Lottie lists the front-most first; the layers go back to front
   fills.reverse();
   strokes.reverse();
+  order.reverse();
   // A single stroke keeps the round caps and joins a path layer has always had here; with several, each keeps its own
   if (strokes.length === 1 && strokes[0].stroke.cap === 'round' && strokes[0].stroke.join === 'round') {
     delete strokes[0].stroke.cap;
     delete strokes[0].stroke.join;
   }
-  return { fills, strokes };
+  return { fills, strokes, order };
 }
 
 function withStyle(ctx: Ctx, node: SceneNode, style: Style): void {
-  const n = node as SceneNode & { fill: Paint | null; stroke: Stroke | null; fills?: Paint[]; strokes?: Stroke[] };
+  const n = node as SceneNode & { fill: Paint | null; stroke: Stroke | null; fills?: Paint[]; strokes?: Stroke[]; paintOrder?: PaintKind[] };
   n.fill = style.fills[0]?.paint ?? null;
   n.stroke = style.strokes[0]?.stroke ?? null;
   if (style.fills.length > 1) n.fills = style.fills.slice(1).map((f) => f.paint);
   if (style.strokes.length > 1) n.strokes = style.strokes.slice(1).map((s) => s.stroke);
+  // A stroke under a fill, or a fill between strokes, keeps its place
+  Object.assign(n, paintOrderField(style.order));
   const color = (v: number[]) => toHex(v.slice(0, 3), v[v.length - 1]);
   style.fills.forEach((f, i) => f.keys && addTrack(ctx, node.id, `${fillPath(i)}.color`, f.keys, color));
   style.strokes.forEach((s, i) => s.keys && addTrack(ctx, node.id, `${strokePath(i)}.paint.color`, s.keys, color));

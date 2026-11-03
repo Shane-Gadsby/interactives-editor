@@ -7,11 +7,10 @@
  */
 import { strToU8, zipSync } from 'fflate';
 import {
-  fillList,
   fillPath,
   isContainer,
+  orderedPaints,
   paintAlpha,
-  strokeList,
   strokePath,
   parseColor,
   polygonPoints,
@@ -20,6 +19,7 @@ import {
   type Easing,
   type Paint,
   type PaintFx,
+  type PaintKind,
   type Project,
   type SceneNode,
   type Stroke,
@@ -222,11 +222,13 @@ function pathShape(points: { x: number; y: number; in?: { x: number; y: number }
 
 /** Shape items (content in the node's local box) for a drawable node, or null. */
 function shapesFor(ctx: Ctx, n: SceneNode): Json[] | null {
-  const styled = n as SceneNode & { fill?: Paint | null; stroke?: Stroke | null; fills?: Paint[]; strokes?: Stroke[] };
-  // A Lottie group paints its first items on top: the strokes, front-most first, then the fills, front-most first
-  const strokes = strokeList({ fill: null, stroke: styled.stroke ?? null, strokes: styled.strokes }).map((s, i) => paintItem(ctx, n, s.paint, 'stroke', strokePath(i), s));
-  const fills = fillList({ fill: styled.fill ?? null, stroke: null, fills: styled.fills }).map((f, i) => paintItem(ctx, n, f, 'fill', fillPath(i)));
-  const style = [...strokes.reverse(), ...fills.reverse()].filter(Boolean);
+  const styled = n as SceneNode & { fill?: Paint | null; stroke?: Stroke | null; fills?: Paint[]; strokes?: Stroke[]; paintOrder?: PaintKind[] };
+  // A Lottie group paints its first items on top, so the paints go in front-most first (the shape's paint order, reversed)
+  const paints = orderedPaints({ fill: styled.fill ?? null, stroke: styled.stroke ?? null, fills: styled.fills, strokes: styled.strokes, paintOrder: styled.paintOrder });
+  const style = paints
+    .map((e) => (e.kind === 'stroke' ? paintItem(ctx, n, e.paint.paint, 'stroke', strokePath(e.index), e.paint) : paintItem(ctx, n, e.paint, 'fill', fillPath(e.index))))
+    .reverse()
+    .filter(Boolean);
   switch (n.type) {
     case 'rect':
     case 'frame':

@@ -38,7 +38,7 @@ export function writeRiv(objects: Spec[]): Uint8Array {
       } else if (type === 'y') {
         const b = v as Uint8Array;
         varuint(b.length);
-        out.push(...b);
+        for (const x of b) out.push(x); // not a spread: a font is bigger than the argument limit
       } else if (type === 'c') out.push(...new Uint8Array(new Uint32Array([Number(v)]).buffer));
       else varuint(typeof v === 'boolean' ? Number(v) : Number(v));
     }

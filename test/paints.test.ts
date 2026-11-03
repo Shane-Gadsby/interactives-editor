@@ -20,6 +20,76 @@ function shape(paints: Spec[], rect = true): Spec[] {
   ];
 }
 
+describe('Rive paint order', () => {
+  // A path has three vertices (slots 3 to 5), so its first paint is slot 6; a rectangle's is slot 3
+  const paints = (first: number, ...kinds: ('Fill' | 'Stroke')[]): Spec[] =>
+    kinds.flatMap((k, i): Spec[] => [
+      k === 'Fill' ? ['Fill', { parentId: 1 }] : ['Stroke', { parentId: 1, thickness: 4 }],
+      ['SolidColor', { parentId: first + i * 2, colorValue: [RED, BLUE, 0xff00ff00][i] }],
+    ]);
+  const orderOf = async (kinds: ('Fill' | 'Stroke')[], rect = true) => {
+    const doc = shape(paints(rect ? 3 : 6, ...kinds), rect);
+    if (!rect) doc.splice(3, 0, ['StraightVertex', { parentId: 2, x: 0, y: 0 }], ['StraightVertex', { parentId: 2, x: 50, y: 0 }], ['StraightVertex', { parentId: 2, x: 25, y: 40 }]);
+    const res = await importRive(writeRiv(doc), 'order');
+    return res.artboards[0].children[0] as RectNode | PathNode;
+  };
+
+  it('imports a stroke under a fill, and keeps a rectangle a rectangle with its own size', async () => {
+    const n = (await orderOf(['Stroke', 'Fill'])) as RectNode & { paintOrder?: string[] };
+    expect(n.type).toBe('rect');
+    expect(n.paintOrder).toEqual(['stroke', 'fill']);
+    // Under a fill the stroke is centred on the outline, so the box is not grown by half of it
+    expect(n.stroke!.align).toBe('center');
+    expect(n.width).toBe(100);
+    expect(n.height).toBe(60);
+  });
+
+  it('imports fill, stroke, fill and a stroke between two fills on a path', async () => {
+    const n = (await orderOf(['Fill', 'Stroke', 'Fill'], false)) as PathNode & { paintOrder?: string[] };
+    expect(n.type).toBe('path');
+    expect(n.paintOrder).toEqual(['fill', 'stroke', 'fill']);
+    expect(n.fill).toMatchObject({ color: '#ff0000' });
+    expect(n.fills).toEqual([expect.objectContaining({ color: '#00ff00' })]);
+    expect(n.stroke!.paint).toMatchObject({ color: '#0000ff' });
+  });
+
+  it('leaves the order out when every fill is under every stroke, and old files import as before', async () => {
+    const n = await orderOf(['Fill', 'Fill', 'Stroke']);
+    expect('paintOrder' in n).toBe(false);
+    const m = await orderOf(['Fill', 'Stroke']);
+    expect('paintOrder' in m).toBe(false);
+    // The box is still grown by half the stroke, as before
+    expect(m.width).toBe(104);
+  });
+
+  it('skips hidden paints when placing the others', async () => {
+    const res = await importRive(
+      writeRiv(
+        shape([
+          ['Stroke', { parentId: 1, thickness: 4, isVisible: false }], // 3
+          ['SolidColor', { parentId: 3, colorValue: RED }],
+          ['Fill', { parentId: 1 }], // 5
+          ['SolidColor', { parentId: 5, colorValue: BLUE }],
+          ['Stroke', { parentId: 1, thickness: 2 }], // 7
+          ['SolidColor', { parentId: 7, colorValue: RED }],
+        ]),
+      ),
+      'hidden',
+    );
+    expect('paintOrder' in res.artboards[0].children[0]).toBe(false);
+  });
+
+  it('exports to Lottie in the same order, front-most first', () => {
+    const p = createProject();
+    const ab = createArtboard({ name: 'A', width: 100, height: 100 });
+    ab.children.push(createNode('ellipse', { width: 20, height: 20, fill: { type: 'solid', color: '#ff0000' }, stroke: { paint: { type: 'solid', color: '#0000ff' }, width: 2 }, paintOrder: ['stroke', 'fill'] }));
+    p.artboards = [ab];
+    const { json } = exportLottie(p, ab, { bytesFor: () => null });
+    const kinds = (json.layers as { shapes: { ty: string }[] }[])[0].shapes.map((i) => i.ty).filter((t) => t === 'st' || t === 'fl');
+    expect(kinds).toEqual(['fl', 'st']);
+  });
+});
+
 describe('Rive shapes with several fills and strokes', () => {
   it('keeps every fill and stroke, in file order, as layers', async () => {
     const res = await importRive(
@@ -154,9 +224,16 @@ describe('Lottie shapes with several fills and strokes', () => {
     expect(artboard.timelines[0].tracks.map((t) => [t.nodeId, t.prop])).toEqual([[dot.id, 'fills.0.color']]);
   });
 
-  it('warns about a fill drawn over a stroke', () => {
-    const { warnings } = importLottie(lottie([fl([1, 0, 0, 1]), st([0, 0, 0, 1], 2)]));
-    expect(warnings.some((w) => /fill drawn over a stroke/.test(w))).toBe(true);
+  it('keeps a fill drawn over a stroke in its place, without a warning', () => {
+    const { artboard, warnings } = importLottie(lottie([fl([1, 0, 0, 1]), st([0, 0, 0, 1], 2)]));
+    const dot = (artboard.children[0] as unknown as { children: { children: EllipseNode[] }[] }).children[0].children[0];
+    expect(dot.paintOrder).toEqual(['stroke', 'fill']);
+    expect(warnings.some((w) => /fill drawn over a stroke/.test(w))).toBe(false);
+  });
+  it('leaves the order out when every fill is under every stroke', () => {
+    const { artboard } = importLottie(lottie([st([0, 0, 0, 1], 2), fl([1, 0, 0, 1])]));
+    const dot = (artboard.children[0] as unknown as { children: { children: EllipseNode[] }[] }).children[0].children[0];
+    expect('paintOrder' in dot).toBe(false);
   });
 
   it('exports every layer, with its own opacity and colour keys, front-most first', () => {

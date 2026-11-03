@@ -74,6 +74,9 @@ import {
   type ImageNode,
   type PathNode,
   type Constraint,
+  isPlainOrder,
+  paintOrderField,
+  type PaintKind,
 } from 'interactives-player';
 import { RIVE_CLASSES } from './rive-defs';
 import type { ImportedAsset } from './lottie-import';
@@ -533,22 +536,38 @@ function localMatrix(o: RObj): M {
 const ap = (m: M, x: number, y: number) => ({ x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] });
 const av = (m: M, x: number, y: number) => ({ x: m[0] * x + m[2] * y, y: m[1] * x + m[3] * y });
 
-function rectPoints(w: number, h: number, ox: number, oy: number, radius: number): PathPoint[] {
+/** A rectangle's or layout's radii per corner (top-left, top-right, bottom-right, bottom-left), or null when it has one radius (linked, or all four equal). */
+function riveRadii(o: RObj | undefined): [number, number, number, number] | null {
+  if (!o || get<boolean>(o, 'linkCornerRadius') !== false) return null;
+  const radii = [get(o, 'cornerRadiusTL'), get(o, 'cornerRadiusTR'), get(o, 'cornerRadiusBR'), get(o, 'cornerRadiusBL')].map((v) => r2(Math.max(0, v))) as [number, number, number, number];
+  return radii.every((v) => v === radii[0]) ? null : radii;
+}
+
+/** A rectangle's outline: four corners, each with its own radius (radii that don't fit are scaled down together, as in CSS). */
+function rectPoints(w: number, h: number, ox: number, oy: number, radius: number, radii?: [number, number, number, number] | null): PathPoint[] {
   const x0 = -w * ox;
   const y0 = -h * oy;
-  const r = Math.max(0, Math.min(radius, w / 2, h / 2));
-  if (!r) return [{ x: x0, y: y0 }, { x: x0 + w, y: y0 }, { x: x0 + w, y: y0 + h }, { x: x0, y: y0 + h }];
-  const k = r * K;
-  return [
-    { x: x0 + r, y: y0, in: { x: -k, y: 0 } },
-    { x: x0 + w - r, y: y0, out: { x: k, y: 0 } },
-    { x: x0 + w, y: y0 + r, in: { x: 0, y: -k } },
-    { x: x0 + w, y: y0 + h - r, out: { x: 0, y: k } },
-    { x: x0 + w - r, y: y0 + h, in: { x: k, y: 0 } },
-    { x: x0 + r, y: y0 + h, out: { x: -k, y: 0 } },
-    { x: x0, y: y0 + h - r, in: { x: 0, y: k } },
-    { x: x0, y: y0 + r, out: { x: 0, y: -k } },
-  ];
+  let [tl, tr, br, bl] = radii ?? [radius, radius, radius, radius];
+  const f = Math.min(1, ...[w / (tl + tr), w / (bl + br), h / (tl + bl), h / (tr + br)].filter((v) => Number.isFinite(v) && v > 0));
+  // Without per-corner radii a single radius is held to half the smaller side
+  if (!radii) tl = tr = br = bl = Math.max(0, Math.min(radius, w / 2, h / 2));
+  else [tl, tr, br, bl] = [tl, tr, br, bl].map((v) => Math.max(0, v * f)) as [number, number, number, number];
+  if (!tl && !tr && !br && !bl) return [{ x: x0, y: y0 }, { x: x0 + w, y: y0 }, { x: x0 + w, y: y0 + h }, { x: x0, y: y0 + h }];
+  const out: PathPoint[] = [];
+  // Clockwise from the top-left corner's end: each rounded corner is the point it is approached at and the one it leaves from
+  const corner = (r: number, cx: number, cy: number, ax: number, ay: number, bx: number, by: number) => {
+    // a: approach (comes along an edge), b: leave
+    if (!r) return out.push({ x: cx, y: cy });
+    const k = r * K;
+    out.push({ x: cx + ax * r, y: cy + ay * r, out: { x: -ax * k, y: -ay * k } });
+    return out.push({ x: cx + bx * r, y: cy + by * r, in: { x: -bx * k, y: -by * k } });
+  };
+  // TL: approached going up the left edge, left going along the top edge
+  corner(tl, x0, y0, 0, 1, 1, 0);
+  corner(tr, x0 + w, y0, -1, 0, 0, 1);
+  corner(br, x0 + w, y0 + h, 0, -1, -1, 0);
+  corner(bl, x0, y0 + h, 1, 0, 0, -1);
+  return out;
 }
 
 function ellipsePoints(w: number, h: number, ox: number, oy: number): PathPoint[] {
@@ -803,20 +822,70 @@ function fitRadial(paint: Paint, radius: number, w: number, h: number): Paint {
   return { ...paint, stops };
 }
 
-/** A stroke's DashPath effect: its Dash children alternate dash and gap lengths (pixel lengths only), plus offset. */
-function dashOf(ac: ArtboardCtx, fc: FileCtx, strokeSlot: number): { dash?: number[]; dashOffset?: number } {
+/**
+ * A stroke's DashPath effect: its Dash children alternate dash and gap lengths, plus an offset. Lengths and offset are
+ * pixels, or (flagged) a fraction of the outline's length, which needs `length`: the outline's length in px, known for
+ * boxes and worked out from the points for paths. Without it percent dashes are left out and reported.
+ */
+function dashOf(ac: ArtboardCtx, fc: FileCtx, strokeSlot: number, length?: number): { dash?: number[]; dashOffset?: number } {
   const dashPath = (ac.children.get(strokeSlot) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath');
   if (dashPath === undefined) return {};
   const dp = ac.rab.slots[dashPath];
   const dashes = (ac.children.get(dashPath) ?? []).map((i) => ac.rab.slots[i]).filter((d) => d?.type === 'Dash');
-  if (dashes.some((d) => get<boolean>(d, 'lengthIsPercentage')) || get<boolean>(dp, 'offsetIsPercentage')) {
-    fc.warnings.add('Dash lengths given as percentages are not supported');
+  const percent = dashes.some((d) => get<boolean>(d, 'lengthIsPercentage'));
+  const offsetPercent = !!get<boolean>(dp, 'offsetIsPercentage');
+  if ((percent || offsetPercent) && !(length && length > 0)) {
+    fc.warnings.add('Dash lengths given as percentages are not supported on this kind of shape');
     return {};
   }
-  const list = dashes.map((d) => r2(get(d, 'length'))).filter((n) => n > 0);
+  const px = (d: RObj) => (get<boolean>(d, 'lengthIsPercentage') ? get(d, 'length') * (length ?? 0) : get(d, 'length'));
+  const list = dashes.map((d) => r2(px(d))).filter((n) => n > 0);
   if (!list.length) return {};
   // One length means equal dashes and gaps
-  return { dash: list.length % 2 ? [...list, ...list] : list, ...(get(dp, 'offset') ? { dashOffset: r2(get(dp, 'offset')) } : {}) };
+  const offset = offsetPercent ? get(dp, 'offset') * (length ?? 0) : get(dp, 'offset');
+  return { dash: list.length % 2 ? [...list, ...list] : list, ...(offset ? { dashOffset: r2(offset) } : {}) };
+}
+
+/** Length of a rounded box's outline (radii: top-left, top-right, bottom-right, bottom-left), or an ellipse's with `ellipse`. */
+function boxPerimeter(w: number, h: number, radii: number[], ellipse = false): number {
+  if (ellipse) {
+    const a = w / 2;
+    const b = h / 2;
+    return Math.PI * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b)));
+  }
+  const f = Math.min(1, ...[w / (radii[0] + radii[1]), w / (radii[3] + radii[2]), h / (radii[0] + radii[3]), h / (radii[1] + radii[2])].filter((v) => Number.isFinite(v) && v > 0));
+  const r = radii.map((v) => Math.max(0, v) * f);
+  // Straight edges, plus a quarter circle per corner
+  return 2 * (w + h) - 2 * r.reduce((t, v) => t + v, 0) + (Math.PI / 2) * r.reduce((t, v) => t + v, 0);
+}
+
+/** Length of the longest sub-path of a path layer, by sampling its curves. */
+function pathLength(paths: SubPath[]): number {
+  let best = 0;
+  for (const sp of paths) {
+    let len = 0;
+    const n = sp.points.length;
+    for (let i = 0; i < (sp.closed ? n : n - 1); i++) {
+      const a = sp.points[i];
+      const b = sp.points[(i + 1) % n];
+      let px = a.x;
+      let py = a.y;
+      const steps = a.out || b.in ? 16 : 1;
+      for (let k = 1; k <= steps; k++) {
+        const t = k / steps;
+        const u = 1 - t;
+        const c1 = { x: a.x + (a.out?.x ?? 0), y: a.y + (a.out?.y ?? 0) };
+        const c2 = { x: b.x + (b.in?.x ?? 0), y: b.y + (b.in?.y ?? 0) };
+        const x = u * u * u * a.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * b.x;
+        const y = u * u * u * a.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * b.y;
+        len += Math.hypot(x - px, y - py);
+        px = x;
+        py = y;
+      }
+    }
+    best = Math.max(best, len);
+  }
+  return best;
 }
 
 /**
@@ -894,7 +963,6 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
         stroke.trimOffset = r2(get(t, 'offset') * 100);
         if (Number(t.props.modeValue ?? 1) === 2) fc.warnings.add('Trim paths in "synchronized" mode trim the whole outline at once');
       }
-      Object.assign(stroke, dashOf(ac, fc, x.st.i));
       // Each stroke has its own cap and join (a path layer's own are the first stroke's)
       if (multiStroke) {
         stroke.cap = (['butt', 'round', 'square'] as const)[get(x.st.o, 'cap')] ?? 'butt';
@@ -904,31 +972,39 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     });
   const stroke: Stroke | null = strokeL[0]?.stroke ?? null;
   // Layers on top of the first of each (their own list, see ShapeStyle)
-  const extra = { ...(fillL.length > 1 ? { fills: fillL.slice(1).map((x) => x.paint) } : {}), ...(strokeL.length > 1 ? { strokes: strokeL.slice(1).map((x) => x.stroke) } : {}) };
+  // Rive draws its fills and strokes in the order they sit in the shape, interleaved: `paintOrder` keeps that (nothing when every fill is under every stroke)
+  const order = kids.flatMap((k): PaintKind[] => (fillL.some((x) => x.f.i === k.i) ? ['fill'] : strokeL.some((x) => x.st.i === k.i) ? ['stroke'] : []));
+  const extra = { ...paintOrderField(order), ...(fillL.length > 1 ? { fills: fillL.slice(1).map((x) => x.paint) } : {}), ...(strokeL.length > 1 ? { strokes: strokeL.slice(1).map((x) => x.stroke) } : {}) };
   const fill = fillL[0]?.paint ?? null;
   const name = String(o.props.name ?? 'Shape');
 
   const plain = paths.length === 1 && (paths[0].o.type === 'Rectangle' || paths[0].o.type === 'Ellipse') && !get(paths[0].o, 'x') && !get(paths[0].o, 'y') && !get(paths[0].o, 'rotation') && get(paths[0].o, 'scaleX') === 1 && get(paths[0].o, 'scaleY') === 1;
   let node: SceneNode;
+  // The outline's length in px, for dashes given as a share of it
+  let outline = 0;
   if (plain) {
     const p = paths[0].o;
     const w = get(p, 'width');
     const h = get(p, 'height');
+    outline = p.type === 'Ellipse' ? boxPerimeter(w, h, [], true) : boxPerimeter(w, h, riveRadii(p) ?? Array<number>(4).fill(get(p, 'cornerRadiusTL')));
+    for (const x of strokeL) Object.assign(x.stroke, dashOf(ac, fc, x.st.i, outline));
     const ox = get(p, 'originX');
     const oy = get(p, 'originY');
     // Rive centres a stroke on the outline, while our rects and ellipses draw it inside their box: grow the box by the stroke
     // (half each side) so outer edges agree. Left alone when the size or the stroke's width is animated.
     const sized = ac.rab.anims.some((an) => an.keyed.some((k) => [paths[0].i, ...strokes.map((st) => st.i)].includes(Number(k.obj.props.objectId ?? 0))));
-    // With several strokes each one is centred on the outline, as in Rive, so the box keeps the path's size
-    if (strokeL.length > 1) for (const x of strokeL) x.stroke.align = 'center';
-    const half = strokeL.length <= 1 && stroke && stroke.width > 0 && !sized ? stroke.width / 2 : 0;
+    // With several strokes, or a stroke under a fill, each one is centred on the outline, as in Rive, so the box keeps the path's size
+    // (a dashed or trimmed stroke is drawn on the outline as well)
+    const centred = strokeL.length > 1 || !isPlainOrder(order) || strokeL.some((x) => x.stroke.dash?.length || x.trim !== undefined);
+    if (centred) for (const x of strokeL) x.stroke.align = 'center';
+    const half = !centred && stroke && stroke.width > 0 && !sized ? stroke.width / 2 : 0;
     // Rive's radial gradients end where the file says (usually the box's side); a CSS-like box paint ends at the corner
     const fit = (x: (typeof fillL)[number]): Paint => (x.info.radius ? fitRadial(x.paint, x.info.radius, w + half * 2, h + half * 2) : x.paint);
     const fitFill = fillL[0] ? fit(fillL[0]) : null;
     const fitExtra = { ...extra, ...(fillL.length > 1 ? { fills: fillL.slice(1).map(fit) } : {}) };
     node =
       p.type === 'Rectangle'
-        ? createNode('rect', { name, fill: fitFill, stroke, ...fitExtra, cornerRadius: r2(get(p, 'cornerRadiusTL') + half) })
+        ? createNode('rect', { name, fill: fitFill, stroke, ...fitExtra, cornerRadius: r2(get(p, 'cornerRadiusTL') + half), ...(riveRadii(p) ? { cornerRadii: riveRadii(p)!.map((v) => r2(v + half)) as [number, number, number, number] } : {}) })
         : createNode('ellipse', { name, fill: fitFill, stroke, ...fitExtra });
     const b = { x: -w * ox - half, y: -h * oy - half };
     placeAtOrigin(node, o, b, w + half * 2, h + half * 2);
@@ -956,7 +1032,7 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
       const ox = get(p, 'originX');
       const oy = get(p, 'originY');
       let closed = true;
-      if (p.type === 'Rectangle') pts = rectPoints(w, h, ox, oy, get(p, 'cornerRadiusTL'));
+      if (p.type === 'Rectangle') pts = rectPoints(w, h, ox, oy, get(p, 'cornerRadiusTL'), riveRadii(p));
       else if (p.type === 'Ellipse') pts = ellipsePoints(w, h, ox, oy);
       else if (p.type === 'Star') pts = polyPoints(get(p, 'points'), w, h, ox, oy, get(p, 'innerRadius'));
       else if (p.type === 'Polygon') pts = polyPoints(get(p, 'points'), w, h, ox, oy, null);
@@ -988,6 +1064,8 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
       });
     }
     if (!subs.length) return null;
+    outline = pathLength(subs);
+    for (const x of strokeL) Object.assign(x.stroke, dashOf(ac, fc, x.st.i, outline));
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -1376,8 +1454,63 @@ function convertImage(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
 
 const ALIGN3 = ['start', 'center', 'end'] as const;
 
+/**
+ * What percent values in a layout style resolve against. Rive resolves a percent padding, margin or gap against the
+ * width of the layout that owns the node (its parent's inner width; the artboard's root layout uses its own width),
+ * for both axes, and a percent inset against the parent's inner width or height. The file keeps a px size per layout,
+ * so these are worked out once at import.
+ */
+interface LayoutBox {
+  w: number;
+  h: number;
+  /** Padding plus border, in px. */
+  pad: { top: number; right: number; bottom: number; left: number };
+  innerW: number;
+  innerH: number;
+  /** The width percent values of this layout's own style resolve against. */
+  ownerW: number;
+}
+
+const styleOfSlot = (ac: ArtboardCtx, slot: number): RObj | undefined => {
+  const o = ac.rab.slots[slot];
+  return o?.props.styleId !== undefined ? ac.rab.slots[Number(o.props.styleId)] : undefined;
+};
+
+/** The nearest layout (or the artboard) above a slot. */
+function layoutParent(ac: ArtboardCtx, slot: number): number | undefined {
+  let s = Number(ac.rab.slots[slot]?.props.parentId ?? 0);
+  for (let guard = 0; guard < 200; guard++) {
+    if (s === 0 || isA(ac.rab.slots[s]?.type ?? '', 'LayoutComponent')) return slot === 0 ? undefined : s;
+    s = Number(ac.rab.slots[s]?.props.parentId ?? 0);
+  }
+  return undefined;
+}
+
+/** A style value in px: points as they are, percent of `owner`, anything else (not set, auto) as 0. */
+function unitPx(style: RObj | undefined, key: string, owner: number): number {
+  if (!style) return 0;
+  const u = get(style, `${key}UnitsValue`);
+  return u === 1 ? get(style, key) : u === 2 ? (get(style, key) / 100) * owner : 0;
+}
+
+function layoutBox(ac: ArtboardCtx, slot: number): LayoutBox {
+  const o = ac.rab.slots[slot];
+  const style = styleOfSlot(ac, slot);
+  const parent = slot === 0 ? undefined : layoutParent(ac, slot);
+  const po = parent === undefined ? undefined : layoutBox(ac, parent);
+  // A layout's own size, when it is a percent of its parent's inner size
+  const size = (key: 'width' | 'height', scale: string, owner: number | undefined) =>
+    style && owner !== undefined && get(style, scale) === 0 && get(style, `${key}UnitsValue`) === 2 ? (get(o, key) / 100) * owner : get(o, key);
+  const w = size('width', 'layoutWidthScaleType', po?.innerW);
+  const h = size('height', 'layoutHeightScaleType', po?.innerH);
+  const ownerW = po ? po.innerW : w;
+  const pad = { top: 0, right: 0, bottom: 0, left: 0 };
+  for (const [side, k] of [['top', 'Top'], ['right', 'Right'], ['bottom', 'Bottom'], ['left', 'Left']] as const) pad[side] = unitPx(style, `padding${k}`, ownerW) + unitPx(style, `border${k}`, ownerW);
+  return { w, h, pad, innerW: Math.max(0, w - pad.left - pad.right), innerH: Math.max(0, h - pad.top - pad.bottom), ownerW };
+}
+
 /** A Rive layout style as our auto layout. */
-function autoLayoutOf(fc: FileCtx, style: RObj | undefined): AutoLayout {
+function autoLayoutOf(fc: FileCtx, style: RObj | undefined, box?: LayoutBox): AutoLayout {
   const dirValue = style ? get(style, 'flexDirectionValue') : 2;
   const row = dirValue === 2 || dirValue === 3;
   // column-reverse (1) and row-reverse (3) list the children from the other end
@@ -1396,25 +1529,32 @@ function autoLayoutOf(fc: FileCtx, style: RObj | undefined): AutoLayout {
     justify = row ? horizontal : vertical;
     align = row ? vertical : horizontal;
   }
-  const pt = (k: string) => (style && get(style, `${k}UnitsValue`) === 2 ? 0 : style ? r2(get(style, k)) : 0);
-  if (style && ['paddingLeft', 'paddingTop', 'gapHorizontal', 'gapVertical'].some((k) => get(style, `${k}UnitsValue`) === 2)) fc.warnings.add('Percentage padding and gaps are imported as 0');
-  return {
+  const ownerW = box?.ownerW ?? 0;
+  // Yoga ignores values without a unit; a layout's border takes room inside it like padding does
+  const pad = box?.pad ?? { top: 0, right: 0, bottom: 0, left: 0 };
+  // Rive lays out with Yoga, which ignores negative gaps (negative margins still apply)
+  const gapH = Math.max(0, unitPx(style, 'gapHorizontal', ownerW));
+  const gapV = Math.max(0, unitPx(style, 'gapVertical', ownerW));
+  const wrap = style ? get(style, 'flexWrapValue') === 1 : false;
+  const layout: AutoLayout = {
     direction: row ? 'row' : 'column',
-    // Rive lays out with Yoga, which ignores negative gaps (negative margins still apply)
-    gap: Math.max(0, row ? pt('gapHorizontal') : pt('gapVertical')),
-    padding: { top: pt('paddingTop'), right: pt('paddingRight'), bottom: pt('paddingBottom'), left: pt('paddingLeft') },
+    gap: r2(row ? gapH : gapV),
+    padding: { top: r2(pad.top), right: r2(pad.right), bottom: r2(pad.bottom), left: r2(pad.left) },
     justify,
     align,
-    wrap: style ? get(style, 'flexWrapValue') === 1 : false,
+    wrap,
     hugWidth: !!style && (get(style, 'layoutWidthScaleType') === 2 || get(style, 'widthUnitsValue') === 3),
     hugHeight: !!style && (get(style, 'layoutHeightScaleType') === 2 || get(style, 'heightUnitsValue') === 3),
     // Rive lists children in layout order; ours are drawn back to front
     reverse: !reversed,
   };
+  // The gap between wrapped lines is the other axis's
+  if (wrap && gapH !== gapV) layout.crossGap = r2(row ? gapV : gapH);
+  return layout;
 }
 
-/** How a Rive layout node sits in its parent layout. */
-function layoutItemOf(style: RObj | undefined, size: { width: number; height: number }, scale?: { w: number; h: number; wu: number; hu: number }): LayoutItem {
+/** How a Rive layout node sits in its parent layout. `parent` is the box it sits in (for percent margins and insets). */
+function layoutItemOf(style: RObj | undefined, size: { width: number; height: number }, scale?: { w: number; h: number; wu: number; hu: number }, parent?: LayoutBox): LayoutItem {
   const it: LayoutItem = {};
   const sw = scale ? scale.w : style ? get(style, 'layoutWidthScaleType') : 0;
   const sh = scale ? scale.h : style ? get(style, 'layoutHeightScaleType') : 0;
@@ -1425,19 +1565,40 @@ function layoutItemOf(style: RObj | undefined, size: { width: number; height: nu
   if (it.width === 'percent') it.widthPercent = size.width;
   if (it.height === 'percent') it.heightPercent = size.height;
   if (style) {
-    const m = { top: get(style, 'marginTop'), right: get(style, 'marginRight'), bottom: get(style, 'marginBottom'), left: get(style, 'marginLeft') };
+    // Margins: points, or a percent of the parent's inner width (either axis); auto takes the free space
+    const ownerW = parent?.innerW ?? 0;
+    const sides = [['top', 'Top'], ['right', 'Right'], ['bottom', 'Bottom'], ['left', 'Left']] as const;
+    const m = { top: 0, right: 0, bottom: 0, left: 0 };
+    const auto: NonNullable<LayoutItem['marginAuto']> = {};
+    for (const [side, k] of sides) {
+      m[side] = unitPx(style, `margin${k}`, ownerW);
+      if (get(style, `margin${k}UnitsValue`) === 3) auto[side] = true;
+    }
     if (m.top || m.right || m.bottom || m.left) it.margin = { top: r2(m.top), right: r2(m.right), bottom: r2(m.bottom), left: r2(m.left) };
+    if (Object.keys(auto).length) it.marginAuto = auto;
     if (get(style, 'positionTypeValue') === 2) {
       it.position = 'absolute';
       const inset: NonNullable<LayoutItem['inset']> = {};
       for (const side of ['Left', 'Top', 'Right', 'Bottom'] as const) {
-        // Units 0 = not set, 1 = points (percent insets are treated as not set)
-        if (get(style, `position${side}UnitsValue`) === 1) inset[side.toLowerCase() as 'left'] = r2(get(style, `position${side}`));
+        // Units 0 = not set; points as they are, a percent of the parent's inner width (left, right) or height (top, bottom)
+        const owner = (side === 'Left' || side === 'Right' ? parent?.innerW : parent?.innerH) ?? 0;
+        if (get(style, `position${side}UnitsValue`) !== 0 && get(style, `position${side}UnitsValue`) !== 3) inset[side.toLowerCase() as 'left'] = r2(unitPx(style, `position${side}`, owner));
       }
       it.inset = inset;
     }
   }
   return it;
+}
+
+/** Whether a hugging layout (a slot) in a column layout is wider than the column's inner width, so its content wraps. */
+function wrapsInColumn(ac: ArtboardCtx, slot: number, width: number): boolean {
+  const parent = layoutParent(ac, slot);
+  if (parent === undefined) return false;
+  const style = styleOfSlot(ac, parent);
+  const dir = style ? get(style, 'flexDirectionValue') : 2;
+  if (dir === 2 || dir === 3) return false;
+  const box = layoutBox(ac, parent);
+  return box.innerW > 0 && width > box.innerW + 0.5;
 }
 
 /** Rive layout participants: everything else inside a layout keeps its own position. */
@@ -1505,11 +1666,12 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     const f = createNode('frame', {
       name: String(o.props.name ?? 'Layout'),
       fill: fillK ? paintOf(ac, fc, fillK.i, null).paint : null,
-      stroke: strokeK && strokePaint ? { paint: strokePaint, width: r2(get(strokeK.o, 'thickness')), ...dashOf(ac, fc, strokeK.i) } : null,
+      stroke: strokeK && strokePaint ? { paint: strokePaint, width: r2(get(strokeK.o, 'thickness')), ...dashOf(ac, fc, strokeK.i, boxPerimeter(w, h, riveRadii(style) ?? Array<number>(4).fill(style ? get(style, 'cornerRadiusTL') : 0))) } : null,
       cornerRadius: style ? r2(get(style, 'cornerRadiusTL')) : 0,
+      ...(riveRadii(style) ? { cornerRadii: riveRadii(style)! } : {}),
       clip: !!get<boolean>(o, 'clip'),
-      layout: autoLayoutOf(fc, style),
-      layoutItem: layoutItemOf(style, { width: w, height: h }),
+      layout: autoLayoutOf(fc, style, layoutBox(ac, slot)),
+      layoutItem: layoutItemOf(style, { width: w, height: h }, undefined, (() => { const p = layoutParent(ac, slot); return p === undefined ? undefined : layoutBox(ac, p); })()),
     });
     placeAtOrigin(f, o, { x: 0, y: 0 }, w, h);
     f.originX = 0;
@@ -1574,7 +1736,12 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
       // Text in a Rive layout takes the layout's width and wraps (unless the layout hugs its content, when the
       // text sets the width), and its height follows the lines
       if (c.type === 'text' && node.type === 'frame' && node.layout) {
-        const hugW = node.layoutItem?.width === 'hug';
+        let hugW = node.layoutItem?.width === 'hug';
+        // A hugging text that is wider than the column it sits in wraps at the column's width, as Yoga measures it with the room that is left
+        if (hugW && wrapsInColumn(ac, slot, c.width)) {
+          hugW = false;
+          node.layoutItem = { ...node.layoutItem, width: 'fill' };
+        }
         c.layoutItem = { width: hugW ? 'hug' : 'fill', height: 'hug' };
         c.autoSize = hugW ? 'width' : 'height';
         // Wrapped text keeps the file's line spacing
@@ -2834,7 +3001,7 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
         stroke: null,
         cornerRadius: 0,
         clip: false,
-        layout: { ...autoLayoutOf(fc, style), hugWidth: false, hugHeight: false },
+        layout: { ...autoLayoutOf(fc, style, layoutBox(ac, 0)), hugWidth: false, hugHeight: false },
         children: kids.map((k) => (participants.has(k.id) ? k : ({ ...k, layoutItem: { position: 'ignore' } } as SceneNode))),
       });
       wrap.originX = 0;
