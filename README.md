@@ -112,6 +112,7 @@ Access works like this:
 | `lib/dxf-parse.ts`, `lib/dxf-import.ts`, `lib/dwg-import.ts` | AutoCAD `.dxf` import (ASCII and binary: tables, blocks / inserts, entities, hatches; model space fitted to a 1600 px artboard, one group per layer) and DWG version detection with a "save as DXF" message (no DWG reader). |
 | `lib/vectorcraft-import.ts`, `lib/photocraft-import.ts`, `lib/craft-shared.ts`, `lib/zstd.ts` | VectorCraft (`.vectorcraft`, JSON or gzip, pictures after a marker) and PhotoCraft (`.pcraft`, a ZIP of a JSON manifest and zstd-compressed pixel tiles) import. `craft-shared.ts` holds the matrices, colours, gradients and text placement both use; `zstd.ts` is a small zstd decoder because browsers have none. Format notes: `research/craft/FORMATS.md`; sample files in `research/craft/samples/` drive `test/craft.test.ts` |
 | `lib/boolean.ts` | union/subtract/intersect/exclude (polygon-clipping) |
+| `lib/path-edit.ts` | path point maths: bend a segment, split to add a point, box shapes as paths, and keeping shape keys (point tracks) renumbered when points are added or removed |
 | `lib/svg-import.ts` | SVG files to editable layers (paths with transforms baked in, groups, gradients, text) |
 | `lib/image-export.ts` | PNG/SVG pictures of an artboard (the renderer inside `<foreignObject>`, assets and fonts inlined) |
 | `lib/prefs.ts` | per-person preferences in localStorage (wheel zoom vs pan, tooltips, rulers) |

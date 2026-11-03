@@ -2,6 +2,7 @@ import { produce, type Draft } from 'immer';
 import { useSyncExternalStore, useRef } from 'react';
 import {
   animatableProp,
+  pathPointPropName,
   relayoutTree,
   createArtboard,
   cloneWithNewIds,
@@ -19,6 +20,7 @@ import {
   type Keyframe,
   type Project,
   type RunStyle,
+  type SubPath,
   type SceneNode,
   type TextModifier,
   type TextRun,
@@ -27,6 +29,7 @@ import {
 import { applyRuns, nodePropsToRunStyle } from '../lib/rich-text';
 import { addModifier, applyPreset, removeModifier, type TextPresetId } from '../lib/text-modifiers';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
+import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths, remapPointTracks, shapeToPaths } from '../lib/path-edit';
 import { apply as applyOps, type Op } from '../../shared/ops.mjs';
 import type { Peer } from '../lib/live';
 import { getArtboard, locate, parentToArtboard, selectionBounds, topmost, uniqueName, nodeNames } from './doc';
@@ -42,6 +45,7 @@ export type Tool =
   | 'line'
   | 'pen'
   | 'pencil'
+  | 'bend'
   | 'text'
   | 'frame'
   | 'image'
@@ -860,6 +864,205 @@ export class EditorStore {
       const tl = getArtboard(d as Project, ab.id)?.timelines.find((x) => x.id === tlId);
       if (tl) setKey(tl as Timeline, nodeId, prop, t, value!);
     });
+  }
+
+  // ---------------------------------------------------------------- path points and shape keys
+
+  /**
+   * Replace a path layer's points. While recording, only the numbers that differ from `from` (the points as the
+   * canvas showed them when the edit began, so including the timeline's frame at the playhead) are keyed at the
+   * playhead: a moved point keys its x and y, a moved handle both numbers of that handle. A handle that didn't exist
+   * before is also keyed (as zero) at the keys the layer's points already have, so earlier poses stay straight.
+   * Otherwise the layer's own points are replaced.
+   */
+  setPathPoints(id: string, paths: SubPath[], opts: { from?: SubPath[]; coalesce?: string } = {}): void {
+    const s = this.state;
+    const tl = this.timeline();
+    const record = !!(s.recording && tl && s.bottomTab === 'timeline');
+    const from = opts.from;
+    const sameShape = !!from && from.length === paths.length && from.every((sp, i) => sp.points.length === paths[i].points.length);
+    if (!record || !from || !sameShape) {
+      this.setProps([id], { paths }, opts.coalesce);
+      return;
+    }
+    const changes: { sub: number; index: number; part: (typeof POINT_PARTS)[number]; value: number }[] = [];
+    paths.forEach((sp, sub) =>
+      sp.points.forEach((pt, index) => {
+        const a = pointParts(from[sub].points[index]);
+        const b = pointParts(pt);
+        for (const part of POINT_PARTS) {
+          const handle = part.includes('.');
+          const pair = handle ? (part.startsWith('in') ? ['in.x', 'in.y'] : ['out.x', 'out.y']) : ['x', 'y'];
+          // both numbers of a point or handle go together
+          if (pair.some((q) => a[q as typeof part] !== b[q as typeof part])) changes.push({ sub, index, part, value: b[part] });
+        }
+      }),
+    );
+    if (!changes.length) return;
+    const t = s.playhead;
+    this.update((d) => {
+      const ab = getArtboard(d as Project, s.activeArtboardId);
+      const dtl = ab?.timelines.find((x) => x.id === tl!.id);
+      const loc = ab && locate(ab as Artboard, id);
+      if (!ab || !dtl || !loc || loc.node.type !== 'path') return;
+      const times = [...new Set(pointTracks(dtl as Timeline, id).flatMap((tr) => tr.keys.map((k) => k.t)))];
+      for (const c of changes) {
+        const prop = pathPointPropName(c.sub, c.index, c.part);
+        const isNew = !dtl.tracks.some((tr) => tr.nodeId === id && tr.prop === prop);
+        if (isNew && c.part.includes('.')) {
+          const base = loc.node.paths[c.sub]?.points[c.index];
+          const baseValue = base ? pointParts(base as never)[c.part] : 0;
+          for (const kt of times) setKey(dtl as Timeline, id, prop, kt, baseValue);
+        }
+        setKey(dtl as Timeline, id, prop, t, c.value);
+      }
+    }, { coalesce: opts.coalesce });
+  }
+
+  /**
+   * Key the whole shape of a path layer at the playhead: every point (and the handles it has) gets a key holding its
+   * value in the frame shown there. Key the shape, move the playhead, edit points while recording, and the shape morphs.
+   */
+  keyShape(nodeId: string): void {
+    const ab = this.artboard();
+    if (!ab) return;
+    const node = locate(ab, nodeId)?.node;
+    if (!node || node.type !== 'path') return;
+    const tlId = this.state.activeTimelineId ?? this.addTimeline();
+    const t = this.state.playhead;
+    const now = this.artboard()!;
+    const tl0 = now.timelines.find((x) => x.id === tlId);
+    if (!tl0) return;
+    const pose = posedPaths(tl0, node, t);
+    this.update((d) => {
+      const dtl = getArtboard(d as Project, now.id)?.timelines.find((x) => x.id === tlId);
+      if (!dtl) return;
+      pose.forEach((sp, sub) =>
+        sp.points.forEach((pt, index) => {
+          const parts = pointParts(pt);
+          for (const part of POINT_PARTS) {
+            const prop = pathPointPropName(sub, index, part);
+            const tracked = dtl.tracks.some((tr) => tr.nodeId === nodeId && tr.prop === prop);
+            // handles only when the point has them (or they are keyed already)
+            if (part.includes('.') && !tracked && !pt[part.startsWith('in') ? 'in' : 'out']) continue;
+            setKey(dtl as Timeline, nodeId, prop, t, parts[part]);
+          }
+        }),
+      );
+    });
+  }
+
+  /** Remove every shape key (point track) of a path layer from the open timeline. */
+  clearShapeKeys(nodeId: string): void {
+    this.updateTimeline((tl) => {
+      const gone = new Set(pointTracks(tl as Timeline, nodeId).map((tr) => tr.id));
+      tl.tracks = tl.tracks.filter((tr) => !gone.has(tr.id));
+    });
+  }
+
+  /**
+   * Turn a rect, ellipse, polygon or star into a path with the same outline, so its points can be edited and bent.
+   * The layer keeps its id, place, fill and stroke; keys on its corner radius or inner ratio go, since those no longer exist.
+   */
+  convertToPath(id: string): boolean {
+    const ab = this.artboard();
+    const node = ab && locate(ab, id)?.node;
+    const paths = node && shapeToPaths(node);
+    if (!ab || !node || !paths) return false;
+    this.update((d) => {
+      const dab = getArtboard(d as Project, ab.id)!;
+      const loc = locate(dab as Artboard, id);
+      if (!loc) return;
+      const old = loc.node as unknown as Record<string, unknown>;
+      const next: Record<string, unknown> = { ...old, type: 'path', paths };
+      for (const k of ['cornerRadius', 'sides', 'points', 'innerRatio']) delete next[k];
+      loc.siblings.splice(loc.index, 1, next as unknown as SceneNode);
+      for (const tl of dab.timelines) tl.tracks = tl.tracks.filter((tr) => !(tr.nodeId === id && (tr.prop === 'cornerRadius' || tr.prop === 'innerRatio')));
+    });
+    return true;
+  }
+
+  /**
+   * Add a point on a segment of a path layer, at parameter t of the segment (the shape doesn't change). Keys stay
+   * valid: the layer's shape keys are renumbered, and in every timeline the new point gets keys at each key time of
+   * its sub-path, placed on the curve of that frame (`si`/`i`/`t` are read from the frame shown at the playhead), with
+   * the two neighbours' handles adjusted to keep each frame's outline.
+   */
+  insertPathPoint(id: string, si: number, i: number, t: number): void {
+    const ab = this.artboard();
+    const node = ab && locate(ab, id)?.node;
+    if (!ab || !node || node.type !== 'path') return;
+    const sp0 = node.paths[si];
+    if (!sp0 || i < 0 || i >= sp0.points.length) return;
+    const n = sp0.points.length;
+    // The frames to rewrite, worked out from the document before the change
+    const plan = ab.timelines
+      .filter((tl) => keyTimes(tl, id, si).length)
+      .map((tl) => {
+        const times = keyTimes(tl, id, si);
+        const poses = times.map((kt) => {
+          const before = posedPaths(tl, node, kt);
+          return { t: kt, before: before[si].points, after: insertPoint(before, si, i, t)[si].points };
+        });
+        return { id: tl.id, poses };
+      });
+    const inserted = insertPoint(node.paths, si, i, t);
+    this.update((d) => {
+      const dab = getArtboard(d as Project, ab.id)!;
+      const dn = locate(dab as Artboard, id)?.node;
+      if (!dn || dn.type !== 'path') return;
+      dn.paths = inserted as never;
+      for (const p of plan) {
+        const dtl = dab.timelines.find((x) => x.id === p.id) as Timeline | undefined;
+        if (!dtl) continue;
+        remapPointTracks(dtl, id, (sub, index) => ({ sub, index: sub === si && index > i ? index + 1 : index }));
+        const mid = i + 1;
+        const nb = (i + 2) % (n + 1);
+        // a curve in any frame means handles are keyed in every frame
+        const curved = p.poses.some((q) => q.after[mid].in || q.after[mid].out);
+        for (const q of p.poses) {
+          const write = (index: number, parts: (typeof POINT_PARTS)[number][]) => {
+            const v = pointParts(q.after[index]);
+            for (const part of parts) setKey(dtl, id, pathPointPropName(si, index, part), q.t, v[part]);
+          };
+          write(mid, curved ? POINT_PARTS : ['x', 'y']);
+          if (curved) {
+            write(i, ['out.x', 'out.y']);
+            write(nb, ['in.x', 'in.y']);
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Remove a point of a path layer (a sub-path left with fewer than two points goes too). The layer's shape keys for
+   * that point go with it and the later points' keys are renumbered, in every timeline, so the other frames stay valid
+   * (their outlines lose that corner: the neighbours are joined directly). Returns false when nothing is left of the layer.
+   */
+  removePathPoint(id: string, si: number, pi: number): boolean {
+    const ab = this.artboard();
+    const node = ab && locate(ab, id)?.node;
+    if (!ab || !node || node.type !== 'path' || !node.paths[si]?.points[pi]) return true;
+    const paths = structuredClone(node.paths) as SubPath[];
+    paths[si].points.splice(pi, 1);
+    const dropSub = paths[si].points.length < 2;
+    const next = paths.filter((_, k) => !(k === si && dropSub));
+    if (!next.length) return false;
+    this.update((d) => {
+      const dab = getArtboard(d as Project, ab.id)!;
+      const dn = locate(dab as Artboard, id)?.node;
+      if (!dn || dn.type !== 'path') return;
+      dn.paths = next as never;
+      for (const tl of dab.timelines)
+        remapPointTracks(tl as Timeline, id, (sub, index) => {
+          if (sub !== si) return { sub: dropSub && sub > si ? sub - 1 : sub, index };
+          if (dropSub) return null;
+          if (index === pi) return null;
+          return { sub, index: index > pi ? index - 1 : index };
+        });
+    });
+    return true;
   }
 }
 

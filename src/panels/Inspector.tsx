@@ -51,6 +51,7 @@ import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { assetKind } from '../lib/assets';
+import { pointTracks } from '../lib/path-edit';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { CodeEditor } from '../components/CodeEditor';
 import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
@@ -727,6 +728,44 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
   );
 }
 
+/** Rect, ellipse, polygon and star become a path (same outline) so their points can be edited, bent and keyed. */
+function ConvertToPath({ node }: { node: SceneNode }) {
+  return (
+    <Row>
+      <button className="btn" title="Turn this shape into a path with the same outline, so its points can be edited, bent and keyed" onClick={() => store().convertToPath(node.id)}>
+        Convert to path
+      </button>
+    </Row>
+  );
+}
+
+/** Shape morphing: key every point of the path at the playhead. */
+function ShapeKeys({ node }: { node: SceneNode }) {
+  const s = useEditor((st) => ({ bottomTab: st.bottomTab, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
+  const tl = s.bottomTab === 'timeline' ? store().artboard()?.timelines.find((t) => t.id === s.tl) : undefined;
+  const tracks = tl ? pointTracks(tl, node.id) : [];
+  const onKey = tracks.some((t) => t.keys.some((k) => Math.abs(k.t - s.playhead) < 1));
+  return (
+    <>
+      <Row>
+        <button
+          className={`btn key-btn${tracks.length ? ' tracked' : ''}${onKey ? ' on-key' : ''}`}
+          title={tl ? `Key the whole shape (every point and handle) at ${Math.round(s.playhead)} ms. Key it at one time, move the playhead, edit the points with recording on, and the shape morphs` : 'Key the whole shape at the playhead (creates a timeline)'}
+          onClick={() => store().keyShape(node.id)}
+        >
+          ◆ Key shape
+        </button>
+        {tracks.length > 0 && (
+          <button className="btn" title="Remove the shape keys of this layer from the open timeline" onClick={() => store().clearShapeKeys(node.id)}>
+            Clear shape keys
+          </button>
+        )}
+      </Row>
+      {tracks.length > 0 && <p className="hint">{tracks.length} shape tracks in this timeline. Adding or deleting a point updates every key.</p>}
+    </>
+  );
+}
+
 function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
@@ -737,7 +776,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
   const radius = 'cornerRadius' in n ? <Num node={n} ids={ids} prop="cornerRadius" label="Radius" min={0} /> : null;
   switch (n.type) {
     case 'rect':
-      return <Section help="shapes#shape-settings" title="Rectangle">{radius}</Section>;
+      return (
+        <Section help="shapes#shape-settings" title="Rectangle">
+          {radius}
+          {nodes.length === 1 && <ConvertToPath node={n} />}
+        </Section>
+      );
     case 'frame':
       return (
         <>
@@ -764,6 +808,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return (
         <Section help="shapes#shape-settings" title="Polygon">
           <NumberField label="Sides" value={n.sides} min={3} max={64} onChange={(v) => set({ sides: Math.round(v) })} />
+          {nodes.length === 1 && <ConvertToPath node={n} />}
         </Section>
       );
     case 'star':
@@ -771,6 +816,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
         <Section help="shapes#shape-settings" title="Star">
           <NumberField label="Points" value={n.points} min={3} max={64} onChange={(v) => set({ points: Math.round(v) })} />
           <Num node={n} ids={ids} prop="innerRatio" label="Inner" step={0.05} min={0.05} max={1} />
+          {nodes.length === 1 && <ConvertToPath node={n} />}
         </Section>
       );
     case 'path':
@@ -793,7 +839,14 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
               </button>
             </Row>
           )}
-          <p className="hint">Double-click a path to edit its points. Alt-click a point toggles curve/corner; Delete removes it.</p>
+          <p className="hint">Double-click a path to edit its points; double-click its outline to add one. Alt-click a point toggles curve/corner; Delete removes it. The Bend tool (W) drags an edge into a curve.</p>
+          {nodes.length === 1 && <ShapeKeys node={n} />}
+        </Section>
+      );
+    case 'ellipse':
+      return (
+        <Section help="shapes#shape-settings" title="Ellipse">
+          {nodes.length === 1 && <ConvertToPath node={n} />}
         </Section>
       );
     case 'text':

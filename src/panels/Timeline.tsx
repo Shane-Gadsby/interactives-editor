@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ANIMATABLE_PROPS, animatableProp, EASING_NAMES, ease, uid, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
+import { ANIMATABLE_PROPS, animatableProp, EASING_NAMES, ease, pathPointProp, uid, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -8,6 +8,43 @@ import { Icons } from '../components/icons';
 import { ChildOrder } from '../components/ChildOrder';
 
 const LABEL_W = 220;
+
+/** Short names of a path point's tracks, shown under the point's own row. */
+const POINT_PART_LABEL = { x: 'X', y: 'Y', 'in.x': 'In handle X', 'in.y': 'In handle Y', 'out.x': 'Out handle X', 'out.y': 'Out handle Y' } as const;
+/** A layer with more point tracks than this starts with its points folded. */
+const FOLD_POINTS_OVER = 12;
+
+type TrackRow = { kind: 'track'; tr: TL['tracks'][number] };
+type PointRow = { kind: 'point'; key: string; label: string; tracks: TL['tracks']; open: boolean };
+
+/**
+ * One layer's track rows: its ordinary tracks, then its shape keys grouped by point ("Shape: point 3" with that point's
+ * x, y and handle tracks under it; a layer with many points starts folded).
+ */
+export function trackRows(nodeId: string, tracks: TL['tracks'], toggled: Record<string, boolean>): (TrackRow | PointRow)[] {
+  const rows: (TrackRow | PointRow)[] = [];
+  const groups = new Map<string, { sub: number; index: number; tracks: TL['tracks'] }>();
+  const nPoint = tracks.filter((t) => pathPointProp(t.prop)).length;
+  for (const tr of tracks) {
+    const pp = pathPointProp(tr.prop);
+    if (!pp) {
+      rows.push({ kind: 'track', tr });
+      continue;
+    }
+    const k = `${pp.sub}.${pp.index}`;
+    const g = groups.get(k) ?? { sub: pp.sub, index: pp.index, tracks: [] };
+    g.tracks.push(tr);
+    groups.set(k, g);
+  }
+  const order = ['x', 'y', 'in.x', 'in.y', 'out.x', 'out.y'];
+  for (const g of [...groups.values()].sort((a, b) => a.sub - b.sub || a.index - b.index)) {
+    const key = `${nodeId}:${g.sub}.${g.index}`;
+    g.tracks.sort((a, b) => order.indexOf(pathPointProp(a.prop)!.part) - order.indexOf(pathPointProp(b.prop)!.part));
+    rows.push({ kind: 'point', key, label: `Shape: point ${g.index + 1}${g.sub ? ` (path ${g.sub + 1})` : ''}`, tracks: g.tracks, open: toggled[key] ?? nPoint <= FOLD_POINTS_OVER });
+    if (toggled[key] ?? nPoint <= FOLD_POINTS_OVER) for (const tr of g.tracks) rows.push({ kind: 'track', tr });
+  }
+  return rows;
+}
 
 /** A track's property name for people: the list's label, with the number of a later constraint or text modifier. */
 function animatableLabel(prop: string): string {
@@ -37,6 +74,8 @@ export function TimelinePanel() {
   const [markerId, setMarkerId] = useState<string | null>(null);
   // The tween (span between a key and the next) whose easing is being edited, named by its starting key
   const [tween, setTween] = useState<{ trackId: string; keyId: string } | null>(null);
+  // Shape-key point groups opened or folded by hand (otherwise by how many there are)
+  const [pointsOpen, setPointsOpen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const el = lane.current;
@@ -214,6 +253,40 @@ export function TimelinePanel() {
     byNode.set(tr.nodeId, list);
   }
 
+  /** One track's lane: its tweens (click for easing) and keys. */
+  const trackLane = (tr: TL['tracks'][number]) => (
+    <div key={tr.id} className="lane" onPointerDown={scrub}>
+      {tr.keys.slice(0, -1).map((k, i) => {
+        const w = X(tr.keys[i + 1].t) - X(k.t);
+        const sel = tween?.trackId === tr.id && tween.keyId === k.id;
+        return (
+          <span
+            key={`seg-${k.id}`}
+            className={`segment${sel ? ' selected' : ''}`}
+            style={{ left: X(k.t), width: w }}
+            title={`Tween ${k.t}–${tr.keys[i + 1].t} ms: ${easeLabel(k.ease)}. Click to change its easing`}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setTween({ trackId: tr.id, keyId: k.id });
+              store().set({ selectedKeys: [], previewPlaying: false });
+            }}
+          >
+            {w > 28 && <EaseCurve ease={k.ease} width={w} />}
+          </span>
+        );
+      })}
+      {tr.keys.map((k) => (
+        <span
+          key={k.id}
+          className={`key${s.selectedKeys.includes(`${tr.id}:${k.id}`) ? ' selected' : ''}`}
+          style={{ left: X(k.t) }}
+          title={`${k.t} ms: ${String(k.value)}`}
+          onPointerDown={(e) => keyDown(e, tr.id, k)}
+        />
+      ))}
+    </div>
+  );
+
   const selectedKey = s.selectedKeys.length === 1 ? findKey(tl, s.selectedKeys[0]) : null;
   const selectedTween = (() => {
     if (!tween) return null;
@@ -308,22 +381,43 @@ export function TimelinePanel() {
                 <div className="track-node" onClick={() => store().select([nodeId])}>
                   {node?.name ?? '(deleted layer)'}
                 </div>
-                {tracks.map((tr) => (
-                  <div key={tr.id} className="track-label">
-                    <span>{animatableLabel(tr.prop)}</span>
-                    <button
-                      className="mini"
-                      title="Remove track"
-                      onClick={() =>
-                        setTl((d) => {
-                          d.tracks = d.tracks.filter((x) => x.id !== tr.id);
-                        })
-                      }
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                {trackRows(nodeId, tracks, pointsOpen).map((row) =>
+                  row.kind === 'point' ? (
+                    <div key={row.key} className="track-label track-point" onClick={() => setPointsOpen((o) => ({ ...o, [row.key]: !row.open }))} title="Show or fold this point's keys">
+                      <span>
+                        {row.open ? '▾' : '▸'} {row.label}
+                      </span>
+                      <button
+                        className="mini"
+                        title="Remove this point's keys"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const gone = new Set(row.tracks.map((x) => x.id));
+                          setTl((d) => {
+                            d.tracks = d.tracks.filter((x) => !gone.has(x.id));
+                          });
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <div key={row.tr.id} className={`track-label${pathPointProp(row.tr.prop) ? ' point-part' : ''}`}>
+                      <span>{pathPointProp(row.tr.prop) ? POINT_PART_LABEL[pathPointProp(row.tr.prop)!.part] : animatableLabel(row.tr.prop)}</span>
+                      <button
+                        className="mini"
+                        title="Remove track"
+                        onClick={() =>
+                          setTl((d) => {
+                            d.tracks = d.tracks.filter((x) => x.id !== row.tr.id);
+                          })
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ),
+                )}
               </div>
             );
           })}
@@ -355,38 +449,26 @@ export function TimelinePanel() {
                   );
                 })}
               </div>
-              {tracks.map((tr) => (
-                <div key={tr.id} className="lane" onPointerDown={scrub}>
-                  {tr.keys.slice(0, -1).map((k, i) => {
-                    const w = X(tr.keys[i + 1].t) - X(k.t);
-                    const sel = tween?.trackId === tr.id && tween.keyId === k.id;
-                    return (
-                      <span
-                        key={`seg-${k.id}`}
-                        className={`segment${sel ? ' selected' : ''}`}
-                        style={{ left: X(k.t), width: w }}
-                        title={`Tween ${k.t}–${tr.keys[i + 1].t} ms: ${easeLabel(k.ease)}. Click to change its easing`}
-                        onPointerDown={(e) => {
-                          e.stopPropagation();
-                          setTween({ trackId: tr.id, keyId: k.id });
-                          store().set({ selectedKeys: [], previewPlaying: false });
-                        }}
-                      >
-                        {w > 28 && <EaseCurve ease={k.ease} width={w} />}
-                      </span>
-                    );
-                  })}
-                  {tr.keys.map((k) => (
-                    <span
-                      key={k.id}
-                      className={`key${s.selectedKeys.includes(`${tr.id}:${k.id}`) ? ' selected' : ''}`}
-                      style={{ left: X(k.t) }}
-                      title={`${k.t} ms: ${String(k.value)}`}
-                      onPointerDown={(e) => keyDown(e, tr.id, k)}
-                    />
-                  ))}
-                </div>
-              ))}
+              {trackRows(nodeId, tracks, pointsOpen).map((row) =>
+                row.kind === 'point' ? (
+                  <div key={row.key} className="lane node-lane point-lane" onPointerDown={scrub}>
+                    {[...new Set(row.tracks.flatMap((t) => t.keys.map((k) => k.t)))].map((t) => {
+                      const refs = row.tracks.flatMap((tr) => tr.keys.filter((k) => k.t === t).map((k) => `${tr.id}:${k.id}`));
+                      return (
+                        <span
+                          key={t}
+                          className={`key summary${refs.every((r) => s.selectedKeys.includes(r)) ? ' selected' : ''}`}
+                          style={{ left: X(t) }}
+                          title={`${t} ms: this point's keys here. Drag to move them together`}
+                          onPointerDown={(e) => keysDown(e, refs, t)}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  trackLane(row.tr)
+                ),
+              )}
             </div>
           ))}
           <div className="playhead" style={{ left: X(Math.min(s.playhead, tl.duration)) }} />

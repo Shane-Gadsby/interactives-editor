@@ -3293,3 +3293,16 @@ code {
 .draw-api li {
   margin: 4px 0;
 }
+/* Shape keys: one row per point, its numbers under it */
+.track-label.track-point {
+  padding-left: 14px;
+  cursor: pointer;
+  background: var(--panel-2);
+  color: var(--text, inherit);
+}
+.track-label.point-part {
+  padding-left: 32px;
+}
+.lane.point-lane {
+  background: var(--panel-2);
+}

@@ -167,6 +167,7 @@ const TOOL_KEYS: Record<string, Tool> = {
   l: 'line',
   p: 'pen',
   n: 'pencil',
+  w: 'bend',
   t: 'text',
   b: 'button',
 };
@@ -584,6 +585,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'line', icon: 'line', label: 'Line', key: 'L' },
   { tool: 'pen', icon: 'pen', label: 'Pen', key: 'P' },
   { tool: 'pencil', icon: 'pencil', label: 'Pencil (freehand)', key: 'N' },
+  { tool: 'bend', icon: 'bend', label: 'Bend (drag an edge into a curve; Alt bends one side)', key: 'W' },
   { tool: 'text', icon: 'text', label: 'Text', key: 'T' },
   { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
 ];

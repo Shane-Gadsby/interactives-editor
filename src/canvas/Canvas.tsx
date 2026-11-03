@@ -40,6 +40,7 @@ import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, ty
 import { insertFiles } from '../lib/insert';
 import { captureDrop } from '../lib/links';
 import { liveSession } from '../lib/live';
+import { bendPaths, hasShapeKeys, nearestSegment, shapeToPaths, type SegmentHit } from '../lib/path-edit';
 import { confirmDialog } from '../components/dialogs';
 
 type Pt = { x: number; y: number };
@@ -56,6 +57,7 @@ type Drag =
   | { kind: 'marquee'; abId: string | null; start: Pt; additive: string[] }
   | { kind: 'penHandle'; index: number }
   | { kind: 'pencil'; abId: string; points: Pt[] }
+  | { kind: 'bend'; id: string; si: number; i: number; t: number; start: Pt; node0: PathNode; parentM: Matrix }
   | { kind: 'pathPoint'; si: number; pi: number; start: Pt; node0: PathNode; parentM: Matrix }
   | { kind: 'pathHandle'; si: number; pi: number; which: 'in' | 'out'; node0: PathNode; parentM: Matrix; mirror: boolean };
 
@@ -351,20 +353,22 @@ export function Canvas() {
         if (!loc || loc.node.type !== 'path') return;
         const si = Number(a);
         const pi = Number(b);
+        // While recording, an edit starts from the frame shown at the playhead (its keyed points), not the layer's own points
+        const node0 = structuredClone(recordedNode(loc.node));
         if (kind === 'pt') {
           setSelPoint({ si, pi });
           if (e.altKey) {
-            togglePointSmooth(loc.node, si, pi);
+            togglePointSmooth(node0, si, pi);
             return;
           }
-          drag.current = { kind: 'pathPoint', si, pi, start: local(ab, w), node0: structuredClone(loc.node), parentM: parentToArtboard(ab, loc.node.id) };
+          drag.current = { kind: 'pathPoint', si, pi, start: local(ab, w), node0, parentM: parentToArtboard(ab, loc.node.id) };
         } else {
           drag.current = {
             kind: 'pathHandle',
             si,
             pi,
             which: kind === 'hin' ? 'in' : 'out',
-            node0: structuredClone(loc.node),
+            node0,
             parentM: parentToArtboard(ab, loc.node.id),
             mirror: !e.altKey,
           };
@@ -379,6 +383,11 @@ export function Canvas() {
 
     const hitAb = abAt(w) ?? null;
     const tool = st.tool;
+
+    if (tool === 'bend') {
+      bendDown(e, w);
+      return;
+    }
 
     if (tool === 'pen') {
       const pab = penRef.current ? getArtboard(st.project, penRef.current.abId) : hitAb ?? ab;
@@ -420,7 +429,11 @@ export function Canvas() {
     }
 
     // Select tool
-    if (st.editingPathId) exitPathEdit();
+    if (st.editingPathId) {
+      // On the edited path's outline a double-click adds a point, so leave edit mode only for clicks elsewhere
+      if (editedSegmentAt(w)) return;
+      exitPathEdit();
+    }
     const found = layerAt(w, e.ctrlKey || e.metaKey);
     const selAb = found?.ab ?? hitAb;
     if (selAb) {
@@ -664,7 +677,15 @@ export function Canvas() {
         if (!pt) break;
         pt.x = round(pt.x + lp.x - sp.x, 2);
         pt.y = round(pt.y + lp.y - sp.y, 2);
-        store().setProps([d.node0.id], { paths }, 'path-edit');
+        store().setPathPoints(d.node0.id, paths, { from: d.node0.paths, coalesce: 'path-edit' });
+        break;
+      }
+      case 'bend': {
+        if (!ab) break;
+        const lp = toNodeLocal(d.node0, d.parentM, local(ab, w));
+        const sp = toNodeLocal(d.node0, d.parentM, d.start);
+        const paths = bendPaths(d.node0.paths, d.si, d.i, d.t, { x: lp.x - sp.x, y: lp.y - sp.y }, e.altKey);
+        store().setPathPoints(d.node0.id, paths, { from: d.node0.paths, coalesce: 'bend' });
         break;
       }
       case 'pathHandle': {
@@ -677,7 +698,7 @@ export function Canvas() {
         pt[d.which] = v;
         const other = d.which === 'in' ? 'out' : 'in';
         if (d.mirror && pt[other]) pt[other] = { x: -v.x, y: -v.y };
-        store().setProps([d.node0.id], { paths }, 'path-edit');
+        store().setPathPoints(d.node0.id, paths, { from: d.node0.paths, coalesce: 'path-edit' });
         break;
       }
     }
@@ -688,6 +709,16 @@ export function Canvas() {
   const onPointerUp = (e: React.PointerEvent) => {
     const d = drag.current;
     drag.current = null;
+    if (d?.kind === 'bend' && !store().get().recording) {
+      // the curve can reach past the layer's box: settle the box around the points (not for keyed shapes, whose keys hold the points as they are)
+      const st = store().get();
+      const ab = getArtboard(st.project, st.activeArtboardId);
+      const loc = ab && locate(ab, d.id);
+      if (ab && loc?.node.type === 'path' && !hasShapeKeys(ab.timelines, d.id)) {
+        const n = normalizePath(loc.node);
+        store().setProps([d.id], { x: round(n.x, 2), y: round(n.y, 2), width: round(n.width, 2), height: round(n.height, 2), paths: n.paths }, 'bend');
+      }
+    }
     store().commit();
     setGuides(null);
     if (!d) return;
@@ -770,6 +801,14 @@ export function Canvas() {
     }
     if (st.tool !== 'select') return;
     const w = toWorld(e.clientX, e.clientY);
+    if (st.editingPathId) {
+      const h = editedSegmentAt(w);
+      if (h) {
+        store().insertPathPoint(st.editingPathId, h.si, h.i, h.t);
+        setSelPoint({ si: h.si, pi: h.i + 1 });
+        return;
+      }
+    }
     const ab = layerAt(w, e.ctrlKey || e.metaKey)?.ab ?? abAt(w);
     if (!ab) return;
     const p = local(ab, w);
@@ -864,6 +903,8 @@ export function Canvas() {
     if (!ab || !id) return;
     const loc = locate(ab, id);
     if (loc?.node.type !== 'path') return;
+    // Shape keys hold points in the layer's own coordinates, so a layer that has them keeps its box and points as they are
+    if (hasShapeKeys(ab.timelines, id)) return;
     const n = normalizePath(loc.node);
     store().setProps([id], { x: round(n.x, 2), y: round(n.y, 2), width: round(n.width, 2), height: round(n.height, 2), paths: n.paths });
   }
@@ -884,23 +925,82 @@ export function Canvas() {
       pt.out = { x: dx, y: dy };
       pt.in = { x: -dx, y: -dy };
     }
-    store().setProps([n.id], { paths });
+    store().setPathPoints(n.id, paths, { from: n.paths });
   }
 
   function deletePathPoint(id: string, sel: { si: number; pi: number }) {
-    const ab = store().artboard();
-    const loc = ab && locate(ab, id);
-    if (!loc || loc.node.type !== 'path') return;
-    const paths = structuredClone(loc.node.paths);
-    paths[sel.si]?.points.splice(sel.pi, 1);
-    const cleaned = paths.filter((p) => p.points.length >= 2);
     setSelPoint(null);
-    if (!cleaned.length) {
+    // shape keys of the point go with it and the later points' keys are renumbered
+    if (!store().removePathPoint(id, sel.si, sel.pi)) {
       store().set({ editingPathId: null });
       store().deleteSelection();
+    }
+  }
+
+  /** The layer as the canvas shows it while recording (its frame at the playhead); otherwise as it is. */
+  function recordedNode(n: PathNode): PathNode {
+    const st = store().get();
+    if (!(st.recording && st.bottomTab === 'timeline' && st.activeTimelineId) || !active) return n;
+    const shown = locate(active, n.id)?.node;
+    return shown?.type === 'path' ? shown : n;
+  }
+
+  /** The segment of the path being edited under a world point, if there is one. */
+  function editedSegmentAt(w: Pt): SegmentHit | null {
+    const st = store().get();
+    const ab = getArtboard(st.project, st.activeArtboardId);
+    const id = st.editingPathId;
+    const loc = ab && id ? locate(ab, id) : null;
+    if (!ab || !loc || loc.node.type !== 'path') return null;
+    const node = recordedNode(loc.node);
+    return nearestSegment(node.paths, toNodeLocal(node, parentToArtboard(ab, node.id), local(ab, w)), 6 / zoom);
+  }
+
+  /**
+   * Bend tool: press on an edge of a shape and drag. Path layers bend straight away; the box shapes first offer to
+   * become paths (their outline needs points to bend).
+   */
+  function bendDown(e: React.PointerEvent, w: Pt) {
+    const st = store().get();
+    const bab = abAt(w) ?? getArtboard(st.project, st.activeArtboardId);
+    if (!bab) return;
+    const base = getArtboard(st.project, bab.id) ?? bab;
+    const p = local(base, w);
+    const recording = st.recording && st.bottomTab === 'timeline' && !!st.activeTimelineId;
+    const src = recording && active && active.id === base.id ? active : base;
+    // The selected layer is tried first, so its edge wins over layers on top of it
+    const cands: SceneNode[] = [];
+    for (const id of st.selection) {
+      const n = locate(src, id)?.node;
+      if (n && n.visible && !n.locked) cands.push(n);
+    }
+    const under = layerAt(w, e.ctrlKey || e.metaKey)?.hit;
+    const underNode = under && locate(src, under.id)?.node;
+    if (underNode && !cands.some((c) => c.id === underNode.id)) cands.push(underNode);
+    for (const n of cands) {
+      const paths = n.type === 'path' ? n.paths : shapeToPaths(n);
+      if (!paths) continue;
+      const pm = parentToArtboard(src, n.id);
+      const h = nearestSegment(paths, toNodeLocal(n, pm, p), 8 / zoom);
+      if (!h) continue;
+      if (n.type !== 'path') {
+        void confirmDialog({
+          title: 'Convert to path',
+          message: `To bend “${n.name}” its outline needs points, so it has to become a path.\n\nIts place, fill, stroke and keys stay. Its ${n.type === 'rect' ? 'corner radius' : n.type === 'polygon' ? 'sides' : n.type === 'star' ? 'points and inner ratio' : 'shape'} settings are replaced by the points, and its width and height no longer stretch the outline.`,
+          confirmLabel: 'Convert to path',
+        }).then((ok) => {
+          if (!ok || !store().convertToPath(n.id)) return;
+          store().select([n.id]);
+          store().toast('Now a path. Drag along an edge to bend it.');
+        });
+        return;
+      }
+      if (!st.selection.includes(n.id)) store().select([n.id]);
+      drag.current = { kind: 'bend', id: n.id, si: h.si, i: h.i, t: h.t, start: p, node0: structuredClone(n), parentM: pm };
       return;
     }
-    store().setProps([id], { paths: cleaned });
+    // Not on an edge: pick the layer under the pointer, as the select tool does
+    if (under) store().select([under.id]);
   }
 
   // ---------------------------------------------------------------- drop files
