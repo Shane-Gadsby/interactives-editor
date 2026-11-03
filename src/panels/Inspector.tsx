@@ -943,6 +943,22 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             ]}
             onChange={(v) => set({ autoSize: v })}
           />
+          <Row>
+            {n.autoSize === 'none' && (
+              <SelectField<'visible' | 'hidden' | 'ellipsis'>
+                label="Overflow"
+                title="What happens to lines that don't fit the box: shown anyway, clipped at the box, or cut with an ellipsis"
+                value={n.overflow ?? 'visible'}
+                options={[
+                  { value: 'visible', label: 'Show' },
+                  { value: 'hidden', label: 'Clip' },
+                  { value: 'ellipsis', label: 'Ellipsis …' },
+                ]}
+                onChange={(v) => set({ overflow: v })}
+              />
+            )}
+            <CheckField label="Wrap lines" title="Break long lines at the box's width. Off keeps the lines as written" value={n.wrap !== false} onChange={(v) => set({ wrap: v })} />
+          </Row>
           <TextSelectionHint id={n.id} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           <p className="hint">
@@ -1685,6 +1701,56 @@ const CONSTRAINT_TYPES: { value: ConstraintType; label: string; tip: string }[] 
   { value: 'distance', label: 'Distance', tip: 'Keep this layer a set distance from the target layer' },
 ];
 
+/** The options the copy constraints share: which values to read, a factor, adding to the layer's own value, and limits. */
+function CopyOptions({ c, onChange }: { c: Constraint; onChange: (patch: Partial<Constraint>) => void }) {
+  const rot = c.type === 'copyRotation';
+  const scale = c.type === 'copyScale';
+  const limited = c.min !== undefined || c.max !== undefined || c.minY !== undefined || c.maxY !== undefined;
+  const range = rot ? { min: -180, max: 180 } : scale ? { min: 0, max: 2 } : { min: 0, max: 1000 };
+  return (
+    <>
+      <SelectField<'world' | 'local'>
+        label="Read"
+        title="World: where the other layer ends up on the artboard. Local: its own position, rotation or scale inside its parent"
+        value={c.space ?? (scale ? 'local' : 'world')}
+        options={[
+          { value: 'world', label: 'World values' },
+          { value: 'local', label: 'Local values' },
+        ]}
+        onChange={(v) => onChange({ space: v })}
+      />
+      <Row>
+        <NumberField label="Factor" title="Multiplies the copied value: 1 copies it as is, 0.5 follows half as far, -1 mirrors it" value={c.factor ?? 1} step={0.1} onChange={(v) => onChange({ factor: v })} />
+        <CheckField label="Add to own" title={scale ? 'Multiply this layer’s own scale by the copied one instead of replacing it' : 'Add the copied value to this layer’s own instead of replacing it'} value={!!c.additive} onChange={(v) => onChange({ additive: v })} />
+      </Row>
+      <CheckField
+        label="Limit"
+        title="Keep the result within a range"
+        value={limited}
+        onChange={(v) => onChange(v ? { min: range.min, max: range.max, ...(rot ? {} : { minY: range.min, maxY: range.max }) } : { min: undefined, max: undefined, minY: undefined, maxY: undefined })}
+      />
+      {limited && (
+        <Row>
+          <NumberField label={rot ? 'Min' : 'Min x'} title="The lowest value allowed" value={c.min ?? range.min} onChange={(v) => onChange({ min: v })} />
+          <NumberField label={rot ? 'Max' : 'Max x'} title="The highest value allowed" value={c.max ?? range.max} onChange={(v) => onChange({ max: v })} />
+        </Row>
+      )}
+      {limited && !rot && (
+        <Row>
+          <NumberField label="Min y" title="The lowest vertical value allowed" value={c.minY ?? range.min} onChange={(v) => onChange({ minY: v })} />
+          <NumberField label="Max y" title="The highest vertical value allowed" value={c.maxY ?? range.max} onChange={(v) => onChange({ maxY: v })} />
+        </Row>
+      )}
+      {c.type === 'copyScale' && (
+        <Row>
+          <CheckField label="Copy x" title="Take the other layer's horizontal scale" value={c.copyX !== false} onChange={(v) => onChange({ copyX: v })} />
+          <CheckField label="Copy y" title="Take the other layer's vertical scale" value={c.copyY !== false} onChange={(v) => onChange({ copyY: v })} />
+        </Row>
+      )}
+    </>
+  );
+}
+
 /** Follow path / copy transform constraints, applied by the player after timelines and bindings. */
 function ConstraintsSection({ node }: { node: SceneNode }) {
   const set = useSetter([node.id]);
@@ -1759,6 +1825,7 @@ function ConstraintsSection({ node }: { node: SceneNode }) {
           {(c.type === 'copyRotation' || (c.type === 'followPath' && c.orient)) && (
             <NumberField label="Angle +" title="Added to the constrained rotation, in degrees" value={c.angleOffset ?? 0} onChange={(v) => update(i, { angleOffset: v })} suffix="°" />
           )}
+          {(c.type === 'copyPosition' || c.type === 'copyRotation' || c.type === 'copyScale') && <CopyOptions c={c} onChange={(patch) => update(i, patch)} />}
           <Num node={node} ids={[node.id]} prop={`constraints.${i}.strength`} label="Strength" title="Mix between the layer's own value (0) and the constrained one (1)" step={0.01} min={0} max={1} fallback={1} />
         </div>
       ))}

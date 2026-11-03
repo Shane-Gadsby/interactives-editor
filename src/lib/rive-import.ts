@@ -1116,6 +1116,8 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
   const oy = get(o, 'originY');
   const sizing = get(o, 'sizingValue');
   const align = (['left', 'right', 'center', 'justify'] as const)[get(o, 'alignValue')] ?? 'left';
+  // Rive: 0 visible, 1 hidden, 2 clipped, 3 ellipsis, 4 fit
+  const overflow = (['visible', 'hidden', 'hidden', 'ellipsis', 'hidden'] as const)[get(o, 'overflowValue')] ?? 'visible';
   const node = createNode('text', {
     name: String(o.props.name ?? 'Text'),
     text,
@@ -1127,7 +1129,13 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
     lineHeight,
     align,
     autoSize: sizing === 0 ? 'width' : sizing === 1 ? 'height' : 'none',
+    // Vertical alignment inside a fixed box, what happens to lines that don't fit, and no-wrap
+    verticalAlign: (['top', 'middle', 'bottom'] as const)[get(o, 'verticalAlignValue')] ?? 'top',
+    ...(sizing === 2 && overflow !== 'visible' ? { overflow } : {}),
+    ...(get(o, 'wrapValue') === 1 ? { wrap: false } : {}),
   });
+  if (get(o, 'overflowValue') === 4) fc.warnings.add('Text that shrinks to fit its box (fit overflow) is clipped at the box instead');
+  if (get(o, 'paragraphSpacing')) fc.warnings.add('Paragraph spacing in text is not imported');
   // originValue 1 = the text's y is its first baseline (about 0.95 em below the top of our line box)
   const baselineShift = get(o, 'originValue') === 1 ? -fontSize * 0.95 : 0;
   placeAtOrigin(node, o, { x: -w * ox, y: -h * oy + baselineShift }, w, h);
@@ -1211,7 +1219,9 @@ const ALIGN3 = ['start', 'center', 'end'] as const;
 function autoLayoutOf(fc: FileCtx, style: RObj | undefined): AutoLayout {
   const dirValue = style ? get(style, 'flexDirectionValue') : 2;
   const row = dirValue === 2 || dirValue === 3;
-  if (dirValue === 1 || dirValue === 3) fc.warnings.add('Reversed layout directions are laid out forwards');
+  // column-reverse (1) and row-reverse (3) list the children from the other end
+  const reversed = dirValue === 1 || dirValue === 3;
+  if (reversed && style && get(style, 'layoutAlignmentType') < 9) fc.warnings.add('Reversed layout directions reverse the order of the children; their start and end alignment stays on the same sides');
   const t = style ? get(style, 'layoutAlignmentType') : 0;
   let justify: AutoLayout['justify'];
   let align: AutoLayout['align'];
@@ -1238,7 +1248,7 @@ function autoLayoutOf(fc: FileCtx, style: RObj | undefined): AutoLayout {
     hugWidth: !!style && (get(style, 'layoutWidthScaleType') === 2 || get(style, 'widthUnitsValue') === 3),
     hugHeight: !!style && (get(style, 'layoutHeightScaleType') === 2 || get(style, 'heightUnitsValue') === 3),
     // Rive lists children in layout order; ours are drawn back to front
-    reverse: true,
+    reverse: !reversed,
   };
 }
 
@@ -1575,7 +1585,12 @@ function buildArtboardNodes(fc: FileCtx, index: number): SceneNode[] {
   return out;
 }
 
-/** Translation constraints (copy the target's x and/or y) become copy-position constraints on the constrained layer. */
+const COPY_CONSTRAINTS = ['TranslationConstraint', 'RotationConstraint', 'ScaleConstraint', 'TransformConstraint', 'FollowPathConstraint'];
+
+/**
+ * Translation, rotation, scale and transform constraints become copy constraints on the constrained layer (with the factor,
+ * "offset" as add-to-own, limits and the source space); follow path constraints become follow path.
+ */
 function importConstraints(ac: ArtboardCtx, fc: FileCtx): void {
   ac.rab.slots.forEach((c, i) => {
     if (i === 0 || !isA(c.type, 'Constraint')) return;
@@ -1583,17 +1598,23 @@ function importConstraints(ac: ArtboardCtx, fc: FileCtx): void {
       rigConstraint(ac, fc, i, c);
       return;
     }
-    if (c.type !== 'TranslationConstraint' && c.type !== 'TransformConstraint') {
-      if (c.type === 'RotationConstraint' || c.type === 'ScaleConstraint') fc.warnings.add('Rotation and scale constraints are not imported');
-      else fc.warnings.add(`${c.type.replace(/Constraint$/, '')} constraints are not supported`);
+    if (!COPY_CONSTRAINTS.includes(c.type)) {
+      fc.warnings.add(`${c.type.replace(/Constraint$/, '')} constraints are not supported`);
       return;
     }
     const parent = Number(c.props.parentId ?? 0);
     const target = ac.nodeBySlot.get(Number(get(c, 'targetId')));
     // A clip shape that follows something (a mask over moving waves) has to carry that to the masking copies as well
-    for (const node of [ac.nodeBySlot.get(parent), ...(ac.clones.get(parent) ?? [])]) {
+    const nodes = [ac.nodeBySlot.get(parent), ...(ac.clones.get(parent) ?? [])];
+    for (const node of nodes) {
       if (!node || !target || node === target) continue;
-      constrainNode(c, node, target, fc);
+      const made = constrainNode(c, node, target, fc);
+      // Keys on the strength (and the distance along a followed path) animate the first layer's constraints
+      if (node === nodes[0] && made.length === 1) {
+        const first = (node.constraints ?? []).length - made.length;
+        const lastIndex = (node.constraints ?? []).length - 1;
+        addTarget(ac, i, { nodeId: node.id, map: { strength: { prop: `constraints.${lastIndex}.strength`, f: num() }, ...(c.type === 'FollowPathConstraint' ? { distance: { prop: `constraints.${first}.distance`, f: num() } } : {}) } });
+      }
     }
   });
 }
@@ -1693,29 +1714,61 @@ function resolveSkins(ac: ArtboardCtx, fc: FileCtx): void {
   }
 }
 
-function constrainNode(c: RObj, node: SceneNode, target: SceneNode, fc: FileCtx): void {
+/** The constraints (as ours) a Rive constraint on `node` means; returns the ones added. */
+function constrainNode(c: RObj, node: SceneNode, target: SceneNode, fc: FileCtx): Constraint[] {
+  const strength = r2(get(c, 'strength'));
+  const added: Constraint[] = [];
+  const push = (k: Omit<Constraint, 'id' | 'target' | 'strength'>) => {
+    const full: Constraint = { id: uid('cn'), target: target.id, strength, ...k } as Constraint;
+    added.push(full);
+    node.constraints = [...(node.constraints ?? []), full];
+  };
+  const local = get(c, 'sourceSpaceValue') === 1;
+  if (c.type === 'FollowPathConstraint') {
+    // Distance runs 0..1 along the outline; the layer turns to face along it unless told not to
+    if (get<boolean>(c, 'offset')) fc.warnings.add('Follow path constraints that keep the layer\'s own position as an offset place it on the path itself');
+    push({ type: 'followPath', distance: r2(get(c, 'distance')), orient: get<boolean>(c, 'orient') !== false });
+    return added;
+  }
   if (c.type === 'TransformConstraint') {
     // Takes the target's whole transform (a filled wave that follows its outline), as copy position + rotation + scale
-    if (get(c, 'sourceSpaceValue') || get(c, 'destSpaceValue')) fc.warnings.add('Transform constraints in local space are imported as world space');
-    const strength = r2(get(c, 'strength'));
-    node.constraints = [
-      ...(node.constraints ?? []),
-      ...(['copyPosition', 'copyRotation', 'copyScale'] as const).map((type) => ({ id: uid('cn'), type, target: target.id, strength })),
-    ];
-    return;
+    if (get(c, 'destSpaceValue')) fc.warnings.add('Transform constraints applied in local space are imported as world space');
+    for (const type of ['copyPosition', 'copyRotation', 'copyScale'] as const) push({ type, ...(local ? { space: 'local' as const } : {}) });
+    return added;
   }
-  if (get<boolean>(c, 'offset') || get<boolean>(c, 'min') || get<boolean>(c, 'max') || get(c, 'copyFactor') !== 1 || get(c, 'copyFactorY') !== 1) fc.warnings.add('Translation constraints with offsets, limits or a factor are imported as plain copies');
-  node.constraints = [
-    ...(node.constraints ?? []),
-    {
-      id: uid('cn'),
-      type: 'copyPosition',
-      target: target.id,
-      strength: r2(get(c, 'strength')),
-      copyX: get<boolean>(c, 'doesCopy') !== false,
-      copyY: get<boolean>(c, 'doesCopyY') !== false,
-    },
-  ];
+  if (get(c, 'destSpaceValue') && c.type !== 'TranslationConstraint') fc.warnings.add('Rotation and scale constraints applied in local space are imported as world space');
+  // The limits: a flag per bound and a value; Y has its own for translation and scale. Rotation is in radians
+  const conv = c.type === 'RotationConstraint' ? DEG : 1;
+  const bounds = (min: string, max: string, minV: string, maxV: string) => ({
+    ...(get<boolean>(c, min) ? { min: r2(get(c, minV) * conv) } : {}),
+    ...(get<boolean>(c, max) ? { max: r2(get(c, maxV) * conv) } : {}),
+  });
+  const xFactor = r2(get(c, 'copyFactor'));
+  const common = {
+    ...(xFactor !== 1 ? { factor: xFactor } : {}),
+    ...(get<boolean>(c, 'offset') ? { additive: true } : {}),
+    ...bounds('min', 'max', 'minValue', 'maxValue'),
+  };
+  if (c.type === 'RotationConstraint') {
+    push({ type: 'copyRotation', ...(local ? { space: 'local' as const } : {}), ...(get<boolean>(c, 'doesCopy') === false ? { factor: 0, additive: true } : {}), ...common });
+    return added;
+  }
+  const y = bounds('minY', 'maxY', 'minValueY', 'maxValueY');
+  const yBounds = { ...(y.min !== undefined ? { minY: y.min } : {}), ...(y.max !== undefined ? { maxY: y.max } : {}) };
+  if (r2(get(c, 'copyFactorY')) !== xFactor) fc.warnings.add('Constraints with a different factor for x and y use the x factor for both');
+  if (c.type === 'ScaleConstraint') {
+    push({ type: 'copyScale', space: local ? 'local' : 'world', copyX: get<boolean>(c, 'doesCopy') !== false, copyY: get<boolean>(c, 'doesCopyY') !== false, ...common, ...yBounds });
+    return added;
+  }
+  push({
+    type: 'copyPosition',
+    ...(local ? { space: 'local' as const } : {}),
+    copyX: get<boolean>(c, 'doesCopy') !== false,
+    copyY: get<boolean>(c, 'doesCopyY') !== false,
+    ...common,
+    ...yBounds,
+  });
+  return added;
 }
 
 // ---------------------------------------------------------------- animations
@@ -2321,7 +2374,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         (ab.blends ??= []).push(b);
         blendOf.set(st, b);
       }
-      const goTo = (from: LogicNode, port: string, target: RState, x: number) => {
+      const goTo = (from: LogicNode, port: string, target: RState, x: number, fadeMs = 0) => {
         let last = from;
         let lastPort = port;
         const others = layerTimelines.filter((o) => o !== tlOf(target)).map((o) => o.id);
@@ -2355,7 +2408,8 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         }
         const tl = tlOf(target);
         if (tl) {
-          const play = add('action.timeline', { timeline: tl.id, op: 'restart' }, entered.x);
+          // A transition's blend time cross-fades the new state's pose in over the old one
+          const play = add('action.timeline', { timeline: tl.id, op: 'restart', ...(fadeMs > 0 ? { fade: String(fadeMs) } : {}) }, entered.x);
           link(entered.last, play, entered.port);
         }
       };
@@ -2374,6 +2428,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         for (const tr of st.transitions) {
           const target = layer.states[Number(tr.obj.props.stateToId ?? 0)];
           if (!target || target.obj.type === 'ExitState') continue;
+          if (Number(tr.obj.props.flags ?? 0) & 1) continue; // disabled in the editor
           const conds: string[] = [];
           const triggers: string[] = [];
           const watched = new Set<string>();
@@ -2460,8 +2515,13 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           if (st.obj.type !== 'AnyState') leave = fireNodes(st.fires, 1, leave.last, leave.port, leave.x);
           leave = fireNodes(tr.fires, 0, leave.last, leave.port, leave.x);
           leave = fireNodes(tr.fires, 1, leave.last, leave.port, leave.x);
-          goTo(leave.last, leave.port, target, leave.x);
-          if (get(tr.obj, 'duration')) fc.warnings.add('Transition blend durations are not imported (states switch instantly)');
+          // Blend time: milliseconds, or a percentage of the state's animation (flag 2)
+          const rawMs = get(tr.obj, 'duration');
+          const fromTl = tlOf(st);
+          const fadeMs = Number(tr.obj.props.flags ?? 0) & 2 ? Math.round(((fromTl?.duration ?? 0) * rawMs) / 100) : rawMs;
+          goTo(leave.last, leave.port, target, leave.x, tlOf(target) ? fadeMs : 0);
+          if (fadeMs > 0 && !tlOf(target)) fc.warnings.add('Transition blend durations into blend states are not imported (they switch instantly)');
+
           y += 120 + Math.max(0, sources.length - 1) * 100;
           void si;
         }
@@ -2469,7 +2529,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     });
     // Listeners -> pointer events setting inputs
     for (const l of sm.listeners) {
-      const pointer: Record<number, string> = { 0: 'pointerenter', 1: 'pointerleave', 2: 'pointerdown', 3: 'pointerup', 6: 'click' };
+      const pointer: Record<number, string> = { 0: 'pointerenter', 1: 'pointerleave', 2: 'pointerdown', 3: 'pointerup', 4: 'pointermove', 6: 'click', 9: 'dragstart', 10: 'dragend', 12: 'drag' };
       // Older files keep one trigger on the listener; newer ones list ListenerInputType objects (events are type 5)
       const triggers = l.inputTypes.length
         ? l.inputTypes.map((it) => ({ type: it.type === 'ListenerInputTypeEvent' ? 5 : Number(it.props.listenerTypeValue ?? 0), eventId: it.props.eventId }))
@@ -2484,7 +2544,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         } else if (trig.type in pointer) {
           const targetNode = ac.nodeBySlot.get(Number(l.obj.props.targetId ?? 0));
           sources.push(add('event.pointer', { target: targetNode?.id ?? '', type: pointer[trig.type] }, 40));
-        } else fc.warnings.add(`Listener type ${trig.type} (only enter/exit/down/up/click and event listeners are imported)`);
+        } else fc.warnings.add(`Listener type ${trig.type} (only enter, exit, down, up, move, click, drag and event listeners are imported)`);
       }
       if (!sources.length) continue;
       let last: LogicNode = sources[0];
