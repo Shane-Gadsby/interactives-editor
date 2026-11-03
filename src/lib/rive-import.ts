@@ -308,11 +308,15 @@ interface RTransition {
   conditions: RObj[];
   /** StateMachineFireEvent / FireTrigger actions (occurs at start or end of the transition). */
   fires: RObj[];
+  /** Listener actions (view model changes) the transition performs. */
+  actions: RObj[];
 }
 interface RState {
   obj: RObj;
   transitions: RTransition[];
   fires: RObj[];
+  /** Listener actions (view model changes) the state performs on entering or leaving. */
+  actions: RObj[];
   /** BlendAnimation1D / BlendAnimationDirect objects of a blend state. */
   blends: RObj[];
 }
@@ -504,12 +508,12 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
       layer = { obj: o, states: [] };
       sm.layers.push(layer);
     } else if (isA(t, 'LayerState') && layer) {
-      state = { obj: o, transitions: [], fires: [], blends: [] };
+      state = { obj: o, transitions: [], fires: [], actions: [], blends: [] };
       transition = null;
       layer.states.push(state);
     } else if (isA(t, 'BlendAnimation') && state) state.blends.push(o);
     else if (isA(t, 'StateTransition') && state) {
-      transition = { obj: o, conditions: [], fires: [] };
+      transition = { obj: o, conditions: [], fires: [], actions: [] };
       state.transitions.push(transition);
     } else if (isA(t, 'TransitionCondition') && transition) {
       transition.conditions.push(o);
@@ -520,7 +524,11 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
       sm.listeners.push(listener);
     } else if (isA(t, 'ListenerInputType') && listener) listener.inputTypes.push(o);
     else if (t === 'KeyboardInput' && listener) listener.keys.push(o);
-    else if (isA(t, 'ListenerAction') && listener) {
+    else if (isA(t, 'ListenerAction') && !listener && (transition || state)) {
+      // Actions on a state or a transition (before any listener of the machine): they run when it is entered, left or taken
+      (transition ?? state)!.actions.push(t === 'ListenerViewModelChange' ? { ...o, parts: pending } : o);
+      pending = [];
+    } else if (isA(t, 'ListenerAction') && listener) {
       listener.actions.push(t === 'ListenerViewModelChange' ? { ...o, parts: pending } : o);
       pending = [];
     }
@@ -3088,7 +3096,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
   };
   // A Rive event as nodes: a message with the event's name (its custom properties as the payload), then, for audio and
   // open-link events, the sound or the link
-  const eventChain = (slot: number, from: LogicNode, port: string, x: number) => {
+  const eventChain = (slot: number, from: LogicNode, port: string, x: number, quiet = false) => {
     const ev = ac.rab.slots[slot];
     if (!ev || !isA(ev.type, 'Event')) {
       fc.warnings.add('Some events fired by animations or state machines could not be found');
@@ -3116,7 +3124,8 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     if (ev.type === 'AudioEvent') {
       const asset = audioAsset(fc, Number(get(ev, 'assetId')));
       if (asset) push(add('action.sound', { asset: asset.id, volume: asset.volume, continue: 'start' }, x));
-    } else if (ev.type === 'OpenUrlEvent') {
+    } else if (ev.type === 'OpenUrlEvent' && !quiet) {
+      // (a layer starting in its first state doesn't open a page: that's the page loading, not a click)
       const url = get<string>(ev, 'url');
       if (url) push(add('action.url', { url: JSON.stringify(url), target: ['_blank', '_parent', '_self', '_top'][Number(get(ev, 'targetValue'))] ?? '_blank' }, x));
     }
@@ -3132,11 +3141,50 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     return n;
   };
   // StateMachineFireEvent actions of a state or transition that happen at the start (0) or end (1)
-  const fireNodes = (fires: RObj[], occurs: number, from: LogicNode, port: string, x: number) => {
+  const fireNodes = (fires: RObj[], occurs: number, from: LogicNode, port: string, x: number, quiet = false) => {
     let r = { last: from, port, x };
     for (const f of fires) {
       if (f.type === 'StateMachineFireTrigger') fc.warnings.add('Fire trigger actions on states and transitions are not imported');
-      if (f.type === 'StateMachineFireEvent' && Number(f.props.occursValue ?? 0) === occurs) r = eventChain(Number(f.props.eventId ?? 0), r.last, r.port, r.x);
+      if (f.type === 'StateMachineFireEvent' && Number(f.props.occursValue ?? 0) === occurs) r = eventChain(Number(f.props.eventId ?? 0), r.last, r.port, r.x, quiet);
+    }
+    return r;
+  };
+  // A ListenerViewModelChange as a Set variable node (a trigger counts up): linked after `from`, or null when its property can't be found
+  const vmChangeNode = (a: RObj, from: LogicNode | null, port: string, x: number): LogicNode | null => {
+    const target = vmVar(contextOf(a));
+    const bindable = (a.parts ?? []).find((x) => isA(x.type, 'BindableProperty'));
+    if (!target) {
+      fc.warnings.add('Some listeners change view model properties that could not be found');
+      return null;
+    }
+    const raw = bindable?.props.propertyValue;
+    const value =
+      target.kind === 'boolean'
+        ? String(!!raw)
+        : target.kind === 'number'
+          ? String(r2(Number(raw ?? 0)))
+          : target.kind === 'color'
+            ? JSON.stringify(argbCss(Number(raw ?? 0)))
+            : target.kind === 'enum'
+              ? JSON.stringify(target.options?.[Number(raw ?? 0)] ?? '')
+              : JSON.stringify(String(raw ?? ''));
+    const n = target.kind === 'trigger' ? add('action.setVariable', { variable: target.id, op: 'add', value: '1' }, x) : add('action.setVariable', { variable: target.id, op: 'set', value }, x);
+    if (from) link(from, n, port);
+    return n;
+  };
+  // Listener actions on a state or a transition (Rive's "on enter / on exit" and "at start / at end" actions): the
+  // ones that happen at `when`, chained after `from`. The flags are a bit set: 4 on enter, 1 on exit (state) or at the end (transition), 2 at the start of a transition.
+  const ACTION_AT = { enter: 4, exit: 1, start: 2, end: 1 };
+  const actionNodes = (actions: RObj[], when: number, from: LogicNode, port: string, x: number) => {
+    let r = { last: from, port, x };
+    for (const a of actions) {
+      if (!(Number(a.props.flags ?? 0) & when)) continue;
+      if (a.type !== 'ListenerViewModelChange') {
+        fc.warnings.add(`${a.type} actions on states and transitions are not imported`);
+        continue;
+      }
+      const n = vmChangeNode(a, r.last, r.port, r.x);
+      if (n) r = { last: n, port: 'out', x: r.x + 240 };
     }
     return r;
   };
@@ -3212,7 +3260,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         early: boolean;
       }
       const mixParams = (m: Mix, outgoing: string) => ({ fade: String(m.ms), ...(m.ease !== 'linear' ? { fadeEase: m.ease } : {}), outgoing, ...(m.hold ? { hold: true } : {}), ...(m.early ? { earlyExit: true } : {}) });
-      const goTo = (from: LogicNode, port: string, target: RState, x: number, mix?: Mix) => {
+      const goTo = (from: LogicNode, port: string, target: RState, x: number, mix?: Mix, quiet = false) => {
         let last = from;
         let lastPort = port;
         const others = layerTimelines.filter((o) => o !== tlOf(target)).map((o) => o.id);
@@ -3220,14 +3268,18 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         // own blend still starts again from the top
         const mixing = !!mix && mix.ms > 0 && (!!tlOf(target) || blendOf.has(target));
         const outgoing = JSON.stringify([...others, ...[...blendOf.values()].filter((b) => b !== blendOf.get(target)).map((b) => b.id)]);
-        if (others.length && !mixing) {
-          // The layer's other states stop where they are; the target state's animation takes over
-          const p = add('action.code', { code: `${JSON.stringify(others)}.forEach((id) => ix.timeline(id)?.pause());` }, x);
-          p.note = 'Pause the layer’s other states';
-          link(last, p, lastPort);
-          last = p;
-          lastPort = 'out';
-          x += 240;
+        // The layer's other states stop where they are while the target state's animation takes over: the node that starts
+        // the target carries them (its outgoing list does that with no blend-in too), or, with nothing to start, a pause each
+        const takesOver = !!tlOf(target) || blendOf.has(target);
+        const pauseWith = others.length && !mixing && takesOver ? { outgoing: JSON.stringify(others) } : {};
+        if (others.length && !mixing && !takesOver) {
+          for (const id of others) {
+            const p = add('action.timeline', { timeline: id, op: 'pause' }, x);
+            link(last, p, lastPort);
+            last = p;
+            lastPort = 'out';
+            x += 240;
+          }
         }
         // The layer's blends stop (the target's own one starts again from the top below)
         for (const b of blendOf.values()) {
@@ -3240,10 +3292,11 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         }
         const set = add('action.setVariable', { variable: stateVar.id, op: 'set', value: JSON.stringify(stateName(target)) }, x);
         link(last, set, lastPort);
-        const entered = fireNodes(target.fires, 0, set, 'out', x + 240);
+        let entered = fireNodes(target.fires, 0, set, 'out', x + 240, quiet);
+        entered = actionNodes(target.actions, ACTION_AT.enter, entered.last, entered.port, entered.x);
         const targetBlend = blendOf.get(target);
         if (targetBlend) {
-          const play = add('action.blendPlay', { blend: targetBlend.id, ...(mixing ? mixParams(mix!, outgoing) : {}) }, entered.x);
+          const play = add('action.blendPlay', { blend: targetBlend.id, ...(mixing ? mixParams(mix!, outgoing) : pauseWith) }, entered.x);
           link(entered.last, play, entered.port);
           entered.last = play;
           entered.port = 'out';
@@ -3252,7 +3305,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         const tl = tlOf(target);
         if (tl) {
           // A transition's blend time cross-fades the new state's pose in over the old one
-          const play = add('action.timeline', { timeline: tl.id, op: 'restart', ...(mixing ? mixParams(mix!, outgoing) : {}) }, entered.x);
+          const play = add('action.timeline', { timeline: tl.id, op: 'restart', ...(mixing ? mixParams(mix!, outgoing) : pauseWith) }, entered.x);
           link(entered.last, play, entered.port);
         }
       };
@@ -3263,7 +3316,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         const target = layer.states[Number(first.obj.props.stateToId ?? 0)];
         const start = add('event.start', {}, 40);
         start.note = `${smName}: layer ${li + 1} entry`;
-        goTo(start, 'out', target, 280);
+        goTo(start, 'out', target, 280, undefined, true);
         y += 120;
       }
       const trFlags = (tr: RTransition) => Number(tr.obj.props.flags ?? 0);
@@ -3342,7 +3395,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           // Rive checks conditions every frame: a condition that is already true when the layer enters a state (or
           // starts) must fire then too, so state changes re-check it
           if (watched.size) watched.add(stateVar.id);
-          const condition = conds.join(' && ') || 'true';
+          let condition = conds.join(' && ') || 'true';
           const specs: [string, Record<string, unknown>][] = [];
           // Exit time: Rive only takes the transition once the state's animation has played to that point (ms, or a share
           // of the animation with flag 8). One at the very end is the animation finishing; earlier ones are waited for
@@ -3351,7 +3404,9 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           const exitRaw = get(tr.obj, 'exitTime');
           const exitAt = exitTl ? Math.min(exitTl.duration, trFlags(tr) & 8 ? (exitTl.duration * exitRaw) / 100 : exitRaw) : 0;
           // (with a trigger there is no event for the animation finishing, so even an exit time at the end is waited for)
-          const exitWait = !!exitTl && (exitAt < exitTl.duration - 0.5 || triggers.length > 0 || vmTriggers.length > 0);
+          // (and with conditions on inputs: they can come true long after the animation finished, and the exit time has to
+          // be looked at again then, not only at the moment it finishes)
+          const exitWait = !!exitTl && (exitAt < exitTl.duration - 0.5 || triggers.length > 0 || vmTriggers.length > 0 || [...watched].some((id) => id !== stateVar.id));
           if (exitTl && !exitWait && !triggers.length && !vmTriggers.length) {
             watched.clear();
             if (exitTl.loop !== 'once') fc.warnings.add('Exit times on looping animations are checked when the animation first finishes');
@@ -3375,6 +3430,9 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
               if (tl) {
                 if (tl.loop !== 'once') fc.warnings.add('Transitions out of looping animations by exit time only happen once the animation is set to play once');
                 specs.push(['event.timelineEnd', { timeline: tl.id }]);
+                // The end of the run that just finished, not of one a transition earlier in this same event has started again
+                // (two states can show the same animation, and Rive's exit time is of the state's own run)
+                condition = `${condition === 'true' ? '' : condition + ' && '}!ix.timeline(${JSON.stringify(tl.id)}).playing`;
               } else {
                 if (blendOf.has(st)) fc.warnings.add('Transitions out of blend states by exit time only are not imported');
                 continue;
@@ -3413,9 +3471,14 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
             }
           }
           // Leaving a state, the transition and entering the next one: their fire event actions, in that order
-          if (st.obj.type !== 'AnyState') leave = fireNodes(st.fires, 1, leave.last, leave.port, leave.x);
+          if (st.obj.type !== 'AnyState') {
+            leave = fireNodes(st.fires, 1, leave.last, leave.port, leave.x);
+            leave = actionNodes(st.actions, ACTION_AT.exit, leave.last, leave.port, leave.x);
+          }
           leave = fireNodes(tr.fires, 0, leave.last, leave.port, leave.x);
+          leave = actionNodes(tr.actions, ACTION_AT.start, leave.last, leave.port, leave.x);
           leave = fireNodes(tr.fires, 1, leave.last, leave.port, leave.x);
+          leave = actionNodes(tr.actions, ACTION_AT.end, leave.last, leave.port, leave.x);
           goTo(leave.last, leave.port, target, leave.x, mix);
 
           y += 120 + Math.max(0, sources.length - 1) * 100;
@@ -3450,9 +3513,14 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           for (const sn of srcs) link(sn, into);
           group.forEach((g, i) => {
             let leave = { last: pick, port: String(i + 1), x: 520 };
-            if (st.obj.type !== 'AnyState') leave = fireNodes(st.fires, 1, leave.last, leave.port, leave.x);
+            if (st.obj.type !== 'AnyState') {
+              leave = fireNodes(st.fires, 1, leave.last, leave.port, leave.x);
+              leave = actionNodes(st.actions, ACTION_AT.exit, leave.last, leave.port, leave.x);
+            }
             leave = fireNodes(g.tr.fires, 0, leave.last, leave.port, leave.x);
+            leave = actionNodes(g.tr.actions, ACTION_AT.start, leave.last, leave.port, leave.x);
             leave = fireNodes(g.tr.fires, 1, leave.last, leave.port, leave.x);
+            leave = actionNodes(g.tr.actions, ACTION_AT.end, leave.last, leave.port, leave.x);
             goTo(leave.last, leave.port, g.target, leave.x, g.mix);
           });
           y += 120 + group.length * 60;
@@ -3508,27 +3576,11 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           continue;
         }
         if (a.type === 'ListenerViewModelChange') {
-          const target = vmVar(contextOf(a));
-          const bindable = (a.parts ?? []).find((x) => isA(x.type, 'BindableProperty'));
-          if (!target) {
-            fc.warnings.add('Some listeners change view model properties that could not be found');
-            continue;
+          const n = vmChangeNode(a, last, 'out', x);
+          if (n) {
+            last = n;
+            x += 240;
           }
-          const raw = bindable?.props.propertyValue;
-          const value =
-            target.kind === 'boolean'
-              ? String(!!raw)
-              : target.kind === 'number'
-                ? String(r2(Number(raw ?? 0)))
-                : target.kind === 'color'
-                  ? JSON.stringify(argbCss(Number(raw ?? 0)))
-                  : target.kind === 'enum'
-                    ? JSON.stringify(target.options?.[Number(raw ?? 0)] ?? '')
-                    : JSON.stringify(String(raw ?? ''));
-          const n = target.kind === 'trigger' ? add('action.setVariable', { variable: target.id, op: 'add', value: '1' }, x) : add('action.setVariable', { variable: target.id, op: 'set', value }, x);
-          link(last, n);
-          last = n;
-          x += 240;
           continue;
         }
         if (a.type === 'FocusActionTarget' || a.type === 'FocusActionClear') {

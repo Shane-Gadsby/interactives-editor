@@ -81,8 +81,9 @@ describe('Rive transitions run the way Rive mixes them', () => {
     const play = t.ab.logic.nodes.find((x) => x.kind === 'action.timeline' && x.params.timeline === timelines.B)!;
     expect(play.params).toMatchObject({ fade: '400', outgoing: JSON.stringify([timelines.A]) });
     // the old state is not paused up front
-    // (only the entry and the way back pause the other states)
-    expect(t.ab.logic.nodes.filter((x) => x.kind === 'action.code' && /pause/.test(String(x.params.code)))).toHaveLength(2);
+    // (only the entry and the way back stop the other states, and with the node that starts the next one)
+    expect(t.ab.logic.nodes.filter((x) => x.kind === 'action.code')).toHaveLength(0);
+    expect(t.ab.logic.nodes.filter((x) => x.kind === 'action.timeline' && Number(x.params.fade) === 0 && x.params.outgoing)).toHaveLength(2);
     t.player.step(100);
     expect(t.n.x).toBeCloseTo(10);
     t.player.send('go');
