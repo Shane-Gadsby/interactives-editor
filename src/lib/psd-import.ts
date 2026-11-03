@@ -852,7 +852,8 @@ export function psdFont(postscript: string, fauxBold = false, fauxItalic = false
   const strip = (t: string) => t.replace(/(PSMT|MT|PS)$/, '');
   let fam = strip(dash > 0 ? name.slice(0, dash) : name);
   const style = strip(dash > 0 ? name.slice(dash + 1) : '');
-  fam = fam.replace(/([a-z])([A-Z0-9])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/\s+/g, ' ').trim() || 'sans-serif';
+  // a few names carry a capital in the middle of one word ("DejaVu"), which the camel-case split must not break
+  fam = fam.replace(/DejaVu/g, 'Dejavu').replace(/([a-z])([A-Z0-9])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/([0-9])([A-Z][a-z])/g, '$1 $2').replace(/Dejavu/g, 'DejaVu').replace(/\s+/g, ' ').trim() || 'sans-serif';
   let weight = 400;
   for (const [re, w] of WEIGHT_WORDS) {
     if (re.test(style)) {

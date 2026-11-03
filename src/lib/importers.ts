@@ -35,11 +35,13 @@ export async function readAnimationFile(file: File): Promise<AnimationImport> {
     const { importAi } = await import('./ai-import');
     return { ...importAi(bytes, base), source: isAi ? 'Illustrator' : 'PDF' };
   }
-  if (/\.dxf$/i.test(file.name)) {
+  // a DWG keeps its message whatever the file is called (renamed, saved as .dxf by mistake, or no extension)
+  const dwgLike = bytes.length >= 6 && bytes[0] === 0x41 && bytes[1] === 0x43 && bytes[2] >= 0x30 && bytes[2] <= 0x39 && bytes[3] >= 0x30 && bytes[3] <= 0x39 && bytes[4] >= 0x30 && bytes[4] <= 0x39 && bytes[5] >= 0x30 && bytes[5] <= 0x39;
+  if (/\.dxf$/i.test(file.name) && !dwgLike) {
     const { importDxf } = await import('./dxf-import');
     return { ...importDxf(bytes, base), source: 'AutoCAD DXF' };
   }
-  if (/\.dwg$/i.test(file.name)) {
+  if (/\.dwg$/i.test(file.name) || dwgLike) {
     const { importDwg } = await import('./dwg-import');
     return { ...importDwg(bytes, base), source: 'AutoCAD DWG' };
   }

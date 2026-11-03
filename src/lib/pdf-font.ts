@@ -135,6 +135,20 @@ function parseCMap(data: Uint8Array): CMap {
 // ---------------------------------------------------------------- fonts
 
 export function loadFont(doc: PdfDoc, fontObj: PdfObj | undefined): PdfFont {
+  return withSymbolFix(loadFontRaw(doc, fontObj));
+}
+
+/** Bullets and ticks of symbol fonts (Wingdings, OpenSymbol, Symbol) sit in the private use area; no other font has them, so they show as boxes. */
+const SYMBOL_FONT = /symbol|wingding|webding|dingbat/i;
+const SYMBOL_CHARS: Record<number, string> = { 0xf0b7: '•', 0xf095: '•', 0xf0a7: '▪', 0xf06e: '■', 0xf06c: '●', 0xf0d8: '➢', 0xf0fc: '✓', 0xf076: '❖', 0xf0a8: '◻', 0xf0b2: '◦', 0xf0e0: '→', 0xf0e8: '➔' };
+function withSymbolFix(font: PdfFont): PdfFont {
+  if (!SYMBOL_FONT.test(font.baseName)) return font;
+  const inner = font.decode;
+  font.decode = (bytes) => inner(bytes).map((g) => (/[\uf000-\uf0ff]/.test(g.text) ? { ...g, text: g.text.replace(/[\uf000-\uf0ff]/g, (c) => SYMBOL_CHARS[c.charCodeAt(0)] ?? '•') } : g));
+  return font;
+}
+
+function loadFontRaw(doc: PdfDoc, fontObj: PdfObj | undefined): PdfFont {
   const dict = doc.dictOf(fontObj) ?? (Object.create(null) as Dict);
   const subtype = doc.get(dict, 'Subtype');
   const sub = subtype instanceof Name ? subtype.name : '';

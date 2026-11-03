@@ -39,6 +39,9 @@ const scaleOf = (m: M) => Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2])) || 1;
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
 
+/** Thinnest stroke kept, in points. */
+const MIN_STROKE = 0.25;
+
 const NO_PDF = "This file has no PDF content. Save it in Illustrator with 'Create PDF Compatible File' ticked, then import it again.";
 
 const BLENDS: Record<string, BlendMode> = { Multiply: 'multiply', Screen: 'screen', Overlay: 'overlay', Darken: 'darken', Lighten: 'lighten', ColorDodge: 'color-dodge', ColorBurn: 'color-burn', Difference: 'difference', Exclusion: 'exclusion' };
@@ -60,6 +63,8 @@ interface Shading {
   domain: [number, number];
   cs: ColorSpace;
   bbox: number[] | null;
+  /** Whether the colours carry on past the start and end of the axis (the circles). */
+  extend: [boolean, boolean];
 }
 
 type PaintSrc = { kind: 'rgb'; rgb: RGB } | { kind: 'shading'; sh: Shading; m: M } | { kind: 'none' };
@@ -207,7 +212,9 @@ class Importer {
     if (!fn || !coords || coords.length < (type === 2 ? 4 : 6)) return null;
     const cs = makeColorSpace(doc, d.ColorSpace, res, (m) => this.warn(`Approximated ${m}`));
     const dom = doc.numbers(d.Domain) ?? [0, 1];
-    return { type, coords, fn, domain: [dom[0] ?? 0, dom[1] ?? 1], cs, bbox: doc.numbers(d.BBox) };
+    const ext = doc.resolve(d.Extend);
+    const extend: [boolean, boolean] = Array.isArray(ext) ? [doc.resolve(ext[0]) === true, doc.resolve(ext[1]) === true] : [false, false];
+    return { type, coords, fn, domain: [dom[0] ?? 0, dom[1] ?? 1], cs, bbox: doc.numbers(d.BBox), extend };
   }
 
   // ---- gradients
@@ -253,7 +260,11 @@ class Importer {
     const k = scaleOf(m);
     const r0 = sh.coords[2] * k;
     const r1 = sh.coords[5] * k;
-    const R = Math.max(w, h) / 2;
+    // A path's radial gradient is stretched with its box (an ellipse), so one drawn through a stretched matrix (an elliptical gradient that
+    // fills its shape) reaches the box edge at its own radius; a circular one keeps the longer side as its reach.
+    const ex = Math.hypot(m[0], m[1]);
+    const ey = Math.hypot(m[2], m[3]);
+    const R = Math.abs(ex - ey) > 0.05 * Math.max(ex, ey) ? Math.sqrt(w * h) / 2 : Math.max(w, h) / 2;
     if (Math.hypot(c.x - (b.x + w / 2), c.y - (b.y + h / 2)) > 0.1 * R) this.warn('A radial gradient whose centre is off the middle of its shape was centred');
     const sAt = (u: number) => (r0 + u * (r1 - r0)) / R;
     const stops: ColorStop[] = [];
@@ -1040,7 +1051,8 @@ class PageRun {
     const sp = stroke ? this.imp.paintFor(gs.stroke, gs.strokeAlpha, bb) : null;
     if (!f && !sp) return;
     if (f && !sp && (b.width < 1e-4 || b.height < 1e-4)) return;
-    const width = Math.max(0.01, r3(gs.lineWidth * k));
+    // a width of 0 is the thinnest line a device can draw, and viewers keep any line at least a pixel wide: a hairline of a hundredth of a point would vanish
+    const width = Math.max(MIN_STROKE, r3(gs.lineWidth * k));
     const dash = gs.dash.map((d) => r3(d * k));
     const node = createNode('path', {
       name: 'Path',
@@ -1095,10 +1107,33 @@ class PageRun {
     const sh = this.imp.shading(res, this.doc.get(res.Shading ?? null, nm.name));
     if (!sh) return;
     const bbox = sh.bbox ? [ap(this.gs.ctm, sh.bbox[0], sh.bbox[1]), ap(this.gs.ctm, sh.bbox[2], sh.bbox[3])] : null;
-    const x0 = bbox ? Math.min(bbox[0].x, bbox[1].x) : 0;
-    const y0 = bbox ? Math.min(bbox[0].y, bbox[1].y) : 0;
-    const x1 = bbox ? Math.max(bbox[0].x, bbox[1].x) : this.width;
-    const y1 = bbox ? Math.max(bbox[0].y, bbox[1].y) : this.height;
+    let x0 = bbox ? Math.min(bbox[0].x, bbox[1].x) : 0;
+    let y0 = bbox ? Math.min(bbox[0].y, bbox[1].y) : 0;
+    let x1 = bbox ? Math.max(bbox[0].x, bbox[1].x) : this.width;
+    let y1 = bbox ? Math.max(bbox[0].y, bbox[1].y) : this.height;
+    // A radial shading that does not extend paints only inside its circles: that square is the shape (and a stray clip does not matter)
+    if (sh.type === 3 && !sh.extend[1]) {
+      const k = scaleOf(this.gs.ctm);
+      const c0 = ap(this.gs.ctm, sh.coords[0], sh.coords[1]);
+      const c1 = ap(this.gs.ctm, sh.coords[3], sh.coords[4]);
+      const r0 = Math.abs(sh.coords[2]) * k;
+      const r1 = Math.abs(sh.coords[5]) * k;
+      x0 = Math.max(x0, Math.min(c0.x - r0, c1.x - r1));
+      y0 = Math.max(y0, Math.min(c0.y - r0, c1.y - r1));
+      x1 = Math.min(x1, Math.max(c0.x + r0, c1.x + r1));
+      y1 = Math.min(y1, Math.max(c0.y + r0, c1.y + r1));
+    }
+    // A shading paints everything the clip lets through, and writers (cairo, Skia) use `sh` inside a clip for every gradient fill. The clips' bounds
+    // are the shape being filled, so the gradient is laid over those (a radial one is centred on the shape instead of the page).
+    for (const f of this.frames) {
+      const m = f.kind === 'clip' ? f.mask : undefined;
+      if (!m || m.width < 0.5 || m.height < 0.5) continue;
+      x0 = Math.max(x0, m.x);
+      y0 = Math.max(y0, m.y);
+      x1 = Math.min(x1, m.x + m.width);
+      y1 = Math.min(y1, m.y + m.height);
+    }
+    if (x1 - x0 < 0.01 || y1 - y0 < 0.01) return;
     const box = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
     const paint = this.imp.gradient(sh, this.gs.ctm, this.gs.fillAlpha, box);
     if (!paint) return;

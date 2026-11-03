@@ -372,4 +372,23 @@ describe('Illustrator / PDF import', () => {
     const text = new TextDecoder('latin1').decode(bytes).replace('/Root 1 0 R', '/Root 1 0 R /Encrypt << >>');
     expect(() => importAi(Uint8Array.from(text, (c) => c.charCodeAt(0)), 'e')).toThrow(/encrypted/);
   });
+  it('keeps hairlines (width 0 or a hundredth of a point) visible', () => {
+    const r = importAi(one('0 0 0 RG 0 w 10 10 m 100 10 l S 0.02 w 10 20 m 100 20 l S 2 w 10 30 m 100 30 l S'));
+    expect(paths(r.artboard.children).map((n) => n.stroke?.width)).toEqual([0.25, 0.25, 2]);
+  });
+
+  it('lays a shading painted through a clip over the clip, and a radial one that does not extend over its own circle', () => {
+    const p = new Pdf();
+    const fn = p.add('<< /FunctionType 2 /Domain [0 1] /C0 [1 1 1] /C1 [0 0 0] /N 1 >>');
+    const sh = p.add(`<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [150 50 0 150 50 40] /Function ${fn} 0 R /Extend [false false] >>`);
+    const ax = p.add(`<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [10 0 60 0] /Function ${fn} 0 R /Extend [true true] >>`);
+    // a stray line makes the clip's bounds bigger than the circle; the radial gradient still sits on the circle
+    p.page('q 0 0 m 190 90 l 190 10 l 110 10 l 110 90 l h W n /S1 sh Q q 10 10 50 50 re W n /S2 sh Q', `/Shading << /S1 ${sh} 0 R /S2 ${ax} 0 R >>`, [0, 0, 200, 100]);
+    const g = paths(importAi(p.build()).artboard.children);
+    const radial = g.find((n) => n.fill?.type === 'radial')!;
+    expect(radial.width).toBeCloseTo(80, 0);
+    expect(radial.height).toBeCloseTo(80, 0);
+    const lin = g.find((n) => n.fill?.type === 'linear')!;
+    expect([lin.x, lin.y, lin.width, lin.height]).toEqual([10, 40, 50, 50]);
+  });
 });
