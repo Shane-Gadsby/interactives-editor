@@ -56,6 +56,7 @@ export const Icons = {
   more: P('M5 12h.01M12 12h.01M19 12h.01'),
   close: P('M6 6l12 12M18 6L6 18'),
   start: P('M5 5v14M9 12l10-7v14z'),
+  table: P('M4 5h16v14H4zM4 10h16M4 15h16M10 5v14'),
 };
 
 export type IconName = keyof typeof Icons;

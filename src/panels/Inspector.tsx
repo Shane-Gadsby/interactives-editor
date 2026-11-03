@@ -1,6 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import {
   ANIMATABLE_PROPS,
+  CURSORS,
+  LINK_TARGETS,
+  type LinkTarget,
+  type Repeat,
   getPath,
   sampleKeys,
   type Artboard,
@@ -315,11 +319,12 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       )}
       {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
       <EffectsSection nodes={nodes} />
+      <LinkCursorSection nodes={nodes} project={project} />
+      {single && (n.type === 'group' || n.type === 'frame') && <RepeatSection node={n} project={project} />}
       {single && <BindingsSection node={n} project={project} />}
       {single && <InteractionsSection node={n} ab={ab} />}
       {single && (
         <Section title="Advanced" defaultOpen={false}>
-          <TextField label="Cursor" value={n.cursor ?? ''} placeholder="auto (pointer when clickable)" onChange={(v) => set({ cursor: v || undefined })} />
           <TextField label="ARIA label" value={n.ariaLabel ?? ''} onChange={(v) => set({ ariaLabel: v || undefined })} />
           <TextField label="CSS class" value={n.className ?? ''} onChange={(v) => set({ className: v || undefined })} />
           <div className="muted small">id: {n.id}</div>
@@ -699,6 +704,89 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
           + On hover
         </button>
       </Row>
+    </Section>
+  );
+}
+
+function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
+  const n = nodes[0];
+  const set = useSetter(nodes.map((x) => x.id));
+  const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
+  const link = n.link;
+  return (
+    <Section title="Link & cursor" defaultOpen={!!(link || n.cursor || n.cursorImage)}>
+      <TextField
+        label="Link"
+        value={link?.url ?? ''}
+        placeholder="https://… (makes the whole layer a link)"
+        commitOnBlur
+        onChange={(url) => set({ link: url.trim() ? { url: url.trim(), target: link?.target ?? '_blank' } : null })}
+      />
+      {link && (
+        <SelectField<LinkTarget> label="Open in" value={link.target} options={LINK_TARGETS as { value: LinkTarget; label: string }[]} onChange={(t) => set({ link: { ...link, target: t } })} />
+      )}
+      <SelectField
+        label="Cursor"
+        value={n.cursor ?? ''}
+        options={[{ value: '', label: link ? 'auto (pointer for links/clicks)' : 'auto (pointer when clickable)' }, ...CURSORS.map((c) => ({ value: c, label: c }))]}
+        onChange={(v) => set({ cursor: v || undefined })}
+      />
+      <SelectField
+        label="Image"
+        value={n.cursorImage ?? ''}
+        options={[{ value: '', label: images.length ? 'No custom cursor image' : 'Upload an image in Assets for a custom cursor' }, ...images.map((a) => ({ value: a.id, label: a.name }))]}
+        onChange={(v) => set({ cursorImage: v || null, cursorHotspot: v ? n.cursorHotspot ?? { x: 0, y: 0 } : undefined })}
+      />
+      {n.cursorImage && (
+        <Row>
+          <NumberField label="Hot x" value={n.cursorHotspot?.x ?? 0} min={0} onChange={(x) => set({ cursorHotspot: { x, y: n.cursorHotspot?.y ?? 0 } })} />
+          <NumberField label="Hot y" value={n.cursorHotspot?.y ?? 0} min={0} onChange={(y) => set({ cursorHotspot: { x: n.cursorHotspot?.x ?? 0, y } })} />
+        </Row>
+      )}
+      <p className="hint">Cursors can also change from interactions (Set cursor) and scripts (<code>ix.setCursor</code>, <code>node.set('cursor', …)</code>). Images over 32×32 px may be ignored by browsers.</p>
+    </Section>
+  );
+}
+
+function RepeatSection({ node, project }: { node: SceneNode & { repeat?: Repeat | null; children: SceneNode[] }; project: Project }) {
+  const set = useSetter([node.id]);
+  const rep = node.repeat;
+  const update = (patch: Partial<Repeat>) => set({ repeat: { ...(rep as Repeat), ...patch } }, `repeat-${node.id}`);
+  const lists = project.dataSources.map((d) => d.name);
+  return (
+    <Section title="Repeat (list)" defaultOpen={!!rep}>
+      <CheckField
+        label="Repeat the first child for each item"
+        value={!!rep}
+        onChange={(on) => set({ repeat: on ? { items: lists[0] ?? '[1, 2, 3]', layout: 'vertical', gap: 8, columns: 2 } : null })}
+      />
+      {rep && (
+        <>
+          <TextField label="Items" mono value={rep.items} commitOnBlur placeholder="products" onChange={(v) => update({ items: v })} />
+          <Row>
+            <SelectField
+              label="Layout"
+              value={rep.layout}
+              options={[
+                { value: 'vertical', label: 'Column' },
+                { value: 'horizontal', label: 'Row' },
+                { value: 'grid', label: 'Grid' },
+                { value: 'none', label: 'Free (bind x/y)' },
+              ]}
+              onChange={(v) => update({ layout: v })}
+            />
+          </Row>
+          <Row>
+            <NumberField label="Gap" value={rep.gap} min={0} onChange={(v) => update({ gap: v })} />
+            {rep.layout === 'grid' && <NumberField label="Cols" value={rep.columns} min={1} onChange={(v) => update({ columns: Math.round(v) })} />}
+          </Row>
+          <p className="hint">
+            Inside the copies, text slots and bindings can use <code>item</code> and <code>index</code>, e.g. <code>{'{item.name}'}</code>. Clicks on a copy put its position in <code>event.index</code>.
+            {lists.length ? ` Data: ${lists.join(', ')}.` : ' Add a data source in the Data tab, or use any array expression.'}
+          </p>
+          {!node.children.length && <p className="error small">Put a layer inside this {node.type} to use as the template.</p>}
+        </>
+      )}
     </Section>
   );
 }

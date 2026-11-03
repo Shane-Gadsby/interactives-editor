@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
-import { Renderer, sampleArtboard, walk, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, prepareNodes, sampleArtboard, walk, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { previewScope } from '../lib/data';
 import { assetUrls } from '../lib/assets';
 import { store } from '../store/store';
 
@@ -11,10 +12,11 @@ interface Props {
   time: number;
   active: boolean;
   assetVersion: number;
+  dataVersion: number;
 }
 
 /** One artboard on the canvas, drawn by the player's own renderer in edit mode. */
-export function ArtboardView({ artboard, project, timeline, time, active, assetVersion }: Props) {
+export function ArtboardView({ artboard, project, timeline, time, active, assetVersion, dataVersion }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const renderer = useRef<Renderer | null>(null);
 
@@ -32,9 +34,10 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   useLayoutEffect(() => {
     const r = renderer.current;
     if (!r) return;
-    const nodes: SceneNode[] = timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children;
-    const vars: Record<string, unknown> = {};
-    for (const v of project.variables) vars[v.name] = v.initial;
+    const vars = previewScope(project);
+    const sampled: SceneNode[] = timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children;
+    // Same bindings and repeaters the player applies, against initial variable values and the loaded data.
+    const nodes = prepareNodes(sampled, { vars });
     r.render(artboard, nodes, { vars });
     // Auto-sized text: measure and write the size back (no undo step).
     const updates: { id: string; width?: number; height?: number }[] = [];
@@ -69,7 +72,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
         }),
       );
     }
-  }, [artboard, project.variables, timeline, time, assetVersion]);
+  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion]);
 
   return (
     <div

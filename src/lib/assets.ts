@@ -41,13 +41,14 @@ class AssetUrls {
 
 export const assetUrls = new AssetUrls();
 
-export type AssetKind = 'image' | 'video' | 'audio' | 'font' | 'other';
+export type AssetKind = 'image' | 'video' | 'audio' | 'font' | 'data' | 'other';
 
 export function assetKind(mime: string, name = ''): AssetKind {
   if (mime.startsWith('image/')) return 'image';
   if (mime.startsWith('video/')) return 'video';
   if (mime.startsWith('audio/')) return 'audio';
   if (mime.startsWith('font/') || /\.(woff2?|ttf|otf)$/i.test(name)) return 'font';
+  if (/json|csv|tab-separated|text\/plain/.test(mime) || /\.(json|csv|tsv|txt)$/i.test(name)) return 'data';
   return 'other';
 }
 
@@ -81,6 +82,10 @@ function guessMime(name: string): string {
       webm: 'video/webm',
       mp3: 'audio/mpeg',
       wav: 'audio/wav',
+      json: 'application/json',
+      csv: 'text/csv',
+      tsv: 'text/tab-separated-values',
+      txt: 'text/plain',
       ogg: 'audio/ogg',
     }[ext] ?? 'application/octet-stream'
   );

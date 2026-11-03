@@ -13,6 +13,7 @@ import { Inspector } from './panels/Inspector';
 import { TimelinePanel, deleteSelectedKeys } from './panels/Timeline';
 import { LogicGraph } from './panels/LogicGraph';
 import { ScriptsPanel, VariablesPanel } from './panels/ScriptsVariables';
+import { DataPanel } from './panels/DataPanel';
 import { Icons, type IconName } from './components/icons';
 import { IconButton } from './components/ui';
 import { getArtboard, selectionBounds } from './store/doc';
@@ -440,6 +441,7 @@ const TABS: { id: BottomTab; label: string; icon: IconName }[] = [
   { id: 'logic', label: 'Interactions', icon: 'logic' },
   { id: 'scripts', label: 'Scripts', icon: 'code' },
   { id: 'variables', label: 'Variables', icon: 'variable' },
+  { id: 'data', label: 'Data', icon: 'table' },
 ];
 
 function BottomPanel() {
@@ -476,6 +478,7 @@ function BottomPanel() {
           {s.tab === 'logic' && <LogicGraph />}
           {s.tab === 'scripts' && <ScriptsPanel />}
           {s.tab === 'variables' && <VariablesPanel />}
+          {s.tab === 'data' && <DataPanel />}
         </div>
       )}
     </section>

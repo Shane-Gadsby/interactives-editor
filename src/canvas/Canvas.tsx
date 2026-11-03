@@ -17,6 +17,7 @@ import {
 import { store, useEditor, type Tool } from '../store/store';
 import { getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, topmost, type Rect } from '../store/doc';
 import { assetUrls } from '../lib/assets';
+import { dataCache } from '../lib/data';
 import { ArtboardView } from './ArtboardView';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
 import { insertFiles } from '../lib/insert';
@@ -74,6 +75,11 @@ export function Canvas() {
     (fn) => assetUrls.subscribe(fn),
     () => assetUrls.version,
   );
+  const dataVersion = useSyncExternalStore(
+    (fn) => dataCache.subscribe(fn),
+    () => dataCache.version,
+  );
+  useEffect(() => dataCache.sync(s.project), [s.project.dataSources, assetVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   const vp = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   const spaceDown = useRef(false);
@@ -1019,6 +1025,7 @@ export function Canvas() {
             time={s.playhead}
             active={ab.id === s.activeArtboardId}
             assetVersion={assetVersion}
+            dataVersion={dataVersion}
           />
         ))}
       </div>

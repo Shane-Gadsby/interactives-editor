@@ -17,6 +17,7 @@ import '@xyflow/react/dist/style.css';
 import {
   ANIMATABLE_PROPS,
   CATALOG,
+  CURSORS,
   CATALOG_BY_KIND,
   EASING_NAMES,
   defaultParams,
@@ -78,6 +79,7 @@ function summarize(n: LogicNode, ab: Artboard, project: Project): string {
     else if (p.type === 'variable') text = project.variables.find((x) => x.id === v)?.name ?? '(missing variable)';
     else if (p.type === 'artboard') text = project.artboards.find((x) => x.id === v)?.name ?? '(missing artboard)';
     else if (p.type === 'script') text = project.scripts.find((x) => x.id === v)?.name ?? '(missing script)';
+    else if (p.type === 'data') text = project.dataSources.find((x) => x.id === v)?.name ?? '(missing data)';
     else if (p.type === 'select') text = p.options?.find((o) => o.value === v)?.label ?? text;
     else if (p.type === 'boolean') text = v ? p.label : '';
     else if (p.type === 'text' && n.kind === 'action.code') text = text.split('\n')[0].slice(0, 40);
@@ -266,7 +268,7 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
     );
     switch (p.type) {
       case 'node':
-        return pick(layers, p.key === 'target' && node.kind.startsWith('event.') ? 'Any layer' : 'Choose layer…');
+        return pick(layers, p.key === 'target' && node.kind.startsWith('event.') ? 'Any layer' : node.kind === 'action.cursor' ? 'Whole player' : 'Choose layer…');
       case 'timeline':
         return pick(ab.timelines.map((t) => ({ value: t.id, label: t.name })), ab.timelines.length ? 'Choose timeline…' : 'No timelines yet');
       case 'variable':
@@ -277,6 +279,10 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
         return pick(project.scripts.map((x) => ({ value: x.id, label: x.name })), project.scripts.length ? 'Choose script…' : 'No scripts yet');
       case 'asset':
         return pick(project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio').map((a) => ({ value: a.id, label: a.name })), 'Choose sound…');
+      case 'data':
+        return pick(project.dataSources.map((d) => ({ value: d.id, label: d.name })), project.dataSources.length ? 'Choose data source…' : 'No data sources yet');
+      case 'cursor':
+        return <SelectField key={p.key} label={p.label} value={String(v ?? 'pointer')} options={[...CURSORS]} onChange={(x) => set(p.key, x)} />;
       case 'prop':
         return <SelectField key={p.key} label={p.label} value={String(v ?? '')} options={ANIMATABLE_PROPS.map((a) => ({ value: a.prop, label: a.label }))} onChange={(x) => set(p.key, x)} />;
       case 'select':

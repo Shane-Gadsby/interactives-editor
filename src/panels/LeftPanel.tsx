@@ -233,7 +233,7 @@ function Assets() {
   const ab = getArtboard(s.project, s.activeArtboardId);
   const center = ab ? { x: ab.width / 2, y: ab.height / 2 } : null;
   const upload = async () => {
-    const files = await pickFiles('image/*,video/*,audio/*,.woff,.woff2,.ttf,.otf');
+    const files = await pickFiles('image/*,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
     if (files.length) await insertFiles(files, null, null);
   };
   const remove = async (id: string) => {
@@ -254,7 +254,7 @@ function Assets() {
       <button className="btn wide" onClick={upload}>
         <Icons.upload width={14} /> Upload files
       </button>
-      <p className="hint">Images, video, audio and fonts. Drop files on the canvas to place them.</p>
+      <p className="hint">Images, video, audio, fonts and data files (JSON/CSV/TSV/text, used from the Data tab). Drop files on the canvas to place them.</p>
       <div className="asset-grid">
         {s.project.assets.map((a) => {
           const kind = assetKind(a.mime, a.name);

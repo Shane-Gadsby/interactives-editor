@@ -1357,3 +1357,64 @@ code,
 .react-flow {
   --xy-background-color: var(--canvas);
 }
+
+/* ---------------------------------------------------------------- data */
+.data-panel {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100%;
+}
+.data-main {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 0;
+}
+.data-form {
+  padding: 8px 12px;
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+}
+.data-form .field {
+  margin: 6px 0;
+}
+.data-preview {
+  padding: 8px 12px;
+  overflow: auto;
+  min-width: 0;
+}
+.data-table {
+  border-collapse: collapse;
+  font-size: 11.5px;
+  margin-top: 6px;
+}
+.data-table th,
+.data-table td {
+  border: 1px solid var(--line);
+  padding: 3px 6px;
+  text-align: left;
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.data-table th {
+  background: var(--panel-2);
+  position: sticky;
+  top: 0;
+}
+.data-raw {
+  white-space: pre-wrap;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line-2);
+  flex: none;
+}
+.dot.ok {
+  background: var(--ok);
+}
+.dot.bad {
+  background: var(--danger);
+}
