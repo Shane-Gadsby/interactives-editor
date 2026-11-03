@@ -114,7 +114,7 @@ export function apply(doc, ops) {
 				if (op.v === undefined) delete parent[last]
 				else parent[last] = clone(op.v)
 			}
-			else if (Array.isArray(parent)) {
+			else if (Array.isArray(parent) && last && typeof last.i === 'string') {
 				let i = parent.findIndex((e) => e && e.id === last.i)
 				if (i < 0) continue
 				parent[i] = clone(op.v)
@@ -127,7 +127,7 @@ export function apply(doc, ops) {
 				//An id array that doesn't exist yet (first element of a list that was missing)
 				if (op.t !== 'ins' || !op.p.length) continue
 				let parent = resolve(doc, op.p.slice(0, -1)), last = op.p[op.p.length - 1]
-				if (!parent || typeof last !== 'string' || UNSAFE.has(last) || parent[last] !== undefined) continue
+				if (!parent || typeof parent !== 'object' || Array.isArray(parent) || typeof last !== 'string' || UNSAFE.has(last) || parent[last] !== undefined) continue
 				parent[last] = arr = []
 			}
 			let id = op.t === 'del' ? op.id : op.v && op.v.id

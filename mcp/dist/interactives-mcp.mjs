@@ -5346,23 +5346,38 @@ async function handle(msg) {
       return fail(-32601, `Method not found: ${msg.method}`);
   }
 }
-let buffer = "";
-process.stdin.setEncoding("utf8");
-process.stdin.on("data", (chunk) => {
-  buffer += chunk;
-  let i;
-  while ((i = buffer.indexOf("\n")) >= 0) {
-    const line = buffer.slice(0, i).trim();
-    buffer = buffer.slice(i + 1);
-    if (!line) continue;
-    try {
-      void handle(JSON.parse(line));
-    } catch {
-      send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } });
+if (!process.env.INTERACTIVES_MCP_NO_STDIO) {
+  let buffer = "";
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", (chunk) => {
+    buffer += chunk;
+    let i;
+    while ((i = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, i).trim();
+      buffer = buffer.slice(i + 1);
+      if (!line) continue;
+      try {
+        void handle(JSON.parse(line));
+      } catch {
+        send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } });
+      }
     }
-  }
-});
-process.stdin.on("end", () => {
-  for (const s of sessions.values()) s.abort.abort();
-  process.exit(0);
-});
+  });
+  process.stdin.on("end", () => {
+    for (const s of sessions.values()) s.abort.abort();
+    process.exit(0);
+  });
+}
+export {
+  TOOLS,
+  applyChanges,
+  handle,
+  interactions,
+  locate,
+  overview,
+  reference,
+  sessions,
+  setPath,
+  syncRuns,
+  validate
+};

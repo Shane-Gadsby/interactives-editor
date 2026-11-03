@@ -184,9 +184,10 @@ export async function importPackage(file: Blob): Promise<Project> {
   const now = new Date().toISOString();
   project = { ...project, id: uid('pr'), updated: now };
   project.assets = project.assets.filter((a) => blobs.has(a.id)).map(({ src: _src, ...a }) => ({ ...a }));
-  for (const [id, blob] of blobs) await putAsset(project.id, id, blob);
+  // The project has to exist on the server before assets can be attached to it (the asset routes check its owner)
   revs.set(project.id, 0);
   await saveProject(project);
+  for (const [id, blob] of blobs) await putAsset(project.id, id, blob);
   return project;
 }
 

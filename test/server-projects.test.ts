@@ -1,0 +1,401 @@
+// @vitest-environment node
+//The real index.js, run against an in-memory fake of the few mongo calls it makes (see helpers/). Covers the project
+//routes: save with revisions, conflicts, who may touch what, the projects page's tags and folder, duplicate, delete,
+//preferences, and the error handling around all of it.
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { startServer, type Harness, type User } from './helpers/server-harness';
+
+const ann: User = { username: 'ann', fullName: 'Ann A' };
+const bob: User = { username: 'bob' };
+const pat: User = { username: 'pat', power: true };
+
+const project = (id: string, extra: Record<string, unknown> = {}) => ({
+  format: 'interactives',
+  id,
+  name: `Project ${id}`,
+  settings: {},
+  artboards: [{ id: 'ab1', name: 'Main', width: 800, height: 600, background: { type: 'solid', color: '#123456' }, children: [] }],
+  ...extra,
+});
+
+let h: Harness;
+let warn: ReturnType<typeof vi.spyOn>;
+beforeAll(async () => {
+  h = await startServer();
+});
+afterAll(async () => {
+  await h.close();
+});
+beforeEach(() => {
+  warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  vi.spyOn(console, 'trace').mockImplementation(() => {});
+  process.env.SUITE_SESSION_ENFORCE = '';
+  h.db.projects.docs = [];
+  h.db.revisions.docs = [];
+  h.db.prefs.docs = [];
+  h.db.libraries.docs = [];
+});
+
+const put = (id: string, p: unknown, user: User | null = ann, extra: Record<string, unknown> = {}) => h.call('PUT', `/api/projects/${id}`, { user, json: { project: p, rev: 0, ...extra } });
+
+describe('session and headers', () => {
+  it('says who you are and whether you are a power user', async () => {
+    expect((await h.call('GET', '/api/session', { user: ann })).json).toEqual({ user: { username: 'ann', userID: 1, name: 'Ann A' }, power: false });
+    expect((await h.call('GET', '/api/session', { user: pat })).json.power).toBe(true);
+    expect((await h.call('GET', '/api/session')).json).toEqual({ user: null, power: false });
+  });
+
+  it('never lets an api response be sniffed into a page, and never caches it', async () => {
+    const r = await h.call('GET', '/api/session');
+    expect(r.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(r.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('answers unknown api routes with json, not a page', async () => {
+    const r = await h.call('GET', '/api/nope');
+    expect(r.status).toBe(404);
+    expect(r.json.error).toMatch(/No such api route/);
+  });
+
+  it('keeps a malformed json body off the screen but still answers with the right status', async () => {
+    const r = await h.call('PUT', '/api/projects/prabc12345', { body: '{not json', type: 'application/json' });
+    expect(r.status).toBe(400);
+    expect(r.json).toEqual({ error: 'Something went wrong on the server' });
+  });
+
+  it('serves the not-built page or the document at the root', async () => {
+    const r = await h.call('GET', '/');
+    expect(r.status).toBe(200);
+    expect(r.headers.get('content-type')).toMatch(/html/);
+  });
+});
+
+describe('preferences', () => {
+  it('starts empty and keeps only the known keys with valid values', async () => {
+    expect((await h.call('GET', '/api/prefs', { user: ann })).json).toEqual({ user: 'ann', prefs: {} });
+    const r = await h.call('PUT', '/api/prefs', {
+      user: ann,
+      json: { prefs: { wheel: 'ctrl', theme: 'purple', tooltips: 'yes', rulers: false, defaultFont: 'Inter', evil: 1, __proto__: { x: 1 } } },
+    });
+    expect(r.json).toEqual({ user: 'ann', prefs: { wheel: 'ctrl', rulers: false, defaultFont: 'Inter' } });
+    expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs).toEqual({ wheel: 'ctrl', rulers: false, defaultFont: 'Inter' });
+  });
+
+  it('drops a default font that is too long and a body that has no prefs', async () => {
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(120) } } })).json.prefs).toEqual({});
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: {} })).json.prefs).toEqual({});
+  });
+
+  it('keeps each person their own, and sessionless use shares one guest set', async () => {
+    await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { theme: 'dark' } } });
+    await h.call('PUT', '/api/prefs', { user: bob, json: { prefs: { theme: 'light' } } });
+    await h.call('PUT', '/api/prefs', { json: { prefs: { theme: 'auto' } } });
+    expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs.theme).toBe('dark');
+    expect((await h.call('GET', '/api/prefs', { user: bob })).json.prefs.theme).toBe('light');
+    const guest = (await h.call('GET', '/api/prefs')).json;
+    expect(guest).toEqual({ user: 'guest', prefs: { theme: 'auto' } });
+  });
+
+  it('refuses a body over 16kb with the too-big message', async () => {
+    const r = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(20000) } } });
+    expect(r.status).toBe(413);
+    expect(r.json.error).toBe('That is too big to save');
+  });
+});
+
+describe('saving projects', () => {
+  it('creates a project at rev 1 with the owner, the preview and the artboard count', async () => {
+    const r = await put('prsave0001', project('prsave0001'));
+    expect(r.json).toEqual({ ok: true, rev: 1 });
+    const doc = h.db.projects.docs[0];
+    expect(doc.owner).toEqual({ username: 'ann', userID: 1, name: 'Ann A' });
+    expect(doc.meta).toEqual({ artboards: 1, library: false, preview: { width: 800, height: 600, background: '#123456' } });
+    expect(typeof doc.doc).toBe('string');
+    expect(JSON.parse(doc.doc).id).toBe('prsave0001');
+  });
+
+  it('uses white for a gradient background, and null when there are no artboards', async () => {
+    await put('prgrad0001', project('prgrad0001', { artboards: [{ id: 'a', width: 10, height: 20, background: { type: 'linear' }, children: [] }] }));
+    await put('prnone0001', project('prnone0001', { artboards: [] }));
+    expect(h.db.projects.docs.find((d) => d._id === 'prgrad0001')!.meta.preview).toEqual({ width: 10, height: 20, background: '#ffffff' });
+    expect(h.db.projects.docs.find((d) => d._id === 'prnone0001')!.meta.preview).toBeNull();
+  });
+
+  it('flags library projects in the meta, and caps and defaults the name', async () => {
+    await put('prlibr0001', project('prlibr0001', { settings: { library: true }, name: 'n'.repeat(300) }));
+    await put('prname0001', project('prname0001', { name: '' }));
+    expect(h.db.projects.docs.find((d) => d._id === 'prlibr0001')!.meta.library).toBe(true);
+    expect(h.db.projects.docs.find((d) => d._id === 'prlibr0001')!.name).toHaveLength(200);
+    expect(h.db.projects.docs.find((d) => d._id === 'prname0001')!.name).toBe('Untitled project');
+  });
+
+  it.each([
+    ['a bad id', 'a/b', project('a/b')],
+    ['an id that does not match the url', 'prmism0001', project('prother0001')],
+    ['a reserved storage id', 'shares', project('shares')],
+    ['the wrong format', 'prfmt00001', { ...project('prfmt00001'), format: 'other' }],
+    ['no artboards array', 'prart00001', { ...project('prart00001'), artboards: {} }],
+    ['no project', 'prnull0001', null],
+  ])('refuses %s', async (_name, id, body) => {
+    const r = await put(id, body);
+    expect(r.status === 400 || r.status === 404).toBe(true);
+    expect(h.db.projects.docs).toHaveLength(0);
+  });
+
+  it('bumps the rev on every save and answers a stale rev with a 409 carrying the current one', async () => {
+    await put('prrev00001', project('prrev00001'));
+    expect((await put('prrev00001', project('prrev00001', { name: 'two' }), ann, { rev: 1 })).json.rev).toBe(2);
+    const stale = await put('prrev00001', project('prrev00001', { name: 'three' }), ann, { rev: 1 });
+    expect(stale.status).toBe(409);
+    expect(stale.json.rev).toBe(2);
+    expect(h.db.projects.docs[0].name).toBe('two');
+    //force overrides it
+    const forced = await put('prrev00001', project('prrev00001', { name: 'three' }), ann, { rev: 1, force: true });
+    expect(forced.json.rev).toBe(3);
+    expect(h.db.projects.docs[0].name).toBe('three');
+  });
+
+  it('says a project saved at a rev that no longer exists was deleted elsewhere (unless forced)', async () => {
+    const r = await put('prgone0001', project('prgone0001'), ann, { rev: 4 });
+    expect(r.status).toBe(409);
+    expect(r.json.rev).toBe(0);
+    expect((await put('prgone0001', project('prgone0001'), ann, { rev: 4, force: true })).json.ok).toBe(true);
+  });
+
+  it('answers 409 when two saves race and mongo rejects the second', async () => {
+    await put('prrace0001', project('prrace0001'));
+    h.db.projects.failNext.updateOne = new Error('write conflict');
+    const r = await put('prrace0001', project('prrace0001'), ann, { rev: 1 });
+    expect(r.status).toBe(409);
+  });
+
+  it('does not treat a non-numeric rev as anything but a new project', async () => {
+    const r = await put('prnan00001', project('prnan00001'), ann, { rev: 'abc' });
+    expect(r.json.rev).toBe(1);
+  });
+
+  it('refuses a save over 25mb', async () => {
+    const r = await h.call('PUT', '/api/projects/prbig00001', { user: ann, body: JSON.stringify({ project: project('prbig00001', { pad: 'x'.repeat(26 * 1024 * 1024) }), rev: 0 }), type: 'application/json' });
+    expect(r.status).toBe(413);
+    expect(r.json.error).toBe('That is too big to save');
+  });
+});
+
+describe('loading and listing', () => {
+  it('loads a project with its rev and owner, and 404s a missing one', async () => {
+    await put('prload0001', project('prload0001'));
+    const r = await h.call('GET', '/api/projects/prload0001', { user: ann });
+    expect(r.json.project.id).toBe('prload0001');
+    expect(r.json.rev).toBe(1);
+    expect(r.json.owner.username).toBe('ann');
+    expect(r.json.live).toBeNull();
+    expect((await h.call('GET', '/api/projects/prmiss0001', { user: ann })).status).toBe(404);
+    expect((await h.call('GET', '/api/projects/_libraries', { user: ann })).status).toBe(400);
+  });
+
+  it('lists only your own, newest first, without the documents', async () => {
+    await put('prlist0001', project('prlist0001'));
+    await new Promise((r) => setTimeout(r, 5));
+    await put('prlist0002', project('prlist0002'));
+    await put('prlist0003', project('prlist0003'), bob);
+    const r = await h.call('GET', '/api/projects', { user: ann });
+    expect(r.json.map((p: { id: string }) => p.id)).toEqual(['prlist0002', 'prlist0001']);
+    expect(r.json[0]).toMatchObject({ rev: 1, artboards: 1, isLibrary: false, libraryVersion: 0, tags: [], folder: null, thumb: null });
+    expect(r.json[0].doc).toBeUndefined();
+  });
+
+  it('only gives everyone\'s projects to power users who ask for them', async () => {
+    await put('prall00001', project('prall00001'), ann);
+    await put('prall00002', project('prall00002'), bob);
+    expect((await h.call('GET', '/api/projects?all=1', { user: ann })).json).toHaveLength(1);
+    expect((await h.call('GET', '/api/projects?all=1', { user: pat })).json).toHaveLength(2);
+    expect((await h.call('GET', '/api/projects', { user: pat })).json).toHaveLength(0);
+  });
+
+  it('shows everything when there is no session and sessions are not enforced yet', async () => {
+    await put('prdev00001', project('prdev00001'), ann);
+    expect((await h.call('GET', '/api/projects')).json).toHaveLength(1);
+  });
+});
+
+describe('who may change what', () => {
+  beforeEach(async () => {
+    await put('prown00001', project('prown00001'), ann);
+  });
+
+  const routes: [string, string, unknown?][] = [
+    ['GET', '/api/projects/prown00001'],
+    ['PUT', '/api/projects/prown00001', { project: project('prown00001'), rev: 1 }],
+    ['PATCH', '/api/projects/prown00001/meta', { tags: ['x'] }],
+    ['DELETE', '/api/projects/prown00001'],
+    ['POST', '/api/projects/prown00001/duplicate', {}],
+    ['GET', '/api/projects/prown00001/assets'],
+    ['GET', '/api/projects/prown00001/revisions'],
+    ['GET', '/api/projects/prown00001/share'],
+    ['GET', '/api/projects/prown00001/library'],
+    ['POST', '/api/projects/prown00001/ops', { ops: [] }],
+  ];
+
+  it.each(routes)('lets the owner %s %s', async (method, url, body) => {
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    const r = await h.call(method, url, { user: ann, json: body });
+    expect(r.status).not.toBe(403);
+  });
+
+  it.each(routes)('refuses someone else on %s %s once sessions are enforced', async (method, url, body) => {
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    const r = await h.call(method, url, { user: bob, json: body });
+    expect(r.status).toBe(403);
+    expect(r.json.error).toMatch(/belongs to someone else/);
+    //and nothing was touched
+    expect(h.db.projects.docs).toHaveLength(1);
+    expect(h.db.projects.docs[0].rev).toBe(1);
+  });
+
+  it('only warns until sessions are enforced', async () => {
+    const r = await h.call('GET', '/api/projects/prown00001', { user: bob });
+    expect(r.status).toBe(200);
+    expect(warn.mock.calls.some((c) => String(c[0]).includes('would reject'))).toBe(true);
+  });
+
+  it('lets a power user into anyone\'s project, and refuses a session-less caller when enforcing', async () => {
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('GET', '/api/projects/prown00001', { user: pat })).status).toBe(200);
+    expect((await h.call('GET', '/api/projects/prown00001')).status).toBe(403);
+  });
+
+  it('treats a project with no owner as open to everyone', async () => {
+    h.db.projects.docs[0].owner = null;
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('GET', '/api/projects/prown00001', { user: bob })).status).toBe(200);
+  });
+});
+
+describe('tags and folder', () => {
+  beforeEach(async () => {
+    await put('prtags0001', project('prtags0001'));
+  });
+  const patch = (body: unknown, user: User | null = ann) => h.call('PATCH', '/api/projects/prtags0001/meta', { user, json: body });
+
+  it('sets tags and folder without touching rev, revisions or the document', async () => {
+    const before = structuredClone(h.db.projects.docs[0]);
+    const r = await patch({ tags: ['Maths', 'year 7'], folder: 'Term 1' });
+    expect(r.status).toBe(200);
+    expect(r.json).toMatchObject({ id: 'prtags0001', tags: ['Maths', 'year 7'], folder: 'Term 1', rev: 1 });
+    const after = h.db.projects.docs[0];
+    expect(after.rev).toBe(before.rev);
+    expect(after.doc).toBe(before.doc);
+    expect(after.updated).toEqual(before.updated);
+  });
+
+  it('cleans labels: trims, collapses whitespace and control characters, collapses case-insensitive duplicates', async () => {
+    const r = await patch({ tags: ['  a   b  ', 'a\u0000\tb', 'A B', 'Other'] });
+    expect(r.json.tags).toEqual(['a b', 'Other']);
+  });
+
+  it('leaves the other field alone when only one is sent, and clears the folder with null or an empty string', async () => {
+    await patch({ tags: ['x'], folder: 'F' });
+    expect((await patch({ tags: ['y'] })).json).toMatchObject({ tags: ['y'], folder: 'F' });
+    expect((await patch({ folder: null })).json).toMatchObject({ tags: ['y'], folder: null });
+    await patch({ folder: 'G' });
+    expect((await patch({ folder: '' })).json.folder).toBeNull();
+  });
+
+  it.each([
+    ['tags that are not a list', { tags: 'a' }],
+    ['more than 20 tags', { tags: Array.from({ length: 21 }, (_, i) => `t${i}`) }],
+    ['an empty tag', { tags: ['ok', '   '] }],
+    ['a non-string tag', { tags: [5] }],
+    ['a tag over 40 characters', { tags: ['x'.repeat(41)] }],
+    ['a folder that is not a string', { folder: 5 }],
+    ['a whitespace folder', { folder: '   ' }],
+    ['a folder over 40 characters', { folder: 'x'.repeat(41) }],
+    ['nothing to change', {}],
+    ['unrelated fields only', { name: 'x' }],
+  ])('refuses %s', async (_n, body) => {
+    const r = await patch(body);
+    expect(r.status).toBe(400);
+    expect(h.db.projects.docs[0].tags).toBeUndefined();
+  });
+
+  it('accepts exactly 20 tags and a 40 character label', async () => {
+    const r = await patch({ tags: Array.from({ length: 20 }, (_, i) => `t${i}`), folder: 'f'.repeat(40) });
+    expect(r.status).toBe(200);
+    expect(r.json.tags).toHaveLength(20);
+  });
+
+  it('404s a project that does not exist and 400s a bad id', async () => {
+    expect((await h.call('PATCH', '/api/projects/prmiss0001/meta', { user: ann, json: { tags: [] } })).status).toBe(404);
+    expect((await h.call('PATCH', '/api/projects/thumbs/meta', { user: ann, json: { tags: [] } })).status).toBe(400);
+  });
+
+  it('shows up in the list', async () => {
+    await patch({ tags: ['a'], folder: 'F' });
+    const list = (await h.call('GET', '/api/projects', { user: ann })).json;
+    expect(list[0]).toMatchObject({ tags: ['a'], folder: 'F' });
+  });
+});
+
+describe('duplicate', () => {
+  it('copies the project and its assets under a fresh server-made id', async () => {
+    await put('prdupe0001', project('prdupe0001', { name: 'Orig' }));
+    await h.call('PATCH', '/api/projects/prdupe0001/meta', { user: ann, json: { tags: ['t'], folder: 'F' } });
+    await h.call('PUT', '/api/projects/prdupe0001/assets/asset00001', { user: ann, body: Buffer.from([1, 2, 3]), type: 'image/png' });
+    const r = await h.call('POST', '/api/projects/prdupe0001/duplicate', { user: bob, json: {} });
+    expect(r.json.ok).toBe(true);
+    const id = r.json.id as string;
+    expect(id).not.toBe('prdupe0001');
+    const copy = h.db.projects.docs.find((d) => d._id === id)!;
+    expect(copy.owner.username).toBe('bob');
+    expect(copy.rev).toBe(1);
+    expect(copy.tags).toEqual(['t']);
+    expect(copy.folder).toBe('F');
+    const project2 = JSON.parse(copy.doc);
+    expect(project2.id).toBe(id);
+    expect(project2.name).toBe('Orig copy');
+    expect(fs.readFileSync(path.join(h.storage, id, 'asset00001'))).toEqual(Buffer.from([1, 2, 3]));
+    //the original is untouched
+    expect(JSON.parse(h.db.projects.docs.find((d) => d._id === 'prdupe0001')!.doc).id).toBe('prdupe0001');
+  });
+
+  it('takes a name from the body (capped), ignores an id in it, and works for a project with no assets', async () => {
+    await put('prdupe0002', project('prdupe0002'));
+    const r = await h.call('POST', '/api/projects/prdupe0002/duplicate', { user: ann, json: { name: 'N'.repeat(300), id: 'prdupe0002' } });
+    expect(r.json.id).not.toBe('prdupe0002');
+    expect(JSON.parse(h.db.projects.docs.find((d) => d._id === r.json.id)!.doc).name).toHaveLength(200);
+  });
+
+  it('404s a missing project and 400s a bad id', async () => {
+    expect((await h.call('POST', '/api/projects/prmiss0001/duplicate', { user: ann, json: {} })).status).toBe(404);
+    expect((await h.call('POST', '/api/projects/_x/duplicate', { user: ann, json: {} })).status).toBe(400);
+  });
+});
+
+describe('delete', () => {
+  it('removes the project, its revisions, assets, thumbnail, share page and library', async () => {
+    await put('prdel00001', project('prdel00001', { settings: { library: true } }));
+    await h.call('PUT', '/api/projects/prdel00001/assets/asset00001', { user: ann, body: Buffer.from([1]), type: 'image/png' });
+    await h.call('PUT', '/api/projects/prdel00001/thumbnail', { user: ann, body: Buffer.from([0xff, 0xd8, 1, 2]), type: 'image/jpeg' });
+    const share = (await h.call('PUT', '/api/projects/prdel00001/share', { user: ann, body: '<html></html>', type: 'text/plain' })).json.share;
+    h.db.libraries.docs.push({ _id: 'prdel00001', owner: ann });
+    fs.mkdirSync(path.join(h.storage, '_libraries', 'prdel00001'), { recursive: true });
+    await vi.waitFor(() => expect(h.db.revisions.docs.length).toBeGreaterThan(0));
+
+    expect((await h.call('DELETE', '/api/projects/prdel00001', { user: ann })).json).toEqual({ ok: true });
+
+    expect(h.db.projects.docs).toHaveLength(0);
+    expect(h.db.revisions.docs).toHaveLength(0);
+    expect(h.db.libraries.docs).toHaveLength(0);
+    expect(fs.existsSync(path.join(h.storage, 'prdel00001'))).toBe(false);
+    expect(fs.existsSync(path.join(h.storage, 'thumbs', 'prdel00001.jpg'))).toBe(false);
+    expect(fs.existsSync(path.join(h.storage, 'shares', `${share.token}.html`))).toBe(false);
+    expect(fs.existsSync(path.join(h.storage, '_libraries', 'prdel00001'))).toBe(false);
+  });
+
+  it('is fine to delete something that is already gone, and refuses bad ids', async () => {
+    expect((await h.call('DELETE', '/api/projects/prgone0001', { user: ann })).json).toEqual({ ok: true });
+    expect((await h.call('DELETE', '/api/projects/shares', { user: ann })).status).toBe(400);
+  });
+});

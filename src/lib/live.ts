@@ -40,6 +40,39 @@ class HttpError extends Error {
   }
 }
 
+/** Is `key` the property one of `keys` writes, or somewhere inside it? (keys are opKey()s: steps joined by "/") */
+function coveredBy(key: string, keys: Set<string>): boolean {
+  if (!keys.size) return false;
+  for (let i = key.indexOf('/'); i >= 0; i = key.indexOf('/', i + 1)) if (keys.has(key.slice(0, i))) return true;
+  return keys.has(key);
+}
+
+/** Is `key` somewhere inside (but not the same as) a property one of `keys` writes? */
+function strictlyUnder(key: string, keys: Set<string>): boolean {
+  for (let i = key.indexOf('/'); i >= 0; i = key.indexOf('/', i + 1)) if (keys.has(key.slice(0, i))) return true;
+  return false;
+}
+
+/** The step list of an op's array (for an insert or delete), as opKey() would write it without the element's id. */
+const arrayKey = (op: Op): string => op.p.map((st) => (typeof st === 'string' ? st : '#' + st.i)).join('/');
+
+/**
+ * Which of our own ops (sent but not echoed, or queued) have to be applied again after someone else's ops, which the
+ * server orders first. That is what they upset: ours inside a layer they inserted or moved (the layer arrives with
+ * its old properties), and ours that insert or delete in a list they also inserted into or deleted from (so the same
+ * layer ends up in the same place for everyone). Whatever else of ours lives inside a replayed layer goes with it.
+ */
+export function replayAfter(own: Op[], remote: Op[]): Op[] {
+  if (!own.length || !remote.length) return [];
+  const remoteKeys = new Set(remote.map(opKey));
+  const remoteLists = new Set(remote.filter((o) => o.t !== 'set').map(arrayKey));
+  const picked = new Set<Op>();
+  for (const op of own) if (strictlyUnder(opKey(op), remoteKeys) || (op.t !== 'set' && remoteLists.has(arrayKey(op)))) picked.add(op);
+  if (!picked.size) return [];
+  const keys = new Set([...picked].map(opKey));
+  return own.filter((op) => picked.has(op) || coveredBy(opKey(op), keys));
+}
+
 const API = new URL('api/', document.baseURI).href;
 
 export class LiveSession {
@@ -47,6 +80,8 @@ export class LiveSession {
   private source: EventSource | null = null;
   private seq = 0;
   private queue: Op[] = [];
+  /** Ops sent to the server that it has not echoed back yet, in the order sent. */
+  private inflight: Op[] = [];
   private sending = false;
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly pending = new Map<string, number>();
@@ -93,6 +128,7 @@ export class LiveSession {
       if (d.seq <= this.seq) return;
       this.seq = d.seq;
       if (d.clientId === this.clientId) {
+        this.inflight.splice(0, d.ops.length);
         for (const op of d.ops) {
           const k = opKey(op);
           const n = (this.pending.get(k) ?? 1) - 1;
@@ -102,10 +138,15 @@ export class LiveSession {
         if (!this.pending.size && !this.queue.length) this.store.set({ saveState: 'saved', saveError: null });
         return;
       }
-      // Skip what we have our own newer op for: already sent (pending) or still waiting to be sent (queue)
-      const queued = new Set(this.queue.map(opKey));
-      const usable = d.ops.filter((op) => !this.pending.has(opKey(op)) && !queued.has(opKey(op)));
-      if (usable.length) this.store.applyRemote(usable);
+      // The server puts these before everything of ours it has not echoed yet (sent, or still queued). Skip what one
+      // of those overwrites (the same property, or a layer we are inserting, moving or deleting)...
+      const own = [...this.inflight, ...this.queue];
+      const ownKeys = new Set(own.map(opKey));
+      const usable = d.ops.filter((op) => !coveredBy(opKey(op), ownKeys));
+      if (!usable.length) return;
+      // ...and put back what these upset of ours, since ours come after them on the server
+      const again = replayAfter(own, usable);
+      this.store.applyRemote(again.length ? [...usable, ...again] : usable);
     });
     es.addEventListener('presence', (e) => {
       const d = JSON.parse((e as MessageEvent).data) as Peer & { left?: boolean; joined?: boolean };
@@ -134,6 +175,7 @@ export class LiveSession {
     const p = await loadProjectRecord(this.projectId);
     if (!p) return;
     this.queue = [];
+    this.inflight = [];
     this.pending.clear();
     this.store.replaceProject(p as Project);
     this.store.toast('The project was replaced elsewhere and has been reloaded');
@@ -166,6 +208,7 @@ export class LiveSession {
       else batch.push(op);
     }
     for (const op of batch) this.pending.set(opKey(op), (this.pending.get(opKey(op)) ?? 0) + 1);
+    this.inflight.push(...batch);
     try {
       const res = await fetch(`${API}projects/${encodeURIComponent(this.projectId)}/ops`, {
         method: 'POST',
@@ -177,6 +220,7 @@ export class LiveSession {
       this.flushRetry = 2000;
     } catch (err) {
       // Put them back at the front and try again shortly
+      this.inflight.splice(this.inflight.length - batch.length, batch.length);
       for (const op of batch) {
         const n = (this.pending.get(opKey(op)) ?? 1) - 1;
         if (n <= 0) this.pending.delete(opKey(op));
@@ -209,6 +253,7 @@ export class LiveSession {
    */
   private giveUp(message: string): void {
     this.queue = [];
+    this.inflight = [];
     this.pending.clear();
     this.close();
     if (current === this) current = null;

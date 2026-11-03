@@ -73,7 +73,11 @@ export function parsePathData(d: string): SubPath[] {
   let sy = 0;
   let lastC: { x: number; y: number } | null = null; // last cubic control (absolute), for S
   let lastQ: { x: number; y: number } | null = null; // last quadratic control, for T
-  const num = () => Number(tokens[i++]);
+  // A missing or unreadable number (path data cut short) reads as 0 rather than poisoning the shape with NaN
+  const num = () => {
+    const v = Number(tokens[i++]);
+    return Number.isFinite(v) ? v : 0;
+  };
   const isNum = () => i < tokens.length && !/^[a-zA-Z]$/.test(tokens[i]);
   const lineTo = (nx: number, ny: number) => {
     cur!.points.push({ x: nx, y: ny });
@@ -97,6 +101,8 @@ export function parsePathData(d: string): SubPath[] {
     }
     const rel = cmd === cmd.toLowerCase();
     const C = cmd.toUpperCase();
+    // Path data has to start with a moveto; anything else is an error, and rendering stops there (as browsers do)
+    if (!cur && C !== 'M') break;
     const ox = rel ? x : 0;
     const oy = rel ? y : 0;
     if (C !== 'C' && C !== 'S') lastC = null;
@@ -360,12 +366,14 @@ export function importSvg(text: string): SvgImport {
     return c ? { type: 'solid', color: c } : null;
   };
 
-  const gradientStops = (g: Element): Element[] => {
+  const gradientStops = (g: Element, seen = new Set<Element>()): Element[] => {
+    if (seen.has(g)) return [];
+    seen.add(g);
     const own = [...g.children].filter((c) => c.tagName.toLowerCase() === 'stop');
     if (own.length) return own;
     const href = g.getAttribute('href') ?? g.getAttribute('xlink:href');
     const parent = href?.startsWith('#') ? doc.getElementById(href.slice(1)) : null;
-    return parent && parent !== g ? gradientStops(parent) : [];
+    return parent && parent !== g ? gradientStops(parent, seen) : [];
   };
 
   const shapePaths = (el: Element): SubPath[] | null => {
@@ -408,6 +416,8 @@ export function importSvg(text: string): SvgImport {
     return null;
   };
 
+  const activeUse = new Set<string>();
+  let useCount = 0;
   const walk = (el: Element, m: M, inherited: Style, opacity: number): SceneNode[] => {
     const out: SceneNode[] = [];
     for (const child of el.children) {
@@ -436,11 +446,19 @@ export function importSvg(text: string): SvgImport {
       if (tag === 'use') {
         const href = child.getAttribute('href') ?? child.getAttribute('xlink:href');
         const ref = href?.startsWith('#') ? doc.getElementById(href.slice(1)) : null;
-        if (ref) {
+        const refId = ref?.getAttribute('id') ?? '';
+        // A <use> that (through others) places itself would never end, and nested ones can multiply without limit
+        if (ref && (activeUse.has(refId) || ++useCount > 5000)) skipped.add('<use> elements that repeat themselves');
+        else if (ref) {
           const wrapper = doc.createElementNS('http://www.w3.org/2000/svg', 'g');
           wrapper.appendChild(ref.cloneNode(true));
           const um = mul(cm, [1, 0, 0, 1, parseFloat(child.getAttribute('x') ?? '0') || 0, parseFloat(child.getAttribute('y') ?? '0') || 0]);
-          out.push(...walk(wrapper, um, style, op));
+          activeUse.add(refId);
+          try {
+            out.push(...walk(wrapper, um, style, op));
+          } finally {
+            activeUse.delete(refId);
+          }
         }
         continue;
       }

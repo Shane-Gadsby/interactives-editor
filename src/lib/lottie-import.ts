@@ -595,10 +595,33 @@ function layersToNodes(ctx: Ctx, layers: Json[], json: Json, w: number, h: numbe
   return roots;
 }
 
+const finiteOr = (v: unknown, fallback: number): number => {
+  const n = Number(v ?? fallback);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+/** Lottie JSON is loosely typed: a keyframe time or value that is not a number must not leave NaN in the document. */
+function scrubNonFinite(v: unknown): void {
+  if (Array.isArray(v)) {
+    for (let i = 0; i < v.length; i++) {
+      if (typeof v[i] === 'number' && !Number.isFinite(v[i])) v[i] = 0;
+      else scrubNonFinite(v[i]);
+    }
+  } else if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    for (const k of Object.keys(o)) {
+      if (typeof o[k] === 'number' && !Number.isFinite(o[k])) o[k] = 0;
+      else scrubNonFinite(o[k]);
+    }
+  }
+}
+
 export function importLottie(json: Json, name = 'Lottie'): LottieImport {
   if (!isLottie(json)) throw new Error('Not a Lottie animation (no layers/fr/w)');
   try {
-    return importLottieUnchecked(json, name);
+    const imported = importLottieUnchecked(json, name);
+    scrubNonFinite(imported.artboard);
+    return imported;
   } catch (err) {
     // Lottie JSON is loosely shaped: anything we trip over becomes a readable message instead of a crash
     if (err instanceof TypeError || err instanceof RangeError) throw new Error(`This Lottie file has data the importer could not read (${err.message})`);
@@ -609,8 +632,8 @@ export function importLottie(json: Json, name = 'Lottie'): LottieImport {
 function importLottieUnchecked(json: Json, name: string): LottieImport {
   const ctx: Ctx = {
     fr: Number(json.fr) || 30,
-    ip: Number(json.ip ?? 0),
-    op: Number(json.op ?? 60),
+    ip: finiteOr(json.ip, 0),
+    op: finiteOr(json.op, 60),
     tracks: [],
     warnings: new Set(),
     assets: [],
