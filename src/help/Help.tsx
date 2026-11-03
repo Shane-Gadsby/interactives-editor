@@ -6,8 +6,10 @@ import { Icons } from '../components/icons';
 
 // ---------------------------------------------------------------- opening help from anywhere
 
-type HelpState = { drawer: { id: string; anchor?: string } | null; search: boolean };
-let state: HelpState = { drawer: null, search: false };
+// `opened` counts requests to show the help from outside it, so the drawer can put the caret in its search box each time
+// (moving between topics inside the help leaves focus where it is)
+type HelpState = { drawer: { id: string; anchor?: string } | null; search: boolean; opened: number };
+let state: HelpState = { drawer: null, search: false, opened: 0 };
 const subs = new Set<() => void>();
 const emit = (next: Partial<HelpState>) => {
   state = { ...state, ...next };
@@ -16,8 +18,9 @@ const emit = (next: Partial<HelpState>) => {
 
 /** Open the help beside whatever is on screen (the full page at #/help works too). */
 export function openHelp(id = 'welcome', anchor?: string): void {
-  emit({ drawer: { id, anchor }, search: false });
+  emit({ drawer: { id, anchor }, search: false, opened: state.opened + 1 });
 }
+const showTopic = (id: string, anchor?: string) => emit({ drawer: { id, anchor }, search: false });
 export function openHelpSearch(): void {
   emit({ search: true });
 }
@@ -64,7 +67,7 @@ export function HelpHost() {
     <>
       {s.drawer && (
         <aside className="help-drawer" aria-label="Help">
-          <HelpView id={s.drawer.id} anchor={s.drawer.anchor} onNavigate={(id, anchor) => openHelp(id, anchor)} compact onClose={closeHelp} />
+          <HelpView id={s.drawer.id} anchor={s.drawer.anchor} onNavigate={showTopic} focusKey={s.opened} compact onClose={closeHelp} />
         </aside>
       )}
       {s.search && <QuickSearch onPick={(h) => openHelp(h.topic.id, h.anchor)} onClose={() => emit({ search: false })} />}
@@ -74,12 +77,18 @@ export function HelpHost() {
 
 // ---------------------------------------------------------------- the help itself
 
-export function HelpView({ id, anchor, onNavigate, compact, onClose }: { id: string; anchor?: string; onNavigate: (id: string, anchor?: string) => void; compact?: boolean; onClose?: () => void }) {
+export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey }: { id: string; anchor?: string; onNavigate: (id: string, anchor?: string) => void; compact?: boolean; onClose?: () => void; focusKey?: number }) {
   const topic = getTopic(id) ?? TOPICS[0];
   const [query, setQuery] = useState('');
   const [navOpen, setNavOpen] = useState(!compact);
   const hits = useMemo(() => searchHelp(query, 30), [query]);
   const body = useRef<HTMLDivElement>(null);
+  const search = useRef<HTMLInputElement>(null);
+  // Showing the help (on mount, and again each time it's asked for) puts the caret in the search box, so people can type
+  // straight away. preventScroll keeps the article where an anchor scrolled it.
+  useEffect(() => {
+    search.current?.focus({ preventScroll: true });
+  }, [focusKey]);
   const go = (href: string) => {
     const [tid, a] = href.split('#');
     onNavigate(tid || topic.id, a);
@@ -107,7 +116,7 @@ export function HelpView({ id, anchor, onNavigate, compact, onClose }: { id: str
             <Icons.more />
           </button>
         )}
-        <input className="help-search" type="search" placeholder="Search help…" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => {
+        <input ref={search} className="help-search" type="search" placeholder="Search help…" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => {
           e.stopPropagation();
           if (e.key === 'Enter' && hits[0]) go(`${hits[0].topic.id}${hits[0].anchor ? `#${hits[0].anchor}` : ''}`);
           if (e.key === 'Escape') setQuery('');
