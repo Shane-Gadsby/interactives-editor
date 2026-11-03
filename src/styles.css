@@ -1955,7 +1955,7 @@ kbd {
   pointer-events: none;
   overflow: hidden;
 }
-.ruler {
+.canvas-ruler {
   position: absolute;
   background: var(--panel);
   color: var(--muted);
@@ -1964,7 +1964,7 @@ kbd {
   overflow: hidden;
   z-index: 2;
 }
-.ruler.top {
+.canvas-ruler.top {
   left: 20px;
   right: 0;
   top: 0;
@@ -1972,7 +1972,7 @@ kbd {
   border-bottom: 1px solid var(--line-2);
   cursor: row-resize;
 }
-.ruler.left {
+.canvas-ruler.left {
   top: 20px;
   bottom: 0;
   left: 0;
@@ -1980,26 +1980,24 @@ kbd {
   border-right: 1px solid var(--line-2);
   cursor: col-resize;
 }
-.ruler span {
+.canvas-ruler span {
   position: absolute;
   white-space: nowrap;
 }
-.ruler.top span {
+.canvas-ruler.top span {
   top: 0;
   height: 100%;
   padding: 3px 0 0 3px;
   border-left: 1px solid var(--line-2);
   margin-left: -20px;
 }
-.ruler.left span {
+.canvas-ruler.left span {
   left: 0;
   width: 100%;
-  padding: 3px 0 0 2px;
+  padding: 3px 0 0 5px;
   border-top: 1px solid var(--line-2);
   margin-top: -20px;
   writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  height: 40px;
 }
 .ruler-corner {
   position: absolute;

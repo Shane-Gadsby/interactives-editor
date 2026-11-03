@@ -108,14 +108,14 @@ export function Rulers({ ab, zoom, panX, panY, width, height }: { ab: Artboard |
           {drag.at}
         </div>
       )}
-      <div className="ruler top" title="Drag down to make a vertical guide (Shift+R hides rulers)" onPointerDown={(e) => start(e, 'x', null)}>
+      <div className="canvas-ruler top" title="Drag down to make a vertical guide (Shift+R hides rulers)" onPointerDown={(e) => start(e, 'x', null)}>
         {ticks(width, ox).map((v) => (
           <span key={v} style={{ left: ox + v * zoom }}>
             {v}
           </span>
         ))}
       </div>
-      <div className="ruler left" title="Drag right to make a horizontal guide" onPointerDown={(e) => start(e, 'y', null)}>
+      <div className="canvas-ruler left" title="Drag right to make a horizontal guide" onPointerDown={(e) => start(e, 'y', null)}>
         {ticks(height, oy).map((v) => (
           <span key={v} style={{ top: oy + v * zoom }}>
             {v}
