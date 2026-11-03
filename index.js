@@ -168,7 +168,8 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	whoIs = (req) => {
 		let user = req.sessionData?.user
 
-		return user ? {username: user.username || null, userID: user.userID ?? null, name: [user.firstname, user.lastname].filter(Boolean).join(' ') || user.username || null} : null
+		//si-manager's formatted session has fullName/firstName/lastName (older ones had firstname/lastname)
+		return user ? {username: user.username || null, userID: user.userID ?? null, name: user.fullName || [user.firstName || user.firstname, user.lastName || user.lastname].filter(Boolean).join(' ') || user.username || null} : null
 	},
 
 	//Admins and power users, minus presentation mode. Same rule as everywhere else in the suite
@@ -546,7 +547,10 @@ router.get('/api/projects/:id/live', async (req, res) => {
 		me = whoIs(req),
 		//An AI agent joining through the MCP server says so (?agent=<name>), so people can see who's editing
 		agent = typeof req.query.agent === 'string' ? req.query.agent.replace(/[^\w .-]+/g, '').slice(0, 40) : '',
-		client = {id: clientId, res, name: agent ? `${agent} (AI)` : me?.name || me?.username || 'Guest', color: PALETTE[room.nextColor++ % PALETTE.length], presence: {}},
+		//Who they are: the checked session first, then the name the page's own session (fetchActivity) gave it, which
+		//only matters where there's no session to check (local dev). It's just a label on the presence list
+		claimed = typeof req.query.name === 'string' ? req.query.name.replace(/[^\p{L}\p{N} .'-]+/gu, '').slice(0, 60).trim() : '',
+		client = {id: clientId, res, name: agent ? `${agent} (AI)` : me?.name || me?.username || claimed || 'Guest', color: PALETTE[room.nextColor++ % PALETTE.length], presence: {}},
 		since = Number(req.query.since)
 
 	res.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no'})

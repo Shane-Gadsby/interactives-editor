@@ -7,6 +7,7 @@
  * still have an unacknowledged op for is skipped: ours comes later on the
  * server, so it is the one that sticks everywhere.
  */
+import { sessionId, sessionUser } from './session';
 import { diff, opKey, type Op } from '../../shared/ops.mjs';
 import type { Project } from 'interactives-player';
 import type { EditorStore } from '../store/store';
@@ -43,12 +44,20 @@ export class LiveSession {
   ) {
     this.seq = since;
     store.onLocalChange = (before, after) => this.local(before, after);
-    this.connect();
+    void this.connect();
   }
 
-  private connect(): void {
+  private async connect(): Promise<void> {
     if (this.closed) return;
-    const url = `${API}projects/${encodeURIComponent(this.projectId)}/live?clientId=${this.clientId}&since=${this.seq}`;
+    // EventSource can't send the X-Session-ID header, so the session id (and the name the page's session gave us,
+    // for when the server has no session to check) go in the URL
+    const me = await sessionUser();
+    if (this.closed) return;
+    const sid = sessionId();
+    const url =
+      `${API}projects/${encodeURIComponent(this.projectId)}/live?clientId=${this.clientId}&since=${this.seq}` +
+      (sid ? `&sessionID=${encodeURIComponent(sid)}` : '') +
+      (me ? `&name=${encodeURIComponent(me.name)}` : '');
     const es = new EventSource(url, { withCredentials: true });
     this.source = es;
     es.addEventListener('hello', (e) => {
@@ -93,7 +102,7 @@ export class LiveSession {
       es.close();
       if (this.closed) return;
       this.store.set({ live: { ...this.store.get().live, status: 'reconnecting' } });
-      setTimeout(() => this.connect(), this.retry);
+      setTimeout(() => void this.connect(), this.retry);
       this.retry = Math.min(15000, this.retry * 2);
     };
   }

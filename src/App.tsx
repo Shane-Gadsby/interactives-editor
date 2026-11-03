@@ -3,6 +3,7 @@ import { Home } from './Home';
 import { Editor } from './Editor';
 import { HelpHost, HelpPage } from './help/Help';
 import { installTooltips } from './components/tooltips';
+import { sessionUser } from './lib/session';
 import { loadUserPrefs } from './lib/prefs'; // importing applies the cached theme before the first paint
 
 type Route = { page: 'home' } | { page: 'editor'; id: string } | { page: 'help'; id: string; anchor?: string };
@@ -17,6 +18,8 @@ function parse(): Route {
 }
 
 installTooltips();
+// Ask the toolbox session who this is early (it also stores the session id utilities.js sends with requests)
+void sessionUser();
 void loadUserPrefs();
 
 export function App() {

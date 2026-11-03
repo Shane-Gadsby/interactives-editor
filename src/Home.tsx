@@ -6,6 +6,7 @@ import { pickFiles } from './lib/insert';
 import { Icons } from './components/icons';
 import { PrefsModal } from './components/PrefsModal';
 import { prefs } from './lib/prefs';
+import { sessionUser, type SessionUser } from './lib/session';
 
 declare global {
   interface Window {
@@ -20,6 +21,11 @@ export function Home({ open }: { open: (id: string) => void }) {
   const [who, setWho] = useState<SessionInfo | null>(null);
   const [power, setPower] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  // The toolbox session's own view of who this is (the server's check can be missing in local dev)
+  const [me2, setMe2] = useState<SessionUser | null>(null);
+  useEffect(() => {
+    void sessionUser().then(setMe2);
+  }, []);
 
   const refresh = async (all = power) => {
     try {
@@ -104,7 +110,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           <span>Interactives</span>
         </div>
         <div className="home-actions">
-          {who?.user && <span className="muted">{who.user.name ?? who.user.username}</span>}
+          {(who?.user || me2) && <span className="muted" title="Signed in through the toolbox">{who?.user?.name ?? me2?.name ?? who?.user?.username}</span>}
           <button className="icon-btn" title="Preferences (theme, mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)}>
             <Icons.gear width={16} />
           </button>
