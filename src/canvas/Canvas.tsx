@@ -535,7 +535,13 @@ export function Canvas() {
       if (locked) lockedSeen.current = Date.now();
     } else setHover(null);
   };
-  useEffect(() => () => cancelAnimationFrame(hoverFrame.current), []);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(hoverFrame.current);
+      hoverFrame.current = 0; // or the next mount (StrictMode's second one) would think a frame was still due
+    },
+    [],
+  );
 
   const onPointerMove = (e: React.PointerEvent) => {
     const st = store().get();

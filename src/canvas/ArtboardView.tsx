@@ -98,6 +98,11 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     return scheduleView(job.current);
   }, [started]);
 
+  // What was drawn last, so a change to a few layers (a keystroke in a field, a timeline frame) redraws just those.
+  // Tied to the renderer it was drawn into: a new renderer has drawn nothing, whatever the props say.
+  // (Declared above the renderer effect, whose cleanup clears it.)
+  const lastDraw = useRef<{ renderer: Renderer; artboard: Artboard; variables: unknown; dataSources: unknown; assetVersion: number; dataVersion: number; depsKey: string; nodes: SceneNode[]; plain: boolean } | null>(null);
+
   // A layout effect, declared before the render one, so the renderer exists for the very first render.
   useLayoutEffect(() => {
     // Script layers paint one still frame in the sandbox (loaded the first time a project has one)
@@ -110,6 +115,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     shader.current = sh;
     host.current!.appendChild(r.root);
     return () => {
+      // What was drawn went with the renderer: its replacement (StrictMode's second mount, or any remount) starts empty
+      lastDraw.current = null;
       r.destroy();
       d.dispose();
       sh.dispose();
@@ -118,9 +125,6 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       shader.current = null;
     };
   }, []);
-
-  // What was drawn last, so a change to a few layers (a keystroke in a field, a timeline frame) redraws just those
-  const lastDraw = useRef<{ artboard: Artboard; variables: unknown; dataSources: unknown; assetVersion: number; dataVersion: number; depsKey: string; nodes: SceneNode[]; plain: boolean } | null>(null);
 
   useLayoutEffect(() => {
     const r = renderer.current;
@@ -131,7 +135,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     // Nothing derived from the whole tree (bindings, repeaters, constraints, layout, script layers, instances) and nothing
     // else the drawing depends on changed: find the layers that did (immer shares the rest, so this only follows what
     // changed) and redraw just those. Any change in structure, or anything unusual, draws the whole artboard instead
-    if (last?.plain && last.variables === project.variables && last.dataSources === project.dataSources && last.assetVersion === assetVersion && last.dataVersion === dataVersion && last.depsKey === depsKey && sameFrame(last.artboard, artboard)) {
+    if (last?.plain && last.renderer === r && last.variables === project.variables && last.dataSources === project.dataSources && last.assetVersion === assetVersion && last.dataVersion === dataVersion && last.depsKey === depsKey && sameFrame(last.artboard, artboard)) {
       const changed = new Map<string, SceneNode>();
       if (diffTrees(last.nodes, sampled, changed)) {
         drawn = !changed.size || r.updateNodes(changed.keys(), changed);
@@ -148,7 +152,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       r.render(artboard, nodes, { vars });
       let plain = nodes === sampled;
       if (plain) walk(sampled, (n) => void (plain &&= !drawnDifferently(n)));
-      lastDraw.current = { artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };
+      lastDraw.current = { renderer: r, artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };
     }
     // Auto-sized text: measure and write the size back (no undo step).
     const updates: { id: string; width?: number; height?: number }[] = [];
