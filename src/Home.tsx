@@ -156,8 +156,10 @@ export function Home({ open }: { open: (id: string) => void }) {
       const text = new TextDecoder().decode(head);
       const animation = /\.(lottie|riv|psd|ai|pdf)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
       if (animation) {
-        const { projectFromAnimation } = await import('./lib/importers');
-        const id = await projectFromAnimation(f);
+        const { chooseLinking, projectFromAnimation } = await import('./lib/importers');
+        const linking = await chooseLinking([f]);
+        if (!linking) return;
+        const id = await projectFromAnimation(f, linking.get(f));
         await refresh();
         open(id);
         return;

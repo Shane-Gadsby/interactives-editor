@@ -29,8 +29,23 @@ export interface AlertOptions {
   okLabel?: string;
 }
 
+export type LinkMode = 'link' | 'embed';
+
+export interface LinkChoiceRow {
+  name: string;
+  /** Set when the file can only be embedded: the reason, shown under its name. */
+  embedOnly?: string;
+}
+
+export interface LinkChoiceOptions {
+  title: string;
+  message?: string;
+  rows: LinkChoiceRow[];
+}
+
 type Request =
   | { kind: 'confirm'; opts: ConfirmOptions; done: (v: boolean) => void }
+  | { kind: 'link'; opts: LinkChoiceOptions; done: (v: LinkMode[] | null) => void }
   | { kind: 'prompt'; opts: PromptOptions; done: (v: string | null) => void }
   | { kind: 'alert'; opts: AlertOptions; done: () => void };
 
@@ -51,13 +66,34 @@ function settle(r: Request) {
 export const confirmDialog = (opts: ConfirmOptions): Promise<boolean> => new Promise((done) => enqueue({ kind: 'confirm', opts, done }));
 export const promptDialog = (opts: PromptOptions): Promise<string | null> => new Promise((done) => enqueue({ kind: 'prompt', opts, done }));
 export const alertDialog = (opts: AlertOptions): Promise<void> => new Promise((done) => enqueue({ kind: 'alert', opts, done }));
+/**
+ * Ask, for each dropped file, whether to link it (keep watching the file on disk) or embed it (copy it into the project).
+ * Resolves with one answer per row, or null when cancelled.
+ */
+export const linkChoiceDialog = (opts: LinkChoiceOptions): Promise<LinkMode[] | null> => new Promise((done) => enqueue({ kind: 'link', opts, done }));
+
+const LINK_DEFAULT_KEY = 'ix-link-default';
+function lastLinkMode(): LinkMode {
+  try {
+    return localStorage.getItem(LINK_DEFAULT_KEY) === 'embed' ? 'embed' : 'link';
+  } catch {
+    return 'link';
+  }
+}
+function rememberLinkMode(m: LinkMode) {
+  try {
+    localStorage.setItem(LINK_DEFAULT_KEY, m);
+  } catch {
+    /* private window */
+  }
+}
 
 /** Cancel everything open or waiting (confirm: false, prompt: null). */
 export function dismissAllDialogs() {
   const all = queue;
   queue = [];
   emit();
-  for (const r of all) r.kind === 'confirm' ? r.done(false) : r.kind === 'prompt' ? r.done(null) : r.done();
+  for (const r of all) r.kind === 'confirm' ? r.done(false) : r.kind === 'prompt' || r.kind === 'link' ? r.done(null) : r.done();
 }
 
 const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -84,13 +120,18 @@ function DialogView({ req }: { req: Request }) {
   const opts = req.opts;
   const [value, setValue] = useState(req.kind === 'prompt' ? req.opts.initial ?? '' : '');
   const [showError, setShowError] = useState(false);
+  const linkRows = req.kind === 'link' ? req.opts.rows : [];
+  const [modes, setModes] = useState<LinkMode[]>(() => {
+    const d = lastLinkMode();
+    return linkRows.map((r) => (r.embedOnly ? 'embed' : d));
+  });
   const box = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const okBtn = useRef<HTMLButtonElement>(null);
   const error = req.kind === 'prompt' ? req.opts.validate?.(value) ?? null : null;
   // Latest state for the window key handler (installed once per dialog)
-  const live = useRef({ value, error });
-  live.current = { value, error };
+  const live = useRef({ value, error, modes });
+  live.current = { value, error, modes };
 
   const accept = () => {
     if (req.kind === 'prompt') {
@@ -101,10 +142,19 @@ function DialogView({ req }: { req: Request }) {
       }
       finish(() => req.done(live.current.value));
     } else if (req.kind === 'confirm') finish(() => req.done(true));
+    else if (req.kind === 'link') answerLink(live.current.modes);
     else finish(() => req.done());
   };
+  /** Finish the link chooser with these answers (and remember the choice for next time). */
+  const answerLink = (answers: LinkMode[]) => {
+    if (req.kind !== 'link') return;
+    if (req.opts.rows.some((r) => !r.embedOnly)) rememberLinkMode(answers.some((a, i) => a === 'link' && !req.opts.rows[i].embedOnly) ? 'link' : 'embed');
+    finish(() => req.done(answers));
+  };
+  const all = (m: LinkMode) => answerLink(linkRows.map((r) => (r.embedOnly ? 'embed' : m)));
   const cancel = () => {
-    if (req.kind === 'prompt') finish(() => req.done(null));
+    if (req.kind === 'link') finish(() => req.done(null));
+    else if (req.kind === 'prompt') finish(() => req.done(null));
     else if (req.kind === 'confirm') finish(() => req.done(false));
     else finish(() => req.done());
   };
@@ -158,21 +208,51 @@ function DialogView({ req }: { req: Request }) {
     };
   }, []);
 
-  const confirmLabel = req.kind === 'alert' ? req.opts.okLabel ?? 'OK' : (req.opts as ConfirmOptions).confirmLabel ?? (req.kind === 'prompt' ? 'OK' : 'Confirm');
-  const cancelLabel = req.kind === 'alert' ? '' : (req.opts as ConfirmOptions).cancelLabel ?? 'Cancel';
-  const danger = req.kind !== 'alert' && !!(req.opts as ConfirmOptions).danger;
+  const confirmLabel = req.kind === 'alert' ? req.opts.okLabel ?? 'OK' : req.kind === 'link' ? 'Import' : (req.opts as ConfirmOptions).confirmLabel ?? (req.kind === 'prompt' ? 'OK' : 'Confirm');
+  const cancelLabel = req.kind === 'alert' ? '' : req.kind === 'link' ? 'Cancel' : (req.opts as ConfirmOptions).cancelLabel ?? 'Cancel';
+  const danger = req.kind !== 'alert' && req.kind !== 'link' && !!(req.opts as ConfirmOptions).danger;
+  const canLink = linkRows.some((r) => !r.embedOnly);
   const message = opts.message;
   const promptOpts = req.kind === 'prompt' ? req.opts : null;
   const titleId = 'dlg-title';
 
   return (
     <div className="modal-backdrop dialog-backdrop" onPointerDown={(e) => e.target === e.currentTarget && cancel()}>
-      <div className="modal dialog" role={req.kind === 'alert' ? 'alertdialog' : 'dialog'} aria-modal="true" aria-labelledby={titleId} ref={box}>
+      <div className={`modal dialog${req.kind === 'link' ? ' link-dialog' : ''}`} role={req.kind === 'alert' ? 'alertdialog' : 'dialog'} aria-modal="true" aria-labelledby={titleId} ref={box}>
         <header>
           <strong id={titleId}>{opts.title}</strong>
         </header>
         <div className="dialog-body">
           {message && <p className="dialog-message">{message}</p>}
+          {req.kind === 'link' && (
+            <ul className="link-rows">
+              {linkRows.map((r, i) => (
+                <li key={i} className="link-row">
+                  <div className="link-file">
+                    <span className="link-name" title={r.name}>
+                      {r.name}
+                    </span>
+                    {r.embedOnly && <span className="link-reason">{r.embedOnly}</span>}
+                  </div>
+                  <div className="seg" role="radiogroup" aria-label={`${r.name}: link or embed`}>
+                    {(['link', 'embed'] as const).map((m) => (
+                      <button
+                        key={m}
+                        role="radio"
+                        aria-checked={modes[i] === m}
+                        className={`seg-btn${modes[i] === m ? ' on' : ''}`}
+                        disabled={m === 'link' && !!r.embedOnly}
+                        title={m === 'link' ? 'Keep a link to the file, watch it and bring its changes in' : 'Copy the file into the project; it stays as it is'}
+                        onClick={() => setModes((cur) => cur.map((x, j) => (j === i ? m : x)))}
+                      >
+                        {m === 'link' ? 'Link' : 'Embed'}
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
           {promptOpts && (
             <label className="dialog-field">
               {promptOpts.label && <span>{promptOpts.label}</span>}
@@ -197,6 +277,16 @@ function DialogView({ req }: { req: Request }) {
             <button className="btn" title={`${cancelLabel} (Esc)`} onClick={cancel}>
               {cancelLabel}
             </button>
+          )}
+          {req.kind === 'link' && canLink && (
+            <>
+              <button className="btn" title="Embed every file" onClick={() => all('embed')}>
+                Embed all
+              </button>
+              <button className="btn" title="Link every file that can be linked" onClick={() => all('link')}>
+                Link all
+              </button>
+            </>
           )}
           <button ref={okBtn} className={`btn ${danger ? 'danger-fill' : 'primary'}`} title={`${confirmLabel} (Enter)`} onClick={accept}>
             {confirmLabel}

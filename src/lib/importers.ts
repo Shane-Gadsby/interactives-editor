@@ -5,6 +5,8 @@ import { assetBytes, createProjectRecord, putAsset, saveProject } from './db';
 import { assetUrls } from './assets';
 import { download, fileSafe } from './export';
 import { exportLottie, toDotLottie } from './lottie-export';
+import { NO_LINK_REASON, currentUser, designKind, handleOf, hashAssets, isDesignFile, newLinkId, rememberHandle, sourcesFor, supportsLinking, type FileHandle } from './links';
+import { linkChoiceDialog, type LinkChoiceRow } from '../components/dialogs';
 
 export interface AnimationImport {
   artboard: Artboard;
@@ -50,13 +52,64 @@ async function uploadAssets(projectId: string, assets: ImportedAsset[]): Promise
   }
 }
 
+/** A file kept linked: the handle to read it again, and the file as it was read. */
+export interface FileLink {
+  handle: FileHandle;
+  file: File;
+}
+
+/**
+ * Before importing dropped or picked files: for the design files among them (the ones that can be linked), ask which to
+ * link and which to embed, in one dialog. Resolves with the handles of the files to link (an empty map when none), or
+ * null when the person cancelled. Nothing is asked when no file is a design file.
+ */
+export async function chooseLinking(files: File[]): Promise<Map<File, FileHandle> | null> {
+  const out = new Map<File, FileHandle>();
+  if (!files.some(isDesignFile)) return out;
+  const can = supportsLinking();
+  const rows: LinkChoiceRow[] = [];
+  const found: (FileHandle | null)[] = [];
+  for (const f of files) {
+    const h = isDesignFile(f) && can ? await handleOf(f) : null;
+    found.push(h);
+    rows.push({ name: f.name, embedOnly: !isDesignFile(f) ? 'Always embedded' : !can ? 'Embedded in this browser' : !h ? 'Can’t link this one: the browser gave no access to the file on disk. Use Import in the Layers panel to pick it.' : undefined });
+  }
+  const answers = await linkChoiceDialog({
+    title: files.length > 1 ? `Import ${files.length} files` : 'Import design file',
+    message: can ? 'Link keeps the file on your computer connected: when you save it in the design app, the changes come into this project and your own edits stay. Embed copies it in once.' : NO_LINK_REASON,
+    rows,
+  });
+  if (!answers) return null;
+  files.forEach((f, i) => {
+    if (answers[i] === 'link' && found[i]) out.set(f, found[i]!);
+  });
+  return out;
+}
+
+/** Read one animation or design file and add it to the open project, linked when `link` is given. Errors become a toast. */
+export async function importAnimationFile(file: File, linking?: Map<File, FileHandle>): Promise<void> {
+  try {
+    const handle = linking?.get(file);
+    await addImportedArtboard(await readAnimationFile(file), handle ? { handle, file } : undefined);
+  } catch (err) {
+    store().toast(`${file.name}: ${err instanceof Error ? err.message : String(err)}`, 'error');
+  }
+}
+
 /** Add an imported artboard to the open project, to the right of the others. */
-export async function addImportedArtboard(imp: AnimationImport): Promise<void> {
+export async function addImportedArtboard(imp: AnimationImport, link?: FileLink): Promise<void> {
   const st = store();
   const p = st.get().project;
   await uploadAssets(p.id, imp.assets);
   const right = p.artboards.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0);
-  const list = placeArtboards(imp.artboards ?? [imp.artboard], right + 100, 0);
+  let list = placeArtboards(imp.artboards ?? [imp.artboard], right + 100, 0);
+  if (link) {
+    // the handle is saved first, so the watcher finds it as soon as the artboards appear
+    const linkId = newLinkId();
+    const sources = sourcesFor(imp.artboards ?? [imp.artboard], hashAssets(imp), { fileName: link.file.name, linkId, lastModified: link.file.lastModified, by: await currentUser() });
+    await rememberHandle(p.id, linkId, link.handle, designKind(link.file.name));
+    list = list.map((a, i) => ({ ...a, source: sources[i] }));
+  }
   const start = list.find((a) => a.id === imp.artboard.id) ?? list[0];
   st.update((d) => {
     d.assets.push(...imp.assets.map((a) => ({ id: a.id, name: a.name, mime: a.mime, size: a.bytes.byteLength })));
@@ -65,14 +118,20 @@ export async function addImportedArtboard(imp: AnimationImport): Promise<void> {
     for (const f of imp.fonts ?? []) if (!d.fonts.some((x) => x.family === f.family)) d.fonts.push(f);
   });
   st.set({ activeArtboardId: start.id, artboardSelected: true, selection: [], activeTimelineId: start.timelines[0]?.id ?? null, bottomTab: 'timeline' });
-  showReport(`Imported ${imp.source}: ${list.length > 1 ? `${list.length} artboards` : start.name}`, imp.warnings);
+  showReport(`Imported ${imp.source}: ${list.length > 1 ? `${list.length} artboards` : start.name}${link ? `, linked to ${link.file.name}` : ''}`, imp.warnings);
 }
 
 /** Create a whole new project from an animation file (projects page). */
-export async function projectFromAnimation(file: File): Promise<string> {
+export async function projectFromAnimation(file: File, handle?: FileHandle): Promise<string> {
   const imp = await readAnimationFile(file);
   const p = createProject(imp.artboard.name);
   p.artboards = placeArtboards(imp.artboards ?? [imp.artboard], 0, 0);
+  if (handle) {
+    const linkId = newLinkId();
+    const sources = sourcesFor(imp.artboards ?? [imp.artboard], hashAssets(imp), { fileName: file.name, linkId, lastModified: file.lastModified, by: await currentUser() });
+    p.artboards = p.artboards.map((a, i) => ({ ...a, source: sources[i] }));
+    await rememberHandle(p.id, linkId, handle, designKind(file.name));
+  }
   p.settings.startArtboardId = imp.artboard.id;
   p.variables = imp.variables ?? [];
   p.fonts = imp.fonts ?? [];

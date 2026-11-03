@@ -24,6 +24,8 @@ import { HelpLink, openHelp } from './help/Help';
 import { PrefsModal } from './components/PrefsModal';
 import { HistoryModal, ShareModal } from './components/ProjectModals';
 import { prefs, setPrefs } from './lib/prefs';
+import { LinkManager, setLinkManager } from './lib/links';
+import { LinkBanner } from './components/LinkBanner';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
   const [ready, setReady] = useState<EditorStore | null>(null);
@@ -31,6 +33,7 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
 
   useEffect(() => {
     let cancelled = false;
+    let stopLinks: (() => void) | null = null;
     (async () => {
       try {
         const p = await loadProjectRecord(projectId);
@@ -41,6 +44,14 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         setCurrentStore(s);
         // Live editing: ops instead of whole-document saves, and other people's changes as they happen
         setLiveSession(new LiveSession(p.id, s, liveSeqOf(p.id)));
+        // Linked design files: handles from this browser, watching, re-importing
+        const links = new LinkManager(s);
+        links.start();
+        setLinkManager(links);
+        stopLinks = () => {
+          links.stop();
+          setLinkManager(null);
+        };
         // Handy from the devtools console (and for driving the editor in automated checks).
         (window as unknown as { interactivesEditor: unknown }).interactivesEditor = {
           store: s,
@@ -64,6 +75,7 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
     })();
     return () => {
       cancelled = true;
+      stopLinks?.();
       liveSession()?.close();
       setLiveSession(null);
       setCurrentStore(null);
@@ -383,7 +395,10 @@ function Workspace({ home }: { home: () => void }) {
   return (
     <div className="workspace" style={{ ['--bottom-h' as string]: s.bottomTab ? `${s.bottomHeight}px` : '34px' }}>
       <TopBar home={home} onPreview={() => setPreview(true)} />
-      {conflict && <ConflictBanner />}
+      <div className="banner-area">
+        {conflict && <ConflictBanner />}
+        <LinkBanner />
+      </div>
       <Toolbar />
       <LeftPanel />
       <main className="stage">

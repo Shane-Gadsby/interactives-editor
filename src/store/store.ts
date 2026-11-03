@@ -744,6 +744,8 @@ export class EditorStore {
       canvasX: src.canvasX + src.width + 100,
       children,
     };
+    // a copy isn't linked to the file: its layers have new ids, so it couldn't be matched to the file's anyway
+    delete copy.source;
     for (const tl of copy.timelines) {
       tl.id = uid('tl');
       for (const tr of tl.tracks) {

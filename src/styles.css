@@ -3143,3 +3143,115 @@ code {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ---------------------------------------------------------------- linked files: chooser, banner, inspector */
+.banner-area {
+  grid-area: banner;
+}
+.banner-area .conflict-banner {
+  grid-area: auto;
+}
+.link-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 24px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line-2);
+  color: var(--text);
+  font-size: 12px;
+}
+.link-banner.warn {
+  background: #3a2f12;
+  color: #f2d48a;
+}
+.link-banner .link-banner-text {
+  flex: 1;
+  min-width: 200px;
+  overflow-wrap: anywhere;
+}
+.modal.dialog.link-dialog {
+  width: min(560px, 94vw);
+}
+.link-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 46vh;
+  overflow: auto;
+}
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: var(--panel-2);
+}
+.link-file {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.link-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.link-reason {
+  color: var(--muted);
+  font-size: 11px;
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  overflow: hidden;
+  flex: none;
+}
+.seg-btn {
+  padding: 4px 12px;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.seg-btn + .seg-btn {
+  border-left: 1px solid var(--line-2);
+}
+.seg-btn.on {
+  background: var(--accent);
+  color: #fff;
+}
+.seg-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.seg-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.link-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.link-info .link-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.link-info .link-sub {
+  color: var(--muted);
+  font-size: 11px;
+}
+.link-info .link-sub.err {
+  color: var(--danger);
+}

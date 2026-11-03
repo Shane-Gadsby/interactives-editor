@@ -102,6 +102,7 @@ Access works like this:
 | `lib/export.ts` | single-file HTML (embeds the player IIFE build, plus the script sandbox when used), `.ixp`, JSON |
 | `lib/live.ts`, `shared/ops.mjs` | live editing client and the shared op diff/apply |
 | `lib/lottie-import.ts`, `lib/lottie-export.ts` | Lottie / dotLottie in and out |
+| `lib/links.ts`, `lib/link-reconcile.ts` | Linked design files: File System Access handles in IndexedDB, the watcher (`LinkManager`), and the pure three-way merge of a re-import into the artboard (`Artboard.source` keeps the baseline) |
 | `lib/rive-import.ts`, `lib/rive-defs.ts` | `.riv` import; defs generated from rive-runtime headers by `research/rive/gen_defs.py` |
 | `lib/ai-import.ts`, `lib/pdf-parse.ts`, `lib/pdf-color.ts`, `lib/pdf-font.ts` | Illustrator `.ai` (the PDF inside) and `.pdf` import: a minimal PDF reader, then the page content operators replayed into path, text, image and mask layers (one artboard per page) |
 | `lib/boolean.ts` | union/subtract/intersect/exclude (polygon-clipping) |

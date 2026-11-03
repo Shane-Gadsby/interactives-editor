@@ -38,6 +38,7 @@ import { freehandToPath } from './freehand';
 import { ArtboardView } from './ArtboardView';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
 import { insertFiles } from '../lib/insert';
+import { captureDrop } from '../lib/links';
 import { liveSession } from '../lib/live';
 import { confirmDialog } from '../components/dialogs';
 
@@ -905,7 +906,8 @@ export function Canvas() {
 
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault();
-    const files = [...e.dataTransfer.files];
+    // the drop's file handles have to be asked for right now, before anything is awaited
+    const files = captureDrop(e.dataTransfer);
     if (!files.length) return;
     const w = toWorld(e.clientX, e.clientY);
     const ab = abAt(w) ?? active;

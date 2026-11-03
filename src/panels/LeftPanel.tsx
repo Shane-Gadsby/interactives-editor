@@ -6,7 +6,7 @@ import { IconButton } from '../components/ui';
 import { confirmDialog } from '../components/dialogs';
 import { assetKind, assetUrls } from '../lib/assets';
 import { insertFiles, pickFiles } from '../lib/insert';
-import { ANIMATION_ACCEPT, addImportedArtboard, readAnimationFile } from '../lib/importers';
+import { ANIMATION_ACCEPT, chooseLinking, importAnimationFile } from '../lib/importers';
 import { getArtboard, locate } from '../store/doc';
 import { deleteAsset } from '../lib/db';
 
@@ -285,13 +285,11 @@ function Layers() {
       <button
         className="link-btn add-artboard"
         onClick={async () => {
-          const [file] = await pickFiles(ANIMATION_ACCEPT, false);
-          if (!file) return;
-          try {
-            await addImportedArtboard(await readAnimationFile(file));
-          } catch (err) {
-            store().toast(err instanceof Error ? err.message : String(err), 'error');
-          }
+          const files = await pickFiles(ANIMATION_ACCEPT, true);
+          if (!files.length) return;
+          const linking = await chooseLinking(files);
+          if (!linking) return;
+          for (const file of files) await importAnimationFile(file, linking);
         }}
       >
         + Import Lottie / Rive / PSD / AI / PDF as artboard

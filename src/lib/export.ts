@@ -24,8 +24,15 @@ function loadSandboxSource(): Promise<string> {
   return sandboxSource;
 }
 
+/** The project without its links to files on this computer (what an export or a share shouldn't carry). */
+export function withoutLinks(project: Project): Project {
+  if (!project.artboards.some((a) => a.source)) return project;
+  return { ...project, artboards: project.artboards.map(({ source: _source, ...a }) => a) };
+}
+
 export async function standaloneHtml(project: Project, opts: { startArtboardId?: string; debug?: boolean } = {}): Promise<string> {
-  const p = opts.startArtboardId ? { ...project, settings: { ...project.settings, startArtboardId: opts.startArtboardId } } : project;
+  const clean = withoutLinks(project);
+  const p = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p)) ? await loadSandboxSource() : undefined;
   return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: (a) => assetBytes(project.id, a), debug: opts.debug });
 }
@@ -40,12 +47,12 @@ export async function downloadStandalone(project: Project): Promise<void> {
 }
 
 export async function downloadPackage(project: Project): Promise<void> {
-  const blob = await exportPackage(project);
+  const blob = await exportPackage(withoutLinks(project));
   download(blob, `${fileSafe(project.name)}${PACKAGE_EXTENSION}`);
 }
 
 export function downloadJson(project: Project): void {
-  download(new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }), `${fileSafe(project.name)}.json`);
+  download(new Blob([JSON.stringify(withoutLinks(project), null, 2)], { type: 'application/json' }), `${fileSafe(project.name)}.json`);
 }
 
 export { playerSource };

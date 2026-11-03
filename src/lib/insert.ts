@@ -2,6 +2,7 @@ import { createNode, type Asset, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { assetKind, assetUrls, imageSize, storeFile, videoSize } from './assets';
 import { importSvg } from './svg-import';
+import { acceptsDesignFiles, isDesignFile, pickWithHandles } from './links';
 
 /** Upload files as assets. Images and videos are placed on the artboard at `at` (artboard coordinates). */
 export async function insertFiles(files: File[], artboardId: string | null, at: { x: number; y: number } | null): Promise<Asset[]> {
@@ -10,15 +11,19 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
   const added: Asset[] = [];
   const nodes: SceneNode[] = [];
   let offset = 0;
+  // Design files (Photoshop, ...) can be linked instead of embedded: ask once for everything that was dropped
+  let linking: Map<File, import('./links').FileHandle> | undefined;
+  if (files.some(isDesignFile)) {
+    const { chooseLinking } = await import('./importers');
+    const chosen = await chooseLinking(files);
+    if (!chosen) return added; // cancelled
+    linking = chosen;
+  }
   for (const file of files) {
-    // Photoshop, Illustrator and PDF files become new artboards of layers (the picture and its position don't matter)
-    if (/\.(psd|ai|pdf)$/i.test(file.name)) {
-      try {
-        const { addImportedArtboard, readAnimationFile } = await import('./importers');
-        await addImportedArtboard(await readAnimationFile(file));
-      } catch (err) {
-        st.toast(`${file.name}: ${err instanceof Error ? err.message : String(err)}`, 'error');
-      }
+    // Design files become a new artboard of layers (the picture and its position don't matter)
+    if (isDesignFile(file)) {
+      const { importAnimationFile } = await import('./importers');
+      await importAnimationFile(file, linking);
       continue;
     }
     // SVG onto an artboard: editable vector layers instead of a picture
@@ -95,7 +100,12 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
 }
 
 /** Ask the user for files, then insert them. */
-export function pickFiles(accept: string, multiple = true): Promise<File[]> {
+export async function pickFiles(accept: string, multiple = true): Promise<File[]> {
+  // The file picker (where there is one) keeps a handle to each file, which is what linking needs
+  if (acceptsDesignFiles(accept)) {
+    const picked = await pickWithHandles(accept, multiple);
+    if (picked) return picked;
+  }
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';

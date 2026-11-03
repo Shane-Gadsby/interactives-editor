@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { walk, type SceneNode } from 'interactives-player';
 import { unzlibSync, zlibSync } from 'fflate';
+import { reconcileArtboard, newSource } from '../src/lib/link-reconcile';
+import { hashAssets } from '../src/lib/links';
 import { encodePng, importPsd, isPsd, parsePsd, psdFont, type PsdGroup, type PsdLayer } from '../src/lib/psd-import';
 
 // ---------------------------------------------------------------- a tiny PSD writer (8 bit RGB)
@@ -684,4 +686,49 @@ describe.skipIf(!existsSync('../research/psd/Untitled-1.psd'))('real Photoshop f
       expect(r.fonts.some((x) => x.family === 'JetBrains Mono')).toBe(true);
     });
   }
+});
+
+describe('re-importing a changed PSD into a linked artboard', () => {
+  const variant = (o: { baseColor?: number[]; innerName?: string; extra?: boolean; dropInner?: boolean } = {}) => {
+    const layers: TestLayer[] = [
+      { name: 'Base', left: 0, top: 0, w: 4, h: 4, rgba: solid(16, o.baseColor ?? px(200, 100, 50)), comp: 'raw', opacity: 204 },
+      ...(o.extra ? [{ name: 'Badge', left: 0, top: 0, w: 2, h: 2, rgba: solid(4, px(0, 255, 0)), comp: 'raw' as const }] : []),
+      { name: '</Layer group>', section: 3 },
+      ...(o.dropInner ? [] : [{ name: o.innerName ?? 'Inner', left: 1, top: 1, w: 2, h: 2, rgba: [...px(1, 2, 3), ...px(1, 2, 3), ...px(9, 8, 7, 128), ...px(9, 8, 7, 0)], comp: 'rle' as const }]),
+      { name: 'Folder', section: 1 },
+    ];
+    return importPsd(buildPsd(layers, { width: 4, height: 4 }), 'poster');
+  };
+  const linked = (imp: ReturnType<typeof importPsd>) => ({ ...imp.artboard, source: newSource(imp.artboard, hashAssets(imp), { kind: 'psd', fileName: 'poster.psd', linkId: 'lk', lastModified: 1, importedAt: 't' }) });
+
+  it('the same file twice changes nothing (ids and pictures hash the same)', () => {
+    const cur = linked(variant());
+    const next = variant();
+    const r = reconcileArtboard(cur, next.artboard, hashAssets(next));
+    expect(r.changed).toBe(false);
+    expect(r.artboard).toBe(cur);
+  });
+
+  it('a repainted layer swaps its picture, a new layer arrives, a renamed one is followed, a deleted one goes', () => {
+    const cur = linked(variant());
+    const folderId = cur.children[1].id;
+    const repainted = variant({ baseColor: px(10, 20, 30) });
+    const r1 = reconcileArtboard(cur, repainted.artboard, hashAssets(repainted));
+    expect(r1.stats.changed).toBe(1);
+    expect(r1.usedAssetIds).toHaveLength(1);
+    expect(r1.releasedAssetIds).toHaveLength(1);
+    const withNew = variant({ extra: true });
+    const r2 = reconcileArtboard(cur, withNew.artboard, hashAssets(withNew));
+    expect(r2.artboard.children.map((c) => c.name)).toEqual(['Base', 'Badge', 'Folder']);
+    const renamed = variant({ innerName: 'Core' });
+    const r3 = reconcileArtboard(cur, renamed.artboard, hashAssets(renamed));
+    const folder = r3.artboard.children[1];
+    expect(folder.id).toBe(folderId);
+    expect(folder.type === 'group' && folder.children.map((c) => c.name)).toEqual(['Core']);
+    expect(r3.stats.renamed).toBe(1);
+    expect(r3.stats.removed + r3.stats.added).toBe(0);
+    const gone = variant({ dropInner: true });
+    const r4 = reconcileArtboard(cur, gone.artboard, hashAssets(gone));
+    expect(r4.artboard.children.map((c) => c.name)).toEqual(['Base']);
+  });
 });

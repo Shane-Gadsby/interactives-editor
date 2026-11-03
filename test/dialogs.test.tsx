@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { DialogHost, alertDialog, dismissAllDialogs, confirmDialog, promptDialog } from '../src/components/dialogs';
+import { DialogHost, alertDialog, dismissAllDialogs, confirmDialog, linkChoiceDialog, promptDialog } from '../src/components/dialogs';
 import { variableNameFrom } from '../src/lib/quick-add';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -171,6 +171,51 @@ describe('dialog service', () => {
     key('Escape');
     await a;
     document.removeEventListener('keydown', l);
+  });
+});
+
+describe('link / embed chooser', () => {
+  const rows = [{ name: 'a.psd' }, { name: 'b.psd' }, { name: 'c.png', embedOnly: 'Always embedded' }];
+  it('Enter imports with the defaults (link where possible), Escape cancels', async () => {
+    localStorage.removeItem('ix-link-default');
+    const a = linkChoiceDialog({ title: 'Import 3 files', rows });
+    await open(a);
+    expect(document.querySelectorAll('.link-row')).toHaveLength(3);
+    key('Enter');
+    expect(await a).toEqual(['link', 'link', 'embed']);
+    const b = linkChoiceDialog({ title: 'Import', rows });
+    await open(b);
+    key('Escape');
+    expect(await b).toBeNull();
+  });
+
+  it('per-row buttons change one answer; dismissing all resolves null', async () => {
+    localStorage.removeItem('ix-link-default');
+    const a = linkChoiceDialog({ title: 'Import', rows });
+    await open(a);
+    const row = document.querySelectorAll('.link-row')[0];
+    click(row.querySelectorAll('[role=radio]')[1]);
+    expect(row.querySelector('[aria-checked=true]')!.textContent).toBe('Embed');
+    click(btn('Import'));
+    expect(await a).toEqual(['embed', 'link', 'embed']);
+    const b = linkChoiceDialog({ title: 'Import', rows });
+    await open(b);
+    dismissAllDialogs();
+    expect(await b).toBeNull();
+    localStorage.removeItem('ix-link-default');
+  });
+
+  it('Link all / Embed all skip the per-row choices; an embed-only row always embeds', async () => {
+    localStorage.removeItem('ix-link-default');
+    const a = linkChoiceDialog({ title: 'Import', rows });
+    await open(a);
+    click(btn('Embed all'));
+    expect(await a).toEqual(['embed', 'embed', 'embed']);
+    const b = linkChoiceDialog({ title: 'Import', rows });
+    await open(b);
+    click(btn('Link all'));
+    expect(await b).toEqual(['link', 'link', 'embed']);
+    localStorage.removeItem('ix-link-default');
   });
 });
 
