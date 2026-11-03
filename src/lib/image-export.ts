@@ -2,6 +2,26 @@ import { Renderer, prepareNodes, sampleArtboard, type Artboard, type Project, ty
 import { assetBytes } from './db';
 import { download, fileSafe } from './export';
 import { previewScope } from './data';
+import { editInstanceMount } from '../canvas/instances';
+
+/** A small JPEG of the start artboard, for the projects page. */
+export async function projectThumbnail(project: Project, width = 400): Promise<Blob | null> {
+  const ab = project.artboards.find((a) => a.id === project.settings.startArtboardId) ?? project.artboards[0];
+  if (!ab) return null;
+  const { svg } = await artboardSvg(project, ab, null, 0, { fonts: false });
+  const img = new Image();
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await img.decode();
+  const scale = Math.min(1, width / ab.width);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(ab.width * scale));
+  canvas.height = Math.max(1, Math.round(ab.height * scale));
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.82));
+}
 
 /**
  * Pictures of an artboard: the same renderer the player uses, drawn into an SVG <foreignObject> with every image
@@ -40,26 +60,39 @@ async function fontCss(project: Project): Promise<string> {
   return parts.join('\n');
 }
 
-export async function artboardSvg(project: Project, ab: Artboard, timeline: Timeline | null, time: number): Promise<{ svg: string; warnings: string[] }> {
+// Data URLs per project asset, so repeated pictures (thumbnails) don't fetch every image again
+const dataUrlCache = new Map<string, Promise<string | null>>();
+function dataUrlOf(project: Project, a: Project['assets'][number]): Promise<string | null> {
+  const key = `${project.id}/${a.id}`;
+  let p = dataUrlCache.get(key);
+  if (!p) {
+    p = assetBytes(project.id, a).then((b) => (b ? toDataUrl(b, a.mime) : null));
+    dataUrlCache.set(key, p);
+  }
+  return p;
+}
+
+export async function artboardSvg(project: Project, ab: Artboard, timeline: Timeline | null, time: number, opts: { fonts?: boolean } = {}): Promise<{ svg: string; warnings: string[] }> {
   const warnings: string[] = [];
   const urls = new Map<string, string>();
   for (const a of project.assets) {
     if (!/^image\//.test(a.mime)) continue;
-    const bytes = await assetBytes(project.id, a);
-    if (bytes) urls.set(a.id, await toDataUrl(bytes, a.mime));
+    const u = await dataUrlOf(project, a);
+    if (u) urls.set(a.id, u);
   }
   const host = document.createElement('div');
   Object.assign(host.style, { position: 'fixed', left: '-100000px', top: '0', width: `${ab.width}px`, height: `${ab.height}px` });
   document.body.appendChild(host);
   try {
-    const r = new Renderer({ mode: 'play', resolveAsset: (id) => urls.get(id) });
+    const resolve = (id: string) => urls.get(id);
+    const r = new Renderer({ mode: 'play', resolveAsset: resolve, mountInstance: editInstanceMount(() => project, 0, resolve) });
     host.appendChild(r.root);
     const vars = previewScope(project);
     const sampled: SceneNode[] = timeline ? sampleArtboard(ab.children, timeline, time) : ab.children;
     r.render(ab, prepareNodes(sampled, { vars }), { vars });
-    if (r.root.querySelector('.ix-instance, iframe, video')) warnings.push('Instances, embeds and video show as empty boxes in pictures.');
+    if (r.root.querySelector('iframe, video')) warnings.push('Embeds and video show as empty boxes in pictures.');
     const html = new XMLSerializer().serializeToString(r.root);
-    const css = await fontCss(project);
+    const css = opts.fonts === false ? '' : await fontCss(project);
     const svg =
       `<svg xmlns="http://www.w3.org/2000/svg" width="${ab.width}" height="${ab.height}" viewBox="0 0 ${ab.width} ${ab.height}">` +
       (css ? `<defs><style>${css.replace(/]]>/g, '')}</style></defs>` : '') +

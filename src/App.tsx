@@ -3,7 +3,7 @@ import { Home } from './Home';
 import { Editor } from './Editor';
 import { HelpHost, HelpPage } from './help/Help';
 import { installTooltips } from './components/tooltips';
-import './lib/prefs'; // applies the theme before the first paint
+import { loadUserPrefs } from './lib/prefs'; // importing applies the cached theme before the first paint
 
 type Route = { page: 'home' } | { page: 'editor'; id: string } | { page: 'help'; id: string; anchor?: string };
 
@@ -17,6 +17,7 @@ function parse(): Route {
 }
 
 installTooltips();
+void loadUserPrefs();
 
 export function App() {
   const [route, setRoute] = useState(parse);

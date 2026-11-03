@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { setPrefs, usePrefs } from '../lib/prefs';
-import { IconButton, SelectField, CheckField } from './ui';
+import { IconButton, SelectField, CheckField, TextField } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
 
@@ -43,9 +43,17 @@ export function PrefsModal({ onClose }: { onClose: () => void }) {
             ]}
             onChange={(v) => setPrefs({ theme: v })}
           />
+          <TextField
+            label="Default font"
+            title="Font for new text, buttons, inputs and links, included in every new project. Any Google font name works"
+            value={p.defaultFont}
+            placeholder="Open Sans"
+            commitOnBlur
+            onChange={(v) => setPrefs({ defaultFont: v.trim() || 'Open Sans' })}
+          />
           <CheckField label="Show rulers" title="Rulers along the canvas edges; drag from them to make guides (Shift+R)" value={p.rulers} onChange={(v) => setPrefs({ rulers: v })} />
           <CheckField label="Show tooltips" title="Explanations when you hover buttons and field names" value={p.tooltips} onChange={(v) => setPrefs({ tooltips: v })} />
-          <p className="hint">These settings are yours and stay in this browser.</p>
+          <p className="hint">These settings are yours: they follow you to any browser you sign in on.</p>
         </div>
       </div>
     </div>

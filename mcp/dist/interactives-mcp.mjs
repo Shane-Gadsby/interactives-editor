@@ -763,14 +763,17 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     id: "preferences",
     title: "Preferences",
     group: "Getting started",
-    summary: "Personal editor settings kept in this browser.",
+    summary: "Your own editor settings: wheel, theme, default font, rulers, tooltips.",
     keywords: "settings options wheel tooltips",
-    body: `Open **Preferences** from the gear in the top bar.
+    body: `Open **Preferences** from the gear in the top bar (or on the projects page). They are yours: saved with your account, so they follow you to any browser.
 
 - **Mouse wheel**: *Zoom* (the wheel zooms, Shift+wheel pans) or *Pan* (the wheel pans, Ctrl+wheel zooms). See [Moving around the canvas](canvas).
-- **Tooltips**: show explanations when you hover buttons and fields.
+- **Theme**: dark, light, or auto (follows your system).
+- **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. Open Sans unless you change it; any Google font name works.
+- **Show rulers**: rulers and guides on the canvas (also <kbd>Shift</kbd>+<kbd>R</kbd>).
+- **Show tooltips**: explanations when you hover buttons and fields.
 
-Preferences are personal and stay in this browser. Project-wide settings (start artboard, fit, sandbox) are in the inspector with nothing selected. See [Project settings](project-settings).`
+Project-wide settings (start artboard, fit, sandbox) are in the inspector with nothing selected. See [Project settings](project-settings).`
   },
   {
     id: "shortcuts",

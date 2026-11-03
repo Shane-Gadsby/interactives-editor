@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from 'react';
 
-/** Per-person editor preferences, kept in this browser. */
+/**
+ * Per-person editor preferences. The server keeps them per user (GET/PUT api/prefs), so they follow you between
+ * browsers; this browser keeps a copy per user so the theme is right before the server answers.
+ */
 export interface Prefs {
   /** 'zoom': the wheel zooms and Shift+wheel pans; 'ctrl': the wheel pans and Ctrl/Cmd+wheel zooms. */
   wheel: 'zoom' | 'ctrl';
@@ -10,19 +13,40 @@ export interface Prefs {
   rulers: boolean;
   /** Colour theme; 'auto' follows the system. */
   theme: 'dark' | 'light' | 'auto';
+  /** Font family for new text layers and the font every new project includes. */
+  defaultFont: string;
 }
 
-const KEY = 'ix-prefs';
-const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark' };
+export const DEFAULT_FONT = 'Open Sans';
+const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT };
+const LAST_USER = 'ix-prefs-user';
+const keyFor = (user: string) => `ix-prefs:${user}`;
 
-let current: Prefs = (() => {
+const read = (key: string): Partial<Prefs> => {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') };
+    return JSON.parse(localStorage.getItem(key) ?? '{}');
   } catch {
-    return { ...DEFAULTS };
+    return {};
+  }
+};
+const write = (key: string, v: unknown) => {
+  try {
+    localStorage.setItem(key, typeof v === 'string' ? v : JSON.stringify(v));
+  } catch {
+    /* storage unavailable */
+  }
+};
+
+let user: string = (() => {
+  try {
+    return localStorage.getItem(LAST_USER) ?? 'guest';
+  } catch {
+    return 'guest';
   }
 })();
+let current: Prefs = { ...DEFAULTS, ...read(keyFor(user)) };
 const subs = new Set<() => void>();
+const notify = () => subs.forEach((f) => f());
 
 export function prefs(): Prefs {
   return current;
@@ -34,15 +58,44 @@ export function applyTheme(): void {
 }
 applyTheme();
 
+const API = typeof document !== 'undefined' ? new URL('api/prefs', document.baseURI).href : '';
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function save(): void {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    void fetch(API, { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prefs: current }) }).catch(() => undefined);
+  }, 400);
+}
+
 export function setPrefs(patch: Partial<Prefs>): void {
   current = { ...current, ...patch };
   applyTheme();
+  write(keyFor(user), current);
+  notify();
+  save();
+}
+
+/** Load this person's preferences from the server (called once at start-up). */
+export async function loadUserPrefs(): Promise<void> {
   try {
-    localStorage.setItem(KEY, JSON.stringify(current));
+    const res = await fetch(API, { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const body = (await res.json()) as { user: string; prefs: Partial<Prefs> };
+    user = body.user || 'guest';
+    write(LAST_USER, user);
+    const fromServer = body.prefs ?? {};
+    // Nothing on the server yet: start from what this browser had (preferences used to be per browser)
+    const first = !Object.keys(fromServer).length;
+    const local = first ? { ...read('ix-prefs'), ...read(keyFor(user)) } : {};
+    current = { ...DEFAULTS, ...local, ...fromServer };
+    write(keyFor(user), current);
+    applyTheme();
+    notify();
+    if (first && Object.keys(local).length) save();
   } catch {
-    /* storage unavailable: keep it for this session */
+    /* offline: keep the cached copy */
   }
-  subs.forEach((f) => f());
 }
 
 export function usePrefs(): Prefs {

@@ -62,6 +62,7 @@ let port = Number(process.env.PORT) || 3048,
 	db,
 	projects,
 	revisions,
+	prefs,
 
 	//Revision ids are strings (time first, so they sort), keeps mongodb's ObjectId out of this app's requires
 	revisionID = () => `${Date.now().toString(36)}${crypto.randomBytes(5).toString('hex')}`,
@@ -200,12 +201,14 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 		created: doc.created,
 		updated: doc.updated,
 		rev: doc.rev,
-		owner: doc.owner || null
+		owner: doc.owner || null,
+		thumb: doc.thumb || null
 	}),
 
 	//Every id is checked by validID before it gets near here, so these can't climb out of storageDir
 	projectDir = (projectID) => path.join(storageDir, projectID),
 	shareFile = (token) => path.join(storageDir, 'shares', `${token}.html`),
+	thumbFile = (projectID) => path.join(storageDir, 'thumbs', `${projectID}.jpg`),
 	assetFile = (projectID, assetID) => path.join(storageDir, projectID, assetID),
 
 	removeAssets = async (projectID, assetID) => {
@@ -228,6 +231,31 @@ router.use(cacheHeaders.stampGate)
 
 //Every api route: never cached, staff session wanted (log only until SUITE_SESSION_ENFORCE=1)
 router.use('/api', cacheHeaders.api, sessionCheck({staff: true}))
+
+//Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
+//by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
+const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', defaultFont: 'string'},
+	cleanPrefs = (p) => {
+		let out = {}
+		for (let [k, rule] of Object.entries(PREF_KEYS)) {
+			let v = p?.[k]
+			if (Array.isArray(rule) ? rule.includes(v) : rule === 'string' ? typeof v === 'string' && v.length < 120 : typeof v === rule) out[k] = v
+		}
+		return out
+	}
+
+router.get('/api/prefs', async (req, res) => {
+	let user = whoIs(req)?.username || 'guest',
+		doc = await prefs.findOne({_id: user})
+	res.json({user, prefs: doc?.prefs || {}})
+})
+
+router.put('/api/prefs', express.json({limit: '16kb'}), async (req, res) => {
+	let user = whoIs(req)?.username || 'guest',
+		clean = cleanPrefs(req.body.prefs)
+	await prefs.updateOne({_id: user}, {$set: {prefs: clean, updated: new Date()}}, {upsert: true})
+	res.json({user, prefs: clean})
+})
 
 //Who the editor's talking to, for the projects list and the owner badge
 router.get('/api/session', (req, res) => {
@@ -351,6 +379,7 @@ router.delete('/api/projects/:id', async (req, res) => {
 
 	await removeAssets(id)
 	await revisions.deleteMany({project: id})
+	await fs.promises.rm(thumbFile(id), {force: true})
 	if (existing.share?.token) await fs.promises.rm(shareFile(existing.share.token), {force: true})
 	await projects.deleteOne({_id: id})
 
@@ -591,6 +620,44 @@ router.post('/api/projects/:id/presence', express.json(), async (req, res) => {
 	res.json({ok: true})
 })
 
+//Project thumbnails for the projects page: a small JPEG of the start artboard, made by the editor as people work.
+//Stored outside the asset folders; `thumb` on the project is its time, so the page can cache-bust it
+router.put('/api/projects/:id/thumbnail', express.raw({type: () => true, limit: '2mb'}), async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	if (!Buffer.isBuffer(req.body) || req.body.length < 4 || req.body[0] !== 0xff || req.body[1] !== 0xd8) {
+		return res.status(400).json({error: 'Not a JPEG'})
+	}
+
+	await fs.promises.mkdir(path.dirname(thumbFile(id)), {recursive: true})
+	await fs.promises.writeFile(thumbFile(id), req.body)
+	let thumb = Date.now()
+	await projects.updateOne({_id: id}, {$set: {thumb}})
+	res.json({ok: true, thumb})
+})
+
+router.get('/api/projects/:id/thumbnail', async (req, res) => {
+	let doc = await projectFor(req, res)
+	if (!doc) {
+		return
+	}
+
+	//The URL carries ?v=<time>, so the browser can keep it until the next one
+	res.set('Cache-Control', 'private, max-age=31536000, immutable')
+	res.sendFile(thumbFile(req.params.id), (err) => {
+		if (err && !res.headersSent) res.status(404).end()
+	})
+})
+
 //Revision history: the list (no documents), one revision's document, and restoring one
 router.get('/api/projects/:id/revisions', async (req, res) => {
 	let id = req.params.id
@@ -799,6 +866,7 @@ client.connect()
 		db = client.db('lti-interactives')
 		projects = db.collection('projects')
 		revisions = db.collection('revisions')
+		prefs = db.collection('prefs')
 		fs.mkdirSync(storageDir, {recursive: true})
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)

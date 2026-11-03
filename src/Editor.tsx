@@ -311,8 +311,57 @@ function zoomTo(mode: 'fit' | '100' | 'selection') {
 
 // ---------------------------------------------------------------- layout
 
+/** Keep the projects page thumbnail current: a few seconds after changes stop, at most every 20 seconds. */
+function useThumbnails() {
+  useEffect(() => {
+    const s = store();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let lastRev = s.revision;
+    let lastShot = 0;
+    let busy = false;
+    let stale = true; // the first visit makes one even without changes, for projects from before thumbnails
+    const shoot = async () => {
+      if (busy) return;
+      busy = true;
+      stale = false;
+      lastShot = Date.now();
+      try {
+        const project = s.get().project;
+        const { projectThumbnail } = await import('./lib/image-export');
+        const blob = await projectThumbnail(project);
+        if (blob) await fetch(new URL(`api/projects/${project.id}/thumbnail`, document.baseURI).href, { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+      } catch (err) {
+        console.warn('[interactives] thumbnail failed', err);
+      } finally {
+        busy = false;
+      }
+    };
+    const schedule = (delay: number) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => void shoot(), Math.max(delay, lastShot + 20000 - Date.now()));
+    };
+    const unsub = s.subscribe(() => {
+      if (s.revision === lastRev) return;
+      lastRev = s.revision;
+      stale = true;
+      schedule(3000);
+    });
+    schedule(4000);
+    // Leaving the editor: catch the last changes if they haven't been captured
+    const flush = () => stale && void shoot();
+    window.addEventListener('pagehide', flush);
+    return () => {
+      unsub();
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, []);
+}
+
 function Workspace({ home }: { home: () => void }) {
   const conflict = useAutosave();
+  useThumbnails();
   useShortcuts();
   const s = useEditor((st) => ({ bottomTab: st.bottomTab, bottomHeight: st.bottomHeight, toast: st.toast, report: st.report }));
   const [preview, setPreview] = useState(false);
@@ -659,7 +708,18 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
           </select>
           <span className="muted small">{ab ? `${ab.width} × ${ab.height}` : ''} · runs exactly like the exported file</span>
           <div className="spacer" />
-          <button className="btn" onClick={() => setNonce(nonce + 1)} title="Start again from the beginning">
+          <button
+            className="btn"
+            onClick={() => {
+              // A new iframe runs everything from the start; the debug panel starts again with it
+              setNonce(nonce + 1);
+              setTraces([]);
+              setLog([]);
+              setDbg(null);
+              t0.current = performance.now();
+            }}
+            title="Start again from the beginning (timelines, variables and all)"
+          >
             Restart
           </button>
           <button className={`btn${showVars ? ' active' : ''}`} onClick={() => setShowVars(!showVars)} title="Debug: what's showing, running timelines, variables (editable) and the events that fire">
@@ -722,14 +782,14 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
               ))}
             </aside>
           )}
-          {html ? <iframe ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : <div className="center-msg muted">Building…</div>}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : <div className="center-msg muted">Building…</div>}
         </div>
         {showVars && (traces.length > 0 || log.length > 0) && (
           <footer className="preview-log mono small">
             <div className="debug-log-head">
               <span>Events (newest last)</span>
-              <button className="link-btn inline" onClick={() => (setTraces([]), setLog([]))}>
-                Clear
+              <button className="btn small-btn" onClick={() => (setTraces([]), setLog([]))} title="Clear the event list (the preview keeps running)">
+                <Icons.trash width={12} /> Clear
               </button>
             </div>
             {traces.map((t, i) => (

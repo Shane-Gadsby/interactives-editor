@@ -59,9 +59,9 @@ export function instanceDepsKey(project: Project, ab: Artboard, depth = 0, seen 
  * Instances on the editor canvas: the referenced artboard drawn statically (bindings and repeaters against
  * initial values), with nested instances down to a few levels.
  */
-export function editInstanceMount(getProject: () => Project, depth = 0): (node: InstanceNode, host: HTMLElement) => InstanceMount {
+export function editInstanceMount(getProject: () => Project, depth = 0, resolveAsset: (id: string) => string | undefined = assetUrls.resolve): (node: InstanceNode, host: HTMLElement) => InstanceMount {
   return (node, host) => {
-    const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve, mountInstance: depth < 4 ? editInstanceMount(getProject, depth + 1) : undefined });
+    const r = new Renderer({ mode: 'edit', resolveAsset, mountInstance: depth < 4 ? editInstanceMount(getProject, depth + 1, resolveAsset) : undefined });
     Object.assign(r.root.style, { position: 'absolute', left: '0', top: '0', transformOrigin: '0 0' });
     host.appendChild(r.root);
     let last = '';

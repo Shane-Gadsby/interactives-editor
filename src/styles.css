@@ -2339,3 +2339,25 @@ a.btn {
 .trace strong {
   font-weight: 600;
 }
+.debug-log-head {
+  position: sticky;
+  top: -6px;
+  align-items: center;
+  padding: 2px 0 4px;
+  background: inherit;
+}
+.btn.small-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 16px;
+}
+.preview-log {
+  background: var(--panel);
+}
+.thumb-img {
+  width: auto;
+  object-fit: contain;
+}

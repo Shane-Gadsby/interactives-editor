@@ -5,6 +5,7 @@ import { downloadPackage } from './lib/export';
 import { pickFiles } from './lib/insert';
 import { Icons } from './components/icons';
 import { PrefsModal } from './components/PrefsModal';
+import { prefs } from './lib/prefs';
 
 declare global {
   interface Window {
@@ -65,6 +66,9 @@ export function Home({ open }: { open: (id: string) => void }) {
   const create = () =>
     run(async () => {
       const p = createProject('Untitled project');
+      // Every new project starts with the person's default font (Open Sans unless they changed it)
+      const font = prefs().defaultFont.trim();
+      if (font) p.fonts.push({ family: font, source: 'google', weights: [400, 600, 700] });
       await createProjectRecord(p);
       open(p.id);
     });
@@ -148,14 +152,18 @@ export function Home({ open }: { open: (id: string) => void }) {
         {list?.map((p) => (
           <article key={p.id} className="project-card">
             <button className="project-thumb" onClick={() => open(p.id)} aria-label={`Open ${p.name}`}>
-              {p.preview && (
-                <span
-                  className="thumb-board"
-                  style={{
-                    background: p.preview.background,
-                    aspectRatio: `${p.preview.width} / ${p.preview.height}`,
-                  }}
-                />
+              {p.thumb ? (
+                <img className="thumb-board thumb-img" src={`api/projects/${p.id}/thumbnail?v=${p.thumb}`} alt="" loading="lazy" style={p.preview ? { aspectRatio: `${p.preview.width} / ${p.preview.height}` } : undefined} />
+              ) : (
+                p.preview && (
+                  <span
+                    className="thumb-board"
+                    style={{
+                      background: p.preview.background,
+                      aspectRatio: `${p.preview.width} / ${p.preview.height}`,
+                    }}
+                  />
+                )
               )}
             </button>
             <div className="project-info">

@@ -17,6 +17,8 @@ export interface ProjectMeta {
   artboards: number;
   owner: { username: string | null; name: string | null } | null;
   preview?: { width: number; height: number; background: string } | null;
+  /** Time of the latest thumbnail (api/projects/<id>/thumbnail?v=<thumb>), if there is one. */
+  thumb?: number | null;
 }
 
 export interface SessionInfo {

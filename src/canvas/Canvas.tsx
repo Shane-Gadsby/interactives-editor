@@ -779,7 +779,7 @@ export function Canvas() {
       const y = tiny && type !== 'text' ? b.y - height / 2 : b.y;
       const extra: Record<string, unknown> = {};
       if (type === 'text') extra.autoSize = tiny ? 'width' : 'height';
-      node = createNode(type, { x: round(x - parentOffset.x), y: round(y - parentOffset.y), width: round(width), height: round(height), ...extra } as never);
+      node = createNode(type, { x: round(x - parentOffset.x), y: round(y - parentOffset.y), width: round(width), height: round(height), ...extra, ...fontDefaults(type) } as never);
     }
     store().addNodes([node], { parentId, artboardId: ab.id });
     if (!shift) store().set({ tool: 'select' });
@@ -1133,7 +1133,7 @@ export function Canvas() {
         onClick: () => {
           const p = local(ab, w);
           const proto = createNode(t.type);
-          const node = createNode(t.type, { x: round(p.x - (t.type === 'text' ? 0 : proto.width / 2)), y: round(p.y - (t.type === 'text' ? 0 : proto.height / 2)) } as never);
+          const node = createNode(t.type, { x: round(p.x - (t.type === 'text' ? 0 : proto.width / 2)), y: round(p.y - (t.type === 'text' ? 0 : proto.height / 2)), ...fontDefaults(t.type) } as never);
           s2.set({ activeArtboardId: ab.id });
           s2.addNodes([node], { artboardId: ab.id });
           if (node.type === 'text') s2.set({ editingTextId: node.id });
@@ -1474,4 +1474,11 @@ function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zo
     default:
       return null;
   }
+}
+
+/** New text-like layers use the person's default font (Preferences). */
+function fontDefaults(type: NodeType): { fontFamily?: string } {
+  if (type !== 'text' && type !== 'button' && type !== 'input' && type !== 'link') return {};
+  const f = prefs().defaultFont.trim();
+  return f ? { fontFamily: `${f.includes(' ') ? `"${f}"` : f}, system-ui, sans-serif` } : {};
 }
