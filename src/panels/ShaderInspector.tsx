@@ -99,7 +99,7 @@ function ShaderFields({ node, target, prefix, project, onPatch }: { node: SceneN
       <Row>
         <NumberField label="FPS" title="Frame rate cap: 0 draws on every frame" value={target.fps ?? 0} min={0} max={120} onChange={(v) => onPatch({ fps: Math.max(0, Math.round(v)) })} />
         <SelectField
-          label="Pixels"
+          label="Pixel ratio"
           title="Canvas pixels per layer pixel. Auto follows the screen's density and the artboard's scale, up to 2x; a higher number is sharper but slower (shaders cost per pixel, so big layers are capped near 4 million pixels)"
           value={ratio}
           options={PIXEL_RATIOS.map((r) => ({ value: r, label: r === 'auto' ? 'Auto' : `${r}x` }))}
@@ -156,8 +156,8 @@ function UniformList({ node, uniforms, prefix, project, onPatch }: { node: Scene
         return (
           <div key={i} className="uniform-item effect-item">
             <Row>
-              <TextField label="Name" value={u.name} mono commitOnBlur onChange={(v) => rename(i, v.trim())} />
-              <SelectField label="Type" value={u.type} options={SHADER_UNIFORM_TYPES.map((t) => ({ value: t, label: TYPE_LABEL[t] }))} onChange={(t) => retypeUniform(node.id, prefix, i, t)} />
+              <TextField label="Name" title="The uniform's name, as the shader code uses it" placeholder="Name" value={u.name} mono commitOnBlur onChange={(v) => rename(i, v.trim())} />
+              <SelectField label="Type" title="The kind of value: a number, a vector, a colour or an image" value={u.type} options={SHADER_UNIFORM_TYPES.map((t) => ({ value: t, label: TYPE_LABEL[t] }))} onChange={(t) => retypeUniform(node.id, prefix, i, t)} />
               <IconButton icon={<Icons.trash />} title={`Remove ${u.name}`} onClick={() => removeUniform(node.id, prefix, i)} />
             </Row>
             {bad && <p className="hint error">{bad} This uniform is left out until it is fixed.</p>}

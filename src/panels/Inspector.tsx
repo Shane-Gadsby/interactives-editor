@@ -389,7 +389,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             { value: 'none', label: 'Actual size' },
           ]}
         />
-        <ColorField label="Page bg" value={project.settings.pageBackground} onChange={(c) => setProject((p) => (p.settings.pageBackground = c), 'page-bg')} />
+        <ColorField label="Page background" value={project.settings.pageBackground} onChange={(c) => setProject((p) => (p.settings.pageBackground = c), 'page-bg')} />
         <CheckField
           label="Run scripts in the sandbox"
           title="Scripts run in a JavaScript VM (WASM) with only the ix API: no DOM, cookies or network. Turn off to let scripts reach the page (node.element)."
@@ -465,7 +465,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         </Row>
         {sameType && n.type === 'bone' ? (
           <Row>
-            <Num node={n} ids={ids} prop="width" label="Len" title="The bone's length (its width)" min={0} />
+            <Num node={n} ids={ids} prop="width" label="Length" title="The bone's length (the layer's width)" min={0} />
             <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
           </Row>
         ) : (
@@ -527,7 +527,7 @@ function KeyRow({ node, prop }: { node: SceneNode; prop: string }) {
   if (s !== 'timeline') return null;
   return (
     <div className="key-row">
-      <span className="muted small">Animate {prop}</span>
+      <span className="muted small">Animate {(ANIMATABLE_PROPS.find((a) => a.prop === prop)?.label ?? prop).toLowerCase()}</span>
       <KeyButton node={node} prop={prop} />
     </div>
   );
@@ -1146,7 +1146,7 @@ function DrawSection({ nodes }: { nodes: DrawNode[] }) {
       <Row>
         <NumberField label="FPS" title="Frame rate cap: 0 draws on every frame" value={n.fps} min={0} max={120} onChange={(v) => set({ fps: Math.max(0, Math.round(v)) })} />
         <SelectField
-          label="Pixels"
+          label="Pixel ratio"
           title="Canvas pixels per layer pixel. Auto follows the screen's density and the artboard's scale; a higher number is sharper but slower"
           value={ratio}
           options={PIXEL_RATIOS.map((r) => ({ value: r, label: r === 'auto' ? 'Auto' : `${r}x` }))}

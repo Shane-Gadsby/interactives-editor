@@ -25,7 +25,7 @@ export function BoneSection({ node, abId }: { node: BoneNode; abId: string }) {
   };
   return (
     <Section help="bones" title="Bone">
-      <p className="hint">The bone points along its own x axis from its base (X, Y). Length is W. Turn it with ↻ or drag it on the canvas; child bones and layers inside it follow.</p>
+      <p className="hint">The bone points along its own x axis from its base (X, Y), for its length. Turn it with ↻ or drag it on the canvas; child bones and layers inside it follow.</p>
       <Row>
         <button className="btn" title="Add a bone that starts at this bone's tip" onClick={addChild}>
           Add child bone

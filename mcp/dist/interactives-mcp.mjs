@@ -2914,7 +2914,7 @@ If you don't have one handy, any Photoshop file with a few layers and a text lay
 There are three ways:
 
 - **Drop it** on the canvas of an open project. \`.psd\`, \`.ai\`, \`.pdf\` and \`.dxf\` files become new artboards.
-- Press **+ Import Lottie / Rive / PSD / AI / PDF / VectorCraft / PhotoCraft as artboard** at the bottom of the **Layers** panel. This adds artboards to the open project.
+- Press **+ Import file as artboard** at the bottom of the **Layers** panel. This adds artboards to the open project.
 - Press **Import** on the projects page. This makes a **new project** from the file.
 
 ## 3. Choose: Link or Embed
@@ -2978,7 +2978,7 @@ Full details, including what each format does and doesn't carry over, are in [Im
 ## 2. Set the page options
 
 1. Click an empty part of the canvas, or the artboard's name, so nothing is selected. The Inspector shows **Artboard** and **Project**.
-2. Under **Project**, set **Page title** (the title of the browser tab), **Fit** (how the artboard scales to its space) and **Page bg** (the colour around the artboard).
+2. Under **Project**, set **Page title** (the title of the browser tab), **Fit** (how the artboard scales to its space) and **Page background** (the colour around the artboard).
 3. Under **Artboard**, make sure the artboard people should see first is the start artboard. The button says **Start artboard** (greyed out) when it already is. If not, press **Make start artboard**.
 
 ![The Project section of the Inspector: name, page title, description, fit, page background, sandbox and reduced motion.](help/project-settings.png)
@@ -3361,7 +3361,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 - Click the arrow beside a group, a frame or an artboard to open or close it. The artboard marked **start** is the one the player shows first.
 - Double-click a name to rename it. <kbd>Enter</kbd> finishes and <kbd>Esc</kbd> cancels.
 - Drag a row to reorder. Drop it above or below another row, or onto a group or frame to put it inside. Drop it on its own artboard's row to bring it to the top level.
-- **+ Add artboard** and **+ Import Lottie / Rive / PSD / AI / PDF / VectorCraft / PhotoCraft as artboard** are at the bottom. See [Artboards](artboards) and [Importing](import).
+- **+ Add artboard** and **+ Import file as artboard** are at the bottom. See [Artboards](artboards) and [Importing](import).
 
 ## Hide and lock
 Hover a row and two small buttons appear at its right: a padlock (**Lock** / **Unlock**) and an eye (**Hide** / **Show**). They stay visible for any layer that is locked or hidden. The **Visible** and **Locked** ticks in the Inspector do the same.
@@ -4188,7 +4188,7 @@ ${DRAW_API.map(([sig, what]) => `| \`${sig.replace(/\|/g, "\\|")}\` | ${what.rep
 ## Settings
 
 - **FPS**: a frame rate cap. 0 draws on every frame; 30 is plenty for most charts.
-- **Pixels**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 3. A fixed number is sharper but slower; very large layers are held to what the browser can allocate.
+- **Pixel ratio**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 3. A fixed number is sharper but slower; very large layers are held to what the browser can allocate.
 - **Paint while editing**: draws a single still frame on the canvas, at the timeline's time (0 when no timeline is showing), so you can lay out the artboard. Turn it off for a heavy script; the layer then shows as a placeholder. **Preview** always runs it.
 
 The layer is an ordinary layer otherwise: move, rotate, fade, blend, mask and animate it, and click it with an **On pointer** event. Inside the script, \`g.pointer\` gives the pointer in the layer's own pixels (\`x\`, \`y\`, \`down\`, \`inside\`), correct even if the layer is rotated or inside a group.
@@ -4248,7 +4248,7 @@ The **Uniforms** list gives the shader values you can change. Press **Add a unif
 ## Settings
 
 - **FPS**: a frame rate cap while it animates. 0 draws on every frame.
-- **Pixels**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 2. Shaders cost time for every pixel, so a layer is held to about 4 million pixels however large it is: past that it is drawn smaller and stretched.
+- **Pixel ratio**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 2. Shaders cost time for every pixel, so a layer is held to about 4 million pixels however large it is: past that it is drawn smaller and stretched.
 - **Animate while editing**: runs the shader live on the editor canvas. Off (the default) paints one still frame at the timeline's time (0 when none is showing), which keeps editing smooth. **Preview** always runs it.
 
 ## Errors
@@ -4352,7 +4352,7 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Page title | The title of the browser tab for the exported page |
 | Description | A note about the project, kept in the file |
 | Fit | How the artboard scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
-| Page bg | The colour around the artboard in the exported page |
+| Page background | The colour around the artboard in the exported page |
 | Run scripts in the sandbox | See [Scripts](scripts) |
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
@@ -4377,7 +4377,7 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 
 New to this? [Tutorial 4](tutorial-import-design) walks through an import step by step.
 
-Lottie, Rive, Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft and PhotoCraft files: use **+ Import Lottie / Rive / PSD / AI / PDF / VectorCraft / PhotoCraft as artboard** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
+Lottie, Rive, Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft and PhotoCraft files: use **+ Import file as artboard** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
 
 ## Lottie (.json, .lottie)
 Shape layers, groups, fills, strokes, gradients, transforms, trim paths and keyframes with easing become layers and a timeline. Text animators with range selectors become [text modifiers](text-modifiers). Expressions, layer masks, track mattes, layer effects, skew and time remapping are not carried over, and the import report lists what was dropped.

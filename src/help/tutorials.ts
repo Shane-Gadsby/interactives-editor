@@ -242,7 +242,7 @@ If you don't have one handy, any Photoshop file with a few layers and a text lay
 There are three ways:
 
 - **Drop it** on the canvas of an open project. \`.psd\`, \`.ai\`, \`.pdf\` and \`.dxf\` files become new artboards.
-- Press **+ Import Lottie / Rive / PSD / AI / PDF / VectorCraft / PhotoCraft as artboard** at the bottom of the **Layers** panel. This adds artboards to the open project.
+- Press **+ Import file as artboard** at the bottom of the **Layers** panel. This adds artboards to the open project.
 - Press **Import** on the projects page. This makes a **new project** from the file.
 
 ## 3. Choose: Link or Embed
@@ -306,7 +306,7 @@ Full details, including what each format does and doesn't carry over, are in [Im
 ## 2. Set the page options
 
 1. Click an empty part of the canvas, or the artboard's name, so nothing is selected. The Inspector shows **Artboard** and **Project**.
-2. Under **Project**, set **Page title** (the title of the browser tab), **Fit** (how the artboard scales to its space) and **Page bg** (the colour around the artboard).
+2. Under **Project**, set **Page title** (the title of the browser tab), **Fit** (how the artboard scales to its space) and **Page background** (the colour around the artboard).
 3. Under **Artboard**, make sure the artboard people should see first is the start artboard. The button says **Start artboard** (greyed out) when it already is. If not, press **Make start artboard**.
 
 ![The Project section of the Inspector: name, page title, description, fit, page background, sandbox and reduced motion.](help/project-settings.png)

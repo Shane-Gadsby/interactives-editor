@@ -15,6 +15,11 @@
   --event: #e7a33e;
   --action: #4d9cff;
   --logic: #b07cff;
+  /* Text colours for notes and toasts that sit on a pale tint or the panel colour */
+  --ok-text: #9fe3c4;
+  --warn-text: #f2d48a;
+  --danger-text: #ffc1c1;
+  --key-on: #ffcf5a;
   --radius: 6px;
   color-scheme: dark;
   font: 12.5px/1.4 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -40,6 +45,10 @@
   --event: #c9821c;
   --action: #2f7fe0;
   --logic: #8b55e8;
+  --ok-text: #12724c;
+  --warn-text: #7a5600;
+  --danger-text: #a02424;
+  --key-on: #b87800;
   color-scheme: light;
 }
 @media (prefers-color-scheme: light) {
@@ -60,6 +69,10 @@
   --event: #c9821c;
   --action: #2f7fe0;
   --logic: #8b55e8;
+  --ok-text: #12724c;
+  --warn-text: #7a5600;
+  --danger-text: #a02424;
+  --key-on: #b87800;
   color-scheme: light;
   }
 }
@@ -157,6 +170,9 @@ code,
   cursor: pointer;
   padding: 4px 0;
 }
+.link-btn:hover:not(:disabled) {
+  text-decoration: underline;
+}
 .icon-btn {
   display: inline-flex;
   align-items: center;
@@ -211,6 +227,8 @@ code,
 .field-label.block {
   display: block;
   margin: 8px 0 4px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .field-label.scrub {
   cursor: ew-resize;
@@ -231,6 +249,9 @@ code,
   height: auto;
   padding: 5px 6px;
   resize: vertical;
+}
+.field select {
+  text-overflow: ellipsis;
 }
 .field input:focus,
 .field select:focus,
@@ -297,12 +318,15 @@ code,
   font-size: 10px;
   padding: 0 2px;
 }
+.key-btn:hover {
+  color: var(--warn);
+}
 .key-btn.tracked {
   color: var(--warn);
 }
 .key-btn.on-key {
-  color: #ffcf5a;
-  text-shadow: 0 0 4px #ffcf5a;
+  color: var(--key-on);
+  text-shadow: 0 0 4px var(--key-on);
 }
 .key-row {
   display: flex;
@@ -340,7 +364,17 @@ code,
   cursor: pointer;
 }
 .type-chip {
-  text-transform: capitalize;
+  text-transform: none;
+}
+.section-title:hover {
+  color: var(--accent);
+}
+/* Several buttons in a section header (e.g. + Colour, + Text) sit side by side */
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
 }
 .section .field {
   margin: 4px 0;
@@ -1050,6 +1084,9 @@ div.text-editor {
   color: var(--muted);
   cursor: pointer;
 }
+button.twisty:hover {
+  color: var(--text);
+}
 .layer-icon {
   color: var(--muted);
   flex: none;
@@ -1272,6 +1309,11 @@ div.text-editor {
   flex: none;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.interaction-chip:hover {
+  border-color: var(--line-2);
+  border-left-color: var(--event);
+  background: var(--bg);
 }
 .interaction-chip {
   display: block;
@@ -1788,6 +1830,9 @@ div.text-editor {
   cursor: pointer;
   text-align: left;
 }
+.list-item:hover:not(.active) {
+  background: var(--panel-2);
+}
 .list-item.active {
   background: rgba(77, 124, 255, 0.25);
 }
@@ -1910,7 +1955,7 @@ div.text-editor {
 }
 .toast.error {
   border-color: var(--danger);
-  color: #ffc1c1;
+  color: var(--danger-text);
 }
 
 /* React Flow, dark */
@@ -1925,6 +1970,9 @@ div.text-editor {
   padding: 8px 12px;
   overflow-y: auto;
   border-right: 1px solid var(--line);
+}
+.data-form .field-label {
+  min-width: 52px;
 }
 .data-form .field {
   margin: 6px 0;
@@ -1989,11 +2037,11 @@ div.text-editor {
   padding: 6px 8px;
   border-radius: 6px;
   background: rgba(64, 192, 138, 0.12);
-  color: #9fe3c4;
+  color: var(--ok-text);
 }
 .sandbox-note.off {
   background: rgba(231, 177, 76, 0.12);
-  color: #f2d48a;
+  color: var(--warn-text);
 }
 .report-modal {
   width: min(640px, 92vw);
@@ -2846,6 +2894,11 @@ a.btn {
   justify-content: space-between;
   color: var(--muted);
   margin-bottom: 2px;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 11px;
+}
+.debug-log-head .btn {
+  font-family: inherit;
 }
 .trace strong {
   font-weight: 600;
@@ -3224,6 +3277,10 @@ code {
   font: inherit;
   cursor: pointer;
 }
+.seg-btn:hover:not(:disabled):not(.on) {
+  color: var(--text);
+  background: var(--panel-2);
+}
 .seg-btn + .seg-btn {
   border-left: 1px solid var(--line-2);
 }
@@ -3506,6 +3563,13 @@ code {
 }
 .uniform-item {
   padding: 6px 0;
+}
+/* The name and type fields are self-evident (and have tooltips); dropping their labels stops "float (number)" and long names being clipped */
+.uniform-item > .row > .field > .field-label {
+  display: none;
+}
+.uniform-item > .row > .field:nth-child(2) {
+  flex: 0 0 104px;
 }
 .uniform-item .keyed + .keyed {
   margin-top: 2px;

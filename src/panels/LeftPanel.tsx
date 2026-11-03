@@ -219,6 +219,8 @@ function Layers() {
         {container ? (
           <button
             className="twisty"
+            title={open ? 'Collapse' : 'Expand'}
+            aria-label={open ? 'Collapse' : 'Expand'}
             onClick={(e) => {
               e.stopPropagation();
               toggle(n.id);
@@ -297,6 +299,7 @@ function Layers() {
       </button>
       <button
         className="link-btn add-artboard"
+        title="Import Lottie, Rive, PSD, AI, PDF, VectorCraft or PhotoCraft files as artboards in this project"
         onClick={async () => {
           const files = await pickFiles(ANIMATION_ACCEPT, true);
           if (!files.length) return;
@@ -305,7 +308,7 @@ function Layers() {
           for (const file of files) await importAnimationFile(file, linking);
         }}
       >
-        + Import Lottie / Rive / PSD / AI / PDF / VectorCraft / PhotoCraft as artboard
+        + Import file as artboard
       </button>
     </div>
   );
