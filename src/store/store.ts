@@ -9,6 +9,7 @@ import {
   isContainer,
   setPath,
   uid,
+  walk,
   apply,
   invert,
   type Artboard,
@@ -500,6 +501,44 @@ export class EditorStore {
   }
 
   /** Move a node into a container (or the artboard root) at an index, keeping its on-screen position for untransformed parents. */
+  /**
+   * Move layers to another artboard, keeping where they sit on the canvas. Their keys in this artboard's timelines go
+   * (timelines belong to an artboard); interactions that pointed at them are left for the person to fix (the Usage tab
+   * lists them).
+   */
+  moveToArtboard(ids: string[], targetId: string): void {
+    const src = this.artboard();
+    if (!src || src.id === targetId) return;
+    const moved: string[] = [];
+    this.update((d) => {
+      const sab = getArtboard(d as Project, src.id)!;
+      const tab = getArtboard(d as Project, targetId);
+      if (!tab) return;
+      for (const id of topmost(sab as Artboard, ids)) {
+        const loc = locate(sab, id);
+        if (!loc) continue;
+        const off = loc.ancestors.reduce((o, a) => ({ x: o.x + a.x, y: o.y + a.y }), { x: 0, y: 0 });
+        const [n] = loc.siblings.splice(loc.index, 1);
+        n.x = Math.round((n.x + off.x + sab.canvasX - tab.canvasX) * 100) / 100;
+        n.y = Math.round((n.y + off.y + sab.canvasY - tab.canvasY) * 100) / 100;
+        n.name = uniqueName(nodeNames(tab as Artboard), n.name);
+        tab.children.push(n);
+        moved.push(id);
+      }
+      const gone = new Set<string>();
+      for (const id of moved) {
+        const tloc = locate(tab, id);
+        if (tloc) walk([tloc.node as SceneNode], (x) => gone.add(x.id));
+      }
+      for (const t of sab.timelines) t.tracks = t.tracks.filter((tr) => !gone.has(tr.nodeId));
+    });
+    if (moved.length) {
+      this.set({ activeArtboardId: targetId, selection: moved, activeTimelineId: null });
+      const tab = getArtboard(this.state.project, targetId);
+      this.toast(`Moved ${moved.length === 1 ? 'the layer' : `${moved.length} layers`} to “${tab?.name}”.`);
+    }
+  }
+
   moveNode(id: string, parentId: string | null, index: number): void {
     const ab = this.artboard();
     if (!ab) return;

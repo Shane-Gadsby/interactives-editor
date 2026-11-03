@@ -704,6 +704,18 @@ export function Canvas() {
       setBox(null);
       return;
     }
+    if (d.kind === 'move' && d.moved && !d.duplicated) {
+      // Dropped over a different artboard: offer to move the layers there
+      const target = abAt(toWorld(e.clientX, e.clientY));
+      if (target && target.id !== d.abId) {
+        const src = getArtboard(st.project, d.abId);
+        const ids = d.items.map((i) => i.id);
+        const what = ids.length === 1 ? `“${src && locate(src, ids[0])?.node.name}”` : `${ids.length} layers`;
+        setTimeout(() => {
+          if (confirm(`Move ${what} to the artboard “${target.name}”?\n\nIts keys in this artboard's timelines are removed, and interactions here that use it will need fixing.`)) store().moveToArtboard(ids, target.id);
+        }, 0);
+      }
+    }
     if (d.kind === 'move' && !d.moved) {
       // Plain click on an already-selected node within a multi-selection selects just it.
       const ab = getArtboard(st.project, d.abId);

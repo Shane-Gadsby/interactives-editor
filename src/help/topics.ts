@@ -215,6 +215,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 
 - Draw a new one with the **Artboard** tool (<kbd>A</kbd>) or add one from the Artboards list.
 - Click an artboard's name on the canvas to select it; the inspector then shows its size, background and **Clip content to artboard**.
+- Drag layers and let go over another artboard and you're asked whether to move them there. They keep their place on the canvas; their keys in the old artboard's timelines are removed, and interactions there that used them need fixing (the **Usage** tab lists broken references).
 - The **start artboard** is the one the player shows first (Project settings).
 - Move between artboards at runtime with the **Go to artboard** action (with a transition) or \`ix.goTo('Name', 'fade')\`.
 - An artboard can also be placed inside another as an [instance](instances), like a reusable component.`,

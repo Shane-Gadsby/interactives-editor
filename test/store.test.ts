@@ -13,6 +13,26 @@ function setup() {
 }
 
 describe('EditorStore', () => {
+  it('moves layers to another artboard, keeping their canvas position and dropping their keys', () => {
+    const { s, a, b } = setup();
+    const ab1 = s.artboard()!;
+    s.update((d) => {
+      d.artboards[0].timelines.push({ id: 't1', name: 'T', duration: 1000, loop: 'once', autoplay: false, speed: 1, tracks: [{ nodeId: a.id, property: 'x', keys: [] }] } as never);
+    });
+    s.addArtboard({ canvasX: ab1.canvasX + 1000, canvasY: ab1.canvasY + 50 });
+    const ab2 = s.get().project.artboards[1];
+    s.set({ activeArtboardId: ab1.id });
+    s.moveToArtboard([a.id], ab2.id);
+    const p = s.get().project;
+    expect(p.artboards[0].children.map((n) => n.id)).toEqual([b.id]);
+    const moved = p.artboards[1].children.find((n) => n.id === a.id)!;
+    expect([moved.x, moved.y]).toEqual([10 - 1000, 10 - 50]);
+    expect(p.artboards[0].timelines[0].tracks).toHaveLength(0);
+    expect(s.get().activeArtboardId).toBe(ab2.id);
+    s.undo();
+    expect(s.get().project.artboards[0].children.map((n) => n.id)).toEqual([a.id, b.id]);
+  });
+
   it('coalesces a drag into one undo step and restores on undo/redo', () => {
     const { s, a } = setup();
     for (let x = 11; x <= 20; x++) s.setProps([a.id], { x }, 'move');
