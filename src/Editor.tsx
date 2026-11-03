@@ -40,6 +40,8 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         (window as unknown as { interactivesEditor: unknown }).interactivesEditor = {
           store: s,
           // Import a Lottie/Rive file (a File or Blob with a name) as artboards, same as the Layers panel button
+          // The player itself, for measuring playback against the open document
+          loadPlayer: () => import('interactives-player'),
           importAnimation: async (file: File) => {
             const { addImportedArtboard, readAnimationFile } = await import('./lib/importers');
             await addImportedArtboard(await readAnimationFile(file));

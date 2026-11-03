@@ -1093,11 +1093,7 @@ code,
 }
 
 /* ---------------------------------------------------------------- logic graph */
-.logic {
-  display: grid;
-  grid-template-columns: 170px 1fr 260px;
-  height: 100%;
-}
+
 .logic-palette {
   overflow-y: auto;
   border-right: 1px solid var(--line);
@@ -1206,11 +1202,7 @@ code,
 }
 
 /* ---------------------------------------------------------------- scripts + variables */
-.scripts {
-  display: grid;
-  grid-template-columns: 180px 1fr 260px;
-  height: 100%;
-}
+
 .script-list {
   border-right: 1px solid var(--line);
   padding: 6px;
@@ -1359,16 +1351,8 @@ code,
 }
 
 /* ---------------------------------------------------------------- data */
-.data-panel {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  height: 100%;
-}
-.data-main {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  min-height: 0;
-}
+
+
 .data-form {
   padding: 8px 12px;
   overflow-y: auto;
@@ -1496,4 +1480,41 @@ code,
 .peer-cursor text {
   font-size: 11px;
   font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- resizable columns */
+.split-columns {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.split-col-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.split-col-wrap > :first-child {
+  flex: 1;
+  min-height: 0;
+}
+.split-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -3px;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 5;
+}
+.split-divider:hover,
+.split-divider:active {
+  background: var(--accent);
+  opacity: 0.5;
+}
+.script-list .link-btn {
+  display: block;
+  text-align: left;
+  white-space: nowrap;
 }

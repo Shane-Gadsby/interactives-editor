@@ -32,6 +32,7 @@ import { store, useEditor } from '../store/store';
 import { getArtboard } from '../store/doc';
 import { CheckField, NumberField, SelectField, TextField } from '../components/ui';
 import { CodeEditor } from '../components/CodeEditor';
+import { SplitColumns } from '../components/SplitColumns';
 import { assetKind } from '../lib/assets';
 
 type IxNodeData = { logic: LogicNode; summary: string };
@@ -178,7 +179,7 @@ export function LogicGraph() {
   const selected = ab.logic.nodes.find((n) => n.id === s.sel);
 
   return (
-    <div className="logic">
+    <SplitColumns id="logic" columns={[{ width: 170, min: 120, max: 360 }, 'flex', { width: 260, min: 200, max: 560 }]} className="logic">
       <div className="logic-palette">
         {(['event', 'action', 'logic'] as const).map((cat) => (
           <div key={cat} className="palette-group">
@@ -243,7 +244,7 @@ export function LogicGraph() {
           if (n) n.note = note || undefined;
         }, `logic-note-${selected.id}`)} /> : <p className="hint">Select a node to edit its settings.</p>}
       </div>
-    </div>
+    </SplitColumns>
   );
 }
 

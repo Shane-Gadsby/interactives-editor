@@ -6,6 +6,7 @@ import { dataCache } from '../lib/data';
 import { insertFiles, pickFiles } from '../lib/insert';
 import { IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
+import { SplitColumns } from '../components/SplitColumns';
 import { assetKind } from '../lib/assets';
 
 const KINDS: { value: DataKind; label: string }[] = [
@@ -62,7 +63,7 @@ export function DataPanel() {
   const loaded = active ? dataCache.get(active.id) : undefined;
 
   return (
-    <div className="data-panel">
+    <SplitColumns id="data" columns={[{ width: 220, min: 140, max: 480 }, 'flex']} className="data-panel">
       <div className="script-list">
         {s.sources.map((d) => {
           const st = dataCache.get(d.id);
@@ -74,15 +75,15 @@ export function DataPanel() {
             </button>
           );
         })}
-        <button className="link-btn" onClick={addFiles}>
-          + From file (JSON / CSV / TSV / text)
+        <button className="link-btn" title="Upload a JSON, CSV, TSV or text file" onClick={addFiles}>
+          + From file
         </button>
-        <button className="link-btn" onClick={addUrl}>
+        <button className="link-btn" title="Fetch JSON, CSV, TSV or text from a URL" onClick={addUrl}>
           + From URL
         </button>
       </div>
       {active ? (
-        <div className="data-main">
+        <SplitColumns id="data-main" columns={[{ width: 320, min: 220, max: 640 }, 'flex']} className="data-main">
           <div className="data-form">
             <TextField label="Name" mono value={active.name} commitOnBlur onChange={(v) => setSource(active.id, { name: v.trim() || active.name })} />
             {!isIdentifier(active.name) && <div className="error small">Use letters, digits and _ only, so expressions can say {active.name.replace(/\W/g, '_')}.</div>}
@@ -100,7 +101,7 @@ export function DataPanel() {
             {active.source === 'url' ? (
               <>
                 <TextField label="URL" value={active.url ?? ''} commitOnBlur placeholder="https://…/items.json" onChange={(v) => setSource(active.id, { url: v.trim() })} />
-                <NumberField label="Refresh" suffix="s (0 = once)" value={active.refresh ?? 0} min={0} onChange={(v) => setSource(active.id, { refresh: Math.round(v) }, `ds-refresh-${active.id}`)} />
+                <NumberField label="Refresh" suffix="s" title="Re-fetch every n seconds; 0 loads once" value={active.refresh ?? 0} min={0} onChange={(v) => setSource(active.id, { refresh: Math.round(v) }, `ds-refresh-${active.id}`)} />
                 <p className="hint">The server must allow cross-origin requests (CORS) from wherever the interactive is published.</p>
               </>
             ) : (
@@ -134,7 +135,7 @@ export function DataPanel() {
             {loaded?.error && <p className="error">{loaded.error}</p>}
             {loaded && 'value' in loaded && <Preview value={loaded.value} />}
           </div>
-        </div>
+        </SplitColumns>
       ) : (
         <div className="panel-empty">
           <p>Data sources feed bindings, repeated lists and expressions from JSON, CSV, TSV or text, uploaded as files or fetched from a URL.</p>
@@ -148,7 +149,7 @@ export function DataPanel() {
           </div>
         </div>
       )}
-    </div>
+    </SplitColumns>
   );
 }
 

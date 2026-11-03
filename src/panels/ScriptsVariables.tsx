@@ -5,6 +5,7 @@ import { isIdentifier, uniqueName } from '../store/doc';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { CodeEditor } from '../components/CodeEditor';
 import { Icons } from '../components/icons';
+import { SplitColumns } from '../components/SplitColumns';
 
 const SCRIPT_TEMPLATE = `// Runs with \`ix\` (the player API), \`event\` (what triggered it) and \`vars\`.
 // Tick "Run on start" to register handlers when the player starts.
@@ -34,7 +35,7 @@ export function ScriptsPanel() {
     setActiveId(sc.id);
   };
   return (
-    <div className="scripts">
+    <SplitColumns id="scripts" columns={[{ width: 180, min: 120, max: 420 }, 'flex', { width: 260, min: 180, max: 520 }]} className="scripts">
       <div className="script-list">
         {s.scripts.map((sc) => (
           <button key={sc.id} className={`list-item${sc.id === active?.id ? ' active' : ''}`} onClick={() => setActiveId(sc.id)}>
@@ -101,7 +102,7 @@ await ix.loadData('products')
 ix.setCursor('grab')
 ix.log(...)`}</pre>
       </div>
-    </div>
+    </SplitColumns>
   );
 }
 
