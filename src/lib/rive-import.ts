@@ -633,6 +633,22 @@ function paintOf(ac: ArtboardCtx, fc: FileCtx, paintSlot: number, shapeBox: { x:
   return { paint: null, colorSlot: null };
 }
 
+/** A stroke's DashPath effect: its Dash children alternate dash and gap lengths (pixel lengths only), plus offset. */
+function dashOf(ac: ArtboardCtx, fc: FileCtx, strokeSlot: number): { dash?: number[]; dashOffset?: number } {
+  const dashPath = (ac.children.get(strokeSlot) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath');
+  if (dashPath === undefined) return {};
+  const dp = ac.rab.slots[dashPath];
+  const dashes = (ac.children.get(dashPath) ?? []).map((i) => ac.rab.slots[i]).filter((d) => d?.type === 'Dash');
+  if (dashes.some((d) => get<boolean>(d, 'lengthIsPercentage')) || get<boolean>(dp, 'offsetIsPercentage')) {
+    fc.warnings.add('Dash lengths given as percentages are not supported');
+    return {};
+  }
+  const list = dashes.map((d) => r2(get(d, 'length'))).filter((n) => n > 0);
+  if (!list.length) return {};
+  // One length means equal dashes and gaps
+  return { dash: list.length % 2 ? [...list, ...list] : list, ...(get(dp, 'offset') ? { dashOffset: r2(get(dp, 'offset')) } : {}) };
+}
+
 function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | null {
   const o = ac.rab.slots[slot];
   const kids = (ac.children.get(slot) ?? []).map((i) => ({ i, o: ac.rab.slots[i] }));
@@ -652,16 +668,7 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     stroke.trimOffset = r2(get(t, 'offset') * 100);
     if (Number(t.props.modeValue ?? 1) === 2) fc.warnings.add('Trim paths in "synchronized" mode trim the whole outline at once');
   }
-  // Dash path effect: its Dash children alternate dash and gap lengths (pixel lengths only)
-  const dashPath = strokes[0] ? (ac.children.get(strokes[0].i) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath') : undefined;
-  if (stroke && dashPath !== undefined) {
-    const dashes = (ac.children.get(dashPath) ?? []).map((i) => ac.rab.slots[i]).filter((d) => d?.type === 'Dash');
-    if (dashes.some((d) => get<boolean>(d, 'lengthIsPercentage'))) fc.warnings.add('Dash lengths given as percentages are not supported');
-    else {
-      const list = dashes.map((d) => r2(get(d, 'length'))).filter((n) => n > 0);
-      if (list.length) stroke.dash = list.length % 2 ? [...list, ...list] : list;
-    }
-  }
+  if (stroke && strokes[0]) Object.assign(stroke, dashOf(ac, fc, strokes[0].i));
   const fill = fillInfo.paint;
   const name = String(o.props.name ?? 'Shape');
 
@@ -843,10 +850,11 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
     // A single line is as tall as the font's own ascent + descent in Rive, even with a smaller line height
     const natural = fontAsset?.bytes ? fontLineRatio(fontAsset.bytes) : null;
     const runText = runs.map((r) => String(get(r.o, 'text') ?? '')).join('');
-    if (natural && !runText.includes('\n') && natural > lineHeight) {
-      riveLineHeight.set(slot, lineHeight);
-      lineHeight = r2(natural);
-    }
+    // Rive sizes a line by the file's line height and centres the glyphs in it, as CSS does, so the file's value
+    // is used as is. (The font's own metrics are still read, for fonts with no line height set.)
+    if (natural && !(get(style, 'lineHeight') > 0)) lineHeight = r2(natural);
+    void riveLineHeight;
+    void runText;
   }
   if (runs.length > 1) fc.warnings.add('Text with several styled runs uses the first run’s style for the whole text');
   const w = get(o, 'width') || 200;
@@ -925,7 +933,8 @@ function autoLayoutOf(fc: FileCtx, style: RObj | undefined): AutoLayout {
   if (style && ['paddingLeft', 'paddingTop', 'gapHorizontal', 'gapVertical'].some((k) => get(style, `${k}UnitsValue`) === 2)) fc.warnings.add('Percentage padding and gaps are imported as 0');
   return {
     direction: row ? 'row' : 'column',
-    gap: row ? pt('gapHorizontal') : pt('gapVertical'),
+    // Rive lays out with Yoga, which ignores negative gaps (negative margins still apply)
+    gap: Math.max(0, row ? pt('gapHorizontal') : pt('gapVertical')),
     padding: { top: pt('paddingTop'), right: pt('paddingRight'), bottom: pt('paddingBottom'), left: pt('paddingLeft') },
     justify,
     align,
@@ -1026,7 +1035,7 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     const f = createNode('frame', {
       name: String(o.props.name ?? 'Layout'),
       fill: fillK ? paintOf(ac, fc, fillK.i, null).paint : null,
-      stroke: strokeK && strokePaint ? { paint: strokePaint, width: r2(get(strokeK.o, 'thickness')) } : null,
+      stroke: strokeK && strokePaint ? { paint: strokePaint, width: r2(get(strokeK.o, 'thickness')), ...dashOf(ac, fc, strokeK.i) } : null,
       cornerRadius: style ? r2(get(style, 'cornerRadiusTL')) : 0,
       clip: !!get<boolean>(o, 'clip'),
       layout: autoLayoutOf(fc, style),
