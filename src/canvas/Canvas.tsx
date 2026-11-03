@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   apply,
   createNode,
@@ -1246,6 +1246,18 @@ export function Canvas() {
     store().set({ zoom: z, panX: el.clientWidth / 2 - (b.x + b.width / 2) * z, panY: el.clientHeight / 2 - (b.y + b.height / 2) * z });
   }
 
+  // While the view moves, the whole world is one composited layer, so panning slides pixels instead of repainting
+  // every shape; once it settles the layer goes, and the browser redraws sharply at the new zoom
+  const worldRef = useRef<HTMLDivElement>(null);
+  const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useLayoutEffect(() => {
+    const el = worldRef.current;
+    if (!el) return;
+    el.style.willChange = 'transform';
+    if (settle.current) clearTimeout(settle.current);
+    settle.current = setTimeout(() => (el.style.willChange = ''), 220);
+  }, [panX, panY, zoom]);
+
   const showRulers = usePrefs().rulers;
   const cursor = s.tool === 'hand' ? 'grab' : s.tool === 'select' ? 'default' : s.tool === 'text' ? 'text' : 'crosshair';
 
@@ -1263,7 +1275,7 @@ export function Canvas() {
       onDrop={onDrop}
       onContextMenu={openMenu}
     >
-      <div className="world" style={{ transform: `translate(${panX}px, ${panY}px) scale(${zoom})` }}>
+      <div ref={worldRef} className="world" style={{ transform: `translate(${panX}px, ${panY}px) scale(${zoom})` }}>
         {project.artboards.map((ab) => (
           <ArtboardView
             key={ab.id}
