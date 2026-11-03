@@ -4,7 +4,7 @@
 import { type Spec } from './rive-writer';
 const C = { red: 0xffe53935, blue: 0xff1e88e5, green: 0xff43a047, yellow: 0xfffdd835, purple: 0xff8e24aa, grey: 0xff444444, white: 0xffffffff, orange: 0xfffb8c00 };
 export type Doc = { name: string; specs: Spec[]; add: (s: Spec) => number };
-function doc(name: string, w: number, h: number, rootStyle: Record<string, unknown>, bg = C.grey): Doc {
+export function doc(name: string, w: number, h: number, rootStyle: Record<string, unknown>, bg = C.grey): Doc {
   const specs: Spec[] = [['Artboard', { name, width: w, height: h, styleId: 1 }]]; // 0
   const add = (s: Spec) => (specs.push(s), specs.length - 1);
   add(['LayoutComponentStyle', { parentId: 0, ...withUnits(rootStyle) }]); // 1

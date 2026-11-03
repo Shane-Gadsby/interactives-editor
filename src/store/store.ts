@@ -946,6 +946,7 @@ export class EditorStore {
       j.id = uid('j');
       if (j.xTimeline && tlMap.has(j.xTimeline)) j.xTimeline = tlMap.get(j.xTimeline)!;
       if (j.yTimeline && tlMap.has(j.yTimeline)) j.yTimeline = tlMap.get(j.yTimeline)!;
+      if (j.handle && idMap.has(j.handle)) j.handle = idMap.get(j.handle)!;
     }
     // Blends are copied with new ids, pointing at the copied timelines
     const blendMap = new Map<string, string>();

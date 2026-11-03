@@ -924,6 +924,16 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             )}
             <CheckField label="Wrap lines" title="Break long lines at the box's width. Off keeps the lines as written" value={n.wrap !== false} onChange={(v) => set({ wrap: v })} />
           </Row>
+          <NumberField
+            label="Paragraph spacing"
+            title="Extra space between paragraphs (the pieces of text between line breaks), in pixels. Not applied to text with modifiers"
+            value={n.paragraphSpacing ?? 0}
+            min={0}
+            step={1}
+            suffix="px"
+            onChange={(v) => set({ paragraphSpacing: v > 0 ? v : undefined }, `para-gap-${n.id}`)}
+            onCommit={() => store().commit()}
+          />
           <TextSelectionHint id={n.id} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           <p className="hint">
@@ -1826,6 +1836,8 @@ function JoysticksSection({ ab }: { ab: Artboard }) {
       { coalesce },
     );
   const tls = [{ value: '', label: 'None' }, ...ab.timelines.map((t) => ({ value: t.id, label: t.name }))];
+  const layers = [{ value: '', label: 'None' }];
+  walk(ab.children, (x) => void layers.push({ value: x.id, label: x.name }));
   return (
     <Section
       help="joysticks"
@@ -1850,6 +1862,30 @@ function JoysticksSection({ ab }: { ab: Artboard }) {
           <TextField label="X value" mono title="Expression from 0 to 1. pointer {x, y}, artboard {width, height} and every variable are in scope" value={j.x} commitOnBlur onChange={(v) => update((js) => void (js[i].x = v))} />
           <SelectField label="Y timeline" title="Optional second timeline, positioned by the Y value" value={j.yTimeline ?? ''} options={tls} onChange={(v) => update((js) => void (js[i].yTimeline = v || null))} />
           {j.yTimeline && <TextField label="Y value" mono title="Expression from 0 to 1" value={j.y ?? ''} commitOnBlur onChange={(v) => update((js) => void (js[i].y = v))} />}
+          <SelectField
+            label="Handle"
+            title="A layer the pointer drags around. Where its origin sits inside the area below is handle.x and handle.y (0 to 1) in the expressions"
+            value={j.handle ?? ''}
+            options={layers}
+            onChange={(v) =>
+              update((js) => {
+                js[i].handle = v || null;
+                if (v && !js[i].area) js[i].area = { x: 0, y: 0, width: ab.width, height: ab.height };
+              })
+            }
+          />
+          {j.handle && j.area && (
+            <>
+              <Row>
+                <NumberField label="Area X" title="Left edge of the handle's range, in artboard pixels" value={j.area.x} onChange={(v) => update((js) => void (js[i].area!.x = v), `joy-ax-${j.id}`)} onCommit={() => store().commit()} />
+                <NumberField label="Y" title="Top edge of the handle's range" value={j.area.y} onChange={(v) => update((js) => void (js[i].area!.y = v), `joy-ay-${j.id}`)} onCommit={() => store().commit()} />
+              </Row>
+              <Row>
+                <NumberField label="Area W" title="Width of the handle's range (handle.x is 1 at this distance from the left edge)" value={j.area.width} min={1} onChange={(v) => update((js) => void (js[i].area!.width = v), `joy-aw-${j.id}`)} onCommit={() => store().commit()} />
+                <NumberField label="H" title="Height of the handle's range" value={j.area.height} min={1} onChange={(v) => update((js) => void (js[i].area!.height = v), `joy-ah-${j.id}`)} onCommit={() => store().commit()} />
+              </Row>
+            </>
+          )}
         </div>
       ))}
     </Section>

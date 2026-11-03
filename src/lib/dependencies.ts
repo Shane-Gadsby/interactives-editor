@@ -300,6 +300,7 @@ export function analyzeUsage(project: Project): UsageReport {
       const by: UsageSource = { type: 'joystick', artboardId: ab.id, artboardName: ab.name, id: j.id, name: j.name || 'Joystick' };
       useId('timeline', j.xTimeline, by, 'joystick x');
       useId('timeline', j.yTimeline, by, 'joystick y');
+      useLayer(j.handle, by, 'joystick handle');
       useExpr(j.x, by, 'joystick x expression');
       if (j.y) useExpr(j.y, by, 'joystick y expression');
     }

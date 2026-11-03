@@ -150,7 +150,10 @@ describe('Rive text box settings', () => {
     const fit = await text({ sizingValue: 2, overflowValue: 4, paragraphSpacing: 6 });
     expect(fit.node.overflow).toBe('hidden');
     expect(fit.res.warnings.some((w) => /fit/.test(w))).toBe(true);
-    expect(fit.res.warnings.some((w) => /Paragraph spacing/.test(w))).toBe(true);
+    // Paragraph spacing comes in as a setting of the layer, with no warning
+    expect(fit.res.warnings.some((w) => /Paragraph spacing/.test(w))).toBe(false);
+    expect((fit.node as unknown as { paragraphSpacing?: number }).paragraphSpacing).toBe(6);
+    expect((plain.node as unknown as { paragraphSpacing?: number }).paragraphSpacing).toBeUndefined();
     const auto = await text({ sizingValue: 1, overflowValue: 3 });
     expect(auto.node.overflow).toBeUndefined();
   });

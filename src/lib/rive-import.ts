@@ -39,6 +39,7 @@ import {
   runsPatch,
   type Artboard,
   type Blend,
+  type Joystick,
   type Easing,
   type FontRef,
   type InstanceNode,
@@ -79,6 +80,8 @@ import {
   isPlainOrder,
   paintOrderField,
   type PaintKind,
+  type TextModifier,
+  defaultModifier,
 } from 'interactives-player';
 import { RIVE_CLASSES } from './rive-defs';
 import type { ImportedAsset } from './lottie-import';
@@ -697,6 +700,8 @@ interface ArtboardCtx {
   wrapBySlot: Map<number, SceneNode>;
   /** Slot of a clip shape -> the masking copies made of it (constraints on the shape have to move its copies too). */
   clones: Map<number, SceneNode[]>;
+  /** Layer mask sources that Rive does not draw on their own: hidden once every layer exists. */
+  maskHidden: number[];
   /** DrawRules slot -> the container it reorders and the child order for each of its draw targets. */
   drawRules: Map<number, { nodeId: string; base: string[]; orders: Map<number, string[]> }>;
   /** Skinned paths and meshes, resolved once every bone has become a layer. */
@@ -1463,14 +1468,102 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
     ...(get(o, 'wrapValue') === 1 ? { wrap: false } : {}),
   });
   if (get(o, 'overflowValue') === 4) fc.warnings.add('Text that shrinks to fit its box (fit overflow) is clipped at the box instead');
-  if (get(o, 'paragraphSpacing')) fc.warnings.add('Paragraph spacing in text is not imported');
+  if (get(o, 'paragraphSpacing') > 0) node.paragraphSpacing = r2(get(o, 'paragraphSpacing'));
   // originValue 1 = the text's y is its first baseline (about 0.95 em below the top of our line box)
   const baselineShift = get(o, 'originValue') === 1 ? -fontSize * 0.95 : 0;
   placeAtOrigin(node, o, { x: -w * ox, y: -h * oy + baselineShift }, w, h);
   addTarget(ac, slot, transformTarget(node, { x: -w * ox, y: -h * oy + baselineShift }));
+  importTextModifiers(ac, fc, slot, node, text);
   for (const r of runs) addTarget(ac, r.i, { nodeId: node.id, map: { text: { prop: 'text', f: (v) => String(v) } } });
   for (const cs of textColorSlots) addTarget(ac, cs, { nodeId: node.id, map: { colorValue: { prop: 'color', f: (v) => argb(Number(v)) } } });
   return node;
+}
+
+/**
+ * Text modifier groups: what they change (move, turn, scale and fade per letter, word or line, by the flags 4, 8, 16 and 32)
+ * and their ranges. Each range becomes one of our text modifiers, with the group's changes. Keys on a range or a group
+ * follow onto the modifier.
+ */
+function importTextModifiers(ac: ArtboardCtx, fc: FileCtx, slot: number, node: SceneNode, text: string): void {
+  if (node.type !== 'text') return;
+  const groups = (ac.children.get(slot) ?? []).filter((i) => ac.rab.slots[i].type === 'TextModifierGroup');
+  const others = new Set<string>();
+  for (const c of ac.children.get(slot) ?? []) {
+    const t = ac.rab.slots[c].type;
+    if (isA(t, 'TextModifier') && t !== 'TextModifierGroup') others.add(t);
+    for (const g of ac.children.get(c) ?? []) if (isA(ac.rab.slots[g].type, 'TextModifier') && ac.rab.slots[g].type !== 'TextModifierGroup') others.add(ac.rab.slots[g].type);
+  }
+  for (const t of others) {
+    if (t === 'TextFollowPathModifier') fc.warnings.add('Text that follows a path (text follow path modifiers) is not imported; the text stays in its line');
+    else if (t === 'TextVariationModifier') fc.warnings.add('Text variation modifiers (variable font axes changed per letter) are not imported');
+    else fc.warnings.add(`Text modifiers of type ${t} are not imported`);
+  }
+  const mods: TextModifier[] = [];
+  for (const gi of groups) {
+    const g = ac.rab.slots[gi];
+    const flags = get(g, 'modifierFlags');
+    const ranges = (ac.children.get(gi) ?? []).filter((i) => ac.rab.slots[i].type === 'TextModifierRange');
+    if (!ranges.length) continue;
+    const move = !!(flags & 4);
+    const turn = !!(flags & 8);
+    const grow = !!(flags & 16);
+    const fade = !!(flags & 32);
+    if (!(move || turn || grow || fade)) continue;
+    if (grow && Math.abs(get(g, 'scaleX') - get(g, 'scaleY')) > 1e-4) fc.warnings.add('Text modifiers that scale letters differently across and down use the horizontal scale for both');
+    const groupTargets: Target[] = [];
+    for (const ri of ranges) {
+      const r = ac.rab.slots[ri];
+      const units = get(r, 'unitsValue');
+      const unit = units === 2 ? 'word' : units === 3 ? 'line' : 'letter';
+      const byIndex = get(r, 'typeValue') === 1;
+      // Counts of what the range counts, to turn index ranges into percentages
+      const count = Math.max(1, unit === 'word' ? text.split(/\s+/).filter(Boolean).length : unit === 'line' ? text.split('\n').length : text.replace(/\s/g, '').length);
+      const pct = (v: number) => (byIndex ? (v / count) * 100 : v * 100);
+      if (units === 0 && /\s/.test(text.trim())) fc.warnings.add('Text modifier ranges that count characters count the spaces too in Rive; here spaces are skipped');
+      if (unit === 'line') fc.warnings.add('Text modifier ranges that count lines count the lines as laid out; wrapped text may differ');
+      if (get(r, 'modeValue')) fc.warnings.add('Text modifier ranges that combine with others by subtracting, multiplying, min, max or difference are imported as adding');
+      if (get(r, 'runId')) fc.warnings.add('Text modifier ranges limited to one text run apply to the whole text');
+      const from = get(r, 'falloffFrom');
+      const to = get(r, 'falloffTo');
+      const shape = from <= 0 && to >= 1 ? 'square' : from > 0 && to < 1 ? 'triangle' : from > 0 ? 'ramp-up' : 'ramp-down';
+      if (shape !== 'square') fc.warnings.add('Text modifier falloffs are approximated by a ramp or a triangle');
+      const index = mods.length;
+      mods.push(
+        defaultModifier({
+          name: String(r.props.name ?? '') || String(g.props.name ?? '') || `Modifier ${index + 1}`,
+          unit,
+          start: r2(pct(get(r, 'modifyFrom'))),
+          end: r2(pct(get(r, 'modifyTo'))),
+          offset: r2(pct(get(r, 'offset'))),
+          shape,
+          strength: r2(get(r, 'strength') * 100),
+          ...(move ? { x: r2(get(g, 'x')), y: r2(get(g, 'y')) } : {}),
+          ...(turn ? { rotation: r2(get(g, 'rotation') * DEG) } : {}),
+          ...(grow ? { scale: r2(get(g, 'scaleX')) } : {}),
+          ...(fade ? { opacity: r2(get(g, 'opacity')) } : {}),
+        }),
+      );
+      // Keys on the range's window and strength
+      const map: Target['map'] = { strength: { prop: `modifiers.${index}.strength`, f: num((v) => v * 100) } };
+      if (!byIndex) {
+        map.modifyFrom = { prop: `modifiers.${index}.start`, f: num((v) => v * 100) };
+        map.modifyTo = { prop: `modifiers.${index}.end`, f: num((v) => v * 100) };
+        map.offset = { prop: `modifiers.${index}.offset`, f: num((v) => v * 100) };
+      } else fc.warnings.add('Keys on the range of text modifiers that count by index are not imported');
+      addTarget(ac, ri, { nodeId: node.id, map });
+      const gmap: Target['map'] = {};
+      if (move) {
+        gmap.x = { prop: `modifiers.${index}.x`, f: num() };
+        gmap.y = { prop: `modifiers.${index}.y`, f: num() };
+      }
+      if (turn) gmap.rotation = { prop: `modifiers.${index}.rotation`, f: num((v) => v * DEG) };
+      if (grow) gmap.scaleX = { prop: `modifiers.${index}.scale`, f: num() };
+      if (fade) gmap.opacity = { prop: `modifiers.${index}.opacity`, f: num() };
+      groupTargets.push({ nodeId: node.id, map: gmap });
+    }
+    for (const t of groupTargets) addTarget(ac, gi, t);
+  }
+  if (mods.length) node.modifiers = mods;
 }
 
 /** An audio asset the file embeds, as a project asset (once). */
@@ -1809,7 +1902,71 @@ function layoutItemOf(style: RObj | undefined, size: { width: number; height: nu
 /** Rive layout participants: everything else inside a layout keeps its own position. */
 function takesPart(t: string): boolean {
   // A plain nested artboard is a transform node in Rive's layout, not a layout item: it keeps its own x and y (leaf and layout nested artboards are sized by the layout)
-  return isA(t, 'LayoutComponent') || t === 'NestedArtboardLeaf' || t === 'NestedArtboardLayout' || t === 'Text';
+  return isA(t, 'LayoutComponent') || t === 'ArtboardComponentList' || t === 'NestedArtboardLeaf' || t === 'NestedArtboardLayout' || t === 'Text';
+}
+
+/**
+ * An artboard component list: a layer that shows one artboard per item of a view model list. Ours is a repeater: a frame
+ * that repeats an instance of the item artboard once per item of the list variable, laid out along the parent's direction.
+ * The items carry no data of their own here (the view model values the item artboards read are shared), so every item
+ * starts as the artboard does.
+ */
+function convertList(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | null {
+  const o = ac.rab.slots[slot];
+  const name = String(o.props.name ?? 'List');
+  const rules = (ac.children.get(slot) ?? []).filter((i) => ac.rab.slots[i].type === 'ArtboardListMapRule');
+  const bind = ac.rab.binds.find((b) => (b.slot === slot || rules.includes(b.slot)) && b.obj.type === 'DataBindContext' && classProps('ArtboardComponentList').get(Number(b.obj.props.propertyKey))?.name === 'listSource');
+  const source = bind ? vmVariable(fc, bind.obj) : null;
+  if (!source || source.kind !== 'list') {
+    fc.warnings.add(`The list "${name}" has no list property to repeat over; it was skipped`);
+    return null;
+  }
+  const artboards = [...new Set(rules.map((i) => Number(ac.rab.slots[i].props.artboardId ?? -1)))].filter((a) => fc.file.artboards[a]);
+  if (!artboards.length) {
+    fc.warnings.add(`The list "${name}" has no artboard to show for its items; it was skipped`);
+    return null;
+  }
+  if (artboards.length > 1) fc.warnings.add(`The list "${name}" shows different artboards for different kinds of items; every item shows the first (${String(fc.file.artboards[artboards[0]].obj.props.name ?? 'artboard')})`);
+  fc.warnings.add(`The list "${name}" repeats its item artboard once per item; the values each item carries (its own view model) are not passed to the items`);
+  const target = artboards[0];
+  const tab = fc.file.artboards[target].obj;
+  const w = Math.max(1, Math.round(get(tab, 'width')));
+  const h = Math.max(1, Math.round(get(tab, 'height')));
+  const inst = createNode('instance', { name: String(tab.props.name ?? 'Item'), artboardId: fc.abIds[target] ?? '', fit: 'contain' });
+  inst.width = w;
+  inst.height = h;
+  inst.x = 0;
+  inst.y = 0;
+  inst.originX = 0;
+  inst.originY = 0;
+  // Along the parent's direction, with its gap
+  const parentSlot = Number(o.props.parentId ?? 0);
+  const parent = ac.nodeBySlot.get(parentSlot);
+  const rootStyle = parentSlot === 0 && ac.rab.obj.props.styleId !== undefined ? ac.rab.slots[Number(ac.rab.obj.props.styleId)] : undefined;
+  const parentLayout = parentSlot === 0 ? (rootStyle ? autoLayoutOf(fc, rootStyle, layoutBox(ac, 0)) : null) : parent?.type === 'frame' ? parent.layout : null;
+  const flow = parentLayout && !parentLayout.grid ? parentLayout : null;
+  const list = createNode('frame', {
+    name,
+    width: w,
+    height: h,
+    fill: null,
+    stroke: null,
+    cornerRadius: 0,
+    clip: false,
+    layout: { direction: flow?.direction ?? 'column', gap: flow?.gap ?? 0, padding: { top: 0, right: 0, bottom: 0, left: 0 }, justify: 'start', align: 'start', wrap: false, hugWidth: true, hugHeight: true },
+    repeat: { items: source.name, layout: 'none', gap: 0, columns: 1 },
+    children: [inst],
+  });
+  list.x = r2(get(o, 'x'));
+  list.y = r2(get(o, 'y'));
+  list.originX = 0;
+  list.originY = 0;
+  list.rotation = r2(get(o, 'rotation') * DEG);
+  list.scaleX = r2(get(o, 'scaleX'));
+  list.scaleY = r2(get(o, 'scaleY'));
+  list.opacity = r2(get(o, 'opacity'));
+  addTarget(ac, slot, transformTarget(list, { x: 0, y: 0 }));
+  return list;
 }
 
 function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number): SceneNode | null {
@@ -1889,6 +2046,8 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     if (style && get(style, 'displayValue') === 1) f.visible = false;
     addTarget(ac, slot, transformTarget(f, { x: 0, y: 0 }));
     node = f;
+  } else if (t === 'ArtboardComponentList') {
+    node = convertList(ac, fc, slot);
   } else if (isA(t, 'Node')) {
     if (t === 'NSlicedNode') fc.warnings.add('N-sliced nodes (groups resized by slice axes) import as plain groups; their contents are not stretched');
     const g = createNode('group', { name: String(o.props.name ?? t) });
@@ -1982,16 +2141,26 @@ function worldOf(ac: ArtboardCtx, slot: number): Matrix {
   return m;
 }
 
+/** Whether `slot` is `ancestor` or sits somewhere under it. */
+function within(ac: ArtboardCtx, slot: number, ancestor: number): boolean {
+  for (let s = slot, guard = 0; s > 0 && guard < 200; s = Number(ac.rab.slots[s]?.props.parentId ?? 0), guard++) if (s === ancestor) return true;
+  return false;
+}
+
 /**
  * Rive clips a layer (and everything under it) with a ClippingShape that points at another shape. Ours masks the layers
  * above a mask inside one parent, so the clipped layer goes into a small group of its own with a masking copy of the
  * clip shape in front of it. Several clips nest, one group each.
  */
 function clipWrap(ac: ArtboardCtx, fc: FileCtx, slot: number, layer: SceneNode, parentSlot: number, abIndex: number, inLayout: boolean): SceneNode {
-  const clips = (ac.children.get(slot) ?? []).filter((c) => ac.rab.slots[c].type === 'ClippingShape' && get<boolean>(ac.rab.slots[c], 'isVisible'));
+  // Layer masks are the same thing with any layer as the source (a group of shapes, an image); only their on / off switch differs
+  const clips = (ac.children.get(slot) ?? []).filter((c) => {
+    const o = ac.rab.slots[c];
+    return (o.type === 'ClippingShape' && get<boolean>(o, 'isVisible')) || (o.type === 'LayerMask' && !!(get(o, 'maskFlags') & 4));
+  });
   if (!clips.length) return layer;
   if (inLayout || takesPart(ac.rab.slots[slot].type)) {
-    fc.warnings.add('Clipping shapes on layers inside a layout are not imported; those layers show unclipped');
+    fc.warnings.add('Clipping shapes and layer masks on layers inside a layout are not imported; those layers show unclipped');
     return layer;
   }
   let out = layer;
@@ -2000,7 +2169,22 @@ function clipWrap(ac: ArtboardCtx, fc: FileCtx, slot: number, layer: SceneNode, 
   for (const cs of clips) {
     const src = Number(get(ac.rab.slots[cs], 'sourceId'));
     const srcSlot = ac.rab.slots[src];
-    if (!srcSlot || !isA(srcSlot.type, 'Shape')) {
+    const isMask = ac.rab.slots[cs].type === 'LayerMask';
+    if (isMask) {
+      const flags = get(ac.rab.slots[cs], 'maskFlags');
+      if (!srcSlot || src === 0 || within(ac, src, slot) || within(ac, slot, src) || isA(srcSlot.type, 'Constraint') || !(srcSlot.type === 'Node' || isA(srcSlot.type, 'Drawable'))) {
+        fc.warnings.add('A layer mask whose source layer could not be found was skipped');
+        continue;
+      }
+      if (flags & 1) {
+        fc.warnings.add('Layer masks that invert the source are not imported; those layers show unmasked');
+        continue;
+      }
+      if (flags & 2) fc.warnings.add('Luminance layer masks are imported as alpha masks (the shape covers, no matter its brightness)');
+      if (flags & 16) fc.warnings.add('Layer masks with custom bounds are imported without the bounds');
+      if (get(ac.rab.slots[cs], 'resolution') !== 1 && 'resolution' in ac.rab.slots[cs].props) fc.warnings.add('Layer mask resolution is ignored');
+      if (!(flags & 8)) ac.maskHidden.push(src);
+    } else if (!srcSlot || !isA(srcSlot.type, 'Shape')) {
       fc.warnings.add('A clipping shape that does not point at a shape was skipped');
       continue;
     }
@@ -2009,14 +2193,14 @@ function clipWrap(ac: ArtboardCtx, fc: FileCtx, slot: number, layer: SceneNode, 
     const shape = convertSlot(scratch, fc, src, abIndex);
     if (!shape) continue;
     shape.visible = true;
-    shape.opacity = 1;
+    if (!isMask) shape.opacity = 1;
     ac.clones.set(src, [...(ac.clones.get(src) ?? []), shape]);
     // The clip shape's own animation (a morphing wave line, a moving rectangle) has to move the mask copy too; its
     // opacity does not matter to a clip
     for (const [tslot, list] of scratch.targets)
       for (const t of list) {
         const map = { ...t.map };
-        delete map.opacity;
+        if (!isMask) delete map.opacity;
         addTarget(ac, tslot, { ...t, map });
       }
     // Clip shape's space -> the parent's space, as a plain translate/rotate/scale
@@ -2095,7 +2279,7 @@ function artboardCtx(fc: FileCtx, index: number): ArtboardCtx {
     list.push(i);
     children.set(p, list);
   });
-  ac = { rab, children, targets: new Map(), nodeBySlot: new Map(), solos: new Map(), wrapBySlot: new Map(), clones: new Map(), drawRules: new Map(), skins: [] };
+  ac = { rab, children, targets: new Map(), nodeBySlot: new Map(), solos: new Map(), wrapBySlot: new Map(), clones: new Map(), maskHidden: [], drawRules: new Map(), skins: [] };
   contexts.set(index, ac);
   return ac;
 }
@@ -2111,6 +2295,11 @@ function buildArtboardNodes(fc: FileCtx, index: number): SceneNode[] {
     if (n) out.push(clipWrap(ac, fc, ci, n, 0, index, false));
   }
   if ((ac.children.get(0) ?? []).some((ci) => (ac.children.get(ci) ?? []).some((r) => ac.rab.slots[r].type === 'DrawRules'))) fc.warnings.add('Draw rules on layers at the top level of an artboard are not imported');
+  for (const m of ac.maskHidden) {
+    const n = ac.nodeBySlot.get(m);
+    if (n) n.visible = false;
+  }
+  if (ac.rab.slots.some((o, i) => o.type === 'LayerMask' && Number(o.props.parentId ?? 0) === 0 && i > 0)) fc.warnings.add('Layer masks on the artboard itself are not imported');
   importConstraints(ac, fc);
   resolveSkins(ac, fc);
   importDataBinds(ac, fc, out);
@@ -2132,6 +2321,14 @@ function importConstraints(ac: ArtboardCtx, fc: FileCtx): void {
       rigConstraint(ac, fc, i, c);
       return;
     }
+    if (c.type === 'ScrollConstraint') {
+      scrollConstraint(ac, fc, i, c);
+      return;
+    }
+    if (c.type === 'ScrollBarConstraint') {
+      fc.warnings.add('Scroll bars are not imported; the browser draws its own scroll bars on scrollable frames');
+      return;
+    }
     if (!COPY_CONSTRAINTS.includes(c.type)) {
       fc.warnings.add(`${c.type.replace(/Constraint$/, '')} constraints are not supported`);
       return;
@@ -2151,6 +2348,33 @@ function importConstraints(ac: ArtboardCtx, fc: FileCtx): void {
       }
     }
   });
+}
+
+/**
+ * A scroll constraint makes its layout a scrollable viewport: the frame scrolls its content along the direction. What the
+ * browser's own scrolling does not do (elastic bounce and momentum, snapping, endless and virtualised lists, drag speed,
+ * an offset to start at) is reported.
+ */
+function scrollConstraint(ac: ArtboardCtx, fc: FileCtx, slot: number, c: RObj): void {
+  const node = ac.nodeBySlot.get(Number(c.props.parentId ?? 0));
+  if (!node || node.type !== 'frame') {
+    fc.warnings.add('A scroll constraint that is not on a layout was skipped');
+    return;
+  }
+  if (!get<boolean>(c, 'interactive')) fc.warnings.add('Scroll constraints that cannot be dragged or scrolled by the viewer are not imported (they only move from animations and data)');
+  else {
+    const dir = get(c, 'directionValue');
+    node.scroll = dir === 0 ? 'horizontal' : dir === 2 ? 'both' : 'vertical';
+    node.clip = true;
+  }
+  const physics = ac.rab.slots[Number(get(c, 'physicsId'))];
+  if (physics?.type === 'ElasticScrollPhysics') fc.warnings.add('Elastic scroll physics (bounce past the ends, momentum) are not imported; scrolling stops at the ends');
+  if (get<boolean>(c, 'snap')) fc.warnings.add('Scroll snapping is not imported');
+  if (get<boolean>(c, 'infinite')) fc.warnings.add('Endless scrolling is not imported; the content scrolls once');
+  if (get<boolean>(c, 'virtualize')) fc.warnings.add('Virtualised scroll lists are not imported; every item is drawn');
+  if (Math.abs(get(c, 'dragMultiplier') - 1) > 1e-4) fc.warnings.add('The drag speed of scroll constraints is not imported');
+  if (get(c, 'scrollOffsetX') || get(c, 'scrollOffsetY')) fc.warnings.add('A starting scroll offset is not imported; scroll frames start at the top left');
+  void slot;
 }
 
 /**
@@ -2724,6 +2948,8 @@ function importDataBinds(ac: ArtboardCtx, fc: FileCtx, nodes: SceneNode[]): void
   for (const b of ac.rab.binds) {
     const o = ac.rab.slots[b.slot];
     const flags = Number(b.obj.props.flags ?? 0);
+    // A list's source is read where the list is made (convertList)
+    if (o.type === 'ArtboardComponentList' || o.type === 'ArtboardListMapRule') continue;
     if (b.obj.type !== 'DataBindContext') {
       fc.warnings.add('Data binds without a view model source were not imported');
       continue;
@@ -3214,6 +3440,34 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           fc.warnings.add('Focus traversal actions (next / previous / direction) are not imported');
           continue;
         }
+        if (a.type === 'ListenerAlignTarget') {
+          // The target's origin follows the pointer: x and y set from the event's position, taken back into the target's parent
+          const target = ac.nodeBySlot.get(Number(a.props.targetId ?? -1));
+          const tSlot = Number(a.props.targetId ?? -1);
+          if (!target) {
+            fc.warnings.add('Align target actions whose layer could not be found were skipped');
+            continue;
+          }
+          if (get<boolean>(a, 'preserveOffset')) fc.warnings.add('Align target actions that keep the offset put the layer on the pointer instead');
+          const rab = fc.file.artboards[abIndex].obj;
+          const ox = get(rab, 'width') * get(rab, 'originX');
+          const oy = get(rab, 'height') * get(rab, 'originY');
+          const parent = Number(ac.rab.slots[tSlot]?.props.parentId ?? 0);
+          const inv = invert(worldOf(ac, parent));
+          const k = (v: number) => String(Math.round(v * 10000) / 10000);
+          const part = (m: number, n: number, c: number) => `${k(m)} * (event.x - ${k(ox)}) + ${k(n)} * (event.y - ${k(oy)}) + ${k(c)}`;
+          // A layer at the top level of the artboard also sits the artboard's origin further along
+          const shift = parent === 0 ? [ox, oy] : [0, 0];
+          const dx = r2(shift[0] - target.originX * target.width);
+          const dy = r2(shift[1] - target.originY * target.height);
+          const sx = add('action.setProperty', { target: target.id, prop: 'x', value: `${part(inv[0], inv[2], inv[4])} + ${k(dx)}` }, x);
+          const sy = add('action.setProperty', { target: target.id, prop: 'y', value: `${part(inv[1], inv[3], inv[5])} + ${k(dy)}` }, x + 240);
+          link(last, sx);
+          link(sx, sy);
+          last = sy;
+          x += 480;
+          continue;
+        }
         // An input of a nested artboard: set it on the instance
         const nestedSlot = a.props.nestedInputId;
         if (nestedSlot !== undefined && ac.rab.slots[Number(nestedSlot)] && isA(ac.rab.slots[Number(nestedSlot)].type, 'NestedInput')) {
@@ -3251,6 +3505,48 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
       y += 120;
     }
   }
+}
+
+/**
+ * A Rive joystick positions an animation from x / y in -1..1: either set by hand, or read from where a handle layer sits
+ * in the joystick's rectangle. Ours takes 0..1 expressions, with the handle's place in an area as `handle.x` / `handle.y`.
+ */
+function importJoysticks(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Timeline[], ox: number, oy: number): void {
+  ac.rab.slots.forEach((j, i) => {
+    if (i === 0 || j.type !== 'Joystick') return;
+    const xTl = timelines[Number(get(j, 'xId'))];
+    const yTl = timelines[Number(get(j, 'yId'))];
+    if (!xTl && !yTl) return;
+    const flags = get(j, 'joystickFlags');
+    const handleSlot = 'handleSourceId' in j.props ? Number(get(j, 'handleSourceId')) : -1;
+    const handle = handleSlot > 0 ? ac.nodeBySlot.get(handleSlot) : undefined;
+    const name = String(j.props.name ?? '') || `Joystick ${(ab.joysticks?.length ?? 0) + 1}`;
+    const axis = (v: string, invert: boolean) => (invert ? `1 - ${v}` : v);
+    const out: Joystick = { id: uid('j'), name, xTimeline: xTl?.id ?? null, x: '0.5', yTimeline: yTl?.id ?? null, y: '0.5' };
+    if (handle) {
+      // The joystick's rectangle in the artboard: its parent's space, moved to its own position, around its origin
+      const m = multiply(worldOf(ac, Number(j.props.parentId ?? 0)), [1, 0, 0, 1, get(j, 'posX'), get(j, 'posY')]);
+      const w = get(j, 'width');
+      const h = get(j, 'height');
+      const x0 = -w * get(j, 'originX');
+      const y0 = -h * get(j, 'originY');
+      const corners = [ap(m, x0, y0), ap(m, x0 + w, y0), ap(m, x0 + w, y0 + h), ap(m, x0, y0 + h)];
+      const xs = corners.map((c) => c.x);
+      const ys = corners.map((c) => c.y);
+      if (Math.abs(m[1]) > 1e-4 || Math.abs(m[2]) > 1e-4) fc.warnings.add('Joysticks inside a rotated or skewed layer use the rectangle around it');
+      out.handle = handle.id;
+      out.area = { x: r2(Math.min(...xs) + ox), y: r2(Math.min(...ys) + oy), width: Math.max(1, r2(Math.max(...xs) - Math.min(...xs))), height: Math.max(1, r2(Math.max(...ys) - Math.min(...ys))) };
+      out.x = axis('handle.x', !!(flags & 1));
+      out.y = axis('handle.y', !!(flags & 2));
+    } else {
+      // Set by hand: -1..1 becomes the position from the start to the end of the animation
+      const at = (v: number, invert: boolean) => String(r2((Math.max(-1, Math.min(1, invert ? -v : v)) + 1) / 2));
+      out.x = at(get(j, 'x'), !!(flags & 1));
+      out.y = at(get(j, 'y'), !!(flags & 2));
+    }
+    if (handleSlot > 0 && !handle) fc.warnings.add('A joystick whose handle layer could not be found keeps its set position');
+    (ab.joysticks ??= []).push(out);
+  });
 }
 
 // ---------------------------------------------------------------- entry point
@@ -3347,6 +3643,7 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     });
     const timelines = rab.anims.map((a) => buildTimeline(ac, fc, a, (nodeId) => (root.has(nodeId) ? { x: ox, y: oy } : { x: 0, y: 0 })));
     ab.timelines = timelines;
+    importJoysticks(ac, fc, ab, timelines, ox, oy);
     buildMachines(ac, fc, ab, timelines, names, variables, index);
     artboards.push(ab);
   });
