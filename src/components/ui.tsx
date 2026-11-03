@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { formatColor, parseColor } from 'interactives-player';
 import { HelpLink } from '../help/Help';
+import { paletteTip, usePalette } from '../lib/palette';
+import { Icons } from './icons';
 import { FIELD_TIPS } from './tips';
 
 /** An explicit title, or the standard explanation for a field label. */
@@ -211,6 +214,96 @@ export function CheckField({ label, value, onChange, title }: { label: ReactNode
   );
 }
 
+/**
+ * The toolbox palette as a popover of swatches, grouped and named (the name is the tooltip).
+ * Renders nothing when the palette stylesheet didn't load, so the picker is just the picker.
+ * `onPick` gets a plain colour value; nothing refers back to the stylesheet.
+ */
+export function PaletteButton({ value, onPick }: { value: string; onPick: (v: string) => void }) {
+  const groups = usePalette();
+  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState('');
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  const pop = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!open || !btn.current) return;
+    const r = btn.current.getBoundingClientRect();
+    const h = pop.current?.offsetHeight ?? 320;
+    const w = 244;
+    const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left));
+    const below = r.bottom + 4;
+    setPos({ left, top: below + h > window.innerHeight - 8 ? Math.max(8, r.top - h - 4) : below });
+  }, [open, groups]);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: Event) => {
+      const t = e.target as Node;
+      if (!pop.current?.contains(t) && !btn.current?.contains(t)) setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setOpen(false);
+        btn.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', away, true);
+    document.addEventListener('keydown', key, true);
+    const close = () => setOpen(false);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('resize', close);
+      document.removeEventListener('pointerdown', away, true);
+      document.removeEventListener('keydown', key, true);
+    };
+  }, [open]);
+  if (!groups.length) return null;
+  const current = parseColor(value);
+  const same = (v: string) => {
+    const c = parseColor(v);
+    return !!c && !!current && c[0] === current[0] && c[1] === current[1] && c[2] === current[2];
+  };
+  return (
+    <>
+      <button ref={btn} type="button" className={`palette-btn${open ? ' open' : ''}`} title="Toolbox palette: pick one of the suite's colours" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Icons.chevronDown />
+      </button>
+      {open &&
+        createPortal(
+          <div ref={pop} className="palette-pop" style={{ left: pos?.left ?? -9999, top: pos?.top ?? -9999 }} role="dialog" aria-label="Toolbox palette" onKeyDown={(e) => e.stopPropagation()}>
+            <div className="palette-head">Toolbox palette</div>
+            {groups.map((g) => (
+              <div key={g.id} className="palette-group">
+                <div className="palette-group-title">{g.title}</div>
+                <div className="palette-swatches">
+                  {g.colors.map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      className={`palette-swatch${same(c.value) ? ' on' : ''}`}
+                      style={{ background: c.value }}
+                      title={paletteTip(c)}
+                      aria-label={`${c.label} ${c.value}`}
+                      onMouseEnter={() => setHover(`${c.label}  ${c.value}`)}
+                      onFocus={() => setHover(`${c.label}  ${c.value}`)}
+                      onClick={() => {
+                        onPick(c.value);
+                        setOpen(false);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div className="palette-foot">{hover || 'Hover a swatch for its name'}</div>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
 /** Colour swatch + hex/rgba text + opacity. */
 export function ColorField({ label, value, onChange, onCommit, title }: { label?: ReactNode; value: string; onChange: (v: string) => void; onCommit?: () => void; title?: string }) {
   const rgba = parseColor(value) ?? [0, 0, 0, 1];
@@ -236,6 +329,15 @@ export function ColorField({ label, value, onChange, onCommit, title }: { label?
           onBlur={onCommit}
         />
       </span>
+      <PaletteButton
+        value={value}
+        onPick={(v) => {
+          // Keeps the opacity already set, like the native picker does
+          const c = parseColor(v)!;
+          onChange(formatColor([c[0], c[1], c[2], rgba[3]]));
+          onCommit?.();
+        }}
+      />
       <input
         className="mono color-text"
         value={text}

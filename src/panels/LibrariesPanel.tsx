@@ -3,7 +3,7 @@ import { type ColorStyle, type Project, type SceneNode, type TextStyleDef } from
 import { store, useEditor } from '../store/store';
 import { locate } from '../store/doc';
 import { confirmDialog, promptDialog } from '../components/dialogs';
-import { CheckField, Row, Section, TextField } from '../components/ui';
+import { CheckField, PaletteButton, Row, Section, TextField } from '../components/ui';
 import { getOwnLibrary, listLibraries, publishLibrary, shareLibrary, unpublishLibrary } from '../lib/db';
 import {
   addColorStyle,
@@ -485,7 +485,10 @@ function StylesSection({ project }: { project: Project }) {
           {c.library ? (
             <span className="lib-swatch" style={{ background: c.color }} />
           ) : (
-            <input type="color" className="style-color" value={/^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#000000'} onChange={(e) => store().update((d) => void editStyle(d as Project, c.id, { color: e.target.value }), { coalesce: `style-${c.id}` })} />
+            <>
+              <input type="color" className="style-color" value={/^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#000000'} onChange={(e) => store().update((d) => void editStyle(d as Project, c.id, { color: e.target.value }), { coalesce: `style-${c.id}` })} />
+              <PaletteButton value={c.color} onPick={(v) => store().update((d) => void editStyle(d as Project, c.id, { color: v }))} />
+            </>
           )}
           <span className="style-name" onDoubleClick={() => !c.library && void rename(c.id, c.name)} title={c.library ? `From ${libName(c.library.libraryId)}` : 'Double-click to rename'}>
             {c.name}

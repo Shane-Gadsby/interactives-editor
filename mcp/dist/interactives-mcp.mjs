@@ -3859,9 +3859,12 @@ Boolean operations (union, subtract, intersect, exclude) turn several shapes int
     title: "Fill, stroke and effects",
     group: "Design",
     summary: "Solid, gradient and image fills; several fills and strokes per shape; strokes, dashes and trim; feather and drop shadows; shadow, blur and blend modes.",
-    keywords: "colour color gradient linear radial image fill stroke border dash cap join align inside outside shadow blur blend opacity trim path layers several multiple feather glow drop shadow eye hide reorder",
+    keywords: "colour color palette swatch preset toolbox brand gradient linear radial image fill stroke border dash cap join align inside outside shadow blur blend opacity trim path layers several multiple feather glow drop shadow eye hide reorder",
     body: `## Fill
 Choose the type from the dropdown at the top of a fill: **None** (removes it), **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. Colours accept hex, \`rgb()\`, \`hsl()\` and names; the number box beside a colour is its opacity.
+
+### Toolbox palette
+The small arrow beside every colour box (fills, strokes, gradient stops, text colours, variables, styles) opens the StudyDesk toolbox palette: the brand colours, greys, link and status colours, feature colours and gradient stops used across the suite. Hover a swatch for its name. Picking one sets an ordinary colour on the layer (opacity is kept), so exports never depend on the palette. The palette is read from the toolbox's \`/styles/palette.min.css\` when the editor opens, so changes to it appear after a reload. Where that stylesheet isn't available (a copy running outside the suite) the arrow simply isn't shown.
 
 ## Several fills and strokes
 A shape can have as many fills and strokes as you like. The **+** in the **Fill** or **Stroke** header adds one on top of the others; the list shows the front-most first, like the layers panel. Each entry has:

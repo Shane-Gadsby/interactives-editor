@@ -19,7 +19,7 @@ export const FIELD_TIPS: Record<string, string> = {
   Inner: 'How deep the star points go (inner radius as a fraction of the outer)',
   Closed: 'Join the last point back to the first',
   'Fill rule': 'Non-zero fills overlapping parts; even-odd leaves holes where shapes overlap',
-  Colour: 'Colour: hex, rgb(), hsl() or a CSS name. The number beside it is opacity',
+  Colour: 'Colour: hex, rgb(), hsl() or a CSS name. The number beside it is opacity. The arrow opens the toolbox palette',
   Angle: 'Gradient direction in degrees',
   Fit: 'How the content fits its box: cover crops, contain shows all, fill stretches',
   Image: 'Which image asset to show',
