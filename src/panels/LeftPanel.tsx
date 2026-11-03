@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createNode, isContainer, nodeTypeLabel, type Artboard, type SceneNode } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { Icons, type IconName } from '../components/icons';
@@ -44,6 +44,8 @@ const TYPE_ICON: Record<string, IconName> = {
   instance: 'copy',
 };
 
+const ROW_H = 26;
+
 type DropPos = { id: string; where: 'before' | 'after' | 'inside' } | null;
 
 function Layers() {
@@ -73,13 +75,93 @@ function Layers() {
     }
   };
 
-  const row = (ab: Artboard, n: SceneNode, depth: number): JSX.Element[] => {
+  // Only the rows in view are drawn: big imports have thousands of layers
+  const flat = useMemo(() => {
+    const out: ({ kind: 'artboard'; ab: Artboard } | { kind: 'node'; ab: Artboard; n: SceneNode; depth: number })[] = [];
+    const add = (ab: Artboard, list: SceneNode[], depth: number) => {
+      for (let i = list.length - 1; i >= 0; i--) {
+        const n = list[i];
+        out.push({ kind: 'node', ab, n, depth });
+        if (isContainer(n) && !collapsed.has(n.id)) add(ab, n.children, depth + 1);
+      }
+    };
+    for (const ab of s.project.artboards) {
+      out.push({ kind: 'artboard', ab });
+      if (!collapsed.has(ab.id)) add(ab, ab.children, 1);
+    }
+    return out;
+  }, [s.project.artboards, collapsed]);
+  const scroller = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState({ top: 0, height: 800 });
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const update = () => setView({ top: el.scrollTop, height: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    el.addEventListener('scroll', update, { passive: true });
+    return () => {
+      ro.disconnect();
+      el.removeEventListener('scroll', update);
+    };
+  }, []);
+  // Selecting on the canvas brings the layer into view
+  const firstSel = s.selection[0];
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !firstSel) return;
+    const i = flat.findIndex((r) => r.kind === 'node' && r.n.id === firstSel && r.ab.id === s.activeArtboardId);
+    if (i < 0) return;
+    const y = i * ROW_H;
+    if (y < el.scrollTop || y + ROW_H > el.scrollTop + el.clientHeight) el.scrollTop = Math.max(0, y - el.clientHeight / 3);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstSel, s.activeArtboardId]);
+  const first = Math.max(0, Math.floor(view.top / ROW_H) - 10);
+  const last = Math.min(flat.length, Math.ceil((view.top + view.height) / ROW_H) + 10);
+
+  const artboardRow = (ab: Artboard) => {
+    const active = ab.id === s.activeArtboardId;
+    const open = !collapsed.has(ab.id);
+    return (
+      <div
+        key={`ab-${ab.id}`}
+        className={`artboard-row${active && s.artboardSelected ? ' selected' : ''}${active ? ' active' : ''}`}
+        onClick={() => store().set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? store().get().activeTimelineId : ab.timelines[0]?.id ?? null })}
+        onDragOver={(e) => {
+          if (dragId && active) e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (dragId) store().moveNode(dragId, null, Infinity);
+          setDragId(null);
+          setDrop(null);
+        }}
+      >
+        <button
+          className="twisty"
+          title={open ? 'Collapse' : 'Expand'}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggle(ab.id);
+          }}
+        >
+          {open ? <Icons.chevronDown width={12} /> : <Icons.chevronRight width={12} />}
+        </button>
+        <Icons.artboard width={14} height={14} />
+        <span className="layer-name">{ab.name}</span>
+        {s.project.settings.startArtboardId === ab.id && <span className="badge">start</span>}
+      </div>
+    );
+  };
+
+  const row = (ab: Artboard, n: SceneNode, depth: number): JSX.Element => {
     const selected = s.selection.includes(n.id) && ab.id === s.activeArtboardId;
     const container = isContainer(n);
     const open = container && !collapsed.has(n.id);
     const Icon = Icons[TYPE_ICON[n.type] ?? 'rect'];
     const dropClass = drop?.id === n.id ? ` drop-${drop.where}` : '';
-    const out = [
+    return (
       <div
         key={n.id}
         className={`layer-row${selected ? ' selected' : ''}${n.visible ? '' : ' hidden-layer'}${dropClass}`}
@@ -180,49 +262,15 @@ function Layers() {
             {n.visible ? <Icons.eye width={13} /> : <Icons.eyeOff width={13} />}
           </button>
         </span>
-      </div>,
-    ];
-    if (open) for (const c of [...(n as { children: SceneNode[] }).children].reverse()) out.push(...row(ab, c, depth + 1));
-    return out;
+      </div>
+    );
   };
 
   return (
-    <div className="layers">
-      {s.project.artboards.map((ab) => {
-        const active = ab.id === s.activeArtboardId;
-        const open = !collapsed.has(ab.id);
-        return (
-          <div key={ab.id} className="layer-group">
-            <div
-              className={`artboard-row${active && s.artboardSelected ? ' selected' : ''}${active ? ' active' : ''}`}
-              onClick={() => store().set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? store().get().activeTimelineId : ab.timelines[0]?.id ?? null })}
-              onDragOver={(e) => {
-                if (dragId && active) e.preventDefault();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (dragId) store().moveNode(dragId, null, Infinity);
-                setDragId(null);
-                setDrop(null);
-              }}
-            >
-              <button
-                className="twisty"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggle(ab.id);
-                }}
-              >
-                {open ? <Icons.chevronDown width={12} /> : <Icons.chevronRight width={12} />}
-              </button>
-              <Icons.artboard width={14} height={14} />
-              <span className="layer-name">{ab.name}</span>
-              {s.project.settings.startArtboardId === ab.id && <span className="badge">start</span>}
-            </div>
-            {open && [...ab.children].reverse().flatMap((n) => row(ab, n, 1))}
-          </div>
-        );
-      })}
+    <div className="layers" ref={scroller}>
+      <div style={{ height: first * ROW_H }} />
+      {flat.slice(first, last).map((r) => (r.kind === 'artboard' ? artboardRow(r.ab) : row(r.ab, r.n, r.depth)))}
+      <div style={{ height: (flat.length - last) * ROW_H }} />
       <button className="link-btn add-artboard" onClick={() => store().addArtboard()}>
         + Add artboard
       </button>
