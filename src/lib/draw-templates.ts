@@ -20,7 +20,7 @@ export function applyDrawTemplate(ids: string[], templateId: string): string[] {
       const visit = (list: typeof ab.children): void => {
         for (const n of list) {
           if (hit.has(n.id) && n.type === 'draw') n.code = t.code;
-          if (n.type === 'group' || n.type === 'frame') visit(n.children);
+          if (n.type === 'group' || n.type === 'frame' || n.type === 'bone') visit(n.children);
         }
       };
       visit(ab.children);

@@ -49,6 +49,7 @@ const TYPE_ICON: Record<string, IconName> = {
   draw: 'draw',
   shader: 'shader',
   instance: 'copy',
+  bone: 'bone',
 };
 
 const ROW_H = 26;

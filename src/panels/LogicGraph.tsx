@@ -23,6 +23,7 @@ import {
   EASING_NAMES,
   defaultParams,
   uid,
+  isContainer,
   walk,
   type Artboard,
   type LogicNode,
@@ -433,7 +434,7 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
   const rec = (list: Artboard['children'], depth: number) => {
     for (const n of [...list].reverse()) {
       layers.push({ value: n.id, label: `${'  '.repeat(depth)}${n.name}` });
-      if (n.type === 'group' || n.type === 'frame') rec(n.children, depth + 1);
+      if (isContainer(n)) rec(n.children, depth + 1);
     }
   };
   rec(ab.children, 0);

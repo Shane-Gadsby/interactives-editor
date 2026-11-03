@@ -25,8 +25,10 @@
  *   - Path vertex keys (shape morphing) -> keys on the path's points, sampled (handles are keyed as rotation + distance)
  *   - isHole paths -> wound the other way round so the fill leaves them open; TranslationConstraint -> copy position, TransformConstraint -> copy position + rotation + scale
  * Data binds: a view model property driving a layer property becomes a binding (with converters); view models are shared variables.
- * Bones/meshes, other constraints, scripted
- * and layout-computed geometry are reported in `warnings`.
+ *   - Bones: RootBone/Bone -> bone layers (a child bone sits at its parent's tip; an animated `length` moves it); Skin + Tendon +
+ *     Weight/CubicWeight on a path -> the path's `skin` (bind matrices from the skin's and tendons' transforms), Mesh +
+ *     MeshVertex on an image -> its `mesh`; IKConstraint (parentBoneCount + 1 bones, invertDirection) -> IK, DistanceConstraint -> distance
+ * Other constraints, scripted and layout-computed geometry are reported in `warnings`.
  */
 import {
   createArtboard,
@@ -61,6 +63,13 @@ import {
   sampleKeys,
   nodeMatrix,
   type Matrix,
+  type PathSkin,
+  type SkinBone,
+  type SkinInfluence,
+  type SkinVertex,
+  type ImageNode,
+  type PathNode,
+  type Constraint,
 } from 'interactives-player';
 import { RIVE_CLASSES } from './rive-defs';
 import type { ImportedAsset } from './lottie-import';
@@ -654,6 +663,15 @@ interface ArtboardCtx {
   clones: Map<number, SceneNode[]>;
   /** DrawRules slot -> the container it reorders and the child order for each of its draw targets. */
   drawRules: Map<number, { nodeId: string; base: string[]; orders: Map<number, string[]> }>;
+  /** Skinned paths and meshes, resolved once every bone has become a layer. */
+  skins: PendingSkin[];
+}
+
+/** A skinned path (one or more of its sub-paths) or image mesh, waiting for the bones it names to exist. */
+interface PendingSkin {
+  node: SceneNode;
+  /** Our node's local space -> the Rive object's local space the skin's matrices were made for, per sub-path (a mesh has one). */
+  parts: { skinSlot: number; toRive: M; sub: number; vslots: number[] }[];
 }
 
 interface VmVar {
@@ -870,6 +888,7 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
   } else {
     const subs: SubPath[] = [];
     const vertexRefs: { slot: number; sub: number; index: number; m: M }[] = [];
+    const skinParts: { skinSlot: number; m: M; sub: number; vslots: number[] }[] = [];
     for (const { i, o: p } of paths) {
       let vslots: number[] = [];
       const m = localMatrix(p);
@@ -887,8 +906,10 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
       else if (isA(p.type, 'PointsCommonPath')) {
         vslots = (ac.children.get(i) ?? []).filter((vi) => isA(ac.rab.slots[vi].type, 'Vertex'));
         const verts = vslots.map((vi) => ac.rab.slots[vi]);
-        if (verts.some((v) => (ac.children.get(ac.rab.slots.indexOf(v)) ?? []).length)) fc.warnings.add('Bone-weighted (skinned) paths are imported in their rest pose');
         pts = vertexPoints(verts);
+        const skinSlot = (ac.children.get(i) ?? []).find((ci) => ac.rab.slots[ci].type === 'Skin');
+        if (skinSlot !== undefined && get<boolean>(p, 'isHole')) fc.warnings.add('A skinned hole in a path is imported in its rest pose');
+        else if (skinSlot !== undefined) skinParts.push({ skinSlot, m, sub: subs.length, vslots });
         closed = !!get<boolean>(p, 'isClosed');
       }
       if (pts.length < 2) continue;
@@ -960,6 +981,8 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     });
     placeAtOrigin(node, o, { x: minX, y: minY }, maxX - minX, maxY - minY);
     addTarget(ac, slot, transformTarget(node, { x: minX, y: minY }));
+    // Our local point -> the path's own space: undo the shift to the box, then the path's transform inside the shape
+    if (skinParts.length) ac.skins.push({ node, parts: skinParts.map((s) => ({ skinSlot: s.skinSlot, sub: s.sub, vslots: s.vslots, toRive: multiply(invert(s.m), [1, 0, 0, 1, minX, minY]) as M })) });
     for (const { i } of paths) addTarget(ac, i, { nodeId: node.id, map: {} });
     for (const ref of vertexRefs) addTarget(ac, ref.slot, { nodeId: node.id, map: {}, vertex: { sub: ref.sub, index: ref.index, m: ref.m, minX, minY } });
   }
@@ -1158,6 +1181,25 @@ function convertImage(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
   const node = createNode('image', { name: String(o.props.name ?? 'Image'), assetId, fit: 'fill' });
   placeAtOrigin(node, o, { x: -size.width * ox, y: -size.height * oy }, size.width, size.height);
   addTarget(ac, slot, transformTarget(node, { x: -size.width * ox, y: -size.height * oy }));
+  // A mesh: its vertices sit in the image's own space (origin at the image's origin), so ours move by the same box offset
+  const meshSlot = (ac.children.get(slot) ?? []).find((i) => ac.rab.slots[i].type === 'Mesh');
+  if (meshSlot !== undefined) {
+    const b = { x: -size.width * ox, y: -size.height * oy };
+    const vslots = (ac.children.get(meshSlot) ?? []).filter((i) => ac.rab.slots[i].type === 'MeshVertex');
+    const triangles = pathIds(ac.rab.slots[meshSlot].props.triangleIndexBytes).filter((i) => i < vslots.length);
+    if (vslots.length >= 3 && triangles.length >= 3) {
+      node.mesh = {
+        vertices: vslots.map((vi) => {
+          const v = ac.rab.slots[vi];
+          return { x: r2(get(v, 'x') - b.x), y: r2(get(v, 'y') - b.y), u: Math.round(get(v, 'u') * 10000) / 10000, v: Math.round(get(v, 'v') * 10000) / 10000 };
+        }),
+        triangles: triangles.slice(0, triangles.length - (triangles.length % 3)),
+        skin: null,
+      };
+      const skinSlot = (ac.children.get(meshSlot) ?? []).find((i) => ac.rab.slots[i].type === 'Skin');
+      if (skinSlot !== undefined) ac.skins.push({ node, parts: [{ skinSlot, sub: 0, vslots, toRive: [1, 0, 0, 1, b.x, b.y] }] });
+    }
+  }
   return node;
 }
 
@@ -1312,15 +1354,46 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     g.originY = 0;
     addTarget(ac, slot, transformTarget(g, { x: 0, y: 0 }));
     node = g;
-  } else if (isA(t, 'Bone') || isA(t, 'Skin') || isA(t, 'Weight')) fc.warnings.add('Bones and skinning are not supported');
-  else if (isA(t, 'Constraint')) {
+  } else if (isA(t, 'Bone')) {
+    // A bone's base is its origin, and a child bone sits at its parent's tip (Rive stores no x or y for it)
+    const parentSlot = Number(o.props.parentId ?? 0);
+    const parent = ac.rab.slots[parentSlot];
+    const underBone = !!parent && isA(parent.type, 'Bone');
+    const bone = createNode('bone', { name: String(o.props.name ?? 'Bone') });
+    bone.width = r2(get(o, 'length'));
+    bone.height = 0;
+    bone.originX = 0;
+    bone.originY = 0;
+    bone.rotation = r2(get(o, 'rotation') * DEG);
+    bone.scaleX = r2(get(o, 'scaleX'));
+    bone.scaleY = r2(get(o, 'scaleY'));
+    if (underBone) {
+      bone.x = r2(get(parent, 'length'));
+      bone.y = 0;
+      // The parent's length is what keeps the child at its tip, so a keyed length moves the child as well
+      addTarget(ac, parentSlot, { nodeId: bone.id, map: { length: { prop: 'x', f: num() } } });
+    } else {
+      bone.x = r2(get(o, 'x'));
+      bone.y = r2(get(o, 'y'));
+    }
+    // x and y keys only exist on a root bone; a child bone's position comes from its parent
+    const t = transformTarget(bone, { x: 0, y: 0 });
+    if (underBone) {
+      delete t.map.x;
+      delete t.map.y;
+    }
+    delete t.map.opacity;
+    t.map.length = { prop: 'width', f: num() };
+    addTarget(ac, slot, t);
+    node = bone;
+  } else if (isA(t, 'Constraint')) {
     // Translation and transform constraints are imported by importConstraints; the rest are reported there too
   } else if (t === 'ClippingShape' || t === 'DrawRules' || t === 'DrawTarget') {
     // Handled by the layer they belong to (clipWrap, drawRules)
   }
   if (!node) return null;
   ac.nodeBySlot.set(slot, node);
-  if (node.type === 'group' || node.type === 'frame') {
+  if (node.type === 'group' || node.type === 'frame' || node.type === 'bone') {
     // Rive lists children front-most first; ours go back to front
     for (const ci of [...(ac.children.get(slot) ?? [])].reverse()) {
       if (isA(ac.rab.slots[ci].type, 'Path') || isA(ac.rab.slots[ci].type, 'ShapePaint')) continue;
@@ -1478,7 +1551,7 @@ function artboardCtx(fc: FileCtx, index: number): ArtboardCtx {
     list.push(i);
     children.set(p, list);
   });
-  ac = { rab, children, targets: new Map(), nodeBySlot: new Map(), solos: new Map(), wrapBySlot: new Map(), clones: new Map(), drawRules: new Map() };
+  ac = { rab, children, targets: new Map(), nodeBySlot: new Map(), solos: new Map(), wrapBySlot: new Map(), clones: new Map(), drawRules: new Map(), skins: [] };
   contexts.set(index, ac);
   return ac;
 }
@@ -1495,6 +1568,7 @@ function buildArtboardNodes(fc: FileCtx, index: number): SceneNode[] {
   }
   if ((ac.children.get(0) ?? []).some((ci) => (ac.children.get(ci) ?? []).some((r) => ac.rab.slots[r].type === 'DrawRules'))) fc.warnings.add('Draw rules on layers at the top level of an artboard are not imported');
   importConstraints(ac, fc);
+  resolveSkins(ac, fc);
   importDataBinds(ac, fc, out);
   fc.building.delete(index);
   fc.built.set(index, out);
@@ -1505,9 +1579,13 @@ function buildArtboardNodes(fc: FileCtx, index: number): SceneNode[] {
 function importConstraints(ac: ArtboardCtx, fc: FileCtx): void {
   ac.rab.slots.forEach((c, i) => {
     if (i === 0 || !isA(c.type, 'Constraint')) return;
+    if (c.type === 'IKConstraint' || c.type === 'DistanceConstraint') {
+      rigConstraint(ac, fc, i, c);
+      return;
+    }
     if (c.type !== 'TranslationConstraint' && c.type !== 'TransformConstraint') {
       if (c.type === 'RotationConstraint' || c.type === 'ScaleConstraint') fc.warnings.add('Rotation and scale constraints are not imported');
-      else fc.warnings.add('Constraints (IK, follow, distance, ...) are not supported');
+      else fc.warnings.add(`${c.type.replace(/Constraint$/, '')} constraints are not supported`);
       return;
     }
     const parent = Number(c.props.parentId ?? 0);
@@ -1518,6 +1596,101 @@ function importConstraints(ac: ArtboardCtx, fc: FileCtx): void {
       constrainNode(c, node, target, fc);
     }
   });
+}
+
+/**
+ * IK (on the end bone: `parentBoneCount` parents turn with it) and distance constraints. Our IK counts the end bone too,
+ * so a parent count of 1 is a two-bone limb. Rive's mode 0 is "closer" (no farther than the distance), 1 "further", 2 exact.
+ */
+function rigConstraint(ac: ArtboardCtx, fc: FileCtx, slot: number, c: RObj): void {
+  const node = ac.nodeBySlot.get(Number(c.props.parentId ?? 0));
+  const target = ac.nodeBySlot.get(Number(get(c, 'targetId')));
+  if (!node || !target || node === target) return;
+  const k: Constraint =
+    c.type === 'IKConstraint'
+      ? { id: uid('cn'), type: 'ik', target: target.id, strength: r2(get(c, 'strength')), bones: Math.max(1, Math.round(get(c, 'parentBoneCount')) + 1), ...(get<boolean>(c, 'invertDirection') ? { invertBend: true } : {}) }
+      : { id: uid('cn'), type: 'distance', target: target.id, strength: r2(get(c, 'strength')), distance: r2(get(c, 'distance')), mode: (['within', 'outside', 'exact'] as const)[get(c, 'modeValue')] ?? 'exact' };
+  if (c.type === 'IKConstraint' && node.type !== 'bone') {
+    fc.warnings.add('An IK constraint on something that is not a bone was skipped');
+    return;
+  }
+  node.constraints = [...(node.constraints ?? []), k];
+  const index = node.constraints.length - 1;
+  // Keys on the strength (and on a distance constraint's distance) animate the constraint
+  addTarget(ac, slot, { nodeId: node.id, map: { strength: { prop: `constraints.${index}.strength`, f: num() }, ...(c.type === 'DistanceConstraint' ? { distance: { prop: `constraints.${index}.distance`, f: num() } } : {}) } });
+}
+
+// ---------------------------------------------------------------- skins
+
+const r5 = (n: number) => Math.round(n * 100000) / 100000;
+
+/** A Rive matrix object (Skin or Tendon: xx, xy, yx, yy, tx, ty, as in Rive's Mat2D) as ours. */
+function riveMat(o: RObj): M {
+  return [get(o, 'xx'), get(o, 'xy'), get(o, 'yx'), get(o, 'yy'), get(o, 'tx'), get(o, 'ty')];
+}
+
+/** Four influences packed a byte each: weights 0-255 over 255, and which tendon (0 is none, so tendon i is i + 1). */
+function influences(values: number, indices: number, tendon: number[]): SkinInfluence[] {
+  const out: SkinInfluence[] = [];
+  for (let i = 0; i < 4; i++) {
+    const w = ((values >>> (8 * i)) & 255) / 255;
+    if (!w) continue;
+    const idx = (indices >>> (8 * i)) & 255;
+    out.push({ b: idx === 0 ? -1 : tendon[idx - 1] ?? -1, w: Math.round(w * 1000) / 1000 });
+  }
+  return out;
+}
+
+/**
+ * Fills in `skin` on the paths and meshes that had one. Rive deforms a point as
+ * `sum(weight * boneWorld * inverse(tendon) * skin * point)`, with `tendon` the bone's world at bind time and `skin` the
+ * skinned object's world then; ours keeps `inverse(tendon) * skin * (our local -> its space)` as the bind of each bone.
+ */
+function resolveSkins(ac: ArtboardCtx, fc: FileCtx): void {
+  for (const ps of ac.skins) {
+    const bones: SkinBone[] = [];
+    const seen = new Map<string, number>();
+    const weights: SkinVertex[][] = [];
+    for (const part of ps.parts) {
+      const skin = ac.rab.slots[part.skinSlot];
+      const S = riveMat(skin);
+      // Tendon i of this skin -> an index into the node's bones (the same bone with the same bind is shared)
+      const tendons = (ac.children.get(part.skinSlot) ?? []).map((i) => ac.rab.slots[i]).filter((o) => o.type === 'Tendon');
+      const tendon = tendons.map((t) => {
+        const bone = ac.nodeBySlot.get(Number(get(t, 'boneId')));
+        if (!bone || bone.type !== 'bone') return -1;
+        const bind = multiply(invert(riveMat(t)), multiply(S, part.toRive)).map(r5) as SkinBone['bind'];
+        const key = `${bone.id}|${bind.join(',')}`;
+        let at = seen.get(key);
+        if (at === undefined) {
+          at = bones.length;
+          bones.push({ bone: bone.id, bind });
+          seen.set(key, at);
+        }
+        return at;
+      });
+      while (weights.length <= part.sub) weights.push([]);
+      part.vslots.forEach((vs, pi) => {
+        const w = (ac.children.get(vs) ?? []).map((i) => ac.rab.slots[i]).find((o) => o.type === 'Weight' || o.type === 'CubicWeight');
+        if (!w) return;
+        const v: SkinVertex = { w: influences(get(w, 'values'), get(w, 'indices'), tendon) };
+        if (w.type === 'CubicWeight') {
+          v.in = influences(get(w, 'inValues'), get(w, 'inIndices'), tendon);
+          v.out = influences(get(w, 'outValues'), get(w, 'outIndices'), tendon);
+        }
+        weights[part.sub][pi] = v;
+      });
+    }
+    // Holes (points the file gave no weight) stay as they are
+    for (const sp of weights) for (let i = 0; i < sp.length; i++) sp[i] ??= { w: [] };
+    if (!bones.length) {
+      fc.warnings.add('A skinned shape whose bones are missing is imported in its rest pose');
+      continue;
+    }
+    const skin: PathSkin = { bones, weights };
+    if (ps.node.type === 'path') (ps.node as PathNode).skin = skin;
+    else if (ps.node.type === 'image' && (ps.node as ImageNode).mesh) (ps.node as ImageNode).mesh!.skin = skin;
+  }
 }
 
 function constrainNode(c: RObj, node: SceneNode, target: SceneNode, fc: FileCtx): void {
@@ -1632,7 +1805,6 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
       if (!targets?.length) {
         const ot = ac.rab.slots[slot]?.type ?? 'object';
         if (isA(ot, 'Vertex')) fc.warnings.add('Path vertex animation (shape morphing) is not supported; those paths stay in their rest shape');
-        else if (isA(ot, 'Bone')) fc.warnings.add('Bones and skinning are not supported');
         else if (ot === 'TrimPath') fc.warnings.add('Trim paths on shapes with several strokes, or on artboard backgrounds, are not imported');
         else if (ot === 'DashPath') fc.warnings.add('Dash path effects are not supported');
         else if (slot) fc.warnings.add(`Animated ${ot} properties (${rprop}) have no matching layer and were skipped`);

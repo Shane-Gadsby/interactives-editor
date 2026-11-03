@@ -56,7 +56,8 @@ export type Tool =
   | 'embed'
   | 'video'
   | 'draw'
-  | 'shader';
+  | 'shader'
+  | 'bone';
 
 export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage';
 
@@ -74,6 +75,8 @@ export interface EditorState {
   panY: number;
   editingPathId: string | null;
   editingTextId: string | null;
+  /** Draw bone glyphs on the canvas (they are never drawn in the player). */
+  showBones: boolean;
   /** The selected range (UTF-16 offsets into the layer's text) while editing text on the canvas; style changes apply to it. */
   textSelection: { id: string; start: number; end: number } | null;
   bottomTab: BottomTab | null;
@@ -139,6 +142,7 @@ export class EditorStore {
       panY: 80,
       editingPathId: null,
       editingTextId: null,
+      showBones: true,
       textSelection: null,
       bottomTab: 'timeline',
       bottomHeight: 260,

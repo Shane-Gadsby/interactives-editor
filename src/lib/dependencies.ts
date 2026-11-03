@@ -267,6 +267,7 @@ export function analyzeUsage(project: Project): UsageReport {
         if (n.link?.url) for (const e of templateSlots(n.link.url)) useExpr(e, by, 'link template');
 
         for (const c of n.constraints ?? []) useLayer(c.target, by, `${c.type} constraint target`);
+        for (const b of (n.type === 'path' ? n.skin : n.type === 'image' ? n.mesh?.skin : null)?.bones ?? []) useLayer(b.bone, by, 'skin bone');
 
         if (isContainer(n)) visit(n.children);
       }

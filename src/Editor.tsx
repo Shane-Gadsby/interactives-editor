@@ -170,6 +170,7 @@ const TOOL_KEYS: Record<string, Tool> = {
   w: 'bend',
   t: 'text',
   b: 'button',
+  j: 'bone',
 };
 
 function useShortcuts() {
@@ -225,6 +226,11 @@ function useShortcuts() {
       if (mod && (k === '0' || k === '1')) {
         e.preventDefault();
         zoomTo(k === '0' ? 'fit' : '100');
+        return;
+      }
+      if (e.shiftKey && !mod && k === 'j') {
+        e.preventDefault();
+        s.set({ showBones: !st.showBones });
         return;
       }
       if (e.shiftKey && !mod && k === 'r') {
@@ -567,6 +573,7 @@ function helpTopicForTool(tool: Tool): string {
   if (['button', 'input', 'link', 'embed', 'video'].includes(tool)) return 'web-elements';
   if (tool === 'draw') return 'script-layers';
   if (tool === 'shader') return 'shader-layers';
+  if (tool === 'bone') return 'bones';
   if (tool === 'text') return 'text';
   if (tool === 'artboard') return 'artboards';
   if (tool === 'frame') return 'groups-frames';
@@ -590,6 +597,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'text', icon: 'text', label: 'Text', key: 'T' },
   { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
   { tool: 'shader', icon: 'shader', label: 'Shader layer (GPU effects, backdrops)' },
+  { tool: 'bone', icon: 'bone', label: 'Bone (drag to draw one; start on a bone tip to continue the chain)', key: 'J' },
 ];
 
 const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
@@ -602,6 +610,7 @@ const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] =
 
 function Toolbar() {
   const tool = useEditor((st) => st.tool);
+  const showBones = useEditor((st) => st.showBones);
   const btn = (t: (typeof TOOLS)[number]) => {
     const I = Icons[t.icon];
     return <IconButton key={t.tool} icon={<I />} title={`${t.label}${t.key ? ` (${t.key})` : ''}`} active={tool === t.tool} onClick={() => store().set({ tool: t.tool, editingPathId: null })} />;
@@ -609,6 +618,7 @@ function Toolbar() {
   return (
     <nav className="toolbar">
       {TOOLS.map(btn)}
+      <IconButton icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={showBones ? 'Hide bones on the canvas (Shift+J)' : 'Show bones on the canvas (Shift+J)'} onClick={() => store().set({ showBones: !showBones })} />
       <IconButton
         icon={<Icons.image />}
         title="Image"

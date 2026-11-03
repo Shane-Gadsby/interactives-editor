@@ -14,6 +14,7 @@ import {
   defaultParams,
   applyConstraints,
   nodeRuns,
+  rotationFor,
   type Artboard,
   type Matrix,
   type NodeType,
@@ -43,6 +44,7 @@ import { liveSession } from '../lib/live';
 import { bendPaths, hasShapeKeys, nearestSegment, shapeToPaths, type SegmentHit } from '../lib/path-edit';
 import { confirmDialog } from '../components/dialogs';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
+import { boneEndAt, boneFromDrag, boneGlyphs } from '../lib/rig';
 
 type Pt = { x: number; y: number };
 
@@ -60,7 +62,10 @@ type Drag =
   | { kind: 'pencil'; abId: string; points: Pt[] }
   | { kind: 'bend'; id: string; si: number; i: number; t: number; start: Pt; node0: PathNode; parentM: Matrix }
   | { kind: 'pathPoint'; si: number; pi: number; start: Pt; node0: PathNode; parentM: Matrix }
-  | { kind: 'pathHandle'; si: number; pi: number; which: 'in' | 'out'; node0: PathNode; parentM: Matrix; mirror: boolean };
+  | { kind: 'pathHandle'; si: number; pi: number; which: 'in' | 'out'; node0: PathNode; parentM: Matrix; mirror: boolean }
+  | { kind: 'boneDraw'; abId: string; parentId: string | null; chain: boolean; a: Pt }
+  | { kind: 'boneRotate'; abId: string; id: string }
+  | { kind: 'boneMove'; abId: string; id: string; start: Pt; x0: number; y0: number; inv: Matrix };
 
 const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
   rect: 'rect',
@@ -96,6 +101,7 @@ export function Canvas() {
     editingPathId: st.editingPathId,
     editingTextId: st.editingTextId,
     focusId: st.focusId,
+    showBones: st.showBones,
     bottomTab: st.bottomTab,
     activeTimelineId: st.activeTimelineId,
     playhead: st.playhead,
@@ -124,6 +130,13 @@ export function Canvas() {
     boxRef.current = b;
     setBoxState(b);
   };
+  // A bone being drawn (artboard space), mirrored in a ref for a quick click
+  const [boneDraft, setBoneDraftState] = useState<{ abId: string; a: Pt; b: Pt } | null>(null);
+  const boneDraftRef = useRef(boneDraft);
+  const setBoneDraft = (b: typeof boneDraft) => {
+    boneDraftRef.current = b;
+    setBoneDraftState(b);
+  };
   const [guides, setGuides] = useState<{ abId: string; x: number[]; y: number[] } | null>(null);
   const [pen, setPen] = useState<{ abId: string; points: PathPoint[]; cursor: Pt | null } | null>(null);
   const [selPoint, setSelPoint] = useState<{ si: number; pi: number } | null>(null);
@@ -141,6 +154,9 @@ export function Canvas() {
     const placed = applyConstraints(kids);
     return placed === baseActive.children ? baseActive : { ...baseActive, children: placed };
   }, [baseActive, timeline, s.playhead]);
+
+  // Bone glyphs follow the frame on show: constraints (IK) and the timeline's playhead move them
+  const glyphs = useMemo(() => (active ? boneGlyphs(active.children) : []), [active]);
 
   // ---------------------------------------------------------------- coordinates
 
@@ -377,6 +393,25 @@ export function Canvas() {
         }
         return;
       }
+      if (kind === 'bone' && ab) {
+        const glyph = glyphs.find((g) => g.id === a);
+        const loc = locate(ab, a);
+        if (!glyph || !loc) return;
+        // With the Bone tool, a drag from a tip carries on the chain
+        if (st.tool === 'bone' && b === 'tip') {
+          drag.current = { kind: 'boneDraw', abId: ab.id, parentId: glyph.id, chain: true, a: glyph.tip };
+          setBoneDraft({ abId: ab.id, a: glyph.tip, b: glyph.tip });
+          return;
+        }
+        const sel = e.shiftKey ? (st.selection.includes(a) ? st.selection.filter((x) => x !== a) : [...st.selection, a]) : st.selection.includes(a) && st.selection.length > 1 ? st.selection : [a];
+        store().set({ selection: sel, artboardSelected: false, editingPathId: null });
+        if (loc.node.locked) return;
+        if (b === 'base') {
+          const pm = parentToArtboard(ab, a);
+          drag.current = { kind: 'boneMove', abId: ab.id, id: a, start: local(ab, w), x0: loc.node.x, y0: loc.node.y, inv: invert([pm[0], pm[1], pm[2], pm[3], 0, 0]) };
+        } else drag.current = { kind: 'boneRotate', abId: ab.id, id: a };
+        return;
+      }
       if (kind === 'penstart' && penRef.current) {
         finishPen(true);
         return;
@@ -408,6 +443,20 @@ export function Canvas() {
       if (cab.id !== st.activeArtboardId) store().set({ activeArtboardId: cab.id, selection: [] });
       drag.current = { kind: 'pencil', abId: cab.id, points: [local(cab, w)] };
       setPencil([local(cab, w)]);
+      return;
+    }
+
+    if (tool === 'bone') {
+      const cab = hitAb ?? ab;
+      if (!cab) return;
+      const p = local(cab, w);
+      if (cab.id !== st.activeArtboardId) store().set({ activeArtboardId: cab.id, selection: [], activeTimelineId: null });
+      // Starting on a bone's tip continues that bone's chain; elsewhere a new bone starts (inside the layer you went into, if any)
+      const near = cab.id === active?.id ? boneEndAt(glyphs, p, 10 / zoom, 'tip') : null;
+      const focus = st.focusId && locate(cab, st.focusId) ? st.focusId : null;
+      const start = near ? near.tip : p;
+      drag.current = { kind: 'boneDraw', abId: cab.id, parentId: near ? near.id : focus, chain: !!near, a: start };
+      setBoneDraft({ abId: cab.id, a: start, b: start });
       return;
     }
 
@@ -690,6 +739,40 @@ export function Canvas() {
         store().setPathPoints(d.node0.id, paths, { from: d.node0.paths, coalesce: 'bend' });
         break;
       }
+      case 'boneDraw': {
+        const bab = getArtboard(st.project, d.abId);
+        if (!bab) break;
+        let p = local(bab, w);
+        if (e.shiftKey) {
+          // Angles in steps of 15 degrees
+          const len = Math.hypot(p.x - d.a.x, p.y - d.a.y);
+          const ang = Math.round(Math.atan2(p.y - d.a.y, p.x - d.a.x) / (Math.PI / 12)) * (Math.PI / 12);
+          p = { x: d.a.x + Math.cos(ang) * len, y: d.a.y + Math.sin(ang) * len };
+        }
+        setBoneDraft({ abId: d.abId, a: d.a, b: p });
+        break;
+      }
+      case 'boneRotate': {
+        const bab = getArtboard(st.project, d.abId);
+        const loc = bab && locate(bab, d.id);
+        if (!bab || !loc) break;
+        const base = apply(nodeToArtboard(bab, d.id), 0, 0);
+        const p = local(bab, w);
+        if (Math.hypot(p.x - base.x, p.y - base.y) < 2 / zoom) break;
+        let r = rotationFor(parentToArtboard(bab, d.id), { x: p.x - base.x, y: p.y - base.y }, loc.node.scaleX);
+        if (e.shiftKey) r = Math.round(r / 15) * 15;
+        r = ((r % 360) + 540) % 360 - 180;
+        store().setProps([d.id], { rotation: round(r, 1) }, 'bone-rotate');
+        break;
+      }
+      case 'boneMove': {
+        const bab = getArtboard(st.project, d.abId);
+        if (!bab) break;
+        const p = local(bab, w);
+        const q = apply(d.inv, p.x - d.start.x, p.y - d.start.y);
+        store().setProps([d.id], { x: round(d.x0 + q.x), y: round(d.y0 + q.y) }, 'bone-move');
+        break;
+      }
       case 'pathHandle': {
         if (!ab) break;
         const lp = toNodeLocal(d.node0, d.parentM, local(ab, w));
@@ -761,6 +844,15 @@ export function Canvas() {
       const cab = d.abId ? getArtboard(st.project, d.abId) : undefined;
       if (!cab) return;
       createFromBox(cab, d.tool, b, d.parentId, e.shiftKey);
+      return;
+    }
+    if (d.kind === 'boneDraw') {
+      const draft = boneDraftRef.current;
+      setBoneDraft(null);
+      const bab = getArtboard(st.project, d.abId);
+      // A click without a drag draws nothing
+      if (!draft || !bab || Math.hypot(draft.b.x - draft.a.x, draft.b.y - draft.a.y) * zoom < 6) return;
+      store().addNodes([boneFromDrag(bab, d.parentId, draft.a, draft.b, { chain: d.chain })], { parentId: d.parentId, artboardId: bab.id });
       return;
     }
     if (d.kind === 'marquee') {
@@ -1090,7 +1182,31 @@ export function Canvas() {
       );
     }
 
-    const ids = topmost(active, s.selection.filter((id) => locate(active, id)));
+    // Bones: octahedral glyphs, a joint at each base and a handle on each tip. Click or drag the body to select and turn,
+    // drag the base to move. They show while the Bone tool is in use even when hidden.
+    if (s.showBones || s.tool === 'bone') {
+      for (const g of glyphs) {
+        const a = toS(active, g.base);
+        const t = toS(active, g.tip);
+        const len = Math.hypot(t.x - a.x, t.y - a.y) || 1;
+        const ux = (t.x - a.x) / len;
+        const uy = (t.y - a.y) / len;
+        const w = Math.min(9, Math.max(3, len * 0.16));
+        const kx = a.x + ux * len * 0.18;
+        const ky = a.y + uy * len * 0.18;
+        const sel = s.selection.includes(g.id);
+        overlay.push(
+          <g key={`bone-${g.id}`} className={`bone-glyph${sel ? ' selected' : ''}`}>
+            <polygon data-handle={`bone:${g.id}:body`} className="bone-body" points={`${a.x},${a.y} ${kx - uy * w},${ky + ux * w} ${t.x},${t.y} ${kx + uy * w},${ky - ux * w}`} />
+            <circle data-handle={`bone:${g.id}:base`} className="bone-joint" cx={a.x} cy={a.y} r={3.5} />
+            <circle data-handle={`bone:${g.id}:tip`} className="bone-tip" cx={t.x} cy={t.y} r={3} />
+          </g>,
+        );
+      }
+    }
+
+    // (Bones draw their own glyphs: a bone has no box to resize)
+    const ids = topmost(active, s.selection.filter((id) => locate(active, id))).filter((id) => locate(active, id)?.node.type !== 'bone');
     if (ids.length && !s.editingPathId && !s.editingTextId) {
       let quad: Pt[];
       let size: { w: number; h: number };
@@ -1150,7 +1266,9 @@ export function Canvas() {
       if (loc && loc.node.type === 'path') {
         const m = nodeToArtboard(active, loc.node.id);
         const P = (x: number, y: number) => toS(active, apply(m, x, y));
-        loc.node.paths.forEach((sp, si) =>
+        // A skinned path is drawn deformed, but its points are edited in their rest shape
+        const rest = loc.node.skin && baseActive ? (locate(baseActive, loc.node.id)?.node as PathNode | undefined) : undefined;
+        (rest?.type === 'path' ? rest : loc.node).paths.forEach((sp, si) =>
           sp.points.forEach((pt, pi) => {
             const a = P(pt.x, pt.y);
             const sel = selPoint?.si === si && selPoint.pi === pi;
@@ -1205,6 +1323,25 @@ export function Canvas() {
           </text>,
         );
     }
+  }
+
+  // A bone being drawn
+  if (boneDraft) {
+    const bab = getArtboard(project, boneDraft.abId) ?? null;
+    const a = oscreen(bab, boneDraft.a);
+    const b = oscreen(bab, boneDraft.b);
+    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const ux = (b.x - a.x) / len;
+    const uy = (b.y - a.y) / len;
+    const w = Math.min(9, Math.max(3, len * 0.16));
+    const kx = a.x + ux * len * 0.18;
+    const ky = a.y + uy * len * 0.18;
+    overlay.push(<polygon key="bone-draft" className="bone-body bone-draft" points={`${a.x},${a.y} ${kx - uy * w},${ky + ux * w} ${b.x},${b.y} ${kx + uy * w},${ky - ux * w}`} />);
+    overlay.push(
+      <text key="bone-draft-len" className="size-label" x={(a.x + b.x) / 2} y={Math.max(a.y, b.y) + 18}>
+        {Math.round(Math.hypot(boneDraft.b.x - boneDraft.a.x, boneDraft.b.y - boneDraft.a.y))} px
+      </text>,
+    );
   }
 
   // Snap guides

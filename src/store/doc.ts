@@ -109,7 +109,7 @@ export function hitTest(artboard: Artboard, x: number, y: number, opts: { includ
       if (isContainer(n)) {
         const inner = walk(n.children, m, [...trail, n]);
         if (inner) return inner;
-        if (n.type === 'group') continue; // Groups are hit only through their children.
+        if (n.type === 'group' || n.type === 'bone') continue; // Groups are hit only through their children (a bone has no area: the canvas picks bones by their glyphs).
         if (n.type === 'frame' && n.clip) {
           // A clipped frame still counts as hit on its own box.
         }

@@ -3515,3 +3515,36 @@ code {
   flex-direction: column;
   gap: 4px;
 }
+
+/* Bones: glyphs on the canvas (never drawn in the player) */
+.bone-body {
+  fill: rgba(77, 124, 255, 0.28);
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  cursor: grab;
+}
+.bone-glyph.selected .bone-body {
+  fill: rgba(255, 190, 60, 0.55);
+  stroke: #ffb43c;
+}
+.bone-draft {
+  pointer-events: none;
+  stroke-dasharray: 3 2;
+}
+.bone-joint,
+.bone-tip {
+  fill: #fff;
+  stroke: var(--accent);
+  stroke-width: 1.2;
+}
+.bone-joint {
+  cursor: move;
+}
+.bone-tip {
+  cursor: crosshair;
+}
+.bone-glyph.selected .bone-joint,
+.bone-glyph.selected .bone-tip {
+  stroke: #ffb43c;
+}

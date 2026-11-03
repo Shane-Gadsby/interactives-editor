@@ -279,6 +279,7 @@ export function exportLottie(project: Project, artboard: Artboard, opts: { timel
     } else if (isContainer(n)) layer = { ty: 3 };
     else ctx.warnings.add(`${n.type} layers ("${n.name}") are web elements and are not part of Lottie`);
     if (!layer) return;
+    if ((n.type === 'path' && n.skin) || (n.type === 'image' && n.mesh?.skin)) ctx.warnings.add('Skinned shapes and meshes export in their rest shape: Lottie has no bones, so they only bend in the player');
     if (n.blendMode && n.blendMode !== 'normal') ctx.warnings.add('Blend modes were dropped');
     if (n.shadow || n.blur) ctx.warnings.add('Shadows and blurs were dropped');
     layers.push({ ...layer, ind, nm: n.name || depthName, ks: transform(ctx, n), ip: 0, op, st: 0, ao: 0, sr: 1, ...(parent !== undefined ? { parent } : {}) });

@@ -69,6 +69,8 @@ import { confirmDialog } from '../components/dialogs';
 import { detach as detachFromLibrary } from '../lib/library-actions';
 import { ShaderFilterFields, ShaderSection } from './ShaderInspector';
 import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
+import { BindSelectionSection, BoneSection, SkinSection } from './RigSection';
+import { skinnable } from '../lib/rig';
 
 const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
 const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
@@ -453,22 +455,33 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
           <Num node={n} ids={ids} prop="x" label="X" />
           <Num node={n} ids={ids} prop="y" label="Y" />
         </Row>
-        <Row>
-          <Num node={n} ids={ids} prop="width" label="W" min={0} />
-          <Num node={n} ids={ids} prop="height" label="H" min={0} />
-        </Row>
-        <Row>
-          <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
-          <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
-        </Row>
+        {sameType && n.type === 'bone' ? (
+          <Row>
+            <Num node={n} ids={ids} prop="width" label="Len" title="The bone's length (its width)" min={0} />
+            <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
+          </Row>
+        ) : (
+          <>
+            <Row>
+              <Num node={n} ids={ids} prop="width" label="W" min={0} />
+              <Num node={n} ids={ids} prop="height" label="H" min={0} />
+            </Row>
+            <Row>
+              <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
+              <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
+            </Row>
+          </>
+        )}
         <Row>
           <Num node={n} ids={ids} prop="scaleX" label="Sx" step={0.05} />
           <Num node={n} ids={ids} prop="scaleY" label="Sy" step={0.05} />
         </Row>
-        <Row>
-          <NumberField label="Ox" title="Transform origin X (0-1)" value={n.originX} step={0.05} min={0} max={1} onChange={(v) => set({ originX: v })} />
-          <NumberField label="Oy" title="Transform origin Y (0-1)" value={n.originY} step={0.05} min={0} max={1} onChange={(v) => set({ originY: v })} />
-        </Row>
+        {!(sameType && n.type === 'bone') && (
+          <Row>
+            <NumberField label="Ox" title="Transform origin X (0-1)" value={n.originX} step={0.05} min={0} max={1} onChange={(v) => set({ originX: v })} />
+            <NumberField label="Oy" title="Transform origin Y (0-1)" value={n.originY} step={0.05} min={0} max={1} onChange={(v) => set({ originY: v })} />
+          </Row>
+        )}
         <Row>
           <CheckField label="Visible" value={n.visible} onChange={(v) => set({ visible: v })} />
           <CheckField label="Locked" value={!!n.locked} onChange={(v) => set({ locked: v })} />
@@ -477,6 +490,8 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={BLEND} onChange={(v) => set({ blendMode: v })} />
       </Section>
       {sameType && <TypeSection nodes={nodes} project={project} />}
+      {!single && <BindSelectionSection nodes={nodes} abId={ab.id} />}
+      {single && skinnable(n) && <SkinSection node={n} abId={ab.id} />}
       {single && n.type === 'text' && <TextModifiersSection node={n} />}
       {sameType && 'fill' in n && <FillSection nodes={nodes} project={project} />}
       {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
@@ -1061,6 +1076,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       );
     case 'instance':
       return <InstanceSection node={n} project={project} />;
+    case 'bone':
+      return <BoneSection node={n} abId={store().get().activeArtboardId} />;
     case 'draw':
       return <DrawSection nodes={nodes as DrawNode[]} />;
     case 'shader':
@@ -1656,6 +1673,8 @@ const CONSTRAINT_TYPES: { value: ConstraintType; label: string; tip: string }[] 
   { value: 'copyPosition', label: 'Copy position', tip: 'Take another layer’s position' },
   { value: 'copyRotation', label: 'Copy rotation', tip: 'Take another layer’s rotation' },
   { value: 'copyScale', label: 'Copy scale', tip: 'Take another layer’s scale' },
+  { value: 'ik', label: 'IK (reach a target)', tip: 'Turn this bone and its parents so this bone’s tip reaches the target layer' },
+  { value: 'distance', label: 'Distance', tip: 'Keep this layer a set distance from the target layer' },
 ];
 
 /** Follow path / copy transform constraints, applied by the player after timelines and bindings. */
@@ -1667,7 +1686,12 @@ function ConstraintsSection({ node }: { node: SceneNode }) {
   if (ab) walk(ab.children, (x) => x.id !== node.id && targets.push({ value: x.id, label: x.name }));
   const update = (i: number, patch: Partial<Constraint>) => set({ constraints: list.map((c, j) => (j === i ? { ...c, ...patch } : c)) }, `constraint-${node.id}-${i}`);
   const add = (type: ConstraintType) =>
-    set({ constraints: [...list, { id: uid('k'), type, target: targets[0]?.value ?? '', strength: 1, ...(type === 'followPath' ? { distance: 0, orient: false } : {}) }] });
+    set({
+      constraints: [
+        ...list,
+        { id: uid('k'), type, target: targets[0]?.value ?? '', strength: 1, ...(type === 'followPath' ? { distance: 0, orient: false } : type === 'ik' ? { bones: 2 } : type === 'distance' ? { distance: 100, mode: 'exact' as const } : {}) },
+      ],
+    });
   return (
     <Section
       help="constraints"
@@ -1679,14 +1703,37 @@ function ConstraintsSection({ node }: { node: SceneNode }) {
       {list.map((c, i) => (
         <div key={c.id} className="constraint">
           <Row>
-            <SelectField<ConstraintType> label="Type" title={CONSTRAINT_TYPES.find((t) => t.value === c.type)?.tip} value={c.type} options={CONSTRAINT_TYPES} onChange={(v) => update(i, { type: v })} />
+            <SelectField<ConstraintType> label="Type" title={CONSTRAINT_TYPES.find((t) => t.value === c.type)?.tip} value={c.type} options={CONSTRAINT_TYPES} onChange={(v) => update(i, { type: v, ...(v === 'ik' ? { bones: c.bones ?? 2 } : v === 'distance' ? { distance: c.distance && c.distance > 1 ? c.distance : 100 } : {}) })} />
             <IconButton icon={<Icons.trash />} title="Remove constraint" onClick={() => set({ constraints: list.filter((_, j) => j !== i) })} />
           </Row>
-          <SelectField label="Target" title={c.type === 'followPath' ? 'The shape or path to follow' : 'The layer to copy from'} value={c.target} options={[{ value: '', label: 'Choose a layer…' }, ...targets]} onChange={(v) => update(i, { target: v })} />
+          <SelectField label="Target" title={c.type === 'followPath' ? 'The shape or path to follow' : c.type === 'ik' ? 'The layer the bone tip reaches for' : c.type === 'distance' ? 'The layer to keep the distance from' : 'The layer to copy from'} value={c.target} options={[{ value: '', label: 'Choose a layer…' }, ...targets]} onChange={(v) => update(i, { target: v })} />
           {c.type === 'followPath' && (
             <>
               <Num node={node} ids={[node.id]} prop={`constraints.${i}.distance`} label="Distance" title="How far along the path, 0 (start) to 1 (end). Animate it to move along the path" step={0.01} min={0} max={1} />
               <CheckField label="Orient along path" title="Turn the layer to face along the path" value={!!c.orient} onChange={(v) => update(i, { orient: v })} />
+            </>
+          )}
+          {c.type === 'ik' && (
+            <>
+              {node.type !== 'bone' && <p className="hint">IK works on bones: put this constraint on the bone at the end of the chain.</p>}
+              <NumberField label="Chain bones" title="How many bones to turn, counting this one and its parents (1 points one bone at the target; 2 or 3 are a limb)" value={c.bones ?? 2} step={1} min={1} max={8} onChange={(v) => update(i, { bones: Math.max(1, Math.round(v)) })} />
+              <CheckField label="Bend the other way" title="Put the elbow or knee on the other side" value={!!c.invertBend} onChange={(v) => update(i, { invertBend: v })} />
+            </>
+          )}
+          {c.type === 'distance' && (
+            <>
+              <Num node={node} ids={[node.id]} prop={`constraints.${i}.distance`} label="Distance" title="How far from the target, px. Animate it to pull in or push out" step={1} min={0} suffix="px" fallback={100} />
+              <SelectField<'within' | 'outside' | 'exact'>
+                label="Mode"
+                title="Exactly at the distance, no farther than it, or no nearer"
+                value={c.mode ?? 'exact'}
+                options={[
+                  { value: 'exact', label: 'Exactly' },
+                  { value: 'within', label: 'No farther than' },
+                  { value: 'outside', label: 'No nearer than' },
+                ]}
+                onChange={(v) => update(i, { mode: v })}
+              />
             </>
           )}
           {(c.type === 'copyPosition' || c.type === 'followPath') && (
