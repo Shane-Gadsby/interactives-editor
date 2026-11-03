@@ -1,4 +1,4 @@
-import { createProject, type Artboard } from 'interactives-player';
+import { createProject, type Artboard, type FontRef, type Variable } from 'interactives-player';
 import { store } from '../store/store';
 import { importLottie, isLottie, readLottieFile, type ImportedAsset } from './lottie-import';
 import { assetBytes, createProjectRecord, putAsset, saveProject } from './db';
@@ -8,7 +8,11 @@ import { exportLottie, toDotLottie } from './lottie-export';
 
 export interface AnimationImport {
   artboard: Artboard;
+  /** Every artboard (Rive files hold several); `artboard` is the one to start on. */
+  artboards?: Artboard[];
   assets: ImportedAsset[];
+  variables?: Variable[];
+  fonts?: FontRef[];
   warnings: string[];
   source: string;
 }
@@ -42,27 +46,54 @@ export async function addImportedArtboard(imp: AnimationImport): Promise<void> {
   const p = st.get().project;
   await uploadAssets(p.id, imp.assets);
   const right = p.artboards.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0);
-  const ab = { ...imp.artboard, canvasX: right + 100, canvasY: 0 };
+  const list = placeArtboards(imp.artboards ?? [imp.artboard], right + 100, 0);
+  const start = list.find((a) => a.id === imp.artboard.id) ?? list[0];
   st.update((d) => {
     d.assets.push(...imp.assets.map((a) => ({ id: a.id, name: a.name, mime: a.mime, size: a.bytes.byteLength })));
-    d.artboards.push(ab);
+    d.artboards.push(...list);
+    mergeVariables(d.variables as Variable[], imp.variables ?? [], list);
+    for (const f of imp.fonts ?? []) if (!d.fonts.some((x) => x.family === f.family)) d.fonts.push(f);
   });
-  st.set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: ab.timelines[0]?.id ?? null, bottomTab: 'timeline' });
-  showReport(`Imported ${imp.source}: ${ab.name}`, imp.warnings);
+  st.set({ activeArtboardId: start.id, artboardSelected: true, selection: [], activeTimelineId: start.timelines[0]?.id ?? null, bottomTab: 'timeline' });
+  showReport(`Imported ${imp.source}: ${list.length > 1 ? `${list.length} artboards` : start.name}`, imp.warnings);
 }
 
 /** Create a whole new project from an animation file (projects page). */
 export async function projectFromAnimation(file: File): Promise<string> {
   const imp = await readAnimationFile(file);
   const p = createProject(imp.artboard.name);
-  p.artboards = [{ ...imp.artboard, canvasX: 0, canvasY: 0 }];
+  p.artboards = placeArtboards(imp.artboards ?? [imp.artboard], 0, 0);
   p.settings.startArtboardId = imp.artboard.id;
+  p.variables = imp.variables ?? [];
+  p.fonts = imp.fonts ?? [];
   await createProjectRecord(p);
   await uploadAssets(p.id, imp.assets);
   p.assets = imp.assets.map((a) => ({ id: a.id, name: a.name, mime: a.mime, size: a.bytes.byteLength }));
   await saveProject(p);
   if (imp.warnings.length) sessionStorage.setItem(`ix-import-report:${p.id}`, JSON.stringify({ title: `Imported ${imp.source}: ${p.name}`, lines: imp.warnings }));
   return p.id;
+}
+
+/** Keep the file's own canvas arrangement, shifted to start at (x, y). */
+function placeArtboards(list: Artboard[], x: number, y: number): Artboard[] {
+  const minX = Math.min(...list.map((a) => a.canvasX));
+  const minY = Math.min(...list.map((a) => a.canvasY));
+  return list.map((a) => ({ ...a, canvasX: a.canvasX - minX + x, canvasY: a.canvasY - minY + y }));
+}
+
+/** Add imported variables, renaming any that clash with existing ones (and the expressions that use them). */
+function mergeVariables(into: Variable[], add: Variable[], artboards: Artboard[]): void {
+  const taken = new Set(into.map((v) => v.name));
+  for (const v of add) {
+    let name = v.name;
+    for (let i = 2; taken.has(name); i++) name = `${v.name}_${i}`;
+    if (name !== v.name) {
+      const re = new RegExp(`\\b${v.name}\\b`, 'g');
+      for (const ab of artboards) for (const n of ab.logic.nodes) for (const [k, val] of Object.entries(n.params)) if (typeof val === 'string') n.params[k] = val.replace(re, name);
+    }
+    taken.add(name);
+    into.push({ ...v, name });
+  }
 }
 
 export function showReport(title: string, lines: string[]): void {

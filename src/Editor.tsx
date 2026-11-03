@@ -34,7 +34,14 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         const s = new EditorStore(p);
         setCurrentStore(s);
         // Handy from the devtools console (and for driving the editor in automated checks).
-        (window as unknown as { interactivesEditor: unknown }).interactivesEditor = { store: s };
+        (window as unknown as { interactivesEditor: unknown }).interactivesEditor = {
+          store: s,
+          // Import a Lottie/Rive file (a File or Blob with a name) as artboards, same as the Layers panel button
+          importAnimation: async (file: File) => {
+            const { addImportedArtboard, readAnimationFile } = await import('./lib/importers');
+            await addImportedArtboard(await readAnimationFile(file));
+          },
+        };
         const pending = sessionStorage.getItem(`ix-import-report:${p.id}`);
         if (pending) {
           sessionStorage.removeItem(`ix-import-report:${p.id}`);
