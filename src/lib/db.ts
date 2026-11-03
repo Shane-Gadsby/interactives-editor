@@ -61,6 +61,12 @@ const json = (body: unknown): RequestInit => ({ method: 'PUT', headers: { 'Conte
 
 /** Last revision seen per project, sent back on save for conflict detection. */
 const revs = new Map<string, number>();
+/** The live room's op number when the project was loaded (null: no room was open). */
+const liveSeqs = new Map<string, number | null>();
+
+export function liveSeqOf(id: string): number {
+  return liveSeqs.get(id) ?? 0;
+}
 
 export function session(): Promise<SessionInfo> {
   return call<SessionInfo>('session');
@@ -72,8 +78,9 @@ export async function listProjects(all = false): Promise<ProjectMeta[]> {
 
 export async function loadProjectRecord(id: string): Promise<Project | null> {
   try {
-    const r = await call<{ project: Project; rev: number }>(`projects/${encodeURIComponent(id)}`);
+    const r = await call<{ project: Project; rev: number; live?: number | null }>(`projects/${encodeURIComponent(id)}`);
     revs.set(id, r.rev);
+    liveSeqs.set(id, r.live ?? null);
     return normalizeProject(r.project);
   } catch (err) {
     if (err instanceof Error && /No such project/.test(err.message)) return null;

@@ -18,6 +18,8 @@ import {
   type Timeline,
 } from 'interactives-player';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
+import { apply as applyOps, type Op } from '../../shared/ops.mjs';
+import type { Peer } from '../lib/live';
 import { getArtboard, locate, parentToArtboard, selectionBounds, topmost, uniqueName, nodeNames } from './doc';
 
 export type Tool =
@@ -68,6 +70,10 @@ export interface EditorState {
   toast: { text: string; kind: 'info' | 'error' } | null;
   /** A list worth reading (import/export notes), shown in a dialog. */
   report: { title: string; lines: string[] } | null;
+  /** Live editing connection, when there is one. */
+  live: { status: 'live' | 'reconnecting' | 'deleted'; color?: string } | null;
+  /** Other people in the project right now. */
+  peers: Record<string, Peer>;
 }
 
 interface HistoryEntry {
@@ -88,6 +94,8 @@ export class EditorStore {
   private lastCoalesce: { key: string; time: number } | null = null;
   /** Bumped on each document change, for autosave. */
   revision = 0;
+  /** Live editing hook: called with the document before and after every local change. */
+  onLocalChange: ((before: Project, after: Project) => void) | null = null;
 
   constructor(project: Project) {
     // Lay out auto-layout frames once on open, so the first edit (and its undo) starts from settled positions.
@@ -123,6 +131,8 @@ export class EditorStore {
       saveError: null,
       toast: null,
       report: null,
+      live: null,
+      peers: {},
     };
   }
 
@@ -170,6 +180,7 @@ export class EditorStore {
     });
     this.state = { ...this.state, project: updated, saveState: 'dirty' };
     this.sanitize();
+    this.onLocalChange?.(before, updated);
     this.emit();
   }
 
@@ -181,7 +192,36 @@ export class EditorStore {
     });
     if (next === this.state.project) return;
     this.revision++;
+    const before = this.state.project;
     this.state = { ...this.state, project: next, saveState: 'dirty' };
+    this.onLocalChange?.(before, next);
+    this.emit();
+  }
+
+  /**
+   * Someone else's ops. Applied to the document and to every undo/redo step, so undo only takes back your
+   * own changes. Not a local change: nothing is sent back.
+   */
+  applyRemote(ops: Op[]): void {
+    const patch = (p: Project) =>
+      produce(p, (d) => {
+        applyOps(d, ops);
+        for (const ab of d.artboards) relayoutTree(ab.children as SceneNode[]);
+      });
+    this.past = this.past.map((h) => ({ ...h, project: patch(h.project) }));
+    this.future = this.future.map((h) => ({ ...h, project: patch(h.project) }));
+    this.state = { ...this.state, project: patch(this.state.project) };
+    this.sanitize();
+    this.emit();
+  }
+
+  /** Swap in a whole new copy of the document (it was replaced elsewhere); history starts over. */
+  replaceProject(p: Project): void {
+    this.past = [];
+    this.future = [];
+    this.lastCoalesce = null;
+    this.state = { ...this.state, project: p, saveState: 'saved' };
+    this.sanitize();
     this.emit();
   }
 
@@ -214,6 +254,8 @@ export class EditorStore {
   private restore(h: HistoryEntry): void {
     this.lastCoalesce = null;
     this.revision++;
+    const before = this.state.project;
+    queueMicrotask(() => this.onLocalChange?.(before, h.project));
     this.state = { ...this.state, project: h.project, selection: h.selection, activeArtboardId: h.activeArtboardId, saveState: 'dirty' };
     this.sanitize();
     this.emit();

@@ -49,10 +49,20 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | `POST /api/projects/:id/duplicate` | copy a project and its assets under `{newId}` |
 | `GET /api/projects/:id/assets` | asset list |
 | `PUT/GET/DELETE /api/projects/:id/assets/:assetId` | raw asset bytes |
+| `GET /api/projects/:id/live?clientId&since` | live editing stream (Server-Sent Events: `hello`, `ops`, `presence`, `reset`, `deleted`) |
+| `POST /api/projects/:id/ops` | a batch of document ops (`shared/ops.mjs`); the server orders, applies and broadcasts them |
+| `POST /api/projects/:id/presence` | cursor, artboard and selection |
 
 Data lives in two places:
 - **MongoDB:** database `lti-interactives`, collection `projects`. Each document is `{_id, name, owner, created, updated, rev, meta, doc}`, where `doc` is the project JSON stored as a string.
 - **Asset files:** stored under `storage/<projectId>/<assetId>`, each with a `.json` sidecar. `INTERACTIVES_STORAGE` moves that folder; on test and prod it is symlinked to the larger storage pool. `storage/` is gitignored.
+
+**Live editing.** Opening a project joins a room held in memory by the server, which holds the document, an op log and the connected clients. Edits are diffed into id-addressed ops (`shared/ops.mjs`, the same file the server uses): set a property, insert after an id, delete an id. The last write wins per property, in the server's order.
+- The server saves the room to MongoDB a second after the last op, when the room empties, and on SIGINT/SIGTERM.
+- Clients reconnect with `since=<seq>`, and missed ops are replayed.
+- Undo only reverts your own changes, because remote ops are also applied to the undo history.
+- A plain PUT (a non-live client or an import) replaces the room and tells everyone to reload.
+- Rooms live in one process, so run a single instance per box.
 
 The projects list wants the index `owner.username_1_updated_-1` from `suite-libs/indexes.js`. Everything else is looked up by `_id`.
 
@@ -77,7 +87,11 @@ Access works like this:
 | `canvas/` | viewport (pan/zoom), artboards drawn by the player's `Renderer` in edit mode, overlay handles, tools, pen and path editing, snapping, in-place text |
 | `panels/` | layers + assets, inspector, timeline, interaction graph (React Flow over the player's node catalog), scripts (CodeMirror), variables |
 | `lib/db.ts` | API client, `.ixp` import/export |
-| `lib/export.ts` | single-file HTML (embeds the player IIFE build), `.ixp`, JSON |
+| `lib/export.ts` | single-file HTML (embeds the player IIFE build, plus the script sandbox when used), `.ixp`, JSON |
+| `lib/live.ts`, `shared/ops.mjs` | live editing client and the shared op diff/apply |
+| `lib/lottie-import.ts`, `lib/lottie-export.ts` | Lottie / dotLottie in and out |
+| `lib/rive-import.ts`, `lib/rive-defs.ts` | `.riv` import; defs generated from rive-runtime headers by `research/rive/gen_defs.py` |
+| `lib/boolean.ts` | union/subtract/intersect/exclude (polygon-clipping) |
 
 Preview runs the single-file export in a sandboxed iframe, so it behaves exactly like the downloaded file.
 

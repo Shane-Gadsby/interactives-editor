@@ -61,6 +61,70 @@ let port = Number(process.env.PORT) || 3048,
 	db,
 	projects
 
+//Live editing. One room per open project: the document in memory, the op log, and everyone connected over SSE.
+//The shared op code is an ES module (the browser uses the same file), so it comes in through import()
+let ops = null
+const rooms = new Map(),
+	LOG_KEEP = 2000,
+	PALETTE = ['#e5484d', '#30a46c', '#3e63dd', '#f76b15', '#8e4ec6', '#12a594', '#d6409f', '#ad7f58'],
+
+	sseSend = (res, event, data, id) => {
+		res.write(`${id !== undefined ? `id: ${id}\n` : ''}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+	},
+
+	broadcast = (room, event, data, id) => {
+		for (let c of room.clients) sseSend(c.res, event, data, id)
+	},
+
+	presenceOf = (room) => [...room.clients].map((c) => ({clientId: c.id, name: c.name, color: c.color, ...c.presence})),
+
+	//Writes the room's document back to mongo, bumping rev so plain (non-live) saves still see conflicts
+	persist = async (room) => {
+		if (!room.dirty) return
+		room.dirty = false
+		clearTimeout(room.saveTimer)
+		room.rev++
+		let p = room.doc, first = p.artboards?.[0]
+		await projects.updateOne({_id: room.id}, {$set: {
+			name: String(p.name || 'Untitled project').slice(0, 200),
+			updated: new Date(),
+			doc: JSON.stringify(p),
+			rev: room.rev,
+			meta: {
+				artboards: p.artboards?.length || 0,
+				preview: first ? {width: first.width, height: first.height, background: first.background?.type === 'solid' ? first.background.color : '#ffffff'} : null
+			}
+		}}).catch((err) => {
+			room.dirty = true
+			console.trace(`${appName}: live save of ${room.id} failed`, err)
+		})
+	},
+
+	openRoom = async (id) => {
+		let room = rooms.get(id)
+		if (room) {
+			clearTimeout(room.closeTimer)
+			return room
+		}
+		let doc = await projects.findOne({_id: id})
+		if (!doc) return null
+		//Someone may have opened it while we waited on mongo
+		if (rooms.has(id)) return rooms.get(id)
+		room = {id, doc: JSON.parse(doc.doc), owner: doc.owner || null, rev: doc.rev || 0, seq: 0, log: [], clients: new Set(), dirty: false, saveTimer: null, closeTimer: null, nextColor: 0}
+		rooms.set(id, room)
+		return room
+	},
+
+	maybeCloseRoom = (room) => {
+		if (room.clients.size) return
+		clearTimeout(room.closeTimer)
+		room.closeTimer = setTimeout(async () => {
+			if (room.clients.size) return
+			await persist(room)
+			rooms.delete(room.id)
+		}, 30 * 1000)
+	}
+
 const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 
 	//Ids come from the editor (uid() in the player's format.ts), nothing else should ever get near a query
@@ -163,7 +227,9 @@ router.get('/api/projects/:id', async (req, res) => {
 		return
 	}
 
-	res.json({project: JSON.parse(doc.doc), rev: doc.rev, owner: doc.owner || null})
+	//A live room has newer content than mongo until its next save
+	let room = rooms.get(req.params.id)
+	res.json({project: room ? room.doc : JSON.parse(doc.doc), rev: room ? room.rev : doc.rev, owner: doc.owner || null, live: room ? room.seq : null})
 })
 
 //Save. The editor sends the rev it loaded, and a mismatch means someone else saved in between,
@@ -218,6 +284,17 @@ router.put('/api/projects/:id', express.json({limit: '25mb'}), async (req, res) 
 		return res.status(409).json({error: 'This project was saved somewhere else at the same moment'})
 	}
 
+	//Somebody saved the whole document while a live room is open (a non-live client, an import): the room takes it
+	//and everyone connected reloads
+	let room = rooms.get(id)
+	if (room) {
+		room.doc = project
+		room.rev = next
+		room.dirty = false
+		room.log = []
+		broadcast(room, 'reset', {rev: next})
+	}
+
 	res.json({ok: true, rev: next})
 })
 
@@ -240,6 +317,14 @@ router.delete('/api/projects/:id', async (req, res) => {
 
 	await removeAssets(id)
 	await projects.deleteOne({_id: id})
+
+	let room = rooms.get(id)
+	if (room) {
+		broadcast(room, 'deleted', {})
+		for (let c of room.clients) c.res.end()
+		rooms.delete(id)
+	}
+
 	res.json({ok: true})
 })
 
@@ -376,6 +461,98 @@ router.delete('/api/projects/:id/assets/:assetId', async (req, res) => {
 	res.json({ok: true})
 })
 
+//Live editing stream. Server-Sent Events rather than a websocket, so it goes through haproxy like any other
+//request. ?since=<seq> replays what a reconnecting client missed, or tells it to reload when that's gone
+router.get('/api/projects/:id/live', async (req, res) => {
+	let doc = await projectFor(req, res)
+	if (!doc) {
+		return
+	}
+
+	let room = await openRoom(req.params.id)
+	if (!room) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	let clientId = String(req.query.clientId || '').slice(0, 64) || `c${Date.now().toString(36)}`,
+		me = whoIs(req),
+		client = {id: clientId, res, name: me?.name || me?.username || 'Guest', color: PALETTE[room.nextColor++ % PALETTE.length], presence: {}},
+		since = Number(req.query.since)
+
+	res.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no'})
+	res.write(':ok\n\n')
+
+	room.clients.add(client)
+	clearTimeout(room.closeTimer)
+
+	if (Number.isFinite(since) && since < room.seq) {
+		let missed = room.log.filter((e) => e.seq > since)
+		if (!missed.length || missed[0].seq !== since + 1) sseSend(res, 'reset', {rev: room.rev})
+		else for (let e of missed) sseSend(res, 'ops', e, e.seq)
+	}
+
+	sseSend(res, 'hello', {seq: room.seq, rev: room.rev, clientId, color: client.color, peers: presenceOf(room)})
+	broadcast(room, 'presence', {clientId, name: client.name, color: client.color, joined: true})
+
+	//Heartbeat under haproxy's 25s server timeout, or the stream gets cut every half minute
+	let beat = setInterval(() => res.write(':\n\n'), 15 * 1000)
+
+	req.on('close', () => {
+		clearInterval(beat)
+		room.clients.delete(client)
+		broadcast(room, 'presence', {clientId, left: true})
+		maybeCloseRoom(room)
+	})
+})
+
+//A batch of ops from one client. The server's order is the order: apply, number, broadcast (the sender
+//gets its own back too, which is its ack)
+router.post('/api/projects/:id/ops', express.json({limit: '25mb'}), async (req, res) => {
+	let doc = await projectFor(req, res)
+	if (!doc) {
+		return
+	}
+
+	let room = await openRoom(req.params.id),
+		batch = Array.isArray(req.body.ops) ? req.body.ops : null
+
+	if (!room || !batch) {
+		return res.status(400).json({error: 'Bad ops'})
+	}
+
+	ops.apply(room.doc, batch)
+	let entry = {seq: ++room.seq, clientId: String(req.body.clientId || ''), ops: batch}
+	room.log.push(entry)
+	if (room.log.length > LOG_KEEP) room.log.splice(0, room.log.length - LOG_KEEP)
+	broadcast(room, 'ops', entry, entry.seq)
+
+	room.dirty = true
+	clearTimeout(room.saveTimer)
+	room.saveTimer = setTimeout(() => persist(room), 1000)
+	maybeCloseRoom(room)
+
+	res.json({ok: true, seq: entry.seq})
+})
+
+//Cursor, artboard and selection, throttled by the client
+router.post('/api/projects/:id/presence', express.json(), async (req, res) => {
+	let room = rooms.get(req.params.id),
+		client = room && [...room.clients].find((c) => c.id === req.body.clientId)
+
+	if (!client) {
+		return res.json({ok: false})
+	}
+
+	let pick = req.body.presence || {}
+	client.presence = {
+		cursor: pick.cursor && Number.isFinite(pick.cursor.x) && Number.isFinite(pick.cursor.y) ? {x: pick.cursor.x, y: pick.cursor.y} : null,
+		artboardId: typeof pick.artboardId === 'string' ? pick.artboardId.slice(0, 64) : null,
+		selection: Array.isArray(pick.selection) ? pick.selection.slice(0, 200).map(String) : []
+	}
+	broadcast(room, 'presence', {clientId: client.id, name: client.name, color: client.color, ...client.presence})
+	res.json({ok: true})
+})
+
 router.use('/api', (req, res) => {
 	res.status(404).json({error: 'No such api route'})
 })
@@ -403,6 +580,14 @@ router.use(express.static(`${__dirname}/dist`, cacheHeaders.staticOptions))
 //The editor routes in the browser (#/project/<id>), so anything else really is a 404
 app.use(`/${appName}`, router)
 
+//pm2 restarts send SIGINT/SIGTERM: get open rooms into mongo first
+for (let sig of ['SIGINT', 'SIGTERM']) {
+	process.on(sig, async () => {
+		await Promise.all([...rooms.values()].map(persist))
+		process.exit(0)
+	})
+}
+
 //Mongo indexes live in suite-libs/indexes.js. The list query wants owner.username + updated, see the README
 client.connect()
 	.then(() => {
@@ -412,6 +597,11 @@ client.connect()
 		fs.mkdirSync(storageDir, {recursive: true})
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
+
+		return import('./shared/ops.mjs')
+	})
+	.then((mod) => {
+		ops = mod
 		cacheHeaders.watchEpoch()
 
 		app.listen(port, (err) => {

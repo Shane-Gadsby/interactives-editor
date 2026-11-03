@@ -21,6 +21,7 @@ import { dataCache } from '../lib/data';
 import { ArtboardView } from './ArtboardView';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
 import { insertFiles } from '../lib/insert';
+import { liveSession } from '../lib/live';
 
 type Pt = { x: number; y: number };
 
@@ -55,6 +56,7 @@ const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
 const SNAP_PX = 6;
 
 export function Canvas() {
+  const peers = useEditor((st) => st.peers);
   const s = useEditor((st) => ({
     project: st.project,
     activeArtboardId: st.activeArtboardId,
@@ -384,6 +386,7 @@ export function Canvas() {
     const st = store().get();
     const d = drag.current;
     const w = toWorld(e.clientX, e.clientY);
+    liveSession()?.presence({ cursor: w, artboardId: st.activeArtboardId });
     if (!d) {
       // Hover feedback
       if (st.tool === 'select' && !spaceDown.current) {
@@ -996,6 +999,29 @@ export function Canvas() {
           overlay.push(<circle key={`ph-${i}`} className="path-handle" cx={o.x} cy={o.y} r={3} />);
         }
       });
+    }
+  }
+
+  // Other people: their selections on this artboard, and their cursors anywhere on the canvas
+  for (const peer of Object.values(peers)) {
+    const pab = peer.artboardId ? getArtboard(project, peer.artboardId) : undefined;
+    if (pab && peer.selection?.length) {
+      for (const id of peer.selection) {
+        if (!locate(pab, id)) continue;
+        const pts = nodeCorners(pab, id).map((p) => screen(pab, p));
+        overlay.push(<polygon key={`peer-${peer.clientId}-${id}`} className="peer-outline" stroke={peer.color} points={pts.map((p) => `${p.x},${p.y}`).join(' ')} />);
+      }
+    }
+    if (peer.cursor) {
+      const c = screen(null, peer.cursor);
+      overlay.push(
+        <g key={`cursor-${peer.clientId}`} className="peer-cursor" transform={`translate(${c.x} ${c.y})`}>
+          <path d="M0 0L0 16L4.5 12L7.5 18.5L10 17.5L7 11L13 11Z" fill={peer.color} stroke="#fff" strokeWidth={1} />
+          <text x={14} y={24} fill="#fff" style={{ paintOrder: 'stroke', stroke: peer.color, strokeWidth: 8, strokeLinejoin: 'round' }}>
+            {peer.name}
+          </text>
+        </g>,
+      );
     }
   }
 

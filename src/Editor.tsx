@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, type Project } from 'interactives-player';
 import { EditorStore, setCurrentStore, store, useEditor, type BottomTab, type Tool } from './store/store';
-import { ConflictError, loadProjectRecord, saveProject } from './lib/db';
+import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
+import { LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
 import { downloadJson, downloadPackage, downloadStandalone, standaloneHtml } from './lib/export';
@@ -33,6 +34,8 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         if (cancelled) return;
         const s = new EditorStore(p);
         setCurrentStore(s);
+        // Live editing: ops instead of whole-document saves, and other people's changes as they happen
+        setLiveSession(new LiveSession(p.id, s, liveSeqOf(p.id)));
         // Handy from the devtools console (and for driving the editor in automated checks).
         (window as unknown as { interactivesEditor: unknown }).interactivesEditor = {
           store: s,
@@ -54,6 +57,8 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
     })();
     return () => {
       cancelled = true;
+      liveSession()?.close();
+      setLiveSession(null);
       setCurrentStore(null);
     };
   }, [projectId]);
@@ -81,6 +86,8 @@ function useAutosave() {
     let lastRev = s.revision;
     let saving = false;
     const save = async (force = false) => {
+      // A live session saves through ops; a whole-document PUT would reset everyone else's copy
+      if (liveSession() && !force) return;
       if (saving) return;
       saving = true;
       const rev = s.revision;
@@ -111,7 +118,7 @@ function useAutosave() {
     });
     ensureFonts(s.get().project);
     const beforeUnload = (e: BeforeUnloadEvent) => {
-      if (s.get().saveState !== 'saved') {
+      if (liveSession() ? liveSession()!.busy : s.get().saveState !== 'saved') {
         e.preventDefault();
         void save();
       }
@@ -300,6 +307,17 @@ function Workspace({ home }: { home: () => void }) {
   useEffect(() => {
     requestAnimationFrame(() => zoomTo('fit'));
   }, []);
+  // Tell the others what is selected (and on which artboard)
+  useEffect(() => {
+    let last = '';
+    return store().subscribe(() => {
+      const st = store().get();
+      const key = `${st.activeArtboardId}|${st.selection.join(',')}`;
+      if (key === last) return;
+      last = key;
+      liveSession()?.presence({ artboardId: st.activeArtboardId, selection: st.selection });
+    });
+  }, []);
   return (
     <div className="workspace" style={{ ['--bottom-h' as string]: s.bottomTab ? `${s.bottomHeight}px` : '34px' }}>
       <TopBar home={home} onPreview={() => setPreview(true)} />
@@ -333,7 +351,7 @@ function ConflictBanner() {
 }
 
 function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }) {
-  const s = useEditor((st) => ({ name: st.project.name, saveState: st.saveState, saveError: st.saveError, zoom: st.zoom, rev: st.project.updated }));
+  const s = useEditor((st) => ({ name: st.project.name, saveState: st.saveState, saveError: st.saveError, zoom: st.zoom, rev: st.project.updated, live: st.live, peers: st.peers }));
   const [menu, setMenu] = useState(false);
   const st = store();
   const run = async (fn: () => Promise<void> | void) => {
@@ -366,7 +384,24 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       <span className={`save-state ${s.saveState}`} title={s.saveError ?? undefined}>
         {s.saveState === 'saved' ? 'Saved' : s.saveState === 'saving' ? 'Saving…' : s.saveState === 'dirty' ? 'Unsaved' : 'Save failed'}
       </span>
+      {s.live && (
+        <span className={`live-state ${s.live.status}`} title={s.live.status === 'live' ? 'Live: changes are shared as you make them' : s.live.status === 'reconnecting' ? 'Reconnecting… your changes are kept and sent when back' : 'This project was deleted'}>
+          ● {s.live.status === 'live' ? 'Live' : s.live.status === 'reconnecting' ? 'Reconnecting' : 'Deleted'}
+        </span>
+      )}
       <div className="spacer" />
+      <div className="peers">
+        {Object.values(s.peers).map((p) => (
+          <span key={p.clientId} className="peer" style={{ background: p.color }} title={p.name}>
+            {p.name
+              .split(/\s+/)
+              .map((w) => w[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase()}
+          </span>
+        ))}
+      </div>
       <IconButton icon={<Icons.undo />} title="Undo (Ctrl+Z)" onClick={() => st.undo()} disabled={!st.canUndo()} />
       <IconButton icon={<Icons.redo />} title="Redo (Ctrl+Shift+Z)" onClick={() => st.redo()} disabled={!st.canRedo()} />
       <div className="zoom-ctl">
