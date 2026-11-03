@@ -466,3 +466,148 @@ describe.skipIf(!samples.includes('treasure_valley_interactive_map.riv'))('Treas
     expect(lines.length).toBeGreaterThan(5);
   });
 });
+
+// ---------------------------------------------------------------- Treasure Valley icon artboards: what was off against Rive
+
+/** One shape (an ellipse or rectangle with a stroke or a fill), built by hand. */
+function shapeFile(kind: 'Ellipse' | 'Rectangle', paint: 'Stroke' | 'Fill'): Uint8Array {
+  return writeRiv([
+    ['Artboard', { name: 'Main', width: 200, height: 200 }],
+    ['Shape', { name: 'Shape', parentId: 0, x: 100, y: 100 }],
+    [kind, { parentId: 1, width: 20, height: 10, originX: 0.5, originY: 0.5, ...(kind === 'Rectangle' ? { cornerRadiusTL: 3 } : {}) }],
+    paint === 'Stroke' ? ['Stroke', { parentId: 1, thickness: 2 }] : ['Fill', { parentId: 1 }],
+    ['SolidColor', { parentId: 3, colorValue: 0xff1e3943 }],
+  ]);
+}
+
+describe('Rive strokes are centred on the outline', () => {
+  const first = async (file: Uint8Array) => (await importRive(file, 'shape')).artboards[0].children[0];
+
+  it('grows a stroked ellipse or rectangle by the stroke width, so its outer edge sits where Rive draws it', async () => {
+    const ring = await first(shapeFile('Ellipse', 'Stroke'));
+    expect(ring.type).toBe('ellipse');
+    expect([ring.width, ring.height]).toEqual([22, 12]);
+    // The centre stays put (the box grows half a stroke each way)
+    expect(ring.x + ring.originX * ring.width).toBeCloseTo(100, 1);
+    expect(ring.y + ring.originY * ring.height).toBeCloseTo(100, 1);
+    const box = await first(shapeFile('Rectangle', 'Stroke'));
+    expect([box.width, box.height]).toEqual([22, 12]);
+    expect(box.type === 'rect' && box.cornerRadius).toBe(4);
+  });
+
+  it('leaves filled shapes alone', async () => {
+    const dot = await first(shapeFile('Ellipse', 'Fill'));
+    expect([dot.width, dot.height]).toEqual([20, 10]);
+    expect(dot.x).toBeCloseTo(90, 1);
+  });
+
+  it('has the Treasure Valley icons draw their circles at the size Rive does', async () => {
+    if (!samples.includes('treasure_valley_interactive_map.riv')) return;
+    const res = await importRive(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')), 'tv');
+    const all: SceneNode[] = [];
+    walk(res.artboards.find((a) => a.name === 'Southeast Boise ICON')!.children, (n) => all.push(n));
+    const rings = all.flatMap((n) => (n.type === 'ellipse' && n.stroke && n.stroke.width > 0 ? [{ w: n.width, s: n.stroke.width }] : []));
+    expect(rings.length).toBeGreaterThan(5);
+    // Centred strokes: every ring is made at least a stroke wider than the nothing it would be inside
+    for (const r of rings) expect(r.w).toBeGreaterThan(r.s);
+  });
+});
+
+describe('Rive transform constraints', () => {
+  it('imports a transform constraint as copy position, rotation and scale of its target', async () => {
+    const file = writeRiv([
+      ['Artboard', { name: 'Main', width: 200, height: 200 }],
+      ['Shape', { name: 'Fill', parentId: 0 }], // 1
+      ['Ellipse', { parentId: 1, width: 10, height: 10 }],
+      ['Fill', { parentId: 1 }],
+      ['SolidColor', { parentId: 3, colorValue: 0xff000000 }],
+      ['Shape', { name: 'Outline', parentId: 0 }], // 5
+      ['Ellipse', { parentId: 5, width: 10, height: 10 }],
+      ['Fill', { parentId: 5 }],
+      ['SolidColor', { parentId: 7, colorValue: 0xff000000 }],
+      ['TransformConstraint', { parentId: 1, targetId: 5, strength: 0.5 }],
+    ]);
+    const ab = (await importRive(file, 'c')).artboards[0];
+    const fill = ab.children.find((n) => n.name === 'Fill')!;
+    const outline = ab.children.find((n) => n.name === 'Outline')!;
+    expect(fill.constraints?.map((c) => c.type).sort()).toEqual(['copyPosition', 'copyRotation', 'copyScale']);
+    for (const c of fill.constraints!) {
+      expect(c.target).toBe(outline.id);
+      expect(c.strength).toBe(0.5);
+    }
+  });
+
+  it('has the Southeast Boise and Compass shapes follow their targets', async () => {
+    if (!samples.includes('treasure_valley_interactive_map.riv')) return;
+    const res = await importRive(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')), 'tv');
+    for (const name of ['Southeast Boise ICON', 'Compass']) {
+      const all: SceneNode[] = [];
+      walk(res.artboards.find((a) => a.name === name)!.children, (n) => all.push(n));
+      expect(all.filter((n) => n.constraints?.some((c) => c.type === 'copyRotation')).length).toBeGreaterThan(0);
+    }
+    expect(res.warnings.some((w) => /Constraints \(IK/.test(w))).toBe(false);
+  });
+
+  it('moves the masking copy of a clip shape with its target, so a boat sits in its waves', async () => {
+    if (!samples.includes('treasure_valley_interactive_map.riv')) return;
+    const res = await importRive(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')), 'tv');
+    const bg = res.artboards.find((a) => a.name === 'IconBG')!;
+    const all: SceneNode[] = [];
+    walk(bg.children, (n) => all.push(n));
+    const ids = new Set(all.map((n) => n.id));
+    // The wave line the constraint follows (it is keyed, loop Water moves it sideways)
+    const copies = all.filter((n) => n.constraints?.some((c) => c.type === 'copyPosition' && c.copyY === false));
+    // The clip shape itself and its masking copy, both in the tree
+    expect(copies.length).toBeGreaterThanOrEqual(2);
+    const maskCopy = copies.find((n) => all.some((g) => g.mask && g.type === 'group' && g.children.includes(n)))!;
+    expect(maskCopy).toBeTruthy();
+    const target = maskCopy.constraints![0].target;
+    expect(ids.has(target)).toBe(true);
+    const moves = bg.timelines.find((t) => t.name === 'loop Water')!.tracks.some((t) => t.nodeId === target && t.prop === 'x');
+    expect(moves).toBe(true);
+  });
+});
+
+describe('Rive loops started by an Any state transition', () => {
+  it('starts an animation on the first frame when an Any state transition has nothing to wait for', async () => {
+    const file = writeRiv([
+      ['Artboard', { name: 'Main', width: 200, height: 200 }],
+      ['Node', { name: 'Tree', parentId: 0 }], // 1
+      ['LinearAnimation', { name: 'Loop Trees', fps: 24, duration: 48, loopValue: 1 }],
+      ['KeyedObject', { objectId: 1 }],
+      ['KeyedProperty', { propertyKey: propKey('Node', 'rotation') }],
+      ['KeyFrameDouble', { frame: 0, value: 0, interpolationType: 1 }],
+      ['KeyFrameDouble', { frame: 48, value: 1, interpolationType: 1 }],
+      ['StateMachine', { name: 'SM' }],
+      ['StateMachineLayer', { name: 'Loop Trees' }],
+      ['AnimationState', { animationId: 0 }],
+      ['AnyState', {}],
+      ['StateTransition', { stateToId: 0 }],
+      ['ExitState', {}],
+      ['EntryState', {}],
+    ]);
+    const ab = (await importRive(file, 'loops')).artboards[0];
+    const tl = ab.timelines.find((t) => t.name === 'Loop Trees')!;
+    expect(tl.loop).toBe('loop');
+    const { nodes, edges } = ab.logic;
+    const start = nodes.find((n) => n.kind === 'event.start')!;
+    expect(start).toBeTruthy();
+    const reach = new Set<string>();
+    const queue = [start.id];
+    while (queue.length) {
+      const from = queue.shift()!;
+      for (const e of edges.filter((x) => x.from === from)) if (!reach.has(e.to)) (reach.add(e.to), queue.push(e.to));
+    }
+    expect(nodes.some((n) => reach.has(n.id) && n.kind === 'action.timeline' && n.params.timeline === tl.id && n.params.op === 'restart')).toBe(true);
+  });
+
+  it('starts the loops of the Treasure Valley icons', async () => {
+    if (!samples.includes('treasure_valley_interactive_map.riv')) return;
+    const res = await importRive(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')), 'tv');
+    const icon = res.artboards.find((a) => a.name === 'South Boise ICON')!;
+    const loops = icon.timelines.filter((t) => /^loop /i.test(t.name));
+    expect(loops.length).toBeGreaterThan(15);
+    const restarted = new Set(icon.logic.nodes.filter((n) => n.kind === 'action.timeline' && n.params.op === 'restart').map((n) => n.params.timeline));
+    for (const t of loops) expect(restarted.has(t.id)).toBe(true);
+  });
+});

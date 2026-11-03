@@ -23,7 +23,7 @@
  *     + On timeline marker), listeners and state/transition "fire event"
  *     actions; event listeners become On message.
  *   - Path vertex keys (shape morphing) -> keys on the path's points, sampled (handles are keyed as rotation + distance)
- *   - isHole paths -> wound the other way round so the fill leaves them open; TranslationConstraint -> copy position
+ *   - isHole paths -> wound the other way round so the fill leaves them open; TranslationConstraint -> copy position, TransformConstraint -> copy position + rotation + scale
  * Data binds: a view model property driving a layer property becomes a binding (with converters); view models are shared variables.
  * Bones/meshes, other constraints, scripted
  * and layout-computed geometry are reported in `warnings`.
@@ -650,6 +650,8 @@ interface ArtboardCtx {
   solos: Map<number, number[]>;
   /** Slot -> the group that now holds it, when clipping wrapped the layer (its parent lists the wrapper). */
   wrapBySlot: Map<number, SceneNode>;
+  /** Slot of a clip shape -> the masking copies made of it (constraints on the shape have to move its copies too). */
+  clones: Map<number, SceneNode[]>;
   /** DrawRules slot -> the container it reorders and the child order for each of its draw targets. */
   drawRules: Map<number, { nodeId: string; base: string[]; orders: Map<number, string[]> }>;
 }
@@ -844,14 +846,17 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     const h = get(p, 'height');
     const ox = get(p, 'originX');
     const oy = get(p, 'originY');
+    // Rive centres a stroke on the outline, while our rects and ellipses draw it inside their box: grow the box by the stroke
+    // (half each side) so outer edges agree. Left alone when the size or the stroke's width is animated.
+    const sized = ac.rab.anims.some((an) => an.keyed.some((k) => [paths[0].i, strokes[0]?.i].includes(Number(k.obj.props.objectId ?? 0))));
+    const half = stroke && stroke.width > 0 && !sized ? stroke.width / 2 : 0;
     node =
       p.type === 'Rectangle'
-        ? createNode('rect', { name, fill, stroke, cornerRadius: r2(get(p, 'cornerRadiusTL')) })
+        ? createNode('rect', { name, fill, stroke, cornerRadius: r2(get(p, 'cornerRadiusTL') + half) })
         : createNode('ellipse', { name, fill, stroke });
-    placeAtOrigin(node, o, { x: -w * ox, y: -h * oy }, w, h);
-    node.originX = ox;
-    node.originY = oy;
-    addTarget(ac, slot, transformTarget(node, { x: -w * ox, y: -h * oy }));
+    const b = { x: -w * ox - half, y: -h * oy - half };
+    placeAtOrigin(node, o, b, w + half * 2, h + half * 2);
+    addTarget(ac, slot, transformTarget(node, b));
     // Size keys: our box grows from its top-left, Rive's around its origin, so x/y follow (with the shape's static x/y).
     addTarget(ac, paths[0].i, {
       nodeId: node.id,
@@ -1308,8 +1313,9 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     addTarget(ac, slot, transformTarget(g, { x: 0, y: 0 }));
     node = g;
   } else if (isA(t, 'Bone') || isA(t, 'Skin') || isA(t, 'Weight')) fc.warnings.add('Bones and skinning are not supported');
-  else if (isA(t, 'Constraint')) fc.warnings.add('Constraints (IK, follow, distance, ...) are not supported');
-  else if (t === 'ClippingShape' || t === 'DrawRules' || t === 'DrawTarget') {
+  else if (isA(t, 'Constraint')) {
+    // Translation and transform constraints are imported by importConstraints; the rest are reported there too
+  } else if (t === 'ClippingShape' || t === 'DrawRules' || t === 'DrawTarget') {
     // Handled by the layer they belong to (clipWrap, drawRules)
   }
   if (!node) return null;
@@ -1387,6 +1393,7 @@ function clipWrap(ac: ArtboardCtx, fc: FileCtx, slot: number, layer: SceneNode, 
     if (!shape) continue;
     shape.visible = true;
     shape.opacity = 1;
+    ac.clones.set(src, [...(ac.clones.get(src) ?? []), shape]);
     // The clip shape's own animation (a morphing wave line, a moving rectangle) has to move the mask copy too; its
     // opacity does not matter to a clip
     for (const [tslot, list] of scratch.targets)
@@ -1471,7 +1478,7 @@ function artboardCtx(fc: FileCtx, index: number): ArtboardCtx {
     list.push(i);
     children.set(p, list);
   });
-  ac = { rab, children, targets: new Map(), nodeBySlot: new Map(), solos: new Map(), wrapBySlot: new Map(), drawRules: new Map() };
+  ac = { rab, children, targets: new Map(), nodeBySlot: new Map(), solos: new Map(), wrapBySlot: new Map(), clones: new Map(), drawRules: new Map() };
   contexts.set(index, ac);
   return ac;
 }
@@ -1498,27 +1505,44 @@ function buildArtboardNodes(fc: FileCtx, index: number): SceneNode[] {
 function importConstraints(ac: ArtboardCtx, fc: FileCtx): void {
   ac.rab.slots.forEach((c, i) => {
     if (i === 0 || !isA(c.type, 'Constraint')) return;
-    if (c.type !== 'TranslationConstraint') {
+    if (c.type !== 'TranslationConstraint' && c.type !== 'TransformConstraint') {
       if (c.type === 'RotationConstraint' || c.type === 'ScaleConstraint') fc.warnings.add('Rotation and scale constraints are not imported');
       else fc.warnings.add('Constraints (IK, follow, distance, ...) are not supported');
       return;
     }
-    const node = ac.nodeBySlot.get(Number(c.props.parentId ?? 0));
+    const parent = Number(c.props.parentId ?? 0);
     const target = ac.nodeBySlot.get(Number(get(c, 'targetId')));
-    if (!node || !target || node === target) return;
-    if (get<boolean>(c, 'offset') || get<boolean>(c, 'min') || get<boolean>(c, 'max') || get(c, 'copyFactor') !== 1 || get(c, 'copyFactorY') !== 1) fc.warnings.add('Translation constraints with offsets, limits or a factor are imported as plain copies');
+    // A clip shape that follows something (a mask over moving waves) has to carry that to the masking copies as well
+    for (const node of [ac.nodeBySlot.get(parent), ...(ac.clones.get(parent) ?? [])]) {
+      if (!node || !target || node === target) continue;
+      constrainNode(c, node, target, fc);
+    }
+  });
+}
+
+function constrainNode(c: RObj, node: SceneNode, target: SceneNode, fc: FileCtx): void {
+  if (c.type === 'TransformConstraint') {
+    // Takes the target's whole transform (a filled wave that follows its outline), as copy position + rotation + scale
+    if (get(c, 'sourceSpaceValue') || get(c, 'destSpaceValue')) fc.warnings.add('Transform constraints in local space are imported as world space');
+    const strength = r2(get(c, 'strength'));
     node.constraints = [
       ...(node.constraints ?? []),
-      {
-        id: uid('cn'),
-        type: 'copyPosition',
-        target: target.id,
-        strength: r2(get(c, 'strength')),
-        copyX: get<boolean>(c, 'doesCopy') !== false,
-        copyY: get<boolean>(c, 'doesCopyY') !== false,
-      },
+      ...(['copyPosition', 'copyRotation', 'copyScale'] as const).map((type) => ({ id: uid('cn'), type, target: target.id, strength })),
     ];
-  });
+    return;
+  }
+  if (get<boolean>(c, 'offset') || get<boolean>(c, 'min') || get<boolean>(c, 'max') || get(c, 'copyFactor') !== 1 || get(c, 'copyFactorY') !== 1) fc.warnings.add('Translation constraints with offsets, limits or a factor are imported as plain copies');
+  node.constraints = [
+    ...(node.constraints ?? []),
+    {
+      id: uid('cn'),
+      type: 'copyPosition',
+      target: target.id,
+      strength: r2(get(c, 'strength')),
+      copyX: get<boolean>(c, 'doesCopy') !== false,
+      copyY: get<boolean>(c, 'doesCopyY') !== false,
+    },
+  ];
 }
 
 // ---------------------------------------------------------------- animations
@@ -2242,7 +2266,9 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
             // Rive checks Any state transitions every frame, starting with the first: one whose condition already holds
             // at the start (a loop that plays while a view model number is 0) has to run then, not on the first change
             if (st.obj.type === 'AnyState' && watched.size) sources.push(add('event.start', {}, 40));
-            if (!watched.size) {
+            // An Any state transition with nothing to wait for (the icons' "Loop ..." layers) is taken on the first frame
+            if (st.obj.type === 'AnyState' && !watched.size) sources.push(add('event.start', {}, 40));
+            else if (!watched.size) {
               // No inputs: leave when the state's animation finishes (exit time)
               const tl = tlOf(st);
               if (tl) {
