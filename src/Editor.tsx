@@ -29,6 +29,7 @@ import { prefs, setPrefs } from './lib/prefs';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
 import { LinkChanges } from './components/LinkChanges';
+import { PanelResizeHandle, usePanelWidths } from './components/PanelResize';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
   const [ready, setReady] = useState<EditorStore | null>(null);
@@ -407,6 +408,7 @@ function Workspace({ home }: { home: () => void }) {
   useThumbnails();
   useShortcuts();
   const s = useEditor((st) => ({ bottomTab: st.bottomTab, bottomHeight: st.bottomHeight, toast: st.toast, report: st.report }));
+  const [widths, setWidth] = usePanelWidths();
   const [preview, setPreview] = useState(false);
   useEffect(() => {
     requestAnimationFrame(() => zoomTo('fit'));
@@ -425,7 +427,7 @@ function Workspace({ home }: { home: () => void }) {
     });
   }, []);
   return (
-    <div className="workspace" style={{ ['--bottom-h' as string]: s.bottomTab ? `${s.bottomHeight}px` : '34px' }}>
+    <div className="workspace" style={{ ['--bottom-h' as string]: s.bottomTab ? `${s.bottomHeight}px` : '34px', ['--left-w' as string]: `${widths.left}px`, ['--right-w' as string]: `${widths.right}px` }}>
       <TopBar home={home} onPreview={() => setPreview(true)} />
       <div className="banner-area">
         {conflict && <ConflictBanner />}
@@ -440,6 +442,8 @@ function Workspace({ home }: { home: () => void }) {
         <Guard message="Something on this artboard couldn't be drawn.">
           <Canvas />
         </Guard>
+        <PanelResizeHandle side="left" width={widths.left} onWidth={(w) => setWidth('left', w)} />
+        <PanelResizeHandle side="right" width={widths.right} onWidth={(w) => setWidth('right', w)} />
       </main>
       <Guard message="This panel couldn't be shown." className="inspector">
         <Inspector />
