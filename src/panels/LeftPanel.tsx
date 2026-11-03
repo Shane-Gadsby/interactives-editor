@@ -9,6 +9,7 @@ import { insertFiles, pickFiles } from '../lib/insert';
 import { ANIMATION_ACCEPT, chooseLinking, importAnimationFile } from '../lib/importers';
 import { getArtboard, locate } from '../store/doc';
 import { deleteAsset } from '../lib/db';
+import { analyzeUsage, unusedAssetIds } from '../lib/dependencies';
 import { LibrariesPanel } from './LibrariesPanel';
 
 export function LeftPanel() {
@@ -344,7 +345,9 @@ function Assets() {
   // Forget checks for assets that are gone (deleted here, by undo, or by someone else)
   const live = new Set(assets.map((a) => a.id));
   const sel = [...checked].filter((id) => live.has(id));
-  const isUsed = (id: string) => JSON.stringify(s.project.artboards).includes(`"${id}"`) || s.project.fonts.some((f) => f.assetId === id);
+  // The same rule as the Usage tab (layers, paints, fonts, data sources, sounds...), worked out once per document
+  const unused = useMemo(() => new Set(unusedAssetIds(analyzeUsage(s.project))), [s.project]);
+  const isUsed = (id: string) => !unused.has(id);
   const upload = async () => {
     const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
     if (files.length) await insertFiles(files, null, null);

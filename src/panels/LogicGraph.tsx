@@ -371,6 +371,11 @@ export function LogicGraph() {
           if (e.key === 'Delete' || e.key === 'Backspace') {
             e.preventDefault();
             deleteSelected();
+          } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+            // The graph keeps the key to itself (stopPropagation above), so undo and redo have to be handled here
+            e.preventDefault();
+            if (e.key.toLowerCase() === 'y' || e.shiftKey) store().redo();
+            else store().undo();
           } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && store().get().logicSelection) {
             e.preventDefault();
             duplicate(store().get().logicSelection!);

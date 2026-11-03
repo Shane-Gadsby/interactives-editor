@@ -51,7 +51,8 @@ export class ConflictError extends Error {
 
 const API = new URL('api/', document.baseURI).href;
 
-async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
+/** `as: 'blob'` reads the body as bytes whatever its content type (an uploaded .json asset is served as application/json). */
+async function call<T>(path: string, init: RequestInit = {}, as?: 'blob'): Promise<T> {
   let res: Response;
   try {
     res = await fetch(API + path, { credentials: 'same-origin', ...init });
@@ -69,7 +70,7 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error(body.error ?? `Server error ${res.status}`);
   }
   const type = res.headers.get('content-type') ?? '';
-  return (type.includes('application/json') ? res.json() : res.blob()) as Promise<T>;
+  return (as !== 'blob' && type.includes('application/json') ? res.json() : res.blob()) as Promise<T>;
 }
 
 const json = (body: unknown): RequestInit => ({ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -127,7 +128,7 @@ export async function putAsset(projectId: string, assetId: string, blob: Blob): 
 
 export async function getAsset(projectId: string, assetId: string): Promise<Blob | null> {
   try {
-    return await call<Blob>(`projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`);
+    return await call<Blob>(`projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`, {}, 'blob');
   } catch {
     return null;
   }

@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { dataKindOf, uid, type DataKind, type DataSource } from 'interactives-player';
 import { store, useEditor } from '../store/store';
-import { isIdentifier, uniqueName } from '../store/doc';
+import { isIdentifier, uniqueIdentifier } from '../store/doc';
 import { dataCache } from '../lib/data';
 import { insertFiles, pickFiles } from '../lib/insert';
 import { IconButton, NumberField, SelectField, TextField } from '../components/ui';
@@ -37,7 +37,7 @@ export function DataPanel() {
     );
   const names = () => [...s.sources.map((d) => d.name), ...s.variables.map((v) => v.name)];
   const addUrl = () => {
-    const ds: DataSource = { id: uid('ds'), name: uniqueName(names(), 'data').replace(/\s+/g, ''), kind: 'json', source: 'url', url: '', refresh: 0 };
+    const ds: DataSource = { id: uid('ds'), name: uniqueIdentifier(names(), 'data'), kind: 'json', source: 'url', url: '', refresh: 0 };
     store().update((d) => {
       d.dataSources.push(ds);
     });
@@ -50,7 +50,7 @@ export function DataPanel() {
     const taken = names();
     const sources: DataSource[] = added.map((a) => {
       const base = a.name.replace(/\.[^.]+$/, '').replace(/[^\w$]+/g, '_').replace(/^(\d)/, '_$1') || 'data';
-      const name = uniqueName(taken, base).replace(/\s+/g, '');
+      const name = uniqueIdentifier(taken, base);
       taken.push(name);
       return { id: uid('ds'), name, kind: dataKindOf(a.name || a.mime), source: 'asset', assetId: a.id };
     });

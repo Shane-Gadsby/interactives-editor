@@ -130,6 +130,17 @@ describe('assets and packages', () => {
     expect(await db.assetBytes(p.id, { id: 'x', name: 'a', mime: 'text/plain', size: 2, src: data } as never)).toEqual(new Uint8Array([104, 105]));
   });
 
+  it('reads a .json data file as bytes, not as parsed JSON (the server sends it as application/json)', async () => {
+    const p = fresh();
+    await db.createProjectRecord(p);
+    await db.putAsset(p.id, 'asset00001', new NodeBlob(['[{\"a\":1}]'], { type: 'application/json' }));
+    const blob = (await db.getAsset(p.id, 'asset00001'))!;
+    expect(typeof blob.arrayBuffer).toBe('function');
+    expect(await blob.text()).toBe('[{"a":1}]');
+    expect(await db.assetBytes(p.id, { id: 'asset00001', name: 'rows.json', mime: 'application/json', size: 9 } as never)).toEqual(new TextEncoder().encode('[{"a":1}]'));
+    expect([...(await db.listAssetBlobs(p.id)).keys()]).toEqual(['asset00001']);
+  });
+
   it('exports a project with its assets as a package and imports it again as a new project with the same assets', async () => {
     const p = fresh('Packed');
     p.assets.push({ id: 'asset00001', name: 'pic.png', mime: 'image/png', size: 4 } as never);

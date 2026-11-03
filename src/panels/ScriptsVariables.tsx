@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { uid, type Script, type Variable, type VariableType } from 'interactives-player';
 import { store, useEditor } from '../store/store';
-import { isIdentifier, uniqueName } from '../store/doc';
+import { isIdentifier, uniqueIdentifier, uniqueName } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { CodeEditor } from '../components/CodeEditor';
@@ -129,7 +129,7 @@ export function VariablesPanel() {
       { coalesce },
     );
   const add = () => {
-    const name = uniqueName(vars.map((v) => v.name), 'value').replace(/\s+/g, '');
+    const name = uniqueIdentifier(vars.map((v) => v.name), 'value');
     store().update((d) => {
       d.variables.push({ id: uid('v'), name, type: 'number', initial: 0 });
     });

@@ -105,6 +105,8 @@ function useAutosave() {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let lastRev = s.revision;
     let saving = false;
+    // The live session closes (parent cleanup) before this one runs, so remember now whether changes travel as ops
+    let viaOps = !!liveSession();
     const save = async (force = false) => {
       // A live session saves through ops; a whole-document PUT would reset everyone else's copy
       if (liveSession() && !force) return;
@@ -147,6 +149,7 @@ function useAutosave() {
     // A live session the server stopped accepting: take the server's current revision, then save the whole document
     // the usual way (a conflict still shows the conflict bar)
     const onLiveFallback = () => {
+      viaOps = false;
       void loadProjectRecord(s.get().project.id)
         .catch(() => null)
         .then(() => save());
@@ -157,7 +160,9 @@ function useAutosave() {
       unsub();
       if (timer) {
         clearTimeout(timer);
-        void save();
+        // Leaving with a change not yet saved: a connected live session still sends its queued ops, and a whole-document
+        // PUT here would reset everyone else's copy (or answer 409 once the server has moved on)
+        if (!viaOps || s.get().live?.status !== 'live') void save();
       }
       window.removeEventListener('beforeunload', beforeUnload);
     };
@@ -407,8 +412,10 @@ function Workspace({ home }: { home: () => void }) {
   // Tell the others what is selected (and on which artboard)
   useEffect(() => {
     let last = '';
-    return store().subscribe(() => {
-      const st = store().get();
+    // Hold the store: leaving the editor clears the current store before this listener is removed, and a late change (a focused field committing as it unmounts) must not throw
+    const s = store();
+    return s.subscribe(() => {
+      const st = s.get();
       const key = `${st.activeArtboardId}|${st.selection.join(',')}`;
       if (key === last) return;
       last = key;
@@ -717,6 +724,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
   const project = useEditor((st) => st.project);
   const abId = useEditor((st) => st.activeArtboardId);
   const [html, setHtml] = useState<string | null>(null);
+  const [buildError, setBuildError] = useState<string | null>(null);
   const [from, setFrom] = useState<'start' | 'current'>('start');
   const [log, setLog] = useState<string[]>([]);
   const [vars, setVars] = useState<Record<string, unknown> | null>(null);
@@ -733,7 +741,11 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
     let live = true;
-    void standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true }).then((h) => live && setHtml(h));
+    setBuildError(null);
+    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true }).then(
+      (h) => live && setHtml(h),
+      (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
+    );
     return () => {
       live = false;
     };
@@ -847,7 +859,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
               ))}
             </aside>
           )}
-          {html ? <iframe key={nonce} ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : <div className="center-msg muted">Building…</div>}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
         </div>
         {showVars && (
           <footer className="preview-log mono small">
@@ -882,6 +894,12 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
 
 function ReportModal({ title, lines }: { title: string; lines: string[] }) {
   const close = () => store().set({ report: null });
+  // Like the other dialogs, Escape closes it
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && store().set({ report: null });
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, []);
   return (
     <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && close()}>
       <div className="modal report-modal">

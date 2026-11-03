@@ -1,6 +1,6 @@
 import { uid, type VariableType } from 'interactives-player';
 import { store } from '../store/store';
-import { uniqueName } from '../store/doc';
+import { uniqueIdentifier } from '../store/doc';
 import { insertFiles, pickFiles } from './insert';
 import { promptDialog } from '../components/dialogs';
 
@@ -31,7 +31,7 @@ export async function pickNewAsset(kind: PickKind): Promise<string | null> {
 
 /** Turn what was typed into a usable, unused variable name (letters, digits and _). */
 export function variableNameFrom(raw: string, taken: string[], suggested = 'value'): string {
-  return uniqueName(taken, raw.trim().replace(/[^\w$]+/g, '_').replace(/^(\d)/, '_$1') || suggested).replace(/\s+/g, '');
+  return uniqueIdentifier(taken, raw.trim().replace(/[^\w$]+/g, '_').replace(/^(\d)/, '_$1') || suggested);
 }
 
 /** Ask for a name and make a variable; resolves to its id (null if the person cancelled). */
@@ -40,7 +40,7 @@ export async function createVariable(type: VariableType = 'number', suggested = 
   const raw = await promptDialog({
     title: 'New variable',
     label: 'Name for the new variable (letters, digits and _)',
-    initial: uniqueName(taken, suggested).replace(/\s+/g, ''),
+    initial: uniqueIdentifier(taken, suggested),
     confirmLabel: 'Create variable',
   });
   if (raw === null) return null;

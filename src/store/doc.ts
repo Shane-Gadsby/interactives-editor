@@ -155,6 +155,14 @@ export function uniqueName(existing: Iterable<string>, base: string): string {
   for (let i = 2; ; i++) if (!names.has(`${stem} ${i}`)) return `${stem} ${i}`;
 }
 
+/** Like uniqueName, but for names that have to be identifiers (variables, data sources): no space, so value, value2, value3. */
+export function uniqueIdentifier(existing: Iterable<string>, base: string): string {
+  const names = new Set(existing);
+  if (!names.has(base)) return base;
+  const stem = base.replace(/\d+$/, '');
+  for (let i = 2; ; i++) if (!names.has(`${stem}${i}`)) return `${stem}${i}`;
+}
+
 export function nodeNames(artboard: Artboard): string[] {
   const out: string[] = [];
   const rec = (l: SceneNode[]) => {

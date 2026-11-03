@@ -84,6 +84,9 @@ const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
   shader: 'shader',
 };
 
+/** Tools that start a new layer where you press, so the selection's resize and rotate handles stay out of the way. */
+const CREATION_TOOLS = new Set<Tool>(['artboard', 'line', 'pen', 'pencil', 'image', ...(Object.keys(CREATE_TYPES) as Tool[])]);
+
 const SNAP_PX = 6;
 /** Where world (0, 0) sits in the scrollable pan space; pan is measured from here. */
 const PAN_ORIGIN = 4_000_000;
@@ -1261,8 +1264,9 @@ export function Canvas() {
       };
       const center = at(0.5, 0.5);
       const locked = ids.some((id) => locate(active, id)!.node.locked);
-      // The Bend tool works on the edges themselves, so no resize/rotate handles sit on top of them
-      if (!locked && s.tool !== 'bend' && s.tool !== 'bone') {
+      // The Bend tool works on the edges themselves, and a creation tool draws wherever you drag (the rotate zones outside a
+      // selected layer's corners would otherwise swallow the start of a new shape), so no resize/rotate handles sit on top then
+      if (!locked && s.tool !== 'bend' && s.tool !== 'bone' && !CREATION_TOOLS.has(s.tool)) {
         for (const h of ['nw', 'ne', 'se', 'sw'] as Handle[]) {
           const [fx, fy] = HANDLE_POS[h];
           const c = at(fx, fy);
