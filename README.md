@@ -66,7 +66,12 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | `GET /api/projects/:id/library` | this project's own library record, or null |
 | `PUT /api/projects/:id/library/share` | `{everyone, users[]}`: who else can use the published library |
 | `DELETE /api/projects/:id/library` | stop publishing (projects that copied components keep them) |
+| `GET /play/:token` | the learner page for a share link: a small page that frames `/s/:token` in its sandbox and answers the project's progress requests (postMessage) by calling the `/learn` routes below with the session id it was opened with (`?sessionID=` or sessionStorage). Give this link to learners in StudyDesk. Served with its own nonce CSP; can be framed |
+| `GET/PUT /learn/:token/progress`, `POST /learn/:token/report` | a learner's remembered variables, artboard, attempts and reported results (`{result}`), for the project whose share link is on. Identity (username, userID, name) and the course (`activity.courseLabel`) come from the session, never from the request; with no session they answer `{available: false}` and the player keeps progress in the browser. Outside `/api` because that is staff only. Bodies are shape- and size-checked in `shared/learner.mjs` |
+| `GET/DELETE /api/projects/:id/results` | owner (or power user): counts, completion and pass rates, average best score and attempts, courses, and the 200 most recently active learners / delete every record for the project |
 | `GET /s/:token` | a shared project, **no session** (a link in a new tab can't carry one). Tokens are 24 random base64url chars; off until the owner turns it on. Served with `Content-Security-Policy: sandbox allow-scripts ...` (no `allow-same-origin`), so a shared page can't touch the editor's origin; its `localStorage` is not available |
+
+Learner records are in `lti-analytics.interactives-user-data` (the suite's shared analytics database), one per project + username + course (the unique index `project_1_username_1_course_1` is in `suite-libs/indexes.js`, with `share.token_1` on `projects`): `{project, username, course, userID, name, courseLabel, courseCode, lmsURL, variables (JSON text), artboard, attempts, attemptCompleted, completed, completedAt, passed, reports, lastScore/lastMax/lastPercent/lastPassed/lastReportAt, bestScore/bestMax/bestPercent, progressAt, created, updated}`. Everything in it is the learner's own browser's word. Deleting a project deletes its records.
 
 Data lives in two places:
 - **MongoDB:** database `lti-interactives`.
@@ -114,6 +119,7 @@ Access works like this:
 | `panels/` | layers + assets, inspector, timeline, interaction graph (React Flow over the player's node catalog), scripts (CodeMirror), variables |
 | `lib/db.ts` | API client, `.ixp` import/export |
 | `lib/export.ts` | single-file HTML (embeds the player IIFE build, plus the script sandbox when used), `.ixp`, JSON |
+| `panels/ReportingSection.tsx`, `components/ProjectModals.tsx` (`ResultsModal`, the Link for StudyDesk in `ShareModal`) | Project > Results and progress (score variable, top score, pass mark, completion rule, resume) writing `settings.reporting`, and the owner's results view over `GET /api/projects/:id/results`. The player side is `interactives-player/src/progress.ts`; the learner page and routes are in `index.js` |
 | `lib/live.ts`, `shared/ops.mjs` | live editing client and the shared op diff/apply |
 | `lib/lottie-import.ts`, `lib/lottie-export.ts` | Lottie / dotLottie in and out (text animators with range selectors import as text modifiers) |
 | `lib/text-modifiers.ts` | text modifiers on a project draft: add / remove (tracks renumbered) and the Typewriter / Wave presets (modifier + timeline in one undo step); the player side is `src/textmod.ts` |

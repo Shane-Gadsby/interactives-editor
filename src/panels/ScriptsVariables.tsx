@@ -93,6 +93,9 @@ ix.timeline('Intro')
   .play() .pause() .stop()
   .restart() .reverse() .seek(ms)
 ix.goTo('Page 2', 'fade')
+ix.report({ completed: true })  // send the result
+ix.result   // {completed, score, percent, passed}
+ix.startOver()
 ix.emit('done', data)  // to host page
 ix.setInstanceInput('Badge', 'level', 3)
 ix.fireInstanceTrigger('Badge', 'ping')
@@ -143,7 +146,7 @@ export function VariablesPanel() {
             <th>Name</th>
             <th>Type</th>
             <th>Initial value</th>
-            <th title="Remember the value in the visitor's browser">Persist</th>
+            <th title="Remember progress: keep the value between visits (in the learner's record when results are kept, otherwise in their browser)">Remember</th>
             <th />
           </tr>
         </thead>

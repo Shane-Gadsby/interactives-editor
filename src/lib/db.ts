@@ -241,6 +241,44 @@ export const stopShare = (projectId: string) => call<{ ok: boolean }>(`projects/
 
 export const shareUrl = (token: string) => new URL(`s/${token}`, document.baseURI).href;
 
+/** The page to give learners instead of the share link when results should be kept: it frames the same project and passes its progress to the server under the learner's session. */
+export const learnerUrl = (token: string) => new URL(`play/${token}`, document.baseURI).href;
+
+// ---------------------------------------------------------------- learner results
+
+export interface ResultsRow {
+  username: string;
+  name: string | null;
+  course: string | null;
+  attempts: number;
+  completed: boolean;
+  passed: boolean;
+  bestPercent: number | null;
+  lastPercent: number | null;
+  updated: string | null;
+}
+
+export interface Results {
+  learners: number;
+  records: number;
+  completed: number;
+  completionRate: number | null;
+  passed: number;
+  scored: number;
+  passRate: number | null;
+  averageBestPercent: number | null;
+  averageAttempts: number | null;
+  courses: { course: string; learners: number; completed: number }[];
+  list: ResultsRow[];
+  truncated: boolean;
+  /** The project has a share link on (results are only collected through one). */
+  shared: boolean;
+}
+
+export const getResults = (projectId: string) => call<Results>(`projects/${encodeURIComponent(projectId)}/results`);
+
+export const clearResults = (projectId: string) => call<{ ok: boolean; deleted: number }>(`projects/${encodeURIComponent(projectId)}/results`, { method: 'DELETE' });
+
 // ---------------------------------------------------------------- libraries
 
 export const listLibraries = () => call<LibraryInfo[]>('libraries');

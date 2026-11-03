@@ -64,6 +64,7 @@ import { ChildOrder } from '../components/ChildOrder';
 import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
 import { GridAlignFields } from '../components/GridAlignFields';
 import { LayoutItemSection } from './LayoutItemSection';
+import { ReportingSection } from './ReportingSection';
 import { blendExample } from '../lib/blend-example';
 import { ConvertersEditor } from '../components/Converters';
 import { TEXT_PRESETS } from '../lib/text-modifiers';
@@ -435,6 +436,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           onChange={(v) => setProject((p) => (p.settings.reducedMotion = v))}
         />
       </Section>
+      <ReportingSection project={project} />
       <Section help="text" title="Fonts">
         {project.fonts.map((f, i) => (
           <Row key={i} className="font-row">

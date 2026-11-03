@@ -160,4 +160,5 @@ export class FakeDb {
   revisions = new FakeCollection();
   prefs = new FakeCollection();
   libraries = new FakeCollection();
+  'interactives-user-data' = new FakeCollection();
 }

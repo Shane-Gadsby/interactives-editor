@@ -376,6 +376,36 @@ const CATALOG = [
     ]
   },
   {
+    kind: "action.reportResult",
+    label: "Report result",
+    category: "action",
+    description: "Send the learner's result (score, pass or fail, completion) to where the page keeps it: the learner's record on the server when played from a share link in StudyDesk. The score comes from the score variable in Project > Results and progress. Nothing is lost or broken if no record is kept.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      {
+        key: "completed",
+        label: "Report as",
+        type: "select",
+        options: [
+          { value: "complete", label: "Complete" },
+          { value: "progress", label: "Score so far (not complete)" }
+        ],
+        default: "complete"
+      },
+      { key: "score", label: "Score", type: "expr", default: "", placeholder: "the score variable", help: "Leave empty to report the score variable. Or an expression, e.g. correct * 10." }
+    ]
+  },
+  {
+    kind: "action.startOver",
+    label: "Start over",
+    category: "action",
+    description: "Begin again: every variable goes back to its starting value, remembered progress is cleared, it counts as a new attempt and the start artboard shows. Nothing after this node runs.",
+    outputs: OUT,
+    hasInput: true,
+    params: []
+  },
+  {
     kind: "action.cursor",
     label: "Set cursor",
     category: "action",
@@ -4602,7 +4632,7 @@ A list variable holds the items a [repeater](repeaters) draws: put its name in *
 - In scripts: \`ix.vars.score += 1\`.
 - From the host page: \`player.setVariable('score', 10)\`.
 
-Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field. Tick **Persist** to remember the value in the visitor's browser between visits (for a score, a saved choice or a name). Press **+ Add variable** to make one, and the bin to delete it. See [Tutorial 3](tutorial-state-machine) for a worked example.
+Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field. Tick **Remember** to keep the value between visits (for a score, a saved choice or a name): in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results). Press **+ Add variable** to make one, and the bin to delete it. See [Tutorial 3](tutorial-state-machine) for a worked example.
 
 ![The Variables tab.](help/variables-panel.png)`
   },
@@ -5029,6 +5059,45 @@ Inside the copies, \`item\` is the current item and \`index\` its position (from
 Clicks on a copy fire **On pointer** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked.`
   },
   {
+    id: "results",
+    title: "Results and progress",
+    group: "Getting started",
+    summary: "Report a score and completion, remember progress between visits, and see how learners did.",
+    keywords: "results score pass mark completion complete report progress remember resume start over attempts learners studydesk lms grade",
+    body: `A project can report how a learner did and remember where they were, so closing the page does not lose their progress.
+
+## Set it up
+Open **Results and progress** in the Project section of the Inspector (click an empty part of the canvas).
+
+| Setting | Meaning |
+|---|---|
+| Score variable | The number variable that holds the score |
+| Top score | The score that counts as 100% (the default is 100). A score above it is reported as 100% |
+| Pass mark | Tick it and give a percentage to report pass or fail as well as the score |
+| Complete when | **Report result node only**, **Reaching an artboard**, **A variable turns on** (a true/false one) or **Score meets the pass mark**. Completing reports the result once |
+| Resume on the same artboard | A returning learner opens on the artboard they left |
+
+Then tick **Remember** on each variable that should keep its value between visits (the Variables tab).
+
+## Report result and Start over
+- **Report result** (action node) sends the result: *Complete* marks this attempt complete, *Score so far* reports the score without completing. Leave **Score** empty to use the score variable, or give an expression such as \`correct * 10\`. In scripts: \`ix.report({ completed: true, score: 7 })\`.
+- **Start over** (action node, or \`ix.startOver()\`) puts every variable back to its starting value, clears remembered progress, counts a new attempt and shows the start artboard. Nothing after it in the same flow runs. Scripts keep their own state.
+- \`ix.result\` reads the result as it stands, \`{completed, score, max, percent, passed}\`. Reading it reports nothing.
+
+## Where it goes
+The player works with no server: with nothing else around it, **Remember** keeps values in the browser and a reported result goes nowhere (the page around an iframe also receives it as a message).
+
+Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It plays the same project, and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session. Someone opening it with no session plays as normal and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
+
+## See the results
+**View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. It is for the project's owner. **Clear results** deletes every record for the project (handy after testing).
+
+## Good to know
+- A result is what the learner's browser says. It is good for tracking progress, not for marks that must be tamper-proof.
+- The project's share link has to be on: results are only kept while it is.
+- **Update to the latest version** in Share link after changing these settings, so the link plays the new version.`
+  },
+  {
     id: "project-settings",
     title: "Project settings",
     group: "Getting started",
@@ -5050,6 +5119,7 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Allowed data hosts | Hosts that data may be loaded from, one per line (\`api.example.com\`, \`*.example.com\`). Empty allows any http(s) host. See [Data sources](data-sources#what-may-be-loaded) |
 | This project is a library | Shares the artboards you publish, with the project's styles and assets, as components for other projects. See [Libraries](libraries) |
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
+| Results and progress | The score, pass mark and when the project counts as complete. See [Results and progress](results) |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
 | Fonts | Google fonts by name (type one and press **Add**), or font files you upload in the **Assets** panel |`
   },
@@ -5217,7 +5287,7 @@ After an import, a report lists anything that couldn't be carried over exactly. 
 | Lottie JSON (this artboard), dotLottie (this artboard) | The open artboard's shapes and timeline, for Lottie players (no interactivity). A report lists what couldn't be written |
 | PNG image (this artboard), PNG image, 1× | The open artboard as a picture, at 2× or at actual size, at the timeline's playhead |
 | SVG image (this artboard) | The open artboard as an SVG file that scales cleanly. It uses HTML inside the SVG for text and web elements, so it opens in browsers but not in every drawing program |
-| Share link… | A link that plays the project in the browser (below) |
+| Share link… | A link that plays the project in the browser (below), and a second one for StudyDesk that keeps learners' results |
 
 The files are named after the project (and the artboard, for pictures and Lottie).
 
@@ -5227,6 +5297,8 @@ The files are named after the project (and the artboard, for pictures and Lottie
 **Export → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. It is a snapshot: press **Update to the latest version** to publish later changes, or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). **Copy** copies the link and **Open** opens it in a new tab.
 
 ![The Share link dialog.](help/share-link-dialog.png)
+
+**Link for StudyDesk** plays the same project but keeps each signed-in learner's score, completion and progress. Use it in StudyDesk when you set a score or tick **Remember** on variables, and see [Results and progress](results). **Results…** shows how learners did.
 
 For a walk-through, see [Tutorial 5](tutorial-publish).`
   },

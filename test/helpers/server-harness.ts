@@ -20,6 +20,8 @@ export interface User {
   username: string;
   fullName?: string;
   power?: boolean;
+  /** The course the session is launched from (activity.courseLabel). */
+  course?: string;
 }
 
 export interface Reply {
@@ -48,7 +50,7 @@ export interface Stream {
   close(): void;
 }
 
-const sessionHeader = (u: User | null | undefined) => (u ? JSON.stringify({ user: { username: u.username, fullName: u.fullName ?? u.username, userID: 1 }, access: { power: !!u.power } }) : undefined);
+const sessionHeader = (u: User | null | undefined) => (u ? JSON.stringify({ user: { username: u.username, fullName: u.fullName ?? u.username, userID: 1 }, access: { power: !!u.power }, activity: u.course ? { courseLabel: u.course, courseCode: u.course.split('_')[0], lmsURL: 'https://lms.example' } : {} }) : undefined);
 
 export async function startServer(): Promise<Harness> {
   const storage = fs.mkdtempSync(path.join(os.tmpdir(), 'ix-storage-'));

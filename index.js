@@ -69,6 +69,7 @@ let port = Number(process.env.PORT) || 3048,
 	revisions,
 	prefs,
 	libraries,
+	userData,
 
 	//Revision ids are strings (time first, so they sort), keeps mongodb's ObjectId out of this app's requires
 	revisionID = () => `${Date.now().toString(36)}${crypto.randomBytes(5).toString('hex')}`,
@@ -78,7 +79,8 @@ let port = Number(process.env.PORT) || 3048,
 //The shared op code is an ES module (the browser uses the same file), so it comes in through import()
 let ops = null,
 	library = null,
-	safety = null
+	safety = null,
+	learner = null
 const rooms = new Map(),
 	LOG_KEEP = 2000,
 	PALETTE = ['#e5484d', '#30a46c', '#3e63dd', '#f76b15', '#8e4ec6', '#12a594', '#d6409f', '#ad7f58'],
@@ -497,6 +499,9 @@ router.delete('/api/projects/:id', async (req, res) => {
 
 	await removeAssets(id)
 	await revisions.deleteMany({project: id})
+
+	//The learners' records go with it
+	await userData.deleteMany({project: id})
 	await fs.promises.rm(thumbFile(id), {force: true})
 	await libraries.deleteOne({_id: id})
 	await fs.promises.rm(libraryDir(id), {recursive: true, force: true})
@@ -1160,6 +1165,251 @@ router.delete('/api/projects/:id/library', async (req, res) => {
 	res.json({ok: true})
 })
 
+//Results of a learner who is playing a shared project: lti-analytics.interactives-user-data, one record per
+//project + username + course (the unique index is in suite-libs/indexes.js). The learner is whoever the suite
+//session says, never anything in the request. These sit outside /api on purpose: that is staff only, and the
+//people playing a project are mostly students. The project comes from the share token, so a project only
+//collects results while its share link is on. No session (dev, or a link opened outside StudyDesk) means nothing
+//is kept here, and the player falls back to the learner's own browser
+const learnerOf = (req) => {
+	let me = whoIs(req)
+
+	if (!me?.username) {
+		return null
+	}
+
+	let activity = req.sessionData?.activity || {}
+
+	return {
+		username: String(me.username),
+		userID: me.userID,
+		name: me.name,
+		course: String(activity.courseLabel || ''),
+		courseLabel: activity.courseLabel,
+		courseCode: activity.courseCode,
+		lmsURL: activity.lmsURL
+	}
+}
+
+//The project a share token belongs to, or a 404
+const sharedProject = async (req, res) => {
+	let token = req.params.token
+
+	if (!/^[\w-]{16,64}$/.test(token)) {
+		res.status(404).json({error: 'No such shared project'})
+		return null
+	}
+
+	let doc = await projects.findOne({'share.token': token}, {projection: {doc: 0}})
+
+	if (!doc) {
+		res.status(404).json({error: 'This share link has been turned off, or never existed'})
+		return null
+	}
+
+	return doc
+}
+
+//Two first saves at once both try to insert, the unique index lets one win and the other goes again as an update
+const saveRecord = async (key, build) => {
+	for (let tries = 0; ; tries++) {
+		let existing = await userData.findOne(key)
+
+		try {
+			await userData.updateOne(key, {$set: build(existing), $setOnInsert: {created: new Date()}}, {upsert: true})
+			return
+		}
+		catch (e) {
+			if (e.code !== 11000 || tries > 2) {
+				throw e
+			}
+		}
+	}
+}
+
+router.use('/learn', cacheHeaders.api, sessionCheck())
+
+router.get('/learn/:token/progress', async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let doc = await userData.findOne({project: project._id, username: who.username, course: who.course})
+
+	res.json({available: true, progress: learner.progressOut(doc)})
+})
+
+router.put('/learn/:token/progress', express.json({limit: '100kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let clean = learner.cleanProgress(req.body)
+
+	if (!clean) {
+		return res.status(400).json({error: 'That progress is not the right shape'})
+	}
+
+	await saveRecord({project: project._id, username: who.username, course: who.course}, (existing) => learner.progressUpdate(existing, clean, who, new Date()))
+	res.json({available: true, ok: true})
+})
+
+router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let result = learner.cleanResult(req.body)
+
+	if (!result) {
+		return res.status(400).json({error: 'That result is not the right shape'})
+	}
+
+	await saveRecord({project: project._id, username: who.username, course: who.course}, (existing) => learner.reportUpdate(existing, result, who, new Date()))
+	res.json({available: true, ok: true})
+})
+
+//The learner page for a share link: the shared project in its sandbox, framed by a small page that does have
+//the session. The project asks it (postMessage) to load, save and report for the learner, and it passes that on to
+//the routes above with the session id, so the sandboxed project never sees a session itself. Embed this in
+//StudyDesk instead of /s/<token> to collect results. The session id comes from the url or sessionStorage the way
+//utilities.js finds it, but is added here directly so the page has nothing to load from the suite's host root
+const learnerPage = (token, base, nonce) => `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interactives</title>
+<style>html,body{margin:0;height:100%;background:#111}iframe{border:0;display:block;width:100%;height:100%}</style>
+</head>
+<body>
+<iframe id="project" src="${base}/s/${token}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen" title="Interactive"></iframe>
+<script nonce="${nonce}">
+(function () {
+	var token = ${JSON.stringify(token)}, base = ${JSON.stringify(base)}, frame = document.getElementById('project'), sessionID = null
+	try {
+		sessionID = new URLSearchParams(location.search).get('sessionID') || sessionStorage.getItem('sessionID')
+		if (sessionID && sessionID !== 'null') sessionStorage.setItem('sessionID', sessionID)
+	}
+	catch (e) {
+	}
+	var answer = function (m, reply) {
+		if (m.rid) frame.contentWindow.postMessage(Object.assign({target: 'interactives', type: 'progress', rid: m.rid}, reply), '*')
+	}
+	//One request at a time, so a save and a report that leave together can't both try to make the learner's first record
+	var chain = Promise.resolve()
+	var call = function (method, path, body) {
+		var headers = {'Content-Type': 'application/json'}
+		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
+		var run = function () {
+			return fetch(base + '/learn/' + token + '/' + path, {method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body), keepalive: body !== undefined}).then(function (r) {
+				return r.ok ? r.json() : {available: false}
+			})
+		}
+		var done = chain.then(run, run)
+		chain = done.catch(function () {
+		})
+		return done
+	}
+	window.addEventListener('message', function (e) {
+		if (e.source !== frame.contentWindow) return
+		var m = e.data
+		if (!m || m.source !== 'interactives-progress') return
+		var failed = function () {
+			answer(m, {ok: false, available: false})
+		}
+		if (m.op === 'load') {
+			call('GET', 'progress').then(function (j) {
+				answer(m, {ok: true, available: !!j.available, data: j.progress || null})
+			}, failed)
+		}
+		else if (m.op === 'save') {
+			call('PUT', 'progress', m.data).then(function (j) {
+				answer(m, {ok: true, available: !!j.available})
+			}, failed)
+		}
+		else if (m.op === 'report') {
+			call('POST', 'report', {result: m.result}).catch(function () {
+			})
+
+			//The page around this one can hear results too
+			if (window.parent !== window) window.parent.postMessage({source: 'interactives', name: 'result', payload: m.result}, '*')
+		}
+	})
+})()
+</script>
+</body>
+</html>
+`
+
+router.get('/play/:token', cacheHeaders.api, (req, res) => {
+	let token = req.params.token
+
+	if (!/^[\w-]{16,64}$/.test(token) || !fs.existsSync(shareFile(token))) {
+		return res.status(404).send('This share link has been turned off, or never existed')
+	}
+
+	let nonce = crypto.randomBytes(16).toString('base64')
+
+	//Only its own script and its own api, and the project in its sandbox as the one frame. It can be framed by StudyDesk
+	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'`)
+	res.setHeader('X-Content-Type-Options', 'nosniff')
+	res.setHeader('Referrer-Policy', 'no-referrer')
+	res.setHeader('X-Robots-Tag', 'noindex')
+	res.type('html').send(learnerPage(token, req.baseUrl, nonce))
+})
+
+//What the project's learners have done, for its owner (this is under /api, which is staff). Counts and averages
+//of the records, and the most recently active people
+router.get('/api/projects/:id/results', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let rows = await userData.find({project: doc._id}, {projection: {variables: 0}}).sort({updated: -1}).limit(5000).toArray()
+
+	res.json({...learner.summarise(rows), truncated: rows.length >= 5000, shared: !!doc.share?.token})
+})
+
+//Start the results afresh (a test run that left records behind, or a new intake)
+router.delete('/api/projects/:id/results', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let result = await userData.deleteMany({project: doc._id})
+
+	res.json({ok: true, deleted: result.deletedCount})
+})
+
 router.use('/api', (req, res) => {
 	res.status(404).json({error: 'No such api route'})
 })
@@ -1218,16 +1468,18 @@ client.connect()
 		revisions = db.collection('revisions')
 		prefs = db.collection('prefs')
 		libraries = db.collection('libraries')
+		userData = analyticsDB.collection('interactives-user-data')
 		fs.mkdirSync(storageDir, {recursive: true})
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod]) => {
 		ops = opsMod
 		library = libraryMod
 		safety = safetyMod
+		learner = learnerMod
 		cacheHeaders.watchEpoch()
 
 		app.listen(port, (err) => {
