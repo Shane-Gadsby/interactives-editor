@@ -558,6 +558,74 @@ const CATALOG = [
     ]
   },
   {
+    kind: "action.questionCheck",
+    label: "Check answer",
+    category: "action",
+    description: 'Check the answer on a question (made with Add question): updates its answered, correct, attempts, score and feedback variables, locks it when it is right or out of tries, and tells screen readers the feedback. Continues from "right" or "wrong", then also from "finished" once the question is locked.',
+    outputs: [
+      { id: "correct", label: "right" },
+      { id: "wrong", label: "wrong" },
+      { id: "finished", label: "finished" }
+    ],
+    hasInput: true,
+    params: [{ key: "question", label: "Question", type: "node", help: "The question frame" }]
+  },
+  {
+    kind: "action.questionReset",
+    label: "Reset question",
+    category: "action",
+    description: "Put a question back to the start: no answer, no hints, all tries back, options reshuffled when it shuffles. With a question bank it moves on to the next row. Run it on start to set the question up.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "question", label: "Question", type: "node", help: "The question frame" },
+      { key: "next", label: "Next from the bank", type: "boolean", default: true, help: "With a question bank: draw the next row. Off keeps the row showing and only clears the answer." }
+    ]
+  },
+  {
+    kind: "action.questionHint",
+    label: "Show hint",
+    category: "action",
+    description: "Show the next hint of a question and tell screen readers. Does nothing when there are none left or the question is finished.",
+    outputs: OUT,
+    hasInput: true,
+    params: [{ key: "question", label: "Question", type: "node", help: "The question frame" }]
+  },
+  {
+    kind: "action.questionChoose",
+    label: "Choose option",
+    category: "action",
+    description: "Select an option of a choice question: it swaps the choice for a single answer and toggles it for several. Normally run from a click on the option layer, where event.index is which option was clicked.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "question", label: "Question", type: "node", help: "The question frame" },
+      { key: "option", label: "Option", type: "expr", default: "event.index", help: "Which option, counting from 0 in the order shown" }
+    ]
+  },
+  {
+    kind: "action.questionMove",
+    label: "Move item",
+    category: "action",
+    description: "Move an item of an ordering question one place up or down and tell screen readers where it went.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "question", label: "Question", type: "node", help: "The question frame" },
+      { key: "item", label: "Item", type: "expr", default: "event.index", help: "Which item, counting from 0 in the order shown" },
+      {
+        key: "direction",
+        label: "Move",
+        type: "select",
+        options: [
+          { value: "up", label: "Up (earlier)" },
+          { value: "down", label: "Down (later)" }
+        ],
+        default: "up"
+      }
+    ]
+  },
+  {
     kind: "action.focus",
     label: "Focus layer",
     category: "action",
@@ -920,24 +988,24 @@ function defaultModifier(patch = {}) {
   return { unit: "letter", start: 0, end: 100, offset: 0, shape: "square", strength: 100, x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0, blur: 0, ...patch };
 }
 const isNum$1 = (v) => typeof v === "number" && Number.isFinite(v);
-const num = (v, d) => isNum$1(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
+const num$1 = (v, d) => isNum$1(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeModifier(raw) {
   const r2 = raw && typeof raw === "object" ? raw : {};
   const d = defaultModifier();
   const m = {
     unit: MODIFIER_UNITS.includes(r2.unit) ? r2.unit : d.unit,
-    start: num(r2.start, d.start),
-    end: num(r2.end, d.end),
-    offset: num(r2.offset, d.offset),
+    start: num$1(r2.start, d.start),
+    end: num$1(r2.end, d.end),
+    offset: num$1(r2.offset, d.offset),
     shape: MODIFIER_SHAPES.includes(r2.shape) ? r2.shape : d.shape,
-    strength: num(r2.strength, d.strength),
-    x: num(r2.x, d.x),
-    y: num(r2.y, d.y),
-    rotation: num(r2.rotation, d.rotation),
-    scale: num(r2.scale, d.scale),
-    opacity: num(r2.opacity, d.opacity),
-    letterSpacing: num(r2.letterSpacing, d.letterSpacing),
-    blur: num(r2.blur, d.blur)
+    strength: num$1(r2.strength, d.strength),
+    x: num$1(r2.x, d.x),
+    y: num$1(r2.y, d.y),
+    rotation: num$1(r2.rotation, d.rotation),
+    scale: num$1(r2.scale, d.scale),
+    opacity: num$1(r2.opacity, d.opacity),
+    letterSpacing: num$1(r2.letterSpacing, d.letterSpacing),
+    blur: num$1(r2.blur, d.blur)
   };
   if (typeof r2.name === "string") m.name = r2.name;
   if (typeof r2.color === "string" && r2.color) m.color = r2.color;
@@ -945,6 +1013,293 @@ function normalizeModifier(raw) {
   if (r2.randomize === true) m.randomize = true;
   if (isNum$1(r2.seed)) m.seed = r2.seed;
   return m;
+}
+const MAX_PATTERN = 300;
+const MAX_UNBOUNDED = 3;
+const MAX_WORK = 65536;
+const INPUT_LIMITS = [1e4, 1e4, 1e3, 200];
+class RegexRefused extends Error {
+}
+const newGroup = () => ({ multi: false, optional: 0, alternation: false, firsts: [], complex: false, atBranchStart: true, work: 1, starts: [], optionals: [], nextStarts: false });
+const SAMPLE = [...Array.from({ length: 128 }, (_, i) => i), 160, 233, 305, 383, 8490, 945, 1046, 19968, 128512].map((c2) => String.fromCodePoint(c2));
+const overlaps = /* @__PURE__ */ new Map();
+function canShare(a, b, flags) {
+  if (a.src === null || b.src === null) return true;
+  const key = `${flags}/${a.src}/${b.src}`;
+  let hit = overlaps.get(key);
+  if (hit === void 0) {
+    const f2 = flags.replace(/[gy]/g, "");
+    try {
+      const ra = new RegExp(`^(?:${a.src})$`, f2);
+      const rb = new RegExp(`^(?:${b.src})$`, f2);
+      hit = SAMPLE.some((ch) => ra.test(ch) && rb.test(ch));
+    } catch {
+      hit = true;
+    }
+    if (overlaps.size > 2e3) overlaps.clear();
+    overlaps.set(key, hit);
+  }
+  return hit;
+}
+function escapeLength(src, i) {
+  const n = src[i + 1];
+  if ((n === "u" || n === "p" || n === "P") && src[i + 2] === "{") {
+    const close = src.indexOf("}", i);
+    return close < 0 ? 2 : close + 1 - i;
+  }
+  if (n === "u") return 6;
+  if (n === "x") return 4;
+  return 2;
+}
+function parseQuantifier(src, i) {
+  const c2 = src[i];
+  let min;
+  let max;
+  let end;
+  if (c2 === "*") [min, max, end] = [0, Infinity, i + 1];
+  else if (c2 === "+") [min, max, end] = [1, Infinity, i + 1];
+  else if (c2 === "?") [min, max, end] = [0, 1, i + 1];
+  else if (c2 === "{") {
+    const m = /^\{(\d+)(?:(,)(\d*))?\}/.exec(src.slice(i, i + 24));
+    if (!m) return void 0;
+    min = Number(m[1]);
+    max = m[2] ? m[3] === "" ? Infinity : Number(m[3]) : min;
+    end = i + m[0].length;
+  } else return void 0;
+  if (src[end] === "?" || src[end] === "+") end++;
+  return { min, max, end };
+}
+function checkPattern(src, flags = "") {
+  if (src.length > MAX_PATTERN) throw new RegexRefused(`the pattern is longer than ${MAX_PATTERN} characters`);
+  const stack = [];
+  let cur = newGroup();
+  let unbounded = 0;
+  const nestedClasses = flags.includes("v");
+  const fold = flags.includes("i") ? (ch) => ch.toUpperCase().toLowerCase() : (ch) => ch;
+  let last;
+  const noteAtom = (ch, text) => {
+    const atom = { src: text };
+    let first;
+    if (cur.atBranchStart) {
+      cur.firsts.push(ch === null ? "" : fold(ch));
+      first = cur.firsts.length - 1;
+      cur.atBranchStart = false;
+      cur.starts.push(atom);
+    } else if (cur.nextStarts) cur.starts.push(atom);
+    cur.nextStarts = false;
+    if (ch === null) cur.complex = true;
+    return { first, atom };
+  };
+  let i = 0;
+  while (i < src.length) {
+    const c2 = src[i];
+    if (c2 === "\\") {
+      const n = src[i + 1] ?? "";
+      if (/[1-9]/.test(n) || n === "k" && src[i + 2] === "<") throw new RegexRefused("backreferences (\\1, \\k<name>) are not allowed");
+      const len = escapeLength(src, i);
+      last = noteAtom(/[a-zA-Z0-9]/.test(n) ? null : n, /^\\[bB]/.test(src.slice(i, i + 2)) ? null : src.slice(i, i + len));
+      i += len;
+    } else if (c2 === "[") {
+      let j = i + 1;
+      if (src[j] === "^") j++;
+      for (let depth = 0; j < src.length && (src[j] !== "]" || depth > 0); j++) {
+        if (src[j] === "\\") j++;
+        else if (nestedClasses && src[j] === "[") depth++;
+        else if (nestedClasses && src[j] === "]") depth--;
+      }
+      last = noteAtom(null, src.slice(i, j + 1));
+      i = j + 1;
+    } else if (c2 === "(") {
+      let j = i + 1;
+      if (src[j] === "?") {
+        const rest = src.slice(j + 1, j + 40);
+        const m = /^(?:[:=!]|<[=!]|<[A-Za-z_$][\w$]*>|[a-z]*(?:-[a-z]+)?:)/.exec(rest);
+        j += 1 + (m ? m[0].length : 0);
+      }
+      noteAtom(null, null);
+      stack.push(cur);
+      cur = newGroup();
+      i = j;
+      last = void 0;
+    } else if (c2 === ")") {
+      const done = cur;
+      const parent = stack.pop();
+      if (!parent) throw new RegexRefused("the parentheses do not match");
+      cur = parent;
+      cur.multi ||= done.multi;
+      cur.optional += done.optional;
+      cur.work *= done.work;
+      cur.optionals.push(...done.optionals);
+      last = { group: done, atom: { src: null } };
+      i++;
+    } else if (c2 === "|") {
+      cur.alternation = true;
+      cur.atBranchStart = true;
+      last = void 0;
+      i++;
+    } else {
+      const q = last ? parseQuantifier(src, i) : void 0;
+      if (q) {
+        const repeats = q.max > 1;
+        const open = q.max === Infinity || q.max - q.min > 50;
+        if (open && ++unbounded > MAX_UNBOUNDED) throw new RegexRefused(`more than ${MAX_UNBOUNDED} open-ended repetitions (*, +, {n,})`);
+        const g = last.group;
+        if (g && repeats) {
+          if (g.multi) throw new RegexRefused("a repeated group contains another repetition, like (a+)+");
+          if (g.optional > 1) throw new RegexRefused("a repeated group contains several optional parts, like (a?a?)+");
+          for (const o of g.optionals) if (g.starts.some((f2) => f2 !== o && canShare(o, f2, flags))) throw new RegexRefused("a repeated group has an optional part that could also start it, like (\\d\\d?)+");
+          if (g.alternation) {
+            const distinct = new Set(g.firsts).size === g.firsts.length && !g.firsts.includes("");
+            if (g.complex || !distinct || g.optional) throw new RegexRefused("a repeated group contains alternatives that can match the same text, like (a|aa)+");
+          }
+        }
+        if (repeats && q.min !== q.max) cur.multi = true;
+        else if (q.max === 1 && q.min === 0) cur.optional++;
+        if (q.max !== Infinity && q.max !== q.min) cur.work *= q.max - q.min + 1;
+        if (g && q.max !== Infinity && q.max > 1) cur.work *= g.work ** (q.max - 1);
+        if (q.min === 0 && last.first !== void 0) {
+          cur.firsts[last.first] = "";
+          cur.nextStarts = true;
+        }
+        if (q.min === 0 && q.max === 1) cur.optionals.push(last.atom);
+        i = q.end;
+        last = void 0;
+      } else {
+        if (c2 === "^" || c2 === "$") {
+          cur.complex = true;
+          last = { atom: { src: null } };
+        } else last = noteAtom(c2 === "." ? null : c2, c2 === "." ? "." : c2.replace(/[\\^$.*+?()[\]{}|/]/g, "\\$&"));
+        i++;
+      }
+    }
+  }
+  if (stack.length) throw new RegexRefused("the parentheses do not match");
+  if (cur.work > MAX_WORK) throw new RegexRefused("too many optional or bounded parts that can overlap, like a?a?a?...a?aaa... or a{0,30}a{0,30}a{0,30}");
+  return { unbounded, work: cur.work };
+}
+const verdicts = /* @__PURE__ */ new Map();
+function verdict(source, flags) {
+  const key = `${flags}/${source}`;
+  let v = verdicts.get(key);
+  if (!v) {
+    try {
+      const { unbounded, work } = checkPattern(source, flags);
+      v = { problem: "", limit: Math.floor(INPUT_LIMITS[unbounded] / work ** (1 / (unbounded + 1))) };
+    } catch (e) {
+      if (!(e instanceof RegexRefused)) throw e;
+      v = { problem: e.message, limit: 0 };
+    }
+    if (verdicts.size > 500) verdicts.clear();
+    verdicts.set(key, v);
+  }
+  return v;
+}
+function regexProblem(source, flags = "") {
+  return verdict(source, flags).problem;
+}
+function assertSafePattern(source, flags = "") {
+  const why = regexProblem(source, flags);
+  if (why) throw new RegexRefused(`Pattern not allowed: ${why}`);
+}
+function assertSafeMatch(source, flags, text) {
+  assertSafePattern(source, flags);
+  const { limit } = verdict(source, flags);
+  if (text.length > limit) throw new RegexRefused(`Text is too long to match against this pattern (${text.length} characters; the limit is ${limit})`);
+}
+const QUESTION_KINDS = [
+  { value: "single", label: "Multiple choice (one answer)", hint: "Pick the one right option" },
+  { value: "multiple", label: "Multiple response (several answers)", hint: "Tick every right option" },
+  { value: "truefalse", label: "True or false", hint: "A statement that is either true or false" },
+  { value: "blank", label: "Fill in the blank", hint: "Type the missing word or number" },
+  { value: "ordering", label: "Put in order", hint: "Arrange the items into the right order" }
+];
+const MAX_OPTIONS = 30;
+const MAX_BLANKS = 8;
+const MAX_HINTS = 10;
+const IDENT = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+const isIdentifier = (s) => IDENT.test(s);
+function newQuestion(kind, prefix = "q1") {
+  const base2 = {
+    kind,
+    prefix,
+    prompt: "Your question goes here",
+    points: 1,
+    options: [],
+    blanks: [],
+    shuffle: false,
+    partial: kind === "multiple" || kind === "ordering" || kind === "blank",
+    attempts: 0,
+    attemptPenalty: 0,
+    hints: [],
+    hintPenalty: 0,
+    feedbackCorrect: "Correct!",
+    feedbackPartial: "",
+    feedbackIncorrect: "Not quite. Have another look.",
+    feedbackOutOfTries: "",
+    reveal: true,
+    bank: null
+  };
+  switch (kind) {
+    case "single":
+      return { ...base2, prompt: "Which of these is a prime number?", options: opts(["9", "11", "15", "21"], [1]), hints: ["It has exactly two factors: 1 and itself."] };
+    case "multiple":
+      return { ...base2, prompt: "Which of these are fruits? Choose all that apply.", options: opts(["Apple", "Carrot", "Banana", "Potato"], [0, 2]) };
+    case "truefalse":
+      return { ...base2, prompt: "The Pacific is the largest ocean on Earth.", options: [{ id: "o1", text: "True", correct: true }, { id: "o2", text: "False" }] };
+    case "blank":
+      return { ...base2, prompt: "Complete the sentence.", blanks: [{ id: "b1", label: "The capital of France is", answers: ["Paris"] }] };
+    case "ordering":
+      return { ...base2, prompt: "Put these steps of the water cycle in order.", shuffle: true, options: opts(["Evaporation", "Condensation", "Precipitation", "Collection"], []) };
+  }
+}
+function opts(texts, right) {
+  return texts.map((text2, i) => ({ id: `o${i + 1}`, text: text2, ...right.includes(i) ? { correct: true } : {} }));
+}
+const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const str$1 = (v, d = "") => typeof v === "string" ? v : d;
+const num = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
+function normaliseQuestion(raw) {
+  if (!isObj$1(raw)) return null;
+  const kind = QUESTION_KINDS.some((k) => k.value === raw.kind) ? raw.kind : null;
+  if (!kind) return null;
+  const d = newQuestion(kind);
+  const list = (v, max) => Array.isArray(v) ? v.filter(isObj$1).slice(0, max) : [];
+  const options = list(raw.options, MAX_OPTIONS).map((o, i) => ({
+    id: str$1(o.id) || `o${i + 1}`,
+    text: str$1(o.text),
+    ...o.correct === true ? { correct: true } : {},
+    ...str$1(o.feedback) ? { feedback: str$1(o.feedback) } : {},
+    ...o.fixed === true ? { fixed: true } : {}
+  }));
+  const blanks = list(raw.blanks, MAX_BLANKS).map((b, i) => ({
+    id: str$1(b.id) || `b${i + 1}`,
+    label: str$1(b.label),
+    answers: (Array.isArray(b.answers) ? b.answers : []).filter((a) => typeof a === "string").slice(0, 40),
+    ...b.caseSensitive === true ? { caseSensitive: true } : {},
+    ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {}
+  }));
+  const bank = isObj$1(raw.bank) && str$1(raw.bank.items).trim() ? { items: str$1(raw.bank.items), order: raw.bank.order === "sequence" ? "sequence" : "random" } : null;
+  return {
+    kind,
+    prefix: isIdentifier(str$1(raw.prefix)) ? str$1(raw.prefix) : d.prefix,
+    prompt: str$1(raw.prompt),
+    points: num(raw.points, 1, 0, 1e3),
+    options,
+    blanks,
+    shuffle: raw.shuffle === true,
+    partial: raw.partial === true,
+    attempts: Math.round(num(raw.attempts, 0, 0, 100)),
+    attemptPenalty: num(raw.attemptPenalty, 0, 0, 1),
+    hints: (Array.isArray(raw.hints) ? raw.hints : []).filter((h) => typeof h === "string").slice(0, MAX_HINTS),
+    hintPenalty: num(raw.hintPenalty, 0, 0, 1),
+    feedbackCorrect: str$1(raw.feedbackCorrect),
+    feedbackPartial: str$1(raw.feedbackPartial),
+    feedbackIncorrect: str$1(raw.feedbackIncorrect),
+    feedbackOutOfTries: str$1(raw.feedbackOutOfTries),
+    reveal: raw.reveal !== false,
+    bank,
+    ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {}
+  };
 }
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isStr = (v) => typeof v === "string";
@@ -1051,6 +1406,12 @@ function sanitizeNode(raw, seen) {
   if (isObj(n.converters)) for (const [k, list] of Object.entries(n.converters)) n.converters[k] = objs(list).filter((c2) => isStr(c2.type));
   if ("constraints" in n) n.constraints = objs(n.constraints).filter((c2) => isStr(c2.type));
   if ("repeat" in n && !(isObj(n.repeat) && isStr(n.repeat.items))) delete n.repeat;
+  if ("question" in n) {
+    const qn = normaliseQuestion(n.question);
+    if (qn && raw.type === "frame") n.question = qn;
+    else delete n.question;
+  }
+  if ("questionPart" in n && !isStr(n.questionPart)) delete n.questionPart;
   if ("solo" in n && !(isObj(n.solo) && (n.solo.active === null || isStr(n.solo.active)))) delete n.solo;
   if ("drawOrder" in n) n.drawOrder = arr(n.drawOrder, isStr);
   if ("link" in n && n.link !== null && !(isObj(n.link) && isStr(n.link.url))) delete n.link;
@@ -1068,7 +1429,7 @@ function sanitizeNode(raw, seen) {
   for (const k of ["mask", "locked"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
   for (const k of ["blur", "fontWeight"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
   for (const k of ["blendMode", "cursor", "ariaLabel", "ariaDescription", "className"]) if (k in n && !isStr(n[k])) delete n[k];
-  if ("role" in n && !["button", "checkbox", "heading", "image", "region"].includes(n.role)) delete n.role;
+  if ("role" in n && !["button", "checkbox", "radio", "radiogroup", "heading", "image", "region"].includes(n.role)) delete n.role;
   for (const k of ["decorative", "focusable", "ariaChecked"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
   for (const k of ["headingLevel", "tabOrder"]) if (k in n && !isNum(n[k])) delete n[k];
   const stroke = (v) => {
@@ -1881,198 +2242,6 @@ function normalizeRuns(runs) {
 function runsPatch(runs) {
   const norm = normalizeRuns(runs);
   return { text: runsText(norm), runs: isPlainRuns(norm) ? void 0 : norm };
-}
-const MAX_PATTERN = 300;
-const MAX_UNBOUNDED = 3;
-const MAX_WORK = 65536;
-const INPUT_LIMITS = [1e4, 1e4, 1e3, 200];
-class RegexRefused extends Error {
-}
-const newGroup = () => ({ multi: false, optional: 0, alternation: false, firsts: [], complex: false, atBranchStart: true, work: 1, starts: [], optionals: [], nextStarts: false });
-const SAMPLE = [...Array.from({ length: 128 }, (_, i) => i), 160, 233, 305, 383, 8490, 945, 1046, 19968, 128512].map((c2) => String.fromCodePoint(c2));
-const overlaps = /* @__PURE__ */ new Map();
-function canShare(a, b, flags) {
-  if (a.src === null || b.src === null) return true;
-  const key = `${flags}/${a.src}/${b.src}`;
-  let hit = overlaps.get(key);
-  if (hit === void 0) {
-    const f2 = flags.replace(/[gy]/g, "");
-    try {
-      const ra = new RegExp(`^(?:${a.src})$`, f2);
-      const rb = new RegExp(`^(?:${b.src})$`, f2);
-      hit = SAMPLE.some((ch) => ra.test(ch) && rb.test(ch));
-    } catch {
-      hit = true;
-    }
-    if (overlaps.size > 2e3) overlaps.clear();
-    overlaps.set(key, hit);
-  }
-  return hit;
-}
-function escapeLength(src, i) {
-  const n = src[i + 1];
-  if ((n === "u" || n === "p" || n === "P") && src[i + 2] === "{") {
-    const close = src.indexOf("}", i);
-    return close < 0 ? 2 : close + 1 - i;
-  }
-  if (n === "u") return 6;
-  if (n === "x") return 4;
-  return 2;
-}
-function parseQuantifier(src, i) {
-  const c2 = src[i];
-  let min;
-  let max;
-  let end;
-  if (c2 === "*") [min, max, end] = [0, Infinity, i + 1];
-  else if (c2 === "+") [min, max, end] = [1, Infinity, i + 1];
-  else if (c2 === "?") [min, max, end] = [0, 1, i + 1];
-  else if (c2 === "{") {
-    const m = /^\{(\d+)(?:(,)(\d*))?\}/.exec(src.slice(i, i + 24));
-    if (!m) return void 0;
-    min = Number(m[1]);
-    max = m[2] ? m[3] === "" ? Infinity : Number(m[3]) : min;
-    end = i + m[0].length;
-  } else return void 0;
-  if (src[end] === "?" || src[end] === "+") end++;
-  return { min, max, end };
-}
-function checkPattern(src, flags = "") {
-  if (src.length > MAX_PATTERN) throw new RegexRefused(`the pattern is longer than ${MAX_PATTERN} characters`);
-  const stack = [];
-  let cur = newGroup();
-  let unbounded = 0;
-  const nestedClasses = flags.includes("v");
-  const fold = flags.includes("i") ? (ch) => ch.toUpperCase().toLowerCase() : (ch) => ch;
-  let last;
-  const noteAtom = (ch, text) => {
-    const atom = { src: text };
-    let first;
-    if (cur.atBranchStart) {
-      cur.firsts.push(ch === null ? "" : fold(ch));
-      first = cur.firsts.length - 1;
-      cur.atBranchStart = false;
-      cur.starts.push(atom);
-    } else if (cur.nextStarts) cur.starts.push(atom);
-    cur.nextStarts = false;
-    if (ch === null) cur.complex = true;
-    return { first, atom };
-  };
-  let i = 0;
-  while (i < src.length) {
-    const c2 = src[i];
-    if (c2 === "\\") {
-      const n = src[i + 1] ?? "";
-      if (/[1-9]/.test(n) || n === "k" && src[i + 2] === "<") throw new RegexRefused("backreferences (\\1, \\k<name>) are not allowed");
-      const len = escapeLength(src, i);
-      last = noteAtom(/[a-zA-Z0-9]/.test(n) ? null : n, /^\\[bB]/.test(src.slice(i, i + 2)) ? null : src.slice(i, i + len));
-      i += len;
-    } else if (c2 === "[") {
-      let j = i + 1;
-      if (src[j] === "^") j++;
-      for (let depth = 0; j < src.length && (src[j] !== "]" || depth > 0); j++) {
-        if (src[j] === "\\") j++;
-        else if (nestedClasses && src[j] === "[") depth++;
-        else if (nestedClasses && src[j] === "]") depth--;
-      }
-      last = noteAtom(null, src.slice(i, j + 1));
-      i = j + 1;
-    } else if (c2 === "(") {
-      let j = i + 1;
-      if (src[j] === "?") {
-        const rest = src.slice(j + 1, j + 40);
-        const m = /^(?:[:=!]|<[=!]|<[A-Za-z_$][\w$]*>|[a-z]*(?:-[a-z]+)?:)/.exec(rest);
-        j += 1 + (m ? m[0].length : 0);
-      }
-      noteAtom(null, null);
-      stack.push(cur);
-      cur = newGroup();
-      i = j;
-      last = void 0;
-    } else if (c2 === ")") {
-      const done = cur;
-      const parent = stack.pop();
-      if (!parent) throw new RegexRefused("the parentheses do not match");
-      cur = parent;
-      cur.multi ||= done.multi;
-      cur.optional += done.optional;
-      cur.work *= done.work;
-      cur.optionals.push(...done.optionals);
-      last = { group: done, atom: { src: null } };
-      i++;
-    } else if (c2 === "|") {
-      cur.alternation = true;
-      cur.atBranchStart = true;
-      last = void 0;
-      i++;
-    } else {
-      const q = last ? parseQuantifier(src, i) : void 0;
-      if (q) {
-        const repeats = q.max > 1;
-        const open = q.max === Infinity || q.max - q.min > 50;
-        if (open && ++unbounded > MAX_UNBOUNDED) throw new RegexRefused(`more than ${MAX_UNBOUNDED} open-ended repetitions (*, +, {n,})`);
-        const g = last.group;
-        if (g && repeats) {
-          if (g.multi) throw new RegexRefused("a repeated group contains another repetition, like (a+)+");
-          if (g.optional > 1) throw new RegexRefused("a repeated group contains several optional parts, like (a?a?)+");
-          for (const o of g.optionals) if (g.starts.some((f2) => f2 !== o && canShare(o, f2, flags))) throw new RegexRefused("a repeated group has an optional part that could also start it, like (\\d\\d?)+");
-          if (g.alternation) {
-            const distinct = new Set(g.firsts).size === g.firsts.length && !g.firsts.includes("");
-            if (g.complex || !distinct || g.optional) throw new RegexRefused("a repeated group contains alternatives that can match the same text, like (a|aa)+");
-          }
-        }
-        if (repeats && q.min !== q.max) cur.multi = true;
-        else if (q.max === 1 && q.min === 0) cur.optional++;
-        if (q.max !== Infinity && q.max !== q.min) cur.work *= q.max - q.min + 1;
-        if (g && q.max !== Infinity && q.max > 1) cur.work *= g.work ** (q.max - 1);
-        if (q.min === 0 && last.first !== void 0) {
-          cur.firsts[last.first] = "";
-          cur.nextStarts = true;
-        }
-        if (q.min === 0 && q.max === 1) cur.optionals.push(last.atom);
-        i = q.end;
-        last = void 0;
-      } else {
-        if (c2 === "^" || c2 === "$") {
-          cur.complex = true;
-          last = { atom: { src: null } };
-        } else last = noteAtom(c2 === "." ? null : c2, c2 === "." ? "." : c2.replace(/[\\^$.*+?()[\]{}|/]/g, "\\$&"));
-        i++;
-      }
-    }
-  }
-  if (stack.length) throw new RegexRefused("the parentheses do not match");
-  if (cur.work > MAX_WORK) throw new RegexRefused("too many optional or bounded parts that can overlap, like a?a?a?...a?aaa... or a{0,30}a{0,30}a{0,30}");
-  return { unbounded, work: cur.work };
-}
-const verdicts = /* @__PURE__ */ new Map();
-function verdict(source, flags) {
-  const key = `${flags}/${source}`;
-  let v = verdicts.get(key);
-  if (!v) {
-    try {
-      const { unbounded, work } = checkPattern(source, flags);
-      v = { problem: "", limit: Math.floor(INPUT_LIMITS[unbounded] / work ** (1 / (unbounded + 1))) };
-    } catch (e) {
-      if (!(e instanceof RegexRefused)) throw e;
-      v = { problem: e.message, limit: 0 };
-    }
-    if (verdicts.size > 500) verdicts.clear();
-    verdicts.set(key, v);
-  }
-  return v;
-}
-function regexProblem(source, flags = "") {
-  return verdict(source, flags).problem;
-}
-function assertSafePattern(source, flags = "") {
-  const why = regexProblem(source, flags);
-  if (why) throw new RegexRefused(`Pattern not allowed: ${why}`);
-}
-function assertSafeMatch(source, flags, text) {
-  assertSafePattern(source, flags);
-  const { limit } = verdict(source, flags);
-  if (text.length > limit) throw new RegexRefused(`Text is too long to match against this pattern (${text.length} characters; the limit is ${limit})`);
 }
 class ExprError extends Error {
 }
@@ -4806,6 +4975,96 @@ ${params}`;
     }
   },
   {
+    id: "question-kit",
+    title: "Questions and quizzes",
+    group: "Interactivity",
+    summary: "Add multiple choice, true/false, fill in the blank and ordering questions that check themselves, with hints, tries, score, shuffle and question banks.",
+    keywords: "question quiz test assessment multiple choice true false fill blank ordering sequence answer correct feedback hint attempts score shuffle bank random self check learning",
+    body: `Quizzes without wiring every button by hand. **Add question** (the speech bubble in the toolbar) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
+
+## Add one
+
+Click **Add question**, pick a type, and a card appears with a prompt, the answers, a Check answer button, a Hint button, feedback text, a score and a Try again button. Edit the prompt and answers in the **Question** section, then press **Preview**.
+
+| Type | The learner | Right when |
+|---|---|---|
+| Multiple choice (one answer) | picks one option | the picked option is marked right |
+| Multiple response | ticks any number | exactly the right ones are ticked |
+| True or false | picks True or False | it matches the statement |
+| Fill in the blank | types into one or more inputs | each blank matches an accepted answer |
+| Put in order | moves items up and down | every item is in its place |
+
+## What gets built
+
+Nothing is hidden. The question is a **frame** (named Question 1, Question 2, ...) holding:
+
+- a **Prompt** text, \`{q1_prompt}\`;
+- an **answer area**: for choices, one **Option** layer repeated once per option (a [repeater](repeaters) over \`q1_items\`, so you restyle the one template and every option follows); for blanks, a label and an input per blank; for ordering, an **Item** layer with Move up and Move down buttons;
+- **Hint text**, **Feedback**, and a row of **Check answer**, **Hint**, **Try again** and **Score**.
+
+Every layer is yours: recolour it, change the font, move things around, swap a rectangle for an image, add animation. The layers are bound to the question's variables (for example the option fill follows \`item.selected\` and \`item.state\`), so they keep working. The **Restyle a part** buttons at the bottom of the Question section select a part for you; selecting any part shows a note saying it belongs to the question.
+
+The behaviour is a handful of nodes in the **Interactions** tab, in rows of an event and what it runs: *On start* then **Reset question**; a click on the option then **Choose option**; a click on Check answer then **Check answer**; and so on. Add your own nodes after them. **Check answer** has three outputs: *right*, *wrong*, and *finished* (once the question is locked, because it is right or out of tries), so "when it is right, play the confetti timeline" is one wire.
+
+## Variables
+
+Each question keeps its state in variables named from its **Name prefix** (\`q1\` by default): \`q1_answered\`, \`q1_correct\`, \`q1_attempts\`, \`q1_triesLeft\`, \`q1_score\`, \`q1_locked\`, \`q1_feedback\`, \`q1_hint\`, \`q1_hintsUsed\`, \`q1_hintsLeft\`, \`q1_prompt\` and \`q1_items\` (what is shown, with \`selected\` and \`state\` per row). Use them anywhere: \`q1_score + q2_score\`, a progress bar bound to \`q1_attempts\`, a Next button shown when \`q1_correct\`. Renaming the prefix renames the variables and everything that reads them.
+
+**Score** is the question's points times the share that is right, less **Retry −%** for each check after the first and **Hint −%** for each hint taken. With **Part marks** on, a multiple response, ordering or fill in the blank question is worth the share it got right.
+
+## Worked examples
+
+**Multiple choice.** Add question, *Multiple choice*. Type the prompt, type each option, and tick the right one. Set **Tries** to 2 and write a hint. In Preview pick a wrong option and press **Check answer**: the feedback says *Not quite*, and with a try left you can pick again. The second miss locks the question and (if **Show the right answer** is on) marks the right option.
+
+**Multiple response.** Tick every right option. Turn **Part marks** on to give a share of the points for a half-right answer, and write **Partly right** feedback.
+
+**True or false.** Write the statement as the prompt and set **Statement is** to True or False. Edit the two labels for other wording ("Agree" and "Disagree").
+
+**Fill in the blank.** The accepted answers go one per line: \`Paris\`, \`city of light\`. Case and extra spaces are ignored unless you tick **Match case**. A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses. A line written \`/colou?r/i\` is a pattern. **Add blank** adds another input in the look of the last one.
+
+**Put in order.** List the items in the **right** order; the learner sees them shuffled (the first deal is never already right). Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
+
+## Shuffle
+
+**Shuffle** deals the options (or ordering items) in a new order every time the question starts or resets. In a multiple choice, tick **Stays in place when shuffled** on an option such as "None of these". Feedback and marking follow the option, not its place.
+
+## Question banks from data
+
+Tick **Take the question from data** and give the name of a [data source](data-sources) (or part of one, like \`quiz.questions\`). Each row is a question; what a row leaves out stays as set in the Question section (except hints, which come only from the row). With a bank the card's Try again button becomes **Next question**, which draws the next row (**Random** shows every row once before any repeats; **In order** goes round).
+
+Columns a row can have:
+
+| Column | For |
+|---|---|
+| \`prompt\` | the question text |
+| \`options\` | choices, as a list or text separated by \`\\|\` (also the items to order, right order first) |
+| \`correct\` | the right choice(s) as text or position counting from 1 (\`B\` or \`2\`, several as \`A\\|C\`); true/false takes \`true\` or \`false\` |
+| \`answer\`, \`answer2\` | accepted answers for each blank, several separated by \`\\|\` |
+| \`items\` | ordering items, right order first |
+| \`hint\`, \`hint2\`, \`feedback\`, \`feedbackCorrect\`, \`feedbackIncorrect\`, \`points\` | as the names say |
+
+A CSV works the same way: the header names are the columns, in any case. The question reloads when its data source finishes loading.
+
+## Results
+
+**Report result** in the Question section adds a *Report result* node after **Check answer**'s *finished* output, sending the question's score (\`q1_score\`) to the project's Results (see the Results settings for the top score, pass mark and completion). With several questions, leave it off and report once yourself, for example a *Report result* node with the score \`q1_score + q2_score\` after the last one.
+
+## Accessible by default
+
+The prompt is a heading, the options are a radio group (or checkboxes) with their text as the name and *Right* / *Wrong* / *This was the right answer* as the description once they are marked, every part is reachable with Tab and operated with Enter and Space, and **Check answer**, **Hint** and the ordering moves announce through the live region (see [Accessibility](accessibility)): the feedback, the hint, "Evaporation, position 2 of 4". Right and wrong are shown with words (✓ Right, ✗ Wrong) as well as colour. These need the Accessibility preference on, which is the default.
+
+## Copies, deleting and changing type
+
+- **Duplicate** a question and the copy shares the original's variables, so the Question section warns and offers **Make this one independent**, which gives the copy its own variables and nodes.
+- Changing **Type** rebuilds the answer area (a different set of layers) and keeps the prompt, buttons and feedback as you styled them. Settings that make no sense for the new type are left alone.
+- Delete a button you don't want (say Hint): its wiring goes the next time settings change, and nothing else is affected. The Hint button hides itself when the question has no hints.
+
+## Reference
+
+The question frame holds its settings in \`question\`, and each part layer carries a \`questionPart\` marker so the settings can find it again after it is renamed or moved. Both are in the exported file; the player uses the settings and ignores the markers. The nodes are **Check answer**, **Reset question**, **Show hint**, **Choose option** and **Move item** in the [node reference](interaction-nodes). Not yet in the kit: matching (which would use [Drag and drop](drag-and-drop)) and hotspots.
+`
+  },
+  {
     id: "variables",
     title: "Variables",
     group: "Interactivity",
@@ -5858,16 +6117,16 @@ function outline(list, depth, maxDepth, out, limit) {
   }
 }
 const r = (v) => Math.round(v * 10) / 10;
-function overview(p, opts) {
+function overview(p, opts2) {
   const lines = [`# ${p.name} (${p.id})`, `Start artboard: ${p.settings.startArtboardId}`, ""];
   for (const ab of p.artboards) {
-    if (opts.artboardId && ab.id !== opts.artboardId) continue;
+    if (opts2.artboardId && ab.id !== opts2.artboardId) continue;
     lines.push(`## Artboard ${ab.name} [${ab.id}] ${ab.width}x${ab.height}`);
     if (ab.timelines.length) lines.push(`Timelines: ${ab.timelines.map((t) => `${t.name} [${t.id}] ${t.duration}ms ${t.loop}${t.autoplay ? " autoplay" : ""} (${t.tracks.length} tracks)`).join("; ")}`);
     if (ab.blends?.length) lines.push(`Blends: ${ab.blends.map((b) => `${b.name} [${b.id}] ${b.mode} (${b.entries.length} timelines)`).join("; ")}`);
     if (ab.logic.nodes.length) lines.push(`Interactions: ${ab.logic.nodes.length} nodes, ${ab.logic.edges.length} connections (use get_interactions)`);
     const out = [];
-    outline(ab.children, 0, opts.depth ?? (opts.artboardId ? 8 : 2), out, { n: opts.artboardId ? 600 : 80 });
+    outline(ab.children, 0, opts2.depth ?? (opts2.artboardId ? 8 : 2), out, { n: opts2.artboardId ? 600 : 80 });
     lines.push(...out, "");
   }
   if (p.variables.length) lines.push("## Variables", ...p.variables.map((v) => `- ${v.name} [${v.id}] ${v.type} = ${JSON.stringify(v.initial)}${v.shared ? " shared" : ""}${v.options ? ` options=${v.options.join("|")}` : ""}`), "");

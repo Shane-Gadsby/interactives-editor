@@ -1239,7 +1239,7 @@ A CSV works the same way: the header names are the columns, in any case. The que
 
 ## Results
 
-**Report result** in the Question section adds a *Report result* node after **Check answer**'s *finished* output, sending the question's score (`q1_score`) to the project's Results (see the Results settings for the top score, pass mark and completion). With several questions, leave it off and report once yourself, for example a *Report result* node with the score `q1_score + q2_score` after the last one.
+**Report result** in the Question section adds a *Report result* node after **Check answer**'s *finished* output, sending the question's score (\`q1_score\`) to the project's Results (see the Results settings for the top score, pass mark and completion). With several questions, leave it off and report once yourself, for example a *Report result* node with the score \`q1_score + q2_score\` after the last one.
 
 ## Accessible by default
 
