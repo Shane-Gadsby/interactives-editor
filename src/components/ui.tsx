@@ -9,6 +9,9 @@ function tipFor(label: ReactNode, title?: string): string | undefined {
   return typeof label === 'string' ? FIELD_TIPS[label] : undefined;
 }
 
+/** A field label that never breaks after a hyphen ("V-align" would wrap to "V-" and "align" in a tight row). */
+const unbroken = (label: ReactNode): ReactNode => (typeof label === 'string' ? label.replace(/-/g, '\u2011') : label);
+
 /** Number input whose label can be dragged left/right to scrub the value. */
 export function NumberField({
   label,
@@ -66,7 +69,7 @@ export function NumberField({
     <label className="field number-field" title={tipFor(label, title)}>
       {label !== undefined && (
         <span className="field-label scrub" onPointerDown={scrub}>
-          {label}
+          {unbroken(label)}
         </span>
       )}
       <input
@@ -165,7 +168,7 @@ export function TextField({
   };
   return (
     <label className={`field text-field${multiline ? ' multiline' : ''}`} title={tipFor(label, title)}>
-      {label !== undefined && <span className="field-label">{label}</span>}
+      {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
     </label>
   );
@@ -187,7 +190,7 @@ export function SelectField<T extends string>({
   const opts = (options as (T | { value: T; label: string })[]).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
   return (
     <label className="field select-field" title={tipFor(label, title)}>
-      {label !== undefined && <span className="field-label">{label}</span>}
+      {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       <select value={value} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
         {opts.map((o) => (
           <option key={o.value} value={o.value}>

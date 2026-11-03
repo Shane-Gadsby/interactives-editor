@@ -311,6 +311,7 @@ code,
   min-width: 0;
 }
 .key-btn {
+  flex: none;
   border: none;
   background: none;
   color: #5c606a;
@@ -331,6 +332,58 @@ code,
 .key-row {
   display: flex;
   justify-content: space-between;
+}
+
+/* ---------------------------------------------------------------- inspector fit
+   Nothing in the inspector clips its value. A field has a smallest size it is still readable at (a three digit number,
+   a short dropdown word, a hex colour), rows wrap onto a second line when their fields would shrink below that, and
+   labels of more than one word wrap inside their own box instead of pushing the field out of the panel. */
+.inspector .row {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.inspector .row > .field:not(.check-field),
+.inspector .row > .keyed {
+  min-width: min-content;
+}
+.inspector .field-label {
+  flex: 0 1 auto;
+  min-width: min-content;
+  white-space: normal;
+  overflow-wrap: normal;
+  line-height: 1.2;
+}
+.inspector .field:not(.text-field.multiline) input:not([type='checkbox']):not([type='color']):not(.alpha),
+.inspector .field select {
+  flex: 1 1 0;
+}
+.inspector .number-field input:not([type='checkbox']):not([type='color']) {
+  min-width: 32px;
+  padding: 0 4px;
+}
+.inspector .text-field:not(.multiline) input {
+  min-width: 56px;
+}
+.inspector .select-field select {
+  min-width: 84px;
+}
+/* Dropdowns need more room than numbers: a row of a dropdown and a number gives the dropdown the larger share */
+.inspector .row > .select-field {
+  flex-grow: 2;
+}
+.inspector .color-field {
+  gap: 4px;
+}
+.inspector .color-field input.color-text:not([type='color']) {
+  min-width: 68px;
+}
+.inspector .check-field {
+  flex: 0 1 auto;
+  gap: 4px;
+}
+.inspector .check-field input {
+  flex: none;
+  margin: 0;
 }
 
 /* ---------------------------------------------------------------- sections */
@@ -3574,7 +3627,7 @@ code {
   display: none;
 }
 .uniform-item > .row > .field:nth-child(2) {
-  flex: 0 0 104px;
+  flex: 0 0 124px;
 }
 .uniform-item .keyed + .keyed {
   margin-top: 2px;
@@ -3666,4 +3719,54 @@ code {
 .paint-head .mini:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+/* Paint order rows say what they hold (swatch, colour or gradient, stroke width), since the numbers stay put when paints trade places */
+.paint-order-row .paint-head-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 0;
+}
+.paint-order-label {
+  flex: none;
+}
+.paint-order-detail {
+  margin-left: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+}
+.paint-order-row.off .paint-head-name {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+.paint-order-row.moved {
+  animation: paint-moved 1.2s ease-out;
+}
+@keyframes paint-moved {
+  from {
+    background: color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  to {
+    background: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paint-order-row.moved {
+    animation: none;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

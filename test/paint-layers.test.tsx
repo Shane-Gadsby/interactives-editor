@@ -134,7 +134,8 @@ describe('Stroke list (inspector)', () => {
 describe('Paint order (inspector)', () => {
   const solid = (color: string) => ({ type: 'solid' as const, color });
   const order = () => (rect() as RectNode & { paintOrder?: string[] }).paintOrder;
-  const rows = () => Array.from(host.querySelectorAll('.paint-order-row .paint-head-name')).map((e) => e.textContent);
+  const rows = () => Array.from(host.querySelectorAll('.paint-order-row .paint-order-label')).map((e) => e.textContent);
+  const details = () => Array.from(host.querySelectorAll('.paint-order-row .paint-order-detail')).map((e) => e.textContent);
 
   it('is not shown for a shape with only fills, or only a stroke', () => {
     mount('order', { fill: solid('#111111'), fills: [solid('#222222')] });
@@ -147,11 +148,13 @@ describe('Paint order (inspector)', () => {
 
   it('lists every paint front-most first, and moves a stroke under the fill', () => {
     mount('order', { fill: solid('#111111'), stroke: { paint: solid('#222222'), width: 2 } });
-    expect(rows()).toEqual(['Stroke (stroke)', 'Fill']);
+    expect(rows()).toEqual(['Stroke', 'Fill']);
+    expect(details()).toEqual(['#222222, 2px', '#111111']);
     expect(order()).toBeUndefined();
     click('Move stroke down in the paint order (behind)');
     expect(order()).toEqual(['stroke', 'fill']);
-    expect(rows()).toEqual(['Fill', 'Stroke (stroke)']);
+    expect(rows()).toEqual(['Fill', 'Stroke']);
+    expect(details()).toEqual(['#111111', '#222222, 2px']);
     // The plain order is not stored
     click('Move stroke up in the paint order (in front)');
     expect(order()).toBeUndefined();
@@ -161,7 +164,7 @@ describe('Paint order (inspector)', () => {
 
   it('puts a stroke between two fills, and swapping two fills swaps their places in the fill list', () => {
     mount('order', { fill: solid('#111111'), fills: [solid('#222222')], stroke: { paint: solid('#333333'), width: 2 } });
-    expect(rows()).toEqual(['Stroke (stroke)', 'Fill 2', 'Fill 1']);
+    expect(rows()).toEqual(['Stroke', 'Fill 2', 'Fill 1']);
     click('Move stroke down in the paint order (behind)');
     expect(order()).toEqual(['fill', 'stroke', 'fill']);
     expect(colors()).toEqual(['#111111', '#222222']);
@@ -198,5 +201,45 @@ describe('Paint order (inspector)', () => {
     expect(order()).toEqual(['stroke', 'fill', 'stroke']);
     click('Remove stroke 1');
     expect(order()).toBeUndefined();
+  });
+
+  it('says what each row holds, so a swap of two fills reads as a swap: the number stays, the paint moves', () => {
+    mount('order', { fill: solid('#111111'), fills: [solid('#222222')], stroke: { paint: solid('#333333'), width: 4 }, paintOrder: ['fill', 'fill', 'stroke'] });
+    expect(rows()).toEqual(['Stroke', 'Fill 2', 'Fill 1']);
+    expect(details()).toEqual(['#333333, 4px', '#222222', '#111111']);
+    const swatches = () => Array.from(host.querySelectorAll<HTMLElement>('.paint-order-row .paint-swatch')).map((e) => e.style.background);
+    expect(swatches()).toEqual(['rgb(51, 51, 51)', 'rgb(34, 34, 34)', 'rgb(17, 17, 17)']);
+    // Fill 2 moves down past fill 1: both labels stay in their rows, but the paints behind them traded places
+    click('Move fill 2 down in the paint order (behind)');
+    expect(rows()).toEqual(['Stroke', 'Fill 2', 'Fill 1']);
+    expect(details()).toEqual(['#333333, 4px', '#111111', '#222222']);
+    expect(swatches()).toEqual(['rgb(51, 51, 51)', 'rgb(17, 17, 17)', 'rgb(34, 34, 34)']);
+    // The document agrees: the colours the canvas draws are the ones the list shows
+    expect(colors()).toEqual(['#222222', '#111111']);
+  });
+
+  it('names gradients, see-through colours and images, and marks hidden paints', () => {
+    mount('order', {
+      fill: { type: 'linear', angle: 90, stops: [{ offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' }] },
+      fills: [{ type: 'radial', stops: [{ offset: 0, color: '#ffffff' }, { offset: 1, color: '#000000' }] }, { type: 'solid', color: 'rgba(0, 0, 0, 0.5)', visible: false }],
+      stroke: { paint: solid('#abcdef'), width: 1.5 },
+    });
+    expect(details()).toEqual(['#abcdef, 1.5px', '#000000 50%', 'Radial gradient', 'Linear gradient']);
+    const first = host.querySelector<HTMLElement>('.paint-order-row:last-child .paint-swatch')!;
+    expect(first.style.background).toContain('linear-gradient');
+    expect(Array.from(host.querySelectorAll('.paint-order-row')).map((r) => r.classList.contains('off'))).toEqual([false, true, false, false]);
+  });
+
+  it('labels the move buttons with the paint they move, and keeps the focus on that paint', () => {
+    mount('order', { fill: solid('#111111'), fills: [solid('#222222')], stroke: { paint: solid('#333333'), width: 2 } });
+    const up = host.querySelector<HTMLButtonElement>('[title="Move fill 1 up in the paint order (in front)"]')!;
+    expect(up.getAttribute('aria-label')).toBe('Move fill 1 (#111111) up in the paint order (in front)');
+    up.focus();
+    act(() => up.click());
+    // Fill 1 moved up and now sits in the next row; that row's up button has the focus, so pressing it again keeps moving the same paint
+    const focused = document.activeElement as HTMLElement;
+    expect(focused.dataset.dir).toBe('up');
+    expect(focused.closest('.paint-order-row')?.querySelector('.paint-order-detail')?.textContent).toBe('#111111');
+    expect(host.querySelector('[role="status"]')?.textContent).toMatch(/^Fill 1 moved up/);
   });
 });

@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { fillList, fillPath, movePaint, orderedPaints, orderWithAdded, orderWithRemoved, paintFields, paintOrder, strokeList, strokePath, type BlendMode, type Paint, type PaintKind, type Project, type SceneNode, type ShapeStyle, type Stroke } from 'interactives-player';
+import { useEffect, useRef, useState } from 'react';
+import { fillList, fillPath, formatColor, movePaint, orderedPaints, paintToCss, parseColor, orderWithAdded, orderWithRemoved, paintFields, paintOrder, strokeList, strokePath, type BlendMode, type Paint, type PaintEntry, type PaintKind, type Project, type SceneNode, type ShapeStyle, type Stroke } from 'interactives-player';
 import { store } from '../store/store';
+import { assetUrls } from '../lib/assets';
 import { IconButton, Row, Section, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { KeyRow, Num, PaintField, useSetter, useShown } from './Inspector';
@@ -262,80 +263,135 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
 // The paint-order row being dragged: its position in the list (bottom to top)
 let draggingOrder: number | null = null;
 
-/** A small colour chip for a paint: its colour, or the first colour of a gradient. */
+/** What a paint is, in a few characters: its colour (with opacity when it is see-through), or the kind of gradient or image. */
+export function paintName(p: Paint): string {
+  if (p.type === 'linear') return 'Linear gradient';
+  if (p.type === 'radial') return 'Radial gradient';
+  if (p.type === 'image') return 'Image';
+  const c = parseColor(p.color);
+  if (!c) return p.color;
+  return c[3] >= 1 ? formatColor(c) : `${formatColor([c[0], c[1], c[2], 1])} ${Math.round(c[3] * 100)}%`;
+}
+
+/** The identifying text of a paint-order row after its Fill/Stroke label: the paint's own name, and a stroke's width. */
+export function entryDetail(e: PaintEntry): string {
+  const paint = 'paint' in e.paint ? e.paint.paint : e.paint;
+  const name = paintName(paint);
+  return 'paint' in e.paint ? `${name}, ${Math.round(e.paint.width * 100) / 100}px` : name;
+}
+
+/** A small chip showing a paint: its colour, gradient or image. */
 function swatchOf(p: Paint | Stroke): string {
   const paint = 'paint' in p ? p.paint : p;
-  if (paint.type === 'solid') return paint.color;
-  if (paint.type === 'image') return 'transparent';
-  return paint.stops[0]?.color ?? 'transparent';
+  return paint.type === 'image' && !assetUrls.resolve(paint.assetId) ? 'repeating-conic-gradient(#999 0% 25%, #ccc 0% 50%) 0 0 / 6px 6px' : paintToCss(paint, assetUrls.resolve);
+}
+
+/** The row's name in the Fill and Stroke sections: "Fill" for the only one, "Fill 2" among several. */
+function entryLabel(e: PaintEntry, fills: number, strokes: number): string {
+  return e.kind === 'fill' ? (fills > 1 ? `Fill ${e.index + 1}` : 'Fill') : strokes > 1 ? `Stroke ${e.index + 1}` : 'Stroke';
 }
 
 /**
  * Which paint is over which, for a shape with both fills and strokes. Fills and strokes are listed in their own
  * sections; here they share one list, front-most first, so a stroke can go under a fill or between two fills
- * (`paintOrder`). Moving a paint past one of its own kind swaps their places in that list.
+ * (`paintOrder`). Moving a paint past one of its own kind swaps their places in that list (the fill list gets reordered),
+ * so each row says what it holds (a swatch, the colour or gradient, a stroke's width) and not just its number: the
+ * number stays where it is while the paints trade places. The row that was moved is highlighted, and keyboard focus
+ * follows it, so pressing the same arrow again keeps moving the same paint.
  */
 export function PaintOrderSection({ nodes }: { nodes: SceneNode[] }) {
   const n = nodes[0] as Painted;
   const ids = nodes.map((x) => x.id);
   const [over, setOver] = useState<number | null>(null);
+  // The position the moved paint ended at, until its highlight fades
+  const [moved, setMoved] = useState<{ pos: number; text: string } | null>(null);
+  const follow = useRef<{ pos: number; dir: 'up' | 'down' } | null>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const all = single(n) ? [] : orderedPaints(n);
+  const entries = JSON.stringify(all.map((e) => [e.kind, e.index, entryDetail(e)]));
+  useEffect(() => {
+    const f = follow.current;
+    if (!f) return;
+    follow.current = null;
+    // Keep the focus on the paint that moved: at an end of the list its button is disabled, so use the other one
+    const row = list.current?.querySelector(`[data-pos="${f.pos}"]`);
+    const btn = row?.querySelector<HTMLButtonElement>(`button[data-dir="${f.dir}"]:not(:disabled)`) ?? row?.querySelector<HTMLButtonElement>('button:not(:disabled)');
+    btn?.focus();
+  }, [entries]);
+  useEffect(() => {
+    if (!moved) return;
+    const t = setTimeout(() => setMoved(null), 1200);
+    return () => clearTimeout(t);
+  }, [moved]);
   if (single(n)) return null;
-  const all = orderedPaints(n);
   if (!all.some((e) => e.kind === 'fill') || !all.some((e) => e.kind === 'stroke')) return null;
   const fills = all.filter((e) => e.kind === 'fill').length;
   const strokes = all.length - fills;
-  const move = (from: number, to: number) => {
+  const move = (from: number, to: number, by: 'button' | 'drag' = 'drag') => {
     if (from === to || to < 0 || to >= all.length) return;
+    const e = all[from];
     store().setProps(ids, movePaint(n, from, to));
     store().commit();
+    if (by === 'button') follow.current = { pos: to, dir: to > from ? 'up' : 'down' };
+    const place = all.length - to;
+    setMoved({ pos: to, text: `${entryLabel(e, fills, strokes)} moved ${to > from ? 'up' : 'down'}: ${place === 1 ? 'front-most' : place === all.length ? 'back-most' : `${place} from the front`}` });
   };
   return (
     <Section help="fill-stroke#paint-order" title="Paint order">
-      {all
-        .map((e, i) => ({ e, i }))
-        .reverse()
-        .map(({ e, i }) => {
-          const label = e.kind === 'fill' ? (fills > 1 ? `Fill ${e.index + 1}` : 'Fill') : strokes > 1 ? `Stroke ${e.index + 1}` : 'Stroke';
-          return (
-            <div
-              key={`${e.kind}${e.index}`}
-              className={`item-head paint-head paint-order-row${over === i ? ' drop' : ''}`}
-              draggable
-              onDragStart={(ev) => {
-                draggingOrder = i;
-                ev.dataTransfer?.setData('text/plain', `order:${i}`);
-              }}
-              onDragOver={(ev) => {
-                if (draggingOrder !== null) {
+      <div ref={list} className="paint-order-list">
+        {all
+          .map((e, i) => ({ e, i }))
+          .reverse()
+          .map(({ e, i }) => {
+            const label = entryLabel(e, fills, strokes);
+            const detail = entryDetail(e);
+            const hidden = e.paint.visible === false;
+            return (
+              <div
+                key={`${e.kind}${e.index}`}
+                data-pos={i}
+                className={`item-head paint-head paint-order-row${over === i ? ' drop' : ''}${moved?.pos === i ? ' moved' : ''}${hidden ? ' off' : ''}`}
+                draggable
+                onDragStart={(ev) => {
+                  draggingOrder = i;
+                  ev.dataTransfer?.setData('text/plain', `order:${i}`);
+                }}
+                onDragOver={(ev) => {
+                  if (draggingOrder !== null) {
+                    ev.preventDefault();
+                    setOver(i);
+                  }
+                }}
+                onDragLeave={() => setOver(null)}
+                onDrop={(ev) => {
                   ev.preventDefault();
-                  setOver(i);
-                }
-              }}
-              onDragLeave={() => setOver(null)}
-              onDrop={(ev) => {
-                ev.preventDefault();
-                setOver(null);
-                if (draggingOrder !== null) move(draggingOrder, i);
-                draggingOrder = null;
-              }}
-              onDragEnd={() => (draggingOrder = null)}
-            >
-              <span className="paint-head-name">
-                <span className="paint-swatch" style={{ background: swatchOf(e.paint) }} />
-                {label}
-                {e.kind === 'stroke' ? ' (stroke)' : ''}
-              </span>
-              <span className="paint-head-tools">
-                <button type="button" className="mini" title={`Move ${label.toLowerCase()} up in the paint order (in front)`} disabled={i === all.length - 1} onClick={() => move(i, i + 1)}>
-                  ↑
-                </button>
-                <button type="button" className="mini" title={`Move ${label.toLowerCase()} down in the paint order (behind)`} disabled={i === 0} onClick={() => move(i, i - 1)}>
-                  ↓
-                </button>
-              </span>
-            </div>
-          );
-        })}
+                  setOver(null);
+                  if (draggingOrder !== null) move(draggingOrder, i);
+                  draggingOrder = null;
+                }}
+                onDragEnd={() => (draggingOrder = null)}
+              >
+                <span className="paint-head-name" title={hidden ? `${label}: ${detail} (hidden)` : `${label}: ${detail}`}>
+                  <span className="paint-swatch" style={{ background: swatchOf(e.paint) }} />
+                  <span className="paint-order-label">{label}</span>
+                  <span className="paint-order-detail">{detail}</span>
+                </span>
+                <span className="paint-head-tools">
+                  <button type="button" className="mini" data-dir="up" title={`Move ${label.toLowerCase()} up in the paint order (in front)`} aria-label={`Move ${label.toLowerCase()} (${detail}) up in the paint order (in front)`} disabled={i === all.length - 1} onClick={() => move(i, i + 1, 'button')}>
+                    ↑
+                  </button>
+                  <button type="button" className="mini" data-dir="down" title={`Move ${label.toLowerCase()} down in the paint order (behind)`} aria-label={`Move ${label.toLowerCase()} (${detail}) down in the paint order (behind)`} disabled={i === 0} onClick={() => move(i, i - 1, 'button')}>
+                    ↓
+                  </button>
+                </span>
+              </div>
+            );
+          })}
+      </div>
+      {/* What just happened, for screen readers */}
+      <span className="sr-only" role="status" aria-live="polite">
+        {moved?.text ?? ''}
+      </span>
     </Section>
   );
 }

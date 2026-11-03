@@ -363,8 +363,9 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <Row>
           <SelectField
             label="Use in"
+            title="Place this artboard as an instance inside another artboard"
             value=""
-            options={[{ value: '', label: 'Place as an instance in…' }, ...project.artboards.filter((a) => a.id !== ab.id).map((a) => ({ value: a.id, label: a.name }))]}
+            options={[{ value: '', label: 'Instance in…' }, ...project.artboards.filter((a) => a.id !== ab.id).map((a) => ({ value: a.id, label: a.name }))]}
             onChange={(target) => {
               if (!target) return;
               const host = project.artboards.find((a) => a.id === target)!;
