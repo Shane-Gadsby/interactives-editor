@@ -26,6 +26,7 @@ function why(n: SceneNode, ab: Artboard): string {
   if (isNativeControl(n)) return n.type === 'link' || n.link ? 'link' : n.type;
   if (n.focusable === true) return 'set to always';
   if (cx.clicks.has(n.id)) return 'On pointer click';
+  if (n.draggable && n.draggable.enabled !== false) return 'draggable';
   if (n.role === 'button' || n.role === 'checkbox') return `${n.role} role`;
   if (cx.focus.has(n.id)) return 'On focus';
   return '';

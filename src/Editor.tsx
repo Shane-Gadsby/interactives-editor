@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { PACKAGE_EXTENSION, type Project } from 'interactives-player';
+import { PACKAGE_EXTENSION, walk, type Project } from 'interactives-player';
 import { EditorStore, setCurrentStore, store, useEditor, type BottomTab, type Tool } from './store/store';
 import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
@@ -751,6 +751,16 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
   const [showVars, setShowVars] = useState(true);
   const [nonce, setNonce] = useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
+  // Drag and drop: outline every draggable layer and drop zone in the running preview
+  const [hitAreas, setHitAreas] = useState(false);
+  const hasDrag = project.artboards.some((a) => {
+    let found = false;
+    walk(a.children, (n) => {
+      if (n.draggable || n.dropZone) found = true;
+    });
+    return found;
+  });
+  const showHitAreas = (on: boolean) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'dragDebug', on }, '*');
   useEffect(() => {
     let live = true;
     setBuildError(null);
@@ -803,6 +813,18 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
           >
             Accessibility {accessibility ? 'on' : 'off'}
           </button>
+          {hasDrag && (
+            <button
+              className={`btn${hitAreas ? ' active' : ''}`}
+              onClick={() => {
+                setHitAreas(!hitAreas);
+                showHitAreas(!hitAreas);
+              }}
+              title="Outline every draggable layer (blue, with its tags and the point tested) and drop zone (green, with what it takes and how full it is) in the preview, and the pointer while dragging"
+            >
+              Hit areas {hitAreas ? 'on' : 'off'}
+            </button>
+          )}
           <div className="spacer" />
           <button
             className="btn"
@@ -880,7 +902,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
               ))}
             </aside>
           )}
-          {html ? <iframe key={nonce} ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => hitAreas && showHitAreas(true)} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
         </div>
         {accessibility && (
           <div className="preview-said" aria-hidden="true" title="What a screen reader is told by Announce nodes and ix.announce, as it is spoken">

@@ -820,7 +820,7 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - **Enter** clicks the focused layer, **Space** clicks it when released, the same way a real button does. It runs the layer's *On pointer → Click* nodes exactly like a mouse click, with the pointer position at the layer's centre.
 - Only the layer itself is activated. A button or input inside a clickable frame does its own thing, so nothing runs twice.
 - An Enter or Space that clicked a layer, or that was pressed on a button or link, does not also run an *On key* node for the same key, so a game's "press Space" and a button's click can't both fire from one press.
-- Only *On pointer → Click* can be done from a keyboard. Hover, press, release and drag events can't, so give those layers a click alternative.
+- Only *On pointer → Click* can be done from a keyboard. Hover, press, release and the older drag events can't, so give those layers a click alternative. Layers made [draggable](drag-and-drop) get a keyboard way (Space, arrows, Space) of their own.
 
 ## Tab order
 With nothing selected, the **Tab order** section in the inspector lists every tab stop on the artboard in the order Tab visits them. Use the arrows to move a layer earlier or later, or click its name to select it. **Reset to layer order** goes back to the default. The order only applies within the player; stops you haven't placed follow the others in layer order.
@@ -1084,6 +1084,66 @@ Expression fields can use every variable and data source by name, \`event\` (det
 
 ## Messages to and from the host page
 **Send message** (and \`ix.emit\`) posts \`{source: 'interactives', name, payload}\` to the page the interactive is in. The page can send messages back with \`player.send(name, payload)\` and **On message** reacts. See [Embedding and the player API](embedding).`,
+  },
+  {
+    id: 'drag-and-drop',
+    title: 'Drag and drop',
+    group: 'Interactivity',
+    summary: 'Layers people can drag, drop zones that take them, and the same thing by keyboard and by tapping: sorting, matching, labelling and small games.',
+    keywords: 'drag drop draggable drop zone sort sorting match matching label diagram game slot snap swap return bounds axis grid keyboard touch tap accessible tags capacity',
+    body: `Any layer can be made **draggable**, and any layer can be a **drop zone** that takes some of the draggable layers. That is all a sorting activity, a matching exercise, a labelled diagram or a jigsaw needs, and it works with a mouse, a finger, a pen, the keyboard and a screen reader.
+
+## A worked example: sort the animals
+Two buckets, four cards. Dropping a card in the right bucket keeps it there; dropping it in the wrong one sends it back.
+
+1. Draw two rectangles and name them **Mammals** and **Birds**. Put a text label on each.
+2. Select **Mammals**. In the **Drop zone** section of the inspector press **+**. Set **Takes tags** to \`mammal\`. Do the same for **Birds** with the tag \`bird\`.
+3. Draw four cards (a rectangle with some text, grouped): *Dog*, *Cat*, *Eagle*, *Owl*. They must be **above** the buckets in the layers list, or the buckets would cover them.
+4. Select a card. In the **Draggable** section press **+**. Put its tag in **Tags** (\`mammal\` for Dog and Cat, \`bird\` for the others). Set **Dropped off a zone** to *Goes back to where it started*. Select all four to set that once.
+5. Open **Preview**. Drag a card into a bucket. The **Hit areas** button outlines every draggable layer (blue) and drop zone (green, with what it takes and how full it is) while you work out why a drop did not land.
+6. Give feedback in **Interactions**: an **On drop** event with **Result** *Taken by the zone* → **Announce** \`event.layer + " is a " + event.zone\`, and one with *Refused by the zone* → **Announce** \`"Not that one. Try again"\`.
+7. Score it. On the first card pick a **Zone variable** (a text variable): it always holds the name of the bucket the card is in, or nothing. A zone's **Contents variable** (a list variable) holds the names of the cards in it. Compare them in an expression such as \`mammalsBucket.length == 2\`.
+
+## The Draggable section
+- **Can be dragged**: untick to lock the layer. The **Allow dragging** action does the same while the project runs (lock the answers once they are checked).
+- **Tags**: words that say what the layer is, separated by commas. A drop zone takes a layer when they share a tag.
+- **Moves**: anywhere, or only left and right, or only up and down (a slider handle, a lane).
+- **Stays inside**: nothing, its parent, the artboard, or another layer. The layer's whole box is kept inside.
+- **Dropped off a zone**: stays where it was let go, or goes back to where the drag began (and to the zone it was in). Off a zone means no zone there, the wrong tag, or a full zone.
+- **Zone decided by**: the layer's centre (the default), the pointer, or whichever zone it overlaps most. Use the pointer for a big card going onto a small slot.
+- **Grid**: snaps the position to a grid of this many pixels while dragging.
+- **Glide**: how long it glides into a zone or back (none when the viewer asked for less motion).
+- **Tap to move**, **Hold to drag on touch**, **Key step**, **Name read out**, **Do not announce**: see below.
+
+## Drop zones
+- **Takes tags**: leave empty to take any draggable layer.
+- **Holds**: how many layers fit (0 is no limit). **When full** either refuses the new layer, or **swaps**: the layer that has been there longest goes to where the dragged one came from, and the dragged one takes its place. Swapping is how slot puzzles and reordering work.
+- **Dropped layers**: stay where they were dropped, centre in the zone, or sit at its top left corner. A layer sent by the keyboard, a tap or an action goes to the centre when this is left alone.
+- **Outline when a layer is over it**: an outline appears on the zone while a layer it takes is over it (and a fainter one while any such layer is being dragged). Untick it if your artwork shows the state itself.
+- A layer can be both: a tile that can be dropped on and then dragged on again.
+
+## Events and actions
+- **On drag start**, **On drag over zone** (moves over / off), **On drop** (taken, refused, or dropped on no zone) and **On drag end** (always fires, after On drop, and also when the pick-up is cancelled). Leave the layer empty to hear every draggable layer or zone. Each fires once per drag, however it ends.
+- Their \`event\` holds \`layer\` (the draggable layer's name), \`zone\` (the zone it is in now), \`from\` (where it was), \`accepted\`, \`reason\` (\`tags\` or \`full\`), \`swapped\`, \`tags\`, \`result\` (accepted, rejected, missed or cancelled) and \`keyboard\` (true when it was not dragged).
+- **Put layer in drop zone** moves a layer into a zone as if it had been dropped there; **Reset draggable** sends one (or all of them, for *Start again*) back to where it started; **Allow dragging** switches a draggable layer or a drop zone on and off. None of them fires the drag events, so they cannot start a loop.
+- The older **On pointer → Dragging** events still work for scripted drags. Use the draggable settings when the point is to move a layer and drop it somewhere.
+- Scripts have \`ix.drag.zoneOf('Dog')\`, \`ix.drag.contents('Mammals')\`, \`ix.drag.state()\` (every layer and its zone), \`ix.drag.put(layer, zone)\`, \`ix.drag.reset(layer?)\` and \`ix.drag.enable(layer, on)\`. The page that holds the player can read \`player.dragState()\`.
+
+## Keyboard, touch and screen readers
+Everyone should be able to finish the activity, so every drag has two ways that need no dragging.
+
+- **Keyboard** (when [accessibility](accessibility) is on): Tab to a draggable layer, press **Space** or **Enter** to pick it up. The **arrow keys** step through the drop zones that take it (it moves onto each one so you can see it), **Home** and **End** jump to the first and last, **Space** drops it, **Escape** puts it back. With no zone to go to, or with **Shift** held, the arrows nudge it by the *Key step* (Shift: five times as far, Alt: a tenth). A layer with an *On pointer → Click* event keeps Enter for the click and is picked up with Space.
+- **Tap to move**: tapping or clicking a draggable layer picks it up, and tapping a drop zone drops it there; tapping the layer again, or anywhere else, puts it back. This is on unless the layer has a click event of its own (the setting can force it on). It is the way to do it for someone who cannot drag at all.
+- **Screen readers** hear the layer called a "draggable item", then what happens: picked up, which zone it is on (*Mammals, 1 of 2*, and *full* or *swaps with…* when that applies), dropped in, refused, put back. **Name read out** sets what they call the layer or zone (it uses the text alternative, then the layer name, otherwise). Tick **Do not announce** to say it yourself with Announce nodes. The Preview shows what would be spoken.
+- **Touch**: a draggable layer stops the browser scrolling or selecting text under the finger. A layer locked to one axis leaves the other axis for scrolling. Inside a scrolling frame, tick **Hold to drag on touch**: the finger must rest a moment before the layer follows it, so swiping from the layer still scrolls the frame.
+
+## Things to know
+- Dragging changes the layer's **X** and **Y**. Do not animate those on a timeline that plays at the same time; animate a group around it instead.
+- A pointer drag never changes the layer's parent or its place in the layer order; it is raised above everything while it is held. Drop zones can sit in another group or frame. A frame the viewer has scrolled is allowed for: a zone is found where it is drawn.
+- Layers made by a [repeater](repeaters) cannot be dragged (every copy would move). A layer inside an auto layout frame can only be dragged when its **Position** (Layout section) is *Ignore*, otherwise the layout puts it back. The inspector says so.
+- Layers that start inside a zone that takes them count as being in it.
+- A draggable layer and the zones for it have to be on the same artboard, and in the same instance if they are inside one.
+- The accessibility checker counts a draggable layer as interactive, so it asks for a name.`,
   },
   {
     id: 'interaction-nodes',

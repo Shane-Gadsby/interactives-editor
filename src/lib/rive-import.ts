@@ -3553,6 +3553,22 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
             fc.warnings.add('Align target actions whose layer could not be found were skipped');
             continue;
           }
+          // A drag listener on the layer itself (or something inside it) that aligns it to the pointer, keeping the offset, is
+          // dragging that layer: a draggable layer does it, and brings the keyboard and tap ways with it
+          const grabs = (): boolean => {
+            for (let cur = Number(l.obj.props.targetId ?? 0), hops = 0; hops < 200; hops++) {
+              if (cur === tSlot) return true;
+              const up = ac.rab.slots[cur]?.props.parentId;
+              if (up === undefined || Number(up) === cur) return false;
+              cur = Number(up);
+            }
+            return false;
+          };
+          if (get<boolean>(a, 'preserveOffset') && triggers.some((t) => t.type === 9 || t.type === 12) && targetNode && grabs()) {
+            const t = target as SceneNode;
+            t.draggable = t.draggable ?? {};
+            continue;
+          }
           if (get<boolean>(a, 'preserveOffset')) fc.warnings.add('Align target actions that keep the offset put the layer on the pointer instead');
           const rab = fc.file.artboards[abIndex].obj;
           const ox = get(rab, 'width') * get(rab, 'originX');

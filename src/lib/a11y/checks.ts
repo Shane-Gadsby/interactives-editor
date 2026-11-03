@@ -371,7 +371,7 @@ export function checkAccessibility(project: Project, opts: CheckOptions = {}): A
       const sem = semanticsOf(n);
       const native = n.type === 'button' || n.type === 'input' || n.type === 'link' || !!n.link;
       const ptr = inter.pointer.get(n.id);
-      const interactive = native || !!ptr;
+      const interactive = native || !!ptr || !!(n.draggable && n.draggable.enabled !== false);
       const hiddenNote = target && target.hidden.length ? ' It is hidden until something shows it, and was checked as it will look then.' : '';
 
       // ---- Keyboard: can the thing be done without a pointer

@@ -80,6 +80,23 @@ describe('Rive joysticks', () => {
     expect(res.warnings.filter((w) => /Align|align/.test(w))).toEqual([]);
   });
 
+  it('imports a drag listener that aligns its own layer to the pointer as a draggable layer', async () => {
+    const bytes = writeRiv([
+      ['Artboard', { name: 'Main', width: 200, height: 200 }],
+      ['Node', { name: 'Holder', parentId: 0, x: 20, y: 10 }], // 1
+      ['Node', { name: 'Knob', parentId: 1 }], // 2
+      ['Node', { name: 'Grip', parentId: 2 }], // 3 (inside the knob)
+      ['StateMachine', { name: 'SM' }],
+      ['StateMachineListenerSingle', { targetId: 3, listenerTypeValue: 12 }],
+      ['ListenerAlignTarget', { targetId: 2, preserveOffset: true }],
+    ] as Spec[]);
+    const res = await importRive(bytes, 'j');
+    const knob = (res.artboards[0].children[0] as unknown as { children: { name: string; draggable?: unknown }[] }).children.find((c) => c.name === 'Knob');
+    expect(knob?.draggable).toEqual({});
+    expect(res.artboards[0].logic.nodes.filter((n) => n.kind === 'action.setProperty')).toEqual([]);
+    expect(res.warnings.filter((w) => /Align|align/.test(w))).toEqual([]);
+  });
+
   it('turns a joystick set by hand into fixed positions, with the inverts', async () => {
     const res = await importRive(scene({ x: 0.5, y: -1, joystickFlags: 2 }), 'j');
     expect(res.artboards[0].joysticks![0]).toMatchObject({ x: '0.75', y: '1' });

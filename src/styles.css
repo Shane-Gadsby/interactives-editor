@@ -119,6 +119,11 @@ code,
   font-size: 11px;
   margin: 6px 0;
 }
+.drag-warn {
+  color: var(--warn-text);
+  margin: 6px 0;
+  line-height: 1.35;
+}
 .hint code {
   background: var(--panel-2);
   padding: 0 3px;

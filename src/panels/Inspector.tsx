@@ -58,6 +58,7 @@ import { formatTracks, parseTracks } from '../lib/grid-tracks';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { CodeEditor } from '../components/CodeEditor';
 import { AccessibilitySection, TabOrderSection } from './AccessibilitySections';
+import { DragDropSections } from './DragDropSections';
 import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
 import { ChildOrder } from '../components/ChildOrder';
 import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
@@ -533,6 +534,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {single && (n.type === 'group' || n.type === 'frame') && <RepeatSection node={n} project={project} />}
       {single && <BindingsSection node={n} project={project} />}
       {single && <InteractionsSection node={n} ab={ab} />}
+      <DragDropSections nodes={nodes} ab={ab} project={project} />
       <AccessibilitySection nodes={nodes} ab={ab} />
       {single && (
         <Section help="web-elements#accessibility" title="Advanced" defaultOpen={false}>

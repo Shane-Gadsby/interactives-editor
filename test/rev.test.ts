@@ -154,7 +154,8 @@ const pair = existsSync(`${dir}262426_-_breathing_for_calm.rev`) && existsSync(`
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Doc = Record<string, any>;
-const ID = /[a-z]{1,3}[0-9][0-9a-z]{9,}/g;
+//ids are a short prefix, the time in base 36 and some random letters: how many digits they hold depends on the clock, so don't count on one
+const ID = /[a-z]{1,3}[0-9a-z]{10,}/g;
 
 /**
  * An artboard with its ids swapped for what they point at (a layer's place in the tree, a timeline's name, a variable's name)

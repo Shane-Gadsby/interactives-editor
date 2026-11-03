@@ -320,6 +320,17 @@ describe('names', () => {
     expect((p.artboards[0].children[0] as SceneNode).ariaLabel).toBe('Next page');
   });
 
+  it('asks a draggable layer for a name too, since a screen reader reads it out when it is picked up', () => {
+    const r = createNode('rect', { name: 'Rectangle 4', width: 60, height: 60, draggable: {} });
+    const { p } = scene([r]);
+    expect(of(p, 'name').map((f) => f.severity)).toEqual(['issue']);
+    r.ariaLabel = 'Apple card';
+    expect(of(p, 'name')).toEqual([]);
+    //a draggable that is switched off is just a shape
+    const off = createNode('rect', { name: 'Rectangle 5', width: 60, height: 60, draggable: { enabled: false } });
+    expect(of(scene([off]).p, 'name')).toEqual([]);
+  });
+
   it('does not suggest an editor-made name, and counts text inside as a name', () => {
     const r = createNode('rect', { name: 'Rectangle 4', width: 60, height: 60 });
     const { p } = scene([r]);

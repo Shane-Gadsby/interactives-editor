@@ -197,6 +197,70 @@ const CATALOG = [
     ]
   },
   {
+    kind: "event.dragStart",
+    label: "On drag start",
+    category: "event",
+    description: "When a draggable layer is picked up: dragged by the mouse or a finger, or lifted with the keyboard (Space) or a tap. Set up dragging in the layer's Draggable section. `event.layer` is its name, `event.zone` the drop zone it was in (empty if none), `event.tags` its tags, `event.keyboard` true when it was not dragged.",
+    outputs: OUT,
+    hasInput: false,
+    params: [{ key: "target", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty to fire for every draggable layer" }]
+  },
+  {
+    kind: "event.dragOver",
+    label: "On drag over zone",
+    category: "event",
+    description: "When a dragged layer moves over a drop zone, or off it. `event.zone` is the zone, `event.layer` the layer, `event.accepted` whether the zone would take it (right tag, room).",
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      { key: "target", label: "Drop zone", type: "node", placeholder: "Any drop zone", help: "Leave empty to fire for every drop zone" },
+      { key: "layer", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty for every draggable layer" },
+      {
+        key: "type",
+        label: "When",
+        type: "select",
+        options: [
+          { value: "enter", label: "Moves over the zone" },
+          { value: "leave", label: "Moves off the zone" }
+        ],
+        default: "enter"
+      }
+    ]
+  },
+  {
+    kind: "event.drop",
+    label: "On drop",
+    category: "event",
+    description: "When a draggable layer is let go (or dropped with the keyboard or a tap). Pick what to react to: dropped in a zone that took it, dropped on a zone that refused it (wrong tag, or full), or dropped where there is no zone. `event.layer`, `event.zone` (the zone it is in now), `event.from` (where it was), `event.accepted`, `event.reason` (tags or full), `event.swapped` (the layer a swap sent back) and `event.tags` are available.",
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      { key: "target", label: "Drop zone", type: "node", placeholder: "Any drop zone", help: "Leave empty to fire for every drop zone (and, with Missed, for drops on no zone)" },
+      { key: "layer", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty for every draggable layer" },
+      {
+        key: "result",
+        label: "Result",
+        type: "select",
+        options: [
+          { value: "accepted", label: "Taken by the zone" },
+          { value: "rejected", label: "Refused by the zone" },
+          { value: "missed", label: "Dropped on no zone" },
+          { value: "any", label: "Any drop" }
+        ],
+        default: "accepted"
+      }
+    ]
+  },
+  {
+    kind: "event.dragEnd",
+    label: "On drag end",
+    category: "event",
+    description: "When a draggable layer is let go, wherever it ends up, or the pick-up is cancelled (Escape). Fires after On drop. `event.result` is accepted, rejected, missed or cancelled; `event.zone` the zone it is in now, `event.dropped` true when a zone took it.",
+    outputs: OUT,
+    hasInput: false,
+    params: [{ key: "target", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty to fire for every draggable layer" }]
+  },
+  {
     kind: "event.dataLoaded",
     label: "On data loaded",
     category: "event",
@@ -512,6 +576,49 @@ const CATALOG = [
         default: "focus"
       },
       { key: "target", label: "Layer", type: "node", showIf: { key: "op", values: ["focus"] } }
+    ]
+  },
+  {
+    kind: "action.dragPlace",
+    label: "Put layer in drop zone",
+    category: "action",
+    description: "Move a draggable layer into a drop zone as if it had been dropped there (it settles by the zone's snap setting, or goes to the zone's centre). Does nothing if the zone would not take it. Fires no drag events, so it cannot start a loop; it does update the zone variables.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "layer", label: "Draggable layer", type: "node" },
+      { key: "zone", label: "Drop zone", type: "node" }
+    ]
+  },
+  {
+    kind: "action.dragReset",
+    label: "Reset draggable",
+    category: "action",
+    description: 'Send a draggable layer back to where it started (and into the zone it started in). Leave the layer empty to reset all of them ("Start again"). Fires no drag events.',
+    outputs: OUT,
+    hasInput: true,
+    params: [{ key: "layer", label: "Draggable layer", type: "node", placeholder: "All draggable layers" }]
+  },
+  {
+    kind: "action.dragEnable",
+    label: "Allow dragging",
+    category: "action",
+    description: "Turn dragging on or off for a draggable layer (to lock an answer after checking it), or turn a drop zone on or off.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "target", label: "Layer", type: "node", help: "A draggable layer or a drop zone" },
+      {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "enable", label: "Allow" },
+          { value: "disable", label: "Do not allow" },
+          { value: "toggle", label: "Toggle" }
+        ],
+        default: "disable"
+      }
     ]
   },
   {
@@ -860,6 +967,38 @@ function fits(value, def) {
       return true;
   }
 }
+function dragSettings(raw, draggable) {
+  const out = {};
+  const pick = (k, ok) => {
+    if (k in raw && ok(raw[k])) out[k] = raw[k];
+  };
+  const oneOf2 = (list) => (v) => isStr(v) && list.includes(v);
+  const bool = (v) => typeof v === "boolean";
+  const nonNeg = (v) => isNum(v) && v >= 0;
+  pick("enabled", bool);
+  pick("label", isStr);
+  if (Array.isArray(raw[draggable ? "tags" : "accepts"])) out[draggable ? "tags" : "accepts"] = arr(raw[draggable ? "tags" : "accepts"], isStr).map((t) => t.trim()).filter(Boolean).slice(0, 50);
+  if (draggable) {
+    pick("axis", oneOf2(["both", "x", "y"]));
+    pick("bounds", isStr);
+    pick("onMiss", oneOf2(["stay", "return"]));
+    pick("hit", oneOf2(["center", "pointer", "overlap"]));
+    pick("grid", nonNeg);
+    pick("glideMs", nonNeg);
+    pick("step", nonNeg);
+    pick("tapToMove", bool);
+    pick("holdToDrag", bool);
+    pick("silent", bool);
+    if ("zoneVariable" in raw && (raw.zoneVariable === null || isStr(raw.zoneVariable))) out.zoneVariable = raw.zoneVariable;
+  } else {
+    pick("capacity", nonNeg);
+    pick("whenFull", oneOf2(["reject", "swap"]));
+    pick("snap", oneOf2(["none", "center", "topLeft"]));
+    pick("highlight", bool);
+    if ("contentsVariable" in raw && (raw.contentsVariable === null || isStr(raw.contentsVariable))) out.contentsVariable = raw.contentsVariable;
+  }
+  return out;
+}
 function stringMap(v) {
   if (!isObj(v)) return void 0;
   const out = {};
@@ -916,6 +1055,12 @@ function sanitizeNode(raw, seen) {
   if ("drawOrder" in n) n.drawOrder = arr(n.drawOrder, isStr);
   if ("link" in n && n.link !== null && !(isObj(n.link) && isStr(n.link.url))) delete n.link;
   if ("layoutItem" in n && n.layoutItem !== null && !isObj(n.layoutItem)) delete n.layoutItem;
+  for (const k of ["draggable", "dropZone"]) {
+    if (!(k in n)) continue;
+    if (n[k] === null) continue;
+    if (!isObj(n[k])) delete n[k];
+    else n[k] = dragSettings(n[k], k === "draggable");
+  }
   if ("shadow" in n && n.shadow !== null && !(isObj(n.shadow) && ["x", "y", "blur", "spread"].every((k) => isNum(n.shadow[k])) && isStr(n.shadow.color))) delete n.shadow;
   if ("maxWidth" in n && !isNum(n.maxWidth)) delete n.maxWidth;
   if ("paragraphSpacing" in n && !isNum(n.paragraphSpacing)) delete n.paragraphSpacing;
@@ -4318,7 +4463,7 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - **Enter** clicks the focused layer, **Space** clicks it when released, the same way a real button does. It runs the layer's *On pointer → Click* nodes exactly like a mouse click, with the pointer position at the layer's centre.
 - Only the layer itself is activated. A button or input inside a clickable frame does its own thing, so nothing runs twice.
 - An Enter or Space that clicked a layer, or that was pressed on a button or link, does not also run an *On key* node for the same key, so a game's "press Space" and a button's click can't both fire from one press.
-- Only *On pointer → Click* can be done from a keyboard. Hover, press, release and drag events can't, so give those layers a click alternative.
+- Only *On pointer → Click* can be done from a keyboard. Hover, press, release and the older drag events can't, so give those layers a click alternative. Layers made [draggable](drag-and-drop) get a keyboard way (Space, arrows, Space) of their own.
 
 ## Tab order
 With nothing selected, the **Tab order** section in the inspector lists every tab stop on the artboard in the order Tab visits them. Use the arrows to move a layer earlier or later, or click its name to select it. **Reset to layer order** goes back to the default. The order only applies within the player; stops you haven't placed follow the others in layer order.
@@ -4579,6 +4724,66 @@ Expression fields can use every variable and data source by name, \`event\` (det
 
 ## Messages to and from the host page
 **Send message** (and \`ix.emit\`) posts \`{source: 'interactives', name, payload}\` to the page the interactive is in. The page can send messages back with \`player.send(name, payload)\` and **On message** reacts. See [Embedding and the player API](embedding).`
+  },
+  {
+    id: "drag-and-drop",
+    title: "Drag and drop",
+    group: "Interactivity",
+    summary: "Layers people can drag, drop zones that take them, and the same thing by keyboard and by tapping: sorting, matching, labelling and small games.",
+    keywords: "drag drop draggable drop zone sort sorting match matching label diagram game slot snap swap return bounds axis grid keyboard touch tap accessible tags capacity",
+    body: `Any layer can be made **draggable**, and any layer can be a **drop zone** that takes some of the draggable layers. That is all a sorting activity, a matching exercise, a labelled diagram or a jigsaw needs, and it works with a mouse, a finger, a pen, the keyboard and a screen reader.
+
+## A worked example: sort the animals
+Two buckets, four cards. Dropping a card in the right bucket keeps it there; dropping it in the wrong one sends it back.
+
+1. Draw two rectangles and name them **Mammals** and **Birds**. Put a text label on each.
+2. Select **Mammals**. In the **Drop zone** section of the inspector press **+**. Set **Takes tags** to \`mammal\`. Do the same for **Birds** with the tag \`bird\`.
+3. Draw four cards (a rectangle with some text, grouped): *Dog*, *Cat*, *Eagle*, *Owl*. They must be **above** the buckets in the layers list, or the buckets would cover them.
+4. Select a card. In the **Draggable** section press **+**. Put its tag in **Tags** (\`mammal\` for Dog and Cat, \`bird\` for the others). Set **Dropped off a zone** to *Goes back to where it started*. Select all four to set that once.
+5. Open **Preview**. Drag a card into a bucket. The **Hit areas** button outlines every draggable layer (blue) and drop zone (green, with what it takes and how full it is) while you work out why a drop did not land.
+6. Give feedback in **Interactions**: an **On drop** event with **Result** *Taken by the zone* → **Announce** \`event.layer + " is a " + event.zone\`, and one with *Refused by the zone* → **Announce** \`"Not that one. Try again"\`.
+7. Score it. On the first card pick a **Zone variable** (a text variable): it always holds the name of the bucket the card is in, or nothing. A zone's **Contents variable** (a list variable) holds the names of the cards in it. Compare them in an expression such as \`mammalsBucket.length == 2\`.
+
+## The Draggable section
+- **Can be dragged**: untick to lock the layer. The **Allow dragging** action does the same while the project runs (lock the answers once they are checked).
+- **Tags**: words that say what the layer is, separated by commas. A drop zone takes a layer when they share a tag.
+- **Moves**: anywhere, or only left and right, or only up and down (a slider handle, a lane).
+- **Stays inside**: nothing, its parent, the artboard, or another layer. The layer's whole box is kept inside.
+- **Dropped off a zone**: stays where it was let go, or goes back to where the drag began (and to the zone it was in). Off a zone means no zone there, the wrong tag, or a full zone.
+- **Zone decided by**: the layer's centre (the default), the pointer, or whichever zone it overlaps most. Use the pointer for a big card going onto a small slot.
+- **Grid**: snaps the position to a grid of this many pixels while dragging.
+- **Glide**: how long it glides into a zone or back (none when the viewer asked for less motion).
+- **Tap to move**, **Hold to drag on touch**, **Key step**, **Name read out**, **Do not announce**: see below.
+
+## Drop zones
+- **Takes tags**: leave empty to take any draggable layer.
+- **Holds**: how many layers fit (0 is no limit). **When full** either refuses the new layer, or **swaps**: the layer that has been there longest goes to where the dragged one came from, and the dragged one takes its place. Swapping is how slot puzzles and reordering work.
+- **Dropped layers**: stay where they were dropped, centre in the zone, or sit at its top left corner. A layer sent by the keyboard, a tap or an action goes to the centre when this is left alone.
+- **Outline when a layer is over it**: an outline appears on the zone while a layer it takes is over it (and a fainter one while any such layer is being dragged). Untick it if your artwork shows the state itself.
+- A layer can be both: a tile that can be dropped on and then dragged on again.
+
+## Events and actions
+- **On drag start**, **On drag over zone** (moves over / off), **On drop** (taken, refused, or dropped on no zone) and **On drag end** (always fires, after On drop, and also when the pick-up is cancelled). Leave the layer empty to hear every draggable layer or zone. Each fires once per drag, however it ends.
+- Their \`event\` holds \`layer\` (the draggable layer's name), \`zone\` (the zone it is in now), \`from\` (where it was), \`accepted\`, \`reason\` (\`tags\` or \`full\`), \`swapped\`, \`tags\`, \`result\` (accepted, rejected, missed or cancelled) and \`keyboard\` (true when it was not dragged).
+- **Put layer in drop zone** moves a layer into a zone as if it had been dropped there; **Reset draggable** sends one (or all of them, for *Start again*) back to where it started; **Allow dragging** switches a draggable layer or a drop zone on and off. None of them fires the drag events, so they cannot start a loop.
+- The older **On pointer → Dragging** events still work for scripted drags. Use the draggable settings when the point is to move a layer and drop it somewhere.
+- Scripts have \`ix.drag.zoneOf('Dog')\`, \`ix.drag.contents('Mammals')\`, \`ix.drag.state()\` (every layer and its zone), \`ix.drag.put(layer, zone)\`, \`ix.drag.reset(layer?)\` and \`ix.drag.enable(layer, on)\`. The page that holds the player can read \`player.dragState()\`.
+
+## Keyboard, touch and screen readers
+Everyone should be able to finish the activity, so every drag has two ways that need no dragging.
+
+- **Keyboard** (when [accessibility](accessibility) is on): Tab to a draggable layer, press **Space** or **Enter** to pick it up. The **arrow keys** step through the drop zones that take it (it moves onto each one so you can see it), **Home** and **End** jump to the first and last, **Space** drops it, **Escape** puts it back. With no zone to go to, or with **Shift** held, the arrows nudge it by the *Key step* (Shift: five times as far, Alt: a tenth). A layer with an *On pointer → Click* event keeps Enter for the click and is picked up with Space.
+- **Tap to move**: tapping or clicking a draggable layer picks it up, and tapping a drop zone drops it there; tapping the layer again, or anywhere else, puts it back. This is on unless the layer has a click event of its own (the setting can force it on). It is the way to do it for someone who cannot drag at all.
+- **Screen readers** hear the layer called a "draggable item", then what happens: picked up, which zone it is on (*Mammals, 1 of 2*, and *full* or *swaps with…* when that applies), dropped in, refused, put back. **Name read out** sets what they call the layer or zone (it uses the text alternative, then the layer name, otherwise). Tick **Do not announce** to say it yourself with Announce nodes. The Preview shows what would be spoken.
+- **Touch**: a draggable layer stops the browser scrolling or selecting text under the finger. A layer locked to one axis leaves the other axis for scrolling. Inside a scrolling frame, tick **Hold to drag on touch**: the finger must rest a moment before the layer follows it, so swiping from the layer still scrolls the frame.
+
+## Things to know
+- Dragging changes the layer's **X** and **Y**. Do not animate those on a timeline that plays at the same time; animate a group around it instead.
+- A pointer drag never changes the layer's parent or its place in the layer order; it is raised above everything while it is held. Drop zones can sit in another group or frame. A frame the viewer has scrolled is allowed for: a zone is found where it is drawn.
+- Layers made by a [repeater](repeaters) cannot be dragged (every copy would move). A layer inside an auto layout frame can only be dragged when its **Position** (Layout section) is *Ignore*, otherwise the layout puts it back. The inspector says so.
+- Layers that start inside a zone that takes them count as being in it.
+- A draggable layer and the zones for it have to be on the same artboard, and in the same instance if they are inside one.
+- The accessibility checker counts a draggable layer as interactive, so it asks for a name.`
   },
   {
     id: "interaction-nodes",
@@ -5913,7 +6118,7 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n");
   if (topic === "layers") {
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "bone"];
-    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, decorative (hide from assistive tech), focusable (tab stop override), tabOrder, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t2) => `"${t2.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, decorative (hide from assistive tech), focusable (tab stop override), tabOrder, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it).\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t2) => `"${t2.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
 Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
