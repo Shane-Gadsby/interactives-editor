@@ -409,7 +409,14 @@ export function Home({ open }: { open: (id: string) => void }) {
               )}
             </button>
             <div className="project-info">
-              <div className="project-name">{p.name}</div>
+              <div className="project-name">
+                {p.name}
+                {p.isLibrary && (
+                  <span className="badge library-badge" title={p.libraryVersion ? `A component library, published as version ${p.libraryVersion}` : 'A component library that has not been published yet'}>
+                    Library{p.libraryVersion ? ` v${p.libraryVersion}` : ''}
+                  </span>
+                )}
+              </div>
               <div className="muted small">
                 {new Date(p.updated).toLocaleString()} · {p.artboards} artboard{p.artboards === 1 ? '' : 's'}
                 {p.owner && p.owner.username !== me && ` · ${p.owner.name ?? p.owner.username}`}

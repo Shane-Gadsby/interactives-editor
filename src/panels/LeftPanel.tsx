@@ -9,9 +9,10 @@ import { insertFiles, pickFiles } from '../lib/insert';
 import { ANIMATION_ACCEPT, chooseLinking, importAnimationFile } from '../lib/importers';
 import { getArtboard, locate } from '../store/doc';
 import { deleteAsset } from '../lib/db';
+import { LibrariesPanel } from './LibrariesPanel';
 
 export function LeftPanel() {
-  const [tab, setTab] = useState<'layers' | 'assets'>('layers');
+  const [tab, setTab] = useState<'layers' | 'assets' | 'libraries'>('layers');
   return (
     <aside className="left-panel">
       <div className="tabs">
@@ -21,8 +22,11 @@ export function LeftPanel() {
         <button className={tab === 'assets' ? 'active' : ''} onClick={() => setTab('assets')}>
           Assets
         </button>
+        <button className={tab === 'libraries' ? 'active' : ''} onClick={() => setTab('libraries')} title="Share components and styles between projects">
+          Libraries
+        </button>
       </div>
-      {tab === 'layers' ? <Layers /> : <Assets />}
+      {tab === 'layers' ? <Layers /> : tab === 'assets' ? <Assets /> : <LibrariesPanel />}
     </aside>
   );
 }
@@ -153,6 +157,12 @@ function Layers() {
         <Icons.artboard width={14} height={14} />
         <span className="layer-name">{ab.name}</span>
         {s.project.settings.startArtboardId === ab.id && <span className="badge">start</span>}
+        {ab.library && (
+          <span className="badge" title={ab.library.internal ? 'Used inside a library component. Read-only until detached' : 'From a library. Read-only until detached'}>
+            {ab.library.internal ? 'library · inner' : 'library'}
+          </span>
+        )}
+        {ab.publish && s.project.settings.library && <span className="badge" title="Published to the library">published</span>}
       </div>
     );
   };

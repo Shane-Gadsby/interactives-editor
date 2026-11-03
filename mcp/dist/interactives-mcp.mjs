@@ -1941,7 +1941,9 @@ Select two or more shapes and press **Union**, **Subtract**, **Intersect** or **
 - **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
 - Messages sent inside an instance (**Send message**, \`ix.emit\`) bubble up to the parent.
 
-Instances can be nested up to six deep. An artboard that contains itself stops at that limit.`
+Instances can be nested up to six deep. An artboard that contains itself stops at that limit.
+
+Components can also be shared between projects: see [Libraries](libraries).`
   },
   {
     id: "constraints",
@@ -2698,6 +2700,45 @@ player.setData('products', [...]);
 \`\`\``
   },
   // ---------------------------------------------------------------- together
+  {
+    id: "libraries",
+    title: "Libraries (shared components and styles)",
+    group: "Working together",
+    summary: "Publish components, colours, text styles and assets from one project and use them, with updates, in others.",
+    keywords: "library component share publish update detach style swatch version design system",
+    body: `A **library** is an ordinary project that publishes some of its artboards as **components**, along with its named colour and text styles and the assets they use. Other projects add the library, drag its components onto the canvas, and are told when a newer version is published. It is how you keep one button, header or colour palette in step across many projects. Everything lives in the **Libraries** tab of the left panel.
+
+## Making a library
+1. Turn on **This project is a library** (Inspector, **Project** section, or **Make this project a library** in the Libraries tab). The projects page marks it with a **Library** badge.
+2. Select an artboard and tick **Publish to library**. Do this for each artboard you want to offer. An artboard that a published one uses as an [instance](instances) comes along automatically.
+3. In the Libraries tab press **Publish**, with an optional note. Each publish with something new in it makes the next **version** (v1, v2 ...). Publishing with nothing changed does not.
+4. **Share**: tick **Everyone can use it**, or type usernames, then **Save sharing**. Only you see the library until you do. **Stop publishing** withdraws it; projects that already use it keep their copies.
+
+## Using a library
+- Under **Available libraries** press **Add**. Its components and colours appear under **Libraries in this project**.
+- **Drag a component onto the canvas**, or press **Place** to put it in the open artboard. The first time, the component's artboard is copied into your project as a **library artboard** (badged *library* in the layers list) and an [instance](instances) of it is placed. Placing it again reuses the same copy. **Add artboard** copies it in without placing anything.
+- A library artboard is **read-only**: its layers, timelines and interactions come from the library. You can move it and rename it. Variables, fonts, data sources and assets it needs are added to your project (a variable or data source you already have with the same name is left alone).
+- Libraries are copied, not linked live: the artboards, assets and styles are in your project, so [exports](export) and the player are self-contained.
+
+## Updates
+When the library publishes a new version, its entry shows **Updates available**. Press it to **review**: each changed component lists what changed (layers added, removed or changed, size, timelines, interactions), and styles are listed too. Then **Update all**, or **Update this one** per component.
+
+What is kept when you update: the instances you placed in your own artboards, their **Inputs**, their position and size, your variables (and their values), your own artboards and your own styles. A component the library has removed stays in your project as it is until you detach or delete it.
+
+## Detach
+**Detach to edit** (Inspector, or in the library's list) turns a library artboard into a normal artboard you can edit. It stops getting updates. **Stop using this library** detaches everything from it and makes its styles your own.
+
+## Styles
+**Styles** holds named colours and text styles.
+- **+ Colour** and **+ Text** create one from the selected layer. Double-click a name to rename it; the colour box edits a colour.
+- **Fill**, **Stroke** and **Text** (colours), and **Apply** (text styles) set the selected layers from a style. A layer **follows** the style: edit the style, or update the library it came from, and the layer changes too. Changing that property on the layer yourself stops it following.
+- A library's styles are added to your project when you add the library, kept in step on update, and cannot be edited here.
+
+## Limits
+- Components carry artboards (with their timelines and interaction graphs), variables, fonts, data sources and assets. Project **scripts** are not carried; instances do not run scripts of their own anyway.
+- An update replaces a copy's content by layer id. Inputs that name a variable the library renamed or removed are left as they were.
+- Only the latest version is kept on the server, so you cannot go back to an older one (undo works right after an update, and the [revision history](live-editing#revision-history) goes further back).`
+  },
   {
     id: "live-editing",
     title: "Live editing and saving",

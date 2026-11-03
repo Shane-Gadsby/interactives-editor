@@ -68,6 +68,7 @@ let port = Number(process.env.PORT) || 3048,
 	projects,
 	revisions,
 	prefs,
+	libraries,
 
 	//Revision ids are strings (time first, so they sort), keeps mongodb's ObjectId out of this app's requires
 	revisionID = () => `${Date.now().toString(36)}${crypto.randomBytes(5).toString('hex')}`,
@@ -75,7 +76,8 @@ let port = Number(process.env.PORT) || 3048,
 
 //Live editing. One room per open project: the document in memory, the op log, and everyone connected over SSE.
 //The shared op code is an ES module (the browser uses the same file), so it comes in through import()
-let ops = null
+let ops = null,
+	library = null
 const rooms = new Map(),
 	LOG_KEEP = 2000,
 	PALETTE = ['#e5484d', '#30a46c', '#3e63dd', '#f76b15', '#8e4ec6', '#12a594', '#d6409f', '#ad7f58'],
@@ -129,6 +131,7 @@ const rooms = new Map(),
 			rev: room.rev,
 			meta: {
 				artboards: p.artboards?.length || 0,
+				library: !!p.settings?.library,
 				preview: first ? {width: first.width, height: first.height, background: first.background?.type === 'solid' ? first.background.color : '#ffffff'} : null
 			}
 		}}).catch((err) => {
@@ -210,6 +213,10 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 		owner: doc.owner || null,
 		thumb: doc.thumb || null,
 
+		//A library project: marked as one in its settings (meta.library, from every save) and, once published, its version
+		isLibrary: !!doc.meta?.library,
+		libraryVersion: doc.library?.version || 0,
+
 		//Organising metadata, top level on the document (not in meta, every save rewrites that)
 		tags: Array.isArray(doc.tags) ? doc.tags : [],
 		folder: typeof doc.folder === 'string' && doc.folder ? doc.folder : null
@@ -232,6 +239,10 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	shareFile = (token) => path.join(storageDir, 'shares', `${token}.html`),
 	thumbFile = (projectID) => path.join(storageDir, 'thumbs', `${projectID}.jpg`),
 	assetFile = (projectID, assetID) => path.join(storageDir, projectID, assetID),
+
+	//A published library keeps its own copy of the assets its snapshot uses, so the snapshot doesn't change under
+	//people when the library project edits or deletes an asset. Library ids are project ids, so validID covers them too
+	libraryDir = (libraryID) => path.join(storageDir, '_libraries', libraryID),
 
 	removeAssets = async (projectID, assetID) => {
 		if (assetID) {
@@ -351,6 +362,7 @@ router.put('/api/projects/:id', express.json({limit: '25mb'}), async (req, res) 
 			rev: next,
 			meta: {
 				artboards: project.artboards.length,
+				library: !!project.settings?.library,
 				preview: firstBoard ? {width: firstBoard.width, height: firstBoard.height, background: firstBoard.background?.type === 'solid' ? firstBoard.background.color : '#ffffff'} : null
 			}
 		}
@@ -465,6 +477,8 @@ router.delete('/api/projects/:id', async (req, res) => {
 	await removeAssets(id)
 	await revisions.deleteMany({project: id})
 	await fs.promises.rm(thumbFile(id), {force: true})
+	await libraries.deleteOne({_id: id})
+	await fs.promises.rm(libraryDir(id), {recursive: true, force: true})
 	if (existing.share?.token) await fs.promises.rm(shareFile(existing.share.token), {force: true})
 	await projects.deleteOne({_id: id})
 
@@ -901,6 +915,224 @@ router.delete('/api/projects/:id/share', async (req, res) => {
 	res.json({ok: true})
 })
 
+//Component libraries. A project marked as a library (settings.library) publishes a versioned snapshot of its
+//"Publish to library" artboards, styles and assets into the libraries collection (one document per library, _id is
+//the project id). Other projects copy components out of it and are told when a newer version exists. The pure parts
+//(snapshot, hash, access, version number) are in shared/library.mjs. Only the latest snapshot is kept, plus a short
+//history of what each version held
+const maxSnapshot = 12 * 1024 * 1024,
+
+	libraryMeta = (doc, me) => ({
+		id: doc._id,
+		name: doc.name,
+		owner: doc.owner || null,
+		version: doc.version,
+		updated: doc.updated,
+		note: doc.note || '',
+		mine: !!me?.username && doc.owner?.username === me.username,
+		//Only the owner sees who it's shared with
+		shared: !!me?.username && doc.owner?.username === me.username ? doc.shared || {everyone: false, users: []} : undefined,
+		components: doc.components || [],
+		internals: doc.internals || [],
+		styles: doc.styles ? JSON.parse(doc.styles) : {colors: [], texts: []},
+		history: (doc.history || []).slice(0, 10)
+	}),
+
+	//Loads a library the person may use, or answers for them. Same pattern as projectFor
+	libraryFor = async (req, res, withSnapshot) => {
+		let {id, assetId} = req.params
+
+		if (!validID(id) || (assetId !== undefined && !validID(assetId))) {
+			res.status(400).json({error: 'Bad id'})
+			return null
+		}
+
+		let doc = await libraries.findOne({_id: id}, withSnapshot ? {} : {projection: {snapshot: 0}})
+
+		if (!doc) {
+			res.status(404).json({error: 'No such library'})
+			return null
+		}
+
+		if (!library.mayUseLibrary(doc, whoIs(req), enforcing())) {
+			console.warn(`${appName}: ${enforcing() ? 'rejected' : 'would reject'} ${req.method} ${req.originalUrl.split('?')[0]}: library not shared with them`)
+
+			if (enforcing()) {
+				res.status(403).json({error: 'That library is not shared with you'})
+				return null
+			}
+		}
+
+		return doc
+	}
+
+//Libraries I can use: my own, and the ones shared with me (or with everyone). No snapshots, those are a request each
+router.get('/api/libraries', async (req, res) => {
+	let me = whoIs(req),
+		list = await libraries.find(library.accessFilter(me, enforcing()), {projection: {snapshot: 0}}).sort({updated: -1}).limit(500).toArray()
+
+	res.json(list.map((doc) => libraryMeta(doc, me)))
+})
+
+//One library with its snapshot (artboards, variables, assets list, styles), for adding it or updating from it
+router.get('/api/libraries/:id', async (req, res) => {
+	let doc = await libraryFor(req, res, true)
+
+	if (!doc) {
+		return
+	}
+
+	res.json({library: libraryMeta(doc, whoIs(req)), snapshot: JSON.parse(doc.snapshot)})
+})
+
+//An asset of the latest snapshot. Asset ids are never reused for other bytes, so it caches for good
+router.get('/api/libraries/:id/assets/:assetId', async (req, res) => {
+	if (!await libraryFor(req, res)) {
+		return
+	}
+
+	let file = path.join(libraryDir(req.params.id), req.params.assetId),
+		meta
+
+	try {
+		meta = JSON.parse(await fs.promises.readFile(`${file}.json`, 'utf8'))
+	}
+	catch (e) {
+		return res.status(404).json({error: 'No such asset'})
+	}
+
+	res.setHeader('Cache-Control', 'private, max-age=31536000, immutable')
+	res.type(meta.mime)
+	res.sendFile(file, (err) => {
+		if (err && !res.headersSent) {
+			res.status(404).json({error: 'No such asset'})
+		}
+	})
+})
+
+//Publish: snapshot the project as it is now (the live room has the newest) as the library's next version. The owner
+//only, and the project has to be marked as a library. Nothing changed since the last version makes no new version
+router.post('/api/projects/:id/library/publish', express.json({limit: '16kb'}), async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let id = req.params.id,
+		full = await projects.findOne({_id: id}, {projection: {doc: 1}}),
+		room = rooms.get(id),
+		project = room ? room.doc : JSON.parse(full.doc)
+
+	if (!project.settings?.library) {
+		return res.status(400).json({error: 'Turn on "This project is a library" in the project settings first'})
+	}
+
+	let snap = library.buildSnapshot(project)
+
+	if (!snap.components.length) {
+		return res.status(400).json({error: 'No artboards are marked "Publish to library"'})
+	}
+
+	let existing = await libraries.findOne({_id: id}, {projection: {snapshot: 0}}),
+		me = whoIs(req),
+		now = new Date(),
+		plan = library.planPublish(existing, snap, {note: req.body.note, by: me?.username || me?.name || null, now})
+
+	if (plan.unchanged) {
+		return res.json({ok: true, unchanged: true, version: plan.version, components: snap.components.length})
+	}
+
+	let text = JSON.stringify({...snap, version: plan.version, created: now})
+
+	if (text.length > maxSnapshot) {
+		return res.status(413).json({error: 'That library is too big to publish'})
+	}
+
+	//Assets first, so a snapshot never names a file that isn't there yet
+	let dir = libraryDir(id),
+		wanted = new Set(snap.assets.map((a) => a.id))
+
+	await fs.promises.mkdir(dir, {recursive: true})
+
+	for (let assetId of wanted) {
+		if (!validID(assetId)) continue
+
+		let from = assetFile(id, assetId),
+			to = path.join(dir, assetId)
+
+		if (fs.existsSync(from) && fs.existsSync(`${from}.json`)) {
+			await fs.promises.copyFile(from, to, fs.constants.COPYFILE_FICLONE)
+			await fs.promises.copyFile(`${from}.json`, `${to}.json`)
+		}
+	}
+
+	//Files of assets this version doesn't use any more
+	for (let name of await fs.promises.readdir(dir)) {
+		if (!wanted.has(name.replace(/\.json$/, ''))) await fs.promises.rm(path.join(dir, name), {force: true})
+	}
+
+	await libraries.updateOne({_id: id}, {
+		$set: {
+			name: String(project.name || 'Untitled project').slice(0, 200),
+			version: plan.version,
+			hash: plan.hash,
+			updated: now,
+			note: typeof req.body.note === 'string' ? req.body.note.slice(0, 500) : '',
+			components: snap.components,
+			internals: snap.internals,
+			styles: JSON.stringify(snap.styles),
+			history: plan.history,
+
+			//Stored as a string for the same reason as projects.doc
+			snapshot: text
+		},
+		$setOnInsert: {owner: doc.owner || me, shared: {everyone: false, users: []}}
+	}, {upsert: true})
+
+	await projects.updateOne({_id: id}, {$set: {library: {version: plan.version, updated: now}}})
+	res.json({ok: true, unchanged: false, version: plan.version, components: snap.components.length})
+})
+
+//Who else can use the library: everyone in the suite and/or named usernames. Owner only, and it has to be published
+router.put('/api/projects/:id/library/share', express.json({limit: '16kb'}), async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	let shared = library.cleanShare(req.body),
+		result = await libraries.updateOne({_id: req.params.id}, {$set: {shared}})
+
+	if (!result.matchedCount) {
+		return res.status(409).json({error: 'Publish the library first'})
+	}
+
+	res.json({shared})
+})
+
+//The library's state for its own project: published or not, version, who it's shared with
+router.get('/api/projects/:id/library', async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	let doc = await libraries.findOne({_id: req.params.id}, {projection: {snapshot: 0}})
+
+	res.json({library: doc ? libraryMeta(doc, whoIs(req)) : null})
+})
+
+//Stop publishing. Projects that already copied components keep them, they just stop seeing updates
+router.delete('/api/projects/:id/library', async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	await libraries.deleteOne({_id: req.params.id})
+	await fs.promises.rm(libraryDir(req.params.id), {recursive: true, force: true})
+	await projects.updateOne({_id: req.params.id}, {$unset: {library: ''}})
+	res.json({ok: true})
+})
+
 router.use('/api', (req, res) => {
 	res.status(404).json({error: 'No such api route'})
 })
@@ -955,14 +1187,16 @@ client.connect()
 		projects = db.collection('projects')
 		revisions = db.collection('revisions')
 		prefs = db.collection('prefs')
+		libraries = db.collection('libraries')
 		fs.mkdirSync(storageDir, {recursive: true})
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return import('./shared/ops.mjs')
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs')])
 	})
-	.then((mod) => {
-		ops = mod
+	.then(([opsMod, libraryMod]) => {
+		ops = opsMod
+		library = libraryMod
 		cacheHeaders.watchEpoch()
 
 		app.listen(port, (err) => {

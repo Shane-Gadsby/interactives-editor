@@ -6,6 +6,7 @@
  * The session id reaches the server through si-manager's utilities.js, which
  * adds `X-Session-ID` to every same-origin fetch when the page loads it.
  */
+import type { LibraryContent, LibraryInfo } from './libraries';
 import { normalizeProject, readPackage, uid, writePackage, type Asset, type Project } from 'interactives-player';
 
 export interface ProjectMeta {
@@ -23,6 +24,10 @@ export interface ProjectMeta {
   tags?: string[];
   /** One-level folder name, or null for "No folder". */
   folder?: string | null;
+  /** Marked as a component library in its settings. */
+  isLibrary?: boolean;
+  /** The published version, 0 when it has never been published. */
+  libraryVersion?: number;
 }
 
 /** Limits the server enforces on tags and folder names. */
@@ -233,3 +238,26 @@ export const publishShare = (projectId: string, html: string) =>
 export const stopShare = (projectId: string) => call<{ ok: boolean }>(`projects/${projectId}/share`, { method: 'DELETE' });
 
 export const shareUrl = (token: string) => new URL(`s/${token}`, document.baseURI).href;
+
+// ---------------------------------------------------------------- libraries
+
+export const listLibraries = () => call<LibraryInfo[]>('libraries');
+
+export const getLibrary = (id: string) => call<{ library: LibraryInfo; snapshot: LibraryContent }>(`libraries/${encodeURIComponent(id)}`);
+
+export const getLibraryAsset = (libraryId: string, assetId: string) => call<Blob>(`libraries/${encodeURIComponent(libraryId)}/assets/${encodeURIComponent(assetId)}`);
+
+/** This project's own library record (published or not), for its owner. */
+export const getOwnLibrary = (projectId: string) => call<{ library: LibraryInfo | null }>(`projects/${encodeURIComponent(projectId)}/library`).then((r) => r.library);
+
+export const publishLibrary = (projectId: string, note: string) =>
+  call<{ ok: boolean; unchanged: boolean; version: number; components: number }>(`projects/${encodeURIComponent(projectId)}/library/publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note }),
+  });
+
+export const shareLibrary = (projectId: string, share: { everyone: boolean; users: string[] }) =>
+  call<{ shared: { everyone: boolean; users: string[] } }>(`projects/${encodeURIComponent(projectId)}/library/share`, json(share));
+
+export const unpublishLibrary = (projectId: string) => call<{ ok: boolean }>(`projects/${encodeURIComponent(projectId)}/library`, { method: 'DELETE' });

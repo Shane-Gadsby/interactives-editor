@@ -58,13 +58,21 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | `GET /api/projects/:id/revisions/:revId` | one revision's project |
 | `POST /api/projects/:id/revisions/:revId/restore` | snapshot the current document ("Before restore"), then restore; live rooms get `reset` |
 | `GET/PUT/DELETE /api/projects/:id/share` | share link state / publish a standalone HTML body (creates the token on first use) / turn off and delete the file |
+| `GET /api/libraries` | libraries you can use: your own, ones shared with you or with everyone (no snapshots) |
+| `GET /api/libraries/:id` | one library with its latest snapshot (`{library, snapshot}`) |
+| `GET /api/libraries/:id/assets/:assetId` | an asset of the latest snapshot (the library keeps its own copy of the files) |
+| `POST /api/projects/:id/library/publish` | `{note?}`: owner only, the project must have `settings.library` and an artboard marked `publish`. Snapshots the project (the live room's copy if open) as the next version; nothing changed means no new version (`unchanged: true`) |
+| `GET /api/projects/:id/library` | this project's own library record, or null |
+| `PUT /api/projects/:id/library/share` | `{everyone, users[]}`: who else can use the published library |
+| `DELETE /api/projects/:id/library` | stop publishing (projects that copied components keep them) |
 | `GET /s/:token` | a shared project, **no session** (a link in a new tab can't carry one). Tokens are 24 random base64url chars; off until the owner turns it on |
 
 Data lives in two places:
 - **MongoDB:** database `lti-interactives`.
   - `projects`: `{_id, name, owner, created, updated, rev, meta, doc, share?}`, where `doc` is the project JSON stored as a string.
+  - `libraries`: `{_id (the project id), name, owner, version, hash, updated, note, shared: {everyone, users[]}, components, internals, styles, history[], snapshot}`. One per published library; `snapshot` is the latest version's JSON string (artboards, variables, fonts, data sources, asset records, styles) and `history` keeps a short list of what each version held. A project's own document gets `library: {version, updated}` when published, and `meta.library` says it is marked as a library.
   - `revisions`: `{_id, project, created, rev, by, reason, size, doc}`. A snapshot at most every 5 minutes per project while it is saved (PUT or live room save), plus one before each restore. The newest 100 per project are kept.
-- **Asset files:** stored under `storage/<projectId>/<assetId>`, each with a `.json` sidecar. Share links are `storage/shares/<token>.html`. `INTERACTIVES_STORAGE` moves that folder; on test and prod it is symlinked to the larger storage pool. `storage/` is gitignored.
+- **Asset files:** stored under `storage/<projectId>/<assetId>`, each with a `.json` sidecar. A published library's snapshot assets are copied to `storage/_libraries/<projectId>/` (same layout) so they survive edits to the library project. Share links are `storage/shares/<token>.html`. `INTERACTIVES_STORAGE` moves that folder; on test and prod it is symlinked to the larger storage pool. `storage/` is gitignored.
 
 **Live editing.** Opening a project joins a room held in memory by the server, which holds the document, an op log and the connected clients. Edits are diffed into id-addressed ops (`shared/ops.mjs`, the same file the server uses): set a property, insert after an id, delete an id. The last write wins per property, in the server's order.
 - The server saves the room to MongoDB a second after the last op, when the room empties, and on SIGINT/SIGTERM.
@@ -73,7 +81,7 @@ Data lives in two places:
 - A plain PUT (a non-live client or an import) replaces the room and tells everyone to reload.
 - Rooms live in one process, so run a single instance per box.
 
-The projects list wants the index `owner.username_1_updated_-1`, and revision history `project_1_created_-1` on `revisions`, both in `suite-libs/indexes.js`. Everything else is looked up by `_id`.
+The projects list wants the index `owner.username_1_updated_-1`, and revision history `project_1_created_-1` on `revisions`, both in `suite-libs/indexes.js`. The libraries list (`$or` of owner, shared with everyone, shared with a username) wants `owner.username_1`, `shared.everyone_1` and `shared.users_1` on `libraries`. Everything else is looked up by `_id`.
 
 Access works like this:
 - A person sees and changes only their own projects.
@@ -111,6 +119,7 @@ Access works like this:
 | `components/Converters.tsx` | the binding converters editor in the inspector's Data bindings section |
 | `lib/dxf-parse.ts`, `lib/dxf-import.ts`, `lib/dwg-import.ts` | AutoCAD `.dxf` import (ASCII and binary: tables, blocks / inserts, entities, hatches; model space fitted to a 1600 px artboard, one group per layer) and DWG version detection with a "save as DXF" message (no DWG reader). |
 | `lib/vectorcraft-import.ts`, `lib/photocraft-import.ts`, `lib/craft-shared.ts`, `lib/zstd.ts` | VectorCraft (`.vectorcraft`, JSON or gzip, pictures after a marker) and PhotoCraft (`.pcraft`, a ZIP of a JSON manifest and zstd-compressed pixel tiles) import. `craft-shared.ts` holds the matrices, colours, gradients and text placement both use; `zstd.ts` is a small zstd decoder because browsers have none. Format notes: `research/craft/FORMATS.md`; sample files in `research/craft/samples/` drive `test/craft.test.ts` |
+| `lib/libraries.ts`, `lib/library-actions.ts`, `panels/LibrariesPanel.tsx`, `shared/library.mjs` | Component libraries: `shared/library.mjs` (server and browser) builds and hashes the snapshot, decides access and the version number; `libraries.ts` is what a project does with one (copy components in as linked read-only `Artboard.library` copies, find and describe updates, update in place keeping instances and variables, detach, and named colour / text styles that layers follow); `library-actions.ts` talks to the server and the store; the panel is the left panel's Libraries tab. `EditorStore.update` refuses edits to library artboards unless the call passes `{library: true}` |
 | `lib/boolean.ts` | union/subtract/intersect/exclude (polygon-clipping) |
 | `lib/path-edit.ts` | path point maths: bend a segment, split to add a point, box shapes as paths, and keeping shape keys (point tracks) renumbered when points are added or removed |
 | `lib/svg-import.ts` | SVG files to editable layers (paths with transforms baked in, groups, gradients, text) |

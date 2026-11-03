@@ -27,6 +27,7 @@ import {
   type Timeline,
 } from 'interactives-player';
 import { applyRuns, nodePropsToRunStyle } from '../lib/rich-text';
+import { lockViolation, unlinkStyleRef } from '../lib/libraries';
 import { addModifier, applyPreset, removeModifier, type TextPresetId } from '../lib/text-modifiers';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths, remapPointTracks, shapeToPaths } from '../lib/path-edit';
@@ -109,6 +110,7 @@ export class EditorStore {
   private past: HistoryEntry[] = [];
   private future: HistoryEntry[] = [];
   private lastCoalesce: { key: string; time: number } | null = null;
+  private lastLockToast = 0;
   /** Bumped on each document change, for autosave. */
   revision = 0;
   /** Live editing hook: called with the document before and after every local change. */
@@ -176,11 +178,28 @@ export class EditorStore {
    * Change the document. Consecutive changes with the same `coalesce` key
    * within a second (e.g. a drag) become one undo step.
    */
-  update(recipe: (draft: Draft<Project>) => void, opts: { coalesce?: string } = {}): void {
+  update(recipe: (draft: Draft<Project>) => void, opts: { coalesce?: string; library?: boolean } = {}): void {
     const before = this.state.project;
+    // Artboards that came from a library are read-only: a change that touches one (other than moving or renaming it)
+    // is refused. Library operations (insert, update, detach) say so with `library: true`.
+    let edited: Project | null = null;
+    if (!opts.library && before.artboards.some((a) => a.library)) {
+      edited = produce(before, (d) => {
+        recipe(d);
+      });
+      const locked = lockViolation(before, edited);
+      if (locked) {
+        const now = Date.now();
+        if (now - this.lastLockToast > 1500) {
+          this.lastLockToast = now;
+          this.toast(`“${locked.name}” comes from a library and is read-only. Detach it to edit it here.`, 'error');
+        }
+        return;
+      }
+    }
     // Auto-layout frames re-position their children after every change, in the same undo step.
-    const next = produce(before, (d) => {
-      recipe(d);
+    const next = produce(edited ?? before, (d) => {
+      if (!edited) recipe(d);
       for (const ab of d.artboards) relayoutTree(ab.children as SceneNode[]);
     });
     if (next === before) return;
@@ -380,6 +399,7 @@ export class EditorStore {
             applyRuns(loc.node, retextRuns(loc.node.runs, String(value ?? '')));
           } else {
             setPath(loc.node as unknown as Record<string, unknown>, prop, value);
+            unlinkStyleRef(loc.node, prop);
           }
         }
       }
@@ -753,6 +773,9 @@ export class EditorStore {
     };
     // a copy isn't linked to the file: its layers have new ids, so it couldn't be matched to the file's anyway
     delete copy.source;
+    // and a copy of a library artboard is your own to edit
+    delete copy.library;
+    delete copy.publish;
     for (const tl of copy.timelines) {
       tl.id = uid('tl');
       for (const tr of tl.tracks) {

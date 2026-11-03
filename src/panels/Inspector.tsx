@@ -62,6 +62,8 @@ import { ConvertersEditor } from '../components/Converters';
 import { TEXT_PRESETS } from '../lib/text-modifiers';
 import { applyDrawTemplate } from '../lib/draw-templates';
 import { useDrawProblem } from '../lib/draw-edit';
+import { confirmDialog } from '../components/dialogs';
+import { detach as detachFromLibrary } from '../lib/library-actions';
 
 const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
 const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
@@ -264,6 +266,30 @@ function LinkedFileSection({ ab }: { ab: Artboard }) {
   );
 }
 
+/** A copy of a library component: where it is from, which version, and Detach. */
+function LibraryArtboardSection({ ab, project }: { ab: Artboard; project: Project }) {
+  const link = ab.library!;
+  const name = project.libraries?.find((l) => l.id === link.libraryId)?.name ?? 'a library';
+  return (
+    <Section help="libraries" title="Library">
+      <p className="hint">
+        {link.internal ? 'Used inside a library component. ' : ''}From <strong>{name}</strong>, version {link.version}. It is read-only here: its layers, timelines and interactions come from the library and are replaced when you update it. Instances of it in your own artboards, their inputs and your variables are yours.
+      </p>
+      <Row>
+        <button
+          className="btn"
+          title="Make a copy you can edit. It stops getting updates"
+          onClick={async () => {
+            if (await confirmDialog({ title: 'Detach', message: `“${ab.name}” becomes a normal artboard you can edit. It will not get library updates any more.`, confirmLabel: 'Detach' })) detachFromLibrary(ab.id);
+          }}
+        >
+          Detach to edit
+        </button>
+      </Row>
+    </Section>
+  );
+}
+
 function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) {
   const setAb = (fn: (a: Artboard) => void, coalesce?: string) =>
     store().update(
@@ -278,6 +304,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
   return (
     <>
       {ab.source?.linkId && <LinkedFileSection ab={ab} />}
+      {ab.library && <LibraryArtboardSection ab={ab} project={project} />}
       <Section help="artboards" title="Artboard">
         <TextField label="Name" value={ab.name} onChange={(v) => setAb((a) => (a.name = v), `ab-name-${ab.id}`)} />
         <Row>
@@ -308,6 +335,14 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <div className="field-label block">Background</div>
         <PaintField paint={ab.background} project={project} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
         <CheckField label="Clip content to artboard" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
+        {project.settings.library && !ab.library && (
+          <CheckField
+            label="Publish to library"
+            title="Offer this artboard as a component to projects that use this library. Publish from the Libraries tab"
+            value={!!ab.publish}
+            onChange={(v) => setAb((a) => (v ? (a.publish = true) : delete a.publish))}
+          />
+        )}
         <Row>
           <button className="btn" disabled={project.settings.startArtboardId === ab.id} onClick={() => setProject((p) => (p.settings.startArtboardId = ab.id))}>
             {project.settings.startArtboardId === ab.id ? 'Start artboard' : 'Make start artboard'}
@@ -353,6 +388,12 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           title="Scripts run in a JavaScript VM (WASM) with only the ix API: no DOM, cookies or network. Turn off to let scripts reach the page (node.element)."
           value={!!project.settings.scriptSandbox}
           onChange={(v) => setProject((p) => (p.settings.scriptSandbox = v))}
+        />
+        <CheckField
+          label="This project is a library"
+          title="Share artboards marked Publish to library, plus this project's styles and assets, as components other projects can use (Libraries tab)"
+          value={!!project.settings.library}
+          onChange={(v) => setProject((p) => (p.settings.library = v))}
         />
         <CheckField
           label="Respect reduced motion"

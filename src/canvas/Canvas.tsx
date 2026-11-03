@@ -42,6 +42,7 @@ import { captureDrop } from '../lib/links';
 import { liveSession } from '../lib/live';
 import { bendPaths, hasShapeKeys, nearestSegment, shapeToPaths, type SegmentHit } from '../lib/path-edit';
 import { confirmDialog } from '../components/dialogs';
+import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
 
 type Pt = { x: number; y: number };
 
@@ -1007,6 +1008,19 @@ export function Canvas() {
 
   const onDrop = async (e: React.DragEvent) => {
     e.preventDefault();
+    // A component dragged from the Libraries panel
+    const comp = e.dataTransfer.getData(COMPONENT_DRAG);
+    if (comp) {
+      try {
+        const { libraryId, componentId } = JSON.parse(comp) as { libraryId: string; componentId: string };
+        const w = toWorld(e.clientX, e.clientY);
+        const ab = abAt(w) ?? active;
+        if (ab) await dropComponent(libraryId, componentId, ab.id, local(ab, w));
+      } catch {
+        /* not ours */
+      }
+      return;
+    }
     // the drop's file handles have to be asked for right now, before anything is awaited
     const files = captureDrop(e.dataTransfer);
     if (!files.length) return;
@@ -1040,6 +1054,7 @@ export function Canvas() {
       >
         {ab.name}
         {project.settings.startArtboardId === ab.id ? '  ▸ start' : ''}
+        {ab.library ? '  ◆ library' : ''}
       </text>,
     );
   }
