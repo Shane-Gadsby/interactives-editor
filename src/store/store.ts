@@ -753,9 +753,18 @@ export class EditorStore {
     }
     const remapParam = (v: unknown) => (typeof v === 'string' && idMap.has(v) ? idMap.get(v) : v);
     const tlMap = new Map(src.timelines.map((t, i) => [t.id, copy.timelines[i].id]));
+    // Blends are copied with new ids, pointing at the copied timelines
+    const blendMap = new Map<string, string>();
+    for (const b of copy.blends ?? []) {
+      const fresh = uid('bl');
+      blendMap.set(b.id, fresh);
+      b.id = fresh;
+      for (const e of b.entries) if (e.timeline && tlMap.has(e.timeline)) e.timeline = tlMap.get(e.timeline)!;
+    }
     for (const n of copy.logic.nodes) {
       for (const k of Object.keys(n.params)) {
         n.params[k] = remapParam(n.params[k]);
+        if (typeof n.params[k] === 'string' && blendMap.has(n.params[k] as string)) n.params[k] = blendMap.get(n.params[k] as string);
         if (typeof n.params[k] === 'string' && tlMap.has(n.params[k] as string)) n.params[k] = tlMap.get(n.params[k] as string);
       }
     }

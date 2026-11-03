@@ -29,6 +29,8 @@ function sourceLabel(s: UsageSource, multi: boolean): { kind: string; name: stri
       return { kind: 'interaction', name: s.name, where };
     case 'joystick':
       return { kind: 'joystick', name: s.name, where };
+    case 'blend':
+      return { kind: 'blend', name: s.name, where };
     case 'timeline':
       return { kind: 'timeline', name: s.name, where };
     case 'artboard':
@@ -55,6 +57,7 @@ function go(s: UsageSource): boolean {
       st.set({ activeArtboardId: s.artboardId, selection: [], artboardSelected: false, bottomTab: 'logic', logicSelection: s.id });
       return true;
     case 'joystick':
+    case 'blend':
       st.set({ activeArtboardId: s.artboardId, selection: [], artboardSelected: false, bottomTab: 'timeline' });
       return true;
     case 'timeline':

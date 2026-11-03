@@ -14,6 +14,7 @@ import {
   getPath,
   sampleKeys,
   type Artboard,
+  type Blend,
   type BlendMode,
   type ColorStop,
   type FitMode,
@@ -252,6 +253,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         </Row>
       </Section>
       <JoysticksSection ab={ab} />
+      <BlendsSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">
         <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
         <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
@@ -1399,6 +1401,84 @@ function JoysticksSection({ ab }: { ab: Artboard }) {
           {j.yTimeline && <TextField label="Y value" mono title="Expression from 0 to 1" value={j.y ?? ''} commitOnBlur onChange={(v) => update((js) => void (js[i].y = v))} />}
         </div>
       ))}
+    </Section>
+  );
+}
+
+/** Blends: several timelines' poses mixed by weights that come from number variables. */
+function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
+  const list = ab.blends ?? [];
+  const update = (fn: (bs: Blend[]) => void, coalesce?: string) =>
+    store().update(
+      (d) => {
+        const a = d.artboards.find((x) => x.id === ab.id);
+        if (!a) return;
+        a.blends ??= [];
+        fn(a.blends);
+      },
+      { coalesce },
+    );
+  const tls = [{ value: '', label: 'Choose timeline…' }, ...ab.timelines.map((t) => ({ value: t.id, label: t.name }))];
+  const numberVars = project.variables.filter((v) => v.type === 'number');
+  const vars = (empty: string) => [{ value: '', label: empty }, ...numberVars.map((v) => ({ value: v.id, label: v.name }))];
+  return (
+    <Section
+      help="blends"
+      title="Blends"
+      defaultOpen={list.length > 0}
+      actions={
+        <IconButton
+          icon={<Icons.plus />}
+          title="Add a blend: mix several timelines by a number, e.g. idle, walk and run by speed"
+          onClick={() => update((bs) => void bs.push({ id: uid('bl'), name: `Blend ${bs.length + 1}`, mode: '1d', variable: numberVars[0]?.id ?? null, entries: ab.timelines.slice(0, 2).map((t, i) => ({ timeline: t.id, value: i })) }))}
+        />
+      }
+    >
+      {!list.length && <p className="hint">Mix several timelines by a number: blend idle, walk and run by speed, or layer a lean on top of a loop. Start one with a Play blend node.</p>}
+      {list.map((b, i) => {
+        const oneD = b.mode === '1d';
+        return (
+          <div key={b.id} className="constraint">
+            <Row>
+              <TextField label="Name" value={b.name} onChange={(v) => update((bs) => void (bs[i].name = v), `blend-name-${b.id}`)} />
+              <IconButton icon={<Icons.trash />} title="Remove blend" onClick={() => update((bs) => void bs.splice(i, 1))} />
+            </Row>
+            <SelectField<Blend['mode']>
+              label="Mode"
+              title="1D: one number picks a position between the entries. Direct: each entry has its own weight. Additive: each entry's change is added on top of the layer"
+              value={b.mode}
+              options={[
+                { value: '1d', label: '1D (by one number)' },
+                { value: 'direct', label: 'Direct (weight per timeline)' },
+                { value: 'additive', label: 'Additive (on top)' },
+              ]}
+              onChange={(v) => update((bs) => void (bs[i].mode = v))}
+            />
+            {oneD && <SelectField label="Input" title="The number variable that picks the position" value={b.variable ?? ''} options={vars(numberVars.length ? 'Choose variable…' : 'No number variables yet')} onChange={(v) => update((bs) => void (bs[i].variable = v || null))} />}
+            {!oneD && <NumberField label="Full weight at" title="The variable value that means full weight: 1 for 0 to 1, 100 for percentages" value={b.range ?? 1} min={0.0001} onChange={(v) => update((bs) => void (bs[i].range = v), `blend-range-${b.id}`)} />}
+            <CheckField label="Start with the artboard" value={!!b.autoplay} onChange={(v) => update((bs) => void (bs[i].autoplay = v || undefined))} />
+            {b.entries.map((e, k) => (
+              <Row key={k}>
+                <SelectField label={k === 0 ? 'Timelines' : undefined} value={e.timeline ?? ''} options={tls} onChange={(v) => update((bs) => void (bs[i].entries[k].timeline = v || null))} />
+                {oneD ? (
+                  <NumberField title="Where this timeline sits along the input" value={e.value ?? k} step={0.1} onChange={(v) => update((bs) => void (bs[i].entries[k].value = v), `blend-val-${b.id}-${k}`)} />
+                ) : (
+                  <>
+                    <SelectField title="Variable giving this timeline's weight" value={e.weightVariable ?? ''} options={vars('Fixed weight')} onChange={(v) => update((bs) => void (bs[i].entries[k].weightVariable = v || null))} />
+                    {!e.weightVariable && <NumberField title="Fixed weight, 0 to 1" value={e.weight ?? 1} step={0.1} min={0} max={1} onChange={(v) => update((bs) => void (bs[i].entries[k].weight = v), `blend-w-${b.id}-${k}`)} />}
+                  </>
+                )}
+                <IconButton icon={<Icons.trash />} title="Remove from blend" onClick={() => update((bs) => void bs[i].entries.splice(k, 1))} />
+              </Row>
+            ))}
+            <IconButton
+              icon={<Icons.plus />}
+              title="Add a timeline to this blend"
+              onClick={() => update((bs) => void bs[i].entries.push({ timeline: ab.timelines.find((t) => !b.entries.some((e) => e.timeline === t.id))?.id ?? null, value: Math.max(-1, ...b.entries.map((e, k) => e.value ?? k)) + 1 }))}
+            />
+          </div>
+        );
+      })}
     </Section>
   );
 }

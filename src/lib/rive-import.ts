@@ -13,6 +13,7 @@
  *   - State machines -> variables (bool/number inputs), messages (triggers),
  *     pointer listeners -> pointer events, and transitions -> flows that play
  *     the target state's timeline
+ *   - Blend states (1D and direct) -> blends: entering the state plays the blend, leaving it stops the blend
  *   - Solo -> a group with native solo (animated through `solo.active`)
  *   - ClippingShape -> the clipped layer wrapped in a group with a masking copy of the clip shape in front of it
  *   - DrawRules/DrawTarget -> `drawOrder` on the parent, when the clipped node and its target are siblings
@@ -33,6 +34,7 @@ import {
   defaultParams,
   runsPatch,
   type Artboard,
+  type Blend,
   type Easing,
   type FontRef,
   type InstanceNode,
@@ -257,6 +259,8 @@ interface RState {
   obj: RObj;
   transitions: RTransition[];
   fires: RObj[];
+  /** BlendAnimation1D / BlendAnimationDirect objects of a blend state. */
+  blends: RObj[];
 }
 interface RLayer {
   obj: RObj;
@@ -392,10 +396,11 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
       layer = { obj: o, states: [] };
       sm.layers.push(layer);
     } else if (isA(t, 'LayerState') && layer) {
-      state = { obj: o, transitions: [], fires: [] };
+      state = { obj: o, transitions: [], fires: [], blends: [] };
       transition = null;
       layer.states.push(state);
-    } else if (isA(t, 'StateTransition') && state) {
+    } else if (isA(t, 'BlendAnimation') && state) state.blends.push(o);
+    else if (isA(t, 'StateTransition') && state) {
       transition = { obj: o, conditions: [], fires: [] };
       state.transitions.push(transition);
     } else if (isA(t, 'TransitionCondition') && transition) {
@@ -1584,6 +1589,61 @@ function eventName(o: RObj | undefined): string {
 
 // ---------------------------------------------------------------- state machines
 
+type InputVar = { kind: 'trigger' | 'bool' | 'number'; name: string; id: string };
+
+/**
+ * A Rive blend state as a blend. 1D states mix the two animations around the input (their `value`s are the positions).
+ * Direct states give each animation a weight, from a number input (0 to 100, so the blend's range is 100) or a fixed mix value.
+ */
+function riveBlend(fc: FileCtx, st: RState, inputVars: InputVar[], timelines: Timeline[]): Blend | null {
+  const entryTimeline = (o: RObj) => timelines[Number(o.props.animationId ?? -1)];
+  const numberInput = (index: unknown): InputVar | undefined => {
+    const v = inputVars[Number(index ?? -1)];
+    return v?.kind === 'number' ? v : undefined;
+  };
+  const anims = st.blends.filter((o) => {
+    if (entryTimeline(o)) return true;
+    fc.warnings.add('Some blend state animations could not be found and were skipped');
+    return false;
+  });
+  // States carry no names of their own: name the blend after what it mixes
+  const name = String(st.obj.props.name ?? '') || `${st.obj.type === 'BlendStateDirect' ? 'Direct' : '1D'} blend: ${anims.map((o) => entryTimeline(o).name).join(' / ')}`;
+  if (!anims.length) {
+    fc.warnings.add(`Blend state "${name}" has no animations and was imported as an empty state`);
+    return null;
+  }
+  const blend: Blend = { id: uid('bl'), name, mode: '1d', entries: [] };
+  if (st.obj.type === 'BlendStateDirect') {
+    blend.mode = 'direct';
+    blend.range = 100;
+    if (anims.length > 1) fc.warnings.add('Direct blend states average their animations by weight; Rive layers them one after another, so overlapping weights can look different');
+    for (const o of anims) {
+      const source = Number(o.props.blendSource ?? 0);
+      const entry: Blend['entries'][number] = { timeline: entryTimeline(o).id };
+      if (source === 0) {
+        const input = numberInput(o.props.inputId);
+        if (input) entry.weightVariable = input.id;
+        else {
+          fc.warnings.add('Some direct blend animations are driven by an input that is not a number and play at full weight');
+          entry.weight = 1;
+        }
+      } else {
+        if (source !== 1) fc.warnings.add('Direct blend animations driven by view model values are imported with their fixed mix value');
+        entry.weight = Math.max(0, Math.min(1, Number(o.props.mixValue ?? 100) / 100));
+      }
+      blend.entries.push(entry);
+    }
+    return blend;
+  }
+  if (st.obj.type === 'BlendState1DInput') {
+    const input = numberInput(st.obj.props.inputId);
+    if (input) blend.variable = input.id;
+    else fc.warnings.add(`Blend state "${name}" is driven by an input that is not a number, so it stays at its first animation`);
+  } else fc.warnings.add(`Blend state "${name}" is driven by a view model value, which is not connected: it stays at its first animation`);
+  blend.entries = anims.map((o) => ({ timeline: entryTimeline(o).id, value: r2(Number(o.props.value ?? 0)) }));
+  return blend;
+}
+
 const identifier = (s: string) => s.replace(/[^\w$]+/g, '_').replace(/^(\d)/, '_$1') || 'input';
 
 function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Timeline[], names: Set<string>, variables: Variable[], abIndex: number): void {
@@ -1732,6 +1792,15 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
       }
       const stateName = (st: RState) => stateNames.get(st) ?? baseName(st);
       const layerTimelines = layer.states.map(tlOf).filter(Boolean) as Timeline[];
+      // Blend states become blends on the artboard: entering the state plays its blend, leaving stops it
+      const blendOf = new Map<RState, Blend>();
+      for (const st of layer.states) {
+        if (!isA(st.obj.type, 'BlendState')) continue;
+        const b = riveBlend(fc, st, inputVars, timelines);
+        if (!b) continue;
+        (ab.blends ??= []).push(b);
+        blendOf.set(st, b);
+      }
       const goTo = (from: LogicNode, port: string, target: RState, x: number) => {
         let last = from;
         let lastPort = port;
@@ -1745,15 +1814,30 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           lastPort = 'out';
           x += 240;
         }
+        // The layer's blends stop (the target's own one starts again from the top below)
+        for (const b of blendOf.values()) {
+          const stop = add('action.blendStop', { blend: b.id }, x);
+          link(last, stop, lastPort);
+          last = stop;
+          lastPort = 'out';
+          x += 240;
+        }
         const set = add('action.setVariable', { variable: stateVar.id, op: 'set', value: JSON.stringify(stateName(target)) }, x);
         link(last, set, lastPort);
         const entered = fireNodes(target.fires, 0, set, 'out', x + 240);
+        const targetBlend = blendOf.get(target);
+        if (targetBlend) {
+          const play = add('action.blendPlay', { blend: targetBlend.id }, entered.x);
+          link(entered.last, play, entered.port);
+          entered.last = play;
+          entered.port = 'out';
+          entered.x += 240;
+        }
         const tl = tlOf(target);
         if (tl) {
           const play = add('action.timeline', { timeline: tl.id, op: 'restart' }, entered.x);
           link(entered.last, play, entered.port);
         }
-        if (target.obj.type === 'BlendState1D' || target.obj.type === 'BlendStateDirect' || isA(target.obj.type, 'BlendState')) fc.warnings.add('Blend states are imported as plain states');
       };
       // Entry: the first unconditional transition picks the starting state
       const entry = layer.states.find((s) => s.obj.type === 'EntryState');
@@ -1836,7 +1920,10 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
               if (tl) {
                 if (tl.loop !== 'once') fc.warnings.add('Transitions out of looping animations by exit time only happen once the animation is set to play once');
                 sources.push(add('event.timelineEnd', { timeline: tl.id }, 40));
-              } else continue;
+              } else {
+                if (blendOf.has(st)) fc.warnings.add('Transitions out of blend states by exit time only are not imported');
+                continue;
+              }
             }
           }
           const iff = add('logic.if', { condition }, 280);

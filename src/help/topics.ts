@@ -524,6 +524,35 @@ Add one in the **Joysticks** section of the artboard (select the artboard).
 Examples: a dial that turns with a variable, a character whose eyes follow the pointer (a left-right timeline and an up-down timeline), or a gauge that fills with a score. \`pointer\` (\`{x, y}\` on the artboard) and \`artboard\` (\`{width, height}\`) are in scope.`,
   },
 
+  {
+    id: 'blends',
+    title: 'Blends',
+    group: 'Motion',
+    summary: 'Mix several timelines at once, weighted by numbers: idle, walk and run by speed, or a lean on top of a loop.',
+    keywords: 'blend mix weight 1d direct additive layer timelines locomotion speed rive blend state input',
+    body: `A **blend** plays several [timelines](timelines) together and mixes their poses. How much each one counts comes from number [variables](variables), so a single number can turn *idle* into *walk* into *run*.
+
+Add one in the **Blends** section of the artboard (select the artboard), then start it with a **Play blend** node (or tick *Start with the artboard*). **Stop blend** ends it.
+
+## Modes
+| Mode | How the weights work |
+|---|---|
+| **1D** | One *Input* variable is a position. Each timeline sits at a *value* along it. The two timelines either side of the input are mixed in proportion; below the first or above the last, that end timeline counts fully. |
+| **Direct** | Each timeline has its own weight: a variable (from 0 up to *Full weight at*, so use 100 for percentages) or a fixed weight from 0 to 1. Weighted timelines are averaged. If the weights add up to less than 1 the rest is whatever the layer already had; if they add up to more than 1 they are scaled down. |
+| **Additive** | Each timeline adds its *change from its first frame*, times its weight, on top of the layer's current value. Stopping the blend takes the change back out. |
+
+## What gets mixed
+- Numbers (position, size, rotation, opacity ...) and colours are blended.
+- Everything else (visible, text, draw order, solo child) takes the value of the heaviest timeline that animates it, as long as the weights covering it add up to at least 0.5. Additive blends leave these alone.
+- Only the properties the blend's timelines animate are touched, and only where the weights say something.
+
+## How it plays
+While a blend is on, each of its timelines plays on a playhead of the blend's own, following the timeline's loop setting. The same timeline can also play normally. Every frame the order is: normal timelines, [joysticks](joysticks), blends (in the order listed), then Animate property tweens. A blend therefore wins over a normal timeline animating the same property, except that Additive blends add to what the timeline wrote. *Play blend* does nothing if the blend is already on; *Stop blend* leaves the mixed pose where it is (Additive blends excepted).
+
+## Imported blend states
+Importing a Rive file turns its 1D and direct blend states into blends. Entering the state plays the blend; leaving stops it. Direct blend inputs run 0 to 100 as in Rive.`,
+  },
+
   // ---------------------------------------------------------------- interactivity
   {
     id: 'interactions',
@@ -690,10 +719,10 @@ A yellow **unused** flag marks items nothing refers to, and the number on each g
 
 - **Assets**: image and video layers, image fills and strokes, cursor images, artboard backgrounds, fonts, data files and *Play sound* nodes.
 - **Artboards**: instances, *Go to artboard* nodes, and being the start artboard.
-- **Variables**: input fields bound to them, bindings, text and link templates (\`{score}\`), repeaters, joysticks, instance inputs, and interaction nodes that name them or use them in an expression.
+- **Variables**: input fields bound to them, bindings, text and link templates (\`{score}\`), repeaters, joysticks, blends, instance inputs, and interaction nodes that name them or use them in an expression.
 - **Data sources**: the same expressions, plus *Load data* and *On data loaded* nodes, and being a font or data file.
 - **Scripts**: *Run script* nodes, or having *Run on start* ticked.
-- **Timelines**: *Control timeline*, *On timeline end* and *On timeline marker* nodes, joysticks, autoplay, and scripts that name them.
+- **Timelines**: *Control timeline*, *On timeline end* and *On timeline marker* nodes, joysticks, blends, autoplay, and scripts that name them.
 - **Layers** tab: layers that a constraint, an interaction node or a timeline track points at.
 
 Uses found by reading script or *Run code* text are marked **?**. A name in code can match something that is not really a use, so check before deleting something that is used only by a **?**.

@@ -20,6 +20,7 @@ export type UsageSource =
   | { type: 'layer'; artboardId: Id; artboardName: string; id: Id; name: string; nodeType: string }
   | { type: 'logic'; artboardId: Id; artboardName: string; id: Id; name: string }
   | { type: 'joystick'; artboardId: Id; artboardName: string; id: Id; name: string }
+  | { type: 'blend'; artboardId: Id; artboardName: string; id: Id; name: string }
   | { type: 'timeline'; artboardId: Id; artboardName: string; id: Id; name: string }
   | { type: 'artboard'; id: Id; name: string }
   | { type: 'script'; id: Id; name: string }
@@ -273,6 +274,16 @@ export function analyzeUsage(project: Project): UsageReport {
       const by: UsageSource = { type: 'timeline', artboardId: ab.id, artboardName: ab.name, id: t.id, name: t.name };
       if (t.autoplay) use('timeline', t.id, by, 'autoplays');
       for (const tr of t.tracks) useLayer(tr.nodeId, by, `track ${tr.prop}`);
+    }
+
+    // Blends: the timelines they mix and the variables that weight them
+    for (const b of ab.blends ?? []) {
+      const by: UsageSource = { type: 'blend', artboardId: ab.id, artboardName: ab.name, id: b.id, name: b.name || 'Blend' };
+      if (b.mode === '1d') useId('variable', b.variable, by, 'blend input');
+      for (const e of b.entries) {
+        useId('timeline', e.timeline, by, 'blend entry');
+        if (b.mode !== '1d') useId('variable', e.weightVariable, by, 'blend weight');
+      }
     }
 
     // Joysticks
