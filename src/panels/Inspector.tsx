@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
+  nodeTypeLabel,
   ANIMATABLE_PROPS,
   animatableProp,
   EASING_NAMES,
@@ -398,7 +399,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
   return (
     <>
       <AlignBar count={nodes.length} shapes={nodes.filter((x) => !(x.type === 'group' || x.type === 'text' || x.type === 'link')).length} />
-      <Section help="fill-stroke" title={single ? <span className="type-chip">{n.type}</span> : `${nodes.length} layers`}>
+      <Section help="fill-stroke" title={single ? <span className="type-chip">{nodeTypeLabel(n.type)}</span> : `${nodes.length} layers`}>
         {single && <TextField label="Name" value={n.name} onChange={(v) => set({ name: v }, `name-${n.id}`)} />}
         <Row>
           <Num node={n} ids={ids} prop="x" label="X" />
