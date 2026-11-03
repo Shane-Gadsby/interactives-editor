@@ -23,3 +23,18 @@ describe.skipIf(!samples.length)('Rive import (sample files in research/rive)', 
     });
   }
 });
+
+describe.skipIf(!samples.includes('treasure_valley_interactive_map.riv'))('Rive view model import', () => {
+  it('turns view model properties into shared variables driven by listeners and tested by transitions', async () => {
+    const res = await importRive(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')), 'tv');
+    const icon = res.variables.find((v) => v.name === 'MainVM_iconNum');
+    const index = res.variables.find((v) => v.name === 'MainVM_indexNum');
+    expect(icon?.shared).toBe(true);
+    expect(index?.type).toBe('number');
+    const nodes = res.artboards.flatMap((a) => a.logic.nodes);
+    expect(nodes.some((n) => n.kind === 'action.setVariable' && n.params.variable === icon!.id && n.params.value === '10')).toBe(true);
+    expect(nodes.some((n) => n.kind === 'logic.if' && String(n.params.condition).includes('MainVM_indexNum ==='))).toBe(true);
+    expect(nodes.some((n) => n.kind === 'event.variable' && n.params.variable === index!.id)).toBe(true);
+    expect(res.warnings.some((w) => /view models\) is not imported/.test(w))).toBe(false);
+  });
+});

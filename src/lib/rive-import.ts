@@ -109,6 +109,16 @@ function defaultOf(cls: string, prop: string): number | boolean | string | undef
 interface RObj {
   type: string;
   props: Record<string, unknown>;
+  /** Data binding: the bindable property and DataBindContext objects that belong to a comparator or listener action. */
+  parts?: RObj[];
+}
+
+/** A view model: its properties in order, and the first instance's values by property index. */
+interface RViewModel {
+  name: string;
+  props: RObj[];
+  values: Map<number, unknown>;
+  instances: number;
 }
 
 function get<T = number>(o: RObj, prop: string): T {
@@ -268,7 +278,12 @@ function claimsSlot(type: string): boolean {
   return (isA(type, 'Component') && type !== 'Artboard') || isA(type, 'KeyFrameInterpolator');
 }
 
-function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[]; warnings: Set<string> } {
+function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[]; warnings: Set<string>; viewModels: RViewModel[] } {
+  const viewModels: RViewModel[] = [];
+  let vmInstance: { vm: RViewModel; first: boolean } | null = null;
+  // Bindable properties and their DataBindContexts come just before the comparator or listener action that uses them
+  let pending: RObj[] = [];
+  let condition: RObj | null = null;
   const artboards: RArtboard[] = [];
   const assets: RAsset[] = [];
   const warnings = new Set<string>();
@@ -284,6 +299,37 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
   let asset: RAsset | null = null;
   for (const o of objects) {
     const t = o.type;
+    if (t === 'ViewModel') {
+      viewModels.push({ name: String(o.props.name ?? `ViewModel${viewModels.length + 1}`), props: [], values: new Map(), instances: 0 });
+      continue;
+    }
+    if (isA(t, 'ViewModelProperty') && viewModels.length) {
+      viewModels[viewModels.length - 1].props.push(o);
+      continue;
+    }
+    if (t === 'ViewModelInstance') {
+      const vm = viewModels[Number(o.props.viewModelId ?? 0)];
+      vmInstance = vm ? { vm, first: vm.instances++ === 0 } : null;
+      continue;
+    }
+    if (isA(t, 'ViewModelInstanceValue')) {
+      if (vmInstance?.first) vmInstance.vm.values.set(Number(o.props.viewModelPropertyId ?? 0), o.props.propertyValue);
+      continue;
+    }
+    if (isA(t, 'BindableProperty') || isA(t, 'DataBind')) {
+      pending.push(o);
+      continue;
+    }
+    if (isA(t, 'TransitionComparator')) {
+      if (condition) (condition.parts ??= []).push({ ...o, parts: pending });
+      pending = [];
+      continue;
+    }
+    if (pending.length && t !== 'ListenerViewModelChange') {
+      // A binding nobody consumed: it was on a layer property (text, colour, position...)
+      if (pending.some((x) => x.type === 'DataBindContext')) warnings.add('Data bindings on layer properties (text, colours, positions) are not imported yet; state machine conditions and listeners on view model values are');
+      pending = [];
+    }
     if (t === 'Artboard') {
       ab = { obj: o, slots: [o], anims: [], machines: [] };
       artboards.push(ab);
@@ -328,14 +374,19 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
     } else if (isA(t, 'StateTransition') && state) {
       transition = { obj: o, conditions: [] };
       state.transitions.push(transition);
-    } else if (isA(t, 'TransitionCondition') && transition) transition.conditions.push(o);
+    } else if (isA(t, 'TransitionCondition') && transition) {
+      transition.conditions.push(o);
+      condition = o;
+    }
     else if (isA(t, 'StateMachineListener') && sm) {
       listener = { obj: o, actions: [] };
       sm.listeners.push(listener);
-    } else if (isA(t, 'ListenerAction') && listener) listener.actions.push(o);
-    else if (isA(t, 'DataBind') || isA(t, 'ViewModel') || isA(t, 'ViewModelInstance') || isA(t, 'ViewModelInstanceValue') || isA(t, 'ViewModelProperty')) warnings.add('Data binding (view models) is not imported; use Interactives variables and bindings instead');
+    } else if (isA(t, 'ListenerAction') && listener) {
+      listener.actions.push(t === 'ListenerViewModelChange' ? { ...o, parts: pending } : o);
+      pending = [];
+    }
   }
-  return { artboards, assets, warnings };
+  return { artboards, assets, warnings, viewModels };
 }
 
 // ---------------------------------------------------------------- geometry helpers
@@ -501,7 +552,30 @@ interface FileCtx {
   pendingInputs: { node: InstanceNode; artboard: number; machine: number; input: number; value: number | boolean }[];
   /** Variable name for (artboard, state machine, input) indexes. */
   inputNames: Map<string, string>;
+  viewModels: RViewModel[];
+  /** One shared variable per view model property used (key: "vm/prop"). Triggers become counters. */
+  vmVars: Map<string, { id: string; name: string; kind: 'number' | 'boolean' | 'string' | 'color' | 'trigger' }>;
 }
+
+/** sourcePathIds: varuints, the view model index then property indexes (through nested view model properties). */
+function pathIds(v: unknown): number[] {
+  const bytes = v instanceof Uint8Array ? v : v && typeof v === 'object' ? Uint8Array.from(Object.values(v as Record<string, number>)) : new Uint8Array();
+  const out: number[] = [];
+  let n = 0;
+  let shift = 0;
+  for (const b of bytes) {
+    n |= (b & 0x7f) << shift;
+    if (b & 0x80) shift += 7;
+    else {
+      out.push(n);
+      n = 0;
+      shift = 0;
+    }
+  }
+  return out;
+}
+
+const argbCss = (v: number) => `rgba(${(v >>> 16) & 255}, ${(v >>> 8) & 255}, ${v & 255}, ${Math.round((((v >>> 24) & 255) / 255) * 1000) / 1000})`;
 
 function addTarget(ac: ArtboardCtx, slot: number, t: Target): void {
   const list = ac.targets.get(slot) ?? [];
@@ -569,6 +643,25 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
   const fillInfo = fills[0] ? paintOf(ac, fc, fills[0].i, null) : { paint: null, colorSlot: null };
   const strokeInfo = strokes[0] ? paintOf(ac, fc, strokes[0].i, null) : { paint: null, colorSlot: null };
   const stroke: Stroke | null = strokes[0] && strokeInfo.paint ? { paint: strokeInfo.paint, width: r2(get(strokes[0].o, 'thickness')) } : null;
+  // Trim path effect on the stroke: start/end/offset are fractions in Rive, percentages here
+  const trim = strokes[0] ? (ac.children.get(strokes[0].i) ?? []).find((i) => ac.rab.slots[i]?.type === 'TrimPath') : undefined;
+  if (stroke && trim !== undefined) {
+    const t = ac.rab.slots[trim];
+    stroke.trimStart = r2(get(t, 'start') * 100);
+    stroke.trimEnd = r2(get(t, 'end') * 100);
+    stroke.trimOffset = r2(get(t, 'offset') * 100);
+    if (Number(t.props.modeValue ?? 1) === 2) fc.warnings.add('Trim paths in "synchronized" mode trim the whole outline at once');
+  }
+  // Dash path effect: its Dash children alternate dash and gap lengths (pixel lengths only)
+  const dashPath = strokes[0] ? (ac.children.get(strokes[0].i) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath') : undefined;
+  if (stroke && dashPath !== undefined) {
+    const dashes = (ac.children.get(dashPath) ?? []).map((i) => ac.rab.slots[i]).filter((d) => d?.type === 'Dash');
+    if (dashes.some((d) => get<boolean>(d, 'lengthIsPercentage'))) fc.warnings.add('Dash lengths given as percentages are not supported');
+    else {
+      const list = dashes.map((d) => r2(get(d, 'length'))).filter((n) => n > 0);
+      if (list.length) stroke.dash = list.length % 2 ? [...list, ...list] : list;
+    }
+  }
   const fill = fillInfo.paint;
   const name = String(o.props.name ?? 'Shape');
 
@@ -672,6 +765,10 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
   if (fillInfo.colorSlot !== null) addTarget(ac, fillInfo.colorSlot, { nodeId: node.id, map: { colorValue: { prop: 'fill.color', f: (v) => argb(Number(v)) } } });
   if (strokeInfo.colorSlot !== null) addTarget(ac, strokeInfo.colorSlot, { nodeId: node.id, map: { colorValue: { prop: 'stroke.paint.color', f: (v) => argb(Number(v)) } } });
   if (strokes[0]) addTarget(ac, strokes[0].i, { nodeId: node.id, map: { thickness: { prop: 'stroke.width', f: num() } } });
+  if (trim !== undefined) {
+    const pct = (v: unknown) => r2(Number(v ?? 0) * 100);
+    addTarget(ac, trim, { nodeId: node.id, map: { start: { prop: 'stroke.trimStart', f: pct }, end: { prop: 'stroke.trimEnd', f: pct }, offset: { prop: 'stroke.trimOffset', f: pct } } });
+  }
   const blend = get(o, 'blendModeValue');
   const blendMap: Record<number, SceneNode['blendMode']> = { 14: 'screen', 15: 'overlay', 16: 'darken', 17: 'lighten', 18: 'color-dodge', 19: 'color-burn', 22: 'difference', 23: 'exclusion', 24: 'multiply' };
   if (blendMap[blend]) node.blendMode = blendMap[blend];
@@ -680,6 +777,38 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
 
 /** Rectangles/ellipses with an origin other than top-left: x/y keys that follow their animated size. */
 let sizeFollowers: { nodeId: string; pathSlot: number; ox: number; oy: number; sx: number; sy: number }[] = [];
+
+const lineRatios = new WeakMap<Uint8Array, number | null>();
+/** (ascender - descender) / unitsPerEm from an OpenType/TrueType font's head and hhea tables. */
+function fontLineRatio(bytes: Uint8Array): number | null {
+  if (lineRatios.has(bytes)) return lineRatios.get(bytes)!;
+  let ratio: number | null = null;
+  try {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const magic = dv.getUint32(0);
+    // Plain TrueType/OpenType only (WOFF tables are compressed)
+    if (magic !== 0x00010000 && magic !== 0x4f54544f && magic !== 0x74727565) throw new Error('not sfnt');
+    const n = dv.getUint16(4);
+    let head = -1;
+    let hhea = -1;
+    for (let i = 0; i < n; i++) {
+      const rec = 12 + i * 16;
+      const tag = String.fromCharCode(bytes[rec], bytes[rec + 1], bytes[rec + 2], bytes[rec + 3]);
+      if (tag === 'head') head = dv.getUint32(rec + 8);
+      if (tag === 'hhea') hhea = dv.getUint32(rec + 8);
+    }
+    if (head >= 0 && hhea >= 0) {
+      const upm = dv.getUint16(head + 18);
+      const asc = dv.getInt16(hhea + 4);
+      const desc = dv.getInt16(hhea + 6);
+      if (upm > 0) ratio = (asc - desc) / upm;
+    }
+  } catch {
+    ratio = null;
+  }
+  lineRatios.set(bytes, ratio);
+  return ratio;
+}
 
 function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
   const o = ac.rab.slots[slot];
@@ -708,6 +837,10 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
     const fontAsset = fc.file.assets[Number(get(style, 'fontAssetId'))];
     const fam = fontAsset ? String(get(fontAsset.obj, 'name') ?? '') : '';
     if (fam) fontFamily = `"${fam.replace(/\.[^.]+$/, '')}", system-ui, sans-serif`;
+    // A single line is as tall as the font's own ascent + descent in Rive, even with a smaller line height
+    const natural = fontAsset?.bytes ? fontLineRatio(fontAsset.bytes) : null;
+    const runText = runs.map((r) => String(get(r.o, 'text') ?? '')).join('');
+    if (natural && !runText.includes('\n') && natural > lineHeight) lineHeight = r2(natural);
   }
   if (runs.length > 1) fc.warnings.add('Text with several styled runs uses the first run’s style for the whole text');
   const w = get(o, 'width') || 200;
@@ -827,7 +960,7 @@ function layoutItemOf(style: RObj | undefined, size: { width: number; height: nu
 
 /** Rive layout participants: everything else inside a layout keeps its own position. */
 function takesPart(t: string): boolean {
-  return isA(t, 'LayoutComponent') || isA(t, 'NestedArtboard');
+  return isA(t, 'LayoutComponent') || isA(t, 'NestedArtboard') || t === 'Text';
 }
 
 function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number): SceneNode | null {
@@ -999,7 +1132,8 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
         const ot = ac.rab.slots[slot]?.type ?? 'object';
         if (isA(ot, 'Vertex')) fc.warnings.add('Path vertex animation (shape morphing) is not supported; those paths stay in their rest shape');
         else if (isA(ot, 'Bone')) fc.warnings.add('Bones and skinning are not supported');
-        else if (ot === 'TrimPath' || ot === 'DashPath') fc.warnings.add('Trim and dash path effects are not supported');
+        else if (ot === 'TrimPath') fc.warnings.add('Trim paths on shapes with several strokes, or on artboard backgrounds, are not imported');
+        else if (ot === 'DashPath') fc.warnings.add('Dash path effects are not supported');
         else if (slot) fc.warnings.add(`Animated ${ot} properties (${rprop}) have no matching layer and were skipped`);
         continue;
       }
@@ -1080,6 +1214,45 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     return n;
   };
   const link = (a: LogicNode, b: LogicNode, port = 'out') => edges.push({ id: uid('e'), from: a.id, fromPort: port, to: b.id, toPort: 'in' } as LogicEdge);
+  // A view model property (followed through nested view model properties) as a shared project variable
+  const vmVar = (ctx: RObj | undefined) => {
+    if (!ctx) return null;
+    const ids = pathIds(ctx.props.sourcePathIds);
+    let vmIndex = ids[0];
+    let vm = fc.viewModels[vmIndex];
+    for (let k = 1; vm && k < ids.length; k++) {
+      const prop = vm.props[ids[k]];
+      if (!prop) return null;
+      if (prop.type === 'ViewModelPropertyViewModel' && k < ids.length - 1) {
+        vmIndex = Number(prop.props.viewModelReferenceId ?? 0);
+        vm = fc.viewModels[vmIndex];
+        continue;
+      }
+      const key = `${vmIndex}/${ids[k]}`;
+      let v = fc.vmVars.get(key);
+      if (!v) {
+        const kind = prop.type === 'ViewModelPropertyBoolean' ? 'boolean' : prop.type === 'ViewModelPropertyTrigger' ? 'trigger' : prop.type === 'ViewModelPropertyColor' ? 'color' : prop.type === 'ViewModelPropertyNumber' ? 'number' : 'string';
+        const name = unique(`${vm.name}_${String(prop.props.name ?? 'value')}`);
+        const raw = vm.values.get(ids[k]);
+        const variable: Variable = {
+          id: uid('v'),
+          name,
+          shared: true,
+          type: kind === 'trigger' ? 'number' : kind,
+          initial: kind === 'boolean' ? !!raw : kind === 'number' ? r2(Number(raw ?? 0)) : kind === 'trigger' ? 0 : kind === 'color' ? argbCss(Number(raw ?? 0xff000000)) : String(raw ?? ''),
+        };
+        variables.push(variable);
+        v = { id: variable.id, name, kind };
+        fc.vmVars.set(key, v);
+      }
+      return v;
+    }
+    return null;
+  };
+  const contextOf = (o: RObj | undefined) => {
+    const ctxs = (o?.parts ?? []).filter((x) => x.type === 'DataBindContext');
+    return ctxs.find((x) => Number(x.props.flags ?? 0) & 1) ?? ctxs[0];
+  };
   const machines = ac.rab.machines;
   if (!machines.length) {
     // No state machine: play the first animation, as Rive does
@@ -1104,7 +1277,17 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
       const stateVar: Variable = { id: uid('v'), name: unique(`${smName}_layer${li + 1}_state`), type: 'string', initial: '' };
       variables.push(stateVar);
       const tlOf = (st: RState | undefined) => (st?.obj.type === 'AnimationState' ? timelines[Number(st.obj.props.animationId ?? -1)] : undefined);
-      const stateName = (st: RState) => String(st.obj.props.name ?? (st.obj.type === 'AnimationState' ? tlOf(st)?.name : st.obj.type) ?? 'state');
+      // States are told apart by name in the layer's state variable, so two states showing the same animation get numbered
+      const baseName = (st: RState) => String(st.obj.props.name ?? (st.obj.type === 'AnimationState' ? tlOf(st)?.name : st.obj.type) ?? 'state');
+      const stateNames = new Map<RState, string>();
+      const used = new Map<string, number>();
+      for (const st of layer.states) {
+        const b = baseName(st);
+        const n = (used.get(b) ?? 0) + 1;
+        used.set(b, n);
+        stateNames.set(st, n > 1 ? `${b} (${n})` : b);
+      }
+      const stateName = (st: RState) => stateNames.get(st) ?? baseName(st);
       const layerTimelines = layer.states.map(tlOf).filter(Boolean) as Timeline[];
       const goTo = (from: LogicNode, port: string, target: RState, x: number) => {
         let last = from;
@@ -1146,7 +1329,32 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           const conds: string[] = [];
           const triggers: string[] = [];
           const watched = new Set<string>();
+          const vmTriggers: string[] = [];
           for (const c of tr.conditions) {
+            if (c.type === 'TransitionViewModelCondition') {
+              const comps = c.parts ?? [];
+              const left = comps.find((x) => x.type === 'TransitionPropertyViewModelComparator');
+              const right = comps.find((x) => x !== left);
+              const lv = vmVar(contextOf(left));
+              if (!lv) {
+                fc.warnings.add('Some view model conditions point at properties that could not be found');
+                continue;
+              }
+              if (lv.kind === 'trigger') {
+                vmTriggers.push(lv.id);
+                continue;
+              }
+              let rhs: string;
+              if (right?.type === 'TransitionPropertyViewModelComparator') rhs = vmVar(contextOf(right))?.name ?? 'undefined';
+              else if (right?.type === 'TransitionValueBooleanComparator') rhs = String(!!right.props.value);
+              else if (right?.type === 'TransitionValueNumberComparator') rhs = String(r2(Number(right.props.value ?? 0)));
+              else if (right?.type === 'TransitionValueColorComparator') rhs = JSON.stringify(argbCss(Number(right.props.value ?? 0)));
+              else rhs = JSON.stringify(String(right?.props.value ?? ''));
+              const ops = ['===', '!==', '<=', '>=', '<', '>'];
+              conds.push(`${lv.name} ${ops[Number(c.props.opValue ?? 0)] ?? '==='} ${rhs}`);
+              watched.add(lv.id);
+              continue;
+            }
             const inp = inputVars[Number(c.props.inputId ?? 0)];
             if (!inp) continue;
             const op = Number(c.props.opValue ?? 0);
@@ -1161,10 +1369,22 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
             } else fc.warnings.add(`Transition condition ${c.type} is not supported`);
           }
           if (st.obj.type !== 'AnyState') conds.push(`${stateVar.name} === ${JSON.stringify(stateName(st))}`);
+          else if (watched.size) conds.push(`${stateVar.name} !== ${JSON.stringify(stateName(target))}`);
+          // Rive checks conditions every frame: a condition that is already true when the layer enters a state (or
+          // starts) must fire then too, so state changes re-check it
+          if (watched.size) watched.add(stateVar.id);
           const condition = conds.join(' && ') || 'true';
           const sources: LogicNode[] = [];
+          // Exit time: Rive only checks the conditions once the state's animation has played to that point
+          const exitTl = Number(tr.obj.props.flags ?? 0) & 4 ? tlOf(st) : undefined;
+          if (exitTl && !triggers.length && !vmTriggers.length) {
+            watched.clear();
+            if (exitTl.loop !== 'once') fc.warnings.add('Exit times on looping animations are checked when the animation first finishes');
+          }
           for (const name of triggers) sources.push(add('event.message', { name }, 40));
-          if (!triggers.length) {
+          // A view model trigger counts up when it fires: the transition runs on that change only
+          for (const id of vmTriggers) sources.push(add('event.variable', { variable: id }, 40));
+          if (!triggers.length && !vmTriggers.length) {
             for (const id of watched) sources.push(add('event.variable', { variable: id }, 40));
             if (!watched.size) {
               // No inputs: leave when the state's animation finishes (exit time)
@@ -1198,6 +1418,22 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
       let last: LogicNode = ev;
       let x = 280;
       for (const a of l.actions) {
+        if (a.type === 'ListenerViewModelChange') {
+          const target = vmVar(contextOf(a));
+          const bindable = (a.parts ?? []).find((x) => isA(x.type, 'BindableProperty'));
+          if (!target) {
+            fc.warnings.add('Some listeners change view model properties that could not be found');
+            continue;
+          }
+          const raw = bindable?.props.propertyValue;
+          const value =
+            target.kind === 'boolean' ? String(!!raw) : target.kind === 'number' ? String(r2(Number(raw ?? 0))) : target.kind === 'color' ? JSON.stringify(argbCss(Number(raw ?? 0))) : JSON.stringify(String(raw ?? ''));
+          const n = target.kind === 'trigger' ? add('action.setVariable', { variable: target.id, op: 'add', value: '1' }, x) : add('action.setVariable', { variable: target.id, op: 'set', value }, x);
+          link(last, n);
+          last = n;
+          x += 240;
+          continue;
+        }
         const inp = inputVars[Number(a.props.inputId ?? 0)];
         if (!inp) continue;
         let n: LogicNode | null = null;
@@ -1235,6 +1471,8 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     abIds: s.artboards.map(() => uid('ab')),
     pendingInputs: [],
     inputNames: new Map(),
+    viewModels: s.viewModels,
+    vmVars: new Map(),
   };
   if (!s.artboards.length) throw new Error('The .riv file has no artboards');
   // Embedded fonts become project fonts
