@@ -117,17 +117,24 @@ export function TimelinePanel() {
     el.addEventListener('pointerup', up);
   };
 
-  const keyDown = (e: React.PointerEvent, trackId: string, key: Keyframe) => {
+  const keyDown = (e: React.PointerEvent, trackId: string, key: Keyframe) => keysDown(e, [`${trackId}:${key.id}`], key.t);
+
+  /** Press on one key, or on a layer's summary diamond (all of its keys at that time): select, then drag them. */
+  const keysDown = (e: React.PointerEvent, refs: string[], t: number) => {
     e.stopPropagation();
-    const ref = `${trackId}:${key.id}`;
     let sel = store().get().selectedKeys;
-    if (e.shiftKey) sel = sel.includes(ref) ? sel.filter((x) => x !== ref) : [...sel, ref];
-    else if (!sel.includes(ref)) sel = [ref];
-    store().set({ selectedKeys: sel, playhead: key.t, previewPlaying: false });
+    const allIn = refs.every((r) => sel.includes(r));
+    if (e.shiftKey) sel = allIn ? sel.filter((x) => !refs.includes(x)) : [...new Set([...sel, ...refs])];
+    else if (!allIn) sel = refs;
+    store().set({ selectedKeys: sel, playhead: t, previewPlaying: false });
     setTween(null);
     const startX = e.clientX;
     const el = e.currentTarget as HTMLElement;
-    el.setPointerCapture(e.pointerId);
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {
+      /* synthetic event */
+    }
     const starts = new Map<string, number>();
     for (const tr of tl.tracks) for (const k of tr.keys) if (sel.includes(`${tr.id}:${k.id}`)) starts.set(k.id, k.t);
     const move = (ev: PointerEvent) => {
@@ -267,9 +274,18 @@ export function TimelinePanel() {
           {[...byNode.entries()].map(([nodeId, tracks]) => (
             <div key={nodeId} className="track-group">
               <div className="lane node-lane" onPointerDown={scrub}>
-                {[...new Set(tracks.flatMap((t) => t.keys.map((k) => k.t)))].map((t) => (
-                  <span key={t} className="key summary" style={{ left: X(t) }} />
-                ))}
+                {[...new Set(tracks.flatMap((t) => t.keys.map((k) => k.t)))].map((t) => {
+                  const refs = tracks.flatMap((tr) => tr.keys.filter((k) => k.t === t).map((k) => `${tr.id}:${k.id}`));
+                  return (
+                    <span
+                      key={t}
+                      className={`key summary${refs.every((r) => s.selectedKeys.includes(r)) ? ' selected' : ''}`}
+                      style={{ left: X(t) }}
+                      title={`${t} ms: all of this layer's keys here. Drag to move them together`}
+                      onPointerDown={(e) => keysDown(e, refs, t)}
+                    />
+                  );
+                })}
               </div>
               {tracks.map((tr) => (
                 <div key={tr.id} className="lane" onPointerDown={scrub}>

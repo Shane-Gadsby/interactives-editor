@@ -53,7 +53,10 @@ let port = Number(process.env.PORT) || 3048,
 			stampedAt = mtime
 		}
 
-		return stamped()
+		//Vite's assets/ files are content hashed already, and must load by exactly the url the lazy chunks import
+		//them by. A ?v= stamp on the entry makes the browser treat it as a second module, so the first lazy import
+		//would boot a whole second copy of the editor
+		return stamped().replace(/((?:\.\/)?assets\/[\w.-]+\.(?:js|css))\?v=[^"'\s>]*/g, '$1')
 	},
 
 	maxAsset = 60 * 1024 * 1024,

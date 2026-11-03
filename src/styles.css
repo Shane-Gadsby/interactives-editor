@@ -1149,9 +1149,14 @@ code,
   height: 8px;
   margin-left: -4px;
   top: 8px;
-  opacity: 0.6;
-  cursor: default;
-  pointer-events: none;
+  opacity: 0.75;
+  cursor: grab;
+}
+.key.summary::after {
+  /* A bigger grab area than the small diamond */
+  content: '';
+  position: absolute;
+  inset: -5px;
 }
 .playhead {
   position: absolute;

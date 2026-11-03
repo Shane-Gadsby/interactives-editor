@@ -281,7 +281,7 @@ export function Canvas() {
       const [kind, a, b] = handle.split(':');
       if (kind === 'ab') {
         const target = getArtboard(st.project, a)!;
-        store().set({ activeArtboardId: a, artboardSelected: true, selection: [], focusId: null, activeTimelineId: null });
+        store().set({ activeArtboardId: a, artboardSelected: true, selection: [], focusId: null, activeTimelineId: a === st.activeArtboardId ? st.activeTimelineId : null });
         drag.current = { kind: 'moveAb', id: a, x0: target.canvasX, y0: target.canvasY, start: w };
         return;
       }
