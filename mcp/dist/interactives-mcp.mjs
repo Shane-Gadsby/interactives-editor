@@ -3931,8 +3931,8 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
     id: "auto-layout",
     title: "Auto layout",
     group: "Design",
-    summary: "Frames that arrange their children in rows or columns, with fill, hug and percent sizes.",
-    keywords: "flex flexbox row column stack gap padding justify align wrap hug fill percent absolute responsive",
+    summary: "Frames that arrange their children in rows, columns, grids or stacks, with fill, hug and percent sizes, grow, margins and aspect ratios.",
+    keywords: "flex flexbox grid row column stack gap padding justify align wrap hug fill percent absolute responsive grow basis aspect ratio margin auto cell span layout item",
     body: `Turn on **Auto layout** on a frame and its children are placed for you, like CSS flexbox.
 
 | Setting | Meaning |
@@ -3944,17 +3944,26 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
 | Align | Across the direction: start, centre, end, stretch |
 | Wrap | Start a new row/column when one is full. **Line gap** (shown with Wrap) is the space between the wrapped rows, when it differs from Gap |
 | Hug width / height | The frame shrinks or grows to fit its children |
-| Layout | *Row or column* (above) or *Grid*: children sit in the cells of **Columns** and **Rows**, written like \`100px 25% 1fr auto\` (px, a percent of the frame, \`fr\` for a share of what is left, or auto: as big as what is in it). Children fill the cells in order, or where a project's layout items name a cell and span (\`gridColumn\`, \`gridRow\`, \`gridColumnSpan\`, \`gridRowSpan\`). *Column gap* and *Row gap* are the spaces between them |
+| Layout | *Row or column* (above), *Grid* or *Stack*. A grid puts children in the cells of **Columns** and **Rows**, written like \`100px 25% 1fr auto\` (px, a percent of the frame, \`fr\` for a share of what is left, or auto: as big as what is in it); *Column gap* and *Row gap* are the spaces between them. A stack puts every child in one cell as big as the frame, on top of each other |
+| Cell alignment / Stack position | A 3x3 picker: where a child that is smaller than its cell sits in it (a grid), or where the children sit in the frame (a stack). A child set to *Fill* stretches instead |
+| Justify content / Align content | A grid only: where the columns (start, centre, space between) and the rows (start, centre) sit when they don't fill the frame, e.g. fixed-size tracks in a bigger frame |
 
 ## Child sizing
-Each child of an auto-layout frame gets a **Layout** section:
+Select a child of an auto-layout frame and its **Layout item** section says how it sits in the frame. Only the settings that frame's kind of layout reads are shown. With several children selected (from the same frame), a change applies to all of them, and a field shows *Mixed* where they differ.
 
-- **Fixed**: its own width/height.
-- **Fill**: shares the frame's free space with other fill children. A project can weigh them (\`layoutItem.grow\`, default 1) and give each a starting size (\`layoutItem.basis\` in px or \`'content'\`, or \`basisPercent\`): the free space is shared on top of it, and layers that are over shrink in proportion to it.
-- **Hug**: fits its own contents (frames and text). A hugging text can wrap at the room its frame offers (\`layoutItem.wrapText\`) and then shrinks to its widest line; a hugging size can also follow the other one by an \`aspectRatio\` (width over height).
-- **Percent**: a percentage of the frame.
-- **Margin** around it. A project can also give a margin *auto* (\`layoutItem.marginAuto\`): that side takes the free space of the line, so a layer is pushed to the end or centred, ahead of Justify.
-- **Position**: *In flow* (laid out), *Absolute* (placed by insets from the frame's edges, e.g. pinned to the bottom right) or *Ignore* (keeps its own x/y).
+- **Position**: *In flow* (laid out with its siblings), *Absolute* (placed by **Inset** from the frame's edges, e.g. pinned to the bottom right; set left and right, or top and bottom, to stretch it) or *Ignore* (keeps its own x/y and takes no room).
+- **Width** and **Height**:
+  - *Fixed*: its own size.
+  - *Hug*: fits its own contents (frames and text).
+  - *Fill*: along a row or column, shares the frame's free space with the other fill children; across it, stretches; in a grid, fills its cell.
+  - *Percent*: a share of the frame's inner size (of the cell, in a grid).
+- **Grow** and **Basis** (row and column, on the axis the frame runs along, for a *Fill* layer): a fill layer starts from its basis (*Zero*, *Pixels*, *Percent* of the frame, or *Content*: as big as what is inside it), and the free space is shared on top of it by grow (default 1; 0 takes none). Layers that are over the line shrink in proportion to their basis.
+- **Aspect** (width over height, like 1.78): when one side hugs and the other is known, the hugging side follows the ratio instead of its content. *From size* takes the ratio from the layer's current size. **Derive** chooses between *Either side* and *Height only* (the width then keeps hugging). In a grid only the height is derived.
+- **Wrap text** (text in a row or column): a text that hugs its width (Sizing set to *Auto width*) wraps at the room its frame offers, and then shrinks to its widest line.
+- **Column**, **Row**, **Col span**, **Row span** (grid): which cell it starts in (1 is the first, negative counts back from the last, 0 takes the next free cell) and how many tracks it covers. Layers without a cell fill the free cells in order.
+- **Margin** around it (top, right, bottom, left). In a row or column, **Auto margin** on a side makes that side take the free room of the line, split equally between the auto sides: it pushes a layer to the end or centres it, ahead of Justify. Across the line, auto on both sides centres the layer and on one side pushes it to the other edge.
+
+These settings are not keyframed: they are part of the layout, not of an animation. Animate a layer's size or position with a timeline, or change the frame's layout from an action.
 
 Layout is worked out again whenever something changes, in the editor and in the player, so repeated lists and text that changes length reflow by themselves.
 

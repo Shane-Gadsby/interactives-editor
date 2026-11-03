@@ -61,6 +61,8 @@ import { CodeEditor } from '../components/CodeEditor';
 import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
 import { ChildOrder } from '../components/ChildOrder';
 import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
+import { GridAlignFields } from '../components/GridAlignFields';
+import { LayoutItemSection } from './LayoutItemSection';
 import { blendExample } from '../lib/blend-example';
 import { ConvertersEditor } from '../components/Converters';
 import { TEXT_PRESETS } from '../lib/text-modifiers';
@@ -510,6 +512,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={BLEND} onChange={(v) => set({ blendMode: v })} />
       </Section>
+      <LayoutItemSection nodes={nodes} ab={ab} />
       {sameType && <TypeSection nodes={nodes} project={project} />}
       {!single && <BindSelectionSection nodes={nodes} abId={ab.id} />}
       {single && skinnable(n) && <SkinSection node={n} abId={ab.id} />}
@@ -1413,18 +1416,24 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
             <SelectField
               label="Layout"
               title="Children flow along a row or column, or sit in the cells of a grid"
-              value={L.grid ? 'grid' : 'flow'}
+              value={L.grid ? (L.grid.stack ? 'stack' : 'grid') : 'flow'}
               options={[
                 { value: 'flow', label: 'Row or column' },
                 { value: 'grid', label: 'Grid' },
+                { value: 'stack', label: 'Stack' },
               ]}
               onChange={(v) => {
                 const { grid: _grid, ...flow } = L;
-                set({ layout: v === 'grid' ? { ...L, grid: { columns: [{ type: 'fr', value: 1 }, { type: 'fr', value: 1 }], rows: [] } } : flow }, `layout-${frame.id}`);
+                // (a stack keeps the grid's tracks, which it ignores, so going back to Grid finds them again)
+                const tracks = L.grid ?? { columns: [{ type: 'fr' as const, value: 1 }, { type: 'fr' as const, value: 1 }], rows: [] };
+                const { stack: _stack, ...plain } = tracks;
+                set({ layout: v === 'flow' ? flow : { ...L, grid: v === 'stack' ? { ...plain, stack: true } : plain } }, `layout-${frame.id}`);
               }}
             />
           </Row>
-          {L.grid ? (
+          {L.grid?.stack ? (
+            <GridAlignFields grid={L.grid} onChange={(grid) => update({ grid })} />
+          ) : L.grid ? (
             <>
               <TextField label="Columns" title="Sizes of the columns: px, %, fr (a share of what is left) or auto. Like 100px 25% 1fr auto" value={formatTracks(L.grid.columns)} onChange={(v) => update({ grid: { ...L.grid!, columns: parseTracks(v) } })} />
               <TextField label="Rows" title="Sizes of the rows, written the same way. Rows past the ones listed are auto" value={formatTracks(L.grid.rows)} onChange={(v) => update({ grid: { ...L.grid!, rows: parseTracks(v) } })} />
@@ -1432,6 +1441,7 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
                 <NumberField label="Column gap" value={L.gap} min={0} onChange={(v) => update({ gap: v })} />
                 <NumberField label="Row gap" value={L.crossGap ?? L.gap} min={0} onChange={(v) => update({ crossGap: v === L.gap ? undefined : v })} />
               </Row>
+              <GridAlignFields grid={L.grid} onChange={(grid) => update({ grid })} />
             </>
           ) : (
             <>
