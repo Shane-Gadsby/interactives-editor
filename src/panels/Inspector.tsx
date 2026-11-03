@@ -3,7 +3,6 @@ import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
 import {
   ANIMATABLE_PROPS,
   animatableProp,
-  nodeUniformProps,
   EASING_NAMES,
   MODIFIER_SHAPES,
   MODIFIER_UNITS,
@@ -44,12 +43,11 @@ import {
   paintFx,
   type Constraint,
   type ConstraintType,
-  type Converter,
   uid,
   walk,
 } from 'interactives-player';
 import { store, useEditor } from '../store/store';
-import { getArtboard, isIdentifier, locate } from '../store/doc';
+import { getArtboard, locate } from '../store/doc';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { assetKind } from '../lib/assets';
@@ -67,7 +65,7 @@ import { GridAlignFields } from '../components/GridAlignFields';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
 import { blendExample } from '../lib/blend-example';
-import { ConvertersEditor } from '../components/Converters';
+import { BindingsSection as BindingsSectionView } from './BindingsSection';
 import { TEXT_PRESETS } from '../lib/text-modifiers';
 import { applyDrawTemplate } from '../lib/draw-templates';
 import { useDrawProblem } from '../lib/draw-edit';
@@ -535,7 +533,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {single && (n.type === 'group' || n.type === 'frame') && <SoloSection node={n} />}
       {single && (n.type === 'group' || n.type === 'frame') && n.children.length > 1 && <DrawOrderSection node={n} />}
       {single && (n.type === 'group' || n.type === 'frame') && <RepeatSection node={n} project={project} />}
-      {single && <BindingsSection node={n} project={project} />}
+      {single && <BindingsSectionView node={n} project={project} set={set} />}
       {single && <InteractionsSection node={n} ab={ab} />}
       <DragDropSections nodes={nodes} ab={ab} project={project} />
       <AccessibilitySection nodes={nodes} ab={ab} />
@@ -1166,53 +1164,6 @@ function DrawSection({ nodes }: { nodes: DrawNode[] }) {
           ))}
         </ul>
       </details>
-    </Section>
-  );
-}
-
-function BindingsSection({ node, project }: { node: SceneNode; project: Project }) {
-  const set = useSetter([node.id]);
-  const bindings = node.bindings ?? {};
-  const converters = node.converters ?? {};
-  const entries = Object.entries(bindings);
-  const [prop, setProp] = useState('opacity');
-  const update = (next: Record<string, string>, conv: Record<string, Converter[]> = converters) => {
-    const keep = Object.fromEntries(Object.entries(conv).filter(([k, list]) => k in next && list.length));
-    set({ bindings: Object.keys(next).length ? next : undefined, converters: Object.keys(keep).length ? keep : undefined }, `bind-${node.id}`);
-  };
-  const kindOf = (p: string) => animatableProp(p, node)?.kind;
-  return (
-    <Section help="bindings" title="Data bindings" defaultOpen={entries.length > 0}>
-      {entries.map(([p, expr]) => (
-        <div key={p} className="binding">
-          <Row className="binding-row">
-            <span className="mono small binding-prop" title={`${p} (${kindOf(p) ?? 'any'})`}>
-              {p}
-            </span>
-            <TextField value={expr} mono commitOnBlur placeholder="expression" onChange={(v) => update({ ...bindings, [p]: v })} />
-            <IconButton
-              icon={<Icons.trash />}
-              title="Remove binding"
-              onClick={() => {
-                const next = { ...bindings };
-                delete next[p];
-                update(next);
-              }}
-            />
-          </Row>
-          <ConvertersEditor list={converters[p] ?? []} expr={expr} variables={project.variables} onChange={(list) => update(bindings, { ...converters, [p]: list })} />
-        </div>
-      ))}
-      <Row>
-        <SelectField value={prop} options={[...ANIMATABLE_PROPS, ...nodeUniformProps(node)].map((a) => ({ value: a.prop, label: a.label }))} onChange={setProp} />
-        <button className="btn" disabled={prop in bindings} onClick={() => update({ ...bindings, [prop]: project.variables[0]?.name ?? '' })}>
-          Bind
-        </button>
-      </Row>
-      <p className="hint">
-        A binding sets the property from variables every frame, e.g. <code>visible</code> ← <code>lives &gt; 0</code>, <code>width</code> ← <code>progress * 3</code>. Add a converter to format a number as text, invert a flag, remap a range or look up a choice.
-        {project.variables.some((v) => !isIdentifier(v.name)) && ' Some variable names are not valid identifiers and cannot be used in expressions.'}
-      </p>
     </Section>
   );
 }

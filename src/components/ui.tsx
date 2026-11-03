@@ -390,7 +390,9 @@ export function Section({
     <section className={`section${open ? '' : ' closed'}`}>
       <header className="section-head">
         <div className="section-title-row" onClick={() => collapsible && setOpen(!open)}>
-          <button className="section-title" aria-expanded={open}>
+          <button className="section-title" aria-expanded={collapsible ? open : undefined} title={collapsible ? (open ? 'Collapse' : 'Expand') : undefined}>
+            {/* the chevron says it folds, and which way it is now: pointing down when open, right when closed */}
+            {collapsible && <span className="section-chev" aria-hidden="true" />}
             {title}
           </button>
           {help && <HelpLink topic={help.split('#')[0]} anchor={help.split('#')[1]} />}

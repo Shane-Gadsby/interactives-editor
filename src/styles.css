@@ -508,6 +508,196 @@ code,
 .section-title:hover {
   color: var(--accent);
 }
+.section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-chev {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s;
+  opacity: 0.7;
+  flex: none;
+}
+.section.closed .section-chev {
+  transform: rotate(-45deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-chev {
+    transition: none;
+  }
+}
+
+/* a searchable dropdown (SearchPicker) */
+.search-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: var(--field, var(--panel-2));
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.search-picker:hover,
+.search-picker.open {
+  border-color: var(--accent);
+}
+.search-picker-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-picker-hint {
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: auto;
+  padding-left: 8px;
+}
+.search-picker svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  opacity: 0.7;
+}
+.search-picker.icon-picker {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  background: none;
+}
+.search-picker.icon-picker:hover {
+  background: var(--panel-2);
+}
+.search-picker.icon-picker .search-picker-value {
+  flex: none;
+  display: inline-flex;
+}
+.search-picker.icon-picker .search-picker-value + svg {
+  display: none;
+}
+.search-picker.icon-picker .search-picker-value svg {
+  width: 14px;
+  height: 14px;
+  opacity: 1;
+}
+.search-picker.add-binding {
+  width: 100%;
+  justify-content: center;
+}
+.search-picker.add-binding .search-picker-value {
+  flex: none;
+}
+.search-pop {
+  position: fixed;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  max-height: min(360px, calc(100vh - 16px));
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.search-pop-input {
+  margin: 6px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+}
+.search-pop-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px 4px;
+  overflow-y: auto;
+}
+.search-pop-list li {
+  display: flex;
+  align-items: center;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.search-pop-list li.on {
+  background: var(--accent);
+  color: #fff;
+}
+.search-pop-list li.on .search-picker-hint {
+  color: rgba(255, 255, 255, 0.8);
+}
+.search-pop-list li.current:not(.on) {
+  font-weight: 600;
+}
+.search-pop-list li.action {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  color: var(--accent);
+}
+.search-pop-list li.action.on {
+  color: #fff;
+}
+.search-pop-list li.empty {
+  cursor: default;
+}
+
+/* lists of things in one section (bindings, ...): a short rule between each */
+hr.item-sep {
+  width: 50%;
+  margin: 10px auto;
+  border: none;
+  border-top: 1px solid var(--line-2);
+}
+.binding-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.binding-head .spacer {
+  flex: 1;
+}
+.binding-source {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.binding-source .seg {
+  align-self: flex-start;
+}
+.binding-source .search-picker {
+  flex: none;
+  width: 100%;
+}
+.binding-trace {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.binding-trace.err {
+  color: var(--danger, #e5484d);
+}
 /* Several buttons in a section header (e.g. + Colour, + Text) sit side by side */
 .section-actions {
   display: flex;
