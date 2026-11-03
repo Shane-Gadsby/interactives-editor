@@ -11,7 +11,7 @@
  * anything found only inside a script or code snippet is marked `loose`: it might be a false hit, but a miss
  * is unlikely.
  */
-import { CATALOG_BY_KIND, isContainer, type Artboard, type DataSource, type Id, type Paint, type Project, type SceneNode, type Timeline, type Variable } from 'interactives-player';
+import { CATALOG_BY_KIND, converterExpressions, isContainer, type Artboard, type DataSource, type Id, type Paint, type Project, type SceneNode, type Timeline, type Variable } from 'interactives-player';
 
 export type EntityKind = 'artboard' | 'asset' | 'variable' | 'data' | 'script' | 'timeline' | 'layer';
 
@@ -255,6 +255,7 @@ export function analyzeUsage(project: Project): UsageReport {
         }
 
         for (const [prop, expr] of Object.entries(n.bindings ?? {})) useExpr(expr, by, `binding on ${prop}`);
+        for (const [prop, list] of Object.entries(n.converters ?? {})) for (const expr of converterExpressions(list)) useExpr(expr, by, `converter on ${prop}`);
         if (isContainer(n) && n.repeat?.items) useExpr(n.repeat.items, by, 'repeater items');
         if (n.type === 'text' || n.type === 'link') for (const e of templateSlots(n.text)) useExpr(e, by, 'text template');
         if (n.type === 'text') for (const r of n.runs ?? []) if (r.link?.url) for (const e of templateSlots(r.link.url)) useExpr(e, by, 'link template');

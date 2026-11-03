@@ -75,4 +75,18 @@ describe('ops', () => {
     apply(doc, [{ t: 'set', p: ['__proto__', 'polluted'], v: 1 }]);
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
+
+  it('sends binding converters and list variables to other people as ordinary changes', () => {
+    const a = createProject('A');
+    const r = createNode('rect', { name: 'r', bindings: { width: 'amount' } });
+    a.artboards[0].children.push(r);
+    const b = produce(a, (d) => {
+      const n = d.artboards[0].children[0];
+      n.converters = { width: [{ type: 'range', inMin: 0, inMax: 1, outMin: 0, outMax: 100, clamp: true }] };
+      d.variables.push({ id: 'l', name: 'people', type: 'list', initial: '[{"name":"Ann"}]' });
+    });
+    const c = clone(a);
+    apply(c, diff(a, b));
+    expect(c).toEqual(clone(b));
+  });
 });

@@ -270,3 +270,199 @@ describe.skipIf(!samples.includes('treasure_valley_interactive_map.riv'))('Rive 
     expect(copy.some((c) => c.copyX !== false && c.copyY === false)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------- data binds on layers (built by hand: the samples only bind transitions and listeners)
+
+function propKey(cls: string, prop: string): number {
+  for (let c: string | undefined = cls; c && RIVE_CLASSES[c]; c = RIVE_CLASSES[c][1]) {
+    const p = RIVE_CLASSES[c][2][prop];
+    if (p) return p[0];
+  }
+  throw new Error(`${cls}.${prop} is not defined`);
+}
+
+const path = (...ids: number[]) => new Uint8Array(ids);
+
+function dataBindFile(): Uint8Array {
+  const objs: Spec[] = [
+    // converters, by index: 0 range mapper, 1 rounder, 2 group (0 then 1), 3 to string, 4 negate, 5 multiply by 2
+    ['DataConverterRangeMapper', { minInput: 0, maxInput: 1, minOutput: 0, maxOutput: 200, flags: 3 }],
+    ['DataConverterRounder', { decimals: 1 }],
+    ['DataConverterGroup', {}],
+    ['DataConverterGroupItem', { converterId: 0 }],
+    ['DataConverterGroupItem', { converterId: 1 }],
+    ['DataConverterToString', { decimals: 2 }],
+    ['DataConverterBooleanNegate', {}],
+    ['DataConverterOperationValue', { operationType: 2, operationValue: 2 }],
+    ['DataEnumCustom', { name: 'Mode' }],
+    ['DataEnumValue', { key: 'low', value: 'low' }],
+    ['DataEnumValue', { key: 'high', value: 'high' }],
+    // view model 0: an item with a label; two instances
+    ['ViewModel', { name: 'Item' }],
+    ['ViewModelPropertyString', { name: 'label' }],
+    ['ViewModelInstance', { viewModelId: 0, name: 'a' }],
+    ['ViewModelInstanceString', { parentId: 0, viewModelPropertyId: 0, propertyValue: 'a' }],
+    ['ViewModelInstance', { viewModelId: 0, name: 'b' }],
+    ['ViewModelInstanceString', { parentId: 0, viewModelPropertyId: 0, propertyValue: 'b' }],
+    // view model 1: the main one
+    ['ViewModel', { name: 'Main' }],
+    ['ViewModelPropertyNumber', { name: 'amount' }], // 0
+    ['ViewModelPropertyColor', { name: 'tint' }], // 1
+    ['ViewModelPropertyBoolean', { name: 'flag' }], // 2
+    ['ViewModelPropertyEnumCustom', { name: 'mode', enumId: 0 }], // 3
+    ['ViewModelPropertyList', { name: 'items' }], // 4
+    ['ViewModelInstance', { viewModelId: 1, name: 'Instance' }],
+    ['ViewModelInstanceNumber', { parentId: 0, viewModelPropertyId: 0, propertyValue: 0.5 }],
+    ['ViewModelInstanceColor', { parentId: 0, viewModelPropertyId: 1, propertyValue: 0xff2e7d32 }],
+    ['ViewModelInstanceBoolean', { parentId: 0, viewModelPropertyId: 2, propertyValue: true }],
+    ['ViewModelInstanceEnum', { parentId: 0, viewModelPropertyId: 3, propertyValue: 1 }],
+    ['ViewModelInstanceList', { parentId: 0, viewModelPropertyId: 4 }],
+    ['ViewModelInstanceListItem', { viewModelId: 0, viewModelInstanceId: 0 }],
+    ['ViewModelInstanceListItem', { viewModelId: 0, viewModelInstanceId: 1 }],
+    ['Artboard', { name: 'Main', width: 400, height: 300 }],
+    // slot 1: a node whose x, rotation (twice, the second to the view model only) follow the view model
+    ['Node', { name: 'Mover', parentId: 0 }],
+    ['DataBindContext', { propertyKey: propKey('Node', 'x'), sourcePathIds: path(1, 0), converterId: 2 }],
+    ['DataBindContext', { propertyKey: propKey('Node', 'rotation'), sourcePathIds: path(1, 0), converterId: 5 }],
+    ['DataBindContext', { propertyKey: propKey('Node', 'scaleX'), flags: 1, sourcePathIds: path(1, 0) }], // layer to view model
+    // slot 2-5: a rectangle whose fill colour follows a colour
+    ['Shape', { name: 'Box', parentId: 0 }],
+    ['Rectangle', { parentId: 2, width: 40, height: 40 }],
+    ['Fill', { parentId: 2 }],
+    ['SolidColor', { parentId: 4, colorValue: 0xff000000 }],
+    ['DataBindContext', { propertyKey: propKey('SolidColor', 'colorValue'), sourcePathIds: path(1, 1) }],
+    // slot 6: a node shown by a flag (negated), moved by the list's length
+    ['Node', { name: 'Flagged', parentId: 0 }],
+    ['DataBindContext', { propertyKey: propKey('Node', 'opacity'), sourcePathIds: path(1, 2), converterId: 4 }],
+    ['DataBindContext', { propertyKey: propKey('Node', 'y'), flags: 2, sourcePathIds: path(1, 4) }],
+    // slots 7-9: text from the choice, and text from the number to two decimals
+    ['Text', { name: 'Mode text', parentId: 0 }],
+    ['TextStylePaint', { parentId: 7, fontSize: 20 }],
+    ['TextValueRun', { parentId: 7, styleId: 8, text: 'x' }],
+    ['DataBindContext', { propertyKey: propKey('TextValueRun', 'text'), sourcePathIds: path(1, 3) }],
+    ['Text', { name: 'Amount text', parentId: 0 }],
+    ['TextStylePaint', { parentId: 10, fontSize: 20 }],
+    ['TextValueRun', { parentId: 10, styleId: 11, text: 'y' }],
+    ['DataBindContext', { propertyKey: propKey('TextValueRun', 'text'), sourcePathIds: path(1, 0), converterId: 3 }],
+  ];
+  return writeRiv(objs);
+}
+
+describe('Rive data binds on layers', () => {
+  it('turns view model values driving layer properties into bindings, with the bind converters', async () => {
+    const res = await importRive(dataBindFile(), 'binds');
+    const ab = res.artboards[0];
+    const find = (name: string) => {
+      const all: SceneNode[] = [];
+      walk(ab.children, (n) => all.push(n));
+      return all.find((n) => n.name === name)!;
+    };
+    const amount = res.variables.find((v) => v.name === 'Main_amount')!;
+    expect(amount).toMatchObject({ shared: true, type: 'number', initial: 0.5 });
+
+    const mover = find('Mover');
+    expect(mover.bindings).toMatchObject({ x: 'Main_amount', rotation: 'Main_amount' });
+    // group: range mapper then rounder
+    expect(mover.converters?.x).toEqual([{ type: 'range', inMin: 0, inMax: 1, outMin: 0, outMax: 200, clamp: true }, { type: 'round', decimals: 1 }]);
+    // multiply by 2, then radians to degrees for our rotation
+    expect(mover.converters?.rotation?.[0]).toEqual({ type: 'expr', expr: 'value * 2' });
+    expect(mover.converters?.rotation?.[1]).toMatchObject({ type: 'expr' });
+    expect(String((mover.converters!.rotation![1] as { expr: string }).expr)).toMatch(/^value \* 57\.29/);
+    // the bind that writes the layer back to the view model is not a binding
+    expect(mover.bindings?.scaleX).toBeUndefined();
+
+    // fill colour from a colour property
+    const tint = res.variables.find((v) => v.name === 'Main_tint')!;
+    expect(tint.type).toBe('color');
+    expect(find('Box').bindings).toEqual({ 'fill.color': 'Main_tint' });
+
+    // negate converter on a flag; the two-way bind on y is one way
+    expect(find('Flagged').bindings?.opacity).toBe('Main_flag');
+    expect(find('Flagged').converters?.opacity).toEqual([{ type: 'invert' }]);
+    expect(find('Flagged').bindings?.y).toBe('Main_items');
+
+    // text from an enum and from a number to text
+    expect(find('Mode text').bindings?.text).toBe('Main_mode');
+    expect(find('Amount text').bindings?.text).toBe('Main_amount');
+    expect(find('Amount text').converters?.text).toEqual([{ type: 'format', decimals: 2 }]);
+
+    expect(res.warnings.some((w) => /write a layer value back/.test(w))).toBe(true);
+    expect(res.warnings.some((w) => /Two-way/.test(w))).toBe(true);
+    expect(res.warnings.some((w) => /not imported yet/.test(w))).toBe(false);
+  });
+
+  it('turns enum properties into choices and list properties into list variables', async () => {
+    const res = await importRive(dataBindFile(), 'binds');
+    const mode = res.variables.find((v) => v.name === 'Main_mode')!;
+    expect(mode).toMatchObject({ type: 'enum', options: ['low', 'high'], initial: 'high', shared: true });
+    const items = res.variables.find((v) => v.name === 'Main_items')!;
+    expect(items.type).toBe('list');
+    expect(JSON.parse(String(items.initial))).toEqual([{ label: 'a' }, { label: 'b' }]);
+  });
+
+  it('plays: the bound layers follow the view model', async () => {
+    const res = await importRive(dataBindFile(), 'binds');
+    const { createProject, prepareNodes, applyConverters } = await import('interactives-player');
+    void createProject;
+    const ab = res.artboards[0];
+    const vars = Object.fromEntries(res.variables.map((v) => [v.name, v.type === 'list' ? JSON.parse(String(v.initial)) : v.initial]));
+    const all: SceneNode[] = [];
+    walk(prepareNodes(ab.children, { vars }), (n) => all.push(n));
+    const mover = all.find((n) => n.name === 'Mover')!;
+    expect(mover.x).toBe(100);
+    expect(all.find((n) => n.name === 'Amount text')).toMatchObject({ text: '0.50' });
+    expect(all.find((n) => n.name === 'Mode text')).toMatchObject({ text: 'high' });
+    const flagged = all.find((n) => n.name === 'Flagged')!;
+    expect(flagged.opacity).toBe(0);
+    void applyConverters;
+    const again: SceneNode[] = [];
+    walk(prepareNodes(ab.children, { vars: { ...vars, Main_amount: 1, Main_flag: false } }), (n) => again.push(n));
+    expect(again.find((n) => n.name === 'Mover')!.x).toBe(200);
+    expect(again.find((n) => n.name === 'Flagged')!.opacity).toBe(1);
+  });
+});
+
+describe.skipIf(!samples.includes('treasure_valley_interactive_map.riv'))('Treasure Valley: what plays on its own', () => {
+  // Rive plays an artboard's default state machine. (rive.js plays the *first animation* when it is told no machine; for the
+  // MAIN artboard that is "Preview", a one-frame animation that fades in a still picture of the map, which looks like
+  // the artboard "switching" to another map. There is no timer, exit time or view model change behind it.)
+  it('does not play the Preview animation that only fades in a still picture', async () => {
+    const res = await importRive(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')), 'tv');
+    const main = res.artboards.find((a) => a.name === 'MAIN')!;
+    const preview = main.timelines.find((t) => t.name === 'Preview')!;
+    expect(preview.autoplay).toBeFalsy();
+    const all: SceneNode[] = [];
+    walk(main.children, (n) => all.push(n));
+    const picture = all.find((n) => n.type === 'image')!;
+    expect(picture.opacity).toBe(0);
+    // nothing on the artboard moves a picture or the district map by time or by a view model value
+    const previewTrack = preview.tracks.find((t) => t.nodeId === picture.id && t.prop === 'opacity');
+    expect(previewTrack?.keys[0].value).toBe(1);
+    expect(main.timelines.filter((t) => t.autoplay).length).toBe(0);
+  });
+
+  it('starts the icon artboards loops: Any state transitions whose condition already holds run on start', async () => {
+    const res = await importRive(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')), 'tv');
+    const bg = res.artboards.find((a) => a.name === 'IconBG')!;
+    const { nodes, edges } = bg.logic;
+    const water = bg.timelines.find((t) => t.name === 'loop Water')!;
+    const startIds = new Set(nodes.filter((n) => n.kind === 'event.start').map((n) => n.id));
+    // an If with a view model condition, fed by On start, that goes on to restart the loop
+    const gate = nodes.find((n) => n.kind === 'logic.if' && String(n.params.condition).startsWith('MainVM_indexNum === 0 &&') && edges.some((e) => startIds.has(e.from) && e.to === n.id) && String(n.params.condition).includes('loop Water'))!;
+    expect(gate).toBeTruthy();
+    const follows = (id: string): string[] => edges.filter((e) => e.from === id && e.fromPort !== 'false').map((e) => e.to);
+    const reach = new Set<string>();
+    const queue = [gate.id];
+    while (queue.length) for (const next of follows(queue.shift()!)) if (!reach.has(next)) (reach.add(next), queue.push(next));
+    expect(nodes.some((n) => reach.has(n.id) && n.kind === 'action.timeline' && n.params.timeline === water.id && n.params.op === 'restart')).toBe(true);
+  });
+
+  it('keeps the straight lines of the icon artboards (ladder rungs, bands) as paths with a hairline box', async () => {
+    const res = await importRive(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')), 'tv');
+    const icon = res.artboards.find((a) => a.name === 'South Boise ICON')!;
+    const all: SceneNode[] = [];
+    walk(icon.children, (n) => all.push(n));
+    const lines = all.filter((n) => n.type === 'path' && (n.height < 1 || n.width < 1) && n.paths.length === 1 && n.paths[0].points.length === 2 && n.stroke && n.stroke.width > 0);
+    expect(lines.length).toBeGreaterThan(5);
+  });
+});

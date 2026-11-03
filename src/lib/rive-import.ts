@@ -24,7 +24,8 @@
  *     actions; event listeners become On message.
  *   - Path vertex keys (shape morphing) -> keys on the path's points, sampled (handles are keyed as rotation + distance)
  *   - isHole paths -> wound the other way round so the fill leaves them open; TranslationConstraint -> copy position
- * Bones/meshes, other constraints, data binding, scripted
+ * Data binds: a view model property driving a layer property becomes a binding (with converters); view models are shared variables.
+ * Bones/meshes, other constraints, scripted
  * and layout-computed geometry are reported in `warnings`.
  */
 import {
@@ -53,6 +54,8 @@ import {
   type TimelineMarker,
   type Track,
   type Variable,
+  type Converter,
+  walk,
   invert,
   multiply,
   sampleKeys,
@@ -137,8 +140,30 @@ interface RObj {
 interface RViewModel {
   name: string;
   props: RObj[];
+  /** The first instance's values by property index (the starting values). */
   values: Map<number, unknown>;
   instances: number;
+  /** Every instance's values by property index, and the list items of each list property (viewModelId/instanceId pairs). */
+  all: { values: Map<number, unknown>; lists: Map<number, { vm: number; instance: number }[]> }[];
+}
+
+/** A Rive enum: its values' keys, in order (a view model enum property stores an index into them). */
+interface REnum {
+  name: string;
+  values: string[];
+}
+
+/** A file-level data converter, with the converters a group holds and the tokens a formula is made of. */
+interface RConverter {
+  obj: RObj;
+  items: number[];
+  tokens: RObj[];
+}
+
+/** A DataBind on a component: which property of the component, where it reads from, and how it converts. */
+interface RDataBind {
+  slot: number;
+  obj: RObj;
 }
 
 function get<T = number>(o: RObj, prop: string): T {
@@ -295,6 +320,8 @@ interface RArtboard {
   slots: RObj[];
   anims: RAnim[];
   machines: RMachine[];
+  /** Data binds that sit right after the component they bind (layer properties: position, text, colour...). */
+  binds: RDataBind[];
 }
 interface RAsset {
   obj: RObj;
@@ -305,9 +332,14 @@ function claimsSlot(type: string): boolean {
   return (isA(type, 'Component') && type !== 'Artboard') || isA(type, 'KeyFrameInterpolator');
 }
 
-function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[]; warnings: Set<string>; viewModels: RViewModel[] } {
+function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[]; warnings: Set<string>; viewModels: RViewModel[]; enums: REnum[]; converters: RConverter[] } {
   const viewModels: RViewModel[] = [];
-  let vmInstance: { vm: RViewModel; first: boolean } | null = null;
+  const enums: REnum[] = [];
+  const converters: RConverter[] = [];
+  let vmInstance: { vm: RViewModel; first: boolean; all: RViewModel['all'][number] } | null = null;
+  let listValue: { vm: RViewModel; first: boolean; items: { vm: number; instance: number }[] } | null = null;
+  // The component a DataBind belongs to is the object read just before it (consecutive binds share it)
+  let prevSlot = -1;
   // Bindable properties and their DataBindContexts come just before the comparator or listener action that uses them
   let pending: RObj[] = [];
   let condition: RObj | null = null;
@@ -326,8 +358,30 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
   let asset: RAsset | null = null;
   for (const o of objects) {
     const t = o.type;
+    const bindTarget = prevSlot;
+    if (!isA(t, 'DataBind')) prevSlot = -1;
     if (t === 'ViewModel') {
-      viewModels.push({ name: String(o.props.name ?? `ViewModel${viewModels.length + 1}`), props: [], values: new Map(), instances: 0 });
+      viewModels.push({ name: String(o.props.name ?? `ViewModel${viewModels.length + 1}`), props: [], values: new Map(), instances: 0, all: [] });
+      continue;
+    }
+    if (t === 'DataEnumCustom') {
+      enums.push({ name: String(o.props.name ?? `Enum${enums.length + 1}`), values: [] });
+      continue;
+    }
+    if (t === 'DataEnumValue') {
+      enums[enums.length - 1]?.values.push(String(o.props.key ?? o.props.value ?? ''));
+      continue;
+    }
+    if (isA(t, 'DataConverter')) {
+      converters.push({ obj: o, items: [], tokens: [] });
+      continue;
+    }
+    if (t === 'DataConverterGroupItem') {
+      converters[converters.length - 1]?.items.push(Number(o.props.converterId ?? 0));
+      continue;
+    }
+    if (isA(t, 'FormulaToken')) {
+      converters[converters.length - 1]?.tokens.push(o);
       continue;
     }
     if (isA(t, 'ViewModelProperty') && viewModels.length) {
@@ -336,11 +390,30 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
     }
     if (t === 'ViewModelInstance') {
       const vm = viewModels[Number(o.props.viewModelId ?? 0)];
-      vmInstance = vm ? { vm, first: vm.instances++ === 0 } : null;
+      const all = { values: new Map<number, unknown>(), lists: new Map<number, { vm: number; instance: number }[]>() };
+      if (vm) vm.all.push(all);
+      vmInstance = vm ? { vm, first: vm.instances++ === 0, all } : null;
+      listValue = null;
       continue;
     }
     if (isA(t, 'ViewModelInstanceValue')) {
-      if (vmInstance?.first) vmInstance.vm.values.set(Number(o.props.viewModelPropertyId ?? 0), o.props.propertyValue);
+      const prop = Number(o.props.viewModelPropertyId ?? 0);
+      if (vmInstance?.first) vmInstance.vm.values.set(prop, o.props.propertyValue);
+      vmInstance?.all.values.set(prop, o.props.propertyValue);
+      listValue = null;
+      if (vmInstance && t === 'ViewModelInstanceList') {
+        const items: { vm: number; instance: number }[] = [];
+        vmInstance.all.lists.set(prop, items);
+        listValue = { vm: vmInstance.vm, first: vmInstance.first, items };
+      }
+      continue;
+    }
+    if (t === 'ViewModelInstanceListItem') {
+      listValue?.items.push({ vm: Number(o.props.viewModelId ?? 0), instance: Number(o.props.viewModelInstanceId ?? 0) });
+      continue;
+    }
+    if (isA(t, 'DataBind') && bindTarget >= 0 && ab) {
+      ab.binds.push({ slot: bindTarget, obj: o });
       continue;
     }
     if (isA(t, 'BindableProperty') || isA(t, 'DataBind')) {
@@ -354,12 +427,13 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
     }
     if (pending.length && t !== 'ListenerViewModelChange') {
       // A binding nobody consumed: it was on a layer property (text, colour, position...)
-      if (pending.some((x) => x.type === 'DataBindContext')) warnings.add('Data bindings on layer properties (text, colours, positions) are not imported yet; state machine conditions and listeners on view model values are');
+      if (pending.some((x) => x.type === 'DataBindContext')) warnings.add('Some data binds are not attached to a layer property, so they were skipped');
       pending = [];
     }
     if (t === 'Artboard') {
-      ab = { obj: o, slots: [o], anims: [], machines: [] };
+      ab = { obj: o, slots: [o], anims: [], machines: [], binds: [] };
       artboards.push(ab);
+      prevSlot = 0;
       anim = ko = kp = null;
       sm = null;
       continue;
@@ -376,6 +450,7 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
     if (!ab) continue;
     if (claimsSlot(t)) {
       ab.slots.push(o);
+      prevSlot = ab.slots.length - 1;
       continue;
     }
     if (t === 'LinearAnimation') {
@@ -416,7 +491,7 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
       pending = [];
     }
   }
-  return { artboards, assets, warnings, viewModels };
+  return { artboards, assets, warnings, viewModels, enums, converters };
 }
 
 // ---------------------------------------------------------------- geometry helpers
@@ -579,6 +654,14 @@ interface ArtboardCtx {
   drawRules: Map<number, { nodeId: string; base: string[]; orders: Map<number, string[]> }>;
 }
 
+interface VmVar {
+  id: string;
+  name: string;
+  kind: 'number' | 'boolean' | 'string' | 'color' | 'trigger' | 'enum' | 'list';
+  /** Enum variables: the options (a Rive enum value is stored as an index into them). */
+  options?: string[];
+}
+
 interface FileCtx {
   file: { artboards: RArtboard[]; assets: RAsset[] };
   warnings: Set<string>;
@@ -594,8 +677,13 @@ interface FileCtx {
   /** Variable name for (artboard, state machine, input) indexes. */
   inputNames: Map<string, string>;
   viewModels: RViewModel[];
+  enums: REnum[];
+  converters: RConverter[];
+  /** Project variables and the names they take, shared by every artboard's data binds and state machines. */
+  variables: Variable[];
+  names: Set<string>;
   /** One shared variable per view model property used (key: "vm/prop"). Triggers become counters. */
-  vmVars: Map<string, { id: string; name: string; kind: 'number' | 'boolean' | 'string' | 'color' | 'trigger' }>;
+  vmVars: Map<string, VmVar>;
   /** Events keyed on a timeline: marker name -> the Rive event's slot. Filled by buildTimeline, turned into flows by buildMachines. */
   timelineEvents: Map<Timeline, Map<string, number>>;
 }
@@ -1136,7 +1224,8 @@ function layoutItemOf(style: RObj | undefined, size: { width: number; height: nu
 
 /** Rive layout participants: everything else inside a layout keeps its own position. */
 function takesPart(t: string): boolean {
-  return isA(t, 'LayoutComponent') || isA(t, 'NestedArtboard') || t === 'Text';
+  // A plain nested artboard is a transform node in Rive's layout, not a layout item: it keeps its own x and y (leaf and layout nested artboards are sized by the layout)
+  return isA(t, 'LayoutComponent') || t === 'NestedArtboardLeaf' || t === 'NestedArtboardLayout' || t === 'Text';
 }
 
 function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number): SceneNode | null {
@@ -1172,8 +1261,10 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     }
     if (get<boolean>(o, 'isPaused')) fc.warnings.add('Paused nested artboards play in the player');
     if (t === 'NestedArtboardLeaf') {
-      // A leaf fills its layout parent, fitted per its fit mode
-      inst.layoutItem = { position: 'absolute', width: 'fill', height: 'fill', inset: { left: 0, top: 0, right: 0, bottom: 0 } };
+      // A leaf fills its layout parent, fitted per its fit mode, and keeps its own offset from it (Rive moves it by x and y)
+      const dx = r2(get(o, 'x'));
+      const dy = r2(get(o, 'y'));
+      inst.layoutItem = { position: 'absolute', width: 'fill', height: 'fill', inset: { left: dx, top: dy, right: -dx, bottom: -dy } };
     } else if (t === 'NestedArtboardLayout') {
       const iw = get(o, 'instanceWidth');
       const ih = get(o, 'instanceHeight');
@@ -1397,6 +1488,7 @@ function buildArtboardNodes(fc: FileCtx, index: number): SceneNode[] {
   }
   if ((ac.children.get(0) ?? []).some((ci) => (ac.children.get(ci) ?? []).some((r) => ac.rab.slots[r].type === 'DrawRules'))) fc.warnings.add('Draw rules on layers at the top level of an artboard are not imported');
   importConstraints(ac, fc);
+  importDataBinds(ac, fc, out);
   fc.building.delete(index);
   fc.built.set(index, out);
   return out;
@@ -1587,6 +1679,271 @@ function eventName(o: RObj | undefined): string {
   return String(o?.props.name ?? '') || 'Event';
 }
 
+// ---------------------------------------------------------------- view models and data binds
+
+/** A property's value as a plain JS value, for a list's items: an enum as its option, a nested view model as an object. */
+function vmValue(fc: FileCtx, vm: RViewModel, instance: number, prop: number, depth = 0): unknown {
+  const def = vm.props[prop];
+  if (!def) return null;
+  const inst = vm.all[instance] ?? vm.all[0];
+  const raw = inst?.values.get(prop);
+  switch (def.type) {
+    case 'ViewModelPropertyBoolean':
+      return !!raw;
+    case 'ViewModelPropertyNumber':
+      return r2(Number(raw ?? 0));
+    case 'ViewModelPropertyColor':
+      return argbCss(Number(raw ?? 0xff000000));
+    case 'ViewModelPropertyEnumCustom':
+      return fc.enums[Number(def.props.enumId ?? 0)]?.values[Number(raw ?? 0)] ?? '';
+    case 'ViewModelPropertyViewModel': {
+      const sub = fc.viewModels[Number(def.props.viewModelReferenceId ?? 0)];
+      return sub && depth < 3 ? vmObject(fc, sub, Number(raw ?? 0), depth + 1) : null;
+    }
+    case 'ViewModelPropertyList':
+      return depth < 3 ? (inst?.lists.get(prop) ?? []).map((it) => (fc.viewModels[it.vm] ? vmObject(fc, fc.viewModels[it.vm], it.instance, depth + 1) : null)) : [];
+    case 'ViewModelPropertyTrigger':
+      return 0;
+    default:
+      return String(raw ?? '');
+  }
+}
+
+/** One view model instance as an object keyed by property name. */
+function vmObject(fc: FileCtx, vm: RViewModel, instance: number, depth = 0): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  vm.props.forEach((p, i) => (out[String(p.props.name ?? `prop${i}`)] = vmValue(fc, vm, instance, i, depth)));
+  return out;
+}
+
+/** A name not used yet, among the project's variables and everything imported so far. */
+function uniqueName(fc: FileCtx, base: string): string {
+  let n = identifier(base);
+  let i = 2;
+  while (fc.names.has(n)) n = `${identifier(base)}_${i++}`;
+  fc.names.add(n);
+  return n;
+}
+
+/**
+ * A view model property (followed through nested view model properties from a DataBindContext's source path) as a
+ * shared project variable, made on first use. Enums become choices, lists become list variables.
+ */
+function vmVariable(fc: FileCtx, ctx: RObj | undefined): VmVar | null {
+  if (!ctx) return null;
+  const ids = pathIds(ctx.props.sourcePathIds);
+  let vmIndex = ids[0];
+  let vm = fc.viewModels[vmIndex];
+  for (let k = 1; vm && k < ids.length; k++) {
+    const prop = vm.props[ids[k]];
+    if (!prop) return null;
+    if (prop.type === 'ViewModelPropertyViewModel' && k < ids.length - 1) {
+      vmIndex = Number(prop.props.viewModelReferenceId ?? 0);
+      vm = fc.viewModels[vmIndex];
+      continue;
+    }
+    const key = `${vmIndex}/${ids[k]}`;
+    let v = fc.vmVars.get(key);
+    if (!v) {
+      const enumDef = prop.type === 'ViewModelPropertyEnumCustom' ? fc.enums[Number(prop.props.enumId ?? 0)] : undefined;
+      const kind: VmVar['kind'] =
+        prop.type === 'ViewModelPropertyBoolean'
+          ? 'boolean'
+          : prop.type === 'ViewModelPropertyTrigger'
+            ? 'trigger'
+            : prop.type === 'ViewModelPropertyColor'
+              ? 'color'
+              : prop.type === 'ViewModelPropertyNumber'
+                ? 'number'
+                : enumDef
+                  ? 'enum'
+                  : prop.type === 'ViewModelPropertyList'
+                    ? 'list'
+                    : 'string';
+      const name = uniqueName(fc, `${vm.name}_${String(prop.props.name ?? 'value')}`);
+      const raw = vm.values.get(ids[k]);
+      const options = enumDef?.values.length ? enumDef.values : undefined;
+      const variable: Variable = {
+        id: uid('v'),
+        name,
+        shared: true,
+        type: kind === 'trigger' ? 'number' : kind,
+        initial:
+          kind === 'boolean'
+            ? !!raw
+            : kind === 'number'
+              ? r2(Number(raw ?? 0))
+              : kind === 'trigger'
+                ? 0
+                : kind === 'color'
+                  ? argbCss(Number(raw ?? 0xff000000))
+                  : kind === 'enum'
+                    ? (options?.[Number(raw ?? 0)] ?? options?.[0] ?? '')
+                    : kind === 'list'
+                      ? JSON.stringify(vmValue(fc, vm, 0, ids[k]) ?? [])
+                      : String(raw ?? ''),
+      };
+      if (kind === 'enum' && options) variable.options = options;
+      fc.variables.push(variable);
+      v = { id: variable.id, name, kind, options };
+      fc.vmVars.set(key, v);
+    }
+    return v;
+  }
+  return null;
+}
+
+/** Rive's arithmetic operation codes (DataConverterOperation, formula tokens). */
+const ARITH = ['+', '-', '*', '/', '%'];
+
+/** What a data converter does to a value, as our converters; null for ones with no equivalent (the bind keeps the rest). */
+function convertersOf(fc: FileCtx, index: number, out: Converter[] = [], depth = 0): boolean {
+  const c = fc.converters[index];
+  if (!c) return false;
+  const t = c.obj.type;
+  const num = (k: string) => Number(get(c.obj, k));
+  switch (t) {
+    case 'DataConverterGroup':
+      return depth < 4 && c.items.every((i) => convertersOf(fc, i, out, depth + 1));
+    case 'DataConverterToString': {
+      const decimals = num('decimals');
+      out.push(decimals > 0 ? { type: 'format', decimals } : { type: 'toText' });
+      return true;
+    }
+    case 'DataConverterToNumber':
+      out.push({ type: 'toNumber' });
+      return true;
+    case 'DataConverterRounder':
+      out.push({ type: 'round', decimals: num('decimals') });
+      return true;
+    case 'DataConverterBooleanNegate':
+      out.push({ type: 'invert' });
+      return true;
+    case 'DataConverterRangeMapper': {
+      const flags = num('flags');
+      // clamp lower (1) / clamp upper (2): both together keep the value inside the range
+      out.push({ type: 'range', inMin: num('minInput'), inMax: num('maxInput'), outMin: num('minOutput'), outMax: num('maxOutput'), clamp: (flags & 3) === 3 });
+      if ((flags & 3) !== 3 && flags & 3) fc.warnings.add('Range mappers that clamp on one side only clamp on neither');
+      return true;
+    }
+    case 'DataConverterOperationValue':
+    case 'DataConverterSystemDegsToRads':
+    case 'DataConverterSystemNormalizer': {
+      if (t === 'DataConverterSystemDegsToRads') {
+        out.push({ type: 'expr', expr: `value * ${Math.PI / 180}` });
+        return true;
+      }
+      const op = ARITH[num('operationType')];
+      if (!op) return false;
+      out.push({ type: 'expr', expr: `value ${op} ${r2(num('operationValue'))}` });
+      return true;
+    }
+    case 'DataConverterStringPad': {
+      const len = num('length');
+      const text = JSON.stringify(String(get(c.obj, 'text') ?? ' ') || ' ');
+      out.push({ type: 'expr', expr: Number(get(c.obj, 'padType')) === 1 ? `String(value).padEnd(${len}, ${text})` : `String(value).padStart(${len}, ${text})` });
+      return true;
+    }
+    case 'DataConverterStringTrim': {
+      const trim = Number(get(c.obj, 'trimType'));
+      out.push({ type: 'expr', expr: trim === 0 ? 'String(value).trimStart()' : trim === 2 ? 'String(value).trim()' : 'String(value).trimEnd()' });
+      return true;
+    }
+    case 'DataConverterStringRemoveZeros':
+      out.push({ type: 'expr', expr: "String(value).replace(/(\\.\\d*?)0+$/, '$1').replace(/\\.$/, '')" });
+      return true;
+    case 'DataConverterListToLength':
+      out.push({ type: 'expr', expr: 'value.length' });
+      return true;
+    case 'DataConverterInterpolator':
+      fc.warnings.add('Interpolating converters (smooth changes over time) apply instantly');
+      return true;
+    case 'DataConverterFormula': {
+      // Plain arithmetic only: the input, numbers, + - * / %, and parentheses
+      const parts: string[] = [];
+      for (const tok of c.tokens) {
+        if (tok.type === 'FormulaTokenInput') parts.push('value');
+        else if (tok.type === 'FormulaTokenValue') parts.push(String(r2(Number(get(tok, 'operationValue')))));
+        else if (tok.type === 'FormulaTokenOperation') {
+          const op = ARITH[Number(get(tok, 'operationType'))];
+          if (!op) return false;
+          parts.push(op);
+        } else if (tok.type === 'FormulaTokenParenthesisOpen') parts.push('(');
+        else if (tok.type === 'FormulaTokenParenthesisClose') parts.push(')');
+        else return false;
+      }
+      if (!parts.length) return false;
+      out.push({ type: 'expr', expr: parts.join(' ') });
+      return true;
+    }
+    default:
+      return false;
+  }
+}
+
+/**
+ * Data binds on layers: a view model property drives a property of a layer (position, rotation, scale, opacity, text,
+ * colours, stroke width, ...). The property's variable is the binding's expression, the bind's data converters its
+ * converters, and the unit change between Rive's property and ours (radians to degrees, the node's origin offset) a last
+ * `expr` converter. Binds that only write to the view model, or have no source, are reported.
+ */
+function importDataBinds(ac: ArtboardCtx, fc: FileCtx, nodes: SceneNode[]): void {
+  if (!ac.rab.binds.length) return;
+  const byId = new Map<string, SceneNode>();
+  walk(nodes, (n) => byId.set(n.id, n));
+  for (const b of ac.rab.binds) {
+    const o = ac.rab.slots[b.slot];
+    const flags = Number(b.obj.props.flags ?? 0);
+    if (b.obj.type !== 'DataBindContext') {
+      fc.warnings.add('Data binds without a view model source were not imported');
+      continue;
+    }
+    const prop = classProps(o.type).get(Number(b.obj.props.propertyKey))?.name;
+    const target = prop ? (ac.targets.get(b.slot) ?? []).find((t) => prop in t.map) : undefined;
+    const node = target ? byId.get(target.nodeId) : undefined;
+    if (!prop || !target || !node) {
+      fc.warnings.add(`Data binds on ${o.type === 'Artboard' ? 'the artboard' : `${prop ?? 'unknown'} of ${o.type}`} are not imported`);
+      continue;
+    }
+    if (flags & 1) {
+      fc.warnings.add('Data binds that write a layer value back to the view model are not imported (only view model to layer)');
+      continue;
+    }
+    if (flags & 2) fc.warnings.add('Two-way data binds are imported one way: the view model value drives the layer');
+    const v = vmVariable(fc, b.obj);
+    if (!v) {
+      fc.warnings.add('Some data binds point at view model properties that could not be found');
+      continue;
+    }
+    const m = target.map[prop];
+    if (!m) continue;
+    const list: Converter[] = [];
+    if (b.obj.props.converterId !== undefined && !convertersOf(fc, Number(b.obj.props.converterId), list)) {
+      fc.warnings.add('Some data converters have no equivalent (functions in formulas, converters that read other view model values); those binds skip the converter');
+      list.length = 0;
+    }
+    // Rive's number to our number: radians to degrees, the node's offset, ...
+    const sample = (x: number) => m.f(x);
+    if (typeof sample(0) === 'number' && typeof sample(1000) === 'number' && v.kind !== 'string') {
+      const a = Math.round(((Number(sample(1000)) - Number(sample(0))) / 1000) * 1e6) / 1e6;
+      const k = Number(sample(0));
+      if (a !== 1 || k !== 0) list.push({ type: 'expr', expr: `value * ${a}${k ? ` + ${k}` : ''}`.replace('+ -', '- ') });
+    }
+    node.bindings = { ...(node.bindings ?? {}), [m.prop]: v.name };
+    if (list.length) node.converters = { ...(node.converters ?? {}), [m.prop]: list };
+  }
+}
+
+/** A root layer moved by the artboard's origin: position bindings move with it. */
+function shiftBindings(n: SceneNode, ox: number, oy: number): SceneNode {
+  if (!n.bindings || (!n.bindings.x && !n.bindings.y)) return n;
+  const converters = { ...(n.converters ?? {}) };
+  for (const [prop, by] of [['x', ox], ['y', oy]] as const) {
+    if (n.bindings[prop] && by) converters[prop] = [...(converters[prop] ?? []), { type: 'expr', expr: `value + ${by}` }];
+  }
+  return { ...n, converters };
+}
+
 // ---------------------------------------------------------------- state machines
 
 type InputVar = { kind: 'trigger' | 'bool' | 'number'; name: string; id: string };
@@ -1664,40 +2021,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
   };
   const link = (a: LogicNode, b: LogicNode, port = 'out') => edges.push({ id: uid('e'), from: a.id, fromPort: port, to: b.id, toPort: 'in' } as LogicEdge);
   // A view model property (followed through nested view model properties) as a shared project variable
-  const vmVar = (ctx: RObj | undefined) => {
-    if (!ctx) return null;
-    const ids = pathIds(ctx.props.sourcePathIds);
-    let vmIndex = ids[0];
-    let vm = fc.viewModels[vmIndex];
-    for (let k = 1; vm && k < ids.length; k++) {
-      const prop = vm.props[ids[k]];
-      if (!prop) return null;
-      if (prop.type === 'ViewModelPropertyViewModel' && k < ids.length - 1) {
-        vmIndex = Number(prop.props.viewModelReferenceId ?? 0);
-        vm = fc.viewModels[vmIndex];
-        continue;
-      }
-      const key = `${vmIndex}/${ids[k]}`;
-      let v = fc.vmVars.get(key);
-      if (!v) {
-        const kind = prop.type === 'ViewModelPropertyBoolean' ? 'boolean' : prop.type === 'ViewModelPropertyTrigger' ? 'trigger' : prop.type === 'ViewModelPropertyColor' ? 'color' : prop.type === 'ViewModelPropertyNumber' ? 'number' : 'string';
-        const name = unique(`${vm.name}_${String(prop.props.name ?? 'value')}`);
-        const raw = vm.values.get(ids[k]);
-        const variable: Variable = {
-          id: uid('v'),
-          name,
-          shared: true,
-          type: kind === 'trigger' ? 'number' : kind,
-          initial: kind === 'boolean' ? !!raw : kind === 'number' ? r2(Number(raw ?? 0)) : kind === 'trigger' ? 0 : kind === 'color' ? argbCss(Number(raw ?? 0xff000000)) : String(raw ?? ''),
-        };
-        variables.push(variable);
-        v = { id: variable.id, name, kind };
-        fc.vmVars.set(key, v);
-      }
-      return v;
-    }
-    return null;
-  };
+  const vmVar = (ctx: RObj | undefined) => vmVariable(fc, ctx);
   const contextOf = (o: RObj | undefined) => {
     const ctxs = (o?.parts ?? []).filter((x) => x.type === 'DataBindContext');
     return ctxs.find((x) => Number(x.props.flags ?? 0) & 1) ?? ctxs[0];
@@ -1877,6 +2201,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
               else if (right?.type === 'TransitionValueBooleanComparator') rhs = String(!!right.props.value);
               else if (right?.type === 'TransitionValueNumberComparator') rhs = String(r2(Number(right.props.value ?? 0)));
               else if (right?.type === 'TransitionValueColorComparator') rhs = JSON.stringify(argbCss(Number(right.props.value ?? 0)));
+              else if (right?.type === 'TransitionValueEnumComparator') rhs = JSON.stringify(lv.options?.[Number(right.props.value ?? 0)] ?? '');
               else rhs = JSON.stringify(String(right?.props.value ?? ''));
               const ops = ['===', '!==', '<=', '>=', '<', '>'];
               conds.push(`${lv.name} ${ops[Number(c.props.opValue ?? 0)] ?? '==='} ${rhs}`);
@@ -1914,6 +2239,9 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           for (const id of vmTriggers) sources.push(add('event.variable', { variable: id }, 40));
           if (!triggers.length && !vmTriggers.length) {
             for (const id of watched) sources.push(add('event.variable', { variable: id }, 40));
+            // Rive checks Any state transitions every frame, starting with the first: one whose condition already holds
+            // at the start (a loop that plays while a view model number is 0) has to run then, not on the first change
+            if (st.obj.type === 'AnyState' && watched.size) sources.push(add('event.start', {}, 40));
             if (!watched.size) {
               // No inputs: leave when the state's animation finishes (exit time)
               const tl = tlOf(st);
@@ -1980,7 +2308,15 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           }
           const raw = bindable?.props.propertyValue;
           const value =
-            target.kind === 'boolean' ? String(!!raw) : target.kind === 'number' ? String(r2(Number(raw ?? 0))) : target.kind === 'color' ? JSON.stringify(argbCss(Number(raw ?? 0))) : JSON.stringify(String(raw ?? ''));
+            target.kind === 'boolean'
+              ? String(!!raw)
+              : target.kind === 'number'
+                ? String(r2(Number(raw ?? 0)))
+                : target.kind === 'color'
+                  ? JSON.stringify(argbCss(Number(raw ?? 0)))
+                  : target.kind === 'enum'
+                    ? JSON.stringify(target.options?.[Number(raw ?? 0)] ?? '')
+                    : JSON.stringify(String(raw ?? ''));
           const n = target.kind === 'trigger' ? add('action.setVariable', { variable: target.id, op: 'add', value: '1' }, x) : add('action.setVariable', { variable: target.id, op: 'set', value }, x);
           link(last, n);
           last = n;
@@ -2015,6 +2351,8 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
   const { objects } = readObjects(bytes);
   const s = structure(objects);
   contexts.clear();
+  const variables: Variable[] = [];
+  const names = new Set<string>();
   const fc: FileCtx = {
     file: { artboards: s.artboards, assets: s.assets },
     warnings: s.warnings,
@@ -2027,6 +2365,10 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     pendingInputs: [],
     inputNames: new Map(),
     viewModels: s.viewModels,
+    enums: s.enums,
+    converters: s.converters,
+    variables,
+    names,
     vmVars: new Map(),
     timelineEvents: new Map(),
   };
@@ -2044,8 +2386,6 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     fc.assets.push({ id, name: `${family}.${mimeOf(a.bytes).split('/')[1] ?? 'ttf'}`, mime: mimeOf(a.bytes), bytes: a.bytes.slice() });
     if (!fc.fonts.some((f) => f.family === family)) fc.fonts.push({ family, source: 'asset', assetId: id });
   });
-  const variables: Variable[] = [];
-  const names = new Set<string>();
   const artboards: Artboard[] = [];
   s.artboards.forEach((rab, index) => {
     sizeFollowers = [];
@@ -2056,7 +2396,7 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     const oy = h * get(rab.obj, 'originY');
     // The artboard origin is where Rive's (0,0) sits; our root layers count from the top-left. Copies, so the
     // cached nodes nested artboards are cloned from stay relative to the origin.
-    let kids = buildArtboardNodes(fc, index).map((k) => ({ ...k, x: r2(k.x + ox), y: r2(k.y + oy) }) as SceneNode);
+    let kids = buildArtboardNodes(fc, index).map((k) => shiftBindings({ ...k, x: r2(k.x + ox), y: r2(k.y + oy) } as SceneNode, ox, oy));
     const root = new Set(kids.map((k) => k.id));
     // Layout artboards: the artboard itself is the root layout box
     const rootSlots = [...(ac.children.get(0) ?? [])];

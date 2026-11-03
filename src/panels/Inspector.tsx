@@ -28,6 +28,7 @@ import {
   type TextStyle,
   type Constraint,
   type ConstraintType,
+  type Converter,
   uid,
   walk,
 } from 'interactives-player';
@@ -41,6 +42,7 @@ import { CodeEditor } from '../components/CodeEditor';
 import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
 import { ChildOrder } from '../components/ChildOrder';
 import { blendExample } from '../lib/blend-example';
+import { ConvertersEditor } from '../components/Converters';
 
 const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
 const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
@@ -946,25 +948,35 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
 function BindingsSection({ node, project }: { node: SceneNode; project: Project }) {
   const set = useSetter([node.id]);
   const bindings = node.bindings ?? {};
+  const converters = node.converters ?? {};
   const entries = Object.entries(bindings);
   const [prop, setProp] = useState('opacity');
-  const update = (next: Record<string, string>) => set({ bindings: Object.keys(next).length ? next : undefined }, `bind-${node.id}`);
+  const update = (next: Record<string, string>, conv: Record<string, Converter[]> = converters) => {
+    const keep = Object.fromEntries(Object.entries(conv).filter(([k, list]) => k in next && list.length));
+    set({ bindings: Object.keys(next).length ? next : undefined, converters: Object.keys(keep).length ? keep : undefined }, `bind-${node.id}`);
+  };
+  const kindOf = (p: string) => ANIMATABLE_PROPS.find((a) => a.prop === p)?.kind;
   return (
     <Section help="bindings" title="Data bindings" defaultOpen={entries.length > 0}>
       {entries.map(([p, expr]) => (
-        <Row key={p} className="binding-row">
-          <span className="mono small binding-prop">{p}</span>
-          <TextField value={expr} mono commitOnBlur placeholder="expression" onChange={(v) => update({ ...bindings, [p]: v })} />
-          <IconButton
-            icon={<Icons.trash />}
-            title="Remove binding"
-            onClick={() => {
-              const next = { ...bindings };
-              delete next[p];
-              update(next);
-            }}
-          />
-        </Row>
+        <div key={p} className="binding">
+          <Row className="binding-row">
+            <span className="mono small binding-prop" title={`${p} (${kindOf(p) ?? 'any'})`}>
+              {p}
+            </span>
+            <TextField value={expr} mono commitOnBlur placeholder="expression" onChange={(v) => update({ ...bindings, [p]: v })} />
+            <IconButton
+              icon={<Icons.trash />}
+              title="Remove binding"
+              onClick={() => {
+                const next = { ...bindings };
+                delete next[p];
+                update(next);
+              }}
+            />
+          </Row>
+          <ConvertersEditor list={converters[p] ?? []} expr={expr} variables={project.variables} onChange={(list) => update(bindings, { ...converters, [p]: list })} />
+        </div>
       ))}
       <Row>
         <SelectField value={prop} options={ANIMATABLE_PROPS.map((a) => ({ value: a.prop, label: a.label }))} onChange={setProp} />
@@ -973,7 +985,7 @@ function BindingsSection({ node, project }: { node: SceneNode; project: Project 
         </button>
       </Row>
       <p className="hint">
-        A binding sets the property from variables every frame, e.g. <code>visible</code> ← <code>lives &gt; 0</code>, <code>width</code> ← <code>progress * 3</code>.
+        A binding sets the property from variables every frame, e.g. <code>visible</code> ← <code>lives &gt; 0</code>, <code>width</code> ← <code>progress * 3</code>. Add a converter to format a number as text, invert a flag, remap a range or look up a choice.
         {project.variables.some((v) => !isIdentifier(v.name)) && ' Some variable names are not valid identifiers and cannot be used in expressions.'}
       </p>
     </Section>

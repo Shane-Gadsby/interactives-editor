@@ -107,6 +107,15 @@ ix.log(...)`}</pre>
   );
 }
 
+/** Whether text is a JSON array (what a list variable's starting value has to be). */
+function validList(text: string): boolean {
+  try {
+    return Array.isArray(JSON.parse(text));
+  } catch {
+    return false;
+  }
+}
+
 export function VariablesPanel() {
   const vars = useEditor((st) => st.project.variables);
   const setVar = (id: string, patch: Partial<Variable>, coalesce?: string) =>
@@ -123,7 +132,7 @@ export function VariablesPanel() {
       d.variables.push({ id: uid('v'), name, type: 'number', initial: 0 });
     });
   };
-  const defaultFor = (t: VariableType) => (t === 'number' ? 0 : t === 'boolean' ? false : t === 'color' ? '#3b5bfd' : t === 'enum' ? 'first' : '');
+  const defaultFor = (t: VariableType) => (t === 'number' ? 0 : t === 'boolean' ? false : t === 'color' ? '#3b5bfd' : t === 'enum' ? 'first' : t === 'list' ? '[]' : '');
   return (
     <div className="variables">
       <table className="var-table">
@@ -146,13 +155,14 @@ export function VariablesPanel() {
               <td>
                 <SelectField<VariableType>
                   value={v.type}
-                  title="Number, text, true/false, colour, or a choice from a list you define"
+                  title="Number, text, true/false, colour, a choice from a list you define, or a list of items (for repeaters)"
                   options={[
                     { value: 'number', label: 'Number' },
                     { value: 'string', label: 'Text' },
                     { value: 'boolean', label: 'True/false' },
                     { value: 'color', label: 'Colour' },
                     { value: 'enum', label: 'Choice' },
+                    { value: 'list', label: 'List' },
                   ]}
                   onChange={(t) => setVar(v.id, t === 'enum' ? { type: t, options: v.options?.length ? v.options : ['first', 'second'], initial: v.options?.[0] ?? 'first' } : { type: t, initial: defaultFor(t) })}
                 />
@@ -162,6 +172,21 @@ export function VariablesPanel() {
                 {v.type === 'string' && <TextField value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
                 {v.type === 'boolean' && <CheckField label={v.initial ? 'true' : 'false'} value={!!v.initial} onChange={(x) => setVar(v.id, { initial: x })} />}
                 {v.type === 'color' && <ColorField value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
+                {v.type === 'list' && (
+                  <div className="enum-edit">
+                    <TextField
+                      value={String(v.initial)}
+                      multiline
+                      mono
+                      rows={3}
+                      commitOnBlur
+                      title="The starting items as JSON: an array, usually of objects"
+                      placeholder={'[{"name": "Ann"}, {"name": "Bo"}]'}
+                      onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)}
+                    />
+                    {!validList(String(v.initial)) && <div className="error small">Not a JSON array, so the list starts empty.</div>}
+                  </div>
+                )}
                 {v.type === 'enum' && (
                   <div className="enum-edit">
                     <SelectField value={String(v.initial)} title="Starting choice" options={(v.options ?? []).map((o) => ({ value: o, label: o }))} onChange={(x) => setVar(v.id, { initial: x })} />

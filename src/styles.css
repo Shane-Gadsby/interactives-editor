@@ -3254,4 +3254,14 @@ code {
 }
 .link-info .link-sub.err {
   color: var(--danger);
+.binding + .binding {
+  margin-top: 8px;
+}
+.converters {
+  margin: 2px 0 0 12px;
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+}
+.converter-row {
+  margin-bottom: 6px;
 }

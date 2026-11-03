@@ -103,8 +103,9 @@ Access works like this:
 | `lib/live.ts`, `shared/ops.mjs` | live editing client and the shared op diff/apply |
 | `lib/lottie-import.ts`, `lib/lottie-export.ts` | Lottie / dotLottie in and out |
 | `lib/links.ts`, `lib/link-reconcile.ts` | Linked design files: File System Access handles in IndexedDB, the watcher (`LinkManager`), and the pure three-way merge of a re-import into the artboard (`Artboard.source` keeps the baseline) |
-| `lib/rive-import.ts`, `lib/rive-defs.ts` | `.riv` import; defs generated from rive-runtime headers by `research/rive/gen_defs.py` |
 | `lib/ai-import.ts`, `lib/pdf-parse.ts`, `lib/pdf-color.ts`, `lib/pdf-font.ts` | Illustrator `.ai` (the PDF inside) and `.pdf` import: a minimal PDF reader, then the page content operators replayed into path, text, image and mask layers (one artboard per page) |
+| `lib/rive-import.ts`, `lib/rive-defs.ts` | `.riv` import (view models become shared variables, DataBinds on layers become bindings with converters); defs generated from rive-runtime headers by `research/rive/gen_defs.py` |
+| `components/Converters.tsx` | the binding converters editor in the inspector's Data bindings section |
 | `lib/boolean.ts` | union/subtract/intersect/exclude (polygon-clipping) |
 | `lib/svg-import.ts` | SVG files to editable layers (paths with transforms baked in, groups, gradients, text) |
 | `lib/image-export.ts` | PNG/SVG pictures of an artboard (the renderer inside `<foreignObject>`, assets and fonts inlined) |

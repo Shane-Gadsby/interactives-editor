@@ -427,6 +427,9 @@ function ConflictBanner() {
   );
 }
 
+/** A live variable's value as text in the preview panel: lists show as JSON. */
+const shown = (v: unknown): string => (v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v ?? ''));
+
 function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }) {
   const s = useEditor((st) => ({ name: st.project.name, saveState: st.saveState, saveError: st.saveError, zoom: st.zoom, rev: st.project.updated, live: st.live, peers: st.peers }));
   const [menu, setMenu] = useState(false);
@@ -787,13 +790,13 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
                     </select>
                   ) : (
                     <input
-                      key={String(vars[v.name])}
-                      defaultValue={String(vars[v.name] ?? '')}
+                      key={shown(vars[v.name])}
+                      defaultValue={shown(vars[v.name])}
                       onKeyDown={(e) => {
                         e.stopPropagation();
                         if (e.key === 'Enter') post(v.name, (e.target as HTMLInputElement).value);
                       }}
-                      onBlur={(e) => e.target.value !== String(vars[v.name] ?? '') && post(v.name, e.target.value)}
+                      onBlur={(e) => e.target.value !== shown(vars[v.name]) && post(v.name, e.target.value)}
                     />
                   )}
                 </label>

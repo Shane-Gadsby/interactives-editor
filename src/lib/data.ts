@@ -1,4 +1,4 @@
-import { fetchDataSource, type DataSource, type Project } from 'interactives-player';
+import { enumOptions, fetchDataSource, initialValue, type DataSource, type Project } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -71,7 +71,7 @@ export const dataCache = new DataCache();
 /** Variables (initial values) and data, the way the player scopes them. */
 export function previewScope(project: Project): Record<string, unknown> {
   const data = dataCache.scope(project);
-  const vars: Record<string, unknown> = { ...data, data };
-  for (const v of project.variables) vars[v.name] = v.initial;
+  const vars: Record<string, unknown> = { ...data, data, enums: enumOptions(project.variables) };
+  for (const v of project.variables) vars[v.name] = initialValue(v);
   return vars;
 }

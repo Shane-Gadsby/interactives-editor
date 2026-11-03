@@ -177,4 +177,14 @@ describe('analyzeUsage', () => {
     expect(unusedAssetIds(r)).toEqual(['as_free']);
     expect(find(r.assets, 'keyed').usedBy[0].loose).toBe(true);
   });
+
+  it('counts a converter expression as a use of the variables it reads', () => {
+    const { p, home } = base();
+    p.variables.push({ id: 'v1', name: 'rate', type: 'number', initial: 1 }, { id: 'v2', name: 'idle', type: 'number', initial: 1 });
+    home.children.push(createNode('rect', { name: 'Bar', bindings: { width: 'level' }, converters: { width: [{ type: 'expr', expr: 'value * rate' }] } }));
+    const r = analyzeUsage(p);
+    expect(find(r.variables, 'rate').unused).toBe(false);
+    expect(how(find(r.variables, 'rate'))).toContain('converter on width');
+    expect(find(r.variables, 'idle').unused).toBe(true);
+  });
 });

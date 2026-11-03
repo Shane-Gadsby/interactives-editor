@@ -422,7 +422,7 @@ function reference(topic: string): string {
   if (topic === 'layers') {
     const types: NodeType[] = ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance'];
     return (
-      'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, layoutItem, constraints.\n' +
+      'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints.\n' +
       'Text layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\n' +
       'Paths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' +
       types.map((t) => `- ${t}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t)).filter(([k]) => !['id', 'name', 'x', 'y', 'rotation', 'scaleX', 'scaleY', 'originX', 'originY', 'opacity', 'visible'].includes(k))))}`).join('\n')
@@ -510,7 +510,7 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       'set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); ' +
       'add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; ' +
       'add_artboard {name, width, height, ref?}; set_artboard {id, props}; ' +
-      'add_variable {name, type: number|string|boolean|color|enum, initial, options?, shared?, ref?}; set_variable {id or name, props}; ' +
+      'add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, ref?}; set_variable {id or name, props}; ' +
       'add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; ' +
       'add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; ' +
       'add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}. ' +
