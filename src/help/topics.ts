@@ -87,7 +87,12 @@ Settings for the selection. With nothing selected it shows the artboard and the 
 **Timeline**, **Interactions**, **Scripts**, **Variables** and **Data**. Click a tab to open it, click it again to close it, and drag the top edge to resize.
 
 ## Preview
-**Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on. The **Variables** panel beside it shows every variable as it changes; type a new value (or tick, or choose) to set it while it runs. Messages the project sends are listed underneath. **Restart** starts again.`,
+**Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on. **Restart** starts again. The **Debug** panel (on by default) shows:
+
+- **Now showing**: the artboard on screen and how many instances it contains.
+- **Timelines**: the ones running, with a progress bar (green dot = playing).
+- **Variables**: every value as it changes. Type a new value (or tick, or choose) to set it while it runs; filter by name when there are many.
+- **Events** (underneath): each interaction event as it fires, which layer it came from, and what it set off, including events inside instances. Messages sent to the host page are listed too.`,
   },
   {
     id: 'canvas',

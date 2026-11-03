@@ -2211,7 +2211,7 @@ kbd {
 }
 .preview-vars {
   flex: none;
-  width: 230px;
+  width: 290px;
   padding: 10px;
   overflow: auto;
   border-right: 1px solid var(--line);
@@ -2222,7 +2222,7 @@ kbd {
 }
 .preview-var {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr;
   align-items: center;
   gap: 6px;
 }
@@ -2288,4 +2288,54 @@ kbd {
 a.btn {
   text-decoration: none;
   color: var(--text);
+}
+.debug-state {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.debug-tl {
+  display: grid;
+  grid-template-columns: 8px 1fr 50px;
+  align-items: center;
+  gap: 6px;
+}
+.debug-tl .mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.debug-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.debug-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.debug-filter {
+  padding: 3px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.preview-log {
+  max-height: 160px;
+  overflow: auto;
+}
+.debug-log-head {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.trace strong {
+  font-weight: 600;
 }

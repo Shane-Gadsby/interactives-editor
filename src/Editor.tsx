@@ -610,6 +610,12 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
   const [from, setFrom] = useState<'start' | 'current'>('start');
   const [log, setLog] = useState<string[]>([]);
   const [vars, setVars] = useState<Record<string, unknown> | null>(null);
+  type DebugState = { artboard: string; timelines: { name: string; playing: boolean; time: number; duration: number }[]; instances: number };
+  type Trace = { artboard: string; event: string; target?: string; then: string[]; note?: string; depth: number; at: number };
+  const [dbg, setDbg] = useState<DebugState | null>(null);
+  const [traces, setTraces] = useState<Trace[]>([]);
+  const [varFilter, setVarFilter] = useState('');
+  const t0 = useRef(performance.now());
   const [showVars, setShowVars] = useState(true);
   const [nonce, setNonce] = useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -624,7 +630,9 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
     const onMsg = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow) return;
       if (e.data?.source === 'interactives-debug') {
-        setVars(e.data.vars);
+        if (e.data.vars) setVars(e.data.vars);
+        if (e.data.state) setDbg(e.data.state);
+        if (e.data.trace) setTraces((l) => [...l.slice(-199), { ...e.data.trace, at: performance.now() - t0.current }]);
         return;
       }
       if (e.data?.source !== 'interactives') return;
@@ -654,18 +662,42 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
           <button className="btn" onClick={() => setNonce(nonce + 1)} title="Start again from the beginning">
             Restart
           </button>
-          <button className={`btn${showVars ? ' active' : ''}`} onClick={() => setShowVars(!showVars)} title="Show the variables as they change, and set them by hand">
-            Variables
+          <button className={`btn${showVars ? ' active' : ''}`} onClick={() => setShowVars(!showVars)} title="Debug: what's showing, running timelines, variables (editable) and the events that fire">
+            Debug
           </button>
           <IconButton icon={<Icons.close />} title="Close (Esc)" onClick={onClose} />
         </header>
         <div className="preview-body">
           {showVars && vars && (
             <aside className="preview-vars">
+              {dbg && (
+                <div className="debug-state">
+                  <div className="field-label block">Now showing</div>
+                  <div className="mono small">
+                    {dbg.artboard}
+                    {dbg.instances ? ` · ${dbg.instances} instance${dbg.instances === 1 ? '' : 's'}` : ''}
+                  </div>
+                  {dbg.timelines.length > 0 && (
+                    <>
+                      <div className="field-label block">Timelines</div>
+                      {dbg.timelines.map((t) => (
+                        <div key={t.name} className="debug-tl small" title={`${t.playing ? 'Playing' : 'Paused'} at ${t.time} of ${t.duration} ms`}>
+                          <span className={`dot ${t.playing ? 'ok' : ''}`} />
+                          <span className="mono">{t.name}</span>
+                          <span className="debug-bar">
+                            <span style={{ width: `${Math.min(100, (t.time / (t.duration || 1)) * 100)}%` }} />
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
               <div className="field-label block">Variables (live)</div>
+              {project.variables.length > 8 && <input className="debug-filter" placeholder="Filter variables…" value={varFilter} onChange={(e) => setVarFilter(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />}
               {Object.keys(vars).length === 0 && <p className="muted small">This project has no variables.</p>}
-              {project.variables.map((v) => (
-                <label key={v.id} className="preview-var" title={`Change ${v.name} in the running preview`}>
+              {project.variables.filter((v) => !varFilter || v.name.toLowerCase().includes(varFilter.toLowerCase())).map((v) => (
+                <label key={v.id} className="preview-var" title={`${v.name}: change it in the running preview`}>
                   <span className="mono">{v.name}</span>
                   {v.type === 'boolean' ? (
                     <input type="checkbox" checked={!!vars[v.name]} onChange={(e) => post(v.name, e.target.checked)} />
@@ -692,10 +724,23 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
           )}
           {html ? <iframe ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : <div className="center-msg muted">Building…</div>}
         </div>
-        {log.length > 0 && (
+        {showVars && (traces.length > 0 || log.length > 0) && (
           <footer className="preview-log mono small">
+            <div className="debug-log-head">
+              <span>Events (newest last)</span>
+              <button className="link-btn inline" onClick={() => (setTraces([]), setLog([]))}>
+                Clear
+              </button>
+            </div>
+            {traces.map((t, i) => (
+              <div key={i} className="trace" title={t.note}>
+                <span className="muted">{(t.at / 1000).toFixed(2)}s</span> {t.depth ? <span className="muted">[{t.artboard}] </span> : null}
+                <strong>{t.event}</strong>
+                {t.target ? ` (${t.target})` : ''} → {t.then.length ? t.then.join(', ') : <span className="muted">nothing connected</span>}
+              </div>
+            ))}
             {log.map((l, i) => (
-              <div key={i}>message: {l}</div>
+              <div key={`m${i}`}>message to the page: {l}</div>
             ))}
           </footer>
         )}
