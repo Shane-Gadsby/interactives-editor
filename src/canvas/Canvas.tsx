@@ -48,6 +48,7 @@ import { freehandToPath } from './freehand';
 import { ArtboardView } from './ArtboardView';
 import { viewPlan } from './viewPlan';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
+import { ADD_POINT_CURSOR, BEND_CURSOR, BONE_CHAIN_CURSOR, PEN_CLOSE_CURSOR, dragCursor, resizeCursor, rotateCursor, rotateCursorAt, toolCursor } from './cursors';
 import { insertFiles } from '../lib/insert';
 import { captureDrop } from '../lib/links';
 import { liveSession } from '../lib/live';
@@ -135,6 +136,10 @@ export function Canvas() {
   const vp = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   const spaceDown = useRef(false);
+  // What the pointer would do here (set while it moves with no drag going), and what the drag going now is doing
+  const [hoverCursor, setHoverCursor] = useState<string | null>(null);
+  const [dragCursorNow, setDragCursorNow] = useState<string | null>(null);
+  const [spaceHeld, setSpaceHeld] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
   const [pencil, setPencil] = useState<Pt[] | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
@@ -247,7 +252,7 @@ export function Canvas() {
     const down = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !isTyping(e)) {
         spaceDown.current = true;
-        if (vp.current) vp.current.style.cursor = 'grab';
+        setSpaceHeld(true);
       }
       const st = store().get();
       if (penRef.current && (e.key === 'Enter' || e.key === 'Escape')) {
@@ -269,7 +274,7 @@ export function Canvas() {
     const up = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         spaceDown.current = false;
-        if (vp.current) vp.current.style.cursor = '';
+        setSpaceHeld(false);
       }
     };
     window.addEventListener('keydown', down, true);
@@ -281,6 +286,9 @@ export function Canvas() {
   });
   const selPointRef = useRef(selPoint);
   selPointRef.current = selPoint;
+
+  // What a press would do belongs to the tool and the path being edited; start from the tool's own until the pointer moves
+  useEffect(() => setHoverCursor(null), [s.tool, s.editingPathId]);
 
   // Finish the pen path when switching tools.
   useEffect(() => {
@@ -319,6 +327,14 @@ export function Canvas() {
   // ---------------------------------------------------------------- pointer down
 
   const onPointerDown = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement;
+    pointerDown(e);
+    // The pointer is captured for the drag, so the canvas has to show what it is doing. A handle says it itself (its own cursor)
+    const d = drag.current;
+    const own = target.closest?.('[data-handle]') ? getComputedStyle(target).cursor : '';
+    setDragCursorNow(d ? dragCursor(d.kind, own) : null);
+  };
+  const pointerDown = (e: React.PointerEvent) => {
     if (e.button === 2) return;
     const st = store().get();
     const target = e.target as HTMLElement;
@@ -543,10 +559,18 @@ export function Canvas() {
   const hoverNow = useRef<(cx: number, cy: number, deep: boolean) => void>(() => undefined);
   hoverNow.current = (cx, cy, deep) => {
     const st = store().get();
-    if (st.tool !== 'select' || spaceDown.current) return;
+    if (spaceDown.current) return;
     const w = toWorld(cx, cy);
+    // The Bend tool only does something on an edge it can bend, so only there does the cursor say so
+    if (st.tool === 'bend') {
+      setHoverCursor(bendTargetAt(w, deep)?.h ? BEND_CURSOR : null);
+      return;
+    }
+    if (st.tool !== 'select') return;
     const found = layerAt(w, deep);
     const hab = found?.ab ?? abAt(w);
+    // Over the outline of the path being edited a double-click adds a point; over a selected layer a drag moves it
+    setHoverCursor(st.editingPathId && editedSegmentAt(w) ? ADD_POINT_CURSOR : found?.hit && st.selection.includes(found.hit.id) ? 'move' : null);
     if (hab) {
       const p = local(hab, w);
       const hit = found?.hit;
@@ -574,7 +598,7 @@ export function Canvas() {
     if (!d) {
       // Hover feedback. Hit-testing every layer is the costly part and pointers report far more often than the screen
       // draws, so it runs once per frame, for the latest position
-      if (st.tool === 'select' && !spaceDown.current) {
+      if ((st.tool === 'select' || st.tool === 'bend') && !spaceDown.current) {
         hoverAt.current = { x: e.clientX, y: e.clientY, deep: e.ctrlKey || e.metaKey };
         if (!hoverFrame.current) {
           hoverFrame.current = requestAnimationFrame(() => {
@@ -854,6 +878,7 @@ export function Canvas() {
   const onPointerUp = (e: React.PointerEvent) => {
     const d = drag.current;
     drag.current = null;
+    setDragCursorNow(null);
     if (d?.kind === 'bend' && !store().get().recording) {
       // the curve can reach past the layer's box: settle the box around the points (not for keyed shapes, whose keys hold the points as they are)
       const st = store().get();
@@ -1114,10 +1139,11 @@ export function Canvas() {
    * Bend tool: press on an edge of a shape and drag. Path layers bend straight away; the box shapes first offer to
    * become paths (their outline needs points to bend).
    */
-  function bendDown(e: React.PointerEvent, w: Pt) {
+  /** The edge the Bend tool would grab at a world point (the cursor and the press both ask), and the layer under it for when there is none. */
+  function bendTargetAt(w: Pt, deep: boolean) {
     const st = store().get();
     const bab = abAt(w) ?? getArtboard(st.project, st.activeArtboardId);
-    if (!bab) return;
+    if (!bab) return null;
     const base = getArtboard(st.project, bab.id) ?? bab;
     const p = local(base, w);
     const recording = st.recording && st.bottomTab === 'timeline' && !!st.activeTimelineId;
@@ -1128,7 +1154,7 @@ export function Canvas() {
       const n = locate(src, id)?.node;
       if (n && n.visible && !n.locked) cands.push(n);
     }
-    const under = layerAt(w, e.ctrlKey || e.metaKey)?.hit;
+    const under = layerAt(w, deep)?.hit;
     const underNode = under && locate(src, under.id)?.node;
     if (underNode && !cands.some((c) => c.id === underNode.id)) cands.push(underNode);
     for (const n of cands) {
@@ -1136,7 +1162,16 @@ export function Canvas() {
       if (!paths) continue;
       const pm = parentToArtboard(src, n.id);
       const h = nearestSegment(paths, toNodeLocal(n, pm, p), 8 / zoom);
-      if (!h) continue;
+      if (h) return { n, h, pm, p, under, selected: st.selection.includes(n.id) };
+    }
+    return { n: null, h: null, pm: null, p, under, selected: false };
+  }
+
+  function bendDown(e: React.PointerEvent, w: Pt) {
+    const t = bendTargetAt(w, e.ctrlKey || e.metaKey);
+    if (!t) return;
+    const { n, h, pm, p, under } = t;
+    if (n && h && pm) {
       if (n.type !== 'path') {
         void confirmDialog({
           title: 'Convert to path',
@@ -1149,7 +1184,7 @@ export function Canvas() {
         });
         return;
       }
-      if (!st.selection.includes(n.id)) store().select([n.id]);
+      if (!t.selected) store().select([n.id]);
       drag.current = { kind: 'bend', id: n.id, si: h.si, i: h.i, t: h.t, start: p, node0: structuredClone(n), parentM: pm };
       return;
     }
@@ -1257,9 +1292,9 @@ export function Canvas() {
         const sel = s.selection.includes(g.id);
         overlay.push(
           <g key={`bone-${g.id}`} className={`bone-glyph${sel ? ' selected' : ''}`}>
-            <polygon data-handle={`bone:${g.id}:body`} className="bone-body" points={`${a.x},${a.y} ${kx - uy * w},${ky + ux * w} ${t.x},${t.y} ${kx + uy * w},${ky - ux * w}`} />
+            <polygon data-handle={`bone:${g.id}:body`} className="bone-body" style={{ cursor: rotateCursor(135) }} points={`${a.x},${a.y} ${kx - uy * w},${ky + ux * w} ${t.x},${t.y} ${kx + uy * w},${ky - ux * w}`} />
             <circle data-handle={`bone:${g.id}:base`} className="bone-joint" cx={a.x} cy={a.y} r={3.5} />
-            <circle data-handle={`bone:${g.id}:tip`} className="bone-tip" cx={t.x} cy={t.y} r={3} />
+            <circle data-handle={`bone:${g.id}:tip`} className="bone-tip" style={{ cursor: s.tool === 'bone' ? BONE_CHAIN_CURSOR : rotateCursor(135) }} cx={t.x} cy={t.y} r={3} />
           </g>,
         );
       }
@@ -1305,12 +1340,12 @@ export function Canvas() {
           const dx = c.x - center.x;
           const dy = c.y - center.y;
           const len = Math.hypot(dx, dy) || 1;
-          overlay.push(<circle key={`rot-${h}`} data-handle={`rotate:${h}`} className="rotate-zone" cx={c.x + (dx / len) * 14} cy={c.y + (dy / len) * 14} r={10} />);
+          overlay.push(<circle key={`rot-${h}`} data-handle={`rotate:${h}`} className="rotate-zone" style={{ cursor: rotateCursorAt(h, quad as [Pt, Pt, Pt, Pt]) }} cx={c.x + (dx / len) * 14} cy={c.y + (dy / len) * 14} r={10} />);
         }
         for (const h of HANDLES) {
           const [fx, fy] = HANDLE_POS[h];
           const c = at(fx, fy);
-          overlay.push(<rect key={`h-${h}`} data-handle={`resize:${h}`} className={`handle h-${h}`} x={c.x - 4} y={c.y - 4} width={8} height={8} />);
+          overlay.push(<rect key={`h-${h}`} data-handle={`resize:${h}`} className={`handle h-${h}`} style={{ cursor: resizeCursor(h, quad as [Pt, Pt, Pt, Pt]) }} x={c.x - 4} y={c.y - 4} width={8} height={8} />);
         }
       }
       // Gradients with points of their own: the points are handles, dragged in the layer's own px
@@ -1477,7 +1512,7 @@ export function Canvas() {
       overlay.push(<path key="pen" className="pen-preview" d={d} />);
       sp.forEach((p, i) => {
         overlay.push(
-          <rect key={`pp-${i}`} data-handle={i === 0 && sp.length > 1 ? 'penstart' : undefined} className={`path-point${i === 0 ? ' first' : ''}`} x={p.x - 4} y={p.y - 4} width={8} height={8} />,
+          <rect key={`pp-${i}`} data-handle={i === 0 && sp.length > 1 ? 'penstart' : undefined} className={`path-point${i === 0 ? ' first' : ''}`} style={i === 0 && sp.length > 1 ? { cursor: PEN_CLOSE_CURSOR } : undefined} x={p.x - 4} y={p.y - 4} width={8} height={8} />,
         );
         if (pen.points[i].out) {
           const o = oscreen(pab, { x: pen.points[i].x + pen.points[i].out!.x, y: pen.points[i].y + pen.points[i].out!.y });
@@ -1680,7 +1715,8 @@ export function Canvas() {
   const views = viewPlan(project.artboards, s.activeArtboardId, zoom, panX, panY, vp.current?.clientWidth || window.innerWidth, vp.current?.clientHeight || window.innerHeight);
 
   const showRulers = usePrefs().rulers;
-  const cursor = s.tool === 'hand' ? 'grab' : s.tool === 'select' ? 'default' : s.tool === 'text' ? 'text' : 'crosshair';
+  // Space pans, a drag shows what it is doing, then what a press under the pointer would do, then the tool's own
+  const cursor = dragCursorNow ?? (spaceHeld ? 'grab' : s.tool === 'select' || s.tool === 'bend' ? hoverCursor ?? toolCursor(s.tool) : toolCursor(s.tool));
 
   return (
     <div
@@ -1692,7 +1728,11 @@ export function Canvas() {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onDoubleClick={onDoubleClick}
-      onDragOver={(e) => e.preventDefault()}
+      onDragOver={(e) => {
+        e.preventDefault();
+        // Files and library components are copied in, not moved
+        e.dataTransfer.dropEffect = 'copy';
+      }}
       onDrop={onDrop}
       onContextMenu={openMenu}
     >

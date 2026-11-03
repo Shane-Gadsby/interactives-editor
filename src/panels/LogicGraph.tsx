@@ -358,7 +358,10 @@ export function LogicGraph() {
                 className="palette-item"
                 title={d.description}
                 draggable
-                onDragStart={(e) => e.dataTransfer.setData('application/x-ix-logic', d.kind)}
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = 'copy';
+                  e.dataTransfer.setData('application/x-ix-logic', d.kind);
+                }}
                 onClick={() => add(d.kind)}
               >
                 {d.label}
@@ -370,7 +373,10 @@ export function LogicGraph() {
       <div
         ref={canvasRef}
         className="logic-canvas"
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }}
         onDrop={(e) => {
           const kind = e.dataTransfer.getData('application/x-ix-logic');
           if (kind && rf.current) add(kind, rf.current.screenToFlowPosition({ x: e.clientX, y: e.clientY }));

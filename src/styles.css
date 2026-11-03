@@ -1276,7 +1276,8 @@ body.col-resizing * {
 .ab-label {
   fill: var(--muted);
   font-size: 11px;
-  cursor: default;
+  /* Pressing the name selects the artboard, and dragging it moves the artboard */
+  cursor: move;
 }
 .ab-label.active {
   fill: var(--text);
@@ -1903,6 +1904,8 @@ button.twisty:hover {
   height: 24px;
   position: relative;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  /* Pressing on the empty lane scrubs the playhead sideways, like the ruler */
+  cursor: col-resize;
 }
 .segment {
   position: absolute;
@@ -1960,6 +1963,10 @@ button.twisty:hover {
   background: var(--warn);
   border: 1px solid #000;
   cursor: grab;
+}
+.key:active,
+.marker:active {
+  cursor: grabbing;
 }
 .key.selected {
   background: #fff;
@@ -2115,6 +2122,16 @@ button.twisty:hover {
   /* The scale property, not transform: transform is how the handle is placed on its edge, and replacing it made the port
      grow from its top left corner. scale composes with it and grows from the centre */
   transition: scale 0.1s;
+}
+/* Dragging out of a port draws a connection (crosshair); while one is being drawn, only a port that can take it says so */
+.ix-graph-node .react-flow__handle {
+  cursor: crosshair;
+}
+.ix-graph-node .react-flow__handle.connectingto {
+  cursor: not-allowed;
+}
+.ix-graph-node .react-flow__handle.connectingto.valid {
+  cursor: crosshair;
 }
 /* An invisible ring makes the connector easy to grab without making the dot big. Outputs are stacked 18px apart, so it is
    as tall as the dot plus a few pixels (neighbouring rings then meet instead of one covering the next port) */
