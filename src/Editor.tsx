@@ -589,7 +589,7 @@ function Toolbar() {
         icon={<Icons.image />}
         title="Image"
         onClick={async () => {
-          const files = await pickFiles('image/*,.psd');
+          const files = await pickFiles('image/*,.psd,.ai,.pdf');
           const ab = store().artboard();
           if (files.length && ab) await insertFiles(files, ab.id, { x: ab.width / 2, y: ab.height / 2 });
         }}

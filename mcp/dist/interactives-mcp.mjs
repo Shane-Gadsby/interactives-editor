@@ -783,7 +783,7 @@ const TOPICS = [
     body: `The projects page lists the projects you own, newest first.
 
 - **New project** makes an empty project with one artboard.
-- **Import** opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, a Lottie file, a Rive \`.riv\` file or a Photoshop \`.psd\` file. Lottie, Rive and Photoshop files become a new project.
+- **Import** opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, a Lottie file, a Rive \`.riv\` file, a Photoshop \`.psd\` file, an Illustrator \`.ai\` file or a PDF. Lottie, Rive, Photoshop, Illustrator and PDF files become a new project.
 - Each card can be opened, **duplicated**, **downloaded** as a package or **deleted**. Deleting can't be undone, so download a package first if you might want it back.
 - Use the **Help** link at the top for these pages, or press <kbd>F1</kbd> anywhere.
 
@@ -1527,11 +1527,11 @@ Clicks on a copy fire **On pointer** for the template layer with \`event.index\`
   // ---------------------------------------------------------------- import/export
   {
     id: "import",
-    title: "Importing Lottie, Rive, Photoshop and SVG",
+    title: "Importing Lottie, Rive, Photoshop, Illustrator, PDF and SVG",
     group: "Import and export",
-    summary: "Bring in Lottie JSON / dotLottie, Rive .riv files, Photoshop .psd files, SVG and project packages.",
-    keywords: "import lottie dotlottie rive riv svg after effects bodymovin convert photoshop psd layers",
-    body: `Lottie, Rive and Photoshop files: use **Import** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\` file dropped on the canvas also becomes a new artboard.
+    summary: "Bring in Lottie JSON / dotLottie, Rive .riv files, Photoshop .psd files, Illustrator .ai files, PDFs, SVG and project packages.",
+    keywords: "import lottie dotlottie rive riv svg after effects bodymovin convert photoshop psd layers illustrator ai pdf artboards vector",
+    body: `Lottie, Rive, Photoshop, Illustrator and PDF files: use **Import** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\` or \`.pdf\` file dropped on the canvas also becomes new artboards.
 
 ## Lottie (.json, .lottie)
 Shape layers, groups, fills, strokes, gradients, transforms, trim paths, masks and keyframes with easing become layers and a timeline. Expressions, effects and text animators are not carried over.
@@ -1551,6 +1551,24 @@ The document becomes an artboard of the same size. Every pixel layer becomes an 
 **Masks.** A layer's pixel mask is baked into the layer's transparency. A folder's pixel mask becomes a mask picture placed over the folder, inside a wrapper group. A vector mask becomes a path layer used as a mask, in a group with the layer (edit the path to reshape the cut-out); the outline of a shape layer is not a mask and is left alone.
 
 Not carried over, and listed in the report: layer styles and effects (shadows, strokes, glows), adjustment layers, smart-object filters, other blend modes (they import as normal), and layer comps. Each layer is stored at its full size, so a large document with many layers makes a big project.
+
+## Illustrator (.ai) and PDF
+Illustrator saves a PDF inside its files when **Create PDF Compatible File** is ticked in the save options (it is by default). The importer reads that PDF, so a \`.ai\` file saved without it can't be imported: you'll see "Save the file with 'Create PDF Compatible File' ticked", and re-saving from Illustrator fixes it. Ordinary \`.pdf\` files import the same way.
+
+Every page becomes an artboard of the page's size (the trim box when the file has one), laid out side by side. A file with one artboard gives an artboard named after the file; with several, each is named *file / Artboard 2* and so on.
+
+What you get is editable vector art:
+
+- **Paths** become path layers, with fills, strokes (width, caps, joins, dashes) and even-odd fills. The positions and any scaling or rotation are applied to the points, so every shape sits where it was.
+- **Colours** in grayscale, RGB, CMYK, spot (separation) and indexed spaces; CMYK is converted with an approximation, so print colours can look a little different on screen.
+- **Gradients**: linear and radial gradients (axial and radial shadings) become linear and radial fills. A radial gradient is centred on its shape.
+- **Clipping** becomes a [mask](groups-frames#masks): a group holding a path used as a mask in front of the layers it clips. Clips that cover everything inside them are dropped.
+- **Opacity** (fill and stroke) and these blend modes: multiply, screen, overlay, darken, lighten, color dodge, color burn, difference and exclusion.
+- **Text** becomes text layers with the font name, size and colour. Pieces on one baseline join into one layer, and following lines in the same style become one multi-line layer. Fonts are matched by name, so install or [choose](text) the real font if it isn't available. Text that has no Unicode mapping in the file may show wrong characters.
+- **Pictures** become image layers (PNG assets, or the original JPEG), with soft masks as transparency and stencil masks in the fill colour.
+- **Layers**: Illustrator's layers become groups with the layer's name, and hidden layers stay hidden.
+
+Not carried over, and listed in the report: pattern fills, gradient meshes, opacity masks, blend modes outside the list, live effects (the PDF holds what they produced, as paths or pictures), overprint, Type 3 fonts, JPEG 2000 and fax pictures, and encrypted files. Artboard names can't be read from the file, so they are numbered.
 
 ## SVG
 Drop an SVG file on the canvas, paste it, or pick it with the **Image** tool. It becomes a group of editable vector layers: shapes and paths (with their transforms applied), groups, solid and gradient fills, strokes and dashes, and simple text. Masks, filters, patterns and embedded images are listed as not carried over.

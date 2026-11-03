@@ -17,15 +17,21 @@ export interface AnimationImport {
   source: string;
 }
 
-export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.psd';
+export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.psd,.ai,.pdf';
 
-/** Read a Lottie (.json/.lottie), Rive (.riv) or Photoshop (.psd) file into an artboard. */
+/** Read a Lottie (.json/.lottie), Rive (.riv), Photoshop (.psd), Illustrator (.ai) or PDF file into artboards. */
 export async function readAnimationFile(file: File): Promise<AnimationImport> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const base = file.name.replace(/\.[^.]+$/, '');
   if (/\.psd$/i.test(file.name) || (bytes[0] === 0x38 && bytes[1] === 0x42 && bytes[2] === 0x50 && bytes[3] === 0x53)) {
     const { importPsd } = await import('./psd-import');
     return { ...importPsd(bytes, base), source: 'Photoshop' };
+  }
+  // Illustrator files are PDFs with private data; a .ai without the PDF part gets a clear error from the importer
+  const isAi = /\.ai$/i.test(file.name);
+  if (isAi || /\.pdf$/i.test(file.name) || (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46)) {
+    const { importAi } = await import('./ai-import');
+    return { ...importAi(bytes, base), source: isAi ? 'Illustrator' : 'PDF' };
   }
   if (/\.riv$/i.test(file.name) || (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x56 && bytes[3] === 0x45)) {
     const { importRive } = await import('./rive-import');

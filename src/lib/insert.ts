@@ -11,8 +11,8 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
   const nodes: SceneNode[] = [];
   let offset = 0;
   for (const file of files) {
-    // Photoshop files become a new artboard of layers (the picture and its position don't matter)
-    if (/\.psd$/i.test(file.name)) {
+    // Photoshop, Illustrator and PDF files become new artboards of layers (the picture and its position don't matter)
+    if (/\.(psd|ai|pdf)$/i.test(file.name)) {
       try {
         const { addImportedArtboard, readAnimationFile } = await import('./importers');
         await addImportedArtboard(await readAnimationFile(file));
