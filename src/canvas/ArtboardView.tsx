@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextExtent, prepareNodes, sampleArtboard, walk, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, sampleArtboard, walk, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
 import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
@@ -166,9 +166,9 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
         // The span is a stretched flex item, so its own width is the box's. The text's real extent comes from a
         // Range, scaled back out of the canvas zoom.
         // Without text modifiers' offsets: the layout is measured, not how the units are moved
-        const rr = measureTextExtent(span);
+        // (a hugging text with a width limit is measured at the limit)
+        const { box: rr, height: h } = measureTextBox(span, n.autoSize === 'width' ? n.maxWidth : undefined);
         const scale = ((r.root.getBoundingClientRect().width / (artboard.width || 1)) || 1) * (Math.abs(n.scaleX) || 1);
-        const h = Math.ceil(span.offsetHeight);
         const before = updates.length;
         if (n.autoSize === 'height') {
           if (h > 0 && Math.abs(h - n.height) > 1) updates.push({ id: n.id, height: h });

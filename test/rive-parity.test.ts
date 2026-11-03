@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
 import { relayoutTree, walk } from 'interactives-player';
-import { importRive, readRiveObjects } from '../src/lib/rive-import';
+import { importRive } from '../src/lib/rive-import';
 import { propKey, writeRiv, type Spec } from './rive-writer';
 import { scenes as layoutScenes } from './rive-layout-scenes';
 
@@ -288,24 +287,24 @@ const near = (b: Box, x: number, y: number, w: number, h: number, tol = 1) => {
   expect(Math.abs(b.height - h), `height ${b.height} vs ${h}`).toBeLessThanOrEqual(tol);
 };
 
-describe('Rive layout styles', () => {
-  const sceneOf = (name: string) => layoutScenes().find((d) => d.name === name)!;
-  /** Import one scene, lay it out as the editor and player do, and find boxes by name. */
-  const laid = async (name: string, mutate?: (specs: Spec[]) => void) => {
-    const specs = sceneOf(name).specs.slice();
-    mutate?.(specs);
-    const res = await importRive(writeRiv([['Backboard', {}], ...specs]), name);
-    const ab = res.artboards[0];
-    relayoutTree(ab.children);
-    const by = (n: string): Box & { layoutItem?: unknown; layout?: unknown } => {
-      let found: unknown;
-      walk(ab.children, (x) => x.name === n && (found = x));
-      if (!found) throw new Error(`no layer "${n}"`);
-      return found as Box;
-    };
-    return { res, by };
+const sceneOf = (name: string) => layoutScenes().find((d) => d.name === name)!;
+/** Import one scene, lay it out as the editor and player do, and find boxes by name. */
+const laid = async (name: string, mutate?: (specs: Spec[]) => void) => {
+  const specs = sceneOf(name).specs.slice();
+  mutate?.(specs);
+  const res = await importRive(writeRiv([['Backboard', {}], ...specs]), name);
+  const ab = res.artboards[0];
+  relayoutTree(ab.children);
+  const by = (n: string): Box & { layoutItem?: unknown; layout?: unknown } => {
+    let found: unknown;
+    walk(ab.children, (x) => x.name === n && (found = x));
+    if (!found) throw new Error(`no layer "${n}"`);
+    return found as Box;
   };
+  return { res, by };
+};
 
+describe('Rive layout styles', () => {
   it('puts padding and a gap in px where Rive does', async () => {
     const { by } = await laid('pad');
     near(by('b0'), 20, 20, 60, 60);
@@ -396,6 +395,126 @@ describe('Rive layout styles', () => {
   });
 });
 
+describe('Rive grid and stack layouts', () => {
+  it('sizes tracks in px, percent, fr and auto, with gaps, in the order the layers come', async () => {
+    // Columns 25%, 80 px, 1fr, 2fr and rows 60 px, 1fr in a 400 x 200 box with 10 px padding and gaps
+    const { by, res } = await laid('grid_basic');
+    near(by('g0'), 10, 10, 94.7, 60);
+    near(by('g1'), 115.3, 10, 79.4, 60);
+    near(by('g2'), 205.3, 10, 58, 60);
+    near(by('g3'), 273.3, 10, 116.7, 60);
+    near(by('g4'), 10, 80, 94.7, 110);
+    near(by('g5'), 115.3, 80, 79.4, 110);
+    expect(res.warnings).toEqual([]);
+  });
+
+  it('sizes auto tracks to what is in them, and lets a fr track have the rest', async () => {
+    const { by } = await laid('grid_auto');
+    near(by('g0'), 10, 10, 30, 30);
+    near(by('g1'), 50, 10, 60, 20);
+    near(by('g2'), 120, 10, 40, 50);
+    near(by('g3'), 10, 80, 20, 20);
+    // A layer that fills its cell stretches to the column the others make
+    near(by('g4'), 50, 80, 60, 30);
+    near(by('g5'), 120, 80, 50, 30);
+  });
+
+  it('places layers where their placement says, spans cells, and puts the rest in the next free cell', async () => {
+    const { by } = await laid('grid_place');
+    near(by('g0'), 100, 10, 80, 50); // column 2, row 1
+    near(by('g2'), 10, 70, 80, 50); // column 1, row 2
+    near(by('g3'), 190, 10, 80, 50); // column -1: the last one
+    near(by('g1'), 100, 70, 170, 50); // two columns wide, in the first free spot that fits
+  });
+
+  it('centres the tracks and the layers in their rows for the centre alignments, spreads columns for the spread ones, and leaves the end ones at the start', async () => {
+    const c = (await laid('grid_center')).by;
+    near(c('g0'), 90, 45.3, 30, 30);
+    near(c('g1'), 210, 50, 60, 20);
+    near(c('g2'), 90, 125.3, 30, 30);
+    const s = (await laid('grid_spread')).by;
+    near(s('g0'), 0, 55.3, 30, 30);
+    near(s('g1'), 300, 60, 60, 20);
+    // End does nothing in the Rive runtime's grid
+    const e = (await laid('grid_end')).by;
+    near(e('g0'), 0, 0, 30, 30);
+    near(e('g1'), 100, 0, 60, 20);
+    const t = (await laid('grid_topcenter')).by;
+    near(t('g0'), 100, 0, 30, 30);
+    near(t('g1'), 200, 0, 60, 20);
+  });
+
+  it('puts a layer in its cell by the justify-items setting, and fills the cell when it fills', async () => {
+    const c = (await laid('grid_just')).by;
+    near(c('g0'), 60, 0, 30, 30);
+    near(c('g1'), 150, 0, 150, 30);
+    const e = (await laid('grid_justend')).by;
+    near(e('g0'), 120, 0, 30, 30);
+  });
+
+  it('stacks every layer in one cell, placed by the alignment', async () => {
+    const c = (await laid('stack_center')).by;
+    near(c('g0'), 185, 85, 30, 30);
+    near(c('g1'), 170, 90, 60, 20);
+    const e = (await laid('stack_end')).by;
+    near(e('g0'), 370, 170, 30, 30);
+    near(e('g1'), 340, 180, 60, 20);
+    near((await laid('stack_top')).by('g0'), 0, 0, 30, 30);
+  });
+
+  it('uses a track\'s minimum size when it has its own maximum, and says so', async () => {
+    const { res } = await laid('grid_basic', (specs) => {
+      const t = specs.find((sp) => sp[0] === 'GridTrack')!;
+      t[1].trackMaxType = 3;
+      t[1].trackMaxValue = 1;
+    });
+    expect(res.warnings).toEqual([expect.stringContaining('maximum size')]);
+  });
+});
+
+describe('Rive flex basis, weights and aspect ratio', () => {
+  it('starts a fill layer from its flex basis (px, or a share of the row) and shares the rest; fixed layers ignore it', async () => {
+    const { by } = await laid('basis');
+    near(by('f0'), 10, 10, 60, 40); // fixed: the basis is not used
+    near(by('f1'), 80, 10, 60, 40);
+    near(by('f2'), 150, 10, 140, 40); // 50 px basis + its half of the free space
+    near(by('f3'), 300, 10, 90, 40);
+    const col = (await laid('basiscol')).by;
+    near(col('f0'), 10, 10, 60, 20);
+    near(col('f1'), 10, 40, 60, 20);
+    near(col('f2'), 10, 70, 60, 120);
+  });
+
+  it('shares the free space by the fill layers\' weights', async () => {
+    const { by } = await laid('fraction');
+    near(by('r0'), 10, 10, 90, 40);
+    near(by('r1'), 110, 10, 180, 40);
+    near(by('r2'), 300, 10, 90, 40);
+  });
+
+  it('starts fill layers from their content when the basis is auto, so a layer with more inside gets more', async () => {
+    const { by } = await laid('basisauto');
+    near(by('r0'), 10, 10, 173.3, 60);
+    near(by('r1'), 193.3, 10, 113.4, 60);
+    near(by('r2'), 316.7, 10, 73.3, 60);
+  });
+
+  it('derives a hugging size from the other one by the aspect ratio', async () => {
+    // Width 120, height hugging, ratio 3: 40 tall
+    const a0 = (await laid('ar0')).by;
+    near(a0('a0'), 10, 10, 120, 40);
+    near(a0('a1'), 140, 10, 50, 50);
+    // A fill width in a row (330 of 390 after the 50 px box and the gap), ratio 1.5
+    near((await laid('ar2')).by('a0'), 10, 10, 330, 220);
+    // Height fixed at 60, width hugging, ratio 0.5: 30 wide
+    near((await laid('ar3')).by('a0'), 10, 10, 30, 60);
+    // The height-only mode never gives the width
+    const a1 = (await laid('ar1')).by;
+    near(a1('a0'), 10, 10, 0, 60);
+    near(a1('a1'), 20, 10, 50, 50);
+  });
+});
+
 describe('Rive dashes on layouts and shapes', () => {
   const dashesOf = async (name: string, find: string) => {
     const specs = layoutScenes().find((d) => d.name === name)!.specs;
@@ -431,36 +550,110 @@ describe('Rive dashes on layouts and shapes', () => {
 });
 
 describe('Rive text in layouts', () => {
-  // A text sits in a hugging layout, which sits in the column: wider than the column, it wraps at the column's width
-  const fontBytes = (): Uint8Array | null => {
-    try {
-      const objs = readRiveObjects(new Uint8Array(readFileSync('../research/rive/breathing_for_calm_TEST1.riv')));
-      const at = objs.findIndex((o) => o.type === 'FontAsset');
-      const contents = objs.slice(at).find((o) => o.type === 'FileAssetContents');
-      return (contents?.props.bytes as Uint8Array | undefined) ?? null;
-    } catch {
-      return null;
-    }
-  };
-  const textBox = async (wrapper: Record<string, unknown>) => {
-    const font = fontBytes();
-    if (!font) return null;
-    const d = layoutScenes().find((s) => s.name === 't_hug')!;
-    // Rebuild the scene with the wrapper's width setting and the font in the file
-    const specs = d.specs.map((s): Spec => (s[0] === 'LayoutComponentStyle' && s[1].intrinsicallySizedValue ? [s[0], { ...s[1], ...wrapper }] : s));
-    const res = await importRive(writeRiv([['Backboard', {}], ['FontAsset', { name: 'Inter.ttf', assetId: 0 }], ['FileAssetContents', { bytes: font }], ...specs]), 'text');
+  // A text sits in a hugging layout, which sits in the column: it wraps at the column's width and its box shrinks to the widest line
+  const textScene = async (name: string, wrapper?: Record<string, unknown>) => {
+    const specs = sceneOf(name).specs.map((sp): Spec => (wrapper && sp[0] === 'LayoutComponentStyle' && sp[1].intrinsicallySizedValue ? [sp[0], { ...sp[1], ...wrapper }] : sp));
+    const res = await importRive(writeRiv([['Backboard', {}], ...specs]), 'text');
     const ab = res.artboards[0];
     relayoutTree(ab.children);
-    let wrapperNode: unknown;
-    let textNode: unknown;
-    walk(ab.children, (x) => (x.name === 'txt' ? (wrapperNode = x) : x.type === 'text' && (textNode = x)));
-    return { wrapper: wrapperNode as { layoutItem: { width: string } }, text: textNode as { autoSize: string; width: number; layoutItem: { width: string } } };
+    const nodes: Record<string, unknown>[] = [];
+    walk(ab.children, (x) => nodes.push(x as never));
+    const text = nodes.find((x) => x.type === 'text') as { autoSize: string; maxWidth?: number; width: number; layoutItem: { width: string; wrapText?: boolean } };
+    return { text, wrapper: nodes.find((x) => x.name === 'txt') as { layoutItem: { width: string } } };
   };
 
-  it('wraps a hugging text that is wider than its column, and lets a short one hug', async () => {
-    const long = await textBox({});
-    if (!long) return;
-    expect(long.wrapper.layoutItem.width).toBe('fill');
-    expect(long.text.autoSize).toBe('height');
+  it('keeps a hugging text hugging, and lets it wrap at the room its column offers', async () => {
+    // Column inside 20 px of padding: 360 px of room
+    const { text, wrapper } = await textScene('t_hug');
+    expect(wrapper.layoutItem.width).toBe('hug');
+    expect(text.autoSize).toBe('width');
+    expect(text.layoutItem).toMatchObject({ width: 'hug', wrapText: true });
+    expect(text.maxWidth).toBe(360);
+  });
+
+  it('wraps a hugging text in a row at what the layers before it leave, plus the wrapping the reference has', async () => {
+    // Root 400 wide, padding 20: 360 inside. Layers before the text: a 60 px box and a 10 px gap. Rive wraps this at ~345
+    expect((await textScene('tr_p2')).text.maxWidth).toBeCloseTo(345, 0);
+    // Nothing before it: the whole 360
+    expect((await textScene('tr_p1')).text.maxWidth).toBe(360);
+    // Layers after it do not narrow it (tr_p3 has a footer)
+    expect((await textScene('tr_p3')).text.maxWidth).toBeCloseTo(345, 0);
+    expect((await textScene('tr_big')).text.maxWidth).toBeCloseTo(255, 0);
+    expect((await textScene('tr_pad50')).text.maxWidth).toBeCloseTo(285, 0);
+  });
+
+  it('does not limit a text that fills or has a fixed box', async () => {
+    expect((await textScene('tr_fill')).text.maxWidth).toBeUndefined();
+    expect((await textScene('tr_fixed')).text.maxWidth).toBeUndefined();
+  });
+});
+
+describe('Rive cubic value interpolators', () => {
+  const rotation = async (interp: Spec, interpolationType: number) => {
+    const res = await importRive(
+      writeRiv([
+        ['Artboard', { name: 'Main', width: 200, height: 200 }],
+        ['Node', { name: 'N', parentId: 0 }], // 1
+        interp, // 2
+        ['LinearAnimation', { name: 'Spin', fps: 24, duration: 16 }],
+        ['KeyedObject', { objectId: 1 }],
+        ['KeyedProperty', { propertyKey: propKey('Node', 'rotation') }],
+        ['KeyFrameDouble', { frame: 0, value: Math.PI / 2, interpolationType, interpolatorId: 2 }],
+        ['KeyFrameDouble', { frame: 8, value: -0.1745 }],
+      ]),
+      'ci',
+    );
+    return res.artboards[0].timelines.find((t) => t.name === 'Spin')!.tracks[0].keys[0].ease;
+  };
+
+  it('keeps a cubic ease as it is', async () => {
+    expect(await rotation(['CubicEaseInterpolator', { x1: 0.2, y1: 1.3, x2: 0.5, y2: 0.9 }], 2)).toEqual([0.2, 1.3, 0.5, 0.9]);
+  });
+
+  it('turns the handle values of a cubic value curve into a share of the segment, since its y numbers are in the property\'s own units', async () => {
+    // From 1.5708 (90 degrees) to -0.1745: a handle at 1.2975 is 16% of the way, and one at the end value is the whole way
+    const ease = (await rotation(['CubicValueInterpolator', { x1: 0.04, y1: 1.2975, y2: -0.1745 }], 3)) as number[];
+    expect(ease).toEqual([0.04, 0.157, 0.58, 1]);
+  });
+});
+
+describe('Rive dash animation', () => {
+  /** The scene with a DashPath offset animated 0 to 1 (a share of the outline when `percent`) */
+  const marching = async (scene: string, percent: boolean, target: 'offset' | 'length' = 'offset') => {
+    const specs = sceneOf(scene).specs.slice();
+    const dp = specs.findIndex((sp) => sp[0] === 'DashPath');
+    if (percent) specs[dp][1].offsetIsPercentage = true;
+    const owner = target === 'offset' ? dp : specs.findIndex((sp) => sp[0] === 'Dash');
+    specs.push(
+      ['LinearAnimation', { name: 'March', fps: 60, duration: 60 }],
+      ['KeyedObject', { objectId: owner }],
+      ['KeyedProperty', { propertyKey: propKey(target === 'offset' ? 'DashPath' : 'Dash', target) }],
+      ['KeyFrameDouble', { frame: 0, value: 0, interpolationType: 1 }],
+      ['KeyFrameDouble', { frame: 60, value: 1, interpolationType: 1 }],
+    );
+    const res = await importRive(writeRiv([['Backboard', {}], ...specs]), scene);
+    return { res, tracks: res.artboards[0].timelines.find((t) => t.name === 'March')!.tracks };
+  };
+
+  it('keys the dash offset of a layout\'s border, in px', async () => {
+    const { tracks, res } = await marching('dash', false);
+    expect(tracks.map((t) => [t.prop, t.keys.map((k) => k.value)])).toEqual([['stroke.dashOffset', [0, 1]]]);
+    expect(res.warnings).toEqual([]);
+  });
+
+  it('keys an offset given as a share of the outline as px of it (a 200 x 120 box is 640 round)', async () => {
+    const { tracks, res } = await marching('dashpct', true);
+    expect(tracks.map((t) => [t.prop, t.keys.map((k) => k.value)])).toEqual([['stroke.dashOffset', [0, 640]]]);
+    expect(res.warnings).toEqual([]);
+    // The same on a plain shape: the 160 x 100 ellipse is about 414 round
+    const shape = await marching('dashshape', true);
+    const key = shape.tracks.find((t) => t.prop === 'stroke.dashOffset')!.keys[1].value as number;
+    expect(key).toBeGreaterThan(413);
+    expect(key).toBeLessThan(415);
+  });
+
+  it('says what is not imported when dash lengths are animated, and not that dashes are unsupported', async () => {
+    const { res } = await marching('dash', false, 'length');
+    expect(res.warnings).toEqual(['Animated dash lengths are not imported; the dashes keep their starting lengths']);
   });
 });

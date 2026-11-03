@@ -1,4 +1,4 @@
-import { pathPointProp, pathPointPropName, polygonPoints, sampleKeys, setPath, starPoints, type PathPoint, type PathPointProp, type SceneNode, type SubPath, type Timeline } from 'interactives-player';
+import { cornerRadiiOf, pathPointProp, pathPointPropName, polygonPoints, roundedBoxPoints, sampleKeys, setPath, starPoints, type PathPoint, type PathPointProp, type SceneNode, type SubPath, type Timeline } from 'interactives-player';
 
 /**
  * Geometry for editing path points: bending a segment, splitting it to add a point, finding the segment under a
@@ -177,6 +177,9 @@ export function shapeToPaths(n: SceneNode): SubPath[] | null {
   const h = n.height;
   switch (n.type) {
     case 'rect': {
+      // Radii per corner (when they are set, they are the shape's corners and the single radius is not drawn)
+      const radii = cornerRadiiOf(n);
+      if (radii) return [{ closed: true, points: roundedBoxPoints(w, h, radii).map(roundPoint) }];
       const r = Math.max(0, Math.min(n.cornerRadius, w / 2, h / 2));
       if (!r)
         return [

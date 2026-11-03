@@ -43,6 +43,8 @@ import {
   type FontRef,
   type InstanceNode,
   type AutoLayout,
+  type GridLayout,
+  type GridTrack,
   type LayoutItem,
   type Keyframe,
   type LogicEdge,
@@ -280,6 +282,12 @@ function readObjects(bytes: Uint8Array): { objects: RObj[]; version: string } {
         case 'b':
           v = r.varuint() !== 0;
           break;
+        case 'i': {
+          // Signed ints are zigzag varints (0, -1, 1, -2, ...)
+          const z = r.varuint();
+          v = z % 2 ? -(z + 1) / 2 : z / 2;
+          break;
+        }
         default:
           v = r.varuint();
       }
@@ -848,6 +856,11 @@ function dashOf(ac: ArtboardCtx, fc: FileCtx, strokeSlot: number, length?: numbe
   return { dash: list.length % 2 ? [...list, ...list] : list, ...(offset ? { dashOffset: r2(offset) } : {}) };
 }
 
+/** How a keyed dash offset becomes a px offset: as it is, or scaled by the outline's length when the offset is a share of it. */
+function dashOffsetKey(ac: ArtboardCtx, dashSlot: number, outline: number): (v: unknown) => number {
+  return get<boolean>(ac.rab.slots[dashSlot], 'offsetIsPercentage') ? (v) => r2(Number(v) * outline) : num();
+}
+
 /** Length of a rounded box's outline (radii: top-left, top-right, bottom-right, bottom-left), or an ellipse's with `ellipse`. */
 function boxPerimeter(w: number, h: number, radii: number[], ellipse = false): number {
   if (ellipse) {
@@ -903,7 +916,7 @@ function vertexSamples(ac: ArtboardCtx, slot: number, anim: RAnim): { frame: num
   for (const kp of ko.props) {
     const name = propNameByKey.get(Number(kp.obj.props.propertyKey))?.name;
     if (!name) continue;
-    const keys = kp.keys.map((k) => ({ id: '', t: Number(k.props.frame ?? 0), value: Number(k.props.value ?? defaultOf(k.type, 'value') ?? 0), ease: easeOf(ac, k) }));
+    const keys = kp.keys.map((k, i) => ({ id: '', t: Number(k.props.frame ?? 0), value: Number(k.props.value ?? defaultOf(k.type, 'value') ?? 0), ease: easeOf(ac, k, kp.keys[i + 1]) }));
     byProp.set(name, keys.sort((a, b) => a.t - b.t));
     for (const k of keys) frames.add(k.t);
   }
@@ -1140,7 +1153,8 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     if (x.info.colorSlot !== null) addTarget(ac, x.info.colorSlot, { nodeId: node.id, map: { colorValue: { prop: `${prefix}.paint.color`, f: (v) => argb(Number(v)) } } });
     addTarget(ac, x.st.i, { nodeId: node.id, map: { thickness: { prop: `${prefix}.width`, f: num() } } });
     const dashSlot = (ac.children.get(x.st.i) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath');
-    if (dashSlot !== undefined && !get<boolean>(ac.rab.slots[dashSlot], 'offsetIsPercentage')) addTarget(ac, dashSlot, { nodeId: node.id, map: { offset: { prop: `${prefix}.dashOffset`, f: num() } } });
+    // A dash offset given as a share of the outline is keyed in px of it (the outline is measured once, at import)
+    if (dashSlot !== undefined) addTarget(ac, dashSlot, { nodeId: node.id, map: { offset: { prop: `${prefix}.dashOffset`, f: dashOffsetKey(ac, dashSlot, outline) } } });
     if (x.trim !== undefined) addTarget(ac, x.trim, { nodeId: node.id, map: { start: { prop: `${prefix}.trimStart`, f: pct }, end: { prop: `${prefix}.trimEnd`, f: pct }, offset: { prop: `${prefix}.trimOffset`, f: pct } } });
     const fe = featherSlot(x.st.i);
     if (fe !== undefined) addTarget(ac, fe, { nodeId: node.id, map: featherMap(prefix) });
@@ -1505,6 +1519,9 @@ interface LayoutBox {
   innerH: number;
   /** The width percent values of this layout's own style resolve against. */
   ownerW: number;
+  /** Its children flow along a row, or sit in a grid or stack (which size them per axis, with no flex basis). */
+  row: boolean;
+  grid: boolean;
 }
 
 const styleOfSlot = (ac: ArtboardCtx, slot: number): RObj | undefined => {
@@ -1542,16 +1559,18 @@ function layoutBox(ac: ArtboardCtx, slot: number): LayoutBox {
   const ownerW = po ? po.innerW : w;
   const pad = { top: 0, right: 0, bottom: 0, left: 0 };
   for (const [side, k] of [['top', 'Top'], ['right', 'Right'], ['bottom', 'Bottom'], ['left', 'Left']] as const) pad[side] = unitPx(style, `padding${k}`, ownerW) + unitPx(style, `border${k}`, ownerW);
-  return { w, h, pad, innerW: Math.max(0, w - pad.left - pad.right), innerH: Math.max(0, h - pad.top - pad.bottom), ownerW };
+  const dir = style ? get(style, 'flexDirectionValue') : 2;
+  return { w, h, pad, innerW: Math.max(0, w - pad.left - pad.right), innerH: Math.max(0, h - pad.top - pad.bottom), ownerW, row: dir === 2 || dir === 3, grid: !!style && get(style, 'layoutTypeValue') > 0 };
 }
 
-/** A Rive layout style as our auto layout. */
-function autoLayoutOf(fc: FileCtx, style: RObj | undefined, box?: LayoutBox): AutoLayout {
+/** A Rive layout style as our auto layout. `tracks` are the GridTrack children of a grid layout. */
+function autoLayoutOf(fc: FileCtx, style: RObj | undefined, box?: LayoutBox, tracks: RObj[] = []): AutoLayout {
   const dirValue = style ? get(style, 'flexDirectionValue') : 2;
   const row = dirValue === 2 || dirValue === 3;
   // column-reverse (1) and row-reverse (3) list the children from the other end
   const reversed = dirValue === 1 || dirValue === 3;
-  if (reversed && style && get(style, 'layoutAlignmentType') < 9) fc.warnings.add('Reversed layout directions reverse the order of the children; their start and end alignment stays on the same sides');
+  const kind = style ? get(style, 'layoutTypeValue') : 0;
+  if (reversed && kind === 0 && style && get(style, 'layoutAlignmentType') < 9) fc.warnings.add('Reversed layout directions reverse the order of the children; their start and end alignment stays on the same sides');
   const t = style ? get(style, 'layoutAlignmentType') : 0;
   let justify: AutoLayout['justify'];
   let align: AutoLayout['align'];
@@ -1571,7 +1590,7 @@ function autoLayoutOf(fc: FileCtx, style: RObj | undefined, box?: LayoutBox): Au
   // Rive lays out with Yoga, which ignores negative gaps (negative margins still apply)
   const gapH = Math.max(0, unitPx(style, 'gapHorizontal', ownerW));
   const gapV = Math.max(0, unitPx(style, 'gapVertical', ownerW));
-  const wrap = style ? get(style, 'flexWrapValue') === 1 : false;
+  const wrap = style ? get(style, 'flexWrapValue') === 1 && kind === 0 : false;
   const layout: AutoLayout = {
     direction: row ? 'row' : 'column',
     gap: r2(row ? gapH : gapV),
@@ -1586,11 +1605,57 @@ function autoLayoutOf(fc: FileCtx, style: RObj | undefined, box?: LayoutBox): Au
   };
   // The gap between wrapped lines is the other axis's
   if (wrap && gapH !== gapV) layout.crossGap = r2(row ? gapV : gapH);
+  if (kind === 1 || kind === 2) {
+    // Grid (1) and stack (2): the columns' gap is the horizontal one, the rows' the vertical one
+    layout.direction = 'row';
+    layout.gap = r2(gapH);
+    layout.wrap = false;
+    layout.reverse = true;
+    if (gapH !== gapV) layout.crossGap = r2(gapV);
+    else delete layout.crossGap;
+    layout.grid = gridOf(fc, style!, tracks, kind === 2, t);
+  }
   return layout;
 }
 
+const TRACK_TYPES = ['auto', 'px', 'percent', 'fr'] as const;
+
+/**
+ * A grid or stack layout's tracks and how it places what is in them. The alignment's 9 positions (and the 3 spread ones)
+ * name where the stack puts its layers. A grid honours them only as far as the Rive runtime does: it centres the tracks
+ * (and the layers in their rows) for "centre", spreads the columns for the spread ones, and leaves "end" at the start.
+ */
+function gridOf(fc: FileCtx, style: RObj, tracks: RObj[], stack: boolean, align: number): GridLayout {
+  const track = (o: RObj): GridTrack => {
+    if (get(o, 'trackMaxType') && (get(o, 'trackMaxType') !== get(o, 'trackType') || get(o, 'trackMaxValue') !== get(o, 'trackValue'))) fc.warnings.add('Grid tracks with a separate maximum size use their minimum size');
+    const type = TRACK_TYPES[get(o, 'trackType')] ?? 'auto';
+    return type === 'auto' ? { type } : { type, value: r2(get(o, 'trackValue')) };
+  };
+  const of = (collection: number) => tracks.filter((o) => get(o, 'collection') === collection).map(track);
+  const grid: GridLayout = { columns: of(0), rows: of(1) };
+  const spread = align >= 9;
+  const h = spread ? 'space-between' : ALIGN3[align % 3];
+  const v = spread ? ALIGN3[align - 9] : ALIGN3[Math.floor(align / 3)];
+  if (stack) {
+    grid.stack = true;
+    if (h !== 'start' && h !== 'space-between') grid.justifyItems = h;
+    if (v !== 'start') grid.alignItems = v;
+    return grid;
+  }
+  if (h === 'center' || h === 'space-between') grid.justifyContent = h;
+  if (v === 'center') {
+    grid.alignContent = 'center';
+    grid.alignItems = 'center';
+  }
+  // The style's own justify-items (how a layer sits in its cell across the columns): 1 is the centre, 9 the end
+  const ji = get(style, 'justifyItemsValue');
+  if (ji === 1) grid.justifyItems = 'center';
+  else if (ji === 9) grid.justifyItems = 'end';
+  return grid;
+}
+
 /** How a Rive layout node sits in its parent layout. `parent` is the box it sits in (for percent margins and insets). */
-function layoutItemOf(style: RObj | undefined, size: { width: number; height: number }, scale?: { w: number; h: number; wu: number; hu: number }, parent?: LayoutBox): LayoutItem {
+function layoutItemOf(style: RObj | undefined, size: { width: number; height: number }, scale?: { w: number; h: number; wu: number; hu: number }, parent?: LayoutBox, own?: { o: RObj; placement?: RObj }): LayoutItem {
   const it: LayoutItem = {};
   const sw = scale ? scale.w : style ? get(style, 'layoutWidthScaleType') : 0;
   const sh = scale ? scale.h : style ? get(style, 'layoutHeightScaleType') : 0;
@@ -1622,19 +1687,34 @@ function layoutItemOf(style: RObj | undefined, size: { width: number; height: nu
       }
       it.inset = inset;
     }
+    if (own && parent && it.position !== 'absolute') {
+      if (parent.grid) {
+        const pl = own.placement;
+        if (pl) {
+          for (const [key, k] of [['gridColumn', 'gridColumn'], ['gridRow', 'gridRow']] as const) if (get(pl, k)) it[key] = get(pl, k);
+          for (const [key, k] of [['gridColumnSpan', 'gridColumnSpan'], ['gridRowSpan', 'gridRowSpan']] as const) if (get(pl, k) > 1) it[key] = get(pl, k);
+        }
+      } else if ((parent.row ? it.width : it.height) === 'fill') {
+        // A fill layer's weight, and what it starts from before the free space is shared (the flex basis; auto is its content)
+        const weight = get(own.o, parent.row ? 'fractionalWidth' : 'fractionalHeight');
+        if (weight !== 1) it.grow = Math.round(weight * 1000) / 1000;
+        const units = get(style, 'flexBasisUnitsValue');
+        if (units === 1) it.basis = r2(get(style, 'flexBasis'));
+        else if (units === 2) it.basisPercent = r2(get(style, 'flexBasis'));
+        else it.basis = 'content';
+      }
+    }
+    // Aspect ratio (width over height): a hugging size follows the other one. With the height-only mode the width never does.
+    const ratio = get(style, 'aspectRatio');
+    if (ratio > 0 && (it.width === 'hug') !== (it.height === 'hug')) {
+      const heightOnly = get(style, 'aspectRatioAxisValue') === 1;
+      if (!(heightOnly && it.width === 'hug')) {
+        it.aspectRatio = Math.round(ratio * 10000) / 10000;
+        if (heightOnly) it.aspectDerive = 'height';
+      }
+    }
   }
   return it;
-}
-
-/** Whether a hugging layout (a slot) in a column layout is wider than the column's inner width, so its content wraps. */
-function wrapsInColumn(ac: ArtboardCtx, slot: number, width: number): boolean {
-  const parent = layoutParent(ac, slot);
-  if (parent === undefined) return false;
-  const style = styleOfSlot(ac, parent);
-  const dir = style ? get(style, 'flexDirectionValue') : 2;
-  if (dir === 2 || dir === 3) return false;
-  const box = layoutBox(ac, parent);
-  return box.innerW > 0 && width > box.innerW + 0.5;
 }
 
 /** Rive layout participants: everything else inside a layout keeps its own position. */
@@ -1696,6 +1776,7 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     const w = get(o, 'width');
     const h = get(o, 'height');
     const bg = (ac.children.get(slot) ?? []).map((i) => ({ i, o: ac.rab.slots[i] }));
+    const kids = (of: number, type: string) => (ac.children.get(of) ?? []).map((i) => ac.rab.slots[i]).filter((k) => k.type === type);
     const fillK = bg.find((k) => k.o.type === 'Fill' && get<boolean>(k.o, 'isVisible') !== false);
     const strokeK = bg.find((k) => k.o.type === 'Stroke' && get<boolean>(k.o, 'isVisible') !== false);
     const strokePaint = strokeK ? paintOf(ac, fc, strokeK.i, null).paint : null;
@@ -1706,14 +1787,17 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
       cornerRadius: style ? r2(get(style, 'cornerRadiusTL')) : 0,
       ...(riveRadii(style) ? { cornerRadii: riveRadii(style)! } : {}),
       clip: !!get<boolean>(o, 'clip'),
-      layout: autoLayoutOf(fc, style, layoutBox(ac, slot)),
-      layoutItem: layoutItemOf(style, { width: w, height: h }, undefined, (() => { const p = layoutParent(ac, slot); return p === undefined ? undefined : layoutBox(ac, p); })()),
+      layout: autoLayoutOf(fc, style, layoutBox(ac, slot), kids(slot, 'GridTrack')),
+      layoutItem: layoutItemOf(style, { width: w, height: h }, undefined, (() => { const p = layoutParent(ac, slot); return p === undefined ? undefined : layoutBox(ac, p); })(), { o, placement: kids(slot, 'GridItemPlacement')[0] }),
     });
     placeAtOrigin(f, o, { x: 0, y: 0 }, w, h);
     f.originX = 0;
     f.originY = 0;
+    if (strokeK) {
+      const dashSlot = (ac.children.get(strokeK.i) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath');
+      if (dashSlot !== undefined) addTarget(ac, dashSlot, { nodeId: f.id, map: { offset: { prop: 'stroke.dashOffset', f: dashOffsetKey(ac, dashSlot, boxPerimeter(w, h, riveRadii(style) ?? Array<number>(4).fill(style ? get(style, 'cornerRadiusTL') : 0))) } } });
+    }
     if (style && get(style, 'displayValue') === 1) f.visible = false;
-    if (style && get(style, 'layoutTypeValue') === 1) fc.warnings.add('Grid layouts are laid out as rows/columns');
     addTarget(ac, slot, transformTarget(f, { x: 0, y: 0 }));
     node = f;
   } else if (isA(t, 'Node')) {
@@ -1769,16 +1853,12 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
       const c = convertSlot(ac, fc, ci, abIndex);
       if (!c) continue;
       if (node.type === 'frame' && node.layout && !takesPart(ac.rab.slots[ci].type)) c.layoutItem = { position: 'ignore' };
-      // Text in a Rive layout takes the layout's width and wraps (unless the layout hugs its content, when the
-      // text sets the width), and its height follows the lines
+      // Text in a Rive layout takes the layout's width and wraps (unless the layout hugs its content, when the text sets the
+      // width: it then wraps at the room its own parent has left and its box shrinks to its widest line), and its height
+      // follows the lines
       if (c.type === 'text' && node.type === 'frame' && node.layout) {
-        let hugW = node.layoutItem?.width === 'hug';
-        // A hugging text that is wider than the column it sits in wraps at the column's width, as Yoga measures it with the room that is left
-        if (hugW && wrapsInColumn(ac, slot, c.width)) {
-          hugW = false;
-          node.layoutItem = { ...node.layoutItem, width: 'fill' };
-        }
-        c.layoutItem = { width: hugW ? 'hug' : 'fill', height: 'hug' };
+        const hugW = node.layoutItem?.width === 'hug';
+        c.layoutItem = { width: hugW ? 'hug' : 'fill', height: 'hug', ...(hugW && c.wrap !== false ? { wrapText: true } : {}) };
         c.autoSize = hugW ? 'width' : 'height';
         // Wrapped text keeps the file's line spacing
         if (!hugW && riveLineHeight.has(ci)) c.lineHeight = riveLineHeight.get(ci)!;
@@ -2137,12 +2217,25 @@ function constrainNode(c: RObj, node: SceneNode, target: SceneNode, fc: FileCtx)
 
 // ---------------------------------------------------------------- animations
 
-function easeOf(ac: ArtboardCtx, k: RObj): Easing {
+/**
+ * The easing of the segment that starts at key `k` (and ends at `next`). A cubic ease holds normalised control points,
+ * while a cubic value curve (the graph editor's) holds its two handles as values in the property's own units, so they are
+ * normalised against the segment's start and end values: the curve is the same one, so only the y numbers change.
+ */
+function easeOf(ac: ArtboardCtx, k: RObj, next?: RObj): Easing {
   const type = Number(k.props.interpolationType ?? 1);
   if (type === 0) return 'step';
   if (type === 1) return 'linear';
   const ip = k.props.interpolatorId;
   const interp = ip === undefined ? undefined : ac.rab.slots[Number(ip)];
+  if (interp?.type === 'CubicValueInterpolator') {
+    const from = Number(get(k, 'value') ?? 0);
+    const to = next ? Number(get(next, 'value') ?? 0) : NaN;
+    // No end to measure against, or a flat segment (the value stays put either way): a plain ease
+    if (!Number.isFinite(to) || Math.abs(to - from) < 1e-9) return 'easeInOut';
+    const norm = (y: number) => Math.round(((y - from) / (to - from)) * 1000) / 1000;
+    return [r2(get(interp, 'x1')), norm(get(interp, 'y1')), r2(get(interp, 'x2')), norm(get(interp, 'y2'))];
+  }
   if (interp && isA(interp.type, 'CubicInterpolator')) return [r2(get(interp, 'x1')), r2(get(interp, 'y1')), r2(get(interp, 'x2')), r2(get(interp, 'y2'))];
   if (interp?.type === 'ElasticInterpolator') return 'elasticOut';
   return 'easeInOut';
@@ -2223,7 +2316,8 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
         const ot = ac.rab.slots[slot]?.type ?? 'object';
         if (isA(ot, 'Vertex')) fc.warnings.add('Path vertex animation (shape morphing) is not supported; those paths stay in their rest shape');
         else if (ot === 'TrimPath') fc.warnings.add('Trim paths on shapes with several strokes, or on artboard backgrounds, are not imported');
-        else if (ot === 'DashPath') fc.warnings.add('Dash path effects are not supported');
+        else if (ot === 'DashPath') fc.warnings.add('An animated dash offset could not be applied to its stroke; the dashes keep their starting offset');
+        else if (ot === 'Dash') fc.warnings.add('Animated dash lengths are not imported; the dashes keep their starting lengths');
         else if (slot) fc.warnings.add(`Animated ${ot} properties (${rprop}) have no matching layer and were skipped`);
         continue;
       }
@@ -2241,11 +2335,11 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
           continue;
         }
         const off = m.prop === 'x' || m.prop === 'y' ? offsetFor(t.nodeId) : { x: 0, y: 0 };
-        const keys: Keyframe[] = kp.keys.map((k) => {
+        const keys: Keyframe[] = kp.keys.map((k, ki) => {
           let v = m.f(k.props.value ?? defaultOf(k.type, 'value'));
           if (typeof v === 'number' && m.prop === 'x') v = r2(v + off.x);
           if (typeof v === 'number' && m.prop === 'y') v = r2(v + off.y);
-          return { id: uid('k'), t: ms(Number(k.props.frame ?? 0)), value: v, ease: easeOf(ac, k) };
+          return { id: uid('k'), t: ms(Number(k.props.frame ?? 0)), value: v, ease: easeOf(ac, k, kp.keys[ki + 1]) };
         });
         if (keys.length) tracks.push({ id: uid('tr'), nodeId: t.nodeId, prop: m.prop, keys });
       }
@@ -3037,7 +3131,7 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
         stroke: null,
         cornerRadius: 0,
         clip: false,
-        layout: { ...autoLayoutOf(fc, style, layoutBox(ac, 0)), hugWidth: false, hugHeight: false },
+        layout: { ...autoLayoutOf(fc, style, layoutBox(ac, 0), (ac.children.get(0) ?? []).map((i) => rab.slots[i]).filter((o) => o.type === 'GridTrack')), hugWidth: false, hugHeight: false },
         children: kids.map((k) => (participants.has(k.id) ? k : ({ ...k, layoutItem: { position: 'ignore' } } as SceneNode))),
       });
       wrap.originX = 0;

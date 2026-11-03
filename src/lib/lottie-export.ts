@@ -7,6 +7,7 @@
  */
 import { strToU8, zipSync } from 'fflate';
 import {
+  cornerRadiiOf,
   fillPath,
   isContainer,
   orderedPaints,
@@ -14,6 +15,7 @@ import {
   strokePath,
   parseColor,
   polygonPoints,
+  roundedBoxPoints,
   starPoints,
   type Artboard,
   type Easing,
@@ -233,6 +235,9 @@ function shapesFor(ctx: Ctx, n: SceneNode): Json[] | null {
     case 'rect':
     case 'frame':
     case 'button': {
+      // A rectangle has one radius in Lottie: radii per corner go out as the outline's path
+      const radii = cornerRadiiOf(n as { cornerRadii?: unknown });
+      if (radii?.some((v) => v > 0)) return [pathShape(roundedBoxPoints(n.width, n.height, radii), true), ...style];
       const { p, s } = sizeProps(ctx, n);
       return [{ ty: 'rc', p, s, r: prop(ctx, n.id, 'cornerRadius', ['cornerRadius' in n ? n.cornerRadius : 0], (v) => [Number(v)]), nm: 'Rect' }, ...style];
     }

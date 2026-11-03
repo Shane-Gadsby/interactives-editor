@@ -617,13 +617,14 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
 | Align | Across the direction: start, centre, end, stretch |
 | Wrap | Start a new row/column when one is full. **Line gap** (shown with Wrap) is the space between the wrapped rows, when it differs from Gap |
 | Hug width / height | The frame shrinks or grows to fit its children |
+| Layout | *Row or column* (above) or *Grid*: children sit in the cells of **Columns** and **Rows**, written like \`100px 25% 1fr auto\` (px, a percent of the frame, \`fr\` for a share of what is left, or auto: as big as what is in it). Children fill the cells in order, or where a project's layout items name a cell and span (\`gridColumn\`, \`gridRow\`, \`gridColumnSpan\`, \`gridRowSpan\`). *Column gap* and *Row gap* are the spaces between them |
 
 ## Child sizing
 Each child of an auto-layout frame gets a **Layout** section:
 
 - **Fixed**: its own width/height.
-- **Fill**: shares the frame's free space with other fill children.
-- **Hug**: fits its own contents (frames and text).
+- **Fill**: shares the frame's free space with other fill children. A project can weigh them (\`layoutItem.grow\`, default 1) and give each a starting size (\`layoutItem.basis\` in px or \`'content'\`, or \`basisPercent\`): the free space is shared on top of it, and layers that are over shrink in proportion to it.
+- **Hug**: fits its own contents (frames and text). A hugging text can wrap at the room its frame offers (\`layoutItem.wrapText\`) and then shrinks to its widest line; a hugging size can also follow the other one by an \`aspectRatio\` (width over height).
 - **Percent**: a percentage of the frame.
 - **Margin** around it. A project can also give a margin *auto* (\`layoutItem.marginAuto\`): that side takes the free space of the line, so a layer is pushed to the end or centred, ahead of Justify.
 - **Position**: *In flow* (laid out), *Absolute* (placed by insets from the frame's edges, e.g. pinned to the bottom right) or *Ignore* (keeps its own x/y).

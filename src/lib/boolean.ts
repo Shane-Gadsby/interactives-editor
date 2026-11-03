@@ -1,9 +1,11 @@
 import polygonClipping, { type MultiPolygon, type Pair, type Polygon } from 'polygon-clipping';
 import {
   apply,
+  cornerRadiiOf,
   createNode,
   multiply,
   polygonPoints,
+  roundedBoxPoints,
   starPoints,
   type Artboard,
   type Matrix,
@@ -33,6 +35,9 @@ function localRings(n: SceneNode): Pair[][] {
     case 'draw':
     case 'shader':
     case 'video': {
+      // Radii per corner draw instead of the single radius
+      const radii = cornerRadiiOf(n as { cornerRadii?: unknown });
+      if (radii && radii.some((v) => v > 0)) return [flattenSubPath(roundedBoxPoints(w, h, radii))];
       const r = Math.min('cornerRadius' in n ? n.cornerRadius : 0, w / 2, h / 2);
       if (r <= 0)
         return [

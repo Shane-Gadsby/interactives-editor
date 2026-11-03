@@ -55,6 +55,7 @@ import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectFi
 import { Icons } from '../components/icons';
 import { assetKind } from '../lib/assets';
 import { pointTracks } from '../lib/path-edit';
+import { formatTracks, parseTracks } from '../lib/grid-tracks';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { CodeEditor } from '../components/CodeEditor';
 import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
@@ -1409,42 +1410,70 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
         <>
           <Row>
             <SelectField
-              label="Direction"
-              value={L.direction}
+              label="Layout"
+              title="Children flow along a row or column, or sit in the cells of a grid"
+              value={L.grid ? 'grid' : 'flow'}
               options={[
-                { value: 'column', label: 'Column ↓' },
-                { value: 'row', label: 'Row →' },
+                { value: 'flow', label: 'Row or column' },
+                { value: 'grid', label: 'Grid' },
               ]}
-              onChange={(v) => update({ direction: v })}
-            />
-            <NumberField label="Gap" value={L.gap} min={0} onChange={(v) => update({ gap: v })} />
-          </Row>
-          <Row>
-            <SelectField
-              label="Justify"
-              value={L.justify}
-              options={[
-                { value: 'start', label: 'Start' },
-                { value: 'center', label: 'Centre' },
-                { value: 'end', label: 'End' },
-                { value: 'space-between', label: 'Space between' },
-              ]}
-              onChange={(v) => update({ justify: v })}
+              onChange={(v) => {
+                const { grid: _grid, ...flow } = L;
+                set({ layout: v === 'grid' ? { ...L, grid: { columns: [{ type: 'fr', value: 1 }, { type: 'fr', value: 1 }], rows: [] } } : flow }, `layout-${frame.id}`);
+              }}
             />
           </Row>
-          <Row>
-            <SelectField
-              label="Align"
-              value={L.align}
-              options={[
-                { value: 'start', label: 'Start' },
-                { value: 'center', label: 'Centre' },
-                { value: 'end', label: 'End' },
-                { value: 'stretch', label: 'Stretch' },
-              ]}
-              onChange={(v) => update({ align: v })}
-            />
-          </Row>
+          {L.grid ? (
+            <>
+              <TextField label="Columns" title="Sizes of the columns: px, %, fr (a share of what is left) or auto. Like 100px 25% 1fr auto" value={formatTracks(L.grid.columns)} onChange={(v) => update({ grid: { ...L.grid!, columns: parseTracks(v) } })} />
+              <TextField label="Rows" title="Sizes of the rows, written the same way. Rows past the ones listed are auto" value={formatTracks(L.grid.rows)} onChange={(v) => update({ grid: { ...L.grid!, rows: parseTracks(v) } })} />
+              <Row>
+                <NumberField label="Column gap" value={L.gap} min={0} onChange={(v) => update({ gap: v })} />
+                <NumberField label="Row gap" value={L.crossGap ?? L.gap} min={0} onChange={(v) => update({ crossGap: v === L.gap ? undefined : v })} />
+              </Row>
+            </>
+          ) : (
+            <>
+              <Row>
+                <SelectField
+                  label="Direction"
+                  value={L.direction}
+                  options={[
+                    { value: 'column', label: 'Column ↓' },
+                    { value: 'row', label: 'Row →' },
+                  ]}
+                  onChange={(v) => update({ direction: v })}
+                />
+                <NumberField label="Gap" value={L.gap} min={0} onChange={(v) => update({ gap: v })} />
+              </Row>
+              <Row>
+                <SelectField
+                  label="Justify"
+                  value={L.justify}
+                  options={[
+                    { value: 'start', label: 'Start' },
+                    { value: 'center', label: 'Centre' },
+                    { value: 'end', label: 'End' },
+                    { value: 'space-between', label: 'Space between' },
+                  ]}
+                  onChange={(v) => update({ justify: v })}
+                />
+              </Row>
+              <Row>
+                <SelectField
+                  label="Align"
+                  value={L.align}
+                  options={[
+                    { value: 'start', label: 'Start' },
+                    { value: 'center', label: 'Centre' },
+                    { value: 'end', label: 'End' },
+                    { value: 'stretch', label: 'Stretch' },
+                  ]}
+                  onChange={(v) => update({ align: v })}
+                />
+              </Row>
+            </>
+          )}
           <div className="field-label block">Padding (top, right, bottom, left)</div>
           <Row>
             {(['top', 'right', 'bottom', 'left'] as const).map((k) => (
@@ -1452,11 +1481,11 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
             ))}
           </Row>
           <Row>
-            <CheckField label="Wrap" value={L.wrap} onChange={(v) => update({ wrap: v })} />
+            {!L.grid && <CheckField label="Wrap" value={L.wrap} onChange={(v) => update({ wrap: v })} />}
             <CheckField label="Hug width" value={L.hugWidth} onChange={(v) => update({ hugWidth: v })} />
             <CheckField label="Hug height" value={L.hugHeight} onChange={(v) => update({ hugHeight: v })} />
           </Row>
-          {L.wrap && <NumberField label="Line gap" title="The space between wrapped rows (or columns). Empty uses Gap" value={L.crossGap ?? L.gap} min={0} onChange={(v) => update({ crossGap: v === L.gap ? undefined : v })} />}
+          {L.wrap && !L.grid && <NumberField label="Line gap" title="The space between wrapped rows (or columns). Empty uses Gap" value={L.crossGap ?? L.gap} min={0} onChange={(v) => update({ crossGap: v === L.gap ? undefined : v })} />}
           <LayoutAnimateFields value={L.animate} onChange={(animate) => update({ animate })} />
           <Row>
             <button className="btn" onClick={() => set({ layout: null })}>

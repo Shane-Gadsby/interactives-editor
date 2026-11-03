@@ -752,6 +752,7 @@ function sanitizeNode(raw, seen) {
   if ("link" in n && n.link !== null && !(isObj(n.link) && isStr(n.link.url))) delete n.link;
   if ("layoutItem" in n && n.layoutItem !== null && !isObj(n.layoutItem)) delete n.layoutItem;
   if ("shadow" in n && n.shadow !== null && !(isObj(n.shadow) && ["x", "y", "blur", "spread"].every((k) => isNum(n.shadow[k])) && isStr(n.shadow.color))) delete n.shadow;
+  if ("maxWidth" in n && !isNum(n.maxWidth)) delete n.maxWidth;
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
   for (const k of ["mask", "locked"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
   for (const k of ["blur", "fontWeight"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
@@ -820,6 +821,11 @@ function sanitizeNode(raw, seen) {
       const pad = isObj(L.padding) ? L.padding : {};
       L.padding = Object.fromEntries(["top", "right", "bottom", "left"].map((k) => [k, isNum(pad[k]) ? pad[k] : 0]));
       if ("crossGap" in L && !isNum(L.crossGap)) delete L.crossGap;
+      if ("grid" in L) {
+        const grid = gridLayout(L.grid);
+        if (grid) L.grid = grid;
+        else delete L.grid;
+      }
       n.layout = L;
     }
   }
@@ -881,6 +887,18 @@ function paint(v) {
     default:
       return null;
   }
+}
+const oneOf = (v, list) => list.includes(v) ? v : void 0;
+function gridLayout(v) {
+  if (!isObj(v)) return null;
+  const tracks = (list) => objs(list).map((t) => ({ type: oneOf(t.type, ["auto", "px", "percent", "fr"]), value: t.value })).filter((t) => t.type).map((t) => isNum(t.value) ? { type: t.type, value: t.value } : { type: t.type });
+  const g = { columns: tracks(v.columns), rows: tracks(v.rows) };
+  for (const [k, list] of [["justifyItems", ["start", "center", "end"]], ["alignItems", ["start", "center", "end"]], ["justifyContent", ["start", "center", "space-between"]], ["alignContent", ["start", "center"]]]) {
+    const x = oneOf(v[k], list);
+    if (x) g[k] = x;
+  }
+  if (v.stack === true) g.stack = true;
+  return g;
 }
 const LAYOUT_DEFAULTS = { direction: "row", gap: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 }, justify: "start", align: "start", wrap: false, hugWidth: false, hugHeight: false };
 function isContainer(node) {
@@ -3883,13 +3901,14 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
 | Align | Across the direction: start, centre, end, stretch |
 | Wrap | Start a new row/column when one is full. **Line gap** (shown with Wrap) is the space between the wrapped rows, when it differs from Gap |
 | Hug width / height | The frame shrinks or grows to fit its children |
+| Layout | *Row or column* (above) or *Grid*: children sit in the cells of **Columns** and **Rows**, written like \`100px 25% 1fr auto\` (px, a percent of the frame, \`fr\` for a share of what is left, or auto: as big as what is in it). Children fill the cells in order, or where a project's layout items name a cell and span (\`gridColumn\`, \`gridRow\`, \`gridColumnSpan\`, \`gridRowSpan\`). *Column gap* and *Row gap* are the spaces between them |
 
 ## Child sizing
 Each child of an auto-layout frame gets a **Layout** section:
 
 - **Fixed**: its own width/height.
-- **Fill**: shares the frame's free space with other fill children.
-- **Hug**: fits its own contents (frames and text).
+- **Fill**: shares the frame's free space with other fill children. A project can weigh them (\`layoutItem.grow\`, default 1) and give each a starting size (\`layoutItem.basis\` in px or \`'content'\`, or \`basisPercent\`): the free space is shared on top of it, and layers that are over shrink in proportion to it.
+- **Hug**: fits its own contents (frames and text). A hugging text can wrap at the room its frame offers (\`layoutItem.wrapText\`) and then shrinks to its widest line; a hugging size can also follow the other one by an \`aspectRatio\` (width over height).
 - **Percent**: a percentage of the frame.
 - **Margin** around it. A project can also give a margin *auto* (\`layoutItem.marginAuto\`): that side takes the free space of the line, so a layer is pushed to the end or centred, ahead of Justify.
 - **Position**: *In flow* (laid out), *Absolute* (placed by insets from the frame's edges, e.g. pinned to the bottom right) or *Ignore* (keeps its own x/y).
