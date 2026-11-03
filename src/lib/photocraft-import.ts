@@ -21,6 +21,7 @@
  * there are some), blend modes Interactives lacks, mask feather and density below 100%, text warps, and documents that are not
  * RGB, grayscale, CMYK or Lab. If nothing can be imported the flattened preview in the file is used instead.
  */
+import { PASCAL_BLENDS } from './blend-modes';
 import { unzipSync } from 'fflate';
 import { cloneWithNewIds, createArtboard, createNode, type Artboard, type BlendMode, type FontRef, type Paint, type SceneNode, type Shadow, type TextNode } from 'interactives-player';
 import type { ImportedAsset } from './lottie-import';
@@ -305,7 +306,7 @@ function cropVisible(x: number, y: number, w: number, h: number, rgba: Uint8Arra
 
 // ---------------------------------------------------------------- colours, fills
 
-const BLENDS: Record<string, BlendMode> = { Multiply: 'multiply', Screen: 'screen', Overlay: 'overlay', Darken: 'darken', Lighten: 'lighten', ColorDodge: 'color-dodge', ColorBurn: 'color-burn', Difference: 'difference', Exclusion: 'exclusion' };
+const BLENDS = PASCAL_BLENDS;
 
 /** A PhotoCraft colour ({mode, c: [4], alpha}) as straight RGBA. */
 export function pcColor(v: unknown): RGBA {

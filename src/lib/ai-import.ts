@@ -1,4 +1,5 @@
 import { createArtboard, createNode, pathBounds, uid, type Artboard, type BlendMode, type ColorStop, type FontRef, type Paint, type SceneNode, type SubPath } from 'interactives-player';
+import { PASCAL_PAINT_BLENDS } from './blend-modes';
 import type { ImportedAsset } from './lottie-import';
 import { DEVICE_CMYK, DEVICE_GRAY, DEVICE_RGB, makeColorSpace, makeFunction, type ColorSpace, type PdfFunction, type RGB } from './pdf-color';
 import { loadFont, type PdfFont } from './pdf-font';
@@ -44,7 +45,7 @@ const MIN_STROKE = 0.25;
 
 const NO_PDF = "This file has no PDF content. Save it in Illustrator with 'Create PDF Compatible File' ticked, then import it again.";
 
-const BLENDS: Record<string, BlendMode> = { Multiply: 'multiply', Screen: 'screen', Overlay: 'overlay', Darken: 'darken', Lighten: 'lighten', ColorDodge: 'color-dodge', ColorBurn: 'color-burn', Difference: 'difference', Exclusion: 'exclusion' };
+const BLENDS = PASCAL_PAINT_BLENDS;
 
 function hex2(v: number): string {
   return Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');

@@ -255,14 +255,16 @@ describe('VectorCraft import (documents built from the format spec)', () => {
   });
 
   it('keeps visibility, opacity, blend mode and names, and reports blend modes it lacks', () => {
-    const res = vc([layer([pathNode(rectPath(0, 0, 10, 10), app(), { name: 'Hidden', visible: false }), pathNode(rectPath(0, 0, 10, 10), app(), { name: 'Soft', opacity: 0.5, blend: 'Multiply' }), pathNode(rectPath(0, 0, 10, 10), app(), { blend: 'SoftLight' })])]);
+    const res = vc([layer([pathNode(rectPath(0, 0, 10, 10), app(), { name: 'Hidden', visible: false }), pathNode(rectPath(0, 0, 10, 10), app(), { name: 'Soft', opacity: 0.5, blend: 'Multiply' }), pathNode(rectPath(0, 0, 10, 10), app(), { blend: 'SoftLight' }), pathNode(rectPath(0, 0, 10, 10), app(), { blend: 'LinearBurn' })])]);
     const p = ofType(res.artboard, 'path');
     expect(p[0].visible).toBe(false);
     expect(p[0].name).toBe('Hidden');
     expect(p[1].opacity).toBe(0.5);
     expect(p[1].blendMode).toBe('multiply');
-    expect(p[2].blendMode).toBeUndefined();
-    expect(res.warnings.join(' ')).toMatch(/SoftLight/);
+    expect(p[2].blendMode).toBe('soft-light');
+    expect(p[3].blendMode).toBeUndefined();
+    expect(res.warnings.join(' ')).toMatch(/LinearBurn/);
+    expect(res.warnings.join(' ')).not.toMatch(/SoftLight/);
   });
 
   it('an object with several fills and strokes becomes one path layer with a list of each', () => {

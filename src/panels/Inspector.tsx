@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
 import {
   nodeTypeLabel,
   ANIMATABLE_PROPS,
@@ -32,7 +33,6 @@ import {
   sampleKeys,
   type Artboard,
   type Blend,
-  type BlendMode,
   type ColorStop,
   type FitMode,
   type InputKind,
@@ -76,7 +76,6 @@ import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit'
 import { BindSelectionSection, BoneSection, SkinSection } from './RigSection';
 import { skinnable } from '../lib/rig';
 
-const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
 const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
 
 export function Inspector() {
@@ -512,7 +511,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
           <CheckField label="Locked" value={!!n.locked} onChange={(v) => set({ locked: v })} />
         </Row>
         <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />
-        <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={BLEND} onChange={(v) => set({ blendMode: v })} />
+        <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={LAYER_BLEND_OPTIONS} onChange={(v) => set({ blendMode: v })} />
       </Section>
       <LayoutItemSection nodes={nodes} ab={ab} />
       {sameType && <TypeSection nodes={nodes} project={project} />}

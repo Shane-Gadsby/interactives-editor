@@ -167,6 +167,26 @@ const BLEND_KEYS: Record<string, BlendMode> = {
   'idiv': 'color-burn',
   'diff': 'difference',
   'smud': 'exclusion',
+  'diss': 'dissolve',
+  'sLit': 'soft-light',
+  'hLit': 'hard-light',
+  'lddg': 'plus-lighter',
+  'hue ': 'hue',
+  'sat ': 'saturation',
+  'colr': 'color',
+  'lum ': 'luminosity',
+};
+
+/** Modes the browser can't draw, brought in as the nearest one it can (and listed in the import report). */
+const BLEND_APPROX: Record<string, BlendMode> = {
+  'lbrn': 'multiply',
+  'dkCl': 'darken',
+  'lgCl': 'lighten',
+  'vLit': 'hard-light',
+  'lLit': 'hard-light',
+  'pLit': 'hard-light',
+  'hMix': 'hard-light',
+  'fdiv': 'color-dodge',
 };
 
 const BLEND_NAMES: Record<string, string> = {
@@ -189,9 +209,11 @@ const BLEND_NAMES: Record<string, string> = {
   'lum ': 'luminosity',
 };
 
-export function psdBlendMode(key: string): { mode: BlendMode; supported: boolean } {
+export function psdBlendMode(key: string): { mode: BlendMode; supported: boolean; approx?: boolean } {
   const mode = BLEND_KEYS[key];
-  return mode ? { mode, supported: true } : { mode: 'normal', supported: false };
+  if (mode) return { mode, supported: true };
+  const near = BLEND_APPROX[key];
+  return near ? { mode: near, supported: true, approx: true } : { mode: 'normal', supported: false };
 }
 
 const ADJUSTMENT_KEYS = new Set(['brit', 'levl', 'curv', 'expA', 'vibA', 'hue2', 'hue ', 'blnc', 'blwh', 'phfl', 'mixr', 'clrL', 'nvrt', 'post', 'thrs', 'selc', 'grdm', 'CgEd']);
@@ -893,6 +915,7 @@ export function importPsd(bytes: Uint8Array, baseName: string, options: PsdImpor
   const assets: ImportedAsset[] = [];
   const googleWeights = new Map<string, Set<number>>();
   const unsupportedBlends = new Set<string>();
+  const approxBlends = new Set<string>();
   let adjustments = 0;
   let keptTextPictures = 0;
 
@@ -903,6 +926,7 @@ export function importPsd(bytes: Uint8Array, baseName: string, options: PsdImpor
   });
   const noteBlend = (n: PsdLayer | PsdGroup) => {
     if (n.blendUnsupported) unsupportedBlends.add(BLEND_NAMES[n.blendKey] ?? n.blendKey.trim());
+    else if (BLEND_APPROX[n.blendKey]) approxBlends.add(`${BLEND_NAMES[n.blendKey] ?? n.blendKey.trim()} (as ${BLEND_APPROX[n.blendKey].replace('-', ' ')})`);
   };
 
   const boundsOf = (kids: SceneNode[]) => ({
@@ -1184,6 +1208,7 @@ export function importPsd(bytes: Uint8Array, baseName: string, options: PsdImpor
   const children = convert(doc.nodes);
   if (adjustments) warnings.add(`${adjustments} adjustment layer${adjustments > 1 ? 's were' : ' was'} not carried over (they change how layers below look, which can't be reproduced)`);
   if (unsupportedBlends.size) warnings.add(`Blend modes with no equivalent were imported as normal: ${[...unsupportedBlends].join(', ')}`);
+  if (approxBlends.size) warnings.add(`Blend modes drawn with the nearest one there is: ${[...approxBlends].join(', ')}`);
   if (keptTextPictures) warnings.add(`${keptTextPictures} text layer${keptTextPictures > 1 ? 's' : ''} (warped, vertical or masked) kept as pictures`);
   if (!children.length) throw new Error('This PSD file has no pixels to import');
 

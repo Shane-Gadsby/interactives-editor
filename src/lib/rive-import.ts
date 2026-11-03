@@ -987,7 +987,7 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
   const fills = kids.filter((k) => k.o.type === 'Fill' && get<boolean>(k.o, 'isVisible') !== false);
   const strokes = kids.filter((k) => k.o.type === 'Stroke' && get<boolean>(k.o, 'isVisible') !== false);
   // Every fill and stroke becomes a layer, in file order (bottom to top): the first is the shape's own fill / stroke
-  const blendMap: Record<number, SceneNode['blendMode']> = { 14: 'screen', 15: 'overlay', 16: 'darken', 17: 'lighten', 18: 'color-dodge', 19: 'color-burn', 22: 'difference', 23: 'exclusion', 24: 'multiply' };
+  const blendMap: Record<number, SceneNode['blendMode']> = { 14: 'screen', 15: 'overlay', 16: 'darken', 17: 'lighten', 18: 'color-dodge', 19: 'color-burn', 20: 'hard-light', 21: 'soft-light', 22: 'difference', 23: 'exclusion', 24: 'multiply', 25: 'hue', 26: 'saturation', 27: 'color', 28: 'luminosity' };
   const fxOf = (slot: number, ps: RObj): PaintFx => {
     const fx: PaintFx = {};
     const bm = blendMap[get(ps, 'blendModeValue')];

@@ -22,6 +22,7 @@
  * art is kept undistorted), pattern fills, brushes and variable width strokes, arrowheads,
  * type on a path, other live effects, placed documents, and blend modes Interactives does not have.
  */
+import { PASCAL_BLENDS, PASCAL_PAINT_BLENDS } from './blend-modes';
 import { gunzipSync } from 'fflate';
 import { createArtboard, createNode, type Artboard, type BlendMode, type FontRef, type Paint, type SceneNode, type Shadow, type Stroke, type TextNode } from 'interactives-player';
 import type { ImportedAsset } from './lottie-import';
@@ -163,7 +164,7 @@ export function parseVectorCraft(input: Uint8Array): VcFile {
 
 // ---------------------------------------------------------------- colours and paints
 
-const BLENDS: Record<string, BlendMode> = { Multiply: 'multiply', Screen: 'screen', Overlay: 'overlay', Darken: 'darken', Lighten: 'lighten', ColorDodge: 'color-dodge', ColorBurn: 'color-burn', Difference: 'difference', Exclusion: 'exclusion' };
+const BLENDS = PASCAL_BLENDS;
 
 /** A VectorCraft colour (rgb, cmyk, gray as ink, lab) as straight RGBA. */
 export function vcColor(c: unknown, alpha = 1): RGBA {
@@ -353,8 +354,8 @@ class Importer {
       const kind = str(it.kind);
       if (kind !== 'fill' && kind !== 'stroke') continue;
       const blend = str(it.blend, 'Normal');
-      if (blend !== 'Normal' && !BLENDS[blend]) this.note(`Blend modes with no equivalent were imported as normal (${blend})`);
-      out.push({ kind, paint: rec(it.paint), opacity: Math.max(0, Math.min(1, num(it.opacity, 1))), blend: BLENDS[blend], stroke: kind === 'stroke' ? it : undefined, effects: arr(it.effects).map(rec) });
+      if (blend !== 'Normal' && !PASCAL_PAINT_BLENDS[blend]) this.note(`Blend modes with no equivalent were imported as normal (${blend})`);
+      out.push({ kind, paint: rec(it.paint), opacity: Math.max(0, Math.min(1, num(it.opacity, 1))), blend: PASCAL_PAINT_BLENDS[blend], stroke: kind === 'stroke' ? it : undefined, effects: arr(it.effects).map(rec) });
     }
     return out;
   }

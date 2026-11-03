@@ -977,13 +977,13 @@ function sanitizeRun(r2) {
   if ("link" in out && out.link !== null && !(isObj(out.link) && isStr(out.link.url))) delete out.link;
   return out;
 }
-const BLEND_MODES = /* @__PURE__ */ new Set(["normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "difference", "exclusion"]);
+const isPaintBlend = (b) => PAINT_BLEND_MODES.includes(b);
 function fx(v) {
   const o = { ...v };
   for (const k of ["opacity", "feather", "offsetX", "offsetY"]) if (k in o && !isNum(o[k])) delete o[k];
   if ("feather" in o && o.feather < 0) delete o.feather;
   if ("visible" in o && typeof o.visible !== "boolean") delete o.visible;
-  if ("blend" in o && !(isStr(o.blend) && BLEND_MODES.has(o.blend))) delete o.blend;
+  if ("blend" in o && !(isStr(o.blend) && isPaintBlend(o.blend))) delete o.blend;
   return o;
 }
 function paint(v) {
@@ -1015,6 +1015,8 @@ function gridLayout(v) {
   return g;
 }
 const LAYOUT_DEFAULTS = { direction: "row", gap: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 }, justify: "start", align: "start", wrap: false, hugWidth: false, hugHeight: false };
+const BLEND_MODES = ["normal", "dissolve", "darken", "multiply", "color-burn", "lighten", "screen", "color-dodge", "plus-lighter", "overlay", "soft-light", "hard-light", "difference", "exclusion", "hue", "saturation", "color", "luminosity"];
+const PAINT_BLEND_MODES = BLEND_MODES.filter((m) => m !== "dissolve");
 function isContainer(node) {
   return node.type === "group" || node.type === "frame" || node.type === "bone";
 }
@@ -3908,7 +3910,7 @@ Use **+** in the **Effects** section to add a shadow or a layer blur; each one h
 Two related settings are in the top section of the Inspector, with the position fields:
 
 - **α** is the opacity of the whole layer (0 to 1).
-- **Blend** is how the layer mixes with what is under it: *normal*, *multiply*, *screen*, *overlay*, *darken*, *lighten*, *color-dodge*, *color-burn*, *difference* or *exclusion*.
+- **Blend** is how the layer mixes with what is under it: *Normal*, *Dissolve*, *Darken*, *Multiply*, *Colour burn*, *Lighten*, *Screen*, *Colour dodge*, *Add (linear dodge)*, *Overlay*, *Soft light*, *Hard light*, *Difference*, *Exclusion*, *Hue*, *Saturation*, *Colour* or *Luminosity*. **Dissolve** draws each pixel either solid or not at all, with the layer's opacity as the odds: at 40% opacity, 40% of the pixels show at full strength, scattered, instead of everything fading. Animate the opacity for a speckled fade in or out. A single fill or stroke (in the paint list) can use every mode except Dissolve.
 
 Most of these can be animated: look for the diamond next to a field. See [Animatable properties](animatable-properties).`
   },
@@ -4957,7 +4959,7 @@ Rive **artboard component lists** become a frame that repeats an [instance](inst
 ## Photoshop (.psd)
 ![A Photoshop file after import: layers, a live text layer, and hidden layers kept hidden.](help/psd-import-result.png)
 
-The document becomes an artboard of the same size. Every pixel layer becomes an image layer (stored as a PNG asset) at its position, folders become groups, and the layer name, visibility, opacity (including fill opacity) and these blend modes carry over: multiply, screen, overlay, darken, lighten, color dodge, color burn, difference and exclusion. 8 and 16 bit RGB and grayscale files import as layers. Indexed colour and CMYK files (and files with no layers) import as one flattened picture, and 32 bit, bitmap, Lab, duotone and multichannel files are not supported. Layers with nothing in them are skipped without comment.
+The document becomes an artboard of the same size. Every pixel layer becomes an image layer (stored as a PNG asset) at its position, folders become groups, and the layer name, visibility, opacity (including fill opacity) and blend modes carry over: normal, dissolve, multiply, screen, overlay, soft light, hard light, darken, lighten, color dodge, color burn, linear dodge (add), difference, exclusion, hue, saturation, color and luminosity. Modes a browser can't draw come in as the nearest one there is, and the report lists them: linear burn as multiply, darker color as darken, lighter color as lighten, vivid, linear and pin light and hard mix as hard light, and divide as color dodge. 8 and 16 bit RGB and grayscale files import as layers. Indexed colour and CMYK files (and files with no layers) import as one flattened picture, and 32 bit, bitmap, Lab, duotone and multichannel files are not supported. Layers with nothing in them are skipped without comment.
 
 **Text layers** become real, editable text layers: the text, font, size, colour, alignment, line height, letter spacing (tracking) and bold, italic, underline and strikethrough, with a style run for each stretch that differs (so a heading with one red word stays one layer). Photoshop stores a font as a PostScript name such as \`Montserrat-SemiBold\`; the importer turns it into a family and weight. Families that are Google fonts are added to the project's fonts so they load; any other font keeps its name and shows only where that font is installed, so check the font field in the inspector. Point text (a click on the canvas) becomes a box that does not wrap, paragraph text (a dragged box) keeps its width and height. Text that is warped, vertical or has a layer mask stays a picture of its pixels, named after the text, and is listed in the report.
 
@@ -4965,7 +4967,7 @@ The document becomes an artboard of the same size. Every pixel layer becomes an 
 
 **Masks.** A layer's pixel mask is baked into the layer's transparency. A folder's pixel mask becomes a mask picture placed over the folder, inside a wrapper group. A vector mask becomes a path layer used as a mask, in a group with the layer (edit the path to reshape the cut-out); the outline of a shape layer is not a mask and is left alone.
 
-Not carried over, and listed in the report: layer styles and effects (shadows, strokes, glows), adjustment layers, smart-object filters, other blend modes (they import as normal), and layer comps. Each layer is stored at its full size, so a large document with many layers makes a big project.
+Not carried over, and listed in the report: layer styles and effects (shadows, strokes, glows), adjustment layers, smart-object filters, the subtract blend mode (it imports as normal), and layer comps. Each layer is stored at its full size, so a large document with many layers makes a big project.
 
 ## Illustrator (.ai) and PDF
 Illustrator saves a PDF inside its files when **Create PDF Compatible File** is ticked in the save options (it is by default). The importer reads that PDF, so a \`.ai\` file saved without it can't be imported: you'll see "Save the file with 'Create PDF Compatible File' ticked", and re-saving from Illustrator fixes it. Ordinary \`.pdf\` files import the same way.
@@ -4978,7 +4980,7 @@ What you get is editable vector art:
 - **Colours** in grayscale, RGB, CMYK, spot (separation) and indexed spaces; CMYK is converted with an approximation, so print colours can look a little different on screen.
 - **Gradients**: linear and radial gradients (axial and radial shadings) become linear and radial fills. A radial gradient is centred on its shape.
 - **Clipping** becomes a [mask](groups-frames#masks): a group holding a path used as a mask in front of the layers it clips. Clips that cover everything inside them are dropped.
-- **Opacity** (fill and stroke) and these blend modes: multiply, screen, overlay, darken, lighten, color dodge, color burn, difference and exclusion.
+- **Opacity** (fill and stroke) and these blend modes: multiply, screen, overlay, soft light, hard light, darken, lighten, color dodge, color burn, difference, exclusion, hue, saturation, color and luminosity.
 - **Text** becomes text layers with the font name, size and colour. Pieces on one baseline join into one layer, and following lines in the same style become one multi-line layer. Fonts are matched by name, so install or [choose](text) the real font if it isn't available. Text that has no Unicode mapping in the file may show wrong characters.
 - **Pictures** become image layers (PNG assets, or the original JPEG), with soft masks as transparency and stencil masks in the fill colour.
 - **Layers**: Illustrator's layers become groups with the layer's name, and hidden layers stay hidden.
@@ -5005,7 +5007,7 @@ Not carried over, and listed in the report: hatch pattern lines (a pattern hatch
 ## VectorCraft (.vectorcraft)
 A VectorCraft file (and the older \`.drawcraft\` name) is read as editable vector art. Each artboard in the file becomes an artboard (one artboard is named after the file, several are named *file - Artboard name*), holding the artwork that touches it.
 
-- **Layers and groups** become groups with the same name; hidden stays hidden, and opacity and these blend modes are kept: multiply, screen, overlay, darken, lighten, color dodge, color burn, difference and exclusion. A clip group or clipped layer becomes a [mask](groups-frames#masks) in front of what it clips.
+- **Layers and groups** become groups with the same name; hidden stays hidden, and opacity and these blend modes are kept: multiply, screen, overlay, soft light, hard light, darken, lighten, color dodge, color burn, linear dodge, difference, exclusion, hue, saturation, color and luminosity. A clip group or clipped layer becomes a [mask](groups-frames#masks) in front of what it clips.
 - **Paths and compound paths** become path layers. Solid, linear and radial gradient fills and strokes (width, caps, joins, dashes) are kept, and an object with several fills or strokes becomes a group with one path layer for each. CMYK, gray and Lab colours are converted to RGB with a simple formula, so print colours can look a little different.
 - **Live objects**: shapes keep their outline, symbols are placed as copies, Repeat objects (radial, grid, mirror) become copies, and a Blend between two paths with the same points gets its steps. Envelope distortions are not applied: the art stays undistorted. Gradient meshes become flat patches.
 - **Text** becomes text layers (font, size, colour, tracking, leading, alignment and style runs). Fonts are matched by name, so check the font field when a family is not one of the Google fonts.

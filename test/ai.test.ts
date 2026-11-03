@@ -340,11 +340,11 @@ describe('Illustrator / PDF import', () => {
   it('warns about what it leaves out', () => {
     const p = new Pdf();
     const tile = p.stream('/PatternType 1 /PaintType 1 /TilingType 1 /BBox [0 0 4 4] /XStep 4 /YStep 4 /Resources << >>', '0 0 2 2 re f');
-    p.page('/Pattern cs /T scn 0 0 50 50 re f /G gs 1 0 0 rg 60 0 10 10 re f', `/Pattern << /T ${tile} 0 R >> /ExtGState << /G << /SMask << /S /Luminosity >> /BM /Hue >> >>`);
+    p.page('/Pattern cs /T scn 0 0 50 50 re f /G gs 1 0 0 rg 60 0 10 10 re f', `/Pattern << /T ${tile} 0 R >> /ExtGState << /G << /SMask << /S /Luminosity >> /BM /Glow >> >>`);
     const r = importAi(p.build());
     expect(r.warnings.join('\n')).toMatch(/tiling/i);
     expect(r.warnings.join('\n')).toMatch(/soft mask|opacity mask/i);
-    expect(r.warnings.join('\n')).toMatch(/Hue/);
+    expect(r.warnings.join('\n')).toMatch(/Blend mode Glow has no equivalent/);
   });
 
   it('explains a file that has no PDF part', () => {

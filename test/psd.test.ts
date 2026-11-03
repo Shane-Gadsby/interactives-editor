@@ -270,7 +270,7 @@ describe('PSD import', () => {
     const doc = parsePsd(
       buildPsd(
         [
-          { name: 'T', w: 1, h: 1, rgba: px(0, 0, 0), text: 'Hello\rworld', fillOpacity: 128, blend: 'sLit', clipped: true },
+          { name: 'T', w: 1, h: 1, rgba: px(0, 0, 0), text: 'Hello\rworld', fillOpacity: 128, blend: 'fsub', clipped: true },
         ],
         { width: 1, height: 1 },
       ),
@@ -354,7 +354,7 @@ describe('PSD import', () => {
       buildPsd(
         [
           { name: '', w: 1, h: 1, rgba: px(1, 1, 1), text: 'Big title' },
-          { name: 'Soft', w: 1, h: 1, rgba: px(1, 1, 1), blend: 'sLit' },
+          { name: 'Soft', w: 1, h: 1, rgba: px(1, 1, 1), blend: 'fsub' },
           { name: 'Empty' },
         ],
         { width: 2, height: 2 },
@@ -363,8 +363,26 @@ describe('PSD import', () => {
     );
     expect(imp.artboard.children.map((c) => c.name)).toEqual(['Big title', 'Soft']);
     expect((imp.artboard.children[0] as { ariaLabel?: string }).ariaLabel).toBe('Big title');
-    expect(imp.warnings.join(' ')).toMatch(/soft light/);
+    expect(imp.warnings.join(' ')).toMatch(/imported as normal: subtract/);
     expect(imp.warnings.join(' ')).not.toMatch(/empty/);
+  });
+
+  it('brings dissolve and the other drawable modes across, and the rest as the nearest one with a note', () => {
+    const keys: [string, string][] = [['diss', 'dissolve'], ['sLit', 'soft-light'], ['hLit', 'hard-light'], ['lddg', 'plus-lighter'], ['hue ', 'hue'], ['sat ', 'saturation'], ['colr', 'color'], ['lum ', 'luminosity'], ['vLit', 'hard-light'], ['lbrn', 'multiply'], ['fdiv', 'color-dodge']];
+    const imp = importPsd(
+      buildPsd(
+        keys.map(([k], i) => ({ name: `L${i}`, w: 1, h: 1, rgba: px(9, 9, 9), blend: k, opacity: 102 })),
+        { width: 2, height: 2 },
+      ),
+      'x',
+    );
+    const byName = new Map(imp.artboard.children.map((c) => [c.name, c]));
+    keys.forEach(([, mode], i) => expect(byName.get(`L${i}`)?.blendMode).toBe(mode));
+    // dissolve keeps the opacity as its amount
+    expect(byName.get('L0')?.opacity).toBeCloseTo(0.4, 2);
+    const w = imp.warnings.join(' ');
+    expect(w).not.toMatch(/imported as normal/);
+    expect(w).toMatch(/nearest one there is: vivid light \(as hard light\), linear burn \(as multiply\), divide \(as color dodge\)/);
   });
 
   it('handles nested groups and empty groups', () => {

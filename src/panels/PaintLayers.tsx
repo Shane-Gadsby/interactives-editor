@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PAINT_BLEND_OPTIONS } from '../lib/blend-modes';
 import { fillList, fillPath, formatColor, movePaint, orderedPaints, paintToCss, parseColor, orderWithAdded, orderWithRemoved, paintFields, paintOrder, strokeList, strokePath, type BlendMode, type Paint, type PaintEntry, type PaintKind, type Project, type SceneNode, type ShapeStyle, type Stroke } from 'interactives-player';
 import { store } from '../store/store';
 import { assetUrls } from '../lib/assets';
@@ -12,7 +13,6 @@ import { KeyRow, Num, PaintField, useSetter, useShown } from './Inspector';
  * and down buttons (or drag its heading), a remove button, and its own controls with the diamond key buttons.
  */
 
-const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
 
 type Painted = SceneNode & ShapeStyle;
 
@@ -88,7 +88,7 @@ function FxFields({ n, ids, prefix, set }: { n: Painted; ids: string[]; prefix: 
     <>
       <Row>
         <Num node={n} ids={ids} prop={`${prefix}.opacity`} label="α" title="Opacity of this paint alone (0 to 1)" step={0.05} min={0} max={1} fallback={1} />
-        <SelectField label="Blend" title="How this paint mixes with what is under it" value={(get('blend') as BlendMode | undefined) ?? 'normal'} options={BLEND} onChange={(v) => set({ [`${prefix}.blend`]: v === 'normal' ? undefined : v })} />
+        <SelectField label="Blend" title="How this paint mixes with what is under it" value={(get('blend') as BlendMode | undefined) ?? 'normal'} options={PAINT_BLEND_OPTIONS} onChange={(v) => set({ [`${prefix}.blend`]: v === 'normal' ? undefined : v })} />
       </Row>
       <Row>
         <Num node={n} ids={ids} prop={`${prefix}.feather`} label="Feather" title="Soft blur of this paint alone, in pixels. With an offset and a dark, see-through colour it makes a drop shadow" min={0} />
