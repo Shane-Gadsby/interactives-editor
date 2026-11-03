@@ -3,6 +3,7 @@ import { createProject, PACKAGE_EXTENSION } from 'interactives-player';
 import { createProjectRecord, deleteProject, duplicateProject, importPackage, listProjects, loadProjectRecord, META_MAX_LABEL, META_MAX_TAGS, session, setProjectMeta, type ProjectMeta, type SessionInfo } from './lib/db';
 import { downloadPackage } from './lib/export';
 import { pickFiles } from './lib/insert';
+import { confirmDialog, promptDialog } from './components/dialogs';
 import { Icons } from './components/icons';
 import { PrefsModal } from './components/PrefsModal';
 import { prefs } from './lib/prefs';
@@ -191,9 +192,9 @@ export function Home({ open }: { open: (id: string) => void }) {
     void saveMeta(p.id, { tags: [...tags, tag] });
   };
 
-  const moveTo = (p: ProjectMeta, value: string) => {
+  const moveTo = async (p: ProjectMeta, value: string) => {
     if (value === NEW_FOLDER) {
-      const name = cleanLabel(prompt('Name for the new folder') ?? '');
+      const name = cleanLabel((await promptDialog({ title: 'New folder', label: 'Name for the new folder', confirmLabel: 'Create folder' })) ?? '');
       if (name) void saveMeta(p.id, { folder: name });
       return;
     }
@@ -201,8 +202,8 @@ export function Home({ open }: { open: (id: string) => void }) {
   };
 
   /** Rename / delete touch every project in the folder that this list holds, one request each. */
-  const renameFolder = (name: string) => {
-    const next = cleanLabel(prompt(`Rename folder "${name}" to`, name) ?? '');
+  const renameFolder = async (name: string) => {
+    const next = cleanLabel((await promptDialog({ title: 'Rename folder', label: `Rename folder "${name}" to`, initial: name, confirmLabel: 'Rename' })) ?? '');
     if (!next || next === name) return;
     void run(async () => {
       await Promise.all((list ?? []).filter((p) => p.folder === name).map((p) => setProjectMeta(p.id, { folder: next })));
@@ -211,8 +212,8 @@ export function Home({ open }: { open: (id: string) => void }) {
     });
   };
 
-  const deleteFolder = (name: string) => {
-    if (!confirm(`Delete the folder "${name}"? Its projects are kept and move to "No folder".`)) return;
+  const deleteFolder = async (name: string) => {
+    if (!(await confirmDialog({ title: 'Delete folder', message: `Delete the folder "${name}"? Its projects are kept and move to "No folder".`, confirmLabel: 'Delete folder', danger: true }))) return;
     void run(async () => {
       await Promise.all((list ?? []).filter((p) => p.folder === name).map((p) => setProjectMeta(p.id, { folder: null })));
       setFolderSel({ kind: 'all' });
@@ -469,13 +470,13 @@ export function Home({ open }: { open: (id: string) => void }) {
               <button
                 className="icon-btn"
                 title="Delete"
-                onClick={() =>
-                  run(async () => {
-                    if (!confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+                onClick={async () => {
+                  if (!(await confirmDialog({ title: 'Delete project', message: `Delete "${p.name}"? This cannot be undone.`, confirmLabel: 'Delete project', danger: true }))) return;
+                  await run(async () => {
                     await deleteProject(p.id);
                     await refresh();
-                  })
-                }
+                  });
+                }}
               >
                 <Icons.trash width={15} />
               </button>

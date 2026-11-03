@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Home } from './Home';
 import { Editor } from './Editor';
 import { HelpHost, HelpPage } from './help/Help';
+import { DialogHost } from './components/dialogs';
 import { installTooltips } from './components/tooltips';
 import { sessionUser } from './lib/session';
 import { loadUserPrefs } from './lib/prefs'; // importing applies the cached theme before the first paint
@@ -39,6 +40,7 @@ export function App() {
         <Home open={(id) => (location.hash = `#/p/${id}`)} />
       )}
       <HelpHost />
+      <DialogHost />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { store, useEditor } from '../store/store';
 import { deleteAsset } from '../lib/db';
+import { confirmDialog } from '../components/dialogs';
 import { analyzeUsage, unusedAssetIds, type UsageItem, type UsageReport, type UsageSource } from '../lib/dependencies';
 import { SplitColumns } from '../components/SplitColumns';
 
@@ -103,7 +104,8 @@ async function removeUnusedAssets(report: UsageReport, projectId: string) {
   if (!ids.length) return;
   const names = report.assets.filter((a) => a.unused).map((a) => a.name);
   const list = names.slice(0, 12).join('\n') + (names.length > 12 ? `\n... and ${names.length - 12} more` : '');
-  if (!confirm(`Remove ${ids.length} unused asset${ids.length === 1 ? '' : 's'}? This deletes the files too.\n\n${list}`)) return;
+  const n = `${ids.length} unused asset${ids.length === 1 ? '' : 's'}`;
+  if (!(await confirmDialog({ title: 'Remove unused assets', message: `Remove ${n}? This deletes the files too.\n\n${list}`, confirmLabel: 'Remove', danger: true }))) return;
   const gone = new Set(ids);
   store().update((d) => {
     d.assets = d.assets.filter((a) => !gone.has(a.id));

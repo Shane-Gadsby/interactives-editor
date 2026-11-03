@@ -3,6 +3,7 @@ import { createNode, isContainer, nodeTypeLabel, type Artboard, type SceneNode }
 import { store, useEditor } from '../store/store';
 import { Icons, type IconName } from '../components/icons';
 import { IconButton } from '../components/ui';
+import { confirmDialog } from '../components/dialogs';
 import { assetKind, assetUrls } from '../lib/assets';
 import { insertFiles, pickFiles } from '../lib/insert';
 import { ANIMATION_ACCEPT, addImportedArtboard, readAnimationFile } from '../lib/importers';
@@ -309,7 +310,7 @@ function Assets() {
   };
   const remove = async (id: string) => {
     const used = JSON.stringify(s.project.artboards).includes(`"${id}"`) || s.project.fonts.some((f) => f.assetId === id);
-    if (used && !confirm('This asset is used in the project. Remove it anyway?')) return;
+    if (used && !(await confirmDialog({ title: 'Remove asset', message: 'This asset is used in the project. Remove it anyway?', confirmLabel: 'Remove', danger: true }))) return;
     store().update((d) => {
       d.assets = d.assets.filter((a) => a.id !== id);
       d.fonts = d.fonts.filter((f) => f.assetId !== id);

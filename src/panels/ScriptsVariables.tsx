@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { uid, type Script, type Variable, type VariableType } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueName } from '../store/doc';
+import { confirmDialog } from '../components/dialogs';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { CodeEditor } from '../components/CodeEditor';
 import { Icons } from '../components/icons';
@@ -55,8 +56,8 @@ export function ScriptsPanel() {
             <IconButton
               icon={<Icons.trash />}
               title="Delete script"
-              onClick={() => {
-                if (!confirm(`Delete script "${active.name}"?`)) return;
+              onClick={async () => {
+                if (!(await confirmDialog({ title: 'Delete script', message: `Delete script "${active.name}"?`, confirmLabel: 'Delete script', danger: true }))) return;
                 store().update((d) => {
                   d.scripts = d.scripts.filter((x) => x.id !== active.id);
                 });

@@ -2,6 +2,7 @@ import { uid, type VariableType } from 'interactives-player';
 import { store } from '../store/store';
 import { uniqueName } from '../store/doc';
 import { insertFiles, pickFiles } from './insert';
+import { promptDialog } from '../components/dialogs';
 
 /** Dropdown values that mean "make a new one" instead of picking an existing item. */
 export const ADD_ASSET = '__add_asset__';
@@ -28,12 +29,22 @@ export async function pickNewAsset(kind: PickKind): Promise<string | null> {
   return added[0]?.id ?? null;
 }
 
-/** Ask for a name and make a variable; returns its id. */
-export function createVariable(type: VariableType = 'number', suggested = 'value'): string | null {
+/** Turn what was typed into a usable, unused variable name (letters, digits and _). */
+export function variableNameFrom(raw: string, taken: string[], suggested = 'value'): string {
+  return uniqueName(taken, raw.trim().replace(/[^\w$]+/g, '_').replace(/^(\d)/, '_$1') || suggested).replace(/\s+/g, '');
+}
+
+/** Ask for a name and make a variable; resolves to its id (null if the person cancelled). */
+export async function createVariable(type: VariableType = 'number', suggested = 'value'): Promise<string | null> {
   const taken = store().get().project.variables.map((v) => v.name);
-  const raw = prompt('Name for the new variable (letters, digits and _):', uniqueName(taken, suggested).replace(/\s+/g, ''));
+  const raw = await promptDialog({
+    title: 'New variable',
+    label: 'Name for the new variable (letters, digits and _)',
+    initial: uniqueName(taken, suggested).replace(/\s+/g, ''),
+    confirmLabel: 'Create variable',
+  });
   if (raw === null) return null;
-  const name = uniqueName(taken, raw.trim().replace(/[^\w$]+/g, '_').replace(/^(\d)/, '_$1') || suggested).replace(/\s+/g, '');
+  const name = variableNameFrom(raw, store().get().project.variables.map((v) => v.name), suggested);
   const id = uid('v');
   const initial = type === 'number' ? 0 : type === 'boolean' ? false : type === 'color' ? '#3b5bfd' : '';
   store().update((d) => {
@@ -54,8 +65,7 @@ export function withQuickAdd(onChange: (v: string) => void, opts: { asset?: Pick
       return;
     }
     if (v === ADD_VARIABLE) {
-      const id = createVariable(opts.variableType, opts.variableName);
-      if (id) onChange(id);
+      void createVariable(opts.variableType, opts.variableName).then((id) => id && onChange(id));
       return;
     }
     onChange(v);

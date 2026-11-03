@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ANIMATABLE_PROPS, EASING_NAMES, ease, uid, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
+import { confirmDialog } from '../components/dialogs';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { ChildOrder } from '../components/ChildOrder';
@@ -269,8 +270,8 @@ export function TimelinePanel() {
         <IconButton
           icon={<Icons.trash />}
           title="Delete timeline"
-          onClick={() => {
-            if (!confirm(`Delete timeline "${tl.name}"?`)) return;
+          onClick={async () => {
+            if (!(await confirmDialog({ title: 'Delete timeline', message: `Delete timeline "${tl.name}"?`, confirmLabel: 'Delete timeline', danger: true }))) return;
             store().update((d) => {
               const a = d.artboards.find((x) => x.id === ab.id);
               if (a) a.timelines = a.timelines.filter((t) => t.id !== tl.id);

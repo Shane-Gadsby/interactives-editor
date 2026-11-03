@@ -39,6 +39,7 @@ import { ArtboardView } from './ArtboardView';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
 import { insertFiles } from '../lib/insert';
 import { liveSession } from '../lib/live';
+import { confirmDialog } from '../components/dialogs';
 
 type Pt = { x: number; y: number };
 
@@ -738,9 +739,11 @@ export function Canvas() {
         const src = getArtboard(st.project, d.abId);
         const ids = d.items.map((i) => i.id);
         const what = ids.length === 1 ? `“${src && locate(src, ids[0])?.node.name}”` : `${ids.length} layers`;
-        setTimeout(() => {
-          if (confirm(`Move ${what} to the artboard “${target.name}”?\n\nIts keys in this artboard's timelines are removed, and interactions here that use it will need fixing.`)) store().moveToArtboard(ids, target.id);
-        }, 0);
+        void confirmDialog({
+          title: 'Move to artboard',
+          message: `Move ${what} to the artboard “${target.name}”?\n\nIts keys in this artboard's timelines are removed, and interactions here that use it will need fixing.`,
+          confirmLabel: 'Move',
+        }).then((ok) => ok && store().moveToArtboard(ids, target.id));
       }
     }
     if (d.kind === 'move' && !d.moved) {

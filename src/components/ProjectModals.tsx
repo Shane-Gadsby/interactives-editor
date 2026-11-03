@@ -8,6 +8,7 @@ import { standaloneHtml } from '../lib/export';
 import { IconButton } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
+import { confirmDialog } from './dialogs';
 
 function Modal({ title, help, onClose, children, className }: { title: string; help?: string; onClose: () => void; children: React.ReactNode; className?: string }) {
   useEffect(() => {
@@ -78,7 +79,7 @@ export function HistoryModal({ onClose }: { onClose: () => void }) {
   }, [projectId, sel]);
   const chosen = list?.find((r) => r.id === sel);
   const restore = async () => {
-    if (!chosen || !confirm(`Restore the version from ${new Date(chosen.created).toLocaleString()}? What's there now is saved in the history first, so you can come back to it.`)) return;
+    if (!chosen || !(await confirmDialog({ title: 'Restore version', message: `Restore the version from ${new Date(chosen.created).toLocaleString()}? What's there now is saved in the history first, so you can come back to it.`, confirmLabel: 'Restore' }))) return;
     setBusy(true);
     try {
       await (window as unknown as { __ixForceSave?: () => Promise<void> }).__ixForceSave?.().catch(() => undefined);
@@ -145,7 +146,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
     }
   };
   const stop = async () => {
-    if (!confirm('Turn the share link off? Anyone using it will get a "turned off" page.')) return;
+    if (!(await confirmDialog({ title: 'Turn off share link', message: 'Turn the share link off? Anyone using it will get a "turned off" page.', confirmLabel: 'Turn off', danger: true }))) return;
     setBusy('Turning off…');
     try {
       await stopShare(projectId);
