@@ -956,104 +956,502 @@ function diff(a, b, path = [], out = []) {
   return out;
 }
 const PACKAGE_EXTENSION = ".ixp";
+const TUTORIALS = [
+  {
+    id: "tutorial-first-animation",
+    title: "Tutorial 1: Your first animation",
+    group: "Getting started",
+    summary: "Draw a box and make it slide across the artboard with two keyframes. About five minutes.",
+    keywords: "tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",
+    body: `In this tutorial you draw a box and make it slide from the left of the artboard to the right. You will meet the **Layers** panel, the **Inspector**, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+
+This is how it looks when it is done:
+
+![The finished animation: Record is on, two keyframes are set, and the box slides when you press Play.](help/first-animation.mp4)
+
+## 1. Make a project
+
+1. Open the Interactives page and press **New project**. The editor opens with one white artboard called **Home**, 800 by 600.
+2. Click the project name at the top left (it says *Untitled project*), type **My first animation** and press <kbd>Enter</kbd>. Everything saves by itself. The label next to the name says **Saved** when it has.
+
+## 2. Draw the box
+
+1. Press <kbd>R</kbd> to pick the **Rectangle** tool (or click the rectangle in the tool bar down the left edge).
+2. Drag on the artboard, from about a quarter of the way down the left side, to make a square. Hold <kbd>Shift</kbd> while you drag to keep it square.
+3. The new layer is selected. In the **Layers** panel on the left it shows under **Home**. In the **Inspector** on the right, change **Name** to **Box**.
+4. In the Inspector's **Fill** section, click the colour swatch and pick a colour you like. Set **Radius** (under **Rectangle**) to 16 for rounded corners.
+
+![The editor with the Box selected: Layers on the left, the artboard in the middle, the Inspector on the right and the Timeline underneath.](help/editor-overview.png)
+
+## 3. Make a timeline
+
+A **timeline** holds the animation. Each artboard can have as many as you like.
+
+1. Click the **Timeline** tab at the bottom of the window. It opens a panel.
+2. Press **+ New timeline**. You get a timeline called **Timeline**, 1000 ms (one second) long, set to **Play once**.
+3. Look at the Inspector. Small diamonds now sit beside the number fields. These are **key buttons**, and they only show while the Timeline tab is open.
+
+## 4. Set the start and the end
+
+A **keyframe** says "at this moment, this property has this value". With two keyframes the player works out everything in between.
+
+1. Make sure the playhead (the red line) is at **0 ms**. The time shows next to the red record dot.
+2. With **Box** selected, click the diamond next to **X**. It turns gold: the box's starting X is now keyed at 0 ms.
+3. Press the red **Record** button in the Timeline bar. A red bar across the top of the Inspector says **Recording keyframes at 0 ms**. While Record is on, any animatable property you change becomes a keyframe at the playhead.
+4. Move the playhead to the end: click the ruler at the far right, at **1s**. The readout shows **1000 ms**.
+5. Drag the box to the right edge of the artboard. Or type a new **X** value, such as 560. A second keyframe appears on the box's **X** track.
+6. Press **Record** again to switch it off. Otherwise your next edit would become a keyframe too.
+
+![The timeline: one track for the Box's X, with a keyframe at 0 and one at 1s. The Length, loop and Autoplay settings are in the bar above.](help/timeline-panel.png)
+
+## 5. Play it
+
+Press the **Play preview** triangle in the Timeline bar. The box slides across. Drag the playhead along the ruler to scrub through by hand.
+
+> If the box doesn't move, check that there are **two** keys on the **X** track. A track with one key just holds that value.
+
+## 6. Make it nicer
+
+- **Easing.** The line between two keys is a *tween*. Click it, and in the **Tween** box on the right choose **easeOut** or **bounceOut** from **Ease**. You can also drag the two round handles on the little graph to draw your own curve. See [Easing](easing).
+- **Loop.** Change **Play once** to **Loop** or **Ping-pong**, and tick **Autoplay** so it starts as soon as the artboard shows.
+- **More properties.** Select the box, press **+ Key** with **Opacity**, **Rotation** or **Fill colour** chosen in the dropdown at the top left of the Timeline, or use Record and change them at different times.
+- **Preview.** Press **Preview** at the top right to see it exactly as the exported file will play it. Press <kbd>Esc</kbd> to close.
+
+## What you learned
+
+- Projects save as you work.
+- The **Layers** panel lists everything; the **Inspector** edits the selection.
+- A timeline has tracks, and a track has keyframes.
+- **Record** turns every change into a keyframe at the playhead.
+
+**Next:** [Tutorial 2: Your first interaction](tutorial-first-interaction), where a button starts the animation. More on timelines: [Timelines and keyframes](timelines).`
+  },
+  {
+    id: "tutorial-first-interaction",
+    title: "Tutorial 2: Your first interaction",
+    group: "Getting started",
+    summary: "Add a button that plays your animation when someone clicks it, using the Interactions graph.",
+    keywords: "tutorial interaction button click event action node graph connect wire drag empty space control timeline play",
+    body: `Now make the animation wait for a click. You will use the **Interactions** tab, where an *event* (something happens) starts a flow of *actions* (do something). It builds on [Tutorial 1](tutorial-first-animation): open that project, or any project with a timeline in it.
+
+## 1. Stop the timeline starting by itself
+
+1. Open the **Timeline** tab and check that **Autoplay** is **off**. If it is on, the box would slide as soon as the artboard shows.
+
+## 2. Add a button
+
+1. Press <kbd>B</kbd> for the **Button** tool and drag a button below the box.
+2. In the Inspector, change **Label** to **Slide the box**. The label is the text on the button. Change **Name** to **Slide button** so it is easy to find later.
+
+## 3. Add the event
+
+1. With the button selected, scroll the Inspector to its **Interactions** section and press **+ On click**.
+2. The bottom panel switches to the **Interactions** tab and an **On pointer** node appears. Its settings on the right say **Layer: Slide button** and **Event: Click / tap**. That reads as "when Slide button is clicked".
+
+> A shortcut for later: right-click a layer, choose **Add interaction**, then **On click…**. It adds an **On pointer** node and a **Control timeline** node, already joined.
+
+## 4. Add the action by dragging
+
+1. Find the small dot on the right edge of the **On pointer** node. That is its output.
+2. Drag from the dot into empty space and let go.
+3. A menu called **ADD AND CONNECT** opens. It lists only the nodes that make sense there. Choose **Action**, then **Control timeline**.
+4. The new node appears where you let go, already connected.
+
+![Dragging a connection into empty space: let go, pick a node, and it is added and joined for you.](help/drag-to-connect.mp4)
+
+## 5. Choose what it does
+
+1. Click the **Control timeline** node. Its settings show on the right.
+2. Set **Timeline** to **Timeline** (the one you made), and **Do** to **Play**.
+3. Leave **Continue** on **When it finishes**. That setting decides when the *next* node would run. It matters once you chain more actions after this one.
+
+![The Interactions tab: the node palette on the left, the graph in the middle and the selected node's settings on the right.](help/interactions-panel.png)
+
+## 6. Try it
+
+1. Press **Preview**.
+2. Click **Slide the box**. The box slides.
+3. Want it to start from the left every time you click? Set **Do** to **Restart** on the **Control timeline** node instead of **Play**.
+
+## Go further
+
+- **Toggle.** Add a **Toggle** node after the event. Join its **a** output to **Control timeline: Play** and its **b** output to **Control timeline: Play in reverse**. Each click now alternates.
+- **Hover.** Use **+ On hover** in the Inspector for a hover effect. Choose **Show / hide** or **Animate property** actions.
+- **Wait.** A **Wait** node pauses a flow for some milliseconds before the next node.
+- **Log.** A **Log** node writes to your browser's console, which is handy when you're not sure a flow ran. The Preview's event list also shows every event as it fires.
+
+## What you learned
+
+- **Events** (green) start flows, **actions** (blue) do things, **logic** (purple) chooses the way.
+- You can drag from an output into empty space to add and join a node in one move.
+- The **Preview** and its event list are the quickest way to test.
+
+**Next:** [Tutorial 3: A state machine with variables](tutorial-state-machine). More on the graph: [Interactions](interactions) and [Interaction node reference](interaction-nodes).`
+  },
+  {
+    id: "tutorial-state-machine",
+    title: "Tutorial 3: A state machine with variables",
+    group: "Getting started",
+    summary: "Build a lamp that switches on and off, with a tap counter, using variables, a data binding and Set variable nodes.",
+    keywords: "tutorial state machine variable boolean number toggle binding set variable counter lamp switch text expression braces state",
+    body: `A *state machine* is a thing that is always in one state, and moves to another when something happens. In Interactives the state lives in **variables**, the things that happen are **events**, and the look of each state comes from **bindings**.
+
+You will build a lamp. A button switches it on and off, and a counter shows how many times you pressed. It takes about ten minutes.
+
+## 1. Make a project and two variables
+
+1. Press **New project** on the projects page. Rename the project **Lamp**.
+2. Open the **Variables** tab at the bottom and press **+ Add variable**. A row appears.
+3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). Set **Type** to **True/false**. Leave the starting value unticked (false).
+4. Press **+ Add variable** again. Name it \`taps\`. Leave **Type** on **Number** with the starting value 0.
+
+Names can only use letters, digits and \`_\`, and can't start with a digit. That is so they work inside expressions.
+
+![The Variables tab: lit is true/false and starts false, taps is a number and starts at 0.](help/variables-panel.png)
+
+## 2. Draw the lamp
+
+1. Press <kbd>O</kbd> for the **Ellipse** tool. Drag on the artboard holding <kbd>Shift</kbd> to make a circle. Name it **Bulb**.
+2. In the Inspector's **Fill**, set the colour to a pale grey, \`#c9ced6\`.
+3. Press <kbd>T</kbd> for the **Text** tool and click under the bulb. Type \`Taps: {taps}\` and press <kbd>Escape</kbd> to finish. Anything in braces is an *expression*, so the text will show the number. Name the layer **Counter**.
+4. Press <kbd>B</kbd>, drag a button under the text and set its **Label** to **Switch**.
+
+## 3. Bind the bulb's colour to the variable
+
+A *binding* keeps a property up to date with an expression.
+
+1. Select **Bulb** and scroll the Inspector to **Data bindings**.
+2. Choose **Fill colour** in the dropdown and press **Bind**.
+3. In the expression box that appears, type:
+
+\`\`\`
+lit ? "#ffd23f" : "#c9ced6"
+\`\`\`
+
+That says: if \`lit\` is true the colour is yellow, otherwise it is grey. The fill now shows a link icon and can't be edited by hand while it is bound.
+
+![The Data bindings section with a binding on fill.color. The + Convert… menu below changes the value before it is set.](help/bindings-section.png)
+
+## 4. Add the interaction
+
+1. Select the **Switch** button. In its **Interactions** section press **+ On click**.
+2. Drag from the **On pointer** node's output dot into empty space. Choose **Action**, then **Set variable**.
+3. In the settings, set **Variable** to **lit** and **Do** to **Toggle (boolean)**.
+4. Drag from the new node's output into empty space again. Choose **Action**, then **Set variable**.
+5. Set **Variable** to **taps**, **Do** to **Add**, and **Value** to \`1\`.
+
+You now have: click → flip \`lit\` → add 1 to \`taps\`.
+
+## 5. Try it
+
+1. Press **Preview**.
+2. Click **Switch**. The bulb turns yellow and the counter goes up. Click again and the bulb goes grey.
+3. On the left of the Preview, the **Variables (live)** list shows \`lit\` and \`taps\`. Tick \`lit\` yourself, or type a number into \`taps\` and press <kbd>Enter</kbd>, to set them by hand. The **Events** list underneath records each click and the nodes it ran.
+
+![The Preview with its debug panel: live variables on the left, the lamp in the middle and the events list underneath.](help/preview-debug.png)
+
+## Go further: more than two states
+
+- Make a variable called \`mode\` with **Type** **Choice** and the options \`off, on, broken\`. A choice shows as a dropdown wherever you set it.
+- Bind the bulb's fill through a **Look up** converter (use **+ Convert…** under the binding): it lists every option for you to give a colour.
+- Use an **If** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **If** has a **true** and a **false** output.
+- Tick **Persist** on a variable in the Variables tab to remember its value in the visitor's browser between visits.
+
+## What you learned
+
+- **Variables** hold state. They are shared by every artboard.
+- **Set variable** changes them. **On variable change** reacts to a change.
+- **Bindings** and \`{braces}\` in text show the state.
+
+**Next:** [Tutorial 4: Importing a design file](tutorial-import-design). More: [Variables](variables), [Bindings](bindings) and [Expressions](expressions).`
+  },
+  {
+    id: "tutorial-import-design",
+    title: "Tutorial 4: Importing a design file",
+    group: "Getting started",
+    summary: "Bring a Photoshop, Illustrator, PDF, AutoCAD, Rive or Lottie file into a project, read the report and keep it linked.",
+    keywords: "tutorial import psd photoshop illustrator ai pdf dxf autocad rive riv lottie svg link embed reconnect watch report design file",
+    body: `You don't have to draw everything in Interactives. You can bring in a design from another app, then add the motion and the behaviour here. This tutorial uses a Photoshop file; the others work the same way.
+
+## 1. Pick a file
+
+Any of these will do:
+
+| Format | File | Becomes |
+|---|---|---|
+| Photoshop | \`.psd\` | One artboard, with real layers and editable text |
+| Illustrator | \`.ai\` (saved with **Create PDF Compatible File**) | One artboard per artboard in the file |
+| PDF | \`.pdf\` | One artboard per page |
+| AutoCAD | \`.dxf\` (not \`.dwg\`) | One artboard with a group per CAD layer |
+| Rive | \`.riv\` | An artboard for each Rive artboard, with timelines and state machines |
+| Lottie | \`.json\` or \`.lottie\` | An artboard and a timeline |
+| SVG | \`.svg\` | A group of editable shapes |
+
+If you don't have one handy, any Photoshop file with a few layers and a text layer is a good test.
+
+## 2. Bring it in
+
+There are three ways:
+
+- **Drop it** on the canvas of an open project. \`.psd\`, \`.ai\`, \`.pdf\` and \`.dxf\` files become new artboards.
+- Press **+ Import Lottie / Rive / PSD / AI / PDF / VectorCraft / PhotoCraft as artboard** at the bottom of the **Layers** panel. This adds artboards to the open project.
+- Press **Import** on the projects page. This makes a **new project** from the file.
+
+## 3. Choose: Link or Embed
+
+For Photoshop, Illustrator, PDF, AutoCAD, VectorCraft and PhotoCraft files, a dialog called **Import design file** asks what to do with each file.
+
+- **Embed** copies the file in once. This is the simplest choice and works in every browser.
+- **Link** keeps a connection to the file on your computer. When you save the file in the design app, the changes come into the artboard, and your own edits stay. Linking needs Chrome or Edge.
+
+Pick one for the file, or press **Embed all** or **Link all**. Then press **Import**.
+
+![The Import design file dialog: one row per file with a Link / Embed choice, and Embed all, Link all and Import buttons.](help/link-or-embed-dialog.png)
+
+## 4. Read the report
+
+When the import finishes, a box lists anything that couldn't be carried over exactly, for example a blend mode with no equivalent. Read it once, then press the **×**. Nothing is hidden: it is the whole list.
+
+![An import report. It says what was approximated, so you know what to check.](help/import-report.png)
+
+## 5. Look at what you got
+
+![A Photoshop file after import: each layer is a layer in the Layers panel, and the text is a live text layer with its own styling.](help/psd-import-result.png)
+
+- Pixel layers became image layers. Folders became groups. Hidden layers stay hidden and show as faint ghosts on the canvas.
+- Click a text layer. It is real text: change the words in the **Text** box. If it has several styles, a **Text runs** button lists them.
+- If a font isn't a Google font, check the **Font** field in the Inspector. A font that isn't installed on the viewer's computer won't show.
+
+## 6. Make it move
+
+1. Select a layer and follow [Tutorial 1](tutorial-first-animation) to animate it, or add a button and follow [Tutorial 2](tutorial-first-interaction).
+2. Your timelines, interactions and bindings are never touched by a re-import.
+
+## 7. Keep a linked file up to date
+
+If you chose **Link**:
+
+1. Select the imported artboard. The Inspector shows **Linked to Poster.psd** with the time it was last updated.
+2. Change the file in the design app and save it.
+3. Within a couple of seconds a message says something like **Poster.psd updated: 3 layers changed, 1 added**. The change is one undo step.
+4. Next time you open the project, a bar at the top may say **Reconnect**. Click it once so the browser may read the file again.
+5. The Inspector also has **Re-import now**, **Unlink (keep as embedded)** and a **Watch for changes** switch.
+
+Full details, including what each format does and doesn't carry over, are in [Importing](import).
+
+**Next:** [Tutorial 5: Publishing and sharing](tutorial-publish).`
+  },
+  {
+    id: "tutorial-publish",
+    title: "Tutorial 5: Publishing and sharing",
+    group: "Getting started",
+    summary: "Check it in Preview, set the page options, then export a single HTML file or make a share link. Also how to hand a project over and get it back.",
+    keywords: "tutorial publish share export html single file link embed iframe ixp package backup revision history restore collaborate preview fit page title",
+    body: `Your interactive is ready. This tutorial gets it to other people. It works with any project; the lamp from [Tutorial 3](tutorial-state-machine) is a good one to use.
+
+## 1. Check it in Preview
+
+1. Press **Preview** at the top right. It plays the project exactly as the exported file will.
+2. The dropdown at the top says **From the start artboard** or **From this artboard**. Use the second to test just the artboard you're working on.
+3. Press **Restart** to start from scratch. Press <kbd>Esc</kbd> to close.
+
+## 2. Set the page options
+
+1. Click an empty part of the canvas, or the artboard's name, so nothing is selected. The Inspector shows **Artboard** and **Project**.
+2. Under **Project**, set **Page title** (the title of the browser tab), **Fit** (how the artboard scales to its space) and **Page bg** (the colour around the artboard).
+3. Under **Artboard**, make sure the artboard people should see first is the start artboard. The button says **Start artboard** (greyed out) when it already is. If not, press **Make start artboard**.
+
+![The Project section of the Inspector: name, page title, description, fit, page background, sandbox and reduced motion.](help/project-settings.png)
+
+## 3. Export a single file
+
+1. Press **Export** at the top right.
+2. Choose **Single HTML file**. Your browser downloads one \`.html\` file that holds the player, the project and every image, font and sound.
+3. Upload it anywhere that serves web pages, or show it in an iframe. It works offline too.
+
+![The Export menu.](help/export-menu.png)
+
+## 4. Or make a share link
+
+A share link needs no uploading. Anyone with the link can play the project in their browser. They can't edit it.
+
+1. Choose **Export → Share link…**.
+2. Press **Create share link**. A link appears.
+3. Press **Copy** and send it, or **Open** to try it.
+4. The link is a snapshot. When you've changed the project, open the dialog again and press **Update to the latest version**.
+5. To stop sharing, press **Turn off link** and confirm. The link then shows a "turned off" page.
+
+![The Share link dialog: the link with Copy and Open, then Update to the latest version and Turn off link.](help/share-link-dialog.png)
+
+## 5. Put it on a page
+
+See [Embedding and the player API](embedding) for the iframe snippet, how the page can set variables and listen for messages, and the \`<interactives-player>\` web component.
+
+## 6. Back it up, or hand it over
+
+- **Export → Project package (.ixp)** saves the whole project with its assets. Anyone can bring it back with **Import** on the projects page.
+- On the projects page, the download button on a project card does the same without opening it.
+- The **history** button (the clock at the top) lists earlier saved versions. Pick one to preview it, then press **Restore this version**. What was there before is saved first, so you can come back. See [Live editing and saving](live-editing).
+
+## 7. Work with other people
+
+- A project can be opened by its owner, and by staff with power-user access (they use the all-projects view on the projects page). When two or more people are in the same project, a **Live** badge shows, their initials appear at the top, and you see each other's cursors. To let someone else play it without editing, send a share link instead. See [Live editing and saving](live-editing).
+- An AI agent can join the same way. See [AI agents (MCP)](ai-agents).
+
+## You're done
+
+You've built, animated, wired up, imported and published. Keep going with the topics on the left. Good places to go next: [Timelines and keyframes](timelines), [Groups and frames](groups-frames), [Auto layout](auto-layout), [Data sources](data-sources) and [Troubleshooting and common questions](troubleshooting).`
+  }
+];
 const TOPICS = [
   // ---------------------------------------------------------------- getting started
   {
     id: "welcome",
     title: "Welcome to Interactives",
     group: "Getting started",
-    summary: "What Interactives is and how a project fits together.",
-    keywords: "intro overview start tutorial",
-    body: `Interactives builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on artboards, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere.
+    summary: "What Interactives is, how a project fits together, and where to start.",
+    keywords: "intro overview start getting started tutorial beginner first learn new user onboarding glossary words",
+    body: `Interactives builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on artboards, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
+
+![The editor: tools down the left edge, then Layers and Assets, the artboards in the middle, the Inspector on the right, and the Timeline, Interactions, Scripts, Variables, Data and Usage tabs along the bottom.](help/editor-overview.png)
+
+## New here? Start with the tutorials
+
+Five short, hands-on tutorials, in order. Each has numbered steps you can follow exactly, and each ends with a link to the next.
+
+1. [Your first animation](tutorial-first-animation): draw a box and make it slide with two keyframes.
+2. [Your first interaction](tutorial-first-interaction): a button that plays the animation when it is clicked.
+3. [A state machine with variables](tutorial-state-machine): a lamp that switches on and off, with a tap counter.
+4. [Importing a design file](tutorial-import-design): bring in a Photoshop, Illustrator, PDF, AutoCAD, Rive or Lottie file.
+5. [Publishing and sharing](tutorial-publish): export a single HTML file or make a share link.
+
+If you like to look around first, read [The editor at a glance](interface). If something isn't working as you expect, try [Troubleshooting and common questions](troubleshooting).
 
 ## How a project fits together
 
 - **Artboards** are the screens. Each has its own layers, timelines and interactions. See [Artboards](artboards).
-- **Layers** are shapes, text, images, groups, frames and real web elements (buttons, inputs, links, embeds, video).
+- **Layers** are shapes, text, images, groups, frames, script layers and real web elements (buttons, inputs, links, embeds, video). See [Layers, hidden and locked layers](layers-panel).
 - **Timelines** animate layer properties through keyframes. See [Timelines and keyframes](timelines).
 - **Interactions** are a node graph: an event (a click, a key, a timer, a variable change) runs actions (play a timeline, set a variable, go to another artboard). See [Interactions](interactions).
 - **Variables** and **data sources** hold values that text, bindings and lists read. See [Variables](variables) and [Data sources](data-sources).
 - **Scripts** are JavaScript for anything the nodes can't do. See [Scripts](scripts).
+- **Assets** are the files in the project: images, video, audio, fonts and data. See [The Assets panel](assets).
 
-## A first project in five minutes
+## Words you'll see
 
-1. On the projects page choose **New project**.
-2. Pick the **Rectangle** tool (<kbd>R</kbd>) and drag on the artboard.
-3. Open the **Timeline** tab at the bottom, press **Record**, move the playhead to 1s and drag the rectangle somewhere else. A keyframe appears.
-4. Open **Interactions**, add **On pointer** (target: the rectangle, click) and connect it to **Play timeline**.
-5. Press **Preview**. Click the rectangle and it moves.
-6. **Export → Single HTML file** gives you one file to upload anywhere.
+| Word | Means |
+|---|---|
+| Artboard | One screen of the interactive, with its own size, background, layers, timelines and interactions |
+| Layer | One thing on an artboard: a shape, some text, a button, a group... |
+| Inspector | The panel on the right that edits whatever is selected |
+| Timeline | A set of tracks that animate layer properties over time |
+| Keyframe (key) | A moment on a track with a value. The player works out the in-between |
+| Record | The red button that turns every property change into a keyframe |
+| Event, action, logic | The three kinds of node in the Interactions graph: what starts a flow, what it does, and how it chooses |
+| Variable | A named value (number, text, true/false, colour, choice, list) shared by the whole project |
+| Binding | A rule that keeps a layer property equal to an expression, such as \`lit ? "#ffd23f" : "#c9ced6"\` |
+| Instance | One artboard placed inside another, like a reusable component |
+| Preview | Plays the project exactly as the exported file will |
 
-> Everything saves automatically. The label next to the project name says Saved, Saving… or Unsaved.`
+## Where to get help
+
+Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pages. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. See [Using this help](help).
+
+> Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`
   },
+  ...TUTORIALS,
   {
     id: "projects",
     title: "Projects page",
     group: "Getting started",
-    summary: "Create, open, duplicate, import and delete projects, and organise them with folders and tags.",
+    summary: "Create, open, duplicate, import and delete projects, and organise them with folders, tags, search and sort.",
     keywords: "home new import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter",
-    body: `The projects page lists the projects you own, newest first.
+    body: `The projects page lists the projects you own. Each card shows a picture of the project's start artboard, its name, when it last changed, how many artboards it has, its tags and a folder menu.
 
-- **New project** makes an empty project with one artboard.
-- **Import** opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, a Lottie file, a Rive \`.riv\` file, a Photoshop \`.psd\` file, an Illustrator \`.ai\` file, a PDF, a VectorCraft file (\`.vectorcraft\`) or a PhotoCraft file (\`.pcraft\`). Lottie, Rive, Photoshop, Illustrator, PDF, VectorCraft and PhotoCraft files become a new project.
-- Each card can be opened, **duplicated**, **downloaded** as a package or **deleted**. Deleting can't be undone, so download a package first if you might want it back.
-- Use the **Help** link at the top for these pages, or press <kbd>F1</kbd> anywhere.
+![The projects page: the folder list on the left, the search box, sort menu and tag filter along the top, and a card for each project.](help/projects-page.png)
+
+## Making and opening projects
+
+- **New project** (top right, or the **+** card) makes an empty project with one artboard called **Home**. Your default font is added to it. See [Preferences](preferences).
+- Click a card's picture to open the project. **Help** and the gear (**Preferences**) are at the top right too.
+- **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`) or PhotoCraft (\`.pcraft\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
+- Each card has three icon buttons: **Duplicate** (a copy of the project and its assets), **Export** a \`${PACKAGE_EXTENSION}\` package (a download of the whole project) and **Delete**. Delete asks first, and can't be undone, so download a package if you might want the project back.
+- With no projects yet the page shows **Create your first project**.
+
+## Search and sort
+
+- The **Search name or tag** box shows only projects whose name or tags contain what you type. **Clear filters** appears if nothing matches.
+- **Sort** orders the cards by **Last updated** (newest first, the default) or **Name**. The choice is remembered in this browser.
 
 ## Folders
 
 Folders keep a long list tidy. A project is in one folder at most, and folders are one level deep.
 
 - The list on the left shows **All projects**, **No folder** and each folder with its project count. Click one to show only those projects.
-- Use the folder menu at the bottom of a card to **move the project to a folder**. Choose **New folder...** to start a new one; a folder exists as long as at least one project is in it.
-- With a folder selected, the pencil **renames** it and the bin **deletes** it. Deleting a folder never deletes projects: they just go back to *No folder*.
+- Use the folder menu at the bottom of a card to **move the project to a folder**. Choose **New folder…** to start a new one: a dialog asks for its name. A folder exists as long as at least one project is in it.
+- With a folder selected, the pencil **renames** it and the bin **deletes** it (both ask in a dialog). Deleting a folder never deletes projects: they just go back to *No folder*.
 
 ## Tags
 
 Tags are short free-text labels, up to 20 per project and 40 characters each.
 
-- Click **+ tag** on a card, type a tag and press <kbd>Enter</kbd>. Tags you've used before are suggested. Click the **x** on a tag to remove it.
-- The tag row at the top lists every tag in use. Click one to show only projects with that tag, and click it again to clear it.
-- The **search** box matches project names and tags. **Sort** orders the cards by last updated or by name (the choice is remembered in this browser).
+- Click **+ tag** on a card, type a tag and press <kbd>Enter</kbd> (<kbd>Esc</kbd> cancels). Tags you've used before are suggested. Click the **×** on a tag to remove it.
+- The tag row at the top lists every tag in use with a count. Click one to show only projects with that tag, and click it again to clear it.
 
 Folders and tags belong to the project record on the server, not to the project file, so they don't appear in exports, package files or the revision history.
 
 ## Who sees what
 
-You see only your own projects. Staff with power-user access can toggle the power-user view (the suite's shared shortcut) to see and open every project; the server checks that access again. In that view you can also file and tag other people's projects.`
+You see only your own projects. Staff with power-user access can toggle the power-user view (the suite's shared shortcut, shown in a banner as **F9**) to see and open every project; the server checks that access again. In that view you can also file and tag other people's projects.`
   },
   {
     id: "interface",
     title: "The editor at a glance",
     group: "Getting started",
-    summary: "Tools, layers, canvas, inspector and the bottom panels.",
-    keywords: "layout panels toolbar inspector layers dock ui",
-    body: `## Top bar
-The project name (click to rename), save state, **Live** indicator, people currently in the project, undo/redo, zoom, **Preview**, **Export**, **Preferences** and **Help**.
+    summary: "Top bar, tools, Layers and Assets, canvas, Inspector, bottom tabs and Preview.",
+    keywords: "layout panels toolbar inspector layers dock ui top bar save live history undo zoom preview debug tabs tour",
+    body: `![The editor with a project open.](help/editor-overview.png)
+
+## Top bar
+From left to right:
+
+- **All projects** (the house): back to the projects page.
+- The **project name**. Click to rename.
+- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason).
+- **Live**, when others are in the project too: **Live**, **Reconnecting** or **Deleted**. Their initials show beside it. See [Live editing and saving](live-editing).
+- **Revision history** (the clock): earlier saved versions of the project.
+- **Undo** and **Redo**.
+- Zoom: **−**, the percentage (click it to fit everything) and **+**.
+- **Preferences** (the gear) and **Help**.
+- **Preview** and **Export**.
 
 ## Tool bar (left edge)
-Drawing tools, then the web-element tools, then **Help** at the bottom. Hover a tool to see its name and shortcut. See [Shapes and paths](shapes) and [Web elements](web-elements).
+Drawing tools, then the web-element tools, then **Help** at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## Left panel
-- **Layers**: the layer tree of the open artboard. Drag to reorder or nest, click the eye to hide and the lock to lock. Double-click to rename.
-- **Assets**: images, video, audio, fonts and data files in the project.
-- **Artboards**: every artboard; click one to open it.
+Two tabs:
+
+- **Layers**: every artboard in the project, with its layer tree. Click to select, drag to reorder or nest, hover for the lock and the eye. See [Layers, hidden and locked layers](layers-panel).
+- **Assets**: images, video, audio, fonts and data files in the project. See [The Assets panel](assets).
 
 ## Canvas
-All artboards side by side. See [Moving around the canvas](canvas). Right-click a layer for cut, copy, order, group, hide, lock and *Add interaction*; right-click an artboard to add a new layer where you clicked, or to duplicate, delete or zoom to it; right-click empty canvas for a new artboard there.
+All artboards side by side. See [Moving around the canvas](canvas). Right-click for menus: see [Layers, hidden and locked layers](layers-panel#right-click-menus).
 
 ## Inspector (right)
-Settings for the selection. With nothing selected it shows the artboard and the project settings. Section titles with a **?** link to the page in these docs.
+Settings for the selection. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard, its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
 
 ## Bottom panel
-**Timeline**, **Interactions**, **Scripts**, **Variables**, **Data** and **Usage**. Click a tab to open it, click it again to close it, and drag the top edge to resize.
+**Timeline**, **Interactions**, **Scripts**, **Variables**, **Data** and **Usage**. Click a tab to open it, click it again to close it, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources) and [Usage](usage).
 
 ## Preview
-**Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on. **Restart** starts again. The **Debug** panel (on by default) shows:
+**Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. The **Debug** panel (on by default) shows:
 
 - **Now showing**: the artboard on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
-- **Variables**: every value as it changes. Type a new value (or tick, or choose) to set it while it runs; filter by name when there are many.
-- **Events** (underneath): each interaction event as it fires, which layer it came from, and what it set off, including events inside instances. Messages sent to the host page are listed too.`
+- **Variables (live)**: every value as it changes. Type a new value and press <kbd>Enter</kbd> (or tick, or choose) to set it while it runs; filter by name when there are many.
+- **Events** (underneath): each interaction event as it fires, which layer it came from, and what it set off, including events inside instances. Messages sent to the host page are listed too, and so are errors from script layers.
+
+![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)`
   },
   {
     id: "canvas",
@@ -1072,8 +1470,8 @@ Settings for the selection. With nothing selected it shows the artboard and the 
 | <kbd>Shift</kbd>+<kbd>2</kbd> | Zoom to the selection |
 | <kbd>Ctrl</kbd>+<kbd>1</kbd> | 100% |
 
-## Big projects
-Artboards you aren't working on are shown as a picture of themselves, which keeps panning and zooming smooth in projects with many artboards. Click an artboard (or a layer in it) and it comes alive for editing; the picture updates by itself shortly after anything in it changes.
+## Big projects and artboard pictures
+Artboards you aren't working on are shown as a *still*: a picture of themselves. That keeps panning and zooming smooth in projects with many artboards. Click an artboard (or a layer in it) and it comes alive for editing. The still updates by itself shortly after anything in it changes, so you never need to refresh it. If an artboard looks slightly soft while you pan, that is the still; click it to see it sharp.
 
 ## Wheel preference
 If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in the top bar) and set **Mouse wheel** to *Pan (Ctrl+wheel zooms)*. With that setting the wheel and two-finger trackpad scrolling pan, and <kbd>Ctrl</kbd>+wheel or a pinch zooms. The setting is kept in this browser.`
@@ -1084,15 +1482,50 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     group: "Getting started",
     summary: "Your own editor settings: wheel, theme, default font, rulers, tooltips.",
     keywords: "settings options wheel tooltips",
-    body: `Open **Preferences** from the gear in the top bar (or on the projects page). They are yours: saved with your account, so they follow you to any browser.
+    body: `![The Preferences dialog.](help/preferences.png)
 
-- **Mouse wheel**: *Zoom* (the wheel zooms, Shift+wheel pans) or *Pan* (the wheel pans, Ctrl+wheel zooms). See [Moving around the canvas](canvas).
-- **Theme**: dark, light, or auto (follows your system).
+Open **Preferences** from the gear in the top bar (or on the projects page). They are yours: saved with your account, so they follow you to any browser you sign in on.
+
+- **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
+- **Theme**: *Dark*, *Light*, or *Auto (follow the system)*.
 - **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. Open Sans unless you change it; any Google font name works.
 - **Show rulers**: rulers and guides on the canvas (also <kbd>Shift</kbd>+<kbd>R</kbd>).
 - **Show tooltips**: explanations when you hover buttons and fields.
 
-Project-wide settings (start artboard, fit, sandbox) are in the inspector with nothing selected. See [Project settings](project-settings).`
+Press <kbd>Esc</kbd> or the **×** to close. Project-wide settings (start artboard, fit, sandbox) are in the inspector with nothing selected. See [Project settings](project-settings).`
+  },
+  {
+    id: "dialogs",
+    title: "Dialogs and confirmations",
+    group: "Getting started",
+    summary: "The editor asks in its own dialogs, not the browser's pop-ups: what they look like, which keys work, and when you will see one.",
+    keywords: "dialog confirm prompt alert popup modal ok cancel enter escape delete are you sure danger red button link embed new folder rename move",
+    body: `Whenever the editor needs an answer from you, it shows a dialog on top of the page. They look the same everywhere and work with the keyboard.
+
+![A confirmation dialog.](help/move-to-artboard.png)
+
+## How they work
+- The **dialog** dims the page behind it. Nothing else can be clicked until you answer.
+- <kbd>Enter</kbd> presses the main button. <kbd>Esc</kbd> cancels. <kbd>Tab</kbd> moves between the buttons and stays inside the dialog.
+- A **red** main button, such as **Delete project**, means the action destroys something. Read the message first.
+- Some dialogs have a text box, such as **New folder**. It is selected for you, so you can type straight away. If a name isn't allowed, a message under the box says why.
+- Dialogs queue up: if two are needed, you get one after the other.
+- None of them are the browser's own pop-ups, so they aren't blocked and they keep the editor's look.
+
+## Where you'll see them
+| Dialog | When |
+|---|---|
+| **Delete project**, **Delete folder** | On the projects page: delete a project (which can't be undone) or a folder (its projects are kept) |
+| **New folder**, **Rename folder** | Moving a project to **New folder…**, or renaming with the pencil |
+| **Move to artboard** | You dropped layers over a different artboard. See [Layers](layers-panel#moving-layers-to-another-artboard) |
+| **Delete asset**, **Delete N assets**, **Remove unused assets** | Deleting from the [Assets panel](assets) or the [Usage](usage) tab. They list the files and warn about any still in use |
+| **Delete timeline**, **Delete script** | The bin beside a timeline or script |
+| **New variable** | Choosing **+ Create new variable…** in a node's settings |
+| **Import design file** | Dropping or picking Photoshop, Illustrator, PDF, AutoCAD, VectorCraft or PhotoCraft files: **Link** or **Embed** each one. See [Importing](import#linking-design-files-instead-of-embedding-them) |
+| **Restore version** | Restoring from the [revision history](live-editing#revision-history) |
+| **Turn off share link** | Stopping a [share link](export#share-link) |
+
+The **Import design file** dialog has a **Link** / **Embed** switch for each file, plus **Embed all** and **Link all** buttons and **Cancel**. Files that can only be embedded (and every file in a browser without file linking) say so under their name. The dialog remembers your last choice.`
   },
   {
     id: "shortcuts",
@@ -1112,6 +1545,7 @@ Project-wide settings (start artboard, fit, sandbox) are in the inspector with n
 | <kbd>L</kbd> | Line |
 | <kbd>P</kbd> | Pen |
 | <kbd>N</kbd> | Pencil (freehand) |
+| <kbd>W</kbd> | Bend (drag an edge into a curve) |
 | <kbd>T</kbd> | Text |
 | <kbd>B</kbd> | Button |
 
@@ -1141,8 +1575,36 @@ Project-wide settings (start artboard, fit, sandbox) are in the inspector with n
 ## Help
 | Key | Does |
 |---|---|
-| <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help |
+| <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
 | <kbd>?</kbd> | Open the help |
+
+## Text
+Double-click a text layer to edit it. Select some of the text, then:
+
+| Key | Does |
+|---|---|
+| <kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd> | Bold / italic / underline the selection |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> | Strikethrough |
+| <kbd>Esc</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> | Finish editing |
+
+(Use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd> on a Mac.)
+
+## Interactions, dialogs and Preview
+| Key | Does |
+|---|---|
+| <kbd>Del</kbd> / <kbd>Backspace</kbd> | Delete the selected node or connection in the graph |
+| <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate the selected node |
+| <kbd>Enter</kbd> / <kbd>Esc</kbd> | Accept / cancel a [dialog](dialogs) |
+| <kbd>Esc</kbd> | Close the Preview, Preferences or any open box |
+
+## Mouse
+| Do this | To |
+|---|---|
+| Hold <kbd>Alt</kbd> while drawing or resizing | Work from the centre |
+| Hold <kbd>Ctrl</kbd> while dragging | Move without snapping |
+| <kbd>Alt</kbd>-click a path point | Switch it between curve and corner |
+| <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Select the deepest layer inside groups |
+| Double-click a group | Select inside it |
 
 While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kbd> resizes from the centre. In number fields, drag the label to scrub (<kbd>Shift</kbd> ×10, <kbd>Alt</kbd> ×0.1), use arrow keys to step, or type sums like \`100/2\`.`
   },
@@ -1152,15 +1614,67 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
     title: "Artboards",
     group: "Design",
     summary: "Screens with their own size, background, timelines and interactions.",
-    keywords: "screen page scene size background start",
+    keywords: "screen page scene size background start preset duplicate delete move resize clip",
     body: `An artboard is one screen of the interactive. Each has a size, a background, its layers, its timelines and its interactions. Variables, scripts, data and assets belong to the whole project and are shared.
 
-- Draw a new one with the **Artboard** tool (<kbd>A</kbd>) or add one from the Artboards list.
-- Click an artboard's name on the canvas to select it; the inspector then shows its size, background and **Clip content to artboard**.
-- Drag layers and let go over another artboard and you're asked whether to move them there. They keep their place on the canvas; their keys in the old artboard's timelines are removed, and interactions there that used them need fixing (the **Usage** tab lists broken references).
-- The **start artboard** is the one the player shows first (Project settings).
+- Make a new one with the **Artboard** tool (<kbd>A</kbd>), the **+ Add artboard** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New artboard here**.
+- Click an artboard's name above it on the canvas, or its row in the **Layers** panel, to select it. Drag the name to move the artboard around the canvas, and drag its corners to resize it.
+- With an artboard selected, the Inspector shows **Name**, **W** and **H** (and **Size presets…** such as Desktop, Tablet or Phone), **Background**, **Clip content to artboard**, **Make start artboard**, **Duplicate artboard** and **Delete artboard**. Then come its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**.
+- The **start artboard** is the one the player shows first. It has a **start** badge in the Layers panel. Use **Make start artboard** (also in the right-click menu) to change it.
+- Drag layers and let go over another artboard and you're asked whether to move them there. See [Moving layers to another artboard](layers-panel#moving-layers-to-another-artboard).
 - Move between artboards at runtime with the **Go to artboard** action (with a transition) or \`ix.goTo('Name', 'fade')\`.
-- An artboard can also be placed inside another as an [instance](instances), like a reusable component.`
+- An artboard can also be placed inside another as an [instance](instances), like a reusable component. The **Use in** menu in the Inspector does it in one step.
+- To bring a design file in as an artboard, see [Importing](import).`
+  },
+  {
+    id: "layers-panel",
+    title: "Layers, hidden and locked layers",
+    group: "Design",
+    summary: "The Layers panel, hiding and locking layers, ghosts and badges on the canvas, moving layers between artboards, and right-click menus.",
+    keywords: "layers panel tree select rename reorder drag hide show hidden visible eye lock locked unlock ghost badge quick unlock move to artboard another artboard context menu right-click order group solo",
+    body: `The **Layers** tab in the left panel lists every artboard in the project, with each artboard's layers beneath it, front-most first.
+
+![The Layers panel. Sun is hidden, so its name is faded. Backdrop is locked.](help/layers-panel.png)
+
+## Working with the list
+- Click a layer to select it. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) or <kbd>Shift</kbd> and click to select several.
+- Click the arrow beside a group, a frame or an artboard to open or close it. The artboard marked **start** is the one the player shows first.
+- Double-click a name to rename it. <kbd>Enter</kbd> finishes and <kbd>Esc</kbd> cancels.
+- Drag a row to reorder. Drop it above or below another row, or onto a group or frame to put it inside. Drop it on its own artboard's row to bring it to the top level.
+- **+ Add artboard** and **+ Import Lottie / Rive / PSD / AI / PDF / VectorCraft / PhotoCraft as artboard** are at the bottom. See [Artboards](artboards) and [Importing](import).
+
+## Hide and lock
+Hover a row and two small buttons appear at its right: a padlock (**Lock** / **Unlock**) and an eye (**Hide** / **Show**). They stay visible for any layer that is locked or hidden. The **Visible** and **Locked** ticks in the Inspector do the same.
+
+- **Hidden** layers are not drawn by the player or in Preview. In the editor they show as a faint **ghost** on the canvas, so you can still see where they are and pick them. Their names are faded in the Layers panel. Hide a mask layer and its clipping stops.
+- **Locked** layers can't be selected or moved by clicking on the canvas, so a backdrop never gets in your way. You can still select one in the Layers panel and edit it in the Inspector.
+- A layer that is hidden only because its parent is a [Solo group](groups-frames#solo-groups) and it isn't the active child looks the same. Its eye says **Hidden by Solo on …: show this one instead**, and pressing it makes it the active child.
+
+### Quick badges on the canvas
+With the **Select** tool, move the pointer over a ghost or over a locked layer. A small badge appears at the top right of the layer:
+
+- an eye with a line through it: click to **show** the layer;
+- a padlock: click to **unlock** the layer.
+
+Clicking selects the layer afterwards, ready to edit.
+
+![A hidden layer (the faint circle) with its Show badge.](help/hidden-layer-ghost.png)
+
+![Hovering the locked backdrop shows an Unlock badge at its top right.](help/locked-layer-badge.png)
+
+## Moving layers to another artboard
+Select layers and drag them on the canvas. If you let go over a **different artboard**, a dialog asks **Move to artboard**: *Move “Card” to the artboard “Menu”?* Press **Move** to do it or **Cancel** to put them back.
+
+![The Move to artboard dialog.](help/move-to-artboard.png)
+
+- The layers keep their place on the canvas, but now belong to the other artboard.
+- Their keys in the old artboard's timelines are removed.
+- Interactions in the old artboard that used them will need fixing. The [Usage](usage) tab's **Broken** list shows exactly which.
+
+## Right-click menus
+- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Add interaction** (**On click…**, **On hover…**) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
+- **An artboard**: **New** (a menu of layers to add where you clicked), **Paste**, **Make start artboard**, **Duplicate artboard**, **Zoom to artboard** and **Delete artboard**.
+- **Empty canvas**: **New artboard here**, **Paste**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`
   },
   {
     id: "shapes",
@@ -1177,7 +1691,7 @@ Click to add corner points, drag to add smooth points with handles. Click the fi
 Draw freehand. The stroke is smoothed into a few bezier curves when you let go. End where you started to make a closed, filled shape.
 
 ## Editing points
-Select a path and press <kbd>Enter</kbd> (or double-click). Drag points and handles, click a point and press <kbd>Delete</kbd> to remove it. <kbd>Escape</kbd> or <kbd>Enter</kbd> finishes. Double-click the outline to add a point. Drag an edge with the Bend tool (<kbd>W</kbd>) to curve it, and animate points to morph the shape: see [Shape morphing and the Bend tool](shape-morphing).
+Select a path and press <kbd>Enter</kbd> (or double-click). Drag points and handles, click a point and press <kbd>Delete</kbd> to remove it, and <kbd>Alt</kbd>-click a point to switch it between a curve and a corner. <kbd>Escape</kbd> or <kbd>Enter</kbd> finishes. Double-click the outline to add a point. Drag an edge with the Bend tool (<kbd>W</kbd>) to curve it, and animate points to morph the shape: see [Shape morphing and the Bend tool](shape-morphing).
 
 ## Shape settings
 - **Rectangle**: corner radius.
@@ -1194,21 +1708,24 @@ Boolean operations (union, subtract, intersect, exclude) turn several shapes int
     summary: "Solid, gradient and image fills; strokes, dashes and trim; shadow, blur and blend modes.",
     keywords: "colour color gradient linear radial image fill stroke border dash cap join shadow blur blend opacity trim path",
     body: `## Fill
-Solid colour, **linear** or **radial** gradient (add and move stops, set the angle) or an **image** fill (cover, contain or stretch). Colours accept hex, \`rgb()\`, \`hsl()\` and names; the number box beside a colour is its opacity.
+Choose the type from the dropdown at the top of the **Fill** section: **None**, **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. Colours accept hex, \`rgb()\`, \`hsl()\` and names; the number box beside a colour is its opacity. The **×** in a section's header removes the fill or stroke, and the **+** adds it back.
 
 ## Stroke
 Colour, width, **cap** (butt, round, square), **join** (miter, round, bevel) and **dash** (e.g. \`8 4\` for 8 on, 4 off).
 
 ### Trim path
-**Trim start**, **Trim end** and **Trim offset** (all 0–100%) draw only part of a stroke. Animate *Trim end* from 0 to 100 to make a line draw itself on. Works on every shape with a stroke.
+The **Trim** row in the Stroke section has a start (**Trim**), an end (**to**) and an offset (**Off**), all 0–100%. They draw only part of a stroke. Animate the end (the *Trim end %* property) from 0 to 100 to make a line draw itself on. Works on every shape with a stroke.
 
 ## Effects
-Use **+** in the Effects section to add a shadow or a layer blur; each one has a **×** to remove it. Fill and Stroke have the same **×** and **+** in their headers.
+Use **+** in the **Effects** section to add a shadow or a layer blur; each one has a **×** to remove it.
 
-- **Opacity** of the whole layer.
-- **Shadow**: x, y, blur, spread and colour.
-- **Layer blur**: blurs the layer.
-- **Blend**: how the layer mixes with what is under it (multiply, screen, overlay, …).
+- **Shadow**: **X**, **Y**, **Blur**, **Spread** and **Colour**. Tick **Inner** to draw the shadow inside the shape instead of behind it.
+- **Layer blur**: blurs the whole layer by an **Amount** in pixels.
+
+Two related settings are in the top section of the Inspector, with the position fields:
+
+- **α** is the opacity of the whole layer (0 to 1).
+- **Blend** is how the layer mixes with what is under it: *normal*, *multiply*, *screen*, *overlay*, *darken*, *lighten*, *color-dodge*, *color-burn*, *difference* or *exclusion*.
 
 Most of these can be animated: look for the diamond next to a field. See [Animatable properties](animatable-properties).`
   },
@@ -1221,7 +1738,7 @@ Most of these can be animated: look for the diamond next to a field. See [Animat
     body: `Use the **Text** tool (<kbd>T</kbd>): click for text that grows as you type, or drag a box for wrapping text. Double-click text to edit it, and <kbd>Escape</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to finish.
 
 - **Sizing**: *Auto width* (one line, grows sideways), *Auto height* (fixed width, wraps and grows down) or *Fixed* (clips nothing, you set both).
-- **Font**: any Google font by name, or a font file you upload in the **Fonts** section of Project settings.
+- **Font**: any Google font by name (add it in the **Fonts** section of the Project settings), or a font file you upload in the [Assets panel](assets), which is added to the fonts for you.
 - Weight, italic, size, line height, letter spacing, alignment, vertical alignment, case and decoration.
 
 ## Several styles in one text layer
@@ -1275,14 +1792,46 @@ A unit halfway into the range gets half of each change. Several modifiers stack,
 - Lottie files with text animators import as modifiers (range selector and the position, scale, rotation, opacity, colour and tracking properties). The Lottie export does not write them.`
   },
   {
+    id: "assets",
+    title: "The Assets panel",
+    group: "Design",
+    summary: "Every file in the project: upload, preview as thumbnails or a list, place on an artboard, check several and delete.",
+    keywords: "assets files upload thumbnails details size slider checkbox select all delete remove place unused image video audio font data panel",
+    body: `The **Assets** tab in the left panel lists every file in the project: images, video, audio, fonts and data files.
+
+![The Assets panel in thumbnail view, with one asset checked and the Delete button showing.](help/assets-panel.png)
+
+## Adding files
+- **Upload files** opens a file picker. You can pick several at once.
+- Or drop files on the canvas, or paste them. Dropped pictures and video are also placed on the artboard where you dropped them.
+- Font files (\`.woff\`, \`.woff2\`, \`.ttf\`, \`.otf\`) are added to the project's fonts as well, and a message tells you.
+- Data files (JSON, CSV, TSV, text) are used from the **Data** tab. See [Data sources](data-sources).
+- Design files (\`.psd\`, \`.ai\`, \`.pdf\`, \`.dxf\`) aren't stored as assets: they become new artboards. See [Importing](import).
+
+## Looking at them
+- **Thumbnails** shows a picture for each asset. Drag the slider beside it to make the thumbnails bigger or smaller.
+- **Details** is a list with each asset's kind and size, and **unused** if nothing in the project refers to it.
+- Hover an asset for its full name and size. Your choice of view and thumbnail size is remembered in this browser.
+
+## Using them
+- **Place** puts an image or video on the artboard you have open, in the middle, at 300 by 200. You can then resize it.
+- Image fills, video and image layers, **Play sound** nodes and fonts pick their file from a dropdown of the project's assets. Most of those dropdowns also offer **+ Add a new image…** (or sound, video or data file), which uploads and selects in one step.
+
+## Checking and deleting
+- Click an asset, or its checkbox, to check it. <kbd>Shift</kbd>+click checks a range. The box above the list, **Select all**, checks or unchecks every asset.
+- When anything is checked a red **Delete** button appears with the count. A dialog lists the files and warns if any are used. Deleting an asset that layers still use leaves those layers empty.
+- The bin on one asset deletes just that one (it asks first).
+- To clear out everything nothing uses, see [Usage](usage#removing-unused-assets).`
+  },
+  {
     id: "images-media",
-    title: "Images, video, audio and assets",
+    title: "Images, video and audio",
     group: "Design",
     summary: "Adding files, the Assets panel, and 9-slice scaling for images.",
     keywords: "image picture photo svg video audio sound mp3 upload drop paste asset nine slice 9-slice n-slice",
     body: `Drop files on the canvas, paste them, or use the **Image** tool. SVG files become editable vector layers; other images become image layers. Video files become video layers; audio files are stored as assets for the **Play sound** action.
 
-The **Assets** panel lists every file in the project. Switch between **Thumbnails** (drag the slider to change their size) and **Details** (a list with the type, size and whether anything uses it). Click an asset, or its checkbox, to check it; Shift+click checks a range, and the box at the top checks or unchecks them all. **Delete** removes the checked assets after asking. Deleting an asset that layers still use leaves those layers empty.
+Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
 
 ## Image settings
 **Fit** (cover, contain, stretch), corner radius, and:
@@ -1362,7 +1911,7 @@ Layers snap to other layers' edges and centres while you drag; guide lines show 
 <kbd>]</kbd> and <kbd>[</kbd> move a layer up and down; add <kbd>Ctrl</kbd> to go to the top or bottom. Or drag in the Layers panel.
 
 ## Boolean operations
-Select two or more shapes and choose **Union**, **Subtract**, **Intersect** or **Exclude** in the inspector. The result is a single path; the originals are replaced.`
+Select two or more shapes and press **Union**, **Subtract**, **Intersect** or **Exclude** in the Inspector (the four buttons in the shape section), or right-click and choose **Combine shapes**. *Subtract* takes the other shapes away from the bottom-most one. The result is a single path; the originals are replaced.`
   },
   {
     id: "instances",
@@ -1372,9 +1921,9 @@ Select two or more shapes and choose **Union**, **Subtract**, **Intersect** or *
     keywords: "component nested artboard reuse symbol instance inputs",
     body: `Any artboard can be placed inside another as an **instance**: a live copy that runs its own timelines and interactions on the parent's clock. Edit the source artboard and every instance updates.
 
-- Select a layer and use **Place as instance** in the inspector, or choose an artboard in an instance layer's **Artboard** field.
-- **Fit** decides how the artboard sits in the instance's box (fill, contain, cover, none).
-- **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source.
+- Select the artboard you want to reuse and pick the artboard to put it in from **Use in** (it says **Place as an instance in…**). Or choose an artboard in an instance layer's **Artboard** field.
+- **Fit** decides how the artboard sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**. **Reset size** puts the box back to the artboard's own size, and **Edit** followed by the artboard's name jumps to the source artboard.
+- **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
 - Messages sent inside an instance (**Send message**, \`ix.emit\`) bubble up to the parent.
 
 Instances can be nested up to six deep. An artboard that contains itself stops at that limit.`
@@ -1438,31 +1987,39 @@ The **Open URL** action does the same from an interaction.
     body: `Each artboard can have any number of timelines. A timeline has **tracks**; each track animates one property of one layer through **keyframes**.
 
 ## Adding keyframes
-- Press **Record** (the red dot). While recording, every change you make to an animatable property at the playhead becomes a keyframe.
+- Press **Record** (the red dot). A red bar at the top of the Inspector says **Recording keyframes at …**. While recording, every change you make to an animatable property at the playhead becomes a keyframe. Press it again to stop.
 - Or click the diamond next to a field in the inspector to key its current value.
-- Drag keys to retime them, <kbd>Shift</kbd>-click to select several, <kbd>Delete</kbd> to remove.
+- Or select a layer, choose a property in the dropdown at the top left of the Timeline and press **+ Key**.
+- Drag keys to retime them (<kbd>Shift</kbd> snaps to 100 ms), <kbd>Shift</kbd>-click to select several, <kbd>Delete</kbd> to remove. The diamond on a layer's own row moves all of that layer's keys at that time.
 
 ## Timeline settings
 | Setting | Meaning |
 |---|---|
-| Duration | Length in milliseconds |
-| Loop | Once, loop, or ping-pong |
+| Length | Duration in milliseconds |
+| **Play once** / **Loop** / **Ping-pong** | What happens at the end |
 | Autoplay | Start when the artboard is shown |
-| Speed | Playback rate (2 is twice as fast, negative plays backwards) |
+| Speed | Playback rate (2 is twice as fast). To play backwards use a **Control timeline** node set to **Play in reverse** |
 
 The line between two keys is a **tween**: it shows its [easing](easing) as a little curve. Click it to choose how the value moves from the first key to the second (or *Use for all tweens*). In the Tween panel, drag the two handles on the graph to make your own curve; the dashed lines mark the start (0) and end (1) values, and the graph grows to show overshoot. Select a key to change its time or value.
 
 ## Markers
-A **marker** is a named point in time. Press **+ Marker** to add one at the playhead; it shows as a flag on the ruler. Drag it to move it, or select it to rename it, set its time or delete it. An **On timeline marker** node runs its flow whenever playback passes the marker: going forwards or in reverse, and on every lap of a loop or ping-pong. Leave *Marker name* empty to react to every marker on the timeline; \`event.marker\` and \`event.time\` say which one fired. Scrubbing and seeking do not fire markers, only playing.
+A **marker** is a named point in time. Press **+ Marker** to add one at the playhead; it shows as a flag on the ruler and is called *Marker 1*, *Marker 2* and so on until you rename it. Drag it to move it, or select it to rename it, set its time or delete it. An **On timeline marker** node runs its flow whenever playback passes the marker: going forwards or in reverse, and on every lap of a loop or ping-pong. Leave *Marker name* empty to react to every marker on the timeline; \`event.marker\` and \`event.time\` say which one fired. Scrubbing and seeking do not fire markers, only playing.
 
-## Design view
-Switching artboards opens them in **design view**: the canvas shows the layers as they are, not a frame of an animation. Choose a timeline in the Timeline tab to see and edit its frames; choose *Design view* again to go back.
+![The timeline bar and tracks. The flag on the ruler is a marker.](help/timeline-markers.png)
+
+## Design view and timeline view
+There are two ways to look at an artboard.
+
+- **Design view**: the canvas shows the layers as they really are, with no animation applied. This is where you place and style things. Opening an artboard starts here, and the Timeline tab says **Design view: the canvas shows the layers as they are. Choose a timeline to see and edit its animation.**
+- **Timeline view**: choose a timeline from the dropdown at the top left of the Timeline tab and the canvas shows that timeline at the playhead. Drag the playhead to see any frame, and with **Record** on, changes become keyframes.
+
+Choose **Design view (no timeline)** in the same dropdown to go back. Record turns itself off when you do.
 
 ## Switching children and draw order
 Two properties are not numbers. **Solo: active child** on a [solo group](groups-frames) switches which child shows, and **Draw order (children)** changes which child is in front. Both step at their keys instead of blending. Key them from the group's Solo and Draw order sections in the inspector.
 
 ## Playing from interactions
-**Play timeline** plays, pauses, stops, restarts, reverses or seeks a timeline. From scripts: \`ix.timeline('Intro').play()\`. **On timeline end** fires when one finishes, and **On timeline marker** fires at each [marker](timelines).`
+**Control timeline** plays, restarts, pauses, stops, reverses, toggles or jumps to a time in a timeline. From scripts: \`ix.timeline('Intro').play()\`. **On timeline end** fires when one finishes, and **On timeline marker** fires at each [marker](timelines#markers).`
   },
   {
     id: "shape-morphing",
@@ -1521,7 +2078,12 @@ Point numbers are shared by all the keys of a path, so the editor keeps them in 
 | bounceOut | Bounces at the end |
 | Custom bezier | Your own curve: drag the two handles |
 
-The same names work in **Animate property** nodes and in \`node.animate(prop, value, { ease: 'easeOut' })\`.`
+The same names work in **Animate property** nodes and in \`node.animate(prop, value, { ease: 'easeOut' })\`.
+
+## Choosing and drawing an easing
+On a timeline, click the line between two keyframes (a *tween*). The **Tween** box shows the curve. Pick a name from **Ease**, or drag the two round handles on the graph to draw your own: the dashed lines mark the start (0) and the end (1) values, and the graph grows to show overshoot. **Use for all tweens** gives every tween in the timeline the same easing.
+
+![The Tween box: a curve with two draggable handles, the Ease menu and Use for all tweens.](help/easing-editor.png)`
   },
   {
     id: "joysticks",
@@ -1548,11 +2110,15 @@ Examples: a dial that turns with a variable, a character whose eyes follow the p
 
 Add one in the **Blends** section of the artboard (select the artboard), then start it with a **Play blend** node (or tick *Start with the artboard*). **Stop blend** ends it.
 
+![The Blends section with the example blend: Mode, Input, Start with the artboard and two timelines.](help/blends-section.png)
+
 ## Quick start: try the example
 1. Click an empty part of the canvas so the **artboard** is selected (the inspector shows the artboard's settings).
 2. Open the **Blends** section and click **Build an example to try**. You get a ball, two timelines (*Example: small and red* and *Example: big and blue*), a variable called *mix*, a slider bound to it, and a blend that starts with the artboard.
 3. Click **Preview** and drag the slider. At 0 the ball is small and red, at 1 it is big and blue, and in between it is a mix of the two.
 4. Open either example timeline to see that each one is just a pose: the same values at the start and the end.
+
+![Preview of the example: changing mix from 0 to 1 turns the small red ball into the big blue one.](help/blends-mix.mp4)
 
 ## Make your own, step by step
 1. **Make the poses.** Create one timeline per pose (say *Idle*, *Walk*, *Run*) and key the layers in each. A pose can be still (the same keys at the start and end) or a loop that moves.
@@ -1591,10 +2157,25 @@ Importing a Rive file turns its 1D and direct blend states into blends. Entering
     body: `Open the **Interactions** tab. Each artboard has its own graph.
 
 - **Events** (green) start a flow: a click, a key, a timer, a variable changing, a timeline ending, a message from the host page, scrolling, data loading, or the artboard starting.
-- **Actions** (blue) do something and continue: play a timeline, set a variable, set or animate a property, show or hide, go to another artboard, open a URL, play a sound, run a script, send a message, wait.
-- **Logic** (purple) chooses where to go: *If*, *Switch*, *Once*, *Sequence*.
+- **Actions** (blue) do something and continue: **Control timeline**, **Play blend**, **Set variable**, **Set property**, **Animate property**, **Show / hide**, **Go to artboard**, **Open URL**, **Play sound**, **Run script**, **Send message**, **Wait** and more.
+- **Logic** (purple) chooses where to go: **If** (a **true** and a **false** output), **Toggle** (alternates between **a** and **b**), **Once** and **Sequence** (runs **1**, then **2**, then **3**).
 
-Drag from an output port to the next node's input to connect them. Actions that take time (**Control timeline**, **Animate property**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away. Let go on empty space instead and a menu offers only the nodes that fit (actions and logic when you drag from an output, anything with an output when you drag backwards from an input); the one you pick is added where you let go and connected for you. Press <kbd>Escape</kbd> or click away to cancel. Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Every node is listed in [Interaction node reference](interaction-nodes).
+![The Interactions tab: the node palette, the graph and the settings of the selected node.](help/interactions-panel.png)
+
+Drag from an output port to the next node's input to connect them. Actions that take time (**Control timeline**, **Animate property**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away. Let go on empty space instead and a menu offers only the nodes that fit (actions and logic when you drag from an output, anything with an output when you drag backwards from an input); the one you pick is added where you let go and connected for you. Press <kbd>Escape</kbd> or click away to cancel.
+
+![Dragging a connection into empty space adds a node and joins it.](help/drag-to-connect.mp4)
+
+Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Settings that name a variable or a sound also offer **+ Create new variable…** or **+ Add a new sound…** in their dropdown, so you don't have to leave the graph. Each node has a **Note** box for a reminder to yourself, and **Delete node** at the bottom.
+
+## Right-click and shortcuts
+- Right-click empty graph for **Add node**.
+- Right-click a node for **Connect to new node**, **Connect to existing node**, **Disconnect**, **Duplicate** (<kbd>Ctrl</kbd>+<kbd>D</kbd>), **Help for this node** and **Delete** (<kbd>Del</kbd>).
+- Right-click a connection to **Delete connection**.
+- Right-click a *layer* on the canvas, choose **Add interaction**, then **On click…** or **On hover…** to add an **On pointer** event with a **Control timeline** action already joined to it.
+- In the Inspector, a layer's **Interactions** section lists its events and has **+ On click** and **+ On hover**.
+
+Test in **Preview**: the event list shows each event as it fires. Every node is listed in [Interaction node reference](interaction-nodes). For a walk-through, see [Tutorial 2](tutorial-first-interaction).
 
 ## What's in scope
 Expression fields can use every variable and data source by name, \`event\` (details of what fired: \`event.key\`, \`event.x\`, \`event.index\` for a repeated copy, \`event.payload\` for a message) and \`Math\`.
@@ -1654,7 +2235,9 @@ A list variable holds the items a [repeater](repeaters) draws: put its name in *
 - In scripts: \`ix.vars.score += 1\`.
 - From the host page: \`player.setVariable('score', 10)\`.
 
-Variable names must be letters, digits and \`_\` so expressions can use them.`
+Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field. Tick **Persist** to remember the value in the visitor's browser between visits (for a score, a saved choice or a name). Press **+ Add variable** to make one, and the bin to delete it. See [Tutorial 3](tutorial-state-machine) for a worked example.
+
+![The Variables tab.](help/variables-panel.png)`
   },
   {
     id: "expressions",
@@ -1700,7 +2283,9 @@ These work in every expression:
     group: "Interactivity",
     summary: "Drive a layer property from a variable, data or expression, live.",
     keywords: "bind binding data binding property drive reactive",
-    body: `A binding sets a layer's property from an [expression](expressions), and keeps it up to date as variables and data change. In the **Data bindings** section of the inspector, pick a property and type the expression.
+    body: `A binding sets a layer's property from an [expression](expressions), and keeps it up to date as variables and data change. In the **Data bindings** section of the Inspector, pick a property in the dropdown, press **Bind**, and type the expression.
+
+![The Data bindings section: a binding on the fill colour, and the + Convert… menu.](help/bindings-section.png)
 
 Examples:
 
@@ -1718,7 +2303,7 @@ A bound property shows a link icon and can't be changed by hand or keyframed unt
 The value is made to fit the property: a number property takes a number (\`true\`/\`false\` become 1/0, numeric text is read) and is left as it was if the expression gives something that is not a number; a true/false property takes a boolean; text and colour properties take text.
 
 ## Converters
-Under a binding, **+ Convert…** changes its value before it is set. They run in order, so a few can be chained.
+Under a binding, the **+ Convert…** menu changes its value before it is set. They run in order, so a few can be chained.
 
 | Converter | Does |
 |---|---|
@@ -1826,10 +2411,12 @@ The layer is an ordinary layer otherwise: move, rotate, fade, blend, mask and an
   {
     id: "usage",
     title: "Usage: what uses what",
-    group: "Design",
+    group: "Reference",
     summary: "Find where an asset, variable, artboard, script, timeline or data source is used, and clear out what is not.",
     keywords: "usage dependencies dependency graph unused references used by find remove cleanup orphan broken missing",
-    body: `The **Usage** tab (bottom panel) answers "what is this used by?" for the whole project, and shows what nothing uses.
+    body: `![The Usage tab: variables on the left, and what each one is used by on the right.](help/usage-tab.png)
+
+The **Usage** tab (bottom panel) answers "what is this used by?" for the whole project, and shows what nothing uses.
 
 Pick a group along the top (**Artboards**, **Assets**, **Variables**, **Data**, **Scripts**, **Timelines**, **Layers**) and an item on the left. The right side lists everything that uses it. **Click an entry to jump there**: layers are selected on the canvas, artboards and timelines are opened, and interactions open the **Interactions** tab on that node. Scripts and data sources open their tab.
 
@@ -1880,7 +2467,7 @@ Use a source by its **name** anywhere expressions go: \`{products.length} produc
     group: "Data",
     summary: "Copy a layer once per item in a list, with item and index in scope.",
     keywords: "repeat repeater list loop for each item index grid table",
-    body: `Turn on **Repeat** on a group or frame and its **first child** is copied once per item in **Items** (an expression that gives a list, like \`products\` or \`[1, 2, 3]\`).
+    body: `Select a group or frame and, in its **Repeat (list)** section, tick **Repeat the first child for each item**. Its **first child** is then copied once per item in **Items** (an expression that gives a list, like \`products\` or \`[1, 2, 3]\`).
 
 **Items** can be a [data source](data-sources) or a *List* [variable](variables): the repeater redraws when the list changes, so a *Set variable* node that appends to the list adds a row.
 
@@ -1893,19 +2480,24 @@ Clicks on a copy fire **On pointer** for the template layer with \`event.index\`
   {
     id: "project-settings",
     title: "Project settings",
-    group: "Data",
+    group: "Getting started",
     summary: "Start artboard, fit, page title, fonts, sandbox and reduced motion.",
     keywords: "settings start artboard fit scale page title background fonts sandbox reduced motion",
-    body: `Click an empty part of the canvas to see Project settings in the inspector.
+    body: `![The Project section of the Inspector.](help/project-settings.png)
+
+Click an empty part of the canvas, or an artboard's name, to see the **Project** settings in the Inspector (below the artboard's own).
 
 | Setting | Meaning |
 |---|---|
-| Start artboard | Shown first in the player |
-| Fit | How the artboard scales to the space it's given: contain, cover, fill, fit width, or none |
-| Page title / Page bg | Title and background of the exported HTML page |
-| Fonts | Google fonts by name, or uploaded font files |
+| Name | The project's name, as on the projects page |
+| Page title | The title of the browser tab for the exported page |
+| Description | A note about the project, kept in the file |
+| Fit | How the artboard scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
+| Page bg | The colour around the artboard in the exported page |
 | Run scripts in the sandbox | See [Scripts](scripts) |
-| Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |`
+| Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
+| Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
+| Fonts | Google fonts by name (type one and press **Add**), or font files you upload in the **Assets** panel |`
   },
   // ---------------------------------------------------------------- import/export
   {
@@ -1914,12 +2506,26 @@ Clicks on a copy fire **On pointer** for the template layer with \`event.index\`
     group: "Import and export",
     summary: "Bring in Lottie JSON / dotLottie, Rive .riv files, Photoshop .psd files, Illustrator .ai files, PDFs, AutoCAD DXF (and what to do with DWG), VectorCraft .vectorcraft and PhotoCraft .pcraft files, SVG and project packages.",
     keywords: "import vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update changes reconnect",
-    body: `Lottie, Rive, Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft and PhotoCraft files: use **Import** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
+    body: `| File | Becomes | Can be linked |
+|---|---|---|
+| Lottie (\`.json\`, \`.lottie\`) | An artboard and a timeline | No |
+| Rive (\`.riv\`) | An artboard for each Rive artboard, with timelines, state machines and bindings | No |
+| Photoshop (\`.psd\`) | An artboard of layers, with editable text | Yes |
+| Illustrator (\`.ai\`) and PDF | An artboard per page, as vector art | Yes |
+| AutoCAD (\`.dxf\`) | An artboard with a group per CAD layer (\`.dwg\` must be saved as DXF first) | Yes |
+| VectorCraft, PhotoCraft | Artboards of layers | Yes |
+| SVG | A group of editable shapes | No |
+
+New to this? [Tutorial 4](tutorial-import-design) walks through an import step by step.
+
+Lottie, Rive, Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft and PhotoCraft files: use **+ Import Lottie / Rive / PSD / AI / PDF / VectorCraft / PhotoCraft as artboard** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
 
 ## Lottie (.json, .lottie)
-Shape layers, groups, fills, strokes, gradients, transforms, trim paths, masks and keyframes with easing become layers and a timeline. Expressions, effects and text animators are not carried over.
+Shape layers, groups, fills, strokes, gradients, transforms, trim paths and keyframes with easing become layers and a timeline. Text animators with range selectors become [text modifiers](text-modifiers). Expressions, layer masks, track mattes, layer effects, skew and time remapping are not carried over, and the import report lists what was dropped.
 
 ## Rive (.riv)
+![A Rive file after import: each Rive artboard is an artboard, with its animations as timelines and its state machine as interactions.](help/rive-import-result.png)
+
 Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes and translation constraints are carried over; bones and meshes are not.
 
 Rive **events** become messages: a *Send message* node with the event's name, and its custom properties as the payload (an object, e.g. \`event.payload.power\`). An event keyed on an animation becomes a [timeline marker](timelines) with an *On timeline marker* node; events fired by listeners and by states or transitions (at their start or end) become *Send message* nodes in those flows, and Rive event listeners become *On message* nodes. An **audio event** also plays its embedded sound (a *Play sound* node, with the audio stored as a project asset), and an **open URL event** also opens its link (an *Open URL* node). Audio that is hosted on Rive's CDN instead of embedded is skipped, and the import report says so.
@@ -1927,6 +2533,8 @@ Rive **events** become messages: a *Send message* node with the event's name, an
 Rive **view models** become shared [variables](variables): numbers, true/false, text, colours, triggers (a count that goes up when it fires) and enums (a *Choice* with the enum's options), and a list property becomes a *List* of the first items' values. Transitions and listeners that read or write them keep working. **Data binds on layers** (a view model value driving a layer's position, rotation, scale, opacity, text, fill or stroke colour, stroke width and so on) become [bindings](bindings), with the bind's converters (to text with decimals, rounding, boolean negate, range mapper, add, subtract, multiply, divide, to number, string pad and trim, formulas that are plain arithmetic) as converters. Two-way and to-source binds are brought in one way only (value to layer), and interpolating converters apply instantly.
 
 ## Photoshop (.psd)
+![A Photoshop file after import: layers, a live text layer, and hidden layers kept hidden.](help/psd-import-result.png)
+
 The document becomes an artboard of the same size. Every pixel layer becomes an image layer (stored as a PNG asset) at its position, folders become groups, and the layer name, visibility, opacity (including fill opacity) and these blend modes carry over: multiply, screen, overlay, darken, lighten, color dodge, color burn, difference and exclusion. 8 and 16 bit RGB and grayscale files import as layers. Indexed colour and CMYK files (and files with no layers) import as one flattened picture, and 32 bit, bitmap, Lab, duotone and multichannel files are not supported. Layers with nothing in them are skipped without comment.
 
 **Text layers** become real, editable text layers: the text, font, size, colour, alignment, line height, letter spacing (tracking) and bold, italic, underline and strikethrough, with a style run for each stretch that differs (so a heading with one red word stays one layer). Photoshop stores a font as a PostScript name such as \`Montserrat-SemiBold\`; the importer turns it into a family and weight. Families that are Google fonts are added to the project's fonts so they load; any other font keeps its name and shows only where that font is installed, so check the font field in the inspector. Point text (a click on the canvas) becomes a box that does not wrap, paragraph text (a dragged box) keeps its width and height. Text that is warped, vertical or has a layer mask stays a picture of its pixels, named after the text, and is listed in the report.
@@ -1956,6 +2564,8 @@ What you get is editable vector art:
 Not carried over, and listed in the report: pattern fills, gradient meshes, opacity masks, blend modes outside the list, live effects (the PDF holds what they produced, as paths or pictures), overprint, Type 3 fonts, JPEG 2000 and fax pictures, and encrypted files. Artboard names can't be read from the file, so they are numbered.
 
 ## AutoCAD (.dxf, and .dwg)
+![An AutoCAD drawing after import: lines, a hatch and text as editable layers.](help/dxf-import-result.png)
+
 A **DXF** file becomes one artboard of editable vector layers, named after the file. ASCII and binary DXF both work. Only the **model space** is imported; paper space layouts (sheets) are skipped and reported. If the file has nothing in the model space, its paper space is imported instead.
 
 - **Fitting.** The drawing is scaled evenly, with the y axis flipped (CAD has y up), so its longest side is 1600 px, plus a 20 px margin. The report tells you the scale ("1 px = 5 mm") from the file's drawing units. Objects on layers that are off or frozen don't count when fitting. If a stray object far from the drawing would shrink it, the artboard shows the extents saved in the file instead and says so.
@@ -2009,7 +2619,11 @@ Select a linked artboard to see **Linked to Poster.psd (updated 2 min ago)** in 
 
 Linking needs a browser with the File System Access API (Chrome or Edge). In Firefox and Safari files are embedded, and the dialog says so. Each time you open the project the browser must be allowed to read the file again, so a bar asks you to click **Reconnect**. The link lives in the browser that made it: other people in the project see the last imported state and get updates when the person with the file saves them, and the bar tells them whose computer has it. A copy of a linked artboard is not linked.
 
-After an import, a report lists anything that couldn't be carried over exactly.`
+![The Import design file dialog.](help/link-or-embed-dialog.png)
+
+After an import, a report lists anything that couldn't be carried over exactly. It is the whole list: nothing is skipped without a note. Press the **×** to close it.
+
+![An import report for a DXF file.](help/import-report-dxf.png)`
   },
   {
     id: "export",
@@ -2024,12 +2638,21 @@ After an import, a report lists anything that couldn't be carried over exactly.`
 | Single HTML file | One file with the player, the project and every asset. Upload or embed it anywhere; it works offline. |
 | Project package (${PACKAGE_EXTENSION}) | The whole project with assets, to re-import or play with the player library |
 | Project JSON | The document only, without asset files |
-| Lottie JSON / dotLottie | The open artboard's shapes and timeline, for Lottie players (no interactivity) |
-| PNG image | The open artboard as a picture, at 2× or 1×, at the timeline's playhead |
-| SVG image | The open artboard as an SVG file that scales cleanly. It uses HTML inside the SVG for text and web elements, so it opens in browsers but not in every drawing program |
+| Lottie JSON (this artboard), dotLottie (this artboard) | The open artboard's shapes and timeline, for Lottie players (no interactivity). A report lists what couldn't be written |
+| PNG image (this artboard), PNG image, 1× | The open artboard as a picture, at 2× or at actual size, at the timeline's playhead |
+| SVG image (this artboard) | The open artboard as an SVG file that scales cleanly. It uses HTML inside the SVG for text and web elements, so it opens in browsers but not in every drawing program |
+| Share link… | A link that plays the project in the browser (below) |
+
+The files are named after the project (and the artboard, for pictures and Lottie).
+
+![The Export menu.](help/export-menu.png)
 
 ## Share link
-**Export → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. It is a snapshot: press **Update to the latest version** to publish later changes, or **Turn off link** to stop it working.`
+**Export → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. It is a snapshot: press **Update to the latest version** to publish later changes, or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). **Copy** copies the link and **Open** opens it in a new tab.
+
+![The Share link dialog.](help/share-link-dialog.png)
+
+For a walk-through, see [Tutorial 5](tutorial-publish).`
   },
   {
     id: "embedding",
@@ -2066,14 +2689,19 @@ player.setData('products', [...]);
     group: "Working together",
     summary: "Several people in one project, autosave, revisions and conflicts.",
     keywords: "multiplayer collaborate live share presence cursor save autosave conflict undo revision history version restore",
-    body: `Everything saves as you work. When others open the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
+    body: `Everything saves as you work. A project can be opened by its owner and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). When more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
 
 - **Undo** only undoes your own changes.
 - If two people change the same setting at the same moment, the later change wins.
 - If the connection drops, the badge says *Reconnecting*; your changes are kept and sent when it's back.
 
 ## Revision history
-The server keeps saved revisions of the project: a snapshot every few minutes while it changes (the newest 100 are kept), and one before every restore. Click the **history** button (the clock) in the top bar to see them, preview one, and **Restore** it. Restoring is itself saved as a new revision, so it can be undone.`
+The server keeps saved revisions of the project: a snapshot every few minutes while it changes (the newest 100 are kept), and one before every restore. Click the **Revision history** button (the clock) in the top bar. The list on the left shows each version with its date and how long ago it was; click one to see a picture of it and a count of its artboards and variables. **Restore this version** asks **Restore version** in a dialog first. What is there now is saved in the history before the restore, so you can come back to it, and the page reloads with the restored project.
+
+![The Revision history dialog.](help/revision-history.png)
+
+## When two copies disagree
+If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).`
   },
   {
     id: "ai-agents",
@@ -2084,6 +2712,13 @@ The server keeps saved revisions of the project: a snapshot every few minutes wh
     body: `An AI agent can join a project like another person: it shows in the top bar as **<name> (AI)**, its edits appear for everyone as it makes them, and it can see what you have selected, so you can say "make the selected button pulse when hovered".
 
 It connects through the **Interactives MCP server**, a small program any MCP client (Claude Code, Claude Desktop and others) can start.
+
+## A first conversation
+1. Open a project in the editor, so you can watch.
+2. Add the MCP server to your agent's settings (below).
+3. Ask the agent: *List my projects, then join the one called Lamp.* A person called **<name> (AI)** appears in the top bar.
+4. Select a layer yourself, then ask: *Make the selected button pulse when I hover over it.* The agent reads your selection and makes the change while you watch.
+5. Ask it to run **validate** when it is done, to find broken references and expressions that don't parse.
 
 ## Setting it up
 The server is \`mcp/dist/interactives-mcp.mjs\` in the editor's repository. Add it to your MCP client, for example in Claude Code:
@@ -2103,6 +2738,7 @@ claude mcp add interactives -e INTERACTIVES_URL=https://<your server>/interactiv
 |---|---|
 | list_projects | Your projects |
 | join_session | Joins a project's live session; reports who is there and what they have selected |
+| leave_session | Leaves the session |
 | get_selection | The layers each person has selected, in full |
 | get_overview, get_layers, get_interactions | Read artboards, layer trees, timelines, variables, interactions |
 | edit | Add, change, move and delete layers; add artboards, variables, timelines, interactions and scripts, in one batch |
@@ -2128,13 +2764,95 @@ claude mcp add interactives -e INTERACTIVES_URL=https://<your server>/interactiv
 ` + ANIMATABLE_PROPS.map((p) => `| \`${p.prop}\` | ${p.label} | ${p.kind} |`).join("\n")
   },
   {
+    id: "troubleshooting",
+    title: "Troubleshooting and common questions",
+    group: "Reference",
+    summary: "Quick answers: the box won't move, a layer can't be selected, text shows braces, imports and links, saving conflicts.",
+    keywords: "troubleshoot problem help faq not working stuck cannot cant why does nothing happens missing wont move select locked hidden record keyframe blank preview conflict save link reconnect dwg cors autoplay",
+    body: `Short answers to the things new users ask most. Each links to the page with the full story.
+
+## Animation
+**My layer doesn't move when the timeline plays.**
+A track needs **two or more** keyframes. With one key it just holds that value. Add a second at another time. See [Tutorial 1](tutorial-first-animation).
+
+**I'm in Record mode but nothing is keyed.**
+- The **Timeline** tab must be open, with a timeline chosen. In **Design view (no timeline)** changes are ordinary edits.
+- The property must be one that can animate (see [Animatable properties](animatable-properties)).
+- A property driven by a [binding](bindings) can't be keyed. Remove the binding first.
+
+**The timeline plays once and stops.**
+Set **Play once** to **Loop** or **Ping-pong**, and tick **Autoplay** if it should start by itself. See [Timelines and keyframes](timelines).
+
+**An edit I make shows up as a keyframe I didn't want.**
+Record is still on. Press the red dot to switch it off.
+
+## Selecting and seeing layers
+**I can't click a layer on the canvas.**
+It is probably **locked**, or **hidden** (shown as a faint ghost). Hover it for the badge that unlocks or shows it, or use the eye and padlock in the Layers panel. See [Layers, hidden and locked layers](layers-panel).
+
+**A layer is in the editor but not in Preview.**
+Check that it is **Visible**; that it isn't hidden by a **Solo** group's active child; that it sits inside the artboard (**Clip content to artboard** hides what is outside); and that no mask above it is clipping it. See [Groups and frames](groups-frames).
+
+**A field is greyed out and has a link icon.**
+It is bound to an expression. Remove the binding in **Data bindings** to edit it by hand. See [Bindings](bindings).
+
+## Text, variables and expressions
+**My text shows \`{score}\` instead of the number.**
+The variable needs to exist with exactly that name (it's case sensitive). Make it in the **Variables** tab. To show a real brace, write \`{{\`. See [Variables](variables).
+
+**It says "Use letters, digits and _ only".**
+Variable and data source names are used inside expressions, so they can't contain spaces or dashes. Try \`high_score\`.
+
+**A script does nothing.**
+Open **Preview** and look at the **Events** list for an error message. Scripts in the sandbox can only use \`ix\`, timers and \`console\`. See [Scripts](scripts).
+
+## Importing and linking
+**It says Link isn't available, or "Embedded in this browser".**
+Linking needs the File System Access API, which is in Chrome and Edge. In other browsers files are embedded. A file *dropped* from some places can be embedded only; use the import button in the **Layers** panel to pick it instead.
+
+**A bar asks me to Reconnect.**
+Press **Reconnect**. The browser needs your permission each time you open a project before it can read a linked file again. See [Importing](import#linking-design-files-instead-of-embedding-them).
+
+**"The file was moved, renamed or deleted."**
+Put it back where it was, or press **Unlink (keep as embedded)** on the artboard.
+
+**An Illustrator file says to save with "Create PDF Compatible File".**
+Re-save it from Illustrator with that option ticked. **A DWG file** must be saved as DXF first. See [Importing](import).
+
+## Saving and sharing
+**A red bar says the project changed in another tab or by someone else.**
+Another copy saved first. **Reload theirs** brings in what is saved, and **Overwrite with mine** keeps your version. Pick carefully: the other one is lost. See [Live editing and saving](live-editing).
+
+**Undo doesn't undo someone else's change.**
+Undo only undoes your own changes. Use the [revision history](live-editing#revision-history) to go back further.
+
+**A video doesn't autoplay.**
+Browsers only autoplay *muted* video. Tick **Muted**.
+
+**Data from a web address doesn't load.**
+The address must allow cross-origin requests (CORS) from where the interactive is shown. See [Data sources](data-sources).
+
+## The editor itself
+**The page zooms when I scroll.**
+That's the default. Set **Mouse wheel** to **Pan (Ctrl+wheel zooms)** in [Preferences](preferences).
+
+**A shortcut doesn't work.**
+Shortcuts are ignored while a text box is focused. Click the canvas first. See [Keyboard shortcuts](shortcuts).
+
+**Where's my project?**
+Check the projects page for an active folder, tag or search (the **Clear filters** button resets them). You only see your own projects. See [Projects page](projects).`
+  },
+  {
     id: "help",
     title: "Using this help",
     group: "Reference",
     summary: "Search, tooltips and help links.",
     keywords: "help docs search tooltip question",
     body: `- **Search**: press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere for quick search. Type a few words and press <kbd>Enter</kbd> to open the best match.
-- **Help button**: the **?** at the bottom of the tool bar, the **Help** link on the projects page, or <kbd>?</kbd>.
+- **Help button**: the **?** at the bottom of the tool bar (it opens the page for the tool you're using), the **?** in the top bar, the **Help** link on the projects page, or <kbd>?</kbd>.
+- **Getting started**: the five tutorials start at [Tutorial 1](tutorial-first-animation). Stuck? [Troubleshooting and common questions](troubleshooting).
+- **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
+- **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
 - **? links**: inspector sections have a **?** that opens their page here.`
   }

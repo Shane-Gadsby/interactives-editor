@@ -2,10 +2,37 @@ import { Fragment, type ReactNode } from 'react';
 
 /**
  * A small Markdown subset for the help pages: # headings, paragraphs, - and 1. lists, ``` code blocks,
- * | tables |, > notes, **bold**, *italic*, `code`, [links](topic-id#anchor or https://…) and <kbd>Ctrl</kbd>.
+ * | tables |, > notes, **bold**, *italic*, `code`, [links](topic-id#anchor or https://…), <kbd>Ctrl</kbd>, and pictures and
+ * short clips on a line of their own: `![What it shows](help/name.png)` or `![What it shows](help/name.mp4)`. The files live in
+ * `public/help/` (Vite copies them to `dist/help/`). A clip plays muted and looping with controls; the alt text is the caption.
  */
 export function Markdown({ text, onLink }: { text: string; onLink: (href: string) => void }) {
   return <>{blocks(text, onLink)}</>;
+}
+
+const MEDIA = /^!\[([^\]]*)\]\(([^)\s]+)\)\s*$/;
+const VIDEO = /\.(mp4|webm|ogv)$/i;
+
+/** Every `help/…` file a Markdown string shows as a picture or clip (the tests check that they exist). */
+export function mediaRefs(text: string): string[] {
+  return [...text.matchAll(/^!\[[^\]]*\]\(([^)\s]+)\)\s*$/gm)].map((m) => m[1]);
+}
+
+/** A picture or a clip with its caption. The address is relative to the page, like the editor's other files. */
+function Media({ alt, src }: { alt: string; src: string }) {
+  const url = /^(https?:|data:)/.test(src) || typeof document === 'undefined' ? src : new URL(src, document.baseURI).href;
+  return (
+    <figure className="help-figure">
+      {VIDEO.test(src) ? (
+        <video src={url} muted loop playsInline autoPlay controls preload="metadata" aria-label={alt} />
+      ) : (
+        <a href={url} target="_blank" rel="noreferrer" title="Open the picture full size">
+          <img src={url} alt={alt} loading="lazy" />
+        </a>
+      )}
+      {alt && <figcaption>{alt}</figcaption>}
+    </figure>
+  );
 }
 
 export function slug(s: string): string {
@@ -25,6 +52,12 @@ function blocks(text: string, onLink: (href: string) => void): ReactNode[] {
   while (i < lines.length) {
     const line = lines[i];
     if (!line.trim()) {
+      i++;
+      continue;
+    }
+    const media = MEDIA.exec(line);
+    if (media) {
+      out.push(<Media key={k++} alt={media[1]} src={media[2]} />);
       i++;
       continue;
     }
@@ -96,8 +129,10 @@ function blocks(text: string, onLink: (href: string) => void): ReactNode[] {
         items.push(item);
       }
       const L = ordered ? 'ol' : 'ul';
+      // A numbered list that carries on after a picture keeps its numbers
+      const first = ordered ? Number(/^\s*(\d+)/.exec(line)![1]) : 1;
       out.push(
-        <L key={k++}>
+        <L key={k++} {...(ordered && first !== 1 ? { start: first } : {})}>
           {items.map((it, j) => (
             <li key={j}>{inl(it)}</li>
           ))}
@@ -116,7 +151,7 @@ function blocks(text: string, onLink: (href: string) => void): ReactNode[] {
       continue;
     }
     const para: string[] = [];
-    while (i < lines.length && lines[i].trim() && !/^(#|```|\||>|\s*([-*]|\d+\.)\s)/.test(lines[i])) para.push(lines[i++]);
+    while (i < lines.length && lines[i].trim() && !/^(#|```|\||>|!\[|\s*([-*]|\d+\.)\s)/.test(lines[i])) para.push(lines[i++]);
     out.push(<p key={k++}>{inl(para.join(' '))}</p>);
   }
   return out;
@@ -160,6 +195,7 @@ export function plain(s: string): string {
   return s
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/<\/?kbd>/g, '')
+    .replace(/^!\[([^\]]*)\]\([^)]*\)\s*$/gm, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/[*`#>|]/g, ' ')
     .replace(/\s+/g, ' ')

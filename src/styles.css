@@ -3306,3 +3306,27 @@ code {
 .lane.point-lane {
   background: var(--panel-2);
 }
+
+.help-figure {
+  margin: 14px 0 16px;
+  padding: 0;
+}
+.help-figure img,
+.help-figure video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+.help-figure a {
+  display: block;
+  line-height: 0;
+}
+.help-figure figcaption {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}

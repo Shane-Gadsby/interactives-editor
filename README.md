@@ -116,7 +116,7 @@ Access works like this:
 | `lib/svg-import.ts` | SVG files to editable layers (paths with transforms baked in, groups, gradients, text) |
 | `lib/image-export.ts` | PNG/SVG pictures of an artboard (the renderer inside `<foreignObject>`, assets and fonts inlined) |
 | `lib/prefs.ts` | per-person preferences in localStorage (wheel zoom vs pan, tooltips, rulers) |
-| `help/` | the in-app help: `topics.ts` (the docs, with the node and property references generated from the catalog), search, drawer, `#/help/<topic>` page, F1 / Ctrl+K quick search |
+| `help/` | the in-app help: `topics.ts` (the docs, with the node and property references generated from the catalog), `tutorials.ts` (the Getting started tutorials), search, drawer, `#/help/<topic>` page, F1 / Ctrl+K quick search. `markdown.tsx` also shows pictures and clips: put `![Caption](help/name.png)` (or `.mp4`) on a line of its own and the file in `public/help/` (Vite copies it to `dist/help/`; keep pictures under 150 KB and clips under 1.5 MB). `test/help.test.ts` checks every topic link, anchor and media file |
 | `components/tooltips.ts`, `components/tips.ts` | styled tooltips for every `title`, and the standard explanations for field labels |
 | `components/ContextMenu.tsx` | right-click menus (interaction graph) |
 
