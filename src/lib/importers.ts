@@ -19,9 +19,9 @@ export interface AnimationImport {
   source: string;
 }
 
-export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.psd,.ai,.pdf';
+export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.psd,.ai,.pdf,.dxf,.dwg';
 
-/** Read a Lottie (.json/.lottie), Rive (.riv), Photoshop (.psd), Illustrator (.ai) or PDF file into artboards. */
+/** Read a Lottie (.json/.lottie), Rive (.riv), Photoshop (.psd), Illustrator (.ai), PDF or AutoCAD (.dxf/.dwg) file into artboards. */
 export async function readAnimationFile(file: File): Promise<AnimationImport> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const base = file.name.replace(/\.[^.]+$/, '');
@@ -34,6 +34,14 @@ export async function readAnimationFile(file: File): Promise<AnimationImport> {
   if (isAi || /\.pdf$/i.test(file.name) || (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46)) {
     const { importAi } = await import('./ai-import');
     return { ...importAi(bytes, base), source: isAi ? 'Illustrator' : 'PDF' };
+  }
+  if (/\.dxf$/i.test(file.name)) {
+    const { importDxf } = await import('./dxf-import');
+    return { ...importDxf(bytes, base), source: 'AutoCAD DXF' };
+  }
+  if (/\.dwg$/i.test(file.name)) {
+    const { importDwg } = await import('./dwg-import');
+    return { ...importDwg(bytes, base), source: 'AutoCAD DWG' };
   }
   if (/\.riv$/i.test(file.name) || (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x56 && bytes[3] === 0x45)) {
     const { importRive } = await import('./rive-import');

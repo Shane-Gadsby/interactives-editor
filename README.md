@@ -106,6 +106,7 @@ Access works like this:
 | `lib/ai-import.ts`, `lib/pdf-parse.ts`, `lib/pdf-color.ts`, `lib/pdf-font.ts` | Illustrator `.ai` (the PDF inside) and `.pdf` import: a minimal PDF reader, then the page content operators replayed into path, text, image and mask layers (one artboard per page) |
 | `lib/rive-import.ts`, `lib/rive-defs.ts` | `.riv` import (view models become shared variables, DataBinds on layers become bindings with converters); defs generated from rive-runtime headers by `research/rive/gen_defs.py` |
 | `components/Converters.tsx` | the binding converters editor in the inspector's Data bindings section |
+| `lib/dxf-parse.ts`, `lib/dxf-import.ts`, `lib/dwg-import.ts` | AutoCAD `.dxf` import (ASCII and binary: tables, blocks / inserts, entities, hatches; model space fitted to a 1600 px artboard, one group per layer) and DWG version detection with a "save as DXF" message (no DWG reader). |
 | `lib/boolean.ts` | union/subtract/intersect/exclude (polygon-clipping) |
 | `lib/svg-import.ts` | SVG files to editable layers (paths with transforms baked in, groups, gradients, text) |
 | `lib/image-export.ts` | PNG/SVG pictures of an artboard (the renderer inside `<foreignObject>`, assets and fonts inlined) |
