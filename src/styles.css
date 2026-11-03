@@ -572,7 +572,7 @@ code,
   gap: 3px;
   padding: 1px 7px;
   border-radius: 10px;
-  border: 1px dashed var(--line-2);
+  border: 1px solid transparent;
   background: transparent;
   color: var(--muted);
   font-size: 11px;
@@ -580,14 +580,29 @@ code,
 }
 .tag-add:hover:not(:disabled) {
   color: var(--text);
-  border-color: var(--accent);
+  background: var(--panel-2);
+  border-color: var(--line-2);
 }
-.tag-input {
-  width: 90px;
+.tag-input,
+.tag-input:focus,
+.tag-input:focus-visible {
+  width: 96px;
   height: 20px;
-  padding: 0 6px;
+  padding: 0 8px;
   font-size: 11px;
+  line-height: 18px;
   border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: var(--panel-2);
+  color: var(--text);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.tag-input::placeholder {
+  color: var(--muted);
+}
+.tag-input::-webkit-calendar-picker-indicator {
+  display: none !important;
 }
 .folder-pick {
   height: 24px;
