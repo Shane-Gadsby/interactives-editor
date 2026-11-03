@@ -1,4 +1,4 @@
-import { enumOptions, fetchDataSource, initialValue, type DataSource, type Project } from 'interactives-player';
+import { dataPolicyFor, enumOptions, fetchDataSource, initialValue, type DataPolicy, type DataSource, type Project } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -10,13 +10,16 @@ class DataCache {
   private values = new Map<string, { sig: string; value?: unknown; error?: string; loading: boolean }>();
   private listeners = new Set<() => void>();
   version = 0;
+  /** The project's data rules (its allowed-hosts list), as of the last sync. */
+  private policy: DataPolicy = {};
 
   private sig(ds: DataSource): string {
-    return JSON.stringify([ds.kind, ds.source, ds.assetId, ds.url]);
+    return JSON.stringify([ds.kind, ds.source, ds.assetId, ds.url, this.policy.allow]);
   }
 
   /** Make sure every source is loaded (or loading) for its current definition. */
   sync(project: Project): void {
+    this.policy = dataPolicyFor(project);
     for (const ds of project.dataSources) {
       const cur = this.values.get(ds.id);
       if (!cur || cur.sig !== this.sig(ds)) void this.load(ds);
@@ -28,7 +31,7 @@ class DataCache {
     this.values.set(ds.id, { ...(this.values.get(ds.id) ?? {}), sig, loading: true });
     this.bump();
     try {
-      const value = await fetchDataSource(ds, assetUrls.resolve);
+      const value = await fetchDataSource(ds, assetUrls.resolve, undefined, this.policy);
       this.values.set(ds.id, { sig, value, loading: false });
     } catch (err) {
       this.values.set(ds.id, { sig, error: err instanceof Error ? err.message : String(err), loading: false });

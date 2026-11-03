@@ -1513,6 +1513,155 @@ function runsPatch(runs) {
   const norm = normalizeRuns(runs);
   return { text: runsText(norm), runs: isPlainRuns(norm) ? void 0 : norm };
 }
+const MAX_PATTERN = 300;
+const MAX_UNBOUNDED = 3;
+const INPUT_LIMITS = [1e4, 1e4, 1e3, 200];
+class RegexRefused extends Error {
+}
+const newGroup = () => ({ multi: false, optional: 0, alternation: false, firsts: [], complex: false, atBranchStart: true });
+function escapeLength(src, i) {
+  const n = src[i + 1];
+  if ((n === "u" || n === "p" || n === "P") && src[i + 2] === "{") {
+    const close = src.indexOf("}", i);
+    return close < 0 ? 2 : close + 1 - i;
+  }
+  if (n === "u") return 6;
+  if (n === "x") return 4;
+  return 2;
+}
+function parseQuantifier(src, i) {
+  const c2 = src[i];
+  let min;
+  let max;
+  let end;
+  if (c2 === "*") [min, max, end] = [0, Infinity, i + 1];
+  else if (c2 === "+") [min, max, end] = [1, Infinity, i + 1];
+  else if (c2 === "?") [min, max, end] = [0, 1, i + 1];
+  else if (c2 === "{") {
+    const m = /^\{(\d+)(?:(,)(\d*))?\}/.exec(src.slice(i, i + 24));
+    if (!m) return void 0;
+    min = Number(m[1]);
+    max = m[2] ? m[3] === "" ? Infinity : Number(m[3]) : min;
+    end = i + m[0].length;
+  } else return void 0;
+  if (src[end] === "?" || src[end] === "+") end++;
+  return { min, max, end };
+}
+function checkPattern(src) {
+  if (src.length > MAX_PATTERN) throw new RegexRefused(`the pattern is longer than ${MAX_PATTERN} characters`);
+  const stack = [];
+  let cur = newGroup();
+  let unbounded = 0;
+  let last;
+  const noteAtom = (ch) => {
+    if (cur.atBranchStart) {
+      cur.firsts.push(ch ?? "");
+      cur.atBranchStart = false;
+    }
+    if (ch === null) cur.complex = true;
+  };
+  let i = 0;
+  while (i < src.length) {
+    const c2 = src[i];
+    if (c2 === "\\") {
+      const n = src[i + 1] ?? "";
+      if (/[1-9]/.test(n) || n === "k" && src[i + 2] === "<") throw new RegexRefused("backreferences (\\1, \\k<name>) are not allowed");
+      noteAtom(/[a-zA-Z0-9]/.test(n) ? null : n);
+      i += escapeLength(src, i);
+      last = {};
+    } else if (c2 === "[") {
+      let j = i + 1;
+      if (src[j] === "^") j++;
+      if (src[j] === "]") j++;
+      for (; j < src.length && src[j] !== "]"; j++) if (src[j] === "\\") j++;
+      noteAtom(null);
+      i = j + 1;
+      last = {};
+    } else if (c2 === "(") {
+      let j = i + 1;
+      if (src[j] === "?") {
+        const rest = src.slice(j + 1, j + 40);
+        const m = /^(?:[:=!]|<[=!]|<[A-Za-z_$][\w$]*>|[a-z]*(?:-[a-z]+)?:)/.exec(rest);
+        j += 1 + (m ? m[0].length : 0);
+      }
+      noteAtom(null);
+      stack.push(cur);
+      cur = newGroup();
+      i = j;
+      last = void 0;
+    } else if (c2 === ")") {
+      const done = cur;
+      const parent = stack.pop();
+      if (!parent) throw new RegexRefused("the parentheses do not match");
+      cur = parent;
+      cur.multi ||= done.multi;
+      cur.optional += done.optional;
+      last = { group: done };
+      i++;
+    } else if (c2 === "|") {
+      cur.alternation = true;
+      cur.atBranchStart = true;
+      last = void 0;
+      i++;
+    } else {
+      const q = last ? parseQuantifier(src, i) : void 0;
+      if (q) {
+        const repeats = q.max > 1;
+        const open = q.max === Infinity || q.max - q.min > 50;
+        if (open && ++unbounded > MAX_UNBOUNDED) throw new RegexRefused(`more than ${MAX_UNBOUNDED} open-ended repetitions (*, +, {n,})`);
+        const g = last.group;
+        if (g && repeats) {
+          if (g.multi) throw new RegexRefused("a repeated group contains another repetition, like (a+)+");
+          if (g.optional > 1) throw new RegexRefused("a repeated group contains several optional parts, like (a?a?)+");
+          if (g.alternation) {
+            const distinct = new Set(g.firsts).size === g.firsts.length && !g.firsts.includes("");
+            if (g.complex || !distinct) throw new RegexRefused("a repeated group contains alternatives that can match the same text, like (a|aa)+");
+          }
+        }
+        if (repeats && q.min !== q.max) cur.multi = true;
+        else if (q.max === 1 && q.min === 0) cur.optional++;
+        i = q.end;
+        last = void 0;
+      } else {
+        if (c2 === ".") noteAtom(null);
+        else if (c2 === "^" || c2 === "$") cur.complex = true;
+        else noteAtom(c2);
+        i++;
+        last = {};
+      }
+    }
+  }
+  if (stack.length) throw new RegexRefused("the parentheses do not match");
+  return unbounded;
+}
+const verdicts = /* @__PURE__ */ new Map();
+function verdict(source, flags) {
+  const key = `${flags}/${source}`;
+  let v = verdicts.get(key);
+  if (!v) {
+    try {
+      v = { problem: "", limit: INPUT_LIMITS[checkPattern(source)] };
+    } catch (e) {
+      if (!(e instanceof RegexRefused)) throw e;
+      v = { problem: e.message, limit: 0 };
+    }
+    if (verdicts.size > 500) verdicts.clear();
+    verdicts.set(key, v);
+  }
+  return v;
+}
+function regexProblem(source, flags = "") {
+  return verdict(source, flags).problem;
+}
+function assertSafePattern(source, flags = "") {
+  const why = regexProblem(source, flags);
+  if (why) throw new RegexRefused(`Pattern not allowed: ${why}`);
+}
+function assertSafeMatch(source, flags, text) {
+  assertSafePattern(source, flags);
+  const { limit } = verdict(source, flags);
+  if (text.length > limit) throw new RegexRefused(`Text is too long to match against this pattern (${text.length} characters; the limit is ${limit})`);
+}
 class ExprError extends Error {
 }
 const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -2145,9 +2294,10 @@ class Parser {
     const flags = s.slice(i + 1, j);
     if (!REGEX_FLAGS.test(flags)) this.fail("Bad regular expression flags", start);
     try {
+      assertSafePattern(source, flags);
       new RegExp(source, flags);
     } catch (e) {
-      this.fail(`Bad regular expression: ${e.message}`, start);
+      this.fail(e instanceof RegexRefused ? e.message : `Bad regular expression: ${e.message}`, start);
     }
     this.pos = j;
     this.advance();
@@ -2249,6 +2399,19 @@ function propKey(k) {
 const guardLen = (n) => {
   if (typeof n === "number" && n > MAX_STRING) throw new ExprError("Text is too long");
 };
+class PatternText {
+  constructor(source) {
+    this.source = source;
+  }
+}
+function guardRegex(re, text) {
+  try {
+    assertSafeMatch(re.source, re instanceof RegExp ? re.flags : "", text);
+  } catch (e) {
+    if (e instanceof RegexRefused) throw new ExprError(e.message);
+    throw e;
+  }
+}
 const STRING_METHODS = {};
 for (const m of [
   "at",
@@ -2301,6 +2464,16 @@ STRING_METHODS.padEnd = function(n, fill) {
 STRING_METHODS.matchAll = function(re) {
   return [...this.matchAll(re)];
 };
+for (const m of ["match", "matchAll", "search", "replace", "replaceAll", "split"]) {
+  const inner = STRING_METHODS[m];
+  const compiles = m === "match" || m === "matchAll" || m === "search";
+  STRING_METHODS[m] = function(...a) {
+    const p = a[0];
+    if (p instanceof RegExp) guardRegex(p, this);
+    else if (compiles && p !== void 0 && p !== null) guardRegex(new PatternText(String(p)), this);
+    return inner.apply(this, a);
+  };
+}
 const ARRAY_METHODS = {};
 for (const m of [
   "at",
@@ -2394,9 +2567,11 @@ for (const m of [
 }
 const REGEXP_METHODS = {
   test: function(s) {
+    guardRegex(this, String(s));
     return this.test(String(s));
   },
   exec: function(s) {
+    guardRegex(this, String(s));
     return this.exec(String(s));
   },
   toString: function() {
@@ -4117,6 +4292,17 @@ Expressions are read by a small interpreter, not run as JavaScript, so a project
 
 These don't: assignment (\`=\`, \`++\`), statements, \`function\`, \`this\`, loops, \`window\`, \`document\`, \`fetch\`, \`eval\`, and list methods that change a list in place (\`push\`, \`splice\`; \`sort\` and \`reverse\` give a sorted copy and leave the list alone). A slot that can't be read or fails is left as written in text and gives nothing elsewhere. Very large lists or text, and expressions that run for very long, are cut off.
 
+## Patterns (regular expressions)
+A \`/pattern/flags\` works with \`match\`, \`matchAll\`, \`search\`, \`replace\`, \`replaceAll\`, \`split\`, \`.test(text)\` and \`.exec(text)\`. Some patterns can make a browser freeze on the wrong text (a pattern like \`(a+)+$\` takes twice as long with every extra character), so patterns are checked before they run. A pattern is refused, with a message, when:
+
+- it has a **backreference** (\`\\1\`, \`\\k<name>\`);
+- a **repeated group contains another repetition**: \`(a+)+\`, \`(\\w+\\s?)*\`, \`(.*x){5}\`. Write it flat instead, for example \`[a-z]+\`;
+- a repeated group has **alternatives that can start the same way**: \`(a|aa)+\` is refused, \`(cat|dog)+\` is fine;
+- a repeated group has **more than one optional part**: \`(a?b?)+\`;
+- it has **more than 3 open-ended repetitions** (\`*\`, \`+\`, \`{n,}\`) or is **over 300 characters**.
+
+The text a pattern runs over is limited too: 10,000 characters for a pattern with no more than one open-ended repetition, 1,000 with two and 200 with three. Longer text gives an error rather than a freeze. Text you pass to \`match\`, \`matchAll\` and \`search\` is a pattern and follows the same rules; to \`replace\`, \`replaceAll\` and \`split\` it is plain text. The rules are cautious on purpose: some harmless patterns, like \`(\\.[a-z]+)+\`, are refused too.
+
 > Expressions are for values. For several steps, waiting or loops, use a [script](scripts).`
   },
   {
@@ -4194,7 +4380,7 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 To paint a layer from a script every frame (generative art, particles, charts), use a [Script layer](script-layers).
 
 ## The sandbox
-New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches whatever URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. Only run projects whose scripts you trust. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`
+New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches the URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. It follows the project's [data rules](data-sources#what-may-be-loaded): http(s) only, no cookies to other sites, and, if you list **Allowed data hosts** in Project settings, only those hosts. A refused URL makes \`loadData\` throw, so use \`try\`/\`catch\`. Without an allowed-hosts list, only run projects whose scripts you trust. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`
   },
   {
     id: "script-layers",
@@ -4370,6 +4556,16 @@ Use a source by its **name** anywhere expressions go: \`{products.length} produc
 
 **Load data** reloads a source (optionally from a different URL); **On data loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
 
+## What may be loaded
+Every data request, from a source, the **Load data** node or \`ix.loadData(name, url)\`, follows the same rules:
+
+- Only \`http:\` and \`https:\` addresses load, plus \`blob:\` and \`data:\` addresses up to 1,000,000 characters. \`file:\`, \`javascript:\` and anything else is refused.
+- Cookies and logins are sent only to the page's own site, never to another site.
+- Relative addresses and the page's own site always work.
+- **Allowed data hosts** (Project settings) is an optional list. Leave it empty to allow any http(s) host. Once it has entries, other sites must match one: \`api.example.com\`, \`*.example.com\` (its subdomains, not \`example.com\` itself), \`example.com:8080\`, or a full origin like \`https://api.example.com\`. A redirect to a site off the list is refused too. Files uploaded to the project are not affected.
+
+A refused request loads nothing and writes a warning to the console; in a script, \`ix.loadData\` throws.
+
 > URLs must allow cross-origin requests (CORS) from wherever the interactive is published.`
   },
   {
@@ -4406,6 +4602,7 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Fit | How the artboard scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
 | Page background | The colour around the artboard in the exported page |
 | Run scripts in the sandbox | See [Scripts](scripts) |
+| Allowed data hosts | Hosts that data may be loaded from, one per line (\`api.example.com\`, \`*.example.com\`). Empty allows any http(s) host. See [Data sources](data-sources#what-may-be-loaded) |
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
 | Fonts | Google fonts by name (type one and press **Add**), or font files you upload in the **Assets** panel |`
@@ -4781,7 +4978,10 @@ Undo only undoes your own changes. Use the [revision history](live-editing#revis
 Browsers only autoplay *muted* video. Tick **Muted**.
 
 **Data from a web address doesn't load.**
-The address must allow cross-origin requests (CORS) from where the interactive is shown. See [Data sources](data-sources).
+The address must allow cross-origin requests (CORS) from where the interactive is shown, and, if the project lists **Allowed data hosts**, its host must be on the list. See [Data sources](data-sources).
+
+**A formula with a pattern (\`/…/\`) says "Pattern not allowed".**
+The pattern could freeze the page on some text, so it is refused. See *Patterns* in [Expressions](expressions).
 
 ## The editor itself
 **The page zooms when I scroll.**

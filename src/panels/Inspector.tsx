@@ -407,6 +407,14 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             onChange={(v) => setProject((p) => (p.settings.trustedEmbeds = v))}
           />
         )}
+        <TextField
+          label="Allowed data hosts"
+          title="Hosts that data may be loaded from, one per line, such as api.example.com or *.example.com. Leave empty to allow any http(s) host. Data sources, the Load data node and ix.loadData all follow it. Cookies are only sent to the page's own site."
+          value={(project.settings.dataAllowList ?? []).join('\n')}
+          multiline
+          placeholder={'api.example.com\n*.example.com'}
+          onChange={(v) => setProject((p) => (p.settings.dataAllowList = v ? v.split('\n') : undefined), 'project-data-hosts')}
+        />
         <CheckField
           label="This project is a library"
           title="Share artboards marked Publish to library, plus this project's styles and assets, as components other projects can use (Libraries tab)"

@@ -1080,6 +1080,17 @@ Expressions are read by a small interpreter, not run as JavaScript, so a project
 
 These don't: assignment (\`=\`, \`++\`), statements, \`function\`, \`this\`, loops, \`window\`, \`document\`, \`fetch\`, \`eval\`, and list methods that change a list in place (\`push\`, \`splice\`; \`sort\` and \`reverse\` give a sorted copy and leave the list alone). A slot that can't be read or fails is left as written in text and gives nothing elsewhere. Very large lists or text, and expressions that run for very long, are cut off.
 
+## Patterns (regular expressions)
+A \`/pattern/flags\` works with \`match\`, \`matchAll\`, \`search\`, \`replace\`, \`replaceAll\`, \`split\`, \`.test(text)\` and \`.exec(text)\`. Some patterns can make a browser freeze on the wrong text (a pattern like \`(a+)+$\` takes twice as long with every extra character), so patterns are checked before they run. A pattern is refused, with a message, when:
+
+- it has a **backreference** (\`\\1\`, \`\\k<name>\`);
+- a **repeated group contains another repetition**: \`(a+)+\`, \`(\\w+\\s?)*\`, \`(.*x){5}\`. Write it flat instead, for example \`[a-z]+\`;
+- a repeated group has **alternatives that can start the same way**: \`(a|aa)+\` is refused, \`(cat|dog)+\` is fine;
+- a repeated group has **more than one optional part**: \`(a?b?)+\`;
+- it has **more than 3 open-ended repetitions** (\`*\`, \`+\`, \`{n,}\`) or is **over 300 characters**.
+
+The text a pattern runs over is limited too: 10,000 characters for a pattern with no more than one open-ended repetition, 1,000 with two and 200 with three. Longer text gives an error rather than a freeze. Text you pass to \`match\`, \`matchAll\` and \`search\` is a pattern and follows the same rules; to \`replace\`, \`replaceAll\` and \`split\` it is plain text. The rules are cautious on purpose: some harmless patterns, like \`(\\.[a-z]+)+\`, are refused too.
+
 > Expressions are for values. For several steps, waiting or loops, use a [script](scripts).`,
   },
   {
@@ -1157,7 +1168,7 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 To paint a layer from a script every frame (generative art, particles, charts), use a [Script layer](script-layers).
 
 ## The sandbox
-New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches whatever URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. Only run projects whose scripts you trust. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`,
+New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches the URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. It follows the project's [data rules](data-sources#what-may-be-loaded): http(s) only, no cookies to other sites, and, if you list **Allowed data hosts** in Project settings, only those hosts. A refused URL makes \`loadData\` throw, so use \`try\`/\`catch\`. Without an allowed-hosts list, only run projects whose scripts you trust. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`,
   },
   {
     id: 'script-layers',
@@ -1335,6 +1346,16 @@ Use a source by its **name** anywhere expressions go: \`{products.length} produc
 
 **Load data** reloads a source (optionally from a different URL); **On data loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
 
+## What may be loaded
+Every data request, from a source, the **Load data** node or \`ix.loadData(name, url)\`, follows the same rules:
+
+- Only \`http:\` and \`https:\` addresses load, plus \`blob:\` and \`data:\` addresses up to 1,000,000 characters. \`file:\`, \`javascript:\` and anything else is refused.
+- Cookies and logins are sent only to the page's own site, never to another site.
+- Relative addresses and the page's own site always work.
+- **Allowed data hosts** (Project settings) is an optional list. Leave it empty to allow any http(s) host. Once it has entries, other sites must match one: \`api.example.com\`, \`*.example.com\` (its subdomains, not \`example.com\` itself), \`example.com:8080\`, or a full origin like \`https://api.example.com\`. A redirect to a site off the list is refused too. Files uploaded to the project are not affected.
+
+A refused request loads nothing and writes a warning to the console; in a script, \`ix.loadData\` throws.
+
 > URLs must allow cross-origin requests (CORS) from wherever the interactive is published.`,
   },
   {
@@ -1371,6 +1392,7 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Fit | How the artboard scales to the space it's given: **Contain (letterbox)**, **Cover (crop)**, **Stretch**, **Fit width (page height follows)** or **Actual size** |
 | Page background | The colour around the artboard in the exported page |
 | Run scripts in the sandbox | See [Scripts](scripts) |
+| Allowed data hosts | Hosts that data may be loaded from, one per line (\`api.example.com\`, \`*.example.com\`). Empty allows any http(s) host. See [Data sources](data-sources#what-may-be-loaded) |
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
 | Fonts | Google fonts by name (type one and press **Add**), or font files you upload in the **Assets** panel |`,
@@ -1748,7 +1770,10 @@ Undo only undoes your own changes. Use the [revision history](live-editing#revis
 Browsers only autoplay *muted* video. Tick **Muted**.
 
 **Data from a web address doesn't load.**
-The address must allow cross-origin requests (CORS) from where the interactive is shown. See [Data sources](data-sources).
+The address must allow cross-origin requests (CORS) from where the interactive is shown, and, if the project lists **Allowed data hosts**, its host must be on the list. See [Data sources](data-sources).
+
+**A formula with a pattern (\`/…/\`) says "Pattern not allowed".**
+The pattern could freeze the page on some text, so it is refused. See *Patterns* in [Expressions](expressions).
 
 ## The editor itself
 **The page zooms when I scroll.**
