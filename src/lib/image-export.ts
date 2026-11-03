@@ -35,6 +35,40 @@ const toDataUrl = (bytes: Uint8Array, mime: string) =>
     r.readAsDataURL(new Blob([bytes as BlobPart], { type: mime }));
   });
 
+// Font CSS per project font list (Google stylesheets and their files are fetched once)
+const fontCssCache = new Map<string, Promise<string>>();
+function fontCssCached(project: Project): Promise<string> {
+  const key = JSON.stringify(project.fonts);
+  let p = fontCssCache.get(key);
+  if (!p) {
+    p = fontCss(project);
+    fontCssCache.set(key, p);
+  }
+  return p;
+}
+
+/**
+ * A still of an artboard that's already drawn on the canvas: its DOM serialised into an SVG image, with assets and
+ * fonts inlined. The canvas shows these for artboards you aren't working on, so the browser has far fewer live
+ * elements to manage while you pan and zoom. Returns an object URL.
+ */
+export async function snapshotFromDom(project: Project, ab: Artboard, root: HTMLElement, resolve: (id: string) => string | undefined): Promise<string> {
+  let html = new XMLSerializer().serializeToString(root);
+  for (const a of project.assets) {
+    if (!/^image\//.test(a.mime)) continue;
+    const url = resolve(a.id);
+    if (!url || !html.includes(url.replace(/&/g, '&amp;'))) continue;
+    const data = await dataUrlOf(project, a);
+    if (data) html = html.split(url.replace(/&/g, '&amp;')).join(data);
+  }
+  const css = await fontCssCached(project);
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${ab.width}" height="${ab.height}" viewBox="0 0 ${ab.width} ${ab.height}">` +
+    (css ? `<defs><style>${css.replace(/]]>/g, '')}</style></defs>` : '') +
+    `<foreignObject x="0" y="0" width="${ab.width}" height="${ab.height}">${html}</foreignObject></svg>`;
+  return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+}
+
 async function fontCss(project: Project): Promise<string> {
   const parts: string[] = [];
   for (const f of project.fonts) {
@@ -92,7 +126,7 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
     r.render(ab, prepareNodes(sampled, { vars }), { vars });
     if (r.root.querySelector('iframe, video')) warnings.push('Embeds and video show as empty boxes in pictures.');
     const html = new XMLSerializer().serializeToString(r.root);
-    const css = opts.fonts === false ? '' : await fontCss(project);
+    const css = opts.fonts === false ? '' : await fontCssCached(project);
     const svg =
       `<svg xmlns="http://www.w3.org/2000/svg" width="${ab.width}" height="${ab.height}" viewBox="0 0 ${ab.width} ${ab.height}">` +
       (css ? `<defs><style>${css.replace(/]]>/g, '')}</style></defs>` : '') +

@@ -68,6 +68,8 @@ const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
 };
 
 const SNAP_PX = 6;
+/** Where world (0, 0) sits in the scrollable pan space; pan is measured from here. */
+const PAN_ORIGIN = 4_000_000;
 
 export function Canvas() {
   const peers = useEditor((st) => st.peers);
@@ -868,10 +870,16 @@ export function Canvas() {
   // ---------------------------------------------------------------- overlay
 
   const overlay: JSX.Element[] = [];
-  const toS = (ab: Artboard, p: Pt) => screen(ab, p);
+  // The overlay is drawn without the pan and moved by a CSS transform, so panning doesn't repaint it (which in a big
+  // project makes the browser rebuild layers for every element on each frame)
+  const oscreen = (ab: Artboard | { canvasX: number; canvasY: number } | null, p: Pt): Pt => ({
+    x: ((ab?.canvasX ?? 0) + p.x) * zoom,
+    y: ((ab?.canvasY ?? 0) + p.y) * zoom,
+  });
+  const toS = (ab: Artboard, p: Pt) => oscreen(ab, p);
 
   for (const ab of project.artboards) {
-    const tl = screen(ab, { x: 0, y: 0 });
+    const tl = oscreen(ab, { x: 0, y: 0 });
     const isActive = ab.id === s.activeArtboardId;
     overlay.push(
       <text
@@ -998,7 +1006,7 @@ export function Canvas() {
   if (pencil && pencil.length > 1) {
     const pab = drag.current?.kind === 'pencil' ? getArtboard(project, drag.current.abId) ?? null : null;
     const d = pencil.map((p, i) => {
-      const q = screen(pab, p);
+      const q = oscreen(pab, p);
       return `${i ? 'L' : 'M'}${q.x.toFixed(1)} ${q.y.toFixed(1)}`;
     });
     overlay.push(<path key="pencil" className="pencil-stroke" d={d.join('')} />);
@@ -1008,11 +1016,11 @@ export function Canvas() {
   if (box) {
     const bab = box.abId ? getArtboard(project, box.abId) ?? null : null;
     if (drag.current?.kind === 'create' && drag.current.tool === 'line') {
-      const a = screen(bab, { x: box.rect.x, y: box.rect.y });
-      const b = screen(bab, { x: box.rect.x + box.rect.width, y: box.rect.y + box.rect.height });
+      const a = oscreen(bab, { x: box.rect.x, y: box.rect.y });
+      const b = oscreen(bab, { x: box.rect.x + box.rect.width, y: box.rect.y + box.rect.height });
       overlay.push(<line key="box" className="create-line" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />);
     } else {
-      const a = screen(bab, { x: box.rect.x, y: box.rect.y });
+      const a = oscreen(bab, { x: box.rect.x, y: box.rect.y });
       if (drag.current?.kind === 'create') overlay.push(<g key="shape-preview">{shapePreview(drag.current.tool, a.x, a.y, box.rect.width * zoom, box.rect.height * zoom, zoom)}</g>);
       overlay.push(
         <rect
@@ -1038,12 +1046,12 @@ export function Canvas() {
     const gab = getArtboard(project, guides.abId);
     if (gab) {
       for (const x of guides.x) {
-        const a = screen(gab, { x, y: -10000 });
-        overlay.push(<line key={`gx-${x}`} className="guide" x1={a.x} x2={a.x} y1={0} y2={10000} />);
+        const a = oscreen(gab, { x, y: -10000 });
+        overlay.push(<line key={`gx-${x}`} className="guide" x1={a.x} x2={a.x} y1={-100000} y2={100000} />);
       }
       for (const y of guides.y) {
-        const a = screen(gab, { x: -10000, y });
-        overlay.push(<line key={`gy-${y}`} className="guide" x1={0} x2={10000} y1={a.y} y2={a.y} />);
+        const a = oscreen(gab, { x: -10000, y });
+        overlay.push(<line key={`gy-${y}`} className="guide" x1={-100000} x2={100000} y1={a.y} y2={a.y} />);
       }
     }
   }
@@ -1052,20 +1060,20 @@ export function Canvas() {
   if (pen) {
     const pab = getArtboard(project, pen.abId);
     if (pab) {
-      const sp = pen.points.map((p) => ({ ...p, ...screen(pab, p) }));
+      const sp = pen.points.map((p) => ({ ...p, ...oscreen(pab, p) }));
       let d = '';
       sp.forEach((p, i) => {
         if (i === 0) d += `M${p.x} ${p.y}`;
         else {
           const a = pen.points[i - 1];
           const b = pen.points[i];
-          const c1 = screen(pab, { x: a.x + (a.out?.x ?? 0), y: a.y + (a.out?.y ?? 0) });
-          const c2 = screen(pab, { x: b.x + (b.in?.x ?? 0), y: b.y + (b.in?.y ?? 0) });
+          const c1 = oscreen(pab, { x: a.x + (a.out?.x ?? 0), y: a.y + (a.out?.y ?? 0) });
+          const c2 = oscreen(pab, { x: b.x + (b.in?.x ?? 0), y: b.y + (b.in?.y ?? 0) });
           d += `C${c1.x} ${c1.y} ${c2.x} ${c2.y} ${p.x} ${p.y}`;
         }
       });
       if (pen.cursor && !drag.current && sp.length) {
-        const c = screen(pab, pen.cursor);
+        const c = oscreen(pab, pen.cursor);
         d += `L${c.x} ${c.y}`;
       }
       overlay.push(<path key="pen" className="pen-preview" d={d} />);
@@ -1074,7 +1082,7 @@ export function Canvas() {
           <rect key={`pp-${i}`} data-handle={i === 0 && sp.length > 1 ? 'penstart' : undefined} className={`path-point${i === 0 ? ' first' : ''}`} x={p.x - 4} y={p.y - 4} width={8} height={8} />,
         );
         if (pen.points[i].out) {
-          const o = screen(pab, { x: pen.points[i].x + pen.points[i].out!.x, y: pen.points[i].y + pen.points[i].out!.y });
+          const o = oscreen(pab, { x: pen.points[i].x + pen.points[i].out!.x, y: pen.points[i].y + pen.points[i].out!.y });
           overlay.push(<line key={`pl-${i}`} className="path-handle-line" x1={p.x} y1={p.y} x2={o.x} y2={o.y} />);
           overlay.push(<circle key={`ph-${i}`} className="path-handle" cx={o.x} cy={o.y} r={3} />);
         }
@@ -1088,12 +1096,12 @@ export function Canvas() {
     if (pab && peer.selection?.length) {
       for (const id of peer.selection) {
         if (!locate(pab, id)) continue;
-        const pts = nodeCorners(pab, id).map((p) => screen(pab, p));
+        const pts = nodeCorners(pab, id).map((p) => oscreen(pab, p));
         overlay.push(<polygon key={`peer-${peer.clientId}-${id}`} className="peer-outline" stroke={peer.color} points={pts.map((p) => `${p.x},${p.y}`).join(' ')} />);
       }
     }
     if (peer.cursor) {
-      const c = screen(null, peer.cursor);
+      const c = oscreen(null, peer.cursor);
       overlay.push(
         <g key={`cursor-${peer.clientId}`} className="peer-cursor" transform={`translate(${c.x} ${c.y})`}>
           <path d="M0 0L0 16L4.5 12L7.5 18.5L10 17.5L7 11L13 11Z" fill={peer.color} stroke="#fff" strokeWidth={1} />
@@ -1248,15 +1256,25 @@ export function Canvas() {
 
   // While the view moves, the whole world is one composited layer, so panning slides pixels instead of repainting
   // every shape; once it settles the layer goes, and the browser redraws sharply at the new zoom
-  const worldRef = useRef<HTMLDivElement>(null);
-  const settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // The store's pan is the source of truth; the scroll position follows it
   useLayoutEffect(() => {
-    const el = worldRef.current;
+    const el = scrollRef.current;
     if (!el) return;
-    el.style.willChange = 'transform';
-    if (settle.current) clearTimeout(settle.current);
-    settle.current = setTimeout(() => (el.style.willChange = ''), 220);
-  }, [panX, panY, zoom]);
+    const x = PAN_ORIGIN - panX;
+    const y = PAN_ORIGIN - panY;
+    if (Math.abs(el.scrollLeft - x) > 0.5) el.scrollLeft = x;
+    if (Math.abs(el.scrollTop - y) > 0.5) el.scrollTop = y;
+  }, [panX, panY]);
+  // Anything else that scrolls it (touch, the browser restoring a position) moves the pan to match
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const st = store().get();
+    const px = PAN_ORIGIN - el.scrollLeft;
+    const py = PAN_ORIGIN - el.scrollTop;
+    if (Math.abs(px - st.panX) > 1 || Math.abs(py - st.panY) > 1) store().set({ panX: px, panY: py });
+  };
 
   const showRulers = usePrefs().rulers;
   const cursor = s.tool === 'hand' ? 'grab' : s.tool === 'select' ? 'default' : s.tool === 'text' ? 'text' : 'crosshair';
@@ -1275,7 +1293,11 @@ export function Canvas() {
       onDrop={onDrop}
       onContextMenu={openMenu}
     >
-      <div ref={worldRef} className="world" style={{ transform: `translate(${panX}px, ${panY}px) scale(${zoom})` }}>
+      {/* Panning scrolls this box instead of moving the world: the browser scrolls on the compositor, where a moving
+          transform would make it rebuild layers for every element on every frame (slow in big projects) */}
+      <div ref={scrollRef} className="canvas-scroll" onScroll={onScroll}>
+        <div className="canvas-space" style={{ width: PAN_ORIGIN * 2, height: PAN_ORIGIN * 2 }}>
+      <div className="world" style={{ left: PAN_ORIGIN, top: PAN_ORIGIN, transform: `scale(${zoom})` }}>
         {project.artboards.map((ab) => (
           <ArtboardView
             key={ab.id}
@@ -1286,10 +1308,15 @@ export function Canvas() {
             active={ab.id === s.activeArtboardId}
             assetVersion={assetVersion}
             dataVersion={dataVersion}
+            live={ab.id === s.activeArtboardId}
           />
         ))}
       </div>
-      <svg className="overlay">{overlay}</svg>
+      <svg className="overlay" style={{ left: PAN_ORIGIN, top: PAN_ORIGIN }}>
+        {overlay}
+      </svg>
+        </div>
+      </div>
       {lockedHover &&
         s.tool === 'select' &&
         (() => {
