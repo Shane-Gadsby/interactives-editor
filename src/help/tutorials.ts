@@ -232,6 +232,7 @@ Any of these will do:
 | PDF | \`.pdf\` | One artboard per page |
 | AutoCAD | \`.dxf\` (not \`.dwg\`) | One artboard with a group per CAD layer |
 | Rive | \`.riv\` | An artboard for each Rive artboard, with timelines and state machines |
+| Rive editor | \`.rev\` | The same, with the layer names the export strips |
 | Lottie | \`.json\` or \`.lottie\` | An artboard and a timeline |
 | SVG | \`.svg\` | A group of editable shapes |
 

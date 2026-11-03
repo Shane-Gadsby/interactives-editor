@@ -97,21 +97,21 @@ export interface RiveImport {
 
 // ---------------------------------------------------------------- definitions
 
-interface PropDef {
+export interface PropDef {
   name: string;
   type: string;
   def?: number | boolean;
 }
 
-const typeByKey = new Map<number, string>();
+export const typeByKey = new Map<number, string>();
 const propsByClass = new Map<string, Map<number, PropDef>>();
-const propNameByKey = new Map<number, PropDef>();
+export const propNameByKey = new Map<number, PropDef>();
 for (const [name, [key, , props]] of Object.entries(RIVE_CLASSES)) {
   if (key >= 0) typeByKey.set(key, name);
   for (const [p, [k, t, d]] of Object.entries(props)) if (!propNameByKey.has(k)) propNameByKey.set(k, { name: p, type: t, def: d });
 }
 
-function classProps(cls: string): Map<number, PropDef> {
+export function classProps(cls: string): Map<number, PropDef> {
   let m = propsByClass.get(cls);
   if (m) return m;
   m = new Map();
@@ -126,7 +126,7 @@ function classProps(cls: string): Map<number, PropDef> {
 
 // By class, then base: called for every object many times over, so no key string is built per call
 const isACache = new Map<string, Map<string, boolean>>();
-function isA(cls: string, base: string): boolean {
+export function isA(cls: string, base: string): boolean {
   let byBase = isACache.get(cls);
   if (!byBase) isACache.set(cls, (byBase = new Map()));
   let v = byBase.get(base);
@@ -152,7 +152,7 @@ function defaultOf(cls: string, prop: string): number | boolean | string | undef
 
 // ---------------------------------------------------------------- reading
 
-interface RObj {
+export interface RObj {
   type: string;
   props: Record<string, unknown>;
   /** Data binding: the bindable property and DataBindContext objects that belong to a comparator or listener action. */
@@ -497,6 +497,8 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
     else if (t === 'StateMachine') {
       sm = { obj: o, inputs: [], layers: [], listeners: [] };
       ab.machines.push(sm);
+      // Nothing of the last machine carries over (a view model change on a transition would end up on its last listener)
+      layer = state = transition = listener = null;
     } else if (isA(t, 'StateMachineInput') && sm) sm.inputs.push(o);
     else if (t === 'StateMachineLayer' && sm) {
       layer = { obj: o, states: [] };
@@ -3655,7 +3657,11 @@ function importJoysticks(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: 
 // ---------------------------------------------------------------- entry point
 
 export async function importRive(bytes: Uint8Array, name: string): Promise<RiveImport> {
-  const { objects } = readObjects(bytes);
+  return importRiveObjects(readObjects(bytes).objects, name);
+}
+
+/** The conversion proper, from an object list in .riv order (a .rev is first rewritten into one by rev-import.ts). */
+export async function importRiveObjects(objects: RObj[], name: string): Promise<RiveImport> {
   const s = structure(objects);
   contexts.clear();
   const variables: Variable[] = [];

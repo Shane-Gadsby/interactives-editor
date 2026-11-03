@@ -85,7 +85,7 @@ Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pag
 
 - **New project** (top right, or the **+** card) makes an empty project with one artboard called **Home**. Your default font is added to it. See [Preferences](preferences).
 - Click a card's picture to open the project. **Help** and the gear (**Preferences**) are at the top right too.
-- **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`) or PhotoCraft (\`.pcraft\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
+- **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`) or PhotoCraft (\`.pcraft\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
 - Each card has three icon buttons: **Duplicate** (a copy of the project and its assets), **Export** a \`${PACKAGE_EXTENSION}\` package (a download of the whole project) and **Delete**. Delete asks first, and can't be undone, so download a package if you might want the project back.
 - With no projects yet the page shows **Create your first project**.
 
@@ -1558,14 +1558,15 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
   // ---------------------------------------------------------------- import/export
   {
     id: 'import',
-    title: 'Importing Lottie, Rive, Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and SVG',
+    title: 'Importing Lottie, Rive (.riv and .rev), Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and SVG',
     group: 'Import and export',
-    summary: 'Bring in Lottie JSON / dotLottie, Rive .riv files, Photoshop .psd files, Illustrator .ai files, PDFs, AutoCAD DXF (and what to do with DWG), VectorCraft .vectorcraft and PhotoCraft .pcraft files, SVG and project packages.',
-    keywords: 'import vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update changes reconnect',
+    summary: 'Bring in Lottie JSON / dotLottie, Rive .riv and Rive editor .rev files, Photoshop .psd files, Illustrator .ai files, PDFs, AutoCAD DXF (and what to do with DWG), VectorCraft .vectorcraft and PhotoCraft .pcraft files, SVG and project packages.',
+    keywords: 'import vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv rev editor project backup svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update changes reconnect',
     body: `| File | Becomes | Can be linked |
 |---|---|---|
 | Lottie (\`.json\`, \`.lottie\`) | An artboard and a timeline | No |
 | Rive (\`.riv\`) | An artboard for each Rive artboard, with timelines, state machines and bindings | No |
+| Rive editor project (\`.rev\`) | The same, plus the layer names and the artboards a \`.riv\` export leaves out | No |
 | Photoshop (\`.psd\`) | An artboard of layers, with editable text | Yes |
 | Illustrator (\`.ai\`) and PDF | An artboard per page, as vector art | Yes |
 | AutoCAD (\`.dxf\`) | An artboard with a group per CAD layer (\`.dwg\` must be saved as DXF first) | Yes |
@@ -1574,7 +1575,7 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 
 New to this? [Tutorial 4](tutorial-import-design) walks through an import step by step.
 
-Lottie, Rive, Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft and PhotoCraft files: use **+ Import file as artboard** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
+Lottie, Rive (\`.riv\` or \`.rev\`), Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft and PhotoCraft files: use **+ Import file as artboard** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
 
 ## Lottie (.json, .lottie)
 Shape layers, groups, fills, strokes, gradients, transforms, trim paths and keyframes with easing become layers and a timeline. Text animators with range selectors become [text modifiers](text-modifiers). Expressions, layer masks, track mattes, layer effects, skew and time remapping are not carried over, and the import report lists what was dropped.
@@ -1600,6 +1601,15 @@ Rive **scroll constraints** make the layout a scrollable [frame](groups-frames) 
 
 Rive **artboard component lists** become a frame that repeats an [instance](instances) of the item artboard once per item of the list [variable](variables), laid out along the parent's direction with its gap. Every item starts as the artboard does: the values each item carries (its own view model) are not passed to it, a list that shows different artboards for different kinds of items shows the first, and a list without a list property or an item artboard is skipped.
 
+
+## Rive editor project (.rev)
+A \`.rev\` is the file the Rive editor itself saves (the project or a backup of it), as opposed to the \`.riv\` it exports for playing. It opens through the same import as a \`.riv\`, so everything above applies, and an artboard comes out the same as the one from the \`.riv\` exported from that project. What the editor file adds:
+
+- **Layer names.** An export strips the names of everything but artboards, animations and state machines; the editor file still has them, so layers keep names like *Hover* or *Shape 7* instead of *Group*.
+- **Artboards the export leaves out.** Every artboard in the project comes in, in the order the file has them, with the project's default artboard first.
+- Only fonts, images and sounds something uses come in; the editor also keeps the files it was given and never used.
+
+The editor's own organisation (folders, the original SVG files that were imported, the position of states in the state machine graph, built-in enum tables) is skipped. Nothing about the format is published, so the reader was written from real files: if a \`.rev\` holds something it does not understand, the report says so and carries on with the rest, and a file it cannot read at all fails with a message. Export a \`.riv\` from the Rive editor and import that if it does.
 ## Photoshop (.psd)
 ![A Photoshop file after import: layers, a live text layer, and hidden layers kept hidden.](help/psd-import-result.png)
 

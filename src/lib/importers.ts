@@ -19,9 +19,9 @@ export interface AnimationImport {
   source: string;
 }
 
-export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft';
+export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft';
 
-/** Read a Lottie (.json/.lottie), Rive (.riv), Photoshop (.psd), Illustrator (.ai), PDF, AutoCAD (.dxf/.dwg), VectorCraft (.vectorcraft) or PhotoCraft (.pcraft) file into artboards. */
+/** Read a Lottie (.json/.lottie), Rive (.riv, or the editor's own .rev), Photoshop (.psd), Illustrator (.ai), PDF, AutoCAD (.dxf/.dwg), VectorCraft (.vectorcraft) or PhotoCraft (.pcraft) file into artboards. */
 export async function readAnimationFile(file: File): Promise<AnimationImport> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const base = file.name.replace(/\.[^.]+$/, '');
@@ -56,6 +56,11 @@ export async function readAnimationFile(file: File): Promise<AnimationImport> {
   if (/\.pcraft$/i.test(file.name) || zip) {
     const { importPhotoCraft, isPhotoCraft } = await import('./photocraft-import');
     if (/\.pcraft$/i.test(file.name) || isPhotoCraft(bytes)) return { ...importPhotoCraft(bytes, base), source: 'PhotoCraft' };
+  }
+  // A .rev has no signature to look for, so it goes by the name
+  if (/\.rev$/i.test(file.name)) {
+    const { importRev } = await import('./rev-import');
+    return { ...(await importRev(bytes, base)), source: 'Rive editor file' };
   }
   if (/\.riv$/i.test(file.name) || (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x56 && bytes[3] === 0x45)) {
     const { importRive } = await import('./rive-import');

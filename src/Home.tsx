@@ -148,13 +148,13 @@ export function Home({ open }: { open: (id: string) => void }) {
 
   const doImport = () =>
     run(async () => {
-      const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json,.lottie,.riv,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft`, false);
+      const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft`, false);
       const f = files[0];
       if (!f) return;
-      // Lottie / Rive / Photoshop / Illustrator / PDF / VectorCraft / PhotoCraft files become a new project; anything else is an Interactives package or project JSON.
+      // Lottie / Rive (.riv, .rev) / Photoshop / Illustrator / PDF / VectorCraft / PhotoCraft files become a new project; anything else is an Interactives package or project JSON.
       const head = new Uint8Array(await f.slice(0, 4096).arrayBuffer());
       const text = new TextDecoder().decode(head);
-      const animation = /\.(lottie|riv|psd|ai|pdf|dxf|dwg|vectorcraft|drawcraft|pcraft)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
+      const animation = /\.(lottie|riv|rev|psd|ai|pdf|dxf|dwg|vectorcraft|drawcraft|pcraft)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
       if (animation) {
         const { chooseLinking, projectFromAnimation } = await import('./lib/importers');
         const linking = await chooseLinking([f]);
