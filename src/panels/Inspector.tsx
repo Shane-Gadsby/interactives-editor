@@ -311,12 +311,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={BLEND} onChange={(v) => set({ blendMode: v })} />
       </Section>
       {sameType && <TypeSection nodes={nodes} project={project} />}
-      {sameType && 'fill' in n && (
-        <Section title="Fill">
-          <PaintField paint={n.fill} project={project} onChange={(p) => set({ fill: p }, `fill-${ids.join()}`)} />
-          {n.fill?.type === 'solid' && <KeyRow node={n} prop="fill.color" />}
-        </Section>
-      )}
+      {sameType && 'fill' in n && <FillSection nodes={nodes} project={project} />}
       {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
       <EffectsSection nodes={nodes} />
       <LinkCursorSection nodes={nodes} project={project} />
@@ -349,6 +344,7 @@ function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project: Projec
   const n = nodes[0] as SceneNode & { stroke: Stroke | null };
   const set = useSetter(nodes.map((x) => x.id));
   const s = n.stroke;
+  const shownStroke = useShown(n)('stroke.paint.color');
   return (
     <Section
       title="Stroke"
@@ -356,7 +352,12 @@ function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project: Projec
     >
       {s && (
         <>
-          <PaintField paint={s.paint} allowNone={false} project={project} onChange={(p) => set({ stroke: { ...s, paint: p! } }, 'stroke-paint')} />
+          <PaintField
+            paint={s.paint.type === 'solid' && typeof shownStroke === 'string' ? { ...s.paint, color: shownStroke } : s.paint}
+            allowNone={false}
+            project={project}
+            onChange={(p) => (p?.type === 'solid' && s.paint.type === 'solid' ? set({ 'stroke.paint.color': p.color }, 'stroke-paint') : set({ stroke: { ...s, paint: p! } }, 'stroke-paint'))}
+          />
           <Row>
             <Num node={n} ids={nodes.map((x) => x.id)} prop="stroke.width" label="W" min={0} />
             <TextField
@@ -787,6 +788,30 @@ function RepeatSection({ node, project }: { node: SceneNode & { repeat?: Repeat 
           {!node.children.length && <p className="error small">Put a layer inside this {node.type} to use as the template.</p>}
         </>
       )}
+    </Section>
+  );
+}
+
+/** Fill, showing the timeline's colour at the playhead; a colour change becomes a keyframe while recording. */
+function FillSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
+  const n = nodes[0] as SceneNode & { fill: Paint | null };
+  const ids = nodes.map((x) => x.id);
+  const set = useSetter(ids);
+  const shown = useShown(n);
+  const color = shown('fill.color');
+  const paint: Paint | null = n.fill?.type === 'solid' && typeof color === 'string' ? { ...n.fill, color } : n.fill;
+  return (
+    <Section title="Fill">
+      <PaintField
+        paint={paint}
+        project={project}
+        onChange={(p) => {
+          // Only the colour moved: set fill.color, so recording turns it into a keyframe.
+          if (p?.type === 'solid' && n.fill?.type === 'solid') set({ 'fill.color': p.color }, `fill-${ids.join()}`);
+          else set({ fill: p }, `fill-${ids.join()}`);
+        }}
+      />
+      {n.fill?.type === 'solid' && <KeyRow node={n} prop="fill.color" />}
     </Section>
   );
 }
