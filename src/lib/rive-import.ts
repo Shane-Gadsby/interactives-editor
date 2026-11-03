@@ -21,8 +21,10 @@
  *     OpenUrlEvent opens its link. They fire from keyframes (timeline markers
  *     + On timeline marker), listeners and state/transition "fire event"
  *     actions; event listeners become On message.
- * Bones/meshes, constraints, data binding, scripted and
- * layout-computed geometry are reported in `warnings`.
+ *   - Path vertex keys (shape morphing) -> keys on the path's points, sampled (handles are keyed as rotation + distance)
+ *   - isHole paths -> wound the other way round so the fill leaves them open; TranslationConstraint -> copy position
+ * Bones/meshes, other constraints, data binding, scripted
+ * and layout-computed geometry are reported in `warnings`.
  */
 import {
   createArtboard,
@@ -51,6 +53,7 @@ import {
   type Variable,
   invert,
   multiply,
+  sampleKeys,
   nodeMatrix,
   type Matrix,
 } from 'interactives-player';
@@ -481,26 +484,27 @@ function polyPoints(n: number, w: number, h: number, ox: number, oy: number, inn
   return pts;
 }
 
+/** One path vertex as a point, from a getter for its (possibly animated) values. */
+function vertexPoint(type: string, g: (prop: string) => number): PathPoint {
+  const p: PathPoint = { x: g('x'), y: g('y') };
+  if (type === 'CubicDetachedVertex') {
+    p.in = { x: Math.cos(g('inRotation')) * g('inDistance'), y: Math.sin(g('inRotation')) * g('inDistance') };
+    p.out = { x: Math.cos(g('outRotation')) * g('outDistance'), y: Math.sin(g('outRotation')) * g('outDistance') };
+  } else if (type === 'CubicMirroredVertex') {
+    const d = g('distance');
+    const r = g('rotation');
+    p.out = { x: Math.cos(r) * d, y: Math.sin(r) * d };
+    p.in = { x: -p.out.x, y: -p.out.y };
+  } else if (type === 'CubicAsymmetricVertex') {
+    const r = g('rotation');
+    p.out = { x: Math.cos(r) * g('outDistance'), y: Math.sin(r) * g('outDistance') };
+    p.in = { x: -Math.cos(r) * g('inDistance'), y: -Math.sin(r) * g('inDistance') };
+  }
+  return p;
+}
+
 function vertexPoints(verts: RObj[]): PathPoint[] {
-  return verts.map((v) => {
-    const x = get(v, 'x');
-    const y = get(v, 'y');
-    const p: PathPoint = { x, y };
-    if (v.type === 'CubicDetachedVertex') {
-      p.in = { x: Math.cos(get(v, 'inRotation')) * get(v, 'inDistance'), y: Math.sin(get(v, 'inRotation')) * get(v, 'inDistance') };
-      p.out = { x: Math.cos(get(v, 'outRotation')) * get(v, 'outDistance'), y: Math.sin(get(v, 'outRotation')) * get(v, 'outDistance') };
-    } else if (v.type === 'CubicMirroredVertex') {
-      const d = get(v, 'distance');
-      const r = get(v, 'rotation');
-      p.out = { x: Math.cos(r) * d, y: Math.sin(r) * d };
-      p.in = { x: -p.out.x, y: -p.out.y };
-    } else if (v.type === 'CubicAsymmetricVertex') {
-      const r = get(v, 'rotation');
-      p.out = { x: Math.cos(r) * get(v, 'outDistance'), y: Math.sin(r) * get(v, 'outDistance') };
-      p.in = { x: -Math.cos(r) * get(v, 'inDistance'), y: -Math.sin(r) * get(v, 'inDistance') };
-    }
-    return p;
-  });
+  return verts.map((v) => vertexPoint(v.type, (prop) => get(v, prop)));
 }
 
 /** Width/height of PNG, JPEG, GIF or WebP bytes. */
@@ -553,6 +557,8 @@ interface Target {
   nodeId: string;
   /** Rive property -> (our property, value transform). */
   map: Record<string, { prop: string; f: (v: unknown) => Keyframe['value'] } | undefined>;
+  /** Set on a path vertex: where its point sits in the path node, so keys on its x/y/handles morph the path. */
+  vertex?: { sub: number; index: number; m: M; minX: number; minY: number };
 }
 
 interface ArtboardCtx {
@@ -681,6 +687,39 @@ function dashOf(ac: ArtboardCtx, fc: FileCtx, strokeSlot: number): { dash?: numb
   return { dash: list.length % 2 ? [...list, ...list] : list, ...(get(dp, 'offset') ? { dashOffset: r2(get(dp, 'offset')) } : {}) };
 }
 
+/**
+ * One vertex's values through an animation, with the easing applied: at every key frame and three steps between
+ * (the handles are keyed as rotation and distance, which a straight blend of x/y would not follow).
+ */
+function vertexSamples(ac: ArtboardCtx, slot: number, anim: RAnim): { frame: number; g: (prop: string) => number }[] {
+  const ko = anim.keyed.find((k) => Number(k.obj.props.objectId ?? 0) === slot);
+  if (!ko) return [];
+  const rest = ac.rab.slots[slot];
+  const byProp = new Map<string, Keyframe[]>();
+  const frames = new Set<number>();
+  for (const kp of ko.props) {
+    const name = propNameByKey.get(Number(kp.obj.props.propertyKey))?.name;
+    if (!name) continue;
+    const keys = kp.keys.map((k) => ({ id: '', t: Number(k.props.frame ?? 0), value: Number(k.props.value ?? defaultOf(k.type, 'value') ?? 0), ease: easeOf(ac, k) }));
+    byProp.set(name, keys.sort((a, b) => a.t - b.t));
+    for (const k of keys) frames.add(k.t);
+  }
+  const sorted = [...frames].sort((a, b) => a - b);
+  const times: number[] = [];
+  sorted.forEach((f, i) => {
+    times.push(f);
+    const next = sorted[i + 1];
+    if (next !== undefined) for (let j = 1; j < 4; j++) times.push(f + ((next - f) * j) / 4);
+  });
+  return times.map((frame) => ({
+    frame,
+    g: (prop: string) => {
+      const keys = byProp.get(prop);
+      return keys ? Number(sampleKeys(keys, frame)) : get(rest, prop);
+    },
+  }));
+}
+
 function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | null {
   const o = ac.rab.slots[slot];
   const kids = (ac.children.get(slot) ?? []).map((i) => ({ i, o: ac.rab.slots[i] }));
@@ -732,7 +771,9 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     if (ox || oy) sizeFollowers.push({ nodeId: node.id, pathSlot: paths[0].i, ox, oy, sx: get(o, 'x'), sy: get(o, 'y') });
   } else {
     const subs: SubPath[] = [];
+    const vertexRefs: { slot: number; sub: number; index: number; m: M }[] = [];
     for (const { i, o: p } of paths) {
+      let vslots: number[] = [];
       const m = localMatrix(p);
       let pts: PathPoint[] = [];
       const w = get(p, 'width');
@@ -746,12 +787,19 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
       else if (p.type === 'Polygon') pts = polyPoints(get(p, 'points'), w, h, ox, oy, null);
       else if (p.type === 'Triangle') pts = [{ x: w * (0.5 - ox), y: -h * oy }, { x: w * (1 - ox), y: h * (1 - oy) }, { x: -w * ox, y: h * (1 - oy) }];
       else if (isA(p.type, 'PointsCommonPath')) {
-        const verts = (ac.children.get(i) ?? []).map((vi) => ac.rab.slots[vi]).filter((v) => isA(v.type, 'Vertex'));
+        vslots = (ac.children.get(i) ?? []).filter((vi) => isA(ac.rab.slots[vi].type, 'Vertex'));
+        const verts = vslots.map((vi) => ac.rab.slots[vi]);
         if (verts.some((v) => (ac.children.get(ac.rab.slots.indexOf(v)) ?? []).length)) fc.warnings.add('Bone-weighted (skinned) paths are imported in their rest pose');
         pts = vertexPoints(verts);
         closed = !!get<boolean>(p, 'isClosed');
       }
       if (pts.length < 2) continue;
+      // Holes wind the other way round, so the shape's nonzero fill leaves them open. Handles swap with the order.
+      if (get<boolean>(p, 'isHole')) {
+        pts = pts.reverse().map((q) => ({ x: q.x, y: q.y, in: q.out ?? null, out: q.in ?? null }));
+        vslots = [];
+      }
+      if (vslots.length === pts.length) vslots.forEach((slot, index) => vertexRefs.push({ slot, sub: subs.length, index, m }));
       subs.push({
         closed,
         points: pts.map((q) => {
@@ -779,6 +827,21 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
           maxX = Math.max(maxX, x);
           maxY = Math.max(maxY, y);
         }
+    // Morphing paths: the box has to hold every pose
+    for (const ref of vertexRefs)
+      for (const anim of ac.rab.anims)
+        for (const smp of vertexSamples(ac, ref.slot, anim)) {
+          const q = vertexPoint(ac.rab.slots[ref.slot].type, smp.g);
+          const a = ap(ref.m, q.x, q.y);
+          const hin = q.in ? av(ref.m, q.in.x, q.in.y) : { x: 0, y: 0 };
+          const hout = q.out ? av(ref.m, q.out.x, q.out.y) : { x: 0, y: 0 };
+          for (const [x, y] of [[a.x, a.y], [a.x + hin.x, a.y + hin.y], [a.x + hout.x, a.y + hout.y]]) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+        }
     const fillRule = fills[0] && get(fills[0].o, 'fillRule') === 1 ? 'evenodd' : 'nonzero';
     node = createNode('path', {
       name,
@@ -800,10 +863,13 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     placeAtOrigin(node, o, { x: minX, y: minY }, maxX - minX, maxY - minY);
     addTarget(ac, slot, transformTarget(node, { x: minX, y: minY }));
     for (const { i } of paths) addTarget(ac, i, { nodeId: node.id, map: {} });
+    for (const ref of vertexRefs) addTarget(ac, ref.slot, { nodeId: node.id, map: {}, vertex: { sub: ref.sub, index: ref.index, m: ref.m, minX, minY } });
   }
   if (fillInfo.colorSlot !== null) addTarget(ac, fillInfo.colorSlot, { nodeId: node.id, map: { colorValue: { prop: 'fill.color', f: (v) => argb(Number(v)) } } });
   if (strokeInfo.colorSlot !== null) addTarget(ac, strokeInfo.colorSlot, { nodeId: node.id, map: { colorValue: { prop: 'stroke.paint.color', f: (v) => argb(Number(v)) } } });
   if (strokes[0]) addTarget(ac, strokes[0].i, { nodeId: node.id, map: { thickness: { prop: 'stroke.width', f: num() } } });
+  const dashSlot = strokes[0] ? (ac.children.get(strokes[0].i) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath') : undefined;
+  if (stroke && dashSlot !== undefined && !get<boolean>(ac.rab.slots[dashSlot], 'offsetIsPercentage')) addTarget(ac, dashSlot, { nodeId: node.id, map: { offset: { prop: 'stroke.dashOffset', f: num() } } });
   if (trim !== undefined) {
     const pct = (v: unknown) => r2(Number(v ?? 0) * 100);
     addTarget(ac, trim, { nodeId: node.id, map: { start: { prop: 'stroke.trimStart', f: pct }, end: { prop: 'stroke.trimEnd', f: pct }, offset: { prop: 'stroke.trimOffset', f: pct } } });
@@ -1225,6 +1291,14 @@ function clipWrap(ac: ArtboardCtx, fc: FileCtx, slot: number, layer: SceneNode, 
     if (!shape) continue;
     shape.visible = true;
     shape.opacity = 1;
+    // The clip shape's own animation (a morphing wave line, a moving rectangle) has to move the mask copy too; its
+    // opacity does not matter to a clip
+    for (const [tslot, list] of scratch.targets)
+      for (const t of list) {
+        const map = { ...t.map };
+        delete map.opacity;
+        addTarget(ac, tslot, { ...t, map });
+      }
     // Clip shape's space -> the parent's space, as a plain translate/rotate/scale
     const x = multiply(toParent, worldOf(ac, Number(ac.rab.slots[src].props.parentId ?? 0)));
     const sx = Math.hypot(x[0], x[1]) || 1;
@@ -1317,9 +1391,37 @@ function buildArtboardNodes(fc: FileCtx, index: number): SceneNode[] {
     if (n) out.push(clipWrap(ac, fc, ci, n, 0, index, false));
   }
   if ((ac.children.get(0) ?? []).some((ci) => (ac.children.get(ci) ?? []).some((r) => ac.rab.slots[r].type === 'DrawRules'))) fc.warnings.add('Draw rules on layers at the top level of an artboard are not imported');
+  importConstraints(ac, fc);
   fc.building.delete(index);
   fc.built.set(index, out);
   return out;
+}
+
+/** Translation constraints (copy the target's x and/or y) become copy-position constraints on the constrained layer. */
+function importConstraints(ac: ArtboardCtx, fc: FileCtx): void {
+  ac.rab.slots.forEach((c, i) => {
+    if (i === 0 || !isA(c.type, 'Constraint')) return;
+    if (c.type !== 'TranslationConstraint') {
+      if (c.type === 'RotationConstraint' || c.type === 'ScaleConstraint') fc.warnings.add('Rotation and scale constraints are not imported');
+      else fc.warnings.add('Constraints (IK, follow, distance, ...) are not supported');
+      return;
+    }
+    const node = ac.nodeBySlot.get(Number(c.props.parentId ?? 0));
+    const target = ac.nodeBySlot.get(Number(get(c, 'targetId')));
+    if (!node || !target || node === target) return;
+    if (get<boolean>(c, 'offset') || get<boolean>(c, 'min') || get<boolean>(c, 'max') || get(c, 'copyFactor') !== 1 || get(c, 'copyFactorY') !== 1) fc.warnings.add('Translation constraints with offsets, limits or a factor are imported as plain copies');
+    node.constraints = [
+      ...(node.constraints ?? []),
+      {
+        id: uid('cn'),
+        type: 'copyPosition',
+        target: target.id,
+        strength: r2(get(c, 'strength')),
+        copyX: get<boolean>(c, 'doesCopy') !== false,
+        copyY: get<boolean>(c, 'doesCopyY') !== false,
+      },
+    ];
+  });
 }
 
 // ---------------------------------------------------------------- animations
@@ -1335,6 +1437,33 @@ function easeOf(ac: ArtboardCtx, k: RObj): Easing {
   return 'easeInOut';
 }
 
+/** Keys on a path vertex (position and handles) as keys on the points of the path node it became. */
+function vertexTracks(ac: ArtboardCtx, anim: RAnim, slot: number, nodeId: string, v: NonNullable<Target['vertex']>, ms: (frame: number) => number): Track[] {
+  const type = ac.rab.slots[slot].type;
+  const series: Record<string, { t: number; v: number }[]> = { x: [], y: [], 'in.x': [], 'in.y': [], 'out.x': [], 'out.y': [] };
+  for (const smp of vertexSamples(ac, slot, anim)) {
+    const t = ms(smp.frame);
+    const q = vertexPoint(type, smp.g);
+    const a = ap(v.m, q.x, q.y);
+    series.x.push({ t, v: r2(a.x - v.minX) });
+    series.y.push({ t, v: r2(a.y - v.minY) });
+    for (const side of ['in', 'out'] as const) {
+      const h = q[side] ? av(v.m, q[side]!.x, q[side]!.y) : null;
+      if (!h) continue;
+      series[`${side}.x`].push({ t, v: r2(h.x) });
+      series[`${side}.y`].push({ t, v: r2(h.y) });
+    }
+  }
+  const out: Track[] = [];
+  for (const [key, list] of Object.entries(series)) {
+    if (list.length < 2) continue;
+    const vals = list.map((e) => e.v);
+    if (Math.max(...vals) - Math.min(...vals) < 0.005) continue;
+    out.push({ id: uid('tr'), nodeId, prop: `paths.${v.sub}.points.${v.index}.${key}`, keys: list.map((e) => ({ id: uid('k'), t: e.t, value: e.v, ease: 'linear' as Easing })) });
+  }
+  return out;
+}
+
 function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (nodeId: string) => { x: number; y: number }): Timeline {
   const o = anim.obj;
   const fps = get(o, 'fps') || 60;
@@ -1348,6 +1477,11 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
   for (const ko of anim.keyed) {
     const slot = Number(ko.obj.props.objectId ?? 0);
     const targets = ac.targets.get(slot);
+    const vt = targets?.find((t) => t.vertex);
+    if (vt?.vertex) {
+      tracks.push(...vertexTracks(ac, anim, slot, vt.nodeId, vt.vertex, ms));
+      continue;
+    }
     for (const kp of ko.props) {
       const key = Number(kp.obj.props.propertyKey);
       const rprop = propNameByKey.get(key)?.name ?? String(key);

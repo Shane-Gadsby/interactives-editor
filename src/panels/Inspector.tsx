@@ -1343,6 +1343,12 @@ function ConstraintsSection({ node }: { node: SceneNode }) {
               <NumberField label="Off y" title="Added to the constrained y position" value={c.offsetY ?? 0} onChange={(v) => update(i, { offsetY: v })} />
             </Row>
           )}
+          {c.type === 'copyPosition' && (
+            <Row>
+              <CheckField label="Copy x" title="Take the other layer's x position" value={c.copyX !== false} onChange={(v) => update(i, { copyX: v })} />
+              <CheckField label="Copy y" title="Take the other layer's y position" value={c.copyY !== false} onChange={(v) => update(i, { copyY: v })} />
+            </Row>
+          )}
           {(c.type === 'copyRotation' || (c.type === 'followPath' && c.orient)) && (
             <NumberField label="Angle +" title="Added to the constrained rotation, in degrees" value={c.angleOffset ?? 0} onChange={(v) => update(i, { angleOffset: v })} suffix="°" />
           )}

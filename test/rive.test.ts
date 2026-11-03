@@ -230,3 +230,43 @@ describe('Rive events', () => {
     expect(res.warnings.some((w) => /events/i.test(w) && /not imported/.test(w))).toBe(false);
   });
 });
+
+describe.skipIf(!samples.includes('treasure_valley_interactive_map.riv'))('Rive waves, morphing paths and holes', () => {
+  const area = (pts: { x: number; y: number }[]) => pts.reduce((s, p, i) => s + (p.x * pts[(i + 1) % pts.length].y - pts[(i + 1) % pts.length].x * p.y), 0);
+
+  it('animates path vertices (the little waves, sails, clouds) as keys on the points', async () => {
+    const res = await importRive(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')), 'tv');
+    const iconBg = res.artboards.find((a) => a.name === 'IconBG')!;
+    const water = iconBg.timelines.find((t) => t.name === 'loop Water')!;
+    const morph = water.tracks.filter((t) => /^paths\.\d+\.points\.\d+\.(x|y|in\.x|in\.y|out\.x|out\.y)$/.test(t.prop));
+    expect(morph.length).toBeGreaterThan(100);
+    // Several poses per loop, not just two
+    expect(Math.max(...morph.map((t) => t.keys.length))).toBeGreaterThan(3);
+    // Every track points at a point that exists on its node
+    const byId = new Map<string, SceneNode>();
+    walk(iconBg.children, (n) => byId.set(n.id, n));
+    for (const t of morph) {
+      const n = byId.get(t.nodeId) as Extract<SceneNode, { type: 'path' }> | undefined;
+      expect(n?.type).toBe('path');
+      const [, sub, , idx] = t.prop.split('.');
+      expect(n!.paths[Number(sub)]?.points[Number(idx)]).toBeTruthy();
+    }
+    expect(res.warnings.some((w) => /Path vertex animation/.test(w))).toBe(false);
+    // The boat's sail morphs too
+    expect(iconBg.timelines.find((t) => t.name === 'loop Boat')!.tracks.some((t) => t.prop.startsWith('paths.'))).toBe(true);
+  });
+
+  it('opens holes (isHole paths wind the other way round) and copies translation constraints per axis', async () => {
+    const res = await importRive(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')), 'tv');
+    const ab = res.artboards.find((a) => a.name === 'Southeast Boise ICON')!;
+    const all: SceneNode[] = [];
+    walk(ab.children, (n) => all.push(n));
+    // The inner tube: a path with two sub-paths wound in opposite directions
+    expect(all.some((n) => n.type === 'path' && n.paths.length >= 2 && Math.sign(area(n.paths[0].points)) !== Math.sign(area(n.paths[1].points)))).toBe(true);
+    const iconBg: SceneNode[] = [];
+    walk(res.artboards.find((a) => a.name === 'IconBG')!.children, (n) => iconBg.push(n));
+    const copy = iconBg.flatMap((n) => n.constraints ?? []).filter((c) => c.type === 'copyPosition');
+    expect(copy.length).toBeGreaterThan(0);
+    expect(copy.some((c) => c.copyX !== false && c.copyY === false)).toBe(true);
+  });
+});
