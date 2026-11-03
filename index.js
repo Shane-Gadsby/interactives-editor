@@ -512,7 +512,9 @@ router.get('/api/projects/:id/live', async (req, res) => {
 
 	let clientId = String(req.query.clientId || '').slice(0, 64) || `c${Date.now().toString(36)}`,
 		me = whoIs(req),
-		client = {id: clientId, res, name: me?.name || me?.username || 'Guest', color: PALETTE[room.nextColor++ % PALETTE.length], presence: {}},
+		//An AI agent joining through the MCP server says so (?agent=<name>), so people can see who's editing
+		agent = typeof req.query.agent === 'string' ? req.query.agent.replace(/[^\w .-]+/g, '').slice(0, 40) : '',
+		client = {id: clientId, res, name: agent ? `${agent} (AI)` : me?.name || me?.username || 'Guest', color: PALETTE[room.nextColor++ % PALETTE.length], presence: {}},
 		since = Number(req.query.since)
 
 	res.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no'})

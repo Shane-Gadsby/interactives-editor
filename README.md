@@ -85,6 +85,10 @@ Access works like this:
 | `INTERACTIVES_STORAGE` | `./storage` | asset files |
 | `SUITE_SESSION_ENFORCE` | unset | `1` to refuse instead of log |
 
+## MCP server (`mcp/`)
+
+`mcp/server.ts` is an MCP server (stdio JSON-RPC, no dependencies) that lets an AI agent join a project's live room as `<name> (AI)`, read it, edit it through the same ops as the editor, and see each person's selection. `npm run build:mcp` (also part of `npm run build`) bundles it with the player's catalog and the help topics into `mcp/dist/interactives-mcp.mjs`, which is committed like `dist/`. Env: `INTERACTIVES_URL`, `INTERACTIVES_SESSION_ID` (sent as `X-Session-ID`), `INTERACTIVES_AGENT_NAME`. The help page "AI agents (MCP)" has the client setup. The live stream takes `?agent=<name>` for this.
+
 ## Frontend (`src/`)
 
 | Path | What |

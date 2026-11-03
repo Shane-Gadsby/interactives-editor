@@ -754,6 +754,46 @@ player.setData('products', [...]);
 The server keeps saved revisions of the project: a snapshot every few minutes while it changes (the newest 100 are kept), and one before every restore. Click the **history** button (the clock) in the top bar to see them, preview one, and **Restore** it. Restoring is itself saved as a new revision, so it can be undone.`,
   },
 
+  {
+    id: 'ai-agents',
+    title: 'AI agents (MCP)',
+    group: 'Working together',
+    summary: 'Let an AI agent join your editing session to build, change and debug alongside you.',
+    keywords: 'ai agent claude mcp model context protocol assistant automation llm copilot',
+    body: `An AI agent can join a project like another person: it shows in the top bar as **<name> (AI)**, its edits appear for everyone as it makes them, and it can see what you have selected, so you can say "make the selected button pulse when hovered".
+
+It connects through the **Interactives MCP server**, a small program any MCP client (Claude Code, Claude Desktop and others) can start.
+
+## Setting it up
+The server is \`mcp/dist/interactives-mcp.mjs\` in the editor's repository. Add it to your MCP client, for example in Claude Code:
+
+\`\`\`
+claude mcp add interactives -e INTERACTIVES_URL=https://<your server>/interactives -e INTERACTIVES_AGENT_NAME=Claude -- node /path/to/interactives-editor/mcp/dist/interactives-mcp.mjs
+\`\`\`
+
+| Setting | Meaning |
+|---|---|
+| \`INTERACTIVES_URL\` | The editor's address (default \`http://127.0.0.1:3048/interactives\`) |
+| \`INTERACTIVES_SESSION_ID\` | Your suite session id, where the server requires a signed-in session |
+| \`INTERACTIVES_AGENT_NAME\` | The name people see (default Agent) |
+
+## What the agent can do
+| Tool | Does |
+|---|---|
+| list_projects | Your projects |
+| join_session | Joins a project's live session; reports who is there and what they have selected |
+| get_selection | The layers each person has selected, in full |
+| get_overview, get_layers, get_interactions | Read artboards, layer trees, timelines, variables, interactions |
+| edit | Add, change, move and delete layers; add artboards, variables, timelines, interactions and scripts, in one batch |
+| validate | Find broken references, unconnected events and expressions that don't parse |
+| read_reference | These help pages, plus generated references for layer fields, interaction nodes and animatable properties |
+
+## Staying in control
+- Everything the agent does goes through the same live editing as people, so you watch it happen.
+- Your **Undo** only undoes your own changes. To roll back an agent's work, use the [revision history](live-editing#revision-history) (a snapshot is kept every few minutes while the project changes).
+- The agent can only open projects your session can open.`,
+  },
+
   // ---------------------------------------------------------------- reference
   {
     id: 'animatable-properties',
