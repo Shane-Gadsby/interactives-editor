@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { walk, type SceneNode } from 'interactives-player';
+import { walk, checkExpression, evaluate, type SceneNode } from 'interactives-player';
 import { importRive, readRiveObjects } from '../src/lib/rive-import';
 import { RIVE_CLASSES } from '../src/lib/rive-defs';
 
@@ -610,4 +610,55 @@ describe('Rive loops started by an Any state transition', () => {
     const restarted = new Set(icon.logic.nodes.filter((n) => n.kind === 'action.timeline' && n.params.op === 'restart').map((n) => n.params.timeline));
     for (const t of loops) expect(restarted.has(t.id)).toBe(true);
   });
+});
+
+describe.skipIf(!samples.length)('Rive import against the safe expression evaluator', () => {
+  for (const f of samples) {
+    it(`every expression written for ${f} parses, and converters evaluate on sample values`, async () => {
+      const res = await importRive(new Uint8Array(readFileSync(dir + f)), 'x');
+      const exprs: string[] = [];
+      const converterExprs: string[] = [];
+      for (const ab of res.artboards) {
+        walk(ab.children, (n) => {
+          const conv = (n as unknown as { converters?: Record<string, { type: string; expr?: string }[]> }).converters;
+          for (const list of Object.values(conv ?? {})) for (const c of list) if (c.type === 'expr' && c.expr) converterExprs.push(c.expr);
+        });
+        for (const n of ab.logic.nodes) {
+          const v = n.kind === 'logic.if' ? n.params.condition : n.kind === 'action.setVariable' ? n.params.value : undefined;
+          if (typeof v === 'string' && v.trim()) exprs.push(v);
+        }
+      }
+      const bad: string[] = [];
+      for (const e of [...exprs, ...converterExprs]) {
+        try {
+          checkExpression(e);
+        } catch (err) {
+          bad.push(`${e}: ${(err as Error).message}`);
+        }
+      }
+      expect(exprs.length).toBeGreaterThan(0);
+      expect(bad).toEqual([]);
+      // The conditions and values run against the variables' starting values without an error
+      const vars = Object.fromEntries(res.variables.map((v) => [v.name, v.initial]));
+      const failed: string[] = [];
+      for (const e of exprs) {
+        try {
+          evaluate(e, { vars, extra: {} });
+        } catch (err) {
+          failed.push(`${e}: ${(err as Error).message}`);
+        }
+      }
+      expect(failed.slice(0, 5)).toEqual([]);
+      // Converters only see `value`: try them on a number and on text; only a missing variable would be an error
+      for (const e of converterExprs) {
+        for (const value of [3, '3.50']) {
+          try {
+            evaluate(e, { vars: {}, extra: { value } });
+          } catch (err) {
+            expect(String((err as Error).message)).not.toMatch(/Cannot parse|not supported|not allowed/);
+          }
+        }
+      }
+    });
+  }
 });

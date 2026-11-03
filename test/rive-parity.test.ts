@@ -207,3 +207,68 @@ describe('Rive reversed layout directions', () => {
     expect(await layout(1)).toMatchObject({ direction: 'column', reverse: false });
   });
 });
+
+describe('Rive text placement, weight and radial gradients', () => {
+  const textFile = (textProps: Record<string, unknown>, extra: Spec[] = [], body = 'Hello there') =>
+    writeRiv([
+      ['Artboard', { name: 'Main', width: 400, height: 200 }],
+      ['Text', { name: 'T', parentId: 0, x: 100, y: 50, ...textProps }], // 1
+      ['TextStyle', { parentId: 1, fontSize: 20 }], // 2
+      ['TextValueRun', { parentId: 1, text: body, styleId: 2 }],
+      ...extra,
+    ]);
+  const find = (ab: { children: unknown[] }, name: string) => {
+    let found: { x: number; width: number; align: string; fontWeight: number } | undefined;
+    walk(ab.children as never, (n) => n.name === name && (found = n as never));
+    return found!;
+  };
+
+  it('does not lay out a root that holds only text: the text keeps its position', async () => {
+    const ab = (await importRive(textFile({ sizingValue: 0 }), 't')).artboards[0];
+    expect(ab.children.some((c) => c.name === 'Artboard layout')).toBe(false);
+    expect(find(ab, 'T').x).toBe(100);
+  });
+
+  it('gives auto-width text a box as wide as its text, aligned to its origin', async () => {
+    const centred = find((await importRive(textFile({ sizingValue: 0, originX: 0.5, alignValue: 0 }), 't')).artboards[0], 'T');
+    expect(centred.align).toBe('center');
+    expect(centred.width).toBeGreaterThan(40);
+    expect(centred.width).toBeLessThan(200);
+    // The box is centred on the origin, so its left edge sits half a width to the left of x
+    expect(centred.x).toBeCloseTo(100 - centred.width / 2, 0);
+    const right = find((await importRive(textFile({ sizingValue: 0, originX: 1 }), 't')).artboards[0], 'T');
+    expect(right.align).toBe('right');
+    // Centred lines of a multi-line block stay centred in a box the width of the longest line
+    const multi = find((await importRive(textFile({ sizingValue: 0, alignValue: 2 }, [], 'ab\nabcdefghij'), 't')).artboards[0], 'T');
+    expect(multi.align).toBe('center');
+    expect(multi.width).toBeLessThan(200);
+  });
+
+  it('reads the variable font weight axis', async () => {
+    const axis: Spec[] = [['TextStyleAxis', { parentId: 2, tag: 0x77676874, axisValue: 700 }]];
+    expect(find((await importRive(textFile({}, axis), 't')).artboards[0], 'T').fontWeight).toBe(700);
+    expect(find((await importRive(textFile({}), 't')).artboards[0], 'T').fontWeight).toBe(400);
+  });
+
+  it('squeezes a radial gradient that ends at the box side, since ours ends at the farthest corner', async () => {
+    const file = (endX: number) =>
+      writeRiv([
+        ['Artboard', { name: 'Main', width: 200, height: 200 }],
+        ['Shape', { name: 'Dot', parentId: 0 }], // 1
+        ['Ellipse', { parentId: 1, width: 200, height: 200 }],
+        ['Fill', { parentId: 1 }], // 3
+        ['RadialGradient', { parentId: 3, endX }], // 4
+        ['GradientStop', { parentId: 4, colorValue: 0xffff0000, position: 0 }],
+        ['GradientStop', { parentId: 4, colorValue: 0xff0000ff, position: 1 }],
+      ]);
+    const stops = async (endX: number) => {
+      let fill: { stops: { offset: number }[] } | undefined;
+      walk((await importRive(file(endX), 'g')).artboards[0].children, (n) => n.name === 'Dot' && (fill = (n as never as { fill: typeof fill }).fill));
+      return fill!.stops.map((s) => s.offset);
+    };
+    // Radius 100 in a 200x200 box: the corner is 141 away, so the blue is reached at 0.71 and carries on
+    expect(await stops(100)).toEqual([0, 0.71, 1]);
+    // Reaching the corner or beyond needs no change
+    expect(await stops(142)).toEqual([0, 1]);
+  });
+});

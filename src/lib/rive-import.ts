@@ -769,7 +769,7 @@ function transformTarget(n: SceneNode, b: { x: number; y: number }): Target {
   };
 }
 
-function paintOf(ac: ArtboardCtx, fc: FileCtx, paintSlot: number, shapeBox: { x: number; y: number; w: number; h: number } | null): { paint: Paint | null; colorSlot: number | null } {
+function paintOf(ac: ArtboardCtx, fc: FileCtx, paintSlot: number, shapeBox: { x: number; y: number; w: number; h: number } | null): { paint: Paint | null; colorSlot: number | null; radius?: number } {
   for (const ci of ac.children.get(paintSlot) ?? []) {
     const c = ac.rab.slots[ci];
     if (c.type === 'SolidColor') return { paint: { type: 'solid', color: argb(get(c, 'colorValue')) }, colorSlot: ci };
@@ -778,7 +778,7 @@ function paintOf(ac: ArtboardCtx, fc: FileCtx, paintSlot: number, shapeBox: { x:
         .map((i) => ac.rab.slots[i])
         .filter((s) => s.type === 'GradientStop')
         .map((s) => ({ offset: r2(get(s, 'position')), color: argb(get(s, 'colorValue')) }));
-      if (c.type === 'RadialGradient') return { paint: { type: 'radial', stops }, colorSlot: null };
+      if (c.type === 'RadialGradient') return { paint: { type: 'radial', stops }, colorSlot: null, radius: Math.hypot(get(c, 'endX') - get(c, 'startX'), get(c, 'endY') - get(c, 'startY')) };
       const angle = Math.atan2(get(c, 'endY') - get(c, 'startY'), get(c, 'endX') - get(c, 'startX')) * DEG + 90;
       void shapeBox;
       fc.warnings.add('Gradients are mapped to CSS-style gradients across the layer box; exact start/end points may differ');
@@ -786,6 +786,21 @@ function paintOf(ac: ArtboardCtx, fc: FileCtx, paintSlot: number, shapeBox: { x:
     }
   }
   return { paint: null, colorSlot: null };
+}
+
+/**
+ * A radial gradient that ends `radius` from its centre, on our box paint (which ends at the farthest corner): the stops
+ * are squeezed towards the centre and the last colour carries on to the edge.
+ */
+function fitRadial(paint: Paint, radius: number, w: number, h: number): Paint {
+  const far = Math.hypot(w / 2, h / 2);
+  if (paint.type !== 'radial' || !(radius > 0) || !(far > 0)) return paint;
+  const k = radius / far;
+  if (Math.abs(k - 1) < 0.01 || k > 1) return paint;
+  const stops = paint.stops.map((st) => ({ ...st, offset: r2(Math.min(1, st.offset * k)) }));
+  const last = paint.stops[paint.stops.length - 1];
+  if (last) stops.push({ ...last, offset: 1 });
+  return { ...paint, stops };
 }
 
 /** A stroke's DashPath effect: its Dash children alternate dash and gap lengths (pixel lengths only), plus offset. */
@@ -907,10 +922,14 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     // With several strokes each one is centred on the outline, as in Rive, so the box keeps the path's size
     if (strokeL.length > 1) for (const x of strokeL) x.stroke.align = 'center';
     const half = strokeL.length <= 1 && stroke && stroke.width > 0 && !sized ? stroke.width / 2 : 0;
+    // Rive's radial gradients end where the file says (usually the box's side); a CSS-like box paint ends at the corner
+    const fit = (x: (typeof fillL)[number]): Paint => (x.info.radius ? fitRadial(x.paint, x.info.radius, w + half * 2, h + half * 2) : x.paint);
+    const fitFill = fillL[0] ? fit(fillL[0]) : null;
+    const fitExtra = { ...extra, ...(fillL.length > 1 ? { fills: fillL.slice(1).map(fit) } : {}) };
     node =
       p.type === 'Rectangle'
-        ? createNode('rect', { name, fill, stroke, ...extra, cornerRadius: r2(get(p, 'cornerRadiusTL') + half) })
-        : createNode('ellipse', { name, fill, stroke, ...extra });
+        ? createNode('rect', { name, fill: fitFill, stroke, ...fitExtra, cornerRadius: r2(get(p, 'cornerRadiusTL') + half) })
+        : createNode('ellipse', { name, fill: fitFill, stroke, ...fitExtra });
     const b = { x: -w * ox - half, y: -h * oy - half };
     placeAtOrigin(node, o, b, w + half * 2, h + half * 2);
     addTarget(ac, slot, transformTarget(node, b));
@@ -1054,6 +1073,79 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
 /** Rectangles/ellipses with an origin other than top-left: x/y keys that follow their animated size. */
 let sizeFollowers: { nodeId: string; pathSlot: number; ox: number; oy: number; sx: number; sy: number }[] = [];
 
+/** Width of one line of text in a plain TrueType/OpenType font (advance widths only, no kerning), or null. */
+function fontLineWidth(bytes: Uint8Array, line: string, size: number): number | null {
+  try {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const magic = dv.getUint32(0);
+    if (magic !== 0x00010000 && magic !== 0x4f54544f && magic !== 0x74727565) return null;
+    const tables = new Map<string, number>();
+    const n = dv.getUint16(4);
+    for (let i = 0; i < n; i++) {
+      const rec = 12 + i * 16;
+      tables.set(String.fromCharCode(bytes[rec], bytes[rec + 1], bytes[rec + 2], bytes[rec + 3]), dv.getUint32(rec + 8));
+    }
+    const head = tables.get('head');
+    const hhea = tables.get('hhea');
+    const hmtx = tables.get('hmtx');
+    const cmap = tables.get('cmap');
+    if (head === undefined || hhea === undefined || hmtx === undefined || cmap === undefined) return null;
+    const upm = dv.getUint16(head + 18);
+    const metrics = dv.getUint16(hhea + 34);
+    // The Unicode cmap subtable: format 12 (full range) or format 4 (BMP)
+    let sub = -1;
+    let fmt = 0;
+    const count = dv.getUint16(cmap + 2);
+    for (let i = 0; i < count; i++) {
+      const plat = dv.getUint16(cmap + 4 + i * 8);
+      const enc = dv.getUint16(cmap + 6 + i * 8);
+      const off = cmap + dv.getUint32(cmap + 8 + i * 8);
+      const f = dv.getUint16(off);
+      if ((plat === 3 && (enc === 1 || enc === 10)) || plat === 0) {
+        if (f === 12 || (f === 4 && fmt !== 12)) {
+          sub = off;
+          fmt = f;
+        }
+      }
+    }
+    if (sub < 0) return null;
+    const glyphOf = (cp: number): number => {
+      if (fmt === 12) {
+        const groups = dv.getUint32(sub + 12);
+        for (let g = 0; g < groups; g++) {
+          const o = sub + 16 + g * 12;
+          const start = dv.getUint32(o);
+          const end = dv.getUint32(o + 4);
+          if (cp >= start && cp <= end) return dv.getUint32(o + 8) + (cp - start);
+        }
+        return 0;
+      }
+      const segX2 = dv.getUint16(sub + 6);
+      const ends = sub + 14;
+      const starts = ends + segX2 + 2;
+      const deltas = starts + segX2;
+      const ranges = deltas + segX2;
+      for (let g = 0; g < segX2; g += 2) {
+        if (cp > dv.getUint16(ends + g)) continue;
+        if (cp < dv.getUint16(starts + g)) return 0;
+        const ro = dv.getUint16(ranges + g);
+        if (!ro) return (cp + dv.getInt16(deltas + g)) & 0xffff;
+        const gi = dv.getUint16(ranges + g + ro + (cp - dv.getUint16(starts + g)) * 2);
+        return gi ? (gi + dv.getInt16(deltas + g)) & 0xffff : 0;
+      }
+      return 0;
+    };
+    let units = 0;
+    for (const ch of line) {
+      const gid = glyphOf(ch.codePointAt(0)!);
+      units += dv.getUint16(hmtx + Math.min(gid, metrics - 1) * 4);
+    }
+    return (units / upm) * size;
+  } catch {
+    return null;
+  }
+}
+
 const lineRatios = new WeakMap<Uint8Array, number | null>();
 /** The file's own line height for texts whose single-line height was raised to the font's metrics. */
 const riveLineHeight = new Map<number, number>();
@@ -1100,8 +1192,15 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
   let fontFamily = 'Inter, system-ui, sans-serif';
   let letterSpacing = 0;
   let lineHeight = 1.2;
+  let fontWeight = 400;
+  let fontBytes: Uint8Array | null = null;
   if (style) {
     fontSize = r2(get(style, 'fontSize') || 16);
+    // Variable font weight axis ('wght')
+    for (const ai of ac.children.get(ac.rab.slots.indexOf(style)) ?? []) {
+      const ax = ac.rab.slots[ai];
+      if (ax.type === 'TextStyleAxis' && get(ax, 'tag') === 0x77676874) fontWeight = Math.round(get(ax, 'axisValue')) || 400;
+    }
     letterSpacing = r2(get(style, 'letterSpacing'));
     const lh = get(style, 'lineHeight');
     if (lh > 0) lineHeight = r2(lh / fontSize);
@@ -1117,6 +1216,7 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
     const fam = fontAsset ? String(get(fontAsset.obj, 'name') ?? '') : '';
     if (fam) fontFamily = `"${fam.replace(/\.[^.]+$/, '')}", system-ui, sans-serif`;
     // A single line is as tall as the font's own ascent + descent in Rive, even with a smaller line height
+    fontBytes = fontAsset?.bytes ?? null;
     const natural = fontAsset?.bytes ? fontLineRatio(fontAsset.bytes) : null;
     const runText = runs.map((r) => String(get(r.o, 'text') ?? '')).join('');
     // Rive sizes a line by the file's line height and centres the glyphs in it, as CSS does, so the file's value
@@ -1160,12 +1260,22 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
     const patch = runsPatch(textRuns);
     textRuns = patch.runs;
   }
-  const w = get(o, 'width') || 200;
-  const h = get(o, 'height') || fontSize * lineHeight;
   const ox = get(o, 'originX');
   const oy = get(o, 'originY');
   const sizing = get(o, 'sizingValue');
-  const align = (['left', 'right', 'center', 'justify'] as const)[get(o, 'alignValue')] ?? 'left';
+  let w = get(o, 'width') || 200;
+  const h = get(o, 'height') || fontSize * lineHeight;
+  let align = (['left', 'right', 'center', 'justify'] as const)[get(o, 'alignValue')] ?? 'left';
+  // Auto-width text hangs off its origin (centred on 0.5, ending at 1). Ours is a box of fixed width, so the text
+  // gets a box as wide as the font measures it (or an estimate) and aligns to the origin, which puts it where Rive draws it.
+  const lines = text.split('\n');
+  const measured = fontBytes ? lines.map((l) => fontLineWidth(fontBytes!, l, fontSize)) : [];
+  const natural = measured.length && measured.every((m) => m !== null) ? Math.max(...(measured as number[])) + letterSpacing * Math.max(...lines.map((l) => l.length)) : null;
+  const widest = natural ?? Math.max(...lines.map((l) => l.length)) * fontSize * 0.6;
+  if (sizing === 0 && (natural !== null || ox > 0 || lines.length > 1) && (lines.length === 1 || align === 'center')) {
+    w = Math.max(1, Math.ceil(widest) + (natural === null ? 16 : 2));
+    align = ox >= 1 && lines.length === 1 ? 'right' : lines.length > 1 || ox === 0.5 ? 'center' : align;
+  }
   // Rive: 0 visible, 1 hidden, 2 clipped, 3 ellipsis, 4 fit
   const overflow = (['visible', 'hidden', 'hidden', 'ellipsis', 'hidden'] as const)[get(o, 'overflowValue')] ?? 'visible';
   const node = createNode('text', {
@@ -1174,6 +1284,7 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
     ...(textRuns ? { runs: textRuns } : {}),
     fontSize,
     fontFamily,
+    ...(fontWeight !== 400 ? { fontWeight } : {}),
     color,
     letterSpacing,
     lineHeight,
@@ -2708,7 +2819,9 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     const root = new Set(kids.map((k) => k.id));
     // Layout artboards: the artboard itself is the root layout box
     const rootSlots = [...(ac.children.get(0) ?? [])];
-    if (rootSlots.some((i) => takesPart(rab.slots[i].type))) {
+    // A root with only text (and shapes) is not laid out: the texts keep their positions. Rive lays the artboard out only
+    // once a real layout item sits in it.
+    if (rootSlots.some((i) => takesPart(rab.slots[i].type) && rab.slots[i].type !== 'Text')) {
       const style = rab.obj.props.styleId !== undefined ? rab.slots[Number(rab.obj.props.styleId)] : undefined;
       const participants = new Set(rootSlots.filter((i) => takesPart(rab.slots[i].type)).map((i) => ac.nodeBySlot.get(i)?.id));
       const wrap = createNode('frame', {
