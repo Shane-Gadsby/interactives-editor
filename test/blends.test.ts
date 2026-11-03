@@ -31,7 +31,8 @@ describe('blends in the editor', () => {
     for (const kind of ['action.blendPlay', 'action.blendStop']) {
       const def = CATALOG_BY_KIND[kind];
       expect(def.category).toBe('action');
-      expect(def.params.map((x) => x.type)).toEqual(['blend']);
+      //Play blend also takes the blend-in settings of a transition
+      expect(def.params.map((x) => x.type)).toEqual(kind === 'action.blendPlay' ? ['blend', 'expr', 'easing', 'expr', 'boolean', 'boolean'] : ['blend']);
     }
   });
 

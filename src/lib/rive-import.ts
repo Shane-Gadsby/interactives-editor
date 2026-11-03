@@ -3199,11 +3199,24 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         (ab.blends ??= []).push(b);
         blendOf.set(st, b);
       }
-      const goTo = (from: LogicNode, port: string, target: RState, x: number, fadeMs = 0) => {
+      // The blend-in of a transition (Rive's mix): how long, its easing, whether the state left stands still (pause on exit)
+      // and whether the next change may cut in (early exit)
+      interface Mix {
+        ms: number;
+        ease: Easing;
+        hold: boolean;
+        early: boolean;
+      }
+      const mixParams = (m: Mix, outgoing: string) => ({ fade: String(m.ms), ...(m.ease !== 'linear' ? { fadeEase: m.ease } : {}), outgoing, ...(m.hold ? { hold: true } : {}), ...(m.early ? { earlyExit: true } : {}) });
+      const goTo = (from: LogicNode, port: string, target: RState, x: number, mix?: Mix) => {
         let last = from;
         let lastPort = port;
         const others = layerTimelines.filter((o) => o !== tlOf(target)).map((o) => o.id);
-        if (others.length) {
+        // With a blend-in, what is left keeps running under it and the player stops it when it is done; the target's
+        // own blend still starts again from the top
+        const mixing = !!mix && mix.ms > 0 && (!!tlOf(target) || blendOf.has(target));
+        const outgoing = JSON.stringify([...others, ...[...blendOf.values()].filter((b) => b !== blendOf.get(target)).map((b) => b.id)]);
+        if (others.length && !mixing) {
           // The layer's other states stop where they are; the target state's animation takes over
           const p = add('action.code', { code: `${JSON.stringify(others)}.forEach((id) => ix.timeline(id)?.pause());` }, x);
           p.note = 'Pause the layer’s other states';
@@ -3214,6 +3227,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         }
         // The layer's blends stop (the target's own one starts again from the top below)
         for (const b of blendOf.values()) {
+          if (mixing && b !== blendOf.get(target)) continue;
           const stop = add('action.blendStop', { blend: b.id }, x);
           link(last, stop, lastPort);
           last = stop;
@@ -3225,7 +3239,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         const entered = fireNodes(target.fires, 0, set, 'out', x + 240);
         const targetBlend = blendOf.get(target);
         if (targetBlend) {
-          const play = add('action.blendPlay', { blend: targetBlend.id }, entered.x);
+          const play = add('action.blendPlay', { blend: targetBlend.id, ...(mixing ? mixParams(mix!, outgoing) : {}) }, entered.x);
           link(entered.last, play, entered.port);
           entered.last = play;
           entered.port = 'out';
@@ -3234,7 +3248,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         const tl = tlOf(target);
         if (tl) {
           // A transition's blend time cross-fades the new state's pose in over the old one
-          const play = add('action.timeline', { timeline: tl.id, op: 'restart', ...(fadeMs > 0 ? { fade: String(fadeMs) } : {}) }, entered.x);
+          const play = add('action.timeline', { timeline: tl.id, op: 'restart', ...(mixing ? mixParams(mix!, outgoing) : {}) }, entered.x);
           link(entered.last, play, entered.port);
         }
       };
@@ -3248,8 +3262,28 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         goTo(start, 'out', target, 280);
         y += 120;
       }
+      const trFlags = (tr: RTransition) => Number(tr.obj.props.flags ?? 0);
+      const enabled = (st: RState) => st.transitions.filter((tr) => !(trFlags(tr) & 1) && layer.states[Number(tr.obj.props.stateToId ?? 0)] && layer.states[Number(tr.obj.props.stateToId ?? 0)].obj.type !== 'ExitState');
+      // A transition's blend time in ms: given in ms, or a percentage of the animation it leaves (flag 2)
+      const mixMs = (st: RState, tr: RTransition) => {
+        const raw = get(tr.obj, 'duration');
+        return trFlags(tr) & 2 ? Math.round(((tlOf(st)?.duration ?? 0) * raw) / 100) : raw;
+      };
+      // States that are entered by a transition with a blend time: leaving them waits for it (unless it allows leaving early)
+      const mixedInto = new Set<RState>();
+      for (const st of layer.states) for (const tr of enabled(st)) if (mixMs(st, tr) > 0) mixedInto.add(layer.states[Number(tr.obj.props.stateToId ?? 0)]);
+      // Random transitions: a state where the valid transitions are told apart by weight (Rive's randomWeight, 1 if absent)
+      const randomOf = new Map<RState, RTransition[]>();
+      for (const st of layer.states) {
+        const trs = enabled(st);
+        if (trs.length < 2 || !trs.some((tr) => get(tr.obj, 'randomWeight') !== 1)) continue;
+        if (trs.length > 6) fc.warnings.add('Random transitions out of a state with more than six transitions are not imported (the first one valid wins)');
+        else if (trs.some((tr) => trFlags(tr) & 4)) fc.warnings.add('Random transitions that also use an exit time are not imported (the first one valid wins)');
+        else randomOf.set(st, trs);
+      }
       for (const [si, st] of layer.states.entries()) {
         if (st.obj.type === 'EntryState') continue;
+        const group: { tr: RTransition; target: RState; condition: string; triggers: string[]; vmNames: string[]; specs: [string, Record<string, unknown>][]; mix: Mix }[] = [];
         for (const tr of st.transitions) {
           const target = layer.states[Number(tr.obj.props.stateToId ?? 0)];
           if (!target || target.obj.type === 'ExitState') continue;
@@ -3258,6 +3292,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           const triggers: string[] = [];
           const watched = new Set<string>();
           const vmTriggers: string[] = [];
+          const vmNames: string[] = [];
           for (const c of tr.conditions) {
             if (c.type === 'TransitionViewModelCondition') {
               const comps = c.parts ?? [];
@@ -3270,6 +3305,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
               }
               if (lv.kind === 'trigger') {
                 vmTriggers.push(lv.id);
+                vmNames.push(lv.name);
                 continue;
               }
               let rhs: string;
@@ -3303,52 +3339,119 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           // starts) must fire then too, so state changes re-check it
           if (watched.size) watched.add(stateVar.id);
           const condition = conds.join(' && ') || 'true';
-          const sources: LogicNode[] = [];
-          // Exit time: Rive only checks the conditions once the state's animation has played to that point
-          const exitTl = Number(tr.obj.props.flags ?? 0) & 4 ? tlOf(st) : undefined;
-          if (exitTl && !triggers.length && !vmTriggers.length) {
+          const specs: [string, Record<string, unknown>][] = [];
+          // Exit time: Rive only takes the transition once the state's animation has played to that point (ms, or a share
+          // of the animation with flag 8). One at the very end is the animation finishing; earlier ones are waited for
+          // with a Wait for time in timeline node once the conditions hold
+          const exitTl = trFlags(tr) & 4 ? tlOf(st) : undefined;
+          const exitRaw = get(tr.obj, 'exitTime');
+          const exitAt = exitTl ? Math.min(exitTl.duration, trFlags(tr) & 8 ? (exitTl.duration * exitRaw) / 100 : exitRaw) : 0;
+          // (with a trigger there is no event for the animation finishing, so even an exit time at the end is waited for)
+          const exitWait = !!exitTl && (exitAt < exitTl.duration - 0.5 || triggers.length > 0 || vmTriggers.length > 0);
+          if (exitTl && !exitWait && !triggers.length && !vmTriggers.length) {
             watched.clear();
             if (exitTl.loop !== 'once') fc.warnings.add('Exit times on looping animations are checked when the animation first finishes');
           }
-          for (const name of triggers) sources.push(add('event.message', { name }, 40));
+          for (const name of triggers) specs.push(['event.message', { name }]);
           // A view model trigger counts up when it fires: the transition runs on that change only
-          for (const id of vmTriggers) sources.push(add('event.variable', { variable: id }, 40));
+          for (const id of vmTriggers) specs.push(['event.variable', { variable: id }]);
           if (!triggers.length && !vmTriggers.length) {
-            for (const id of watched) sources.push(add('event.variable', { variable: id }, 40));
+            for (const id of watched) specs.push(['event.variable', { variable: id }]);
             // Rive checks Any state transitions every frame, starting with the first: one whose condition already holds
             // at the start (a loop that plays while a view model number is 0) has to run then, not on the first change
-            if (st.obj.type === 'AnyState' && watched.size) sources.push(add('event.start', {}, 40));
+            if (st.obj.type === 'AnyState' && watched.size) specs.push(['event.start', {}]);
             // An Any state transition with nothing to wait for (the icons' "Loop ..." layers) is taken on the first frame
-            if (st.obj.type === 'AnyState' && !watched.size) sources.push(add('event.start', {}, 40));
-            else if (!watched.size) {
+            if (st.obj.type === 'AnyState' && !watched.size) specs.push(['event.start', {}]);
+            else if (!watched.size && exitWait) {
+              // No inputs but an exit time part-way: look when the state is entered, the wait does the rest
+              specs.push(['event.variable', { variable: stateVar.id }]);
+            } else if (!watched.size) {
               // No inputs: leave when the state's animation finishes (exit time)
               const tl = tlOf(st);
               if (tl) {
                 if (tl.loop !== 'once') fc.warnings.add('Transitions out of looping animations by exit time only happen once the animation is set to play once');
-                sources.push(add('event.timelineEnd', { timeline: tl.id }, 40));
+                specs.push(['event.timelineEnd', { timeline: tl.id }]);
               } else {
                 if (blendOf.has(st)) fc.warnings.add('Transitions out of blend states by exit time only are not imported');
                 continue;
               }
             }
           }
+          const mix: Mix = { ms: mixMs(st, tr), ease: easeOf(ac, tr.obj), hold: !!(trFlags(tr) & 16), early: !!(trFlags(tr) & 32) };
+          // Random transitions are picked between together, once every one of the state has been looked at
+          if (randomOf.get(st)?.includes(tr)) {
+            group.push({ tr, target, condition, triggers, vmNames, specs, mix });
+            continue;
+          }
+          const sources = specs.map(([kind, params]) => add(kind, params, 40));
           const iff = add('logic.if', { condition }, 280);
           iff.note = `${stateName(st)} → ${stateName(target)}`;
           for (const s of sources) link(s, iff);
-          // Leaving a state, the transition and entering the next one: their fire event actions, in that order
           let leave = { last: iff, port: 'true', x: 520 };
+          // An exit time part-way through: wait for it, then make sure the transition still holds
+          if (exitTl && exitWait) {
+            const wait = add('action.waitTimeline', { timeline: exitTl.id, unit: 'ms', at: Math.round(exitAt) }, leave.x);
+            link(leave.last, wait, leave.port);
+            const again = add('logic.if', { condition }, leave.x + 240);
+            link(wait, again);
+            leave = { last: again, port: 'true', x: leave.x + 480 };
+          }
+          // Not while the state is still being blended into, unless that blend-in allows it
+          if (mixedInto.has(st) && st.obj.type !== 'AnyState' && (tlOf(st) || blendOf.has(st))) {
+            const drop = triggers.length > 0 || vmTriggers.length > 0;
+            const gate = add('action.waitBlendIn', { ...(tlOf(st) ? { timeline: tlOf(st)!.id } : { blend: blendOf.get(st)!.id }), drop }, leave.x);
+            link(leave.last, gate, leave.port);
+            leave = { last: gate, port: 'out', x: leave.x + 240 };
+            if (!drop) {
+              const again = add('logic.if', { condition }, leave.x);
+              link(gate, again);
+              leave = { last: again, port: 'true', x: leave.x + 240 };
+            }
+          }
+          // Leaving a state, the transition and entering the next one: their fire event actions, in that order
           if (st.obj.type !== 'AnyState') leave = fireNodes(st.fires, 1, leave.last, leave.port, leave.x);
           leave = fireNodes(tr.fires, 0, leave.last, leave.port, leave.x);
           leave = fireNodes(tr.fires, 1, leave.last, leave.port, leave.x);
-          // Blend time: milliseconds, or a percentage of the state's animation (flag 2)
-          const rawMs = get(tr.obj, 'duration');
-          const fromTl = tlOf(st);
-          const fadeMs = Number(tr.obj.props.flags ?? 0) & 2 ? Math.round(((fromTl?.duration ?? 0) * rawMs) / 100) : rawMs;
-          goTo(leave.last, leave.port, target, leave.x, tlOf(target) ? fadeMs : 0);
-          if (fadeMs > 0 && !tlOf(target)) fc.warnings.add('Transition blend durations into blend states are not imported (they switch instantly)');
+          goTo(leave.last, leave.port, target, leave.x, mix);
 
           y += 120 + Math.max(0, sources.length - 1) * 100;
           void si;
+        }
+        if (group.length) {
+          // One random pick among the valid transitions, by weight
+          const seen = new Set<string>();
+          const srcs: LogicNode[] = [];
+          for (const g of group) {
+            for (const [kind, params] of g.specs) {
+              const key = kind + JSON.stringify(params);
+              if (seen.has(key)) continue;
+              seen.add(key);
+              srcs.push(add(kind, params, 40));
+            }
+          }
+          const valid = group.map((g) => {
+            const fired = [...g.triggers.map((n) => `event.type === "message" && event.name === ${JSON.stringify(n)}`), ...g.vmNames.map((n) => `event.type === "variable" && event.name === ${JSON.stringify(n)}`)];
+            const parts = [g.condition === 'true' ? '' : g.condition, fired.length ? fired.map((f) => `(${f})`).join(' && ') : ''].filter(Boolean);
+            return `(${parts.join(' && ') || 'true'})`;
+          });
+          const pick = add('logic.random', { weights: `[${group.map((g) => get(g.tr.obj, 'randomWeight')).join(', ')}]`, valid: `[${valid.join(', ')}]` }, 280);
+          pick.note = `${stateName(st)}: random transition`;
+          // Not while the state is still being blended into, unless that blend-in allows it
+          let into = pick;
+          if (mixedInto.has(st) && st.obj.type !== 'AnyState' && (tlOf(st) || blendOf.has(st))) {
+            const drop = group.some((g) => g.triggers.length > 0 || g.vmNames.length > 0);
+            into = add('action.waitBlendIn', { ...(tlOf(st) ? { timeline: tlOf(st)!.id } : { blend: blendOf.get(st)!.id }), drop }, 280);
+            link(into, pick);
+          }
+          for (const sn of srcs) link(sn, into);
+          group.forEach((g, i) => {
+            let leave = { last: pick, port: String(i + 1), x: 520 };
+            if (st.obj.type !== 'AnyState') leave = fireNodes(st.fires, 1, leave.last, leave.port, leave.x);
+            leave = fireNodes(g.tr.fires, 0, leave.last, leave.port, leave.x);
+            leave = fireNodes(g.tr.fires, 1, leave.last, leave.port, leave.x);
+            goTo(leave.last, leave.port, g.target, leave.x, g.mix);
+          });
+          y += 120 + group.length * 60;
         }
       }
     });
