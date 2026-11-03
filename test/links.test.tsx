@@ -8,7 +8,8 @@ import { DialogHost, dismissAllDialogs } from '../src/components/dialogs';
 import { hashBytes } from '../src/lib/link-reconcile';
 import * as db from '../src/lib/db';
 import * as importers from '../src/lib/importers';
-import { LinkManager, captureDrop, handleOf, isDesignFile, loadLinkRecord, rememberHandle, sourcesFor, supportsLinking, type FileHandle } from '../src/lib/links';
+import { LinkChanges } from '../src/components/LinkChanges';
+import { LinkManager, setLinkManager, captureDrop, handleOf, isDesignFile, loadLinkRecord, rememberHandle, sourcesFor, supportsLinking, type FileHandle } from '../src/lib/links';
 
 vi.mock('../src/lib/db', async (orig) => ({
   ...(await orig<typeof import('../src/lib/db')>()),
@@ -179,7 +180,7 @@ describe('LinkManager', () => {
     m = null;
   });
 
-  it('finds the saved handle, imports once the file has settled, and does not repeat itself', async () => {
+  it('finds the saved handle, flags the file once it has settled, imports when asked, and does not repeat itself', async () => {
     const { s } = await linkedStore({ Bg: 'bg' }, 100);
     const { handle, state } = fileHandle({ modified: 100 });
     await rememberHandle(s.get().project.id, 'lk1', handle, 'psd');
@@ -188,17 +189,45 @@ describe('LinkManager', () => {
     m.start();
     await vi.waitFor(() => expect(m!.getSnapshot()[0]?.state).toBe('connected'));
     await m.tick();
-    expect(readAnimationFile).not.toHaveBeenCalled(); // same time as the document
+    expect(m.getSnapshot()[0].changed).toBeUndefined(); // same time as the document
     state.modified = 500;
     await m.tick(); // first look: wait for the save to finish
-    expect(readAnimationFile).not.toHaveBeenCalled();
+    expect(m.getSnapshot()[0].changed).toBeUndefined();
     await m.tick();
-    await vi.waitFor(() => expect(readAnimationFile).toHaveBeenCalledTimes(1));
-    await vi.waitFor(() => expect(s.get().project.artboards[0].children.map((c) => c.name)).toEqual(['Bg', 'New']));
+    expect(m.getSnapshot()[0].changed).toMatchObject({ lastModified: 500, dismissed: false });
+    expect(readAnimationFile).not.toHaveBeenCalled(); // nothing is brought in until someone says so
+    await m.applyChanges(['lk1']);
+    expect(readAnimationFile).toHaveBeenCalledTimes(1);
+    expect(s.get().project.artboards[0].children.map((c) => c.name)).toEqual(['Bg', 'New']);
     expect(s.get().toast?.text).toContain('Poster.psd updated');
+    expect(m.getSnapshot()[0].changed).toBeUndefined();
     await m.tick();
     await m.tick();
     expect(readAnimationFile).toHaveBeenCalledTimes(1);
+    expect(m.getSnapshot()[0].changed).toBeUndefined();
+  });
+
+  it('Not now leaves a change alone until the file is saved again', async () => {
+    const { s } = await linkedStore({ Bg: 'bg' }, 100);
+    const { handle, state } = fileHandle({ modified: 100 });
+    await rememberHandle(s.get().project.id, 'lk1', handle, 'psd');
+    m = new LinkManager(s, readAnimationFile);
+    m.start();
+    await vi.waitFor(() => expect(m!.getSnapshot()[0]?.state).toBe('connected'));
+    state.modified = 500;
+    await m.tick();
+    await m.tick();
+    m.dismissChanges(['lk1']);
+    expect(m.getSnapshot()[0].changed?.dismissed).toBe(true);
+    await m.tick();
+    await m.tick();
+    expect(m.getSnapshot()[0].changed?.dismissed).toBe(true);
+    state.modified = 700;
+    state.content = 'xy';
+    await m.tick();
+    await m.tick();
+    expect(m.getSnapshot()[0].changed).toMatchObject({ lastModified: 700, dismissed: false });
+    expect(readAnimationFile).not.toHaveBeenCalled();
   });
 
   it('does not watch when switched off, and Re-import now still works', async () => {
@@ -385,5 +414,83 @@ describe('chooseLinking', () => {
     click(btn('Cancel'));
     await p;
     localStorage.removeItem('ix-link-default');
+  });
+});
+
+describe('the changes dialog', () => {
+  let m: LinkManager | null = null;
+  let root: Root;
+  let host: HTMLElement;
+  afterEach(() => {
+    m?.stop();
+    m = null;
+    act(() => setLinkManager(null));
+    act(() => root.unmount());
+    host.remove();
+  });
+  const btn = (label: string) => Array.from(document.querySelectorAll<HTMLButtonElement>('.link-changes button')).find((b) => b.textContent === label);
+
+  /** Two linked artboards (Poster.psd, Map.psd), both saved since they were imported, with the dialog mounted. */
+  async function twoChanged() {
+    const { s } = await linkedStore({ Bg: 'bg' }, 100);
+    const imp = imported({ Sea: 'sea' });
+    const map: Artboard = { ...imp.artboard, id: 'ab_map', name: 'Map', source: sourcesFor([imp.artboard], hashesOf(imp), { fileName: 'Map.psd', linkId: 'lk2', lastModified: 100, by: 'sam' })[0] };
+    s.update((d) => void d.artboards.push(map as never));
+    const a = fileHandle({ modified: 100 });
+    const b = fileHandle({ modified: 100 });
+    b.handle.name = 'Map.psd';
+    await rememberHandle(s.get().project.id, 'lk1', a.handle, 'psd');
+    await rememberHandle(s.get().project.id, 'lk2', b.handle, 'psd');
+    readAnimationFile.mockImplementation(async () => imported({ Bg: 'bg', New: 'new' }));
+    m = new LinkManager(s, readAnimationFile);
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    act(() => {
+      setLinkManager(m);
+      root.render(<LinkChanges />);
+    });
+    m.start();
+    await vi.waitFor(() => expect(m!.getSnapshot().every((l) => l.state === 'connected')).toBe(true));
+    a.state.modified = 500;
+    b.state.modified = 600;
+    await act(async () => {
+      await m!.tick();
+      await m!.tick();
+    });
+    return { s };
+  }
+
+  it('lists every changed file, all ticked, and re-imports only the ticked ones', async () => {
+    await twoChanged();
+    const rows = Array.from(document.querySelectorAll('.link-changes .link-row'));
+    expect(rows.map((r) => r.querySelector('.link-name')?.textContent)).toEqual(['Poster.psd', 'Map.psd']);
+    expect(Array.from(document.querySelectorAll<HTMLInputElement>('.link-changes input[type=checkbox]')).every((c) => c.checked)).toBe(true);
+    expect(btn('Re-import all')).toBeTruthy();
+    act(() => document.querySelectorAll<HTMLInputElement>('.link-changes input[type=checkbox]')[1].click());
+    await act(async () => btn('Re-import')!.click());
+    await vi.waitFor(() => expect(readAnimationFile).toHaveBeenCalledTimes(1));
+    await flush();
+    expect(m!.getSnapshot().find((l) => l.linkId === 'lk1')?.changed).toBeUndefined();
+    expect(m!.getSnapshot().find((l) => l.linkId === 'lk2')?.changed?.dismissed).toBe(true);
+    expect(document.querySelector('.link-changes')).toBeNull();
+  });
+
+  it('None unticks everything (nothing to re-import), All ticks them again', async () => {
+    await twoChanged();
+    act(() => btn('None')!.click());
+    expect(Array.from(document.querySelectorAll<HTMLInputElement>('.link-changes input[type=checkbox]')).some((c) => c.checked)).toBe(false);
+    expect(Array.from(document.querySelectorAll<HTMLButtonElement>('.link-changes .primary'))[0].disabled).toBe(true);
+    act(() => btn('All')!.click());
+    expect(btn('Re-import all')?.disabled).toBe(false);
+  });
+
+  it('Esc is Not now for every file', async () => {
+    await twoChanged();
+    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
+    await flush();
+    expect(document.querySelector('.link-changes')).toBeNull();
+    expect(m!.getSnapshot().every((l) => l.changed?.dismissed)).toBe(true);
+    expect(readAnimationFile).not.toHaveBeenCalled();
   });
 });

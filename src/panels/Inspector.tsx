@@ -257,7 +257,9 @@ function LinkedFileSection({ ab }: { ab: Artboard }) {
           ? 'The file was moved, renamed or deleted.'
           : status?.error
             ? status.error
-            : '';
+            : status?.changed
+              ? 'The file has been saved since it was brought in. Re-import now to bring the changes in.'
+              : '';
   return (
     <Section help="import" title="Linked file">
       <div className="link-info">
@@ -273,7 +275,7 @@ function LinkedFileSection({ ab }: { ab: Artboard }) {
             Unlink (keep as embedded)
           </button>
         </Row>
-        <CheckField label="Watch for changes" title="Re-import automatically when the file is saved (checked every couple of seconds while this tab is open)" value={!!status?.watch && mine} onChange={(v) => void linkManager()?.setWatch(src.linkId, v)} />
+        <CheckField label="Watch for changes" title="Ask to re-import when the file is saved (looked at every few seconds while this tab is open)" value={!!status?.watch && mine} onChange={(v) => void linkManager()?.setWatch(src.linkId, v)} />
       </div>
     </Section>
   );

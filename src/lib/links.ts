@@ -305,9 +305,15 @@ export interface LinkStatus {
   by?: string;
   /** When the file was last imported (ISO). */
   importedAt: string;
+  /**
+   * The file was saved since it was last brought in, and is waiting for someone to say whether to re-import it.
+   * `dismissed` once they said "not now" (the dialog leaves it alone until the file changes again).
+   */
+  changed?: { stamp: string; lastModified: number; dismissed: boolean };
 }
 
-const POLL_MS = 2000;
+/** How often watched files are looked at (only their time and size, the file isn't read until someone asks for it). */
+const POLL_MS = 5000;
 
 export class LinkManager {
   private records = new Map<string, LinkRecord>();
@@ -489,6 +495,8 @@ export class LinkManager {
     const known = this.linkedTime(linkId);
     if (known === undefined || file.lastModified === known) {
       this.pending.delete(linkId);
+      // brought in meanwhile (here, or by someone else with the file), so there's nothing to ask about any more
+      if (this.status.get(linkId)?.changed) this.patch(linkId, { changed: undefined });
       return;
     }
     const stamp = `${file.lastModified}:${file.size}`;
@@ -498,12 +506,27 @@ export class LinkManager {
       return;
     }
     this.pending.delete(linkId);
-    // two people with the file would both do this at once: the one who is slower sees the other's result and skips it
-    if (!now) {
-      await new Promise((r) => setTimeout(r, Math.random() * 900));
-      if (this.linkedTime(linkId) === file.lastModified) return;
+    if (now) return this.run(linkId, file, stamp, false);
+    // Settled: say so and let the person pick what to bring in (the changes dialog), rather than importing over their work
+    if (this.status.get(linkId)?.changed?.stamp === stamp) return;
+    this.patch(linkId, { changed: { stamp, lastModified: file.lastModified, dismissed: false } });
+  }
+
+  /** From the changes dialog: re-import these files now. */
+  async applyChanges(linkIds: string[]): Promise<void> {
+    for (const linkId of linkIds) {
+      const file = await this.fileOf(linkId);
+      if (!file) continue;
+      await this.run(linkId, file, `${file.lastModified}:${file.size}`, false);
     }
-    await this.run(linkId, file, stamp, !now);
+  }
+
+  /** From the changes dialog: leave these as they are until their files change again. Re-import now still brings them in. */
+  dismissChanges(linkIds: string[]): void {
+    for (const linkId of linkIds) {
+      const c = this.status.get(linkId)?.changed;
+      if (c && !c.dismissed) this.patch(linkId, { changed: { ...c, dismissed: true } });
+    }
   }
 
   private async run(linkId: string, file: File, stamp: string, quiet: boolean): Promise<void> {
@@ -511,6 +534,7 @@ export class LinkManager {
     try {
       const r = await reimportLink(this.st, linkId, file, this.read);
       this.failed.delete(linkId);
+      this.patch(linkId, { changed: undefined });
       if (r.changed || !quiet) this.st.toast(r.message + (r.missing.length ? `. Not in the file any more: ${r.missing.join(', ')}` : ''));
     } catch (err) {
       this.failed.set(linkId, stamp);

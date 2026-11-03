@@ -27,6 +27,7 @@ import { HistoryModal, ShareModal } from './components/ProjectModals';
 import { prefs, setPrefs } from './lib/prefs';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
+import { LinkChanges } from './components/LinkChanges';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
   const [ready, setReady] = useState<EditorStore | null>(null);
@@ -428,6 +429,7 @@ function Workspace({ home }: { home: () => void }) {
       <div className="banner-area">
         {conflict && <ConflictBanner />}
         <LinkBanner />
+        <LinkChanges />
       </div>
       <Toolbar />
       <Guard message="This panel couldn't be shown." className="left-panel">

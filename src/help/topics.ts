@@ -1593,7 +1593,7 @@ Not carried over, and listed in the report: adjustment layers, other layer style
 Drop an SVG file on the canvas, paste it, or pick it with the **Image** tool. It becomes a group of editable vector layers: shapes and paths (with their transforms applied), groups, solid and gradient fills, strokes and dashes, and simple text. Masks, filters, patterns and embedded images are listed as not carried over.
 
 ## Linking design files instead of embedding them
-When you drop (or pick) a Photoshop, Illustrator, PDF, VectorCraft or PhotoCraft file, a dialog asks for each file whether to **Link** or **Embed** it, with **Link all** and **Embed all** for the lot. Embed copies the file in once. **Link** keeps a connection to the file on your computer: the editor checks it every couple of seconds while the tab is open and when you come back to it, and when you save it in the design app the changes come into the artboard.
+When you drop (or pick) a Photoshop, Illustrator, PDF, VectorCraft or PhotoCraft file, a dialog asks for each file whether to **Link** or **Embed** it, with **Link all** and **Embed all** for the lot. Embed copies the file in once. **Link** keeps a connection to the file on your computer: the editor looks at it every few seconds while the tab is open and when you come back to it. When you save it in the design app, a dialog lists every linked file that changed, all ticked: untick any you don't want yet (or use **All** / **None**) and press **Re-import**. **Not now** (or Esc) leaves them as they are until the file is saved again; **Re-import now** in the inspector still brings them in whenever you like.
 
 How a re-import merges (your edits are kept):
 - Layers are matched by name (in the same folder, the nth layer of a repeated name), and a layer renamed in the file is recognised by its picture or text and position.
@@ -1602,7 +1602,7 @@ How a re-import merges (your edits are kept):
 - A layer the file no longer has is removed. If you gave it keys, interactions or bindings it stays instead, hidden, and is renamed "(removed from file)", so nothing you built is lost. A layer you deleted here stays deleted.
 - One undo step undoes a whole re-import. Pictures the file no longer uses are kept in the project (so undo can bring them back); they show as unused in the Usage tab, and **Remove unused assets** deletes them. A toast says what happened ("Poster.psd updated: 3 layers changed, 1 added").
 
-Select a linked artboard to see **Linked to Poster.psd (updated 2 min ago)** in the inspector, with **Re-import now**, **Unlink (keep as embedded)** and a **Watch for changes** switch. Unlinking leaves the layers as they are.
+Select a linked artboard to see **Linked to Poster.psd (updated 2 min ago)** in the inspector, with **Re-import now**, **Unlink (keep as embedded)** and a **Watch for changes** switch (off: the file isn't looked at, and the changes dialog never asks about it). When the file has changes you said **Not now** to, it says so there. Unlinking leaves the layers as they are.
 
 Linking needs a browser with the File System Access API (Chrome or Edge). In Firefox and Safari files are embedded, and the dialog says so. Each time you open the project the browser must be allowed to read the file again, so a bar asks you to click **Reconnect**. The link lives in the browser that made it: other people in the project see the last imported state and get updates when the person with the file saves them, and the bar tells them whose computer has it. A copy of a linked artboard is not linked.
 

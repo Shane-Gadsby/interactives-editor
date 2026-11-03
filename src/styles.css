@@ -3320,6 +3320,17 @@ code {
   color: var(--muted);
   font-size: 11px;
 }
+.link-file.link-pick {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: center;
+  cursor: pointer;
+}
+.link-pick input {
+  grid-row: span 2;
+  margin: 0;
+}
 .seg {
   display: inline-flex;
   border: 1px solid var(--line-2);
