@@ -514,27 +514,45 @@ export function Canvas() {
 
   // ---------------------------------------------------------------- pointer move
 
+  const hoverAt = useRef<{ x: number; y: number; deep: boolean } | null>(null);
+  const hoverFrame = useRef(0);
+  const hoverNow = useRef<(cx: number, cy: number, deep: boolean) => void>(() => undefined);
+  hoverNow.current = (cx, cy, deep) => {
+    const st = store().get();
+    if (st.tool !== 'select' || spaceDown.current) return;
+    const w = toWorld(cx, cy);
+    const found = layerAt(w, deep);
+    const hab = found?.ab ?? abAt(w);
+    if (hab) {
+      const p = local(hab, w);
+      const hit = found?.hit;
+      setHover(hit ? `${hab.id}/${hit.id}` : null);
+      // A locked or hidden layer under the pointer gets quick unlock / show buttons
+      const trail = hitTest(hab, p.x, p.y, { includeLocked: true, includeHidden: true });
+      const locked = hit && !hit.visible ? hit : [...trail].reverse().find((n) => n.locked);
+      setLockedHover((cur) => (locked ? (cur?.id === locked.id ? cur : { abId: hab.id, id: locked.id }) : cur && Date.now() - (lockedSeen.current ?? 0) < 600 ? cur : null));
+      if (locked) lockedSeen.current = Date.now();
+    } else setHover(null);
+  };
+  useEffect(() => () => cancelAnimationFrame(hoverFrame.current), []);
+
   const onPointerMove = (e: React.PointerEvent) => {
     const st = store().get();
     const d = drag.current;
     const w = toWorld(e.clientX, e.clientY);
     liveSession()?.presence({ cursor: w, artboardId: st.activeArtboardId });
     if (!d) {
-      // Hover feedback
+      // Hover feedback. Hit-testing every layer is the costly part and pointers report far more often than the screen
+      // draws, so it runs once per frame, for the latest position
       if (st.tool === 'select' && !spaceDown.current) {
-        const found = layerAt(w, e.ctrlKey || e.metaKey);
-        const hab = found?.ab ?? abAt(w);
-        if (hab) {
-          const p = local(hab, w);
-          const hit = found?.hit;
-          setHover(hit ? `${hab.id}/${hit.id}` : null);
-          // A locked layer under the pointer gets a quick-unlock button
-          // A locked or hidden layer under the pointer gets quick unlock / show buttons
-          const trail = hitTest(hab, p.x, p.y, { includeLocked: true, includeHidden: true });
-          const locked = hit && !hit.visible ? hit : [...trail].reverse().find((n) => n.locked);
-          setLockedHover((cur) => (locked ? (cur?.id === locked.id ? cur : { abId: hab.id, id: locked.id }) : cur && Date.now() - (lockedSeen.current ?? 0) < 600 ? cur : null));
-          if (locked) lockedSeen.current = Date.now();
-        } else setHover(null);
+        hoverAt.current = { x: e.clientX, y: e.clientY, deep: e.ctrlKey || e.metaKey };
+        if (!hoverFrame.current) {
+          hoverFrame.current = requestAnimationFrame(() => {
+            hoverFrame.current = 0;
+            const at = hoverAt.current;
+            if (at && !drag.current) hoverNow.current(at.x, at.y, at.deep);
+          });
+        }
       }
       if (st.tool === 'pen' && penRef.current) {
         const pab = getArtboard(st.project, penRef.current.abId);

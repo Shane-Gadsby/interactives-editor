@@ -59,6 +59,22 @@ export function diff(a, b, path = [], out = []) {
 		return out
 	}
 	if (Array.isArray(a)) {
+		//The same elements in the same order (an edit inside one, nothing inserted, removed or moved): compare them pairwise,
+		//without the id maps a reshuffle needs. The usual case, and the one worth being quick on in a long list of layers
+		if (a.length && a.length === b.length) {
+			let aligned = true
+			for (let i = 0; i < a.length; i++) {
+				let x = a[i], y = b[i]
+				if (!x || typeof x !== 'object' || typeof x.id !== 'string' || (x !== y && (!y || typeof y !== 'object' || y.id !== x.id))) {
+					aligned = false
+					break
+				}
+			}
+			if (aligned) {
+				for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff(a[i], b[i], [...path, {i: a[i].id}], out)
+				return out
+			}
+		}
 		let idArrays = (isIdArray(a) || a.length === 0) && (isIdArray(b) || b.length === 0) && (a.length || b.length)
 		if (!idArrays) {
 			if (!same(a, b)) out.push({t: 'set', p: path, v: b})

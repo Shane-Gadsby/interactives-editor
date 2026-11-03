@@ -36,6 +36,35 @@ import { apply as applyOps, type Op, type PathStep } from '../../shared/ops.mjs'
 import type { Peer } from '../lib/live';
 import { getArtboard, locate, parentToArtboard, selectionBounds, topmost, uniqueName, nodeNames } from './doc';
 
+/** Whether any frame in a tree has auto layout. */
+function hasAutoLayout(list: SceneNode[]): boolean {
+  for (const n of list) {
+    if (n.type === 'frame' && n.layout) return true;
+    if (isContainer(n) && hasAutoLayout(n.children)) return true;
+  }
+  return false;
+}
+
+// Per artboard object (immer shares the ones a change didn't touch, so this is only worked out again for what changed)
+const layoutFlag = new WeakMap<object, boolean>();
+
+/**
+ * Lay out the auto-layout frames of a document after a change. Only artboards that have any are walked: doing it inside
+ * the change's own draft would wrap every layer of every artboard in a proxy just to find there was nothing to lay out.
+ */
+function settleLayout(project: Project): Project {
+  const withLayout = new Set<string>();
+  for (const ab of project.artboards) {
+    let has = layoutFlag.get(ab);
+    if (has === undefined) layoutFlag.set(ab, (has = hasAutoLayout(ab.children)));
+    if (has) withLayout.add(ab.id);
+  }
+  if (!withLayout.size) return project;
+  return produce(project, (d) => {
+    for (const ab of d.artboards) if (withLayout.has(ab.id)) relayoutTree(ab.children as SceneNode[]);
+  });
+}
+
 /**
  * Layers a batch of ops wrote to: the innermost layer on each op's path, or the layer an insert added. Ops come from
  * other people and agents, so a layer they touched is checked for wrong-typed values (see the player's sanitizer)
@@ -148,10 +177,8 @@ export class EditorStore {
 
   constructor(project: Project) {
     // Lay out auto-layout frames once on open, so the first edit (and its undo) starts from settled positions.
-    const settled = produce(project, (d) => {
-      for (const ab of d.artboards) relayoutTree(ab.children as SceneNode[]);
-    });
-    this.state = EditorStore.initial(settled);
+    // (an unchanged produce still freezes the document, so a stray in-place edit throws instead of corrupting history)
+    this.state = EditorStore.initial(settleLayout(produce(project, () => undefined)));
   }
 
   static initial(project: Project): EditorState {
@@ -229,10 +256,7 @@ export class EditorStore {
       }
     }
     // Auto-layout frames re-position their children after every change, in the same undo step.
-    const next = produce(edited ?? before, (d) => {
-      if (!edited) recipe(d);
-      for (const ab of d.artboards) relayoutTree(ab.children as SceneNode[]);
-    });
+    const next = settleLayout(edited ?? produce(before, (d) => void recipe(d)));
     if (next === before) return;
     const t = Date.now();
     const merge = opts.coalesce && this.lastCoalesce && this.lastCoalesce.key === opts.coalesce && t - this.lastCoalesce.time < 1000;
@@ -254,10 +278,7 @@ export class EditorStore {
 
   /** Change the document without an undo step (derived data such as measured text size). */
   patchSilently(recipe: (draft: Draft<Project>) => void): void {
-    const next = produce(this.state.project, (d) => {
-      recipe(d);
-      for (const ab of d.artboards) relayoutTree(ab.children as SceneNode[]);
-    });
+    const next = settleLayout(produce(this.state.project, (d) => void recipe(d)));
     if (next === this.state.project) return;
     this.revision++;
     const before = this.state.project;
@@ -272,11 +293,12 @@ export class EditorStore {
    */
   applyRemote(ops: Op[]): void {
     const patch = (p: Project) =>
-      produce(p, (d) => {
-        applyOps(d, ops);
-        sanitizeTouched(d as Project, ops);
-        for (const ab of d.artboards) relayoutTree(ab.children as SceneNode[]);
-      });
+      settleLayout(
+        produce(p, (d) => {
+          applyOps(d, ops);
+          sanitizeTouched(d as Project, ops);
+        }),
+      );
     this.past = this.past.map((h) => ({ ...h, project: patch(h.project) }));
     this.future = this.future.map((h) => ({ ...h, project: patch(h.project) }));
     this.state = { ...this.state, project: patch(this.state.project) };

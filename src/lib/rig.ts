@@ -74,6 +74,8 @@ export interface BoneGlyph {
 }
 
 export function boneGlyphs(children: SceneNode[]): BoneGlyph[] {
+  // No bones (nearly always): nothing to work out, and the world matrices of every layer are not cheap
+  if (!bonesOf(children).length) return [];
   const world = worldMatrices(children);
   const out: BoneGlyph[] = [];
   const rec = (list: SceneNode[], parent: string | null) => {

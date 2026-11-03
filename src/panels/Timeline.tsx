@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ANIMATABLE_PROPS, animatableProp, nodeUniformProps, EASING_NAMES, ease, pathPointProp, uid, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { ANIMATABLE_PROPS, animatableProp, nodeUniformProps, EASING_NAMES, ease, pathPointProp, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -68,6 +68,22 @@ export function TimelinePanel() {
   }));
   const ab = getArtboard(s.project, s.abId);
   const tl = ab?.timelines.find((t) => t.id === s.tlId);
+  // Layers by id, and the tracks grouped by layer (kept in layer order): rebuilt only when the layers or tracks change,
+  // so scrubbing and typing in the inspector don't redo them
+  const nodeIndex = useMemo(() => {
+    const m = new Map<string, SceneNode>();
+    if (ab) walk(ab.children, (n) => void m.set(n.id, n));
+    return m;
+  }, [ab?.children]); // eslint-disable-line react-hooks/exhaustive-deps
+  const byNode = useMemo(() => {
+    const m = new Map<string, TL['tracks']>();
+    for (const tr of tl?.tracks ?? []) {
+      const list = m.get(tr.nodeId) ?? [];
+      list.push(tr);
+      m.set(tr.nodeId, list);
+    }
+    return m;
+  }, [tl?.tracks]);
   const lane = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(600);
   const [addProp, setAddProp] = useState('x');
@@ -246,48 +262,6 @@ export function TimelinePanel() {
     el.addEventListener('pointerup', up);
   };
 
-  // Group tracks by node, keeping layer order.
-  const byNode = new Map<string, typeof tl.tracks>();
-  for (const tr of tl.tracks) {
-    const list = byNode.get(tr.nodeId) ?? [];
-    list.push(tr);
-    byNode.set(tr.nodeId, list);
-  }
-
-  /** One track's lane: its tweens (click for easing) and keys. */
-  const trackLane = (tr: TL['tracks'][number]) => (
-    <div key={tr.id} className="lane" onPointerDown={scrub}>
-      {tr.keys.slice(0, -1).map((k, i) => {
-        const w = X(tr.keys[i + 1].t) - X(k.t);
-        const sel = tween?.trackId === tr.id && tween.keyId === k.id;
-        return (
-          <span
-            key={`seg-${k.id}`}
-            className={`segment${sel ? ' selected' : ''}`}
-            style={{ left: X(k.t), width: w }}
-            title={`Tween ${k.t}–${tr.keys[i + 1].t} ms: ${easeLabel(k.ease)}. Click to change its easing`}
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              setTween({ trackId: tr.id, keyId: k.id });
-              store().set({ selectedKeys: [], previewPlaying: false });
-            }}
-          >
-            {w > 28 && <EaseCurve ease={k.ease} width={w} />}
-          </span>
-        );
-      })}
-      {tr.keys.map((k) => (
-        <span
-          key={k.id}
-          className={`key${s.selectedKeys.includes(`${tr.id}:${k.id}`) ? ' selected' : ''}`}
-          style={{ left: X(k.t) }}
-          title={`${k.t} ms: ${String(k.value)}`}
-          onPointerDown={(e) => keyDown(e, tr.id, k)}
-        />
-      ))}
-    </div>
-  );
-
   const selectedKey = s.selectedKeys.length === 1 ? findKey(tl, s.selectedKeys[0]) : null;
   const selectedTween = (() => {
     if (!tween) return null;
@@ -375,53 +349,7 @@ export function TimelinePanel() {
               <span className="muted small">Select a layer to add keys</span>
             )}
           </div>
-          {[...byNode.entries()].map(([nodeId, tracks]) => {
-            const node = locate(ab, nodeId)?.node;
-            return (
-              <div key={nodeId} className="track-group">
-                <div className="track-node" onClick={() => store().select([nodeId])}>
-                  {node?.name ?? '(deleted layer)'}
-                </div>
-                {trackRows(nodeId, tracks, pointsOpen).map((row) =>
-                  row.kind === 'point' ? (
-                    <div key={row.key} className="track-label track-point" onClick={() => setPointsOpen((o) => ({ ...o, [row.key]: !row.open }))} title="Show or fold this point's keys">
-                      <span>
-                        {row.open ? '▾' : '▸'} {row.label}
-                      </span>
-                      <button
-                        className="mini"
-                        title="Remove this point's keys"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const gone = new Set(row.tracks.map((x) => x.id));
-                          setTl((d) => {
-                            d.tracks = d.tracks.filter((x) => !gone.has(x.id));
-                          });
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <div key={row.tr.id} className={`track-label${pathPointProp(row.tr.prop) ? ' point-part' : ''}`}>
-                      <span>{pathPointProp(row.tr.prop) ? POINT_PART_LABEL[pathPointProp(row.tr.prop)!.part] : animatableLabel(row.tr.prop, node)}</span>
-                      <button
-                        className="mini"
-                        title="Remove track"
-                        onClick={() =>
-                          setTl((d) => {
-                            d.tracks = d.tracks.filter((x) => x.id !== row.tr.id);
-                          })
-                        }
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ),
-                )}
-              </div>
-            );
-          })}
+          <TrackLabels byNode={byNode} nodeIndex={nodeIndex} pointsOpen={pointsOpen} setPointsOpen={setPointsOpen} setTl={setTl} />
         </div>
         <div className="timeline-lanes" ref={lane}>
           <div className="ruler" onPointerDown={scrub}>
@@ -434,44 +362,7 @@ export function TimelinePanel() {
               <span key={m.id} className={`marker${m.id === markerId ? ' selected' : ''}`} style={{ left: X(Math.min(m.time, tl.duration)) }} title={`${m.name} at ${m.time} ms. Drag to move it`} onPointerDown={(e) => markerDown(e, m.id)} />
             ))}
           </div>
-          {[...byNode.entries()].map(([nodeId, tracks]) => (
-            <div key={nodeId} className="track-group">
-              <div className="lane node-lane" onPointerDown={scrub}>
-                {[...new Set(tracks.flatMap((t) => t.keys.map((k) => k.t)))].map((t) => {
-                  const refs = tracks.flatMap((tr) => tr.keys.filter((k) => k.t === t).map((k) => `${tr.id}:${k.id}`));
-                  return (
-                    <span
-                      key={t}
-                      className={`key summary${refs.every((r) => s.selectedKeys.includes(r)) ? ' selected' : ''}`}
-                      style={{ left: X(t) }}
-                      title={`${t} ms: all of this layer's keys here. Drag to move them together`}
-                      onPointerDown={(e) => keysDown(e, refs, t)}
-                    />
-                  );
-                })}
-              </div>
-              {trackRows(nodeId, tracks, pointsOpen).map((row) =>
-                row.kind === 'point' ? (
-                  <div key={row.key} className="lane node-lane point-lane" onPointerDown={scrub}>
-                    {[...new Set(row.tracks.flatMap((t) => t.keys.map((k) => k.t)))].map((t) => {
-                      const refs = row.tracks.flatMap((tr) => tr.keys.filter((k) => k.t === t).map((k) => `${tr.id}:${k.id}`));
-                      return (
-                        <span
-                          key={t}
-                          className={`key summary${refs.every((r) => s.selectedKeys.includes(r)) ? ' selected' : ''}`}
-                          style={{ left: X(t) }}
-                          title={`${t} ms: this point's keys here. Drag to move them together`}
-                          onPointerDown={(e) => keysDown(e, refs, t)}
-                        />
-                      );
-                    })}
-                  </div>
-                ) : (
-                  trackLane(row.tr)
-                ),
-              )}
-            </div>
-          ))}
+          <TrackLanes byNode={byNode} duration={tl.duration} pxPerMs={pxPerMs} selectedKeys={s.selectedKeys} tween={tween} pointsOpen={pointsOpen} h={{ scrub, keyDown, keysDown, setTween }} />
           <div className="playhead" style={{ left: X(Math.min(s.playhead, tl.duration)) }} />
         </div>
         {selectedKey && (
@@ -555,6 +446,176 @@ export function TimelinePanel() {
     </div>
   );
 }
+
+type TrackMap = Map<string, TL['tracks']>;
+type SetTl = (fn: (t: TL) => void, coalesce?: string) => void;
+
+/**
+ * The label column: a layer's name and its tracks, one memoised group per layer (redrawn when that layer or its tracks
+ * change, or a point folds or opens), so scrubbing the playhead, or editing one layer, doesn't redraw hundreds of rows.
+ */
+const TrackLabels = memo(
+  function TrackLabels({ byNode, nodeIndex, pointsOpen, setPointsOpen, setTl }: { byNode: TrackMap; nodeIndex: Map<string, SceneNode>; pointsOpen: Record<string, boolean>; setPointsOpen: React.Dispatch<React.SetStateAction<Record<string, boolean>>>; setTl: SetTl }) {
+    return (
+      <>
+        {[...byNode.entries()].map(([nodeId, tracks]) => (
+          <TrackGroupLabels key={nodeId} nodeId={nodeId} tracks={tracks} node={nodeIndex.get(nodeId)} pointsOpen={pointsOpen} setPointsOpen={setPointsOpen} setTl={setTl} />
+        ))}
+      </>
+    );
+  },
+  (a, b) => {
+    if (a.byNode !== b.byNode || a.pointsOpen !== b.pointsOpen) return false;
+    for (const id of b.byNode.keys()) if (a.nodeIndex.get(id) !== b.nodeIndex.get(id)) return false;
+    return true;
+  },
+);
+
+const TrackGroupLabels = memo(
+  function TrackGroupLabels({ nodeId, tracks, node, pointsOpen, setPointsOpen, setTl }: { nodeId: string; tracks: TL['tracks']; node: SceneNode | undefined; pointsOpen: Record<string, boolean>; setPointsOpen: React.Dispatch<React.SetStateAction<Record<string, boolean>>>; setTl: SetTl }) {
+    return (
+      <div className="track-group">
+        <div className="track-node" onClick={() => store().select([nodeId])}>
+          {node?.name ?? '(deleted layer)'}
+        </div>
+        {trackRows(nodeId, tracks, pointsOpen).map((row) =>
+          row.kind === 'point' ? (
+            <div key={row.key} className="track-label track-point" onClick={() => setPointsOpen((o) => ({ ...o, [row.key]: !row.open }))} title="Show or fold this point's keys">
+              <span>
+                {row.open ? '▾' : '▸'} {row.label}
+              </span>
+              <button
+                className="mini"
+                title="Remove this point's keys"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const gone = new Set(row.tracks.map((x) => x.id));
+                  setTl((d) => {
+                    d.tracks = d.tracks.filter((x) => !gone.has(x.id));
+                  });
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ) : (
+            <div key={row.tr.id} className={`track-label${pathPointProp(row.tr.prop) ? ' point-part' : ''}`}>
+              <span>{pathPointProp(row.tr.prop) ? POINT_PART_LABEL[pathPointProp(row.tr.prop)!.part] : animatableLabel(row.tr.prop, node)}</span>
+              <button
+                className="mini"
+                title="Remove track"
+                onClick={() =>
+                  setTl((d) => {
+                    d.tracks = d.tracks.filter((x) => x.id !== row.tr.id);
+                  })
+                }
+              >
+                ×
+              </button>
+            </div>
+          ),
+        )}
+      </div>
+    );
+  },
+  // (the handlers only call into the store, so the ones from an earlier draw do the same)
+  (a, b) => a.nodeId === b.nodeId && a.tracks === b.tracks && a.node === b.node && a.pointsOpen === b.pointsOpen,
+);
+
+interface LaneHandlers {
+  scrub: (e: React.PointerEvent) => void;
+  keyDown: (e: React.PointerEvent, trackId: string, key: Keyframe) => void;
+  keysDown: (e: React.PointerEvent, refs: string[], t: number) => void;
+  setTween: (t: { trackId: string; keyId: string } | null) => void;
+}
+
+/**
+ * The lanes: every track's tweens and keys. Memoised on what they draw (the tracks, the scale, the selected keys, the
+ * selected tween, the folded points), so moving the playhead doesn't redraw them. The handlers are only called from events and
+ * close over the same tracks and scale the memo is keyed on, so the ones from the last draw are always right.
+ */
+const TrackLanes = memo(
+  function TrackLanes({ byNode, pxPerMs, selectedKeys, tween, pointsOpen, h }: { byNode: TrackMap; duration: number; pxPerMs: number; selectedKeys: string[]; tween: { trackId: string; keyId: string } | null; pointsOpen: Record<string, boolean>; h: LaneHandlers }) {
+    const X = (t: number) => 12 + t * pxPerMs;
+    const isSel = (refs: string[]) => refs.every((r) => selectedKeys.includes(r));
+    /** One track's lane: its tweens (click for easing) and keys. */
+    const trackLane = (tr: TL['tracks'][number]) => (
+      <div key={tr.id} className="lane" onPointerDown={h.scrub}>
+        {tr.keys.slice(0, -1).map((k, i) => {
+          const w = X(tr.keys[i + 1].t) - X(k.t);
+          const sel = tween?.trackId === tr.id && tween.keyId === k.id;
+          return (
+            <span
+              key={`seg-${k.id}`}
+              className={`segment${sel ? ' selected' : ''}`}
+              style={{ left: X(k.t), width: w }}
+              title={`Tween ${k.t}–${tr.keys[i + 1].t} ms: ${easeLabel(k.ease)}. Click to change its easing`}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                h.setTween({ trackId: tr.id, keyId: k.id });
+                store().set({ selectedKeys: [], previewPlaying: false });
+              }}
+            >
+              {w > 28 && <EaseCurve ease={k.ease} width={w} />}
+            </span>
+          );
+        })}
+        {tr.keys.map((k) => (
+          <span
+            key={k.id}
+            className={`key${selectedKeys.includes(`${tr.id}:${k.id}`) ? ' selected' : ''}`}
+            style={{ left: X(k.t) }}
+            title={`${k.t} ms: ${String(k.value)}`}
+            onPointerDown={(e) => h.keyDown(e, tr.id, k)}
+          />
+        ))}
+      </div>
+    );
+    return (
+      <>
+        {[...byNode.entries()].map(([nodeId, tracks]) => (
+          <div key={nodeId} className="track-group">
+            <div className="lane node-lane" onPointerDown={h.scrub}>
+              {[...new Set(tracks.flatMap((t) => t.keys.map((k) => k.t)))].map((t) => {
+                const refs = tracks.flatMap((tr) => tr.keys.filter((k) => k.t === t).map((k) => `${tr.id}:${k.id}`));
+                return (
+                  <span
+                    key={t}
+                    className={`key summary${isSel(refs) ? ' selected' : ''}`}
+                    style={{ left: X(t) }}
+                    title={`${t} ms: all of this layer's keys here. Drag to move them together`}
+                    onPointerDown={(e) => h.keysDown(e, refs, t)}
+                  />
+                );
+              })}
+            </div>
+            {trackRows(nodeId, tracks, pointsOpen).map((row) =>
+              row.kind === 'point' ? (
+                <div key={row.key} className="lane node-lane point-lane" onPointerDown={h.scrub}>
+                  {[...new Set(row.tracks.flatMap((t) => t.keys.map((k) => k.t)))].map((t) => {
+                    const refs = row.tracks.flatMap((tr) => tr.keys.filter((k) => k.t === t).map((k) => `${tr.id}:${k.id}`));
+                    return (
+                      <span
+                        key={t}
+                        className={`key summary${isSel(refs) ? ' selected' : ''}`}
+                        style={{ left: X(t) }}
+                        title={`${t} ms: this point's keys here. Drag to move them together`}
+                        onPointerDown={(e) => h.keysDown(e, refs, t)}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                trackLane(row.tr)
+              ),
+            )}
+          </div>
+        ))}
+      </>
+    );
+  },
+  (a, b) => a.byNode === b.byNode && a.duration === b.duration && a.pxPerMs === b.pxPerMs && a.selectedKeys === b.selectedKeys && a.tween === b.tween && a.pointsOpen === b.pointsOpen,
+);
 
 function KeyValueField({ prop, value, kids, node, onChange }: { prop: string; value: Keyframe['value']; kids: SceneNode[]; node?: SceneNode; onChange: (v: Keyframe['value']) => void }) {
   if (prop === 'drawOrder') return <ChildOrder children={kids} order={Array.isArray(value) ? value : []} onChange={onChange} />;

@@ -101,13 +101,17 @@ export function selectionBounds(artboard: Artboard, ids: string[]): Rect | null 
 
 /** Topmost node under a point (artboard space). Walks into containers; returns the deepest hit path (top-level first). */
 export function hitTest(artboard: Artboard, x: number, y: number, opts: { includeLocked?: boolean; includeHidden?: boolean } = {}): SceneNode[] {
-  const walk = (list: SceneNode[], parentM: Matrix, trail: SceneNode[]): SceneNode[] | null => {
+  // `trail` is the stack of groups being walked into; it is only copied when something is hit
+  const trail: SceneNode[] = [];
+  const walk = (list: SceneNode[], parentM: Matrix): SceneNode[] | null => {
     for (let i = list.length - 1; i >= 0; i--) {
       const n = list[i];
       if ((!n.visible && !opts.includeHidden) || (n.locked && !opts.includeLocked)) continue;
       const m = multiply(parentM, nodeMatrix(n));
       if (isContainer(n)) {
-        const inner = walk(n.children, m, [...trail, n]);
+        trail.push(n);
+        const inner = walk(n.children, m);
+        trail.pop();
         if (inner) return inner;
         if (n.type === 'group' || n.type === 'bone') continue; // Groups are hit only through their children (a bone has no area: the canvas picks bones by their glyphs).
         if (n.type === 'frame' && n.clip) {
@@ -119,7 +123,7 @@ export function hitTest(artboard: Artboard, x: number, y: number, opts: { includ
     }
     return null;
   };
-  return walk(artboard.children, [...IDENTITY], []) ?? [];
+  return walk(artboard.children, [...IDENTITY]) ?? [];
 }
 
 /** Ids of every node in an artboard, depth first. */

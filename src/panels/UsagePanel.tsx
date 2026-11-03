@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { store, useEditor } from '../store/store';
 import { deleteAsset } from '../lib/db';
 import { confirmDialog } from '../components/dialogs';
@@ -124,7 +124,9 @@ async function removeUnusedAssets(report: UsageReport, projectId: string) {
 /** What uses what: every artboard, asset, variable, data source, script and timeline with the places it is used, and a flag on the ones nothing uses. */
 export function UsagePanel() {
   const project = useEditor((st) => st.project);
-  const report = useMemo(() => analyzeUsage(project), [project]);
+  // The analysis walks the whole document: while changes keep coming (typing in a field) it waits for a pause
+  const analysed = useDeferredValue(project);
+  const report = useMemo(() => analyzeUsage(analysed), [analysed]);
   const [cat, setCat] = useState<Cat>('assets');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [onlyUnused, setOnlyUnused] = useState(false);
