@@ -6,6 +6,8 @@ import { EditorStore, setCurrentStore, useEditor } from '../src/store/store';
 import { AccessibilitySection, TabOrderSection } from '../src/panels/AccessibilitySections';
 import { prefs, setPrefs } from '../src/lib/prefs';
 import { standaloneHtml } from '../src/lib/export';
+import { PrefsModal } from '../src/components/PrefsModal';
+import { PreviewModal } from '../src/Editor';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -54,6 +56,51 @@ describe('accessibility preference', () => {
     expect(await standaloneHtml(p, { debug: true })).not.toContain("project, { accessibility: false }");
     expect(await standaloneHtml(p, { debug: true, accessibility: true })).not.toContain("project, { accessibility: false }");
     expect(await standaloneHtml(p, { debug: true, accessibility: false })).toContain("project, { accessibility: false }");
+  });
+});
+
+describe('screen reader preference', () => {
+  const mountModal = async (el: React.ReactElement) => {
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => {
+      root.render(el);
+      await new Promise((r) => setTimeout(r, 30));
+    });
+  };
+  const btn = (text: string) => [...host.querySelectorAll('button')].find((b) => b.textContent?.startsWith(text))!;
+  beforeEach(() => setPrefs({ accessibility: true, screenReader: false }));
+
+  it('is off by default and is its own preference next to Accessibility', async () => {
+    localStorage.clear();
+    expect(prefs().screenReader).toBe(false);
+    await mountModal(<PrefsModal onClose={() => undefined} />);
+    const boxes = [...host.querySelectorAll('label')].map((l) => l.textContent);
+    const a = boxes.findIndex((t) => t?.includes('Accessibility features'));
+    const sr = boxes.findIndex((t) => t?.includes('Screen reader strip'));
+    expect(a).toBeGreaterThan(-1);
+    expect(sr).toBe(a + 1);
+    const input = [...host.querySelectorAll('label')][sr].querySelector('input')!;
+    expect(input.checked).toBe(false);
+    act(() => input.click());
+    expect(prefs().screenReader).toBe(true);
+    expect(prefs().accessibility).toBe(true);
+  });
+
+  it('the Preview strip shows only with Screen reader and Accessibility both on', async () => {
+    const s = new EditorStore(createProject('T'));
+    setCurrentStore(s);
+    await mountModal(<PreviewModal onClose={() => undefined} />);
+    expect(host.querySelector('.preview-said')).toBeNull();
+    expect(btn('Screen reader').textContent).toBe('Screen reader off');
+    act(() => btn('Screen reader').click());
+    expect(prefs().screenReader).toBe(true);
+    expect(btn('Screen reader').textContent).toBe('Screen reader on');
+    expect(host.querySelector('.preview-said')).not.toBeNull();
+    act(() => btn('Accessibility').click());
+    expect(prefs().accessibility).toBe(false);
+    expect(host.querySelector('.preview-said')).toBeNull();
   });
 });
 

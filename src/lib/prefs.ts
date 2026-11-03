@@ -20,10 +20,12 @@ export interface Prefs {
    * roles, focus ring, announcements. On by default; switch it off to check whether a problem comes from it.
    */
   accessibility: boolean;
+  /** The Screen reader strip under Preview, showing what would be announced. Off by default; it only shows while accessibility is on too. */
+  screenReader: boolean;
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true };
+const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 

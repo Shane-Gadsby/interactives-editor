@@ -775,12 +775,12 @@ function BottomPanel() {
   );
 }
 
-function PreviewModal({ onClose }: { onClose: () => void }) {
+export function PreviewModal({ onClose }: { onClose: () => void }) {
   const project = useEditor((st) => st.project);
   const abId = useEditor((st) => st.activeArtboardId);
   const [html, setHtml] = useState<string | null>(null);
   // Accessibility features in the preference: the preview plays with or without them, and shows what the screen reader would say
-  const accessibility = usePrefs().accessibility;
+  const { accessibility, screenReader } = usePrefs();
   const [said, setSaid] = useState<{ text: string; politeness: string }[]>([]);
   const [buildError, setBuildError] = useState<string | null>(null);
   const [from, setFrom] = useState<'start' | 'current'>('start');
@@ -858,6 +858,13 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
             title="Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements (also in Preferences). Switch it off to check whether a problem comes from it"
           >
             Accessibility {accessibility ? 'on' : 'off'}
+          </button>
+          <button
+            className={`btn${screenReader && accessibility ? ' active' : ''}`}
+            onClick={() => setPrefs({ screenReader: !screenReader })}
+            title="Show a strip under the preview with what a screen reader would be told by Announce nodes and ix.announce (also in Preferences). It needs Accessibility on"
+          >
+            Screen reader {screenReader ? 'on' : 'off'}
           </button>
           {hasDrag && (
             <button
@@ -950,7 +957,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
           )}
           {html ? <iframe key={nonce} ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => hitAreas && showHitAreas(true)} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
         </div>
-        {accessibility && (
+        {accessibility && screenReader && (
           <div className="preview-said" aria-hidden="true" title="What a screen reader is told by Announce nodes and ix.announce, as it is spoken">
             <strong>Screen reader</strong>
             {said.length ? said.map((a, i) => <span key={i} className={i === said.length - 1 ? 'latest' : undefined}>{a.text}</span>) : <span className="muted">Nothing announced yet. Tab to a clickable layer and press Enter or Space.</span>}

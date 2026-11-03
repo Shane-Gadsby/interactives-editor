@@ -58,6 +58,12 @@ export function PrefsModal({ onClose }: { onClose: () => void }) {
             value={p.accessibility}
             onChange={(v) => setPrefs({ accessibility: v })}
           />
+          <CheckField
+            label="Screen reader strip"
+            title="A strip under Preview showing what a screen reader would be told by Announce nodes and ix.announce, as it is spoken. Off by default; it needs Accessibility features on"
+            value={p.screenReader}
+            onChange={(v) => setPrefs({ screenReader: v })}
+          />
           <CheckField label="Show tooltips" title="Explanations when you hover buttons and field names" value={p.tooltips} onChange={(v) => setPrefs({ tooltips: v })} />
           <p className="hint">These settings are yours: they follow you to any browser you sign in on.</p>
         </div>
