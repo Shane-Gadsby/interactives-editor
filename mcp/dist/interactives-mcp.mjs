@@ -1,5 +1,20 @@
 #!/usr/bin/env node
 const OUT = [{ id: "out", label: "" }];
+const CONTINUE = [
+  {
+    key: "continue",
+    label: "Continue",
+    type: "select",
+    options: [
+      { value: "end", label: "When it finishes" },
+      { value: "percent", label: "Part-way through" },
+      { value: "start", label: "Straight away" }
+    ],
+    default: "end",
+    help: "When the next node runs: when this finishes, part-way through, or straight away"
+  },
+  { key: "continueAt", label: "At (%)", type: "number", default: 50, showIf: { key: "continue", values: ["percent"] }, help: "How far through, 0 to 100" }
+];
 const LINK_TARGETS = [
   { value: "_blank", label: "New tab (_blank)" },
   { value: "_self", label: "Same frame (_self)" },
@@ -154,7 +169,8 @@ const CATALOG = [
         ],
         default: "play"
       },
-      { key: "time", label: "Time (ms)", type: "expr", default: "0", showIf: { key: "op", values: ["seek"] } }
+      { key: "time", label: "Time (ms)", type: "expr", default: "0", showIf: { key: "op", values: ["seek"] } },
+      ...CONTINUE.map((c) => c.key === "continue" ? { ...c, showIf: { key: "op", values: ["play", "restart", "reverse", "toggle"] } } : c)
     ]
   },
   {
@@ -197,7 +213,7 @@ const CATALOG = [
     kind: "action.animate",
     label: "Animate property",
     category: "action",
-    description: "Tween a layer property to a value. Continues when the tween finishes.",
+    description: "Tween a layer property to a value.",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -207,7 +223,7 @@ const CATALOG = [
       { key: "relative", label: "Relative (add to current)", type: "boolean", default: false },
       { key: "duration", label: "Duration (ms)", type: "number", default: 400 },
       { key: "ease", label: "Easing", type: "easing", default: "easeInOut" },
-      { key: "wait", label: "Wait until done", type: "boolean", default: false }
+      ...CONTINUE
     ]
   },
   {
@@ -302,7 +318,8 @@ const CATALOG = [
     hasInput: true,
     params: [
       { key: "asset", label: "Sound", type: "asset" },
-      { key: "volume", label: "Volume (0-1)", type: "number", default: 1 }
+      { key: "volume", label: "Volume (0-1)", type: "number", default: 1 },
+      ...CONTINUE
     ]
   },
   {
@@ -1132,7 +1149,7 @@ Examples: a dial that turns with a variable, a character whose eyes follow the p
 - **Actions** (blue) do something and continue: play a timeline, set a variable, set or animate a property, show or hide, go to another artboard, open a URL, play a sound, run a script, send a message, wait.
 - **Logic** (purple) chooses where to go: *If*, *Switch*, *Once*, *Sequence*.
 
-Drag from an output port to the next node's input to connect them. Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Every node is listed in [Interaction node reference](interaction-nodes).
+Drag from an output port to the next node's input to connect them. Actions that take time (**Control timeline**, **Animate property**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away. Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Every node is listed in [Interaction node reference](interaction-nodes).
 
 ## What's in scope
 Expression fields can use every variable and data source by name, \`event\` (details of what fired: \`event.key\`, \`event.x\`, \`event.index\` for a repeated copy, \`event.payload\` for a message) and \`Math\`.

@@ -491,7 +491,7 @@ Examples: a dial that turns with a variable, a character whose eyes follow the p
 - **Actions** (blue) do something and continue: play a timeline, set a variable, set or animate a property, show or hide, go to another artboard, open a URL, play a sound, run a script, send a message, wait.
 - **Logic** (purple) chooses where to go: *If*, *Switch*, *Once*, *Sequence*.
 
-Drag from an output port to the next node's input to connect them. Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Every node is listed in [Interaction node reference](interaction-nodes).
+Drag from an output port to the next node's input to connect them. Actions that take time (**Control timeline**, **Animate property**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away. Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Every node is listed in [Interaction node reference](interaction-nodes).
 
 ## What's in scope
 Expression fields can use every variable and data source by name, \`event\` (details of what fired: \`event.key\`, \`event.x\`, \`event.index\` for a repeated copy, \`event.payload\` for a message) and \`Math\`.
