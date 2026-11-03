@@ -100,10 +100,18 @@ async function twoEditors(setup: (s: EditorStore) => void, a: (s: EditorStore) =
 const abOf = (p: Project) => p.artboards[0];
 const json = (v: unknown) => JSON.parse(JSON.stringify(v));
 
-async function run(seed: number, opts: { structure: boolean }) {
+async function run(seed: number, opts: { structure: boolean; nest?: boolean }) {
   const r = rng(seed * 104729);
   const base: Project = createProject('Converge');
   for (let i = 0; i < 5; i++) abOf(base).children.push(createNode('rect', { name: `L${i}`, x: i * 10, y: 0, width: 40, height: 40 }));
+  if (opts.nest) {
+    //two groups with a couple of layers each, so layers can be reordered and reparented between lists
+    for (let g = 0; g < 2; g++) {
+      const group = createNode('group', { name: `G${g}`, x: 0, y: 0, width: 100, height: 100 });
+      for (let i = 0; i < 3; i++) (group as any).children.push(createNode('rect', { name: `G${g}L${i}`, x: i * 10, y: 0, width: 20, height: 20 }));
+      abOf(base).children.push(group);
+    }
+  }
   net = new Net(base);
   vi.stubGlobal('EventSource', FakeES);
   vi.stubGlobal(
@@ -124,7 +132,19 @@ async function run(seed: number, opts: { structure: boolean }) {
   await vi.advanceTimersByTimeAsync(20);
   for (const c of clients) net.sources.get((c.session as any).clientId)!.emit('hello', { seq: 0, rev: 1, clientId: (c.session as any).clientId, color: '#f00', peers: [] });
 
-  const layerIds = (s: EditorStore) => abOf(s.get().project).children.map((n) => n.id);
+  const flat = (nodes: any[]): string[] => nodes.flatMap((n) => [n.id, ...flat(n.children ?? [])]);
+  const layerIds = (s: EditorStore) => (opts.nest ? flat(abOf(s.get().project).children) : abOf(s.get().project).children.map((n) => n.id));
+  const groupIds = (s: EditorStore) => flat(abOf(s.get().project).children).filter((id) => /group/.test(String(findType(s, id))));
+  const findType = (s: EditorStore, id: string) => {
+    const walk = (nodes: any[]): any => {
+      for (const n of nodes) {
+        if (n.id === id) return n.type;
+        const t = walk(n.children ?? []);
+        if (t) return t;
+      }
+    };
+    return walk(abOf(s.get().project).children);
+  };
   for (let step = 0; step < 40; step++) {
     const c = r.pick(clients);
     const s = c.store;
@@ -140,7 +160,12 @@ async function run(seed: number, opts: { structure: boolean }) {
     else if (k === 8 && ids.length > 2) {
       s.select([r.pick(ids)]);
       s.deleteSelection();
-    } else if (k === 9 && ids.length > 2) s.moveNode(r.pick(ids), null, r.int(ids.length));
+    } else if (k === 9 && ids.length > 2) {
+      const groups = opts.nest ? groupIds(s) : [];
+      //into a group (any depth), or back to the top level
+      const parent = groups.length && r.chance(0.6) ? r.pick(groups) : null;
+      s.moveNode(r.pick(ids), parent, r.int(ids.length));
+    }
     await vi.advanceTimersByTimeAsync(r.int(120));
     net.deliver(r);
   }
@@ -177,19 +202,25 @@ describe('live editing converges', () => {
     }
   }, 60000);
 
-  it('adding, deleting and moving layers leaves every editor with the same layers and the same properties on each', async () => {
-    //Heavy random concurrent moves around the same neighbours can still leave a few editors with the same layers in a
-    //different stacking order until the next reload (a few percent of clients in this sim), so this compares layers and
-    //their properties, and the tests below pin the common cases down exactly.
-    for (const seed of seeds(25)) {
+  it('adding, deleting and moving layers leaves every editor with exactly the server document, stacking order included', async () => {
+    for (const seed of seeds(300)) {
       const { clients, server } = await run(seed, { structure: true });
-      const byId = (p: Project) => Object.fromEntries(abOf(p).children.map((n) => [n.id, json(n)]));
       for (const [i, c] of clients.entries()) {
-        expect(byId(c.store.get().project), `seed ${seed} client ${i}`).toEqual(byId(server));
+        expect(json(c.store.get().project.artboards), `seed ${seed} client ${i}`).toEqual(json(server.artboards));
         c.session.close();
       }
     }
-  }, 60000);
+  }, 300000);
+
+  it('the same with layers inside groups, reordered and moved between lists', async () => {
+    for (const seed of seeds(300)) {
+      const { clients, server } = await run(seed, { structure: true, nest: true });
+      for (const [i, c] of clients.entries()) {
+        expect(json(c.store.get().project.artboards), `seed ${seed} client ${i}`).toEqual(json(server.artboards));
+        c.session.close();
+      }
+    }
+  }, 300000);
 
   describe('the common collisions, exactly', () => {
     const ids = (p: Project) => abOf(p).children.map((n) => n.id);

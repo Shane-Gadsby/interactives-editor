@@ -8,12 +8,18 @@
  * or still queued to be sent) is skipped: ours comes later on the server, so it
  * is the one that sticks everywhere.
  *
+ * Order in lists is the one thing that can't be settled op by op ("insert after X" lands somewhere else once someone
+ * else's inserts come first), so the session keeps a copy of the server's document (`shadow`, every op the server
+ * sends, ours included, applied in its order). After someone else's inserts or deletes it works out what the lists
+ * will look like once the server has our unanswered ops too (orderFixes) and moves ours to match. When everything
+ * is answered the document is the shadow, which is the server's document.
+ *
  * A batch the server refuses for good (a 4xx such as 413 or 400) is never retried:
  * the session ends and the whole document is saved the normal way instead.
  * Network errors and 5xx are retried with a growing delay.
  */
 import { sessionId, sessionUser } from './session';
-import { diff, opKey, type Op } from '../../shared/ops.mjs';
+import { apply as applyOps, diff, opKey, orderFixes, type Op } from '../../shared/ops.mjs';
 import type { Project } from 'interactives-player';
 import type { EditorStore } from '../store/store';
 import { loadProjectRecord } from './db';
@@ -91,6 +97,8 @@ export class LiveSession {
   private retry = 1000;
   private flushRetry = 2000;
   private backingOff = false;
+  /** The server's document as of the last op seen (ours and everyone's), kept apart from the one on screen. */
+  private shadow: unknown;
 
   constructor(
     private readonly projectId: string,
@@ -98,6 +106,7 @@ export class LiveSession {
     since: number,
   ) {
     this.seq = since;
+    this.shadow = JSON.parse(JSON.stringify(store.get().project));
     store.onLocalChange = (before, after) => this.local(before, after);
     void this.connect();
   }
@@ -127,6 +136,7 @@ export class LiveSession {
       const d = JSON.parse((e as MessageEvent).data) as { seq: number; clientId: string; ops: Op[] };
       if (d.seq <= this.seq) return;
       this.seq = d.seq;
+      applyOps(this.shadow, d.ops);
       if (d.clientId === this.clientId) {
         this.inflight.splice(0, d.ops.length);
         for (const op of d.ops) {
@@ -143,10 +153,14 @@ export class LiveSession {
       const own = [...this.inflight, ...this.queue];
       const ownKeys = new Set(own.map(opKey));
       const usable = d.ops.filter((op) => !coveredBy(opKey(op), ownKeys));
-      if (!usable.length) return;
-      // ...and put back what these upset of ours, since ours come after them on the server
-      const again = replayAfter(own, usable);
-      this.store.applyRemote(again.length ? [...usable, ...again] : usable);
+      if (usable.length) {
+        // ...and put back what these upset of ours, since ours come after them on the server
+        const again = replayAfter(own, usable);
+        this.store.applyRemote(again.length ? [...usable, ...again] : usable);
+      }
+      // ...then settle the order of any list they inserted into or deleted from, the way the server will end up with it
+      const fixes = own.length ? orderFixes(this.store.get().project, this.shadow, own, d.ops) : [];
+      if (fixes.length) this.store.applyRemote(fixes);
     });
     es.addEventListener('presence', (e) => {
       const d = JSON.parse((e as MessageEvent).data) as Peer & { left?: boolean; joined?: boolean };
@@ -177,6 +191,7 @@ export class LiveSession {
     this.queue = [];
     this.inflight = [];
     this.pending.clear();
+    this.shadow = JSON.parse(JSON.stringify(p));
     this.store.replaceProject(p as Project);
     this.store.toast('The project was replaced elsewhere and has been reloaded');
   }

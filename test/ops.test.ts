@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { produce } from 'immer';
-import { apply, diff } from '../shared/ops.mjs';
+import { apply, diff, opKey, orderFixes, type Op } from '../shared/ops.mjs';
 import { createNode, createProject } from 'interactives-player';
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
@@ -125,5 +125,84 @@ describe('ops', () => {
     });
     apply(c, diff(b, d2));
     expect((c.artboards[0].children[0] as { paintOrder?: unknown }).paintOrder).toBeUndefined();
+  });
+});
+
+describe('mv and orderFixes', () => {
+  const doc = (ids: string[]) => ({ list: ids.map((id) => ({ id })) });
+  const order = (d: { list: { id: string }[] }) => d.list.map((e) => e.id).join('');
+  const L = ['list'];
+  const ins = (id: string, after: string | null): Op => ({ t: 'ins', p: L, v: { id }, after });
+
+  it('mv moves an element after an anchor, to the front, or to the end when the anchor is gone, and skips unknown ids', () => {
+    const d = doc(['a', 'b', 'c', 'd']);
+    apply(d, [{ t: 'mv', p: L, id: 'a', after: 'c' }]);
+    expect(order(d)).toBe('bcad');
+    apply(d, [{ t: 'mv', p: L, id: 'd', after: null }]);
+    expect(order(d)).toBe('dbca');
+    apply(d, [{ t: 'mv', p: L, id: 'b', after: 'zzz' }]);
+    expect(order(d)).toBe('dcab');
+    apply(d, [{ t: 'mv', p: L, id: 'nope', after: 'c' }]);
+    expect(order(d)).toBe('dcab');
+    expect(opKey({ t: 'mv', p: L, id: 'a', after: null })).toBe('list/#a');
+  });
+
+  it('puts a list in the order the server will have once our unanswered ops land after theirs', () => {
+    //server had abc; they put x after a; we (not knowing) put y after a. The server ends up with a y x b c
+    const shadow = doc(['a', 'x', 'b', 'c']);
+    const local = doc(['a', 'x', 'y', 'b', 'c']);
+    const own = [ins('y', 'a')];
+    const fixes = orderFixes(local, shadow, own, [ins('x', 'a')]);
+    apply(local, fixes);
+    const server = doc(['a', 'b', 'c']);
+    apply(server, [ins('x', 'a'), ...own]);
+    expect(order(local)).toBe(order(server));
+    expect(order(local)).toBe('ayxbc');
+  });
+
+  it('does nothing when the lists already agree, or when we have nothing waiting in that part of the document', () => {
+    const shadow = doc(['a', 'x', 'b']);
+    expect(orderFixes(doc(['a', 'x', 'b']), shadow, [], [ins('x', 'a')])).toEqual([]);
+    expect(orderFixes(doc(['a', 'x', 'b']), shadow, [{ t: 'set', p: ['other'], v: 1 }], [ins('x', 'a')])).toEqual([]);
+    expect(orderFixes(doc(['a', 'x', 'b']), shadow, [ins('b', 'x')], [ins('x', 'a')])).toEqual([]);
+  });
+
+  it('does not change its inputs', () => {
+    const shadow = doc(['a', 'x', 'b']), local = doc(['a', 'y', 'x', 'b']);
+    const before = JSON.stringify([shadow, local]);
+    orderFixes(local, shadow, [ins('y', 'a')], [ins('x', 'a')]);
+    expect(JSON.stringify([shadow, local])).toBe(before);
+  });
+
+  it('an insert of a layer that already lives elsewhere in the artboard moves it, so two concurrent moves leave one copy', () => {
+    const ab = { id: 'ab', children: [{ id: 'g1', children: [{ id: 'x' }] }, { id: 'g2', children: [] }, { id: 'y' }] };
+    const d = { artboards: [ab] };
+    const A = ['artboards', { i: 'ab' }, 'children'];
+    apply(d, [{ t: 'ins', p: A, v: { id: 'x' }, after: 'g1' }]);
+    apply(d, [{ t: 'del', p: [...A, { i: 'g1' }, 'children'], id: 'x' }, { t: 'ins', p: [...A, { i: 'g2' }, 'children'], v: { id: 'x' }, after: null }]);
+    const ids = (ns: { id: string; children?: any[] }[]): string[] => ns.flatMap((n) => [n.id, ...ids(n.children ?? [])]);
+    expect(ids(ab.children)).toEqual(['g1', 'g2', 'x', 'y']);
+    expect(ab.children[1].children).toEqual([{ id: 'x' }]);
+  });
+
+  it('orderFixes also drops a doubled layer and puts back one that went missing', () => {
+    const mk = (kids: string[]) => ({ artboards: [{ id: 'ab', children: kids.map((id) => ({ id })) }] });
+    const A = ['artboards', { i: 'ab' }, 'children'];
+    const shadow = mk(['a', 'b', 'c']);
+    const local = mk(['a', 'c', 'b', 'c']);
+    const own: Op[] = [{ t: 'ins', p: A, v: { id: 'q' }, after: 'a' }];
+    local.artboards[0].children.splice(1, 0, { id: 'q' });
+    apply(local, orderFixes(local, shadow, own, [{ t: 'ins', p: A, v: { id: 'z' }, after: 'c' }]).concat([]));
+    expect(local.artboards[0].children.map((e) => e.id)).toEqual(['a', 'q', 'b', 'c']);
+  });
+
+  it('a group inserted with a child that has since moved elsewhere in the artboard comes without that child', () => {
+    const A = ['artboards', { i: 'ab' }, 'children'];
+    const d = { artboards: [{ id: 'ab', children: [{ id: 'g', children: [{ id: 'k' }, { id: 'm' }] }, { id: 'k2' }] }] };
+    //k was moved out to the top level first; then someone moves g (still showing k) into the artboard's end
+    apply(d, [{ t: 'del', p: [...A, { i: 'g' }, 'children'], id: 'k' }, { t: 'ins', p: A, v: { id: 'k' }, after: 'g' }]);
+    apply(d, [{ t: 'del', p: A, id: 'g' }, { t: 'ins', p: A, v: { id: 'g', children: [{ id: 'k' }, { id: 'm' }] } as { id: string }, after: 'k2' }]);
+    expect(d.artboards[0].children.map((e: any) => e.id)).toEqual(['k', 'k2', 'g']);
+    expect((d.artboards[0].children[2] as any).children).toEqual([{ id: 'm' }]);
   });
 });
