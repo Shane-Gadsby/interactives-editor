@@ -24,6 +24,8 @@ export const FIELD_TIPS: Record<string, string> = {
   Fit: 'How the content fits its box: cover crops, contain shows all, fill stretches',
   Image: 'Which image asset to show',
   Video: 'Which video asset to play (or set a URL)',
+  FPS: 'Frame rate cap for the script layer; 0 draws on every frame',
+  Pixels: 'Canvas pixels per layer pixel: Auto follows the screen and the artboard scale',
   Autoplay: 'Start playing as soon as it is shown',
   Loop: 'Start again from the beginning when it ends',
   Muted: 'No sound (browsers only autoplay muted video)',

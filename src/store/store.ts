@@ -49,7 +49,8 @@ export type Tool =
   | 'input'
   | 'link'
   | 'embed'
-  | 'video';
+  | 'video'
+  | 'draw';
 
 export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage';
 

@@ -564,6 +564,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
 /** The help page for whatever tool is in use. */
 function helpTopicForTool(tool: Tool): string {
   if (['button', 'input', 'link', 'embed', 'video'].includes(tool)) return 'web-elements';
+  if (tool === 'draw') return 'script-layers';
   if (tool === 'text') return 'text';
   if (tool === 'artboard') return 'artboards';
   if (tool === 'frame') return 'groups-frames';
@@ -584,6 +585,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'pen', icon: 'pen', label: 'Pen', key: 'P' },
   { tool: 'pencil', icon: 'pencil', label: 'Pencil (freehand)', key: 'N' },
   { tool: 'text', icon: 'text', label: 'Text', key: 'T' },
+  { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
 ];
 
 const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
@@ -684,6 +686,8 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
   type Trace = { artboard: string; event: string; target?: string; then: string[]; note?: string; depth: number; at: number };
   const [dbg, setDbg] = useState<DebugState | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
+  // Script layers that failed or hit a limit, as the player reports them (newest last)
+  const [scriptErrors, setScriptErrors] = useState<{ layer: string; message: string; kind: string }[]>([]);
   const [varFilter, setVarFilter] = useState('');
   const t0 = useRef(performance.now());
   const [showVars, setShowVars] = useState(true);
@@ -703,6 +707,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
         if (e.data.vars) setVars(e.data.vars);
         if (e.data.state) setDbg(e.data.state);
         if (e.data.trace) setTraces((l) => [...l.slice(-199), { ...e.data.trace, at: performance.now() - t0.current }]);
+        if (e.data.scripterror) setScriptErrors((l) => [...l.slice(-49), e.data.scripterror]);
         return;
       }
       if (e.data?.source !== 'interactives') return;
@@ -736,6 +741,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
               setNonce(nonce + 1);
               setTraces([]);
               setLog([]);
+              setScriptErrors([]);
               setDbg(null);
               t0.current = performance.now();
             }}
@@ -809,10 +815,15 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
           <footer className="preview-log mono small">
             <div className="debug-log-head">
               <span>Events (newest last)</span>
-              <button className="btn small-btn" onClick={() => (setTraces([]), setLog([]))} title="Clear the event list (the preview keeps running)">
+              <button className="btn small-btn" onClick={() => (setTraces([]), setLog([]), setScriptErrors([]))} title="Clear the event list (the preview keeps running)">
                 <Icons.trash width={12} /> Clear
               </button>
             </div>
+            {scriptErrors.map((x, i) => (
+              <div key={`e${i}`} className={x.kind === 'error' ? 'error' : undefined}>
+                Script layer “{x.layer}” {x.kind === 'error' ? 'stopped' : 'warning'}: {x.message}
+              </div>
+            ))}
             {traces.map((t, i) => (
               <div key={i} className="trace" title={t.note}>
                 <span className="muted">{(t.at / 1000).toFixed(2)}s</span> {t.depth ? <span className="muted">[{t.artboard}] </span> : null}
@@ -823,7 +834,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
             {log.map((l, i) => (
               <div key={`m${i}`}>message to the page: {l}</div>
             ))}
-            {!traces.length && !log.length && <div className="muted">No events yet. Click, hover or type in the preview and they show here.</div>}
+            {!traces.length && !log.length && !scriptErrors.length && <div className="muted">No events yet. Click, hover or type in the preview and they show here.</div>}
           </footer>
         )}
       </div>

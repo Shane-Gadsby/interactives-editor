@@ -545,6 +545,150 @@ function walk(nodes, fn, parent = null) {
     if (isContainer(n)) walk(n.children, fn, n);
   }
 }
+const DRAW_TEMPLATES = [
+  {
+    id: "starter",
+    name: "Pulsing circle",
+    description: "The smallest script layer: a circle that breathes.",
+    code: `// g draws; t is seconds since the layer started
+function draw(g, t) {
+  g.clear('#10131a');
+  g.fill('#6f8cff');
+  const r = 24 + Math.sin(t * 2) * 8;
+  g.circle(g.width / 2, g.height / 2, r);
+}
+`
+  },
+  {
+    id: "particles",
+    name: "Particles",
+    description: "Glowing dots that drift upwards and shy away from the pointer.",
+    code: `// Anything declared outside draw() keeps its value between frames
+const dots = [];
+
+function setup(g) {
+  for (let i = 0; i < 80; i++) {
+    dots.push({
+      x: g.random(g.width),
+      y: g.random(g.height),
+      r: g.random(1.5, 4),
+      speed: g.random(8, 30),
+      hue: g.random(190, 280),
+    });
+  }
+}
+
+function draw(g, t, dt) {
+  g.clear('#0b0e17');
+  g.blend('add');
+  for (const d of dots) {
+    d.y -= d.speed * dt;
+    if (d.y < -10) { d.y = g.height + 10; d.x = g.random(g.width); }
+    // Push dots away from the pointer
+    if (g.pointer.inside) {
+      const dx = d.x - g.pointer.x;
+      const dy = d.y - g.pointer.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist < 70) { d.x += (dx / dist) * (70 - dist) * 4 * dt; d.y += (dy / dist) * (70 - dist) * 4 * dt; }
+    }
+    g.fill(g.hsl(d.hue, 90, 65, 0.8));
+    g.circle(d.x + Math.sin(t + d.hue) * 6, d.y, d.r);
+  }
+}
+`
+  },
+  {
+    id: "bar-chart",
+    name: "Bar chart from a variable",
+    description: "Bars for the numbers in a list variable called chartValues. Change the variable and the bars grow to match.",
+    variables: [{ name: "chartValues", type: "list", initial: "[12, 19, 7, 15, 24, 10]" }],
+    code: `// Reads the list variable "chartValues" (numbers, or objects with a "value"). Edit it and the bars follow.
+const shown = [];   // what is drawn now, easing towards the variable
+
+function draw(g, t, dt) {
+  const raw = ix.vars.chartValues;
+  const values = (Array.isArray(raw) ? raw : []).map((v) => Number(v && typeof v === 'object' ? v.value : v) || 0);
+  g.clear('#ffffff');
+  if (!values.length) { g.fill('#888'); g.text('Add a list variable called chartValues', 12, 24, { size: 13 }); return; }
+
+  const pad = 24;
+  const max = Math.max(1, ...values);
+  const slot = (g.width - pad * 2) / values.length;
+  g.stroke('#e3e6ee', 1);
+  g.line(pad, g.height - pad, g.width - pad, g.height - pad);
+  g.noStroke();
+
+  values.forEach((v, i) => {
+    // Ease the shown value towards the real one (about a third of a second)
+    shown[i] = (shown[i] ?? 0) + (v - (shown[i] ?? 0)) * Math.min(1, dt * 8);
+    const h = (shown[i] / max) * (g.height - pad * 2 - 14);
+    const x = pad + i * slot + slot * 0.15;
+    g.fill(g.hsl(220 + i * 18, 75, 58));
+    g.rect(x, g.height - pad - h, slot * 0.7, h, 4);
+    g.fill('#444');
+    g.text(String(Math.round(v)), x + slot * 0.35, g.height - pad - h - 6, { size: 12, align: 'center' });
+  });
+}
+`
+  },
+  {
+    id: "sine-waves",
+    name: "Sine waves",
+    description: "Layered, slowly moving waves with a gradient sky.",
+    code: `function draw(g, t) {
+  const sky = g.linearGradient(0, 0, 0, g.height, ['#1b2a5a', '#e0709a']);
+  g.fill(sky);
+  g.rect(0, 0, g.width, g.height);
+
+  for (let layer = 0; layer < 4; layer++) {
+    const base = g.height * (0.45 + layer * 0.14);
+    const amp = 14 + layer * 6;
+    const points = [[0, g.height]];
+    for (let x = 0; x <= g.width; x += 6) {
+      points.push([x, base + Math.sin(x / (50 + layer * 20) + t * (0.6 + layer * 0.25)) * amp]);
+    }
+    points.push([g.width, g.height]);
+    g.fill(g.hsl(255 - layer * 12, 55, 20 + layer * 9, 0.9));
+    g.path(points, true);
+  }
+}
+`
+  },
+  {
+    id: "clock",
+    name: "Clock",
+    description: "An analogue clock showing the viewer's local time.",
+    code: `function hand(g, cx, cy, angle, length, width, color) {
+  g.stroke(color, width);
+  g.lineStyle({ cap: 'round' });
+  g.line(cx, cy, cx + Math.sin(angle) * length, cy - Math.cos(angle) * length);
+}
+
+function draw(g) {
+  const cx = g.width / 2;
+  const cy = g.height / 2;
+  const r = Math.min(cx, cy) - 8;
+  g.clear();
+  g.fill('#fafafa');
+  g.stroke('#222', 3);
+  g.circle(cx, cy, r);
+  g.noFill();
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    g.stroke('#222', i % 3 === 0 ? 3 : 1);
+    g.line(cx + Math.sin(a) * r * 0.86, cy - Math.cos(a) * r * 0.86, cx + Math.sin(a) * r * 0.95, cy - Math.cos(a) * r * 0.95);
+  }
+  const now = new Date();
+  const s = now.getSeconds() + now.getMilliseconds() / 1000;
+  const m = now.getMinutes() + s / 60;
+  const h = (now.getHours() % 12) + m / 60;
+  hand(g, cx, cy, (h / 12) * Math.PI * 2, r * 0.5, 5, '#222');
+  hand(g, cx, cy, (m / 60) * Math.PI * 2, r * 0.75, 3, '#222');
+  hand(g, cx, cy, (s / 60) * Math.PI * 2, r * 0.85, 1.5, '#d33');
+}
+`
+  }
+];
 const NAMES = {
   rect: "Rectangle",
   ellipse: "Ellipse",
@@ -560,7 +704,8 @@ const NAMES = {
   link: "Link",
   embed: "Embed",
   video: "Video",
-  instance: "Instance"
+  instance: "Instance",
+  draw: "Script layer"
 };
 function base(type) {
   return {
@@ -591,6 +736,7 @@ const DEFAULT_TEXT_STYLE = {
   align: "left",
   verticalAlign: "top"
 };
+const DEFAULT_DRAW_CODE = DRAW_TEMPLATES[0].code;
 const GREY = { type: "solid", color: "#d9d9d9" };
 const FACTORIES = {
   rect: () => ({ fill: GREY, stroke: null, cornerRadius: 0 }),
@@ -669,11 +815,48 @@ const FACTORIES = {
     width: 320,
     height: 180
   }),
-  instance: () => ({ artboardId: "", fit: "fill" })
+  instance: () => ({ artboardId: "", fit: "fill" }),
+  draw: () => ({
+    code: DEFAULT_DRAW_CODE,
+    fps: 0,
+    pixelRatio: "auto",
+    runInEditor: true,
+    width: 320,
+    height: 200
+  })
 };
 function createNode(type, partial = {}) {
   return { ...base(type), ...FACTORIES[type](), ...partial, type };
 }
+const DRAW_API = [
+  ["function draw(g, t, dt)", "Runs every frame. t is seconds since the layer started, dt seconds since the last frame it drew. The canvas is cleared before each frame, so draw everything every time."],
+  ["function setup(g)", "Optional. Runs once, before the first draw. Top-level code and `let` variables outside the functions keep their values between frames."],
+  ["g.width, g.height", "The layer's size in px. Draw in these units, 0,0 is the top-left; the pixel ratio is handled for you."],
+  ["g.pointer", "{x, y, down, inside}: the pointer in layer px, whether a button is down, and whether it is over the layer."],
+  ["g.frame", "How many frames this layer has drawn."],
+  ["g.clear(color?)", "Wipes the canvas, optionally filling it with a colour."],
+  ["g.fill(color) / g.noFill()", "Fill for the shapes and text that follow. Starts as black. A colour is any CSS colour, or a gradient from g.linearGradient / g.radialGradient."],
+  ["g.stroke(color, width = 1) / g.noStroke()", "Outline for the shapes that follow. Starts off."],
+  ["g.lineStyle({cap, join, dash, dashOffset})", "cap: butt, round or square. join: miter, round or bevel. dash: lengths like [6, 4]."],
+  ["g.rect(x, y, w, h, radius = 0)", "A rectangle (top-left corner and size)."],
+  ["g.circle(x, y, r) / g.ellipse(x, y, rx, ry, rotation = 0)", "Centre and radius. Rotation is in radians."],
+  ["g.line(x1, y1, x2, y2)", "A line, drawn with the stroke (the fill colour when there is no stroke)."],
+  ["g.path(points, closed = false)", "Joins points ([[x, y], ...], [{x, y}, ...] or a flat [x, y, x, y, ...]) and draws them with the fill and stroke."],
+  ["g.begin(), g.moveTo(x, y), g.lineTo(x, y), g.bezierTo(c1x, c1y, c2x, c2y, x, y), g.quadTo(cx, cy, x, y), g.arc(x, y, r, a0, a1, ccw), g.close(), g.paint()", "Build any outline step by step; paint() fills and strokes it. Angles are in radians."],
+  ["g.svgPath(d)", 'An SVG path string ("M0 0L10 10..."), drawn with the fill and stroke.'],
+  ['g.text(str, x, y, {size = 16, font, weight, italic, align = "left", baseline = "alphabetic", maxWidth})', "Text with the fill (and stroke). font is a family name, e.g. one of the project fonts. baseline: top, middle, alphabetic or bottom."],
+  ["g.image(assetNameOrId, x, y, w?, h?)", "An image asset from the project, at its own size unless w and h are given. Optional source rectangle: g.image(a, x, y, w, h, sx, sy, sw, sh)."],
+  ["g.save() / g.restore()", "Keep and bring back the fill, stroke, transform, opacity, blend mode and clip."],
+  ["g.translate(x, y) / g.rotate(radians) / g.scale(sx, sy = sx)", "Move, turn or scale everything that follows (until restore)."],
+  ["g.clipRect(x, y, w, h)", "Only draw inside this rectangle (until restore)."],
+  ["g.alpha(a)", "Opacity 0 to 1 for what follows."],
+  ["g.blend(mode)", "normal, add, multiply, screen, overlay, darken, lighten, color-dodge, color-burn, hard-light, soft-light, difference, exclusion."],
+  ["g.shadow(color, blur, x = 0, y = 0) / g.noShadow()", "A drop shadow for what follows."],
+  ["g.linearGradient(x0, y0, x1, y1, stops) / g.radialGradient(x, y, r0, r1, stops)", "A gradient to pass to fill or stroke. stops: colours, spaced evenly, or [[offset, color], ...]. Valid for the frame it is made in."],
+  ["g.rgb(r, g, b, a = 1) / g.hsl(h, s, l, a = 1)", "Colour strings. h is 0 to 360, s and l 0 to 100."],
+  ["g.random(), g.random(max), g.random(min, max) / g.seed(n)", "Seeded random numbers: the layer draws the same numbers on every run, g.seed(n) restarts the sequence (do that at the start of draw for a picture that does not change from frame to frame)."],
+  ["ix.vars.name, ix.data.name", "Project variables and data sources, read as in any script (vars is also a shortcut). A script layer can read them; it cannot move other layers."]
+];
 const STYLE_KEYS = ["fontFamily", "fontSize", "fontWeight", "italic", "color", "underline", "strike", "letterSpacing", "link"];
 function runsText(runs) {
   return runs ? runs.map((r2) => r2.text).join("") : "";
@@ -1540,8 +1723,66 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
 | \`ix.setCursor('grab')\`, \`ix.log(…)\` | Cursor, logging |
 
+To paint a layer from a script every frame (generative art, particles, charts), use a [Script layer](script-layers).
+
 ## The sandbox
 New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`
+  },
+  {
+    id: "script-layers",
+    title: "Script layers",
+    group: "Interactivity",
+    summary: "A layer painted by a script every frame: generative art, particles, charts and custom visualisations.",
+    keywords: "script layer draw canvas generative art particles chart graph visualisation visualization animation code g.rect g.circle fps pixel ratio sandbox",
+    body: () => `A **Script layer** is a box that a script paints every frame. Use it for things shapes and timelines can't do well: particles, generative art, live charts, custom meters and any other visualisation that is easier to compute than to draw by hand.
+
+Pick the **Script layer** tool in the toolbar and drag a box. It starts with a small script that already runs, and the **Start from** menu in the inspector replaces it with a starter: ${DRAW_TEMPLATES.map((t) => `**${t.name}**`).join(", ")}.
+
+## The script
+
+\`\`\`
+// Anything declared outside the functions keeps its value between frames
+const dots = [];
+
+function setup(g) {
+  for (let i = 0; i < 50; i++) dots.push({ x: g.random(g.width), y: g.random(g.height) });
+}
+
+function draw(g, t, dt) {
+  g.clear('#10131a');
+  g.fill('#6f8cff');
+  for (const d of dots) g.circle(d.x, (d.y + t * 20) % g.height, 3);
+}
+\`\`\`
+
+- \`draw(g, t, dt)\` runs every frame. **t** is seconds since the layer started and **dt** is seconds since its last frame.
+- \`setup(g)\` is optional and runs once first.
+- The layer is **cleared before every frame**, so draw everything each time. Keep animation state in variables outside \`draw\`.
+- Coordinates are layer pixels, 0,0 at the top-left of the box. Resize the layer and \`g.width\` and \`g.height\` follow.
+- Read project variables and data with \`ix.vars.name\` and \`ix.data.name\`, as in any [script](scripts). A bar chart can read a list variable, a meter a number. A script layer reads the project; it can't move other layers.
+
+## The drawing API
+
+\`g\` is a small recorder, not a canvas: each call adds a drawing command, and the player paints the list onto a real canvas. Fill and stroke are set first and then used by the shapes that follow.
+
+| Call | Does |
+|---|---|
+${DRAW_API.map(([sig, what]) => `| \`${sig.replace(/\|/g, "\\|")}\` | ${what.replace(/\|/g, "\\|")} |`).join("\n")}
+
+## Settings
+
+- **FPS**: a frame rate cap. 0 draws on every frame; 30 is plenty for most charts.
+- **Pixels**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 3. A fixed number is sharper but slower; very large layers are held to what the browser can allocate.
+- **Paint while editing**: draws a single still frame on the canvas, at the timeline's time (0 when no timeline is showing), so you can lay out the artboard. Turn it off for a heavy script; the layer then shows as a placeholder. **Preview** always runs it.
+
+The layer is an ordinary layer otherwise: move, rotate, fade, blend, mask and animate it, and click it with an **On pointer** event. Inside the script, \`g.pointer\` gives the pointer in the layer's own pixels (\`x\`, \`y\`, \`down\`, \`inside\`), correct even if the layer is rotated or inside a group.
+
+## Errors and limits
+
+- The script runs in the [sandbox](scripts) when the project has **Run scripts in the sandbox** on (the default): no page, network or storage access, and a frame that takes more than about 100 ms is stopped. Without the sandbox bundle the layer shows nothing.
+- An error in the script **stops that layer only**. The message shows under the code, in the layer on the canvas, and in the Preview's event list. Edit the code to start it again.
+- A frame is limited to 20,000 drawing commands. Past that, the rest are dropped and a warning is shown. Join many segments into one path with \`g.path\`.
+- \`g.random()\` is seeded: the layer draws the same numbers on every run. Call \`g.seed(1)\` at the start of \`draw\` for a picture that stays the same from frame to frame.`
   },
   {
     id: "usage",
@@ -1949,6 +2190,7 @@ function outline(list, depth, maxDepth, out, limit) {
     if (n.type === "text") extra.push(JSON.stringify(n.text.slice(0, 40)) + (n.runs?.length ? ` (${n.runs.length} runs)` : ""));
     if (n.type === "button") extra.push(JSON.stringify(n.label.slice(0, 40)));
     if (n.type === "instance") extra.push(`artboard=${n.artboardId}`);
+    if (n.type === "draw") extra.push(`script layer${n.fps ? ` ${n.fps}fps` : ""}, ${n.code.split("\n").length} lines`);
     if (!n.visible) extra.push("hidden");
     if (n.locked) extra.push("locked");
     if (n.bindings && Object.keys(n.bindings).length) extra.push(`bindings: ${Object.keys(n.bindings).join(",")}`);
@@ -2219,8 +2461,13 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   }
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n");
   if (topic === "layers") {
-    const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance"];
-    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
+    const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw"];
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t2) => `"${t2.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
+Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
+Paths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer's own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.
+
+Defaults per type (what add_layer fills in):
+` + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
   const t = TOPICS.find((x) => x.id === topic);
   if (t) return `# ${t.title}

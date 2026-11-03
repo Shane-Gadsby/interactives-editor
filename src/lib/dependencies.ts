@@ -245,6 +245,7 @@ export function analyzeUsage(project: Project): UsageReport {
 
         if (n.type === 'image') useId('asset', n.assetId, by, 'image');
         if (n.type === 'video') useId('asset', n.assetId, by, 'video');
+        if (n.type === 'draw') useCode(n.code, by, 'script layer code');
         if (n.type === 'input') useId('variable', n.variableId, by, 'input bound to variable');
         if (n.type === 'instance') {
           useId('artboard', n.artboardId, by, 'instance of artboard');

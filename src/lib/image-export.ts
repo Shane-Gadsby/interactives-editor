@@ -53,7 +53,7 @@ function fontCssCached(project: Project): Promise<string> {
  * elements to manage while you pan and zoom. Returns an object URL.
  */
 export async function snapshotFromDom(project: Project, ab: Artboard, root: HTMLElement, resolve: (id: string) => string | undefined): Promise<string> {
-  let html = new XMLSerializer().serializeToString(root);
+  let html = new XMLSerializer().serializeToString(withCanvasesAsImages(root));
   for (const a of project.assets) {
     if (!/^image\//.test(a.mime)) continue;
     const url = resolve(a.id);
@@ -67,6 +67,26 @@ export async function snapshotFromDom(project: Project, ab: Artboard, root: HTML
     (css ? `<defs><style>${css.replace(/]]>/g, '')}</style></defs>` : '') +
     `<foreignObject x="0" y="0" width="${ab.width}" height="${ab.height}">${html}</foreignObject></svg>`;
   return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+}
+
+/** Canvas pixels don't survive serialising: a copy of the tree where each canvas (script layers) is the picture it shows. */
+function withCanvasesAsImages(root: HTMLElement): HTMLElement {
+  const live = root.querySelectorAll('canvas');
+  if (!live.length) return root;
+  const copy = root.cloneNode(true) as HTMLElement;
+  const copies = copy.querySelectorAll('canvas');
+  live.forEach((c, i) => {
+    try {
+      const img = document.createElement('img');
+      img.src = c.toDataURL();
+      img.className = c.className;
+      img.style.cssText = c.style.cssText;
+      copies[i].replaceWith(img);
+    } catch {
+      /* a canvas the browser won't read: it is left out of the picture */
+    }
+  });
+  return copy;
 }
 
 async function fontCss(project: Project): Promise<string> {
@@ -125,6 +145,7 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
     const sampled: SceneNode[] = timeline ? sampleArtboard(ab.children, timeline, time) : ab.children;
     r.render(ab, prepareNodes(sampled, { vars }), { vars });
     if (r.root.querySelector('iframe, video')) warnings.push('Embeds and video show as empty boxes in pictures.');
+    if (r.root.querySelector('canvas.ix-draw')) warnings.push('Script layers show as empty boxes in pictures.');
     const html = new XMLSerializer().serializeToString(r.root);
     const css = opts.fonts === false ? '' : await fontCssCached(project);
     const svg =

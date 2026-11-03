@@ -14,6 +14,10 @@ import {
   nodeRuns,
   createNode,
   type InstanceNode,
+  type DrawNode,
+  DRAW_API,
+  DRAW_TEMPLATES,
+  type DrawTemplate,
   defaultAutoLayout,
   type AutoLayout,
   type FrameNode,
@@ -53,6 +57,8 @@ import { ChildOrder } from '../components/ChildOrder';
 import { blendExample } from '../lib/blend-example';
 import { ConvertersEditor } from '../components/Converters';
 import { TEXT_PRESETS } from '../lib/text-modifiers';
+import { applyDrawTemplate } from '../lib/draw-templates';
+import { useDrawProblem } from '../lib/draw-edit';
 
 const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
 const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
@@ -945,6 +951,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       );
     case 'instance':
       return <InstanceSection node={n} project={project} />;
+    case 'draw':
+      return <DrawSection nodes={nodes as DrawNode[]} />;
     case 'group':
       return (
         <Section help="groups-frames" title="Group">
@@ -954,6 +962,62 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     default:
       return null;
   }
+}
+
+const PIXEL_RATIOS = ['auto', '1', '2', '3'] as const;
+
+/** A script layer: its draw script, frame rate, pixel ratio, and starter scripts. */
+function DrawSection({ nodes }: { nodes: DrawNode[] }) {
+  const n = nodes[0];
+  const set = useSetter(nodes.map((x) => x.id));
+  const problem = useDrawProblem(n.id);
+  const ratio = typeof n.pixelRatio === 'number' ? String(n.pixelRatio) : 'auto';
+  return (
+    <Section help="script-layers" title="Script layer">
+      <SelectField
+        label="Start from"
+        title="Replace the script with a starter: particles, a bar chart that reads a variable, waves, a clock. Undo brings the old one back"
+        value=""
+        options={[{ value: '', label: 'Choose a template…' }, ...DRAW_TEMPLATES.map((t: DrawTemplate) => ({ value: t.id, label: t.name }))]}
+        onChange={(id) => id && applyDrawTemplate(nodes.map((x) => x.id), id)}
+      />
+      {nodes.length === 1 && (
+        <div className="code-field">
+          <div className="field-label block">
+            Draw script: <code>function draw(g, t, dt)</code>
+          </div>
+          <CodeEditor value={n.code} onChange={(v) => set({ code: v }, `code-${n.id}`)} height={280} />
+        </div>
+      )}
+      {problem && <p className={problem.kind === 'error' ? 'hint error' : 'hint'}>{problem.kind === 'error' ? `Script error, the layer stopped: ${problem.message}` : problem.message}</p>}
+      <Row>
+        <NumberField label="FPS" title="Frame rate cap: 0 draws on every frame" value={n.fps} min={0} max={120} onChange={(v) => set({ fps: Math.max(0, Math.round(v)) })} />
+        <SelectField
+          label="Pixels"
+          title="Canvas pixels per layer pixel. Auto follows the screen's density and the artboard's scale; a higher number is sharper but slower"
+          value={ratio}
+          options={PIXEL_RATIOS.map((r) => ({ value: r, label: r === 'auto' ? 'Auto' : `${r}x` }))}
+          onChange={(v) => set({ pixelRatio: v === 'auto' ? 'auto' : Number(v) })}
+        />
+      </Row>
+      <CheckField
+        label="Paint while editing"
+        title="Draw the layer on the canvas while you edit: one still frame (at the timeline's time). Off shows a placeholder; Preview always runs it"
+        value={n.runInEditor !== false}
+        onChange={(v) => set({ runInEditor: v })}
+      />
+      <details className="draw-api">
+        <summary>What can the script use?</summary>
+        <ul className="hint">
+          {DRAW_API.map(([sig, what]) => (
+            <li key={sig}>
+              <code>{sig}</code>: {what}
+            </li>
+          ))}
+        </ul>
+      </details>
+    </Section>
+  );
 }
 
 function BindingsSection({ node, project }: { node: SceneNode; project: Project }) {

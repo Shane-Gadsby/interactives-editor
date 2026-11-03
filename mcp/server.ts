@@ -13,6 +13,8 @@ import { CATALOG } from '../../interactives-player/src/catalog';
 import { ANIMATABLE_PROPS } from '../../interactives-player/src/animation';
 import { createNode } from '../../interactives-player/src/defaults';
 import { createArtboard, isContainer, uid, walk, type Artboard, type LogicNode, type NodeType, type Project, type SceneNode, type Variable } from '../../interactives-player/src/format';
+import { DRAW_API } from '../../interactives-player/src/draw';
+import { DRAW_TEMPLATES } from '../../interactives-player/src/draw-templates';
 import { runsPatch } from '../../interactives-player/src/textruns';
 import { diff } from '../shared/ops.mjs';
 import { TOPICS, topicBody } from '../src/help/topics';
@@ -135,6 +137,7 @@ function outline(list: SceneNode[], depth: number, maxDepth: number, out: string
     if (n.type === 'text') extra.push(JSON.stringify(n.text.slice(0, 40)) + (n.runs?.length ? ` (${n.runs.length} runs)` : ''));
     if (n.type === 'button') extra.push(JSON.stringify(n.label.slice(0, 40)));
     if (n.type === 'instance') extra.push(`artboard=${n.artboardId}`);
+    if (n.type === 'draw') extra.push(`script layer${n.fps ? ` ${n.fps}fps` : ''}, ${n.code.split('\n').length} lines`);
     if (!n.visible) extra.push('hidden');
     if (n.locked) extra.push('locked');
     if (n.bindings && Object.keys(n.bindings).length) extra.push(`bindings: ${Object.keys(n.bindings).join(',')}`);
@@ -420,11 +423,12 @@ function reference(topic: string): string {
   }
   if (topic === 'properties') return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join('\n');
   if (topic === 'layers') {
-    const types: NodeType[] = ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance'];
+    const types: NodeType[] = ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance', 'draw'];
     return (
       'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints.\n' +
       'Text layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\n' +
       'Text layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\n' +
+      'Script layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t) => `"${t.name}"`).join(', ') + '. The g API:\n' + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join('\n') + '\nExample: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear(\'#10131a\');\\n  g.fill(\'#6f8cff\');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.\n' +
       'Paths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' +
       types.map((t) => `- ${t}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t)).filter(([k]) => !['id', 'name', 'x', 'y', 'rotation', 'scaleX', 'scaleY', 'originX', 'originY', 'opacity', 'visible'].includes(k))))}`).join('\n')
     );

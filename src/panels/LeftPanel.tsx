@@ -42,6 +42,7 @@ const TYPE_ICON: Record<string, IconName> = {
   link: 'link',
   embed: 'embed',
   video: 'video',
+  draw: 'draw',
   instance: 'copy',
 };
 

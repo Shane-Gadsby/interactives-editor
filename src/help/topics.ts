@@ -1,4 +1,4 @@
-import { ANIMATABLE_PROPS, CATALOG, PACKAGE_EXTENSION, type NodeDef } from 'interactives-player';
+import { ANIMATABLE_PROPS, CATALOG, DRAW_API, DRAW_TEMPLATES, PACKAGE_EXTENSION, type NodeDef } from 'interactives-player';
 
 export interface HelpTopic {
   id: string;
@@ -786,8 +786,66 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
 | \`ix.setCursor('grab')\`, \`ix.log(…)\` | Cursor, logging |
 
+To paint a layer from a script every frame (generative art, particles, charts), use a [Script layer](script-layers).
+
 ## The sandbox
 New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`,
+  },
+  {
+    id: 'script-layers',
+    title: 'Script layers',
+    group: 'Interactivity',
+    summary: 'A layer painted by a script every frame: generative art, particles, charts and custom visualisations.',
+    keywords: 'script layer draw canvas generative art particles chart graph visualisation visualization animation code g.rect g.circle fps pixel ratio sandbox',
+    body: () => `A **Script layer** is a box that a script paints every frame. Use it for things shapes and timelines can't do well: particles, generative art, live charts, custom meters and any other visualisation that is easier to compute than to draw by hand.
+
+Pick the **Script layer** tool in the toolbar and drag a box. It starts with a small script that already runs, and the **Start from** menu in the inspector replaces it with a starter: ${DRAW_TEMPLATES.map((t) => `**${t.name}**`).join(', ')}.
+
+## The script
+
+\`\`\`
+// Anything declared outside the functions keeps its value between frames
+const dots = [];
+
+function setup(g) {
+  for (let i = 0; i < 50; i++) dots.push({ x: g.random(g.width), y: g.random(g.height) });
+}
+
+function draw(g, t, dt) {
+  g.clear('#10131a');
+  g.fill('#6f8cff');
+  for (const d of dots) g.circle(d.x, (d.y + t * 20) % g.height, 3);
+}
+\`\`\`
+
+- \`draw(g, t, dt)\` runs every frame. **t** is seconds since the layer started and **dt** is seconds since its last frame.
+- \`setup(g)\` is optional and runs once first.
+- The layer is **cleared before every frame**, so draw everything each time. Keep animation state in variables outside \`draw\`.
+- Coordinates are layer pixels, 0,0 at the top-left of the box. Resize the layer and \`g.width\` and \`g.height\` follow.
+- Read project variables and data with \`ix.vars.name\` and \`ix.data.name\`, as in any [script](scripts). A bar chart can read a list variable, a meter a number. A script layer reads the project; it can't move other layers.
+
+## The drawing API
+
+\`g\` is a small recorder, not a canvas: each call adds a drawing command, and the player paints the list onto a real canvas. Fill and stroke are set first and then used by the shapes that follow.
+
+| Call | Does |
+|---|---|
+${DRAW_API.map(([sig, what]) => `| \`${sig.replace(/\|/g, '\\|')}\` | ${what.replace(/\|/g, '\\|')} |`).join('\n')}
+
+## Settings
+
+- **FPS**: a frame rate cap. 0 draws on every frame; 30 is plenty for most charts.
+- **Pixels**: canvas pixels per layer pixel. **Auto** follows the screen's density and the artboard's scale, up to 3. A fixed number is sharper but slower; very large layers are held to what the browser can allocate.
+- **Paint while editing**: draws a single still frame on the canvas, at the timeline's time (0 when no timeline is showing), so you can lay out the artboard. Turn it off for a heavy script; the layer then shows as a placeholder. **Preview** always runs it.
+
+The layer is an ordinary layer otherwise: move, rotate, fade, blend, mask and animate it, and click it with an **On pointer** event. Inside the script, \`g.pointer\` gives the pointer in the layer's own pixels (\`x\`, \`y\`, \`down\`, \`inside\`), correct even if the layer is rotated or inside a group.
+
+## Errors and limits
+
+- The script runs in the [sandbox](scripts) when the project has **Run scripts in the sandbox** on (the default): no page, network or storage access, and a frame that takes more than about 100 ms is stopped. Without the sandbox bundle the layer shows nothing.
+- An error in the script **stops that layer only**. The message shows under the code, in the layer on the canvas, and in the Preview's event list. Edit the code to start it again.
+- A frame is limited to 20,000 drawing commands. Past that, the rest are dropped and a warning is shown. Join many segments into one path with \`g.path\`.
+- \`g.random()\` is seeded: the layer draws the same numbers on every run. Call \`g.seed(1)\` at the start of \`draw\` for a picture that stays the same from frame to frame.`,
   },
 
   {

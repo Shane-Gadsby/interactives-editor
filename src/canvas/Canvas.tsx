@@ -71,6 +71,7 @@ const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
   link: 'link',
   embed: 'embed',
   video: 'video',
+  draw: 'draw',
 };
 
 const SNAP_PX = 6;
@@ -1181,6 +1182,7 @@ export function Canvas() {
       { type: 'link', label: 'Link' },
       { type: 'embed', label: 'Embed' },
       { type: 'video', label: 'Video' },
+      { type: 'draw', label: 'Script layer' },
     ];
     const newHere = (ab: Artboard): MenuItem => ({
       label: 'New',
@@ -1699,6 +1701,13 @@ function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zo
         <>
           <rect x={x} y={y} width={w} height={h} fill="#2a2b30" fillOpacity={0.9} />
           {h > 14 * zoom && label(tool === 'embed' ? 'Embed' : 'Video', '#9a9ea8', 14)}
+        </>
+      );
+    case 'draw':
+      return (
+        <>
+          <rect x={x} y={y} width={w} height={h} fill="#10131a" fillOpacity={0.9} />
+          {h > 14 * zoom && label('Script layer', '#6f8cff', 14)}
         </>
       );
     default:

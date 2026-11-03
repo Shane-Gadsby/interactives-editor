@@ -12,6 +12,8 @@ export default defineConfig({
     alias: [
       { find: /^interactives-player$/, replacement: `${playerDir}/src/index.ts` },
       { find: /^@player-iife(\?raw)?$/, replacement: `${playerDir}/dist/interactives-player.iife.js$1` },
+      // The script sandbox's source, for painting script layers on the editor canvas (a lazy chunk)
+      { find: /^@player-sandbox$/, replacement: `${playerDir}/src/sandbox.ts` },
       { find: /^@player-sandbox-iife(\?raw)?$/, replacement: `${playerDir}/dist/interactives-sandbox.iife.js$1` },
     ],
     dedupe: ['fflate'],

@@ -1,5 +1,6 @@
 import playerSource from '@player-iife?raw';
 import { buildStandaloneHtml, PACKAGE_EXTENSION, type Project } from 'interactives-player';
+import { hasScriptLayers } from './draw-templates';
 import { assetBytes, exportPackage } from './db';
 
 export function download(blob: Blob, filename: string): void {
@@ -33,7 +34,7 @@ export function withoutLinks(project: Project): Project {
 export async function standaloneHtml(project: Project, opts: { startArtboardId?: string; debug?: boolean } = {}): Promise<string> {
   const clean = withoutLinks(project);
   const p = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
-  const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p)) ? await loadSandboxSource() : undefined;
+  const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
   return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: (a) => assetBytes(project.id, a), debug: opts.debug });
 }
 

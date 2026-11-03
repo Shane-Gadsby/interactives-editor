@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, measureTextExtent, prepareNodes, sampleArtboard, walk, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
+import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
 import { assetUrls } from '../lib/assets';
 import { store } from '../store/store';
 
@@ -27,17 +28,23 @@ let snapSeq = 0;
 export function ArtboardView({ artboard, project, timeline, time, active, assetVersion, dataVersion, live }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const renderer = useRef<Renderer | null>(null);
+  const draw = useRef<EditorDraw | null>(null);
   // Instances draw other artboards, so they redraw when any artboard changes
   const depsKey = instanceDepsKey(project, artboard);
 
   // A layout effect, declared before the render one, so the renderer exists for the very first render.
   useLayoutEffect(() => {
-    const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve, mountInstance: editInstanceMount(() => store().get().project) });
+    // Script layers paint one still frame in the sandbox (loaded the first time a project has one)
+    const d = createEditorDraw(() => store().get().project);
+    const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve, mountInstance: editInstanceMount(() => store().get().project), mountDraw: d.mount });
     renderer.current = r;
+    draw.current = d;
     host.current!.appendChild(r.root);
     return () => {
       r.destroy();
+      d.dispose();
       renderer.current = null;
+      draw.current = null;
     };
   }, []);
 
@@ -48,6 +55,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     const sampled: SceneNode[] = timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children;
     // Same bindings and repeaters the player applies, against initial variable values and the loaded data.
     const nodes = prepareNodes(sampled, { vars });
+    // Script layers paint at the timeline's time (0 when none is showing), again when assets or data change
+    draw.current?.configure(timeline ? time / 1000 : 0, `${assetVersion}|${dataVersion}`);
     r.render(artboard, nodes, { vars });
     // Auto-sized text: measure and write the size back (no undo step).
     const updates: { id: string; width?: number; height?: number }[] = [];

@@ -14,7 +14,8 @@
     "types": ["vite/client", "node"],
     "baseUrl": ".",
     "paths": {
-      "interactives-player": ["../interactives-player/src/index.ts"]
+      "interactives-player": ["../interactives-player/src/index.ts"],
+      "@player-sandbox": ["../interactives-player/src/sandbox.ts"]
     }
   },
   "include": ["src", "test"]

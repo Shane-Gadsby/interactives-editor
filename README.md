@@ -6,7 +6,8 @@ The browser editor for Interactives. You use it to build interactive 2D experien
 - keyframe timelines;
 - a node-based interaction graph;
 - variables and data bindings;
-- custom JavaScript.
+- custom JavaScript;
+- script layers: a box painted by a script every frame (generative art, charts), with starter templates.
 
 Projects are stored on the server in MongoDB. They export as a single self-contained HTML file or as a `.ixp` package (zip), and import back from `.ixp`.
 
@@ -97,6 +98,7 @@ Access works like this:
 | `store/store.ts` | `EditorStore`: the immer document, undo/redo with drag coalescing, selection, recording keyframes |
 | `store/doc.ts` | tree lookups, world matrices, hit testing |
 | `canvas/` | viewport (pan/zoom), artboards drawn by the player's `Renderer` in edit mode, overlay handles, tools, pen and path editing, snapping, in-place text |
+| `lib/draw-edit.ts`, `lib/draw-templates.ts` | script layers on the canvas: one still frame painted in the sandbox (lazy chunk, aliased `@player-sandbox`), error registry for the inspector, starter templates |
 | `panels/` | layers + assets, inspector, timeline, interaction graph (React Flow over the player's node catalog), scripts (CodeMirror), variables |
 | `lib/db.ts` | API client, `.ixp` import/export |
 | `lib/export.ts` | single-file HTML (embeds the player IIFE build, plus the script sandbox when used), `.ixp`, JSON |
