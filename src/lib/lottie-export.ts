@@ -261,7 +261,11 @@ export function exportLottie(project: Project, artboard: Artboard, opts: { timel
     let layer: Json | null = null;
     const shapes = shapesFor(ctx, n);
     if (shapes) layer = { ty: 4, shapes };
-    else if (n.type === 'text' || n.type === 'link') layer = textLayer(n, n.text, fonts);
+    else if (n.type === 'text' || n.type === 'link') {
+      // Lottie text has one style per layer: rich text runs export as the plain text in the layer's own style
+      if (n.type === 'text' && n.runs?.length) ctx.warnings.add('Text with several styles (runs) exports as plain text in the layer’s own style');
+      layer = textLayer(n, n.text, fonts);
+    }
     else if (n.type === 'image') {
       const bytes = n.assetId ? ctx.bytesFor(n.assetId) : null;
       if (bytes) {

@@ -24,6 +24,7 @@ import {
   createNode,
   uid,
   defaultParams,
+  runsPatch,
   type Artboard,
   type Easing,
   type FontRef,
@@ -37,6 +38,7 @@ import {
   type PathPoint,
   type SceneNode,
   type Stroke,
+  type TextRun,
   type SubPath,
   type Timeline,
   type Track,
@@ -867,7 +869,41 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
     void riveLineHeight;
     void runText;
   }
-  if (runs.length > 1) fc.warnings.add('Text with several styled runs uses the first run’s style for the whole text');
+  // Further runs that use another style become rich text runs: only what differs from the first run's style is stored.
+  let textRuns: TextRun[] | undefined;
+  if (runs.length > 1) {
+    const read = (st: typeof style) => {
+      let col = color;
+      let fam = fontFamily;
+      if (st) {
+        const stSlot = ac.rab.slots.indexOf(st);
+        for (const pi of ac.children.get(stSlot) ?? []) {
+          if (ac.rab.slots[pi].type === 'Fill') {
+            const info = paintOf(ac, fc, pi, null);
+            if (info.paint?.type === 'solid') col = info.paint.color;
+          }
+        }
+        const fa = fc.file.assets[Number(get(st, 'fontAssetId'))];
+        const nm = fa ? String(get(fa.obj, 'name') ?? '') : '';
+        if (nm) fam = `"${nm.replace(/\.[^.]+$/, '')}", system-ui, sans-serif`;
+      }
+      return { fontSize: st ? r2(get(st, 'fontSize') || 16) : fontSize, letterSpacing: st ? r2(get(st, 'letterSpacing')) : letterSpacing, color: col, fontFamily: fam };
+    };
+    const base = read(style);
+    textRuns = runs.map((r) => {
+      const st = ac.rab.slots[Number(get(r.o, 'styleId'))];
+      const run: TextRun = { text: String(get(r.o, 'text') ?? '') };
+      if (!st || st === style) return run;
+      const v = read(st);
+      if (v.fontSize !== base.fontSize) run.fontSize = v.fontSize;
+      if (v.letterSpacing !== base.letterSpacing) run.letterSpacing = v.letterSpacing;
+      if (v.color !== base.color) run.color = v.color;
+      if (v.fontFamily !== base.fontFamily) run.fontFamily = v.fontFamily;
+      return run;
+    });
+    const patch = runsPatch(textRuns);
+    textRuns = patch.runs;
+  }
   const w = get(o, 'width') || 200;
   const h = get(o, 'height') || fontSize * lineHeight;
   const ox = get(o, 'originX');
@@ -877,6 +913,7 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
   const node = createNode('text', {
     name: String(o.props.name ?? 'Text'),
     text,
+    ...(textRuns ? { runs: textRuns } : {}),
     fontSize,
     fontFamily,
     color,

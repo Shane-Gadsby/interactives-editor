@@ -972,6 +972,11 @@ code,
   overflow: hidden;
   outline: none;
 }
+div.text-editor {
+  box-sizing: border-box;
+  min-width: 40px;
+  cursor: text;
+}
 
 /* ---------------------------------------------------------------- layers + assets */
 .layers,
@@ -2883,4 +2888,32 @@ code {
 .child-order .mini:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+/* ---------------------------------------------------------------- text runs (inspector) */
+.runs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0;
+}
+.run-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.run-row textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 24px;
+  box-sizing: border-box;
+}
+.run-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }

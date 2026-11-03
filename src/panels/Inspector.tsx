@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import {
   ANIMATABLE_PROPS,
   CURSORS,
+  nodeRuns,
   createNode,
   type InstanceNode,
   defaultAutoLayout,
@@ -22,6 +23,7 @@ import {
   type SceneNode,
   type Shadow,
   type Stroke,
+  type TextRun,
   type TextStyle,
   type Constraint,
   type ConstraintType,
@@ -529,6 +531,89 @@ function AddMenu({ title, items }: { title: string; items: { label: string; onCl
   );
 }
 
+/** Shown while a range of a text layer is selected on the canvas: the style fields below then restyle just that range. */
+function TextSelectionHint({ id }: { id: string }) {
+  const sel = useEditor((s) => s.textSelection);
+  const editing = useEditor((s) => s.editingTextId);
+  if (editing !== id || !sel || sel.id !== id || sel.start === sel.end) return null;
+  return <p className="hint">Styling the {sel.end - sel.start} selected characters. Click outside the text to style the whole layer.</p>;
+}
+
+/**
+ * Rich text as a list: each run is a stretch of text with its own overrides (empty = the layer's own style).
+ * Clearing a run's text removes it, and equal neighbours merge. Parts are cut on the canvas, by selecting a range.
+ */
+function RunsEditor({ node: n }: { node: Extract<SceneNode, { type: 'text' }> }) {
+  const [open, setOpen] = useState(false);
+  const runs = nodeRuns(n);
+  const rich = !!n.runs?.length;
+  const save = (next: TextRun[], coalesce?: string) => store().setTextRuns(n.id, next, coalesce);
+  const edit = (i: number, patch: Partial<TextRun>, coalesce?: string) => save(runs.map((r, j) => (j === i ? { ...r, ...patch } : r)), coalesce);
+  const clear = (i: number, key: keyof TextRun) => {
+    const r = { ...runs[i] };
+    delete r[key];
+    save(runs.map((x, j) => (j === i ? r : x)));
+  };
+  const toggle = (i: number, key: 'underline' | 'strike' | 'italic', baseOn: boolean) => {
+    const r = runs[i];
+    const on = r[key] ?? baseOn;
+    if (on === baseOn) edit(i, { [key]: !baseOn });
+    else clear(i, key);
+  };
+  return (
+    <div className="runs">
+      <button className="btn" onClick={() => setOpen(!open)} title="Style parts of the text differently. On the canvas: double-click the text, select a range and press Ctrl/Cmd+B, I or U.">
+        {open ? 'Hide text runs' : rich ? `Text runs (${runs.length})` : 'Text runs…'}
+      </button>
+      {open && (
+        <>
+          {runs.map((r, i) => {
+            const bold = (r.fontWeight ?? n.fontWeight) >= 600;
+            return (
+              <div className="run-row" key={i}>
+                <textarea
+                  rows={1}
+                  value={r.text}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onChange={(e) => edit(i, { text: e.target.value }, `run-${n.id}-${i}`)}
+                />
+                <div className="run-tools">
+                  <IconButton icon={<b>B</b>} title="Bold" active={bold} onClick={() => edit(i, { fontWeight: bold ? (n.fontWeight >= 600 ? 400 : n.fontWeight) : 700 })} />
+                  <IconButton icon={<i>I</i>} title="Italic" active={r.italic ?? n.fontStyle === 'italic'} onClick={() => toggle(i, 'italic', n.fontStyle === 'italic')} />
+                  <IconButton icon={<u>U</u>} title="Underline" active={r.underline ?? n.textDecoration === 'underline'} onClick={() => toggle(i, 'underline', n.textDecoration === 'underline')} />
+                  <IconButton icon={<s>S</s>} title="Strikethrough" active={r.strike ?? n.textDecoration === 'line-through'} onClick={() => toggle(i, 'strike', n.textDecoration === 'line-through')} />
+                  <ColorField value={r.color ?? n.color} onChange={(c) => edit(i, { color: c }, `run-color-${n.id}-${i}`)} onCommit={() => store().commit()} title="Colour of this run" />
+                  <NumberField value={r.fontSize ?? n.fontSize} min={1} onChange={(v) => edit(i, { fontSize: v }, `run-size-${n.id}-${i}`)} onCommit={() => store().commit()} title="Size of this run" />
+                </div>
+                <div className="run-tools">
+                  <TextField
+                    placeholder="Link URL (optional)"
+                    value={r.link?.url ?? ''}
+                    commitOnBlur
+                    onChange={(v) => edit(i, { link: v.trim() ? { url: v.trim(), target: '_blank' } : null })}
+                  />
+                  <button className="btn" title="Remove this run and its text" onClick={() => save(runs.filter((_, j) => j !== i))}>
+                    Remove
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          <button className="btn" onClick={() => save([...runs, { text: ' text', fontWeight: n.fontWeight >= 600 ? 400 : 700 }])}>
+            Add run
+          </button>
+          {rich && (
+            <button className="btn" title="Keep the text, drop all the per-run styling" onClick={() => save([{ text: n.text }])}>
+              Clear run styling
+            </button>
+          )}
+          <p className="hint">A binding on Text replaces all runs with the bound plain text.</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[]; project: Project }) {
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
@@ -637,6 +722,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return (
         <Section help="text" title="Text">
           {nodes.length === 1 && <TextField label="Text" value={n.text} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
+          {nodes.length === 1 && <RunsEditor node={n} />}
           <SelectField
             label="Sizing"
             value={n.autoSize}
@@ -647,6 +733,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             ]}
             onChange={(v) => set({ autoSize: v })}
           />
+          <TextSelectionHint id={n.id} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           <p className="hint">
             Insert variables with <code>{'{name}'}</code>, or any expression like <code>{'{score * 10}'}</code>.

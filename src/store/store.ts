@@ -12,12 +12,18 @@ import {
   walk,
   apply,
   invert,
+  applyRunStyle,
+  nodeRuns,
+  retextRuns,
   type Artboard,
   type Keyframe,
   type Project,
+  type RunStyle,
   type SceneNode,
+  type TextRun,
   type Timeline,
 } from 'interactives-player';
+import { applyRuns, nodePropsToRunStyle } from '../lib/rich-text';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { apply as applyOps, type Op } from '../../shared/ops.mjs';
 import type { Peer } from '../lib/live';
@@ -59,6 +65,8 @@ export interface EditorState {
   panY: number;
   editingPathId: string | null;
   editingTextId: string | null;
+  /** The selected range (UTF-16 offsets into the layer's text) while editing text on the canvas; style changes apply to it. */
+  textSelection: { id: string; start: number; end: number } | null;
   bottomTab: BottomTab | null;
   bottomHeight: number;
   activeTimelineId: string | null;
@@ -121,6 +129,7 @@ export class EditorStore {
       panY: 80,
       editingPathId: null,
       editingTextId: null,
+      textSelection: null,
       bottomTab: 'timeline',
       bottomHeight: 260,
       activeTimelineId: null,
@@ -333,6 +342,20 @@ export class EditorStore {
   /** Apply per-node changes (id -> props). */
   setEach(changes: Map<string, Record<string, unknown>>, coalesce?: string): void {
     const s = this.state;
+    // While editing text with a range selected, style changes (colour, size, weight, ...) go to that range as runs
+    const sel = s.editingTextId && s.textSelection && s.textSelection.id === s.editingTextId && s.textSelection.start !== s.textSelection.end ? s.textSelection : null;
+    const selNode = sel && changes.has(sel.id) ? this.nodeById(sel.id) : undefined;
+    // (everything selected in a layer with no runs is just "the layer": that sets its own style, as before)
+    if (sel && selNode?.type === 'text' && !(sel.start === 0 && sel.end >= selNode.text.length && !selNode.runs?.length)) {
+      const { style, rest } = nodePropsToRunStyle(changes.get(sel.id)!);
+      if (Object.keys(style).length) {
+        this.styleTextRange(sel.id, sel.start, sel.end, style, coalesce);
+        changes = new Map(changes);
+        if (Object.keys(rest).length) changes.set(sel.id, rest);
+        else changes.delete(sel.id);
+        if (!changes.size) return;
+      }
+    }
     const tl = this.timeline();
     const record = s.recording && tl && s.bottomTab === 'timeline';
     this.update((d) => {
@@ -345,11 +368,39 @@ export class EditorStore {
           if (record && ANIMATABLE_PROPS.some((a) => a.prop === prop)) {
             const dtl = ab.timelines.find((t) => t.id === tl!.id)!;
             setKey(dtl as Timeline, id, prop, s.playhead, value as Keyframe['value']);
+          } else if (prop === 'text' && loc.node.type === 'text' && loc.node.runs?.length) {
+            // Editing the plain text of a rich text layer keeps the styling around the edit
+            applyRuns(loc.node, retextRuns(loc.node.runs, String(value ?? '')));
           } else {
             setPath(loc.node as unknown as Record<string, unknown>, prop, value);
           }
         }
       }
+    }, { coalesce });
+  }
+
+  private nodeById(id: string): SceneNode | undefined {
+    const ab = this.artboard();
+    return ab ? locate(ab, id)?.node : undefined;
+  }
+
+  /** Style part of a text layer (rich text): splits runs at the edges, merges equal neighbours, keeps `text` in sync. */
+  styleTextRange(id: string, start: number, end: number, patch: Partial<RunStyle>, coalesce?: string): void {
+    this.update((d) => {
+      const ab = getArtboard(d as Project, this.state.activeArtboardId);
+      const n = ab && locate(ab as Artboard, id)?.node;
+      if (!n || n.type !== 'text') return;
+      applyRuns(n, applyRunStyle(nodeRuns(n), start, end, patch));
+    }, { coalesce });
+  }
+
+  /** Replace a text layer's runs (and so its text). Plain runs turn the layer back to ordinary text. */
+  setTextRuns(id: string, runs: TextRun[], coalesce?: string): void {
+    this.update((d) => {
+      const ab = getArtboard(d as Project, this.state.activeArtboardId);
+      const n = ab && locate(ab as Artboard, id)?.node;
+      if (!n || n.type !== 'text') return;
+      applyRuns(n, runs);
     }, { coalesce });
   }
 

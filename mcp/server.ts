@@ -13,6 +13,7 @@ import { CATALOG } from '../../interactives-player/src/catalog';
 import { ANIMATABLE_PROPS } from '../../interactives-player/src/animation';
 import { createNode } from '../../interactives-player/src/defaults';
 import { createArtboard, isContainer, uid, walk, type Artboard, type LogicNode, type NodeType, type Project, type SceneNode, type Variable } from '../../interactives-player/src/format';
+import { runsPatch } from '../../interactives-player/src/textruns';
 import { diff } from '../shared/ops.mjs';
 import { TOPICS, topicBody } from '../src/help/topics';
 
@@ -131,7 +132,7 @@ function outline(list: SceneNode[], depth: number, maxDepth: number, out: string
   for (const n of [...list].reverse()) {
     if (limit.n-- <= 0) return;
     const extra: string[] = [];
-    if (n.type === 'text') extra.push(JSON.stringify(n.text.slice(0, 40)));
+    if (n.type === 'text') extra.push(JSON.stringify(n.text.slice(0, 40)) + (n.runs?.length ? ` (${n.runs.length} runs)` : ''));
     if (n.type === 'button') extra.push(JSON.stringify(n.label.slice(0, 40)));
     if (n.type === 'instance') extra.push(`artboard=${n.artboardId}`);
     if (!n.visible) extra.push('hidden');
@@ -246,6 +247,7 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
           if (k === 'id' || k === 'type' || k === 'children') continue;
           setPath(loc.node as unknown as Record<string, unknown>, k, v);
         }
+        syncRuns(loc.node, props);
         touched.push(loc.node.id);
         break;
       }
@@ -253,6 +255,7 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
         const ab = findAb(c.artboard_id);
         const node = createNode(c.type as NodeType, (resolveRefs(c.props ?? {}) as Partial<SceneNode>) as never) as SceneNode;
         if (isContainer(node) && Array.isArray(c.children)) node.children = [];
+        syncRuns(node, (resolveRefs(c.props ?? {}) as Record<string, unknown>));
         let list = ab.children;
         if (c.parent_id) {
           const parent = locate(p, ref(c.parent_id));
@@ -385,6 +388,17 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
   return { project: p, created, touched };
 }
 
+/** Keep a text layer's `text` and `runs` consistent after an edit: runs win when given, and plain `text` alone replaces them. */
+function syncRuns(node: SceneNode, props: Record<string, unknown>): void {
+  if (node.type !== 'text') return;
+  if (Array.isArray(props.runs)) {
+    const patch = runsPatch(props.runs.filter((r): r is { text: string } => !!r && typeof (r as { text?: unknown }).text === 'string'));
+    node.text = patch.text;
+    if (patch.runs) node.runs = patch.runs;
+    else delete node.runs;
+  } else if ('text' in props || props.runs === null) delete node.runs;
+}
+
 function setPath(obj: Record<string, unknown>, path: string, v: unknown) {
   const keys = path.split('.');
   let cur = obj;
@@ -407,6 +421,7 @@ function reference(topic: string): string {
     const types: NodeType[] = ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance'];
     return (
       'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, layoutItem, constraints.\n' +
+      'Text layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\n' +
       'Paths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' +
       types.map((t) => `- ${t}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t)).filter(([k]) => !['id', 'name', 'x', 'y', 'rotation', 'scaleX', 'scaleY', 'originX', 'originY', 'opacity', 'visible'].includes(k))))}`).join('\n')
     );

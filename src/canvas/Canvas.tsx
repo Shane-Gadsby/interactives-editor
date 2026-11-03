@@ -13,13 +13,17 @@ import {
   uid,
   defaultParams,
   applyConstraints,
+  nodeRuns,
   type Artboard,
   type Matrix,
   type NodeType,
   type PathNode,
   type PathPoint,
   type SceneNode,
+  type TextRun,
 } from 'interactives-player';
+import { toggleRunStyle, type ToggleKind } from '../lib/rich-text';
+import { paintRuns, readRuns, selectionOffsets, setSelectionOffsets } from '../lib/rich-text-dom';
 import { store, useEditor, type Tool } from '../store/store';
 import { getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, topmost, type Rect } from '../store/doc';
 import { assetUrls } from '../lib/assets';
@@ -287,7 +291,7 @@ export function Canvas() {
     } catch {
       // synthetic or already-released pointer
     }
-    if (st.editingTextId && !target.closest('.text-editor')) store().set({ editingTextId: null });
+    if (st.editingTextId && !target.closest('.text-editor')) store().set({ editingTextId: null, textSelection: null });
 
     if (e.button === 1 || spaceDown.current || st.tool === 'hand') {
       drag.current = { kind: 'pan', sx: e.clientX, sy: e.clientY, px: st.panX, py: st.panY };
@@ -1396,6 +1400,127 @@ export function Canvas() {
 
 function TextEditor({ ab, id, zoom, panX, panY }: { ab: Artboard; id: string; zoom: number; panX: number; panY: number }) {
   const loc = locate(ab, id);
+  if (!loc) return null;
+  if (loc.node.type === 'text') return <RichTextEditor node={loc.node} ab={ab} zoom={zoom} panX={panX} panY={panY} />;
+  return <PlainTextEditor ab={ab} id={id} zoom={zoom} panX={panX} panY={panY} />;
+}
+
+/** In-place editor for text layers: a contenteditable with one span per run, so ranges can be styled (Ctrl/Cmd+B, I, U, Shift+X; or the inspector). */
+function RichTextEditor({ node: n, ab, zoom, panX, panY }: { node: Extract<SceneNode, { type: 'text' }>; ab: Artboard; zoom: number; panX: number; panY: number }) {
+  const id = n.id;
+  const ref = useRef<HTMLDivElement>(null);
+  const painted = useRef<TextRun[]>([]);
+  const ownSig = useRef('');
+  const sigOf = (t: Extract<SceneNode, { type: 'text' }>) => JSON.stringify([t.text, t.runs ?? null, zoom]);
+  const paint = () => {
+    const el = ref.current;
+    if (!el) return;
+    const node = locate(store().artboard()!, id)?.node;
+    if (!node || node.type !== 'text') return;
+    painted.current = nodeRuns(node).map((r) => ({ ...r }));
+    paintRuns(el, painted.current, node, zoom);
+    ownSig.current = sigOf(node);
+  };
+  // First paint, focus and select everything
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    paint();
+    el.focus();
+    const len = el.textContent?.length ?? 0;
+    setSelectionOffsets(el, 0, len);
+    store().set({ textSelection: { id, start: 0, end: len } });
+    return () => {
+      if (store().get().textSelection?.id === id) store().set({ textSelection: null });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+  // The document changed some other way than typing here: repaint, keeping the selection
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || sigOf(n) === ownSig.current) return;
+    paint();
+    const sel = store().get().textSelection;
+    if (sel && sel.id === id && document.activeElement === el) setSelectionOffsets(el, sel.start, sel.end);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n.text, n.runs, zoom]);
+  useEffect(() => {
+    const onSel = () => {
+      const el = ref.current;
+      const o = el && selectionOffsets(el);
+      if (!o) return;
+      const cur = store().get().textSelection;
+      if (!cur || cur.id !== id || cur.start !== o.start || cur.end !== o.end) store().set({ textSelection: { id, ...o } });
+    };
+    document.addEventListener('selectionchange', onSel);
+    return () => document.removeEventListener('selectionchange', onSel);
+  }, [id]);
+
+  const b = selectionBounds(ab, [id])!;
+  const style: React.CSSProperties = {
+    left: panX + (ab.canvasX + b.x) * zoom,
+    top: panY + (ab.canvasY + b.y) * zoom,
+    width: Math.max(40, b.width * zoom + 4),
+    minHeight: b.height * zoom,
+    fontFamily: n.fontFamily,
+    fontSize: n.fontSize * zoom,
+    fontWeight: n.fontWeight,
+    fontStyle: n.fontStyle,
+    lineHeight: n.lineHeight,
+    letterSpacing: n.letterSpacing * zoom,
+    textAlign: n.align,
+    textTransform: n.textTransform,
+    color: n.color,
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'break-word',
+  };
+  const read = () => {
+    const el = ref.current;
+    if (!el) return;
+    store().setTextRuns(id, readRuns(el, painted.current), `text-${id}`);
+    const node = locate(store().artboard()!, id)?.node;
+    if (node && node.type === 'text') ownSig.current = sigOf(node);
+  };
+  return (
+    <div
+      ref={ref}
+      className="text-editor"
+      style={style}
+      contentEditable="plaintext-only"
+      suppressContentEditableWarning
+      spellCheck={false}
+      onInput={read}
+      onBlur={(e) => {
+        // Focus moving into the inspector (to change colour or size of the selection) keeps editing
+        const to = e.relatedTarget as HTMLElement | null;
+        if (to?.closest?.('.inspector')) return;
+        store().commit();
+        store().set({ editingTextId: null, textSelection: null });
+      }}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
+          (e.target as HTMLElement).blur();
+          return;
+        }
+        const mod = e.metaKey || e.ctrlKey;
+        const kind: ToggleKind | null = mod && !e.altKey ? (e.key.toLowerCase() === 'b' && !e.shiftKey ? 'bold' : e.key.toLowerCase() === 'i' && !e.shiftKey ? 'italic' : e.key.toLowerCase() === 'u' && !e.shiftKey ? 'underline' : e.key.toLowerCase() === 'x' && e.shiftKey ? 'strike' : null) : null;
+        if (!kind) return;
+        e.preventDefault();
+        const el = ref.current;
+        const o = el && selectionOffsets(el);
+        if (!o || o.start === o.end) return;
+        const node = locate(store().artboard()!, id)?.node;
+        if (!node || node.type !== 'text') return;
+        store().styleTextRange(id, o.start, o.end, toggleRunStyle(nodeRuns(node), o.start, o.end, kind, node));
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+    />
+  );
+}
+
+function PlainTextEditor({ ab, id, zoom, panX, panY }: { ab: Artboard; id: string; zoom: number; panX: number; panY: number }) {
+  const loc = locate(ab, id);
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     ref.current?.focus();
@@ -1403,7 +1528,7 @@ function TextEditor({ ab, id, zoom, panX, panY }: { ab: Artboard; id: string; zo
   }, [id]);
   if (!loc) return null;
   const n = loc.node;
-  if (n.type !== 'text' && n.type !== 'button' && n.type !== 'link') return null;
+  if (n.type !== 'button' && n.type !== 'link' && n.type !== 'text') return null;
   const prop = n.type === 'button' ? 'label' : 'text';
   const value = n.type === 'button' ? n.label : n.text;
   const b = selectionBounds(ab, [id])!;

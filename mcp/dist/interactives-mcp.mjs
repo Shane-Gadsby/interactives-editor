@@ -615,6 +615,43 @@ const FACTORIES = {
 function createNode(type, partial = {}) {
   return { ...base(type), ...FACTORIES[type](), ...partial, type };
 }
+const STYLE_KEYS = ["fontFamily", "fontSize", "fontWeight", "italic", "color", "underline", "strike", "letterSpacing", "link"];
+function runsText(runs) {
+  return runs ? runs.map((r2) => r2.text).join("") : "";
+}
+function styleOf(r2) {
+  const out = {};
+  for (const k of STYLE_KEYS) if (r2[k] !== void 0 && r2[k] !== null) out[k] = r2[k];
+  return out;
+}
+function sameRunStyle(a, b) {
+  for (const k of STYLE_KEYS) {
+    const x = a[k] ?? void 0;
+    const y = b[k] ?? void 0;
+    if (k === "link") {
+      if (x?.url !== y?.url || x?.target !== y?.target) return false;
+    } else if (x !== y) return false;
+  }
+  return true;
+}
+function isPlainRuns(runs) {
+  return !runs || runs.every((r2) => Object.keys(styleOf(r2)).length === 0);
+}
+function normalizeRuns(runs) {
+  const out = [];
+  for (const r2 of runs) {
+    if (!r2.text) continue;
+    const next = { text: r2.text, ...styleOf(r2) };
+    const last = out[out.length - 1];
+    if (last && sameRunStyle(last, next)) last.text += next.text;
+    else out.push(next);
+  }
+  return out;
+}
+function runsPatch(runs) {
+  const norm = normalizeRuns(runs);
+  return { text: runsText(norm), runs: isPlainRuns(norm) ? void 0 : norm };
+}
 const isIdArray = (a) => Array.isArray(a) && a.length > 0 && a.every((e) => e && typeof e === "object" && typeof e.id === "string");
 const same = (a, b) => {
   if (a === b) return true;
@@ -938,12 +975,23 @@ Most of these can be animated: look for the diamond next to a field. See [Animat
     title: "Text",
     group: "Design",
     summary: "Text layers, fonts, sizing and live values in text.",
-    keywords: "font typography type size weight align template variables google fonts upload",
+    keywords: "font typography type size weight align template variables google fonts upload rich text runs bold italic underline selection range several styles",
     body: `Use the **Text** tool (<kbd>T</kbd>): click for text that grows as you type, or drag a box for wrapping text. Double-click text to edit it, and <kbd>Escape</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to finish.
 
 - **Sizing**: *Auto width* (one line, grows sideways), *Auto height* (fixed width, wraps and grows down) or *Fixed* (clips nothing, you set both).
 - **Font**: any Google font by name, or a font file you upload in the **Fonts** section of Project settings.
 - Weight, italic, size, line height, letter spacing, alignment, vertical alignment, case and decoration.
+
+## Several styles in one text layer
+Double-click a text layer, select some of the text and press <kbd>Ctrl</kbd>+<kbd>B</kbd> (bold), <kbd>Ctrl</kbd>+<kbd>I</kbd> (italic), <kbd>Ctrl</kbd>+<kbd>U</kbd> (underline) or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> (strikethrough); <kbd>Cmd</kbd> on a Mac. While part of the text is selected, the Font, Size, Weight, Letter, Colour, Italic and Decoration fields in the inspector change just that selection. Select all of a layer that has no styled parts and they change the whole layer, as usual. Click outside the text to go back to styling the whole layer.
+
+Each differently styled stretch is a **run**. A run only records how it differs from the layer's own style, so changing the layer's colour or font still changes every run that doesn't set its own. The **Text runs** list in the inspector shows them: edit a run's text, toggle bold/italic/underline/strikethrough, change its colour or size, give it a link, add a run, or clear all run styling. Neighbouring runs with the same style merge by themselves. Runs can also link: a run with a link URL is a hyperlink to that address in the player (links in runs are inert while editing).
+
+Things to know:
+- The layer's **Text** field always shows the runs joined. Typing in it keeps the styling around your edit.
+- Sizing, alignment, line height, case and the shadow belong to the whole layer, not to runs. Line height is one value for the whole layer, so a much bigger run makes its lines taller but not by a different multiplier.
+- A **binding** on Text (or a timeline, tween or *Set property* action that sets Text) replaces the runs with that plain text for as long as it applies. Variables in braces like \`{score}\` still work inside each run, but a \`{...}\` slot should sit within one run.
+- Lottie export writes the text in the layer's own style (Lottie text has one style per layer). SVG and PNG export, the player and the single-file export keep every run. Rive files with several text runs import as runs.
 
 ## Live values in text
 Anything in braces is an [expression](expressions): \`Score: {score}\`, \`{name.toUpperCase()}\`, \`{items.length} items\`. Write \`{{\` for a literal brace.`
@@ -1640,7 +1688,7 @@ function outline(list, depth, maxDepth, out, limit) {
   for (const n of [...list].reverse()) {
     if (limit.n-- <= 0) return;
     const extra = [];
-    if (n.type === "text") extra.push(JSON.stringify(n.text.slice(0, 40)));
+    if (n.type === "text") extra.push(JSON.stringify(n.text.slice(0, 40)) + (n.runs?.length ? ` (${n.runs.length} runs)` : ""));
     if (n.type === "button") extra.push(JSON.stringify(n.label.slice(0, 40)));
     if (n.type === "instance") extra.push(`artboard=${n.artboardId}`);
     if (!n.visible) extra.push("hidden");
@@ -1743,6 +1791,7 @@ function applyChanges(p0, changes) {
           if (k === "id" || k === "type" || k === "children") continue;
           setPath(loc.node, k, v);
         }
+        syncRuns(loc.node, props);
         touched.push(loc.node.id);
         break;
       }
@@ -1750,6 +1799,7 @@ function applyChanges(p0, changes) {
         const ab = findAb(c.artboard_id);
         const node = createNode(c.type, resolveRefs(c.props ?? {}));
         if (isContainer(node) && Array.isArray(c.children)) node.children = [];
+        syncRuns(node, resolveRefs(c.props ?? {}));
         let list = ab.children;
         if (c.parent_id) {
           const parent = locate(p, ref(c.parent_id));
@@ -1881,6 +1931,15 @@ function applyChanges(p0, changes) {
   }
   return { project: p, created, touched };
 }
+function syncRuns(node, props) {
+  if (node.type !== "text") return;
+  if (Array.isArray(props.runs)) {
+    const patch = runsPatch(props.runs.filter((r2) => !!r2 && typeof r2.text === "string"));
+    node.text = patch.text;
+    if (patch.runs) node.runs = patch.runs;
+    else delete node.runs;
+  } else if ("text" in props || props.runs === null) delete node.runs;
+}
 function setPath(obj, path, v) {
   const keys = path.split(".");
   let cur = obj;
@@ -1901,11 +1960,7 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n");
   if (topic === "layers") {
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance"];
-    return `Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, layoutItem, constraints.
-Paths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer's own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.
-
-Defaults per type (what add_layer fills in):
-` + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, layoutItem, constraints.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
   const t = TOPICS.find((x) => x.id === topic);
   if (t) return `# ${t.title}
