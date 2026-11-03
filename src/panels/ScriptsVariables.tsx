@@ -15,7 +15,7 @@ ix.on('hello', (payload) => {
 `;
 
 export function ScriptsPanel() {
-  const s = useEditor((st) => ({ scripts: st.project.scripts }));
+  const s = useEditor((st) => ({ scripts: st.project.scripts, sandbox: !!st.project.settings.scriptSandbox }));
   const [activeId, setActiveId] = useState<string | null>(s.scripts[0]?.id ?? null);
   const active = s.scripts.find((x) => x.id === activeId) ?? s.scripts[0];
   const setScript = (id: string, patch: Partial<Script>, coalesce?: string) =>
@@ -73,6 +73,11 @@ export function ScriptsPanel() {
         </div>
       )}
       <div className="script-help">
+        <div className={`sandbox-note${s.sandbox ? '' : ' off'}`}>
+          {s.sandbox
+            ? 'Sandboxed: scripts run in a WASM VM with only ix, setTimeout/setInterval and console. No DOM, cookies or network (use data sources).'
+            : 'In-page: scripts run with full page access (node.element, fetch, DOM). Turn the sandbox on in Project settings for untrusted code.'}
+        </div>
         <div className="field-label block">ix API</div>
         <pre className="api-ref">{`ix.vars.score += 1
 ix.get('name') / ix.set('name', v)
@@ -81,7 +86,7 @@ ix.node('Ball')        // by name or id
   .show() .hide() .toggle()
   await .animate('x', 200,
     { duration: 400, ease: 'easeOut' })
-  .element             // DOM element
+  .element             // DOM element (in-page only)
 ix.timeline('Intro')
   .play() .pause() .stop()
   .restart() .reverse() .seek(ms)
@@ -91,6 +96,9 @@ ix.on('reset', fn)     // messages
 ix.onFrame((dt, t) => {})
 ix.pointer  // {x, y, down}
 ix.artboard // {name, width, height}
+ix.data.products     // data sources
+await ix.loadData('products')
+ix.setCursor('grab')
 ix.log(...)`}</pre>
       </div>
     </div>

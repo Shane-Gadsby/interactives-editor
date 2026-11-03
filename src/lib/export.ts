@@ -17,9 +17,21 @@ export function fileSafe(name: string): string {
   return name.replace(/[^\w.\- ]+/g, '').trim().replace(/\s+/g, '-') || 'project';
 }
 
-export function standaloneHtml(project: Project, opts: { startArtboardId?: string } = {}): Promise<string> {
+/** The sandbox (~735 kB) is only fetched when a project runs scripts in it. */
+let sandboxSource: Promise<string> | null = null;
+function loadSandboxSource(): Promise<string> {
+  sandboxSource ??= import('@player-sandbox-iife?raw').then((m) => m.default);
+  return sandboxSource;
+}
+
+export async function standaloneHtml(project: Project, opts: { startArtboardId?: string } = {}): Promise<string> {
   const p = opts.startArtboardId ? { ...project, settings: { ...project.settings, startArtboardId: opts.startArtboardId } } : project;
-  return buildStandaloneHtml(p, { playerSource, bytesFor: (a) => assetBytes(project.id, a) });
+  const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p)) ? await loadSandboxSource() : undefined;
+  return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: (a) => assetBytes(project.id, a) });
+}
+
+function hasCodeNodes(p: Project): boolean {
+  return p.artboards.some((a) => a.logic.nodes.some((n) => n.kind === 'action.code' || n.kind === 'action.script'));
 }
 
 export async function downloadStandalone(project: Project): Promise<void> {

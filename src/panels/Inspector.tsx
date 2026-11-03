@@ -245,6 +245,12 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           ]}
         />
         <ColorField label="Page bg" value={project.settings.pageBackground} onChange={(c) => setProject((p) => (p.settings.pageBackground = c), 'page-bg')} />
+        <CheckField
+          label="Run scripts in the sandbox"
+          title="Scripts run in a JavaScript VM (WASM) with only the ix API: no DOM, cookies or network. Turn off to let scripts reach the page (node.element)."
+          value={!!project.settings.scriptSandbox}
+          onChange={(v) => setProject((p) => (p.settings.scriptSandbox = v))}
+        />
       </Section>
       <Section title="Fonts">
         {project.fonts.map((f, i) => (

@@ -12,6 +12,7 @@ export default defineConfig({
     alias: [
       { find: /^interactives-player$/, replacement: `${playerDir}/src/index.ts` },
       { find: /^@player-iife(\?raw)?$/, replacement: `${playerDir}/dist/interactives-player.iife.js$1` },
+      { find: /^@player-sandbox-iife(\?raw)?$/, replacement: `${playerDir}/dist/interactives-sandbox.iife.js$1` },
     ],
     dedupe: ['fflate'],
   },
