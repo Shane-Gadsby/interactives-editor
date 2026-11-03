@@ -721,7 +721,13 @@ export class EditorStore {
     const loc = locate(ab, nodeId);
     if (!loc) return;
     let value = getPath(loc.node, prop) as Keyframe['value'] | undefined;
-    if (value === undefined) value = prop.endsWith('color') ? '#000000' : 0;
+    if (value === undefined) {
+      const kids = isContainer(loc.node) ? loc.node.children : [];
+      // Draw order starts as the layers' own order; solo starts on the first child
+      if (prop === 'drawOrder') value = kids.map((k) => k.id);
+      else if (prop === 'solo.active') value = kids[0]?.id ?? '';
+      else value = prop.endsWith('color') ? '#000000' : 0;
+    }
     const t = this.state.playhead;
     this.update((d) => {
       const tl = getArtboard(d as Project, ab.id)?.timelines.find((x) => x.id === tlId);

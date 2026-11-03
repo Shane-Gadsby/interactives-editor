@@ -2849,3 +2849,38 @@ code {
 .ce-handle:hover {
   fill: var(--accent);
 }
+
+/* ---------------------------------------------------------------- draw order list */
+.child-order {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0;
+}
+.child-order-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(128, 128, 128, 0.1);
+}
+.child-order-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.child-order .mini {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 3px;
+}
+.child-order .mini:disabled {
+  opacity: 0.3;
+  cursor: default;
+}

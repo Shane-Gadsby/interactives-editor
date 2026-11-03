@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ANIMATABLE_PROPS, EASING_NAMES, ease, type Easing, type Keyframe, type Timeline as TL } from 'interactives-player';
+import { ANIMATABLE_PROPS, EASING_NAMES, ease, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
+import { ChildOrder } from '../components/ChildOrder';
 
 const LABEL_W = 220;
 
@@ -345,6 +346,10 @@ export function TimelinePanel() {
             <KeyValueField
               prop={selectedKey.track.prop}
               value={selectedKey.key.value}
+              kids={(() => {
+                const n = locate(ab, selectedKey.track.nodeId)?.node;
+                return n && 'children' in n ? n.children : [];
+              })()}
               onChange={(v) =>
                 setTl((d) => {
                   const k = findKey(d, s.selectedKeys[0]);
@@ -359,7 +364,7 @@ export function TimelinePanel() {
           <div className="key-editor">
             <div className="field-label block">Tween</div>
             <div className="small muted">
-              {ANIMATABLE_PROPS.find((a) => a.prop === selectedTween.track.prop)?.label ?? selectedTween.track.prop}: {String(selectedTween.key.value)} → {String(selectedTween.next.value)}, {selectedTween.key.t}–{selectedTween.next.t} ms
+              {ANIMATABLE_PROPS.find((a) => a.prop === selectedTween.track.prop)?.label ?? selectedTween.track.prop}: {tweenValue(selectedTween.key.value)} → {tweenValue(selectedTween.next.value)}, {selectedTween.key.t}–{selectedTween.next.t} ms
             </div>
             <CurveEditor ease={selectedTween.key.ease} onChange={(e) => setEase(e)} />
             <SelectField
@@ -400,12 +405,20 @@ export function TimelinePanel() {
   );
 }
 
-function KeyValueField({ prop, value, onChange }: { prop: string; value: Keyframe['value']; onChange: (v: Keyframe['value']) => void }) {
+function KeyValueField({ prop, value, kids, onChange }: { prop: string; value: Keyframe['value']; kids: SceneNode[]; onChange: (v: Keyframe['value']) => void }) {
+  if (prop === 'drawOrder') return <ChildOrder children={kids} order={Array.isArray(value) ? value : []} onChange={onChange} />;
+  if (prop === 'solo.active')
+    return <SelectField label="Value" value={String(value)} options={[{ value: '', label: '(none)' }, ...kids.map((c) => ({ value: c.id, label: c.name }))]} onChange={onChange} />;
   const kind = ANIMATABLE_PROPS.find((a) => a.prop === prop)?.kind ?? (typeof value === 'number' ? 'number' : 'string');
   if (kind === 'number') return <NumberField label="Value" value={Number(value)} step={prop === 'opacity' || prop.startsWith('scale') ? 0.05 : 1} onChange={onChange} />;
   if (kind === 'color') return <ColorField label="Value" value={String(value)} onChange={onChange} />;
   if (kind === 'boolean') return <CheckField label="Value" value={!!value} onChange={onChange} />;
   return <TextField label="Value" value={String(value)} onChange={onChange} />;
+}
+
+/** Short text for a keyframe value (a draw order is a list of layer ids, which says little). */
+function tweenValue(v: Keyframe['value']): string {
+  return Array.isArray(v) ? `order of ${v.length} layers` : String(v);
 }
 
 function findKey(tl: TL, ref: string) {

@@ -35,6 +35,7 @@ import { Icons } from '../components/icons';
 import { assetKind } from '../lib/assets';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { CodeEditor } from '../components/CodeEditor';
+import { ChildOrder } from '../components/ChildOrder';
 
 const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
 const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
@@ -345,6 +346,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
           <CheckField label="Visible" value={n.visible} onChange={(v) => set({ visible: v })} />
           <CheckField label="Locked" value={!!n.locked} onChange={(v) => set({ locked: v })} />
         </Row>
+        <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={BLEND} onChange={(v) => set({ blendMode: v })} />
       </Section>
       {sameType && <TypeSection nodes={nodes} project={project} />}
@@ -353,6 +355,8 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       <EffectsSection nodes={nodes} />
       {single && <ConstraintsSection node={n} />}
       <LinkCursorSection nodes={nodes} project={project} />
+      {single && (n.type === 'group' || n.type === 'frame') && <SoloSection node={n} />}
+      {single && (n.type === 'group' || n.type === 'frame') && n.children.length > 1 && <DrawOrderSection node={n} />}
       {single && (n.type === 'group' || n.type === 'frame') && <RepeatSection node={n} project={project} />}
       {single && <BindingsSection node={n} project={project} />}
       {single && <InteractionsSection node={n} ab={ab} />}
@@ -927,6 +931,53 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
       </p>
     </Section>
     </>
+  );
+}
+
+/** Show one child at a time. The active child can be keyed on the timeline and set from interactions. */
+function SoloSection({ node }: { node: SceneNode & { children: SceneNode[]; solo?: { active: string | null } | null } }) {
+  const set = useSetter([node.id]);
+  const shown = useShown(node);
+  const on = !!node.solo;
+  const active = String(shown('solo.active') ?? '');
+  return (
+    <Section help="groups-frames#solo-groups" title="Solo" defaultOpen={on}>
+      <CheckField label="Solo" value={on} onChange={(v) => set({ solo: v ? { active: node.children[0]?.id ?? null } : null })} />
+      {on && (
+        <div className="keyed">
+          <SelectField
+            label="Active child"
+            value={node.children.some((c) => c.id === active) ? active : ''}
+            options={[{ value: '', label: '(none)' }, ...node.children.map((c) => ({ value: c.id, label: c.name }))]}
+            onChange={(v) => set({ 'solo.active': v || null })}
+          />
+          <KeyButton node={node} prop="solo.active" />
+        </div>
+      )}
+    </Section>
+  );
+}
+
+/** Reorder the children over time: change the order here with Record on (or press the key button) to key it. */
+function DrawOrderSection({ node }: { node: SceneNode & { children: SceneNode[]; drawOrder?: string[] | null } }) {
+  const set = useSetter([node.id]);
+  const shown = useShown(node);
+  const order = shown('drawOrder') as string[] | null | undefined;
+  return (
+    <Section help="groups-frames#draw-order" title="Draw order" defaultOpen={!!node.drawOrder?.length}>
+      <div className="keyed">
+        <span className="field-label" title="Which child is drawn in front. Key it on the timeline to change the stacking over time">
+          Front to back
+        </span>
+        <KeyButton node={node} prop="drawOrder" />
+      </div>
+      <ChildOrder children={node.children} order={order} onChange={(next) => set({ drawOrder: next })} />
+      {!!node.drawOrder?.length && (
+        <button className="btn" title="Go back to the layer order in the layers panel" onClick={() => set({ drawOrder: null })}>
+          Reset to layer order
+        </button>
+      )}
+    </Section>
   );
 }
 

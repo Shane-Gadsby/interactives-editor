@@ -13,7 +13,10 @@
  *   - State machines -> variables (bool/number inputs), messages (triggers),
  *     pointer listeners -> pointer events, and transitions -> flows that play
  *     the target state's timeline
- * Bones/meshes, constraints, clipping, data binding, events, audio, scripted
+ *   - Solo -> a group with native solo (animated through `solo.active`)
+ *   - ClippingShape -> the clipped layer wrapped in a group with a masking copy of the clip shape in front of it
+ *   - DrawRules/DrawTarget -> `drawOrder` on the parent, when the clipped node and its target are siblings
+ * Bones/meshes, constraints, data binding, events, audio, scripted
  * and layout-computed geometry are reported in `warnings`.
  */
 import {
@@ -38,6 +41,10 @@ import {
   type Timeline,
   type Track,
   type Variable,
+  invert,
+  multiply,
+  nodeMatrix,
+  type Matrix,
 } from 'interactives-player';
 import { RIVE_CLASSES } from './rive-defs';
 import type { ImportedAsset } from './lottie-import';
@@ -536,6 +543,10 @@ interface ArtboardCtx {
   nodeBySlot: Map<number, SceneNode>;
   /** Solo slot -> its child slots that became layers (for activeComponentId keys). */
   solos: Map<number, number[]>;
+  /** Slot -> the group that now holds it, when clipping wrapped the layer (its parent lists the wrapper). */
+  wrapBySlot: Map<number, SceneNode>;
+  /** DrawRules slot -> the container it reorders and the child order for each of its draw targets. */
+  drawRules: Map<number, { nodeId: string; base: string[]; orders: Map<number, string[]> }>;
 }
 
 interface FileCtx {
@@ -1057,7 +1068,9 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     node = g;
   } else if (isA(t, 'Bone') || isA(t, 'Skin') || isA(t, 'Weight')) fc.warnings.add('Bones and skinning are not supported');
   else if (isA(t, 'Constraint')) fc.warnings.add('Constraints (IK, follow, distance, ...) are not supported');
-  else if (t === 'ClippingShape') fc.warnings.add('Clipping shapes are not supported yet; clipped content shows unclipped');
+  else if (t === 'ClippingShape' || t === 'DrawRules' || t === 'DrawTarget') {
+    // Handled by the layer they belong to (clipWrap, drawRules)
+  }
   else if (isA(t, 'Event') || t === 'AudioEvent') fc.warnings.add('Rive events and audio events are not imported');
   if (!node) return null;
   ac.nodeBySlot.set(slot, node);
@@ -1077,19 +1090,124 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
         // Wrapped text keeps the file's line spacing
         if (!hugW && riveLineHeight.has(ci)) c.lineHeight = riveLineHeight.get(ci)!;
       }
-      node.children.push(c);
+      node.children.push(clipWrap(ac, fc, ci, c, slot, abIndex, !!(node.type === 'frame' && node.layout)));
     }
+    applyDrawRules(ac, fc, slot, node);
     if (o.type === 'Solo') {
-      const active = Number(get(o, 'activeComponentId'));
-      for (const ci of ac.children.get(slot) ?? []) {
-        const c = ac.nodeBySlot.get(ci);
-        if (c) c.visible = ci === active;
-      }
+      // activeComponentId is a slot; our solo names the child layer by id
+      node.solo = { active: entryOf(ac, Number(get(o, 'activeComponentId')))?.id ?? null };
       ac.solos.set(slot, (ac.children.get(slot) ?? []).filter((ci) => ac.nodeBySlot.has(ci)));
     }
   }
   return node;
 }
+
+/** The layer a slot appears as in its parent's list: its clip wrapper when it has one. */
+function entryOf(ac: ArtboardCtx, slot: number): SceneNode | undefined {
+  return ac.wrapBySlot.get(slot) ?? ac.nodeBySlot.get(slot);
+}
+
+/** Rive node transform (x, y, rotation, scale) as a matrix, in its parent's space. */
+function riveMatrix(o: RObj): Matrix {
+  return nodeMatrix({ x: get(o, 'x'), y: get(o, 'y'), width: 0, height: 0, rotation: get(o, 'rotation') * DEG, scaleX: get(o, 'scaleX'), scaleY: get(o, 'scaleY'), originX: 0, originY: 0 });
+}
+
+/** Maps a slot's own space to the artboard's, through its ancestors' transforms. */
+function worldOf(ac: ArtboardCtx, slot: number): Matrix {
+  let m: Matrix = [1, 0, 0, 1, 0, 0];
+  for (let s = slot, guard = 0; s > 0 && guard < 200; s = Number(ac.rab.slots[s].props.parentId ?? 0), guard++) m = multiply(riveMatrix(ac.rab.slots[s]), m);
+  return m;
+}
+
+/**
+ * Rive clips a layer (and everything under it) with a ClippingShape that points at another shape. Ours masks the layers
+ * above a mask inside one parent, so the clipped layer goes into a small group of its own with a masking copy of the
+ * clip shape in front of it. Several clips nest, one group each.
+ */
+function clipWrap(ac: ArtboardCtx, fc: FileCtx, slot: number, layer: SceneNode, parentSlot: number, abIndex: number, inLayout: boolean): SceneNode {
+  const clips = (ac.children.get(slot) ?? []).filter((c) => ac.rab.slots[c].type === 'ClippingShape' && get<boolean>(ac.rab.slots[c], 'isVisible'));
+  if (!clips.length) return layer;
+  if (inLayout || takesPart(ac.rab.slots[slot].type)) {
+    fc.warnings.add('Clipping shapes on layers inside a layout are not imported; those layers show unclipped');
+    return layer;
+  }
+  let out = layer;
+  // Where the clipped layer's parent sits, to carry each clip shape's position over into it
+  const toParent = invert(worldOf(ac, parentSlot));
+  for (const cs of clips) {
+    const src = Number(get(ac.rab.slots[cs], 'sourceId'));
+    const srcSlot = ac.rab.slots[src];
+    if (!srcSlot || !isA(srcSlot.type, 'Shape')) {
+      fc.warnings.add('A clipping shape that does not point at a shape was skipped');
+      continue;
+    }
+    // Convert the clip shape on a scratch copy so the real layer keeps its animation targets
+    const scratch: ArtboardCtx = { ...ac, targets: new Map(), nodeBySlot: new Map(), solos: new Map(), wrapBySlot: new Map(), drawRules: new Map() };
+    const shape = convertSlot(scratch, fc, src, abIndex);
+    if (!shape) continue;
+    shape.visible = true;
+    shape.opacity = 1;
+    // Clip shape's space -> the parent's space, as a plain translate/rotate/scale
+    const x = multiply(toParent, worldOf(ac, Number(ac.rab.slots[src].props.parentId ?? 0)));
+    const sx = Math.hypot(x[0], x[1]) || 1;
+    const sy = (x[0] * x[3] - x[1] * x[2]) / sx || 1;
+    const mask = createNode('group', { name: `${shape.name} (mask)`, children: [shape] });
+    mask.mask = true;
+    mask.width = mask.height = 0.01;
+    mask.originX = mask.originY = 0;
+    mask.x = r2(x[4]);
+    mask.y = r2(x[5]);
+    mask.rotation = r2(Math.atan2(x[1], x[0]) * DEG);
+    mask.scaleX = r2(sx);
+    mask.scaleY = r2(sy);
+    const wrap = createNode('group', { name: `${layer.name} (clipped)`, children: [mask, out] });
+    wrap.width = wrap.height = 0.01;
+    wrap.originX = wrap.originY = 0;
+    out = wrap;
+  }
+  if (out !== layer) ac.wrapBySlot.set(slot, out);
+  return out;
+}
+
+/**
+ * DrawRules move the node they sit on (with everything under it) before or after another drawable, per active
+ * DrawTarget. When that drawable is a sibling this is a draw order on the parent; elsewhere it can't be expressed.
+ */
+function applyDrawRules(ac: ArtboardCtx, fc: FileCtx, parentSlot: number, parent: ContainerLike): void {
+  const rulesOn: { rules: number; owner: number }[] = [];
+  for (const ci of ac.children.get(parentSlot) ?? []) for (const r of ac.children.get(ci) ?? []) if (ac.rab.slots[r].type === 'DrawRules') rulesOn.push({ rules: r, owner: ci });
+  if (!rulesOn.length) return;
+  const base = parent.children.map((c) => c.id);
+  const slotOfEntry = new Map<string, number>();
+  for (const ci of ac.children.get(parentSlot) ?? []) {
+    const e = entryOf(ac, ci);
+    if (e) slotOfEntry.set(e.id, ci);
+  }
+  const first = rulesOn[0];
+  if (rulesOn.length > 1) fc.warnings.add('Several draw rules in one group: only the first is imported');
+  const ownerEntry = entryOf(ac, first.owner);
+  if (!ownerEntry) return;
+  const orders = new Map<number, string[]>();
+  for (const ti of ac.children.get(first.rules) ?? []) {
+    const tgt = ac.rab.slots[ti];
+    if (tgt.type !== 'DrawTarget') continue;
+    const dest = entryOf(ac, Number(get(tgt, 'drawableId')));
+    if (!dest || !base.includes(dest.id) || dest.id === ownerEntry.id) {
+      fc.warnings.add('Draw rules that move a layer relative to a layer in another group are not imported');
+      continue;
+    }
+    const list = base.filter((id) => id !== ownerEntry.id);
+    // Rive's "before" is drawn behind the target, which is earlier in our back-to-front list
+    list.splice(list.indexOf(dest.id) + (Number(get(tgt, 'placementValue')) === 1 ? 1 : 0), 0, ownerEntry.id);
+    orders.set(ti, list);
+  }
+  if (!orders.size) return;
+  ac.drawRules.set(first.rules, { nodeId: parent.id, base, orders });
+  const active = orders.get(Number(get(ac.rab.slots[first.rules], 'drawTargetId')));
+  if (active) parent.drawOrder = active;
+}
+
+type ContainerLike = Extract<SceneNode, { children: SceneNode[] }>;
 
 const contexts = new Map<number, ArtboardCtx>();
 
@@ -1105,7 +1223,7 @@ function artboardCtx(fc: FileCtx, index: number): ArtboardCtx {
     list.push(i);
     children.set(p, list);
   });
-  ac = { rab, children, targets: new Map(), nodeBySlot: new Map(), solos: new Map() };
+  ac = { rab, children, targets: new Map(), nodeBySlot: new Map(), solos: new Map(), wrapBySlot: new Map(), drawRules: new Map() };
   contexts.set(index, ac);
   return ac;
 }
@@ -1118,8 +1236,9 @@ function buildArtboardNodes(fc: FileCtx, index: number): SceneNode[] {
   for (const ci of [...(ac.children.get(0) ?? [])].reverse()) {
     if (isA(ac.rab.slots[ci].type, 'ShapePaint')) continue;
     const n = convertSlot(ac, fc, ci, index);
-    if (n) out.push(n);
+    if (n) out.push(clipWrap(ac, fc, ci, n, 0, index, false));
   }
+  if ((ac.children.get(0) ?? []).some((ci) => (ac.children.get(ci) ?? []).some((r) => ac.rab.slots[r].type === 'DrawRules'))) fc.warnings.add('Draw rules on layers at the top level of an artboard are not imported');
   fc.building.delete(index);
   fc.built.set(index, out);
   return out;
@@ -1152,6 +1271,11 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
     for (const kp of ko.props) {
       const key = Number(kp.obj.props.propertyKey);
       const rprop = propNameByKey.get(key)?.name ?? String(key);
+      if (rprop === 'drawTargetId' && ac.drawRules.has(slot)) {
+        const dr = ac.drawRules.get(slot)!;
+        tracks.push({ id: uid('tr'), nodeId: dr.nodeId, prop: 'drawOrder', keys: kp.keys.map((k) => ({ id: uid('k'), t: ms(Number(k.props.frame ?? 0)), value: dr.orders.get(Number(k.props.value ?? 0)) ?? dr.base, ease: 'step' as Easing })) });
+        continue;
+      }
       if (!targets?.length) {
         const ot = ac.rab.slots[slot]?.type ?? 'object';
         if (isA(ot, 'Vertex')) fc.warnings.add('Path vertex animation (shape morphing) is not supported; those paths stay in their rest shape');
@@ -1162,10 +1286,9 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
         continue;
       }
       if (rprop === 'activeComponentId' && ac.solos.has(slot)) {
-        for (const ci of ac.solos.get(slot)!) {
-          const child = ac.nodeBySlot.get(ci)!;
-          tracks.push({ id: uid('tr'), nodeId: child.id, prop: 'visible', keys: kp.keys.map((k) => ({ id: uid('k'), t: ms(Number(k.props.frame ?? 0)), value: Number(k.props.value ?? 0) === ci, ease: 'step' as Easing })) });
-        }
+        // The key value is the active child's slot; the group's solo wants that layer's id
+        const solo = ac.nodeBySlot.get(slot)!;
+        tracks.push({ id: uid('tr'), nodeId: solo.id, prop: 'solo.active', keys: kp.keys.map((k) => ({ id: uid('k'), t: ms(Number(k.props.frame ?? 0)), value: entryOf(ac, Number(k.props.value ?? 0))?.id ?? '', ease: 'step' as Easing })) });
         continue;
       }
       for (const t of targets) {

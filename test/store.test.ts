@@ -54,6 +54,24 @@ describe('EditorStore', () => {
     expect(track.keys.map((k) => [k.t, k.value])).toEqual([[500, 300]]);
   });
 
+  it('keys a group\'s draw order and solo child, and records order changes', () => {
+    const { s, a, b } = setup();
+    s.select([a.id, b.id]);
+    s.groupSelection();
+    const g = s.artboard()!.children[0];
+    s.addTimeline();
+    s.set({ playhead: 0 });
+    s.keyCurrent(g.id, 'drawOrder');
+    s.keyCurrent(g.id, 'solo.active');
+    s.set({ recording: true, playhead: 400, bottomTab: 'timeline' });
+    s.setProps([g.id], { drawOrder: [b.id, a.id] });
+    const tracks = s.artboard()!.timelines[0].tracks;
+    expect(tracks.find((t) => t.prop === 'drawOrder')!.keys.map((k) => [k.t, k.value])).toEqual([[0, [a.id, b.id]], [400, [b.id, a.id]]]);
+    expect(tracks.find((t) => t.prop === 'solo.active')!.keys[0].value).toBe(a.id);
+    // The document itself is untouched while recording
+    expect((locate(s.artboard()!, g.id)!.node as { drawOrder?: unknown }).drawOrder).toBeUndefined();
+  });
+
   it('deletes the selection and its timeline tracks', () => {
     const { s, a } = setup();
     s.addTimeline();

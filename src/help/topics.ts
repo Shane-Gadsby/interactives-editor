@@ -240,6 +240,7 @@ Select a path and press <kbd>Enter</kbd> (or double-click). Drag points and hand
 - **Rectangle**: corner radius.
 - **Polygon**: number of sides. **Star**: points and inner ratio (how deep the points are).
 - **Path**: closed or open, fill rule (non-zero or even-odd for holes).
+- Any shape can be a **mask** for the layers above it: tick *Use as mask* ([Groups and frames](groups-frames#masks)).
 
 Boolean operations (union, subtract, intersect, exclude) turn several shapes into one path. See [Align, arrange and combine](arrange).`,
   },
@@ -306,12 +307,21 @@ Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video
     id: 'groups-frames',
     title: 'Groups and frames',
     group: 'Design',
-    summary: 'Grouping layers, frames that clip and lay out, and scrolling frames.',
-    keywords: 'group frame container clip mask nest focus scroll scrollable overflow',
+    summary: 'Grouping layers, frames that clip and lay out, masks, solo groups, draw order and scrolling frames.',
+    keywords: 'group frame container clip mask masking clipping solo state switch draw order z-order nest focus scroll scrollable overflow',
     body: `- A **group** (<kbd>Ctrl</kbd>+<kbd>G</kbd>) moves, scales and animates its layers together. Its size follows its contents.
 - A **frame** (<kbd>F</kbd>) is a box with its own fill, stroke and corner radius. It can **clip** its contents and can use [auto layout](auto-layout).
 
 Press <kbd>Enter</kbd> on a group or frame to work inside it; <kbd>Escape</kbd> goes back out.
+
+## Masks
+Tick **Use as mask** on a shape or group and it clips the layers above it in the same group, up to the next mask, so they only show inside its outline (the way masks work in most design tools). A group masks with the shapes inside it. The mask itself is not drawn in the player; on the canvas it shows as a faint ghost so you can still pick it. Hide the mask layer to turn the clipping off. To clip just one layer, put the mask and that layer together in their own group.
+
+## Solo groups
+Tick **Solo** on a group or frame and it shows only one child at a time, the one chosen under **Active child**. Use it for states of a character or a button: build each state as a child, then switch between them. The active child can be keyed on a timeline (a step change, like a cut) or set from interactions with **Set property** and the property *Solo: active child*, whose value can be a quoted layer name such as \`"Happy"\`. Children that are not active take no room in auto layout.
+
+## Draw order
+A group's **Draw order** section lists its children front to back with arrows to move them. With **Record** on, or with the diamond, a change becomes a keyframe on the *Draw order (children)* property, so layers can pass in front of and behind each other during an animation. Keys always step from one order to the next. Layers you do not list keep their place. From interactions or scripts, set the property \`drawOrder\` to a list of layer names, back to front.
 
 ## Scrolling frames
 Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scroll both*. Content beyond the frame can then be scrolled with the wheel, a trackpad or touch in the player, like a scrollable panel. An **On scroll** event set to *Is scrolled* fires as it scrolls, with \`event.scrollTop\`, \`event.scrollLeft\` and \`event.progress\` (0 to 1). In the editor the frame stays still so you can edit it; scroll it in Preview.`,
@@ -456,6 +466,9 @@ The line between two keys is a **tween**: it shows its [easing](easing) as a lit
 
 ## Design view
 Switching artboards opens them in **design view**: the canvas shows the layers as they are, not a frame of an animation. Choose a timeline in the Timeline tab to see and edit its frames; choose *Design view* again to go back.
+
+## Switching children and draw order
+Two properties are not numbers. **Solo: active child** on a [solo group](groups-frames) switches which child shows, and **Draw order (children)** changes which child is in front. Both step at their keys instead of blending. Key them from the group's Solo and Draw order sections in the inspector.
 
 ## Playing from interactions
 **Play timeline** plays, pauses, stops, restarts, reverses or seeks a timeline. From scripts: \`ix.timeline('Intro').play()\`. **On timeline end** fires when one finishes.`,
