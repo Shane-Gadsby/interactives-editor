@@ -1893,7 +1893,22 @@ Each child of an auto-layout frame gets a **Layout** section:
 - **Margin** around it.
 - **Position**: *In flow* (laid out), *Absolute* (placed by insets from the frame's edges, e.g. pinned to the bottom right) or *Ignore* (keeps its own x/y).
 
-Layout is worked out again whenever something changes, in the editor and in the player, so repeated lists and text that changes length reflow by themselves.`
+Layout is worked out again whenever something changes, in the editor and in the player, so repeated lists and text that changes length reflow by themselves.
+
+## Animate changes
+Turn on **Animate changes** in the frame's Auto layout section and, while the project plays (Preview and the published player), children glide to their new place instead of jumping. It covers layers shown or hidden, a solo or draw order switching, text changing length, a list gaining or losing items, the frame being resized, and direction, gap, padding or alignment being set by an action.
+
+| Setting | Meaning |
+|---|---|
+| Duration | How long a glide takes, in milliseconds |
+| Easing | A preset, or *Custom* to drag the curve's handles |
+| Enter | How a layer looks as it appears (a layer shown, or a new list item): *None*, *Fade*, *Scale* (grows from nothing) or *Fade and scale* (from 80%) |
+| Exit | How a layer looks as it goes (hidden, or a list item removed): it fades or shrinks where it was, then goes |
+
+- **Timelines win.** If a timeline or an *Animate property* action is moving a layer's x, y, width or height, the frame follows it exactly rather than gliding behind it, and a property a timeline has a track on is never glided.
+- Text that sizes itself changes size at once (its position still glides), and layers set to *Ignore* are not moved by layout so they don't glide.
+- The editor canvas always snaps, so you can design without things moving. Scrubbing a timeline snaps too.
+- With **Respect reduced motion** on in Project settings, viewers who ask for less motion see everything snap.`
   },
   {
     id: "arrange",

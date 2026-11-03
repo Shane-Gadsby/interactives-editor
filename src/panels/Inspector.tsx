@@ -56,6 +56,7 @@ import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-ad
 import { CodeEditor } from '../components/CodeEditor';
 import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
 import { ChildOrder } from '../components/ChildOrder';
+import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
 import { blendExample } from '../lib/blend-example';
 import { ConvertersEditor } from '../components/Converters';
 import { TEXT_PRESETS } from '../lib/text-modifiers';
@@ -1373,7 +1374,7 @@ function AlignBar({ count, shapes }: { count: number; shapes: number }) {
   );
 }
 
-function AutoLayoutSection({ frame }: { frame: FrameNode }) {
+export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
   const set = useSetter([frame.id]);
   const L = frame.layout;
   const update = (patch: Partial<AutoLayout>) => set({ layout: { ...(L as AutoLayout), ...patch } }, `layout-${frame.id}`);
@@ -1431,6 +1432,7 @@ function AutoLayoutSection({ frame }: { frame: FrameNode }) {
             <CheckField label="Hug width" value={L.hugWidth} onChange={(v) => update({ hugWidth: v })} />
             <CheckField label="Hug height" value={L.hugHeight} onChange={(v) => update({ hugHeight: v })} />
           </Row>
+          <LayoutAnimateFields value={L.animate} onChange={(animate) => update({ animate })} />
           <Row>
             <button className="btn" onClick={() => set({ layout: null })}>
               Remove auto layout
