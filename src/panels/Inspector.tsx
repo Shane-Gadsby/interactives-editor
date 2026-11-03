@@ -33,6 +33,7 @@ import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { assetKind } from '../lib/assets';
+import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { CodeEditor } from '../components/CodeEditor';
 
 const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
@@ -589,8 +590,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           <SelectField
             label="Image"
             value={n.assetId ?? ''}
-            onChange={(v) => set({ assetId: v || null })}
-            options={[{ value: '', label: images.length ? 'Choose…' : 'Upload in Assets' }, ...images.map((a) => ({ value: a.id, label: a.name }))]}
+            onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'image' })}
+            options={[{ value: '', label: images.length ? 'Choose…' : 'No image' }, ...images.map((a) => ({ value: a.id, label: a.name })), addAssetOption('image')]}
           />
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
           {radius}
@@ -635,7 +636,15 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             options={['text', 'number', 'email', 'password', 'textarea', 'checkbox', 'range', 'select']}
             onChange={(v) => set({ inputType: v })}
           />
-          <SelectField label="Variable" value={n.variableId ?? ''} options={varOptions} onChange={(v) => set({ variableId: v || null })} />
+          <SelectField
+            label="Variable"
+            value={n.variableId ?? ''}
+            options={[...varOptions, addVariableOption()]}
+            onChange={withQuickAdd((v) => set({ variableId: v || null }), {
+              variableType: n.inputType === 'checkbox' ? 'boolean' : n.inputType === 'number' || n.inputType === 'range' ? 'number' : 'string',
+              variableName: n.name.replace(/\W+/g, '') || 'value',
+            })}
+          />
           {n.inputType !== 'checkbox' && n.inputType !== 'range' && n.inputType !== 'select' && <TextField label="Placeholder" value={n.placeholder} onChange={(v) => set({ placeholder: v })} />}
           {!n.variableId && <TextField label="Value" value={n.value} onChange={(v) => set({ value: v })} />}
           {(n.inputType === 'number' || n.inputType === 'range') && (
@@ -691,8 +700,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           <SelectField
             label="Video"
             value={n.assetId ?? ''}
-            onChange={(v) => set({ assetId: v || null })}
-            options={[{ value: '', label: 'Use a URL' }, ...videos.map((a) => ({ value: a.id, label: a.name }))]}
+            onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'video' })}
+            options={[{ value: '', label: 'Use a URL' }, ...videos.map((a) => ({ value: a.id, label: a.name })), addAssetOption('video')]}
           />
           {!n.assetId && <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />}
           <Row>
@@ -839,8 +848,8 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
       <SelectField
         label="Image"
         value={n.cursorImage ?? ''}
-        options={[{ value: '', label: images.length ? 'No custom cursor image' : 'Upload an image in Assets for a custom cursor' }, ...images.map((a) => ({ value: a.id, label: a.name }))]}
-        onChange={(v) => set({ cursorImage: v || null, cursorHotspot: v ? n.cursorHotspot ?? { x: 0, y: 0 } : undefined })}
+        options={[{ value: '', label: 'No custom cursor image' }, ...images.map((a) => ({ value: a.id, label: a.name })), addAssetOption('image')]}
+        onChange={withQuickAdd((v) => set({ cursorImage: v || null, cursorHotspot: v ? n.cursorHotspot ?? { x: 0, y: 0 } : undefined }), { asset: 'image' })}
       />
       {n.cursorImage && (
         <Row>

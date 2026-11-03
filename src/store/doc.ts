@@ -100,11 +100,11 @@ export function selectionBounds(artboard: Artboard, ids: string[]): Rect | null 
 }
 
 /** Topmost node under a point (artboard space). Walks into containers; returns the deepest hit path (top-level first). */
-export function hitTest(artboard: Artboard, x: number, y: number): SceneNode[] {
+export function hitTest(artboard: Artboard, x: number, y: number, opts: { includeLocked?: boolean } = {}): SceneNode[] {
   const walk = (list: SceneNode[], parentM: Matrix, trail: SceneNode[]): SceneNode[] | null => {
     for (let i = list.length - 1; i >= 0; i--) {
       const n = list[i];
-      if (!n.visible || n.locked) continue;
+      if (!n.visible || (n.locked && !opts.includeLocked)) continue;
       const m = multiply(parentM, nodeMatrix(n));
       if (isContainer(n)) {
         const inner = walk(n.children, m, [...trail, n]);

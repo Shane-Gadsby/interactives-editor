@@ -4,6 +4,7 @@ import { createProjectRecord, deleteProject, duplicateProject, importPackage, li
 import { downloadPackage } from './lib/export';
 import { pickFiles } from './lib/insert';
 import { Icons } from './components/icons';
+import { PrefsModal } from './components/PrefsModal';
 
 declare global {
   interface Window {
@@ -17,6 +18,7 @@ export function Home({ open }: { open: (id: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [who, setWho] = useState<SessionInfo | null>(null);
   const [power, setPower] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
 
   const refresh = async (all = power) => {
     try {
@@ -99,6 +101,10 @@ export function Home({ open }: { open: (id: string) => void }) {
         </div>
         <div className="home-actions">
           {who?.user && <span className="muted">{who.user.name ?? who.user.username}</span>}
+          <button className="icon-btn" title="Preferences (theme, mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)}>
+            <Icons.gear width={16} />
+          </button>
+          {prefsOpen && <PrefsModal onClose={() => setPrefsOpen(false)} />}
           <a className="btn" href="#/help" title="How to use Interactives (F1 to search)">
             <Icons.help width={14} /> Help
           </a>
@@ -122,6 +128,22 @@ export function Home({ open }: { open: (id: string) => void }) {
               Create your first project
             </button>
           </div>
+        )}
+        {!!list?.length && (
+          <article className="project-card new-card">
+            <button className="project-thumb new-thumb" onClick={create} disabled={busy} title="Start an empty project with one artboard">
+              <Icons.plus width={34} height={34} />
+            </button>
+            <div className="project-info">
+              <div className="project-name">Create new project</div>
+              <div className="muted small">
+                Or{' '}
+                <button className="link-btn inline" onClick={doImport} disabled={busy} title={`Import a ${PACKAGE_EXTENSION} package, project JSON, Lottie or Rive file`}>
+                  import a file
+                </button>
+              </div>
+            </div>
+          </article>
         )}
         {list?.map((p) => (
           <article key={p.id} className="project-card">

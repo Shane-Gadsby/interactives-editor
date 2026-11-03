@@ -8,10 +8,12 @@ export interface Prefs {
   tooltips: boolean;
   /** Rulers along the canvas edges (Shift+R). */
   rulers: boolean;
+  /** Colour theme; 'auto' follows the system. */
+  theme: 'dark' | 'light' | 'auto';
 }
 
 const KEY = 'ix-prefs';
-const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false };
+const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark' };
 
 let current: Prefs = (() => {
   try {
@@ -26,8 +28,15 @@ export function prefs(): Prefs {
   return current;
 }
 
+/** Put the theme on <html> so the stylesheet can switch colours. */
+export function applyTheme(): void {
+  if (typeof document !== 'undefined') document.documentElement.dataset.theme = current.theme;
+}
+applyTheme();
+
 export function setPrefs(patch: Partial<Prefs>): void {
   current = { ...current, ...patch };
+  applyTheme();
   try {
     localStorage.setItem(KEY, JSON.stringify(current));
   } catch {

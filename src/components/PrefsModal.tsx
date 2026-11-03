@@ -32,6 +32,17 @@ export function PrefsModal({ onClose }: { onClose: () => void }) {
             ]}
             onChange={(v) => setPrefs({ wheel: v })}
           />
+          <SelectField<'dark' | 'light' | 'auto'>
+            label="Theme"
+            title="Colours of the editor. Auto follows your system's light or dark setting"
+            value={p.theme}
+            options={[
+              { value: 'dark', label: 'Dark' },
+              { value: 'light', label: 'Light' },
+              { value: 'auto', label: 'Auto (follow the system)' },
+            ]}
+            onChange={(v) => setPrefs({ theme: v })}
+          />
           <CheckField label="Show rulers" title="Rulers along the canvas edges; drag from them to make guides (Shift+R)" value={p.rulers} onChange={(v) => setPrefs({ rulers: v })} />
           <CheckField label="Show tooltips" title="Explanations when you hover buttons and field names" value={p.tooltips} onChange={(v) => setPrefs({ tooltips: v })} />
           <p className="hint">These settings are yours and stay in this browser.</p>

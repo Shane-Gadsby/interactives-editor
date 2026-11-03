@@ -24,6 +24,7 @@ import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, usePrefs } from '../lib/prefs';
 import { Rulers } from './Rulers';
+import { Icons } from '../components/icons';
 import { freehandToPath } from './freehand';
 import { ArtboardView } from './ArtboardView';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
@@ -95,6 +96,8 @@ export function Canvas() {
   const spaceDown = useRef(false);
   const [hover, setHover] = useState<string | null>(null);
   const [pencil, setPencil] = useState<Pt[] | null>(null);
+  const [lockedHover, setLockedHover] = useState<{ abId: string; id: string } | null>(null);
+  const lockedSeen = useRef<number | null>(null);
   const [box, setBoxState] = useState<{ abId: string | null; rect: Rect } | null>(null); // marquee / create preview
   // Mirrored in a ref: a quick click can fire pointerup before React re-renders with the new box.
   const boxRef = useRef(box);
@@ -420,6 +423,11 @@ export function Canvas() {
           const p = local(hab, w);
           const hit = pickFromHit(hitTest(hab, p.x, p.y), e.ctrlKey || e.metaKey);
           setHover(hit ? `${hab.id}/${hit.id}` : null);
+          // A locked layer under the pointer gets a quick-unlock button
+          const lockedTrail = hitTest(hab, p.x, p.y, { includeLocked: true });
+          const locked = lockedTrail.find((n) => n.locked);
+          setLockedHover((cur) => (locked ? (cur?.id === locked.id ? cur : { abId: hab.id, id: locked.id }) : cur && Date.now() - (lockedSeen.current ?? 0) < 600 ? cur : null));
+          if (locked) lockedSeen.current = Date.now();
         } else setHover(null);
       }
       if (st.tool === 'pen' && penRef.current) {
@@ -1123,6 +1131,34 @@ export function Canvas() {
         ))}
       </div>
       <svg className="overlay">{overlay}</svg>
+      {lockedHover &&
+        s.tool === 'select' &&
+        (() => {
+          const lab = getArtboard(project, lockedHover.abId);
+          const b = lab && selectionBounds(lab, [lockedHover.id]);
+          const n = lab && locate(lab, lockedHover.id)?.node;
+          if (!lab || !b || !n?.locked) return null;
+          const at = screen(lab, { x: b.x + b.width, y: b.y });
+          return (
+            <button
+              className="quick-unlock"
+              style={{ left: at.x - 26, top: at.y + 4 }}
+              title={`Unlock “${n.name}”`}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerEnter={() => (lockedSeen.current = Date.now() + 100000)}
+              onPointerLeave={() => (lockedSeen.current = Date.now())}
+              onClick={(e) => {
+                e.stopPropagation();
+                store().set({ activeArtboardId: lab.id });
+                store().setProps([n.id], { locked: false });
+                store().select([n.id], { artboardId: lab.id });
+                setLockedHover(null);
+              }}
+            >
+              <Icons.lock width={13} />
+            </button>
+          );
+        })()}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} />}
     </div>

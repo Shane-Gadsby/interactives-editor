@@ -37,6 +37,8 @@ import { CodeEditor } from '../components/CodeEditor';
 import { SplitColumns } from '../components/SplitColumns';
 import { assetKind } from '../lib/assets';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
+import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
+import { usePrefs } from '../lib/prefs';
 
 type IxNodeData = { logic: LogicNode; summary: string };
 
@@ -94,6 +96,7 @@ function summarize(n: LogicNode, ab: Artboard, project: Project): string {
 
 export function LogicGraph() {
   const s = useEditor((st) => ({ project: st.project, abId: st.activeArtboardId, sel: st.logicSelection }));
+  const theme = usePrefs().theme;
   const ab = getArtboard(s.project, s.abId);
   const rf = useRef<ReactFlowInstance<Node<IxNodeData>, Edge> | null>(null);
 
@@ -362,7 +365,7 @@ export function LogicGraph() {
           fitView={ab.logic.nodes.length > 0}
           fitViewOptions={{ maxZoom: 1 }}
           deleteKeyCode={null}
-          colorMode="dark"
+          colorMode={theme === 'auto' ? 'system' : theme}
           proOptions={{ hideAttribution: true }}
           minZoom={0.2}
         >
@@ -407,8 +410,8 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
   const field = (p: ParamDef) => {
     if (p.showIf && !p.showIf.values.includes(params[p.showIf.key])) return null;
     const v = params[p.key];
-    const pick = (options: { value: string; label: string }[], empty: string) => (
-      <SelectField key={p.key} label={p.label} value={String(v ?? '')} options={[{ value: '', label: empty }, ...options]} onChange={(x) => set(p.key, x)} />
+    const pick = (options: { value: string; label: string }[], empty: string, extra: { value: string; label: string }[] = [], quick: Parameters<typeof withQuickAdd>[1] = {}) => (
+      <SelectField key={p.key} label={p.label} value={String(v ?? '')} options={[{ value: '', label: empty }, ...options, ...extra]} onChange={withQuickAdd((x) => set(p.key, x), quick)} />
     );
     switch (p.type) {
       case 'node':
@@ -416,13 +419,13 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
       case 'timeline':
         return pick(ab.timelines.map((t) => ({ value: t.id, label: t.name })), ab.timelines.length ? 'Choose timeline…' : 'No timelines yet');
       case 'variable':
-        return pick(project.variables.map((x) => ({ value: x.id, label: x.name })), project.variables.length ? 'Choose variable…' : 'No variables yet');
+        return pick(project.variables.map((x) => ({ value: x.id, label: x.name })), project.variables.length ? 'Choose variable…' : 'No variables yet', [addVariableOption()], { variableType: 'number' });
       case 'artboard':
         return pick(project.artboards.map((a) => ({ value: a.id, label: a.name })), 'Choose artboard…');
       case 'script':
         return pick(project.scripts.map((x) => ({ value: x.id, label: x.name })), project.scripts.length ? 'Choose script…' : 'No scripts yet');
       case 'asset':
-        return pick(project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio').map((a) => ({ value: a.id, label: a.name })), 'Choose sound…');
+        return pick(project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio').map((a) => ({ value: a.id, label: a.name })), 'Choose sound…', [addAssetOption('audio')], { asset: 'audio' });
       case 'data':
         return pick(project.dataSources.map((d) => ({ value: d.id, label: d.name })), project.dataSources.length ? 'Choose data source…' : 'No data sources yet');
       case 'cursor':

@@ -8,6 +8,7 @@ import { IconButton, NumberField, SelectField, TextField } from '../components/u
 import { Icons } from '../components/icons';
 import { SplitColumns } from '../components/SplitColumns';
 import { assetKind } from '../lib/assets';
+import { addAssetOption, withQuickAdd } from '../lib/quick-add';
 
 const KINDS: { value: DataKind; label: string }[] = [
   { value: 'json', label: 'JSON' },
@@ -108,8 +109,14 @@ export function DataPanel() {
               <SelectField
                 label="File"
                 value={active.assetId ?? ''}
-                options={[{ value: '', label: dataAssets.length ? 'Choose…' : 'Upload a data file' }, ...dataAssets.map((a) => ({ value: a.id, label: a.name }))]}
-                onChange={(v) => setSource(active.id, { assetId: v || null, kind: v ? dataKindOf(s.assets.find((a) => a.id === v)?.name ?? active.kind) : active.kind })}
+                options={[{ value: '', label: dataAssets.length ? 'Choose…' : 'No file yet' }, ...dataAssets.map((a) => ({ value: a.id, label: a.name })), addAssetOption('data')]}
+                onChange={withQuickAdd(
+                  (v) => {
+                    const a = store().get().project.assets.find((x) => x.id === v);
+                    setSource(active.id, { assetId: v || null, kind: a ? dataKindOf(a.name) : active.kind });
+                  },
+                  { asset: 'data' },
+                )}
               />
             )}
             <div className="row">

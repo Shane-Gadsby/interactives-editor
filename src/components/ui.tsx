@@ -288,7 +288,10 @@ export function Section({
           {title}
         </button>
         {help && <HelpLink topic={help.split('#')[0]} anchor={help.split('#')[1]} />}
-        <div className="section-actions">{actions}</div>
+        {/* Adding something (the + buttons) opens the section so it can be seen */}
+        <div className="section-actions" onClickCapture={() => setOpen(true)}>
+          {actions}
+        </div>
       </header>
       {open && <div className="section-body">{children}</div>}
     </section>
