@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Renderer, prepareNodes, sampleArtboard, walk, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, measureTextExtent, prepareNodes, sampleArtboard, walk, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
 import { assetUrls } from '../lib/assets';
@@ -58,9 +58,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       if (!span) return;
       // The span is a stretched flex item, so its own width is the box's. The text's real extent comes from a
       // Range, scaled back out of the canvas zoom.
-      const range = document.createRange();
-      range.selectNodeContents(span);
-      const rr = range.getBoundingClientRect();
+      // Without text modifiers' offsets: the layout is measured, not how the units are moved
+      const rr = measureTextExtent(span);
       const scale = ((r.root.getBoundingClientRect().width / (artboard.width || 1)) || 1) * (Math.abs(n.scaleX) || 1);
       const h = Math.ceil(span.offsetHeight);
       if (n.autoSize === 'height') {

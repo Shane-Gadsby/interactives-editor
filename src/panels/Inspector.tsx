@@ -1,6 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   ANIMATABLE_PROPS,
+  animatableProp,
+  EASING_NAMES,
+  MODIFIER_SHAPES,
+  MODIFIER_UNITS,
+  defaultModifier,
+  type Easing,
+  type TextModifier,
+  type TextModifierShape,
+  type TextModifierUnit,
   CURSORS,
   nodeRuns,
   createNode,
@@ -43,6 +52,7 @@ import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
 import { ChildOrder } from '../components/ChildOrder';
 import { blendExample } from '../lib/blend-example';
 import { ConvertersEditor } from '../components/Converters';
+import { TEXT_PRESETS } from '../lib/text-modifiers';
 
 const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
 const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
@@ -89,7 +99,7 @@ function useShown(node: SceneNode) {
 
 function KeyButton({ node, prop }: { node: SceneNode; prop: string }) {
   const s = useEditor((st) => ({ bottomTab: st.bottomTab, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
-  if (s.bottomTab !== 'timeline' || !ANIMATABLE_PROPS.some((a) => a.prop === prop)) return null;
+  if (s.bottomTab !== 'timeline' || !animatableProp(prop)) return null;
   const ab = store().artboard();
   const tl = ab?.timelines.find((t) => t.id === s.tl);
   const track = tl?.tracks.find((t) => t.nodeId === node.id && t.prop === prop);
@@ -412,6 +422,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={BLEND} onChange={(v) => set({ blendMode: v })} />
       </Section>
       {sameType && <TypeSection nodes={nodes} project={project} />}
+      {single && n.type === 'text' && <TextModifiersSection node={n} />}
       {sameType && 'fill' in n && <FillSection nodes={nodes} project={project} />}
       {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
       <EffectsSection nodes={nodes} />
@@ -955,7 +966,7 @@ function BindingsSection({ node, project }: { node: SceneNode; project: Project 
     const keep = Object.fromEntries(Object.entries(conv).filter(([k, list]) => k in next && list.length));
     set({ bindings: Object.keys(next).length ? next : undefined, converters: Object.keys(keep).length ? keep : undefined }, `bind-${node.id}`);
   };
-  const kindOf = (p: string) => ANIMATABLE_PROPS.find((a) => a.prop === p)?.kind;
+  const kindOf = (p: string) => animatableProp(p)?.kind;
   return (
     <Section help="bindings" title="Data bindings" defaultOpen={entries.length > 0}>
       {entries.map(([p, expr]) => (
@@ -1365,6 +1376,100 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
         }}
       />
       <p className="hint">An instance runs its artboard on its own in the player: its timelines, interactions and variables. Inputs set its variables' starting values by name.</p>
+    </Section>
+  );
+}
+
+const UNIT_LABELS: Record<TextModifierUnit, string> = { letter: 'Letters', word: 'Words', line: 'Lines' };
+const SHAPE_LABELS: Record<TextModifierShape, string> = { square: 'Square', 'ramp-up': 'Ramp up', 'ramp-down': 'Ramp down', triangle: 'Triangle', round: 'Round', smooth: 'Smooth' };
+
+/** A number with a slider under it and a keyframe button, for a text modifier's range. */
+function ModRange({ node, prop, label, title, min, max, step = 1, fallback = 0 }: { node: SceneNode; prop: string; label: ReactNode; title: string; min: number; max: number; step?: number; fallback?: number }) {
+  const shown = useShown(node);
+  const set = useSetter([node.id]);
+  const v = Number(shown(prop) ?? fallback);
+  return (
+    <div className="mod-range">
+      <Num node={node} ids={[node.id]} prop={prop} label={label} title={title} step={step} min={min} max={max} suffix="%" fallback={fallback} />
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={Math.min(max, Math.max(min, v))}
+        title={title}
+        aria-label={typeof label === 'string' ? label : prop}
+        onChange={(e) => set({ [prop]: Number(e.target.value) })}
+        onPointerUp={() => store().commit()}
+        onKeyUp={() => store().commit()}
+      />
+    </div>
+  );
+}
+
+/**
+ * Text modifiers: per-letter, per-word or per-line animation. Each modifier has a range over the units (start, end,
+ * offset, shape) and the changes it makes inside that range. The offset and the amounts can be keyed like any property.
+ */
+function TextModifiersSection({ node }: { node: Extract<SceneNode, { type: 'text' }> }) {
+  const set = useSetter([node.id]);
+  const list = node.modifiers ?? [];
+  const update = (i: number, patch: Partial<TextModifier>) => set({ modifiers: list.map((m, j) => (j === i ? { ...m, ...patch } : m)) }, `modifier-${node.id}-${i}-${Object.keys(patch).join(',')}`);
+  return (
+    <Section
+      help="text-modifiers"
+      title="Text modifiers"
+      defaultOpen={list.length > 0}
+      actions={<IconButton icon={<Icons.plus />} title="Add a text modifier: animate letters, words or lines one after another" onClick={() => store().addTextModifier(node.id)} />}
+    >
+      <Row>
+        {TEXT_PRESETS.map((p) => (
+          <button key={p.id} className="btn" title={p.tip} onClick={() => store().applyTextPreset(node.id, p.id)}>
+            {p.label}
+          </button>
+        ))}
+      </Row>
+      {!list.length && <p className="hint">Animate letters, words or lines one after another. Try a preset, or add a modifier and key its offset.</p>}
+      {list.map((raw, i) => {
+        const m = { ...defaultModifier(), ...raw };
+        const P = (k: string) => `modifiers.${i}.${k}`;
+        return (
+          <div key={i} className="constraint text-modifier">
+            <Row>
+              <SelectField<TextModifierUnit> label="Per" title="What the range counts: single letters, words, or lines as laid out" value={m.unit} options={MODIFIER_UNITS.map((u) => ({ value: u, label: UNIT_LABELS[u] }))} onChange={(v) => update(i, { unit: v })} />
+              <IconButton icon={<Icons.trash />} title="Remove this modifier (and its keyframes)" onClick={() => store().removeTextModifier(node.id, i)} />
+            </Row>
+            <ModRange node={node} prop={P('start')} label="Start" title="Where the range starts, as a percent of the text" min={0} max={100} fallback={0} />
+            <ModRange node={node} prop={P('end')} label="End" title="Where the range ends, as a percent of the text" min={0} max={100} fallback={100} />
+            <ModRange node={node} prop={P('offset')} label="Offset" title="Slides the whole range along the text, past either end. Key it to make things happen one after another" min={-100} max={100} fallback={0} />
+            <Row>
+              <SelectField<TextModifierShape> label="Shape" title="How strongly units are hit across the range" value={m.shape} options={MODIFIER_SHAPES.map((sh) => ({ value: sh, label: SHAPE_LABELS[sh] }))} onChange={(v) => update(i, { shape: v })} />
+              <SelectField<string> label="Ease" title="Easing applied to the weights" value={typeof m.ease === 'string' ? m.ease : 'linear'} options={EASING_NAMES.map((e) => ({ value: e, label: e }))} onChange={(v) => update(i, { ease: v === 'linear' ? undefined : (v as Easing) })} />
+            </Row>
+            <Row>
+              <CheckField label="Randomize" title="Hit the units in a scrambled (but repeatable) order" value={!!m.randomize} onChange={(v) => update(i, { randomize: v || undefined })} />
+              {m.randomize && <NumberField label="Seed" title="Another seed, another order" value={m.seed ?? 0} step={1} onChange={(v) => update(i, { seed: Math.round(v) })} onCommit={() => store().commit()} />}
+            </Row>
+            <ModRange node={node} prop={P('strength')} label="Strength" title="How much of the modifier applies" min={0} max={100} fallback={100} />
+            <p className="hint">At full strength, inside the range:</p>
+            <Row>
+              <Num node={node} ids={[node.id]} prop={P('x')} label="X" title="Move right by this many pixels" />
+              <Num node={node} ids={[node.id]} prop={P('y')} label="Y" title="Move down by this many pixels" />
+            </Row>
+            <Row>
+              <Num node={node} ids={[node.id]} prop={P('rotation')} label="↻" suffix="°" title="Turn by this many degrees, around the centre of each unit" />
+              <Num node={node} ids={[node.id]} prop={P('scale')} label="Scale" step={0.05} fallback={1} title="Scale each unit (1 = unchanged)" />
+            </Row>
+            <Num node={node} ids={[node.id]} prop={P('opacity')} label="Opacity" step={0.05} min={0} max={1} fallback={1} title="Fade each unit to this opacity (1 = unchanged, 0 = invisible)" />
+            <Row>
+              <Num node={node} ids={[node.id]} prop={P('letterSpacing')} label="Spacing" suffix="px" title="Add this much letter spacing (the text reflows)" />
+              <Num node={node} ids={[node.id]} prop={P('blur')} label="Blur" suffix="px" min={0} title="Blur each unit by this many pixels" />
+            </Row>
+            <CheckField label="Tint" title="Mix each unit's colour toward a colour" value={!!m.color} onChange={(v) => update(i, { color: v ? '#ff3d71' : undefined })} />
+            {m.color && <Color node={node} ids={[node.id]} prop={P('color')} label="Colour" />}
+          </div>
+        );
+      })}
     </Section>
   );
 }

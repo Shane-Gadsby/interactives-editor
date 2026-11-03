@@ -101,7 +101,8 @@ Access works like this:
 | `lib/db.ts` | API client, `.ixp` import/export |
 | `lib/export.ts` | single-file HTML (embeds the player IIFE build, plus the script sandbox when used), `.ixp`, JSON |
 | `lib/live.ts`, `shared/ops.mjs` | live editing client and the shared op diff/apply |
-| `lib/lottie-import.ts`, `lib/lottie-export.ts` | Lottie / dotLottie in and out |
+| `lib/lottie-import.ts`, `lib/lottie-export.ts` | Lottie / dotLottie in and out (text animators with range selectors import as text modifiers) |
+| `lib/text-modifiers.ts` | text modifiers on a project draft: add / remove (tracks renumbered) and the Typewriter / Wave presets (modifier + timeline in one undo step); the player side is `src/textmod.ts` |
 | `lib/links.ts`, `lib/link-reconcile.ts` | Linked design files: File System Access handles in IndexedDB, the watcher (`LinkManager`), and the pure three-way merge of a re-import into the artboard (`Artboard.source` keeps the baseline) |
 | `lib/ai-import.ts`, `lib/pdf-parse.ts`, `lib/pdf-color.ts`, `lib/pdf-font.ts` | Illustrator `.ai` (the PDF inside) and `.pdf` import: a minimal PDF reader, then the page content operators replayed into path, text, image and mask layers (one artboard per page) |
 | `lib/rive-import.ts`, `lib/rive-defs.ts` | `.riv` import (view models become shared variables, DataBinds on layers become bindings with converters); defs generated from rive-runtime headers by `research/rive/gen_defs.py` |

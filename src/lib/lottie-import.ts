@@ -19,6 +19,7 @@ import {
   type SceneNode,
   type Stroke,
   type SubPath,
+  type TextModifier,
   type Timeline,
   type Track,
 } from 'interactives-player';
@@ -428,8 +429,7 @@ function layerNode(ctx: Ctx, L: Json, json: Json, compW: number, compH: number):
         const tw = Math.max(...lines.map((l) => l.length)) * size * 0.6 + 4;
         const th = lines.length * size * 1.2;
         const fontFamily = String(json.fonts?.list?.find((f: Json) => f.fName === d.f)?.fFamily ?? d.f ?? 'sans-serif');
-        content = [
-          createNode('text', {
+        const textNode = createNode('text', {
             name,
             text: lines.join('\n'),
             fontSize: size,
@@ -443,10 +443,10 @@ function layerNode(ctx: Ctx, L: Json, json: Json, compW: number, compH: number):
             y: -size,
             width: tw,
             height: th,
-          }),
-        ];
+          });
+        content = [textNode];
         if ((L.t?.d?.k?.length ?? 0) > 1) ctx.warnings.add('Animated text content is imported at its first value');
-        if (L.t?.a?.length) ctx.warnings.add('Text animators are not supported');
+        if (L.t?.a?.length) importTextAnimators(ctx, L.t.a, textNode, size);
       }
       break;
     }
@@ -485,6 +485,75 @@ function layerNode(ctx: Ctx, L: Json, json: Json, compW: number, compH: number):
     addTrack(ctx, g.id, 'visible', keys.length > 1 ? keys : [...keys, keys[0]], (v) => v[0] > 0);
   }
   return g;
+}
+
+const LOTTIE_SHAPES: TextModifier['shape'][] = ['square', 'ramp-up', 'ramp-down', 'triangle', 'round', 'smooth'];
+
+/**
+ * Text animators with a range selector become text modifiers: the selector's start, end, offset, amount, shape and
+ * randomize map directly, and the animator's position, scale, rotation, opacity, fill colour and tracking become the
+ * modifier's amounts. Animated selector values (start, end, offset, amount) become tracks on `modifiers.N.*`.
+ */
+function importTextAnimators(ctx: Ctx, animators: Json[], node: SceneNode & { type: 'text' }, fontSize: number): void {
+  const mods: TextModifier[] = [];
+  const text = node.text;
+  const count = (unit: TextModifier['unit']): number =>
+    unit === 'letter' ? Math.max(1, text.replace(/\s/g, '').length) : unit === 'word' ? Math.max(1, text.split(/\s+/).filter(Boolean).length) : Math.max(1, text.split('\n').length);
+  for (const an of animators) {
+    const sel = an?.s ?? {};
+    const a = an?.a ?? {};
+    const based = Number(sel.b ?? 1);
+    const unit: TextModifier['unit'] = based === 3 ? 'word' : based === 4 ? 'line' : 'letter';
+    // t: 1 means the range is counted in units instead of percent (b, t, sh and rn are plain numbers in the selector)
+    const scale = Number(sel.t ?? 0) === 1 ? 100 / count(unit) : 1;
+    const props = { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0 } as Partial<TextModifier>;
+    const pos = first(a.p, [0, 0]);
+    props.x = r2(pos[0] ?? 0);
+    props.y = r2(pos[1] ?? 0);
+    const sc = first(a.s, [100, 100]);
+    props.scale = r2((sc[0] ?? 100) / 100);
+    if (sc[1] !== undefined && Math.abs(sc[1] - sc[0]) > 0.01) ctx.warnings.add('Text animator scale is uniform here: the horizontal value was used');
+    props.rotation = r2(first(a.r, [0])[0]);
+    props.opacity = r2(first(a.o, [100])[0] / 100);
+    // Tracking is in thousandths of an em
+    props.letterSpacing = r2((first(a.t, [0])[0] / 1000) * fontSize);
+    if (a.fc) props.color = toHex(first(a.fc, [0, 0, 0]));
+    const m: TextModifier = {
+      name: String(an?.nm ?? `Animator ${mods.length + 1}`),
+      unit,
+      start: r2(first(sel.s, [0])[0] * scale),
+      end: r2(first(sel.e, [100])[0] * scale),
+      offset: r2(first(sel.o, [0])[0] * scale),
+      shape: LOTTIE_SHAPES[Number(sel.sh ?? 1) - 1] ?? 'square',
+      strength: r2(first(sel.a, [100])[0]),
+      x: 0,
+      y: 0,
+      rotation: 0,
+      scale: 1,
+      opacity: 1,
+      letterSpacing: 0,
+      blur: 0,
+      ...props,
+    };
+    if (Number(sel.rn ?? 0) === 1) m.randomize = true;
+    const index = mods.length;
+    mods.push(m);
+    for (const [key, prop] of [['s', 'start'], ['e', 'end'], ['o', 'offset']] as const) {
+      addTrack(ctx, node.id, `modifiers.${index}.${prop}`, keysOf(sel[key]) ?? [], (v) => r2(v[0] * scale));
+    }
+    addTrack(ctx, node.id, `modifiers.${index}.strength`, keysOf(sel.a) ?? [], (v) => r2(v[0]));
+    if (Number(sel.sm ? first(sel.sm, [100])[0] : 100) < 100) ctx.warnings.add('Text animator smoothness is not supported');
+    if (sel.xe || sel.ne) {
+      const hi = first(sel.xe, [0])[0];
+      const lo = first(sel.ne, [0])[0];
+      if (hi || lo) ctx.warnings.add('Text animator ease high / low is not supported');
+    }
+    if (['p', 's', 'r', 'o', 't', 'fc'].some((k) => isAnimated(keysOf(a[k])))) ctx.warnings.add('Animated text animator values are imported at their first value');
+    if (['sk', 'sa', 'sc', 'sw', 'a', 'bl', 'rx', 'ry', 'ls'].some((k) => a[k] !== undefined && a[k] !== null && keysOf(a[k])?.some((q) => q.v.some((x) => x !== 0 && !(k === 'a' && x === 0))))) {
+      ctx.warnings.add('Some text animator properties (skew, stroke, anchor, blur, line spacing) are not supported');
+    }
+  }
+  if (mods.length) node.modifiers = mods;
 }
 
 /** Lottie layers (front-most first) to nodes (back to front), nesting parented layers. */

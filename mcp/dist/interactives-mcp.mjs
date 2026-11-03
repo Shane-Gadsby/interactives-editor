@@ -500,7 +500,19 @@ const ANIMATABLE_PROPS = [
   { prop: "solo.active", label: "Solo: active child", kind: "string" },
   { prop: "drawOrder", label: "Draw order (children)", kind: "list" },
   { prop: "constraints.0.distance", label: "Follow path distance", kind: "number" },
-  { prop: "constraints.0.strength", label: "Constraint strength", kind: "number" }
+  { prop: "constraints.0.strength", label: "Constraint strength", kind: "number" },
+  { prop: "modifiers.0.offset", label: "Text modifier offset %", kind: "number" },
+  { prop: "modifiers.0.start", label: "Text modifier start %", kind: "number" },
+  { prop: "modifiers.0.end", label: "Text modifier end %", kind: "number" },
+  { prop: "modifiers.0.strength", label: "Text modifier strength %", kind: "number" },
+  { prop: "modifiers.0.x", label: "Text modifier X", kind: "number" },
+  { prop: "modifiers.0.y", label: "Text modifier Y", kind: "number" },
+  { prop: "modifiers.0.rotation", label: "Text modifier rotation", kind: "number" },
+  { prop: "modifiers.0.scale", label: "Text modifier scale", kind: "number" },
+  { prop: "modifiers.0.opacity", label: "Text modifier opacity", kind: "number" },
+  { prop: "modifiers.0.color", label: "Text modifier colour", kind: "color" },
+  { prop: "modifiers.0.letterSpacing", label: "Text modifier letter spacing", kind: "number" },
+  { prop: "modifiers.0.blur", label: "Text modifier blur", kind: "number" }
 ];
 function isContainer(node) {
   return node.type === "group" || node.type === "frame";
@@ -1041,7 +1053,43 @@ Things to know:
 - Lottie export writes the text in the layer's own style (Lottie text has one style per layer). SVG and PNG export, the player and the single-file export keep every run. Rive files with several text runs import as runs.
 
 ## Live values in text
-Anything in braces is an [expression](expressions): \`Score: {score}\`, \`{name.toUpperCase()}\`, \`{items.length} items\`. Write \`{{\` for a literal brace.`
+Anything in braces is an [expression](expressions): \`Score: {score}\`, \`{name.toUpperCase()}\`, \`{items.length} items\`. Write \`{{\` for a literal brace.
+
+To animate a text layer one letter, word or line at a time (typewriter, wave), see [Text modifiers](text-modifiers).`
+  },
+  {
+    id: "text-modifiers",
+    title: "Text modifiers",
+    group: "Design",
+    summary: "Animate text one letter, word or line at a time: typewriter, waves and staggered effects.",
+    keywords: "text modifier animator range selector per letter word line typewriter wave stagger reveal offset start end shape randomize split chars characters",
+    body: `A **text modifier** changes the letters, words or lines of a text layer inside a *range*. Slide the range along the text over time and the change travels through the text: a typewriter reveal, a wave, letters dropping in one after another. Select a text layer and open **Text modifiers** in the inspector.
+
+## One click
+- **Typewriter** adds a modifier that hides every letter, plus a timeline that slides its range off the end so the letters appear in order. The timeline plays when the artboard starts.
+- **Wave** adds a modifier that lifts the letters under a smooth hump, plus a looping timeline that rolls the hump through the text.
+
+Both create a new timeline named after the preset and open it, so you can change its length, easing or loop straight away.
+
+## How a modifier works
+- **Per**: the unit the range counts: *Letters* (spaces are skipped), *Words* or *Lines* (found from how the text wraps, so they follow the layer's width).
+- **Start** and **End**: the range, as a percent of the text. **Offset** slides the whole range along the text, even past either end (-100 to 100). Keying the **Offset** is how most effects are made.
+- **Shape**: how strongly units are hit across the range. *Square* hits all of them equally, *Ramp up* and *Ramp down* grow or fade across it, *Triangle*, *Round* and *Smooth* peak in the middle (*Smooth* has soft edges). **Ease** shapes the falloff.
+- **Randomize** hits the units in a scrambled but repeatable order; change the **Seed** for another order.
+- **Strength** is how much of the modifier applies, 0 to 100.
+- The changes at full strength: **X** and **Y** move, **↻** turns and **Scale** scales (around the centre of each letter, word or line), **Opacity** fades, **Tint** mixes toward a colour, **Spacing** adds letter spacing and **Blur** blurs.
+
+A unit halfway into the range gets half of each change. Several modifiers stack, top to bottom.
+
+## Animating them
+**Start**, **End**, **Offset**, **Strength** and the amounts all have a key button (◆) like any other property: turn on recording in the [timeline](timelines) and change them, or key them by hand. The tracks are named like \`modifiers.0.offset\`, the number being the modifier's position in the list. Deleting a modifier removes its tracks and renumbers the later ones. Bindings, *Set property* actions and scripts can set the same paths.
+
+## Things to know
+- Everything except **Spacing** is purely visual: it does not change how the text wraps or the layer's auto size. Letter spacing really spaces the letters, so the text may reflow.
+- Modifiers work on rich text too: each letter keeps its run's styling. A word that crosses a run boundary is still one word.
+- Letters and words are drawn as separate pieces, so kerning pairs and ligatures between them are not applied while a modifier is on (a modifier that only fades or tints keeps them as far as the browser allows).
+- With **reduced motion** on, modifiers still apply, but timelines that animate them show their last frame instead of playing.
+- Lottie files with text animators import as modifiers (range selector and the position, scale, rotation, opacity, colour and tracking properties). The Lottie export does not write them.`
   },
   {
     id: "images-media",
@@ -2172,7 +2220,7 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n");
   if (topic === "layers") {
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance"];
-    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
   const t = TOPICS.find((x) => x.id === topic);
   if (t) return `# ${t.title}

@@ -3266,3 +3266,14 @@ code {
 .converter-row {
   margin-bottom: 6px;
 }
+
+.text-modifier .mod-range {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.text-modifier .mod-range input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}

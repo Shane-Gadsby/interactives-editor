@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ANIMATABLE_PROPS, EASING_NAMES, ease, uid, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
+import { ANIMATABLE_PROPS, animatableProp, EASING_NAMES, ease, uid, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -8,6 +8,14 @@ import { Icons } from '../components/icons';
 import { ChildOrder } from '../components/ChildOrder';
 
 const LABEL_W = 220;
+
+/** A track's property name for people: the list's label, with the number of a later constraint or text modifier. */
+function animatableLabel(prop: string): string {
+  const label = animatableProp(prop)?.label;
+  if (!label) return prop;
+  const m = /^(?:constraints|modifiers)\.(\d+)\./.exec(prop);
+  return m && m[1] !== '0' ? `${label} #${Number(m[1]) + 1}` : label;
+}
 
 export function TimelinePanel() {
   const s = useEditor((st) => ({
@@ -302,7 +310,7 @@ export function TimelinePanel() {
                 </div>
                 {tracks.map((tr) => (
                   <div key={tr.id} className="track-label">
-                    <span>{ANIMATABLE_PROPS.find((a) => a.prop === tr.prop)?.label ?? tr.prop}</span>
+                    <span>{animatableLabel(tr.prop)}</span>
                     <button
                       className="mini"
                       title="Remove track"
@@ -423,7 +431,7 @@ export function TimelinePanel() {
           <div className="key-editor">
             <div className="field-label block">Tween</div>
             <div className="small muted">
-              {ANIMATABLE_PROPS.find((a) => a.prop === selectedTween.track.prop)?.label ?? selectedTween.track.prop}: {tweenValue(selectedTween.key.value)} → {tweenValue(selectedTween.next.value)}, {selectedTween.key.t}–{selectedTween.next.t} ms
+              {animatableLabel(selectedTween.track.prop)}: {tweenValue(selectedTween.key.value)} → {tweenValue(selectedTween.next.value)}, {selectedTween.key.t}–{selectedTween.next.t} ms
             </div>
             <CurveEditor ease={selectedTween.key.ease} onChange={(e) => setEase(e)} />
             <SelectField
@@ -468,7 +476,7 @@ function KeyValueField({ prop, value, kids, onChange }: { prop: string; value: K
   if (prop === 'drawOrder') return <ChildOrder children={kids} order={Array.isArray(value) ? value : []} onChange={onChange} />;
   if (prop === 'solo.active')
     return <SelectField label="Value" value={String(value)} options={[{ value: '', label: '(none)' }, ...kids.map((c) => ({ value: c.id, label: c.name }))]} onChange={onChange} />;
-  const kind = ANIMATABLE_PROPS.find((a) => a.prop === prop)?.kind ?? (typeof value === 'number' ? 'number' : 'string');
+  const kind = animatableProp(prop)?.kind ?? (typeof value === 'number' ? 'number' : 'string');
   if (kind === 'number') return <NumberField label="Value" value={Number(value)} step={prop === 'opacity' || prop.startsWith('scale') ? 0.05 : 1} onChange={onChange} />;
   if (kind === 'color') return <ColorField label="Value" value={String(value)} onChange={onChange} />;
   if (kind === 'boolean') return <CheckField label="Value" value={!!value} onChange={onChange} />;

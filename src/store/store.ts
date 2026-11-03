@@ -1,7 +1,7 @@
 import { produce, type Draft } from 'immer';
 import { useSyncExternalStore, useRef } from 'react';
 import {
-  ANIMATABLE_PROPS,
+  animatableProp,
   relayoutTree,
   createArtboard,
   cloneWithNewIds,
@@ -20,10 +20,12 @@ import {
   type Project,
   type RunStyle,
   type SceneNode,
+  type TextModifier,
   type TextRun,
   type Timeline,
 } from 'interactives-player';
 import { applyRuns, nodePropsToRunStyle } from '../lib/rich-text';
+import { addModifier, applyPreset, removeModifier, type TextPresetId } from '../lib/text-modifiers';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { apply as applyOps, type Op } from '../../shared/ops.mjs';
 import type { Peer } from '../lib/live';
@@ -365,7 +367,7 @@ export class EditorStore {
         const loc = locate(ab as Artboard, id);
         if (!loc) continue;
         for (const [prop, value] of Object.entries(props)) {
-          if (record && ANIMATABLE_PROPS.some((a) => a.prop === prop)) {
+          if (record && animatableProp(prop)) {
             const dtl = ab.timelines.find((t) => t.id === tl!.id)!;
             setKey(dtl as Timeline, id, prop, s.playhead, value as Keyframe['value']);
           } else if (prop === 'text' && loc.node.type === 'text' && loc.node.runs?.length) {
@@ -774,6 +776,29 @@ export class EditorStore {
       d.artboards.push(copy);
     });
     this.set({ activeArtboardId: copy.id, selection: [], artboardSelected: true });
+  }
+
+  // ---------------------------------------------------------------- text modifiers
+
+  addTextModifier(nodeId: string, patch: Partial<TextModifier> = {}): void {
+    const ab = this.artboard();
+    if (ab) this.update((d) => void addModifier(d as Project, ab.id, nodeId, patch));
+  }
+
+  removeTextModifier(nodeId: string, index: number): void {
+    const ab = this.artboard();
+    if (ab) this.update((d) => removeModifier(d as Project, ab.id, nodeId, index));
+  }
+
+  /** Typewriter or wave: a modifier and a timeline for it, in one undo step. The new timeline becomes the open one. */
+  applyTextPreset(nodeId: string, preset: TextPresetId): void {
+    const ab = this.artboard();
+    if (!ab) return;
+    let tlId: string | null = null;
+    this.update((d) => {
+      tlId = applyPreset(d as Project, ab.id, nodeId, preset);
+    });
+    if (tlId) this.set({ activeTimelineId: tlId, playhead: 0, bottomTab: 'timeline' });
   }
 
   // ---------------------------------------------------------------- timelines
