@@ -300,26 +300,102 @@ function Layers() {
   );
 }
 
+const ASSET_VIEW_KEY = 'ix-assets-view';
+const ASSET_SIZE_KEY = 'ix-assets-size';
+const readLocal = (k: string, d: string) => {
+  try {
+    return localStorage.getItem(k) ?? d;
+  } catch {
+    return d;
+  }
+};
+const writeLocal = (k: string, v: string) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch {
+    /* storage unavailable */
+  }
+};
+const kb = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+
 function Assets() {
   const s = useEditor((st) => ({ project: st.project, activeArtboardId: st.activeArtboardId }));
   const ab = getArtboard(s.project, s.activeArtboardId);
   const center = ab ? { x: ab.width / 2, y: ab.height / 2 } : null;
+  const [view, setView] = useState<'grid' | 'list'>(() => (readLocal(ASSET_VIEW_KEY, 'grid') === 'list' ? 'list' : 'grid'));
+  const [size, setSize] = useState(() => Math.min(220, Math.max(56, Number(readLocal(ASSET_SIZE_KEY, '96')) || 96)));
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const lastClicked = useRef<string | null>(null);
+  const assets = s.project.assets;
+  // Forget checks for assets that are gone (deleted here, by undo, or by someone else)
+  const live = new Set(assets.map((a) => a.id));
+  const sel = [...checked].filter((id) => live.has(id));
+  const isUsed = (id: string) => JSON.stringify(s.project.artboards).includes(`"${id}"`) || s.project.fonts.some((f) => f.assetId === id);
   const upload = async () => {
     const files = await pickFiles('image/*,.psd,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
     if (files.length) await insertFiles(files, null, null);
   };
-  const remove = async (id: string) => {
-    const used = JSON.stringify(s.project.artboards).includes(`"${id}"`) || s.project.fonts.some((f) => f.assetId === id);
-    if (used && !(await confirmDialog({ title: 'Remove asset', message: 'This asset is used in the project. Remove it anyway?', confirmLabel: 'Remove', danger: true }))) return;
+  const removeIds = async (ids: string[]) => {
     store().update((d) => {
-      d.assets = d.assets.filter((a) => a.id !== id);
-      d.fonts = d.fonts.filter((f) => f.assetId !== id);
+      d.assets = d.assets.filter((a) => !ids.includes(a.id));
+      d.fonts = d.fonts.filter((f) => !f.assetId || !ids.includes(f.assetId));
     });
-    try {
-      await deleteAsset(s.project.id, id);
-    } catch {
-      /* already gone */
+    for (const id of ids) {
+      try {
+        await deleteAsset(s.project.id, id);
+      } catch {
+        /* already gone */
+      }
     }
+    setChecked(new Set());
+  };
+  const remove = async (id: string) => {
+    const a = assets.find((x) => x.id === id);
+    const used = isUsed(id);
+    const ok = await confirmDialog({
+      title: 'Delete asset',
+      message: used ? `“${a?.name}” is used in the project. Layers that show it will be empty. Delete it anyway?` : `Delete “${a?.name}”?`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (ok) await removeIds([id]);
+  };
+  const removeSelected = async () => {
+    if (!sel.length) return;
+    const used = sel.filter(isUsed);
+    const names = sel.map((id) => assets.find((a) => a.id === id)?.name ?? id);
+    const ok = await confirmDialog({
+      title: `Delete ${sel.length} asset${sel.length === 1 ? '' : 's'}`,
+      message: `${names.slice(0, 12).join('\n')}${names.length > 12 ? `\n…and ${names.length - 12} more` : ''}${used.length ? `\n\n${used.length} of them ${used.length === 1 ? 'is' : 'are'} used in the project; layers that show ${used.length === 1 ? 'it' : 'them'} will be empty.` : ''}`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (ok) await removeIds(sel);
+  };
+  const toggle = (id: string, e?: { shiftKey: boolean }) => {
+    setChecked((cur) => {
+      const next = new Set([...cur].filter((x) => live.has(x)));
+      // Shift-click checks everything between the last clicked asset and this one
+      if (e?.shiftKey && lastClicked.current && live.has(lastClicked.current)) {
+        const ids = assets.map((a) => a.id);
+        const [i, j] = [ids.indexOf(lastClicked.current), ids.indexOf(id)].sort((x, y) => x - y);
+        for (const x of ids.slice(i, j + 1)) next.add(x);
+      } else if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    lastClicked.current = id;
+  };
+  const place = (a: (typeof assets)[number], kind: string) => {
+    if (!ab || !center) return;
+    store().addNodes(
+      [createNode(kind === 'image' ? 'image' : 'video', { name: a.name.replace(/\.[^.]+$/, ''), assetId: a.id, x: center.x - 150, y: center.y - 100, width: 300, height: 200 })],
+      { artboardId: ab.id },
+    );
+  };
+  const setViewKeep = (v: 'grid' | 'list') => {
+    setView(v);
+    writeLocal(ASSET_VIEW_KEY, v);
   };
   return (
     <div className="assets">
@@ -327,32 +403,103 @@ function Assets() {
         <Icons.upload width={14} /> Upload files
       </button>
       <p className="hint">Images, video, audio, fonts and data files (JSON/CSV/TSV/text, used from the Data tab). Drop files on the canvas to place them.</p>
-      <div className="asset-grid">
-        {s.project.assets.map((a) => {
+      {assets.length > 0 && (
+        <div className="asset-toolbar">
+          <div className="seg">
+            <button className={view === 'grid' ? 'on' : ''} title="Show assets as thumbnails" onClick={() => setViewKeep('grid')}>
+              Thumbnails
+            </button>
+            <button className={view === 'list' ? 'on' : ''} title="Show assets as a list with details" onClick={() => setViewKeep('list')}>
+              Details
+            </button>
+          </div>
+          {view === 'grid' && (
+            <input
+              type="range"
+              className="asset-size"
+              min={56}
+              max={220}
+              step={2}
+              value={size}
+              title="Thumbnail size"
+              onChange={(e) => {
+                setSize(Number(e.target.value));
+                writeLocal(ASSET_SIZE_KEY, e.target.value);
+              }}
+            />
+          )}
+        </div>
+      )}
+      {assets.length > 0 && (
+        <div className={`asset-selbar${sel.length ? ' active' : ''}`}>
+          <label title={sel.length === assets.length ? 'Uncheck every asset' : 'Check every asset'}>
+            <input
+              type="checkbox"
+              checked={sel.length > 0 && sel.length === assets.length}
+              ref={(el) => {
+                if (el) el.indeterminate = sel.length > 0 && sel.length < assets.length;
+              }}
+              onChange={() => setChecked(sel.length === assets.length ? new Set() : new Set(assets.map((a) => a.id)))}
+            />
+            {sel.length ? `${sel.length} selected` : 'Select all'}
+          </label>
+          {sel.length > 0 && (
+            <button className="btn small danger-fill" title="Delete the checked assets (you'll be asked first)" onClick={removeSelected}>
+              <Icons.trash width={12} /> Delete
+            </button>
+          )}
+        </div>
+      )}
+      <div className={view === 'grid' ? 'asset-grid' : 'asset-list'} style={view === 'grid' ? { gridTemplateColumns: `repeat(auto-fill, minmax(${size}px, 1fr))` } : undefined}>
+        {assets.map((a) => {
           const kind = assetKind(a.mime, a.name);
           const url = assetUrls.resolve(a.id);
+          const on = sel.includes(a.id);
+          const box = (
+            <input
+              type="checkbox"
+              className="asset-check"
+              checked={on}
+              title={on ? 'Uncheck' : 'Check (Shift+click to check a range)'}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => toggle(a.id, e.nativeEvent as MouseEvent)}
+            />
+          );
+          const actions = (
+            <div className="asset-actions">
+              {(kind === 'image' || kind === 'video') && ab && center && (
+                <button className="link-btn" title={`Place on “${ab.name}”`} onClick={(e) => (e.stopPropagation(), place(a, kind))}>
+                  Place
+                </button>
+              )}
+              <IconButton icon={<Icons.trash width={13} />} title="Delete asset" onClick={(e) => (e?.stopPropagation(), void remove(a.id))} />
+            </div>
+          );
+          if (view === 'list')
+            return (
+              <div key={a.id} className={`asset-row${on ? ' checked' : ''}`} title={`${a.name} · ${kb(a.size)}`} onClick={(e) => toggle(a.id, e)}>
+                {box}
+                <div className="asset-mini" style={kind === 'image' && url ? { backgroundImage: `url("${url}")` } : undefined}>
+                  {kind !== 'image' && <span className="asset-kind">{kind.slice(0, 4)}</span>}
+                </div>
+                <div className="asset-row-text">
+                  <div className="asset-name">{a.name}</div>
+                  <div className="asset-meta">
+                    {kind} · {kb(a.size)}
+                    {isUsed(a.id) ? '' : ' · unused'}
+                  </div>
+                </div>
+                {actions}
+              </div>
+            );
           return (
-            <div key={a.id} className="asset-card" title={`${a.name} · ${(a.size / 1024).toFixed(0)} KB`}>
-              <div className="asset-thumb" style={kind === 'image' && url ? { backgroundImage: `url("${url}")` } : undefined}>
+            <div key={a.id} className={`asset-card${on ? ' checked' : ''}`} title={`${a.name} · ${kb(a.size)}`} onClick={(e) => toggle(a.id, e)}>
+              <div className="asset-thumb" style={{ height: Math.round(size * 0.66), ...(kind === 'image' && url ? { backgroundImage: `url("${url}")` } : {}) }}>
                 {kind !== 'image' && <span className="asset-kind">{kind}</span>}
+                {box}
               </div>
               <div className="asset-name">{a.name}</div>
-              <div className="asset-actions">
-                {(kind === 'image' || kind === 'video') && ab && center && (
-                  <button
-                    className="link-btn"
-                    onClick={() => {
-                      store().addNodes(
-                        [createNode(kind === 'image' ? 'image' : 'video', { name: a.name.replace(/\.[^.]+$/, ''), assetId: a.id, x: center.x - 150, y: center.y - 100, width: 300, height: 200 })],
-                        { artboardId: ab.id },
-                      );
-                    }}
-                  >
-                    Place
-                  </button>
-                )}
-                <IconButton icon={<Icons.trash width={13} />} title="Remove asset" onClick={() => remove(a.id)} />
-              </div>
+              {actions}
             </div>
           );
         })}

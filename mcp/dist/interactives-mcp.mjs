@@ -1034,7 +1034,7 @@ Anything in braces is an [expression](expressions): \`Score: {score}\`, \`{name.
     keywords: "image picture photo svg video audio sound mp3 upload drop paste asset nine slice 9-slice n-slice",
     body: `Drop files on the canvas, paste them, or use the **Image** tool. SVG files become editable vector layers; other images become image layers. Video files become video layers; audio files are stored as assets for the **Play sound** action.
 
-The **Assets** panel lists every file in the project with its size. Removing an asset that layers still use leaves those layers empty.
+The **Assets** panel lists every file in the project. Switch between **Thumbnails** (drag the slider to change their size) and **Details** (a list with the type, size and whether anything uses it). Click an asset, or its checkbox, to check it; Shift+click checks a range, and the box at the top checks or unchecks them all. **Delete** removes the checked assets after asking. Deleting an asset that layers still use leaves those layers empty.
 
 ## Image settings
 **Fit** (cover, contain, stretch), corner radius, and:
