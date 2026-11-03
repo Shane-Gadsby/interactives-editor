@@ -3,6 +3,8 @@ import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
 import {
   ANIMATABLE_PROPS,
   animatableProp,
+  linearLine,
+  radialCircle,
   EASING_NAMES,
   MODIFIER_SHAPES,
   MODIFIER_UNITS,
@@ -164,7 +166,88 @@ export function Color({ node, ids, prop, label }: { node: SceneNode; ids: string
 
 // ---------------------------------------------------------------- paint
 
-export function PaintField({ paint, onChange, project, allowNone = true }: { paint: Paint | null; onChange: (p: Paint | null) => void; project: Project; allowNone?: boolean }) {
+/** Where a gradient's points are edited: the numbers of its start and end (linear), or its centre and radius (radial), in px from the layer's top-left. */
+function GradientPoints({ paint, onChange, box }: { paint: Extract<Paint, { type: 'linear' | 'radial' }>; onChange: (p: Paint) => void; box: { w: number; h: number } }) {
+  const commit = () => store().commit();
+  const r1 = (v: number) => Math.round(v * 100) / 100;
+  if (paint.type === 'linear') {
+    const l = linearLine(paint, box.w, box.h);
+    if (!l.exact) {
+      return (
+        <button
+          className="link-btn"
+          title="Pin the start and end of the gradient to points on the layer (in px from its top-left corner), instead of running corner to corner along the angle. They stay put when the layer is resized and can be animated."
+          onClick={() => onChange({ ...paint, from: { x: r1(l.x1), y: r1(l.y1) }, to: { x: r1(l.x2), y: r1(l.y2) } })}
+        >
+          Set start and end points
+        </button>
+      );
+    }
+    const pts = { from: { x: r1(l.x1), y: r1(l.y1) }, to: { x: r1(l.x2), y: r1(l.y2) } };
+    const setPt = (which: 'from' | 'to', k: 'x' | 'y', v: number) => onChange({ ...paint, ...pts, [which]: { ...pts[which], [k]: v } });
+    return (
+      <>
+        <Row>
+          <NumberField label="From X" title="Where the first colour sits, in px from the layer's left edge" value={r1(l.x1)} suffix="px" onChange={(v) => setPt('from', 'x', v)} onCommit={commit} />
+          <NumberField label="From Y" title="Where the first colour sits, in px from the layer's top edge" value={r1(l.y1)} suffix="px" onChange={(v) => setPt('from', 'y', v)} onCommit={commit} />
+        </Row>
+        <Row>
+          <NumberField label="To X" title="Where the last colour sits, in px from the layer's left edge" value={r1(l.x2)} suffix="px" onChange={(v) => setPt('to', 'x', v)} onCommit={commit} />
+          <NumberField label="To Y" title="Where the last colour sits, in px from the layer's top edge" value={r1(l.y2)} suffix="px" onChange={(v) => setPt('to', 'y', v)} onCommit={commit} />
+        </Row>
+        <button
+          className="link-btn"
+          title="Go back to a gradient that runs corner to corner along an angle (the angle of the current line is kept)"
+          onClick={() => {
+            const { from: _f, to: _t, ...rest } = paint;
+            void _f;
+            void _t;
+            onChange({ ...rest, angle: r1((Math.atan2(l.y2 - l.y1, l.x2 - l.x1) * 180) / Math.PI + 90) });
+          }}
+        >
+          Use angle instead of points
+        </button>
+      </>
+    );
+  }
+  const c = radialCircle(paint, box.w, box.h);
+  if (!c.exact) {
+    return (
+      <button
+        className="link-btn"
+        title="Pin the gradient to a centre and radius in px from the layer's top-left corner, instead of running from the middle to the farthest corner. They stay put when the layer is resized and can be animated."
+        onClick={() => onChange({ ...paint, center: { x: r1(c.cx), y: r1(c.cy) }, radius: r1(c.r) })}
+      >
+        Set centre and radius
+      </button>
+    );
+  }
+  const base = { center: { x: r1(c.cx), y: r1(c.cy) }, radius: r1(c.r) };
+  return (
+    <>
+      <Row>
+        <NumberField label="Centre X" title="Where the first colour sits, in px from the layer's left edge" value={base.center.x} suffix="px" onChange={(v) => onChange({ ...paint, ...base, center: { ...base.center, x: v } })} onCommit={commit} />
+        <NumberField label="Centre Y" title="Where the first colour sits, in px from the layer's top edge" value={base.center.y} suffix="px" onChange={(v) => onChange({ ...paint, ...base, center: { ...base.center, y: v } })} onCommit={commit} />
+      </Row>
+      <NumberField label="Radius" title="How far from the centre the last colour is reached, in px" value={base.radius} suffix="px" min={0.01} onChange={(v) => onChange({ ...paint, ...base, radius: v })} onCommit={commit} />
+      <button
+        className="link-btn"
+        title="Go back to a gradient from the middle of the layer to its farthest corner"
+        onClick={() => {
+          const { center: _c, radius: _r, ...rest } = paint;
+          void _c;
+          void _r;
+          onChange(rest);
+        }}
+      >
+        Use the box instead of a centre and radius
+      </button>
+    </>
+  );
+}
+
+/** `box` (the layer's size) is what the gradient points start from; without it a 100 x 100 box stands in. */
+export function PaintField({ paint, onChange, project, allowNone = true, box }: { paint: Paint | null; onChange: (p: Paint | null) => void; project: Project; allowNone?: boolean; box?: { w: number; h: number } }) {
   const type = paint?.type ?? 'none';
   const stopsOf = (p: Paint | null): ColorStop[] =>
     p && (p.type === 'linear' || p.type === 'radial')
@@ -193,7 +276,8 @@ export function PaintField({ paint, onChange, project, allowNone = true }: { pai
       {paint?.type === 'solid' && <ColorField value={paint.color} onChange={(c) => onChange({ ...paint, color: c })} onCommit={() => store().commit()} />}
       {(paint?.type === 'linear' || paint?.type === 'radial') && (
         <>
-          {paint.type === 'linear' && <NumberField label="Angle" value={paint.angle} suffix="°" onChange={(a) => onChange({ ...paint, angle: a })} onCommit={() => store().commit()} />}
+          {paint.type === 'linear' && !paint.from && !paint.to && <NumberField label="Angle" value={paint.angle} suffix="°" onChange={(a) => onChange({ ...paint, angle: a })} onCommit={() => store().commit()} />}
+          <GradientPoints paint={paint} onChange={onChange} box={box ?? { w: 100, h: 100 }} />
           {paint.stops.map((stop, i) => (
             <Row key={i} className="stop-row">
               <ColorField value={stop.color} onChange={(c) => onChange({ ...paint, stops: paint.stops.map((x, j) => (j === i ? { ...x, color: c } : x)) })} />
@@ -350,7 +434,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           ]}
         />
         <div className="field-label block">Background</div>
-        <PaintField paint={ab.background} project={project} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
+        <PaintField paint={ab.background} project={project} box={{ w: ab.width, h: ab.height }} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
         <CheckField label="Clip content to artboard" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
         {project.settings.library && !ab.library && (
           <CheckField

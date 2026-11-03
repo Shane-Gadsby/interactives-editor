@@ -111,3 +111,61 @@ describe('Lottie export', () => {
     expect(back.children[0].name).toBe('Background');
   });
 });
+
+describe('Lottie gradient points', () => {
+  const stops = [{ offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' }];
+  it('exports exact points, and the corner to corner line of a box-relative gradient', () => {
+    const p = createProject('G');
+    const ab = createArtboard({ name: 'A', width: 300, height: 200 });
+    const exact = createNode('rect', { name: 'Exact', x: 0, y: 0, width: 100, height: 50, fill: { type: 'linear', angle: 0, stops, from: { x: 10, y: 20 }, to: { x: 70, y: 40 } } });
+    const radial = createNode('ellipse', { name: 'Radial', x: 0, y: 60, width: 100, height: 50, fill: { type: 'radial', stops, center: { x: 30, y: 25 }, radius: 18 } });
+    const old = createNode('rect', { name: 'Old', x: 0, y: 120, width: 100, height: 50, fill: { type: 'linear', angle: 90, stops } });
+    ab.children.push(exact, radial, old);
+    p.artboards = [ab];
+    const { json } = exportLottie(p, ab, { bytesFor: () => null });
+    const gf = (name: string) => {
+      const layer = (json.layers as { nm: string; shapes: { ty: string; it?: { ty: string; s?: { k: number[] }; e?: { k: number[] }; t?: number }[] }[] }[]).find((l) => l.nm === name)!;
+      const find = (items: unknown[]): { s: { k: number[] }; e: { k: number[] }; t: number } | undefined => {
+        for (const it of items as { ty: string; it?: unknown[] }[]) {
+          if (it.ty === 'gf') return it as never;
+          if (it.it) {
+            const r = find(it.it);
+            if (r) return r;
+          }
+        }
+      };
+      return find(layer.shapes)!;
+    };
+    expect(gf('Exact').s.k).toEqual([10, 20]);
+    expect(gf('Exact').e.k).toEqual([70, 40]);
+    expect(gf('Radial').t).toBe(2);
+    expect(gf('Radial').s.k).toEqual([30, 25]);
+    expect(gf('Radial').e.k).toEqual([48, 25]);
+    // 90deg on 100x50 runs left middle to right middle
+    expect(gf('Old').s.k.map(Math.round)).toEqual([0, 25]);
+    expect(gf('Old').e.k.map(Math.round)).toEqual([100, 25]);
+  });
+
+  it('imports the points into the layer box', () => {
+    const lottie = {
+      v: '5.7.4', fr: 30, ip: 0, op: 30, w: 200, h: 100, nm: 'G', ddd: 0, assets: [],
+      layers: [{
+        ty: 4, ind: 1, nm: 'Grad', ip: 0, op: 30, st: 0, ks: {},
+        shapes: [{
+          ty: 'gr', nm: 'G', it: [
+            { ty: 'rc', p: { a: 0, k: [100, 50] }, s: { a: 0, k: [80, 40] }, r: { a: 0, k: 0 } },
+            { ty: 'gf', t: 1, s: { a: 0, k: [60, 30] }, e: { a: 0, k: [140, 30] }, g: { p: 2, k: { a: 0, k: [0, 1, 0, 0, 1, 0, 0, 1] } }, o: { a: 0, k: 100 } },
+            { ty: 'tr', p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } },
+          ],
+        }],
+      }],
+    };
+    const { artboard } = importLottie(lottie);
+    let rect: { fill: { from: unknown; to: unknown } } | undefined;
+    const rec = (nodes: { type: string; children?: unknown[] }[]) => nodes.forEach((n) => (n.type === 'rect' ? (rect = n as never) : n.children && rec(n.children as never)));
+    rec(artboard.children as never);
+    // The rectangle's box starts at (60,30), where the gradient starts
+    expect(rect!.fill.from).toEqual({ x: 0, y: 0 });
+    expect(rect!.fill.to).toEqual({ x: 80, y: 0 });
+  });
+});

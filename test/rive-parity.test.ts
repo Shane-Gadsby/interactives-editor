@@ -253,28 +253,6 @@ describe('Rive text placement, weight and radial gradients', () => {
     expect(find((await importRive(textFile({}, axis), 't')).artboards[0], 'T').fontWeight).toBe(700);
     expect(find((await importRive(textFile({}), 't')).artboards[0], 'T').fontWeight).toBe(400);
   });
-
-  it('squeezes a radial gradient that ends at the box side, since ours ends at the farthest corner', async () => {
-    const file = (endX: number) =>
-      writeRiv([
-        ['Artboard', { name: 'Main', width: 200, height: 200 }],
-        ['Shape', { name: 'Dot', parentId: 0 }], // 1
-        ['Ellipse', { parentId: 1, width: 200, height: 200 }],
-        ['Fill', { parentId: 1 }], // 3
-        ['RadialGradient', { parentId: 3, endX }], // 4
-        ['GradientStop', { parentId: 4, colorValue: 0xffff0000, position: 0 }],
-        ['GradientStop', { parentId: 4, colorValue: 0xff0000ff, position: 1 }],
-      ]);
-    const stops = async (endX: number) => {
-      let fill: { stops: { offset: number }[] } | undefined;
-      walk((await importRive(file(endX), 'g')).artboards[0].children, (n) => n.name === 'Dot' && (fill = (n as never as { fill: typeof fill }).fill));
-      return fill!.stops.map((s) => s.offset);
-    };
-    // Radius 100 in a 200x200 box: the corner is 141 away, so the blue is reached at 0.71 and carries on
-    expect(await stops(100)).toEqual([0, 0.71, 1]);
-    // Reaching the corner or beyond needs no change
-    expect(await stops(142)).toEqual([0, 1]);
-  });
 });
 
 // ---------------------------------------------------------------- layout styles

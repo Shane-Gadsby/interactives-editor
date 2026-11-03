@@ -7,6 +7,8 @@
  */
 import { strToU8, zipSync } from 'fflate';
 import {
+  linearLine,
+  radialCircle,
   cornerRadiiOf,
   fillPath,
   isContainer,
@@ -173,15 +175,14 @@ function paintItem(ctx: Ctx, n: SceneNode, p: Paint | null, kind: 'fill' | 'stro
     let s = [0, h / 2];
     let e = [w, h / 2];
     if (p.type === 'linear') {
-      const a = ((p.angle - 90) * Math.PI) / 180;
-      const cx = w / 2;
-      const cy = h / 2;
-      const len = (Math.abs(w * Math.cos(a)) + Math.abs(h * Math.sin(a))) / 2;
-      s = [cx - Math.cos(a) * len, cy - Math.sin(a) * len];
-      e = [cx + Math.cos(a) * len, cy + Math.sin(a) * len];
+      // Points of its own go out as they are, a box-relative gradient as its corner to corner line
+      const l = linearLine(p, w, h);
+      s = [l.x1, l.y1];
+      e = [l.x2, l.y2];
     } else {
-      s = [w / 2, h / 2];
-      e = [w, h / 2];
+      const c = radialCircle(p, w, h);
+      s = [c.cx, c.cy];
+      e = [c.cx + c.r, c.cy];
     }
     const g = { p: stops.length, k: { a: 0, k } };
     const common = { o: { a: 0, k: r3(alpha * 100) }, s: { a: 0, k: s.map(r3) }, e: { a: 0, k: e.map(r3) }, t: p.type === 'linear' ? 1 : 2, g };

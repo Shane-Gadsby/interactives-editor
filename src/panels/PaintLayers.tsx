@@ -150,6 +150,7 @@ export function FillSection({ nodes, project }: { nodes: SceneNode[]; project: P
             <PaintField
               paint={paint}
               project={project}
+              box={{ w: n.width, h: n.height }}
               onChange={(np) => {
                 if (!np) remove(i);
                 // Only the colour moved: set its colour, so recording turns it into a keyframe
@@ -213,6 +214,7 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
               paint={s.paint.type === 'solid' && typeof color === 'string' ? { ...s.paint, color } : s.paint}
               allowNone={false}
               project={project}
+              box={{ w: n.width, h: n.height }}
               onChange={(p) => (p?.type === 'solid' && s.paint.type === 'solid' ? set({ [`${prefix}.paint.color`]: p.color }, `stroke-paint-${i}`) : set({ [`${prefix}.paint`]: p! }, `stroke-paint-${i}`))}
             />
             <Row>

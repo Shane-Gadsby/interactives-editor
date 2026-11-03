@@ -677,3 +677,25 @@ describe.skipIf(!existsSync(dir + '262426_-_breathing_for_calm.riv'))('Rive nest
     expect(selfRefs).toEqual([]);
   });
 });
+
+const breathing = '262426_-_breathing_for_calm.riv';
+describe.skipIf(!existsSync(dir + breathing))('Rive view model changes on states and transitions', () => {
+  it('turns the actions of states and transitions into variable changes, in the state flow, with nothing skipped', async () => {
+    const res = await importRive(new Uint8Array(readFileSync(dir + breathing)), 'b');
+    expect(res.warnings.some((w) => /not attached to a layer property|change view model properties that could not be found/.test(w))).toBe(false);
+    const nodes = res.artboards.flatMap((a) => a.logic.nodes);
+    const edges = res.artboards.flatMap((a) => a.logic.edges);
+    const varOf = (name: string) => res.variables.find((v) => v.name === name)!;
+    const sets = (name: string, value: string) => nodes.filter((n) => n.kind === 'action.setVariable' && n.params.variable === varOf(name).id && n.params.value === value);
+    // State actions (flags 4: when the state starts) set the scene and round counters
+    expect(sets('VM_sceneNum', '2').length).toBeGreaterThan(0);
+    expect(sets('VM_roundNum', '3').length).toBeGreaterThan(0);
+    // The hover transitions set the cursor text, both ways
+    expect(sets('VM_setCursor', '"pointer"').length).toBeGreaterThan(0);
+    expect(sets('VM_setCursor', '"default"').length).toBeGreaterThan(0);
+    // A trigger property in an action fires it (adds one), and each action sits on a chain: something leads into it
+    const fire = nodes.filter((n) => n.kind === 'action.setVariable' && n.params.variable === varOf('VM_supportTrig').id && n.params.op === 'add');
+    expect(fire.length).toBeGreaterThan(0);
+    for (const n of [...fire, ...sets('VM_sceneNum', '2')]) expect(edges.some((e) => e.to === n.id)).toBe(true);
+  });
+});

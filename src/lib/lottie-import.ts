@@ -7,6 +7,7 @@
  * keyframed transforms, opacity, colours and rect/ellipse sizes, with their
  * bezier easing. Everything it can't represent is listed in `warnings`.
  */
+import { shiftedPaint } from './gradient-space';
 import {
   createArtboard,
   createNode,
@@ -198,11 +199,12 @@ function gradientPaint(item: Json): Paint {
     stops.push({ offset: r2(off ?? 0), color: toHex([r ?? 0, g ?? 0, b ?? 0]) });
   }
   if (!stops.length) stops.push({ offset: 0, color: '#000000' }, { offset: 1, color: '#ffffff' });
-  if (item.t === 2) return { type: 'radial', stops };
   const sp = first(item.s, [0, 0]);
   const ep = first(item.e, [1, 0]);
+  // The points are in the group's space; withStyle moves them into each layer's box
+  if (item.t === 2) return { type: 'radial', stops, center: { x: r2(sp[0]), y: r2(sp[1]) }, radius: Math.max(0.01, r2(Math.hypot(ep[0] - sp[0], ep[1] - sp[1]))) };
   const angle = (Math.atan2(ep[1] - sp[1], ep[0] - sp[0]) * 180) / Math.PI + 90;
-  return { type: 'linear', angle: r2(angle), stops };
+  return { type: 'linear', angle: r2(angle), stops, from: { x: r2(sp[0]), y: r2(sp[1]) }, to: { x: r2(ep[0]), y: r2(ep[1]) } };
 }
 
 function styleOf(ctx: Ctx, items: Json[]): Style {
@@ -246,10 +248,13 @@ function styleOf(ctx: Ctx, items: Json[]): Style {
 
 function withStyle(ctx: Ctx, node: SceneNode, style: Style): void {
   const n = node as SceneNode & { fill: Paint | null; stroke: Stroke | null; fills?: Paint[]; strokes?: Stroke[]; paintOrder?: PaintKind[] };
-  n.fill = style.fills[0]?.paint ?? null;
-  n.stroke = style.strokes[0]?.stroke ?? null;
-  if (style.fills.length > 1) n.fills = style.fills.slice(1).map((f) => f.paint);
-  if (style.strokes.length > 1) n.strokes = style.strokes.slice(1).map((s) => s.stroke);
+  // A gradient's points are in the group's space, the layer's box starts at its x/y in it
+  const at = { x: node.x, y: node.y };
+  const inBox = (st: Stroke): Stroke => ({ ...st, paint: shiftedPaint(st.paint, at) });
+  n.fill = style.fills[0] ? shiftedPaint(style.fills[0].paint, at) : null;
+  n.stroke = style.strokes[0] ? inBox(style.strokes[0].stroke) : null;
+  if (style.fills.length > 1) n.fills = style.fills.slice(1).map((f) => shiftedPaint(f.paint, at));
+  if (style.strokes.length > 1) n.strokes = style.strokes.slice(1).map((s) => inBox(s.stroke));
   // A stroke under a fill, or a fill between strokes, keeps its place
   Object.assign(n, paintOrderField(style.order));
   const color = (v: number[]) => toHex(v.slice(0, 3), v[v.length - 1]);

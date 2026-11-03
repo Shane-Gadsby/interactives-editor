@@ -84,6 +84,7 @@ import {
   defaultModifier,
 } from 'interactives-player';
 import { RIVE_CLASSES } from './rive-defs';
+import { shiftedPaint, shiftGradients } from './gradient-space';
 import type { ImportedAsset } from './lottie-import';
 
 export interface RiveImport {
@@ -505,6 +506,7 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
       layer = state = transition = listener = null;
     } else if (isA(t, 'StateMachineInput') && sm) sm.inputs.push(o);
     else if (t === 'StateMachineLayer' && sm) {
+      listener = null;
       layer = { obj: o, states: [] };
       sm.layers.push(layer);
     } else if (isA(t, 'LayerState') && layer) {
@@ -852,38 +854,81 @@ function transformTarget(n: SceneNode, b: { x: number; y: number }): Target {
   };
 }
 
-function paintOf(ac: ArtboardCtx, fc: FileCtx, paintSlot: number, shapeBox: { x: number; y: number; w: number; h: number } | null): { paint: Paint | null; colorSlot: number | null; radius?: number } {
+/** The gradient a paint came from: which Rive objects keys on it go to, to be given their paths once the paint's place on its layer is known. */
+interface GradientInfo {
+  slot: number;
+  radial: boolean;
+  stops: number[];
+  /** The gradient's own start / end in the shape's local space, for keys that move only one of the two numbers of a radius. */
+  start: { x: number; y: number };
+  end: { x: number; y: number };
+}
+
+/**
+ * A fill or stroke's paint. Gradients keep Rive's own points (start and end in the shape's local space; a radial one is a circle
+ * round the start that ends at the end), which `shiftGradients` takes into the layer's box once that is known.
+ */
+function paintOf(ac: ArtboardCtx, fc: FileCtx, paintSlot: number, shapeBox: { x: number; y: number; w: number; h: number } | null): { paint: Paint | null; colorSlot: number | null; gradient?: GradientInfo } {
+  void fc;
+  void shapeBox;
   for (const ci of ac.children.get(paintSlot) ?? []) {
     const c = ac.rab.slots[ci];
     if (c.type === 'SolidColor') return { paint: { type: 'solid', color: argb(get(c, 'colorValue')) }, colorSlot: ci };
     if (c.type === 'LinearGradient' || c.type === 'RadialGradient') {
-      const stops = (ac.children.get(ci) ?? [])
-        .map((i) => ac.rab.slots[i])
-        .filter((s) => s.type === 'GradientStop')
-        .map((s) => ({ offset: r2(get(s, 'position')), color: argb(get(s, 'colorValue')) }));
-      if (c.type === 'RadialGradient') return { paint: { type: 'radial', stops }, colorSlot: null, radius: Math.hypot(get(c, 'endX') - get(c, 'startX'), get(c, 'endY') - get(c, 'startY')) };
-      const angle = Math.atan2(get(c, 'endY') - get(c, 'startY'), get(c, 'endX') - get(c, 'startX')) * DEG + 90;
-      void shapeBox;
-      fc.warnings.add('Gradients are mapped to CSS-style gradients across the layer box; exact start/end points may differ');
-      return { paint: { type: 'linear', angle: r2(angle), stops }, colorSlot: null };
+      const stopSlots = (ac.children.get(ci) ?? []).filter((i) => ac.rab.slots[i].type === 'GradientStop');
+      const stops = stopSlots.map((i) => ({ offset: r2(get(ac.rab.slots[i], 'position')), color: argb(get(ac.rab.slots[i], 'colorValue')) }));
+      const start = { x: get(c, 'startX'), y: get(c, 'startY') };
+      const end = { x: get(c, 'endX'), y: get(c, 'endY') };
+      const info = { slot: ci, radial: c.type === 'RadialGradient', stops: stopSlots, start, end };
+      if (c.type === 'RadialGradient') return { paint: { type: 'radial', stops, center: { x: r2(start.x), y: r2(start.y) }, radius: Math.max(0.01, r2(Math.hypot(end.x - start.x, end.y - start.y))) }, colorSlot: null, gradient: info };
+      // The angle is only for what does not know about points (it is what the box-relative gradient would be)
+      const angle = Math.atan2(end.y - start.y, end.x - start.x) * DEG + 90;
+      return { paint: { type: 'linear', angle: r2(angle), stops, from: { x: r2(start.x), y: r2(start.y) }, to: { x: r2(end.x), y: r2(end.y) } }, colorSlot: null, gradient: info };
     }
   }
   return { paint: null, colorSlot: null };
 }
 
+/** Moves the gradients of a layer's paints from the shape's local space into the layer's box (`b` is where the box's top-left sits in that space). */
+function shiftPaint(p: Paint | null | undefined, b: { x: number; y: number }): Paint | null | undefined {
+  return p && shiftedPaint(p, b);
+}
+
 /**
- * A radial gradient that ends `radius` from its centre, on our box paint (which ends at the farthest corner): the stops
- * are squeezed towards the centre and the last colour carries on to the edge.
+ * Keys on a gradient: its points go to `<paint>.from.x` ... (`center` and `radius` for a radial one) and its stops to
+ * `<paint>.stops.<i>.color` / `.offset`. `b` is where the layer's box sits in the shape's space, as for `shiftGradients`.
  */
-function fitRadial(paint: Paint, radius: number, w: number, h: number): Paint {
-  const far = Math.hypot(w / 2, h / 2);
-  if (paint.type !== 'radial' || !(radius > 0) || !(far > 0)) return paint;
-  const k = radius / far;
-  if (Math.abs(k - 1) < 0.01 || k > 1) return paint;
-  const stops = paint.stops.map((st) => ({ ...st, offset: r2(Math.min(1, st.offset * k)) }));
-  const last = paint.stops[paint.stops.length - 1];
-  if (last) stops.push({ ...last, offset: 1 });
-  return { ...paint, stops };
+function gradientTargets(ac: ArtboardCtx, fc: FileCtx, nodeId: string, prefix: string, g: GradientInfo | undefined, b: { x: number; y: number }): void {
+  if (!g) return;
+  const sx = (v: unknown) => r2(Number(v) - b.x);
+  const sy = (v: unknown) => r2(Number(v) - b.y);
+  if (g.radial) {
+    // The radius is the distance from the start to the end: a key on one number of the end gives the radius with the others as they were
+    const r = (dx: (v: number) => number, dy: (v: number) => number) => (v: unknown) => Math.max(0.01, r2(Math.hypot(dx(Number(v)), dy(Number(v)))));
+    addTarget(ac, g.slot, {
+      nodeId,
+      map: {
+        startX: { prop: `${prefix}.center.x`, f: sx },
+        startY: { prop: `${prefix}.center.y`, f: sy },
+        endX: { prop: `${prefix}.radius`, f: r((v) => v - g.start.x, () => g.end.y - g.start.y) },
+        endY: { prop: `${prefix}.radius`, f: r(() => g.end.x - g.start.x, (v) => v - g.start.y) },
+      },
+    });
+    const keyed = new Set<string>();
+    for (const an of ac.rab.anims) for (const ko of an.keyed) if (Number(ko.obj.props.objectId) === g.slot) for (const kp of ko.props) keyed.add(propNameByKey.get(Number(kp.obj.props.propertyKey))?.name ?? '');
+    if (keyed.has('endX') && keyed.has('endY')) fc.warnings.add("A radial gradient whose end point moves in both directions follows the end point's x only (its radius is not re-measured)");
+  } else {
+    addTarget(ac, g.slot, {
+      nodeId,
+      map: {
+        startX: { prop: `${prefix}.from.x`, f: sx },
+        startY: { prop: `${prefix}.from.y`, f: sy },
+        endX: { prop: `${prefix}.to.x`, f: sx },
+        endY: { prop: `${prefix}.to.y`, f: sy },
+      },
+    });
+  }
+  g.stops.forEach((slot, i) => addTarget(ac, slot, { nodeId, map: { colorValue: { prop: `${prefix}.stops.${i}.color`, f: (v) => argb(Number(v)) }, position: { prop: `${prefix}.stops.${i}.offset`, f: num() } } }));
 }
 
 /**
@@ -1049,6 +1094,8 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
 
   const plain = paths.length === 1 && (paths[0].o.type === 'Rectangle' || paths[0].o.type === 'Ellipse') && !get(paths[0].o, 'x') && !get(paths[0].o, 'y') && !get(paths[0].o, 'rotation') && get(paths[0].o, 'scaleX') === 1 && get(paths[0].o, 'scaleY') === 1;
   let node: SceneNode;
+  // Where the layer's box sits in the shape's own space (gradient points are in that space)
+  let origin = { x: 0, y: 0 };
   // The outline's length in px, for dashes given as a share of it
   let outline = 0;
   if (plain) {
@@ -1067,15 +1114,14 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     const centred = strokeL.length > 1 || !isPlainOrder(order) || strokeL.some((x) => x.stroke.dash?.length || x.trim !== undefined);
     if (centred) for (const x of strokeL) x.stroke.align = 'center';
     const half = !centred && stroke && stroke.width > 0 && !sized ? stroke.width / 2 : 0;
-    // Rive's radial gradients end where the file says (usually the box's side); a CSS-like box paint ends at the corner
-    const fit = (x: (typeof fillL)[number]): Paint => (x.info.radius ? fitRadial(x.paint, x.info.radius, w + half * 2, h + half * 2) : x.paint);
-    const fitFill = fillL[0] ? fit(fillL[0]) : null;
-    const fitExtra = { ...extra, ...(fillL.length > 1 ? { fills: fillL.slice(1).map(fit) } : {}) };
+    const fitFill = fillL[0]?.paint ?? null;
+    const fitExtra = extra;
     node =
       p.type === 'Rectangle'
         ? createNode('rect', { name, fill: fitFill, stroke, ...fitExtra, cornerRadius: r2(get(p, 'cornerRadiusTL') + half), ...(riveRadii(p) ? { cornerRadii: riveRadii(p)!.map((v) => r2(v + half)) as [number, number, number, number] } : {}) })
         : createNode('ellipse', { name, fill: fitFill, stroke, ...fitExtra });
     const b = { x: -w * ox - half, y: -h * oy - half };
+    origin = b;
     placeAtOrigin(node, o, b, w + half * 2, h + half * 2);
     addTarget(ac, slot, transformTarget(node, b));
     // Size keys: our box grows from its top-left, Rive's around its origin, so x/y follow (with the shape's static x/y).
@@ -1185,6 +1231,7 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
         })),
       })),
     });
+    origin = { x: minX, y: minY };
     placeAtOrigin(node, o, { x: minX, y: minY }, maxX - minX, maxY - minY);
     addTarget(ac, slot, transformTarget(node, { x: minX, y: minY }));
     // Our local point -> the path's own space: undo the shift to the box, then the path's transform inside the shape
@@ -1196,14 +1243,17 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
   const pct = (v: unknown) => r2(Number(v ?? 0) * 100);
   const featherMap = (prefix: string) => ({ strength: { prop: `${prefix}.feather`, f: num() }, offsetX: { prop: `${prefix}.offsetX`, f: num() }, offsetY: { prop: `${prefix}.offsetY`, f: num() } });
   const featherSlot = (slot: number) => (ac.children.get(slot) ?? []).find((ci) => ac.rab.slots[ci]?.type === 'Feather');
+  shiftGradients(node, origin);
   fillL.forEach((x, k) => {
     const prefix = fillPath(k);
+    gradientTargets(ac, fc, node.id, prefix, x.info.gradient, origin);
     if (x.info.colorSlot !== null) addTarget(ac, x.info.colorSlot, { nodeId: node.id, map: { colorValue: { prop: `${prefix}.color`, f: (v) => argb(Number(v)) } } });
     const fe = featherSlot(x.f.i);
     if (fe !== undefined) addTarget(ac, fe, { nodeId: node.id, map: featherMap(prefix) });
   });
   strokeL.forEach((x, k) => {
     const prefix = strokePath(k);
+    gradientTargets(ac, fc, node.id, `${prefix}.paint`, x.info.gradient, origin);
     if (x.info.colorSlot !== null) addTarget(ac, x.info.colorSlot, { nodeId: node.id, map: { colorValue: { prop: `${prefix}.paint.color`, f: (v) => argb(Number(v)) } } });
     addTarget(ac, x.st.i, { nodeId: node.id, map: { thickness: { prop: `${prefix}.width`, f: num() } } });
     const dashSlot = (ac.children.get(x.st.i) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath');
@@ -1216,6 +1266,68 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
   const blend = get(o, 'blendModeValue');
   if (blendMap[blend]) node.blendMode = blendMap[blend];
   return node;
+}
+
+/**
+ * Text layers by node id: what their box is made of in Rive (position, size, origin, and where the box starts because of
+ * them), so that keys on any of those can be turned into the position, size and pivot tracks our box wants.
+ */
+const textFollowers = new Map<string, { sizing: number; w: number; h: number; ox: number; oy: number; x: number; y: number; baseline: number }>();
+const TEXT_BOX_KEYS = new Set(['x', 'y', 'width', 'height', 'originX', 'originY']);
+type TextBoxKeys = Partial<Record<'x' | 'y' | 'width' | 'height' | 'originX' | 'originY', Keyframe[]>>;
+
+/**
+ * The tracks for a text layer whose box is keyed. Rive puts the box's top-left at `position - size * origin` and turns and
+ * scales it round the origin; ours has the box's own top-left as its x/y and the origin as a pivot, so the position track is
+ * worked out from the keys of the position, the size and the origin together. Only the numbers Rive reads count: auto-width
+ * text ignores its width and height keys and auto-height text its height keys.
+ */
+function textBoxTracks(fc: FileCtx, nodeId: string, keys: TextBoxKeys, off: { x: number; y: number }): Track[] {
+  const f = textFollowers.get(nodeId);
+  if (!f) return [];
+  const honoured = { width: f.sizing !== 0, height: f.sizing === 2 };
+  const used: TextBoxKeys = {};
+  for (const [k, list] of Object.entries(keys) as [keyof TextBoxKeys, Keyframe[]][]) {
+    if ((k === 'width' && !honoured.width) || (k === 'height' && !honoured.height)) continue;
+    if (list.length) used[k] = list;
+  }
+  const stat = { x: f.x, y: f.y, width: f.w, height: f.h, originX: f.ox, originY: f.oy };
+  const at = (name: keyof typeof stat, t: number): number => (used[name] ? Number(sampleKeys(used[name]!, t)) : stat[name]);
+  const tracks: Track[] = [];
+  const track = (prop: string, list: Keyframe[], value: (k: Keyframe, t: number) => number) => tracks.push({ id: uid('tr'), nodeId, prop, keys: list.map((k) => ({ id: uid('k'), t: k.t, value: r2(value(k, k.t)), ease: k.ease })) });
+  if (used.width) track('width', used.width, (k) => Math.max(0.01, Number(k.value)));
+  if (used.height) track('height', used.height, (k) => Math.max(0.01, Number(k.value)));
+  if (used.originX) track('originX', used.originX, (k) => Number(k.value));
+  if (used.originY) track('originY', used.originY, (k) => Number(k.value));
+  // x = X - width * originX (+ the artboard origin), y likewise (+ the baseline shift)
+  const place = (axis: 'x' | 'y') => {
+    const size = axis === 'x' ? 'width' : 'height';
+    const org = axis === 'x' ? 'originX' : 'originY';
+    const parts = [axis, size, org].filter((p) => used[p as keyof TextBoxKeys]) as (keyof TextBoxKeys)[];
+    if (!parts.length) return;
+    const value = (t: number) => at(axis, t) - Math.max(0.01, at(size, t)) * at(org, t) + (axis === 'y' ? f.baseline : 0) + off[axis];
+    // A size keyed on a box whose origin is its top-left leaves the box where it is
+    const rest = stat[axis] - Math.max(0.01, stat[size]) * stat[org] + (axis === 'y' ? f.baseline : 0) + off[axis];
+    if (parts.every((p) => used[p]!.every((k) => Math.abs(value(k.t) - rest) < 0.005))) return;
+    // One thing moving: the box's top-left is a straight line of it, so its own keys and easing carry over exactly
+    if (parts.length === 1) {
+      track(axis, used[parts[0]]!, (_k, t) => value(t));
+      return;
+    }
+    // Several (a size that grows round an origin that moves): the product is curved, so it is sampled between the keys
+    const times = [...new Set(parts.flatMap((p) => used[p]!.map((k) => k.t)))].sort((a, b) => a - b);
+    const list: Keyframe[] = [];
+    times.forEach((t, i) => {
+      list.push({ id: uid('k'), t, value: 0, ease: 'linear' });
+      const next = times[i + 1];
+      if (next !== undefined && next - t > 1) for (let j = 1; j < 8; j++) list.push({ id: uid('k'), t: Math.round(t + ((next - t) * j) / 8), value: 0, ease: 'linear' });
+    });
+    track(axis, list, (_k, t) => value(t));
+    fc.warnings.add('A text box animating its size and its origin together is sampled between the keys');
+  };
+  place('x');
+  place('y');
+  return tracks;
 }
 
 /** Rectangles/ellipses with an origin other than top-left: x/y keys that follow their animated size. */
@@ -1483,6 +1595,9 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
   const baselineShift = get(o, 'originValue') === 1 ? -fontSize * 0.95 : 0;
   placeAtOrigin(node, o, { x: -w * ox, y: -h * oy + baselineShift }, w, h);
   addTarget(ac, slot, transformTarget(node, { x: -w * ox, y: -h * oy + baselineShift }));
+  // Keys on the text's box (x, y, width, height, origin) are put together once the timeline is read, see `textBoxTracks`.
+  // Auto-width text takes its size from its text (width and height keys do nothing, as in Rive), auto-height text its height.
+  textFollowers.set(node.id, { sizing, w, h, ox, oy, x: get(o, 'x'), y: get(o, 'y'), baseline: baselineShift });
   importTextModifiers(ac, fc, slot, node, text);
   for (const r of runs) addTarget(ac, r.i, { nodeId: node.id, map: { text: { prop: 'text', f: (v) => String(v) } } });
   for (const cs of textColorSlots) addTarget(ac, cs, { nodeId: node.id, map: { colorValue: { prop: 'color', f: (v) => argb(Number(v)) } } });
@@ -2037,10 +2152,12 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     const kids = (of: number, type: string) => (ac.children.get(of) ?? []).map((i) => ac.rab.slots[i]).filter((k) => k.type === type);
     const fillK = bg.find((k) => k.o.type === 'Fill' && get<boolean>(k.o, 'isVisible') !== false);
     const strokeK = bg.find((k) => k.o.type === 'Stroke' && get<boolean>(k.o, 'isVisible') !== false);
-    const strokePaint = strokeK ? paintOf(ac, fc, strokeK.i, null).paint : null;
+    const strokeInfo = strokeK ? paintOf(ac, fc, strokeK.i, null) : null;
+    const fillInfo = fillK ? paintOf(ac, fc, fillK.i, null) : null;
+    const strokePaint = strokeInfo?.paint ?? null;
     const f = createNode('frame', {
       name: String(o.props.name ?? 'Layout'),
-      fill: fillK ? paintOf(ac, fc, fillK.i, null).paint : null,
+      fill: fillInfo?.paint ?? null,
       stroke: strokeK && strokePaint ? { paint: strokePaint, width: r2(get(strokeK.o, 'thickness')), ...dashOf(ac, fc, strokeK.i, boxPerimeter(w, h, riveRadii(style) ?? Array<number>(4).fill(style ? get(style, 'cornerRadiusTL') : 0))) } : null,
       cornerRadius: style ? r2(get(style, 'cornerRadiusTL')) : 0,
       ...(riveRadii(style) ? { cornerRadii: riveRadii(style)! } : {}),
@@ -2051,6 +2168,9 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     placeAtOrigin(f, o, { x: 0, y: 0 }, w, h);
     f.originX = 0;
     f.originY = 0;
+    //A layout's paints are in its own box already
+    gradientTargets(ac, fc, f.id, 'fill', fillInfo?.gradient, { x: 0, y: 0 });
+    gradientTargets(ac, fc, f.id, 'stroke.paint', strokeInfo?.gradient, { x: 0, y: 0 });
     if (strokeK) {
       const dashSlot = (ac.children.get(strokeK.i) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath');
       if (dashSlot !== undefined) addTarget(ac, dashSlot, { nodeId: f.id, map: { offset: { prop: 'stroke.dashOffset', f: dashOffsetKey(ac, dashSlot, boxPerimeter(w, h, riveRadii(style) ?? Array<number>(4).fill(style ? get(style, 'cornerRadiusTL') : 0))) } } });
@@ -2605,6 +2725,7 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
   const markers: TimelineMarker[] = [];
   const events = new Map<string, number>();
   const nestedKeys: Omit<NestedKey, 'tl'>[] = [];
+  const textBoxes = new Map<string, TextBoxKeys>();
   for (const ko of anim.keyed) {
     const slot = Number(ko.obj.props.objectId ?? 0);
     const targets = ac.targets.get(slot);
@@ -2674,6 +2795,13 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
         continue;
       }
       for (const t of targets) {
+        // A text layer's box: its position, size and origin are put together after the keys are read
+        if (slotType === 'Text' && textFollowers.has(t.nodeId) && TEXT_BOX_KEYS.has(rprop)) {
+          const bucket = textBoxes.get(t.nodeId) ?? {};
+          textBoxes.set(t.nodeId, bucket);
+          bucket[rprop as keyof TextBoxKeys] = kp.keys.map((k, ki) => ({ id: uid('k'), t: ms(Number(k.props.frame ?? 0)), value: Number(k.props.value ?? defaultOf(k.type, 'value')), ease: easeOf(ac, k, kp.keys[ki + 1]) }));
+          continue;
+        }
         const m = t.map[rprop];
         if (!m) {
           if (rprop === 'x' || rprop === 'y') fc.warnings.add('Path vertex animation (shape morphing) is not supported');
@@ -2691,6 +2819,7 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
       }
     }
   }
+  for (const [nodeId, keys] of textBoxes) tracks.push(...textBoxTracks(fc, nodeId, keys, offsetFor(nodeId)));
   // Rects/ellipses sized around a centre: keep the centre where Rive keeps it.
   for (const f of sizeFollowers) {
     for (const axis of ['width', 'height'] as const) {
@@ -3774,6 +3903,7 @@ export async function importRiveObjects(objects: RObj[], name: string): Promise<
   const artboards: Artboard[] = [];
   s.artboards.forEach((rab, index) => {
     sizeFollowers = [];
+    textFollowers.clear();
     const ac = artboardCtx(fc, index);
     const w = get(rab.obj, 'width');
     const h = get(rab.obj, 'height');
@@ -3808,7 +3938,9 @@ export async function importRiveObjects(objects: RObj[], name: string): Promise<
       kids = [wrap];
     }
     const bg = (ac.children.get(0) ?? []).map((i) => ({ i, o: rab.slots[i] })).find((k) => k.o.type === 'Fill');
-    const background = bg ? paintOf(ac, fc, bg.i, null).paint : null;
+    const bgPaint = bg ? paintOf(ac, fc, bg.i, null).paint : null;
+    //The artboard's paints are in a space whose zero is its origin
+    const background = shiftPaint(bgPaint, { x: -ox, y: -oy }) ?? null;
     const ab = createArtboard({
       id: fc.abIds[index],
       name: String(rab.obj.props.name ?? `Artboard ${index + 1}`),

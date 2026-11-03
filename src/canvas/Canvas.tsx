@@ -2,6 +2,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import {
   apply,
   createNode,
+  fillList,
+  fillPath,
+  getPath,
+  linearLine,
+  radialCircle,
+  strokeList,
+  strokePath,
   invert,
   isContainer,
   nodeMatrix,
@@ -19,8 +26,10 @@ import {
   type Matrix,
   type NodeType,
   type PathNode,
+  type Paint,
   type PathPoint,
   type SceneNode,
+  type Stroke,
   type TextRun,
 } from 'interactives-player';
 import { toggleRunStyle, type ToggleKind } from '../lib/rich-text';
@@ -53,6 +62,7 @@ type Drag =
   | { kind: 'pan'; sx: number; sy: number; px: number; py: number }
   | { kind: 'move'; abId: string; start: Pt; items: { id: string; x0: number; y0: number; inv: Matrix }[]; bounds0: Rect; alt: boolean; duplicated: boolean; moved: boolean }
   | { kind: 'resize'; handle: Handle; id: string; node0: SceneNode; parentM: Matrix }
+  | { kind: 'gradPt'; id: string; prefix: string; part: 'from' | 'to' | 'center' | 'radius'; node0: SceneNode; parentM: Matrix }
   | { kind: 'resizeMulti'; handle: Handle; bounds0: Rect; items: { id: string; node0: SceneNode; off: Pt }[] }
   | { kind: 'rotate'; center: Pt; angle0: number; items: { id: string; r0: number }[] }
   | { kind: 'moveAb'; id: string; x0: number; y0: number; start: Pt }
@@ -336,6 +346,13 @@ export function Canvas() {
       }
       if (kind === 'abresize' && ab) {
         drag.current = { kind: 'resizeAb', handle: a as Handle, id: ab.id, ab0: structuredClone(ab) };
+        return;
+      }
+      if (kind === 'grad' && ab) {
+        // A gradient's start, end, centre or radius handle: dragged in the layer's own px
+        const ids = topmost(ab, st.selection);
+        const loc = ids.length === 1 ? locate(ab, ids[0]) : undefined;
+        if (loc && !loc.node.locked) drag.current = { kind: 'gradPt', id: ids[0], prefix: a, part: b as 'from' | 'to' | 'center' | 'radius', node0: structuredClone(loc.node), parentM: parentToArtboard(ab, ids[0]) };
         return;
       }
       if (kind === 'resize' && ab) {
@@ -622,6 +639,18 @@ export function Canvas() {
           props.autoSize = hy === 0.5 ? 'height' : 'none';
         }
         store().setProps([d.id], props, 'resize');
+        break;
+      }
+      case 'gradPt': {
+        if (!ab) break;
+        const pp = apply(invert(d.parentM), w.x - ab.canvasX, w.y - ab.canvasY);
+        const lp = apply(invert(nodeMatrix(d.node0)), pp.x, pp.y);
+        const x = round(lp.x, 1);
+        const y = round(lp.y, 1);
+        if (d.part === 'radius') {
+          const c = getPath(d.node0, `${d.prefix}.center`) as { x?: number; y?: number } | undefined;
+          store().setProps([d.id], { [`${d.prefix}.radius`]: Math.max(0.1, round(Math.hypot(lp.x - (c?.x ?? d.node0.width / 2), lp.y - (c?.y ?? d.node0.height / 2)), 1)) }, 'grad');
+        } else store().setProps([d.id], { [`${d.prefix}.${d.part}.x`]: x, [`${d.prefix}.${d.part}.y`]: y }, 'grad');
         break;
       }
       case 'resizeMulti': {
@@ -1279,6 +1308,40 @@ export function Canvas() {
           const [fx, fy] = HANDLE_POS[h];
           const c = at(fx, fy);
           overlay.push(<rect key={`h-${h}`} data-handle={`resize:${h}`} className={`handle h-${h}`} x={c.x - 4} y={c.y - 4} width={8} height={8} />);
+        }
+      }
+      // Gradients with points of their own: the points are handles, dragged in the layer's own px
+      const sel1 = ids.length === 1 ? (locate(active, ids[0])!.node as unknown as { fill: Paint | null; stroke: Stroke | null; fills?: Paint[]; strokes?: Stroke[]; paintOrder?: never } & SceneNode) : null;
+      if (sel1 && !locked && size.w > 0 && size.h > 0 && s.tool !== 'bend' && s.tool !== 'bone' && !CREATION_TOOLS.has(s.tool)) {
+        const paints = [
+          ...fillList(sel1).map((p, i) => ({ p, prefix: fillPath(i, sel1) })),
+          ...strokeList(sel1).map((st, i) => ({ p: st.paint, prefix: `${strokePath(i, sel1)}.paint` })),
+        ];
+        const gh = (key: string, x: number, y: number, part: string, prefix: string, color: string, title: string) => {
+          const c = at(x / size.w, y / size.h);
+          overlay.push(
+            <circle key={key} data-handle={`grad:${prefix}:${part}`} className="grad-handle" cx={c.x} cy={c.y} r={6} style={{ fill: color }}>
+              <title>{title}</title>
+            </circle>,
+          );
+          return c;
+        };
+        for (const { p, prefix } of paints) {
+          if (p.type === 'linear' && (p.from || p.to) && p.visible !== false) {
+            const l = linearLine(p, size.w, size.h);
+            const a = at(l.x1 / size.w, l.y1 / size.h);
+            const b = at(l.x2 / size.w, l.y2 / size.h);
+            overlay.push(<line key={`gl-${prefix}`} className="grad-line" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />);
+            gh(`gf-${prefix}`, l.x1, l.y1, 'from', prefix, p.stops[0]?.color ?? '#fff', 'Gradient start (drag)');
+            gh(`gt-${prefix}`, l.x2, l.y2, 'to', prefix, p.stops[p.stops.length - 1]?.color ?? '#000', 'Gradient end (drag)');
+          } else if (p.type === 'radial' && p.visible !== false && (p.center || (typeof p.radius === 'number' && p.radius > 0))) {
+            const c = radialCircle(p, size.w, size.h);
+            const mid = at(c.cx / size.w, c.cy / size.h);
+            const edge = at((c.cx + c.r) / size.w, c.cy / size.h);
+            overlay.push(<line key={`gl-${prefix}`} className="grad-line" x1={mid.x} y1={mid.y} x2={edge.x} y2={edge.y} />);
+            gh(`gc-${prefix}`, c.cx, c.cy, 'center', prefix, p.stops[0]?.color ?? '#fff', 'Gradient centre (drag)');
+            gh(`gr-${prefix}`, c.cx + c.r, c.cy, 'radius', prefix, p.stops[p.stops.length - 1]?.color ?? '#000', 'Gradient radius (drag)');
+          }
         }
       }
       const bottom = Math.max(...quad.map((p) => p.y));

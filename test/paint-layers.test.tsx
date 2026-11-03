@@ -243,3 +243,36 @@ describe('Paint order (inspector)', () => {
     expect(host.querySelector('[role="status"]')?.textContent).toMatch(/^Fill 1 moved up/);
   });
 });
+
+describe('Gradient points (inspector)', () => {
+  const stops = [{ offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' }];
+  const press = (text: string) => {
+    const b = [...host.querySelectorAll('button')].find((x) => x.textContent === text);
+    if (!b) throw new Error(`no button "${text}"`);
+    act(() => b.click());
+  };
+  const label = (text: string) => [...host.querySelectorAll('label, .field-label, span')].some((x) => x.textContent === text);
+
+  it('pins a linear gradient to the points its angle gave, and goes back', () => {
+    mount('fill', { width: 200, height: 100, fill: { type: 'linear', angle: 90, stops } });
+    expect(label('From X')).toBe(false);
+    press('Set start and end points');
+    const f = rect().fill as { from: { x: number; y: number }; to: { x: number; y: number } };
+    expect(f.from).toEqual({ x: 0, y: 50 });
+    expect(f.to).toEqual({ x: 200, y: 50 });
+    expect(label('From X')).toBe(true);
+    press('Use angle instead of points');
+    const back = rect().fill as { angle: number; from?: unknown };
+    expect(back.from).toBeUndefined();
+    expect(back.angle).toBeCloseTo(90, 1);
+  });
+
+  it('pins a radial gradient to the box centre and radius', () => {
+    mount('fill', { width: 200, height: 100, fill: { type: 'radial', stops } });
+    press('Set centre and radius');
+    const f = rect().fill as { center: { x: number; y: number }; radius: number };
+    expect(f.center).toEqual({ x: 100, y: 50 });
+    expect(f.radius).toBeCloseTo(111.8, 1);
+    expect(label('Radius')).toBe(true);
+  });
+});

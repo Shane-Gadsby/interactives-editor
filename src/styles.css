@@ -1361,6 +1361,22 @@ body.col-resizing * {
   fill: var(--accent);
   cursor: move;
 }
+.grad-handle {
+  stroke: #fff;
+  stroke-width: 2;
+  cursor: grab;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
+}
+.grad-handle:hover {
+  stroke: var(--accent, #3b5bfd);
+}
+.grad-line {
+  stroke: #fff;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
+}
 .path-handle-line {
   stroke: var(--accent);
   stroke-width: 1;
