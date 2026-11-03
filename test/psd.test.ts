@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { unzlibSync, zlibSync } from 'fflate';
-import { encodePng, importPsd, isPsd, parsePsd, type PsdGroup, type PsdLayer } from '../src/lib/psd-import';
+import { encodePng, importPsd, isPsd, parsePsd, psdFont, type PsdGroup, type PsdLayer } from '../src/lib/psd-import';
 
 // ---------------------------------------------------------------- a tiny PSD writer (8 bit RGB)
 
@@ -75,6 +75,12 @@ interface TestLayer {
   text?: string;
   fillOpacity?: number;
   mask?: { top: number; left: number; w: number; h: number; samples: number[]; def: number };
+  /** A real TySh block, as bytes (replaces the fake one `text` makes). */
+  tysh?: Uint8Array;
+  /** A vmsk block, as bytes. */
+  vmsk?: Uint8Array;
+  /** A fill layer block (SoCo): the layer's vmsk is its own shape. */
+  solidFill?: boolean;
 }
 
 function block(key: string, data: Uint8Array): Uint8Array {
@@ -92,8 +98,8 @@ function buildPsd(layers: TestLayer[], opts: { width: number; height: number; co
     const chans: { id: number; samples: number[]; w: number; h: number }[] = [];
     if (w && h) {
       for (const [id, k] of [[-1, 3], [0, 0], [1, 1], [2, 2]] as const) chans.push({ id, samples: rgba.filter((_, i) => i % 4 === k), w, h });
-      if (l.mask) chans.push({ id: -2, samples: l.mask.samples, w: l.mask.w, h: l.mask.h });
     }
+    if (l.mask) chans.push({ id: -2, samples: l.mask.samples, w: l.mask.w, h: l.mask.h });
     const chanData = chans.map((c) => cat(u16(compCode[comp]), channelBytes(c.samples, c.w, c.h, comp)));
     const blocks: Uint8Array[] = [];
     if (l.unicodeName) blocks.push(block('luni', cat(u32(l.unicodeName.length), utf16(l.unicodeName))));
@@ -103,6 +109,9 @@ function buildPsd(layers: TestLayer[], opts: { width: number; height: number; co
       // not a real descriptor, but the key / type / length / UTF-16 run is what the reader looks for
       blocks.push(block('TySh', cat(u16(1), new Uint8Array(48), u32(0), ascii('Txt '), ascii('TEXT'), u32(l.text.length + 1), utf16(l.text + '\0'), u32(0))));
     }
+    if (l.tysh) blocks.push(block('TySh', l.tysh));
+    if (l.vmsk) blocks.push(block('vmsk', l.vmsk));
+    if (l.solidFill) blocks.push(block('SoCo', new Uint8Array(8)));
     const name = pad(cat(new Uint8Array([l.name.length]), ascii(l.name)), 4);
     const maskBytes = l.mask
       ? cat(u32(l.mask.top), u32(l.mask.left), u32(l.mask.top + l.mask.h), u32(l.mask.left + l.mask.w), new Uint8Array([l.mask.def, 0, 0, 0]))
@@ -268,7 +277,7 @@ describe('PSD import', () => {
     expect(t.blendMode).toBe('normal');
     expect(t.blendUnsupported).toBe(true);
     expect(t.clipped).toBe(true);
-    expect(doc.warnings.join(' ')).toMatch(/Clipping/);
+    expect(doc.warnings.join(' ')).not.toMatch(/Clipping/);
   });
 
   it('uses planar composite data and the picture saved in the file', () => {
@@ -336,7 +345,7 @@ describe('PSD import', () => {
     expect([...png.rgba]).toEqual([1, 2, 3, 255, 1, 2, 3, 255, 9, 8, 7, 128, 9, 8, 7, 0]);
   });
 
-  it('names text layers after their text and reports what is lost', () => {
+  it('names unreadable text layers after their text, keeps their pixels, and skips empty layers quietly', () => {
     const imp = importPsd(
       buildPsd(
         [
@@ -351,7 +360,7 @@ describe('PSD import', () => {
     expect(imp.artboard.children.map((c) => c.name)).toEqual(['Big title', 'Soft']);
     expect((imp.artboard.children[0] as { ariaLabel?: string }).ariaLabel).toBe('Big title');
     expect(imp.warnings.join(' ')).toMatch(/soft light/);
-    expect(imp.warnings.join(' ')).toMatch(/empty layer/);
+    expect(imp.warnings.join(' ')).not.toMatch(/empty/);
   });
 
   it('handles nested groups and empty groups', () => {
@@ -380,5 +389,283 @@ describe('PSD import', () => {
     if (inner.type !== 'group') throw new Error('group expected');
     expect(inner.name).toBe('Inner folder');
     expect([outer.x, outer.y, inner.x, inner.y, inner.children[0].x]).toEqual([2, 2, 0, 0, 0]);
+  });
+});
+
+// ---------------------------------------------------------------- type layers, masks and clipping
+
+const f64 = (n: number) => {
+  const b = new Uint8Array(8);
+  new DataView(b.buffer).setFloat64(0, n);
+  return b;
+};
+const k4 = (k: string) => (k.length === 4 ? cat(u32(0), ascii(k)) : cat(u32(k.length), ascii(k)));
+const descriptor = (items: [string, Uint8Array][]) => cat(u32(0), k4('TxLr'), u32(items.length), ...items.map(([k, v]) => cat(k4(k), v)));
+const vText = (s: string) => cat(ascii('TEXT'), u32(s.length + 1), utf16(s + '\0'));
+const vEnum = (t: string, v: string) => cat(ascii('enum'), k4(t), k4(v));
+const vTdta = (b: Uint8Array) => cat(ascii('tdta'), u32(b.length), b);
+
+/** EngineData strings are UTF-16BE with a byte order mark, in parentheses. */
+const eng = (s: string) => {
+  let out = '(þÿ';
+  for (const ch of s) {
+    const c = ch.charCodeAt(0);
+    for (const b of [c >> 8, c & 255]) out += [40, 41, 92].includes(b) ? '\\' + String.fromCharCode(b) : String.fromCharCode(b);
+  }
+  return out + ')';
+};
+const latin1 = (s: string) => Uint8Array.from(s, (c) => c.charCodeAt(0));
+
+interface TypeOpts {
+  text?: string;
+  transform?: number[];
+  shapeType?: 0 | 1;
+  box?: number[];
+  justification?: number;
+  warp?: boolean;
+  /** style runs: [length, sheet body] */
+  runs?: [number, string][];
+}
+
+function tysh(o: TypeOpts = {}): Uint8Array {
+  const text = o.text ?? 'Hello\rWorld\r';
+  const runs = o.runs ?? [[6, '/Font 0 /FontSize 20 /FillColor << /Type 1 /Values [ 1 1 0 0 ] >>'], [6, '/Font 1 /FontSize 30 /FauxBold true /Tracking 100 /Underline true /FillColor << /Type 1 /Values [ 1 0 0 1 ] >>']];
+  const engine = `
+/EngineDict <<
+  /Editor << /Text ${eng(text)} >>
+  /ParagraphRun << /RunArray [ << /ParagraphSheet << /Properties << /Justification ${o.justification ?? 0} >> >> >> ] /RunLengthArray [ ${text.length} ] >>
+  /StyleRun << /RunArray [ ${runs.map(([, body]) => `<< /StyleSheet << /StyleSheetData << ${body} >> >> >>`).join(' ')} ] /RunLengthArray [ ${runs.map(([n]) => n).join(' ')} ] >>
+  /Rendered << /Shapes << /Children [ << /ShapeType ${o.shapeType ?? 0} /Cookie << /Photoshop << /BoxBounds [ ${(o.box ?? [0, 0, 0, 0]).join(' ')} ] >> >> >> ] >> >>
+>>
+/ResourceDict <<
+  /FontSet [ << /Name ${eng('Montserrat-SemiBold')} >> << /Name ${eng('SomeCustomFont-Italic')} >> ]
+  /StyleSheetSet [ << /Name ${eng('Normal')} /StyleSheetData << /Font 0 /FontSize 12 /AutoLeading true /Tracking 0 /FillColor << /Type 1 /Values [ 1 0 0 0 ] >> >> >> ]
+  /TheNormalStyleSheet 0
+>>
+`;
+  const main = descriptor([
+    ['Txt ', vText(text)],
+    ['EngineData', vTdta(latin1(engine))],
+    ['Ornt', vEnum('Ornt', 'Hrzn')],
+  ]);
+  const warp = descriptor([['warpStyle', vEnum('warpStyle', o.warp ? 'warpArc' : 'warpNone')]]);
+  const t = o.transform ?? [1, 0, 0, 1, 10, 20];
+  return cat(u16(1), ...t.map(f64), u16(50), u32(16), main, u16(1), u32(16), warp, ...[0, 0, 100, 40].map(f64));
+}
+
+const fix = (v: number) => new Uint8Array([(v >> 24) & 255, (v >> 16) & 255, (v >> 8) & 255, v & 255]);
+const frac = (n: number) => Math.round(n * 16777216) | 0;
+
+/** A vmsk block with one closed polygon (corners as fractions of the document), no curves. */
+function vmskPoly(corners: [number, number][], flags = 0): Uint8Array {
+  const rec = (sel: number, body: Uint8Array) => cat(u16(sel), body, new Uint8Array(24 - body.length));
+  const knots = corners.map(([x, y]) => rec(1, cat(...[y, x, y, x, y, x].map((v) => fix(frac(v))))));
+  return cat(u32(3), u32(flags), rec(6, new Uint8Array(0)), rec(0, cat(u16(corners.length), u16(1))), ...knots);
+}
+
+const blue = (n: number) => solid(n, px(0, 0, 255));
+
+describe('PSD type layers', () => {
+  const textLayer = (o: TypeOpts, extra: Partial<TestLayer> = {}): TestLayer => ({ name: 'Title', left: 8, top: 4, w: 4, h: 2, rgba: blue(8), tysh: tysh(o), ...extra });
+
+  it('maps a point text layer with style runs to a text layer', () => {
+    const imp = importPsd(buildPsd([textLayer({ transform: [2, 0, 0, 2, 100, 60] })], { width: 200, height: 100 }), 't');
+    expect(imp.assets).toHaveLength(0);
+    const t = imp.artboard.children[0];
+    if (t.type !== 'text') throw new Error('text expected');
+    expect(t.name).toBe('Title');
+    expect(t.text).toBe('Hello\nWorld');
+    expect(t.fontFamily).toBe('Montserrat');
+    expect(t.fontWeight).toBe(600);
+    expect(t.fontSize).toBe(40); // 20 pt at 200 %
+    expect(t.color).toBe('#ff0000');
+    expect(t.lineHeight).toBe(1.2);
+    expect(t.align).toBe('left');
+    expect(t.autoSize).toBe('width');
+    expect(t.runs).toEqual([
+      { text: 'Hello\n' },
+      { text: 'World', fontFamily: 'Some Custom Font', fontSize: 60, fontWeight: 700, italic: true, color: '#0000ff', underline: true, letterSpacing: 6 },
+    ]);
+    // first baseline sits on the anchor (100, 60): left aligned, so the box starts at x = 100 and is above the anchor
+    expect(t.x).toBe(100);
+    expect(t.y).toBeLessThan(60);
+    expect(t.y + t.height).toBeGreaterThan(60);
+    expect(imp.fonts).toEqual([{ family: 'Montserrat', source: 'google', weights: [600] }]);
+  });
+
+  it('keeps plain text plain, centres around the anchor and reads leading', () => {
+    const imp = importPsd(
+      buildPsd([textLayer({ text: 'Hi\r', justification: 2, runs: [[3, '/FontSize 10 /AutoLeading false /Leading 20']] })], { width: 200, height: 100 }),
+      't',
+    );
+    const t = imp.artboard.children[0];
+    if (t.type !== 'text') throw new Error('text expected');
+    expect(t.runs).toBeUndefined();
+    expect(t.text).toBe('Hi');
+    expect(t.align).toBe('center');
+    expect(t.lineHeight).toBe(2);
+    expect(t.x + t.width / 2).toBeCloseTo(10, 5); // anchor x of the default transform
+  });
+
+  it('places paragraph text from its box, with rotation', () => {
+    const imp = importPsd(buildPsd([textLayer({ shapeType: 1, box: [0, 0, 300, 100], transform: [1, 0, 0, 1, 50, 40] })], { width: 400, height: 200 }), 't');
+    const t = imp.artboard.children[0];
+    if (t.type !== 'text') throw new Error('text expected');
+    expect([t.x, t.y, t.width, t.height, t.autoSize]).toEqual([50, 40, 300, 100, 'none']);
+    const r = importPsd(buildPsd([textLayer({ shapeType: 1, box: [0, 0, 300, 100], transform: [0, 1, -1, 0, 50, 40] })], { width: 400, height: 200 }), 't').artboard.children[0];
+    expect(r.rotation).toBe(90);
+    // the box's centre (200, 90 in local, turned a quarter) lands at (50 - 50, 40 + 150)
+    expect(r.x + r.width / 2).toBeCloseTo(0, 5);
+    expect(r.y + r.height / 2).toBeCloseTo(190, 5);
+  });
+
+  it('keeps warped, vertical and masked text as pictures, and honours the option', () => {
+    const warped = importPsd(buildPsd([textLayer({ warp: true })], { width: 20, height: 20 }), 't');
+    expect(warped.artboard.children[0].type).toBe('image');
+    expect(warped.warnings.join(' ')).toMatch(/kept as pictures/);
+    const masked = importPsd(buildPsd([textLayer({}, { mask: { top: 4, left: 8, w: 4, h: 2, samples: new Array(8).fill(255), def: 0 } })], { width: 20, height: 20 }), 't');
+    expect(masked.artboard.children[0].type).toBe('image');
+    const off = importPsd(buildPsd([textLayer({})], { width: 20, height: 20 }), 't', { text: false });
+    expect(off.artboard.children[0].type).toBe('image');
+    expect(off.warnings.join(' ')).not.toMatch(/kept as pictures/);
+  });
+
+  it('turns PostScript names into families, weights and slants', () => {
+    expect(psdFont('Montserrat-SemiBoldItalic')).toEqual({ family: 'Montserrat', weight: 600, italic: true, google: true });
+    expect(psdFont('OpenSans-ExtraBold')).toEqual({ family: 'Open Sans', weight: 800, italic: false, google: true });
+    expect(psdFont('Roboto-Light').weight).toBe(300);
+    expect(psdFont('IBMPlexSans-Medium')).toMatchObject({ family: 'IBM Plex Sans', weight: 500 });
+    expect(psdFont('ArialMT')).toEqual({ family: 'Arial', weight: 400, italic: false, google: false });
+    expect(psdFont('TimesNewRomanPS-BoldItalicMT')).toEqual({ family: 'Times New Roman', weight: 700, italic: true, google: false });
+    expect(psdFont('Foo-Regular', true, false).weight).toBe(700);
+  });
+});
+
+describe('PSD masks and clipping', () => {
+  const a = { name: 'Base', left: 0, top: 0, w: 4, h: 4, rgba: solid(16, px(10, 20, 30)), opacity: 128, blend: 'mul ' };
+  const c1 = { name: 'Clip 1', left: 1, top: 1, w: 2, h: 2, rgba: solid(4, px(200, 0, 0)), clipped: true };
+  const c2 = { name: 'Clip 2', left: 0, top: 0, w: 1, h: 1, rgba: solid(1, px(0, 200, 0)), clipped: true, hidden: true };
+
+  it('turns a clipping base and its clipped layers into a group with a mask copy of the base', () => {
+    const imp = importPsd(buildPsd([a, c1, c2, { name: 'After', left: 3, top: 3, w: 1, h: 1, rgba: px(1, 1, 1) }], { width: 4, height: 4 }), 'c');
+    expect(imp.artboard.children.map((n) => n.name)).toEqual(['Base (clipped)', 'After']);
+    const g = imp.artboard.children[0];
+    if (g.type !== 'group') throw new Error('group expected');
+    // the group carries the base's opacity and blend mode; the base itself is drawn plain
+    expect([g.opacity, g.blendMode]).toEqual([0.502, 'multiply']);
+    expect(g.children.map((n) => [n.name, n.type, !!n.mask])).toEqual([
+      ['Base', 'image', false],
+      ['Base (mask)', 'image', true],
+      ['Clip 1', 'image', false],
+      ['Clip 2', 'image', false],
+    ]);
+    const [base, mask, clip1, clip2] = g.children;
+    expect([base.opacity, base.blendMode ?? 'normal']).toEqual([1, 'normal']);
+    // the mask is the base's picture (alpha), at the same place
+    expect((mask as { assetId: string }).assetId).toBe((base as { assetId: string }).assetId);
+    expect([mask.x, mask.y, mask.width, mask.height]).toEqual([base.x, base.y, base.width, base.height]);
+    expect((mask as { fit: string }).fit).toBe('fill');
+    expect([clip1.x, clip1.y, clip2.visible]).toEqual([1, 1, false]);
+    expect(imp.assets).toHaveLength(4);
+    expect(imp.warnings.join(' ')).not.toMatch(/lipping/);
+  });
+
+  it('starts a new group for each base and leaves a clipped layer with nothing below it alone', () => {
+    const imp = importPsd(
+      buildPsd([{ ...c1, name: 'Orphan' }, { ...a, opacity: 255, blend: 'norm', name: 'B1' }, { ...c1, name: 'K1' }, { ...a, opacity: 255, blend: 'norm', name: 'B2' }, { ...c1, name: 'K2' }], { width: 4, height: 4 }),
+      'c',
+    );
+    expect(imp.artboard.children.map((n) => n.name)).toEqual(['Orphan', 'B1 (clipped)', 'B2 (clipped)']);
+  });
+
+  it('clips to a folder with a copy of the folder', () => {
+    const imp = importPsd(
+      buildPsd(
+        [
+          { name: '</Layer group>', section: 3 },
+          { name: 'Inside', left: 1, top: 1, w: 2, h: 2, rgba: solid(4, px(9, 9, 9)) },
+          { name: 'Folder', section: 2 },
+          { ...c1, name: 'Over' },
+        ],
+        { width: 4, height: 4 },
+      ),
+      'c',
+    );
+    const g = imp.artboard.children[0];
+    if (g.type !== 'group') throw new Error('group expected');
+    expect(g.name).toBe('Folder (clipped)');
+    const [folder, mask] = g.children;
+    expect([folder.type, mask.type, mask.mask]).toEqual(['group', 'group', true]);
+    expect(mask.id).not.toBe(folder.id);
+    expect([mask.x, mask.y]).toEqual([folder.x, folder.y]);
+    if (mask.type !== 'group' || folder.type !== 'group') throw new Error('group expected');
+    expect(mask.children[0].id).not.toBe(folder.children[0].id);
+  });
+
+  it('wraps a layer with a vector mask in a group with a path mask under it', () => {
+    const imp = importPsd(
+      buildPsd([{ name: 'Photo', left: 0, top: 0, w: 4, h: 4, rgba: blue(16), vmsk: vmskPoly([[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]]) }], { width: 8, height: 8 }),
+      'v',
+    );
+    const g = imp.artboard.children[0];
+    if (g.type !== 'group') throw new Error('group expected');
+    expect(g.name).toBe('Photo');
+    const [m, photo] = g.children;
+    expect([m.type, m.mask, photo.type, !!photo.mask]).toEqual(['path', true, 'image', false]);
+    if (m.type !== 'path') throw new Error('path expected');
+    // 25 % to 75 % of an 8 px document: the square from (2, 2) to (6, 6), points relative to the node
+    expect([g.x + m.x, g.y + m.y, m.width, m.height]).toEqual([2, 2, 4, 4]);
+    expect(m.paths[0].closed).toBe(true);
+    expect(m.paths[0].points.map((p) => [p.x, p.y])).toEqual([[0, 0], [4, 0], [4, 4], [0, 4]]);
+    expect(imp.warnings.join(' ')).not.toMatch(/ector mask/);
+  });
+
+  it('ignores a disabled vector mask and the outline of a shape layer, and inverts when asked', () => {
+    const sq = vmskPoly([[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]]);
+    const layer = { left: 0, top: 0, w: 2, h: 2, rgba: blue(4) };
+    const imp = importPsd(
+      buildPsd([{ name: 'Off', ...layer, vmsk: vmskPoly([[0.25, 0.25], [0.75, 0.25], [0.75, 0.75]], 4) }, { name: 'Shape', ...layer, vmsk: sq, solidFill: true }, { name: 'Inv', ...layer, vmsk: vmskPoly([[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]], 1) }], { width: 8, height: 8 }),
+      'v',
+    );
+    expect(imp.artboard.children.map((n) => n.type)).toEqual(['image', 'image', 'group']);
+    const inv = imp.artboard.children[2];
+    if (inv.type !== 'group' || inv.children[0].type !== 'path') throw new Error('mask expected');
+    expect(inv.children[0].paths).toHaveLength(2);
+    expect(inv.children[0].fillRule).toBe('evenodd');
+  });
+
+  it('uses the vector mask as the clipping mask of a base that has one', () => {
+    const imp = importPsd(
+      buildPsd([{ name: 'Photo', left: 0, top: 0, w: 4, h: 4, rgba: blue(16), vmsk: vmskPoly([[0, 0], [0.5, 0], [0.5, 0.5], [0, 0.5]]) }, { ...c1, name: 'Over' }], { width: 8, height: 8 }),
+      'v',
+    );
+    const g = imp.artboard.children[0];
+    if (g.type !== 'group') throw new Error('group expected');
+    expect(g.name).toBe('Photo (clipped)');
+    expect(g.children.map((n) => [n.type, !!n.mask])).toEqual([['group', false], ['path', true], ['image', false]]);
+  });
+
+  it('turns a folder\'s pixel mask into an image mask over the folder', () => {
+    const imp = importPsd(
+      buildPsd(
+        [
+          { name: '</Layer group>', section: 3 },
+          { name: 'Inside', left: 0, top: 0, w: 4, h: 4, rgba: blue(16) },
+          { name: 'Folder', section: 2, mask: { top: 0, left: 0, w: 2, h: 4, samples: new Array(8).fill(51), def: 255 } },
+        ],
+        { width: 4, height: 4 },
+      ),
+      'm',
+    );
+    const g = imp.artboard.children[0];
+    if (g.type !== 'group') throw new Error('group expected');
+    const [m, folder] = g.children;
+    expect([m.type, m.mask, folder.type]).toEqual(['image', true, 'group']);
+    const asset = imp.assets.find((x) => x.id === (m as { assetId: string }).assetId)!;
+    const png = decodePng(asset.bytes);
+    // left half of the mask holds 51, the right half is outside the mask box so it takes the default colour
+    expect([png.rgba[3], png.rgba[(1 * 4 + 3) * 4 + 3]]).toEqual([51, 255]);
+    expect(png.rgba[3 * 4 + 3]).toBe(255);
+    expect([m.width, m.height]).toEqual([4, 4]);
   });
 });

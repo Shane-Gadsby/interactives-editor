@@ -7,13 +7,17 @@
  * (a PNG stored as a project asset) and folders become groups.
  *
  * Supported: 8 and 16 bit RGB and grayscale layers. Other modes and depths use the flattened picture saved in the file.
+ * Clipping groups (a layer and the layers clipped to it) become a group with a copy of the base used as a mask,
+ * vector masks become a path mask, and layer masks are baked into the layer's pixels (group masks become an image mask).
+ * Type layers become real text layers (`psd-type.ts` reads the styles), unless they are warped, vertical or masked, which
+ * keep their pixels.
  * Not carried over: layer styles and effects, smart-object contents (their raster is used), adjustment layers,
- * vector masks, clipping masks, and blend modes we don't have. Text layers keep their pixels and their text becomes
- * the layer name.
+ * and blend modes we don't have.
  */
 import { unzlibSync, zlibSync } from 'fflate';
-import { createArtboard, createNode, uid, type Artboard, type BlendMode, type SceneNode } from 'interactives-player';
+import { cloneWithNewIds, createArtboard, createNode, runsPatch, uid, type Artboard, type BlendMode, type FontRef, type PathNode, type SceneNode, type SubPath, type TextNode, type TextRun } from 'interactives-player';
 import type { ImportedAsset } from './lottie-import';
+import { parseTypeBlock, parseVectorMask, type PsdType, type PsdVectorMask } from './psd-type';
 
 // ---------------------------------------------------------------- types
 
@@ -36,6 +40,12 @@ export interface PsdLayer {
   height: number;
   /** The text of a type layer. */
   text?: string;
+  /** The type layer's styles and placement, when the file's type data could be read. */
+  type?: PsdType;
+  /** The layer's vector mask (a path in document pixels), when it has one that isn't just the shape of a shape layer. */
+  vectorMask?: PsdVectorMask;
+  /** An enabled pixel mask is already multiplied into the pixels. */
+  hasPixelMask?: boolean;
   /** A layer with no pixels that changes what is below it (levels, curves, ...). */
   adjustment: boolean;
   /** Decode the pixels as RGBA, `width * height * 4` bytes. Empty when the layer has no pixels. */
@@ -53,6 +63,9 @@ export interface PsdGroup {
   clipped: boolean;
   /** Folder was open in the layers panel. */
   open: boolean;
+  vectorMask?: PsdVectorMask;
+  /** The folder's pixel mask: `getAlpha` gives `width * height` samples; outside the box the mask is `defaultColor`. */
+  pixelMask?: { left: number; top: number; width: number; height: number; defaultColor: number; getAlpha(): Uint8Array };
   /** Painting order: first is the bottom. */
   children: PsdNode[];
 }
@@ -288,9 +301,13 @@ interface RawLayer {
   /** lsct type: 0 other, 1 open folder, 2 closed folder, 3 bounding divider. */
   section: number;
   text?: string;
+  typeData?: Uint8Array;
   adjustment: boolean;
   mask: MaskInfo | null;
   vectorMask: boolean;
+  vectorData?: Uint8Array;
+  /** A fill layer or shape layer: its `vmsk` is the layer's own outline, not a mask over something. */
+  fillLayer: boolean;
 }
 
 function decodeUtf16(bytes: Uint8Array): string {
@@ -350,7 +367,7 @@ function readLayerRecord(r: Reader, psb: boolean): RawLayer {
   if (extraEnd > r.bytes.length) throw new Error('This PSD file is damaged or cut short');
   const layer: RawLayer = {
     top, left, bottom, right, channels, blendKey, opacity: opacity / 255, fill: 1, clipped,
-    visible: (flags & 2) === 0, name: '', section: 0, adjustment: false, mask: null, vectorMask: false,
+    visible: (flags & 2) === 0, name: '', section: 0, adjustment: false, mask: null, vectorMask: false, fillLayer: false,
   };
   // layer mask
   const maskLen = r.u32();
@@ -389,8 +406,12 @@ function readLayerRecord(r: Reader, psb: boolean): RawLayer {
       layer.fill = data[0] / 255;
     } else if (key === 'TySh') {
       layer.text = findText(data);
+      layer.typeData = data;
     } else if (key === 'vmsk' || key === 'vsms') {
       layer.vectorMask = true;
+      layer.vectorData = data;
+    } else if (key === 'SoCo' || key === 'GdFl' || key === 'PtFl') {
+      layer.fillLayer = true;
     } else if (ADJUSTMENT_KEYS.has(key)) {
       layer.adjustment = true;
     }
@@ -407,6 +428,8 @@ interface Ctx {
   psb: boolean;
   depth: number;
   mode: number;
+  width: number;
+  height: number;
   warnings: Set<string>;
 }
 
@@ -481,8 +504,42 @@ function toNode(ctx: Ctx, raw: RawLayer): PsdLayer {
     width: w,
     height: h,
     text: raw.text,
+    ...(raw.typeData ? optional('type', parseTypeBlock(raw.typeData)) : {}),
+    ...vmaskOf(ctx, raw),
+    hasPixelMask: !!raw.mask && !raw.mask.disabled && raw.channels.some((c) => c.id === -2),
     adjustment: raw.adjustment && !(w > 0 && h > 0),
     getPixels: () => layerPixels(ctx, raw),
+  };
+}
+
+function optional<K extends string, V>(key: K, v: V | null): { [P in K]?: V } {
+  return v ? ({ [key]: v } as { [P in K]?: V }) : {};
+}
+
+/** The vector mask of a layer, unless it is the outline of a shape or fill layer. */
+function vmaskOf(ctx: Ctx, raw: RawLayer): { vectorMask?: PsdVectorMask } {
+  if (!raw.vectorData || raw.fillLayer) return {};
+  return optional('vectorMask', parseVectorMask(raw.vectorData, ctx.width, ctx.height));
+}
+
+/** A folder's pixel mask (folders have no pixels, so the mask is carried on its own). */
+function folderMask(ctx: Ctx, raw: RawLayer): PsdGroup['pixelMask'] {
+  const m = raw.mask;
+  const ch = raw.channels.find((c) => c.id === -2);
+  if (!m || m.disabled || !ch || ch.length < 2) return undefined;
+  const width = m.right - m.left;
+  const height = m.bottom - m.top;
+  return {
+    left: m.left,
+    top: m.top,
+    width: Math.max(0, width),
+    height: Math.max(0, height),
+    defaultColor: m.defaultColor,
+    getAlpha: () => {
+      if (width <= 0 || height <= 0) return new Uint8Array(0);
+      const view = new DataView(ctx.bytes.buffer, ctx.bytes.byteOffset, ctx.bytes.byteLength);
+      return decodeChannel(ctx.bytes.subarray(ch.offset + 2, ch.offset + ch.length), view.getUint16(ch.offset), width, height, ctx.depth, ctx.psb);
+    },
   };
 }
 
@@ -505,6 +562,8 @@ function buildTree(ctx: Ctx, raws: RawLayer[]): PsdNode[] {
         blendUnsupported: !b.supported && raw.blendKey !== 'pass',
         clipped: raw.clipped,
         open: raw.section === 1,
+        ...vmaskOf(ctx, raw),
+        ...optional('pixelMask', folderMask(ctx, raw)),
         children,
       });
     } else {
@@ -637,7 +696,7 @@ export function parsePsd(bytes: Uint8Array): PsdDocument {
   if (width < 1 || height < 1 || width > 300000 || height > 300000) throw new Error('This PSD file has an invalid size');
   if (![1, 8, 16, 32].includes(depth)) throw new Error(`Unsupported PSD bit depth ${depth}`);
   const modeNames: Record<number, string> = { 0: 'bitmap', 1: 'grayscale', 2: 'indexed colour', 3: 'RGB', 4: 'CMYK', 7: 'multichannel', 8: 'duotone', 9: 'Lab' };
-  const ctx: Ctx = { bytes, psb, depth, mode, warnings: new Set() };
+  const ctx: Ctx = { bytes, psb, depth, mode, width, height, warnings: new Set() };
 
   const colorData = r.slice(r.u32());
   r.skip(r.u32()); // image resources: guides, slices, thumbnails ... not used
@@ -690,8 +749,6 @@ export function parsePsd(bytes: Uint8Array): PsdDocument {
   const usable = raws.some((l) => l.section === 0 && l.right > l.left && l.bottom > l.top);
   if (usable) {
     doc.nodes = buildTree(ctx, raws);
-    if (raws.some((l) => l.clipped)) ctx.warnings.add('Clipping masks are not reproduced; clipped layers show in full');
-    if (raws.some((l) => l.vectorMask)) ctx.warnings.add('Vector masks and shape clipping are not applied');
     if (raws.some((l) => l.mask && !l.mask.disabled && !l.channels.some((c) => c.id === -2))) ctx.warnings.add('Some layer masks could not be read and were not applied');
   } else {
     // flat file, or one we can't split: use the picture saved with the document
@@ -761,81 +818,375 @@ export function encodePng(width: number, height: number, rgba: Uint8Array): Uint
   return out;
 }
 
+// ---------------------------------------------------------------- fonts
+
+/** Google fonts a Photoshop file is likely to use. Keys are the name in lower case without spaces. */
+const GOOGLE_FONTS = [
+  'Roboto', 'Roboto Condensed', 'Roboto Slab', 'Roboto Mono', 'Open Sans', 'Lato', 'Montserrat', 'Poppins', 'Inter', 'Oswald', 'Raleway', 'Nunito', 'Nunito Sans',
+  'Playfair Display', 'Merriweather', 'Ubuntu', 'Source Sans Pro', 'Source Sans 3', 'Source Serif Pro', 'Source Code Pro', 'Noto Sans', 'Noto Serif', 'PT Sans', 'PT Serif',
+  'Rubik', 'Work Sans', 'DM Sans', 'DM Serif Display', 'Fira Sans', 'Fira Code', 'Quicksand', 'Karla', 'Barlow', 'Barlow Condensed', 'Mulish', 'Muli', 'Josefin Sans',
+  'Libre Baskerville', 'Libre Franklin', 'Cabin', 'Bebas Neue', 'Anton', 'Lora', 'Crimson Text', 'Dosis', 'Arimo', 'Titillium Web', 'Inconsolata', 'Space Grotesk',
+  'Space Mono', 'Manrope', 'IBM Plex Sans', 'IBM Plex Serif', 'IBM Plex Mono', 'Cormorant Garamond', 'EB Garamond', 'Pacifico', 'Lobster', 'Dancing Script', 'Comfortaa',
+  'Archivo', 'Exo 2', 'Heebo', 'Kanit', 'Hind', 'Oxygen', 'Abril Fatface', 'Bitter', 'Cinzel', 'Teko', 'Fjalla One', 'Signika', 'Varela Round', 'Asap', 'Maven Pro',
+  'Prompt', 'Sarabun', 'Sora', 'Outfit', 'Plus Jakarta Sans', 'Lexend', 'Urbanist', 'Figtree', 'Albert Sans', 'Red Hat Display', 'Red Hat Text', 'Jost', 'Be Vietnam Pro',
+  'Public Sans', 'Syne', 'Zilla Slab', 'Arvo', 'Domine', 'Spectral', 'Vollkorn', 'Alegreya', 'Overpass', 'Questrial', 'Nanum Gothic', 'Cairo', 'Tajawal', 'Amatic SC',
+  'Caveat', 'Shadows Into Light', 'Permanent Marker', 'Righteous', 'Satisfy', 'Great Vibes', 'Courgette', 'Sacramento', 'Chivo', 'Staatliches', 'Rajdhani', 'Saira',
+  'Kalam', 'Yanone Kaffeesatz', 'Lilita One', 'Fredoka', 'Baloo 2', 'Cormorant', 'Old Standard TT', 'Rokkitt', 'Bree Serif', 'Cardo', 'Josefin Slab', 'Slabo 27px',
+];
+const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+const GOOGLE_BY_KEY = new Map(GOOGLE_FONTS.map((f) => [squash(f), f]));
+
+const WEIGHT_WORDS: [RegExp, number][] = [
+  [/hairline|thin/i, 100],
+  [/extra\s*light|ultra\s*light/i, 200],
+  [/light/i, 300],
+  [/semi\s*bold|demi\s*bold|demi/i, 600],
+  [/extra\s*bold|ultra\s*bold|heavy/i, 800],
+  [/black|ultra/i, 900],
+  [/bold/i, 700],
+  [/medium/i, 500],
+  [/regular|roman|book|normal/i, 400],
+];
+
+export interface PsdFont {
+  family: string;
+  weight: number;
+  italic: boolean;
+  /** The family is a known Google font. */
+  google: boolean;
+}
+
+/** Best effort: a PostScript name like `Montserrat-SemiBoldItalic` as a family, weight and slant. */
+export function psdFont(postscript: string, fauxBold = false, fauxItalic = false): PsdFont {
+  const name = postscript.replace(/_/g, ' ').trim();
+  const dash = name.indexOf('-');
+  const strip = (t: string) => t.replace(/(PSMT|MT|PS)$/, '');
+  let fam = strip(dash > 0 ? name.slice(0, dash) : name);
+  const style = strip(dash > 0 ? name.slice(dash + 1) : '');
+  fam = fam.replace(/([a-z])([A-Z0-9])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/\s+/g, ' ').trim() || 'sans-serif';
+  let weight = 400;
+  for (const [re, w] of WEIGHT_WORDS) {
+    if (re.test(style)) {
+      weight = w;
+      break;
+    }
+  }
+  // "ExtraBold" must not stop at "Bold" and "SemiBold" must not stop at "Light": the table order handles it, but "Black" before "Bold" is intended
+  const italic = /italic|oblique|\bit$/i.test(style) || fauxItalic;
+  if (fauxBold && weight < 600) weight = 700;
+  const known = GOOGLE_BY_KEY.get(squash(fam));
+  return { family: known ?? fam, weight, italic, google: !!known };
+}
+
 // ---------------------------------------------------------------- to layers
 
 export interface PsdImport {
   artboard: Artboard;
   assets: ImportedAsset[];
+  /** Google fonts used by the text layers. */
+  fonts: FontRef[];
   warnings: string[];
 }
 
-/** Turn a PSD into an artboard of image layers and groups, with the pictures as PNG assets. */
-export function importPsd(bytes: Uint8Array, baseName: string): PsdImport {
+export interface PsdImportOptions {
+  /** Bring type layers in as editable text (default). Off keeps every one as a picture. */
+  text?: boolean;
+}
+
+const round = (v: number, d = 1000) => Math.round(v * d) / d;
+
+/** Turn a PSD into an artboard of image layers, groups, masks and text, with the pictures as PNG assets. */
+export function importPsd(bytes: Uint8Array, baseName: string, options: PsdImportOptions = {}): PsdImport {
   const doc = parsePsd(bytes);
+  const asText = options.text !== false;
   const warnings = new Set(doc.warnings);
   const assets: ImportedAsset[] = [];
+  const googleWeights = new Map<string, Set<number>>();
   const unsupportedBlends = new Set<string>();
   let adjustments = 0;
-  let empty = 0;
+  let keptTextPictures = 0;
 
   const common = (n: PsdLayer | PsdGroup) => ({
     visible: n.visible,
-    opacity: Math.round(n.opacity * 1000) / 1000,
+    opacity: round(n.opacity),
     ...(n.blendMode !== 'normal' ? { blendMode: n.blendMode } : {}),
   });
   const noteBlend = (n: PsdLayer | PsdGroup) => {
     if (n.blendUnsupported) unsupportedBlends.add(BLEND_NAMES[n.blendKey] ?? n.blendKey.trim());
   };
 
-  const convert = (list: PsdNode[]): SceneNode[] => {
-    const out: SceneNode[] = [];
-    for (const n of list) {
-      if (n.kind === 'group') {
-        const kids = convert(n.children);
-        if (!kids.length) {
-          empty++;
-          continue;
+  const boundsOf = (kids: SceneNode[]) => ({
+    x0: Math.min(...kids.map((k) => k.x)),
+    y0: Math.min(...kids.map((k) => k.y)),
+    x1: Math.max(...kids.map((k) => k.x + k.width)),
+    y1: Math.max(...kids.map((k) => k.y + k.height)),
+  });
+
+  /** A group whose box is the union of its children, with the children placed relative to it. */
+  const makeGroup = (name: string, kids: SceneNode[], extra: Record<string, unknown> = {}): SceneNode => {
+    const b = boundsOf(kids);
+    for (const k of kids) {
+      k.x -= b.x0;
+      k.y -= b.y0;
+    }
+    return createNode('group', { name, x: b.x0, y: b.y0, width: b.x1 - b.x0, height: b.y1 - b.y0, children: kids, ...extra });
+  };
+
+  const addImage = (name: string, w: number, h: number, rgba: Uint8Array): string => {
+    const id = uid('as');
+    assets.push({ id, name: `${name.replace(/[\\/:*?"<>|]+/g, '_')}.png`, mime: 'image/png', bytes: encodePng(w, h, rgba) });
+    return id;
+  };
+
+  /** The outline of a vector mask as a path layer that works as a clipping mask. */
+  const vectorMaskNode = (name: string, vm: PsdVectorMask): SceneNode => {
+    const subs = vm.paths.map((p) => ({ closed: p.closed, points: p.points }));
+    const all: { x: number; y: number }[] = [];
+    for (const s of subs) for (const p of s.points) all.push({ x: p.x, y: p.y }, { x: p.x + p.inX, y: p.y + p.inY }, { x: p.x + p.outX, y: p.y + p.outY });
+    if (vm.invert) all.push({ x: 0, y: 0 }, { x: doc.width, y: doc.height });
+    const x0 = Math.min(...all.map((p) => p.x));
+    const y0 = Math.min(...all.map((p) => p.y));
+    const x1 = Math.max(...all.map((p) => p.x));
+    const y1 = Math.max(...all.map((p) => p.y));
+    const paths: SubPath[] = subs.map((s) => ({
+      closed: s.closed,
+      points: s.points.map((p) => ({
+        x: round(p.x - x0),
+        y: round(p.y - y0),
+        in: p.inX || p.inY ? { x: round(p.inX), y: round(p.inY) } : null,
+        out: p.outX || p.outY ? { x: round(p.outX), y: round(p.outY) } : null,
+      })),
+    }));
+    // "invert" hides what is inside the path: the whole canvas with the path cut out of it
+    if (vm.invert) {
+      const c = { closed: true, points: [[0, 0], [doc.width, 0], [doc.width, doc.height], [0, doc.height]].map(([x, y]) => ({ x: x - x0, y: y - y0, in: null, out: null })) };
+      paths.unshift(c);
+    }
+    return createNode('path', {
+      name,
+      x: round(x0),
+      y: round(y0),
+      width: Math.max(1, round(x1 - x0)),
+      height: Math.max(1, round(y1 - y0)),
+      paths,
+      fill: { type: 'solid', color: '#000000' },
+      stroke: null,
+      fillRule: vm.evenodd || vm.invert ? 'evenodd' : 'nonzero',
+      mask: true,
+    } as Partial<PathNode>);
+  };
+
+  /** Registers the fonts of a run and gives back the style it maps to. */
+  const fontOf = (ps: string, fauxBold: boolean, fauxItalic: boolean) => {
+    const f = psdFont(ps, fauxBold, fauxItalic);
+    if (f.google) {
+      if (!googleWeights.has(f.family)) googleWeights.set(f.family, new Set());
+      googleWeights.get(f.family)!.add(f.weight);
+    }
+    return f;
+  };
+
+  /** A Photoshop type layer as a text layer: font, size, colour, spacing, alignment and the style runs. */
+  const textNode = (n: PsdLayer, t: PsdType, name: string): SceneNode => {
+    const [xx, xy, yx, yy, tx, ty] = t.transform;
+    const sx = Math.hypot(xx, xy) || 1;
+    const sy = Math.hypot(yx, yy) || 1;
+    const rot = (Math.atan2(xy, xx) * 180) / Math.PI;
+    const style = (r: PsdType['runs'][number]) => {
+      const f = fontOf(r.font, r.fauxBold, r.fauxItalic);
+      const size = Math.max(1, round(r.size * sy, 10));
+      return { family: f.family, weight: f.weight, italic: f.italic, size, color: r.color, spacing: round((r.tracking / 1000) * size, 100), underline: r.underline, strike: r.strike };
+    };
+    const first = t.runs[0];
+    const b = style(first);
+    const runs: TextRun[] = t.runs.map((r) => {
+      const s = style(r);
+      const o: TextRun = { text: r.text };
+      if (s.family !== b.family) o.fontFamily = s.family;
+      if (s.size !== b.size) o.fontSize = s.size;
+      if (s.weight !== b.weight) o.fontWeight = s.weight;
+      if (s.italic !== b.italic) o.italic = s.italic;
+      if (s.color !== b.color) o.color = s.color;
+      if (s.underline !== b.underline) o.underline = s.underline;
+      if (s.strike !== b.strike) o.strike = s.strike;
+      if (s.spacing !== b.spacing) o.letterSpacing = s.spacing;
+      return o;
+    });
+    const lineHeight = first.leading !== null ? round(first.leading / first.size, 100) : round(t.autoLeading, 100);
+    const lines = t.text.split('\n').length;
+    const lh = lineHeight * b.size;
+
+    // Where the box goes. Paragraph text has a box starting at the transform's origin. Point text is anchored at its first
+    // baseline (left, centre or right per alignment), so the box is built around the rendered width.
+    let w: number;
+    let h: number;
+    let cx: number; // box centre relative to the origin, before rotation
+    let cy: number;
+    if (t.paragraph && t.box) {
+      const [l, tp, r, bt] = t.box;
+      w = (r - l) * sx;
+      h = (bt - tp) * sy;
+      cx = ((l + r) / 2) * sx;
+      cy = ((tp + bt) / 2) * sy;
+    } else {
+      const longest = Math.max(...t.text.split('\n').map((x) => x.length));
+      w = Math.ceil((n.width > 0 ? n.width : longest * b.size * 0.6) * 1.08) + 6;
+      h = lines * lh;
+      const ox = t.align === 'center' ? -w / 2 : t.align === 'right' ? -w : 0;
+      const oy = -(lh / 2 + 0.325 * b.size);
+      cx = ox + w / 2;
+      cy = oy + h / 2;
+    }
+    const rad = (rot * Math.PI) / 180;
+    const centerX = tx + cx * Math.cos(rad) - cy * Math.sin(rad);
+    const centerY = ty + cx * Math.sin(rad) + cy * Math.cos(rad);
+
+    return createNode('text', {
+      name,
+      x: round(centerX - w / 2, 100),
+      y: round(centerY - h / 2, 100),
+      width: round(w, 100),
+      height: round(h, 100),
+      ...(Math.abs(rot) > 0.01 ? { rotation: round(rot, 100) } : {}),
+      ...runsPatch(runs),
+      fontFamily: b.family,
+      fontSize: b.size,
+      fontWeight: b.weight,
+      fontStyle: b.italic ? 'italic' : 'normal',
+      lineHeight,
+      letterSpacing: b.spacing,
+      color: b.color,
+      align: t.align,
+      verticalAlign: 'top',
+      ...(b.underline ? { textDecoration: 'underline' as const } : b.strike ? { textDecoration: 'line-through' as const } : {}),
+      ...(first.allCaps ? { textTransform: 'uppercase' as const } : {}),
+      autoSize: t.paragraph && t.box ? 'none' : 'width',
+    } as Partial<TextNode>);
+  };
+
+  /** A layer or folder as a scene node, without its opacity / blend / visibility (the caller places those), plus a mask copy. */
+  interface Unit {
+    node: SceneNode;
+    c: ReturnType<typeof common>;
+    name: string;
+    /** A copy to use as the clipping mask for layers clipped to this one, or null when it has no shape. */
+    mask: () => SceneNode | null;
+  }
+
+  const convertOne = (n: PsdNode): Unit | null => {
+    let core: SceneNode;
+    let mask: () => SceneNode | null;
+    const name = n.name || 'Layer';
+    if (n.kind === 'group') {
+      const kids = convert(n.children);
+      if (!kids.length) return null;
+      noteBlend(n);
+      const b = boundsOf(kids);
+      core = makeGroup(n.name || 'Group', kids);
+      // the mask copy for layers clipped to this folder, taken while its children are still in document coordinates
+      const snapshot = cloneWithNewIds(core);
+      mask = () => cloneWithNewIdsMask(snapshot);
+      if (n.pixelMask) {
+        // a folder's pixel mask becomes an image mask over the whole folder (alpha from the mask, default colour outside it)
+        const pm = n.pixelMask;
+        const hasBox = pm.width > 0 && pm.height > 0;
+        const x0 = Math.floor(hasBox ? Math.min(pm.left, b.x0) : b.x0);
+        const y0 = Math.floor(hasBox ? Math.min(pm.top, b.y0) : b.y0);
+        const x1 = Math.ceil(hasBox ? Math.max(pm.left + pm.width, b.x1) : b.x1);
+        const y1 = Math.ceil(hasBox ? Math.max(pm.top + pm.height, b.y1) : b.y1);
+        const W = Math.max(1, x1 - x0);
+        const H = Math.max(1, y1 - y0);
+        const rgba = new Uint8Array(W * H * 4);
+        const alpha = hasBox ? pm.getAlpha() : new Uint8Array(0);
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            const mx = x0 + x - pm.left;
+            const my = y0 + y - pm.top;
+            rgba[(y * W + x) * 4 + 3] = hasBox && mx >= 0 && my >= 0 && mx < pm.width && my < pm.height ? alpha[my * pm.width + mx] : pm.defaultColor;
+          }
         }
-        noteBlend(n);
-        // the group's box is the union of its children, with the children placed relative to it
-        const x0 = Math.min(...kids.map((k) => k.x));
-        const y0 = Math.min(...kids.map((k) => k.y));
-        const x1 = Math.max(...kids.map((k) => k.x + k.width));
-        const y1 = Math.max(...kids.map((k) => k.y + k.height));
-        for (const k of kids) {
-          k.x -= x0;
-          k.y -= y0;
-        }
-        out.push(createNode('group', { name: n.name || 'Group', x: x0, y: y0, width: x1 - x0, height: y1 - y0, children: kids, ...common(n) }));
-        continue;
+        const id = addImage(`${name} layer mask`, W, H, rgba);
+        const maskNode = createNode('image', { name: `${name} (layer mask)`, assetId: id, x: x0, y: y0, width: W, height: H, fit: 'fill', mask: true });
+        core = makeGroup(name, [maskNode, core]);
       }
+    } else {
       if (n.adjustment) {
         adjustments++;
-        continue;
+        return null;
       }
-      if (n.width < 1 || n.height < 1) {
-        empty++;
-        continue;
-      }
-      noteBlend(n);
-      const png = encodePng(n.width, n.height, n.getPixels());
+      const hasPx = n.width >= 1 && n.height >= 1;
+      const t = n.type;
+      const real = asText && !!t && !t.vertical && !t.warped && !n.hasPixelMask;
+      if (t && asText && !real && (t.vertical || t.warped || n.hasPixelMask)) keptTextPictures++;
       const text = n.text?.replace(/[\r\n\u0003]+/g, ' ').trim();
-      const name = n.name || (text ? text.slice(0, 80) : 'Layer');
-      const id = uid('as');
-      assets.push({ id, name: `${name.replace(/[\\/:*?"<>|]+/g, '_')}.png`, mime: 'image/png', bytes: png });
-      out.push(
-        createNode('image', {
-          name,
-          assetId: id,
-          x: n.left,
-          y: n.top,
-          width: n.width,
-          height: n.height,
-          fit: 'fill',
-          ...(text ? { ariaLabel: text } : {}),
-          ...common(n),
-        }),
-      );
+      const label = n.name || (text ? text.slice(0, 80) : 'Layer');
+      let raster: string | null = null;
+      const rasterId = (): string | null => {
+        if (!hasPx) return null;
+        raster ??= addImage(label, n.width, n.height, n.getPixels());
+        return raster;
+      };
+      const imageNode = (id: string, extra: Record<string, unknown> = {}) =>
+        createNode('image', { name: label, assetId: id, x: n.left, y: n.top, width: n.width, height: n.height, fit: 'fill', ...extra });
+      if (real && t) {
+        core = textNode(n, t, label);
+        mask = () => {
+          const id = rasterId();
+          return id ? imageNode(id, { name: `${label} (mask)`, mask: true }) : null;
+        };
+      } else {
+        if (!hasPx) return null;
+        noteBlend(n);
+        const id = rasterId()!;
+        core = imageNode(id, text ? { ariaLabel: text } : {});
+        mask = () => imageNode(id, { name: `${label} (mask)`, mask: true });
+      }
+      if (real) noteBlend(n);
+    }
+    // a vector mask: a path used as a mask, just under the layer, inside a group of their own
+    let node = core;
+    if (n.vectorMask) {
+      const vm = vectorMaskNode(`${name} (vector mask)`, n.vectorMask);
+      node = makeGroup(name, [vm, core]);
+      const pathCopy = vectorMaskNode(`${name} (mask)`, n.vectorMask);
+      mask = () => pathCopy;
+    }
+    return { node, c: common(n), name, mask };
+  };
+
+  const cloneWithNewIdsMask = (node: SceneNode): SceneNode => {
+    const c = cloneWithNewIds(node);
+    c.mask = true;
+    c.name = `${node.name} (mask)`;
+    c.visible = true;
+    c.opacity = 1;
+    return c;
+  };
+
+  const convert = (list: PsdNode[]): SceneNode[] => {
+    const out: SceneNode[] = [];
+    let i = 0;
+    while (i < list.length) {
+      const n = list[i];
+      // a clipped layer clips to the nearest unclipped layer below it; with none below it, it is just a layer
+      let j = i + 1;
+      if (!n.clipped) while (j < list.length && list[j].clipped) j++;
+      const base = convertOne(n);
+      const rest = list.slice(i + 1, j).map(convertOne).filter((u): u is Unit => !!u);
+      i = j;
+      if (!base) {
+        for (const u of rest) out.push(Object.assign(u.node, u.c));
+        continue;
+      }
+      const maskNode = rest.length ? base.mask() : null;
+      if (!rest.length || !maskNode) {
+        out.push(Object.assign(base.node, base.c));
+        for (const u of rest) out.push(Object.assign(u.node, u.c));
+        continue;
+      }
+      // The base is drawn first, a copy of it masks everything clipped to it, and the group carries the base's opacity and blend mode
+      const clipped = rest.map((u) => Object.assign(u.node, u.c));
+      out.push(makeGroup(`${base.name} (clipped)`, [base.node, maskNode, ...clipped], base.c));
     }
     return out;
   };
@@ -843,9 +1194,10 @@ export function importPsd(bytes: Uint8Array, baseName: string): PsdImport {
   const children = convert(doc.nodes);
   if (adjustments) warnings.add(`${adjustments} adjustment layer${adjustments > 1 ? 's were' : ' was'} not carried over (they change how layers below look, which can't be reproduced)`);
   if (unsupportedBlends.size) warnings.add(`Blend modes with no equivalent were imported as normal: ${[...unsupportedBlends].join(', ')}`);
-  if (empty) warnings.add(`${empty} empty layer${empty > 1 ? 's were' : ' was'} skipped`);
+  if (keptTextPictures) warnings.add(`${keptTextPictures} text layer${keptTextPictures > 1 ? 's' : ''} (warped, vertical or masked) kept as pictures`);
   if (!children.length) throw new Error('This PSD file has no pixels to import');
 
+  const fonts: FontRef[] = [...googleWeights].map(([family, w]) => ({ family, source: 'google', weights: [...w].sort((a, b) => a - b) }));
   const artboard = createArtboard({ name: baseName || 'Photoshop import', width: doc.width, height: doc.height, background: null, children });
-  return { artboard, assets, warnings: [...warnings] };
+  return { artboard, assets, fonts, warnings: [...warnings] };
 }
