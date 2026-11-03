@@ -120,7 +120,7 @@ export type Tool =
   | 'shader'
   | 'bone';
 
-export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage';
+export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y';
 
 export interface EditorState {
   project: Project;
