@@ -172,7 +172,7 @@ describe('Rive pointer listeners', () => {
         ['ListenerBoolChange', { inputId: 0, value: 1 }],
         ['StateMachineListenerSingle', { targetId: 1, listenerTypeValue: 10 }],
         ['ListenerBoolChange', { inputId: 0, value: 0 }],
-        ['StateMachineListenerSingle', { targetId: 1, listenerTypeValue: 13 }],
+        ['StateMachineListenerSingle', { targetId: 1, listenerTypeValue: 17 }],
         ['ListenerBoolChange', { inputId: 0, value: 0 }],
       ]),
       'l',
@@ -181,7 +181,7 @@ describe('Rive pointer listeners', () => {
     const hot = ab.children.find((n) => n.name === 'Hot')!;
     const types = ab.logic.nodes.filter((n) => n.kind === 'event.pointer').map((n) => [n.params.target, n.params.type]);
     expect(types).toEqual([[hot.id, 'pointermove'], [hot.id, 'drag'], [hot.id, 'dragstart'], [hot.id, 'dragend']]);
-    expect(res.warnings.filter((w) => /Listener type/.test(w))).toEqual([expect.stringContaining('Listener type 13')]);
+    expect(res.warnings.filter((w) => /Listener type/.test(w))).toEqual([expect.stringContaining('Listener type 17')]);
   });
 });
 

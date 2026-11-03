@@ -322,6 +322,8 @@ interface RListener {
   actions: RObj[];
   /** ListenerInputTypeEvent objects: the events an event listener reacts to. */
   inputTypes: RObj[];
+  /** KeyboardInput objects: the keys a keyboard listener reacts to. */
+  keys: RObj[];
 }
 interface RMachine {
   obj: RObj;
@@ -509,9 +511,10 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
       condition = o;
     } else if (isA(t, 'StateMachineFireAction') && (transition || state)) (transition ?? state)!.fires.push(o);
     else if (isA(t, 'StateMachineListener') && sm) {
-      listener = { obj: o, actions: [], inputTypes: [] };
+      listener = { obj: o, actions: [], inputTypes: [], keys: [] };
       sm.listeners.push(listener);
     } else if (isA(t, 'ListenerInputType') && listener) listener.inputTypes.push(o);
+    else if (t === 'KeyboardInput' && listener) listener.keys.push(o);
     else if (isA(t, 'ListenerAction') && listener) {
       listener.actions.push(t === 'ListenerViewModelChange' ? { ...o, parts: pending } : o);
       pending = [];
@@ -739,6 +742,42 @@ interface FileCtx {
   vmVars: Map<string, VmVar>;
   /** Events keyed on a timeline: marker name -> the Rive event's slot. Filled by buildTimeline, turned into flows by buildMachines. */
   timelineEvents: Map<Timeline, Map<string, number>>;
+  /** Nested inputs keyed on a timeline (markers that set the input or fire the trigger), named once every artboard's inputs are. */
+  nestedKeys: NestedKey[];
+  /** Flow nodes that name a nested input, filled in once every artboard's state machine inputs have names. */
+  pendingNested: { node: LogicNode; ref: NestedRef }[];
+}
+
+/** An input of the state machine of a nested artboard, as the parent sees it (a NestedBool / NestedNumber / NestedTrigger). */
+interface NestedRef {
+  inst: SceneNode;
+  artboard: number;
+  machine: number;
+  input: number;
+  kind: 'bool' | 'number' | 'trigger';
+}
+
+/** One key of a nested input animation: a marker on the timeline, then a flow that sets the input or fires the trigger. */
+interface NestedKey {
+  tl: Timeline;
+  marker: TimelineMarker;
+  ref: NestedRef;
+  value: number | boolean;
+}
+
+/** The nested input a NestedBool / NestedNumber / NestedTrigger component stands for, found through its nested state machine and nested artboard. */
+function nestedRef(ac: ArtboardCtx, slot: number): NestedRef | null {
+  const o = ac.rab.slots[slot];
+  const kind = o?.type === 'NestedBool' ? 'bool' : o?.type === 'NestedNumber' ? 'number' : o?.type === 'NestedTrigger' ? 'trigger' : null;
+  if (!kind) return null;
+  const smSlot = Number(o.props.parentId ?? 0);
+  const sm = ac.rab.slots[smSlot];
+  if (sm?.type !== 'NestedStateMachine') return null;
+  const naSlot = Number(sm.props.parentId ?? 0);
+  const na = ac.rab.slots[naSlot];
+  const inst = ac.nodeBySlot.get(naSlot);
+  if (!na || !isA(na.type, 'NestedArtboard') || inst?.type !== 'instance') return null;
+  return { inst, artboard: Number(get(na, 'artboardId')), machine: Number(get(sm, 'animationId')), input: Number(get(o, 'inputId')), kind };
 }
 
 /** sourcePathIds: varuints, the view model index then property indexes (through nested view model properties). */
@@ -1457,6 +1496,36 @@ function audioAsset(fc: FileCtx, index: number): { id: string; volume: number } 
   return { id, volume: r2(Number(get(asset.obj, 'volume') ?? 1)) };
 }
 
+/**
+ * The 9-slice of an image: its NSlicer child holds two axes per direction (offsets in image pixels, or 0 to 1 of the
+ * size when `normalized`), so the pieces are corner, stretching edge, corner. Tile modes are kept per patch in Rive; here
+ * one mode covers the edges and middle.
+ */
+function imageSlice(ac: ArtboardCtx, fc: FileCtx, slot: number, size: { width: number; height: number }): { slice: NonNullable<ImageNode['slice']>; tile?: 'repeat' } | null {
+  const slicer = (ac.children.get(slot) ?? []).find((i) => ac.rab.slots[i].type === 'NSlicer');
+  if (slicer === undefined) return null;
+  const parts = (ac.children.get(slicer) ?? []).map((i) => ac.rab.slots[i]);
+  const stops = (type: string, extent: number) =>
+    parts
+      .filter((p) => p.type === type)
+      .map((p) => (get<boolean>(p, 'normalized') ? Math.min(1, Math.max(0, get(p, 'offset'))) * extent : Math.min(extent, Math.max(0, get(p, 'offset')))))
+      .sort((a, b) => a - b);
+  const xs = stops('AxisX', size.width);
+  const ys = stops('AxisY', size.height);
+  if (xs.length !== 2 || ys.length !== 2) {
+    fc.warnings.add('A 9-slice image needs two axes in each direction; this one has a different number and imports as a plain image');
+    return null;
+  }
+  const slice = { top: r2(ys[0]), right: r2(size.width - xs[1]), bottom: r2(size.height - ys[1]), left: r2(xs[0]) };
+  // Patches count left to right, top to bottom, three to a row; the corners never stretch, so only 1, 3, 4, 5 and 7 can tile
+  const modes = new Map(parts.filter((p) => p.type === 'NSlicerTileMode').map((p) => [Number(get(p, 'patchIndex')), Number(get(p, 'style'))] as const));
+  const stretchy = [1, 3, 4, 5, 7].map((i) => modes.get(i) ?? 0);
+  if ([...modes.values()].some((s) => s === 2)) fc.warnings.add('Hidden patches of a 9-slice image are drawn');
+  const repeats = stretchy.filter((s) => s === 1).length;
+  if (repeats && repeats < stretchy.length) fc.warnings.add('A 9-slice image tiles all its edges and its middle or none of them; the tile modes were merged');
+  return { slice, ...(repeats ? { tile: 'repeat' as const } : {}) };
+}
+
 function convertImage(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | null {
   const o = ac.rab.slots[slot];
   const index = Number(get(o, 'assetId'));
@@ -1476,8 +1545,28 @@ function convertImage(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
   const ox = get(o, 'originX');
   const oy = get(o, 'originY');
   const node = createNode('image', { name: String(o.props.name ?? 'Image'), assetId, fit: 'fill' });
-  placeAtOrigin(node, o, { x: -size.width * ox, y: -size.height * oy }, size.width, size.height);
-  addTarget(ac, slot, transformTarget(node, { x: -size.width * ox, y: -size.height * oy }));
+  // 9-slice: an NSlicer child with axes; the image then resizes by stretching only what lies between them
+  const sliced = imageSlice(ac, fc, slot, size);
+  let w = size.width;
+  let h = size.height;
+  if (sliced) {
+    node.slice = sliced.slice;
+    if (sliced.tile) node.sliceTile = sliced.tile;
+    // Rive resizes a sliced image by its scale, keeping the corners at their pixel size; here the box is resized instead (unless the scale is animated)
+    const sx = get(o, 'scaleX');
+    const sy = get(o, 'scaleY');
+    const animated = ac.rab.anims.some((an) => an.keyed.some((k) => Number(k.obj.props.objectId ?? 0) === slot));
+    if (!animated && sx > 0 && sy > 0 && (sx !== 1 || sy !== 1)) {
+      w = size.width * sx;
+      h = size.height * sy;
+    }
+  }
+  placeAtOrigin(node, o, { x: -w * ox, y: -h * oy }, w, h);
+  if (w !== size.width || h !== size.height) {
+    node.scaleX = 1;
+    node.scaleY = 1;
+  }
+  addTarget(ac, slot, transformTarget(node, { x: -w * ox, y: -h * oy }));
   // A mesh: its vertices sit in the image's own space (origin at the image's origin), so ours move by the same box offset
   const meshSlot = (ac.children.get(slot) ?? []).find((i) => ac.rab.slots[i].type === 'Mesh');
   if (meshSlot !== undefined) {
@@ -1801,6 +1890,7 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     addTarget(ac, slot, transformTarget(f, { x: 0, y: 0 }));
     node = f;
   } else if (isA(t, 'Node')) {
+    if (t === 'NSlicedNode') fc.warnings.add('N-sliced nodes (groups resized by slice axes) import as plain groups; their contents are not stretched');
     const g = createNode('group', { name: String(o.props.name ?? t) });
     placeAtOrigin(g, o, { x: 0, y: 0 }, 0, 0);
     g.originX = 0;
@@ -2278,6 +2368,7 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
   const tracks: Track[] = [];
   const markers: TimelineMarker[] = [];
   const events = new Map<string, number>();
+  const nestedKeys: Omit<NestedKey, 'tl'>[] = [];
   for (const ko of anim.keyed) {
     const slot = Number(ko.obj.props.objectId ?? 0);
     const targets = ac.targets.get(slot);
@@ -2295,6 +2386,25 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
         continue;
       }
       const slotType = ac.rab.slots[slot]?.type;
+      if (slotType && isA(slotType, 'NestedInput')) {
+        // A key on a nested input: a marker that sets it (or fires the trigger) on the instance
+        const ref = nestedRef(ac, slot);
+        if (!ref) {
+          fc.warnings.add('Animated nested inputs whose nested artboard could not be found were skipped');
+          continue;
+        }
+        if (ref.kind === 'number' && kp.keys.length > 1) fc.warnings.add('Animated nested numbers jump to each key value instead of tweening between keys');
+        for (const k of kp.keys) {
+          const frame = Number(k.props.frame ?? 0);
+          if (frame < start || frame > end) continue;
+          const value = ref.kind === 'bool' ? !!get<boolean>(k, 'value') : ref.kind === 'number' ? r2(get(k, 'value')) : true;
+          // Keys that do the same thing share a marker name (and so one flow); the readable name comes once the input has one
+          const marker: TimelineMarker = { id: uid('mk'), time: Math.min(ms(frame), ms(end)), name: `nested|${ref.inst.id}|${ref.machine}|${ref.input}|${String(value)}` };
+          markers.push(marker);
+          nestedKeys.push({ marker, ref, value });
+        }
+        continue;
+      }
       if (slotType && isA(slotType, 'Event')) {
         // A callback keyframe fires the event: a timeline marker named after it (made unique if two events share a name)
         let marker = eventName(ac.rab.slots[slot]);
@@ -2377,9 +2487,22 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
   if (markers.length) {
     tl.markers = markers.sort((a, b) => a.time - b.time);
     fc.timelineEvents.set(tl, events);
+    for (const k of nestedKeys) fc.nestedKeys.push({ ...k, tl });
   }
   return tl;
 }
+
+/** Rive key codes (the ones keyboard listeners use) as the key or code names a browser reports. Letters and digits are the character itself. */
+const RIVE_KEYS: Record<number, string> = (() => {
+  const keys: Record<number, string> = { 32: 'Space', 39: "'", 44: ',', 45: '-', 46: '.', 47: '/', 59: ';', 61: '=', 91: '[', 92: '\\', 93: ']', 96: '`', 256: 'Escape', 257: 'Enter', 258: 'Tab', 259: 'Backspace', 260: 'Insert', 261: 'Delete', 262: 'ArrowRight', 263: 'ArrowLeft', 264: 'ArrowDown', 265: 'ArrowUp', 266: 'PageUp', 267: 'PageDown', 268: 'Home', 269: 'End', 280: 'CapsLock', 281: 'ScrollLock', 282: 'NumLock', 283: 'PrintScreen', 284: 'Pause', 330: 'NumpadDecimal', 331: 'NumpadDivide', 332: 'NumpadMultiply', 333: 'NumpadSubtract', 334: 'NumpadAdd', 335: 'NumpadEnter', 336: 'NumpadEqual', 340: 'ShiftLeft', 341: 'ControlLeft', 342: 'AltLeft', 343: 'MetaLeft', 344: 'ShiftRight', 345: 'ControlRight', 346: 'AltRight', 347: 'MetaRight', 348: 'ContextMenu' };
+  for (let i = 0; i < 10; i++) {
+    keys[48 + i] = String(i);
+    keys[320 + i] = `Numpad${i}`;
+  }
+  for (let i = 0; i < 26; i++) keys[65 + i] = String.fromCharCode(97 + i);
+  for (let i = 0; i < 25; i++) keys[290 + i] = `F${i + 1}`;
+  return keys;
+})();
 
 /** An event's name (Rive events are found by name when the host listens for them). */
 function eventName(o: RObj | undefined): string {
@@ -2769,6 +2892,15 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     }
     return { last, port: lastPort, x };
   };
+  // Setting a nested input (or firing a nested trigger) on the instance that holds it; the input's name is filled in at the end
+  const nestedAction = (ref: NestedRef, value: number | boolean, x: number): LogicNode => {
+    const n =
+      ref.kind === 'trigger'
+        ? add('action.instanceTrigger', { target: ref.inst.id, name: '' }, x)
+        : add('action.instanceInput', { target: ref.inst.id, name: '', value: String(value) }, x);
+    fc.pendingNested.push({ node: n, ref });
+    return n;
+  };
   // StateMachineFireEvent actions of a state or transition that happen at the start (0) or end (1)
   const fireNodes = (fires: RObj[], occurs: number, from: LogicNode, port: string, x: number) => {
     let r = { last: from, port, x };
@@ -2786,6 +2918,15 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
       eventChain(slot, src, 'out', 280);
       y += 120;
     }
+  }
+  // Nested inputs keyed on timelines: a marker plays them. The names of the input and of the marker come once every artboard is built.
+  const nestedDone = new Map<string, LogicNode>();
+  for (const nk of fc.nestedKeys) {
+    if (!timelines.includes(nk.tl) || nestedDone.has(`${nk.tl.id}|${nk.marker.name}`)) continue;
+    const src = add('event.timelineMarker', { timeline: nk.tl.id, marker: nk.marker.name }, 40);
+    link(src, nestedAction(nk.ref, nk.value, 280));
+    nestedDone.set(`${nk.tl.id}|${nk.marker.name}`, src);
+    y += 120;
   }
   const machines = ac.rab.machines;
   if (!machines.length) {
@@ -2985,14 +3126,27 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         }
       }
     });
-    // Listeners -> pointer events setting inputs
+    // Listeners -> pointer, key and focus events setting inputs
+    const keyEvents = (key: RObj): LogicNode[] => {
+      const code = Number(key.props.keyType ?? -1);
+      const name = code < 0 || code > 0xffff ? '' : RIVE_KEYS[code];
+      if (code >= 0 && code <= 0xffff && !name) fc.warnings.add(`Keyboard listeners for the key with code ${code} react to any key`);
+      const mods = Number(key.props.modifiers ?? 0);
+      const phase = Number(key.props.keyPhase ?? 0) || 1;
+      const base = { key: name ?? '', shift: !!(mods & 1), ctrl: !!(mods & 2), alt: !!(mods & 4), meta: !!(mods & 8) };
+      const out: LogicNode[] = [];
+      if (phase & 3) out.push(add('event.key', { ...base, type: 'keydown', repeat: !!(phase & 2) }, 40));
+      if (phase & 4) out.push(add('event.key', { ...base, type: 'keyup' }, 40));
+      return out;
+    };
     for (const l of sm.listeners) {
       const pointer: Record<number, string> = { 0: 'pointerenter', 1: 'pointerleave', 2: 'pointerdown', 3: 'pointerup', 4: 'pointermove', 6: 'click', 9: 'dragstart', 10: 'dragend', 12: 'drag' };
       // Older files keep one trigger on the listener; newer ones list ListenerInputType objects (events are type 5)
       const triggers = l.inputTypes.length
-        ? l.inputTypes.map((it) => ({ type: it.type === 'ListenerInputTypeEvent' ? 5 : Number(it.props.listenerTypeValue ?? 0), eventId: it.props.eventId }))
+        ? l.inputTypes.map((it) => ({ type: it.type === 'ListenerInputTypeEvent' ? 5 : it.type === 'ListenerInputTypeKeyboard' ? 15 : Number(it.props.listenerTypeValue ?? 0), eventId: it.props.eventId }))
         : [{ type: Number(l.obj.props.listenerTypeValue ?? 0), eventId: l.obj.props.eventId }];
       const sources: LogicNode[] = [];
+      const targetNode = ac.nodeBySlot.get(Number(l.obj.props.targetId ?? 0));
       for (const trig of triggers) {
         if (trig.type === 5) {
           // Event listeners react to Rive events, which are messages here
@@ -3000,9 +3154,14 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           if (ev && isA(ev.type, 'Event')) sources.push(add('event.message', { name: eventName(ev) }, 40));
           else fc.warnings.add('Event listeners whose events could not be found were skipped');
         } else if (trig.type in pointer) {
-          const targetNode = ac.nodeBySlot.get(Number(l.obj.props.targetId ?? 0));
           sources.push(add('event.pointer', { target: targetNode?.id ?? '', type: pointer[trig.type] }, 40));
-        } else fc.warnings.add(`Listener type ${trig.type} (only enter, exit, down, up, move, click, drag and event listeners are imported)`);
+        } else if (trig.type === 13 || trig.type === 14) {
+          sources.push(add('event.focus', { target: targetNode?.id ?? '', type: trig.type === 13 ? 'focus' : 'blur' }, 40));
+        } else if (trig.type === 15) {
+          if (targetNode) fc.warnings.add('Keyboard listeners on a layer react to the key wherever the focus is, not only while that layer has it');
+          if (!l.keys.length) sources.push(add('event.key', { key: '', type: 'keydown' }, 40));
+          for (const key of l.keys) sources.push(...keyEvents(key));
+        } else fc.warnings.add(`Listener type ${trig.type} (only enter, exit, down, up, move, click, drag, focus, blur, keyboard and event listeners are imported)`);
       }
       if (!sources.length) continue;
       let last: LogicNode = sources[0];
@@ -3034,6 +3193,39 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
                     ? JSON.stringify(target.options?.[Number(raw ?? 0)] ?? '')
                     : JSON.stringify(String(raw ?? ''));
           const n = target.kind === 'trigger' ? add('action.setVariable', { variable: target.id, op: 'add', value: '1' }, x) : add('action.setVariable', { variable: target.id, op: 'set', value }, x);
+          link(last, n);
+          last = n;
+          x += 240;
+          continue;
+        }
+        if (a.type === 'FocusActionTarget' || a.type === 'FocusActionClear') {
+          const focusTarget = ac.nodeBySlot.get(Number(a.props.targetId ?? -1));
+          if (a.type === 'FocusActionTarget' && !focusTarget) {
+            fc.warnings.add('Focus actions whose layer could not be found were skipped');
+            continue;
+          }
+          const n = add('action.focus', a.type === 'FocusActionClear' ? { op: 'clear' } : { op: 'focus', target: focusTarget!.id }, x);
+          link(last, n);
+          last = n;
+          x += 240;
+          continue;
+        }
+        if (a.type === 'FocusActionTraversal') {
+          fc.warnings.add('Focus traversal actions (next / previous / direction) are not imported');
+          continue;
+        }
+        // An input of a nested artboard: set it on the instance
+        const nestedSlot = a.props.nestedInputId;
+        if (nestedSlot !== undefined && ac.rab.slots[Number(nestedSlot)] && isA(ac.rab.slots[Number(nestedSlot)].type, 'NestedInput')) {
+          const ref = nestedRef(ac, Number(nestedSlot));
+          if (!ref) {
+            fc.warnings.add('Listener actions on nested inputs whose nested artboard could not be found were skipped');
+            continue;
+          }
+          const bv = Number(a.props.value ?? 1);
+          if (a.type === 'ListenerBoolChange' && bv === 2) fc.warnings.add('Toggling a nested bool is imported as setting it to true');
+          const value = ref.kind === 'bool' ? bv !== 0 : ref.kind === 'number' ? r2(get(a, 'value')) : true;
+          const n = nestedAction(ref, value, x);
           link(last, n);
           last = n;
           x += 240;
@@ -3087,6 +3279,8 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     names,
     vmVars: new Map(),
     timelineEvents: new Map(),
+    nestedKeys: [],
+    pendingNested: [],
   };
   if (!s.artboards.length) throw new Error('The .riv file has no artboards');
   // Embedded fonts become project fonts
@@ -3157,10 +3351,33 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     artboards.push(ab);
   });
   // Instance inputs, now that every state machine input has a variable name
+  // (a root layer was copied to sit relative to the artboard origin, so the instance is looked up by id in the finished artboards)
+  const finished = new Map<string, SceneNode>();
+  for (const ab of artboards) walk(ab.children, (n) => finished.set(n.id, n));
   for (const p of fc.pendingInputs) {
     const name = fc.inputNames.get(`${p.artboard}/${p.machine}/${p.input}`);
-    if (name) p.node.inputs = { ...(p.node.inputs ?? {}), [name]: p.value };
+    const node = (finished.get(p.node.id) ?? p.node) as InstanceNode;
+    if (name) node.inputs = { ...(node.inputs ?? {}), [name]: p.value };
   }
+  // Nested input flows, now that every input has a name; a marker is named after the instance and input
+  for (const p of fc.pendingNested) {
+    const inputName = fc.inputNames.get(`${p.ref.artboard}/${p.ref.machine}/${p.ref.input}`);
+    if (inputName) p.node.params.name = inputName;
+  }
+  const renamed = new Map<string, string>();
+  const temps = fc.nestedKeys.map((nk) => nk.marker.name);
+  fc.nestedKeys.forEach((nk, i) => {
+    const key = `${nk.tl.id}|${temps[i]}`;
+    if (renamed.has(key)) return;
+    const inputName = fc.inputNames.get(`${nk.ref.artboard}/${nk.ref.machine}/${nk.ref.input}`) ?? `input ${nk.ref.input}`;
+    const wanted = `${nk.ref.inst.name}: ${inputName}${nk.ref.kind === 'trigger' ? '' : ` = ${String(nk.value)}`}`;
+    const taken = new Set((nk.tl.markers ?? []).map((m) => m.name));
+    let name = wanted;
+    for (let n = 2; taken.has(name); n++) name = `${wanted} (${n})`;
+    renamed.set(key, name);
+    for (const ab of artboards) for (const n of ab.logic.nodes) if (n.kind === 'event.timelineMarker' && n.params.timeline === nk.tl.id && n.params.marker === temps[i]) n.params.marker = name;
+    for (const m of nk.tl.markers ?? []) if (m.name === temps[i]) m.name = name;
+  });
   void name;
   const start = artboards.find((a) => a.name === String(s.artboards[0].obj.props.name)) ?? artboards[0];
   return { artboard: start, artboards, assets: fc.assets, variables, fonts: fc.fonts, warnings: [...fc.warnings] };

@@ -962,6 +962,18 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
               ))}
             </Row>
           )}
+          {n.slice && (
+            <SelectField
+              label="Fill edges"
+              title="How the edges and middle fill their space: stretch the picture, or repeat it at its own size"
+              value={n.sliceTile ?? 'stretch'}
+              options={[
+                { value: 'stretch', label: 'Stretch' },
+                { value: 'repeat', label: 'Tile' },
+              ]}
+              onChange={(v) => set({ sliceTile: v === 'repeat' ? 'repeat' : 'stretch' })}
+            />
+          )}
         </Section>
       );
     case 'button':

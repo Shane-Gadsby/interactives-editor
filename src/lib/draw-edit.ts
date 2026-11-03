@@ -158,6 +158,8 @@ export function createEditorDraw(getProject: () => Project): EditorDraw {
     loadData: async () => undefined,
     setData: () => undefined,
     setCursor: () => undefined,
+    setInstanceInput: () => false,
+    fireInstanceTrigger: () => false,
   } as unknown as ScriptApi;
   const hostFor = (): EditorDrawHost => {
     if (!host) {

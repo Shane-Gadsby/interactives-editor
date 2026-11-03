@@ -94,6 +94,8 @@ ix.timeline('Intro')
   .restart() .reverse() .seek(ms)
 ix.goTo('Page 2', 'fade')
 ix.emit('done', data)  // to host page
+ix.setInstanceInput('Badge', 'level', 3)
+ix.fireInstanceTrigger('Badge', 'ping')
 ix.on('reset', fn)     // messages
 ix.onFrame((dt, t) => {})
 ix.pointer  // {x, y, down}
