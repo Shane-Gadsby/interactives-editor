@@ -3652,7 +3652,7 @@ Drag the left and right panels' inner edges (beside the canvas) to make them wid
 All artboards side by side. See [Moving around the canvas](canvas). Right-click for menus: see [Layers, hidden and locked layers](layers-panel#right-click-menus).
 
 ## Inspector (right)
-Settings for the selection. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard, its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
+Settings for the selection. A layer's settings start with **Layer** (name, position, size, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard, its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
 
 ## Bottom panel
 **Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility** and **Usage**. Click a tab to open it, click it again to close it, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker) and [Usage](usage).
@@ -3967,7 +3967,7 @@ Use **+** in the **Effects** section to add a shadow or a layer blur; each one h
 - **Layer blur**: blurs the whole layer by an **Amount** in pixels.
 - **Shader filter** (image layers only): draws the picture through a GPU shader, such as wave distortion, CRT scanlines, halftone dots or film grain. See [Shader layers](shader-layers#shader-filter-on-an-image).
 
-Two related settings are in the top section of the Inspector, with the position fields:
+Two related settings are in the **Layer** section at the top of the Inspector, with the position fields:
 
 - **α** is the opacity of the whole layer (0 to 1).
 - **Blend** is how the layer mixes with what is under it: *Normal*, *Dissolve*, *Darken*, *Multiply*, *Colour burn*, *Lighten*, *Screen*, *Colour dodge*, *Add (linear dodge)*, *Overlay*, *Soft light*, *Hard light*, *Difference*, *Exclusion*, *Hue*, *Saturation*, *Colour* or *Luminosity*. **Dissolve** draws each pixel either solid or not at all, with the layer's opacity as the odds: at 40% opacity, 40% of the pixels show at full strength, scattered, instead of everything fading. Animate the opacity for a speckled fade in or out. A single fill or stroke (in the paint list) can use every mode except Dissolve.

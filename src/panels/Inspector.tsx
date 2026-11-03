@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
 import {
-  nodeTypeLabel,
   ANIMATABLE_PROPS,
   animatableProp,
   nodeUniformProps,
@@ -477,7 +476,8 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
   return (
     <>
       <AlignBar count={nodes.length} shapes={nodes.filter((x) => !(x.type === 'group' || x.type === 'text' || x.type === 'link')).length} />
-      <Section help="fill-stroke" title={single ? <span className="type-chip">{nodeTypeLabel(n.type)}</span> : `${nodes.length} layers`}>
+      {/* the layer's type heads its own section further down (Path, Text, ...), so this one is just "Layer" */}
+      <Section help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
         {single && <TextField label="Name" value={n.name} onChange={(v) => set({ name: v }, `name-${n.id}`)} />}
         <Row>
           <Num node={n} ids={ids} prop="x" label="X" />
