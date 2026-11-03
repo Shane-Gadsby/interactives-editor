@@ -560,6 +560,22 @@ const ANIMATABLE_PROPS = [
   { prop: "fill.color", label: "Fill colour", kind: "color" },
   { prop: "stroke.width", label: "Stroke width", kind: "number" },
   { prop: "stroke.paint.color", label: "Stroke colour", kind: "color" },
+  { prop: "fill.opacity", label: "Fill opacity", kind: "number" },
+  { prop: "fill.feather", label: "Fill feather", kind: "number" },
+  { prop: "stroke.opacity", label: "Stroke opacity", kind: "number" },
+  { prop: "stroke.feather", label: "Stroke feather", kind: "number" },
+  { prop: "fills.0.color", label: "Fill 2 colour", kind: "color" },
+  { prop: "fills.0.opacity", label: "Fill 2 opacity", kind: "number" },
+  { prop: "fills.0.feather", label: "Fill 2 feather", kind: "number" },
+  { prop: "fills.0.offsetX", label: "Fill 2 offset X", kind: "number" },
+  { prop: "fills.0.offsetY", label: "Fill 2 offset Y", kind: "number" },
+  { prop: "strokes.0.width", label: "Stroke 2 width", kind: "number" },
+  { prop: "strokes.0.paint.color", label: "Stroke 2 colour", kind: "color" },
+  { prop: "strokes.0.opacity", label: "Stroke 2 opacity", kind: "number" },
+  { prop: "strokes.0.feather", label: "Stroke 2 feather", kind: "number" },
+  { prop: "strokes.0.trimStart", label: "Stroke 2 trim start %", kind: "number" },
+  { prop: "strokes.0.trimEnd", label: "Stroke 2 trim end %", kind: "number" },
+  { prop: "strokes.0.trimOffset", label: "Stroke 2 trim offset %", kind: "number" },
   { prop: "color", label: "Text colour", kind: "color" },
   { prop: "fontSize", label: "Font size", kind: "number" },
   { prop: "letterSpacing", label: "Letter spacing", kind: "number" },
@@ -715,12 +731,22 @@ function sanitizeNode(raw, seen) {
   const stroke = (v) => {
     const pt = isObj(v) ? paint(v.paint) : null;
     if (!isObj(v) || !pt) return null;
-    return { ...v, paint: pt, width: isNum(v.width) ? v.width : 1, ...v.dash !== void 0 ? { dash: arr(v.dash, isNum) } : {} };
+    const out = { ...fx(v), paint: pt, width: isNum(v.width) ? v.width : 1 };
+    if (v.dash !== void 0) out.dash = arr(v.dash, isNum);
+    for (const k of ["dashOffset", "trimStart", "trimEnd", "trimOffset"]) if (k in out && !isNum(out[k])) delete out[k];
+    if ("cap" in out && !["butt", "round", "square"].includes(out.cap)) delete out.cap;
+    if ("join" in out && !["miter", "round", "bevel"].includes(out.join)) delete out.join;
+    if ("align" in out && !["center", "inside", "outside"].includes(out.align)) delete out.align;
+    return out;
   };
   if ("fill" in n) n.fill = paint(n.fill);
   if ("stroke" in n) n.stroke = stroke(n.stroke);
-  if ("strokes" in n) n.strokes = (Array.isArray(n.strokes) ? n.strokes : []).map(stroke).filter(Boolean);
-  if ("fills" in n) n.fills = (Array.isArray(n.fills) ? n.fills : []).map(paint).filter(Boolean);
+  for (const k of ["strokes", "fills"]) {
+    if (!(k in n)) continue;
+    const list = (Array.isArray(n[k]) ? n[k] : []).map(k === "fills" ? paint : stroke).filter(Boolean);
+    if (list.length) n[k] = list;
+    else delete n[k];
+  }
   if ("background" in n && n.background !== null) n.background = paint(n.background);
   if ("modifiers" in n) {
     if (Array.isArray(n.modifiers)) n.modifiers = objs(n.modifiers).map(normalizeModifier);
@@ -797,18 +823,27 @@ function sanitizeRun(r2) {
   if ("link" in out && out.link !== null && !(isObj(out.link) && isStr(out.link.url))) delete out.link;
   return out;
 }
+const BLEND_MODES = /* @__PURE__ */ new Set(["normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "difference", "exclusion"]);
+function fx(v) {
+  const o = { ...v };
+  for (const k of ["opacity", "feather", "offsetX", "offsetY"]) if (k in o && !isNum(o[k])) delete o[k];
+  if ("feather" in o && o.feather < 0) delete o.feather;
+  if ("visible" in o && typeof o.visible !== "boolean") delete o.visible;
+  if ("blend" in o && !(isStr(o.blend) && BLEND_MODES.has(o.blend))) delete o.blend;
+  return o;
+}
 function paint(v) {
   if (!isObj(v) || !isStr(v.type)) return null;
   switch (v.type) {
     case "solid":
-      return isStr(v.color) ? v : { ...v, color: "#000000" };
+      return fx(isStr(v.color) ? v : { ...v, color: "#000000" });
     case "linear":
     case "radial": {
       const stops = objs(v.stops).filter((st) => isStr(st.color)).map((st) => ({ ...st, offset: isNum(st.offset) ? st.offset : 0 }));
-      return stops.length ? { ...v, angle: isNum(v.angle) ? v.angle : 0, stops } : null;
+      return stops.length ? fx({ ...v, angle: isNum(v.angle) ? v.angle : 0, stops }) : null;
     }
     case "image":
-      return isStr(v.assetId) ? v : null;
+      return isStr(v.assetId) ? fx(v) : null;
     default:
       return null;
   }
@@ -3425,13 +3460,30 @@ Boolean operations (union, subtract, intersect, exclude) turn several shapes int
     id: "fill-stroke",
     title: "Fill, stroke and effects",
     group: "Design",
-    summary: "Solid, gradient and image fills; strokes, dashes and trim; shadow, blur and blend modes.",
-    keywords: "colour color gradient linear radial image fill stroke border dash cap join shadow blur blend opacity trim path",
+    summary: "Solid, gradient and image fills; several fills and strokes per shape; strokes, dashes and trim; feather and drop shadows; shadow, blur and blend modes.",
+    keywords: "colour color gradient linear radial image fill stroke border dash cap join align inside outside shadow blur blend opacity trim path layers several multiple feather glow drop shadow eye hide reorder",
     body: `## Fill
-Choose the type from the dropdown at the top of the **Fill** section: **None**, **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. Colours accept hex, \`rgb()\`, \`hsl()\` and names; the number box beside a colour is its opacity. The **×** in a section's header removes the fill or stroke, and the **+** adds it back.
+Choose the type from the dropdown at the top of a fill: **None** (removes it), **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. Colours accept hex, \`rgb()\`, \`hsl()\` and names; the number box beside a colour is its opacity.
+
+## Several fills and strokes
+A shape can have as many fills and strokes as you like. The **+** in the **Fill** or **Stroke** header adds one on top of the others; the list shows the front-most first, like the layers panel. Each entry has:
+
+- an **eye** to hide it without removing it, **↑** and **↓** (or drag its heading) to change the order, and a **×** to remove it;
+- its own paint (solid, gradient or image) and, for a stroke, **W**idth, **Dash**, **Trim**, **Cap**, **Join** and **Align** (centre, inside or outside the outline; boxes default to inside, vector shapes to the centre);
+- **α** (the opacity of that paint alone), **Blend** (how it mixes with what is under it), **Feather** (a soft blur of that paint, in pixels) and an **X / Y** offset.
+
+All the fills are drawn under all the strokes. Layers are numbered from the bottom: **Fill 1** is the shape's own fill (the one \`fill.color\` and a style refer to), **Fill 2** the next, and so on.
+
+Some things to build with it:
+
+- **Layered gradients**: a solid fill under a see-through gradient with **Blend** set to *multiply* or *overlay*.
+- **An outline plus a glow**: a thin dark stroke over a wide, see-through stroke with a **Feather**.
+- **A drop shadow that follows a shape's fill or stroke**: add a fill, make it dark and see-through (alpha in its colour or **α**), set **Feather** to 12 or so and **Y** to a few pixels, and move it down the list so it sits under the real fill. It is the way a Rive drop shadow is built, and Rive files import that way.
+
+Each paint's numbers can be animated: look for the diamond next to a field. The property names are \`fill.opacity\`, \`fills.0.color\`, \`fills.0.opacity\`, \`fills.0.feather\`, \`fills.0.offsetX\`, \`strokes.0.width\`, \`strokes.0.paint.color\`, \`strokes.0.trimEnd\` and so on (\`fills.0\` is the second fill, \`strokes.1\` the third stroke); bindings, **Set property** nodes and scripts use the same names. A shape with one plain fill and stroke is drawn as before; a shape with layers, or with opacity, blend, feather, an offset, a cap, join or align on a paint, is drawn as SVG. Buttons and inputs draw only their first fill and stroke. Lottie export keeps every fill and stroke with their opacity, and leaves out the blend modes, feathered and offset paints (shadows), which Lottie cannot hold.
 
 ## Stroke
-Colour, width, **cap** (butt, round, square), **join** (miter, round, bevel) and **dash** (e.g. \`8 4\` for 8 on, 4 off).
+Colour, width, **cap** (butt, round, square), **join** (miter, round, bevel), **align** (centre, inside, outside) and **dash** (e.g. \`8 4\` for 8 on, 4 off).
 
 ### Trim path
 The **Trim** row in the Stroke section has a start (**Trim**), an end (**to**) and an offset (**Off**), all 0–100%. They draw only part of a stroke. Animate the end (the *Trim end %* property) from 0 to 100 to make a line draw itself on. Works on every shape with a stroke.
@@ -5123,7 +5175,7 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "bone"];
     return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t2) => `"${t2.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
-Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
+Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top (all fills under all strokes). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
   const t = TOPICS.find((x) => x.id === topic);
   if (t) return `# ${t.title}

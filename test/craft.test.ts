@@ -265,12 +265,25 @@ describe('VectorCraft import (documents built from the format spec)', () => {
     expect(res.warnings.join(' ')).toMatch(/SoftLight/);
   });
 
-  it('an object with several fills and strokes becomes a group with a path layer for each', () => {
-    const appearance = { items: [{ kind: 'fill', paint: solid(1, 0, 0) }, { kind: 'fill', paint: solid(0, 1, 0), opacity: 0.5 }, { kind: 'stroke', paint: solid(0, 0, 0), width: 3 }] };
+  it('an object with several fills and strokes becomes one path layer with a list of each', () => {
+    const appearance = { items: [{ kind: 'fill', paint: solid(1, 0, 0) }, { kind: 'fill', paint: solid(0, 1, 0), opacity: 0.5 }, { kind: 'stroke', paint: solid(0, 0, 0), width: 3, align: 'Outside', cap: 'Round' }, { kind: 'stroke', paint: solid(1, 1, 1), width: 1, blend: 'Multiply' }] };
     const res = vc([layer([pathNode(rectPath(0, 0, 40, 40), appearance, { name: 'Multi' })])]);
-    const g = ofType(res.artboard, 'group').find((n) => n.name === 'Multi')!;
-    expect(g.children).toHaveLength(3);
-    expect((g.children[1] as PathNode).fill).toEqual({ type: 'solid', color: 'rgba(0, 255, 0, 0.5)' });
+    const p = ofType(res.artboard, 'path').find((n) => n.name === 'Multi')!;
+    expect(p.fill).toEqual({ type: 'solid', color: '#ff0000' });
+    expect(p.fills).toEqual([{ type: 'solid', color: 'rgba(0, 255, 0, 0.5)' }]);
+    expect(p.stroke).toMatchObject({ width: 3, align: 'outside', cap: 'round', join: 'miter' });
+    expect(p.strokes).toHaveLength(1);
+    expect(p.strokes![0]).toMatchObject({ width: 1, blend: 'multiply' });
+    expect(res.warnings.join(' ')).not.toMatch(/stroke alignment/);
+  });
+
+  it('a stroke under a fill is split into a layer each, since fills always sit under strokes', () => {
+    const appearance = { items: [{ kind: 'stroke', paint: solid(0, 0, 0), width: 3 }, { kind: 'fill', paint: solid(1, 0, 0) }] };
+    const res = vc([layer([pathNode(rectPath(0, 0, 40, 40), appearance, { name: 'Under' })])]);
+    const g = ofType(res.artboard, 'group').find((n) => n.name === 'Under')!;
+    expect(g.children).toHaveLength(2);
+    expect((g.children[0] as PathNode).stroke).not.toBeNull();
+    expect((g.children[1] as PathNode).fill).not.toBeNull();
   });
 
   it('dashes, caps and joins carry over', () => {

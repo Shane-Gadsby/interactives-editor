@@ -40,9 +40,9 @@ import {
   type Project,
   type SceneNode,
   type Shadow,
-  type Stroke,
   type TextRun,
   type TextStyle,
+  paintFx,
   type Constraint,
   type ConstraintType,
   type Converter,
@@ -68,6 +68,7 @@ import { useDrawProblem } from '../lib/draw-edit';
 import { confirmDialog } from '../components/dialogs';
 import { detach as detachFromLibrary } from '../lib/library-actions';
 import { ShaderFilterFields, ShaderSection } from './ShaderInspector';
+import { FillSection, StrokeSection } from './PaintLayers';
 import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
 import { BindSelectionSection, BoneSection, SkinSection } from './RigSection';
 import { skinnable } from '../lib/rig';
@@ -99,12 +100,12 @@ export function Inspector() {
 
 // ---------------------------------------------------------------- shared bits
 
-function useSetter(ids: string[]) {
+export function useSetter(ids: string[]) {
   return (props: Record<string, unknown>, coalesce?: string) => store().setProps(ids, props, coalesce ?? `insp-${Object.keys(props).join(',')}-${ids.join(',')}`);
 }
 
 /** Value shown in the inspector: the timeline's value at the playhead when it animates the property. */
-function useShown(node: SceneNode) {
+export function useShown(node: SceneNode) {
   const st = store().get();
   const ab = store().artboard();
   const tl = st.bottomTab === 'timeline' ? ab?.timelines.find((t) => t.id === st.activeTimelineId) : undefined;
@@ -167,12 +168,14 @@ export function PaintField({ paint, onChange, project, allowNone = true }: { pai
           { offset: 0, color: p?.type === 'solid' ? p.color : '#3b5bfd' },
           { offset: 1, color: '#00c2a8' },
         ];
+  // Changing the type keeps what the paint does besides its colour: opacity, blend, feather, offset
   const setType = (t: string) => {
-    if (t === 'none') onChange(null);
-    else if (t === 'solid') onChange({ type: 'solid', color: paint && paint.type !== 'solid' && paint.type !== 'image' ? paint.stops[0]?.color ?? '#d9d9d9' : '#d9d9d9' });
-    else if (t === 'linear') onChange({ type: 'linear', angle: 180, stops: stopsOf(paint) });
-    else if (t === 'radial') onChange({ type: 'radial', stops: stopsOf(paint) });
-    else if (t === 'image') onChange({ type: 'image', assetId: project.assets.find((a) => assetKind(a.mime) === 'image')?.id ?? '', fit: 'cover' });
+    const change = (p: Paint | null) => onChange(p && paint ? { ...paintFx(paint), ...p } : p);
+    if (t === 'none') change(null);
+    else if (t === 'solid') change({ type: 'solid', color: paint && paint.type !== 'solid' && paint.type !== 'image' ? paint.stops[0]?.color ?? '#d9d9d9' : '#d9d9d9' });
+    else if (t === 'linear') change({ type: 'linear', angle: 180, stops: stopsOf(paint) });
+    else if (t === 'radial') change({ type: 'radial', stops: stopsOf(paint) });
+    else if (t === 'image') change({ type: 'image', assetId: project.assets.find((a) => assetKind(a.mime) === 'image')?.id ?? '', fit: 'cover' });
   };
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
   return (
@@ -522,7 +525,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
   );
 }
 
-function KeyRow({ node, prop }: { node: SceneNode; prop: string }) {
+export function KeyRow({ node, prop }: { node: SceneNode; prop: string }) {
   const s = useEditor((st) => st.bottomTab);
   if (s !== 'timeline') return null;
   return (
@@ -530,58 +533,6 @@ function KeyRow({ node, prop }: { node: SceneNode; prop: string }) {
       <span className="muted small">Animate {(ANIMATABLE_PROPS.find((a) => a.prop === prop)?.label ?? prop).toLowerCase()}</span>
       <KeyButton node={node} prop={prop} />
     </div>
-  );
-}
-
-function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
-  const n = nodes[0] as SceneNode & { stroke: Stroke | null };
-  const set = useSetter(nodes.map((x) => x.id));
-  const s = n.stroke;
-  const shownStroke = useShown(n)('stroke.paint.color');
-  return (
-    <Section
-      help="fill-stroke#stroke"
-      title="Stroke"
-      actions={
-        s ? (
-          <IconButton icon={<Icons.close />} className="remove-btn" title="Remove stroke" onClick={() => set({ stroke: null })} />
-        ) : (
-          <IconButton icon={<Icons.plus />} title="Add stroke" onClick={() => set({ stroke: { paint: { type: 'solid', color: '#111111' }, width: 1 } })} />
-        )
-      }
-    >
-      {s && (
-        <>
-          <PaintField
-            paint={s.paint.type === 'solid' && typeof shownStroke === 'string' ? { ...s.paint, color: shownStroke } : s.paint}
-            allowNone={false}
-            project={project}
-            onChange={(p) => (p?.type === 'solid' && s.paint.type === 'solid' ? set({ 'stroke.paint.color': p.color }, 'stroke-paint') : set({ stroke: { ...s, paint: p! } }, 'stroke-paint'))}
-          />
-          <Row>
-            <Num node={n} ids={nodes.map((x) => x.id)} prop="stroke.width" label="W" min={0} />
-            <TextField
-              label="Dash"
-              value={(s.dash ?? []).join(' ')}
-              placeholder="e.g. 4 2"
-              commitOnBlur
-              onChange={(v) => {
-                const dash = v.split(/[\s,]+/).map(Number).filter((x) => x > 0);
-                set({ stroke: { ...s, dash: dash.length ? dash : undefined } });
-              }}
-            />
-          </Row>
-          {(n.type === 'path' || n.type === 'polygon' || n.type === 'star' || n.type === 'rect' || n.type === 'ellipse') && (
-            <Row>
-              <Num node={n} ids={nodes.map((x) => x.id)} prop="stroke.trimStart" label="Trim" title="Trim start: where the drawn part of the stroke begins (% of its length). Animate it to draw lines on" min={0} max={100} suffix="%" />
-              <Num node={n} ids={nodes.map((x) => x.id)} prop="stroke.trimEnd" label="to" title="Trim end: where the drawn part ends (% of its length)" min={0} max={100} suffix="%" fallback={100} />
-              <Num node={n} ids={nodes.map((x) => x.id)} prop="stroke.trimOffset" label="Off" title="Trim offset: slides the drawn part along the outline (%)" min={-100} max={200} suffix="%" />
-            </Row>
-          )}
-          {(n.type === 'path' || n.type === 'polygon' || n.type === 'star') && <p className="hint">Vector strokes are centred on the path; box strokes sit inside the edge.</p>}
-        </>
-      )}
-    </Section>
   );
 }
 
@@ -1405,40 +1356,6 @@ function RepeatSection({ node, project }: { node: SceneNode & { repeat?: Repeat 
           {!node.children.length && <p className="error small">Put a layer inside this {node.type} to use as the template.</p>}
         </>
       )}
-    </Section>
-  );
-}
-
-/** Fill, showing the timeline's colour at the playhead; a colour change becomes a keyframe while recording. */
-function FillSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
-  const n = nodes[0] as SceneNode & { fill: Paint | null };
-  const ids = nodes.map((x) => x.id);
-  const set = useSetter(ids);
-  const shown = useShown(n);
-  const color = shown('fill.color');
-  const paint: Paint | null = n.fill?.type === 'solid' && typeof color === 'string' ? { ...n.fill, color } : n.fill;
-  return (
-    <Section
-      help="fill-stroke"
-      title="Fill"
-      actions={
-        n.fill ? (
-          <IconButton icon={<Icons.close />} className="remove-btn" title="Remove fill" onClick={() => set({ fill: null })} />
-        ) : (
-          <IconButton icon={<Icons.plus />} title="Add fill" onClick={() => set({ fill: { type: 'solid', color: '#d9d9d9' } })} />
-        )
-      }
-    >
-      <PaintField
-        paint={paint}
-        project={project}
-        onChange={(p) => {
-          // Only the colour moved: set fill.color, so recording turns it into a keyframe.
-          if (p?.type === 'solid' && n.fill?.type === 'solid') set({ 'fill.color': p.color }, `fill-${ids.join()}`);
-          else set({ fill: p }, `fill-${ids.join()}`);
-        }}
-      />
-      {n.fill?.type === 'solid' && <KeyRow node={n} prop="fill.color" />}
     </Section>
   );
 }

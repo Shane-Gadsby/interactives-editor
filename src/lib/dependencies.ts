@@ -235,13 +235,17 @@ export function analyzeUsage(project: Project): UsageReport {
     const visit = (list: SceneNode[]) => {
       for (const n of list) {
         const by = layerSrc(n);
-        const any = n as unknown as Record<string, unknown> & { fill?: Paint | null; stroke?: { paint?: Paint | null } | null };
+        const any = n as unknown as Record<string, unknown> & { fill?: Paint | null; stroke?: { paint?: Paint | null } | null; fills?: Paint[]; strokes?: { paint?: Paint | null }[] };
 
         useId('asset', n.cursorImage, by, 'cursor image');
-        const fill = paintAsset(any.fill);
-        if (fill) useId('asset', fill, by, 'fill image');
-        const stroke = paintAsset(any.stroke?.paint);
-        if (stroke) useId('asset', stroke, by, 'stroke image');
+        for (const f of [any.fill, ...(Array.isArray(any.fills) ? any.fills : [])]) {
+          const fill = paintAsset(f);
+          if (fill) useId('asset', fill, by, 'fill image');
+        }
+        for (const s of [any.stroke, ...(Array.isArray(any.strokes) ? any.strokes : [])]) {
+          const stroke = paintAsset(s?.paint);
+          if (stroke) useId('asset', stroke, by, 'stroke image');
+        }
 
         if (n.type === 'image') useId('asset', n.assetId, by, 'image');
         if (n.type === 'video') useId('asset', n.assetId, by, 'video');

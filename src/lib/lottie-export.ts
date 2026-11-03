@@ -7,13 +7,19 @@
  */
 import { strToU8, zipSync } from 'fflate';
 import {
+  fillList,
+  fillPath,
   isContainer,
+  paintAlpha,
+  strokeList,
+  strokePath,
   parseColor,
   polygonPoints,
   starPoints,
   type Artboard,
   type Easing,
   type Paint,
+  type PaintFx,
   type Project,
   type SceneNode,
   type Stroke,
@@ -129,14 +135,33 @@ function transform(ctx: Ctx, n: SceneNode): Json {
   };
 }
 
-function paintItem(ctx: Ctx, n: SceneNode, p: Paint | null, kind: 'fill' | 'stroke', stroke?: Stroke): Json | null {
+const LOTTIE_CAP = { butt: 1, round: 2, square: 3 } as const;
+const LOTTIE_JOIN = { miter: 1, round: 2, bevel: 3 } as const;
+
+/**
+ * One Lottie fill or stroke item. `prefix` is the paint's property path (`fill`, `fills.0`, `stroke`, `strokes.1`), so its
+ * colour and width tracks come along; `fx` carries the paint's own opacity.
+ */
+function paintItem(ctx: Ctx, n: SceneNode, p: Paint | null, kind: 'fill' | 'stroke', prefix: string, stroke?: Stroke): Json | null {
   if (!p) return null;
-  const colorPath = kind === 'fill' ? 'fill.color' : 'stroke.paint.color';
+  const fx: PaintFx = stroke ?? p;
+  if (fx.visible === false) return null;
+  // Lottie has no per-paint blend, feather or offset: a soft or shifted paint (a shadow) would come out as a hard copy, so it is left out
+  if (fx.feather || fx.offsetX || fx.offsetY) {
+    ctx.warnings.add(`Feathered or offset fills and strokes (shadows) are not exported to Lottie ("${n.name}")`);
+    return null;
+  }
+  if (fx.blend && fx.blend !== 'normal') ctx.warnings.add(`Blend modes of fills and strokes are not exported to Lottie ("${n.name}")`);
+  const alpha = paintAlpha(fx);
+  const colorPath = kind === 'fill' ? `${prefix}.color` : `${prefix}.paint.color`;
+  const widthPath = `${prefix}.width`;
+  const lc = LOTTIE_CAP[stroke?.cap ?? 'round'];
+  const lj = LOTTIE_JOIN[stroke?.join ?? 'round'];
   if (p.type === 'solid') {
     const c = colorArr(p.color);
     const color = prop(ctx, n.id, colorPath, c.slice(0, 3), (v) => colorArr(String(v)).slice(0, 3));
-    const o = { a: 0, k: r3(c[3] * 100) };
-    return kind === 'fill' ? { ty: 'fl', c: color, o, r: 1, nm: 'Fill' } : { ty: 'st', c: color, o, w: prop(ctx, n.id, 'stroke.width', [stroke!.width], (v) => [Number(v)]), lc: 2, lj: 2, nm: 'Stroke' };
+    const o = { a: 0, k: r3(c[3] * alpha * 100) };
+    return kind === 'fill' ? { ty: 'fl', c: color, o, r: 1, nm: 'Fill' } : { ty: 'st', c: color, o, w: prop(ctx, n.id, widthPath, [stroke!.width], (v) => [Number(v)]), lc, lj, nm: 'Stroke' };
   }
   if (p.type === 'linear' || p.type === 'radial') {
     const stops = [...p.stops].sort((a, b) => a.offset - b.offset);
@@ -157,8 +182,8 @@ function paintItem(ctx: Ctx, n: SceneNode, p: Paint | null, kind: 'fill' | 'stro
       e = [w, h / 2];
     }
     const g = { p: stops.length, k: { a: 0, k } };
-    const common = { o: { a: 0, k: 100 }, s: { a: 0, k: s.map(r3) }, e: { a: 0, k: e.map(r3) }, t: p.type === 'linear' ? 1 : 2, g };
-    return kind === 'fill' ? { ty: 'gf', ...common, r: 1, nm: 'Gradient fill' } : { ty: 'gs', ...common, w: { a: 0, k: stroke!.width }, lc: 2, lj: 2, nm: 'Gradient stroke' };
+    const common = { o: { a: 0, k: r3(alpha * 100) }, s: { a: 0, k: s.map(r3) }, e: { a: 0, k: e.map(r3) }, t: p.type === 'linear' ? 1 : 2, g };
+    return kind === 'fill' ? { ty: 'gf', ...common, r: 1, nm: 'Gradient fill' } : { ty: 'gs', ...common, w: { a: 0, k: stroke!.width }, lc, lj, nm: 'Gradient stroke' };
   }
   ctx.warnings.add(`Image fills are not supported in Lottie ("${n.name}")`);
   return null;
@@ -197,8 +222,11 @@ function pathShape(points: { x: number; y: number; in?: { x: number; y: number }
 
 /** Shape items (content in the node's local box) for a drawable node, or null. */
 function shapesFor(ctx: Ctx, n: SceneNode): Json[] | null {
-  const styled = n as SceneNode & { fill?: Paint | null; stroke?: Stroke | null };
-  const style = [paintItem(ctx, n, styled.stroke?.paint ?? null, 'stroke', styled.stroke ?? undefined), paintItem(ctx, n, styled.fill ?? null, 'fill')].filter(Boolean);
+  const styled = n as SceneNode & { fill?: Paint | null; stroke?: Stroke | null; fills?: Paint[]; strokes?: Stroke[] };
+  // A Lottie group paints its first items on top: the strokes, front-most first, then the fills, front-most first
+  const strokes = strokeList({ fill: null, stroke: styled.stroke ?? null, strokes: styled.strokes }).map((s, i) => paintItem(ctx, n, s.paint, 'stroke', strokePath(i), s));
+  const fills = fillList({ fill: styled.fill ?? null, stroke: null, fills: styled.fills }).map((f, i) => paintItem(ctx, n, f, 'fill', fillPath(i)));
+  const style = [...strokes.reverse(), ...fills.reverse()].filter(Boolean);
   switch (n.type) {
     case 'rect':
     case 'frame':

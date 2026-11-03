@@ -6,7 +6,8 @@
  * rive-defs.ts, rebuilds each artboard's component tree, and maps it onto our
  * model:
  *   - Node/Solo/LayoutComponent -> group; Shape -> path (or rect/ellipse when
- *     it is a single plain one), with fills/strokes/gradients; Text; Image;
+ *     it is a single plain one), with fills/strokes/gradients (several of each become layers: fills + fills[], stroke + strokes[], with
+ *     blend mode and Feather as feather + offset); Text; Image;
  *     NestedArtboard -> a copy of that artboard's layers
  *   - LinearAnimation -> timeline (transforms, opacity, sizes, colours,
  *     stroke widths, text, with hold/linear/cubic/elastic easing)
@@ -47,6 +48,9 @@ import {
   type LogicEdge,
   type LogicNode,
   type Paint,
+  type PaintFx,
+  fillPath,
+  strokePath,
   type PathPoint,
   type SceneNode,
   type Stroke,
@@ -839,21 +843,54 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
   const paths = kids.filter((k) => isA(k.o.type, 'Path'));
   const fills = kids.filter((k) => k.o.type === 'Fill' && get<boolean>(k.o, 'isVisible') !== false);
   const strokes = kids.filter((k) => k.o.type === 'Stroke' && get<boolean>(k.o, 'isVisible') !== false);
-  if (fills.length > 1 || strokes.length > 1) fc.warnings.add('Shapes with several fills or strokes keep only the first of each');
-  const fillInfo = fills[0] ? paintOf(ac, fc, fills[0].i, null) : { paint: null, colorSlot: null };
-  const strokeInfo = strokes[0] ? paintOf(ac, fc, strokes[0].i, null) : { paint: null, colorSlot: null };
-  const stroke: Stroke | null = strokes[0] && strokeInfo.paint ? { paint: strokeInfo.paint, width: r2(get(strokes[0].o, 'thickness')) } : null;
-  // Trim path effect on the stroke: start/end/offset are fractions in Rive, percentages here
-  const trim = strokes[0] ? (ac.children.get(strokes[0].i) ?? []).find((i) => ac.rab.slots[i]?.type === 'TrimPath') : undefined;
-  if (stroke && trim !== undefined) {
-    const t = ac.rab.slots[trim];
-    stroke.trimStart = r2(get(t, 'start') * 100);
-    stroke.trimEnd = r2(get(t, 'end') * 100);
-    stroke.trimOffset = r2(get(t, 'offset') * 100);
-    if (Number(t.props.modeValue ?? 1) === 2) fc.warnings.add('Trim paths in "synchronized" mode trim the whole outline at once');
-  }
-  if (stroke && strokes[0]) Object.assign(stroke, dashOf(ac, fc, strokes[0].i));
-  const fill = fillInfo.paint;
+  // Every fill and stroke becomes a layer, in file order (bottom to top): the first is the shape's own fill / stroke
+  const blendMap: Record<number, SceneNode['blendMode']> = { 14: 'screen', 15: 'overlay', 16: 'darken', 17: 'lighten', 18: 'color-dodge', 19: 'color-burn', 22: 'difference', 23: 'exclusion', 24: 'multiply' };
+  const fxOf = (slot: number, ps: RObj): PaintFx => {
+    const fx: PaintFx = {};
+    const bm = blendMap[get(ps, 'blendModeValue')];
+    if (bm) fx.blend = bm;
+    // A Feather child blurs just this paint; with an offset it is how Rive builds drop shadows
+    const feather = (ac.children.get(slot) ?? []).find((ci) => ac.rab.slots[ci]?.type === 'Feather');
+    if (feather !== undefined) {
+      const fe = ac.rab.slots[feather];
+      if (get<boolean>(fe, 'inner')) fc.warnings.add('Inner feathers are imported as ordinary (outer) feathers');
+      if (get(fe, 'strength') > 0) fx.feather = r2(get(fe, 'strength'));
+      if (get(fe, 'offsetX')) fx.offsetX = r2(get(fe, 'offsetX'));
+      if (get(fe, 'offsetY')) fx.offsetY = r2(get(fe, 'offsetY'));
+    }
+    return fx;
+  };
+  const fillL = fills
+    .map((f) => ({ f, info: paintOf(ac, fc, f.i, null) }))
+    .filter((x) => x.info.paint)
+    .map((x) => ({ ...x, paint: { ...x.info.paint!, ...fxOf(x.f.i, x.f.o) } as Paint }));
+  const multiStroke = strokes.length > 1;
+  const strokeL = strokes
+    .map((st) => ({ st, info: paintOf(ac, fc, st.i, null) }))
+    .filter((x) => x.info.paint)
+    .map((x) => {
+      const stroke: Stroke = { paint: x.info.paint!, width: r2(get(x.st.o, 'thickness')), ...fxOf(x.st.i, x.st.o) };
+      // Trim path effect on the stroke: start/end/offset are fractions in Rive, percentages here
+      const trim = (ac.children.get(x.st.i) ?? []).find((i) => ac.rab.slots[i]?.type === 'TrimPath');
+      if (trim !== undefined) {
+        const t = ac.rab.slots[trim];
+        stroke.trimStart = r2(get(t, 'start') * 100);
+        stroke.trimEnd = r2(get(t, 'end') * 100);
+        stroke.trimOffset = r2(get(t, 'offset') * 100);
+        if (Number(t.props.modeValue ?? 1) === 2) fc.warnings.add('Trim paths in "synchronized" mode trim the whole outline at once');
+      }
+      Object.assign(stroke, dashOf(ac, fc, x.st.i));
+      // Each stroke has its own cap and join (a path layer's own are the first stroke's)
+      if (multiStroke) {
+        stroke.cap = (['butt', 'round', 'square'] as const)[get(x.st.o, 'cap')] ?? 'butt';
+        stroke.join = (['miter', 'round', 'bevel'] as const)[get(x.st.o, 'join')] ?? 'miter';
+      }
+      return { ...x, stroke, trim };
+    });
+  const stroke: Stroke | null = strokeL[0]?.stroke ?? null;
+  // Layers on top of the first of each (their own list, see ShapeStyle)
+  const extra = { ...(fillL.length > 1 ? { fills: fillL.slice(1).map((x) => x.paint) } : {}), ...(strokeL.length > 1 ? { strokes: strokeL.slice(1).map((x) => x.stroke) } : {}) };
+  const fill = fillL[0]?.paint ?? null;
   const name = String(o.props.name ?? 'Shape');
 
   const plain = paths.length === 1 && (paths[0].o.type === 'Rectangle' || paths[0].o.type === 'Ellipse') && !get(paths[0].o, 'x') && !get(paths[0].o, 'y') && !get(paths[0].o, 'rotation') && get(paths[0].o, 'scaleX') === 1 && get(paths[0].o, 'scaleY') === 1;
@@ -866,12 +903,14 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     const oy = get(p, 'originY');
     // Rive centres a stroke on the outline, while our rects and ellipses draw it inside their box: grow the box by the stroke
     // (half each side) so outer edges agree. Left alone when the size or the stroke's width is animated.
-    const sized = ac.rab.anims.some((an) => an.keyed.some((k) => [paths[0].i, strokes[0]?.i].includes(Number(k.obj.props.objectId ?? 0))));
-    const half = stroke && stroke.width > 0 && !sized ? stroke.width / 2 : 0;
+    const sized = ac.rab.anims.some((an) => an.keyed.some((k) => [paths[0].i, ...strokes.map((st) => st.i)].includes(Number(k.obj.props.objectId ?? 0))));
+    // With several strokes each one is centred on the outline, as in Rive, so the box keeps the path's size
+    if (strokeL.length > 1) for (const x of strokeL) x.stroke.align = 'center';
+    const half = strokeL.length <= 1 && stroke && stroke.width > 0 && !sized ? stroke.width / 2 : 0;
     node =
       p.type === 'Rectangle'
-        ? createNode('rect', { name, fill, stroke, cornerRadius: r2(get(p, 'cornerRadiusTL') + half) })
-        : createNode('ellipse', { name, fill, stroke });
+        ? createNode('rect', { name, fill, stroke, ...extra, cornerRadius: r2(get(p, 'cornerRadiusTL') + half) })
+        : createNode('ellipse', { name, fill, stroke, ...extra });
     const b = { x: -w * ox - half, y: -h * oy - half };
     placeAtOrigin(node, o, b, w + half * 2, h + half * 2);
     addTarget(ac, slot, transformTarget(node, b));
@@ -966,6 +1005,7 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
       name,
       fill,
       stroke,
+      ...extra,
       fillRule,
       lineCap: strokes[0] ? (['butt', 'round', 'square'] as const)[get(strokes[0].o, 'cap')] ?? 'butt' : 'round',
       lineJoin: strokes[0] ? (['miter', 'round', 'bevel'] as const)[get(strokes[0].o, 'join')] ?? 'miter' : 'round',
@@ -986,17 +1026,27 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
     for (const { i } of paths) addTarget(ac, i, { nodeId: node.id, map: {} });
     for (const ref of vertexRefs) addTarget(ac, ref.slot, { nodeId: node.id, map: {}, vertex: { sub: ref.sub, index: ref.index, m: ref.m, minX, minY } });
   }
-  if (fillInfo.colorSlot !== null) addTarget(ac, fillInfo.colorSlot, { nodeId: node.id, map: { colorValue: { prop: 'fill.color', f: (v) => argb(Number(v)) } } });
-  if (strokeInfo.colorSlot !== null) addTarget(ac, strokeInfo.colorSlot, { nodeId: node.id, map: { colorValue: { prop: 'stroke.paint.color', f: (v) => argb(Number(v)) } } });
-  if (strokes[0]) addTarget(ac, strokes[0].i, { nodeId: node.id, map: { thickness: { prop: 'stroke.width', f: num() } } });
-  const dashSlot = strokes[0] ? (ac.children.get(strokes[0].i) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath') : undefined;
-  if (stroke && dashSlot !== undefined && !get<boolean>(ac.rab.slots[dashSlot], 'offsetIsPercentage')) addTarget(ac, dashSlot, { nodeId: node.id, map: { offset: { prop: 'stroke.dashOffset', f: num() } } });
-  if (trim !== undefined) {
-    const pct = (v: unknown) => r2(Number(v ?? 0) * 100);
-    addTarget(ac, trim, { nodeId: node.id, map: { start: { prop: 'stroke.trimStart', f: pct }, end: { prop: 'stroke.trimEnd', f: pct }, offset: { prop: 'stroke.trimOffset', f: pct } } });
-  }
+  // Keys on each layer's colour, thickness, dashes, trim and feather go to that layer's own paths (`fills.0.color`, `strokes.1.width`)
+  const pct = (v: unknown) => r2(Number(v ?? 0) * 100);
+  const featherMap = (prefix: string) => ({ strength: { prop: `${prefix}.feather`, f: num() }, offsetX: { prop: `${prefix}.offsetX`, f: num() }, offsetY: { prop: `${prefix}.offsetY`, f: num() } });
+  const featherSlot = (slot: number) => (ac.children.get(slot) ?? []).find((ci) => ac.rab.slots[ci]?.type === 'Feather');
+  fillL.forEach((x, k) => {
+    const prefix = fillPath(k);
+    if (x.info.colorSlot !== null) addTarget(ac, x.info.colorSlot, { nodeId: node.id, map: { colorValue: { prop: `${prefix}.color`, f: (v) => argb(Number(v)) } } });
+    const fe = featherSlot(x.f.i);
+    if (fe !== undefined) addTarget(ac, fe, { nodeId: node.id, map: featherMap(prefix) });
+  });
+  strokeL.forEach((x, k) => {
+    const prefix = strokePath(k);
+    if (x.info.colorSlot !== null) addTarget(ac, x.info.colorSlot, { nodeId: node.id, map: { colorValue: { prop: `${prefix}.paint.color`, f: (v) => argb(Number(v)) } } });
+    addTarget(ac, x.st.i, { nodeId: node.id, map: { thickness: { prop: `${prefix}.width`, f: num() } } });
+    const dashSlot = (ac.children.get(x.st.i) ?? []).find((i) => ac.rab.slots[i]?.type === 'DashPath');
+    if (dashSlot !== undefined && !get<boolean>(ac.rab.slots[dashSlot], 'offsetIsPercentage')) addTarget(ac, dashSlot, { nodeId: node.id, map: { offset: { prop: `${prefix}.dashOffset`, f: num() } } });
+    if (x.trim !== undefined) addTarget(ac, x.trim, { nodeId: node.id, map: { start: { prop: `${prefix}.trimStart`, f: pct }, end: { prop: `${prefix}.trimEnd`, f: pct }, offset: { prop: `${prefix}.trimOffset`, f: pct } } });
+    const fe = featherSlot(x.st.i);
+    if (fe !== undefined) addTarget(ac, fe, { nodeId: node.id, map: featherMap(prefix) });
+  });
   const blend = get(o, 'blendModeValue');
-  const blendMap: Record<number, SceneNode['blendMode']> = { 14: 'screen', 15: 'overlay', 16: 'darken', 17: 'lighten', 18: 'color-dodge', 19: 'color-burn', 22: 'difference', 23: 'exclusion', 24: 'multiply' };
   if (blendMap[blend]) node.blendMode = blendMap[blend];
   return node;
 }

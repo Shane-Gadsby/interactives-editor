@@ -89,4 +89,25 @@ describe('ops', () => {
     apply(c, diff(a, b));
     expect(c).toEqual(clone(b));
   });
+
+  it('carries the extra fills and strokes of a layer, and their removal', () => {
+    const a = createProject('A');
+    const r = createNode('rect', { name: 'r', fills: [{ type: 'solid', color: '#111111' }], strokes: [{ paint: { type: 'solid', color: '#000000' }, width: 2 }] });
+    a.artboards[0].children.push(r);
+    const b = produce(a, (d) => {
+      const n = d.artboards[0].children[0] as unknown as { fills?: unknown[]; strokes?: { width: number }[] };
+      n.fills!.push({ type: 'linear', angle: 0, stops: [{ offset: 0, color: '#fff' }, { offset: 1, color: '#000' }], feather: 4 });
+      n.strokes![0].width = 5;
+    });
+    const c = clone(a);
+    apply(c, diff(a, b));
+    expect(c).toEqual(clone(b));
+    const d2 = produce(b, (d) => {
+      const n = d.artboards[0].children[0] as unknown as { fills?: unknown[] };
+      n.fills = undefined;
+    });
+    const e = clone(b);
+    apply(e, diff(b, d2));
+    expect((e.artboards[0].children[0] as { fills?: unknown }).fills).toBeUndefined();
+  });
 });

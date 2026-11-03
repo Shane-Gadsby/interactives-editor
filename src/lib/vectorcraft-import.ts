@@ -11,18 +11,19 @@
  *   - layers and groups become groups (hidden stays hidden, opacity and blend mode kept); clip groups and clipped layers
  *     become a mask layer in front of what it clips;
  *   - paths and compound paths become path layers with solid, linear and radial gradient fills and strokes (width, caps,
- *     joins, dashes). An object with several fills or strokes becomes a group of one path layer for each;
+ *     joins, dashes, inside / outside alignment). An object with several fills or strokes becomes one path layer with a list of
+ *     each (blend modes per paint); only a stroke drawn under a fill is split into a group of one path layer for each;
  *   - live shapes are their outline, symbols are placed as copies, Repeat objects are expanded into copies, Blend objects
  *     between two paths with the same points get their steps;
  *   - text becomes text layers (font, size, colour, tracking, leading, alignment, style runs);
  *   - pictures become image layers with the picture as an asset (linked pictures only when their preview is saved in the file);
  *   - drop shadows, glows and Gaussian blur become the layer's shadow and blur.
  * Not carried over (and reported): opacity masks, gradient meshes (approximated by flat patches), envelope distortions (the
- * art is kept undistorted), pattern fills, brushes and variable width strokes, arrowheads, inside / outside stroke alignment,
+ * art is kept undistorted), pattern fills, brushes and variable width strokes, arrowheads,
  * type on a path, other live effects, placed documents, and blend modes Interactives does not have.
  */
 import { gunzipSync } from 'fflate';
-import { createArtboard, createNode, type Artboard, type BlendMode, type FontRef, type Paint, type SceneNode, type Shadow, type TextNode } from 'interactives-player';
+import { createArtboard, createNode, type Artboard, type BlendMode, type FontRef, type Paint, type SceneNode, type Shadow, type Stroke, type TextNode } from 'interactives-player';
 import type { ImportedAsset } from './lottie-import';
 import {
   FontBook,
@@ -412,42 +413,73 @@ class Importer {
     if (!subs.length || !items.length) return { nodes: [], items };
     const b = absBounds(subs);
     const k = scaleOfM(m);
-    const make = (fill: Item | null, stroke: Item | null, nm: string): SceneNode | null => {
-      const fp = fill ? this.paintOf(fill.paint, fill.opacity, b, m) : null;
-      const sp = stroke ? this.paintOf(stroke.paint, stroke.opacity, b, m) : null;
-      const width = stroke ? Math.max(0, num(stroke.stroke?.width)) * k : 0;
-      if (!fp && !(sp && width > 0)) return null;
-      const so = stroke?.stroke;
+    const fillOf = (it: Item): Paint | null => {
+      const p = this.paintOf(it.paint, it.opacity, b, m);
+      return p && it.blend ? { ...p, blend: it.blend } : p;
+    };
+    const strokeOf = (it: Item, own: boolean): Stroke | null => {
+      const sp = this.paintOf(it.paint, it.opacity, b, m);
+      const so = it.stroke;
+      const width = Math.max(0, num(so?.width)) * k;
+      if (!sp || !(width > 0)) return null;
       const dash = rec(so?.dash);
       const pattern = arr(dash.pattern).map((v) => num(v)).filter((v) => v >= 0);
       const dashed = pattern.length > 0 && pattern.some((v) => v > 0);
-      const cap = str(so?.cap, 'Butt').toLowerCase();
-      const join = str(so?.join, 'Miter').toLowerCase();
-      if (stroke && (str(so?.align, 'Center') !== 'Center')) this.note('Inside and outside stroke alignment was imported as centred');
-      if (stroke && (so?.brush || so?.profile)) this.note('Brushes and variable width strokes were imported as plain strokes');
-      if (stroke && (so?.start_arrow || so?.end_arrow)) this.note('Arrowheads were left out');
-      const blend = fill?.blend ?? stroke?.blend;
-      return pathNodeOf(nm, subs, {
-        fill: fp,
-        stroke: sp && width > 0 ? { paint: sp, width: round(width, 100), ...(dashed ? { dash: pattern.map((v) => round(v * k, 100)), ...(num(dash.offset) ? { dashOffset: round(num(dash.offset) * k, 100) } : {}) } : {}) } : null,
-        fillRule: evenodd ? 'evenodd' : 'nonzero',
-        lineCap: cap === 'round' ? 'round' : cap === 'square' ? 'square' : 'butt',
-        lineJoin: join === 'round' ? 'round' : join === 'bevel' ? 'bevel' : 'miter',
-        ...(blend ? { blendMode: blend } : {}),
-      });
+      if (so?.brush || so?.profile) this.note('Brushes and variable width strokes were imported as plain strokes');
+      if (so?.start_arrow || so?.end_arrow) this.note('Arrowheads were left out');
+      const stroke: Stroke = { paint: sp, width: round(width, 100) };
+      if (dashed) {
+        stroke.dash = pattern.map((v) => round(v * k, 100));
+        if (num(dash.offset)) stroke.dashOffset = round(num(dash.offset) * k, 100);
+      }
+      const align = str(so?.align, 'Center').toLowerCase();
+      if (align === 'inside' || align === 'outside') stroke.align = align;
+      // Each stroke of a stack has its own caps and joins; a lone one leaves them to the path layer
+      if (own) {
+        stroke.cap = capOf(so);
+        stroke.join = joinOf(so);
+      }
+      if (it.blend) stroke.blend = it.blend;
+      return stroke;
+    };
+    const capOf = (so: Rec | undefined) => {
+      const c = str(so?.cap, 'Butt').toLowerCase();
+      return c === 'round' ? 'round' : c === 'square' ? 'square' : 'butt';
+    };
+    const joinOf = (so: Rec | undefined) => {
+      const j = str(so?.join, 'Miter').toLowerCase();
+      return j === 'round' ? 'round' : j === 'bevel' ? 'bevel' : 'miter';
     };
     const fills = items.filter((i) => i.kind === 'fill');
     const strokes = items.filter((i) => i.kind === 'stroke');
-    const strokeFirst = items.findIndex((i) => i.kind === 'stroke') < items.findIndex((i) => i.kind === 'fill') && fills.length > 0;
-    const plain = fills.length <= 1 && strokes.length <= 1 && !strokeFirst && items.every((i) => !i.blend);
+    // Fills are all drawn under strokes in a layer: a stack with a stroke under a fill is split into one layer each
+    const lastFill = items.map((i) => i.kind).lastIndexOf('fill');
+    const firstStroke = items.findIndex((i) => i.kind === 'stroke');
+    const stacked = lastFill < 0 || firstStroke < 0 || lastFill < firstStroke;
     const out: SceneNode[] = [];
-    if (plain) {
-      const node = make(fills[0] ?? null, strokes[0] ?? null, name);
-      if (node) out.push(node);
+    if (stacked) {
+      const fl = fills.map(fillOf).filter(Boolean) as Paint[];
+      const sl = strokes.map((it) => ({ it, stroke: strokeOf(it, strokes.length > 1) })).filter((x) => x.stroke) as { it: Item; stroke: Stroke }[];
+      if (fl.length || sl.length) {
+        const so = sl[0]?.it.stroke;
+        out.push(
+          pathNodeOf(name, subs, {
+            fill: fl[0] ?? null,
+            stroke: sl[0]?.stroke ?? null,
+            ...(fl.length > 1 ? { fills: fl.slice(1) } : {}),
+            ...(sl.length > 1 ? { strokes: sl.slice(1).map((x) => x.stroke) } : {}),
+            fillRule: evenodd ? 'evenodd' : 'nonzero',
+            lineCap: capOf(so),
+            lineJoin: joinOf(so),
+          }),
+        );
+      }
     } else {
       items.forEach((it, i) => {
-        const node = make(it.kind === 'fill' ? it : null, it.kind === 'stroke' ? it : null, `${name} ${it.kind} ${i + 1}`);
-        if (node) out.push(node);
+        const fp = it.kind === 'fill' ? fillOf(it) : null;
+        const sp = it.kind === 'stroke' ? strokeOf(it, false) : null;
+        if (!fp && !sp) return;
+        out.push(pathNodeOf(`${name} ${it.kind} ${i + 1}`, subs, { fill: fp, stroke: sp, fillRule: evenodd ? 'evenodd' : 'nonzero', lineCap: capOf(it.stroke), lineJoin: joinOf(it.stroke) }));
       });
     }
     return { nodes: out, items };

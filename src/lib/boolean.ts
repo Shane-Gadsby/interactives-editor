@@ -177,6 +177,9 @@ export function booleanPath(ab: Artboard, ids: string[], op: BooleanOp): { node:
     fillRule: 'evenodd',
     fill: ('fill' in base ? base.fill : { type: 'solid', color: '#d9d9d9' }) as PathNode['fill'],
     stroke: ('stroke' in base ? base.stroke : null) as PathNode['stroke'],
+    // the extra fills and strokes of the first shape come along
+    ...('fills' in base && base.fills?.length ? { fills: structuredClone(base.fills) } : {}),
+    ...('strokes' in base && base.strokes?.length ? { strokes: structuredClone(base.strokes) } : {}),
     opacity: base.opacity,
     lineJoin: 'round',
   });
