@@ -2650,9 +2650,14 @@ kbd {
   padding: 0;
   font: inherit;
 }
-.quick-unlock {
+.quick-badges {
   position: absolute;
   z-index: 3;
+  display: flex;
+  gap: 2px;
+}
+.quick-unlock {
+  position: relative;
   width: 22px;
   height: 22px;
   display: grid;

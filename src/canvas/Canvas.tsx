@@ -157,17 +157,15 @@ export function Canvas() {
    */
   const layerAt = (w: Pt, pickDeepest: boolean): { ab: Artboard; hit: SceneNode } | null => {
     const under = abAt(w);
-    if (under) {
-      const p = local(under, w);
-      const hit = pickFromHit(hitTest(under, p.x, p.y), pickDeepest);
-      if (hit) return { ab: under, hit };
-    }
-    const others = [...(active ? [active] : []), ...[...project.artboards].reverse().filter((a) => a.id !== active?.id && a.clip === false)];
-    for (const ab of others) {
-      if (ab.id === under?.id) continue;
-      const p = local(ab, w);
-      const hit = pickFromHit(hitTest(ab, p.x, p.y), pickDeepest);
-      if (hit) return { ab, hit };
+    const others = [...(active ? [active] : []), ...[...project.artboards].reverse().filter((a) => a.id !== active?.id && a.clip === false)].filter((a) => a.id !== under?.id);
+    const order = [...(under ? [under] : []), ...others];
+    // Visible layers win; hidden ones (drawn as ghosts) are picked only where nothing visible is
+    for (const includeHidden of [false, true]) {
+      for (const ab of order) {
+        const p = local(ab, w);
+        const hit = pickFromHit(hitTest(ab, p.x, p.y, { includeHidden }), pickDeepest);
+        if (hit) return { ab, hit };
+      }
     }
     return null;
   };
@@ -464,8 +462,9 @@ export function Canvas() {
           const hit = found?.hit;
           setHover(hit ? `${hab.id}/${hit.id}` : null);
           // A locked layer under the pointer gets a quick-unlock button
-          const lockedTrail = hitTest(hab, p.x, p.y, { includeLocked: true });
-          const locked = lockedTrail.find((n) => n.locked);
+          // A locked or hidden layer under the pointer gets quick unlock / show buttons
+          const trail = hitTest(hab, p.x, p.y, { includeLocked: true, includeHidden: true });
+          const locked = hit && !hit.visible ? hit : [...trail].reverse().find((n) => n.locked);
           setLockedHover((cur) => (locked ? (cur?.id === locked.id ? cur : { abId: hab.id, id: locked.id }) : cur && Date.now() - (lockedSeen.current ?? 0) < 600 ? cur : null));
           if (locked) lockedSeen.current = Date.now();
         } else setHover(null);
@@ -1367,26 +1366,48 @@ export function Canvas() {
           const lab = getArtboard(project, lockedHover.abId);
           const b = lab && selectionBounds(lab, [lockedHover.id]);
           const n = lab && locate(lab, lockedHover.id)?.node;
-          if (!lab || !b || !n?.locked) return null;
+          if (!lab || !b || !n || (!n.locked && n.visible)) return null;
           const at = screen(lab, { x: b.x + b.width, y: b.y });
+          const keep = {
+            onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+            onPointerEnter: () => (lockedSeen.current = Date.now() + 100000),
+            onPointerLeave: () => (lockedSeen.current = Date.now()),
+          };
+          const done = () => {
+            store().select([n.id], { artboardId: lab.id });
+            setLockedHover(null);
+          };
           return (
-            <button
-              className="quick-unlock"
-              style={{ left: at.x - 26, top: at.y + 4 }}
-              title={`Unlock “${n.name}”`}
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerEnter={() => (lockedSeen.current = Date.now() + 100000)}
-              onPointerLeave={() => (lockedSeen.current = Date.now())}
-              onClick={(e) => {
-                e.stopPropagation();
-                store().set({ activeArtboardId: lab.id });
-                store().setProps([n.id], { locked: false });
-                store().select([n.id], { artboardId: lab.id });
-                setLockedHover(null);
-              }}
-            >
-              <Icons.lock width={13} />
-            </button>
+            <div className="quick-badges" style={{ left: at.x + 6, top: at.y }} {...keep}>
+              {!n.visible && (
+                <button
+                  className="quick-unlock"
+                  title={`“${n.name}” is hidden: click to show it`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    store().set({ activeArtboardId: lab.id });
+                    store().setProps([n.id], { visible: true });
+                    done();
+                  }}
+                >
+                  <Icons.eyeOff width={13} />
+                </button>
+              )}
+              {n.locked && (
+                <button
+                  className="quick-unlock"
+                  title={`Unlock “${n.name}”`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    store().set({ activeArtboardId: lab.id });
+                    store().setProps([n.id], { locked: false });
+                    done();
+                  }}
+                >
+                  <Icons.lock width={13} />
+                </button>
+              )}
+            </div>
           );
         })()}
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
