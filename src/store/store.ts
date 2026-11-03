@@ -35,6 +35,7 @@ import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths
 import { apply as applyOps, type Op, type PathStep } from '../../shared/ops.mjs';
 import type { Peer } from '../lib/live';
 import { getArtboard, locate, parentToArtboard, selectionBounds, topmost, uniqueName, nodeNames } from './doc';
+import { dropRefsToRemoved, retargetChildRefs } from './refs';
 
 /** Whether any frame in a tree has auto layout. */
 function hasAutoLayout(list: SceneNode[]): boolean {
@@ -648,6 +649,8 @@ export class EditorStore {
       const insertAt = Math.min(remaining.length, index - members.length + 1);
       remaining.splice(insertAt, 0, group as SceneNode);
       list.splice(0, list.length, ...remaining);
+      // The layers are not the parent's children any more, the group is: its draw order and solo (and their keys) name the group
+      retargetChildRefs(dab, loc.parent, new Map(members.map((m) => [m.id, [groupId]])));
     });
     this.select([groupId]);
   }
@@ -688,12 +691,17 @@ export class EditorStore {
         });
         if (g.mask) lost.add('mask');
         if (lost.size) dropped.push(`“${g.name}”: ${[...lost].join(', ')}`);
+        // Where the parent listed the group (its draw order, its solo) it lists the layers released from it, in order; a solo
+        // that showed the group shows the first of them (the layers can't all be shown by a solo, and it had one on show)
+        retargetChildRefs(dab, loc.parent, new Map([[g.id, kids.map((k) => k.id)]]));
         loc.siblings.splice(loc.index, 1, ...kids);
         released.push(...kids.map((k) => k.id));
         gone.add(g.id);
       }
-      // The group is gone, and so is whatever animated it (as when a layer is deleted)
+      // The group is gone, and so is whatever animated it (as when a layer is deleted), whatever followed it (constraints)
+      // and whatever it was a bone of (skins)
       if (gone.size) for (const tl of dab.timelines) tl.tracks = tl.tracks.filter((t) => !gone.has(t.nodeId));
+      dropRefsToRemoved(dab, gone);
     });
     if (dropped.length) this.toast(`Ungrouped, but some settings could not be kept on the layers: ${dropped.join('; ')}.`);
     if (released.length) this.select(released);
@@ -735,6 +743,7 @@ export class EditorStore {
         if (!loc) continue;
         const off = loc.ancestors.reduce((o, a) => ({ x: o.x + a.x, y: o.y + a.y }), { x: 0, y: 0 });
         const [n] = loc.siblings.splice(loc.index, 1);
+        retargetChildRefs(sab, loc.parent, new Map([[id, []]]));
         n.x = Math.round((n.x + off.x + sab.canvasX - tab.canvasX) * 100) / 100;
         n.y = Math.round((n.y + off.y + sab.canvasY - tab.canvasY) * 100) / 100;
         n.name = uniqueName(nodeNames(tab as Artboard), n.name);
@@ -767,6 +776,8 @@ export class EditorStore {
       const [n] = loc.siblings.splice(loc.index, 1);
       const target = parentId ? locate(dab, parentId) : null;
       const list = target && isContainer(target.node) ? target.node.children : dab.children;
+      // Leaving its parent: what the parent listed of it (draw order, solo) goes with it
+      if (loc.siblings !== list) retargetChildRefs(dab, loc.parent, new Map([[id, []]]));
       const newOffset = target ? [...target.ancestors, target.node].reduce((o, a) => ({ x: o.x + a.x, y: o.y + a.y }), { x: 0, y: 0 }) : { x: 0, y: 0 };
       n.x += oldOffset.x - newOffset.x;
       n.y += oldOffset.y - newOffset.y;

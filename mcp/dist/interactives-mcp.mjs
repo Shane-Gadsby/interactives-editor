@@ -688,33 +688,6 @@ const ANIMATABLE_PROPS = [
   { prop: "modifiers.0.letterSpacing", label: "Text modifier letter spacing", kind: "number" },
   { prop: "modifiers.0.blur", label: "Text modifier blur", kind: "number" }
 ];
-function fillList(n) {
-  return [...n.fill ? [n.fill] : [], ...Array.isArray(n.fills) ? n.fills.filter(Boolean) : []];
-}
-function strokeList(n) {
-  return [...n.stroke ? [n.stroke] : [], ...Array.isArray(n.strokes) ? n.strokes.filter(Boolean) : []];
-}
-function resolveOrder(order, fills, strokes) {
-  const out = [];
-  let f2 = 0;
-  let s = 0;
-  if (Array.isArray(order))
-    for (const k of order) {
-      if (k === "fill" && f2 < fills) f2++, out.push("fill");
-      else if (k === "stroke" && s < strokes) s++, out.push("stroke");
-    }
-  while (f2 < fills) f2++, out.push("fill");
-  while (s < strokes) s++, out.push("stroke");
-  return out;
-}
-function isPlainOrder(order) {
-  let stroked = false;
-  for (const k of order) {
-    if (k === "stroke") stroked = true;
-    else if (stroked) return false;
-  }
-  return true;
-}
 const MODIFIER_UNITS = ["letter", "word", "line"];
 const MODIFIER_SHAPES = ["square", "ramp-up", "ramp-down", "triangle", "round", "smooth"];
 function defaultModifier(patch = {}) {
@@ -849,9 +822,9 @@ function sanitizeNode(raw, seen) {
     if (list.length) n[k] = list;
     else delete n[k];
   }
+  const written = n.paintOrder;
   if ("paintOrder" in n) {
-    const order = resolveOrder(n.paintOrder, fillList(n).length, strokeList(n).length);
-    if (Array.isArray(n.paintOrder) && !isPlainOrder(order)) n.paintOrder = order;
+    if (Array.isArray(written)) n.paintOrder = written.filter((k) => k === "fill" || k === "stroke");
     else delete n.paintOrder;
   }
   if ("background" in n && n.background !== null) n.background = paint(n.background);
@@ -4053,8 +4026,8 @@ Select a child of an auto-layout frame and its **Layout item** section says how 
   - *Fixed*: its own size.
   - *Hug*: fits its own contents (frames and text).
   - *Fill*: along a row or column, shares the frame's free space with the other fill children; across it, stretches; in a grid, fills its cell.
-  - *Percent*: a share of the frame's inner size (of the cell, in a grid).
-- **Grow** and **Basis** (row and column, shown for a *Fill* layer on the axis the frame runs along): a fill layer starts from its basis (*Zero*, *Pixels*, *Percent* of the frame, or *Content*: as big as what is inside it), and the free space is shared on top of it by grow (default 1; 0 takes none). Layers that are over the line shrink in proportion to their basis.
+  - *Percent*: a share of the frame's inner size (of the cell, in a grid). Where the frame hugs that size, the frame is as big as everything else needs, and the percent layer then takes its share of that.
+- **Grow** and **Basis** (row and column, on the axis the frame runs along, for a *Fill* layer): a fill layer starts from its basis (*Zero*, *Pixels*, *Percent* of the frame, or *Content*: as big as what is inside it), and the free space is shared on top of it by grow (default 1; 0 takes none). Layers that are over the line shrink in proportion to their basis. A wrapping line breaks at each fill layer's basis (zero when it has none), not at the size it was left with by the last layout.
 - **Aspect** (width over height, like 1.78): when one side hugs and the other is known, the hugging side follows the ratio instead of its content. The field shows up once a ratio is set or exactly one side is *Hug* (in a grid: the height); *From size* takes the ratio from the layer's current size, and 0 clears it. **Derive** chooses between *Either side* and *Height only* (the width then keeps hugging). In a grid only the height is derived.
 - **Wrap text** (text in a row or column): a text that hugs its width (Sizing set to *Auto width*; the section says so when it isn't) wraps at the room its frame offers, and then shrinks to its widest line.
 - **Column**, **Row**, **Col span**, **Row span** (grid): which cell it starts in (1 is the first, negative counts back from the last, 0 takes the next free cell) and how many tracks it covers. Layers without a cell fill the free cells in order.
