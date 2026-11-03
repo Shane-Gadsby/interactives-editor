@@ -155,6 +155,32 @@ async function open0() {
   return open(new Uint8Array(readFileSync(dir + '262426_-_breathing_for_calm.riv')));
 }
 
+describe.skipIf(!existsSync(dir + 'treasure_valley_interactive_map.riv'))('the Treasure Valley map reacts to the pointer', () => {
+  it('hovering a region shows its click target, and clicking it picks the region', async () => {
+    const t = await open(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')));
+    try {
+      await t.run(1000);
+      type Sess = { session: { artboard: { name: string; logic: { nodes: { id: string; kind: string; params: Record<string, unknown> }[]; edges: { from: string; to: string }[] } }; byId: Map<string, { name: string; solo?: { active: string | null }; children?: { id: string }[] }>; parents: Map<string, { id: string; solo?: { active: string | null } } | undefined>; renderer: { element(id: string): HTMLElement } } };
+      const tv = ([...(t.player as unknown as { instances: Set<Sess> }).instances] as Sess[]).find((k) => k.session.artboard.name === 'TREASURE VALLEY')!.session;
+      const nodes = tv.artboard.logic.nodes;
+      const sets = (id: string) => tv.artboard.logic.edges.filter((e) => e.from === id).map((e) => nodes.find((n) => n.id === e.to)!.params.value);
+      const enter = nodes.find((n) => n.kind === 'event.pointer' && n.params.type === 'pointerenter' && sets(n.id)[0] === '6')!;
+      const click = nodes.find((n) => n.kind === 'event.pointer' && n.params.type === 'click' && sets(n.id)[0] === '6')!;
+      tv.renderer.element(String(enter.params.target)).dispatchEvent(new MouseEvent('pointerover', { bubbles: true, relatedTarget: document.body }));
+      await t.run(1000);
+      expect(t.get('TargetingTreasureValleyVM_targetingCitiesNum')).toBe(6);
+      //the click targets' solo shows the hovered region's (the layer that follows the hover wins over the first layer's "nothing")
+      const parent = [...tv.byId.values()].find((n) => n.children?.some((c) => c.id === String(click.params.target)))!;
+      expect(parent.solo?.active).toBe(String(click.params.target));
+      tv.renderer.element(String(click.params.target)).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flush();
+      expect(t.get('MainVM_indexNum')).toBe(6);
+    } finally {
+      t.player.destroy();
+    }
+  }, 30000);
+});
+
 const path = (...ids: number[]) => new Uint8Array(ids);
 
 //one view model S (n, count). Animation A (a second, once) leaves for B by exit time, once n is 1; B sets count to 5 on entering.

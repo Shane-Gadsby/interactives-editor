@@ -138,7 +138,7 @@ describe('Rive transitions run the way Rive mixes them', () => {
     const t = await run(bytes);
     const play = t.ab.logic.nodes.find((x) => x.kind === 'action.blendPlay')!;
     expect(play.params).toMatchObject({ fade: '400' });
-    expect(String(play.params.outgoing)).toContain(t.ab.timelines[0].id);
+    expect(String(play.params.outgoing)).toContain(t.ab.timelines.find((tl) => tl.name === 'A')!.id);
     expect(t.res.warnings.some((w) => /blend durations into blend states/.test(w))).toBe(false);
     t.player.step(100); // A x 10
     t.player.send('go');

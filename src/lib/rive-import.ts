@@ -3335,6 +3335,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     nestedDone.set(`${nk.tl.id}|${nk.marker.name}`, src);
     y += 120;
   }
+  const layerRank = new Map<Timeline, number>();
   const machines = ac.rab.machines;
   if (!machines.length) {
     // No state machine: play the first animation, as Rive does
@@ -3371,6 +3372,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
       }
       const stateName = (st: RState) => stateNames.get(st) ?? baseName(st);
       const layerTimelines = layer.states.map(tlOf).filter(Boolean) as Timeline[];
+      for (const tl of layerTimelines) if (!layerRank.has(tl)) layerRank.set(tl, layerRank.size + 1);
       // Blend states become blends on the artboard: entering the state plays its blend, leaving stops it
       const blendOf = new Map<RState, Blend>();
       for (const st of layer.states) {
@@ -3833,6 +3835,10 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
       y += 120;
     }
   }
+  // Rive applies a machine's layers one after another, the later ones over the earlier ones where they key the same
+  // property (a hover layer that shows one region over the first layer's "nothing selected"). The player applies timelines
+  // in the artboard's order, so the ones of later layers go later in it.
+  ab.timelines.sort((a, b) => (layerRank.get(a) ?? -1) - (layerRank.get(b) ?? -1));
 }
 
 /**
