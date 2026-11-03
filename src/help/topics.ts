@@ -111,6 +111,9 @@ Settings for the selection. With nothing selected it shows the artboard and the 
 | <kbd>Shift</kbd>+<kbd>2</kbd> | Zoom to the selection |
 | <kbd>Ctrl</kbd>+<kbd>1</kbd> | 100% |
 
+## Big projects
+Artboards you aren't working on are shown as a picture of themselves, which keeps panning and zooming smooth in projects with many artboards. Click an artboard (or a layer in it) and it comes alive for editing; the picture updates by itself shortly after anything in it changes.
+
 ## Wheel preference
 If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in the top bar) and set **Mouse wheel** to *Pan (Ctrl+wheel zooms)*. With that setting the wheel and two-finger trackpad scrolling pan, and <kbd>Ctrl</kbd>+wheel or a pinch zooms. The setting is kept in this browser.`,
   },
