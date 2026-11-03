@@ -85,7 +85,12 @@ function sanitizeTouched(d: Project, ops: Op[]): void {
     for (const id of ids) {
       const loc = locate(ab, id);
       if (!loc) continue;
+      // The paint order is repaired against the paints the layer has right now, and ops of other people that add or remove
+      // paints may still be on their way: what was written is kept (it is repaired whenever it is drawn), so this copy of the
+      // layer stays the same as everyone else's
+      const order = (loc.node as { paintOrder?: unknown }).paintOrder;
       if (!sanitizeLayerInPlace(loc.node)) loc.siblings.splice(loc.siblings.indexOf(loc.node), 1);
+      else if (Array.isArray(order) && order.every((k) => k === 'fill' || k === 'stroke')) (loc.node as { paintOrder?: unknown }).paintOrder = order;
     }
   }
 }
@@ -652,6 +657,7 @@ export class EditorStore {
     if (!ab) return;
     const released: string[] = [];
     const dropped: string[] = [];
+    const gone = new Set<string>();
     this.update((d) => {
       const dab = getArtboard(d as Project, ab.id)!;
       for (const id of this.state.selection) {
@@ -684,7 +690,10 @@ export class EditorStore {
         if (lost.size) dropped.push(`“${g.name}”: ${[...lost].join(', ')}`);
         loc.siblings.splice(loc.index, 1, ...kids);
         released.push(...kids.map((k) => k.id));
+        gone.add(g.id);
       }
+      // The group is gone, and so is whatever animated it (as when a layer is deleted)
+      if (gone.size) for (const tl of dab.timelines) tl.tracks = tl.tracks.filter((t) => !gone.has(t.nodeId));
     });
     if (dropped.length) this.toast(`Ungrouped, but some settings could not be kept on the layers: ${dropped.join('; ')}.`);
     if (released.length) this.select(released);

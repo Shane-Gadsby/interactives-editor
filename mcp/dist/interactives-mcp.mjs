@@ -1567,10 +1567,31 @@ function runsPatch(runs) {
 }
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
+const MAX_WORK = 65536;
 const INPUT_LIMITS = [1e4, 1e4, 1e3, 200];
 class RegexRefused extends Error {
 }
-const newGroup = () => ({ multi: false, optional: 0, alternation: false, firsts: [], complex: false, atBranchStart: true });
+const newGroup = () => ({ multi: false, optional: 0, alternation: false, firsts: [], complex: false, atBranchStart: true, work: 1, starts: [], optionals: [], nextStarts: false });
+const SAMPLE = [...Array.from({ length: 128 }, (_, i) => i), 160, 233, 305, 383, 8490, 945, 1046, 19968, 128512].map((c2) => String.fromCodePoint(c2));
+const overlaps = /* @__PURE__ */ new Map();
+function canShare(a, b, flags) {
+  if (a.src === null || b.src === null) return true;
+  const key = `${flags}/${a.src}/${b.src}`;
+  let hit = overlaps.get(key);
+  if (hit === void 0) {
+    const f2 = flags.replace(/[gy]/g, "");
+    try {
+      const ra = new RegExp(`^(?:${a.src})$`, f2);
+      const rb = new RegExp(`^(?:${b.src})$`, f2);
+      hit = SAMPLE.some((ch) => ra.test(ch) && rb.test(ch));
+    } catch {
+      hit = true;
+    }
+    if (overlaps.size > 2e3) overlaps.clear();
+    overlaps.set(key, hit);
+  }
+  return hit;
+}
 function escapeLength(src, i) {
   const n = src[i + 1];
   if ((n === "u" || n === "p" || n === "P") && src[i + 2] === "{") {
@@ -1599,18 +1620,26 @@ function parseQuantifier(src, i) {
   if (src[end] === "?" || src[end] === "+") end++;
   return { min, max, end };
 }
-function checkPattern(src) {
+function checkPattern(src, flags = "") {
   if (src.length > MAX_PATTERN) throw new RegexRefused(`the pattern is longer than ${MAX_PATTERN} characters`);
   const stack = [];
   let cur = newGroup();
   let unbounded = 0;
+  const nestedClasses = flags.includes("v");
+  const fold = flags.includes("i") ? (ch) => ch.toUpperCase().toLowerCase() : (ch) => ch;
   let last;
-  const noteAtom = (ch) => {
+  const noteAtom = (ch, text) => {
+    const atom = { src: text };
+    let first;
     if (cur.atBranchStart) {
-      cur.firsts.push(ch ?? "");
+      cur.firsts.push(ch === null ? "" : fold(ch));
+      first = cur.firsts.length - 1;
       cur.atBranchStart = false;
-    }
+      cur.starts.push(atom);
+    } else if (cur.nextStarts) cur.starts.push(atom);
+    cur.nextStarts = false;
     if (ch === null) cur.complex = true;
+    return { first, atom };
   };
   let i = 0;
   while (i < src.length) {
@@ -1618,17 +1647,19 @@ function checkPattern(src) {
     if (c2 === "\\") {
       const n = src[i + 1] ?? "";
       if (/[1-9]/.test(n) || n === "k" && src[i + 2] === "<") throw new RegexRefused("backreferences (\\1, \\k<name>) are not allowed");
-      noteAtom(/[a-zA-Z0-9]/.test(n) ? null : n);
-      i += escapeLength(src, i);
-      last = {};
+      const len = escapeLength(src, i);
+      last = noteAtom(/[a-zA-Z0-9]/.test(n) ? null : n, /^\\[bB]/.test(src.slice(i, i + 2)) ? null : src.slice(i, i + len));
+      i += len;
     } else if (c2 === "[") {
       let j = i + 1;
       if (src[j] === "^") j++;
-      if (src[j] === "]") j++;
-      for (; j < src.length && src[j] !== "]"; j++) if (src[j] === "\\") j++;
-      noteAtom(null);
+      for (let depth = 0; j < src.length && (src[j] !== "]" || depth > 0); j++) {
+        if (src[j] === "\\") j++;
+        else if (nestedClasses && src[j] === "[") depth++;
+        else if (nestedClasses && src[j] === "]") depth--;
+      }
+      last = noteAtom(null, src.slice(i, j + 1));
       i = j + 1;
-      last = {};
     } else if (c2 === "(") {
       let j = i + 1;
       if (src[j] === "?") {
@@ -1636,7 +1667,7 @@ function checkPattern(src) {
         const m = /^(?:[:=!]|<[=!]|<[A-Za-z_$][\w$]*>|[a-z]*(?:-[a-z]+)?:)/.exec(rest);
         j += 1 + (m ? m[0].length : 0);
       }
-      noteAtom(null);
+      noteAtom(null, null);
       stack.push(cur);
       cur = newGroup();
       i = j;
@@ -1648,7 +1679,9 @@ function checkPattern(src) {
       cur = parent;
       cur.multi ||= done.multi;
       cur.optional += done.optional;
-      last = { group: done };
+      cur.work *= done.work;
+      cur.optionals.push(...done.optionals);
+      last = { group: done, atom: { src: null } };
       i++;
     } else if (c2 === "|") {
       cur.alternation = true;
@@ -1665,26 +1698,35 @@ function checkPattern(src) {
         if (g && repeats) {
           if (g.multi) throw new RegexRefused("a repeated group contains another repetition, like (a+)+");
           if (g.optional > 1) throw new RegexRefused("a repeated group contains several optional parts, like (a?a?)+");
+          for (const o of g.optionals) if (g.starts.some((f2) => f2 !== o && canShare(o, f2, flags))) throw new RegexRefused("a repeated group has an optional part that could also start it, like (\\d\\d?)+");
           if (g.alternation) {
             const distinct = new Set(g.firsts).size === g.firsts.length && !g.firsts.includes("");
-            if (g.complex || !distinct) throw new RegexRefused("a repeated group contains alternatives that can match the same text, like (a|aa)+");
+            if (g.complex || !distinct || g.optional) throw new RegexRefused("a repeated group contains alternatives that can match the same text, like (a|aa)+");
           }
         }
         if (repeats && q.min !== q.max) cur.multi = true;
         else if (q.max === 1 && q.min === 0) cur.optional++;
+        if (q.max !== Infinity && q.max !== q.min) cur.work *= q.max - q.min + 1;
+        if (g && q.max !== Infinity && q.max > 1) cur.work *= g.work ** (q.max - 1);
+        if (q.min === 0 && last.first !== void 0) {
+          cur.firsts[last.first] = "";
+          cur.nextStarts = true;
+        }
+        if (q.min === 0 && q.max === 1) cur.optionals.push(last.atom);
         i = q.end;
         last = void 0;
       } else {
-        if (c2 === ".") noteAtom(null);
-        else if (c2 === "^" || c2 === "$") cur.complex = true;
-        else noteAtom(c2);
+        if (c2 === "^" || c2 === "$") {
+          cur.complex = true;
+          last = { atom: { src: null } };
+        } else last = noteAtom(c2 === "." ? null : c2, c2 === "." ? "." : c2.replace(/[\\^$.*+?()[\]{}|/]/g, "\\$&"));
         i++;
-        last = {};
       }
     }
   }
   if (stack.length) throw new RegexRefused("the parentheses do not match");
-  return unbounded;
+  if (cur.work > MAX_WORK) throw new RegexRefused("too many optional or bounded parts that can overlap, like a?a?a?...a?aaa... or a{0,30}a{0,30}a{0,30}");
+  return { unbounded, work: cur.work };
 }
 const verdicts = /* @__PURE__ */ new Map();
 function verdict(source, flags) {
@@ -1692,7 +1734,8 @@ function verdict(source, flags) {
   let v = verdicts.get(key);
   if (!v) {
     try {
-      v = { problem: "", limit: INPUT_LIMITS[checkPattern(source)] };
+      const { unbounded, work } = checkPattern(source, flags);
+      v = { problem: "", limit: Math.floor(INPUT_LIMITS[unbounded] / work ** (1 / (unbounded + 1))) };
     } catch (e) {
       if (!(e instanceof RegexRefused)) throw e;
       v = { problem: e.message, limit: 0 };
@@ -4369,11 +4412,12 @@ A \`/pattern/flags\` works with \`match\`, \`matchAll\`, \`search\`, \`replace\`
 
 - it has a **backreference** (\`\\1\`, \`\\k<name>\`);
 - a **repeated group contains another repetition**: \`(a+)+\`, \`(\\w+\\s?)*\`, \`(.*x){5}\`. Write it flat instead, for example \`[a-z]+\`;
-- a repeated group has **alternatives that can start the same way**: \`(a|aa)+\` is refused, \`(cat|dog)+\` is fine;
-- a repeated group has **more than one optional part**: \`(a?b?)+\`;
+- a repeated group has **alternatives that can start the same way** (letters that differ only in case count as the same with the \`i\` flag), or an alternative that begins with an optional part, or any optional part at all: \`(a|aa)+\`, \`(a|A)+\` with \`i\`, \`(a?b|b)+\` are refused, \`(cat|dog)+\` is fine;
+- a repeated group has **more than one optional part**, or one that could also begin the group: \`(a?b?)+\`, \`(\\d\\d?)+\`; \`(\\d{3}-?)+\` is fine;
+- the parts that **vary in length but are not open-ended multiply up** past 65,536: \`a?a?a?...\` thirty times followed by thirty \`a\`, or \`a{0,30}\` six times in a row;
 - it has **more than 3 open-ended repetitions** (\`*\`, \`+\`, \`{n,}\`) or is **over 300 characters**.
 
-The text a pattern runs over is limited too: 10,000 characters for a pattern with no more than one open-ended repetition, 1,000 with two and 200 with three. Longer text gives an error rather than a freeze. Text you pass to \`match\`, \`matchAll\` and \`search\` is a pattern and follows the same rules; to \`replace\`, \`replaceAll\` and \`split\` it is plain text. The rules are cautious on purpose: some harmless patterns, like \`(\\.[a-z]+)+\`, are refused too.
+The text a pattern runs over is limited too: 10,000 characters for a pattern with no more than one open-ended repetition, 1,000 with two and 200 with three. Patterns with bounded repetitions such as \`\\w{0,50}\` get a shorter limit still. Longer text gives an error rather than a freeze. Text you pass to \`match\`, \`matchAll\` and \`search\` is a pattern and follows the same rules; to \`replace\`, \`replaceAll\` and \`split\` it is plain text. The rules are cautious on purpose: some harmless patterns, like \`(\\.[a-z]+)+\`, are refused too.
 
 > Expressions are for values. For several steps, waiting or loops, use a [script](scripts).`
   },

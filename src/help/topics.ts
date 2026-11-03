@@ -1091,11 +1091,12 @@ A \`/pattern/flags\` works with \`match\`, \`matchAll\`, \`search\`, \`replace\`
 
 - it has a **backreference** (\`\\1\`, \`\\k<name>\`);
 - a **repeated group contains another repetition**: \`(a+)+\`, \`(\\w+\\s?)*\`, \`(.*x){5}\`. Write it flat instead, for example \`[a-z]+\`;
-- a repeated group has **alternatives that can start the same way**: \`(a|aa)+\` is refused, \`(cat|dog)+\` is fine;
-- a repeated group has **more than one optional part**: \`(a?b?)+\`;
+- a repeated group has **alternatives that can start the same way** (letters that differ only in case count as the same with the \`i\` flag), or an alternative that begins with an optional part, or any optional part at all: \`(a|aa)+\`, \`(a|A)+\` with \`i\`, \`(a?b|b)+\` are refused, \`(cat|dog)+\` is fine;
+- a repeated group has **more than one optional part**, or one that could also begin the group: \`(a?b?)+\`, \`(\\d\\d?)+\`; \`(\\d{3}-?)+\` is fine;
+- the parts that **vary in length but are not open-ended multiply up** past 65,536: \`a?a?a?...\` thirty times followed by thirty \`a\`, or \`a{0,30}\` six times in a row;
 - it has **more than 3 open-ended repetitions** (\`*\`, \`+\`, \`{n,}\`) or is **over 300 characters**.
 
-The text a pattern runs over is limited too: 10,000 characters for a pattern with no more than one open-ended repetition, 1,000 with two and 200 with three. Longer text gives an error rather than a freeze. Text you pass to \`match\`, \`matchAll\` and \`search\` is a pattern and follows the same rules; to \`replace\`, \`replaceAll\` and \`split\` it is plain text. The rules are cautious on purpose: some harmless patterns, like \`(\\.[a-z]+)+\`, are refused too.
+The text a pattern runs over is limited too: 10,000 characters for a pattern with no more than one open-ended repetition, 1,000 with two and 200 with three. Patterns with bounded repetitions such as \`\\w{0,50}\` get a shorter limit still. Longer text gives an error rather than a freeze. Text you pass to \`match\`, \`matchAll\` and \`search\` is a pattern and follows the same rules; to \`replace\`, \`replaceAll\` and \`split\` it is plain text. The rules are cautious on purpose: some harmless patterns, like \`(\\.[a-z]+)+\`, are refused too.
 
 > Expressions are for values. For several steps, waiting or loops, use a [script](scripts).`,
   },

@@ -130,7 +130,7 @@ export function FillSection({ nodes, project }: { nodes: SceneNode[]; project: P
       actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add fill" onClick={() => write([...list, { type: 'solid', color: list.length ? '#ffffff' : '#d9d9d9' }], orderWithAdded(order, 'fill'))} />}
     >
       {rows.map(({ p, i }) => {
-        const prefix = fillPath(i);
+        const prefix = fillPath(i, n);
         const color = shown(`${prefix}.color`);
         const paint: Paint = p.type === 'solid' && typeof color === 'string' ? { ...p, color } : p;
         const label = list.length > 1 ? `Fill ${i + 1}` : 'Fill';
@@ -193,7 +193,7 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
       actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add stroke" onClick={() => write([...list, { paint: { type: 'solid', color: '#111111' }, width: 1 }], orderWithAdded(order, 'stroke'))} />}
     >
       {rows.map(({ s, i }) => {
-        const prefix = strokePath(i);
+        const prefix = strokePath(i, n);
         const color = shown(`${prefix}.paint.color`);
         const label = list.length > 1 ? `Stroke ${i + 1}` : 'Stroke';
         return (

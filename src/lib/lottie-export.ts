@@ -228,7 +228,7 @@ function shapesFor(ctx: Ctx, n: SceneNode): Json[] | null {
   // A Lottie group paints its first items on top, so the paints go in front-most first (the shape's paint order, reversed)
   const paints = orderedPaints({ fill: styled.fill ?? null, stroke: styled.stroke ?? null, fills: styled.fills, strokes: styled.strokes, paintOrder: styled.paintOrder });
   const style = paints
-    .map((e) => (e.kind === 'stroke' ? paintItem(ctx, n, e.paint.paint, 'stroke', strokePath(e.index), e.paint) : paintItem(ctx, n, e.paint, 'fill', fillPath(e.index))))
+    .map((e) => (e.kind === 'stroke' ? paintItem(ctx, n, e.paint.paint, 'stroke', strokePath(e.index, styled), e.paint) : paintItem(ctx, n, e.paint, 'fill', fillPath(e.index, styled))))
     .reverse()
     .filter(Boolean);
   switch (n.type) {
