@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createProject, PACKAGE_EXTENSION } from 'interactives-player';
-import { createProjectRecord, deleteProject, duplicateProject, importPackage, listProjects, loadProjectRecord, session, type ProjectMeta, type SessionInfo } from './lib/db';
+import { createProjectRecord, deleteProject, duplicateProject, importPackage, listProjects, loadProjectRecord, META_MAX_LABEL, META_MAX_TAGS, session, setProjectMeta, type ProjectMeta, type SessionInfo } from './lib/db';
 import { downloadPackage } from './lib/export';
 import { pickFiles } from './lib/insert';
 import { Icons } from './components/icons';
@@ -12,6 +12,68 @@ declare global {
   interface Window {
     powerUser?: { isToggleKey(e: KeyboardEvent): boolean; canUse(access: unknown): boolean };
   }
+}
+
+type FolderSel = { kind: 'all' } | { kind: 'none' } | { kind: 'folder'; name: string };
+type SortKey = 'updated' | 'name';
+
+const SORT_KEY = 'ix.home.sort';
+const NEW_FOLDER = '\u0000new';
+
+/** The tag text as the server will keep it: collapsed spaces, trimmed, capped. */
+const cleanLabel = (s: string) => s.replace(/\s+/g, ' ').trim().slice(0, META_MAX_LABEL);
+
+function readSort(): SortKey {
+  try {
+    return localStorage.getItem(SORT_KEY) === 'name' ? 'name' : 'updated';
+  } catch {
+    return 'updated';
+  }
+}
+
+/** Add-a-tag input on a project card: a "+" button that turns into a small text field. */
+function TagAdder({ onAdd, disabled, suggestions }: { onAdd: (tag: string) => void; disabled: boolean; suggestions: string[] }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+  const commit = () => {
+    const t = cleanLabel(draft);
+    if (t) onAdd(t);
+    setDraft('');
+    setOpen(false);
+  };
+  if (!open)
+    return (
+      <button className="tag-add" disabled={disabled} onClick={() => setOpen(true)} title="Add a tag to this project">
+        <Icons.plus width={10} height={10} /> tag
+      </button>
+    );
+  return (
+    <>
+      <input
+        className="tag-input"
+        autoFocus
+        list="home-tag-suggestions"
+        value={draft}
+        maxLength={META_MAX_LABEL}
+        placeholder="New tag"
+        title="Type a tag and press Enter (Esc to cancel)"
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit();
+          if (e.key === 'Escape') {
+            setDraft('');
+            setOpen(false);
+          }
+        }}
+      />
+      <datalist id="home-tag-suggestions">
+        {suggestions.map((t) => (
+          <option key={t} value={t} />
+        ))}
+      </datalist>
+    </>
+  );
 }
 
 export function Home({ open }: { open: (id: string) => void }) {
@@ -26,6 +88,10 @@ export function Home({ open }: { open: (id: string) => void }) {
   useEffect(() => {
     void sessionUser().then(setMe2);
   }, []);
+  const [folderSel, setFolderSel] = useState<FolderSel>({ kind: 'all' });
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<SortKey>(readSort);
 
   const refresh = async (all = power) => {
     try {
@@ -102,6 +168,90 @@ export function Home({ open }: { open: (id: string) => void }) {
 
   const me = who?.user?.username;
 
+  const changeSort = (next: SortKey) => {
+    setSort(next);
+    try {
+      localStorage.setItem(SORT_KEY, next);
+    } catch {
+      /* private window */
+    }
+  };
+
+  /** Save tags / folder for one project and fold the server's answer back into the list. */
+  const saveMeta = (id: string, patch: { tags?: string[]; folder?: string | null }) =>
+    run(async () => {
+      const next = await setProjectMeta(id, patch);
+      setList((l) => l && l.map((p) => (p.id === id ? { ...p, tags: next.tags ?? [], folder: next.folder ?? null } : p)));
+    });
+
+  const addTag = (p: ProjectMeta, tag: string) => {
+    const tags = p.tags ?? [];
+    if (tags.some((t) => t.toLowerCase() === tag.toLowerCase())) return;
+    if (tags.length >= META_MAX_TAGS) return setError(`A project can have up to ${META_MAX_TAGS} tags`);
+    void saveMeta(p.id, { tags: [...tags, tag] });
+  };
+
+  const moveTo = (p: ProjectMeta, value: string) => {
+    if (value === NEW_FOLDER) {
+      const name = cleanLabel(prompt('Name for the new folder') ?? '');
+      if (name) void saveMeta(p.id, { folder: name });
+      return;
+    }
+    void saveMeta(p.id, { folder: value || null });
+  };
+
+  /** Rename / delete touch every project in the folder that this list holds, one request each. */
+  const renameFolder = (name: string) => {
+    const next = cleanLabel(prompt(`Rename folder "${name}" to`, name) ?? '');
+    if (!next || next === name) return;
+    void run(async () => {
+      await Promise.all((list ?? []).filter((p) => p.folder === name).map((p) => setProjectMeta(p.id, { folder: next })));
+      setFolderSel({ kind: 'folder', name: next });
+      await refresh();
+    });
+  };
+
+  const deleteFolder = (name: string) => {
+    if (!confirm(`Delete the folder "${name}"? Its projects are kept and move to "No folder".`)) return;
+    void run(async () => {
+      await Promise.all((list ?? []).filter((p) => p.folder === name).map((p) => setProjectMeta(p.id, { folder: null })));
+      setFolderSel({ kind: 'all' });
+      await refresh();
+    });
+  };
+
+  const folders = useMemo(() => {
+    const counts = new Map<string, number>();
+    let none = 0;
+    for (const p of list ?? []) {
+      if (p.folder) counts.set(p.folder, (counts.get(p.folder) ?? 0) + 1);
+      else none++;
+    }
+    return { names: [...counts.keys()].sort((a, b) => a.localeCompare(b)), counts, none };
+  }, [list]);
+
+  const tagCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of list ?? []) for (const t of p.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [list]);
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const out = (list ?? []).filter((p) => {
+      if (folderSel.kind === 'none' && p.folder) return false;
+      if (folderSel.kind === 'folder' && p.folder !== folderSel.name) return false;
+      if (tagFilter && !(p.tags ?? []).some((t) => t.toLowerCase() === tagFilter.toLowerCase())) return false;
+      if (q && !p.name.toLowerCase().includes(q) && !(p.tags ?? []).some((t) => t.toLowerCase().includes(q))) return false;
+      return true;
+    });
+    if (sort === 'name') out.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+    else out.sort((a, b) => b.updated.localeCompare(a.updated));
+    return out;
+  }, [list, folderSel, tagFilter, query, sort]);
+
+  const filtering = folderSel.kind !== 'all' || !!tagFilter || !!query.trim();
+
   return (
     <div className="home">
       <header className="home-head">
@@ -128,6 +278,71 @@ export function Home({ open }: { open: (id: string) => void }) {
       </header>
       {power && <div className="power-banner">Power user mode: showing everyone's projects (F9 to turn off)</div>}
       {error && <div className="error-banner">{error}</div>}
+      {!!list?.length && (
+        <div className="home-tools">
+          <input
+            type="search"
+            className="home-search"
+            value={query}
+            placeholder="Search name or tag"
+            title="Show only projects whose name or tags contain this text"
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <label className="home-sort muted small" title="Order of the project cards">
+            Sort{' '}
+            <select value={sort} onChange={(e) => changeSort(e.target.value as SortKey)}>
+              <option value="updated">Last updated</option>
+              <option value="name">Name</option>
+            </select>
+          </label>
+          {tagCounts.length > 0 && (
+            <div className="tag-filter" title="Click a tag to show only projects that have it">
+              <Icons.tag width={13} height={13} />
+              {tagCounts.map(([t, n]) => (
+                <button key={t} className={`tag-chip${tagFilter?.toLowerCase() === t.toLowerCase() ? ' active' : ''}`} onClick={() => setTagFilter(tagFilter?.toLowerCase() === t.toLowerCase() ? null : t)} title={`${n} project${n === 1 ? '' : 's'} tagged "${t}". Click to filter, click again to clear`}>
+                  {t} <span className="tag-n">{n}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      <div className="home-body">
+        {!!list?.length && (
+          <aside className="folder-side" aria-label="Folders">
+            <button className={`folder-item${folderSel.kind === 'all' ? ' active' : ''}`} onClick={() => setFolderSel({ kind: 'all' })} title="Every project">
+              <span>All projects</span>
+              <span className="tag-n">{list.length}</span>
+            </button>
+            <button className={`folder-item${folderSel.kind === 'none' ? ' active' : ''}`} onClick={() => setFolderSel({ kind: 'none' })} title="Projects that are not in any folder">
+              <span>No folder</span>
+              <span className="tag-n">{folders.none}</span>
+            </button>
+            {folders.names.map((name) => {
+              const active = folderSel.kind === 'folder' && folderSel.name === name;
+              return (
+                <div key={name} className={`folder-row${active ? ' active' : ''}`}>
+                  <button className="folder-item" onClick={() => setFolderSel({ kind: 'folder', name })} title={`Show the projects in "${name}"`}>
+                    <Icons.folder width={13} height={13} />
+                    <span className="folder-name">{name}</span>
+                    <span className="tag-n">{folders.counts.get(name)}</span>
+                  </button>
+                  {active && (
+                    <span className="folder-tools">
+                      <button className="icon-btn" title={`Rename folder "${name}"`} disabled={busy} onClick={() => renameFolder(name)}>
+                        <Icons.pencil width={13} />
+                      </button>
+                      <button className="icon-btn" title={`Delete folder "${name}" (its projects are kept, they just leave the folder)`} disabled={busy} onClick={() => deleteFolder(name)}>
+                        <Icons.trash width={13} />
+                      </button>
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+            <div className="hint">Use a card's folder menu to move a project into a folder, or to start a new one.</div>
+          </aside>
+        )}
       <main className="project-grid">
         {list === null && !error && <p className="muted">Loading…</p>}
         {list?.length === 0 && (
@@ -155,7 +370,25 @@ export function Home({ open }: { open: (id: string) => void }) {
             </div>
           </article>
         )}
-        {list?.map((p) => (
+        {!!list?.length && !shown.length && (
+          <div className="empty-state">
+            <p>No projects match.</p>
+            {filtering && (
+              <button
+                className="btn"
+                title="Clear the search, tag and folder filters"
+                onClick={() => {
+                  setQuery('');
+                  setTagFilter(null);
+                  setFolderSel({ kind: 'all' });
+                }}
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
+        {shown.map((p) => (
           <article key={p.id} className="project-card">
             <button className="project-thumb" onClick={() => open(p.id)} aria-label={`Open ${p.name}`}>
               {p.thumb ? (
@@ -178,8 +411,37 @@ export function Home({ open }: { open: (id: string) => void }) {
                 {new Date(p.updated).toLocaleString()} · {p.artboards} artboard{p.artboards === 1 ? '' : 's'}
                 {p.owner && p.owner.username !== me && ` · ${p.owner.name ?? p.owner.username}`}
               </div>
+              <div className="card-tags">
+                {(p.tags ?? []).map((t) => (
+                  <span key={t} className="tag-chip static">
+                    <button className="tag-label" onClick={() => setTagFilter(t)} title={`Show only projects tagged "${t}"`}>
+                      {t}
+                    </button>
+                    <button
+                      className="tag-x"
+                      disabled={busy}
+                      title={`Remove the tag "${t}" from this project`}
+                      aria-label={`Remove tag ${t}`}
+                      onClick={() => saveMeta(p.id, { tags: (p.tags ?? []).filter((x) => x !== t) })}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                <TagAdder disabled={busy} onAdd={(t) => addTag(p, t)} suggestions={tagCounts.map(([t]) => t).filter((t) => !(p.tags ?? []).includes(t))} />
+              </div>
             </div>
             <div className="project-actions">
+              <select className="folder-pick" value={p.folder ?? ''} disabled={busy} title="Move this project to a folder" aria-label="Folder" onChange={(e) => moveTo(p, e.target.value)}>
+                <option value="">No folder</option>
+                {folders.names.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+                <option value={NEW_FOLDER}>New folder…</option>
+              </select>
+              <span className="spacer" />
               <button
                 className="icon-btn"
                 title="Duplicate"
@@ -221,6 +483,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           </article>
         ))}
       </main>
+      </div>
     </div>
   );
 }

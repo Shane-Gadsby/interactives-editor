@@ -46,6 +46,7 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | `GET /api/session` | who the session is, and whether they're a power user |
 | `GET /api/projects` | your projects. `?all=1` returns everyone's, and is honoured only for admins and power users |
 | `GET/PUT/DELETE /api/projects/:id` | load / save (`{project, rev}`, a stale `rev` gets a 409) / delete with assets |
+| `PATCH /api/projects/:id/meta` | `{tags?, folder?}`: the projects page's tags (up to 20, 40 characters each) and one-level folder. Stored on the mongo document beside `name`, not in the project JSON, and no rev bump |
 | `POST /api/projects/:id/duplicate` | copy a project and its assets under `{newId}` |
 | `GET /api/projects/:id/assets` | asset list |
 | `PUT/GET/DELETE /api/projects/:id/assets/:assetId` | raw asset bytes |

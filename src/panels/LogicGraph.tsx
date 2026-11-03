@@ -8,6 +8,7 @@ import {
   type Connection,
   type Edge,
   type EdgeChange,
+  type FinalConnectionState,
   type Node,
   type NodeChange,
   type NodeProps,
@@ -39,6 +40,7 @@ import { assetKind } from '../lib/assets';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { usePrefs } from '../lib/prefs';
+import { compatibleKinds, newNodePort, type DragDirection } from '../lib/graph';
 
 type IxNodeData = { logic: LogicNode; summary: string };
 
@@ -175,16 +177,42 @@ export function LogicGraph() {
     });
   };
 
-  const add = (kind: string, at?: { x: number; y: number }, from?: { id: string; port: string }) => {
+  const add = (kind: string, at?: { x: number; y: number }, from?: { id: string; port: string }, back?: { id: string; port: string }) => {
     const pos = at ?? rf.current?.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight - 160 }) ?? { x: 40, y: 40 };
     const id = uid('lg');
+    // The node and its connection go in one update, so a single undo removes both
     updateLogic((a) => {
       a.logic.nodes.push({ id, kind, x: Math.round(pos.x), y: Math.round(pos.y), params: defaultParams(kind) });
       if (from && CATALOG_BY_KIND[kind]?.hasInput) a.logic.edges.push({ id: uid('e'), from: from.id, fromPort: from.port, to: id, toPort: 'in' });
+      // Dragged backwards from an input: the new node feeds the original one
+      if (back) a.logic.edges.push({ id: uid('e'), from: id, fromPort: back.port, to: back.id, toPort: 'in' });
     });
     store().set({ logicSelection: id });
     setSelEdges([]);
     return id;
+  };
+
+  /** A connection dragged from a port and let go on empty space: offer the nodes that could go there. */
+  const onConnectEnd = (event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+    if (state.isValid || state.toHandle || !state.fromHandle || !state.fromNode) return;
+    const pt = 'changedTouches' in event ? event.changedTouches[0] : event;
+    if (!pt) return;
+    const at = rf.current?.screenToFlowPosition({ x: pt.clientX, y: pt.clientY });
+    const origin = state.fromNode.id;
+    const direction: DragDirection = state.fromHandle.type === 'source' ? 'from-output' : 'from-input';
+    const port = state.fromHandle.id ?? (direction === 'from-output' ? 'out' : 'in');
+    const kinds = new Set(compatibleKinds(direction));
+    const items = paletteItems(
+      (kind) => {
+        const mine = newNodePort(kind, direction);
+        if (!mine) return;
+        if (direction === 'from-output') add(kind, at, { id: origin, port });
+        else add(kind, at, undefined, { id: origin, port: mine });
+      },
+      (k) => kinds.has(k),
+    );
+    if (!items.length) return;
+    setMenu({ x: pt.clientX, y: pt.clientY, items: [{ heading: 'Add and connect' }, ...items] });
   };
 
   const removeNodes = (ids: string[]) =>
@@ -354,6 +382,7 @@ export function LogicGraph() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onConnectEnd={onConnectEnd}
           onInit={(inst) => (rf.current = inst)}
           onPaneClick={() => {
             store().set({ logicSelection: null });
@@ -376,7 +405,7 @@ export function LogicGraph() {
         {!ab.logic.nodes.length && (
           <div className="logic-empty">
             <p>
-              Add an <b>event</b> (e.g. On pointer), then connect it to <b>actions</b>. Drag from a node's right edge to the next node. Right-click for a menu of nodes.
+              Add an <b>event</b> (e.g. On pointer), then connect it to <b>actions</b>. Drag from a node's right edge to the next node. Right-click for a menu of nodes, or drag a connection into empty space to add and connect one.
             </p>
           </div>
         )}

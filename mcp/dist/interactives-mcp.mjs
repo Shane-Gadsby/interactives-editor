@@ -709,8 +709,8 @@ const TOPICS = [
     id: "projects",
     title: "Projects page",
     group: "Getting started",
-    summary: "Create, open, duplicate, import and delete projects.",
-    keywords: "home new import duplicate delete package ixp god mode power user",
+    summary: "Create, open, duplicate, import and delete projects, and organise them with folders and tags.",
+    keywords: "home new import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter",
     body: `The projects page lists the projects you own, newest first.
 
 - **New project** makes an empty project with one artboard.
@@ -718,9 +718,27 @@ const TOPICS = [
 - Each card can be opened, **duplicated**, **downloaded** as a package or **deleted**. Deleting can't be undone, so download a package first if you might want it back.
 - Use the **Help** link at the top for these pages, or press <kbd>F1</kbd> anywhere.
 
+## Folders
+
+Folders keep a long list tidy. A project is in one folder at most, and folders are one level deep.
+
+- The list on the left shows **All projects**, **No folder** and each folder with its project count. Click one to show only those projects.
+- Use the folder menu at the bottom of a card to **move the project to a folder**. Choose **New folder...** to start a new one; a folder exists as long as at least one project is in it.
+- With a folder selected, the pencil **renames** it and the bin **deletes** it. Deleting a folder never deletes projects: they just go back to *No folder*.
+
+## Tags
+
+Tags are short free-text labels, up to 20 per project and 40 characters each.
+
+- Click **+ tag** on a card, type a tag and press <kbd>Enter</kbd>. Tags you've used before are suggested. Click the **x** on a tag to remove it.
+- The tag row at the top lists every tag in use. Click one to show only projects with that tag, and click it again to clear it.
+- The **search** box matches project names and tags. **Sort** orders the cards by last updated or by name (the choice is remembered in this browser).
+
+Folders and tags belong to the project record on the server, not to the project file, so they don't appear in exports, package files or the revision history.
+
 ## Who sees what
 
-You see only your own projects. Staff with power-user access can toggle the power-user view (the suite's shared shortcut) to see and open every project; the server checks that access again.`
+You see only your own projects. Staff with power-user access can toggle the power-user view (the suite's shared shortcut) to see and open every project; the server checks that access again. In that view you can also file and tag other people's projects.`
   },
   {
     id: "interface",
@@ -746,7 +764,7 @@ All artboards side by side. See [Moving around the canvas](canvas). Right-click 
 Settings for the selection. With nothing selected it shows the artboard and the project settings. Section titles with a **?** link to the page in these docs.
 
 ## Bottom panel
-**Timeline**, **Interactions**, **Scripts**, **Variables** and **Data**. Click a tab to open it, click it again to close it, and drag the top edge to resize.
+**Timeline**, **Interactions**, **Scripts**, **Variables**, **Data** and **Usage**. Click a tab to open it, click it again to close it, and drag the top edge to resize.
 
 ## Preview
 **Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on. **Restart** starts again. The **Debug** panel (on by default) shows:
@@ -1149,7 +1167,7 @@ Examples: a dial that turns with a variable, a character whose eyes follow the p
 - **Actions** (blue) do something and continue: play a timeline, set a variable, set or animate a property, show or hide, go to another artboard, open a URL, play a sound, run a script, send a message, wait.
 - **Logic** (purple) chooses where to go: *If*, *Switch*, *Once*, *Sequence*.
 
-Drag from an output port to the next node's input to connect them. Actions that take time (**Control timeline**, **Animate property**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away. Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Every node is listed in [Interaction node reference](interaction-nodes).
+Drag from an output port to the next node's input to connect them. Actions that take time (**Control timeline**, **Animate property**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away. Let go on empty space instead and a menu offers only the nodes that fit (actions and logic when you drag from an output, anything with an output when you drag backwards from an input); the one you pick is added where you let go and connected for you. Press <kbd>Escape</kbd> or click away to cancel. Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Every node is listed in [Interaction node reference](interaction-nodes).
 
 ## What's in scope
 Expression fields can use every variable and data source by name, \`event\` (details of what fired: \`event.key\`, \`event.x\`, \`event.index\` for a repeated copy, \`event.payload\` for a message) and \`Math\`.
@@ -1283,6 +1301,38 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 
 ## The sandbox
 New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`
+  },
+  {
+    id: "usage",
+    title: "Usage: what uses what",
+    group: "Design",
+    summary: "Find where an asset, variable, artboard, script, timeline or data source is used, and clear out what is not.",
+    keywords: "usage dependencies dependency graph unused references used by find remove cleanup orphan broken missing",
+    body: `The **Usage** tab (bottom panel) answers "what is this used by?" for the whole project, and shows what nothing uses.
+
+Pick a group along the top (**Artboards**, **Assets**, **Variables**, **Data**, **Scripts**, **Timelines**, **Layers**) and an item on the left. The right side lists everything that uses it. **Click an entry to jump there**: layers are selected on the canvas, artboards and timelines are opened, and interactions open the **Interactions** tab on that node. Scripts and data sources open their tab.
+
+A yellow **unused** flag marks items nothing refers to, and the number on each group is how many there are. Tick **Unused only** to list just those.
+
+## What counts as a use
+
+- **Assets**: image and video layers, image fills and strokes, cursor images, artboard backgrounds, fonts, data files and *Play sound* nodes.
+- **Artboards**: instances, *Go to artboard* nodes, and being the start artboard.
+- **Variables**: input fields bound to them, bindings, text and link templates (\`{score}\`), repeaters, joysticks, instance inputs, and interaction nodes that name them or use them in an expression.
+- **Data sources**: the same expressions, plus *Load data* and *On data loaded* nodes, and being a font or data file.
+- **Scripts**: *Run script* nodes, or having *Run on start* ticked.
+- **Timelines**: *Control timeline* and *On timeline end* nodes, joysticks, autoplay, and scripts that name them.
+- **Layers** tab: layers that a constraint, an interaction node or a timeline track points at.
+
+Uses found by reading script or *Run code* text are marked **?**. A name in code can match something that is not really a use, so check before deleting something that is used only by a **?**.
+
+## Removing unused assets
+
+**Remove unused assets** deletes every asset flagged unused, after a confirmation that lists them. It only ever touches assets, and the project text is searched for the asset's id before it is called unused. The removal can be undone with <kbd>Ctrl</kbd>+<kbd>Z</kbd>, but the uploaded file itself is deleted from the server, so you would need to upload it again.
+
+## Broken references
+
+The **Broken** group lists references that point at something that has been deleted, such as a button that targets a layer that no longer exists. Click one to go to the thing holding the reference and fix it.`
   },
   // ---------------------------------------------------------------- data
   {

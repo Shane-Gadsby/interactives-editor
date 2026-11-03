@@ -19,7 +19,15 @@ export interface ProjectMeta {
   preview?: { width: number; height: number; background: string } | null;
   /** Time of the latest thumbnail (api/projects/<id>/thumbnail?v=<thumb>), if there is one. */
   thumb?: number | null;
+  /** Free-text tags, kept on the server beside the project (not inside the project JSON). */
+  tags?: string[];
+  /** One-level folder name, or null for "No folder". */
+  folder?: string | null;
 }
+
+/** Limits the server enforces on tags and folder names. */
+export const META_MAX_TAGS = 20;
+export const META_MAX_LABEL = 40;
 
 export interface SessionInfo {
   user: { username: string | null; userID: string | number | null; name: string | null } | null;
@@ -77,6 +85,10 @@ export function session(): Promise<SessionInfo> {
 export async function listProjects(all = false): Promise<ProjectMeta[]> {
   return call<ProjectMeta[]>(`projects${all ? '?all=1' : ''}`);
 }
+
+/** Change a project's tags and/or folder (organising metadata only; does not touch the document or its rev). */
+export const setProjectMeta = (id: string, patch: { tags?: string[]; folder?: string | null }) =>
+  call<ProjectMeta>(`projects/${encodeURIComponent(id)}/meta`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
 
 export async function loadProjectRecord(id: string): Promise<Project | null> {
   try {

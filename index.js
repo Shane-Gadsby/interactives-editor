@@ -60,6 +60,8 @@ let port = Number(process.env.PORT) || 3048,
 	},
 
 	maxAsset = 60 * 1024 * 1024,
+	maxTags = 20,
+	maxLabel = 40,
 
 	analyticsDB,
 	db,
@@ -206,8 +208,24 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 		updated: doc.updated,
 		rev: doc.rev,
 		owner: doc.owner || null,
-		thumb: doc.thumb || null
+		thumb: doc.thumb || null,
+
+		//Organising metadata, top level on the document (not in meta, every save rewrites that)
+		tags: Array.isArray(doc.tags) ? doc.tags : [],
+		folder: typeof doc.folder === 'string' && doc.folder ? doc.folder : null
 	}),
+
+	//Tags and folder come straight from the browser, so trim them, drop control chars and cap the lot.
+	//Returns null for anything that isn't the right shape
+	cleanLabel = (value, max) => {
+		if (typeof value !== 'string') {
+			return null
+		}
+
+		let label = value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim()
+
+		return label && label.length <= max ? label : null
+	},
 
 	//Every id is checked by validID before it gets near here, so these can't climb out of storageDir
 	projectDir = (projectID) => path.join(storageDir, projectID),
@@ -364,6 +382,69 @@ router.put('/api/projects/:id', express.json({limit: '25mb'}), async (req, res) 
 	res.json({ok: true, rev: next})
 })
 
+//Tags and folder for the projects page. Only touches those two fields, no rev bump and no revision, so it can't
+//collide with an editor save. Either field can be left out to keep it as it is
+router.patch('/api/projects/:id/meta', express.json({limit: '16kb'}), async (req, res) => {
+	let id = req.params.id,
+		body = req.body || {}
+
+	if (!validID(id)) {
+		return res.status(400).json({error: 'Bad project id'})
+	}
+
+	let set = {}
+
+	if ('tags' in body) {
+		if (!Array.isArray(body.tags) || body.tags.length > maxTags) {
+			return res.status(400).json({error: `Tags must be a list of up to ${maxTags}`})
+		}
+
+		let tags = []
+
+		for (let raw of body.tags) {
+			let tag = cleanLabel(raw, maxLabel)
+
+			if (!tag) {
+				return res.status(400).json({error: `Each tag must be 1 to ${maxLabel} characters`})
+			}
+
+			//Case-insensitive duplicates collapse into the first spelling
+			if (!tags.some((t) => t.toLowerCase() === tag.toLowerCase())) {
+				tags.push(tag)
+			}
+		}
+
+		set.tags = tags
+	}
+
+	if ('folder' in body) {
+		let folder = body.folder === null || body.folder === '' ? null : cleanLabel(body.folder, maxLabel)
+
+		if (body.folder !== null && body.folder !== '' && !folder) {
+			return res.status(400).json({error: `A folder name must be 1 to ${maxLabel} characters`})
+		}
+
+		set.folder = folder
+	}
+
+	if (!Object.keys(set).length) {
+		return res.status(400).json({error: 'Nothing to change'})
+	}
+
+	let existing = await projects.findOne({_id: id}, {projection: {doc: 0}})
+
+	if (!existing) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	if (!mayChange(req, res, existing)) {
+		return
+	}
+
+	await projects.updateOne({_id: id}, {$set: set})
+	res.json(metaOf({...existing, ...set}))
+})
+
 router.delete('/api/projects/:id', async (req, res) => {
 	let id = req.params.id
 
@@ -428,7 +509,7 @@ router.post('/api/projects/:id/duplicate', express.json(), async (req, res) => {
 		await fs.promises.cp(projectDir(id), projectDir(newID), {recursive: true})
 	}
 
-	await projects.insertOne({_id: newID, name: project.name, created: now, updated: now, doc: JSON.stringify(project), rev: 1, meta: doc.meta, owner: whoIs(req)})
+	await projects.insertOne({_id: newID, name: project.name, created: now, updated: now, doc: JSON.stringify(project), rev: 1, meta: doc.meta, tags: doc.tags || [], folder: doc.folder || null, owner: whoIs(req)})
 	res.json({ok: true, id: newID})
 })
 

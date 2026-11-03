@@ -75,6 +75,9 @@ export const Icons = {
   intersect: P('M4 4h10v10H4zM10 10h10v10H10zM10 10h4v4h-4z'),
   exclude: P('M4 4h10v6h-4v4H4zM20 20H10v-6h4v-4h6z'),
   table: P('M4 5h16v14H4zM4 10h16M4 15h16M10 5v14'),
+  folder: P('M3 6a1 1 0 011-1h5l2 2h9a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1z'),
+  tag: P('M3 12V4h8l10 10-8 8zM8 8h.01'),
+  usage: P('M6 6a2 2 0 100-4 2 2 0 000 4zM18 14a2 2 0 100-4 2 2 0 000 4zM6 22a2 2 0 100-4 2 2 0 000 4zM6 6v12M6 12h8a4 4 0 004-4'),
 };
 
 export type IconName = keyof typeof Icons;

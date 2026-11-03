@@ -42,7 +42,7 @@ export type Tool =
   | 'embed'
   | 'video';
 
-export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data';
+export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage';
 
 export interface EditorState {
   project: Project;
