@@ -1167,6 +1167,96 @@ Everyone should be able to finish the activity, so every drag has two ways that 
     },
   },
   {
+    id: 'question-kit',
+    title: 'Questions and quizzes',
+    group: 'Interactivity',
+    summary: 'Add multiple choice, true/false, fill in the blank and ordering questions that check themselves, with hints, tries, score, shuffle and question banks.',
+    keywords: 'question quiz test assessment multiple choice true false fill blank ordering sequence answer correct feedback hint attempts score shuffle bank random self check learning',
+    body: `Quizzes without wiring every button by hand. **Add question** (the speech bubble in the toolbar) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
+
+## Add one
+
+Click **Add question**, pick a type, and a card appears with a prompt, the answers, a Check answer button, a Hint button, feedback text, a score and a Try again button. Edit the prompt and answers in the **Question** section, then press **Preview**.
+
+| Type | The learner | Right when |
+|---|---|---|
+| Multiple choice (one answer) | picks one option | the picked option is marked right |
+| Multiple response | ticks any number | exactly the right ones are ticked |
+| True or false | picks True or False | it matches the statement |
+| Fill in the blank | types into one or more inputs | each blank matches an accepted answer |
+| Put in order | moves items up and down | every item is in its place |
+
+## What gets built
+
+Nothing is hidden. The question is a **frame** (named Question 1, Question 2, ...) holding:
+
+- a **Prompt** text, \`{q1_prompt}\`;
+- an **answer area**: for choices, one **Option** layer repeated once per option (a [repeater](repeaters) over \`q1_items\`, so you restyle the one template and every option follows); for blanks, a label and an input per blank; for ordering, an **Item** layer with Move up and Move down buttons;
+- **Hint text**, **Feedback**, and a row of **Check answer**, **Hint**, **Try again** and **Score**.
+
+Every layer is yours: recolour it, change the font, move things around, swap a rectangle for an image, add animation. The layers are bound to the question's variables (for example the option fill follows \`item.selected\` and \`item.state\`), so they keep working. The **Restyle a part** buttons at the bottom of the Question section select a part for you; selecting any part shows a note saying it belongs to the question.
+
+The behaviour is a handful of nodes in the **Interactions** tab, in rows of an event and what it runs: *On start* then **Reset question**; a click on the option then **Choose option**; a click on Check answer then **Check answer**; and so on. Add your own nodes after them. **Check answer** has three outputs: *right*, *wrong*, and *finished* (once the question is locked, because it is right or out of tries), so "when it is right, play the confetti timeline" is one wire.
+
+## Variables
+
+Each question keeps its state in variables named from its **Name prefix** (\`q1\` by default): \`q1_answered\`, \`q1_correct\`, \`q1_attempts\`, \`q1_triesLeft\`, \`q1_score\`, \`q1_locked\`, \`q1_feedback\`, \`q1_hint\`, \`q1_hintsUsed\`, \`q1_hintsLeft\`, \`q1_prompt\` and \`q1_items\` (what is shown, with \`selected\` and \`state\` per row). Use them anywhere: \`q1_score + q2_score\`, a progress bar bound to \`q1_attempts\`, a Next button shown when \`q1_correct\`. Renaming the prefix renames the variables and everything that reads them.
+
+**Score** is the question's points times the share that is right, less **Retry −%** for each check after the first and **Hint −%** for each hint taken. With **Part marks** on, a multiple response, ordering or fill in the blank question is worth the share it got right.
+
+## Worked examples
+
+**Multiple choice.** Add question, *Multiple choice*. Type the prompt, type each option, and tick the right one. Set **Tries** to 2 and write a hint. In Preview pick a wrong option and press **Check answer**: the feedback says *Not quite*, and with a try left you can pick again. The second miss locks the question and (if **Show the right answer** is on) marks the right option.
+
+**Multiple response.** Tick every right option. Turn **Part marks** on to give a share of the points for a half-right answer, and write **Partly right** feedback.
+
+**True or false.** Write the statement as the prompt and set **Statement is** to True or False. Edit the two labels for other wording ("Agree" and "Disagree").
+
+**Fill in the blank.** The accepted answers go one per line: \`Paris\`, \`city of light\`. Case and extra spaces are ignored unless you tick **Match case**. A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses. A line written \`/colou?r/i\` is a pattern. **Add blank** adds another input in the look of the last one.
+
+**Put in order.** List the items in the **right** order; the learner sees them shuffled (the first deal is never already right). Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
+
+## Shuffle
+
+**Shuffle** deals the options (or ordering items) in a new order every time the question starts or resets. In a multiple choice, tick **Stays in place when shuffled** on an option such as "None of these". Feedback and marking follow the option, not its place.
+
+## Question banks from data
+
+Tick **Take the question from data** and give the name of a [data source](data-sources) (or part of one, like \`quiz.questions\`). Each row is a question; what a row leaves out stays as set in the Question section (except hints, which come only from the row). With a bank the card's Try again button becomes **Next question**, which draws the next row (**Random** shows every row once before any repeats; **In order** goes round).
+
+Columns a row can have:
+
+| Column | For |
+|---|---|
+| \`prompt\` | the question text |
+| \`options\` | choices, as a list or text separated by \`\\|\` (also the items to order, right order first) |
+| \`correct\` | the right choice(s) as text or position counting from 1 (\`B\` or \`2\`, several as \`A\\|C\`); true/false takes \`true\` or \`false\` |
+| \`answer\`, \`answer2\` | accepted answers for each blank, several separated by \`\\|\` |
+| \`items\` | ordering items, right order first |
+| \`hint\`, \`hint2\`, \`feedback\`, \`feedbackCorrect\`, \`feedbackIncorrect\`, \`points\` | as the names say |
+
+A CSV works the same way: the header names are the columns, in any case. The question reloads when its data source finishes loading.
+
+## Results
+
+**Report result** in the Question section adds a *Report result* node after **Check answer**'s *finished* output, sending the question's score (`q1_score`) to the project's Results (see the Results settings for the top score, pass mark and completion). With several questions, leave it off and report once yourself, for example a *Report result* node with the score `q1_score + q2_score` after the last one.
+
+## Accessible by default
+
+The prompt is a heading, the options are a radio group (or checkboxes) with their text as the name and *Right* / *Wrong* / *This was the right answer* as the description once they are marked, every part is reachable with Tab and operated with Enter and Space, and **Check answer**, **Hint** and the ordering moves announce through the live region (see [Accessibility](accessibility)): the feedback, the hint, "Evaporation, position 2 of 4". Right and wrong are shown with words (✓ Right, ✗ Wrong) as well as colour. These need the Accessibility preference on, which is the default.
+
+## Copies, deleting and changing type
+
+- **Duplicate** a question and the copy shares the original's variables, so the Question section warns and offers **Make this one independent**, which gives the copy its own variables and nodes.
+- Changing **Type** rebuilds the answer area (a different set of layers) and keeps the prompt, buttons and feedback as you styled them. Settings that make no sense for the new type are left alone.
+- Delete a button you don't want (say Hint): its wiring goes the next time settings change, and nothing else is affected. The Hint button hides itself when the question has no hints.
+
+## Reference
+
+The question frame holds its settings in \`question\`, and each part layer carries a \`questionPart\` marker so the settings can find it again after it is renamed or moved. Both are in the exported file; the player uses the settings and ignores the markers. The nodes are **Check answer**, **Reset question**, **Show hint**, **Choose option** and **Move item** in the [node reference](interaction-nodes). Not yet in the kit: matching (which would use [Drag and drop](drag-and-drop)) and hotspots.
+`,
+  },
+  {
     id: 'variables',
     title: 'Variables',
     group: 'Interactivity',

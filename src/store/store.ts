@@ -36,6 +36,7 @@ import { apply as applyOps, type Op, type PathStep } from '../../shared/ops.mjs'
 import type { Peer } from '../lib/live';
 import { getArtboard, locate, parentToArtboard, selectionBounds, topmost, uniqueName, nodeNames } from './doc';
 import { dropRefsToRemoved, retargetChildRefs } from './refs';
+import { adoptQuestions, dropOrphanKitNodes } from '../lib/question-kit';
 
 /** Whether any frame in a tree has auto layout. */
 function hasAutoLayout(list: SceneNode[]): boolean {
@@ -544,6 +545,7 @@ export class EditorStore {
       const parent = opts.parentId ? locate(ab, opts.parentId)?.node : null;
       if (parent && isContainer(parent)) parent.children.push(...nodes);
       else ab.children.push(...nodes);
+      adoptQuestions(d as Project, abId, nodes.map((n) => n.id));
     });
     if (opts.select !== false) this.select(nodes.map((n) => n.id), { artboardId: abId });
   }
@@ -574,6 +576,7 @@ export class EditorStore {
         list.filter((n) => !ids.has(n.id)).map((n) => (isContainer(n) ? { ...n, children: rec(n.children) } : n)) as SceneNode[];
       dab.children = rec(dab.children as SceneNode[]);
       for (const tl of dab.timelines) tl.tracks = tl.tracks.filter((t) => !gone.has(t.nodeId));
+      dropOrphanKitNodes(dab);
     });
     this.set({ selection: [] });
   }
@@ -598,6 +601,7 @@ export class EditorStore {
         loc.siblings.splice(loc.index + 1, 0, copy);
         newIds.push(copy.id);
       }
+      adoptQuestions(d as Project, ab.id, newIds);
     });
     this.select(newIds);
   }

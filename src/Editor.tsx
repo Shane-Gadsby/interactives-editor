@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { PACKAGE_EXTENSION, walk, type Project } from 'interactives-player';
+import { PACKAGE_EXTENSION, QUESTION_KINDS, walk, type Project, type QuestionKind } from 'interactives-player';
 import { EditorStore, setCurrentStore, store, useEditor, type BottomTab, type Tool } from './store/store';
 import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
@@ -7,6 +7,7 @@ import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
 import { downloadJson, downloadPackage, downloadStandalone, standaloneHtml } from './lib/export';
 import { insertFiles, pickFiles } from './lib/insert';
+import { addQuestion } from './lib/question-kit';
 import { copySelection, pasteNodes } from './lib/clipboard';
 import { Canvas } from './canvas/Canvas';
 import { LeftPanel } from './panels/LeftPanel';
@@ -646,6 +647,49 @@ const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] =
   { tool: 'video', icon: 'video', label: 'Video' },
 ];
 
+/** The Add question button: a menu of question types; picking one builds the question on the open artboard and selects it. */
+function AddQuestion() {
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  const add = (kind: QuestionKind) => {
+    const s = store();
+    const ab = s.artboard();
+    setAt(null);
+    if (!ab) return;
+    let id: string | null = null;
+    s.update((d) => void (id = addQuestion(d as Project, ab.id, kind)));
+    if (id) s.select([id], { artboardId: ab.id });
+  };
+  return (
+    <>
+      <IconButton
+        icon={<Icons.question />}
+        title="Add question: multiple choice, true/false, fill in the blank, ordering"
+        active={!!at}
+        onClick={(e) => {
+          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          setAt(at ? null : { left: r.right + 6, top: Math.max(8, Math.min(r.top, window.innerHeight - 330)) });
+        }}
+      />
+      {at && (
+        <>
+          <div className="q-menu-scrim" onClick={() => setAt(null)} />
+          <div className="q-menu" style={{ left: at.left, top: at.top }} role="menu" aria-label="Add question" onKeyDown={(e) => e.key === 'Escape' && setAt(null)}>
+            <div className="q-menu-title">
+              Add question <HelpLink topic="question-kit" />
+            </div>
+            {QUESTION_KINDS.map((k) => (
+              <button key={k.value} role="menuitem" onClick={() => add(k.value)}>
+                {k.label}
+                <span className="muted small">{k.hint}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 function Toolbar() {
   const tool = useEditor((st) => st.tool);
   const showBones = useEditor((st) => st.showBones);
@@ -668,6 +712,8 @@ function Toolbar() {
       />
       <div className="toolbar-sep" />
       {WEB_TOOLS.map(btn)}
+      <div className="toolbar-sep" />
+      <AddQuestion />
       <div className="toolbar-fill" />
       <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
     </nav>

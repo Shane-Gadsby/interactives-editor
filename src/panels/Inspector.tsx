@@ -59,6 +59,7 @@ import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-ad
 import { CodeEditor } from '../components/CodeEditor';
 import { AccessibilitySection, TabOrderSection } from './AccessibilitySections';
 import { DragDropSections } from './DragDropSections';
+import { QuestionPartNote, QuestionSection } from './QuestionSection';
 import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
 import { ChildOrder } from '../components/ChildOrder';
 import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
@@ -518,6 +519,8 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={LAYER_BLEND_OPTIONS} onChange={(v) => set({ blendMode: v })} />
       </Section>
+      {single && n.type === 'frame' && n.question && <QuestionSection frame={n} ab={ab} project={project} />}
+      {single && n.questionPart && <QuestionPartNote node={n} ab={ab} />}
       <LayoutItemSection nodes={nodes} ab={ab} />
       {sameType && <TypeSection nodes={nodes} project={project} />}
       {!single && <BindSelectionSection nodes={nodes} abId={ab.id} />}
