@@ -16,8 +16,13 @@
  *   - Solo -> a group with native solo (animated through `solo.active`)
  *   - ClippingShape -> the clipped layer wrapped in a group with a masking copy of the clip shape in front of it
  *   - DrawRules/DrawTarget -> `drawOrder` on the parent, when the clipped node and its target are siblings
- * Bones/meshes, constraints, data binding, events, audio, scripted
- * and layout-computed geometry are reported in `warnings`.
+ *   - Events: an Event becomes a message (Send message, custom properties as
+ *     the payload); an AudioEvent also plays its embedded sound and an
+ *     OpenUrlEvent opens its link. They fire from keyframes (timeline markers
+ *     + On timeline marker), listeners and state/transition "fire event"
+ *     actions; event listeners become On message.
+ * Bones/meshes, constraints, data binding, scripted and
+ * layout-computed geometry are reported in `warnings`.
  */
 import {
   createArtboard,
@@ -41,6 +46,7 @@ import {
   type TextRun,
   type SubPath,
   type Timeline,
+  type TimelineMarker,
   type Track,
   type Variable,
   invert,
@@ -241,10 +247,13 @@ function readObjects(bytes: Uint8Array): { objects: RObj[]; version: string } {
 interface RTransition {
   obj: RObj;
   conditions: RObj[];
+  /** StateMachineFireEvent / FireTrigger actions (occurs at start or end of the transition). */
+  fires: RObj[];
 }
 interface RState {
   obj: RObj;
   transitions: RTransition[];
+  fires: RObj[];
 }
 interface RLayer {
   obj: RObj;
@@ -253,6 +262,8 @@ interface RLayer {
 interface RListener {
   obj: RObj;
   actions: RObj[];
+  /** ListenerInputTypeEvent objects: the events an event listener reacts to. */
+  inputTypes: RObj[];
 }
 interface RMachine {
   obj: RObj;
@@ -378,19 +389,21 @@ function structure(objects: RObj[]): { artboards: RArtboard[]; assets: RAsset[];
       layer = { obj: o, states: [] };
       sm.layers.push(layer);
     } else if (isA(t, 'LayerState') && layer) {
-      state = { obj: o, transitions: [] };
+      state = { obj: o, transitions: [], fires: [] };
+      transition = null;
       layer.states.push(state);
     } else if (isA(t, 'StateTransition') && state) {
-      transition = { obj: o, conditions: [] };
+      transition = { obj: o, conditions: [], fires: [] };
       state.transitions.push(transition);
     } else if (isA(t, 'TransitionCondition') && transition) {
       transition.conditions.push(o);
       condition = o;
-    }
+    } else if (isA(t, 'StateMachineFireAction') && (transition || state)) (transition ?? state)!.fires.push(o);
     else if (isA(t, 'StateMachineListener') && sm) {
-      listener = { obj: o, actions: [] };
+      listener = { obj: o, actions: [], inputTypes: [] };
       sm.listeners.push(listener);
-    } else if (isA(t, 'ListenerAction') && listener) {
+    } else if (isA(t, 'ListenerInputType') && listener) listener.inputTypes.push(o);
+    else if (isA(t, 'ListenerAction') && listener) {
       listener.actions.push(t === 'ListenerViewModelChange' ? { ...o, parts: pending } : o);
       pending = [];
     }
@@ -524,6 +537,10 @@ function mimeOf(b: Uint8Array): string {
   if (b[0] === 0x47 && b[1] === 0x49) return 'image/gif';
   if (String.fromCharCode(...b.subarray(8, 12)) === 'WEBP') return 'image/webp';
   if ((b[0] === 0x00 && b[1] === 0x01) || String.fromCharCode(...b.subarray(0, 4)) === 'OTTO' || String.fromCharCode(...b.subarray(0, 4)) === 'true') return 'font/ttf';
+  if (String.fromCharCode(...b.subarray(0, 4)) === 'RIFF' && String.fromCharCode(...b.subarray(8, 12)) === 'WAVE') return 'audio/wav';
+  if (String.fromCharCode(...b.subarray(0, 4)) === 'OggS') return 'audio/ogg';
+  if (String.fromCharCode(...b.subarray(0, 4)) === 'fLaC') return 'audio/flac';
+  if (String.fromCharCode(...b.subarray(0, 3)) === 'ID3' || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0)) return 'audio/mpeg';
   if (String.fromCharCode(...b.subarray(0, 4)) === 'wOF2') return 'font/woff2';
   if (String.fromCharCode(...b.subarray(0, 4)) === 'wOFF') return 'font/woff';
   return 'application/octet-stream';
@@ -568,6 +585,8 @@ interface FileCtx {
   viewModels: RViewModel[];
   /** One shared variable per view model property used (key: "vm/prop"). Triggers become counters. */
   vmVars: Map<string, { id: string; name: string; kind: 'number' | 'boolean' | 'string' | 'color' | 'trigger' }>;
+  /** Events keyed on a timeline: marker name -> the Rive event's slot. Filled by buildTimeline, turned into flows by buildMachines. */
+  timelineEvents: Map<Timeline, Map<string, number>>;
 }
 
 /** sourcePathIds: varuints, the view model index then property indexes (through nested view model properties). */
@@ -931,6 +950,29 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
   return node;
 }
 
+/** An audio asset the file embeds, as a project asset (once). */
+function audioAsset(fc: FileCtx, index: number): { id: string; volume: number } | null {
+  const asset = fc.file.assets[index];
+  if (!asset || !isA(asset.obj.type, 'ExportAudio')) {
+    fc.warnings.add('Sound events pointing at a missing audio asset play no sound');
+    return null;
+  }
+  if (!asset.bytes) {
+    fc.warnings.add('Audio not embedded in the .riv (referenced or hosted on the CDN) was skipped');
+    return null;
+  }
+  let id = fc.assetIdByIndex.get(index);
+  if (!id) {
+    id = uid('as');
+    fc.assetIdByIndex.set(index, id);
+    const mime = mimeOf(asset.bytes);
+    const ext = mime === 'audio/mpeg' ? 'mp3' : (mime.split('/')[1] ?? 'audio');
+    const base = String(get(asset.obj, 'name') || `sound-${index}`);
+    fc.assets.push({ id, name: /\.\w{2,4}$/.test(base) ? base : `${base}.${ext}`, mime, bytes: asset.bytes.slice() });
+  }
+  return { id, volume: r2(Number(get(asset.obj, 'volume') ?? 1)) };
+}
+
 function convertImage(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | null {
   const o = ac.rab.slots[slot];
   const index = Number(get(o, 'assetId'));
@@ -1108,7 +1150,6 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
   else if (t === 'ClippingShape' || t === 'DrawRules' || t === 'DrawTarget') {
     // Handled by the layer they belong to (clipWrap, drawRules)
   }
-  else if (isA(t, 'Event') || t === 'AudioEvent') fc.warnings.add('Rive events and audio events are not imported');
   if (!node) return null;
   ac.nodeBySlot.set(slot, node);
   if (node.type === 'group' || node.type === 'frame') {
@@ -1302,6 +1343,8 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
   const end = work && get(o, 'workEnd') > 0 ? get(o, 'workEnd') : get(o, 'duration');
   const ms = (frame: number) => Math.max(0, Math.round(((frame - start) / fps) * 1000));
   const tracks: Track[] = [];
+  const markers: TimelineMarker[] = [];
+  const events = new Map<string, number>();
   for (const ko of anim.keyed) {
     const slot = Number(ko.obj.props.objectId ?? 0);
     const targets = ac.targets.get(slot);
@@ -1311,6 +1354,24 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
       if (rprop === 'drawTargetId' && ac.drawRules.has(slot)) {
         const dr = ac.drawRules.get(slot)!;
         tracks.push({ id: uid('tr'), nodeId: dr.nodeId, prop: 'drawOrder', keys: kp.keys.map((k) => ({ id: uid('k'), t: ms(Number(k.props.frame ?? 0)), value: dr.orders.get(Number(k.props.value ?? 0)) ?? dr.base, ease: 'step' as Easing })) });
+        continue;
+      }
+      const slotType = ac.rab.slots[slot]?.type;
+      if (slotType && isA(slotType, 'Event')) {
+        // A callback keyframe fires the event: a timeline marker named after it (made unique if two events share a name)
+        let marker = eventName(ac.rab.slots[slot]);
+        const taken = events.get(marker);
+        if (taken !== undefined && taken !== slot) {
+          let n = 2;
+          while (events.has(`${marker} (${n})`)) n++;
+          marker = `${marker} (${n})`;
+        }
+        events.set(marker, slot);
+        for (const k of kp.keys) {
+          const frame = Number(k.props.frame ?? 0);
+          if (frame < start || frame > end) continue;
+          markers.push({ id: uid('mk'), time: Math.min(ms(frame), ms(end)), name: marker });
+        }
         continue;
       }
       if (!targets?.length) {
@@ -1366,7 +1427,7 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
     }
   }
   const loop = get(o, 'loopValue');
-  return {
+  const tl: Timeline = {
     id: uid('tl'),
     name: String(o.props.name ?? 'Animation'),
     duration: Math.max(1, ms(end)),
@@ -1375,6 +1436,16 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
     speed: r2(get(o, 'speed') || 1),
     tracks,
   };
+  if (markers.length) {
+    tl.markers = markers.sort((a, b) => a.time - b.time);
+    fc.timelineEvents.set(tl, events);
+  }
+  return tl;
+}
+
+/** An event's name (Rive events are found by name when the host listens for them). */
+function eventName(o: RObj | undefined): string {
+  return String(o?.props.name ?? '') || 'Event';
 }
 
 // ---------------------------------------------------------------- state machines
@@ -1437,6 +1508,60 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     const ctxs = (o?.parts ?? []).filter((x) => x.type === 'DataBindContext');
     return ctxs.find((x) => Number(x.props.flags ?? 0) & 1) ?? ctxs[0];
   };
+  // A Rive event as nodes: a message with the event's name (its custom properties as the payload), then, for audio and
+  // open-link events, the sound or the link
+  const eventChain = (slot: number, from: LogicNode, port: string, x: number) => {
+    const ev = ac.rab.slots[slot];
+    if (!ev || !isA(ev.type, 'Event')) {
+      fc.warnings.add('Some events fired by animations or state machines could not be found');
+      return { last: from, port, x };
+    }
+    const props: Record<string, unknown> = {};
+    for (const ci of ac.children.get(slot) ?? []) {
+      const c = ac.rab.slots[ci];
+      const key = String(c.props.name ?? '');
+      if (!key || !isA(c.type, 'CustomProperty')) continue;
+      const raw = get<unknown>(c, 'propertyValue');
+      props[key] = c.type === 'CustomPropertyBoolean' ? !!raw : c.type === 'CustomPropertyString' ? String(raw ?? '') : r2(Number(raw ?? 0));
+    }
+    let last = from;
+    let lastPort = port;
+    const push = (n: LogicNode) => {
+      link(last, n, lastPort);
+      last = n;
+      lastPort = 'out';
+      x += 240;
+    };
+    const emit = add('action.emit', { name: eventName(ev), payload: Object.keys(props).length ? JSON.stringify(props) : '' }, x);
+    emit.note = `Rive event: ${eventName(ev)}`;
+    push(emit);
+    if (ev.type === 'AudioEvent') {
+      const asset = audioAsset(fc, Number(get(ev, 'assetId')));
+      if (asset) push(add('action.sound', { asset: asset.id, volume: asset.volume, continue: 'start' }, x));
+    } else if (ev.type === 'OpenUrlEvent') {
+      const url = get<string>(ev, 'url');
+      if (url) push(add('action.url', { url: JSON.stringify(url), target: ['_blank', '_parent', '_self', '_top'][Number(get(ev, 'targetValue'))] ?? '_blank' }, x));
+    }
+    return { last, port: lastPort, x };
+  };
+  // StateMachineFireEvent actions of a state or transition that happen at the start (0) or end (1)
+  const fireNodes = (fires: RObj[], occurs: number, from: LogicNode, port: string, x: number) => {
+    let r = { last: from, port, x };
+    for (const f of fires) {
+      if (f.type === 'StateMachineFireTrigger') fc.warnings.add('Fire trigger actions on states and transitions are not imported');
+      if (f.type === 'StateMachineFireEvent' && Number(f.props.occursValue ?? 0) === occurs) r = eventChain(Number(f.props.eventId ?? 0), r.last, r.port, r.x);
+    }
+    return r;
+  };
+  // Events keyed on timelines: a marker plays them
+  for (const tl of timelines) {
+    for (const [marker, slot] of fc.timelineEvents.get(tl) ?? []) {
+      const src = add('event.timelineMarker', { timeline: tl.id, marker }, 40);
+      src.note = `${tl.name}: ${marker}`;
+      eventChain(slot, src, 'out', 280);
+      y += 120;
+    }
+  }
   const machines = ac.rab.machines;
   if (!machines.length) {
     // No state machine: play the first animation, as Rive does
@@ -1488,10 +1613,11 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         }
         const set = add('action.setVariable', { variable: stateVar.id, op: 'set', value: JSON.stringify(stateName(target)) }, x);
         link(last, set, lastPort);
+        const entered = fireNodes(target.fires, 0, set, 'out', x + 240);
         const tl = tlOf(target);
         if (tl) {
-          const play = add('action.timeline', { timeline: tl.id, op: 'restart' }, x + 240);
-          link(set, play);
+          const play = add('action.timeline', { timeline: tl.id, op: 'restart' }, entered.x);
+          link(entered.last, play, entered.port);
         }
         if (target.obj.type === 'BlendState1D' || target.obj.type === 'BlendStateDirect' || isA(target.obj.type, 'BlendState')) fc.warnings.add('Blend states are imported as plain states');
       };
@@ -1582,7 +1708,12 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           const iff = add('logic.if', { condition }, 280);
           iff.note = `${stateName(st)} → ${stateName(target)}`;
           for (const s of sources) link(s, iff);
-          goTo(iff, 'true', target, 520);
+          // Leaving a state, the transition and entering the next one: their fire event actions, in that order
+          let leave = { last: iff, port: 'true', x: 520 };
+          if (st.obj.type !== 'AnyState') leave = fireNodes(st.fires, 1, leave.last, leave.port, leave.x);
+          leave = fireNodes(tr.fires, 0, leave.last, leave.port, leave.x);
+          leave = fireNodes(tr.fires, 1, leave.last, leave.port, leave.x);
+          goTo(leave.last, leave.port, target, leave.x);
           if (get(tr.obj, 'duration')) fc.warnings.add('Transition blend durations are not imported (states switch instantly)');
           y += 120 + Math.max(0, sources.length - 1) * 100;
           void si;
@@ -1591,17 +1722,34 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     });
     // Listeners -> pointer events setting inputs
     for (const l of sm.listeners) {
-      const type = Number(l.obj.props.listenerTypeValue ?? 0);
       const pointer: Record<number, string> = { 0: 'pointerenter', 1: 'pointerleave', 2: 'pointerdown', 3: 'pointerup', 6: 'click' };
-      if (!(type in pointer)) {
-        fc.warnings.add(`Listener type ${type} (only enter/exit/down/up/click are imported)`);
-        continue;
+      // Older files keep one trigger on the listener; newer ones list ListenerInputType objects (events are type 5)
+      const triggers = l.inputTypes.length
+        ? l.inputTypes.map((it) => ({ type: it.type === 'ListenerInputTypeEvent' ? 5 : Number(it.props.listenerTypeValue ?? 0), eventId: it.props.eventId }))
+        : [{ type: Number(l.obj.props.listenerTypeValue ?? 0), eventId: l.obj.props.eventId }];
+      const sources: LogicNode[] = [];
+      for (const trig of triggers) {
+        if (trig.type === 5) {
+          // Event listeners react to Rive events, which are messages here
+          const ev = ac.rab.slots[Number(trig.eventId ?? -1)];
+          if (ev && isA(ev.type, 'Event')) sources.push(add('event.message', { name: eventName(ev) }, 40));
+          else fc.warnings.add('Event listeners whose events could not be found were skipped');
+        } else if (trig.type in pointer) {
+          const targetNode = ac.nodeBySlot.get(Number(l.obj.props.targetId ?? 0));
+          sources.push(add('event.pointer', { target: targetNode?.id ?? '', type: pointer[trig.type] }, 40));
+        } else fc.warnings.add(`Listener type ${trig.type} (only enter/exit/down/up/click and event listeners are imported)`);
       }
-      const targetNode = ac.nodeBySlot.get(Number(l.obj.props.targetId ?? 0));
-      const ev = add('event.pointer', { target: targetNode?.id ?? '', type: pointer[type] }, 40);
-      let last: LogicNode = ev;
+      if (!sources.length) continue;
+      let last: LogicNode = sources[0];
       let x = 280;
+      const firstAction = nodes.length;
       for (const a of l.actions) {
+        if (a.type === 'ListenerFireEvent') {
+          const r = eventChain(Number(a.props.eventId ?? 0), last, 'out', x);
+          last = r.last;
+          x = r.x;
+          continue;
+        }
         if (a.type === 'ListenerViewModelChange') {
           const target = vmVar(contextOf(a));
           const bindable = (a.parts ?? []).find((x) => isA(x.type, 'BindableProperty'));
@@ -1633,6 +1781,8 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           x += 240;
         }
       }
+      // Several events trigger the same actions
+      if (nodes.length > firstAction) for (const extra of sources.slice(1)) link(extra, nodes[firstAction]);
       y += 120;
     }
   }
@@ -1657,6 +1807,7 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     inputNames: new Map(),
     viewModels: s.viewModels,
     vmVars: new Map(),
+    timelineEvents: new Map(),
   };
   if (!s.artboards.length) throw new Error('The .riv file has no artboards');
   // Embedded fonts become project fonts

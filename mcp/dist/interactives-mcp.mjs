@@ -104,6 +104,18 @@ const CATALOG = [
     params: [{ key: "timeline", label: "Timeline", type: "timeline" }]
   },
   {
+    kind: "event.timelineMarker",
+    label: "On timeline marker",
+    category: "event",
+    description: "When playback of a timeline passes a marker, going forwards or backwards, on every lap of a loop. `event.marker` is the marker name, `event.time` its time in ms.",
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      { key: "timeline", label: "Timeline", type: "timeline" },
+      { key: "marker", label: "Marker name", type: "text", placeholder: "Any marker", help: "Leave empty to fire for every marker on the timeline" }
+    ]
+  },
+  {
     kind: "event.message",
     label: "On message",
     category: "event",
@@ -1174,6 +1186,9 @@ The **Open URL** action does the same from an interaction.
 
 The line between two keys is a **tween**: it shows its [easing](easing) as a little curve. Click it to choose how the value moves from the first key to the second (or *Use for all tweens*). In the Tween panel, drag the two handles on the graph to make your own curve; the dashed lines mark the start (0) and end (1) values, and the graph grows to show overshoot. Select a key to change its time or value.
 
+## Markers
+A **marker** is a named point in time. Press **+ Marker** to add one at the playhead; it shows as a flag on the ruler. Drag it to move it, or select it to rename it, set its time or delete it. An **On timeline marker** node runs its flow whenever playback passes the marker: going forwards or in reverse, and on every lap of a loop or ping-pong. Leave *Marker name* empty to react to every marker on the timeline; \`event.marker\` and \`event.time\` say which one fired. Scrubbing and seeking do not fire markers, only playing.
+
 ## Design view
 Switching artboards opens them in **design view**: the canvas shows the layers as they are, not a frame of an animation. Choose a timeline in the Timeline tab to see and edit its frames; choose *Design view* again to go back.
 
@@ -1181,7 +1196,7 @@ Switching artboards opens them in **design view**: the canvas shows the layers a
 Two properties are not numbers. **Solo: active child** on a [solo group](groups-frames) switches which child shows, and **Draw order (children)** changes which child is in front. Both step at their keys instead of blending. Key them from the group's Solo and Draw order sections in the inspector.
 
 ## Playing from interactions
-**Play timeline** plays, pauses, stops, restarts, reverses or seeks a timeline. From scripts: \`ix.timeline('Intro').play()\`. **On timeline end** fires when one finishes.`
+**Play timeline** plays, pauses, stops, restarts, reverses or seeks a timeline. From scripts: \`ix.timeline('Intro').play()\`. **On timeline end** fires when one finishes, and **On timeline marker** fires at each [marker](timelines).`
   },
   {
     id: "easing",
@@ -1385,7 +1400,7 @@ A yellow **unused** flag marks items nothing refers to, and the number on each g
 - **Variables**: input fields bound to them, bindings, text and link templates (\`{score}\`), repeaters, joysticks, instance inputs, and interaction nodes that name them or use them in an expression.
 - **Data sources**: the same expressions, plus *Load data* and *On data loaded* nodes, and being a font or data file.
 - **Scripts**: *Run script* nodes, or having *Run on start* ticked.
-- **Timelines**: *Control timeline* and *On timeline end* nodes, joysticks, autoplay, and scripts that name them.
+- **Timelines**: *Control timeline*, *On timeline end* and *On timeline marker* nodes, joysticks, autoplay, and scripts that name them.
 - **Layers** tab: layers that a constraint, an interaction node or a timeline track points at.
 
 Uses found by reading script or *Run code* text are marked **?**. A name in code can match something that is not really a use, so check before deleting something that is used only by a **?**.
@@ -1462,6 +1477,8 @@ Shape layers, groups, fills, strokes, gradients, transforms, trim paths, masks a
 
 ## Rive (.riv)
 Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Bones, meshes and data binding are not carried over yet.
+
+Rive **events** become messages: a *Send message* node with the event's name, and its custom properties as the payload (an object, e.g. \`event.payload.power\`). An event keyed on an animation becomes a [timeline marker](timelines) with an *On timeline marker* node; events fired by listeners and by states or transitions (at their start or end) become *Send message* nodes in those flows, and Rive event listeners become *On message* nodes. An **audio event** also plays its embedded sound (a *Play sound* node, with the audio stored as a project asset), and an **open URL event** also opens its link (an *Open URL* node). Audio that is hosted on Rive's CDN instead of embedded is skipped, and the import report says so.
 
 ## Photoshop (.psd)
 The document becomes an artboard of the same size. Every pixel layer becomes an image layer (stored as a PNG asset) at its position, folders become groups, and the layer name, visibility, opacity (including fill opacity) and these blend modes carry over: multiply, screen, overlay, darken, lighten, color dodge, color burn, difference and exclusion. Layer masks are baked into the layer's transparency. Text layers become image layers of their pixels, named after the text (the text is also set as the accessible name); the text itself is not editable. 8 and 16 bit RGB and grayscale files import as layers. Indexed colour and CMYK files (and files with no layers) import as one flattened picture, and 32 bit, bitmap, Lab, duotone and multichannel files are not supported.

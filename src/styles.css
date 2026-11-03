@@ -1280,6 +1280,23 @@ div.text-editor {
   width: 1px;
   background: var(--line-2);
 }
+.marker {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 14px;
+  margin-left: -5px;
+  background: var(--accent, #4f9dff);
+  clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
+  cursor: ew-resize;
+  opacity: 0.8;
+  z-index: 2;
+}
+.marker:hover,
+.marker.selected {
+  opacity: 1;
+  background: #ffc247;
+}
 .lane {
   height: 24px;
   position: relative;

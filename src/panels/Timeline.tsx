@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ANIMATABLE_PROPS, EASING_NAMES, ease, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
+import { ANIMATABLE_PROPS, EASING_NAMES, ease, uid, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
@@ -24,6 +24,8 @@ export function TimelinePanel() {
   const lane = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(600);
   const [addProp, setAddProp] = useState('x');
+  // The marker on the ruler being edited
+  const [markerId, setMarkerId] = useState<string | null>(null);
   // The tween (span between a key and the next) whose easing is being edited, named by its starting key
   const [tween, setTween] = useState<{ trackId: string; keyId: string } | null>(null);
 
@@ -118,6 +120,42 @@ export function TimelinePanel() {
     el.addEventListener('pointerup', up);
   };
 
+  const addMarker = () => {
+    const id = uid('mk');
+    const n = (tl.markers?.length ?? 0) + 1;
+    setTl((d) => {
+      (d.markers ??= []).push({ id, time: Math.round(Math.min(s.playhead, d.duration)), name: `Marker ${n}` });
+      d.markers.sort((a, b) => a.time - b.time);
+    });
+    setMarkerId(id);
+  };
+
+  /** Press on a marker: select it, then drag to retime it. */
+  const markerDown = (e: React.PointerEvent, id: string) => {
+    e.stopPropagation();
+    setMarkerId(id);
+    const el = e.currentTarget as HTMLElement;
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {
+      /* not capturable in some test environments */
+    }
+    const move = (ev: PointerEvent) => {
+      const t = snap(T(ev.clientX), ev);
+      setTl((d) => {
+        const m = d.markers?.find((x) => x.id === id);
+        if (m) m.time = t;
+      }, `marker-${id}`);
+    };
+    const up = () => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+  };
+  const selMarker = tl.markers?.find((m) => m.id === markerId);
+
   const keyDown = (e: React.PointerEvent, trackId: string, key: Keyframe) => keysDown(e, [`${trackId}:${key.id}`], key.t);
 
   /** Press on one key, or on a layer's summary diamond (all of its keys at that time): select, then drag them. */
@@ -211,6 +249,23 @@ export function TimelinePanel() {
         />
         <CheckField label="Autoplay" title="Start when the artboard is shown" value={tl.autoplay} onChange={(v) => setTl((d) => (d.autoplay = v))} />
         <NumberField label="Speed" value={tl.speed} step={0.1} min={0.1} onChange={(v) => setTl((d) => (d.speed = v), 'tl-speed')} />
+        <button className="btn" title="Add a marker at the playhead. An On timeline marker node runs when playback passes it" onClick={addMarker}>
+          + Marker
+        </button>
+        {selMarker && (
+          <>
+            <TextField value={selMarker.name} commitOnBlur onChange={(v) => setTl((d) => void (d.markers!.find((x) => x.id === selMarker.id)!.name = v || selMarker.name))} />
+            <NumberField label="At" value={selMarker.time} min={0} max={tl.duration} suffix="ms" onChange={(v) => setTl((d) => void (d.markers!.find((x) => x.id === selMarker.id)!.time = Math.round(v)), `marker-${selMarker.id}`)} />
+            <IconButton
+              icon={<Icons.trash />}
+              title="Delete marker"
+              onClick={() => {
+                setTl((d) => void (d.markers = d.markers!.filter((x) => x.id !== selMarker.id)));
+                setMarkerId(null);
+              }}
+            />
+          </>
+        )}
         <IconButton
           icon={<Icons.trash />}
           title="Delete timeline"
@@ -270,6 +325,9 @@ export function TimelinePanel() {
               <span key={t} className="tick" style={{ left: X(t) }}>
                 {t >= 1000 ? `${(t / 1000).toFixed(t % 1000 ? 1 : 0)}s` : `${t}`}
               </span>
+            ))}
+            {(tl.markers ?? []).map((m) => (
+              <span key={m.id} className={`marker${m.id === markerId ? ' selected' : ''}`} style={{ left: X(Math.min(m.time, tl.duration)) }} title={`${m.name} at ${m.time} ms. Drag to move it`} onPointerDown={(e) => markerDown(e, m.id)} />
             ))}
           </div>
           {[...byNode.entries()].map(([nodeId, tracks]) => (
