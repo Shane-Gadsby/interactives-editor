@@ -147,6 +147,26 @@ export function Canvas() {
     return ab && active && ab.id === active.id ? active : ab;
   };
   const local = (ab: Artboard, w: Pt): Pt => ({ x: w.x - ab.canvasX, y: w.y - ab.canvasY });
+  /**
+   * The layer under the pointer. The artboard under the pointer goes first; then layers hanging outside their
+   * artboard (the open one, or any that doesn't clip), so things moved past the edge can still be picked.
+   */
+  const layerAt = (w: Pt, pickDeepest: boolean): { ab: Artboard; hit: SceneNode } | null => {
+    const under = abAt(w);
+    if (under) {
+      const p = local(under, w);
+      const hit = pickFromHit(hitTest(under, p.x, p.y), pickDeepest);
+      if (hit) return { ab: under, hit };
+    }
+    const others = [...(active ? [active] : []), ...[...project.artboards].reverse().filter((a) => a.id !== active?.id && a.clip === false)];
+    for (const ab of others) {
+      if (ab.id === under?.id) continue;
+      const p = local(ab, w);
+      const hit = pickFromHit(hitTest(ab, p.x, p.y), pickDeepest);
+      if (hit) return { ab, hit };
+    }
+    return null;
+  };
   const screen = (ab: Artboard | { canvasX: number; canvasY: number } | null, p: Pt): Pt => ({
     x: panX + ((ab?.canvasX ?? 0) + p.x) * zoom,
     y: panY + ((ab?.canvasY ?? 0) + p.y) * zoom,
@@ -396,9 +416,12 @@ export function Canvas() {
 
     // Select tool
     if (st.editingPathId) exitPathEdit();
-    if (hitAb) {
+    const found = layerAt(w, e.ctrlKey || e.metaKey);
+    const selAb = found?.ab ?? hitAb;
+    if (selAb) {
+      const hitAb = selAb;
       const p = local(hitAb, w);
-      const hit = pickFromHit(hitTest(hitAb, p.x, p.y), e.ctrlKey || e.metaKey);
+      const hit = found?.hit ?? null;
       if (hitAb.id !== st.activeArtboardId) {
         store().set({ activeArtboardId: hitAb.id, selection: [], focusId: null, activeTimelineId: null });
       }
@@ -430,10 +453,11 @@ export function Canvas() {
     if (!d) {
       // Hover feedback
       if (st.tool === 'select' && !spaceDown.current) {
-        const hab = abAt(w);
+        const found = layerAt(w, e.ctrlKey || e.metaKey);
+        const hab = found?.ab ?? abAt(w);
         if (hab) {
           const p = local(hab, w);
-          const hit = pickFromHit(hitTest(hab, p.x, p.y), e.ctrlKey || e.metaKey);
+          const hit = found?.hit;
           setHover(hit ? `${hab.id}/${hit.id}` : null);
           // A locked layer under the pointer gets a quick-unlock button
           const lockedTrail = hitTest(hab, p.x, p.y, { includeLocked: true });
@@ -738,7 +762,7 @@ export function Canvas() {
     }
     if (st.tool !== 'select') return;
     const w = toWorld(e.clientX, e.clientY);
-    const ab = abAt(w);
+    const ab = layerAt(w, e.ctrlKey || e.metaKey)?.ab ?? abAt(w);
     if (!ab) return;
     const p = local(ab, w);
     const path = hitTest(ab, p.x, p.y);
