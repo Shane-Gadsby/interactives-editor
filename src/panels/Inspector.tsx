@@ -396,6 +396,14 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           value={!!project.settings.scriptSandbox}
           onChange={(v) => setProject((p) => (p.settings.scriptSandbox = v))}
         />
+        {!project.settings.scriptSandbox && (
+          <CheckField
+            label="Run embedded HTML in the page"
+            title="Embed layers with HTML normally run in a sandboxed frame that cannot reach the page. Turn on only for HTML you wrote and trust, if it needs the page. Ignored while scripts run in the sandbox."
+            value={!!project.settings.trustedEmbeds}
+            onChange={(v) => setProject((p) => (p.settings.trustedEmbeds = v))}
+          />
+        )}
         <CheckField
           label="This project is a library"
           title="Share artboards marked Publish to library, plus this project's styles and assets, as components other projects can use (Libraries tab)"

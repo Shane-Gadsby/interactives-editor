@@ -77,7 +77,8 @@ let port = Number(process.env.PORT) || 3048,
 //Live editing. One room per open project: the document in memory, the op log, and everyone connected over SSE.
 //The shared op code is an ES module (the browser uses the same file), so it comes in through import()
 let ops = null,
-	library = null
+	library = null,
+	safety = null
 const rooms = new Map(),
 	LOG_KEEP = 2000,
 	PALETTE = ['#e5484d', '#30a46c', '#3e63dd', '#f76b15', '#8e4ec6', '#12a594', '#d6409f', '#ad7f58'],
@@ -169,8 +170,9 @@ const rooms = new Map(),
 
 const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 
-	//Ids come from the editor (uid() in the player's format.ts), nothing else should ever get near a query
-	validID = (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{4,64}$/.test(id),
+	//Ids come from the editor (uid() in the player's format.ts), nothing else should ever get near a query.
+	//Never one of storage/'s own folder names (shares, thumbs, _libraries), see shared/safety.mjs
+	validID = (id) => safety.validID(id),
 
 	whoIs = (req) => {
 		let user = req.sessionData?.user
@@ -255,6 +257,12 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 			await fs.promises.rm(projectDir(projectID), {recursive: true, force: true})
 		}
 	}
+
+//Nothing the api sends is ever to be sniffed into a page
+router.use('/api', (req, res, next) => {
+	res.setHeader('X-Content-Type-Options', 'nosniff')
+	next()
+})
 
 //No body unless something parsed one, express 5 leaves it undefined
 router.use((req, res, next) => {
@@ -503,13 +511,13 @@ router.delete('/api/projects/:id', async (req, res) => {
 	res.json({ok: true})
 })
 
-//Copies the project and every asset, under a new id the editor picked
+//Copies the project and every asset, under a new id made here. The browser doesn't get to pick it, or it could
+//copy into (and over) a project that already exists
 router.post('/api/projects/:id/duplicate', express.json(), async (req, res) => {
 	let id = req.params.id,
-		newID = req.body.newId,
 		name = req.body.name
 
-	if (!validID(id) || !validID(newID)) {
+	if (!validID(id)) {
 		return res.status(400).json({error: 'Bad project id'})
 	}
 
@@ -519,16 +527,22 @@ router.post('/api/projects/:id/duplicate', express.json(), async (req, res) => {
 		return res.status(404).json({error: 'No such project'})
 	}
 
-	let project = JSON.parse(doc.doc),
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	let newID = safety.newProjectID(),
+		project = JSON.parse(doc.doc),
 		now = new Date()
+
+	//A random id colliding is next to impossible, but this is the check that makes it a promise
+	if (await projects.findOne({_id: newID}, {projection: {_id: 1}}) || fs.existsSync(projectDir(newID))) {
+		return res.status(409).json({error: 'Try that again'})
+	}
 
 	project.id = newID
 	project.name = String(name || `${project.name} copy`).slice(0, 200)
 	project.created = project.updated = now.toISOString()
-
-	if (!mayChange(req, res, doc)) {
-		return
-	}
 
 	if (fs.existsSync(projectDir(id))) {
 		await fs.promises.cp(projectDir(id), projectDir(newID), {recursive: true})
@@ -619,7 +633,9 @@ router.get('/api/projects/:id/assets/:assetId', async (req, res) => {
 
 	//Overrides the api no-store, asset ids are never reused
 	res.setHeader('Cache-Control', 'private, max-age=31536000, immutable')
-	res.type(meta.mime)
+
+	//Uploads are served from this origin, so only the kinds that can't be a page keep their type
+	safety.assetHeaders(res, meta.mime)
 	res.sendFile(file, (err) => {
 		if (err && !res.headersSent) {
 			res.status(404).json({error: 'No such asset'})
@@ -1013,7 +1029,7 @@ router.get('/api/libraries/:id/assets/:assetId', async (req, res) => {
 	}
 
 	res.setHeader('Cache-Control', 'private, max-age=31536000, immutable')
-	res.type(meta.mime)
+	safety.assetHeaders(res, meta.mime)
 	res.sendFile(file, (err) => {
 		if (err && !res.headersSent) {
 			res.status(404).json({error: 'No such asset'})
@@ -1165,6 +1181,9 @@ router.get('/s/:token', cacheHeaders.api, (req, res) => {
 		return res.status(404).send('No such shared project')
 	}
 
+	//A shared page is somebody's project with its own scripts, so it runs sandboxed: no cookies, no api, no editor
+	safety.shareHeaders(res)
+
 	res.sendFile(shareFile(req.params.token), {headers: {'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex'}}, (err) => {
 		if (err && !res.headersSent) res.status(404).send('This share link has been turned off, or never existed')
 	})
@@ -1203,11 +1222,12 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs')])
 	})
-	.then(([opsMod, libraryMod]) => {
+	.then(([opsMod, libraryMod, safetyMod]) => {
 		ops = opsMod
 		library = libraryMod
+		safety = safetyMod
 		cacheHeaders.watchEpoch()
 
 		app.listen(port, (err) => {

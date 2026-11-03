@@ -19,6 +19,7 @@ import { SHADER_PRESETS } from '../../interactives-player/src/shader-presets';
 import { SHADER_BUILTINS, SHADER_UNIFORM_TYPES } from '../../interactives-player/src/shader-uniforms';
 import { runsPatch } from '../../interactives-player/src/textruns';
 import { sanitizeLayerInPlace } from '../../interactives-player/src/sanitize';
+import { checkExpression } from '../../interactives-player/src/expr';
 import { diff } from '../shared/ops.mjs';
 import { TOPICS, topicBody } from '../src/help/topics';
 
@@ -216,7 +217,7 @@ function validate(p: Project): string[] {
         if (pd.type === 'variable' && !varIds.has(String(v))) problems.push(`${ab.name}: "${def.label}" (${n.id}) points at a missing variable ${v}`);
         if (pd.type === 'expr') {
           try {
-            new Function(`return (${String(v)}\n);`);
+            checkExpression(String(v));
           } catch (e) {
             problems.push(`${ab.name}: "${def.label}" (${n.id}) ${pd.label}: ${(e as Error).message} in \`${v}\``);
           }

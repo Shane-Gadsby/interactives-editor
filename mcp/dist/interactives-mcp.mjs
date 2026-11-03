@@ -461,9 +461,84 @@ const CATALOG = [
 Object.fromEntries(CATALOG.map((d) => [d.kind, d]));
 const SHADER_UNIFORM_TYPES = ["float", "vec2", "vec3", "vec4", "color", "image"];
 const SHADER_BUILTINS = ["u_time", "u_resolution", "u_mouse", "u_frame", "v_uv"];
-new Set(
+const GLSL_WORDS = new Set(
   "attribute uniform varying const in out inout centroid flat smooth layout float int uint bool void true false vec2 vec3 vec4 ivec2 ivec3 ivec4 uvec2 uvec3 uvec4 bvec2 bvec3 bvec4 mat2 mat3 mat4 sampler2D samplerCube if else for while do switch case default break continue return discard struct precision highp mediump lowp main mainImage texture texture2D".split(" ")
 );
+const VECTOR_SIZE = { float: 1, vec2: 2, vec3: 3, vec4: 4 };
+function uniformNameProblem(name, others = []) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) return "A name is letters, digits and underscores, and does not start with a digit.";
+  if (name.length > 48) return "That name is too long (48 characters at most).";
+  if (name.startsWith("gl_") || name.includes("__") || name.startsWith("ix_")) return "That name is reserved by GLSL or the player.";
+  if (SHADER_BUILTINS.includes(name)) return `${name} is built in.`;
+  if (GLSL_WORDS.has(name)) return `${name} is a GLSL word.`;
+  if (others.includes(name)) return "Another uniform already has that name.";
+  return null;
+}
+function defaultUniformValue(type) {
+  switch (type) {
+    case "float":
+      return 0;
+    case "vec2":
+      return [0, 0];
+    case "vec3":
+      return [0, 0, 0];
+    case "vec4":
+      return [0, 0, 0, 1];
+    case "color":
+      return "#ffffff";
+    case "image":
+      return "";
+  }
+}
+const finite = (v) => {
+  const n = typeof v === "number" ? v : typeof v === "boolean" ? v ? 1 : 0 : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : 0;
+};
+function coerceUniformValue(type, value) {
+  const def = defaultUniformValue(type);
+  switch (type) {
+    case "float":
+      return finite(value);
+    case "vec2":
+    case "vec3":
+    case "vec4": {
+      const size = VECTOR_SIZE[type];
+      const src = Array.isArray(value) ? value : typeof value === "number" ? [value] : [];
+      const out = def.slice();
+      for (let i = 0; i < size; i++) if (i < src.length) out[i] = finite(src[i]);
+      return out;
+    }
+    case "color":
+      return typeof value === "string" && value.trim() ? value : def;
+    case "image":
+      return typeof value === "string" ? value : "";
+  }
+}
+function normalizeUniform(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const r2 = raw;
+  if (typeof r2.name !== "string" || !r2.name || !SHADER_UNIFORM_TYPES.includes(r2.type)) return null;
+  const type = r2.type;
+  const u = { name: r2.name, type, value: coerceUniformValue(type, r2.value) };
+  if (typeof r2.min === "number" && Number.isFinite(r2.min)) u.min = r2.min;
+  if (typeof r2.max === "number" && Number.isFinite(r2.max)) u.max = r2.max;
+  return u;
+}
+function usableUniforms(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  const names = [];
+  for (const raw of list) {
+    const u = normalizeUniform(raw);
+    if (!u || uniformNameProblem(u.name, names)) continue;
+    if (u.type === "image" && names.includes(`${u.name}_size`)) continue;
+    if (names.includes(u.name)) continue;
+    names.push(u.name);
+    if (u.type === "image") names.push(`${u.name}_size`);
+    out.push(u);
+  }
+  return out;
+}
 const ANIMATABLE_PROPS = [
   { prop: "x", label: "X", kind: "number" },
   { prop: "y", label: "Y", kind: "number" },
@@ -519,6 +594,221 @@ const ANIMATABLE_PROPS = [
   { prop: "modifiers.0.letterSpacing", label: "Text modifier letter spacing", kind: "number" },
   { prop: "modifiers.0.blur", label: "Text modifier blur", kind: "number" }
 ];
+const MODIFIER_UNITS = ["letter", "word", "line"];
+const MODIFIER_SHAPES = ["square", "ramp-up", "ramp-down", "triangle", "round", "smooth"];
+function defaultModifier(patch = {}) {
+  return { unit: "letter", start: 0, end: 100, offset: 0, shape: "square", strength: 100, x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0, blur: 0, ...patch };
+}
+const isNum$1 = (v) => typeof v === "number" && Number.isFinite(v);
+const num = (v, d) => isNum$1(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
+function normalizeModifier(raw) {
+  const r2 = raw && typeof raw === "object" ? raw : {};
+  const d = defaultModifier();
+  const m = {
+    unit: MODIFIER_UNITS.includes(r2.unit) ? r2.unit : d.unit,
+    start: num(r2.start, d.start),
+    end: num(r2.end, d.end),
+    offset: num(r2.offset, d.offset),
+    shape: MODIFIER_SHAPES.includes(r2.shape) ? r2.shape : d.shape,
+    strength: num(r2.strength, d.strength),
+    x: num(r2.x, d.x),
+    y: num(r2.y, d.y),
+    rotation: num(r2.rotation, d.rotation),
+    scale: num(r2.scale, d.scale),
+    opacity: num(r2.opacity, d.opacity),
+    letterSpacing: num(r2.letterSpacing, d.letterSpacing),
+    blur: num(r2.blur, d.blur)
+  };
+  if (typeof r2.name === "string") m.name = r2.name;
+  if (typeof r2.color === "string" && r2.color) m.color = r2.color;
+  if (r2.ease !== void 0 && r2.ease !== null) m.ease = r2.ease;
+  if (r2.randomize === true) m.randomize = true;
+  if (isNum$1(r2.seed)) m.seed = r2.seed;
+  return m;
+}
+const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isStr = (v) => typeof v === "string";
+const isNum = (v) => typeof v === "number" && Number.isFinite(v);
+const arr = (v, keep) => Array.isArray(v) ? v.filter(keep) : [];
+const objs = (v) => arr(v, isObj);
+function fits(value, def) {
+  if (def === null) return value === null || isObj(value) || isStr(value) || isNum(value);
+  if (Array.isArray(def)) return Array.isArray(value);
+  switch (typeof def) {
+    case "number":
+      return isNum(value);
+    case "string":
+      return isStr(value);
+    case "boolean":
+      return typeof value === "boolean";
+    case "object":
+      return value === null || isObj(value);
+    default:
+      return true;
+  }
+}
+function stringMap(v) {
+  if (!isObj(v)) return void 0;
+  const out = {};
+  for (const [k, x] of Object.entries(v)) if (isStr(x)) out[k] = x;
+  return out;
+}
+function sanitizeLayerInPlace(node) {
+  const clean = sanitizeNode(node, /* @__PURE__ */ new Set());
+  if (!clean) return false;
+  const target = node;
+  for (const k of Object.keys(target)) if (!(k in clean)) delete target[k];
+  for (const [k, v] of Object.entries(clean)) if (!same$1(target[k], v)) target[k] = v;
+  return true;
+}
+function same$1(a, b) {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object" || Array.isArray(a) !== Array.isArray(b)) return false;
+  const ka = Object.keys(a);
+  if (ka.length !== Object.keys(b).length) return false;
+  return ka.every((k) => same$1(a[k], b[k]));
+}
+function sanitizeNode(raw, seen) {
+  if (!isObj(raw) || !isStr(raw.id) || !raw.id || !isStr(raw.type)) return null;
+  seen.add(raw.id);
+  let def;
+  try {
+    def = createNode(raw.type);
+  } catch {
+    return null;
+  }
+  const n = { ...raw };
+  for (const [k, d] of Object.entries(def)) {
+    if (k === "id" || k === "type") continue;
+    if (!(k in n) || !fits(n[k], d)) n[k] = structuredClone(d);
+  }
+  if (!isStr(n.name)) n.name = String(raw.type);
+  if (raw.type === "draw") n.pixelRatio = isNum(raw.pixelRatio) && raw.pixelRatio > 0 ? Math.min(4, raw.pixelRatio) : "auto";
+  if (raw.type === "shader") {
+    n.pixelRatio = isNum(raw.pixelRatio) && raw.pixelRatio > 0 ? Math.min(3, raw.pixelRatio) : "auto";
+    n.uniforms = usableUniforms(raw.uniforms);
+  }
+  if (raw.type === "image" && "shaderFilter" in n) {
+    const f2 = n.shaderFilter;
+    if (isObj(f2) && isStr(f2.code)) {
+      n.shaderFilter = { ...f2, uniforms: usableUniforms(f2.uniforms), ...f2.pixelRatio !== void 0 ? { pixelRatio: isNum(f2.pixelRatio) && f2.pixelRatio > 0 ? Math.min(3, f2.pixelRatio) : "auto" } : {} };
+    } else delete n.shaderFilter;
+  }
+  if ("bindings" in n) n.bindings = stringMap(n.bindings);
+  if ("converters" in n && !isObj(n.converters)) delete n.converters;
+  if (isObj(n.converters)) for (const [k, list] of Object.entries(n.converters)) n.converters[k] = objs(list).filter((c2) => isStr(c2.type));
+  if ("constraints" in n) n.constraints = objs(n.constraints).filter((c2) => isStr(c2.type));
+  if ("repeat" in n && !(isObj(n.repeat) && isStr(n.repeat.items))) delete n.repeat;
+  if ("solo" in n && !(isObj(n.solo) && (n.solo.active === null || isStr(n.solo.active)))) delete n.solo;
+  if ("drawOrder" in n) n.drawOrder = arr(n.drawOrder, isStr);
+  if ("link" in n && n.link !== null && !(isObj(n.link) && isStr(n.link.url))) delete n.link;
+  if ("layoutItem" in n && n.layoutItem !== null && !isObj(n.layoutItem)) delete n.layoutItem;
+  if ("shadow" in n && n.shadow !== null && !(isObj(n.shadow) && ["x", "y", "blur", "spread"].every((k) => isNum(n.shadow[k])) && isStr(n.shadow.color))) delete n.shadow;
+  for (const k of ["mask", "locked"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  for (const k of ["blur", "fontWeight"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
+  for (const k of ["blendMode", "cursor", "ariaLabel", "className"]) if (k in n && !isStr(n[k])) delete n[k];
+  const stroke = (v) => {
+    const pt = isObj(v) ? paint(v.paint) : null;
+    if (!isObj(v) || !pt) return null;
+    return { ...v, paint: pt, width: isNum(v.width) ? v.width : 1, ...v.dash !== void 0 ? { dash: arr(v.dash, isNum) } : {} };
+  };
+  if ("fill" in n) n.fill = paint(n.fill);
+  if ("stroke" in n) n.stroke = stroke(n.stroke);
+  if ("strokes" in n) n.strokes = (Array.isArray(n.strokes) ? n.strokes : []).map(stroke).filter(Boolean);
+  if ("fills" in n) n.fills = (Array.isArray(n.fills) ? n.fills : []).map(paint).filter(Boolean);
+  if ("background" in n && n.background !== null) n.background = paint(n.background);
+  if ("modifiers" in n) {
+    if (Array.isArray(n.modifiers)) n.modifiers = objs(n.modifiers).map(normalizeModifier);
+    else delete n.modifiers;
+  }
+  if ("runs" in n) {
+    const runs = objs(n.runs).filter((r2) => isStr(r2.text)).map(sanitizeRun);
+    if (runs.length) n.runs = runs;
+    else delete n.runs;
+  }
+  if ("options" in n && !isStr(n.options)) delete n.options;
+  for (const k of ["min", "max", "step"]) if (k in n && !isNum(n[k])) delete n[k];
+  if ("cursorImage" in n && n.cursorImage !== null && !isStr(n.cursorImage)) delete n.cursorImage;
+  if ("cursorHotspot" in n && !(isObj(n.cursorHotspot) && isNum(n.cursorHotspot.x) && isNum(n.cursorHotspot.y))) delete n.cursorHotspot;
+  if ("disabled" in n && typeof n.disabled !== "boolean") delete n.disabled;
+  if ("slice" in n && n.slice !== null && !(isObj(n.slice) && ["top", "right", "bottom", "left"].every((k) => isNum(n.slice[k])))) delete n.slice;
+  if ("inputs" in n && !isObj(n.inputs)) delete n.inputs;
+  if (isObj(n.inputs)) n.inputs = Object.fromEntries(Object.entries(n.inputs).filter(([, v]) => isNum(v) || isStr(v) || typeof v === "boolean"));
+  if (raw.type === "path") {
+    n.paths = objs(n.paths).map((sp) => ({ ...sp, closed: !!sp.closed, points: objs(sp.points).filter((p) => isNum(p.x) && isNum(p.y)) })).filter((sp) => sp.points.length > 0);
+  }
+  if ("skin" in n) {
+    const sk = skin(n.skin);
+    if (sk) n.skin = sk;
+    else delete n.skin;
+  }
+  if ("mesh" in n) {
+    const m = mesh(n.mesh);
+    if (m) n.mesh = m;
+    else delete n.mesh;
+  }
+  if (raw.type === "group" || raw.type === "frame" || raw.type === "bone") {
+    n.children = (Array.isArray(n.children) ? n.children : []).map((c2) => sanitizeNode(c2, seen)).filter(Boolean);
+    if (n.layout !== void 0 && n.layout !== null && !isObj(n.layout)) n.layout = null;
+    if (isObj(n.layout)) {
+      const L = { ...LAYOUT_DEFAULTS, ...n.layout };
+      for (const [k, d] of Object.entries(LAYOUT_DEFAULTS)) if (!fits(L[k], d)) L[k] = structuredClone(d);
+      const pad = isObj(L.padding) ? L.padding : {};
+      L.padding = Object.fromEntries(["top", "right", "bottom", "left"].map((k) => [k, isNum(pad[k]) ? pad[k] : 0]));
+      n.layout = L;
+    }
+  }
+  return n;
+}
+const influences = (v) => objs(v).filter((i) => isNum(i.b) && isNum(i.w)).slice(0, 4);
+function skin(v) {
+  if (!isObj(v) || !Array.isArray(v.bones) || !Array.isArray(v.weights)) return null;
+  const bones = objs(v.bones).filter((b) => isStr(b.bone) && Array.isArray(b.bind) && b.bind.length === 6 && b.bind.every(isNum));
+  if (!bones.length || bones.length !== v.bones.length) return null;
+  const weights = v.weights.map(
+    (sp) => (Array.isArray(sp) ? sp : []).map((pt) => {
+      const o = isObj(pt) ? pt : {};
+      const out = { w: influences(o.w).filter((i) => i.b < bones.length) };
+      for (const k of ["in", "out"]) if (Array.isArray(o[k])) out[k] = influences(o[k]).filter((i) => i.b < bones.length);
+      return out;
+    })
+  );
+  return { bones, weights };
+}
+function mesh(v) {
+  if (!isObj(v) || !Array.isArray(v.vertices) || !Array.isArray(v.triangles)) return null;
+  const vertices = objs(v.vertices).filter((p) => isNum(p.x) && isNum(p.y) && isNum(p.u) && isNum(p.v));
+  if (vertices.length !== v.vertices.length || vertices.length < 3) return null;
+  const tri = v.triangles.filter((i) => Number.isInteger(i) && i >= 0 && i < vertices.length);
+  if (tri.length !== v.triangles.length) return null;
+  const sk = v.skin === void 0 || v.skin === null ? null : skin(v.skin);
+  return { vertices, triangles: tri.slice(0, tri.length - tri.length % 3), skin: sk };
+}
+function sanitizeRun(r2) {
+  const out = { ...r2 };
+  for (const k of ["fontFamily", "color"]) if (k in out && !isStr(out[k])) delete out[k];
+  for (const k of ["fontSize", "fontWeight", "letterSpacing"]) if (k in out && !isNum(out[k])) delete out[k];
+  for (const k of ["italic", "underline", "strike"]) if (k in out && typeof out[k] !== "boolean") delete out[k];
+  if ("link" in out && out.link !== null && !(isObj(out.link) && isStr(out.link.url))) delete out.link;
+  return out;
+}
+function paint(v) {
+  if (!isObj(v) || !isStr(v.type)) return null;
+  switch (v.type) {
+    case "solid":
+      return isStr(v.color) ? v : { ...v, color: "#000000" };
+    case "linear":
+    case "radial": {
+      const stops = objs(v.stops).filter((st) => isStr(st.color)).map((st) => ({ ...st, offset: isNum(st.offset) ? st.offset : 0 }));
+      return stops.length ? { ...v, angle: isNum(v.angle) ? v.angle : 0, stops } : null;
+    }
+    case "image":
+      return isStr(v.assetId) ? v : null;
+    default:
+      return null;
+  }
+}
+const LAYOUT_DEFAULTS = { direction: "row", gap: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 }, justify: "start", align: "start", wrap: false, hugWidth: false, hugHeight: false };
 function isContainer(node) {
   return node.type === "group" || node.type === "frame" || node.type === "bone";
 }
@@ -1182,6 +1472,1142 @@ function normalizeRuns(runs) {
 function runsPatch(runs) {
   const norm = normalizeRuns(runs);
   return { text: runsText(norm), runs: isPlainRuns(norm) ? void 0 : norm };
+}
+class ExprError extends Error {
+}
+const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const MAX_STEPS = 2e5;
+const MAX_DEPTH = 80;
+const MAX_SOURCE = 2e4;
+const MAX_STRING = 1e6;
+const MAX_LIST = 1e5;
+const SHORT = Symbol("short");
+const RESERVED = /* @__PURE__ */ new Set([
+  "function",
+  "this",
+  "class",
+  "delete",
+  "instanceof",
+  "var",
+  "let",
+  "const",
+  "return",
+  "if",
+  "else",
+  "for",
+  "while",
+  "do",
+  "switch",
+  "case",
+  "default",
+  "break",
+  "continue",
+  "try",
+  "catch",
+  "finally",
+  "throw",
+  "async",
+  "await",
+  "yield",
+  "import",
+  "export",
+  "super",
+  "with",
+  "debugger",
+  "enum",
+  "extends",
+  "new",
+  "typeof",
+  "void",
+  "in",
+  "null",
+  "true",
+  "false"
+]);
+const PUNCT = [
+  ">>>=",
+  "...",
+  "===",
+  "!==",
+  "**=",
+  "<<=",
+  ">>=",
+  ">>>",
+  "&&=",
+  "||=",
+  "??=",
+  "=>",
+  "==",
+  "!=",
+  "<=",
+  ">=",
+  "&&",
+  "||",
+  "??",
+  "?.",
+  "**",
+  "<<",
+  ">>",
+  "+=",
+  "-=",
+  "*=",
+  "/=",
+  "%=",
+  "&=",
+  "|=",
+  "^=",
+  "+",
+  "-",
+  "*",
+  "/",
+  "%",
+  "<",
+  ">",
+  "=",
+  "!",
+  "~",
+  "&",
+  "|",
+  "^",
+  "?",
+  ":",
+  ",",
+  ".",
+  "(",
+  ")",
+  "[",
+  "]",
+  "{",
+  "}"
+];
+const ID_START = /[A-Za-z_$ -￿]/;
+const ID_PART = /[\w$ -￿]/;
+const DIGIT = /[0-9]/;
+const ASSIGN = /* @__PURE__ */ new Set(["=", "+=", "-=", "*=", "/=", "%=", "**=", "<<=", ">>=", ">>>=", "&=", "|=", "^=", "&&=", "||=", "??="]);
+const REGEX_FLAGS = /^[dgimsuy]*$/;
+class Parser {
+  constructor(src) {
+    this.src = src;
+    this.pos = 0;
+    this.depth = 0;
+    this.advance();
+  }
+  fail(msg, at = this.tok?.start ?? this.pos) {
+    throw new ExprError(`${msg} (at ${at})`);
+  }
+  // ---- lexing
+  lex() {
+    const s = this.src;
+    while (this.pos < s.length && /\s/.test(s[this.pos])) this.pos++;
+    const start = this.pos;
+    if (start >= s.length) return { t: "end", v: "", start, end: start };
+    const c2 = s[start];
+    if (c2 === '"' || c2 === "'") {
+      let i = start + 1;
+      let out = "";
+      while (i < s.length && s[i] !== c2) {
+        if (s[i] === "\n") this.fail("Unterminated string", start);
+        if (s[i] === "\\") {
+          const r2 = this.escape(i);
+          out += r2.text;
+          i = r2.next;
+        } else out += s[i++];
+      }
+      if (i >= s.length) this.fail("Unterminated string", start);
+      this.pos = i + 1;
+      return { t: "str", v: out, start, end: this.pos };
+    }
+    if (c2 === "`") {
+      this.pos = start + 1;
+      return { t: "tick", v: "`", start, end: this.pos };
+    }
+    if (DIGIT.test(c2) || c2 === "." && DIGIT.test(s[start + 1] ?? "")) {
+      let m = /^0[xX][0-9a-fA-F]+|^0[bB][01]+|^0[oO][0-7]+/.exec(s.slice(start));
+      if (!m) m = /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/.exec(s.slice(start));
+      const text = m[0];
+      if (s[start + text.length] && ID_START.test(s[start + text.length])) this.fail("Unexpected character after number", start);
+      this.pos = start + text.length;
+      return { t: "num", v: text, n: Number(text), start, end: this.pos };
+    }
+    if (ID_START.test(c2)) {
+      let i = start + 1;
+      while (i < s.length && ID_PART.test(s[i])) i++;
+      this.pos = i;
+      return { t: "id", v: s.slice(start, i), start, end: i };
+    }
+    for (const p of PUNCT) {
+      if (s.startsWith(p, start)) {
+        if (p === "?." && DIGIT.test(s[start + 2] ?? "")) continue;
+        this.pos = start + p.length;
+        return { t: "p", v: p, start, end: this.pos };
+      }
+    }
+    return this.fail(`Unexpected character "${c2}"`, start);
+  }
+  escape(i) {
+    const s = this.src;
+    const c2 = s[i + 1];
+    switch (c2) {
+      case "n":
+        return { text: "\n", next: i + 2 };
+      case "t":
+        return { text: "	", next: i + 2 };
+      case "r":
+        return { text: "\r", next: i + 2 };
+      case "b":
+        return { text: "\b", next: i + 2 };
+      case "f":
+        return { text: "\f", next: i + 2 };
+      case "v":
+        return { text: "\v", next: i + 2 };
+      case "0":
+        return { text: "\0", next: i + 2 };
+      case "\n":
+        return { text: "", next: i + 2 };
+      case "x": {
+        const h = s.slice(i + 2, i + 4);
+        if (!/^[0-9a-fA-F]{2}$/.test(h)) this.fail("Bad escape", i);
+        return { text: String.fromCharCode(parseInt(h, 16)), next: i + 4 };
+      }
+      case "u": {
+        if (s[i + 2] === "{") {
+          const close = s.indexOf("}", i);
+          const h2 = s.slice(i + 3, close);
+          if (close < 0 || !/^[0-9a-fA-F]{1,6}$/.test(h2) || parseInt(h2, 16) > 1114111) this.fail("Bad escape", i);
+          return { text: String.fromCodePoint(parseInt(h2, 16)), next: close + 1 };
+        }
+        const h = s.slice(i + 2, i + 6);
+        if (!/^[0-9a-fA-F]{4}$/.test(h)) this.fail("Bad escape", i);
+        return { text: String.fromCharCode(parseInt(h, 16)), next: i + 6 };
+      }
+      case void 0:
+        return this.fail("Bad escape", i);
+      default:
+        return { text: c2, next: i + 2 };
+    }
+  }
+  advance() {
+    this.tok = this.lex();
+  }
+  is(v) {
+    return this.tok.t === "p" && this.tok.v === v;
+  }
+  eat(v) {
+    if (this.is(v)) {
+      this.advance();
+      return true;
+    }
+    return false;
+  }
+  expect(v) {
+    if (!this.eat(v)) this.fail(`Expected "${v}"`);
+  }
+  // ---- grammar
+  parseAll() {
+    if (this.src.length > MAX_SOURCE) this.fail("Expression is too long", 0);
+    const e = this.sequence();
+    if (this.tok.t !== "end") this.fail(`Unexpected "${this.tok.v}"`);
+    return e;
+  }
+  nest(f2) {
+    if (++this.depth > MAX_DEPTH) this.fail("Expression is nested too deeply");
+    try {
+      return f2();
+    } finally {
+      this.depth--;
+    }
+  }
+  sequence() {
+    const first = this.ternary();
+    if (!this.is(",")) return first;
+    const list = [first];
+    while (this.eat(",")) list.push(this.ternary());
+    return (env) => {
+      let v;
+      for (const e of list) v = e(env);
+      return v;
+    };
+  }
+  ternary() {
+    return this.nest(() => {
+      const arrow = this.tryArrow();
+      if (arrow) return arrow;
+      const test = this.binary(0);
+      if (this.is("?")) {
+        this.advance();
+        const a = this.ternary();
+        this.expect(":");
+        const b = this.ternary();
+        return (env) => test(env) ? a(env) : b(env);
+      }
+      if (this.tok.t === "p" && ASSIGN.has(this.tok.v)) this.fail("Assignment is not supported in expressions");
+      return test;
+    });
+  }
+  /** `x => body` and `(a, b) => body`; null when this is not an arrow function (state untouched). */
+  tryArrow() {
+    const save = { pos: this.pos, tok: this.tok };
+    const restore = () => {
+      this.pos = save.pos;
+      this.tok = save.tok;
+    };
+    let params = null;
+    if (this.tok.t === "id" && !RESERVED.has(this.tok.v)) {
+      const name = this.tok.v;
+      this.advance();
+      if (this.is("=>")) params = [name];
+    } else if (this.is("(")) {
+      this.advance();
+      const names2 = [];
+      let ok = true;
+      if (!this.is(")")) {
+        for (; ; ) {
+          if (this.tok.t === "id" && !RESERVED.has(this.tok.v)) {
+            names2.push(this.tok.v);
+            this.advance();
+          } else {
+            ok = false;
+            break;
+          }
+          if (this.eat(",")) continue;
+          break;
+        }
+      }
+      if (ok && this.is(")")) {
+        this.advance();
+        if (this.is("=>")) params = names2;
+      }
+    }
+    if (!params) {
+      restore();
+      return null;
+    }
+    this.advance();
+    if (this.is("{")) this.fail("Arrow functions need an expression body, not a block");
+    const body = this.ternary();
+    const names = params;
+    for (const n of names) if (n === "__proto__") this.fail("Bad parameter name");
+    return (env) => {
+      const outer = env;
+      return (...args) => {
+        const b = outer.budget.active ? outer.budget : { steps: 0, active: true };
+        if (++b.steps > MAX_STEPS) throw new ExprError("Expression took too long");
+        return body({ ...outer, budget: b, locals: { names, values: args, parent: outer.locals } });
+      };
+    };
+  }
+  static {
+    this.BIN = {
+      "??": 1,
+      "||": 2,
+      "&&": 3,
+      "|": 4,
+      "^": 5,
+      "&": 6,
+      "==": 7,
+      "!=": 7,
+      "===": 7,
+      "!==": 7,
+      "<": 8,
+      ">": 8,
+      "<=": 8,
+      ">=": 8,
+      in: 8,
+      "<<": 9,
+      ">>": 9,
+      ">>>": 9,
+      "+": 10,
+      "-": 10,
+      "*": 11,
+      "/": 11,
+      "%": 11,
+      "**": 12
+    };
+  }
+  binary(min) {
+    let left = this.unary();
+    for (; ; ) {
+      const op = this.tok.t === "p" || this.tok.t === "id" && this.tok.v === "in" ? this.tok.v : "";
+      const prec = Parser.BIN[op];
+      if (prec === void 0 || prec < min) return left;
+      this.advance();
+      const right = this.binary(op === "**" ? prec : prec + 1);
+      left = makeBinary(op, left, right);
+    }
+  }
+  unary() {
+    return this.nest(() => {
+      if (this.tok.t === "p" && ["!", "-", "+", "~"].includes(this.tok.v)) {
+        const op = this.tok.v;
+        this.advance();
+        const a = this.unary();
+        if (op === "!") return (env) => !a(env);
+        if (op === "-") return (env) => -a(env);
+        if (op === "+") return (env) => +a(env);
+        return (env) => ~a(env);
+      }
+      if (this.tok.t === "id" && (this.tok.v === "typeof" || this.tok.v === "void")) {
+        const op = this.tok.v;
+        this.advance();
+        const a = this.unary();
+        if (op === "typeof") {
+          const name = IDENT_NAME.get(a);
+          if (name) {
+            return (env) => {
+              const f2 = find(env, name);
+              return f2.found ? typeof f2.value : "undefined";
+            };
+          }
+          return (env) => typeof a(env);
+        }
+        return (env) => (a(env), void 0);
+      }
+      if (this.is("++") || this.is("--")) this.fail("Increment is not supported in expressions");
+      return this.postfix();
+    });
+  }
+  args() {
+    const list = [];
+    this.expect("(");
+    while (!this.is(")")) {
+      if (this.eat("...")) {
+        const e = this.ternary();
+        list.push(markSpread(e));
+      } else list.push(this.ternary());
+      if (!this.eat(",")) break;
+    }
+    this.expect(")");
+    return list;
+  }
+  postfix() {
+    let e = this.primary();
+    let optional = false;
+    for (; ; ) {
+      if (this.is(".") || this.is("?.")) {
+        const opt = this.is("?.");
+        this.advance();
+        if (opt && this.is("(")) {
+          e = makeCall(e, this.args(), true);
+          optional = true;
+          continue;
+        }
+        if (opt && this.is("[")) {
+          this.advance();
+          const k = this.sequence();
+          this.expect("]");
+          e = makeMember(e, k, true);
+          optional = true;
+          continue;
+        }
+        if (this.tok.t !== "id") this.fail("Expected a property name");
+        const name = this.tok.v;
+        this.advance();
+        e = makeMember(e, name, opt);
+        if (opt) optional = true;
+        continue;
+      }
+      if (this.is("[")) {
+        this.advance();
+        const k = this.sequence();
+        this.expect("]");
+        e = makeMember(e, k, false);
+        continue;
+      }
+      if (this.is("(")) {
+        e = makeCall(e, this.args(), false);
+        continue;
+      }
+      if (this.tok.t === "tick") this.fail("Tagged templates are not supported");
+      break;
+    }
+    if (optional) {
+      const inner = e;
+      return (env) => {
+        const v = inner(env);
+        return v === SHORT ? void 0 : v;
+      };
+    }
+    return e;
+  }
+  primary() {
+    const t = this.tok;
+    switch (t.t) {
+      case "num": {
+        this.advance();
+        const n = t.n;
+        return () => n;
+      }
+      case "str": {
+        this.advance();
+        const s = t.v;
+        return () => s;
+      }
+      case "tick":
+        return this.template();
+      case "id":
+        return this.identifier();
+      case "p":
+        break;
+      default:
+        return this.fail("Unexpected end of expression");
+    }
+    switch (t.v) {
+      case "(": {
+        this.advance();
+        const e = this.sequence();
+        this.expect(")");
+        return e;
+      }
+      case "[":
+        return this.arrayLiteral();
+      case "{":
+        return this.objectLiteral();
+      case "/":
+      case "/=":
+        return this.regex();
+      default:
+        return this.fail(`Unexpected "${t.v}"`);
+    }
+  }
+  identifier() {
+    const name = this.tok.v;
+    if (name === "new") return this.newExpr();
+    if (RESERVED.has(name)) {
+      if (name === "null") {
+        this.advance();
+        return () => null;
+      }
+      if (name === "true") {
+        this.advance();
+        return () => true;
+      }
+      if (name === "false") {
+        this.advance();
+        return () => false;
+      }
+      this.fail(`"${name}" is not supported in expressions`);
+    }
+    this.advance();
+    const ev = (env) => {
+      const f2 = find(env, name);
+      if (!f2.found) throw new ExprError(`${name} is not defined`);
+      return f2.value;
+    };
+    IDENT_NAME.set(ev, name);
+    return ev;
+  }
+  newExpr() {
+    this.advance();
+    if (this.tok.t !== "id" || RESERVED.has(this.tok.v)) this.fail("Expected a name after new");
+    const name = this.tok.v;
+    this.advance();
+    const args = this.is("(") ? this.args() : [];
+    return (env) => {
+      const f2 = find(env, name);
+      const fn = f2.found ? f2.value : void 0;
+      if (typeof fn !== "function" || !NEWABLE.has(fn)) throw new ExprError(`new ${name} is not supported in expressions`);
+      budget(env);
+      return Reflect.construct(fn, evalArgs(args, env));
+    };
+  }
+  arrayLiteral() {
+    this.advance();
+    const items = [];
+    while (!this.is("]")) {
+      if (this.is(",")) {
+        this.advance();
+        items.push(() => void 0);
+        continue;
+      }
+      if (this.eat("...")) items.push(markSpread(this.ternary()));
+      else items.push(this.ternary());
+      if (!this.eat(",")) break;
+    }
+    this.expect("]");
+    return (env) => evalArgs(items, env);
+  }
+  objectLiteral() {
+    this.advance();
+    const props = [];
+    while (!this.is("}")) {
+      if (this.eat("...")) {
+        props.push({ key: null, value: this.ternary(), spread: true });
+      } else {
+        let key;
+        let shorthand = null;
+        if (this.tok.t === "id") {
+          key = this.tok.v;
+          shorthand = RESERVED.has(this.tok.v) ? null : this.tok.v;
+          this.advance();
+        } else if (this.tok.t === "str") {
+          key = this.tok.v;
+          this.advance();
+        } else if (this.tok.t === "num") {
+          key = String(this.tok.n);
+          this.advance();
+        } else if (this.is("[")) {
+          this.advance();
+          key = this.ternary();
+          this.expect("]");
+        } else return this.fail("Expected a property name");
+        if (this.eat(":")) props.push({ key, value: this.ternary() });
+        else if (shorthand && typeof key === "string") {
+          const name = shorthand;
+          props.push({
+            key,
+            value: (env) => {
+              const f2 = find(env, name);
+              if (!f2.found) throw new ExprError(`${name} is not defined`);
+              return f2.value;
+            }
+          });
+        } else if (this.is("(")) this.fail("Methods in object literals are not supported");
+        else this.fail('Expected ":"');
+      }
+      if (!this.eat(",")) break;
+    }
+    this.expect("}");
+    return (env) => {
+      const out = {};
+      for (const p of props) {
+        if (p.spread) {
+          const v = p.value(env);
+          if (v === null || v === void 0) continue;
+          if (typeof v === "string" || Array.isArray(v) || isPlain(v)) {
+            for (const k2 of Object.keys(v)) if (!BLOCKED.has(k2)) out[k2] = v[k2];
+          } else throw new ExprError("Cannot spread that value into an object");
+          continue;
+        }
+        const k = typeof p.key === "string" ? p.key : propKey(p.key(env));
+        if (BLOCKED.has(k)) throw new ExprError(`Property "${k}" is not allowed`);
+        Object.defineProperty(out, k, { value: p.value(env), enumerable: true, writable: true, configurable: true });
+      }
+      return out;
+    };
+  }
+  regex() {
+    const s = this.src;
+    const start = this.tok.start;
+    let i = start + 1;
+    let inClass = false;
+    for (; i < s.length; i++) {
+      const c2 = s[i];
+      if (c2 === "\n") this.fail("Unterminated regular expression", start);
+      if (c2 === "\\") i++;
+      else if (c2 === "[") inClass = true;
+      else if (c2 === "]") inClass = false;
+      else if (c2 === "/" && !inClass) break;
+    }
+    if (i >= s.length) this.fail("Unterminated regular expression", start);
+    const source = s.slice(start + 1, i);
+    let j = i + 1;
+    while (j < s.length && ID_PART.test(s[j])) j++;
+    const flags = s.slice(i + 1, j);
+    if (!REGEX_FLAGS.test(flags)) this.fail("Bad regular expression flags", start);
+    try {
+      new RegExp(source, flags);
+    } catch (e) {
+      this.fail(`Bad regular expression: ${e.message}`, start);
+    }
+    this.pos = j;
+    this.advance();
+    return () => new RegExp(source, flags);
+  }
+  template() {
+    const s = this.src;
+    let i = this.tok.end;
+    const strings = [];
+    const exprs = [];
+    let cur = "";
+    for (; ; ) {
+      if (i >= s.length) this.fail("Unterminated template", this.tok.start);
+      const c2 = s[i];
+      if (c2 === "`") {
+        strings.push(cur);
+        i++;
+        break;
+      }
+      if (c2 === "\\") {
+        const r2 = this.escape(i);
+        cur += r2.text;
+        i = r2.next;
+      } else if (c2 === "$" && s[i + 1] === "{") {
+        strings.push(cur);
+        cur = "";
+        this.pos = i + 2;
+        this.advance();
+        exprs.push(this.sequence());
+        if (!this.is("}")) this.fail('Expected "}" in template');
+        i = this.tok.end;
+      } else {
+        cur += c2;
+        i++;
+      }
+    }
+    this.pos = i;
+    this.advance();
+    return (env) => {
+      let out = strings[0];
+      for (let k = 0; k < exprs.length; k++) out += toText(exprs[k](env)) + strings[k + 1];
+      if (out.length > MAX_STRING) throw new ExprError("Text is too long");
+      return out;
+    };
+  }
+}
+function budget(env) {
+  if (++env.budget.steps > MAX_STEPS) throw new ExprError("Expression took too long");
+}
+function find(env, name) {
+  for (let l = env.locals; l; l = l.parent) {
+    const i = l.names.lastIndexOf(name);
+    if (i >= 0) return { found: true, value: l.values[i] };
+  }
+  if (hasOwn(env.extra, name)) return { found: true, value: env.extra[name] };
+  if (hasOwn(env.vars, name)) return { found: true, value: env.vars[name] };
+  if (hasOwn(FORMULA_HELPERS, name)) return { found: true, value: FORMULA_HELPERS[name] };
+  if (hasOwn(GLOBALS, name)) return { found: true, value: GLOBALS[name] };
+  return { found: false };
+}
+const IDENT_NAME = /* @__PURE__ */ new WeakMap();
+const MEMBER_INFO = /* @__PURE__ */ new WeakMap();
+const SPREAD = /* @__PURE__ */ new WeakSet();
+function markSpread(e) {
+  const w = (env) => e(env);
+  SPREAD.add(w);
+  return w;
+}
+function evalArgs(list, env) {
+  const out = [];
+  for (const e of list) {
+    if (SPREAD.has(e)) {
+      const v = e(env);
+      if (typeof v === "string" || Array.isArray(v)) {
+        if (out.length + v.length > MAX_LIST) throw new ExprError("List is too long");
+        for (const x of v) out.push(x);
+      } else throw new ExprError("Cannot spread that value");
+    } else out.push(e(env));
+  }
+  return out;
+}
+function toText(v) {
+  if (typeof v === "symbol") throw new ExprError("Cannot convert a symbol to text");
+  return String(v);
+}
+const BLOCKED = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"]);
+function isPlain(v) {
+  if (v === null || typeof v !== "object") return false;
+  const p = Object.getPrototypeOf(v);
+  if (p === Object.prototype || p === null) return true;
+  return Object.getPrototypeOf(p) === null && hasOwn(p, "hasOwnProperty");
+}
+function propKey(k) {
+  if (typeof k === "string") return k;
+  if (typeof k === "number" || typeof k === "boolean" || typeof k === "bigint") return String(k);
+  if (k === null || k === void 0) return String(k);
+  throw new ExprError("That value cannot be used as a property name");
+}
+const guardLen = (n) => {
+  if (typeof n === "number" && n > MAX_STRING) throw new ExprError("Text is too long");
+};
+const STRING_METHODS = {};
+for (const m of [
+  "at",
+  "charAt",
+  "charCodeAt",
+  "codePointAt",
+  "concat",
+  "endsWith",
+  "includes",
+  "indexOf",
+  "lastIndexOf",
+  "localeCompare",
+  "match",
+  "normalize",
+  "replace",
+  "replaceAll",
+  "search",
+  "slice",
+  "split",
+  "startsWith",
+  "substring",
+  "substr",
+  "toLowerCase",
+  "toLocaleLowerCase",
+  "toUpperCase",
+  "toLocaleUpperCase",
+  "toString",
+  "trim",
+  "trimEnd",
+  "trimStart",
+  "valueOf"
+]) {
+  const f2 = String.prototype[m];
+  STRING_METHODS[m] = function(...a) {
+    return f2.apply(this, a);
+  };
+}
+STRING_METHODS.repeat = function(n) {
+  if (typeof n === "number" && n * this.length > MAX_STRING) throw new ExprError("Text is too long");
+  return this.repeat(n);
+};
+STRING_METHODS.padStart = function(n, fill) {
+  guardLen(n);
+  return this.padStart(n, fill);
+};
+STRING_METHODS.padEnd = function(n, fill) {
+  guardLen(n);
+  return this.padEnd(n, fill);
+};
+STRING_METHODS.matchAll = function(re) {
+  return [...this.matchAll(re)];
+};
+const ARRAY_METHODS = {};
+for (const m of [
+  "at",
+  "concat",
+  "every",
+  "filter",
+  "find",
+  "findIndex",
+  "findLast",
+  "findLastIndex",
+  "flat",
+  "flatMap",
+  "forEach",
+  "includes",
+  "indexOf",
+  "join",
+  "lastIndexOf",
+  "map",
+  "reduce",
+  "reduceRight",
+  "slice",
+  "some",
+  "toString",
+  "toLocaleString",
+  "toSorted",
+  "toReversed",
+  "toSpliced",
+  "with"
+]) {
+  const f2 = Array.prototype[m];
+  if (!f2) continue;
+  ARRAY_METHODS[m] = function(...a) {
+    return f2.apply(this, a);
+  };
+}
+ARRAY_METHODS.sort = function(cmp) {
+  return [...this].sort(cmp);
+};
+ARRAY_METHODS.reverse = function() {
+  return [...this].reverse();
+};
+const NUMBER_METHODS = {};
+for (const m of ["toFixed", "toExponential", "toPrecision", "toString", "toLocaleString", "valueOf"]) {
+  const f2 = Number.prototype[m];
+  NUMBER_METHODS[m] = function(...a) {
+    return f2.apply(this, a);
+  };
+}
+const BOOLEAN_METHODS = {
+  toString: function() {
+    return String(this);
+  },
+  valueOf: function() {
+    return this.valueOf();
+  }
+};
+const DATE_METHODS = {};
+for (const m of [
+  "getTime",
+  "getFullYear",
+  "getMonth",
+  "getDate",
+  "getDay",
+  "getHours",
+  "getMinutes",
+  "getSeconds",
+  "getMilliseconds",
+  "getTimezoneOffset",
+  "getUTCFullYear",
+  "getUTCMonth",
+  "getUTCDate",
+  "getUTCDay",
+  "getUTCHours",
+  "getUTCMinutes",
+  "getUTCSeconds",
+  "getUTCMilliseconds",
+  "toISOString",
+  "toJSON",
+  "toDateString",
+  "toTimeString",
+  "toString",
+  "toLocaleString",
+  "toLocaleDateString",
+  "toLocaleTimeString",
+  "valueOf"
+]) {
+  const f2 = Date.prototype[m];
+  DATE_METHODS[m] = function(...a) {
+    return f2.apply(this, a);
+  };
+}
+const REGEXP_METHODS = {
+  test: function(s) {
+    return this.test(String(s));
+  },
+  exec: function(s) {
+    return this.exec(String(s));
+  },
+  toString: function() {
+    return this.toString();
+  }
+};
+const STATICS = /* @__PURE__ */ new Map();
+const guardedFrom = (src, map) => {
+  if (typeof src === "string" || Array.isArray(src)) return Array.from(src, map);
+  if (src && typeof src === "object") {
+    const len = Number(src.length);
+    if (Number.isFinite(len) && len > MAX_LIST) throw new ExprError("List is too long");
+    return Array.from(src, map);
+  }
+  return [];
+};
+const plainOnly = (o) => {
+  if (o !== null && typeof o === "object" && (Array.isArray(o) || isPlain(o))) return o;
+  throw new ExprError("Expected an object");
+};
+const ObjectNs = {
+  keys: (o) => Object.keys(plainOnly(o)),
+  values: (o) => Object.values(plainOnly(o)),
+  entries: (o) => Object.entries(plainOnly(o)),
+  fromEntries: (list) => {
+    const out = {};
+    for (const e of guardedFrom(list)) {
+      const k = propKey(e[0]);
+      if (!BLOCKED.has(k)) Object.defineProperty(out, k, { value: e[1], enumerable: true, writable: true, configurable: true });
+    }
+    return out;
+  },
+  hasOwn: (o, k) => hasOwn(plainOnly(o), propKey(k))
+};
+const ArrayNs = {
+  isArray: (v) => Array.isArray(v),
+  from: guardedFrom,
+  of: (...a) => a
+};
+const JSONNs = {
+  parse: (s, reviver) => JSON.parse(String(s), reviver),
+  stringify: (v, replacer, space) => JSON.stringify(v, replacer, space)
+};
+const NUMBER_STATICS = {};
+for (const k of ["isFinite", "isInteger", "isNaN", "isSafeInteger", "parseFloat", "parseInt", "MAX_SAFE_INTEGER", "MIN_SAFE_INTEGER", "EPSILON", "MAX_VALUE", "MIN_VALUE", "POSITIVE_INFINITY", "NEGATIVE_INFINITY", "NaN"]) {
+  NUMBER_STATICS[k] = Number[k];
+}
+STATICS.set(Number, NUMBER_STATICS);
+STATICS.set(String, {
+  fromCharCode: (...a) => String.fromCharCode(...a),
+  fromCodePoint: (...a) => String.fromCodePoint(...a)
+});
+STATICS.set(Date, { now: () => Date.now(), parse: (s) => Date.parse(String(s)), UTC: (...a) => Date.UTC(...a) });
+const NEWABLE = /* @__PURE__ */ new Set([Date]);
+const GLOBALS = {
+  Math,
+  JSON: JSONNs,
+  Number,
+  String,
+  Boolean,
+  Date,
+  Array: ArrayNs,
+  Object: ObjectNs,
+  parseInt,
+  parseFloat,
+  isNaN,
+  isFinite,
+  encodeURIComponent,
+  decodeURIComponent,
+  encodeURI,
+  decodeURI,
+  NaN: NaN,
+  Infinity: Infinity,
+  undefined: void 0
+};
+function getMember(obj, rawKey) {
+  if (obj === null || obj === void 0) throw new ExprError(`Cannot read "${String(rawKey)}" of ${obj}`);
+  const key = propKey(rawKey);
+  if (BLOCKED.has(key)) throw new ExprError(`Property "${key}" is not allowed`);
+  switch (typeof obj) {
+    case "string":
+      if (key === "length") return obj.length;
+      if (/^\d+$/.test(key)) return obj[Number(key)];
+      return hasOwn(STRING_METHODS, key) ? bind(STRING_METHODS[key], obj) : void 0;
+    case "number":
+      return hasOwn(NUMBER_METHODS, key) ? bind(NUMBER_METHODS[key], obj) : void 0;
+    case "boolean":
+      return hasOwn(BOOLEAN_METHODS, key) ? bind(BOOLEAN_METHODS[key], obj) : void 0;
+    case "function": {
+      const t = STATICS.get(obj);
+      return t && hasOwn(t, key) ? t[key] : void 0;
+    }
+    case "object":
+      if (Array.isArray(obj)) {
+        if (key === "length") return obj.length;
+        if (/^\d+$/.test(key)) return obj[Number(key)];
+        return hasOwn(ARRAY_METHODS, key) ? bind(ARRAY_METHODS[key], obj) : void 0;
+      }
+      if (obj instanceof Date) return hasOwn(DATE_METHODS, key) ? bind(DATE_METHODS[key], obj) : void 0;
+      if (obj instanceof RegExp) {
+        if (key === "source") return obj.source;
+        if (key === "flags") return obj.flags;
+        return hasOwn(REGEXP_METHODS, key) ? bind(REGEXP_METHODS[key], obj) : void 0;
+      }
+      if (isPlain(obj)) return hasOwn(obj, key) ? obj[key] : void 0;
+      throw new ExprError(`Cannot read "${key}" of that value`);
+    default:
+      return void 0;
+  }
+}
+function bind(fn, self) {
+  return (...a) => fn.apply(self, a);
+}
+function makeMember(objEv, key, optional) {
+  const ev = (env) => {
+    const o = objEv(env);
+    if (o === SHORT) return SHORT;
+    if (optional && (o === null || o === void 0)) return SHORT;
+    return getMember(o, typeof key === "string" ? key : key(env));
+  };
+  MEMBER_INFO.set(ev, { obj: objEv, key, optional });
+  return ev;
+}
+function makeCall(calleeEv, args, optionalCall) {
+  const info = MEMBER_INFO.get(calleeEv);
+  return (env) => {
+    budget(env);
+    let fn;
+    let self;
+    if (info) {
+      const o = info.obj(env);
+      if (o === SHORT) return SHORT;
+      if (info.optional && (o === null || o === void 0)) return SHORT;
+      fn = getMember(o, typeof info.key === "string" ? info.key : info.key(env));
+      self = isPlain(o) ? o : void 0;
+    } else {
+      fn = calleeEv(env);
+      if (fn === SHORT) return SHORT;
+    }
+    if ((fn === null || fn === void 0) && optionalCall) return SHORT;
+    if (typeof fn !== "function") throw new ExprError("Not a function");
+    return fn.apply(self, evalArgs(args, env));
+  };
+}
+function makeBinary(op, a, b) {
+  switch (op) {
+    case "??":
+      return (env) => {
+        const v = a(env);
+        return v === null || v === void 0 ? b(env) : v;
+      };
+    case "||":
+      return (env) => a(env) || b(env);
+    case "&&":
+      return (env) => a(env) && b(env);
+    case "|":
+      return (env) => a(env) | b(env);
+    case "^":
+      return (env) => a(env) ^ b(env);
+    case "&":
+      return (env) => a(env) & b(env);
+    case "==":
+      return (env) => a(env) == b(env);
+    case "!=":
+      return (env) => a(env) != b(env);
+    case "===":
+      return (env) => a(env) === b(env);
+    case "!==":
+      return (env) => a(env) !== b(env);
+    case "<":
+      return (env) => a(env) < b(env);
+    case ">":
+      return (env) => a(env) > b(env);
+    case "<=":
+      return (env) => a(env) <= b(env);
+    case ">=":
+      return (env) => a(env) >= b(env);
+    case "in":
+      return (env) => {
+        const k = a(env);
+        const o = b(env);
+        if (o === null || typeof o !== "object" || !(Array.isArray(o) || isPlain(o))) throw new ExprError('"in" needs an object or a list');
+        return hasOwn(o, propKey(k));
+      };
+    case "<<":
+      return (env) => a(env) << b(env);
+    case ">>":
+      return (env) => a(env) >> b(env);
+    case ">>>":
+      return (env) => a(env) >>> b(env);
+    case "+":
+      return (env) => {
+        const r2 = a(env) + b(env);
+        if (typeof r2 === "string" && r2.length > MAX_STRING) throw new ExprError("Text is too long");
+        return r2;
+      };
+    case "-":
+      return (env) => a(env) - b(env);
+    case "*":
+      return (env) => a(env) * b(env);
+    case "/":
+      return (env) => a(env) / b(env);
+    case "%":
+      return (env) => a(env) % b(env);
+    case "**":
+      return (env) => a(env) ** b(env);
+    default:
+      throw new ExprError(`Unsupported operator ${op}`);
+  }
+}
+const FORMULA_HELPERS = {
+  fmt(n, decimals = 0, thousands = false) {
+    const d = Math.max(0, Math.min(20, Math.round(decimals)));
+    const s = Number(n).toFixed(d);
+    if (!thousands) return s;
+    const [int, frac] = s.split(".");
+    return int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (frac ? "." + frac : "");
+  },
+  remap(v, inMin, inMax, outMin, outMax, clamp = false) {
+    const t = inMax === inMin ? 0 : (v - inMin) / (inMax - inMin);
+    const k = clamp ? Math.min(1, Math.max(0, t)) : t;
+    return outMin + (outMax - outMin) * k;
+  },
+  clamp: (v, min, max) => Math.min(max, Math.max(min, v)),
+  lookup(v, map, fallback) {
+    const key = String(v);
+    return map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : fallback;
+  },
+  pad: (n, width) => {
+    guardLen(width);
+    return String(n).padStart(width, "0");
+  }
+};
+const cache = /* @__PURE__ */ new Map();
+function compile(src) {
+  let hit = cache.get(src);
+  if (hit === void 0) {
+    try {
+      hit = new Parser(src).parseAll();
+    } catch (e) {
+      hit = e instanceof ExprError ? e : new ExprError(String(e?.message ?? e));
+    }
+    if (cache.size > 2e3) cache.clear();
+    cache.set(src, hit);
+  }
+  if (hit instanceof ExprError) throw new ExprError(`Cannot parse expression: ${src.trim()} - ${hit.message}`);
+  return hit;
+}
+function checkExpression(src) {
+  const t = src.trim();
+  if (t) compile(t);
 }
 const isIdArray = (a) => Array.isArray(a) && a.length > 0 && a.every((e) => e && typeof e === "object" && typeof e.id === "string");
 const same = (a, b) => {
@@ -2301,7 +3727,7 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
 - **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react.
 - **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed.
 - **Link**: text that opens a URL.
-- **Embed**: an iframe from a URL, or your own HTML.
+- **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
 - **Video**: a video file or URL.
 
 ## Accessibility
@@ -2314,7 +3740,7 @@ Every layer has an **ARIA label** and a **CSS class** in the Advanced section. G
     summary: "Make any layer a link, and choose the cursor shown when hovering it.",
     keywords: "hyperlink url href target new tab cursor pointer hand custom cursor image hotspot",
     body: `## Link
-In the **Link** section, give any layer a **URL** and it becomes a real link. **Open in** chooses where: a new tab, the same frame, the parent frame, or the whole page (useful when the interactive is embedded in an iframe). URLs can contain \`{expressions}\`.
+In the **Link** section, give any layer a **URL** and it becomes a real link. **Open in** chooses where: a new tab, the same frame, the parent frame, or the whole page (useful when the interactive is embedded in an iframe). URLs can contain \`{expressions}\`. Links go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses; anything else (such as \`javascript:\`) is ignored.
 
 The **Open URL** action does the same from an interaction.
 
@@ -2589,7 +4015,7 @@ Variable names must be letters, digits and \`_\` so expressions can use them. Th
     group: "Interactivity",
     summary: "Short JavaScript formulas in text, bindings and node settings.",
     keywords: "expression formula javascript template braces condition ternary math",
-    body: `An expression is a short piece of JavaScript that gives a value. Variables and data sources are in scope by name.
+    body: `An expression is a short formula that gives a value, written in a safe subset of JavaScript. Variables and data sources are in scope by name.
 
 \`\`\`
 score + 1
@@ -2618,6 +4044,17 @@ These work in every expression:
 | \`lookup(v, {a: 1, b: 2}, fallback)\` | The value stored under a key |
 | \`pad(n, width)\` | Zero padding: \`pad(7, 3)\` is \`007\` |
 | \`enums.name\` | The options of a choice variable |
+
+## What you can write
+Expressions are read by a small interpreter, not run as JavaScript, so a project can't use them to reach the page. These work:
+
+- **Values**: numbers (\`12\`, \`.5\`, \`1e3\`, \`0xff\`), text in \`"…"\`, \`'…'\` or backticks with \`\${…}\` slots, \`true\`, \`false\`, \`null\`, \`undefined\`, lists \`[1, 2, ...more]\`, objects \`{a: 1, b}\`, and patterns \`/regex/flags\`.
+- **Operators**: \`+ - * / % **\`, \`== != === !==\`, \`< > <= >=\`, \`&& || ??\`, \`!\`, \`typeof\`, \`in\`, \`a ? b : c\`, bit operators, and \`,\` inside brackets.
+- **Looking inside**: \`a.b\`, \`a[b]\` and \`a?.b\`. Only the values you put there are readable: your variables, data and \`item\`, \`event\`, \`value\`; \`__proto__\`, \`constructor\` and \`prototype\` never are.
+- **Calls**: the helpers above, \`Math.*\`, \`Number\`, \`String\`, \`Boolean\`, \`parseInt\`, \`parseFloat\`, \`isNaN\`, \`JSON.parse/stringify\`, \`Object.keys/values/entries\`, \`Array.isArray/from\`, \`Date.now()\` and \`new Date(…)\`, and the usual methods of text (\`slice\`, \`split\`, \`replace\`, \`padStart\`, \`toUpperCase\`…), numbers (\`toFixed\`, \`toLocaleString\`…), lists (\`map\`, \`filter\`, \`find\`, \`some\`, \`every\`, \`reduce\`, \`join\`, \`includes\`, \`slice\`, \`sort\`…) and dates.
+- **Arrow functions** for those list methods: \`x => x * 2\`, \`(a, b) => a + b\`. They take plain names and an expression, not a block.
+
+These don't: assignment (\`=\`, \`++\`), statements, \`function\`, \`this\`, loops, \`window\`, \`document\`, \`fetch\`, \`eval\`, and list methods that change a list in place (\`push\`, \`splice\`; \`sort\` and \`reverse\` give a sorted copy and leave the list alone). A slot that can't be read or fails is left as written in text and gives nothing elsewhere. Very large lists or text, and expressions that run for very long, are cut off.
 
 > Expressions are for values. For several steps, waiting or loops, use a [script](scripts).`
   },
@@ -2691,10 +4128,12 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
 | \`ix.setCursor('grab')\`, \`ix.log(…)\` | Cursor, logging |
 
+\`.set()\` and \`.animate()\` change the properties in the [Animatable properties](animatable-properties) (position, size, colour, text, visibility, link URL…) and a layer's \`fill\`, \`stroke\`, \`shadow\` and auto layout. Anything else, such as an embed's \`html\`, \`className\`, \`bindings\` or a layer's \`repeat\`, is part of how the project was built: the call throws an error saying so. Links only go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses.
+
 To paint a layer from a script every frame (generative art, particles, charts), use a [Script layer](script-layers).
 
 ## The sandbox
-New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`
+New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches whatever URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. Only run projects whose scripts you trust. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`
   },
   {
     id: "script-layers",
@@ -3024,7 +4463,7 @@ How a re-import merges (your edits are kept):
 - A property (position, size, opacity, visibility, text, style, ...) the file changed is updated **unless you changed it too**: what you edited stays. Pictures that changed in the file are replaced; one you swapped for another picture stays.
 - New layers in the file appear in their place in the layer order. Layers you added yourself, and all timelines, interactions and bindings, are left alone.
 - A layer the file no longer has is removed. If you gave it keys, interactions or bindings it stays instead, hidden, and is renamed "(removed from file)", so nothing you built is lost. A layer you deleted here stays deleted.
-- One undo step undoes a whole re-import. A toast says what happened ("Poster.psd updated: 3 layers changed, 1 added").
+- One undo step undoes a whole re-import. Pictures the file no longer uses are kept in the project (so undo can bring them back); they show as unused in the Usage tab, and **Remove unused assets** deletes them. A toast says what happened ("Poster.psd updated: 3 layers changed, 1 added").
 
 Select a linked artboard to see **Linked to Poster.psd (updated 2 min ago)** in the inspector, with **Re-import now**, **Unlink (keep as embedded)** and a **Watch for changes** switch. Unlinking leaves the layers as they are.
 
@@ -3144,6 +4583,7 @@ What is kept when you update: the instances you placed in your own artboards, th
 - **Undo** only undoes your own changes.
 - If two people change the same setting at the same moment, the later change wins.
 - If the connection drops, the badge says *Reconnecting*; your changes are kept and sent when it's back.
+- If the server refuses a batch of changes for good (too large, not allowed), live editing stops with a message and the whole project is saved the normal way instead. A temporary server error is retried, waiting a little longer each time.
 
 ## Revision history
 The server keeps saved revisions of the project: a snapshot every few minutes while it changes (the newest 100 are kept), and one before every restore. Click the **Revision history** button (the clock) in the top bar. The list on the left shows each version with its date and how long ago it was; click one to see a picture of it and a count of its artboards and variables. **Restore this version** asks **Restore version** in a dialog first. What is there now is saved in the history before the restore, so you can come back to it, and the page reloads with the restored project.
@@ -3466,8 +4906,7 @@ function validate(p) {
         if (pd.type === "variable" && !varIds.has(String(v))) problems.push(`${ab.name}: "${def.label}" (${n.id}) points at a missing variable ${v}`);
         if (pd.type === "expr") {
           try {
-            new Function(`return (${String(v)}
-);`);
+            checkExpression(String(v));
           } catch (e) {
             problems.push(`${ab.name}: "${def.label}" (${n.id}) ${pd.label}: ${e.message} in \`${v}\``);
           }
@@ -3503,6 +4942,7 @@ function applyChanges(p0, changes) {
           setPath(loc.node, k, v);
         }
         syncRuns(loc.node, props);
+        sanitizeLayerInPlace(loc.node);
         touched.push(loc.node.id);
         break;
       }
@@ -3511,6 +4951,7 @@ function applyChanges(p0, changes) {
         const node = createNode(c2.type, resolveRefs(c2.props ?? {}));
         if (isContainer(node) && Array.isArray(c2.children)) node.children = [];
         syncRuns(node, resolveRefs(c2.props ?? {}));
+        sanitizeLayerInPlace(node);
         let list = ab.children;
         if (c2.parent_id) {
           const parent = locate(p, ref(c2.parent_id));

@@ -726,7 +726,7 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
 - **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react.
 - **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed.
 - **Link**: text that opens a URL.
-- **Embed**: an iframe from a URL, or your own HTML.
+- **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
 - **Video**: a video file or URL.
 
 ## Accessibility
@@ -739,7 +739,7 @@ Every layer has an **ARIA label** and a **CSS class** in the Advanced section. G
     summary: 'Make any layer a link, and choose the cursor shown when hovering it.',
     keywords: 'hyperlink url href target new tab cursor pointer hand custom cursor image hotspot',
     body: `## Link
-In the **Link** section, give any layer a **URL** and it becomes a real link. **Open in** chooses where: a new tab, the same frame, the parent frame, or the whole page (useful when the interactive is embedded in an iframe). URLs can contain \`{expressions}\`.
+In the **Link** section, give any layer a **URL** and it becomes a real link. **Open in** chooses where: a new tab, the same frame, the parent frame, or the whole page (useful when the interactive is embedded in an iframe). URLs can contain \`{expressions}\`. Links go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses; anything else (such as \`javascript:\`) is ignored.
 
 The **Open URL** action does the same from an interaction.
 
@@ -1018,7 +1018,7 @@ Variable names must be letters, digits and \`_\` so expressions can use them. Th
     group: 'Interactivity',
     summary: 'Short JavaScript formulas in text, bindings and node settings.',
     keywords: 'expression formula javascript template braces condition ternary math',
-    body: `An expression is a short piece of JavaScript that gives a value. Variables and data sources are in scope by name.
+    body: `An expression is a short formula that gives a value, written in a safe subset of JavaScript. Variables and data sources are in scope by name.
 
 \`\`\`
 score + 1
@@ -1047,6 +1047,17 @@ These work in every expression:
 | \`lookup(v, {a: 1, b: 2}, fallback)\` | The value stored under a key |
 | \`pad(n, width)\` | Zero padding: \`pad(7, 3)\` is \`007\` |
 | \`enums.name\` | The options of a choice variable |
+
+## What you can write
+Expressions are read by a small interpreter, not run as JavaScript, so a project can't use them to reach the page. These work:
+
+- **Values**: numbers (\`12\`, \`.5\`, \`1e3\`, \`0xff\`), text in \`"…"\`, \`'…'\` or backticks with \`\${…}\` slots, \`true\`, \`false\`, \`null\`, \`undefined\`, lists \`[1, 2, ...more]\`, objects \`{a: 1, b}\`, and patterns \`/regex/flags\`.
+- **Operators**: \`+ - * / % **\`, \`== != === !==\`, \`< > <= >=\`, \`&& || ??\`, \`!\`, \`typeof\`, \`in\`, \`a ? b : c\`, bit operators, and \`,\` inside brackets.
+- **Looking inside**: \`a.b\`, \`a[b]\` and \`a?.b\`. Only the values you put there are readable: your variables, data and \`item\`, \`event\`, \`value\`; \`__proto__\`, \`constructor\` and \`prototype\` never are.
+- **Calls**: the helpers above, \`Math.*\`, \`Number\`, \`String\`, \`Boolean\`, \`parseInt\`, \`parseFloat\`, \`isNaN\`, \`JSON.parse/stringify\`, \`Object.keys/values/entries\`, \`Array.isArray/from\`, \`Date.now()\` and \`new Date(…)\`, and the usual methods of text (\`slice\`, \`split\`, \`replace\`, \`padStart\`, \`toUpperCase\`…), numbers (\`toFixed\`, \`toLocaleString\`…), lists (\`map\`, \`filter\`, \`find\`, \`some\`, \`every\`, \`reduce\`, \`join\`, \`includes\`, \`slice\`, \`sort\`…) and dates.
+- **Arrow functions** for those list methods: \`x => x * 2\`, \`(a, b) => a + b\`. They take plain names and an expression, not a block.
+
+These don't: assignment (\`=\`, \`++\`), statements, \`function\`, \`this\`, loops, \`window\`, \`document\`, \`fetch\`, \`eval\`, and list methods that change a list in place (\`push\`, \`splice\`; \`sort\` and \`reverse\` give a sorted copy and leave the list alone). A slot that can't be read or fails is left as written in text and gives nothing elsewhere. Very large lists or text, and expressions that run for very long, are cut off.
 
 > Expressions are for values. For several steps, waiting or loops, use a [script](scripts).`,
   },
@@ -1120,10 +1131,12 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
 | \`ix.setCursor('grab')\`, \`ix.log(…)\` | Cursor, logging |
 
+\`.set()\` and \`.animate()\` change the properties in the [Animatable properties](animatable-properties) (position, size, colour, text, visibility, link URL…) and a layer's \`fill\`, \`stroke\`, \`shadow\` and auto layout. Anything else, such as an embed's \`html\`, \`className\`, \`bindings\` or a layer's \`repeat\`, is part of how the project was built: the call throws an error saying so. Links only go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses.
+
 To paint a layer from a script every frame (generative art, particles, charts), use a [Script layer](script-layers).
 
 ## The sandbox
-New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`,
+New projects run scripts in a sandbox: a separate JavaScript engine compiled to WebAssembly. Scripts there can only use \`ix\`, timers and \`console\`, with no access to the page, cookies or the network (use [data sources](data-sources) for data). A script that runs too long without yielding is stopped. One thing the sandbox does not hide: \`ix.loadData(name, url)\` fetches whatever URL the script gives it, from the viewer's browser, so a script can read from, and send data to, the network that way. Only run projects whose scripts you trust. Turn **Run scripts in the sandbox** off in Project settings only for code you trust that needs the page (\`node.element\`, \`fetch\`).`,
   },
   {
     id: 'script-layers',

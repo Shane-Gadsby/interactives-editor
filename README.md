@@ -49,7 +49,7 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | `GET /api/projects` | your projects. `?all=1` returns everyone's, and is honoured only for admins and power users |
 | `GET/PUT/DELETE /api/projects/:id` | load / save (`{project, rev}`, a stale `rev` gets a 409) / delete with assets |
 | `PATCH /api/projects/:id/meta` | `{tags?, folder?}`: the projects page's tags (up to 20, 40 characters each) and one-level folder. Stored on the mongo document beside `name`, not in the project JSON, and no rev bump |
-| `POST /api/projects/:id/duplicate` | copy a project and its assets under `{newId}` |
+| `POST /api/projects/:id/duplicate` | copy a project and its assets under a new id made by the server (`{name?}` in, `{id}` out) |
 | `GET /api/projects/:id/assets` | asset list |
 | `PUT/GET/DELETE /api/projects/:id/assets/:assetId` | raw asset bytes |
 | `GET /api/projects/:id/live?clientId&since` | live editing stream (Server-Sent Events: `hello`, `ops`, `presence`, `reset`, `deleted`) |
@@ -66,14 +66,14 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | `GET /api/projects/:id/library` | this project's own library record, or null |
 | `PUT /api/projects/:id/library/share` | `{everyone, users[]}`: who else can use the published library |
 | `DELETE /api/projects/:id/library` | stop publishing (projects that copied components keep them) |
-| `GET /s/:token` | a shared project, **no session** (a link in a new tab can't carry one). Tokens are 24 random base64url chars; off until the owner turns it on |
+| `GET /s/:token` | a shared project, **no session** (a link in a new tab can't carry one). Tokens are 24 random base64url chars; off until the owner turns it on. Served with `Content-Security-Policy: sandbox allow-scripts ...` (no `allow-same-origin`), so a shared page can't touch the editor's origin; its `localStorage` is not available |
 
 Data lives in two places:
 - **MongoDB:** database `lti-interactives`.
   - `projects`: `{_id, name, owner, created, updated, rev, meta, doc, share?}`, where `doc` is the project JSON stored as a string.
   - `libraries`: `{_id (the project id), name, owner, version, hash, updated, note, shared: {everyone, users[]}, components, internals, styles, history[], snapshot}`. One per published library; `snapshot` is the latest version's JSON string (artboards, variables, fonts, data sources, asset records, styles) and `history` keeps a short list of what each version held. A project's own document gets `library: {version, updated}` when published, and `meta.library` says it is marked as a library.
   - `revisions`: `{_id, project, created, rev, by, reason, size, doc}`. A snapshot at most every 5 minutes per project while it is saved (PUT or live room save), plus one before each restore. The newest 100 per project are kept.
-- **Asset files:** stored under `storage/<projectId>/<assetId>`, each with a `.json` sidecar. A published library's snapshot assets are copied to `storage/_libraries/<projectId>/` (same layout) so they survive edits to the library project. Share links are `storage/shares/<token>.html`. `INTERACTIVES_STORAGE` moves that folder; on test and prod it is symlinked to the larger storage pool. `storage/` is gitignored.
+- **Asset files:** stored under `storage/<projectId>/<assetId>`, each with a `.json` sidecar. A published library's snapshot assets are copied to `storage/_libraries/<projectId>/` (same layout) so they survive edits to the library project. Share links are `storage/shares/<token>.html`. `INTERACTIVES_STORAGE` moves that folder; on test and prod it is symlinked to the larger storage pool. `storage/` is gitignored. Because a project id is a folder name, `validID` (in `shared/safety.mjs`) refuses `shares`, `thumbs`, `_libraries` and anything starting with `_`. Asset responses (project and library) go through `assetHeaders` in the same file: `nosniff`; images (not svg), video, audio, fonts, JSON, CSV and plain text keep their type; svg gets a CSP that stops scripts; anything else is served as `application/octet-stream` with `Content-Disposition: attachment`.
 
 **Live editing.** Opening a project joins a room held in memory by the server, which holds the document, an op log and the connected clients. Edits are diffed into id-addressed ops (`shared/ops.mjs`, the same file the server uses): set a property, insert after an id, delete an id. The last write wins per property, in the server's order.
 - The server saves the room to MongoDB a second after the last op, when the room empties, and on SIGINT/SIGTERM.

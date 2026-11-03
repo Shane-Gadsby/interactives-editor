@@ -149,12 +149,12 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
       time: timeline ? time / 1000 : 0,
       ratio: opts.fonts === false ? 1 : 2,
     }));
-    const r = new Renderer({ mode: 'play', resolveAsset: resolve, mountInstance: editInstanceMount(() => project, 0, resolve), mountShader: shaders.mount });
+    const r = new Renderer({ mode: 'play', placeholderEmbeds: true, resolveAsset: resolve, mountInstance: editInstanceMount(() => project, 0, resolve), mountShader: shaders.mount });
     host.appendChild(r.root);
     const vars = previewScope(project);
     const sampled: SceneNode[] = timeline ? sampleArtboard(ab.children, timeline, time) : ab.children;
     r.render(ab, prepareNodes(sampled, { vars }), { vars });
-    if (r.root.querySelector('iframe, video')) warnings.push('Embeds and video show as empty boxes in pictures.');
+    if (r.root.querySelector('iframe, video, [data-ix-embed]')) warnings.push('Embeds and video show as empty boxes in pictures.');
     if (r.root.querySelector('canvas.ix-draw')) warnings.push('Script layers show as empty boxes in pictures.');
     if (r.root.querySelector('canvas.ix-shader')) {
       await shaders.settled();

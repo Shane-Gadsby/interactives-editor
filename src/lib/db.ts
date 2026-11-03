@@ -191,9 +191,9 @@ export async function importPackage(file: Blob): Promise<Project> {
 }
 
 export async function duplicateProject(id: string, name?: string): Promise<string> {
-  const newId = uid('pr');
-  await call(`projects/${encodeURIComponent(id)}/duplicate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newId, name }) });
-  return newId;
+  // The server makes the new id (a client-chosen one could land on a project that already exists)
+  const res = await call<{ id: string }>(`projects/${encodeURIComponent(id)}/duplicate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+  return res.id;
 }
 
 /** A new project must be saved once before assets can be attached to it. */
