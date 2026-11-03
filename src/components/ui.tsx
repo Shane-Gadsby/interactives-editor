@@ -284,10 +284,12 @@ export function Section({
   return (
     <section className={`section${open ? '' : ' closed'}`}>
       <header className="section-head">
-        <button className="section-title" onClick={() => collapsible && setOpen(!open)}>
-          {title}
-        </button>
-        {help && <HelpLink topic={help.split('#')[0]} anchor={help.split('#')[1]} />}
+        <div className="section-title-row" onClick={() => collapsible && setOpen(!open)}>
+          <button className="section-title" aria-expanded={open}>
+            {title}
+          </button>
+          {help && <HelpLink topic={help.split('#')[0]} anchor={help.split('#')[1]} />}
+        </div>
         {/* Adding something (the + buttons) opens the section so it can be seen */}
         <div className="section-actions" onClickCapture={() => setOpen(true)}>
           {actions}

@@ -885,6 +885,8 @@ Colour, width, **cap** (butt, round, square), **join** (miter, round, bevel) and
 **Trim start**, **Trim end** and **Trim offset** (all 0–100%) draw only part of a stroke. Animate *Trim end* from 0 to 100 to make a line draw itself on. Works on every shape with a stroke.
 
 ## Effects
+Use **+** in the Effects section to add a shadow or a layer blur; each one has a **×** to remove it. Fill and Stroke have the same **×** and **+** in their headers.
+
 - **Opacity** of the whole layer.
 - **Shadow**: x, y, blur, spread and colour.
 - **Layer blur**: blurs the layer.
@@ -1074,7 +1076,7 @@ The **Open URL** action does the same from an interaction.
 | Autoplay | Start when the artboard is shown |
 | Speed | Playback rate (2 is twice as fast, negative plays backwards) |
 
-The line between two keys is a **tween**: it shows its [easing](easing) as a little curve. Click it to choose how the value moves from the first key to the second (or *Use for all tweens*). Select a key to change its time or value.
+The line between two keys is a **tween**: it shows its [easing](easing) as a little curve. Click it to choose how the value moves from the first key to the second (or *Use for all tweens*). In the Tween panel, drag the two handles on the graph to make your own curve; the dashed lines mark the start (0) and end (1) values, and the graph grows to show overshoot. Select a key to change its time or value.
 
 ## Design view
 Switching artboards opens them in **design view**: the canvas shows the layers as they are, not a frame of an animation. Choose a timeline in the Timeline tab to see and edit its frames; choose *Design view* again to go back.

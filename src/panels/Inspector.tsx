@@ -387,7 +387,13 @@ function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project: Projec
     <Section
       help="fill-stroke#stroke"
       title="Stroke"
-      actions={!s && <IconButton icon={<Icons.plus />} title="Add stroke" onClick={() => set({ stroke: { paint: { type: 'solid', color: '#111111' }, width: 1 } })} />}
+      actions={
+        s ? (
+          <IconButton icon={<Icons.close />} className="remove-btn" title="Remove stroke" onClick={() => set({ stroke: null })} />
+        ) : (
+          <IconButton icon={<Icons.plus />} title="Add stroke" onClick={() => set({ stroke: { paint: { type: 'solid', color: '#111111' }, width: 1 } })} />
+        )
+      }
     >
       {s && (
         <>
@@ -409,7 +415,6 @@ function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project: Projec
                 set({ stroke: { ...s, dash: dash.length ? dash : undefined } });
               }}
             />
-            <IconButton icon={<Icons.trash />} title="Remove stroke" onClick={() => set({ stroke: null })} />
           </Row>
           {(n.type === 'path' || n.type === 'polygon' || n.type === 'star' || n.type === 'rect' || n.type === 'ellipse') && (
             <Row>
@@ -430,16 +435,32 @@ function EffectsSection({ nodes }: { nodes: SceneNode[] }) {
   const ids = nodes.map((x) => x.id);
   const set = useSetter(ids);
   const sh = n.shadow;
+  const [blurOn, setBlurOn] = useState(false);
+  const hasBlur = !!n.blur || blurOn;
   const setShadow = (patch: Partial<Shadow>) => set({ shadow: { ...(sh as Shadow), ...patch } }, 'shadow');
+  const addShadow = () => set({ shadow: { x: 0, y: 4, blur: 12, spread: 0, color: 'rgba(0, 0, 0, 0.25)' } });
+  const addBlur = () => {
+    setBlurOn(true);
+    set({ blur: 4 });
+  };
   return (
     <Section
+      help="fill-stroke#effects"
       title="Effects"
       defaultOpen={!!(sh || n.blur)}
-      actions={!sh && <IconButton icon={<Icons.plus />} title="Add shadow" onClick={() => set({ shadow: { x: 0, y: 4, blur: 12, spread: 0, color: 'rgba(0, 0, 0, 0.25)' } })} />}
+      actions={
+        !(sh && hasBlur) && (
+          <AddMenu
+            title="Add an effect"
+            items={[...(!sh ? [{ label: 'Shadow', onClick: addShadow }] : []), ...(!hasBlur ? [{ label: 'Layer blur', onClick: addBlur }] : [])]}
+          />
+        )
+      }
     >
+      {!sh && !hasBlur && <p className="hint">No effects. Use + to add a shadow or a blur.</p>}
       {sh && (
-        <>
-          <div className="field-label block">Shadow</div>
+        <div className="effect-item">
+          <ItemHead label="Shadow" onRemove={() => set({ shadow: null })} />
           <Row>
             <Num node={n} ids={ids} prop="shadow.x" label="X" />
             <Num node={n} ids={ids} prop="shadow.y" label="Y" />
@@ -449,14 +470,58 @@ function EffectsSection({ nodes }: { nodes: SceneNode[] }) {
             <NumberField label="Spread" value={sh.spread} onChange={(v) => setShadow({ spread: v })} />
           </Row>
           <Color node={n} ids={ids} prop="shadow.color" label="Colour" />
-          <Row>
-            <CheckField label="Inner" value={!!sh.inset} onChange={(v) => setShadow({ inset: v })} />
-            <IconButton icon={<Icons.trash />} title="Remove shadow" onClick={() => set({ shadow: null })} />
-          </Row>
-        </>
+          <CheckField label="Inner" title="Draw the shadow inside the shape instead of behind it" value={!!sh.inset} onChange={(v) => setShadow({ inset: v })} />
+        </div>
       )}
-      <Num node={n} ids={ids} prop="blur" label="Layer blur" min={0} />
+      {hasBlur && (
+        <div className="effect-item">
+          <ItemHead
+            label="Layer blur"
+            onRemove={() => {
+              setBlurOn(false);
+              set({ blur: 0 });
+            }}
+          />
+          <Num node={n} ids={ids} prop="blur" label="Amount" title="Blur radius in pixels" min={0} />
+        </div>
+      )}
     </Section>
+  );
+}
+
+/** The name of something added to a section, with a clear way to remove it. */
+function ItemHead({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <div className="item-head">
+      <span>{label}</span>
+      <IconButton icon={<Icons.close />} className="remove-btn" title={`Remove ${label.toLowerCase()}`} onClick={onRemove} />
+    </div>
+  );
+}
+
+/** A + button that offers a short list of things to add. */
+function AddMenu({ title, items }: { title: string; items: { label: string; onClick: () => void }[] }) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 1) return <IconButton icon={<Icons.plus />} title={`Add ${items[0].label.toLowerCase()}`} onClick={items[0].onClick} />;
+  return (
+    <span className="add-menu">
+      <IconButton icon={<Icons.plus />} title={title} onClick={() => setOpen(!open)} />
+      {open && (
+        <span className="add-menu-list" onMouseLeave={() => setOpen(false)}>
+          {items.map((it) => (
+            <button
+              key={it.label}
+              onClick={() => {
+                setOpen(false);
+                it.onClick();
+              }}
+            >
+              {it.label}
+            </button>
+          ))}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -917,7 +982,17 @@ function FillSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
   const color = shown('fill.color');
   const paint: Paint | null = n.fill?.type === 'solid' && typeof color === 'string' ? { ...n.fill, color } : n.fill;
   return (
-    <Section help="fill-stroke" title="Fill">
+    <Section
+      help="fill-stroke"
+      title="Fill"
+      actions={
+        n.fill ? (
+          <IconButton icon={<Icons.close />} className="remove-btn" title="Remove fill" onClick={() => set({ fill: null })} />
+        ) : (
+          <IconButton icon={<Icons.plus />} title="Add fill" onClick={() => set({ fill: { type: 'solid', color: '#d9d9d9' } })} />
+        )
+      }
+    >
       <PaintField
         paint={paint}
         project={project}

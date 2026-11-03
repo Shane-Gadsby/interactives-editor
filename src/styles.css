@@ -321,8 +321,17 @@ code,
   display: flex;
   align-items: center;
 }
-.section-title {
+.section-title-row {
+  cursor: pointer;
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+/* The title button only takes its text's width, so the "?" sits right after it */
+.section-title {
+  flex: none;
   text-align: left;
   background: none;
   border: none;
@@ -1676,7 +1685,7 @@ code,
   border-color: var(--accent);
 }
 .section-head .help-link {
-  margin-right: 4px;
+  margin-right: auto;
 }
 .help-drawer {
   position: fixed;
@@ -2464,4 +2473,86 @@ kbd,
 code {
   user-select: text;
   -webkit-user-select: text;
+}
+.effect-item {
+  padding: 4px 0 8px;
+  border-top: 1px solid var(--line);
+}
+.effect-item:first-child {
+  border-top: 0;
+}
+.item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 12px;
+  margin: 2px 0 4px;
+}
+.icon-btn.remove-btn:hover {
+  color: var(--danger);
+}
+.add-menu {
+  position: relative;
+}
+.add-menu-list {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-width: 130px;
+  padding: 4px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.35);
+}
+.add-menu-list button {
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.add-menu-list button:hover {
+  background: var(--accent-2);
+  color: #fff;
+}
+.curve-editor {
+  display: block;
+  margin: 6px 0;
+  border-radius: 4px;
+  background: var(--bg);
+  touch-action: none;
+}
+.ce-guide {
+  stroke: var(--line-2);
+  stroke-dasharray: 3 3;
+}
+.ce-label {
+  fill: var(--muted);
+  font: 9px ui-monospace, monospace;
+}
+.ce-curve {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.ce-arm {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.ce-handle {
+  fill: var(--panel);
+  stroke: var(--accent);
+  stroke-width: 2;
+  cursor: grab;
+}
+.ce-handle:hover {
+  fill: var(--accent);
 }
