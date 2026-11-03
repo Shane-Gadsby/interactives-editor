@@ -89,6 +89,7 @@ export function parsePathData(d: string): SubPath[] {
     y = ny;
   };
   while (i < tokens.length) {
+    const before = i;
     if (/^[a-zA-Z]$/.test(tokens[i])) cmd = tokens[i++];
     else if (!cmd) {
       i++;
@@ -176,10 +177,11 @@ export function parsePathData(d: string): SubPath[] {
         }
         x = sx;
         y = sy;
-        // A new segment after Z starts a new sub-path at the same point
+        // Numbers right after Z (not valid SVG, but seen in the wild): line-tos from a new sub-path at the same point
         if (isNum()) {
           cur = { closed: false, points: [{ x, y }] };
           out.push(cur);
+          cmd = rel ? 'l' : 'L';
         }
         break;
       }
@@ -187,7 +189,11 @@ export function parsePathData(d: string): SubPath[] {
         i++;
     }
     if (cur === null) break;
+    // Every pass must use up at least one token, whatever the data says
+    if (i === before) i++;
   }
+  // Missing numbers at the end read as NaN: drop those points rather than draw garbage
+  for (const sp of out) sp.points = sp.points.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
   return out.filter((sp) => sp.points.length > 1 || sp.closed);
 }
 

@@ -46,8 +46,12 @@ export function isLottie(json: Json): boolean {
 const r2 = (n: number) => Math.round(n * 1000) / 1000;
 
 function toHex(c: number[], alpha = 1): string {
-  const [r, g, b] = c.map((v) => Math.round(Math.max(0, Math.min(1, v)) * 255));
-  const a = Math.max(0, Math.min(1, (c[3] ?? 1) * alpha));
+  const ch = (i: number, d: number) => {
+    const v = Number(Array.isArray(c) ? c[i] : undefined);
+    return Number.isFinite(v) ? v : d;
+  };
+  const [r, g, b] = [0, 1, 2].map((i) => Math.round(Math.max(0, Math.min(1, ch(i, 0))) * 255));
+  const a = Math.max(0, Math.min(1, ch(3, 1) * (Number.isFinite(alpha) ? alpha : 1)));
   const hex = '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
   return a >= 1 ? hex : hex + Math.round(a * 255).toString(16).padStart(2, '0');
 }
@@ -501,6 +505,16 @@ function layersToNodes(ctx: Ctx, layers: Json[], json: Json, w: number, h: numbe
 
 export function importLottie(json: Json, name = 'Lottie'): LottieImport {
   if (!isLottie(json)) throw new Error('Not a Lottie animation (no layers/fr/w)');
+  try {
+    return importLottieUnchecked(json, name);
+  } catch (err) {
+    // Lottie JSON is loosely shaped: anything we trip over becomes a readable message instead of a crash
+    if (err instanceof TypeError || err instanceof RangeError) throw new Error(`This Lottie file has data the importer could not read (${err.message})`);
+    throw err;
+  }
+}
+
+function importLottieUnchecked(json: Json, name: string): LottieImport {
   const ctx: Ctx = {
     fr: Number(json.fr) || 30,
     ip: Number(json.ip ?? 0),
