@@ -77,12 +77,12 @@ function Layers() {
 
   // Only the rows in view are drawn: big imports have thousands of layers
   const flat = useMemo(() => {
-    const out: ({ kind: 'artboard'; ab: Artboard } | { kind: 'node'; ab: Artboard; n: SceneNode; depth: number })[] = [];
-    const add = (ab: Artboard, list: SceneNode[], depth: number) => {
+    const out: ({ kind: 'artboard'; ab: Artboard } | { kind: 'node'; ab: Artboard; n: SceneNode; depth: number; parent: SceneNode | null })[] = [];
+    const add = (ab: Artboard, list: SceneNode[], depth: number, parent: SceneNode | null = null) => {
       for (let i = list.length - 1; i >= 0; i--) {
         const n = list[i];
-        out.push({ kind: 'node', ab, n, depth });
-        if (isContainer(n) && !collapsed.has(n.id)) add(ab, n.children, depth + 1);
+        out.push({ kind: 'node', ab, n, depth, parent });
+        if (isContainer(n) && !collapsed.has(n.id)) add(ab, n.children, depth + 1, n);
       }
     };
     for (const ab of s.project.artboards) {
@@ -155,7 +155,11 @@ function Layers() {
     );
   };
 
-  const row = (ab: Artboard, n: SceneNode, depth: number): JSX.Element => {
+  const row = (ab: Artboard, n: SceneNode, depth: number, parent: SceneNode | null): JSX.Element => {
+    // A Solo group or frame shows one child; the others are hidden even though their own Visible is on
+    const soloOf = parent && isContainer(parent) ? (parent as { solo?: { active: string | null } }).solo : undefined;
+    const soloHidden = !!soloOf && soloOf.active !== n.id;
+    const shown = n.visible && !soloHidden;
     const selected = s.selection.includes(n.id) && ab.id === s.activeArtboardId;
     const container = isContainer(n);
     const open = container && !collapsed.has(n.id);
@@ -164,7 +168,7 @@ function Layers() {
     return (
       <div
         key={n.id}
-        className={`layer-row${selected ? ' selected' : ''}${n.visible ? '' : ' hidden-layer'}${dropClass}`}
+        className={`layer-row${selected ? ' selected' : ''}${shown ? '' : ' hidden-layer'}${dropClass}`}
         style={{ paddingLeft: 8 + depth * 14 }}
         draggable={renaming !== n.id}
         onDragStart={(e) => {
@@ -251,15 +255,18 @@ function Layers() {
             {n.locked ? <Icons.lock width={13} /> : <Icons.unlock width={13} />}
           </button>
           <button
-            title={n.visible ? 'Hide' : 'Show'}
-            className={!n.visible ? 'on' : ''}
+            title={soloHidden ? `Hidden by Solo on ${parent!.name}: show this one instead` : n.visible ? 'Hide' : 'Show'}
+            className={!shown ? 'on' : ''}
             onClick={(e) => {
               e.stopPropagation();
               store().set({ activeArtboardId: ab.id });
-              store().setProps([n.id], { visible: !n.visible });
+              if (soloHidden) {
+                store().setProps([parent!.id], { 'solo.active': n.id });
+                if (!n.visible) store().setProps([n.id], { visible: true });
+              } else store().setProps([n.id], { visible: !n.visible });
             }}
           >
-            {n.visible ? <Icons.eye width={13} /> : <Icons.eyeOff width={13} />}
+            {shown ? <Icons.eye width={13} /> : <Icons.eyeOff width={13} />}
           </button>
         </span>
       </div>
@@ -269,7 +276,7 @@ function Layers() {
   return (
     <div className="layers" ref={scroller}>
       <div style={{ height: first * ROW_H }} />
-      {flat.slice(first, last).map((r) => (r.kind === 'artboard' ? artboardRow(r.ab) : row(r.ab, r.n, r.depth)))}
+      {flat.slice(first, last).map((r) => (r.kind === 'artboard' ? artboardRow(r.ab) : row(r.ab, r.n, r.depth, r.parent)))}
       <div style={{ height: (flat.length - last) * ROW_H }} />
       <button className="link-btn add-artboard" onClick={() => store().addArtboard()}>
         + Add artboard
