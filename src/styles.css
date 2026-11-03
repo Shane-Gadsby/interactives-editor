@@ -1418,3 +1418,16 @@ code,
 .dot.bad {
   background: var(--danger);
 }
+
+.align-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.align-sep {
+  width: 1px;
+  background: var(--line-2);
+  margin: 4px 4px;
+}

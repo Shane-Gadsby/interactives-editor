@@ -2,6 +2,9 @@ import { useState, type ReactNode } from 'react';
 import {
   ANIMATABLE_PROPS,
   CURSORS,
+  defaultAutoLayout,
+  type AutoLayout,
+  type FrameNode,
   LINK_TARGETS,
   type LinkTarget,
   type Repeat,
@@ -282,6 +285,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
   const sameType = nodes.every((x) => x.type === n.type);
   return (
     <>
+      <AlignBar count={nodes.length} shapes={nodes.filter((x) => !(x.type === 'group' || x.type === 'text' || x.type === 'link')).length} />
       <Section title={single ? <span className="type-chip">{n.type}</span> : `${nodes.length} layers`}>
         {single && <TextField label="Name" value={n.name} onChange={(v) => set({ name: v }, `name-${n.id}`)} />}
         <Row>
@@ -462,10 +466,13 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return <Section title="Rectangle">{radius}</Section>;
     case 'frame':
       return (
-        <Section title="Frame">
-          {radius}
-          <CheckField label="Clip content" value={n.clip} onChange={(v) => set({ clip: v })} />
-        </Section>
+        <>
+          <Section title="Frame">
+            {radius}
+            <CheckField label="Clip content" value={n.clip} onChange={(v) => set({ clip: v })} />
+          </Section>
+          {nodes.length === 1 && <AutoLayoutSection frame={n} />}
+        </>
       );
     case 'polygon':
       return (
@@ -812,6 +819,105 @@ function FillSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
         }}
       />
       {n.fill?.type === 'solid' && <KeyRow node={n} prop="fill.color" />}
+    </Section>
+  );
+}
+
+function AlignBar({ count, shapes }: { count: number; shapes: number }) {
+  const st = store();
+  const b = (icon: keyof typeof Icons, title: string, fn: () => void, disabled = false) => {
+    const I = Icons[icon];
+    return <IconButton key={title} icon={<I width={16} />} title={title} onClick={fn} disabled={disabled} />;
+  };
+  return (
+    <div className="align-bar">
+      {b('alignLeft', 'Align left', () => st.align('left'))}
+      {b('alignHCenter', 'Align horizontal centres', () => st.align('hcenter'))}
+      {b('alignRight', 'Align right', () => st.align('right'))}
+      {b('alignTop', 'Align top', () => st.align('top'))}
+      {b('alignVCenter', 'Align vertical centres', () => st.align('vcenter'))}
+      {b('alignBottom', 'Align bottom', () => st.align('bottom'))}
+      {b('distH', 'Distribute horizontally (3+)', () => st.distribute('horizontal'), count < 3)}
+      {b('distV', 'Distribute vertically (3+)', () => st.distribute('vertical'), count < 3)}
+      {shapes >= 2 && (
+        <>
+          <span className="align-sep" />
+          {b('union', 'Union', () => st.booleanSelection('union'))}
+          {b('subtract', 'Subtract (from the bottom-most)', () => st.booleanSelection('subtract'))}
+          {b('intersect', 'Intersect', () => st.booleanSelection('intersect'))}
+          {b('exclude', 'Exclude overlap', () => st.booleanSelection('exclude'))}
+        </>
+      )}
+    </div>
+  );
+}
+
+function AutoLayoutSection({ frame }: { frame: FrameNode }) {
+  const set = useSetter([frame.id]);
+  const L = frame.layout;
+  const update = (patch: Partial<AutoLayout>) => set({ layout: { ...(L as AutoLayout), ...patch } }, `layout-${frame.id}`);
+  const pad = L?.padding;
+  return (
+    <Section title="Auto layout" defaultOpen={!!L} actions={!L && <IconButton icon={<Icons.plus />} title="Add auto layout" onClick={() => set({ layout: defaultAutoLayout('column') })} />}>
+      {L && pad && (
+        <>
+          <Row>
+            <SelectField
+              label="Direction"
+              value={L.direction}
+              options={[
+                { value: 'column', label: 'Column ↓' },
+                { value: 'row', label: 'Row →' },
+              ]}
+              onChange={(v) => update({ direction: v })}
+            />
+            <NumberField label="Gap" value={L.gap} min={0} onChange={(v) => update({ gap: v })} />
+          </Row>
+          <Row>
+            <SelectField
+              label="Justify"
+              value={L.justify}
+              options={[
+                { value: 'start', label: 'Start' },
+                { value: 'center', label: 'Centre' },
+                { value: 'end', label: 'End' },
+                { value: 'space-between', label: 'Space between' },
+              ]}
+              onChange={(v) => update({ justify: v })}
+            />
+          </Row>
+          <Row>
+            <SelectField
+              label="Align"
+              value={L.align}
+              options={[
+                { value: 'start', label: 'Start' },
+                { value: 'center', label: 'Centre' },
+                { value: 'end', label: 'End' },
+                { value: 'stretch', label: 'Stretch' },
+              ]}
+              onChange={(v) => update({ align: v })}
+            />
+          </Row>
+          <div className="field-label block">Padding (top, right, bottom, left)</div>
+          <Row>
+            {(['top', 'right', 'bottom', 'left'] as const).map((k) => (
+              <NumberField key={k} value={pad[k]} min={0} onChange={(v) => update({ padding: { ...pad, [k]: v } })} />
+            ))}
+          </Row>
+          <Row>
+            <CheckField label="Wrap" value={L.wrap} onChange={(v) => update({ wrap: v })} />
+            <CheckField label="Hug width" value={L.hugWidth} onChange={(v) => update({ hugWidth: v })} />
+            <CheckField label="Hug height" value={L.hugHeight} onChange={(v) => update({ hugHeight: v })} />
+          </Row>
+          <Row>
+            <button className="btn" onClick={() => set({ layout: null })}>
+              Remove auto layout
+            </button>
+          </Row>
+          <p className="hint">Children are placed in layer order (reorder them in Layers). Hidden layers take no space, also at runtime.</p>
+        </>
+      )}
     </Section>
   );
 }

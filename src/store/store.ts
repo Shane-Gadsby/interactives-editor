@@ -2,19 +2,23 @@ import { produce, type Draft } from 'immer';
 import { useSyncExternalStore, useRef } from 'react';
 import {
   ANIMATABLE_PROPS,
+  relayoutTree,
   createArtboard,
   cloneWithNewIds,
   getPath,
   isContainer,
   setPath,
   uid,
+  apply,
+  invert,
   type Artboard,
   type Keyframe,
   type Project,
   type SceneNode,
   type Timeline,
 } from 'interactives-player';
-import { getArtboard, locate, topmost, uniqueName, nodeNames } from './doc';
+import { booleanPath, type BooleanOp } from '../lib/boolean';
+import { getArtboard, locate, parentToArtboard, selectionBounds, topmost, uniqueName, nodeNames } from './doc';
 
 export type Tool =
   | 'select'
@@ -84,7 +88,11 @@ export class EditorStore {
   revision = 0;
 
   constructor(project: Project) {
-    this.state = EditorStore.initial(project);
+    // Lay out auto-layout frames once on open, so the first edit (and its undo) starts from settled positions.
+    const settled = produce(project, (d) => {
+      for (const ab of d.artboards) relayoutTree(ab.children as SceneNode[]);
+    });
+    this.state = EditorStore.initial(settled);
   }
 
   static initial(project: Project): EditorState {
@@ -139,7 +147,11 @@ export class EditorStore {
    */
   update(recipe: (draft: Draft<Project>) => void, opts: { coalesce?: string } = {}): void {
     const before = this.state.project;
-    const next = produce(before, recipe);
+    // Auto-layout frames re-position their children after every change, in the same undo step.
+    const next = produce(before, (d) => {
+      recipe(d);
+      for (const ab of d.artboards) relayoutTree(ab.children as SceneNode[]);
+    });
     if (next === before) return;
     const t = Date.now();
     const merge = opts.coalesce && this.lastCoalesce && this.lastCoalesce.key === opts.coalesce && t - this.lastCoalesce.time < 1000;
@@ -160,7 +172,10 @@ export class EditorStore {
 
   /** Change the document without an undo step (derived data such as measured text size). */
   patchSilently(recipe: (draft: Draft<Project>) => void): void {
-    const next = produce(this.state.project, recipe);
+    const next = produce(this.state.project, (d) => {
+      recipe(d);
+      for (const ab of d.artboards) relayoutTree(ab.children as SceneNode[]);
+    });
     if (next === this.state.project) return;
     this.revision++;
     this.state = { ...this.state, project: next, saveState: 'dirty' };
@@ -457,6 +472,91 @@ export class EditorStore {
       if (loc.siblings === list && loc.index < index) at--;
       list.splice(Math.max(0, Math.min(list.length, at)), 0, n);
     });
+  }
+
+  /**
+   * Align the selection's top-level layers: to each other when several are selected, to their
+   * container (or the artboard) when one is.
+   */
+  align(edge: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'): void {
+    const ab = this.artboard();
+    if (!ab) return;
+    const ids = topmost(ab, this.state.selection).filter((id) => !locate(ab, id)?.node.locked);
+    if (!ids.length) return;
+    let target: { x: number; y: number; width: number; height: number } | null;
+    if (ids.length === 1) {
+      const loc = locate(ab, ids[0])!;
+      target = loc.parent ? selectionBounds(ab, [loc.parent.id]) : { x: 0, y: 0, width: ab.width, height: ab.height };
+    } else target = selectionBounds(ab, ids);
+    if (!target) return;
+    const changes = new Map<string, Record<string, unknown>>();
+    for (const id of ids) {
+      const b = selectionBounds(ab, [id])!;
+      let dx = 0;
+      let dy = 0;
+      if (edge === 'left') dx = target.x - b.x;
+      if (edge === 'right') dx = target.x + target.width - (b.x + b.width);
+      if (edge === 'hcenter') dx = target.x + target.width / 2 - (b.x + b.width / 2);
+      if (edge === 'top') dy = target.y - b.y;
+      if (edge === 'bottom') dy = target.y + target.height - (b.y + b.height);
+      if (edge === 'vcenter') dy = target.y + target.height / 2 - (b.y + b.height / 2);
+      changes.set(id, this.moveBy(ab, id, dx, dy));
+    }
+    this.setEach(changes);
+  }
+
+  /** Space the selection evenly between its outermost layers (3 or more). */
+  distribute(axis: 'horizontal' | 'vertical'): void {
+    const ab = this.artboard();
+    if (!ab) return;
+    const ids = topmost(ab, this.state.selection).filter((id) => !locate(ab, id)?.node.locked);
+    if (ids.length < 3) return;
+    const h = axis === 'horizontal';
+    const items = ids.map((id) => ({ id, b: selectionBounds(ab, [id])! })).sort((a, b) => (h ? a.b.x - b.b.x : a.b.y - b.b.y));
+    const first = items[0].b;
+    const last = items[items.length - 1].b;
+    const span = h ? last.x + last.width - first.x : last.y + last.height - first.y;
+    const sizes = items.reduce((t, i) => t + (h ? i.b.width : i.b.height), 0);
+    const gap = (span - sizes) / (items.length - 1);
+    let pos = h ? first.x : first.y;
+    const changes = new Map<string, Record<string, unknown>>();
+    for (const it of items) {
+      const delta = pos - (h ? it.b.x : it.b.y);
+      changes.set(it.id, this.moveBy(ab, it.id, h ? delta : 0, h ? 0 : delta));
+      pos += (h ? it.b.width : it.b.height) + gap;
+    }
+    this.setEach(changes);
+  }
+
+  /** Replace the selected shapes with their boolean combination (a path). */
+  booleanSelection(op: BooleanOp): void {
+    const ab = this.artboard();
+    if (!ab) return;
+    const ids = topmost(ab, this.state.selection);
+    const res = booleanPath(ab, ids, op);
+    if (!res) {
+      this.toast(ids.length < 2 ? 'Select two or more shapes' : 'Shapes must share a parent, and the result was empty or they did not overlap', 'error');
+      return;
+    }
+    const remove = new Set(ids);
+    this.update((d) => {
+      const dab = getArtboard(d as Project, ab.id)!;
+      const list = res.parentId ? (locate(dab, res.parentId)!.node as { children: SceneNode[] }).children : dab.children;
+      const kept = list.filter((n) => !remove.has(n.id));
+      kept.splice(Math.max(0, Math.min(kept.length, res.index)), 0, res.node);
+      list.splice(0, list.length, ...kept);
+      for (const tl of dab.timelines) tl.tracks = tl.tracks.filter((t) => !remove.has(t.nodeId));
+    });
+    this.select([res.node.id]);
+  }
+
+  /** New x/y for moving a node by (dx, dy) in artboard space, through its parent's transform. */
+  private moveBy(ab: Artboard, id: string, dx: number, dy: number): Record<string, unknown> {
+    const loc = locate(ab, id)!;
+    const pm = parentToArtboard(ab, id);
+    const inv = invert([pm[0], pm[1], pm[2], pm[3], 0, 0]);
+    const q = apply(inv, dx, dy);
+    return { x: Math.round((loc.node.x + q.x) * 100) / 100, y: Math.round((loc.node.y + q.y) * 100) / 100 };
   }
 
   // ---------------------------------------------------------------- artboards

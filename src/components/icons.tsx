@@ -56,6 +56,18 @@ export const Icons = {
   more: P('M5 12h.01M12 12h.01M19 12h.01'),
   close: P('M6 6l12 12M18 6L6 18'),
   start: P('M5 5v14M9 12l10-7v14z'),
+  alignLeft: P('M4 3v18M8 7h12v4H8zM8 14h7v4H8z'),
+  alignHCenter: P('M12 3v18M6 7h12v4H6zM8.5 14h7v4h-7z'),
+  alignRight: P('M20 3v18M4 7h12v4H4zM9 14h7v4H9z'),
+  alignTop: P('M3 4h18M7 8v12h4V8zM14 8v7h4V8z'),
+  alignVCenter: P('M3 12h18M7 6v12h4V6zM14 8.5v7h4v-7z'),
+  alignBottom: P('M3 20h18M7 4v12h4V4zM14 9v7h4V9z'),
+  distH: P('M4 4v16M20 4v16M10 8h4v8h-4z'),
+  distV: P('M4 4h16M4 20h16M8 10h8v4H8z'),
+  union: P('M4 4h10v6h6v10H10v-6H4z'),
+  subtract: P('M4 4h10v10H4zM14 10h6v10H10v-6'),
+  intersect: P('M4 4h10v10H4zM10 10h10v10H10zM10 10h4v4h-4z'),
+  exclude: P('M4 4h10v6h-4v4H4zM20 20H10v-6h4v-4h6z'),
   table: P('M4 5h16v14H4zM4 10h16M4 15h16M10 5v14'),
 };
 
