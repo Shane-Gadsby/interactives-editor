@@ -10,6 +10,7 @@ let port = Number(process.env.PORT) || 3048,
 	cacheHeaders = require('../suite-libs/cache-headers'),
 	sessionCheck = require('../suite-libs/session-check'),
 	path = require('path'),
+	crypto = require('crypto'),
 	router = new express.Router(),
 
 	//The suite's one power user (god mode) rule lives in the toolbox, which is always checked out beside us.
@@ -59,7 +60,12 @@ let port = Number(process.env.PORT) || 3048,
 
 	analyticsDB,
 	db,
-	projects
+	projects,
+	revisions,
+
+	//Revision ids are strings (time first, so they sort), keeps mongodb's ObjectId out of this app's requires
+	revisionID = () => `${Date.now().toString(36)}${crypto.randomBytes(5).toString('hex')}`,
+	validRevision = (id) => typeof id === 'string' && /^[a-z0-9]{12,30}$/.test(id)
 
 //Live editing. One room per open project: the document in memory, the op log, and everyone connected over SSE.
 //The shared op code is an ES module (the browser uses the same file), so it comes in through import()
@@ -78,6 +84,30 @@ const rooms = new Map(),
 
 	presenceOf = (room) => [...room.clients].map((c) => ({clientId: c.id, name: c.name, color: c.color, ...c.presence})),
 
+	//Revision history: a snapshot of the document every few minutes while it's being changed, plus one before
+	//every restore. Old ones past the cap get dropped
+	revisionEvery = 5 * 60 * 1000,
+	revisionCap = 100,
+	lastRevision = new Map(),
+
+	snapshot = async (projectID, docString, rev, by, reason, force) => {
+		let last = lastRevision.get(projectID)
+
+		if (!force && last === undefined) {
+			let newest = await revisions.findOne({project: projectID}, {sort: {created: -1}, projection: {created: 1}})
+			last = newest ? newest.created.getTime() : 0
+		}
+
+		if (!force && Date.now() - last < revisionEvery) return
+
+		lastRevision.set(projectID, Date.now())
+		await revisions.insertOne({_id: revisionID(), project: projectID, created: new Date(), rev, by: by || null, reason: reason || 'Autosave', size: docString.length, doc: docString})
+
+		//Keep the newest revisionCap
+		let old = await revisions.find({project: projectID}, {sort: {created: -1}, skip: revisionCap, projection: {_id: 1}}).toArray()
+		if (old.length) await revisions.deleteMany({_id: {$in: old.map((r) => r._id)}})
+	},
+
 	//Writes the room's document back to mongo, bumping rev so plain (non-live) saves still see conflicts
 	persist = async (room) => {
 		if (!room.dirty) return
@@ -85,6 +115,7 @@ const rooms = new Map(),
 		clearTimeout(room.saveTimer)
 		room.rev++
 		let p = room.doc, first = p.artboards?.[0]
+		snapshot(room.id, JSON.stringify(p), room.rev, null, 'Autosave').catch((err) => console.trace(`${appName}: revision of ${room.id} failed`, err))
 		await projects.updateOne({_id: room.id}, {$set: {
 			name: String(p.name || 'Untitled project').slice(0, 200),
 			updated: new Date(),
@@ -174,6 +205,7 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 
 	//Every id is checked by validID before it gets near here, so these can't climb out of storageDir
 	projectDir = (projectID) => path.join(storageDir, projectID),
+	shareFile = (token) => path.join(storageDir, 'shares', `${token}.html`),
 	assetFile = (projectID, assetID) => path.join(storageDir, projectID, assetID),
 
 	removeAssets = async (projectID, assetID) => {
@@ -284,6 +316,8 @@ router.put('/api/projects/:id', express.json({limit: '25mb'}), async (req, res) 
 		return res.status(409).json({error: 'This project was saved somewhere else at the same moment'})
 	}
 
+	snapshot(id, set.doc, next, whoIs(req), existing ? 'Autosave' : 'Created').catch((err) => console.trace(`${appName}: revision of ${id} failed`, err))
+
 	//Somebody saved the whole document while a live room is open (a non-live client, an import): the room takes it
 	//and everyone connected reloads
 	let room = rooms.get(id)
@@ -316,6 +350,8 @@ router.delete('/api/projects/:id', async (req, res) => {
 	}
 
 	await removeAssets(id)
+	await revisions.deleteMany({project: id})
+	if (existing.share?.token) await fs.promises.rm(shareFile(existing.share.token), {force: true})
 	await projects.deleteOne({_id: id})
 
 	let room = rooms.get(id)
@@ -553,6 +589,161 @@ router.post('/api/projects/:id/presence', express.json(), async (req, res) => {
 	res.json({ok: true})
 })
 
+//Revision history: the list (no documents), one revision's document, and restoring one
+router.get('/api/projects/:id/revisions', async (req, res) => {
+	let id = req.params.id
+
+	if (!validID(id)) {
+		return res.status(400).json({error: 'Bad project id'})
+	}
+
+	let doc = await projects.findOne({_id: id}, {projection: {doc: 0}})
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	let list = await revisions.find({project: id}, {sort: {created: -1}, projection: {doc: 0}}).limit(revisionCap).toArray()
+	res.json(list.map((r) => ({id: String(r._id), created: r.created, rev: r.rev, by: r.by, reason: r.reason, size: r.size})))
+})
+
+router.get('/api/projects/:id/revisions/:revID', async (req, res) => {
+	let id = req.params.id
+
+	if (!validID(id) || !validRevision(req.params.revID)) {
+		return res.status(400).json({error: 'Bad id'})
+	}
+
+	let doc = await projects.findOne({_id: id}, {projection: {doc: 0}})
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	let r = await revisions.findOne({_id: req.params.revID, project: id})
+
+	if (!r) {
+		return res.status(404).json({error: 'No such revision'})
+	}
+
+	res.json({project: JSON.parse(r.doc), created: r.created, rev: r.rev})
+})
+
+router.post('/api/projects/:id/revisions/:revID/restore', async (req, res) => {
+	let id = req.params.id
+
+	if (!validID(id) || !validRevision(req.params.revID)) {
+		return res.status(400).json({error: 'Bad id'})
+	}
+
+	let doc = await projects.findOne({_id: id})
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	let r = await revisions.findOne({_id: req.params.revID, project: id})
+
+	if (!r) {
+		return res.status(404).json({error: 'No such revision'})
+	}
+
+	//Whatever's there now goes into history first, so a restore can itself be undone
+	let room = rooms.get(id)
+	if (room) await persist(room)
+	let current = room ? JSON.stringify(room.doc) : doc.doc,
+		currentRev = room ? room.rev : doc.rev
+	await snapshot(id, current, currentRev, whoIs(req), 'Before restore', true)
+
+	let project = JSON.parse(r.doc),
+		next = currentRev + 1
+
+	//The restored copy keeps this project's id (a revision from before a rename still belongs here)
+	project.id = id
+	await projects.updateOne({_id: id}, {$set: {doc: JSON.stringify(project), rev: next, updated: new Date(), name: String(project.name || 'Untitled project').slice(0, 200)}})
+
+	if (room) {
+		room.doc = project
+		room.rev = next
+		room.dirty = false
+		room.log = []
+		broadcast(room, 'reset', {rev: next})
+	}
+
+	res.json({ok: true, rev: next})
+})
+
+//Share links: the project as one standalone HTML file (built by the editor), at /interactives/s/<token>.
+//Anyone with the link can play it, no session (a link opened in a new tab can't carry one), so it's off until
+//the owner turns it on, the token is unguessable, and turning it off deletes the file
+router.get('/api/projects/:id/share', async (req, res) => {
+	let doc = validID(req.params.id) && (await projects.findOne({_id: req.params.id}, {projection: {doc: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	res.json({share: doc.share || null})
+})
+
+router.put('/api/projects/:id/share', express.text({type: () => true, limit: '200mb'}), async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	if (typeof req.body !== 'string' || !req.body.includes('<html')) {
+		return res.status(400).json({error: 'Not an HTML page'})
+	}
+
+	let token = doc.share?.token || crypto.randomBytes(18).toString('base64url'),
+		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req)}
+
+	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
+	await fs.promises.writeFile(shareFile(token), req.body)
+	await projects.updateOne({_id: id}, {$set: {share}})
+	res.json({share})
+})
+
+router.delete('/api/projects/:id/share', async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0}}))
+
+	if (!doc) {
+		return res.json({ok: true})
+	}
+
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	if (doc.share?.token) await fs.promises.rm(shareFile(doc.share.token), {force: true})
+	await projects.updateOne({_id: id}, {$unset: {share: ''}})
+	res.json({ok: true})
+})
+
 router.use('/api', (req, res) => {
 	res.status(404).json({error: 'No such api route'})
 })
@@ -566,6 +757,17 @@ router.use('/api', (err, req, res, next) => {
 	}
 
 	res.status(err.status || 500).json({error: err.type === 'entity.too.large' ? 'That is too big to save' : 'Something went wrong on the server'})
+})
+
+//A shared project. Tokens are base64url only, so the path can't climb out of storage/shares
+router.get('/s/:token', cacheHeaders.api, (req, res) => {
+	if (!/^[\w-]{16,64}$/.test(req.params.token)) {
+		return res.status(404).send('No such shared project')
+	}
+
+	res.sendFile(shareFile(req.params.token), {headers: {'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex'}}, (err) => {
+		if (err && !res.headersSent) res.status(404).send('This share link has been turned off, or never existed')
+	})
 })
 
 //The document. no-cache, it's what hands out everyone else's stamps
@@ -594,6 +796,7 @@ client.connect()
 		analyticsDB = client.db('lti-analytics')
 		db = client.db('lti-interactives')
 		projects = db.collection('projects')
+		revisions = db.collection('revisions')
 		fs.mkdirSync(storageDir, {recursive: true})
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)

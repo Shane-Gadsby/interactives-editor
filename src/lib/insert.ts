@@ -1,6 +1,7 @@
 import { createNode, type Asset, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { assetKind, assetUrls, imageSize, storeFile, videoSize } from './assets';
+import { importSvg } from './svg-import';
 
 /** Upload files as assets. Images and videos are placed on the artboard at `at` (artboard coordinates). */
 export async function insertFiles(files: File[], artboardId: string | null, at: { x: number; y: number } | null): Promise<Asset[]> {
@@ -10,6 +11,33 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
   const nodes: SceneNode[] = [];
   let offset = 0;
   for (const file of files) {
+    // SVG onto an artboard: editable vector layers instead of a picture
+    if (artboardId && at && (file.type === 'image/svg+xml' || /\.svg$/i.test(file.name))) {
+      try {
+        const svg = importSvg(await file.text());
+        if (svg.nodes.length) {
+          const scale = Math.min(1, 800 / Math.max(svg.width, svg.height));
+          const group = createNode('group', {
+            name: file.name.replace(/\.[^.]+$/, ''),
+            x: Math.round(at.x - (svg.width * scale) / 2 + offset),
+            y: Math.round(at.y - (svg.height * scale) / 2 + offset),
+            width: svg.width,
+            height: svg.height,
+            scaleX: scale,
+            scaleY: scale,
+            originX: 0,
+            originY: 0,
+            children: svg.nodes,
+          });
+          nodes.push(group);
+          offset += 20;
+          if (svg.skipped.length) st.toast(`${file.name}: not carried over: ${svg.skipped.join(', ')}`);
+          continue;
+        }
+      } catch (err) {
+        console.warn('[interactives] SVG import failed, adding it as an image instead', err);
+      }
+    }
     let asset: Asset;
     try {
       asset = await storeFile(projectId, file);
@@ -37,7 +65,10 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
       offset += 20;
     }
   }
-  if (!added.length) return added;
+  if (!added.length) {
+    if (nodes.length && artboardId) st.addNodes(nodes, { artboardId });
+    return added;
+  }
   st.update((d) => {
     d.assets.push(...added);
     for (const a of added) {

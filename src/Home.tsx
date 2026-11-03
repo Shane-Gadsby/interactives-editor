@@ -99,6 +99,9 @@ export function Home({ open }: { open: (id: string) => void }) {
         </div>
         <div className="home-actions">
           {who?.user && <span className="muted">{who.user.name ?? who.user.username}</span>}
+          <a className="btn" href="#/help" title="How to use Interactives (F1 to search)">
+            <Icons.help width={14} /> Help
+          </a>
           <button className="btn" onClick={doImport} disabled={busy}>
             <Icons.upload width={14} /> Import ({PACKAGE_EXTENSION}, Lottie, Rive)
           </button>

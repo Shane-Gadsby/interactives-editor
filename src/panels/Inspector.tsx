@@ -23,6 +23,10 @@ import {
   type Shadow,
   type Stroke,
   type TextStyle,
+  type Constraint,
+  type ConstraintType,
+  uid,
+  walk,
 } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, isIdentifier, locate } from '../store/doc';
@@ -92,13 +96,13 @@ function KeyButton({ node, prop }: { node: SceneNode; prop: string }) {
   );
 }
 
-function Num({ node, ids, prop, label, step, min, max, suffix }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string }) {
+function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string }) {
   const shown = useShown(node);
   const set = useSetter(ids);
-  const v = Number(shown(prop) ?? 0);
+  const v = Number(shown(prop) ?? fallback);
   return (
     <div className="keyed">
-      <NumberField label={label} value={v} step={step} min={min} max={max} suffix={suffix} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
+      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
       <KeyButton node={node} prop={prop} />
     </div>
   );
@@ -192,7 +196,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
   const [font, setFont] = useState('');
   return (
     <>
-      <Section title="Artboard">
+      <Section help="artboards" title="Artboard">
         <TextField label="Name" value={ab.name} onChange={(v) => setAb((a) => (a.name = v), `ab-name-${ab.id}`)} />
         <Row>
           <NumberField label="W" value={ab.width} min={1} onChange={(v) => setAb((a) => (a.width = Math.round(v)), `ab-w-${ab.id}`)} />
@@ -243,7 +247,8 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           <IconButton icon={<Icons.trash />} title="Delete artboard" onClick={() => store().deleteArtboard(ab.id)} />
         </Row>
       </Section>
-      <Section title="Project">
+      <JoysticksSection ab={ab} />
+      <Section help="project-settings" title="Project">
         <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
         <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
         <TextField label="Description" value={project.settings.description} multiline onChange={(v) => setProject((p) => (p.settings.description = v), 'project-desc')} />
@@ -266,8 +271,14 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           value={!!project.settings.scriptSandbox}
           onChange={(v) => setProject((p) => (p.settings.scriptSandbox = v))}
         />
+        <CheckField
+          label="Respect reduced motion"
+          title="When the viewer's device asks for less motion, autoplaying timelines show their last frame and artboard transitions are instant"
+          value={!!project.settings.reducedMotion}
+          onChange={(v) => setProject((p) => (p.settings.reducedMotion = v))}
+        />
       </Section>
-      <Section title="Fonts">
+      <Section help="text" title="Fonts">
         {project.fonts.map((f, i) => (
           <Row key={i} className="font-row">
             <span className="font-name" style={{ fontFamily: f.family }}>
@@ -307,7 +318,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
   return (
     <>
       <AlignBar count={nodes.length} shapes={nodes.filter((x) => !(x.type === 'group' || x.type === 'text' || x.type === 'link')).length} />
-      <Section title={single ? <span className="type-chip">{n.type}</span> : `${nodes.length} layers`}>
+      <Section help="fill-stroke" title={single ? <span className="type-chip">{n.type}</span> : `${nodes.length} layers`}>
         {single && <TextField label="Name" value={n.name} onChange={(v) => set({ name: v }, `name-${n.id}`)} />}
         <Row>
           <Num node={n} ids={ids} prop="x" label="X" />
@@ -339,12 +350,13 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {sameType && 'fill' in n && <FillSection nodes={nodes} project={project} />}
       {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
       <EffectsSection nodes={nodes} />
+      {single && <ConstraintsSection node={n} />}
       <LinkCursorSection nodes={nodes} project={project} />
       {single && (n.type === 'group' || n.type === 'frame') && <RepeatSection node={n} project={project} />}
       {single && <BindingsSection node={n} project={project} />}
       {single && <InteractionsSection node={n} ab={ab} />}
       {single && (
-        <Section title="Advanced" defaultOpen={false}>
+        <Section help="web-elements#accessibility" title="Advanced" defaultOpen={false}>
           <TextField label="ARIA label" value={n.ariaLabel ?? ''} onChange={(v) => set({ ariaLabel: v || undefined })} />
           <TextField label="CSS class" value={n.className ?? ''} onChange={(v) => set({ className: v || undefined })} />
           <div className="muted small">id: {n.id}</div>
@@ -372,6 +384,7 @@ function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project: Projec
   const shownStroke = useShown(n)('stroke.paint.color');
   return (
     <Section
+      help="fill-stroke#stroke"
       title="Stroke"
       actions={!s && <IconButton icon={<Icons.plus />} title="Add stroke" onClick={() => set({ stroke: { paint: { type: 'solid', color: '#111111' }, width: 1 } })} />}
     >
@@ -397,6 +410,13 @@ function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project: Projec
             />
             <IconButton icon={<Icons.trash />} title="Remove stroke" onClick={() => set({ stroke: null })} />
           </Row>
+          {(n.type === 'path' || n.type === 'polygon' || n.type === 'star' || n.type === 'rect' || n.type === 'ellipse') && (
+            <Row>
+              <Num node={n} ids={nodes.map((x) => x.id)} prop="stroke.trimStart" label="Trim" title="Trim start: where the drawn part of the stroke begins (% of its length). Animate it to draw lines on" min={0} max={100} suffix="%" />
+              <Num node={n} ids={nodes.map((x) => x.id)} prop="stroke.trimEnd" label="to" title="Trim end: where the drawn part ends (% of its length)" min={0} max={100} suffix="%" fallback={100} />
+              <Num node={n} ids={nodes.map((x) => x.id)} prop="stroke.trimOffset" label="Off" title="Trim offset: slides the drawn part along the outline (%)" min={-100} max={200} suffix="%" />
+            </Row>
+          )}
           {(n.type === 'path' || n.type === 'polygon' || n.type === 'star') && <p className="hint">Vector strokes are centred on the path; box strokes sit inside the edge.</p>}
         </>
       )}
@@ -484,33 +504,45 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
   const radius = 'cornerRadius' in n ? <Num node={n} ids={ids} prop="cornerRadius" label="Radius" min={0} /> : null;
   switch (n.type) {
     case 'rect':
-      return <Section title="Rectangle">{radius}</Section>;
+      return <Section help="shapes#shape-settings" title="Rectangle">{radius}</Section>;
     case 'frame':
       return (
         <>
-          <Section title="Frame">
+          <Section help="groups-frames" title="Frame">
             {radius}
-            <CheckField label="Clip content" value={n.clip} onChange={(v) => set({ clip: v })} />
+            <CheckField label="Clip content" value={n.clip || (!!n.scroll && n.scroll !== 'none')} onChange={(v) => set({ clip: v })} />
+            <SelectField<'none' | 'vertical' | 'horizontal' | 'both'>
+              label="Overflow"
+              title="Let viewers scroll content that doesn't fit, like a scrollable panel (in Preview and the player)"
+              value={n.scroll ?? 'none'}
+              options={[
+                { value: 'none', label: 'No scrolling' },
+                { value: 'vertical', label: 'Scroll vertically' },
+                { value: 'horizontal', label: 'Scroll horizontally' },
+                { value: 'both', label: 'Scroll both ways' },
+              ]}
+              onChange={(v) => set({ scroll: v === 'none' ? undefined : v })}
+            />
           </Section>
           {nodes.length === 1 && <AutoLayoutSection frame={n} />}
         </>
       );
     case 'polygon':
       return (
-        <Section title="Polygon">
+        <Section help="shapes#shape-settings" title="Polygon">
           <NumberField label="Sides" value={n.sides} min={3} max={64} onChange={(v) => set({ sides: Math.round(v) })} />
         </Section>
       );
     case 'star':
       return (
-        <Section title="Star">
+        <Section help="shapes#shape-settings" title="Star">
           <NumberField label="Points" value={n.points} min={3} max={64} onChange={(v) => set({ points: Math.round(v) })} />
           <Num node={n} ids={ids} prop="innerRatio" label="Inner" step={0.05} min={0.05} max={1} />
         </Section>
       );
     case 'path':
       return (
-        <Section title="Path">
+        <Section help="shapes#editing-points" title="Path">
           <Row>
             <SelectField label="Cap" value={n.lineCap ?? 'butt'} options={['butt', 'round', 'square'] as const} onChange={(v) => set({ lineCap: v })} />
             <SelectField label="Join" value={n.lineJoin ?? 'miter'} options={['miter', 'round', 'bevel'] as const} onChange={(v) => set({ lineJoin: v })} />
@@ -533,7 +565,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       );
     case 'text':
       return (
-        <Section title="Text">
+        <Section help="text" title="Text">
           {nodes.length === 1 && <TextField label="Text" value={n.text} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
           <SelectField
             label="Sizing"
@@ -553,7 +585,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       );
     case 'image':
       return (
-        <Section title="Image">
+        <Section help="images-media#image-settings" title="Image">
           <SelectField
             label="Image"
             value={n.assetId ?? ''}
@@ -562,11 +594,31 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           />
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
           {radius}
+          <CheckField
+            label="9-slice scaling"
+            title="Corners keep their size while the edges and middle stretch, so a panel or button image resizes without distortion"
+            value={!!n.slice}
+            onChange={(on) => set({ slice: on ? { top: 16, right: 16, bottom: 16, left: 16 } : null })}
+          />
+          {n.slice && (
+            <Row>
+              {(['top', 'right', 'bottom', 'left'] as const).map((k) => (
+                <NumberField
+                  key={k}
+                  label={k[0].toUpperCase()}
+                  title={`${k[0].toUpperCase() + k.slice(1)} inset in image pixels`}
+                  value={n.slice![k]}
+                  min={0}
+                  onChange={(v) => set({ slice: { ...n.slice!, [k]: Math.round(v) } }, `slice-${n.id}`)}
+                />
+              ))}
+            </Row>
+          )}
         </Section>
       );
     case 'button':
       return (
-        <Section title="Button">
+        <Section help="web-elements" title="Button">
           {nodes.length === 1 && <TextField label="Label" value={n.label} onChange={(v) => set({ label: v }, `label-${n.id}`)} />}
           {radius}
           <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
@@ -576,7 +628,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       );
     case 'input':
       return (
-        <Section title="Input">
+        <Section help="web-elements" title="Input">
           <SelectField<InputKind>
             label="Type"
             value={n.inputType}
@@ -601,7 +653,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       );
     case 'link':
       return (
-        <Section title="Link">
+        <Section help="links-cursors" title="Link">
           {nodes.length === 1 && <TextField label="Text" value={n.text} onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
           <TextField label="URL" value={n.href} onChange={(v) => set({ href: v })} />
           <CheckField label="Open in new tab" value={n.newTab} onChange={(v) => set({ newTab: v })} />
@@ -610,7 +662,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       );
     case 'embed':
       return (
-        <Section title="Embed">
+        <Section help="web-elements" title="Embed">
           <SelectField
             label="Mode"
             value={n.mode}
@@ -635,7 +687,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       );
     case 'video':
       return (
-        <Section title="Video">
+        <Section help="images-media#video" title="Video">
           <SelectField
             label="Video"
             value={n.assetId ?? ''}
@@ -659,7 +711,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return <InstanceSection node={n} project={project} />;
     case 'group':
       return (
-        <Section title="Group">
+        <Section help="groups-frames" title="Group">
           <p className="hint">Double-click to select inside. Ctrl/⌘-click selects deep layers directly.</p>
         </Section>
       );
@@ -675,7 +727,7 @@ function BindingsSection({ node, project }: { node: SceneNode; project: Project 
   const [prop, setProp] = useState('opacity');
   const update = (next: Record<string, string>) => set({ bindings: Object.keys(next).length ? next : undefined }, `bind-${node.id}`);
   return (
-    <Section title="Data bindings" defaultOpen={entries.length > 0}>
+    <Section help="bindings" title="Data bindings" defaultOpen={entries.length > 0}>
       {entries.map(([p, expr]) => (
         <Row key={p} className="binding-row">
           <span className="mono small binding-prop">{p}</span>
@@ -717,7 +769,7 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
     store().set({ bottomTab: 'logic', logicSelection: id });
   };
   return (
-    <Section title="Interactions" defaultOpen>
+    <Section help="interactions" title="Interactions" defaultOpen>
       {events.length ? (
         events.map((e) => (
           <button key={e.id} className="interaction-chip" onClick={() => store().set({ bottomTab: 'logic', logicSelection: e.id })}>
@@ -739,13 +791,32 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
   );
 }
 
+const CURSOR_LABELS: Record<string, string> = {
+  auto: 'auto (browser decides)',
+  default: 'default (arrow)',
+  pointer: 'pointer (hand)',
+  grab: 'grab (open hand)',
+  grabbing: 'grabbing (closed hand)',
+  move: 'move (four arrows)',
+  text: 'text (I-beam)',
+  crosshair: 'crosshair',
+  help: 'help (arrow and ?)',
+  wait: 'wait (busy)',
+  progress: 'progress (arrow, busy)',
+  'not-allowed': 'not-allowed',
+  'zoom-in': 'zoom-in',
+  'zoom-out': 'zoom-out',
+  none: 'none (hidden)',
+};
+
 function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
   const n = nodes[0];
   const set = useSetter(nodes.map((x) => x.id));
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
   const link = n.link;
   return (
-    <Section title="Link & cursor" defaultOpen={!!(link || n.cursor || n.cursorImage)}>
+    <>
+    <Section help="links-cursors#link" title="Link" defaultOpen={!!link}>
       <TextField
         label="Link"
         value={link?.url ?? ''}
@@ -756,10 +827,13 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
       {link && (
         <SelectField<LinkTarget> label="Open in" value={link.target} options={LINK_TARGETS as { value: LinkTarget; label: string }[]} onChange={(t) => set({ link: { ...link, target: t } })} />
       )}
+    </Section>
+    <Section help="links-cursors#cursor" title="Cursor on hover" defaultOpen={!!(n.cursor || n.cursorImage)}>
       <SelectField
         label="Cursor"
+        title="The mouse cursor shown while the pointer is over this layer (and its children), like CSS :hover { cursor }"
         value={n.cursor ?? ''}
-        options={[{ value: '', label: link ? 'auto (pointer for links/clicks)' : 'auto (pointer when clickable)' }, ...CURSORS.map((c) => ({ value: c, label: c }))]}
+        options={[{ value: '', label: 'Automatic: pointer if it is a link or clickable' }, ...CURSORS.map((c) => ({ value: c, label: CURSOR_LABELS[c] ?? c }))]}
         onChange={(v) => set({ cursor: v || undefined })}
       />
       <SelectField
@@ -774,8 +848,11 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
           <NumberField label="Hot y" value={n.cursorHotspot?.y ?? 0} min={0} onChange={(y) => set({ cursorHotspot: { x: n.cursorHotspot?.x ?? 0, y } })} />
         </Row>
       )}
-      <p className="hint">Cursors can also change from interactions (Set cursor) and scripts (<code>ix.setCursor</code>, <code>node.set('cursor', …)</code>). Images over 32×32 px may be ignored by browsers.</p>
+      <p className="hint">
+        Shown on hover in Preview and the exported player. Automatic gives a pointer to links and to layers with a click, press or release interaction. Interactions (Set cursor) and scripts (<code>ix.setCursor</code>, <code>node.set('cursor', …)</code>) can change it while running. Images over 32×32 px may be ignored by browsers.
+      </p>
     </Section>
+    </>
   );
 }
 
@@ -785,7 +862,7 @@ function RepeatSection({ node, project }: { node: SceneNode & { repeat?: Repeat 
   const update = (patch: Partial<Repeat>) => set({ repeat: { ...(rep as Repeat), ...patch } }, `repeat-${node.id}`);
   const lists = project.dataSources.map((d) => d.name);
   return (
-    <Section title="Repeat (list)" defaultOpen={!!rep}>
+    <Section help="repeaters" title="Repeat (list)" defaultOpen={!!rep}>
       <CheckField
         label="Repeat the first child for each item"
         value={!!rep}
@@ -831,7 +908,7 @@ function FillSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
   const color = shown('fill.color');
   const paint: Paint | null = n.fill?.type === 'solid' && typeof color === 'string' ? { ...n.fill, color } : n.fill;
   return (
-    <Section title="Fill">
+    <Section help="fill-stroke" title="Fill">
       <PaintField
         paint={paint}
         project={project}
@@ -881,7 +958,7 @@ function AutoLayoutSection({ frame }: { frame: FrameNode }) {
   const update = (patch: Partial<AutoLayout>) => set({ layout: { ...(L as AutoLayout), ...patch } }, `layout-${frame.id}`);
   const pad = L?.padding;
   return (
-    <Section title="Auto layout" defaultOpen={!!L} actions={!L && <IconButton icon={<Icons.plus />} title="Add auto layout" onClick={() => set({ layout: defaultAutoLayout('column') })} />}>
+    <Section help="auto-layout" title="Auto layout" defaultOpen={!!L} actions={!L && <IconButton icon={<Icons.plus />} title="Add auto layout" onClick={() => set({ layout: defaultAutoLayout('column') })} />}>
       {L && pad && (
         <>
           <Row>
@@ -951,7 +1028,7 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
   const target = project.artboards.find((a) => a.id === node.artboardId);
   const [inputs, setInputs] = useState(JSON.stringify(node.inputs ?? {}, null, 0));
   return (
-    <Section title="Instance">
+    <Section help="instances" title="Instance">
       <SelectField
         label="Artboard"
         value={node.artboardId}
@@ -996,6 +1073,104 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
         }}
       />
       <p className="hint">An instance runs its artboard on its own in the player: its timelines, interactions and variables. Inputs set its variables' starting values by name.</p>
+    </Section>
+  );
+}
+
+const CONSTRAINT_TYPES: { value: ConstraintType; label: string; tip: string }[] = [
+  { value: 'followPath', label: 'Follow path', tip: 'Place this layer along another layer’s outline' },
+  { value: 'copyPosition', label: 'Copy position', tip: 'Take another layer’s position' },
+  { value: 'copyRotation', label: 'Copy rotation', tip: 'Take another layer’s rotation' },
+  { value: 'copyScale', label: 'Copy scale', tip: 'Take another layer’s scale' },
+];
+
+/** Follow path / copy transform constraints, applied by the player after timelines and bindings. */
+function ConstraintsSection({ node }: { node: SceneNode }) {
+  const set = useSetter([node.id]);
+  const ab = useEditor((st) => getArtboard(st.project, st.activeArtboardId));
+  const list = node.constraints ?? [];
+  const targets: { value: string; label: string }[] = [];
+  if (ab) walk(ab.children, (x) => x.id !== node.id && targets.push({ value: x.id, label: x.name }));
+  const update = (i: number, patch: Partial<Constraint>) => set({ constraints: list.map((c, j) => (j === i ? { ...c, ...patch } : c)) }, `constraint-${node.id}-${i}`);
+  const add = (type: ConstraintType) =>
+    set({ constraints: [...list, { id: uid('k'), type, target: targets[0]?.value ?? '', strength: 1, ...(type === 'followPath' ? { distance: 0, orient: false } : {}) }] });
+  return (
+    <Section
+      help="constraints"
+      title="Constraints"
+      defaultOpen={list.length > 0}
+      actions={<IconButton icon={<Icons.plus />} title="Add a constraint" onClick={() => add('followPath')} />}
+    >
+      {!list.length && <p className="hint">Tie this layer to another: follow a path, or copy its position, rotation or scale.</p>}
+      {list.map((c, i) => (
+        <div key={c.id} className="constraint">
+          <Row>
+            <SelectField<ConstraintType> label="Type" title={CONSTRAINT_TYPES.find((t) => t.value === c.type)?.tip} value={c.type} options={CONSTRAINT_TYPES} onChange={(v) => update(i, { type: v })} />
+            <IconButton icon={<Icons.trash />} title="Remove constraint" onClick={() => set({ constraints: list.filter((_, j) => j !== i) })} />
+          </Row>
+          <SelectField label="Target" title={c.type === 'followPath' ? 'The shape or path to follow' : 'The layer to copy from'} value={c.target} options={[{ value: '', label: 'Choose a layer…' }, ...targets]} onChange={(v) => update(i, { target: v })} />
+          {c.type === 'followPath' && (
+            <>
+              <Num node={node} ids={[node.id]} prop={`constraints.${i}.distance`} label="Distance" title="How far along the path, 0 (start) to 1 (end). Animate it to move along the path" step={0.01} min={0} max={1} />
+              <CheckField label="Orient along path" title="Turn the layer to face along the path" value={!!c.orient} onChange={(v) => update(i, { orient: v })} />
+            </>
+          )}
+          {(c.type === 'copyPosition' || c.type === 'followPath') && (
+            <Row>
+              <NumberField label="Off x" title="Added to the constrained x position" value={c.offsetX ?? 0} onChange={(v) => update(i, { offsetX: v })} />
+              <NumberField label="Off y" title="Added to the constrained y position" value={c.offsetY ?? 0} onChange={(v) => update(i, { offsetY: v })} />
+            </Row>
+          )}
+          {(c.type === 'copyRotation' || (c.type === 'followPath' && c.orient)) && (
+            <NumberField label="Angle +" title="Added to the constrained rotation, in degrees" value={c.angleOffset ?? 0} onChange={(v) => update(i, { angleOffset: v })} suffix="°" />
+          )}
+          <Num node={node} ids={[node.id]} prop={`constraints.${i}.strength`} label="Strength" title="Mix between the layer's own value (0) and the constrained one (1)" step={0.01} min={0} max={1} fallback={1} />
+        </div>
+      ))}
+    </Section>
+  );
+}
+
+/** Joysticks: timelines positioned by expressions instead of time. */
+function JoysticksSection({ ab }: { ab: Artboard }) {
+  const list = ab.joysticks ?? [];
+  const update = (fn: (js: NonNullable<Artboard['joysticks']>) => void, coalesce?: string) =>
+    store().update(
+      (d) => {
+        const a = d.artboards.find((x) => x.id === ab.id);
+        if (!a) return;
+        a.joysticks ??= [];
+        fn(a.joysticks);
+      },
+      { coalesce },
+    );
+  const tls = [{ value: '', label: 'None' }, ...ab.timelines.map((t) => ({ value: t.id, label: t.name }))];
+  return (
+    <Section
+      help="joysticks"
+      title="Joysticks"
+      defaultOpen={list.length > 0}
+      actions={
+        <IconButton
+          icon={<Icons.plus />}
+          title="Add a joystick: scrub timelines from numbers, e.g. the pointer position"
+          onClick={() => update((js) => void js.push({ id: uid('j'), name: `Joystick ${js.length + 1}`, xTimeline: ab.timelines[0]?.id ?? null, x: 'pointer.x / artboard.width', yTimeline: null, y: 'pointer.y / artboard.height' }))}
+        />
+      }
+    >
+      {!list.length && <p className="hint">Set timeline positions from numbers instead of time: dials, gauges, eyes that follow the pointer.</p>}
+      {list.map((j, i) => (
+        <div key={j.id} className="constraint">
+          <Row>
+            <TextField label="Name" value={j.name} onChange={(v) => update((js) => void (js[i].name = v), `joy-name-${j.id}`)} />
+            <IconButton icon={<Icons.trash />} title="Remove joystick" onClick={() => update((js) => void js.splice(i, 1))} />
+          </Row>
+          <SelectField label="X timeline" title="Timeline positioned by the X value" value={j.xTimeline ?? ''} options={tls} onChange={(v) => update((js) => void (js[i].xTimeline = v || null))} />
+          <TextField label="X value" mono title="Expression from 0 to 1. pointer {x, y}, artboard {width, height} and every variable are in scope" value={j.x} commitOnBlur onChange={(v) => update((js) => void (js[i].x = v))} />
+          <SelectField label="Y timeline" title="Optional second timeline, positioned by the Y value" value={j.yTimeline ?? ''} options={tls} onChange={(v) => update((js) => void (js[i].yTimeline = v || null))} />
+          {j.yTimeline && <TextField label="Y value" mono title="Expression from 0 to 1" value={j.y ?? ''} commitOnBlur onChange={(v) => update((js) => void (js[i].y = v))} />}
+        </div>
+      ))}
     </Section>
   );
 }

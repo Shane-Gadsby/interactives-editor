@@ -1,0 +1,94 @@
+import { Renderer, prepareNodes, sampleArtboard, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { assetBytes } from './db';
+import { download, fileSafe } from './export';
+import { previewScope } from './data';
+
+/**
+ * Pictures of an artboard: the same renderer the player uses, drawn into an SVG <foreignObject> with every image
+ * and font inlined, so the file stands alone. PNG rasterises that SVG.
+ */
+
+const toDataUrl = (bytes: Uint8Array, mime: string) =>
+  new Promise<string>((resolve) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.readAsDataURL(new Blob([bytes as BlobPart], { type: mime }));
+  });
+
+async function fontCss(project: Project): Promise<string> {
+  const parts: string[] = [];
+  for (const f of project.fonts) {
+    try {
+      if (f.source === 'asset' && f.assetId) {
+        const a = project.assets.find((x) => x.id === f.assetId);
+        const bytes = a && (await assetBytes(project.id, a));
+        if (bytes) parts.push(`@font-face{font-family:${JSON.stringify(f.family)};src:url("${await toDataUrl(bytes, a!.mime || 'font/woff2')}")}`);
+      } else if (f.source === 'google') {
+        const weights = (f.weights?.length ? f.weights : [400, 700]).slice().sort((a, b) => a - b).join(';');
+        let css = await (await fetch(`https://fonts.googleapis.com/css2?family=${encodeURIComponent(f.family).replace(/%20/g, '+')}:wght@${weights}`)).text();
+        // Inline each font file the stylesheet points at
+        for (const m of [...css.matchAll(/url\((https:[^)]+)\)/g)]) {
+          const bytes = new Uint8Array(await (await fetch(m[1])).arrayBuffer());
+          css = css.replace(m[1], await toDataUrl(bytes, 'font/woff2'));
+        }
+        parts.push(css);
+      }
+    } catch {
+      /* offline or blocked: the text falls back to a system font */
+    }
+  }
+  return parts.join('\n');
+}
+
+export async function artboardSvg(project: Project, ab: Artboard, timeline: Timeline | null, time: number): Promise<{ svg: string; warnings: string[] }> {
+  const warnings: string[] = [];
+  const urls = new Map<string, string>();
+  for (const a of project.assets) {
+    if (!/^image\//.test(a.mime)) continue;
+    const bytes = await assetBytes(project.id, a);
+    if (bytes) urls.set(a.id, await toDataUrl(bytes, a.mime));
+  }
+  const host = document.createElement('div');
+  Object.assign(host.style, { position: 'fixed', left: '-100000px', top: '0', width: `${ab.width}px`, height: `${ab.height}px` });
+  document.body.appendChild(host);
+  try {
+    const r = new Renderer({ mode: 'play', resolveAsset: (id) => urls.get(id) });
+    host.appendChild(r.root);
+    const vars = previewScope(project);
+    const sampled: SceneNode[] = timeline ? sampleArtboard(ab.children, timeline, time) : ab.children;
+    r.render(ab, prepareNodes(sampled, { vars }), { vars });
+    if (r.root.querySelector('.ix-instance, iframe, video')) warnings.push('Instances, embeds and video show as empty boxes in pictures.');
+    const html = new XMLSerializer().serializeToString(r.root);
+    const css = await fontCss(project);
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${ab.width}" height="${ab.height}" viewBox="0 0 ${ab.width} ${ab.height}">` +
+      (css ? `<defs><style>${css.replace(/]]>/g, '')}</style></defs>` : '') +
+      `<foreignObject x="0" y="0" width="${ab.width}" height="${ab.height}">${html}</foreignObject></svg>`;
+    return { svg, warnings };
+  } finally {
+    host.remove();
+  }
+}
+
+export async function downloadArtboardSvg(project: Project, ab: Artboard, timeline: Timeline | null, time: number): Promise<string[]> {
+  const { svg, warnings } = await artboardSvg(project, ab, timeline, time);
+  download(new Blob([svg], { type: 'image/svg+xml' }), `${fileSafe(ab.name)}.svg`);
+  return warnings;
+}
+
+export async function downloadArtboardPng(project: Project, ab: Artboard, timeline: Timeline | null, time: number, scale = 2): Promise<string[]> {
+  const { svg, warnings } = await artboardSvg(project, ab, timeline, time);
+  const img = new Image();
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await img.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(ab.width * scale);
+  canvas.height = Math.round(ab.height * scale);
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(scale, scale);
+  ctx.drawImage(img, 0, 0, ab.width, ab.height);
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
+  if (!blob) throw new Error('The browser could not make the PNG.');
+  download(blob, `${fileSafe(ab.name)}${scale !== 1 ? `@${scale}x` : ''}.png`);
+  return warnings;
+}

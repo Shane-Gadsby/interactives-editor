@@ -19,6 +19,10 @@ import { Icons, type IconName } from './components/icons';
 import { IconButton } from './components/ui';
 import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
+import { HelpLink, openHelp } from './help/Help';
+import { PrefsModal } from './components/PrefsModal';
+import { HistoryModal, ShareModal } from './components/ProjectModals';
+import { prefs, setPrefs } from './lib/prefs';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
   const [ready, setReady] = useState<EditorStore | null>(null);
@@ -149,6 +153,7 @@ const TOOL_KEYS: Record<string, Tool> = {
   o: 'ellipse',
   l: 'line',
   p: 'pen',
+  n: 'pencil',
   t: 'text',
   b: 'button',
 };
@@ -206,6 +211,11 @@ function useShortcuts() {
       if (mod && (k === '0' || k === '1')) {
         e.preventDefault();
         zoomTo(k === '0' ? 'fit' : '100');
+        return;
+      }
+      if (e.shiftKey && !mod && k === 'r') {
+        e.preventDefault();
+        setPrefs({ rulers: !prefs().rulers });
         return;
       }
       if (e.shiftKey && (e.code === 'Digit1' || e.code === 'Digit2')) {
@@ -355,7 +365,19 @@ function ConflictBanner() {
 function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }) {
   const s = useEditor((st) => ({ name: st.project.name, saveState: st.saveState, saveError: st.saveError, zoom: st.zoom, rev: st.project.updated, live: st.live, peers: st.peers }));
   const [menu, setMenu] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const st = store();
+  const [shareOpen, setShareOpen] = useState(false);
+  const exportPicture = async (kind: 'png' | 'svg', scale: number) => {
+    const state = st.get();
+    const ab = getArtboard(state.project, state.activeArtboardId);
+    if (!ab) throw new Error('Open an artboard first.');
+    const tl = ab.timelines.find((t) => t.id === state.activeTimelineId) ?? null;
+    const { downloadArtboardPng, downloadArtboardSvg } = await import('./lib/image-export');
+    const warnings = kind === 'png' ? await downloadArtboardPng(state.project, ab, tl, state.playhead, scale) : await downloadArtboardSvg(state.project, ab, tl, state.playhead);
+    for (const w of warnings) st.toast(w);
+  };
   const run = async (fn: () => Promise<void> | void) => {
     setMenu(false);
     try {
@@ -404,6 +426,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
           </span>
         ))}
       </div>
+      <IconButton icon={<Icons.history />} title="Revision history: earlier saved versions of this project" onClick={() => setHistoryOpen(true)} />
       <IconButton icon={<Icons.undo />} title="Undo (Ctrl+Z)" onClick={() => st.undo()} disabled={!st.canUndo()} />
       <IconButton icon={<Icons.redo />} title="Redo (Ctrl+Shift+Z)" onClick={() => st.redo()} disabled={!st.canRedo()} />
       <div className="zoom-ctl">
@@ -413,7 +436,12 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         </button>
         <button onClick={() => st.set({ zoom: Math.min(32, s.zoom * 1.25) })}>+</button>
       </div>
-      <button className="btn primary" onClick={onPreview}>
+      <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)} />
+      <IconButton icon={<Icons.help />} title="Help (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp()} />
+      {prefsOpen && <PrefsModal onClose={() => setPrefsOpen(false)} />}
+      {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
+      {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
+      <button className="btn primary" onClick={onPreview} title="Play the project exactly as the exported file will">
         <Icons.preview width={14} /> Preview
       </button>
       <div className="menu-wrap">
@@ -442,11 +470,37 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
               dotLottie (this artboard)
               <span className="muted small">.lottie package of the same</span>
             </button>
+            <button onClick={() => run(() => exportPicture('png', 2))}>
+              PNG image (this artboard)
+              <span className="muted small">At 2× size, at the timeline's playhead</span>
+            </button>
+            <button onClick={() => run(() => exportPicture('png', 1))}>
+              PNG image, 1×
+              <span className="muted small">Actual size</span>
+            </button>
+            <button onClick={() => run(() => exportPicture('svg', 1))}>
+              SVG image (this artboard)
+              <span className="muted small">Scales cleanly; opens in browsers</span>
+            </button>
+            <button onClick={() => run(() => setShareOpen(true))}>
+              Share link…
+              <span className="muted small">A link that plays the project in the browser</span>
+            </button>
           </div>
         )}
       </div>
     </header>
   );
+}
+
+/** The help page for whatever tool is in use. */
+function helpTopicForTool(tool: Tool): string {
+  if (['button', 'input', 'link', 'embed', 'video'].includes(tool)) return 'web-elements';
+  if (tool === 'text') return 'text';
+  if (tool === 'artboard') return 'artboards';
+  if (tool === 'frame') return 'groups-frames';
+  if (tool === 'select' || tool === 'hand') return 'interface';
+  return 'shapes';
 }
 
 const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
@@ -460,6 +514,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'star', icon: 'star', label: 'Star' },
   { tool: 'line', icon: 'line', label: 'Line', key: 'L' },
   { tool: 'pen', icon: 'pen', label: 'Pen', key: 'P' },
+  { tool: 'pencil', icon: 'pencil', label: 'Pencil (freehand)', key: 'N' },
   { tool: 'text', icon: 'text', label: 'Text', key: 'T' },
 ];
 
@@ -491,16 +546,18 @@ function Toolbar() {
       />
       <div className="toolbar-sep" />
       {WEB_TOOLS.map(btn)}
+      <div className="toolbar-fill" />
+      <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
     </nav>
   );
 }
 
-const TABS: { id: BottomTab; label: string; icon: IconName }[] = [
-  { id: 'timeline', label: 'Timeline', icon: 'timeline' },
-  { id: 'logic', label: 'Interactions', icon: 'logic' },
-  { id: 'scripts', label: 'Scripts', icon: 'code' },
-  { id: 'variables', label: 'Variables', icon: 'variable' },
-  { id: 'data', label: 'Data', icon: 'table' },
+const TABS: { id: BottomTab; label: string; icon: IconName; help: string; tip: string }[] = [
+  { id: 'timeline', label: 'Timeline', icon: 'timeline', help: 'timelines', tip: 'Animate properties with keyframes' },
+  { id: 'logic', label: 'Interactions', icon: 'logic', help: 'interactions', tip: 'Events, actions and logic as a node graph' },
+  { id: 'scripts', label: 'Scripts', icon: 'code', help: 'scripts', tip: 'JavaScript with the ix API' },
+  { id: 'variables', label: 'Variables', icon: 'variable', help: 'variables', tip: 'Named values shared by the whole project' },
+  { id: 'data', label: 'Data', icon: 'table', help: 'data-sources', tip: 'JSON, CSV, TSV or text from files or URLs' },
 ];
 
 function BottomPanel() {
@@ -525,11 +582,13 @@ function BottomPanel() {
         {TABS.map((t) => {
           const I = Icons[t.icon];
           return (
-            <button key={t.id} className={s.tab === t.id ? 'active' : ''} onClick={() => store().set({ bottomTab: s.tab === t.id ? null : t.id, previewPlaying: false })}>
+            <button key={t.id} className={s.tab === t.id ? 'active' : ''} title={t.tip} onClick={() => store().set({ bottomTab: s.tab === t.id ? null : t.id, previewPlaying: false })}>
               <I width={14} /> {t.label}
             </button>
           );
         })}
+        <div className="spacer" />
+        {s.tab && <HelpLink topic={TABS.find((t) => t.id === s.tab)!.help} />}
       </div>
       {s.tab && (
         <div className="bottom-body">
@@ -550,18 +609,25 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
   const [html, setHtml] = useState<string | null>(null);
   const [from, setFrom] = useState<'start' | 'current'>('start');
   const [log, setLog] = useState<string[]>([]);
+  const [vars, setVars] = useState<Record<string, unknown> | null>(null);
+  const [showVars, setShowVars] = useState(true);
   const [nonce, setNonce] = useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
     let live = true;
-    void standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined }).then((h) => live && setHtml(h));
+    void standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true }).then((h) => live && setHtml(h));
     return () => {
       live = false;
     };
   }, [project, from, abId, nonce]);
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
-      if (e.source !== frame.current?.contentWindow || e.data?.source !== 'interactives') return;
+      if (e.source !== frame.current?.contentWindow) return;
+      if (e.data?.source === 'interactives-debug') {
+        setVars(e.data.vars);
+        return;
+      }
+      if (e.data?.source !== 'interactives') return;
       setLog((l) => [...l.slice(-50), `${e.data.name}${e.data.payload !== undefined ? ` ${JSON.stringify(e.data.payload)}` : ''}`]);
     };
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -573,6 +639,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
     };
   }, [onClose]);
   const ab = getArtboard(project, from === 'current' ? abId : project.settings.startArtboardId);
+  const post = (name: string, value: unknown) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'setVariable', name, value }, '*');
   return (
     <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal preview-modal">
@@ -584,12 +651,45 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
           </select>
           <span className="muted small">{ab ? `${ab.width} × ${ab.height}` : ''} · runs exactly like the exported file</span>
           <div className="spacer" />
-          <button className="btn" onClick={() => setNonce(nonce + 1)}>
+          <button className="btn" onClick={() => setNonce(nonce + 1)} title="Start again from the beginning">
             Restart
+          </button>
+          <button className={`btn${showVars ? ' active' : ''}`} onClick={() => setShowVars(!showVars)} title="Show the variables as they change, and set them by hand">
+            Variables
           </button>
           <IconButton icon={<Icons.close />} title="Close (Esc)" onClick={onClose} />
         </header>
         <div className="preview-body">
+          {showVars && vars && (
+            <aside className="preview-vars">
+              <div className="field-label block">Variables (live)</div>
+              {Object.keys(vars).length === 0 && <p className="muted small">This project has no variables.</p>}
+              {project.variables.map((v) => (
+                <label key={v.id} className="preview-var" title={`Change ${v.name} in the running preview`}>
+                  <span className="mono">{v.name}</span>
+                  {v.type === 'boolean' ? (
+                    <input type="checkbox" checked={!!vars[v.name]} onChange={(e) => post(v.name, e.target.checked)} />
+                  ) : v.type === 'enum' ? (
+                    <select value={String(vars[v.name] ?? '')} onChange={(e) => post(v.name, e.target.value)}>
+                      {(v.options ?? []).map((o) => (
+                        <option key={o}>{o}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      key={String(vars[v.name])}
+                      defaultValue={String(vars[v.name] ?? '')}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') post(v.name, (e.target as HTMLInputElement).value);
+                      }}
+                      onBlur={(e) => e.target.value !== String(vars[v.name] ?? '') && post(v.name, e.target.value)}
+                    />
+                  )}
+                </label>
+              ))}
+            </aside>
+          )}
           {html ? <iframe ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : <div className="center-msg muted">Building…</div>}
         </div>
         {log.length > 0 && (

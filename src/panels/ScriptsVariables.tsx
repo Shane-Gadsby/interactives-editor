@@ -122,7 +122,7 @@ export function VariablesPanel() {
       d.variables.push({ id: uid('v'), name, type: 'number', initial: 0 });
     });
   };
-  const defaultFor = (t: VariableType) => (t === 'number' ? 0 : t === 'boolean' ? false : t === 'color' ? '#3b5bfd' : '');
+  const defaultFor = (t: VariableType) => (t === 'number' ? 0 : t === 'boolean' ? false : t === 'color' ? '#3b5bfd' : t === 'enum' ? 'first' : '');
   return (
     <div className="variables">
       <table className="var-table">
@@ -143,13 +143,39 @@ export function VariablesPanel() {
                 {!isIdentifier(v.name) && <div className="error small">Use letters, digits and _ only, not starting with a digit.</div>}
               </td>
               <td>
-                <SelectField<VariableType> value={v.type} options={['number', 'string', 'boolean', 'color']} onChange={(t) => setVar(v.id, { type: t, initial: defaultFor(t) })} />
+                <SelectField<VariableType>
+                  value={v.type}
+                  title="Number, text, true/false, colour, or a choice from a list you define"
+                  options={[
+                    { value: 'number', label: 'Number' },
+                    { value: 'string', label: 'Text' },
+                    { value: 'boolean', label: 'True/false' },
+                    { value: 'color', label: 'Colour' },
+                    { value: 'enum', label: 'Choice' },
+                  ]}
+                  onChange={(t) => setVar(v.id, t === 'enum' ? { type: t, options: v.options?.length ? v.options : ['first', 'second'], initial: v.options?.[0] ?? 'first' } : { type: t, initial: defaultFor(t) })}
+                />
               </td>
               <td>
                 {v.type === 'number' && <NumberField value={Number(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
                 {v.type === 'string' && <TextField value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
                 {v.type === 'boolean' && <CheckField label={v.initial ? 'true' : 'false'} value={!!v.initial} onChange={(x) => setVar(v.id, { initial: x })} />}
                 {v.type === 'color' && <ColorField value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
+                {v.type === 'enum' && (
+                  <div className="enum-edit">
+                    <SelectField value={String(v.initial)} title="Starting choice" options={(v.options ?? []).map((o) => ({ value: o, label: o }))} onChange={(x) => setVar(v.id, { initial: x })} />
+                    <TextField
+                      value={(v.options ?? []).join(', ')}
+                      title="The choices, separated by commas"
+                      placeholder="easy, medium, hard"
+                      commitOnBlur
+                      onChange={(x) => {
+                        const options = [...new Set(x.split(',').map((o) => o.trim()).filter(Boolean))];
+                        setVar(v.id, { options, initial: options.includes(String(v.initial)) ? v.initial : (options[0] ?? '') });
+                      }}
+                    />
+                  </div>
+                )}
               </td>
               <td>
                 <CheckField label="" value={!!v.persist} onChange={(x) => setVar(v.id, { persist: x })} />

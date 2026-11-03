@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Home } from './Home';
 import { Editor } from './Editor';
+import { HelpHost, HelpPage } from './help/Help';
+import { installTooltips } from './components/tooltips';
 
-/** Hash routes: `#/` projects list, `#/p/<id>` editor. Hash routing keeps the server to one document. */
-function parse(): { page: 'home' } | { page: 'editor'; id: string } {
+type Route = { page: 'home' } | { page: 'editor'; id: string } | { page: 'help'; id: string; anchor?: string };
+
+/** Hash routes: `#/` projects list, `#/p/<id>` editor, `#/help/<topic>[/<anchor>]` help. Hash routing keeps the server to one document. */
+function parse(): Route {
   const m = /^#\/p\/([\w-]+)/.exec(location.hash);
-  return m ? { page: 'editor', id: m[1] } : { page: 'home' };
+  if (m) return { page: 'editor', id: m[1] };
+  const h = /^#\/help(?:\/([\w-]+))?(?:\/([\w-]+))?/.exec(location.hash);
+  if (h) return { page: 'help', id: h[1] ?? 'welcome', anchor: h[2] };
+  return { page: 'home' };
 }
+
+installTooltips();
 
 export function App() {
   const [route, setRoute] = useState(parse);
@@ -15,6 +24,16 @@ export function App() {
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
-  if (route.page === 'editor') return <Editor key={route.id} projectId={route.id} home={() => (location.hash = '#/')} />;
-  return <Home open={(id) => (location.hash = `#/p/${id}`)} />;
+  return (
+    <>
+      {route.page === 'editor' ? (
+        <Editor key={route.id} projectId={route.id} home={() => (location.hash = '#/')} />
+      ) : route.page === 'help' ? (
+        <HelpPage id={route.id} anchor={route.anchor} />
+      ) : (
+        <Home open={(id) => (location.hash = `#/p/${id}`)} />
+      )}
+      <HelpHost />
+    </>
+  );
 }

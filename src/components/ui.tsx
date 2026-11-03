@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { formatColor, parseColor } from 'interactives-player';
+import { HelpLink } from '../help/Help';
+import { FIELD_TIPS } from './tips';
+
+/** An explicit title, or the standard explanation for a field label. */
+function tipFor(label: ReactNode, title?: string): string | undefined {
+  if (title) return title;
+  return typeof label === 'string' ? FIELD_TIPS[label] : undefined;
+}
 
 /** Number input whose label can be dragged left/right to scrub the value. */
 export function NumberField({
@@ -55,7 +63,7 @@ export function NumberField({
     el.addEventListener('pointerup', up);
   };
   return (
-    <label className="field number-field" title={title}>
+    <label className="field number-field" title={tipFor(label, title)}>
       {label !== undefined && (
         <span className="field-label scrub" onPointerDown={scrub}>
           {label}
@@ -123,6 +131,7 @@ export function TextField({
   mono,
   commitOnBlur,
   rows,
+  title,
 }: {
   label?: ReactNode;
   value: string;
@@ -132,6 +141,7 @@ export function TextField({
   mono?: boolean;
   commitOnBlur?: boolean;
   rows?: number;
+  title?: string;
 }) {
   const [text, setText] = useState(value);
   const focused = useRef(false);
@@ -154,7 +164,7 @@ export function TextField({
     },
   };
   return (
-    <label className={`field text-field${multiline ? ' multiline' : ''}`}>
+    <label className={`field text-field${multiline ? ' multiline' : ''}`} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{label}</span>}
       {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
     </label>
@@ -166,15 +176,17 @@ export function SelectField<T extends string>({
   value,
   options,
   onChange,
+  title,
 }: {
   label?: ReactNode;
   value: T;
   options: { value: T; label: string }[] | readonly T[];
   onChange: (v: T) => void;
+  title?: string;
 }) {
   const opts = (options as (T | { value: T; label: string })[]).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
   return (
-    <label className="field select-field">
+    <label className="field select-field" title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{label}</span>}
       <select value={value} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
         {opts.map((o) => (
@@ -189,7 +201,7 @@ export function SelectField<T extends string>({
 
 export function CheckField({ label, value, onChange, title }: { label: ReactNode; value: boolean; onChange: (v: boolean) => void; title?: string }) {
   return (
-    <label className="field check-field" title={title}>
+    <label className="field check-field" title={tipFor(label, title)}>
       <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}</span>
     </label>
@@ -197,7 +209,7 @@ export function CheckField({ label, value, onChange, title }: { label: ReactNode
 }
 
 /** Colour swatch + hex/rgba text + opacity. */
-export function ColorField({ label, value, onChange, onCommit }: { label?: ReactNode; value: string; onChange: (v: string) => void; onCommit?: () => void }) {
+export function ColorField({ label, value, onChange, onCommit, title }: { label?: ReactNode; value: string; onChange: (v: string) => void; onCommit?: () => void; title?: string }) {
   const rgba = parseColor(value) ?? [0, 0, 0, 1];
   const hex = formatColor([rgba[0], rgba[1], rgba[2], 1]);
   const alpha = Math.round(rgba[3] * 100);
@@ -205,7 +217,11 @@ export function ColorField({ label, value, onChange, onCommit }: { label?: React
   useEffect(() => setText(value), [value]);
   return (
     <div className="field color-field">
-      {label !== undefined && <span className="field-label">{label}</span>}
+      {label !== undefined && (
+        <span className="field-label" title={tipFor(label, title)}>
+          {label}
+        </span>
+      )}
       <span className="swatch" style={{ background: value }}>
         <input
           type="color"
@@ -248,7 +264,22 @@ export function ColorField({ label, value, onChange, onCommit }: { label?: React
   );
 }
 
-export function Section({ title, children, actions, collapsible = true, defaultOpen = true }: { title: ReactNode; children: ReactNode; actions?: ReactNode; collapsible?: boolean; defaultOpen?: boolean }) {
+export function Section({
+  title,
+  children,
+  actions,
+  collapsible = true,
+  defaultOpen = true,
+  help,
+}: {
+  title: ReactNode;
+  children: ReactNode;
+  actions?: ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+  /** Help topic id (or "topic#anchor") for the section's "?" link. */
+  help?: string;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <section className={`section${open ? '' : ' closed'}`}>
@@ -256,6 +287,7 @@ export function Section({ title, children, actions, collapsible = true, defaultO
         <button className="section-title" onClick={() => collapsible && setOpen(!open)}>
           {title}
         </button>
+        {help && <HelpLink topic={help.split('#')[0]} anchor={help.split('#')[1]} />}
         <div className="section-actions">{actions}</div>
       </header>
       {open && <div className="section-body">{children}</div>}

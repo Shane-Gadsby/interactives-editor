@@ -6,7 +6,11 @@ import {
   isContainer,
   nodeMatrix,
   pathBounds,
+  polygonPoints,
+  starPoints,
+  subPathsToD,
   sampleArtboard,
+  applyConstraints,
   type Artboard,
   type Matrix,
   type NodeType,
@@ -18,6 +22,9 @@ import { store, useEditor, type Tool } from '../store/store';
 import { getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, topmost, type Rect } from '../store/doc';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
+import { prefs, usePrefs } from '../lib/prefs';
+import { Rulers } from './Rulers';
+import { freehandToPath } from './freehand';
 import { ArtboardView } from './ArtboardView';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
 import { insertFiles } from '../lib/insert';
@@ -36,6 +43,7 @@ type Drag =
   | { kind: 'create'; tool: Tool; abId: string | null; start: Pt; parentId: string | null }
   | { kind: 'marquee'; abId: string | null; start: Pt; additive: string[] }
   | { kind: 'penHandle'; index: number }
+  | { kind: 'pencil'; abId: string; points: Pt[] }
   | { kind: 'pathPoint'; si: number; pi: number; start: Pt; node0: PathNode; parentM: Matrix }
   | { kind: 'pathHandle'; si: number; pi: number; which: 'in' | 'out'; node0: PathNode; parentM: Matrix; mirror: boolean };
 
@@ -86,6 +94,7 @@ export function Canvas() {
   const drag = useRef<Drag | null>(null);
   const spaceDown = useRef(false);
   const [hover, setHover] = useState<string | null>(null);
+  const [pencil, setPencil] = useState<Pt[] | null>(null);
   const [box, setBoxState] = useState<{ abId: string | null; rect: Rect } | null>(null); // marquee / create preview
   // Mirrored in a ref: a quick click can fire pointerup before React re-renders with the new box.
   const boxRef = useRef(box);
@@ -103,10 +112,13 @@ export function Canvas() {
   const baseActive = getArtboard(project, s.activeArtboardId);
   const timeline = s.bottomTab === 'timeline' ? baseActive?.timelines.find((t) => t.id === s.activeTimelineId) ?? null : null;
   // While a timeline is open the canvas shows its frame at the playhead, so outlines and handles follow that frame too.
-  const active = useMemo(
-    () => (baseActive && timeline ? { ...baseActive, children: sampleArtboard(baseActive.children, timeline, s.playhead) } : baseActive),
-    [baseActive, timeline, s.playhead],
-  );
+  // Constrained layers are drawn where their constraints put them, so their outlines go there too.
+  const active = useMemo(() => {
+    if (!baseActive) return baseActive;
+    const kids = timeline ? sampleArtboard(baseActive.children, timeline, s.playhead) : baseActive.children;
+    const placed = applyConstraints(kids);
+    return placed === baseActive.children ? baseActive : { ...baseActive, children: placed };
+  }, [baseActive, timeline, s.playhead]);
 
   // ---------------------------------------------------------------- coordinates
 
@@ -132,7 +144,11 @@ export function Canvas() {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const st = store().get();
-      if (e.ctrlKey || e.metaKey) {
+      // Ctrl/Cmd+wheel (and trackpad pinch, which arrives as ctrl+wheel) always zooms.
+      // With the default preference the plain wheel zooms too; Shift+wheel and sideways scrolling pan.
+      const sideways = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+      const zoomIt = e.ctrlKey || e.metaKey || (prefs().wheel === 'zoom' && !e.shiftKey && !sideways);
+      if (zoomIt) {
         const r = el.getBoundingClientRect();
         const cx = e.clientX - r.left;
         const cy = e.clientY - r.top;
@@ -335,6 +351,15 @@ export function Canvas() {
       return;
     }
 
+    if (tool === 'pencil') {
+      const cab = hitAb ?? ab;
+      if (!cab) return;
+      if (cab.id !== st.activeArtboardId) store().set({ activeArtboardId: cab.id, selection: [] });
+      drag.current = { kind: 'pencil', abId: cab.id, points: [local(cab, w)] };
+      setPencil([local(cab, w)]);
+      return;
+    }
+
     if (tool === 'artboard') {
       drag.current = { kind: 'create', tool, abId: null, start: w, parentId: null };
       setBox({ abId: null, rect: { x: w.x, y: w.y, width: 0, height: 0 } });
@@ -429,7 +454,7 @@ export function Canvas() {
           if (Math.abs(dx) > Math.abs(dy)) dy = 0;
           else dx = 0;
         }
-        const snap = snapMove(mab, d.bounds0, dx, dy, d.items.map((i) => i.id), zoom);
+        const snap = e.ctrlKey || e.metaKey ? { dx: 0, dy: 0, guides: { x: [], y: [] } } : snapMove(mab, d.bounds0, dx, dy, d.items.map((i) => i.id), zoom);
         dx += snap.dx;
         dy += snap.dy;
         setGuides(snap.guides.x.length || snap.guides.y.length ? { abId: mab.id, ...snap.guides } : null);
@@ -527,6 +552,13 @@ export function Canvas() {
         );
         break;
       }
+      case 'pencil': {
+        const pab = getArtboard(st.project, d.abId);
+        if (!pab) break;
+        d.points.push(local(pab, w));
+        setPencil(d.points.slice());
+        break;
+      }
       case 'create': {
         const cab = d.abId ? getArtboard(st.project, d.abId) : null;
         const p = cab ? local(cab, w) : w;
@@ -610,6 +642,29 @@ export function Canvas() {
     setGuides(null);
     if (!d) return;
     const st = store().get();
+    if (d.kind === 'pencil') {
+      setPencil(null);
+      const pab = getArtboard(st.project, d.abId);
+      if (!pab || d.points.length < 2) return;
+      // Ends close together: a closed, filled shape
+      const first = d.points[0];
+      const last = d.points[d.points.length - 1];
+      const closed = d.points.length > 8 && Math.hypot(first.x - last.x, first.y - last.y) < 10 / zoom;
+      const pts = freehandToPath(d.points, 0.5, closed);
+      if (pts.length < 2) return;
+      const b = pathBounds([{ points: pts, closed }]);
+      const node = createNode('path', {
+        name: 'Pencil',
+        x: round(b.x, 2),
+        y: round(b.y, 2),
+        width: Math.max(1, b.width),
+        height: Math.max(1, b.height),
+        paths: [{ closed, points: pts.map((p) => ({ ...p, x: round(p.x - b.x, 2), y: round(p.y - b.y, 2) })) }],
+        fill: closed ? { type: 'solid', color: '#d9d9d9' } : null,
+      });
+      store().addNodes([node], { artboardId: pab.id });
+      return;
+    }
     if (d.kind === 'create') {
       const b = boxRef.current?.rect;
       setBox(null);
@@ -925,6 +980,16 @@ export function Canvas() {
     }
   }
 
+  // Freehand stroke in progress
+  if (pencil && pencil.length > 1) {
+    const pab = drag.current?.kind === 'pencil' ? getArtboard(project, drag.current.abId) ?? null : null;
+    const d = pencil.map((p, i) => {
+      const q = screen(pab, p);
+      return `${i ? 'L' : 'M'}${q.x.toFixed(1)} ${q.y.toFixed(1)}`;
+    });
+    overlay.push(<path key="pencil" className="pencil-stroke" d={d.join('')} />);
+  }
+
   // Marquee / creation preview
   if (box) {
     const bab = box.abId ? getArtboard(project, box.abId) ?? null : null;
@@ -934,6 +999,7 @@ export function Canvas() {
       overlay.push(<line key="box" className="create-line" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />);
     } else {
       const a = screen(bab, { x: box.rect.x, y: box.rect.y });
+      if (drag.current?.kind === 'create') overlay.push(<g key="shape-preview">{shapePreview(drag.current.tool, a.x, a.y, box.rect.width * zoom, box.rect.height * zoom, zoom)}</g>);
       overlay.push(
         <rect
           key="box"
@@ -1025,6 +1091,7 @@ export function Canvas() {
     }
   }
 
+  const showRulers = usePrefs().rulers;
   const cursor = s.tool === 'hand' ? 'grab' : s.tool === 'select' ? 'default' : s.tool === 'text' ? 'text' : 'crosshair';
 
   return (
@@ -1056,6 +1123,7 @@ export function Canvas() {
         ))}
       </div>
       <svg className="overlay">{overlay}</svg>
+      {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} />}
     </div>
   );
@@ -1140,8 +1208,8 @@ function isTyping(e: KeyboardEvent): boolean {
 /** Snap a moved selection's edges/centre to the artboard and to other top-level layers. */
 function snapMove(ab: Artboard, b: Rect, dx: number, dy: number, moving: string[], zoom: number): { dx: number; dy: number; guides: { x: number[]; y: number[] } } {
   const th = SNAP_PX / zoom;
-  const xs = [0, ab.width / 2, ab.width];
-  const ys = [0, ab.height / 2, ab.height];
+  const xs = [0, ab.width / 2, ab.width, ...(ab.guides?.x ?? [])];
+  const ys = [0, ab.height / 2, ab.height, ...(ab.guides?.y ?? [])];
   const set = new Set(moving);
   for (const n of ab.children) {
     if (set.has(n.id) || !n.visible) continue;
@@ -1168,4 +1236,58 @@ function snapMove(ab: Artboard, b: Rect, dx: number, dy: number, moving: string[
   const sx = best(cx, xs);
   const sy = best(cy, ys);
   return { dx: sx?.d ?? 0, dy: sy?.d ?? 0, guides: { x: sx ? [sx.at] : [], y: sy ? [sy.at] : [] } };
+}
+
+
+/** What a shape will look like while it is being drawn, in screen pixels (the defaults the new layer gets). */
+function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zoom: number) {
+  if (w < 1 || h < 1) return null;
+  const grey = { fill: '#d9d9d9', fillOpacity: 0.85 };
+  const label = (text: string, color: string, size = 16, extra: Record<string, unknown> = {}) => (
+    <text x={x + w / 2} y={y + h / 2} fill={color} fontSize={size * zoom} fontFamily="Inter, system-ui, sans-serif" textAnchor="middle" dominantBaseline="central" {...extra}>
+      {text}
+    </text>
+  );
+  switch (tool) {
+    case 'rect':
+      return <rect x={x} y={y} width={w} height={h} {...grey} />;
+    case 'ellipse':
+      return <ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} {...grey} />;
+    case 'polygon':
+      return <path transform={`translate(${x} ${y})`} d={subPathsToD([{ points: polygonPoints(6, w, h), closed: true }])} {...grey} />;
+    case 'star':
+      return <path transform={`translate(${x} ${y})`} d={subPathsToD([{ points: starPoints(5, 0.45, w, h), closed: true }])} {...grey} />;
+    case 'frame':
+      return <rect x={x} y={y} width={w} height={h} fill="#ffffff" fillOpacity={0.92} />;
+    case 'button':
+      return (
+        <>
+          <rect x={x} y={y} width={w} height={h} rx={8 * zoom} fill="#3b5bfd" fillOpacity={0.9} />
+          {h > 12 * zoom && label('Button', '#fff', 16, { fontWeight: 600 })}
+        </>
+      );
+    case 'input':
+      return (
+        <>
+          <rect x={x} y={y} width={w} height={h} rx={6 * zoom} fill="#fff" stroke="#c4c4c4" />
+          {h > 12 * zoom && (
+            <text x={x + 10 * zoom} y={y + h / 2} fill="#999" fontSize={16 * zoom} fontFamily="Inter, system-ui, sans-serif" dominantBaseline="central">
+              Type here
+            </text>
+          )}
+        </>
+      );
+    case 'link':
+      return label('Link', '#3b5bfd', 16, { textDecoration: 'underline' });
+    case 'embed':
+    case 'video':
+      return (
+        <>
+          <rect x={x} y={y} width={w} height={h} fill="#2a2b30" fillOpacity={0.9} />
+          {h > 14 * zoom && label(tool === 'embed' ? 'Embed' : 'Video', '#9a9ea8', 14)}
+        </>
+      );
+    default:
+      return null;
+  }
 }

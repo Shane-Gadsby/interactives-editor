@@ -52,10 +52,17 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | `GET /api/projects/:id/live?clientId&since` | live editing stream (Server-Sent Events: `hello`, `ops`, `presence`, `reset`, `deleted`) |
 | `POST /api/projects/:id/ops` | a batch of document ops (`shared/ops.mjs`); the server orders, applies and broadcasts them |
 | `POST /api/projects/:id/presence` | cursor, artboard and selection |
+| `GET /api/projects/:id/revisions` | revision history (newest 100, no documents) |
+| `GET /api/projects/:id/revisions/:revId` | one revision's project |
+| `POST /api/projects/:id/revisions/:revId/restore` | snapshot the current document ("Before restore"), then restore; live rooms get `reset` |
+| `GET/PUT/DELETE /api/projects/:id/share` | share link state / publish a standalone HTML body (creates the token on first use) / turn off and delete the file |
+| `GET /s/:token` | a shared project, **no session** (a link in a new tab can't carry one). Tokens are 24 random base64url chars; off until the owner turns it on |
 
 Data lives in two places:
-- **MongoDB:** database `lti-interactives`, collection `projects`. Each document is `{_id, name, owner, created, updated, rev, meta, doc}`, where `doc` is the project JSON stored as a string.
-- **Asset files:** stored under `storage/<projectId>/<assetId>`, each with a `.json` sidecar. `INTERACTIVES_STORAGE` moves that folder; on test and prod it is symlinked to the larger storage pool. `storage/` is gitignored.
+- **MongoDB:** database `lti-interactives`.
+  - `projects`: `{_id, name, owner, created, updated, rev, meta, doc, share?}`, where `doc` is the project JSON stored as a string.
+  - `revisions`: `{_id, project, created, rev, by, reason, size, doc}`. A snapshot at most every 5 minutes per project while it is saved (PUT or live room save), plus one before each restore. The newest 100 per project are kept.
+- **Asset files:** stored under `storage/<projectId>/<assetId>`, each with a `.json` sidecar. Share links are `storage/shares/<token>.html`. `INTERACTIVES_STORAGE` moves that folder; on test and prod it is symlinked to the larger storage pool. `storage/` is gitignored.
 
 **Live editing.** Opening a project joins a room held in memory by the server, which holds the document, an op log and the connected clients. Edits are diffed into id-addressed ops (`shared/ops.mjs`, the same file the server uses): set a property, insert after an id, delete an id. The last write wins per property, in the server's order.
 - The server saves the room to MongoDB a second after the last op, when the room empties, and on SIGINT/SIGTERM.
@@ -64,7 +71,7 @@ Data lives in two places:
 - A plain PUT (a non-live client or an import) replaces the room and tells everyone to reload.
 - Rooms live in one process, so run a single instance per box.
 
-The projects list wants the index `owner.username_1_updated_-1` from `suite-libs/indexes.js`. Everything else is looked up by `_id`.
+The projects list wants the index `owner.username_1_updated_-1`, and revision history `project_1_created_-1` on `revisions`, both in `suite-libs/indexes.js`. Everything else is looked up by `_id`.
 
 Access works like this:
 - A person sees and changes only their own projects.
@@ -92,6 +99,12 @@ Access works like this:
 | `lib/lottie-import.ts`, `lib/lottie-export.ts` | Lottie / dotLottie in and out |
 | `lib/rive-import.ts`, `lib/rive-defs.ts` | `.riv` import; defs generated from rive-runtime headers by `research/rive/gen_defs.py` |
 | `lib/boolean.ts` | union/subtract/intersect/exclude (polygon-clipping) |
+| `lib/svg-import.ts` | SVG files to editable layers (paths with transforms baked in, groups, gradients, text) |
+| `lib/image-export.ts` | PNG/SVG pictures of an artboard (the renderer inside `<foreignObject>`, assets and fonts inlined) |
+| `lib/prefs.ts` | per-person preferences in localStorage (wheel zoom vs pan, tooltips, rulers) |
+| `help/` | the in-app help: `topics.ts` (the docs, with the node and property references generated from the catalog), search, drawer, `#/help/<topic>` page, F1 / Ctrl+K quick search |
+| `components/tooltips.ts`, `components/tips.ts` | styled tooltips for every `title`, and the standard explanations for field labels |
+| `components/ContextMenu.tsx` | right-click menus (interaction graph) |
 
 Preview runs the single-file export in a sandboxed iframe, so it behaves exactly like the downloaded file.
 
@@ -99,8 +112,10 @@ Preview runs the single-file export in a sandboxed iframe, so it behaves exactly
 
 | Keys | Action |
 |---|---|
-| V H A F R O L P T B | select, hand, artboard, frame, rectangle, ellipse, line, pen, text, button |
-| Space-drag, wheel, Ctrl+wheel | pan, scroll, zoom |
+| V H A F R O L P N T B | select, hand, artboard, frame, rectangle, ellipse, line, pen, pencil, text, button |
+| Space-drag, wheel, Ctrl+wheel | pan, zoom (or pan, with the Preferences wheel setting), zoom |
+| Shift+R | rulers (drag out guides) |
+| F1 / Ctrl+K, ? | search help, open help |
 | Shift+1 / Shift+2 / Ctrl+1 | fit all / fit selection / 100% |
 | Ctrl+Z, Ctrl+Shift+Z | undo, redo |
 | Ctrl+C / X / V / D | copy, cut, paste, duplicate |

@@ -24,10 +24,10 @@ function loadSandboxSource(): Promise<string> {
   return sandboxSource;
 }
 
-export async function standaloneHtml(project: Project, opts: { startArtboardId?: string } = {}): Promise<string> {
+export async function standaloneHtml(project: Project, opts: { startArtboardId?: string; debug?: boolean } = {}): Promise<string> {
   const p = opts.startArtboardId ? { ...project, settings: { ...project.settings, startArtboardId: opts.startArtboardId } } : project;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p)) ? await loadSandboxSource() : undefined;
-  return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: (a) => assetBytes(project.id, a) });
+  return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: (a) => assetBytes(project.id, a), debug: opts.debug });
 }
 
 function hasCodeNodes(p: Project): boolean {

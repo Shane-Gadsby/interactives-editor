@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -29,11 +29,14 @@ import {
   type Project,
 } from 'interactives-player';
 import { store, useEditor } from '../store/store';
+import { openHelp } from '../help/Help';
+import { slug } from '../help/markdown';
 import { getArtboard } from '../store/doc';
 import { CheckField, NumberField, SelectField, TextField } from '../components/ui';
 import { CodeEditor } from '../components/CodeEditor';
 import { SplitColumns } from '../components/SplitColumns';
 import { assetKind } from '../lib/assets';
+import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 
 type IxNodeData = { logic: LogicNode; summary: string };
 
@@ -105,9 +108,12 @@ export function LogicGraph() {
       })),
     [ab, s.project, s.sel],
   );
+  // Selected connections live here (the document only stores the graph), so Delete can remove them
+  const [selEdges, setSelEdges] = useState<string[]>([]);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const edges: Edge[] = useMemo(
-    () => (ab?.logic.edges ?? []).map((e) => ({ id: e.id, source: e.from, sourceHandle: e.fromPort, target: e.to, targetHandle: e.toPort, animated: false })),
-    [ab],
+    () => (ab?.logic.edges ?? []).map((e) => ({ id: e.id, source: e.from, sourceHandle: e.fromPort, target: e.to, targetHandle: e.toPort, animated: false, selected: selEdges.includes(e.id) })),
+    [ab, selEdges],
   );
 
   const updateLogic = useCallback(
@@ -134,7 +140,10 @@ export function LogicGraph() {
           }
         }, `logic-move-${c.id}`);
         if (!c.dragging) store().commit();
-      } else if (c.type === 'select' && c.selected) store().set({ logicSelection: c.id });
+      } else if (c.type === 'select' && c.selected) {
+        store().set({ logicSelection: c.id });
+        setSelEdges([]);
+      }
       else if (c.type === 'remove') {
         updateLogic((a) => {
           a.logic.nodes = a.logic.nodes.filter((x) => x.id !== c.id);
@@ -144,6 +153,11 @@ export function LogicGraph() {
     }
   };
   const onEdgesChange = (changes: EdgeChange[]) => {
+    for (const c of changes)
+      if (c.type === 'select') {
+        setSelEdges((cur) => (c.selected ? [...cur.filter((x) => x !== c.id), c.id] : cur.filter((x) => x !== c.id)));
+        if (c.selected) store().set({ logicSelection: null });
+      }
     const removed = changes.filter((c) => c.type === 'remove').map((c) => c.id);
     if (removed.length)
       updateLogic((a) => {
@@ -158,13 +172,121 @@ export function LogicGraph() {
     });
   };
 
-  const add = (kind: string, at?: { x: number; y: number }) => {
+  const add = (kind: string, at?: { x: number; y: number }, from?: { id: string; port: string }) => {
     const pos = at ?? rf.current?.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight - 160 }) ?? { x: 40, y: 40 };
     const id = uid('lg');
     updateLogic((a) => {
       a.logic.nodes.push({ id, kind, x: Math.round(pos.x), y: Math.round(pos.y), params: defaultParams(kind) });
+      if (from && CATALOG_BY_KIND[kind]?.hasInput) a.logic.edges.push({ id: uid('e'), from: from.id, fromPort: from.port, to: id, toPort: 'in' });
     });
     store().set({ logicSelection: id });
+    setSelEdges([]);
+    return id;
+  };
+
+  const removeNodes = (ids: string[]) =>
+    updateLogic((a) => {
+      a.logic.nodes = a.logic.nodes.filter((x) => !ids.includes(x.id));
+      a.logic.edges = a.logic.edges.filter((e) => !ids.includes(e.from) && !ids.includes(e.to));
+    });
+  const removeEdges = (ids: string[]) =>
+    updateLogic((a) => {
+      a.logic.edges = a.logic.edges.filter((e) => !ids.includes(e.id));
+    });
+  const deleteSelected = () => {
+    const st = store().get();
+    if (selEdges.length) removeEdges(selEdges);
+    if (st.logicSelection) removeNodes([st.logicSelection]);
+    setSelEdges([]);
+    store().set({ logicSelection: null });
+  };
+  const duplicate = (id: string) => {
+    const n = ab?.logic.nodes.find((x) => x.id === id);
+    if (!n) return;
+    const nid = uid('lg');
+    updateLogic((a) => {
+      a.logic.nodes.push({ ...structuredClone(n), id: nid, x: n.x + 30, y: n.y + 30 });
+    });
+    store().set({ logicSelection: nid });
+  };
+
+  /** Node palette as menu items: categories with their nodes, each calling `pick(kind)`. */
+  const paletteItems = (pick: (kind: string) => void, only?: (kind: string) => boolean): MenuItem[] =>
+    (['event', 'action', 'logic'] as const)
+      .map((cat) => ({
+        label: cat === 'event' ? 'Event' : cat === 'action' ? 'Action' : 'Logic',
+        color: CAT_COLOR[cat],
+        items: CATALOG.filter((d) => d.category === cat && (!only || only(d.kind))).map((d) => ({ label: d.label, title: d.description, onClick: () => pick(d.kind) })),
+      }))
+      .filter((g) => g.items.length);
+
+  const paneMenu = (e: React.MouseEvent | MouseEvent) => {
+    e.preventDefault();
+    const at = rf.current?.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    setMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [{ heading: 'Add node' }, ...paletteItems((kind) => add(kind, at))],
+    });
+  };
+
+  const nodeMenu = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    if (!ab) return;
+    const n = ab.logic.nodes.find((x) => x.id === id);
+    const def = n && CATALOG_BY_KIND[n.kind];
+    if (!n || !def) return;
+    store().set({ logicSelection: id });
+    setSelEdges([]);
+    const names = new Map(ab.logic.nodes.map((x) => [x.id, CATALOG_BY_KIND[x.kind]?.label ?? x.kind]));
+    const outs = def.outputs;
+    const ins = ab.logic.edges.filter((x) => x.to === id);
+    const outEdges = ab.logic.edges.filter((x) => x.from === id);
+    const portLabel = (port: string) => outs.find((o) => o.id === port)?.label;
+    const at = { x: n.x + 260, y: n.y + outEdges.length * 40 };
+    // "Connect to new" for each output (one level when there is just one output)
+    const toNew = (port: string): MenuItem[] => paletteItems((kind) => add(kind, at, { id, port }), (k) => CATALOG_BY_KIND[k]?.hasInput);
+    const others = ab.logic.nodes.filter((x) => x.id !== id && CATALOG_BY_KIND[x.kind]?.hasInput);
+    const toExisting = (port: string): MenuItem[] =>
+      others.length
+        ? others.map((o) => ({
+            label: `${names.get(o.id)}${summarize(o, ab, s.project) ? ` · ${summarize(o, ab, s.project).slice(0, 30)}` : ''}`,
+            disabled: ab.logic.edges.some((x) => x.from === id && x.fromPort === port && x.to === o.id),
+            onClick: () => onConnect({ source: id, sourceHandle: port, target: o.id, targetHandle: 'in' }),
+          }))
+        : [{ label: 'No other nodes to connect to', onClick: () => undefined, disabled: true }];
+    const perPort = (make: (port: string) => MenuItem[]): MenuItem[] =>
+      outs.length === 1 ? make(outs[0].id) : outs.map((o) => ({ label: `From “${o.label || o.id}”`, items: make(o.id) }));
+    const items: MenuItem[] = [{ heading: def.label }];
+    if (outs.length) {
+      items.push({ label: 'Connect to new node', items: perPort(toNew) });
+      items.push({ label: 'Connect to existing node', items: perPort(toExisting) });
+    }
+    if (ins.length || outEdges.length)
+      items.push({
+        label: 'Disconnect',
+        items: [
+          ...ins.map((x) => ({ label: `From ${names.get(x.from)}`, onClick: () => removeEdges([x.id]) })),
+          ...outEdges.map((x) => ({ label: `To ${names.get(x.to)}${portLabel(x.fromPort) ? ` (${portLabel(x.fromPort)})` : ''}`, onClick: () => removeEdges([x.id]) })),
+          { separator: true } as MenuItem,
+          { label: 'All connections', onClick: () => removeEdges([...ins, ...outEdges].map((x) => x.id)) },
+        ],
+      });
+    items.push(
+      { separator: true },
+      { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate(id) },
+      { label: 'Help for this node', onClick: () => openHelp('interaction-nodes', slug(def.label)) },
+      { separator: true },
+      { label: 'Delete', hint: 'Del', danger: true, onClick: () => removeNodes([id]) },
+    );
+    setMenu({ x: e.clientX, y: e.clientY, items });
+  };
+
+  const edgeMenu = (e: React.MouseEvent, edgeId: string) => {
+    e.preventDefault();
+    setSelEdges([edgeId]);
+    store().set({ logicSelection: null });
+    setMenu({ x: e.clientX, y: e.clientY, items: [{ label: 'Delete connection', hint: 'Del', danger: true, onClick: () => removeEdges([edgeId]) }] });
   };
 
   // Frame the graph when switching artboards, or when nodes appear in a graph that was empty.
@@ -208,7 +330,19 @@ export function LogicGraph() {
           const kind = e.dataTransfer.getData('application/x-ix-logic');
           if (kind && rf.current) add(kind, rf.current.screenToFlowPosition({ x: e.clientX, y: e.clientY }));
         }}
-        onKeyDown={(e) => e.stopPropagation()}
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          const t = e.target as HTMLElement;
+          if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.closest('.cm-editor')) return;
+          if (e.key === 'Delete' || e.key === 'Backspace') {
+            e.preventDefault();
+            deleteSelected();
+          } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && store().get().logicSelection) {
+            e.preventDefault();
+            duplicate(store().get().logicSelection!);
+          }
+        }}
       >
         <ReactFlow
           nodes={nodes}
@@ -218,10 +352,16 @@ export function LogicGraph() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onInit={(inst) => (rf.current = inst)}
-          onPaneClick={() => store().set({ logicSelection: null })}
+          onPaneClick={() => {
+            store().set({ logicSelection: null });
+            setSelEdges([]);
+          }}
+          onPaneContextMenu={paneMenu}
+          onNodeContextMenu={(e, node) => nodeMenu(e, node.id)}
+          onEdgeContextMenu={(e, edge) => edgeMenu(e, edge.id)}
           fitView={ab.logic.nodes.length > 0}
           fitViewOptions={{ maxZoom: 1 }}
-          deleteKeyCode={['Delete', 'Backspace']}
+          deleteKeyCode={null}
           colorMode="dark"
           proOptions={{ hideAttribution: true }}
           minZoom={0.2}
@@ -229,9 +369,12 @@ export function LogicGraph() {
           <Background gap={16} />
           <Controls showInteractive={false} />
         </ReactFlow>
+        {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
         {!ab.logic.nodes.length && (
           <div className="logic-empty">
-            Add an <b>event</b> (e.g. On pointer), then connect it to <b>actions</b>. Drag from a node's right edge to the next node.
+            <p>
+              Add an <b>event</b> (e.g. On pointer), then connect it to <b>actions</b>. Drag from a node's right edge to the next node. Right-click for a menu of nodes.
+            </p>
           </div>
         )}
       </div>
@@ -294,13 +437,33 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
         return <NumberField key={p.key} label={p.label} value={Number(v ?? 0)} onChange={(x) => set(p.key, x)} />;
       case 'boolean':
         return <CheckField key={p.key} label={p.label} value={!!v} onChange={(x) => set(p.key, x)} />;
-      case 'expr':
+      case 'expr': {
+        // Setting a choice variable: pick from its choices (stored as a quoted value), or type an expression
+        const enumVar = node.kind === 'action.setVariable' && p.key === 'value' ? project.variables.find((x) => x.id === node.params.variable && x.type === 'enum') : undefined;
+        if (enumVar) {
+          const opts = enumVar.options ?? [];
+          const cur = String(v ?? '');
+          const quoted = opts.map((o) => JSON.stringify(o));
+          return (
+            <div key={p.key}>
+              <SelectField
+                label={p.label}
+                title={`${enumVar.name} is a choice: pick one of its options`}
+                value={quoted.includes(cur) ? cur : '__expr'}
+                options={[...opts.map((o) => ({ value: JSON.stringify(o), label: o })), { value: '__expr', label: 'Expression…' }]}
+                onChange={(x) => set(p.key, x === '__expr' ? '' : x)}
+              />
+              {!quoted.includes(cur) && <TextField label="Expr" value={cur} mono commitOnBlur placeholder={`e.g. ${JSON.stringify(opts[0] ?? '')}`} onChange={(x) => set(p.key, x)} />}
+            </div>
+          );
+        }
         return (
           <div key={p.key}>
             <TextField label={p.label} value={String(v ?? '')} mono commitOnBlur placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
             <div className="hint">{p.help ?? 'JavaScript expression; variables by name, plus event.'}</div>
           </div>
         );
+      }
       case 'text':
         if (node.kind === 'action.code')
           return (

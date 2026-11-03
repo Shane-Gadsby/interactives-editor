@@ -182,3 +182,40 @@ export async function createProjectRecord(p: Project): Promise<void> {
   revs.set(p.id, 0);
   await saveProject(p);
 }
+
+// ---------------------------------------------------------------- revision history
+
+export interface RevisionMeta {
+  id: string;
+  created: string;
+  rev: number;
+  by: { username: string | null; name: string | null } | null;
+  reason: string;
+  size: number;
+}
+
+export const listRevisions = (projectId: string) => call<RevisionMeta[]>(`projects/${projectId}/revisions`);
+
+export async function loadRevision(projectId: string, revId: string): Promise<Project> {
+  const r = await call<{ project: Project }>(`projects/${projectId}/revisions/${revId}`);
+  return normalizeProject(r.project);
+}
+
+export const restoreRevision = (projectId: string, revId: string) => call<{ rev: number }>(`projects/${projectId}/revisions/${revId}/restore`, { method: 'POST' });
+
+// ---------------------------------------------------------------- share links
+
+export interface ShareInfo {
+  token: string;
+  created: string;
+  updated: string;
+}
+
+export const getShare = (projectId: string) => call<{ share: ShareInfo | null }>(`projects/${projectId}/share`).then((r) => r.share);
+
+export const publishShare = (projectId: string, html: string) =>
+  call<{ share: ShareInfo }>(`projects/${projectId}/share`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html }).then((r) => r.share);
+
+export const stopShare = (projectId: string) => call<{ ok: boolean }>(`projects/${projectId}/share`, { method: 'DELETE' });
+
+export const shareUrl = (token: string) => new URL(`s/${token}`, document.baseURI).href;

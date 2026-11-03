@@ -32,6 +32,7 @@ export type Tool =
   | 'star'
   | 'line'
   | 'pen'
+  | 'pencil'
   | 'text'
   | 'frame'
   | 'image'
