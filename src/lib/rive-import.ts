@@ -779,6 +779,8 @@ function convertShape(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
 let sizeFollowers: { nodeId: string; pathSlot: number; ox: number; oy: number; sx: number; sy: number }[] = [];
 
 const lineRatios = new WeakMap<Uint8Array, number | null>();
+/** The file's own line height for texts whose single-line height was raised to the font's metrics. */
+const riveLineHeight = new Map<number, number>();
 /** (ascender - descender) / unitsPerEm from an OpenType/TrueType font's head and hhea tables. */
 function fontLineRatio(bytes: Uint8Array): number | null {
   if (lineRatios.has(bytes)) return lineRatios.get(bytes)!;
@@ -811,6 +813,7 @@ function fontLineRatio(bytes: Uint8Array): number | null {
 }
 
 function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
+  riveLineHeight.delete(slot); // slot numbers repeat across artboards
   const o = ac.rab.slots[slot];
   const runs = (ac.children.get(slot) ?? []).map((i) => ({ i, o: ac.rab.slots[i] })).filter((k) => k.o.type === 'TextValueRun');
   const textColorSlots: number[] = [];
@@ -840,7 +843,10 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
     // A single line is as tall as the font's own ascent + descent in Rive, even with a smaller line height
     const natural = fontAsset?.bytes ? fontLineRatio(fontAsset.bytes) : null;
     const runText = runs.map((r) => String(get(r.o, 'text') ?? '')).join('');
-    if (natural && !runText.includes('\n') && natural > lineHeight) lineHeight = r2(natural);
+    if (natural && !runText.includes('\n') && natural > lineHeight) {
+      riveLineHeight.set(slot, lineHeight);
+      lineHeight = r2(natural);
+    }
   }
   if (runs.length > 1) fc.warnings.add('Text with several styled runs uses the first run’s style for the whole text');
   const w = get(o, 'width') || 200;
@@ -1053,6 +1059,15 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
       const c = convertSlot(ac, fc, ci, abIndex);
       if (!c) continue;
       if (node.type === 'frame' && node.layout && !takesPart(ac.rab.slots[ci].type)) c.layoutItem = { position: 'ignore' };
+      // Text in a Rive layout takes the layout's width and wraps (unless the layout hugs its content, when the
+      // text sets the width), and its height follows the lines
+      if (c.type === 'text' && node.type === 'frame' && node.layout) {
+        const hugW = node.layoutItem?.width === 'hug';
+        c.layoutItem = { width: hugW ? 'hug' : 'fill', height: 'hug' };
+        c.autoSize = hugW ? 'width' : 'height';
+        // Wrapped text keeps the file's line spacing
+        if (!hugW && riveLineHeight.has(ci)) c.lineHeight = riveLineHeight.get(ci)!;
+      }
       node.children.push(c);
     }
     if (o.type === 'Solo') {
