@@ -25,6 +25,8 @@ import {
   type Easing,
   type FontRef,
   type InstanceNode,
+  type AutoLayout,
+  type LayoutItem,
   type Keyframe,
   type LogicEdge,
   type LogicNode,
@@ -758,6 +760,76 @@ function convertImage(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | n
   return node;
 }
 
+// ---------------------------------------------------------------- layout (Rive layouts are Yoga flexbox)
+
+const ALIGN3 = ['start', 'center', 'end'] as const;
+
+/** A Rive layout style as our auto layout. */
+function autoLayoutOf(fc: FileCtx, style: RObj | undefined): AutoLayout {
+  const dirValue = style ? get(style, 'flexDirectionValue') : 2;
+  const row = dirValue === 2 || dirValue === 3;
+  if (dirValue === 1 || dirValue === 3) fc.warnings.add('Reversed layout directions are laid out forwards');
+  const t = style ? get(style, 'layoutAlignmentType') : 0;
+  let justify: AutoLayout['justify'];
+  let align: AutoLayout['align'];
+  if (t >= 9) {
+    justify = 'space-between';
+    align = ALIGN3[t - 9] ?? 'start';
+  } else {
+    // The 9 positions name screen directions, so they swap with the main axis
+    const horizontal = ALIGN3[t % 3];
+    const vertical = ALIGN3[Math.floor(t / 3)];
+    justify = row ? horizontal : vertical;
+    align = row ? vertical : horizontal;
+  }
+  const pt = (k: string) => (style && get(style, `${k}UnitsValue`) === 2 ? 0 : style ? r2(get(style, k)) : 0);
+  if (style && ['paddingLeft', 'paddingTop', 'gapHorizontal', 'gapVertical'].some((k) => get(style, `${k}UnitsValue`) === 2)) fc.warnings.add('Percentage padding and gaps are imported as 0');
+  return {
+    direction: row ? 'row' : 'column',
+    gap: row ? pt('gapHorizontal') : pt('gapVertical'),
+    padding: { top: pt('paddingTop'), right: pt('paddingRight'), bottom: pt('paddingBottom'), left: pt('paddingLeft') },
+    justify,
+    align,
+    wrap: style ? get(style, 'flexWrapValue') === 1 : false,
+    hugWidth: !!style && (get(style, 'layoutWidthScaleType') === 2 || get(style, 'widthUnitsValue') === 3),
+    hugHeight: !!style && (get(style, 'layoutHeightScaleType') === 2 || get(style, 'heightUnitsValue') === 3),
+    // Rive lists children in layout order; ours are drawn back to front
+    reverse: true,
+  };
+}
+
+/** How a Rive layout node sits in its parent layout. */
+function layoutItemOf(style: RObj | undefined, size: { width: number; height: number }, scale?: { w: number; h: number; wu: number; hu: number }): LayoutItem {
+  const it: LayoutItem = {};
+  const sw = scale ? scale.w : style ? get(style, 'layoutWidthScaleType') : 0;
+  const sh = scale ? scale.h : style ? get(style, 'layoutHeightScaleType') : 0;
+  const wu = scale ? scale.wu : style ? get(style, 'widthUnitsValue') : 1;
+  const hu = scale ? scale.hu : style ? get(style, 'heightUnitsValue') : 1;
+  it.width = sw === 1 ? 'fill' : sw === 2 || wu === 3 ? 'hug' : wu === 2 ? 'percent' : 'fixed';
+  it.height = sh === 1 ? 'fill' : sh === 2 || hu === 3 ? 'hug' : hu === 2 ? 'percent' : 'fixed';
+  if (it.width === 'percent') it.widthPercent = size.width;
+  if (it.height === 'percent') it.heightPercent = size.height;
+  if (style) {
+    const m = { top: get(style, 'marginTop'), right: get(style, 'marginRight'), bottom: get(style, 'marginBottom'), left: get(style, 'marginLeft') };
+    if (m.top || m.right || m.bottom || m.left) it.margin = { top: r2(m.top), right: r2(m.right), bottom: r2(m.bottom), left: r2(m.left) };
+    if (get(style, 'positionTypeValue') === 2) {
+      it.position = 'absolute';
+      const inset: NonNullable<LayoutItem['inset']> = {};
+      for (const side of ['Left', 'Top', 'Right', 'Bottom'] as const) {
+        // Units 0 = not set, 1 = points (percent insets are treated as not set)
+        if (get(style, `position${side}UnitsValue`) === 1) inset[side.toLowerCase() as 'left'] = r2(get(style, `position${side}`));
+      }
+      it.inset = inset;
+    }
+  }
+  return it;
+}
+
+/** Rive layout participants: everything else inside a layout keeps its own position. */
+function takesPart(t: string): boolean {
+  return isA(t, 'LayoutComponent') || isA(t, 'NestedArtboard');
+}
+
 function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number): SceneNode | null {
   const o = ac.rab.slots[slot];
   const t = o.type;
@@ -790,13 +862,49 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
       }
     }
     if (get<boolean>(o, 'isPaused')) fc.warnings.add('Paused nested artboards play in the player');
+    if (t === 'NestedArtboardLeaf') {
+      // A leaf fills its layout parent, fitted per its fit mode
+      inst.layoutItem = { position: 'absolute', width: 'fill', height: 'fill', inset: { left: 0, top: 0, right: 0, bottom: 0 } };
+    } else if (t === 'NestedArtboardLayout') {
+      const iw = get(o, 'instanceWidth');
+      const ih = get(o, 'instanceHeight');
+      if (iw > 0) inst.width = r2(iw);
+      if (ih > 0) inst.height = r2(ih);
+      inst.layoutItem = layoutItemOf(undefined, { width: iw, height: ih }, { w: get(o, 'instanceWidthScaleType'), h: get(o, 'instanceHeightScaleType'), wu: get(o, 'instanceWidthUnitsValue'), hu: get(o, 'instanceHeightUnitsValue') });
+      // Sized by the layout: stretch the artboard into the box Rive gives it
+      inst.fit = 'fill';
+    }
     node = inst;
-  } else if (isA(t, 'Node') || isA(t, 'LayoutComponent')) {
+  } else if (isA(t, 'LayoutComponent')) {
+    // A layout box: our frame with auto layout from its style, a background from its paints
+    const style = o.props.styleId !== undefined ? ac.rab.slots[Number(o.props.styleId)] : undefined;
+    const w = get(o, 'width');
+    const h = get(o, 'height');
+    const bg = (ac.children.get(slot) ?? []).map((i) => ({ i, o: ac.rab.slots[i] }));
+    const fillK = bg.find((k) => k.o.type === 'Fill' && get<boolean>(k.o, 'isVisible') !== false);
+    const strokeK = bg.find((k) => k.o.type === 'Stroke' && get<boolean>(k.o, 'isVisible') !== false);
+    const strokePaint = strokeK ? paintOf(ac, fc, strokeK.i, null).paint : null;
+    const f = createNode('frame', {
+      name: String(o.props.name ?? 'Layout'),
+      fill: fillK ? paintOf(ac, fc, fillK.i, null).paint : null,
+      stroke: strokeK && strokePaint ? { paint: strokePaint, width: r2(get(strokeK.o, 'thickness')) } : null,
+      cornerRadius: style ? r2(get(style, 'cornerRadiusTL')) : 0,
+      clip: !!get<boolean>(o, 'clip'),
+      layout: autoLayoutOf(fc, style),
+      layoutItem: layoutItemOf(style, { width: w, height: h }),
+    });
+    placeAtOrigin(f, o, { x: 0, y: 0 }, w, h);
+    f.originX = 0;
+    f.originY = 0;
+    if (style && get(style, 'displayValue') === 1) f.visible = false;
+    if (style && get(style, 'layoutTypeValue') === 1) fc.warnings.add('Grid layouts are laid out as rows/columns');
+    addTarget(ac, slot, transformTarget(f, { x: 0, y: 0 }));
+    node = f;
+  } else if (isA(t, 'Node')) {
     const g = createNode('group', { name: String(o.props.name ?? t) });
-    placeAtOrigin(g, o, { x: 0, y: 0 }, isA(t, 'LayoutComponent') ? get(o, 'width') : 0, isA(t, 'LayoutComponent') ? get(o, 'height') : 0);
+    placeAtOrigin(g, o, { x: 0, y: 0 }, 0, 0);
     g.originX = 0;
     g.originY = 0;
-    if (isA(t, 'LayoutComponent')) fc.warnings.add('Rive layouts are imported at their stored positions, not re-laid out');
     addTarget(ac, slot, transformTarget(g, { x: 0, y: 0 }));
     node = g;
   } else if (isA(t, 'Bone') || isA(t, 'Skin') || isA(t, 'Weight')) fc.warnings.add('Bones and skinning are not supported');
@@ -805,12 +913,14 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
   else if (isA(t, 'Event') || t === 'AudioEvent') fc.warnings.add('Rive events and audio events are not imported');
   if (!node) return null;
   ac.nodeBySlot.set(slot, node);
-  if (node.type === 'group') {
+  if (node.type === 'group' || node.type === 'frame') {
     // Rive lists children front-most first; ours go back to front
     for (const ci of [...(ac.children.get(slot) ?? [])].reverse()) {
       if (isA(ac.rab.slots[ci].type, 'Path') || isA(ac.rab.slots[ci].type, 'ShapePaint')) continue;
       const c = convertSlot(ac, fc, ci, abIndex);
-      if (c) node.children.push(c);
+      if (!c) continue;
+      if (node.type === 'frame' && node.layout && !takesPart(ac.rab.slots[ci].type)) c.layoutItem = { position: 'ignore' };
+      node.children.push(c);
     }
     if (o.type === 'Solo') {
       const active = Number(get(o, 'activeComponentId'));
@@ -1152,8 +1262,30 @@ export async function importRive(bytes: Uint8Array, name: string): Promise<RiveI
     const oy = h * get(rab.obj, 'originY');
     // The artboard origin is where Rive's (0,0) sits; our root layers count from the top-left. Copies, so the
     // cached nodes nested artboards are cloned from stay relative to the origin.
-    const kids = buildArtboardNodes(fc, index).map((k) => ({ ...k, x: r2(k.x + ox), y: r2(k.y + oy) }) as SceneNode);
+    let kids = buildArtboardNodes(fc, index).map((k) => ({ ...k, x: r2(k.x + ox), y: r2(k.y + oy) }) as SceneNode);
     const root = new Set(kids.map((k) => k.id));
+    // Layout artboards: the artboard itself is the root layout box
+    const rootSlots = [...(ac.children.get(0) ?? [])];
+    if (rootSlots.some((i) => takesPart(rab.slots[i].type))) {
+      const style = rab.obj.props.styleId !== undefined ? rab.slots[Number(rab.obj.props.styleId)] : undefined;
+      const participants = new Set(rootSlots.filter((i) => takesPart(rab.slots[i].type)).map((i) => ac.nodeBySlot.get(i)?.id));
+      const wrap = createNode('frame', {
+        name: 'Artboard layout',
+        x: 0,
+        y: 0,
+        width: Math.round(w),
+        height: Math.round(h),
+        fill: null,
+        stroke: null,
+        cornerRadius: 0,
+        clip: false,
+        layout: { ...autoLayoutOf(fc, style), hugWidth: false, hugHeight: false },
+        children: kids.map((k) => (participants.has(k.id) ? k : ({ ...k, layoutItem: { position: 'ignore' } } as SceneNode))),
+      });
+      wrap.originX = 0;
+      wrap.originY = 0;
+      kids = [wrap];
+    }
     const bg = (ac.children.get(0) ?? []).map((i) => ({ i, o: rab.slots[i] })).find((k) => k.o.type === 'Fill');
     const background = bg ? paintOf(ac, fc, bg.i, null).paint : null;
     const ab = createArtboard({

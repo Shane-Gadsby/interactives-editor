@@ -1,7 +1,7 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { Renderer, prepareNodes, sampleArtboard, walk, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
-import { editInstanceMount } from './instances';
+import { editInstanceMount, instanceDepsKey } from './instances';
 import { assetUrls } from '../lib/assets';
 import { store } from '../store/store';
 
@@ -21,13 +21,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   const host = useRef<HTMLDivElement>(null);
   const renderer = useRef<Renderer | null>(null);
   // Instances draw other artboards, so they redraw when any artboard changes
-  const hasInstances = useMemo(() => {
-    let found = false;
-    walk(artboard.children, (n) => {
-      if (n.type === 'instance') found = true;
-    });
-    return found;
-  }, [artboard]);
+  const depsKey = instanceDepsKey(project, artboard);
 
   // A layout effect, declared before the render one, so the renderer exists for the very first render.
   useLayoutEffect(() => {
@@ -82,7 +76,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, hasInstances ? project.artboards : null]);
+  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, depsKey]);
 
   return (
     <div
