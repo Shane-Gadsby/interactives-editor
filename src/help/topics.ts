@@ -52,7 +52,7 @@ export const TOPICS: HelpTopic[] = [
     body: `The projects page lists the projects you own, newest first.
 
 - **New project** makes an empty project with one artboard.
-- **Import** opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, a Lottie file or a Rive \`.riv\` file. Lottie and Rive files become a new project.
+- **Import** opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, a Lottie file, a Rive \`.riv\` file or a Photoshop \`.psd\` file. Lottie, Rive and Photoshop files become a new project.
 - Each card can be opened, **duplicated**, **downloaded** as a package or **deleted**. Deleting can't be undone, so download a package first if you might want it back.
 - Use the **Help** link at the top for these pages, or press <kbd>F1</kbd> anywhere.
 
@@ -682,17 +682,22 @@ Clicks on a copy fire **On pointer** for the template layer with \`event.index\`
   // ---------------------------------------------------------------- import/export
   {
     id: 'import',
-    title: 'Importing Lottie, Rive and SVG',
+    title: 'Importing Lottie, Rive, Photoshop and SVG',
     group: 'Import and export',
-    summary: 'Bring in Lottie JSON / dotLottie, Rive .riv files, SVG and project packages.',
-    keywords: 'import lottie dotlottie rive riv svg after effects bodymovin convert',
-    body: `Lottie and Rive files: use **Import** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project).
+    summary: 'Bring in Lottie JSON / dotLottie, Rive .riv files, Photoshop .psd files, SVG and project packages.',
+    keywords: 'import lottie dotlottie rive riv svg after effects bodymovin convert photoshop psd layers',
+    body: `Lottie, Rive and Photoshop files: use **Import** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\` file dropped on the canvas also becomes a new artboard.
 
 ## Lottie (.json, .lottie)
 Shape layers, groups, fills, strokes, gradients, transforms, trim paths, masks and keyframes with easing become layers and a timeline. Expressions, effects and text animators are not carried over.
 
 ## Rive (.riv)
 Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Bones, meshes and data binding are not carried over yet.
+
+## Photoshop (.psd)
+The document becomes an artboard of the same size. Every pixel layer becomes an image layer (stored as a PNG asset) at its position, folders become groups, and the layer name, visibility, opacity (including fill opacity) and these blend modes carry over: multiply, screen, overlay, darken, lighten, color dodge, color burn, difference and exclusion. Layer masks are baked into the layer's transparency. Text layers become image layers of their pixels, named after the text (the text is also set as the accessible name); the text itself is not editable. 8 and 16 bit RGB and grayscale files import as layers. Indexed colour and CMYK files (and files with no layers) import as one flattened picture, and 32 bit, bitmap, Lab, duotone and multichannel files are not supported.
+
+Not carried over, and listed in the report: layer styles and effects (shadows, strokes, glows), adjustment layers, vector masks, clipping masks (clipped layers show in full), smart-object filters, other blend modes (they import as normal), and layer comps. Each layer is stored at its full size, so a large document with many layers makes a big project.
 
 ## SVG
 Drop an SVG file on the canvas, paste it, or pick it with the **Image** tool. It becomes a group of editable vector layers: shapes and paths (with their transforms applied), groups, solid and gradient fills, strokes and dashes, and simple text. Masks, filters, patterns and embedded images are listed as not carried over.

@@ -81,13 +81,13 @@ export function Home({ open }: { open: (id: string) => void }) {
 
   const doImport = () =>
     run(async () => {
-      const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json,.lottie,.riv`, false);
+      const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json,.lottie,.riv,.psd`, false);
       const f = files[0];
       if (!f) return;
-      // Lottie / Rive files become a new project; anything else is an Interactives package or project JSON.
+      // Lottie / Rive / Photoshop files become a new project; anything else is an Interactives package or project JSON.
       const head = new Uint8Array(await f.slice(0, 4096).arrayBuffer());
       const text = new TextDecoder().decode(head);
-      const animation = /\.(lottie|riv)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
+      const animation = /\.(lottie|riv|psd)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
       if (animation) {
         const { projectFromAnimation } = await import('./lib/importers');
         const id = await projectFromAnimation(f);
@@ -119,7 +119,7 @@ export function Home({ open }: { open: (id: string) => void }) {
             <Icons.help width={14} /> Help
           </a>
           <button className="btn" onClick={doImport} disabled={busy}>
-            <Icons.upload width={14} /> Import ({PACKAGE_EXTENSION}, Lottie, Rive)
+            <Icons.upload width={14} /> Import ({PACKAGE_EXTENSION}, Lottie, Rive, PSD)
           </button>
           <button className="btn primary" onClick={create} disabled={busy}>
             <Icons.plus width={14} /> New project
@@ -148,7 +148,7 @@ export function Home({ open }: { open: (id: string) => void }) {
               <div className="project-name">Create new project</div>
               <div className="muted small">
                 Or{' '}
-                <button className="link-btn inline" onClick={doImport} disabled={busy} title={`Import a ${PACKAGE_EXTENSION} package, project JSON, Lottie or Rive file`}>
+                <button className="link-btn inline" onClick={doImport} disabled={busy} title={`Import a ${PACKAGE_EXTENSION} package, project JSON, Lottie, Rive or Photoshop file`}>
                   import a file
                 </button>
               </div>

@@ -17,12 +17,16 @@ export interface AnimationImport {
   source: string;
 }
 
-export const ANIMATION_ACCEPT = '.json,.lottie,.riv';
+export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.psd';
 
-/** Read a Lottie (.json/.lottie) or Rive (.riv) file into an artboard. */
+/** Read a Lottie (.json/.lottie), Rive (.riv) or Photoshop (.psd) file into an artboard. */
 export async function readAnimationFile(file: File): Promise<AnimationImport> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const base = file.name.replace(/\.[^.]+$/, '');
+  if (/\.psd$/i.test(file.name) || (bytes[0] === 0x38 && bytes[1] === 0x42 && bytes[2] === 0x50 && bytes[3] === 0x53)) {
+    const { importPsd } = await import('./psd-import');
+    return { ...importPsd(bytes, base), source: 'Photoshop' };
+  }
   if (/\.riv$/i.test(file.name) || (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x56 && bytes[3] === 0x45)) {
     const { importRive } = await import('./rive-import');
     return { ...(await importRive(bytes, base)), source: 'Rive' };

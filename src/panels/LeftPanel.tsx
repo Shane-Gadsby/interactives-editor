@@ -286,7 +286,7 @@ function Layers() {
           }
         }}
       >
-        + Import Lottie / Rive as artboard
+        + Import Lottie / Rive / PSD as artboard
       </button>
     </div>
   );
@@ -297,7 +297,7 @@ function Assets() {
   const ab = getArtboard(s.project, s.activeArtboardId);
   const center = ab ? { x: ab.width / 2, y: ab.height / 2 } : null;
   const upload = async () => {
-    const files = await pickFiles('image/*,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
+    const files = await pickFiles('image/*,.psd,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
     if (files.length) await insertFiles(files, null, null);
   };
   const remove = async (id: string) => {
