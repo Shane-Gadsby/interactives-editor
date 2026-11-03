@@ -207,7 +207,7 @@ const CATALOG = [
     kind: "action.setVariable",
     label: "Set variable",
     category: "action",
-    description: "Set, add to or toggle a variable.",
+    description: "Set, add to, toggle or change the list of a variable.",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -219,11 +219,21 @@ const CATALOG = [
         options: [
           { value: "set", label: "Set to" },
           { value: "add", label: "Add" },
-          { value: "toggle", label: "Toggle (boolean)" }
+          { value: "toggle", label: "Toggle (boolean)" },
+          { value: "push", label: "Append to list" },
+          { value: "remove", label: "Remove from list (position)" },
+          { value: "clear", label: "Empty (list, number or text)" }
         ],
         default: "set"
       },
-      { key: "value", label: "Value", type: "expr", default: "0", showIf: { key: "op", values: ["set", "add"] }, help: 'Expression, e.g. 1, "hi", score * 2' }
+      {
+        key: "value",
+        label: "Value",
+        type: "expr",
+        default: "0",
+        showIf: { key: "op", values: ["set", "add", "push", "remove"] },
+        help: 'Expression, e.g. 1, "hi", score * 2. For a list: the item to append ({name: "Ann"}) or the position to remove (0 is the first).'
+      }
     ]
   },
   {
@@ -460,12 +470,16 @@ const ANIMATABLE_PROPS = [
   { prop: "opacity", label: "Opacity", kind: "number" },
   { prop: "visible", label: "Visible", kind: "boolean" },
   { prop: "cornerRadius", label: "Corner radius", kind: "number" },
+  { prop: "originX", label: "Origin X (0-1)", kind: "number" },
+  { prop: "originY", label: "Origin Y (0-1)", kind: "number" },
   { prop: "fill.color", label: "Fill colour", kind: "color" },
   { prop: "stroke.width", label: "Stroke width", kind: "number" },
   { prop: "stroke.paint.color", label: "Stroke colour", kind: "color" },
   { prop: "color", label: "Text colour", kind: "color" },
   { prop: "fontSize", label: "Font size", kind: "number" },
   { prop: "letterSpacing", label: "Letter spacing", kind: "number" },
+  { prop: "fontWeight", label: "Font weight", kind: "number" },
+  { prop: "lineHeight", label: "Line height", kind: "number" },
   { prop: "blur", label: "Blur", kind: "number" },
   { prop: "shadow.blur", label: "Shadow blur", kind: "number" },
   { prop: "shadow.x", label: "Shadow X", kind: "number" },
@@ -476,6 +490,9 @@ const ANIMATABLE_PROPS = [
   { prop: "cursor", label: "Cursor", kind: "string" },
   { prop: "link.url", label: "Link URL", kind: "string" },
   { prop: "label", label: "Button label", kind: "string" },
+  { prop: "assetId", label: "Image / video asset", kind: "string" },
+  { prop: "disabled", label: "Button disabled", kind: "boolean" },
+  { prop: "ariaLabel", label: "Accessible name", kind: "string" },
   { prop: "src", label: "Embed/video URL", kind: "string" },
   { prop: "stroke.trimStart", label: "Trim start %", kind: "number" },
   { prop: "stroke.trimEnd", label: "Trim end %", kind: "number" },
@@ -1352,8 +1369,12 @@ Add them in the **Variables** tab. Each has a name, a type and a starting value.
 | True/false | \`true\` or \`false\` |
 | Colour | \`#3b5bfd\` |
 | Choice | One of a list of options you define, like \`easy\`, \`medium\`, \`hard\` |
+| List | Items, usually objects: \`[{"name": "Ann"}, {"name": "Bo"}]\` |
 
-Choice variables show as a dropdown wherever you set them, so you can't type a value that isn't on the list.
+Choice variables show as a dropdown wherever you set them, so you can't type a value that isn't on the list. In expressions, \`enums.difficulty\` is the list of that choice's options, so \`enums.difficulty.indexOf(difficulty)\` is its position. A solo group's **active child** can be bound straight to a choice whose options are the children's names.
+
+## Lists
+A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Set variable**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. In scripts assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
 
 ## Using variables
 - In text: \`Score: {score}\`.
@@ -1389,6 +1410,18 @@ products.filter(p => p.inStock).length
 
 In repeated copies, \`item\` and \`index\` are the current list item and its position. In interactions, \`event\` describes what fired.
 
+## Helpers
+These work in every expression:
+
+| Call | Gives |
+|---|---|
+| \`fmt(n, decimals, thousands)\` | A number as text: \`fmt(1234.5, 2, true)\` is \`1,234.50\` |
+| \`remap(v, inMin, inMax, outMin, outMax, clamp)\` | One range mapped onto another |
+| \`clamp(v, min, max)\` | A number held between two limits |
+| \`lookup(v, {a: 1, b: 2}, fallback)\` | The value stored under a key |
+| \`pad(n, width)\` | Zero padding: \`pad(7, 3)\` is \`007\` |
+| \`enums.name\` | The options of a choice variable |
+
 > Expressions are for values. For several steps, waiting or loops, use a [script](scripts).`
   },
   {
@@ -1408,8 +1441,28 @@ Examples:
 | Visible | \`step === 3\` |
 | Text | \`products[0].name\` |
 | Rotation | \`speed * 3\` |
+| Solo: active child | \`mode\` (a choice whose options are the children's names) |
 
-A bound property shows a link icon and can't be changed by hand or keyframed until you remove the binding. Every animatable property can be bound; see [Animatable properties](animatable-properties).`
+A bound property shows a link icon and can't be changed by hand or keyframed until you remove the binding. Every animatable property can be bound; see [Animatable properties](animatable-properties).
+
+The value is made to fit the property: a number property takes a number (\`true\`/\`false\` become 1/0, numeric text is read) and is left as it was if the expression gives something that is not a number; a true/false property takes a boolean; text and colour properties take text.
+
+## Converters
+Under a binding, **+ Convert…** changes its value before it is set. They run in order, so a few can be chained.
+
+| Converter | Does |
+|---|---|
+| Number to text | Decimals, thousands separators, zero padding, text before and after: \`$1,234.50\`, \`42%\` |
+| Round | Round, floor or ceil to some decimals |
+| Invert (not) | true/false flipped (a number becomes 1 - x) |
+| Remap range | One range onto another, optionally kept inside it: 0-1 to 0-100 |
+| Look up | A value to anything else. Bound to a **choice** variable, it lists every option for you to fill in. *Otherwise* is used for values not listed |
+| To number / text / true/false | Change the type |
+| Expression | Any [expression](expressions), with \`value\` as the incoming value |
+
+Anything a converter does can also be written straight into the expression with the helpers (\`fmt\`, \`remap\`, \`lookup\`…), which is what to use in text \`{slots}\`.
+
+Choices and lists work with bindings like any other value: bind a fill colour to a choice through a *Look up* converter, a text layer to \`people.length + " people"\`, or a [repeater](repeaters) to a list variable. Importing a Rive file turns its data bindings on layers into bindings with converters, and its view models into shared variables (see [Importing](import)).`
   },
   {
     id: "scripts",
@@ -1501,6 +1554,8 @@ Use a source by its **name** anywhere expressions go: \`{products.length} produc
     keywords: "repeat repeater list loop for each item index grid table",
     body: `Turn on **Repeat** on a group or frame and its **first child** is copied once per item in **Items** (an expression that gives a list, like \`products\` or \`[1, 2, 3]\`).
 
+**Items** can be a [data source](data-sources) or a *List* [variable](variables): the repeater redraws when the list changes, so a *Set variable* node that appends to the list adds a row.
+
 Inside the copies, \`item\` is the current item and \`index\` its position (from 0): \`{index + 1}. {item.name} - {item.price}\`.
 
 **Layout** places the copies: vertical, horizontal, grid (with columns), or none (when the frame uses [auto layout](auto-layout), which is usually best).
@@ -1537,9 +1592,11 @@ Clicks on a copy fire **On pointer** for the template layer with \`event.index\`
 Shape layers, groups, fills, strokes, gradients, transforms, trim paths, masks and keyframes with easing become layers and a timeline. Expressions, effects and text animators are not carried over.
 
 ## Rive (.riv)
-Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes and translation constraints are carried over; bones, meshes and data binding are not yet.
+Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes and translation constraints are carried over; bones and meshes are not.
 
 Rive **events** become messages: a *Send message* node with the event's name, and its custom properties as the payload (an object, e.g. \`event.payload.power\`). An event keyed on an animation becomes a [timeline marker](timelines) with an *On timeline marker* node; events fired by listeners and by states or transitions (at their start or end) become *Send message* nodes in those flows, and Rive event listeners become *On message* nodes. An **audio event** also plays its embedded sound (a *Play sound* node, with the audio stored as a project asset), and an **open URL event** also opens its link (an *Open URL* node). Audio that is hosted on Rive's CDN instead of embedded is skipped, and the import report says so.
+
+Rive **view models** become shared [variables](variables): numbers, true/false, text, colours, triggers (a count that goes up when it fires) and enums (a *Choice* with the enum's options), and a list property becomes a *List* of the first items' values. Transitions and listeners that read or write them keep working. **Data binds on layers** (a view model value driving a layer's position, rotation, scale, opacity, text, fill or stroke colour, stroke width and so on) become [bindings](bindings), with the bind's converters (to text with decimals, rounding, boolean negate, range mapper, add, subtract, multiply, divide, to number, string pad and trim, formulas that are plain arithmetic) as converters. Two-way and to-source binds are brought in one way only (value to layer), and interpolating converters apply instantly.
 
 ## Photoshop (.psd)
 The document becomes an artboard of the same size. Every pixel layer becomes an image layer (stored as a PNG asset) at its position, folders become groups, and the layer name, visibility, opacity (including fill opacity) and these blend modes carry over: multiply, screen, overlay, darken, lighten, color dodge, color burn, difference and exclusion. 8 and 16 bit RGB and grayscale files import as layers. Indexed colour and CMYK files (and files with no layers) import as one flattened picture, and 32 bit, bitmap, Lab, duotone and multichannel files are not supported. Layers with nothing in them are skipped without comment.
@@ -2078,7 +2135,7 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n");
   if (topic === "layers") {
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance"];
-    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, layoutItem, constraints.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}]} | {type:"radial", stops} | {type:"image", assetId, fit}. Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?}.\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
   const t = TOPICS.find((x) => x.id === topic);
   if (t) return `# ${t.title}
@@ -2160,7 +2217,7 @@ ${JSON.stringify(loc.node, null, 1)}`);
   },
   {
     name: "edit",
-    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props}; add_variable {name, type: number|string|boolean|color|enum, initial, options?, shared?, ref?}; set_variable {id or name, props}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}. Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
+    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props}; add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, ref?}; set_variable {id or name, props}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}. Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
     inputSchema: S({ project_id: str("Project id"), changes: { type: "array", items: { type: "object" } }, explain: str("One line saying what this does (shown in the editor log)") }, ["project_id", "changes"]),
     run: async (a) => {
       const s = join(String(a.project_id));

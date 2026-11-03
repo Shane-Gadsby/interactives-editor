@@ -3254,6 +3254,7 @@ code {
 }
 .link-info .link-sub.err {
   color: var(--danger);
+}
 .binding + .binding {
   margin-top: 8px;
 }
