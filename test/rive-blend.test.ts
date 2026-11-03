@@ -114,15 +114,15 @@ describe('Rive blend states', () => {
       for (let c = next(from, port); c && kinds.length < 8; c = next(c.id)) kinds.push({ kind: c.kind, blend: c.params.blend });
       return kinds;
     };
-    // Entry: both blends are stopped (nothing is running), the state is recorded, then its blend plays
+    // Entry: both blends are stopped (nothing is running), its blend plays, then the state is recorded
     const start = nodes.find((n) => n.kind === 'event.start')!;
-    expect(chain(start.id).map((c) => c.kind)).toEqual(['action.blendStop', 'action.blendStop', 'action.setVariable', 'action.blendPlay']);
+    expect(chain(start.id).map((c) => c.kind)).toEqual(['action.blendStop', 'action.blendStop', 'action.blendPlay', 'action.setVariable']);
     expect(chain(start.id).find((c) => c.kind === 'action.blendPlay')!.blend).toBe(oneD.id);
     // The trigger transition stops the 1D blend (among the stops) and starts the direct one
     const iff = nodes.find((n) => n.kind === 'logic.if')!;
     const route = chain(iff.id, 'true');
     expect(route.filter((c) => c.kind === 'action.blendStop').map((c) => c.blend)).toContain(oneD.id);
-    expect(route.at(-1)).toEqual({ kind: 'action.blendPlay', blend: direct.id });
+    expect(route.find((c) => c.kind === 'action.blendPlay')).toEqual({ kind: 'action.blendPlay', blend: direct.id });
   });
 
   it('warns about blend states that are only partly supported', async () => {

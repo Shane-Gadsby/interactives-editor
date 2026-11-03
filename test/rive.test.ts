@@ -208,18 +208,18 @@ describe('Rive events', () => {
     const res = await importRive(eventFile(), 'events');
     const { nodes, edges } = res.artboards[0].logic;
     const next = (id: string, port = 'out') => nodes.find((n) => n.id === edges.find((e) => e.from === id && e.fromPort === port)?.to);
-    // Entering state 3: set the state, then the Click event (message + sound), then play its animation
+    // Entering state 3: its animation plays, the state is set, then the Click event (message + sound)
     const start = nodes.find((n) => n.kind === 'event.start')!;
     let n = next(start.id)!;
     while (n.kind !== 'action.setVariable') n = next(n.id)!;
     const chain: string[] = [];
     for (let c = next(n.id); c && chain.length < 6; c = next(c.id)) chain.push(c.kind + (c.params.name ? `:${c.params.name}` : ''));
-    expect(chain).toEqual(['action.emit:Click', 'action.sound', 'action.timeline']);
+    expect(chain).toEqual(['action.emit:Click', 'action.sound']);
     // The transition by the trigger: leaving state 3 sends Hit, the transition sends Go + link, then state 4 is entered
     const iff = nodes.find((n) => n.kind === 'logic.if')!;
     const route: string[] = [];
     for (let c = next(iff.id, 'true'); c && route.length < 8; c = next(c.id)) route.push(c.kind + (c.params.name ? `:${c.params.name}` : ''));
-    expect(route.slice(0, 4)).toEqual(['action.emit:Hit', 'action.emit:Go', 'action.url', 'action.setVariable']);
+    expect(route.slice(0, 4)).toEqual(['action.emit:Hit', 'action.emit:Go', 'action.url', 'action.timeline']);
     // Pointer listener fires Hit; the event listener reacts to Hit and Click and fires Go
     const down = nodes.find((n) => n.kind === 'event.pointer')!;
     expect(next(down.id)?.params).toMatchObject({ name: 'Hit' });

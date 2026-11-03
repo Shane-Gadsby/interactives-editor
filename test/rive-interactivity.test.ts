@@ -113,12 +113,41 @@ describe.skipIf(!existsSync(dir + '262426_-_breathing_for_calm.riv'))('the breat
     }
   });
 
-  it('does not open the support page when the page loads', async () => {
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+  it('lets the pointer through everything but the layers a listener names', async () => {
     const t = await open0();
-    await t.run(1000);
-    expect(open).not.toHaveBeenCalled();
-    t.player.destroy();
+    try {
+      const kids = (t.player as unknown as { instances: Set<{ session: { artboard: { name: string; logic: { nodes: { kind: string; params: Record<string, unknown> }[] } }; renderer: { root: HTMLElement; element(id: string): HTMLElement } } }> }).instances;
+      const named = (n: string) => [...kids].find((k) => k.session.artboard.name === n)!;
+      //a panel with no listeners (and its layers) never takes the pointer; a button's target does, and so does what is inside it
+      const panel = named('Information panel').session.renderer;
+      expect(panel.root.style.pointerEvents).toBe('none');
+      const begin = named('Lets Begin').session;
+      const target = begin.renderer.element(String(begin.artboard.logic.nodes.find((n) => n.kind === 'event.pointer')!.params.target));
+      expect(target.style.pointerEvents).toBe('auto');
+      expect(begin.renderer.root.style.pointerEvents).toBe('none');
+      expect(t.res.artboards.every((a) => a.pointerThrough)).toBe(true);
+    } finally {
+      t.player.destroy();
+    }
+  });
+
+  it('opens the support page once per click, and not when the page loads', async () => {
+    const opened = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const t = await open0();
+    try {
+      await t.run(1000);
+      expect(opened).not.toHaveBeenCalled();
+      //the layer waits in its entry state until the button is pressed
+      expect(t.get('Main_Animation_SM_layer3_state')).toBe('EntryState');
+      const main = t.player as unknown as { session: { artboard: { logic: { nodes: { kind: string; params: Record<string, unknown> }[] } }; renderer: { element(id: string): Element } } };
+      const ev = main.session.artboard.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.type === 'pointerdown')!;
+      main.session.renderer.element(String(ev.params.target)).dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      await t.run(1500);
+      expect(opened).toHaveBeenCalledTimes(1);
+      expect(String(opened.mock.calls[0][0])).toMatch(/mental-health/);
+    } finally {
+      t.player.destroy();
+    }
   });
 });
 

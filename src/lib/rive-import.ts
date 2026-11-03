@@ -3419,29 +3419,43 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           lastPort = 'out';
           x += 240;
         }
-        const set = add('action.setVariable', { variable: stateVar.id, op: 'set', value: JSON.stringify(stateName(target)) }, x);
-        link(last, set, lastPort);
-        let entered = fireNodes(target.fires, 0, set, 'out', x + 240, quiet);
-        entered = actionNodes(target.actions, ACTION_AT.enter, entered.last, entered.port, entered.x);
+        // The target's animation starts before the state is announced: what the state variable's change sets off (a
+        // transition out of it that has nothing to wait for, a wait for blend-in) must find that animation running
         const targetBlend = blendOf.get(target);
         if (targetBlend) {
-          const play = add('action.blendPlay', { blend: targetBlend.id, ...(mixing ? mixParams(mix!, outgoing) : pauseWith) }, entered.x);
-          link(entered.last, play, entered.port);
-          entered.last = play;
-          entered.port = 'out';
-          entered.x += 240;
+          const play = add('action.blendPlay', { blend: targetBlend.id, ...(mixing ? mixParams(mix!, outgoing) : pauseWith) }, x);
+          link(last, play, lastPort);
+          last = play;
+          lastPort = 'out';
+          x += 240;
         }
         const tl = tlOf(target);
         if (tl) {
           // A transition's blend time cross-fades the new state's pose in over the old one
-          const play = add('action.timeline', { timeline: tl.id, op: 'restart', ...(mixing ? mixParams(mix!, outgoing) : pauseWith) }, entered.x);
-          link(entered.last, play, entered.port);
+          const play = add('action.timeline', { timeline: tl.id, op: 'restart', continue: 'start', ...(mixing ? mixParams(mix!, outgoing) : pauseWith) }, x);
+          link(last, play, lastPort);
+          last = play;
+          lastPort = 'out';
+          x += 240;
         }
+        const set = add('action.setVariable', { variable: stateVar.id, op: 'set', value: JSON.stringify(stateName(target)) }, x);
+        link(last, set, lastPort);
+        let entered = fireNodes(target.fires, 0, set, 'out', x + 240, quiet);
+        entered = actionNodes(target.actions, ACTION_AT.enter, entered.last, entered.port, entered.x);
       };
       // Entry: the first unconditional transition picks the starting state
       const entry = layer.states.find((s) => s.obj.type === 'EntryState');
       const first = entry?.transitions[0];
-      if (first) {
+      // An entry transition that waits for something (an input, an exit time) leaves the layer in the entry state, doing
+      // nothing, until it holds: the entry is a state like any other then
+      const entryWaits = !!first && (first.conditions.length > 0 || !!(Number(first.obj.props.flags ?? 0) & 4));
+      if (first && entry && entryWaits) {
+        const start = add('event.start', {}, 40);
+        start.note = `${smName}: layer ${li + 1} entry`;
+        const set = add('action.setVariable', { variable: stateVar.id, op: 'set', value: JSON.stringify(stateName(entry)) }, 280);
+        link(start, set);
+        y += 120;
+      } else if (first) {
         const target = layer.states[Number(first.obj.props.stateToId ?? 0)];
         const start = add('event.start', {}, 40);
         start.note = `${smName}: layer ${li + 1} entry`;
@@ -3468,7 +3482,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         else randomOf.set(st, trs);
       }
       for (const [si, st] of layer.states.entries()) {
-        if (st.obj.type === 'EntryState') continue;
+        if (st.obj.type === 'EntryState' && !entryWaits) continue;
         const group: { tr: RTransition; target: RState; condition: string; triggers: string[]; vmNames: string[]; specs: [string, Record<string, unknown>][]; mix: Mix }[] = [];
         for (const tr of st.transitions) {
           const target = layer.states[Number(tr.obj.props.stateToId ?? 0)];
@@ -3526,6 +3540,7 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           if (watched.size) watched.add(stateVar.id);
           let condition = conds.join(' && ') || 'true';
           const specs: [string, Record<string, unknown>][] = [];
+          let untilNextTurn = false;
           // Exit time: Rive only takes the transition once the state's animation has played to that point (ms, or a share
           // of the animation with flag 8). One at the very end is the animation finishing; earlier ones are waited for
           // with a Wait for time in timeline node once the conditions hold
@@ -3553,6 +3568,11 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
             else if (!watched.size && exitWait) {
               // No inputs but an exit time part-way: look when the state is entered, the wait does the rest
               specs.push(['event.variable', { variable: stateVar.id }]);
+            } else if (!watched.size && !(trFlags(tr) & 4) && st.obj.type !== 'EntryState') {
+              // Nothing to wait for and no exit time: Rive takes it the moment the state is entered (a state that is only
+              // there to start its animation over). Next turn, so the entering finishes first.
+              specs.push(['event.variable', { variable: stateVar.id }]);
+              untilNextTurn = true;
             } else if (!watched.size) {
               // No inputs: leave when the state's animation finishes (exit time)
               const tl = tlOf(st);
@@ -3577,7 +3597,11 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
           const sources = specs.map(([kind, params]) => add(kind, params, 40));
           const iff = add('logic.if', { condition }, 280);
           iff.note = `${stateName(st)} → ${stateName(target)}`;
-          for (const s of sources) link(s, iff);
+          if (untilNextTurn) {
+            const wait = add('action.delay', { ms: 0 }, 160);
+            for (const s of sources) link(s, wait);
+            link(wait, iff);
+          } else for (const s of sources) link(s, iff);
           let leave = { last: iff, port: 'true', x: 520 };
           // An exit time part-way through: wait for it, then make sure the transition still holds
           if (exitTl && exitWait) {
@@ -3954,6 +3978,8 @@ export async function importRiveObjects(objects: RObj[], name: string): Promise<
     });
     const timelines = rab.anims.map((a) => buildTimeline(ac, fc, a, (nodeId) => (root.has(nodeId) ? { x: ox, y: oy } : { x: 0, y: 0 })));
     ab.timelines = timelines;
+    // Rive's pointer only reaches the layers its listeners name; everything else (hidden panels, pictures) is not in the way
+    ab.pointerThrough = true;
     importJoysticks(ac, fc, ab, timelines, ox, oy);
     buildMachines(ac, fc, ab, timelines, names, variables, index);
     artboards.push(ab);
