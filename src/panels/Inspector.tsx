@@ -39,6 +39,7 @@ import { assetKind } from '../lib/assets';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { CodeEditor } from '../components/CodeEditor';
 import { ChildOrder } from '../components/ChildOrder';
+import { blendExample } from '../lib/blend-example';
 
 const BLEND: BlendMode[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'difference', 'exclusion'];
 const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
@@ -1435,6 +1436,26 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
       }
     >
       {!list.length && <p className="hint">Mix several timelines by a number: blend idle, walk and run by speed, or layer a lean on top of a loop. Start one with a Play blend node.</p>}
+      {!list.length && (
+        <button
+          className="link-btn"
+          title="Add a circle, two pose timelines, a 0 to 1 variable with a slider, and a blend between the poses. Open Preview and drag the slider"
+          onClick={() => {
+            const ex = blendExample(ab, project.variables.map((v) => v.name));
+            store().update((d) => {
+              const a = d.artboards.find((x) => x.id === ab.id);
+              if (!a) return;
+              d.variables.push(ex.variable);
+              a.children.push(...ex.nodes);
+              a.timelines.push(...ex.timelines);
+              (a.blends ??= []).push(ex.blend);
+            });
+            store().toast('Added an example blend. Open Preview and drag the slider: the ball mixes between the two timelines.');
+          }}
+        >
+          Build an example to try
+        </button>
+      )}
       {list.map((b, i) => {
         const oneD = b.mode === '1d';
         return (

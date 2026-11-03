@@ -534,6 +534,21 @@ Examples: a dial that turns with a variable, a character whose eyes follow the p
 
 Add one in the **Blends** section of the artboard (select the artboard), then start it with a **Play blend** node (or tick *Start with the artboard*). **Stop blend** ends it.
 
+## Quick start: try the example
+1. Click an empty part of the canvas so the **artboard** is selected (the inspector shows the artboard's settings).
+2. Open the **Blends** section and click **Build an example to try**. You get a ball, two timelines (*Example: small and red* and *Example: big and blue*), a variable called *mix*, a slider bound to it, and a blend that starts with the artboard.
+3. Click **Preview** and drag the slider. At 0 the ball is small and red, at 1 it is big and blue, and in between it is a mix of the two.
+4. Open either example timeline to see that each one is just a pose: the same values at the start and the end.
+
+## Make your own, step by step
+1. **Make the poses.** Create one timeline per pose (say *Idle*, *Walk*, *Run*) and key the layers in each. A pose can be still (the same keys at the start and end) or a loop that moves.
+2. **Make the number.** In the **Variables** tab add a *number* variable, say *speed*. Anything can change it: a slider (an **Input field** with type *Range* bound to the variable), a **Set variable** node, a [joystick](joysticks), or a script.
+3. **Add the blend.** Select the artboard, open **Blends** and click **+**. Leave the mode on **1D**, set **Input** to *speed*, and add your timelines with **+ timeline**. Give each one the value of *speed* where it should count fully, e.g. *Idle* 0, *Walk* 1, *Run* 2.
+4. **Start it.** Tick **Start with the artboard**, or add a **Play blend** node to a flow in the Interactions tab.
+5. **Preview** and change the number.
+
+Use **Direct** when each pose should have its own weight (e.g. a *smile* and a *frown* amount from two sliders), and **Additive** to layer a small motion (a lean, a breath) on top of whatever is already playing.
+
 ## Modes
 | Mode | How the weights work |
 |---|---|

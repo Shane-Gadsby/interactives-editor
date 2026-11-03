@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { CATALOG_BY_KIND, createProject, uid } from 'interactives-player';
 import { analyzeUsage } from '../src/lib/dependencies';
 import { EditorStore } from '../src/store/store';
@@ -54,5 +54,35 @@ describe('blends in the editor', () => {
     expect(copy.blends![0].entries[0].timeline).toBe(copy.timelines[0].id);
     expect(copy.logic.nodes.find((n) => n.kind === 'action.blendPlay')!.params.blend).toBe(copy.blends![0].id);
     expect(orig.blends![0].entries[0].timeline).toBe('tl1');
+  });
+});
+
+describe('blend example', () => {
+  it('builds a ball, two poses, a slider bound to a 0..1 variable and a 1D blend that plays', async () => {
+    const { blendExample } = await import('../src/lib/blend-example');
+    const { createProject, Player } = await import('interactives-player');
+    const p = createProject('ex');
+    const ab = p.artboards[0];
+    const ex = blendExample(ab, []);
+    p.variables.push(ex.variable);
+    ab.children.push(...ex.nodes);
+    ab.timelines.push(...ex.timelines);
+    ab.blends = [ex.blend];
+    expect(ex.nodes[1]).toMatchObject({ type: 'input', inputType: 'range', variableId: ex.variable.id });
+    document.body.innerHTML = '<div id="st" style="width:800px;height:600px"></div>';
+    let raf: FrameRequestCallback | null = null;
+    vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) => ((raf = f), 1));
+    vi.stubGlobal('cancelAnimationFrame', () => undefined);
+    const player = new Player(document.getElementById('st')!, p, { loadData: false });
+    const scale = () => (document.querySelector(`[data-ix-id="${ex.nodes[0].id}"]`) as HTMLElement).style.transform;
+    const tick = (t: number) => raf && (raf as FrameRequestCallback)(t);
+    tick(16);
+    tick(32);
+    expect(scale()).toContain('scale(0.6, 0.6)');
+    player.setVariable(ex.variable.name, 1);
+    tick(48);
+    tick(64);
+    expect(scale()).toContain('scale(1.8, 1.8)');
+    vi.unstubAllGlobals();
   });
 });
