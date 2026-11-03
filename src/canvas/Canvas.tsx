@@ -1237,7 +1237,7 @@ export function Canvas() {
       const center = at(0.5, 0.5);
       const locked = ids.some((id) => locate(active, id)!.node.locked);
       // The Bend tool works on the edges themselves, so no resize/rotate handles sit on top of them
-      if (!locked && s.tool !== 'bend') {
+      if (!locked && s.tool !== 'bend' && s.tool !== 'bone') {
         for (const h of ['nw', 'ne', 'se', 'sw'] as Handle[]) {
           const [fx, fy] = HANDLE_POS[h];
           const c = at(fx, fy);
