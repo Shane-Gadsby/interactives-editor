@@ -229,6 +229,12 @@ function parseEngine(bytes: Uint8Array): Dict | null {
     return n;
   };
   try {
+    // Photoshop wraps the whole thing in << >>; older writers (and our tests) leave the top level bare
+    skipWs();
+    if (s.startsWith('<<', i)) {
+      i += 2;
+      return dictBody(true, 0);
+    }
     return dictBody(false, 0);
   } catch {
     return null;

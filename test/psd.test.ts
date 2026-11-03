@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { existsSync, readFileSync } from 'node:fs';
+import { walk, type SceneNode } from 'interactives-player';
 import { unzlibSync, zlibSync } from 'fflate';
 import { encodePng, importPsd, isPsd, parsePsd, psdFont, type PsdGroup, type PsdLayer } from '../src/lib/psd-import';
 
@@ -668,4 +670,18 @@ describe('PSD masks and clipping', () => {
     expect(png.rgba[3 * 4 + 3]).toBe(255);
     expect([m.width, m.height]).toEqual([4, 4]);
   });
+});
+
+// Real Photoshop files (research/psd, from the user): engine data wrapped in << >>, a Google font by PostScript name
+describe.skipIf(!existsSync('../research/psd/Untitled-1.psd'))('real Photoshop files', () => {
+  for (const f of ['Untitled-1.psd', 'sadasdasd.psd']) {
+    it(`${f}: type layers come in as editable text`, () => {
+      const r = importPsd(new Uint8Array(readFileSync(`../research/psd/${f}`)), f);
+      const texts: SceneNode[] = [];
+      walk(r.artboard.children, (n) => n.type === 'text' && texts.push(n));
+      expect(texts.map((t) => (t as { text: string }).text)).toEqual(['Lorem Ipsum']);
+      expect((texts[0] as { fontFamily: string }).fontFamily).toBe('JetBrains Mono');
+      expect(r.fonts.some((x) => x.family === 'JetBrains Mono')).toBe(true);
+    });
+  }
 });

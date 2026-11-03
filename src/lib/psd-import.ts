@@ -17,6 +17,7 @@
 import { unzlibSync, zlibSync } from 'fflate';
 import { cloneWithNewIds, createArtboard, createNode, runsPatch, uid, type Artboard, type BlendMode, type FontRef, type PathNode, type SceneNode, type SubPath, type TextNode, type TextRun } from 'interactives-player';
 import type { ImportedAsset } from './lottie-import';
+import { GOOGLE_FONT_FAMILIES } from './google-fonts';
 import { parseTypeBlock, parseVectorMask, type PsdType, type PsdVectorMask } from './psd-type';
 
 // ---------------------------------------------------------------- types
@@ -821,20 +822,8 @@ export function encodePng(width: number, height: number, rgba: Uint8Array): Uint
 // ---------------------------------------------------------------- fonts
 
 /** Google fonts a Photoshop file is likely to use. Keys are the name in lower case without spaces. */
-const GOOGLE_FONTS = [
-  'Roboto', 'Roboto Condensed', 'Roboto Slab', 'Roboto Mono', 'Open Sans', 'Lato', 'Montserrat', 'Poppins', 'Inter', 'Oswald', 'Raleway', 'Nunito', 'Nunito Sans',
-  'Playfair Display', 'Merriweather', 'Ubuntu', 'Source Sans Pro', 'Source Sans 3', 'Source Serif Pro', 'Source Code Pro', 'Noto Sans', 'Noto Serif', 'PT Sans', 'PT Serif',
-  'Rubik', 'Work Sans', 'DM Sans', 'DM Serif Display', 'Fira Sans', 'Fira Code', 'Quicksand', 'Karla', 'Barlow', 'Barlow Condensed', 'Mulish', 'Muli', 'Josefin Sans',
-  'Libre Baskerville', 'Libre Franklin', 'Cabin', 'Bebas Neue', 'Anton', 'Lora', 'Crimson Text', 'Dosis', 'Arimo', 'Titillium Web', 'Inconsolata', 'Space Grotesk',
-  'Space Mono', 'Manrope', 'IBM Plex Sans', 'IBM Plex Serif', 'IBM Plex Mono', 'Cormorant Garamond', 'EB Garamond', 'Pacifico', 'Lobster', 'Dancing Script', 'Comfortaa',
-  'Archivo', 'Exo 2', 'Heebo', 'Kanit', 'Hind', 'Oxygen', 'Abril Fatface', 'Bitter', 'Cinzel', 'Teko', 'Fjalla One', 'Signika', 'Varela Round', 'Asap', 'Maven Pro',
-  'Prompt', 'Sarabun', 'Sora', 'Outfit', 'Plus Jakarta Sans', 'Lexend', 'Urbanist', 'Figtree', 'Albert Sans', 'Red Hat Display', 'Red Hat Text', 'Jost', 'Be Vietnam Pro',
-  'Public Sans', 'Syne', 'Zilla Slab', 'Arvo', 'Domine', 'Spectral', 'Vollkorn', 'Alegreya', 'Overpass', 'Questrial', 'Nanum Gothic', 'Cairo', 'Tajawal', 'Amatic SC',
-  'Caveat', 'Shadows Into Light', 'Permanent Marker', 'Righteous', 'Satisfy', 'Great Vibes', 'Courgette', 'Sacramento', 'Chivo', 'Staatliches', 'Rajdhani', 'Saira',
-  'Kalam', 'Yanone Kaffeesatz', 'Lilita One', 'Fredoka', 'Baloo 2', 'Cormorant', 'Old Standard TT', 'Rokkitt', 'Bree Serif', 'Cardo', 'Josefin Slab', 'Slabo 27px',
-];
 const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-const GOOGLE_BY_KEY = new Map(GOOGLE_FONTS.map((f) => [squash(f), f]));
+const GOOGLE_BY_KEY = new Map(GOOGLE_FONT_FAMILIES.map((f) => [squash(f), f]));
 
 const WEIGHT_WORDS: [RegExp, number][] = [
   [/hairline|thin/i, 100],
@@ -874,7 +863,7 @@ export function psdFont(postscript: string, fauxBold = false, fauxItalic = false
   // "ExtraBold" must not stop at "Bold" and "SemiBold" must not stop at "Light": the table order handles it, but "Black" before "Bold" is intended
   const italic = /italic|oblique|\bit$/i.test(style) || fauxItalic;
   if (fauxBold && weight < 600) weight = 700;
-  const known = GOOGLE_BY_KEY.get(squash(fam));
+  const known = GOOGLE_BY_KEY.get(squash(fam)) ?? GOOGLE_BY_KEY.get(squash(strip(dash > 0 ? name.slice(0, dash) : name)));
   return { family: known ?? fam, weight, italic, google: !!known };
 }
 
