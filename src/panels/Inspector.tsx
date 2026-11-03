@@ -58,6 +58,7 @@ import { pointTracks } from '../lib/path-edit';
 import { formatTracks, parseTracks } from '../lib/grid-tracks';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { CodeEditor } from '../components/CodeEditor';
+import { AccessibilitySection, TabOrderSection } from './AccessibilitySections';
 import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
 import { ChildOrder } from '../components/ChildOrder';
 import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
@@ -379,6 +380,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           <IconButton icon={<Icons.trash />} title="Delete artboard" onClick={() => store().deleteArtboard(ab.id)} />
         </Row>
       </Section>
+      <TabOrderSection ab={ab} />
       <JoysticksSection ab={ab} />
       <BlendsSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">
@@ -529,9 +531,9 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {single && (n.type === 'group' || n.type === 'frame') && <RepeatSection node={n} project={project} />}
       {single && <BindingsSection node={n} project={project} />}
       {single && <InteractionsSection node={n} ab={ab} />}
+      <AccessibilitySection nodes={nodes} ab={ab} />
       {single && (
         <Section help="web-elements#accessibility" title="Advanced" defaultOpen={false}>
-          <TextField label="ARIA label" value={n.ariaLabel ?? ''} onChange={(v) => set({ ariaLabel: v || undefined })} />
           <TextField label="CSS class" value={n.className ?? ''} onChange={(v) => set({ className: v || undefined })} />
           <div className="muted small">id: {n.id}</div>
         </Section>

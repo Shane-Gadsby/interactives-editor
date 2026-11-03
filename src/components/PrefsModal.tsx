@@ -52,6 +52,12 @@ export function PrefsModal({ onClose }: { onClose: () => void }) {
             onChange={(v) => setPrefs({ defaultFont: v.trim() || 'Open Sans' })}
           />
           <CheckField label="Show rulers" title="Rulers along the canvas edges; drag from them to make guides (Shift+R)" value={p.rulers} onChange={(v) => setPrefs({ rulers: v })} />
+          <CheckField
+            label="Accessibility features"
+            title="Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview. Switch it off to see whether a problem comes from it"
+            value={p.accessibility}
+            onChange={(v) => setPrefs({ accessibility: v })}
+          />
           <CheckField label="Show tooltips" title="Explanations when you hover buttons and field names" value={p.tooltips} onChange={(v) => setPrefs({ tooltips: v })} />
           <p className="hint">These settings are yours: they follow you to any browser you sign in on.</p>
         </div>

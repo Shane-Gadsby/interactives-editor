@@ -25,7 +25,7 @@ import { HelpLink, openHelp } from './help/Help';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrefsModal } from './components/PrefsModal';
 import { HistoryModal, ShareModal } from './components/ProjectModals';
-import { prefs, setPrefs } from './lib/prefs';
+import { prefs, setPrefs, usePrefs } from './lib/prefs';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
 import { LinkChanges } from './components/LinkChanges';
@@ -733,6 +733,9 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
   const project = useEditor((st) => st.project);
   const abId = useEditor((st) => st.activeArtboardId);
   const [html, setHtml] = useState<string | null>(null);
+  // Accessibility features in the preference: the preview plays with or without them, and shows what the screen reader would say
+  const accessibility = usePrefs().accessibility;
+  const [said, setSaid] = useState<{ text: string; politeness: string }[]>([]);
   const [buildError, setBuildError] = useState<string | null>(null);
   const [from, setFrom] = useState<'start' | 'current'>('start');
   const [log, setLog] = useState<string[]>([]);
@@ -751,14 +754,14 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     let live = true;
     setBuildError(null);
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true }).then(
+    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );
     return () => {
       live = false;
     };
-  }, [project, from, abId, nonce]);
+  }, [project, from, abId, nonce, accessibility]);
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow) return;
@@ -767,6 +770,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
         if (e.data.state) setDbg(e.data.state);
         if (e.data.trace) setTraces((l) => [...l.slice(-199), { ...e.data.trace, at: performance.now() - t0.current }]);
         if (e.data.scripterror) setScriptErrors((l) => [...l.slice(-49), e.data.scripterror]);
+        if (e.data.announce) setSaid((l) => [...l.slice(-2), e.data.announce]);
         return;
       }
       if (e.data?.source !== 'interactives') return;
@@ -792,6 +796,13 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
             <option value="current">From this artboard</option>
           </select>
           <span className="muted small">{ab ? `${ab.width} × ${ab.height}` : ''} · runs exactly like the exported file</span>
+          <button
+            className={`btn${accessibility ? ' active' : ''}`}
+            onClick={() => setPrefs({ accessibility: !accessibility })}
+            title="Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements (also in Preferences). Switch it off to check whether a problem comes from it"
+          >
+            Accessibility {accessibility ? 'on' : 'off'}
+          </button>
           <div className="spacer" />
           <button
             className="btn"
@@ -801,6 +812,7 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
               setTraces([]);
               setLog([]);
               setScriptErrors([]);
+              setSaid([]);
               setDbg(null);
               t0.current = performance.now();
             }}
@@ -870,6 +882,12 @@ function PreviewModal({ onClose }: { onClose: () => void }) {
           )}
           {html ? <iframe key={nonce} ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
         </div>
+        {accessibility && (
+          <div className="preview-said" aria-hidden="true" title="What a screen reader is told by Announce nodes and ix.announce, as it is spoken">
+            <strong>Screen reader</strong>
+            {said.length ? said.map((a, i) => <span key={i} className={i === said.length - 1 ? 'latest' : undefined}>{a.text}</span>) : <span className="muted">Nothing announced yet. Tab to a clickable layer and press Enter or Space.</span>}
+          </div>
+        )}
         {showVars && (
           <footer className="preview-log mono small">
             <div className="debug-log-head">

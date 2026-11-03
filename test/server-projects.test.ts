@@ -77,10 +77,10 @@ describe('preferences', () => {
     expect((await h.call('GET', '/api/prefs', { user: ann })).json).toEqual({ user: 'ann', prefs: {} });
     const r = await h.call('PUT', '/api/prefs', {
       user: ann,
-      json: { prefs: { wheel: 'ctrl', theme: 'purple', tooltips: 'yes', rulers: false, defaultFont: 'Inter', evil: 1, __proto__: { x: 1 } } },
+      json: { prefs: { wheel: 'ctrl', theme: 'purple', tooltips: 'yes', rulers: false, accessibility: false, defaultFont: 'Inter', evil: 1, __proto__: { x: 1 } } },
     });
-    expect(r.json).toEqual({ user: 'ann', prefs: { wheel: 'ctrl', rulers: false, defaultFont: 'Inter' } });
-    expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs).toEqual({ wheel: 'ctrl', rulers: false, defaultFont: 'Inter' });
+    expect(r.json).toEqual({ user: 'ann', prefs: { wheel: 'ctrl', rulers: false, accessibility: false, defaultFont: 'Inter' } });
+    expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs).toEqual({ wheel: 'ctrl', rulers: false, accessibility: false, defaultFont: 'Inter' });
   });
 
   it('drops a default font that is too long and a body that has no prefs', async () => {

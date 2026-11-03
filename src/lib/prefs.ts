@@ -15,10 +15,15 @@ export interface Prefs {
   theme: 'dark' | 'light' | 'auto';
   /** Font family for new text layers and the font every new project includes. */
   defaultFont: string;
+  /**
+   * Layer semantics and keyboard operation in Preview (the player's `accessibility` option): tab stops, Enter/Space, ARIA
+   * roles, focus ring, announcements. On by default; switch it off to check whether a problem comes from it.
+   */
+  accessibility: boolean;
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT };
+const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 

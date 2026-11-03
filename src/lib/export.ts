@@ -31,11 +31,11 @@ export function withoutLinks(project: Project): Project {
   return { ...project, artboards: project.artboards.map(({ source: _source, ...a }) => a) };
 }
 
-export async function standaloneHtml(project: Project, opts: { startArtboardId?: string; debug?: boolean } = {}): Promise<string> {
+export async function standaloneHtml(project: Project, opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean } = {}): Promise<string> {
   const clean = withoutLinks(project);
   const p = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
-  return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: (a) => assetBytes(project.id, a), debug: opts.debug });
+  return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: (a) => assetBytes(project.id, a), debug: opts.debug, accessibility: opts.accessibility });
 }
 
 function hasCodeNodes(p: Project): boolean {

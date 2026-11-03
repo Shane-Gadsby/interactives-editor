@@ -2240,6 +2240,31 @@ button.twisty:hover {
   border: 0;
   display: block;
 }
+.preview-said {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-2);
+  font-size: 13px;
+  min-height: 20px;
+}
+.preview-said span {
+  opacity: 0.6;
+}
+.preview-said span.latest {
+  opacity: 1;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--accent, #1a73e8);
+  color: #fff;
+}
+.preview-said span.muted {
+  opacity: 0.7;
+  background: none;
+  color: inherit;
+}
 .preview-log {
   max-height: 100px;
   overflow-y: auto;
@@ -4104,4 +4129,36 @@ code {
 .li-small-btn {
   flex: none;
   white-space: nowrap;
+}
+
+.tab-order {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tab-order li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.tab-order-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tab-order-name:hover,
+.tab-order-name:focus-visible {
+  background: var(--panel-2);
 }

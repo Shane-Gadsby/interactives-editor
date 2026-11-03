@@ -100,6 +100,7 @@ export const FIELD_TIPS: Record<string, string> = {
   Solo: 'Show only one child at a time: the active child below. Key it on the timeline or set it from interactions to switch states',
   'Active child': 'The child shown while Solo is on',
   'ARIA label': 'What screen readers announce for this layer',
+  'Text alternative': 'What screen readers announce for this layer: an image\'s alt text, or what a clickable shape does',
   'CSS class': 'Class added to the element, for custom CSS or scripts',
   Name: 'Name used in expressions, scripts and the layers list',
   Value: 'Starting value',
