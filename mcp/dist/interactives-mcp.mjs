@@ -5061,8 +5061,8 @@ Add one in the **Blends** section of the artboard (select the artboard), then st
 
 ## Quick start: try the example
 1. Click an empty part of the canvas so the **artboard** is selected (the inspector shows the artboard's settings).
-2. Open the **Blends** section and click **Build an example to try**. You get a ball, two timelines (*Example: small and red* and *Example: big and blue*), a variable called *mix*, a slider bound to it, and a blend that starts with the artboard.
-3. Click **Preview** and drag the slider. At 0 the ball is small and red, at 1 it is big and blue, and in between it is a mix of the two.
+2. Open the **Blends** section and click **Build an example to try**. On the artboard you get a ball and, under it, a slider with the caption **Drag me: blend weight** (with *0 = small and red* and *1 = big and blue* at its ends and the live value of *mix* below it). Behind them are two timelines (*Example: small and red* and *Example: big and blue*), a variable called *mix* that the slider is bound to, and a blend that starts with the artboard.
+3. Click **Preview** (the button at the top right of the editor). The artboard opens in the Preview window: the slider is the horizontal bar under the ball. Drag its knob from the left end to the right end. At 0 the ball is small and red, at 1 it is big and blue, and in between it is a mix of the two. (In the Preview window's left panel, **Variables (live)** also has a *mix* box you can type a number into.)
 4. Open either example timeline to see that each one is just a pose: the same values at the start and the end.
 
 ![Preview of the example: changing mix from 0 to 1 turns the small red ball into the big blue one.](help/blends-mix.mp4)
