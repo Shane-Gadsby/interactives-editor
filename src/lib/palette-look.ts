@@ -32,3 +32,8 @@ export async function syncProjectWithPalette(p: Project): Promise<number> {
   const live = await Promise.race([startPalette(), new Promise<boolean>((r) => setTimeout(() => r(false), 600))]);
   return live ? refreshLinkedTokens(p.themes, currentPalette()) : 0;
 }
+
+/** Wait (briefly) for the live palette, so something made now takes its colours from it. Never rejects, never waits long. */
+export async function whenPaletteReady(): Promise<void> {
+  await Promise.race([startPalette(), new Promise<boolean>((r) => setTimeout(() => r(false), 600))]);
+}

@@ -5,6 +5,7 @@ import {
   bakeTheme,
   starterHex,
   countTokenUse,
+  createProject,
   defaultTheme,
   fillList,
   findTheme,
@@ -62,6 +63,18 @@ function starterToken(d: StarterTokenDef, list: ThemeDef[], id = uid('tk')): The
     token.palette![th.id] = d[column];
   }
   return token;
+}
+
+/**
+ * A blank new project in the toolbox look: the starter themes with their palette-linked tokens, the artboard on `color/background`,
+ * so layers added to it (which follow the tokens by name) change with the theme from the start.
+ */
+export function newProjectWithThemes(name = 'Untitled project'): Project {
+  const p = createProject(name);
+  p.themes = starterThemes();
+  const bg = tokenByName(p.themes, 'color/background');
+  if (bg) for (const ab of p.artboards) ab.background = { type: 'solid', color: tokenRef(bg.id) };
+  return p;
 }
 
 // ---------------------------------------------------------------- the starter look in new layers

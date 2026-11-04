@@ -1,7 +1,9 @@
 import { track } from './lib/analytics';
 import { VersionInfo } from './components/VersionInfo';
 import { useEffect, useMemo, useState } from 'react';
-import { createProject, PACKAGE_EXTENSION } from 'interactives-player';
+import { PACKAGE_EXTENSION } from 'interactives-player';
+import { newProjectWithThemes } from './lib/themes';
+import { whenPaletteReady } from './lib/palette-look';
 import { createProjectRecord, deleteProject, duplicateProject, importPackage, listProjects, loadProjectRecord, META_MAX_LABEL, META_MAX_TAGS, session, setProjectMeta, type ProjectMeta, type SessionInfo } from './lib/db';
 import { downloadPackage } from './lib/export';
 import { pickFiles } from './lib/insert';
@@ -203,7 +205,9 @@ export function Home({ open }: { open: (id: string) => void }) {
 
   const create = () =>
     run(async () => {
-      const p = createProject('Untitled project');
+      // The toolbox look from the start: the starter themes, with colours from the shared palette
+      await whenPaletteReady();
+      const p = newProjectWithThemes('Untitled project');
       // Every new project starts with the person's default font (Open Sans unless they changed it)
       await loadCatalog().catch(() => []);
       ensureGoogleFont(p.fonts, prefs().defaultFont.trim() || DEFAULT_FONT, [400, 600, 700], { force: true });

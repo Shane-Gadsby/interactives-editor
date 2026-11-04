@@ -24,6 +24,8 @@ vi.mock('../src/lib/insert', () => ({ pickFiles: async () => [Object.assign(new 
 vi.mock('../src/lib/session', () => ({ sessionUser: async () => null }));
 
 import { Home } from '../src/Home';
+import { STARTER_TOKEN_DEFS, createNode, type Project } from 'interactives-player';
+import { lookDefaults } from '../src/lib/themes';
 import { loadCatalog } from '../src/lib/font-catalog';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -59,6 +61,21 @@ describe('new projects and imports land in the selected folder', () => {
     await flush();
     expect(db.createProjectRecord).toHaveBeenCalledTimes(1);
     expect(db.setProjectMeta).toHaveBeenCalledWith(opened[0], { folder: 'Maths' });
+  });
+
+  it('a blank new project starts with the starter themes and palette-linked tokens, on the Light background', async () => {
+    await click(host.querySelector('.new-thumb'));
+    await flush();
+    const p = (db.createProjectRecord.mock.calls[0] as unknown as [Project])[0];
+    expect(p.themes!.list.map((t) => t.name)).toEqual(['Light', 'Dark', 'High contrast']);
+    expect(p.themes!.tokens.length).toBe(STARTER_TOKEN_DEFS.length);
+    expect(p.themes!.tokens.every((t) => Object.keys(t.palette ?? {}).length === 3)).toBe(true);
+    const bg = p.themes!.tokens.find((t) => t.name === 'color/background')!;
+    expect(p.artboards[0].background).toEqual({ type: 'solid', color: `token:${bg.id}` });
+    // a layer added to it follows the tokens
+    const button = createNode('button', lookDefaults(p, 'button') as never);
+    expect(button.fill).toEqual({ type: 'solid', color: `token:${p.themes!.tokens.find((t) => t.name === 'color/button')!.id}` });
+    expect(p.fonts.length).toBe(1);
   });
 
   it('create with All projects or No folder selected does not set a folder', async () => {
