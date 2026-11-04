@@ -84,10 +84,10 @@ import { FillSection, PaintOrderSection, StrokeSection } from './PaintLayers';
 import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
 import { BindSelectionSection, BoneSection, SkinSection } from './RigSection';
 import { skinnable } from '../lib/rig';
+import { FONT_FAMILIES } from '../lib/fonts';
 import { CornerRadii } from './CornerRadii';
 import { hasCornerRadii } from '../lib/corner-radii';
 
-const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
 
 export function Inspector() {
   const s = useEditor((st) => ({
@@ -649,6 +649,12 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {single && (
         <Section help="web-elements#accessibility" title="Advanced" defaultOpen={false}>
           <TextField label="CSS class" value={n.className ?? ''} onChange={(v) => set({ className: v || undefined })} />
+          {n.type === 'text' && (
+            <>
+              <p className="hint">The toolbar that floats over the text while you edit it (double-click the text) is the normal way to style parts of it. This list is for fixing the runs by hand.</p>
+              <RunsEditor node={n} />
+            </>
+          )}
           <div className="muted small">id: {n.id}</div>
         </Section>
       )}
@@ -802,7 +808,7 @@ function RunsEditor({ node: n }: { node: Extract<SceneNode, { type: 'text' }> })
   };
   return (
     <div className="runs">
-      <button className="btn" onClick={() => setOpen(!open)} title="Style parts of the text differently. On the canvas: double-click the text, select a range and press Ctrl/Cmd+B, I or U.">
+      <button className="btn" onClick={() => setOpen(!open)} title="Every differently styled stretch of the text, one by one. The normal way: double-click the text on the canvas, select some of it and use the toolbar.">
         {open ? 'Hide text runs' : rich ? `Text runs (${runs.length})` : 'Text runs…'}
       </button>
       {open && (
@@ -1012,7 +1018,6 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return (
         <Section help="text" title="Text">
           {nodes.length === 1 && <TextField label="Text" value={n.text} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
-          {nodes.length === 1 && <RunsEditor node={n} />}
           <SelectField
             label="Sizing"
             value={n.autoSize}

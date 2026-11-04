@@ -43,7 +43,7 @@ export function nodePropsToRunStyle(props: Record<string, unknown>): { style: Pa
 export type ToggleKind = 'bold' | 'italic' | 'underline' | 'strike';
 type Base = Pick<TextStyle, 'fontWeight' | 'fontStyle'> & { textDecoration?: TextStyle['textDecoration'] };
 
-const effective = (r: TextRun, kind: ToggleKind, base: Base): boolean => {
+export const effective = (r: TextRun, kind: ToggleKind, base: Base): boolean => {
   switch (kind) {
     case 'bold':
       return (r.fontWeight ?? base.fontWeight) >= 600;

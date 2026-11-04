@@ -49,7 +49,8 @@ export function HelpHost() {
   const s = useHelpState();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'F1' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) {
+      //Ctrl/Cmd+K is the link shortcut while editing text (F1 still opens the search there)
+      if (e.key === 'F1' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !(e.target instanceof HTMLElement && e.target.closest('.text-editor, .text-toolbar')))) {
         e.preventDefault();
         openHelpSearch();
       } else if (e.key === '?' && !isTyping(e) && !e.ctrlKey && !e.metaKey) {

@@ -25,3 +25,6 @@ export function ensureFonts(project: Project): void {
     }
   }
 }
+
+/** The font stacks offered before any of the project's own fonts. */
+export const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];

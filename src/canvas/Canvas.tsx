@@ -34,7 +34,8 @@ import {
   type TextRun,
   nodeTypeLabel,
 } from 'interactives-player';
-import { toggleRunStyle, type ToggleKind } from '../lib/rich-text';
+import { shortcutAction } from '../lib/text-toolbar';
+import { TextToolbar, type ToolbarCommands } from './TextToolbar';
 import { paintRuns, readRuns, selectionOffsets, setSelectionOffsets } from '../lib/rich-text-dom';
 import { store, useEditor, type Tool } from '../store/store';
 import { CommentLayer } from './CommentLayer';
@@ -1932,7 +1933,7 @@ export function Canvas() {
       <CommentLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} />
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
-      {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} />}
+      {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} bounds={{ width: vp.current?.clientWidth ?? 2000, height: vp.current?.clientHeight ?? 1200 }} />}
       {toolHint && (
         <div className="tool-hint" role="status" style={{ left: toolHint.x + 18, top: toolHint.y + 20 }}>
           <Icons.info className="tool-hint-icon" />
@@ -1945,19 +1946,20 @@ export function Canvas() {
 
 // ---------------------------------------------------------------- in-place text editing
 
-function TextEditor({ ab, id, zoom, panX, panY }: { ab: Artboard; id: string; zoom: number; panX: number; panY: number }) {
+function TextEditor({ ab, id, zoom, panX, panY, bounds }: { ab: Artboard; id: string; zoom: number; panX: number; panY: number; bounds: { width: number; height: number } }) {
   const loc = locate(ab, id);
   if (!loc) return null;
-  if (loc.node.type === 'text') return <RichTextEditor node={loc.node} ab={ab} zoom={zoom} panX={panX} panY={panY} />;
+  if (loc.node.type === 'text') return <RichTextEditor node={loc.node} ab={ab} zoom={zoom} panX={panX} panY={panY} bounds={bounds} />;
   return <PlainTextEditor ab={ab} id={id} zoom={zoom} panX={panX} panY={panY} />;
 }
 
-/** In-place editor for text layers: a contenteditable with one span per run, so ranges can be styled (Ctrl/Cmd+B, I, U, Shift+X; or the inspector). */
-function RichTextEditor({ node: n, ab, zoom, panX, panY }: { node: Extract<SceneNode, { type: 'text' }>; ab: Artboard; zoom: number; panX: number; panY: number }) {
+/** In-place editor for text layers: a contenteditable with one span per run, so ranges can be styled (the floating toolbar, Ctrl/Cmd+B, I, U, K, Shift+X; or the inspector). */
+function RichTextEditor({ node: n, ab, zoom, panX, panY, bounds }: { node: Extract<SceneNode, { type: 'text' }>; ab: Artboard; zoom: number; panX: number; panY: number; bounds: { width: number; height: number } }) {
   const id = n.id;
   const ref = useRef<HTMLDivElement>(null);
   const painted = useRef<TextRun[]>([]);
   const ownSig = useRef('');
+  const commands = useRef<ToolbarCommands | null>(null);
   const sigOf = (t: Extract<SceneNode, { type: 'text' }>) => JSON.stringify([t.text, t.runs ?? null, zoom]);
   const paint = () => {
     const el = ref.current;
@@ -1988,7 +1990,7 @@ function RichTextEditor({ node: n, ab, zoom, panX, panY }: { node: Extract<Scene
     if (!el || sigOf(n) === ownSig.current) return;
     paint();
     const sel = store().get().textSelection;
-    if (sel && sel.id === id && document.activeElement === el) setSelectionOffsets(el, sel.start, sel.end);
+    if (sel && sel.id === id && (document.activeElement === el || document.activeElement?.closest('.text-toolbar, .palette-pop'))) setSelectionOffsets(el, sel.start, sel.end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [n.text, n.runs, zoom]);
   useEffect(() => {
@@ -2029,40 +2031,43 @@ function RichTextEditor({ node: n, ab, zoom, panX, panY }: { node: Extract<Scene
     if (node && node.type === 'text') ownSig.current = sigOf(node);
   };
   return (
-    <div
-      ref={ref}
-      className="text-editor"
-      style={style}
-      contentEditable="plaintext-only"
-      suppressContentEditableWarning
-      spellCheck={false}
-      onInput={read}
-      onBlur={(e) => {
-        // Focus moving into the inspector (to change colour or size of the selection) keeps editing
-        const to = e.relatedTarget as HTMLElement | null;
-        if (to?.closest?.('.inspector')) return;
-        store().commit();
-        store().set({ editingTextId: null, textSelection: null });
-      }}
-      onKeyDown={(e) => {
-        e.stopPropagation();
-        if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
-          (e.target as HTMLElement).blur();
-          return;
-        }
-        const mod = e.metaKey || e.ctrlKey;
-        const kind: ToggleKind | null = mod && !e.altKey ? (e.key.toLowerCase() === 'b' && !e.shiftKey ? 'bold' : e.key.toLowerCase() === 'i' && !e.shiftKey ? 'italic' : e.key.toLowerCase() === 'u' && !e.shiftKey ? 'underline' : e.key.toLowerCase() === 'x' && e.shiftKey ? 'strike' : null) : null;
-        if (!kind) return;
-        e.preventDefault();
-        const el = ref.current;
-        const o = el && selectionOffsets(el);
-        if (!o || o.start === o.end) return;
-        const node = locate(store().artboard()!, id)?.node;
-        if (!node || node.type !== 'text') return;
-        store().styleTextRange(id, o.start, o.end, toggleRunStyle(nodeRuns(node), o.start, o.end, kind, node));
-      }}
-      onPointerDown={(e) => e.stopPropagation()}
-    />
+    <>
+      <div
+        ref={ref}
+        className="text-editor"
+        style={style}
+        contentEditable="plaintext-only"
+        suppressContentEditableWarning
+        spellCheck={false}
+        onInput={read}
+        onBlur={(e) => {
+          // Focus moving into the toolbar or the inspector (to change colour or size of the selection) keeps editing
+          const to = e.relatedTarget as HTMLElement | null;
+          if (to?.closest?.('.inspector, .text-toolbar, .palette-pop')) return;
+          store().commit();
+          store().set({ editingTextId: null, textSelection: null });
+        }}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
+            (e.target as HTMLElement).blur();
+            return;
+          }
+          if (e.key === 'F10' && e.altKey) {
+            e.preventDefault();
+            commands.current?.enter();
+            return;
+          }
+          const action = shortcutAction(e);
+          if (!action) return;
+          e.preventDefault();
+          const el = ref.current;
+          commands.current?.apply(action, (el && selectionOffsets(el)) || undefined);
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      />
+      <TextToolbar node={n} editor={ref} commands={commands} bounds={bounds} box={{ left: style.left as number, top: style.top as number, width: style.width as number, height: b.height * zoom }} />
+    </>
   );
 }
 
