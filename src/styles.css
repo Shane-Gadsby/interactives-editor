@@ -5392,3 +5392,14 @@ code {
   color: var(--accent);
   border-color: var(--accent);
 }
+
+/* Preview's Events list: the Auto-scroll tickbox in its header */
+.debug-autoscroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 8px;
+  cursor: pointer;
+  font-family: var(--font, inherit);
+}

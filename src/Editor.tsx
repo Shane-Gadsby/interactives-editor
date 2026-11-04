@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, QUESTION_KINDS, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
 import { EditorStore, setCurrentStore, store, useEditor, type BottomTab, type Tool } from './store/store';
 import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
@@ -800,6 +800,15 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const [buildError, setBuildError] = useState<string | null>(null);
   const [from, setFrom] = useState<'start' | 'current'>('start');
   const [log, setLog] = useState<string[]>([]);
+  // The Events list follows the newest entry unless this is unticked (kept in this browser)
+  const [autoScroll, setAutoScroll] = useState(() => {
+    try {
+      return localStorage.getItem('ix-events-autoscroll') !== 'off';
+    } catch {
+      return true;
+    }
+  });
+  const eventsBox = useRef<HTMLElement>(null);
   const [vars, setVars] = useState<Record<string, unknown> | null>(null);
   type DebugState = { artboard: string; timelines: { name: string; playing: boolean; time: number; duration: number }[]; instances: number; variant?: { set: string; width: number } };
   type Trace = { artboard: string; event: string; target?: string; then: string[]; note?: string; depth: number; at: number };
@@ -807,6 +816,11 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const [traces, setTraces] = useState<Trace[]>([]);
   // Script layers that failed or hit a limit, as the player reports them (newest last)
   const [scriptErrors, setScriptErrors] = useState<{ source?: string; layer: string; message: string; kind: string }[]>([]);
+  // Follow the newest event (after the list has drawn it)
+  useLayoutEffect(() => {
+    const el = eventsBox.current;
+    if (autoScroll && el) el.scrollTop = el.scrollHeight;
+  }, [autoScroll, traces, log, scriptErrors]);
   const [varFilter, setVarFilter] = useState('');
   const t0 = useRef(performance.now());
   const [showVars, setShowVars] = useState(true);
@@ -1003,9 +1017,24 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           </div>
         )}
         {showVars && (
-          <footer className="preview-log mono small">
+          <footer className="preview-log mono small" ref={eventsBox}>
             <div className="debug-log-head">
               <span>Events (newest last)</span>
+              <label className="debug-autoscroll" title="Keep the list scrolled to the newest event">
+                <input
+                  type="checkbox"
+                  checked={autoScroll}
+                  onChange={(e) => {
+                    setAutoScroll(e.target.checked);
+                    try {
+                      localStorage.setItem('ix-events-autoscroll', e.target.checked ? 'on' : 'off');
+                    } catch {
+                      /* storage unavailable */
+                    }
+                  }}
+                />
+                Auto-scroll
+              </label>
               <button className="btn small-btn" onClick={() => (setTraces([]), setLog([]), setScriptErrors([]))} title="Clear the event list (the preview keeps running)">
                 <Icons.trash width={12} /> Clear
               </button>
