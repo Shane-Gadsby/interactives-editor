@@ -245,6 +245,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
         ghostR.current = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve });
         ghostEl.current.appendChild(ghostR.current.root);
       }
+      ghostR.current.setColorResolver(resolver);
       ghostR.current.render({ ...artboard, clip: false, background: null }, ghost.nodes, { vars: previewScope(project, artboard) });
     } else if (ghostR.current) {
       ghostR.current.destroy();
