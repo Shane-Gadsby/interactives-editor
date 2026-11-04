@@ -193,7 +193,7 @@ When the project has [responsive artboards](responsive), a **Page width** slider
 | <kbd>Ctrl</kbd>+<kbd>1</kbd> | 100% |
 
 ## Big projects and artboard pictures
-Artboards you aren't working on are shown as a *still*: a picture of themselves. That keeps panning and zooming smooth in projects with many artboards. Click an artboard (or a layer in it) and it comes alive for editing. The still updates by itself shortly after anything in it changes, so you never need to refresh it. If an artboard looks slightly soft while you pan, that is the still; click it to see it sharp.
+Artboards you aren't working on are shown as a *still*: a picture of themselves. That keeps panning and zooming smooth in projects with many artboards. Click an artboard (or a layer in it) and it comes alive for editing. The still updates by itself shortly after anything in it changes, so you never need to refresh it. If an artboard looks slightly soft while you pan, that is the still; click it to see it sharp. Stills are kept in this browser between sessions, so a big project opens with its artboards already showing instead of filling in one by one. An artboard that was changed since (by you or someone else) is just drawn again. While a project with several artboards opens, the canvas waits for the artboards in view (a moment) and then fades them in together.
 
 ## Wheel preference
 If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in the top bar) and set **Mouse wheel** to *Pan (Ctrl+wheel zooms)*. With that setting the wheel and two-finger trackpad scrolling pan, and <kbd>Ctrl</kbd>+wheel or a pinch zooms. The setting is kept in this browser.`,

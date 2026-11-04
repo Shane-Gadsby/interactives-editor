@@ -8,6 +8,7 @@ import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
 import { createEditorShader, type EditorShader } from '../lib/shader-edit';
 import { assetUrls } from '../lib/assets';
 import { store } from '../store/store';
+import { cachedStill, isCachedUrl, saveStill, stillHash } from '../lib/still-cache';
 
 interface Props {
   artboard: Artboard;
@@ -29,14 +30,30 @@ interface Props {
   rank?: number;
 }
 
+/** A picture standing in for an artboard that isn't live (an SVG made of its DOM) */
+interface Snap {
+  url: string;
+  key: string;
+}
+
 interface ViewJob {
   rank: number;
+  /** Its picture is already showing (from a saved still), so drawing the live DOM is not urgent and goes in smaller bites */
+  quiet?: boolean;
   run: () => void;
 }
 const jobs = new Set<ViewJob>();
 let pumping = false;
 // A frame's worth of drawing: one artboard at least, then more while this much time is left
 const FRAME_BUDGET = 10;
+// Artboards that already show a picture only need their live DOM in the background
+const QUIET_BUDGET = 4;
+// While the canvas is held back for the first fill (see `holdView`) nothing is on screen to stutter, so frames can be fuller
+const OPENING_BUDGET = 24;
+let holding = false;
+const waiters = new Set<() => void>();
+// Quiet ones always go after the rest
+const QUIET_RANK = 1e9;
 
 /**
  * Deferred artboards draw one at a time between frames, nearest the viewport first, so a project with dozens of artboards
@@ -48,7 +65,39 @@ function scheduleView(job: ViewJob): () => void {
     pumping = true;
     nextFrame(pump);
   }
-  return () => void jobs.delete(job);
+  return () => {
+    jobs.delete(job);
+    settle();
+  };
+}
+
+/** Whether every artboard that is in view and has no picture yet has been drawn */
+const inViewDone = () => !decoding.size && ![...jobs].some((j) => !j.quiet && j.rank < 1);
+// Pictures that are on their way in (loading and decoding), so the canvas can wait for them too
+const decoding = new Set<object>();
+function settle(): void {
+  if (!waiters.size || !inViewDone()) return;
+  for (const w of [...waiters]) w();
+}
+
+/** Resolves once the artboards in view are drawn (or after `maxMs`): the canvas stays hidden until then, and fades in */
+export function whenViewDrawn(maxMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(t);
+      waiters.delete(done);
+      resolve();
+    };
+    const t = setTimeout(done, maxMs);
+    waiters.add(done);
+    // Nothing to wait for (everything in view is drawn already): a couple of frames on says so (the zoom may still be settling)
+    nextFrame(() => nextFrame(settle));
+  });
+}
+
+/** Fuller frames while the canvas is held back */
+export function holdView(on: boolean): void {
+  holding = on;
 }
 
 function nextFrame(f: () => void): void {
@@ -59,9 +108,11 @@ function nextFrame(f: () => void): void {
 function pump(): void {
   const t0 = performance.now();
   let ran = 0;
-  while (jobs.size && (!ran || performance.now() - t0 < FRAME_BUDGET)) {
+  while (jobs.size) {
     let best: ViewJob | null = null;
-    for (const j of jobs) if (!best || j.rank < best.rank) best = j;
+    for (const j of jobs) if (!best || j.rank + (j.quiet ? QUIET_RANK : 0) < best.rank + (best.quiet ? QUIET_RANK : 0)) best = j;
+    const budget = holding && !best!.quiet ? OPENING_BUDGET : best!.quiet ? QUIET_BUDGET : FRAME_BUDGET;
+    if (ran && performance.now() - t0 >= budget) break;
     jobs.delete(best!);
     ran++;
     try {
@@ -70,6 +121,7 @@ function pump(): void {
       console.warn('[interactives] artboard draw failed', err);
     }
   }
+  settle();
   if (jobs.size) nextFrame(pump);
   else pumping = false;
 }
@@ -87,6 +139,14 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   const shader = useRef<EditorShader | null>(null);
   // Instances draw other artboards, so they redraw when any artboard changes
   const depsKey = instanceDepsKey(project, artboard);
+
+  // What the artboard looks like, as one image, while you work elsewhere (see the stills below). One saved from the last session
+  // is here from the first render, so the artboard is never an empty background that fills in later.
+  const key = `${snapKey(artboard)}|${depsKey}|${assetVersion}|${dataVersion}|${snapKey(project.variables)}|${snapKey(project.fonts)}`;
+  const [snap, setSnap] = useState<Snap | null>(() => {
+    const url = active ? null : cachedStill(project.id, artboard.id, stillHash(project, artboard));
+    return url ? { url, key } : null;
+  });
 
   // Whether the live DOM is being drawn. Once it is, it stays (stills are made from it, and switching back is instant)
   const [started, setStarted] = useState(!deferred || active);
@@ -211,9 +271,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, depsKey, started, live]);
 
-  // ---- stills: what the artboard looks like, as one image, while you work elsewhere
-  const [snap, setSnap] = useState<{ url: string; key: string } | null>(null);
-  const key = `${snapKey(artboard)}|${depsKey}|${assetVersion}|${dataVersion}|${snapKey(project.variables)}|${snapKey(project.fonts)}`;
+  // ---- stills
   const keyRef = useRef(key);
   keyRef.current = key;
   useEffect(() => {
@@ -232,6 +290,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
           return;
         }
         setSnap({ url, key });
+        // For the next session (the key just confirmed this is the artboard as it is now)
+        saveStill(store().get().project.id, artboard.id, stillHash(store().get().project, artboard), url);
       } catch (err) {
         console.warn('[interactives] artboard still failed', mine, err);
       }
@@ -244,11 +304,28 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   // Each still's object URL is released when the next one replaces it, or the artboard goes
   useEffect(
     () => () => {
-      if (snap) URL.revokeObjectURL(snap.url);
+      if (snap && !isCachedUrl(snap.url)) URL.revokeObjectURL(snap.url);
     },
     [snap],
   );
-  const showStill = !live && snap?.key === key;
+  // The picture is only swapped in once the browser has decoded it: until then whatever is under it (the live DOM, or the
+  // artboard's background) stays, so an artboard never flashes empty between the two
+  const canDecode = typeof HTMLImageElement !== 'undefined' && typeof HTMLImageElement.prototype.decode === 'function';
+  const [decoded, setDecoded] = useState<string | null>(null);
+  const picture = !live && snap && (snap.key === key || !started) ? snap : null;
+  const showStill = !!picture && (!canDecode || decoded === picture.url);
+  job.current.quiet = !!picture;
+  // Counts as drawn only once the picture is, so the first fill waits for it
+  const waitingOnPicture = !!picture && !showStill;
+  useLayoutEffect(() => {
+    if (!waitingOnPicture) return;
+    const token = {};
+    decoding.add(token);
+    return () => {
+      decoding.delete(token);
+      settle();
+    };
+  }, [waitingOnPicture, picture?.url]);
 
   return (
     <div
@@ -260,7 +337,22 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       <div ref={host} className="artboard-host" style={showStill ? { display: 'none' } : undefined} />
       {/* Not drawn yet: the artboard's own background, so it is where it will be */}
       {!started && <div className="artboard-pending" style={{ background: paintToCss(artboard.background, assetUrls.resolve) }} />}
-      {showStill && <img className="artboard-still" src={snap!.url} alt="" draggable={false} />}
+      {picture && (
+        <img
+          key={picture.url}
+          className={`artboard-still${showStill ? ' shown' : ''}${started ? '' : ' fade'}`}
+          src={picture.url}
+          alt=""
+          draggable={false}
+          onLoad={(e) => {
+            const url = picture.url;
+            void e.currentTarget.decode().then(
+              () => setDecoded(url),
+              () => setDecoded(url),
+            );
+          }}
+        />
+      )}
     </div>
   );
 }

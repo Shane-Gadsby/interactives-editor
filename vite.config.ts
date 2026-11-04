@@ -8,6 +8,8 @@ const playerDir = fileURLToPath(new URL('../interactives-player', import.meta.ur
 // canvas and types) and embeds its IIFE build (for previews and exports).
 export default defineConfig({
   plugins: [react()],
+  // Saved artboard pictures (lib/still-cache.ts) are only good for the build that drew them
+  define: { __IX_BUILD__: JSON.stringify(Date.now().toString(36)) },
   resolve: {
     alias: [
       { find: /^interactives-player$/, replacement: `${playerDir}/src/index.ts` },

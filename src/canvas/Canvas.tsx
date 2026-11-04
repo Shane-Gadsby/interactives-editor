@@ -47,7 +47,8 @@ import { openHelp } from '../help/Help';
 import { Rulers } from './Rulers';
 import { Icons } from '../components/icons';
 import { freehandToPath } from './freehand';
-import { ArtboardView } from './ArtboardView';
+import { ArtboardView, holdView, whenViewDrawn } from './ArtboardView';
+import { hasCachedStill, stillHash } from '../lib/still-cache';
 import { viewPlan } from './viewPlan';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
 import { ADD_POINT_CURSOR, BEND_CURSOR, BONE_CHAIN_CURSOR, PEN_CLOSE_CURSOR, dragCursor, resizeCursor, rotateCursor, rotateCursorAt, toolCursor } from './cursors';
@@ -104,6 +105,10 @@ const CREATION_TOOLS = new Set<Tool>(['artboard', 'line', 'pen', 'pencil', 'imag
 const SNAP_PX = 6;
 /** Where world (0, 0) sits in the scrollable pan space; pan is measured from here. */
 const PAN_ORIGIN = 4_000_000;
+// The longest a big project's first fill is held back (see `opening`)
+const OPENING_MAX = 2500;
+// ... and when every artboard has a saved picture, which only has to decode: the heaviest few fade in on their own after this
+const OPENING_MAX_SAVED = 700;
 
 export function Canvas() {
   const peers = useEditor((st) => st.peers);
@@ -1779,6 +1784,28 @@ export function Canvas() {
   // Which artboards to draw at once and which to leave for the scheduler (see `viewPlan`)
   const views = viewPlan(onCanvas, s.activeArtboardId, zoom, panX, panY, vp.current?.clientWidth || window.innerWidth, vp.current?.clientHeight || window.innerHeight);
 
+  // Opening a big project: the artboards would pop in one by one, as the scheduler draws them or their saved pictures decode. Hold
+  // them back (invisible, but drawn in fuller frames) until the ones in view are done, then fade them in together. Once, at open,
+  // and never for longer than OPENING_MAX. (Whether they are in view isn't known yet: the workspace fits the zoom after this first
+  // render. A project of a few artboards isn't worth it.)
+  const [opening, setOpening] = useState(() => onCanvas.length > 3);
+  const [allSaved] = useState(() => onCanvas.every((ab) => ab.id === s.activeArtboardId || hasCachedStill(project.id, ab.id, stillHash(project, ab))));
+  useEffect(() => {
+    if (!opening) return;
+    let off = false;
+    holdView(true);
+    void whenViewDrawn(allSaved ? OPENING_MAX_SAVED : OPENING_MAX).then(() => {
+      if (off) return;
+      holdView(false);
+      setOpening(false);
+    });
+    return () => {
+      off = true;
+      holdView(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const showRulers = usePrefs().rulers;
   // Space pans, a drag shows what it is doing, then what a press under the pointer would do, then the tool's own
   const cursor = dragCursorNow ?? (spaceHeld ? 'grab' : s.tool === 'select' || s.tool === 'bend' ? hoverCursor ?? toolCursor(s.tool) : toolCursor(s.tool));
@@ -1806,7 +1833,7 @@ export function Canvas() {
           transform would make it rebuild layers for every element on every frame (slow in big projects) */}
       <div ref={scrollRef} className="canvas-scroll" onScroll={onScroll}>
         <div className="canvas-space" style={{ width: PAN_ORIGIN * 2, height: PAN_ORIGIN * 2 }}>
-      <div className="world" style={{ left: PAN_ORIGIN, top: PAN_ORIGIN, transform: `scale(${zoom})` }}>
+      <div className={`world${opening ? ' opening' : ''}`} style={{ left: PAN_ORIGIN, top: PAN_ORIGIN, transform: `scale(${zoom})` }}>
         {onCanvas.map((ab) => (
           <ArtboardView
             key={ab.id}

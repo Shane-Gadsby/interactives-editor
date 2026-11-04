@@ -25,7 +25,7 @@ function refKey(o: object): number {
 }
 
 const targetsCache = new WeakMap<Artboard, string[]>();
-function instanceTargets(ab: Artboard): string[] {
+export function instanceTargets(ab: Artboard): string[] {
   let t = targetsCache.get(ab);
   if (!t) {
     const set = new Set<string>();

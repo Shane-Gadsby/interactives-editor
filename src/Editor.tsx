@@ -34,6 +34,7 @@ import { LinkBanner } from './components/LinkBanner';
 import { LinkChanges } from './components/LinkChanges';
 import { PanelResizeHandle, usePanelWidths } from './components/PanelResize';
 import { noteIfStale } from './lib/stale-build';
+import { primeStills, releaseStills } from './lib/still-cache';
 import { keyMoveTarget } from './lib/layer-drop';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
@@ -45,9 +46,13 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
     let stopLinks: (() => void) | null = null;
     (async () => {
       try {
+        // The saved pictures of its artboards are read while the project downloads, so the canvas opens with them showing
+        const stills = primeStills(projectId);
         const p = await loadProjectRecord(projectId);
         if (!p) throw new Error('That project does not exist (it may have been deleted).');
         await assetUrls.load(p.id);
+        // Nearly always done by now; never held up for long if the browser's database is slow
+        await Promise.race([stills, new Promise((r) => setTimeout(r, 400))]);
         if (cancelled) return;
         const s = new EditorStore(p);
         setCurrentStore(s);
@@ -88,6 +93,7 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
       liveSession()?.close();
       setLiveSession(null);
       setCurrentStore(null);
+      releaseStills();
     };
   }, [projectId]);
 
@@ -424,7 +430,10 @@ function Workspace({ home }: { home: () => void }) {
   const s = useEditor((st) => ({ bottomTab: st.bottomTab, bottomHeight: st.bottomHeight, toast: st.toast, report: st.report }));
   const [widths, setWidth] = usePanelWidths();
   const [preview, setPreview] = useState(false);
-  useEffect(() => {
+  // Fitted before the first paint (the canvas opens at its final zoom, not at 100% for a frame), and again a frame later in
+  // case the panels settled the canvas to a different size
+  useLayoutEffect(() => {
+    zoomTo('fit');
     requestAnimationFrame(() => zoomTo('fit'));
   }, []);
   // Tell the others what is selected (and on which artboard)
