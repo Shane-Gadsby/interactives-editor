@@ -13,7 +13,7 @@ const KEY = 'ix-panel-widths-v2';
 export const clampWidth = (side: Side, w: number): number => {
   const { min, max } = PANEL_WIDTH[side];
   // never so wide the canvas disappears
-  const room = typeof window !== 'undefined' ? Math.max(min, window.innerWidth - 44 - 320 - (side === 'left' ? PANEL_WIDTH.right.min : PANEL_WIDTH.left.min)) : max;
+  const room = typeof window !== 'undefined' ? Math.max(min, window.innerWidth - 56 - 320 - (side === 'left' ? PANEL_WIDTH.right.min : PANEL_WIDTH.left.min)) : max;
   return Math.round(Math.max(min, Math.min(max, room, w)));
 };
 

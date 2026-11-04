@@ -18,7 +18,7 @@ describe('side panel widths', () => {
     expect(clampWidth('right', 100)).toBe(PANEL_WIDTH.right.min);
     expect(clampWidth('right', 5000)).toBe(PANEL_WIDTH.right.max);
     Object.defineProperty(window, 'innerWidth', { value: 900, configurable: true });
-    expect(clampWidth('right', 600)).toBe(900 - 44 - 320 - PANEL_WIDTH.left.min);
+    expect(clampWidth('right', 600)).toBe(900 - 56 - 320 - PANEL_WIDTH.left.min);
   });
 
   it('arrow keys move the edge, double-click resets, and the width is remembered', () => {

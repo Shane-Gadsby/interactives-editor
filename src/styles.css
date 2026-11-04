@@ -1179,7 +1179,7 @@ hr.item-sep {
 .workspace {
   height: 100%;
   display: grid;
-  grid-template-columns: 44px var(--left-w, 240px) 1fr var(--right-w, 320px);
+  grid-template-columns: 56px var(--left-w, 240px) 1fr var(--right-w, 320px);
   grid-template-rows: 44px auto 1fr var(--bottom-h);
   grid-template-areas:
     'top top top top'
@@ -6279,13 +6279,13 @@ code {
   border: none;
   background: none;
   color: var(--muted);
-  font-size: 8.5px;
+  font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   cursor: pointer;
-  overflow: hidden;
   white-space: nowrap;
+  justify-content: center;
 }
 .tool-group-head:hover,
 .tool-group-head:focus-visible {
