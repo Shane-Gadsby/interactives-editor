@@ -152,6 +152,17 @@ export class FakeCollection {
     return { matchedCount: inserted ? 0 : 1, modifiedCount: 1, upsertedCount: inserted ? 1 : 0 };
   }
 
+  async updateMany(filter: Doc, update: Doc) {
+    this.check('updateMany');
+    let n = 0;
+    for (const doc of this.docs.filter((d) => matches(d, filter))) {
+      for (const [k, v] of Object.entries((update.$set ?? {}) as Doc)) doc[k] = clone(v);
+      for (const k of Object.keys((update.$unset ?? {}) as Doc)) delete doc[k];
+      n++;
+    }
+    return { matchedCount: n, modifiedCount: n };
+  }
+
   async deleteOne(filter: Doc) {
     this.check('deleteOne');
     const i = this.docs.findIndex((d) => matches(d, filter));
@@ -172,6 +183,8 @@ export class FakeDb {
   revisions = new FakeCollection();
   prefs = new FakeCollection();
   libraries = new FakeCollection();
+  comments = new FakeCollection();
+  'comment-notices' = new FakeCollection();
   'interactives-user-data' = new FakeCollection();
   ingest = new FakeCollection();
 }

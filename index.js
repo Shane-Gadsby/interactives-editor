@@ -71,6 +71,8 @@ let port = Number(process.env.PORT) || 3048,
 	libraries,
 	userData,
 	ingest,
+	commentRows,
+	commentNotices,
 
 	//Revision ids are strings (time first, so they sort), keeps mongodb's ObjectId out of this app's requires
 	revisionID = () => `${Date.now().toString(36)}${crypto.randomBytes(5).toString('hex')}`,
@@ -82,7 +84,8 @@ let ops = null,
 	library = null,
 	safety = null,
 	learner = null,
-	records = null
+	records = null,
+	commentLib = null
 const rooms = new Map(),
 	LOG_KEEP = 2000,
 	PALETTE = ['#e5484d', '#30a46c', '#3e63dd', '#f76b15', '#8e4ec6', '#12a594', '#d6409f', '#ad7f58'],
@@ -281,7 +284,7 @@ router.use('/api', cacheHeaders.api, sessionCheck({staff: true}))
 
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
-const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string'},
+const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean'},
 	cleanPrefs = (p) => {
 		let out = {}
 		for (let [k, rule] of Object.entries(PREF_KEYS)) {
@@ -314,9 +317,30 @@ router.get('/api/session', (req, res) => {
 router.get('/api/projects', async (req, res) => {
 	let me = whoIs(req),
 		filter = (req.query.all === '1' && isPower(req)) || (!me?.username && !enforcing()) ? {} : {'owner.username': me?.username ?? null},
-		list = await projects.find(filter, {projection: {doc: 0}}).sort({updated: -1}).limit(1000).toArray()
+		list = await projects.find(filter, {projection: {doc: 0}}).sort({updated: -1}).limit(1000).toArray(),
+		open = new Map()
 
-	res.json(list.map(metaOf))
+	//Open review comments per project, for the cards. A hiccup here must not take the list down with it
+	try {
+		let rows = await commentRows.find({project: {$in: list.map((d) => d._id)}, root: true, status: 'open'}, {projection: {project: 1, assignee: 1}}).toArray()
+
+		for (let r of rows) {
+			let have = open.get(r.project) || {open: 0, assigned: 0}
+
+			have.open++
+
+			if (me?.username && r.assignee?.username === me.username) {
+				have.assigned++
+			}
+
+			open.set(r.project, have)
+		}
+	}
+	catch (err) {
+		console.trace(`${appName}: comment counts failed`, err)
+	}
+
+	res.json(list.map((d) => ({...metaOf(d), openComments: open.get(d._id)?.open || 0, assignedComments: open.get(d._id)?.assigned || 0})))
 })
 
 router.get('/api/projects/:id', async (req, res) => {
@@ -502,8 +526,11 @@ router.delete('/api/projects/:id', async (req, res) => {
 	await removeAssets(id)
 	await revisions.deleteMany({project: id})
 
-	//The learners' records go with it
+	//The learners' records go with it, and so do the review comments
 	await userData.deleteMany({project: id})
+	await commentRows.deleteMany({project: id})
+	await commentNotices.deleteMany({project: id})
+	hubEnd(id)
 	await fs.promises.rm(thumbFile(id), {force: true})
 	await libraries.deleteOne({_id: id})
 	await fs.promises.rm(libraryDir(id), {recursive: true, force: true})
@@ -1167,6 +1194,574 @@ router.delete('/api/projects/:id/library', async (req, res) => {
 	res.json({ok: true})
 })
 
+//Review comments. Notes pinned to an artboard (and a layer on it) with replies, resolve and an assignee, kept in
+//lti-interactives.comments, one row per message (shared/comments.mjs says how rows become threads). They are not
+//part of the project document, so exports, share links and the op log never see them.
+//
+//Two doors in. The editor (/api/projects/:id/comments..., the owner and power users, like every project route) and
+//the review page (/review/:token/..., anyone with the review link). A review link can allow guests: they give a
+//display name, can pin and reply, and are rate limited per address and per link. Signed in reviewers comment under
+//their own name and can resolve. Assigning and mentioning are for the people who can open the project.
+//Live updates go out over a small SSE hub per project (not the editing room: reviewers aren't in it)
+const commentHubs = new Map(),
+	commentLimits = {},
+
+	//haproxy appends the address it saw as the last X-Forwarded-For entry, anything before that is the client's own claim
+	clientIP = (req) => {
+		let forwarded = String(req.get('x-forwarded-for') || '').split(',').map((s) => s.trim()).filter(Boolean)
+
+		return forwarded[forwarded.length - 1] || req.socket?.remoteAddress || 'unknown'
+	},
+
+	hubSend = (projectID, event, data) => {
+		for (let c of commentHubs.get(projectID) || []) {
+			sseSend(c.res, event, data)
+		}
+	},
+
+	hubJoin = (req, res, projectID, token) => {
+		let client = {res, token: token || null},
+			set = commentHubs.get(projectID) || new Set()
+
+		commentHubs.set(projectID, set)
+		set.add(client)
+		res.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no'})
+		res.write(':ok\n\n')
+		sseSend(res, 'hello', {})
+
+		//Under haproxy's 25s server timeout, same as the editing stream
+		let beat = setInterval(() => res.write(':\n\n'), 15 * 1000)
+
+		req.on('close', () => {
+			clearInterval(beat)
+			set.delete(client)
+
+			if (!set.size) {
+				commentHubs.delete(projectID)
+			}
+		})
+	},
+
+	//Everyone watching a project's comments is cut off (the project went, or the review link did)
+	hubEnd = (projectID, token) => {
+		for (let c of [...(commentHubs.get(projectID) || [])]) {
+			if (!token || c.token === token) {
+				c.res.end()
+			}
+		}
+	},
+
+	commentID = () => `cm${crypto.randomBytes(9).toString('hex')}`,
+
+	threadOne = async (projectID, threadID) => commentLib.threadsOf(await commentRows.find({project: projectID, thread: threadID}).sort({created: 1}).toArray())[0] || null,
+
+	threadsFor = async (projectID) => commentLib.threadsOf(await commentRows.find({project: projectID}).sort({created: 1}).toArray()),
+
+	//Who is writing. Signed in is the session's word. A review guest is a name they typed, so it is only ever a label
+	commentActor = (req, doc, via, body) => {
+		let me = whoIs(req),
+			manager = via === 'editor' || (!!me?.username && (me.username === doc.owner?.username || isPower(req)))
+
+		if (me?.username) {
+			return {by: {username: me.username, userID: me.userID, name: me.name || me.username}, signed: true, guest: false, manager}
+		}
+
+		if (via === 'review') {
+			let name = commentLib.cleanName(body?.guestName)
+
+			return name ? {by: {name, guest: true}, signed: false, guest: true, manager: false} : null
+		}
+
+		//The editor with no session at all (dev without si-manager): a label, same as the editing stream's
+		return {by: {username: null, name: commentLib.cleanName(body?.name) || 'Guest'}, signed: false, guest: false, manager: true}
+	},
+
+	sameAuthor = (row, actor) => !!actor.by.username && !actor.guest && row.by?.username === actor.by.username,
+
+	//Counts one write against the limits. Guests: their address and the link. Everyone: a generous per person ceiling
+	commentAllowed = (c) => c.actor.guest
+		? commentLimits.guestIP.hit(c.ip) && commentLimits.guestToken.hit(c.token || c.doc._id)
+		: commentLimits.person.hit(c.actor.by.username || c.ip),
+
+	//In-app notices for the people a write is about, unless they switched them off in their preferences
+	notify = async (c, thread, kind, text, mentions, assignee) => {
+		let list = commentLib.noticesFor({thread, by: c.actor.by, kind, mentions, assignee}),
+			now = new Date(),
+			sent = []
+
+		for (let n of list) {
+			try {
+				let p = await prefs.findOne({_id: n.user})
+
+				if (p?.prefs?.commentNotices === false) {
+					continue
+				}
+
+				await commentNotices.insertOne({_id: commentID(), user: n.user, project: c.doc._id, projectName: c.doc.name, thread: thread.id, n: thread.n, kind: n.kind, by: c.actor.by.name, text: commentLib.snippet(text), at: now, read: false})
+				sent.push(n)
+			}
+			catch (err) {
+				console.trace(`${appName}: comment notice for ${n.user} failed`, err)
+			}
+		}
+
+		return sent
+	},
+
+	publish = (c, thread, sent) => hubSend(c.doc._id, 'thread', {thread, by: c.actor.by.name, notify: sent || []}),
+
+	tooMany = {status: 429, body: {error: 'That is a lot of comments in a short time. Wait a few minutes and try again'}},
+
+	commentOps = {
+		async create(c, body) {
+			let text = commentLib.cleanText(body.text),
+				anchor = commentLib.cleanAnchor(body.anchor)
+
+			if (!text) {
+				return {status: 400, body: {error: `Write a comment first (up to ${commentLib.LIMITS.text} characters)`}}
+			}
+
+			if (!anchor) {
+				return {status: 400, body: {error: 'Pin the comment on an artboard'}}
+			}
+
+			if (!commentAllowed(c)) {
+				return tooMany
+			}
+
+			let rows = await commentRows.find({project: c.doc._id}, {projection: {n: 1, root: 1}}).toArray()
+
+			if (rows.length >= commentLib.LIMITS.perProject) {
+				return {status: 409, body: {error: 'This project has as many comments as it can hold'}}
+			}
+
+			let id = commentID(),
+				now = new Date(),
+				mentions = c.actor.guest ? [] : commentLib.cleanMentions(body.mentions),
+				assignee = null
+
+			if (c.actor.manager && body.assignee) {
+				assignee = commentLib.cleanAssignee(body.assignee)
+			}
+
+			await commentRows.insertOne({
+				_id: id,
+				project: c.doc._id,
+				thread: id,
+				root: true,
+				n: rows.reduce((max, r) => r.root ? Math.max(max, r.n || 0) : max, 0) + 1,
+				anchor,
+				context: commentLib.cleanContext(body.context),
+				status: 'open',
+				assignee,
+				resolved: null,
+				by: c.actor.by,
+				text,
+				mentions,
+				created: now,
+				updated: now
+			})
+
+			let thread = await threadOne(c.doc._id, id),
+				sent = await notify(c, thread, 'root', text, mentions, assignee)
+
+			publish(c, thread, sent)
+
+			return {status: 200, body: {thread}}
+		},
+
+		async reply(c, threadID, body) {
+			let text = commentLib.cleanText(body.text)
+
+			if (!text) {
+				return {status: 400, body: {error: `Write a reply first (up to ${commentLib.LIMITS.text} characters)`}}
+			}
+
+			let root = commentLib.validCommentID(threadID) && await commentRows.findOne({_id: threadID, project: c.doc._id, root: true})
+
+			if (!root) {
+				return {status: 404, body: {error: 'No such comment'}}
+			}
+
+			if (!commentAllowed(c)) {
+				return tooMany
+			}
+
+			let have = await commentRows.find({thread: threadID}, {projection: {_id: 1}}).toArray()
+
+			if (have.length >= commentLib.LIMITS.perThread) {
+				return {status: 409, body: {error: 'This conversation is full. Start a new comment'}}
+			}
+
+			let now = new Date(),
+				mentions = c.actor.guest ? [] : commentLib.cleanMentions(body.mentions)
+
+			await commentRows.insertOne({_id: commentID(), project: c.doc._id, thread: threadID, root: false, by: c.actor.by, text, mentions, created: now})
+			await commentRows.updateOne({_id: threadID}, {$set: {updated: now}})
+
+			let thread = await threadOne(c.doc._id, threadID),
+				sent = await notify(c, thread, 'reply', text, mentions, null)
+
+			publish(c, thread, sent)
+
+			return {status: 200, body: {thread}}
+		},
+
+		//Resolve or reopen (anyone signed in), hand it to someone (the people who can open the project)
+		async patch(c, threadID, body) {
+			let root = commentLib.validCommentID(threadID) && await commentRows.findOne({_id: threadID, project: c.doc._id, root: true})
+
+			if (!root) {
+				return {status: 404, body: {error: 'No such comment'}}
+			}
+
+			let set = {},
+				assignee = null,
+				now = new Date()
+
+			if (body.status !== undefined) {
+				let status = commentLib.cleanStatus(body.status)
+
+				if (!status) {
+					return {status: 400, body: {error: 'Status is open or resolved'}}
+				}
+
+				if (c.actor.guest) {
+					return {status: 403, body: {error: 'Sign in to resolve comments'}}
+				}
+
+				set.status = status
+				set.resolved = status === 'resolved' ? {by: c.actor.by, at: now} : null
+			}
+
+			if (body.assignee !== undefined) {
+				if (!c.actor.manager) {
+					return {status: 403, body: {error: 'Only the people who can open the project can assign comments'}}
+				}
+
+				assignee = body.assignee === null ? null : commentLib.cleanAssignee(body.assignee)
+
+				if (body.assignee !== null && !assignee) {
+					return {status: 400, body: {error: 'Pick a person'}}
+				}
+
+				set.assignee = assignee
+			}
+
+			if (!Object.keys(set).length) {
+				return {status: 400, body: {error: 'Nothing to change'}}
+			}
+
+			if (!commentAllowed(c)) {
+				return tooMany
+			}
+
+			set.updated = now
+			await commentRows.updateOne({_id: threadID}, {$set: set})
+
+			let thread = await threadOne(c.doc._id, threadID),
+				sent = assignee && assignee.username !== root.assignee?.username ? await notify(c, thread, 'root', root.text, [], assignee) : []
+
+			publish(c, thread, sent)
+
+			return {status: 200, body: {thread}}
+		},
+
+		async edit(c, threadID, messageID, body) {
+			let row = commentLib.validCommentID(threadID) && commentLib.validCommentID(messageID) && await commentRows.findOne({_id: messageID, thread: threadID, project: c.doc._id}),
+				text = commentLib.cleanText(body.text)
+
+			if (!row) {
+				return {status: 404, body: {error: 'No such comment'}}
+			}
+
+			if (!sameAuthor(row, c.actor) && !c.actor.manager) {
+				return {status: 403, body: {error: 'That comment is somebody else\'s'}}
+			}
+
+			if (!text) {
+				return {status: 400, body: {error: `Write a comment first (up to ${commentLib.LIMITS.text} characters)`}}
+			}
+
+			if (!commentAllowed(c)) {
+				return tooMany
+			}
+
+			await commentRows.updateOne({_id: messageID}, {$set: {text, mentions: commentLib.cleanMentions(body.mentions), edited: new Date()}})
+
+			let thread = await threadOne(c.doc._id, threadID)
+
+			publish(c, thread)
+
+			return {status: 200, body: {thread}}
+		},
+
+		//A reply, or (no message id, or the first message's) the whole thread
+		async remove(c, threadID, messageID) {
+			let row = commentLib.validCommentID(threadID) && (messageID === undefined || commentLib.validCommentID(messageID)) && await commentRows.findOne({_id: messageID || threadID, thread: threadID, project: c.doc._id})
+
+			if (!row) {
+				return {status: 404, body: {error: 'No such comment'}}
+			}
+
+			if (!sameAuthor(row, c.actor) && !c.actor.manager) {
+				return {status: 403, body: {error: 'That comment is somebody else\'s'}}
+			}
+
+			if (row.root) {
+				await commentRows.deleteMany({thread: threadID, project: c.doc._id})
+				await commentNotices.deleteMany({thread: threadID})
+				hubSend(c.doc._id, 'gone', {id: threadID})
+
+				return {status: 200, body: {ok: true}}
+			}
+
+			await commentRows.deleteOne({_id: row._id})
+
+			let thread = await threadOne(c.doc._id, threadID)
+
+			publish(c, thread)
+
+			return {status: 200, body: {thread}}
+		}
+	},
+
+	reply = (res, out) => res.status(out.status).json(out.body)
+
+//The editor's side. projectFor has checked the owner (or power user) and the project id
+router.get('/api/projects/:id/comments', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let threads = await threadsFor(doc._id)
+
+	res.json({threads, people: commentLib.peopleOf(threads, doc.owner), me: commentActor(req, doc, 'editor').by, review: doc.review ? {token: doc.review.token, guests: !!doc.review.guests} : null})
+})
+
+router.get('/api/projects/:id/comments/live', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (doc) {
+		hubJoin(req, res, doc._id)
+	}
+})
+
+//One door for the writes: the project, who is writing, and the address for the limits
+const editorComment = (handler) => async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	reply(res, await handler({doc, actor: commentActor(req, doc, 'editor', req.body), ip: clientIP(req), token: null}, req))
+}
+
+router.post('/api/projects/:id/comments', express.json({limit: '16kb'}), editorComment((c, req) => commentOps.create(c, req.body)))
+router.post('/api/projects/:id/comments/:cid/replies', express.json({limit: '16kb'}), editorComment((c, req) => commentOps.reply(c, req.params.cid, req.body)))
+router.patch('/api/projects/:id/comments/:cid', express.json({limit: '16kb'}), editorComment((c, req) => commentOps.patch(c, req.params.cid, req.body)))
+router.patch('/api/projects/:id/comments/:cid/messages/:mid', express.json({limit: '16kb'}), editorComment((c, req) => commentOps.edit(c, req.params.cid, req.params.mid, req.body)))
+router.delete('/api/projects/:id/comments/:cid/messages/:mid', editorComment((c, req) => commentOps.remove(c, req.params.cid, req.params.mid)))
+router.delete('/api/projects/:id/comments/:cid', editorComment((c, req) => commentOps.remove(c, req.params.cid)))
+
+//The review link: a second token, apart from the share link, that opens the project for looking at and commenting on
+router.get('/api/projects/:id/review', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (doc) {
+		res.json({review: doc.review || null})
+	}
+})
+
+router.put('/api/projects/:id/review', express.json({limit: '1kb'}), async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let review = {token: doc.review?.token || crypto.randomBytes(18).toString('base64url'), guests: !!req.body.guests, created: doc.review?.created || new Date(), updated: new Date(), by: whoIs(req)}
+
+	await projects.updateOne({_id: doc._id}, {$set: {review}})
+	res.json({review})
+})
+
+//Turning it off ends the link and anyone watching through it. The comments stay, for the owner
+router.delete('/api/projects/:id/review', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	await projects.updateOne({_id: doc._id}, {$unset: {review: ''}})
+
+	if (doc.review?.token) {
+		hubEnd(doc._id, doc.review.token)
+	}
+
+	res.json({ok: true})
+})
+
+//In-app notices: assigned to you, mentioned, a reply in a thread you are in. The newest 50, and what is unread
+router.get('/api/notices', async (req, res) => {
+	let user = whoIs(req)?.username
+
+	if (!user) {
+		return res.json({unread: 0, items: []})
+	}
+
+	let items = await commentNotices.find({user}).sort({at: -1}).limit(50).toArray()
+
+	res.json({unread: items.filter((n) => !n.read).length, items})
+})
+
+router.post('/api/notices/read', express.json({limit: '4kb'}), async (req, res) => {
+	let user = whoIs(req)?.username
+
+	if (!user) {
+		return res.json({ok: true})
+	}
+
+	let filter = {user, read: false}
+
+	if (typeof req.body.project === 'string' && validID(req.body.project)) {
+		filter.project = req.body.project
+	}
+
+	if (typeof req.body.thread === 'string' && commentLib.validCommentID(req.body.thread)) {
+		filter.thread = req.body.thread
+	}
+
+	await commentNotices.updateMany(filter, {$set: {read: true}})
+	res.json({ok: true})
+})
+
+//The review page's side. Open to anyone with the link: a session is read if there is one (optional), and a link that
+//allows no guests wants one
+const REVIEW_TOKEN = /^[\w-]{16,64}$/
+
+router.use('/review', cacheHeaders.api, sessionCheck({optional: true}), (req, res, next) => {
+	res.setHeader('X-Content-Type-Options', 'nosniff')
+	res.setHeader('X-Robots-Tag', 'noindex')
+	next()
+})
+
+const reviewProject = async (req, res, full) => {
+	let token = req.params.token,
+		doc = REVIEW_TOKEN.test(token) && await projects.findOne({'review.token': token}, full ? {} : {projection: {doc: 0}})
+
+	if (!doc) {
+		res.status(404).json({error: 'This review link has been turned off, or never existed'})
+		return null
+	}
+
+	if (!doc.review.guests && !whoIs(req)?.username) {
+		res.status(401).json({error: 'Sign in to StudyDesk to review this project', signin: true})
+		return null
+	}
+
+	return doc
+}
+
+router.get('/review/:token', async (req, res) => {
+	let doc = await reviewProject(req, res, true)
+
+	if (!doc) {
+		return
+	}
+
+	let room = rooms.get(doc._id),
+		threads = await threadsFor(doc._id),
+		actor = commentActor(req, doc, 'review')
+
+	res.json({
+		id: doc._id,
+		name: doc.name,
+		project: room ? room.doc : JSON.parse(doc.doc),
+		guests: !!doc.review.guests,
+		me: actor ? {...actor.by, manager: actor.manager} : null,
+		owner: doc.owner ? {username: doc.owner.username, name: doc.owner.name} : null,
+		threads,
+		people: commentLib.peopleOf(threads, doc.owner)
+	})
+})
+
+//The project's pictures, fonts and the rest, by the link instead of a session. Same rules as the editor's asset route
+router.get('/review/:token/assets/:assetId', async (req, res) => {
+	let doc = await reviewProject(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	if (!validID(req.params.assetId)) {
+		return res.status(400).json({error: 'Bad id'})
+	}
+
+	let file = assetFile(doc._id, req.params.assetId),
+		meta
+
+	try {
+		meta = JSON.parse(await fs.promises.readFile(`${file}.json`, 'utf8'))
+	}
+	catch (e) {
+		return res.status(404).json({error: 'No such asset'})
+	}
+
+	res.setHeader('Cache-Control', 'private, max-age=3600')
+	safety.assetHeaders(res, meta.mime)
+	res.sendFile(file, (err) => {
+		if (err && !res.headersSent) {
+			res.status(404).json({error: 'No such asset'})
+		}
+	})
+})
+
+router.get('/review/:token/live', async (req, res) => {
+	let doc = await reviewProject(req, res)
+
+	if (doc) {
+		hubJoin(req, res, doc._id, req.params.token)
+	}
+})
+
+const reviewComment = (handler) => async (req, res) => {
+	let doc = await reviewProject(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let actor = commentActor(req, doc, 'review', req.body)
+
+	if (!actor) {
+		return res.status(400).json({error: 'Tell us your name first (2 to 40 letters)'})
+	}
+
+	reply(res, await handler({doc, actor, ip: clientIP(req), token: req.params.token}, req))
+}
+
+router.post('/review/:token/comments', express.json({limit: '16kb'}), reviewComment((c, req) => commentOps.create(c, req.body)))
+router.post('/review/:token/comments/:cid/replies', express.json({limit: '16kb'}), reviewComment((c, req) => commentOps.reply(c, req.params.cid, req.body)))
+router.patch('/review/:token/comments/:cid', express.json({limit: '16kb'}), reviewComment((c, req) => commentOps.patch(c, req.params.cid, req.body)))
+router.patch('/review/:token/comments/:cid/messages/:mid', express.json({limit: '16kb'}), reviewComment((c, req) => commentOps.edit(c, req.params.cid, req.params.mid, req.body)))
+router.delete('/review/:token/comments/:cid/messages/:mid', reviewComment((c, req) => commentOps.remove(c, req.params.cid, req.params.mid)))
+router.delete('/review/:token/comments/:cid', reviewComment((c, req) => commentOps.remove(c, req.params.cid)))
+
+router.use('/review', (err, req, res, next) => {
+	console.trace(`${appName} review error`, err)
+
+	if (res.headersSent) {
+		return next(err)
+	}
+
+	res.status(err.status || 500).json({error: err.type === 'entity.too.large' ? 'That is too long' : 'Something went wrong on the server'})
+})
+
 //Results of a learner who is playing a shared project: lti-analytics.interactives-user-data, one record per
 //project + username + course (the unique index is in suite-libs/indexes.js). The learner is whoever the suite
 //session says, never anything in the request. These sit outside /api on purpose: that is staff only, and the
@@ -1533,20 +2128,28 @@ client.connect()
 		revisions = db.collection('revisions')
 		prefs = db.collection('prefs')
 		libraries = db.collection('libraries')
+		commentRows = db.collection('comments')
+		commentNotices = db.collection('comment-notices')
 		userData = analyticsDB.collection('interactives-user-data')
 		ingest = analyticsDB.collection('ingest')
 		fs.mkdirSync(storageDir, {recursive: true})
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/records.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/records.mjs'), import('./shared/comments.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, recordsMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, recordsMod, commentsMod]) => {
 		ops = opsMod
 		library = libraryMod
 		safety = safetyMod
 		learner = learnerMod
 		records = recordsMod
+		commentLib = commentsMod
+
+		//Sliding windows for review comments: a guest's address, a guest through one link, and anyone signed in
+		commentLimits.guestIP = new commentsMod.Limiter(10, 10 * 60 * 1000)
+		commentLimits.guestToken = new commentsMod.Limiter(60, 60 * 60 * 1000)
+		commentLimits.person = new commentsMod.Limiter(60, 10 * 60 * 1000)
 		cacheHeaders.watchEpoch()
 
 		app.listen(port, (err) => {
