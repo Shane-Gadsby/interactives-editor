@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { AudioMixer, ANIMATABLE_PROPS, animatableProp, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
+import { AudioMixer, ANIMATABLE_PROPS, animatableProp, instanceInputProps, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -440,7 +440,7 @@ export function TimelinePanel() {
           <div className="ruler-spacer">
             {selNode ? (
               <div className="add-track">
-                <SelectField value={addProp} options={[...ANIMATABLE_PROPS, ...nodeUniformProps(selNode)].map((a) => ({ value: a.prop, label: a.label }))} onChange={setAddProp} />
+                <SelectField value={addProp} options={[...ANIMATABLE_PROPS, ...nodeUniformProps(selNode), ...instanceInputProps(selNode, s.project.variables)].map((a) => ({ value: a.prop, label: a.label }))} onChange={setAddProp} />
                 <button className="btn" title={`Keyframe ${selNode.name}'s ${addProp} at the playhead`} onClick={() => store().keyCurrent(selNode.id, addProp)}>
                   + Key
                 </button>

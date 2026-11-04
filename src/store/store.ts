@@ -1076,6 +1076,7 @@ export class EditorStore {
       // Draw order starts as the layers' own order; solo starts on the first child
       if (prop === 'drawOrder') value = kids.map((k) => k.id);
       else if (prop === 'solo.active') value = kids[0]?.id ?? '';
+      else if (prop.startsWith('inputs.')) value = this.state.project.variables.find((v) => v.name === prop.slice(7))?.initial ?? 0;
       else value = prop.endsWith('color') ? '#000000' : 0;
     }
     const t = this.state.playhead;

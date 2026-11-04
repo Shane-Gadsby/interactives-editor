@@ -147,9 +147,9 @@ describe('Rive nested artboard control', () => {
     expect(inputs.map((n) => [n.params.target, n.params.name, n.params.value])).toEqual([
       [badge.id, 'level', '9'],
       [badge.id, 'flag', 'false'],
-      [badge.id, 'flag', 'true'],
+      [badge.id, 'flag', `!instanceInput(${JSON.stringify(badge.id)}, "flag")`],
     ]);
-    expect(res.warnings.some((w) => /Toggling a nested bool/.test(w))).toBe(true);
+    expect(res.warnings.some((w) => /Toggling a nested bool/.test(w))).toBe(false);
   });
 
   it('turns keys on nested inputs into markers that set them or fire the trigger', async () => {
@@ -177,24 +177,29 @@ describe('Rive nested artboard control', () => {
     const tl = ab.timelines[0];
     expect(tl.markers!.map((m) => [m.time, m.name])).toEqual([
       [0, 'Badge: flag = false'],
-      [250, 'Badge: level = 7'],
       [500, 'Badge: flag = true'],
-      [500, 'Badge: level = 8'],
       [750, 'Badge: bump'],
       [1000, 'Badge: flag = true'],
     ]);
+    //the number is a track on the instance's input, so it tweens between its keys
+    const badge = ab.children.find((n) => n.name === 'Badge')!;
+    const track = tl.tracks.find((t) => t.nodeId === badge.id)!;
+    expect(track.prop).toBe('inputs.level');
+    expect(track.keys.map((k) => [k.t, k.value])).toEqual([
+      [250, 7],
+      [500, 8],
+    ]);
     //one flow per distinct key, listening to that marker
     const events = kinds(ab.logic.nodes, 'event.timelineMarker');
-    expect(events.map((n) => n.params.marker).sort()).toEqual(['Badge: bump', 'Badge: flag = false', 'Badge: flag = true', 'Badge: level = 7', 'Badge: level = 8']);
+    expect(events.map((n) => n.params.marker).sort()).toEqual(['Badge: bump', 'Badge: flag = false', 'Badge: flag = true']);
     const flowOf = (marker: string) => {
       const ev = events.find((n) => n.params.marker === marker)!;
       const edge = ab.logic.edges.find((e) => e.from === ev.id)!;
       return ab.logic.nodes.find((n) => n.id === edge.to)!;
     };
     expect(flowOf('Badge: bump')).toMatchObject({ kind: 'action.instanceTrigger', params: { name: 'bump' } });
-    expect(flowOf('Badge: level = 8')).toMatchObject({ kind: 'action.instanceInput', params: { name: 'level', value: '8' } });
     expect(flowOf('Badge: flag = true').params).toMatchObject({ name: 'flag', value: 'true' });
-    expect(res.warnings.some((w) => /nested numbers jump/.test(w))).toBe(true);
+    expect(res.warnings.some((w) => /nested numbers jump/.test(w))).toBe(false);
   });
 });
 
@@ -274,6 +279,72 @@ describe('Rive keyboard listeners on a layer, played', () => {
     el.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true }));
     await new Promise((r) => setTimeout(r, 0));
     expect(player.getInstanceInput('Badge', 'level')).toBe(9);
+    player.destroy();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('Rive nested inputs, played', () => {
+  const play = async (objects: Spec[]) => {
+    document.body.innerHTML = '<div id="stage" style="width:200px;height:200px"></div>';
+    vi.stubGlobal('requestAnimationFrame', () => 0);
+    const res = await importRive(writeRiv(objects), 'nested');
+    const project = createProject('nested');
+    project.artboards = res.artboards;
+    project.variables = res.variables;
+    project.settings.startArtboardId = res.artboard.id;
+    const player = new Player(document.getElementById('stage')!, project, { loadData: false });
+    await new Promise((r) => setTimeout(r, 0));
+    return player;
+  };
+
+  it('a nested number animated between keys tweens inside the instance', async () => {
+    const player = await play([
+      ['Artboard', { name: 'Main', width: 200, height: 200 }],
+      ['NestedArtboard', { name: 'Badge', parentId: 0, artboardId: 1 }], // 1
+      ['NestedStateMachine', { parentId: 1, animationId: 0 }], // 2
+      ['NestedNumber', { parentId: 2, inputId: 0, nestedValue: 0 }], // 3
+      ['LinearAnimation', { name: 'Grow', duration: 60, fps: 60 }],
+      ['KeyedObject', { objectId: 3 }],
+      ['KeyedProperty', { propertyKey: propKey('NestedNumber', 'nestedValue') }],
+      ['KeyFrameDouble', { frame: 0, value: 0, interpolationType: 1 }],
+      ['KeyFrameDouble', { frame: 60, value: 10 }],
+      ['Artboard', { name: 'Child', width: 50, height: 50 }],
+      ['StateMachine', { name: 'Child SM' }],
+      ['StateMachineNumber', { name: 'level' }],
+    ]);
+    player.step(250);
+    expect(Number(player.getInstanceInput('Badge', 'level'))).toBeCloseTo(2.5, 1);
+    player.step(250);
+    expect(Number(player.getInstanceInput('Badge', 'level'))).toBeCloseTo(5, 1);
+    player.destroy();
+    vi.unstubAllGlobals();
+  });
+
+  it('toggling a nested bool flips what it is now', async () => {
+    const player = await play([
+      ['Artboard', { name: 'Main', width: 200, height: 200 }],
+      ['NestedArtboard', { name: 'Badge', parentId: 0, artboardId: 1 }], // 1
+      ['NestedStateMachine', { parentId: 1, animationId: 0 }], // 2
+      ['NestedBool', { parentId: 2, inputId: 0, nestedValue: false }], // 3
+      ['StateMachine', { name: 'Main SM' }],
+      ['StateMachineListener', { targetId: 0 }],
+      ['ListenerInputTypeKeyboard', {}],
+      ['KeyboardInput', { keyType: 66, keyPhase: 1 }],
+      ['ListenerBoolChange', { nestedInputId: 3, value: 2 }],
+      ['Artboard', { name: 'Child', width: 50, height: 50 }],
+      ['StateMachine', { name: 'Child SM' }],
+      ['StateMachineBool', { name: 'flag' }],
+    ]);
+    const press = async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b' }));
+      await new Promise((r) => setTimeout(r, 0));
+    };
+    expect(player.getInstanceInput('Badge', 'flag')).toBe(false);
+    await press();
+    expect(player.getInstanceInput('Badge', 'flag')).toBe(true);
+    await press();
+    expect(player.getInstanceInput('Badge', 'flag')).toBe(false);
     player.destroy();
     vi.unstubAllGlobals();
   });

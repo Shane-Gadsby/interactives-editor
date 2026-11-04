@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { ANIMATABLE_PROPS, animatableProp, applyConverters, evaluate, nodeUniformProps, parseList, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
+import { ANIMATABLE_PROPS, animatableProp, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { isIdentifier } from '../store/doc';
 import { IconButton, Section, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
@@ -55,7 +55,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
     const keep = Object.fromEntries(Object.entries(conv).filter(([k, list]) => k in next && list.length));
     set({ bindings: Object.keys(next).length ? next : undefined, converters: Object.keys(keep).length ? keep : undefined }, `bind-${node.id}`);
   };
-  const props = [...ANIMATABLE_PROPS, ...nodeUniformProps(node)];
+  const props = [...ANIMATABLE_PROPS, ...nodeUniformProps(node), ...instanceInputProps(node, project.variables)];
   const labelOf = (p: string) => props.find((a) => a.prop === p)?.label ?? p;
   const free: PickerOption[] = props.filter((a) => !(a.prop in bindings)).map((a) => ({ value: a.prop, label: a.label, hint: a.prop === a.label.toLowerCase() ? undefined : a.prop }));
   const add = (p: string) => update({ ...bindings, [p]: '' });

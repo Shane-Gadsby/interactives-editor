@@ -762,7 +762,9 @@ interface FileCtx {
   /** Nested inputs keyed on a timeline (markers that set the input or fire the trigger), named once every artboard's inputs are. */
   nestedKeys: NestedKey[];
   /** Flow nodes that name a nested input, filled in once every artboard's state machine inputs have names. */
-  pendingNested: { node: LogicNode; ref: NestedRef }[];
+  pendingNested: { node: LogicNode; ref: NestedRef; toggle?: boolean }[];
+  /** Number tracks on a nested input: they point at `inputs.<name>` once every artboard's inputs are named (dropped when the input has no name). */
+  pendingInputTracks: { track: Track; tracks: Track[]; ref: NestedRef }[];
 }
 
 /** An input of the state machine of a nested artboard, as the parent sees it (a NestedBool / NestedNumber / NestedTrigger). */
@@ -2750,11 +2752,20 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
           fc.warnings.add('Animated nested inputs whose nested artboard could not be found were skipped');
           continue;
         }
-        if (ref.kind === 'number' && kp.keys.length > 1) fc.warnings.add('Animated nested numbers jump to each key value instead of tweening between keys');
+        if (ref.kind === 'number') {
+          // A number is a track on the instance's input, so it tweens between keys like any other value
+          const keys: Keyframe[] = kp.keys.map((k, ki) => ({ id: uid('k'), t: ms(Number(k.props.frame ?? 0)), value: r2(get(k, 'value')), ease: easeOf(ac, k, kp.keys[ki + 1]) }));
+          if (keys.length) {
+            const track: Track = { id: uid('tr'), nodeId: ref.inst.id, prop: 'inputs.', keys };
+            tracks.push(track);
+            fc.pendingInputTracks.push({ track, tracks, ref });
+          }
+          continue;
+        }
         for (const k of kp.keys) {
           const frame = Number(k.props.frame ?? 0);
           if (frame < start || frame > end) continue;
-          const value = ref.kind === 'bool' ? !!get<boolean>(k, 'value') : ref.kind === 'number' ? r2(get(k, 'value')) : true;
+          const value = ref.kind === 'bool' ? !!get<boolean>(k, 'value') : true;
           // Keys that do the same thing share a marker name (and so one flow); the readable name comes once the input has one
           const marker: TimelineMarker = { id: uid('mk'), time: Math.min(ms(frame), ms(end)), name: `nested|${ref.inst.id}|${ref.machine}|${ref.input}|${String(value)}` };
           markers.push(marker);
@@ -3266,12 +3277,12 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     return { last, port: lastPort, x };
   };
   // Setting a nested input (or firing a nested trigger) on the instance that holds it; the input's name is filled in at the end
-  const nestedAction = (ref: NestedRef, value: number | boolean, x: number): LogicNode => {
+  const nestedAction = (ref: NestedRef, value: number | boolean, x: number, toggle = false): LogicNode => {
     const n =
       ref.kind === 'trigger'
         ? add('action.instanceTrigger', { target: ref.inst.id, name: '' }, x)
         : add('action.instanceInput', { target: ref.inst.id, name: '', value: String(value) }, x);
-    fc.pendingNested.push({ node: n, ref });
+    fc.pendingNested.push({ node: n, ref, toggle });
     return n;
   };
   // StateMachineFireEvent actions of a state or transition that happen at the start (0) or end (1)
@@ -3812,9 +3823,9 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
             continue;
           }
           const bv = Number(a.props.value ?? 1);
-          if (a.type === 'ListenerBoolChange' && bv === 2) fc.warnings.add('Toggling a nested bool is imported as setting it to true');
+          const toggle = a.type === 'ListenerBoolChange' && bv === 2 && ref.kind === 'bool';
           const value = ref.kind === 'bool' ? bv !== 0 : ref.kind === 'number' ? r2(get(a, 'value')) : true;
-          const n = nestedAction(ref, value, x);
+          const n = nestedAction(ref, value, x, toggle);
           link(last, n);
           last = n;
           x += 240;
@@ -3920,6 +3931,7 @@ export async function importRiveObjects(objects: RObj[], name: string): Promise<
     timelineEvents: new Map(),
     nestedKeys: [],
     pendingNested: [],
+    pendingInputTracks: [],
   };
   if (!s.artboards.length) throw new Error('The .riv file has no artboards');
   // Embedded fonts become project fonts
@@ -4007,7 +4019,16 @@ export async function importRiveObjects(objects: RObj[], name: string): Promise<
   // Nested input flows, now that every input has a name; a marker is named after the instance and input
   for (const p of fc.pendingNested) {
     const inputName = fc.inputNames.get(`${p.ref.artboard}/${p.ref.machine}/${p.ref.input}`);
-    if (inputName) p.node.params.name = inputName;
+    if (inputName) {
+      p.node.params.name = inputName;
+      //a toggle flips what the instance's input is now (read back by the instance layer and input name)
+      if (p.toggle) p.node.params.value = `!instanceInput(${JSON.stringify(p.ref.inst.id)}, ${JSON.stringify(inputName)})`;
+    }
+  }
+  for (const p of fc.pendingInputTracks) {
+    const inputName = fc.inputNames.get(`${p.ref.artboard}/${p.ref.machine}/${p.ref.input}`);
+    if (inputName) p.track.prop = `inputs.${inputName}`;
+    else p.tracks.splice(p.tracks.indexOf(p.track), 1);
   }
   const renamed = new Map<string, string>();
   const temps = fc.nestedKeys.map((nk) => nk.marker.name);
