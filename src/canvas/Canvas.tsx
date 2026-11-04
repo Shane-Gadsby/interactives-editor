@@ -1852,7 +1852,8 @@ export function Canvas() {
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} />}
       {toolHint && (
         <div className="tool-hint" role="status" style={{ left: toolHint.x + 18, top: toolHint.y + 20 }}>
-          {toolHint.text}
+          <Icons.info className="tool-hint-icon" />
+          <span>{toolHint.text}</span>
         </div>
       )}
     </div>

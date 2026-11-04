@@ -4755,6 +4755,9 @@ code {
 
 /* the note beside the pointer when pressing will ask something first (Canvas toolHint) */
 .tool-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
   position: absolute;
   z-index: 30;
   max-width: 260px;
@@ -4767,6 +4770,12 @@ code {
   font-size: 12px;
   line-height: 1.35;
   pointer-events: none;
+}
+.tool-hint-icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--accent);
 }
 
 /* The "new version, reload" notice after a deploy (lib/stale-build.ts) */
