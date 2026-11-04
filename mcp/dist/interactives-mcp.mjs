@@ -2363,6 +2363,12 @@ function cleanCues(v) {
 }
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isStr = (v) => typeof v === "string";
+function percentSides(v) {
+  if (!isObj(v)) return void 0;
+  const out = {};
+  for (const k of ["top", "right", "bottom", "left"]) if (v[k] === "percent") out[k] = "percent";
+  return Object.keys(out).length ? out : void 0;
+}
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const arr = (v, keep) => Array.isArray(v) ? v.filter(keep) : [];
 const objs = (v) => arr(v, isObj);
@@ -2476,6 +2482,11 @@ function sanitizeNode(raw, seen) {
   if ("drawOrder" in n) n.drawOrder = arr(n.drawOrder, isStr);
   if ("link" in n && n.link !== null && !(isObj(n.link) && isStr(n.link.url))) delete n.link;
   if ("layoutItem" in n && n.layoutItem !== null && !isObj(n.layoutItem)) delete n.layoutItem;
+  if (isObj(n.layoutItem) && "marginUnits" in n.layoutItem) {
+    const u = percentSides(n.layoutItem.marginUnits);
+    if (u && isObj(n.layoutItem.margin)) n.layoutItem.marginUnits = u;
+    else delete n.layoutItem.marginUnits;
+  }
   for (const k of ["draggable", "dropZone"]) {
     if (!(k in n)) continue;
     if (n[k] === null) continue;
@@ -2566,6 +2577,16 @@ function sanitizeNode(raw, seen) {
       const pad = isObj(L.padding) ? L.padding : {};
       L.padding = Object.fromEntries(["top", "right", "bottom", "left"].map((k) => [k, isNum(pad[k]) ? pad[k] : 0]));
       if ("crossGap" in L && !isNum(L.crossGap)) delete L.crossGap;
+      if ("units" in L) {
+        const u = isObj(L.units) ? L.units : {};
+        const kept = {};
+        if (u.gap === "percent") kept.gap = "percent";
+        if (u.crossGap === "percent" && isNum(L.crossGap)) kept.crossGap = "percent";
+        const sides = percentSides(u.padding);
+        if (sides) kept.padding = sides;
+        if (Object.keys(kept).length) L.units = kept;
+        else delete L.units;
+      }
       if ("grid" in L) {
         const grid = gridLayout(L.grid);
         if (grid) L.grid = grid;
@@ -5620,8 +5641,8 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
 | Setting | Meaning |
 |---|---|
 | Direction | Row (left to right) or column (top to bottom) |
-| Gap | Space between children |
-| Padding | Space inside the frame's edges |
+| Gap | Space between children, in px or a percent |
+| Padding | Space inside the frame's edges (top, right, bottom, left), in px or a percent |
 | Justify | Where children sit along the direction: start, centre, end, space between |
 | Align | Across the direction: start, centre, end, stretch |
 | Wrap | Start a new row/column when one is full (row or column layouts; a grid has no wrap). **Line gap** (shown while Wrap is ticked) is the space between the wrapped rows, or columns in a column layout. It starts out equal to Gap; type a different number to separate the rows more or less than the items in them |
@@ -5631,6 +5652,16 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
 ![A frame whose Wrap is ticked: the nine cards fill a row, then continue on the next. Gap is 12 between cards and Line gap is 40 between the rows.](help/line-gap.png)
 
 ![Changing Line gap and Gap: the rows move apart and the cards spread or regroup.](help/line-gap.mp4)
+
+## Percent padding, margin and gap
+Every padding, gap and margin field takes **px** (the default) or a **percent**. Type \`10%\` (or \`10px\` to go back), or press the small **px / %** button at the right of the field; pressing it keeps the size the value comes to now, so 20 px in a 400 px wide frame turns into 5%. Each side can have its own unit.
+
+A percent is worked out again on every layout, so it follows the frame as it is resized or the page changes size. It is a share of a **width**, on both axes (the way CSS and Rive do it, so a 10% padding is the same all the way round):
+
+- **Padding and gap**: the inner width of the auto-layout frame this one sits in, or this frame's own width when it is not in one (the artboard's top layout, for one).
+- **Margin**: the inner width of the frame that lays the layer out.
+
+A frame that hugs its width measures a percent against the width it had before the layout ran, so it settles in a pass or two rather than chasing itself. Percent **sizes** of a layer are separate (see *Percent* under child sizing); a track in a grid can be a percent too.
 
 ## Grids and stacks
 Set **Layout** to **Grid** to put the children in the cells of a table instead of along a line, or to **Stack** to put them all on top of each other.
@@ -5662,7 +5693,7 @@ Select a child of an auto-layout frame and its **Layout item** section says how 
 - **Aspect** (width over height, like 1.78): when one side hugs and the other is known, the hugging side follows the ratio instead of its content. The field shows up once a ratio is set or exactly one side is *Hug* (in a grid: the height); *From size* takes the ratio from the layer's current size, and 0 clears it. **Derive** chooses between *Either side* and *Height only* (the width then keeps hugging). In a grid only the height is derived.
 - **Wrap text** (text in a row or column): a text that hugs its width (Sizing set to *Auto width*; the section says so when it isn't) wraps at the room its frame offers, and then shrinks to its widest line.
 - **Column**, **Row**, **Col span**, **Row span** (grid): which cell it starts in (1 is the first, negative counts back from the last, 0 takes the next free cell) and how many tracks it covers. Layers without a cell fill the free cells in order.
-- **Margin** around it (top, right, bottom, left), in a row, column or grid. In a row or column, **Auto margin** on a side makes that side take the free room of the line, split equally between the auto sides: it pushes a layer to the end or centres it, ahead of Justify. Across the line, auto on both sides centres the layer and on one side pushes it to the other edge.
+- **Margin** around it (top, right, bottom, left), in a row, column or grid, in px or a percent of the frame's inner width (see [Percent padding, margin and gap](#percent-padding-margin-and-gap)). In a row or column, **Auto margin** on a side makes that side take the free room of the line, split equally between the auto sides: it pushes a layer to the end or centres it, ahead of Justify. Across the line, auto on both sides centres the layer and on one side pushes it to the other edge.
 
 These settings are not keyframed: they are part of the layout, not of an animation. Animate a layer's size or position with a timeline, or change the frame's layout from an action.
 
@@ -5801,8 +5832,23 @@ Every constraint has a **Strength** (0–100%) that mixes between the layer's ow
     title: "Bones and skinning",
     group: "Motion",
     summary: "Rig a character with bones, bend paths and images with them, and pose limbs with IK.",
-    keywords: "bone skeleton rig rigging skin skinning weights bind mesh deform ik inverse kinematics distance constraint character puppet",
+    keywords: "bone skeleton rig rigging skin skinning weights bind mesh deform ik inverse kinematics distance constraint character puppet example demo try tutorial arm",
     body: `A **bone** is a layer that only exists to be posed. Draw a chain of bones, **bind** paths and images to them, and the shapes bend where the bones turn. Bones are drawn on the canvas as blue glyphs while you edit; the player never shows them.
+
+## Try bones in two minutes
+Not sure where to start? Let the editor build a working rig, then take it apart.
+
+1. With nothing selected, open the **Bones** section in the Inspector (the right panel) and click **Build an example to try**. (A selected bone has the same button.)
+2. On the artboard you get a three-bone arm with a shape skinned to it, an **orange dot**, a **Wave** button and the instruction *Drag the orange dot*. The blue lines inside the arm are the bones; they show in the editor, never in the player. Click a bone in **Layers** (*Upper arm*, *Forearm*, *Hand*) to see it.
+3. Click **Preview** (top right) and **drag the orange dot**. The arm bends to follow it: the dot is the target of an **IK** constraint on the *Hand* bone, three bones long. Drag it out of reach and the arm straightens toward it.
+4. Press **Wave**. A timeline called *Example: wave* swings the bones by hand for two seconds, with the IK **Strength** keyed down to 0 so the keyed poses win. As the strength comes back to 1 the arm returns to the dot.
+5. Close Preview, select the *Hand* bone and look at **Constraints**: *IK*, target *IK target (drag me)*, 3 bones. Try **Bend the other way**, or drop the bones to 2 to see the hand end swing free. Select *Arm* to see its **Skin**, and a point's weights in **Weights of**.
+
+![The example arm bent toward the orange dot, with the Bones section of the Inspector open.](help/bones-example.png)
+
+![Dragging the orange dot in Preview: the arm follows it. Then Wave swings the bones and hands the arm back to the dot.](help/bones-example.mp4)
+
+The example is ordinary layers, bones, a timeline and two interaction nodes, so everything in it can be changed, copied or deleted. Press **Build an example to try** again for another copy.
 
 ## Drawing bones
 Pick the **Bone** tool (<kbd>J</kbd>) and drag from a bone's base to its tip. To carry on a chain, start the next drag on the tip of the last bone: the new bone becomes its child, and turning a parent moves everything below it. A drag that starts anywhere else begins a new bone (inside the group you went into, if you double-clicked into one). Hold <kbd>Shift</kbd> to snap angles to 15°. The eye button in the toolbar (<kbd>Shift</kbd>+<kbd>J</kbd>) hides the glyphs.
@@ -7072,7 +7118,7 @@ Shape layers, groups, fills, strokes, gradients (with their exact start and end 
 ## Rive (.riv)
 ![A Rive file after import: each Rive artboard is an artboard, with its animations as timelines and its state machine as interactions.](help/rive-import-result.png)
 
-Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes (a clip shape that follows another shape keeps following it) and the translation, rotation, scale, transform and follow path constraints (with factors, limits and local space) are carried over, and so are bones, skins (weights), image meshes, and IK and distance constraints (see [Bones and skinning](bones)); other constraints are not. A transition's blend time becomes a **Blend in** on the next state's *Control timeline* or *Play blend* (a percentage of the old animation is converted to milliseconds, disabled transitions are skipped), with its mix curve as the blend easing, the state left running on under it (or frozen, for *pause on exit*) and *early exit* as *Can be left early*; a state that is being mixed into cannot be left until the mix is done, unless that allows it (a trigger pressed meanwhile is lost, as in Rive). An exit time becomes a **Wait for time in timeline**. Transitions out of one state that carry different random weights become one **Random** node (up to six; a weight of 0 is never picked). Transitions from the Any state are not held up by a mix in progress. Layout padding, margins, gaps and absolute insets given as percentages are worked out against the layout's width the way Rive does (and fixed at the file's size); a layout's border widths take room inside it like padding, auto margins push a layer to the end, and a gap between wrapped lines keeps its own value. Rectangles and layouts with a different radius on each corner keep them, and dash lengths given as a share of the outline become pixels (fixed at the file's size). A fill and a stroke that Rive draws in a mixed order keep that [paint order](fill-stroke#paint-order). A text box's vertical alignment, overflow (clip, ellipsis) and no-wrap come in; paragraph spacing comes in too (as the layer's *Paragraph spacing*); shrink-to-fit does not. Rive centres a stroke on its outline, so a stroked rectangle or ellipse comes in a stroke-width bigger to keep the same outer edge. State machine layers that start an animation from any state with nothing to wait for (the looping animations of an icon) start when the artboard does. A transition that has an exit time at the end of the animation and also conditions is taken as soon as both hold, even when the conditions come true long after the animation finished (a splash that plays once and waits for a button); with no exit time and nothing to wait for it is taken the moment the state is entered. An entry transition that has conditions leaves the layer idle until they hold. Actions on a state or a transition (set a view model property when it is entered, left, started or finished) become *Set variable* nodes. A layer's open-link event does not fire when the artboard starts, and one link is not opened twice within two seconds. Listeners on a nested artboard (the buttons of a layout built from several artboards) change the shared view model variables the main artboard's state machine reads. In play, an imported Rive artboard lets the pointer through every layer except the ones its listeners name (the artboard's **pointerThrough** setting in a saved project), so a hidden panel or a picture on top of a button does not stop its click, as in Rive.
+Each Rive artboard becomes an artboard: shapes, paths, fills, strokes, gradients, images, text, timelines, nested artboards (as [instances](instances)), layouts (as [auto layout](auto-layout)) and state machines (as interactions). Shape morphing (animated path points), holes, clipping shapes (a clip shape that follows another shape keeps following it) and the translation, rotation, scale, transform and follow path constraints (with factors, limits and local space) are carried over, and so are bones, skins (weights), image meshes, and IK and distance constraints (see [Bones and skinning](bones)); other constraints are not. A transition's blend time becomes a **Blend in** on the next state's *Control timeline* or *Play blend* (a percentage of the old animation is converted to milliseconds, disabled transitions are skipped), with its mix curve as the blend easing, the state left running on under it (or frozen, for *pause on exit*) and *early exit* as *Can be left early*; a state that is being mixed into cannot be left until the mix is done, unless that allows it (a trigger pressed meanwhile is lost, as in Rive). An exit time becomes a **Wait for time in timeline**. Transitions out of one state that carry different random weights become one **Random** node (up to six; a weight of 0 is never picked). Transitions from the Any state are not held up by a mix in progress. Layout padding, margins and gaps given as percentages stay percentages (a share of the width of the layout around them, the way Rive does it, so they follow the layout when it is resized), and absolute insets given as percentages are worked out against the layout's size (and fixed at the file's size); a layout's border widths take room inside it like padding, auto margins push a layer to the end, and a gap between wrapped lines keeps its own value. Rectangles and layouts with a different radius on each corner keep them, and dash lengths given as a share of the outline become pixels (fixed at the file's size). A fill and a stroke that Rive draws in a mixed order keep that [paint order](fill-stroke#paint-order). A text box's vertical alignment, overflow (clip, ellipsis) and no-wrap come in; paragraph spacing comes in too (as the layer's *Paragraph spacing*); shrink-to-fit does not. Rive centres a stroke on its outline, so a stroked rectangle or ellipse comes in a stroke-width bigger to keep the same outer edge. State machine layers that start an animation from any state with nothing to wait for (the looping animations of an icon) start when the artboard does. A transition that has an exit time at the end of the animation and also conditions is taken as soon as both hold, even when the conditions come true long after the animation finished (a splash that plays once and waits for a button); with no exit time and nothing to wait for it is taken the moment the state is entered. An entry transition that has conditions leaves the layer idle until they hold. Actions on a state or a transition (set a view model property when it is entered, left, started or finished) become *Set variable* nodes. A layer's open-link event does not fire when the artboard starts, and one link is not opened twice within two seconds. Listeners on a nested artboard (the buttons of a layout built from several artboards) change the shared view model variables the main artboard's state machine reads. In play, an imported Rive artboard lets the pointer through every layer except the ones its listeners name (the artboard's **pointerThrough** setting in a saved project), so a hidden panel or a picture on top of a button does not stop its click, as in Rive.
 
 Rive **listeners** import as events: pointer enter, exit, press, release, click, move and drag as *On pointer*, **keyboard listeners** as *On key* (the key, its modifiers, and the down, repeat and up phases; the key codes are the ones Rive uses, so letters, digits, arrows, function and numpad keys all map), and **focus** and **blur** listeners as *On focus*, with Rive's focus actions as *Focus layer* (focus traversal actions are not imported). A keyboard listener on a layer imports with *Only while this layer has focus* set to it, so it hears the key only while that layer (or one inside it) has the focus, as in Rive; one on the artboard reacts wherever the focus is. Rive has no scroll-wheel listener, so there is nothing to import there; gamepad, text input and semantic listeners are listed in the report. **Nested artboards** keep their starting inputs, and what Rive does to their inputs comes in too: a listener action that sets a nested number or bool or fires a nested trigger becomes *Set instance input* or *Fire instance trigger* (a nested bool that Rive toggles flips what it is now: the instance's input is read back with \`instanceInput()\`). Keys on a nested bool or trigger in an animation become [timeline markers](timelines) (named like *Badge: flag = true*) with an *On timeline marker* flow, and a nested number animated between keys becomes a track on the instance's input (*Input level*), so it tweens (see [instances](instances)). A **9-slice image** (an image with slice axes) imports with its insets, and tile modes become **Fill edges**; Rive scales such an image to resize it, so the box is resized here and the corners keep their size (when the scale is animated the scale is kept instead). N-sliced groups, which resize a group's shapes, import as plain groups.
 
