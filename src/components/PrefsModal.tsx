@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { VERSION_LABEL } from '../lib/version';
 import { setPrefs, usePrefs } from '../lib/prefs';
 import { IconButton, SelectField, CheckField, TextField } from './ui';
 import { Icons } from './icons';
@@ -72,6 +73,9 @@ export function PrefsModal({ onClose }: { onClose: () => void }) {
           />
           <CheckField label="Show tooltips" title="Explanations when you hover buttons and field names" value={p.tooltips} onChange={(v) => setPrefs({ tooltips: v })} />
           <p className="hint">These settings are yours: they follow you to any browser you sign in on.</p>
+          <p className="version-line" title="Mention this when reporting a problem">
+            {VERSION_LABEL}
+          </p>
         </div>
       </div>
     </div>

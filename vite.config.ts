@@ -1,15 +1,28 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 
 const playerDir = fileURLToPath(new URL('../interactives-player', import.meta.url));
+
+// The version (package.json) and build id (the editor and player commits it was built from), shown in Preferences and help
+const version = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version as string;
+const commit = (dir: string) => {
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+  } catch {
+    return '';
+  }
+};
+const buildId = [commit(fileURLToPath(new URL('.', import.meta.url))), commit(playerDir)].filter(Boolean).join('.') || 'dev';
 
 // The player lives in the sibling repo. The editor imports its source (for the
 // canvas and types) and embeds its IIFE build (for previews and exports).
 export default defineConfig({
   plugins: [react()],
   // Saved artboard pictures (lib/still-cache.ts) are only good for the build that drew them
-  define: { __IX_BUILD__: JSON.stringify(Date.now().toString(36)) },
+  define: { __IX_BUILD__: JSON.stringify(Date.now().toString(36)), __IX_VERSION__: JSON.stringify(version), __IX_BUILD_ID__: JSON.stringify(buildId) },
   resolve: {
     alias: [
       { find: /^interactives-player$/, replacement: `${playerDir}/src/index.ts` },

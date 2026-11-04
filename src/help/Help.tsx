@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { VERSION_LABEL } from '../lib/version';
 import { Markdown } from './markdown';
 import { searchHelp, type HelpHit } from './search';
 import { noteHelpSearch, track } from '../lib/analytics';
@@ -162,6 +163,9 @@ export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey }:
                 ))}
               </div>
             ))}
+            <p className="version-line" title="Mention this when reporting a problem">
+              {VERSION_LABEL}
+            </p>
           </nav>
         )}
         <div className="help-body" ref={body}>
