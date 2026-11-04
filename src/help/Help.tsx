@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { VERSION_LABEL } from '../lib/version';
+import { BUILD_ID, VERSION, VERSION_LABEL } from '../lib/version';
 import { Markdown } from './markdown';
 import { searchHelp, type HelpHit } from './search';
 import { noteHelpSearch, track } from '../lib/analytics';
@@ -129,6 +129,7 @@ export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey }:
           if (e.key === 'Enter' && hits[0]) go(`${hits[0].topic.id}${hits[0].anchor ? `#${hits[0].anchor}` : ''}`);
           if (e.key === 'Escape') setQuery('');
         }} />
+        <span className="version-tag" title={`${VERSION_LABEL}. Mention it when reporting a problem`}>v{VERSION} · {BUILD_ID}</span>
         {compact && (
           <a className="icon-btn" title="Open the help in a new tab" href={`#/help/${topic.id}`} target="_blank" rel="noreferrer">
             <Icons.external />
@@ -163,9 +164,6 @@ export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey }:
                 ))}
               </div>
             ))}
-            <p className="version-line" title="Mention this when reporting a problem">
-              {VERSION_LABEL}
-            </p>
           </nav>
         )}
         <div className="help-body" ref={body}>
