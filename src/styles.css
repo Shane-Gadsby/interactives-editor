@@ -1421,7 +1421,8 @@ div.text-editor {
   gap: 4px;
   height: 26px;
   padding-right: 6px;
-  cursor: default;
+  /* Click selects; the rows also drag to reorder */
+  cursor: pointer;
   border-top: 1px solid transparent;
   border-bottom: 1px solid transparent;
 }
