@@ -4842,6 +4842,8 @@ The **Open URL** action does the same from an interaction.
 | **Play once** / **Loop** / **Ping-pong** | What happens at the end |
 | Autoplay | Start when the artboard is shown |
 | Speed | Playback rate (2 is twice as fast). To play backwards use a **Control timeline** node set to **Play in reverse** |
+| Frame rate | Frames per second the animation was made at (1 to 240); 0 leaves it free |
+| Whole frames | Shown once a frame rate is set. Values are read at the start of the frame, so they step from frame to frame instead of gliding. Playback time, markers, sound and captions still use the real time. Applies in the player, blends and the canvas. Imported animations that snap to frames (for example 24 fps hand-drawn motion) come in with it on |
 
 The line between two keys is a **tween**: it shows its [easing](easing) as a little curve. Click it to choose how the value moves from the first key to the second (or *Use for all tweens*). In the Tween panel, drag the two handles on the graph to make your own curve; the dashed lines mark the start (0) and end (1) values, and the graph grows to show overshoot. Select a key to change its time or value.
 
