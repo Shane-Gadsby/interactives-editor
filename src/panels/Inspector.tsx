@@ -607,6 +607,19 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
           <CheckField label="Locked" value={!!n.locked} onChange={(v) => set({ locked: v })} />
         </Row>
         <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />
+        {n.mask && (
+          <SelectField
+            label="Mask mode"
+            value={n.maskMode ?? 'alpha'}
+            options={[
+              { value: 'alpha', label: 'Alpha (shapes show)' },
+              { value: 'inverted', label: 'Inverted (shapes cut out)' },
+              { value: 'luminance', label: 'Luminance (brightness)' },
+              { value: 'invertedLuminance', label: 'Inverted luminance' },
+            ]}
+            onChange={(v) => set({ maskMode: v === 'alpha' ? undefined : v })}
+          />
+        )}
         <SelectField label="Blend" value={n.blendMode ?? 'normal'} options={LAYER_BLEND_OPTIONS} onChange={(v) => set({ blendMode: v })} />
       </Section>
       {single && n.type === 'frame' && n.question && <QuestionSection frame={n} ab={ab} project={project} />}

@@ -148,15 +148,22 @@ describe('Rive layer masks', () => {
     expect(find(res.artboards[0].children, 'Hole')).toMatchObject({ visible: true });
   });
 
-  it('skips inverted masks and a switched off mask, and warns about luminance', async () => {
-    const inverted = await importRive(scene(1 | 4), 'm');
-    expect(find(inverted.artboards[0].children, 'Content (clipped)')).toBeUndefined();
-    expect(inverted.warnings.some((w) => /invert the source/.test(w))).toBe(true);
-    const off = await importRive(scene(0), 'm');
-    expect(find(off.artboards[0].children, 'Content (clipped)')).toBeUndefined();
-    const lum = await importRive(scene(2 | 4), 'm');
-    expect(find(lum.artboards[0].children, 'Content (clipped)')).toBeTruthy();
-    expect(lum.warnings.some((w) => /Luminance layer masks/.test(w))).toBe(true);
+  it('keeps the mode of inverted, luminance and inverted luminance masks, and skips a switched off one', async () => {
+    const maskOf = async (flags: number) => {
+      const res = await importRive(scene(flags), 'm');
+      const wrap = find(res.artboards[0].children, 'Content (clipped)') as unknown as { children: SceneNode[] } | undefined;
+      return { res, mask: wrap?.children[0] };
+    };
+    const alpha = await maskOf(4);
+    expect(alpha.mask!.mask).toBe(true);
+    expect(alpha.mask!.maskMode).toBeUndefined();
+    for (const [flags, mode] of [[1 | 4, 'inverted'], [2 | 4, 'luminance'], [3 | 4, 'invertedLuminance']] as const) {
+      const r = await maskOf(flags);
+      expect(r.mask!.mask).toBe(true);
+      expect(r.mask!.maskMode).toBe(mode);
+      expect(r.res.warnings.filter((w) => /mask/i.test(w))).toEqual([]);
+    }
+    expect((await maskOf(0)).mask).toBeUndefined();
   });
 
   it('skips a mask whose source sits inside the masked layer', async () => {

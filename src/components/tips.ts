@@ -99,6 +99,7 @@ export const FIELD_TIPS: Record<string, string> = {
   Inputs: "Values for the instance's own variables",
   Visible: 'Shown or hidden',
   Locked: "Can't be selected or moved on the canvas",
+  'Mask mode': 'Alpha: layers above show where this has shapes. Inverted: everywhere else. Luminance: as brightly as its painted shapes are. Inverted luminance: the opposite of that',
   'Use as mask': "Clip the layers above this one (in the same group, up to the next mask) to this outline. The mask isn't drawn in the player; hide it to turn the clipping off",
   Solo: 'Show only one child at a time: the active child below. Key it on the timeline or set it from interactions to switch states',
   'Active child': 'The child shown while Solo is on',

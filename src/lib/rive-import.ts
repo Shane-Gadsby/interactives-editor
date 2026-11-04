@@ -2304,17 +2304,15 @@ function clipWrap(ac: ArtboardCtx, fc: FileCtx, slot: number, layer: SceneNode, 
     const src = Number(get(ac.rab.slots[cs], 'sourceId'));
     const srcSlot = ac.rab.slots[src];
     const isMask = ac.rab.slots[cs].type === 'LayerMask';
+    let maskMode: 'alpha' | 'inverted' | 'luminance' | 'invertedLuminance' = 'alpha';
     if (isMask) {
       const flags = get(ac.rab.slots[cs], 'maskFlags');
       if (!srcSlot || src === 0 || within(ac, src, slot) || within(ac, slot, src) || isA(srcSlot.type, 'Constraint') || !(srcSlot.type === 'Node' || isA(srcSlot.type, 'Drawable'))) {
         fc.warnings.add('A layer mask whose source layer could not be found was skipped');
         continue;
       }
-      if (flags & 1) {
-        fc.warnings.add('Layer masks that invert the source are not imported; those layers show unmasked');
-        continue;
-      }
-      if (flags & 2) fc.warnings.add('Luminance layer masks are imported as alpha masks (the shape covers, no matter its brightness)');
+      //the mode is the low two bits of the flags: alpha, inverted alpha, luminance, inverted luminance
+      maskMode = (['alpha', 'inverted', 'luminance', 'invertedLuminance'] as const)[flags & 3];
       if (flags & 16) fc.warnings.add('Layer masks with custom bounds are imported without the bounds');
       if (get(ac.rab.slots[cs], 'resolution') !== 1 && 'resolution' in ac.rab.slots[cs].props) fc.warnings.add('Layer mask resolution is ignored');
       if (!(flags & 8)) ac.maskHidden.push(src);
@@ -2343,6 +2341,7 @@ function clipWrap(ac: ArtboardCtx, fc: FileCtx, slot: number, layer: SceneNode, 
     const sy = (x[0] * x[3] - x[1] * x[2]) / sx || 1;
     const mask = createNode('group', { name: `${shape.name} (mask)`, children: [shape] });
     mask.mask = true;
+    if (maskMode !== 'alpha') mask.maskMode = maskMode;
     mask.width = mask.height = 0.01;
     mask.originX = mask.originY = 0;
     mask.x = r2(x[4]);
