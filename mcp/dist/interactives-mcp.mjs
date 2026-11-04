@@ -2402,6 +2402,25 @@ function cleanCues(v) {
   }
   return out;
 }
+function toRgb(hex) {
+  const n = parseInt(hex.slice(1, 7), 16);
+  return [n >> 16 & 255, n >> 8 & 255, n & 255];
+}
+const toHex = (c2) => "#" + c2.map((x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, "0")).join("");
+function resolveSpec(spec, vars) {
+  const s = spec.trim();
+  const m = /^mix\(\s*(--[\w-]+)\s+(\d{1,3})%\s*,\s*(--[\w-]+)\s*\)$/.exec(s);
+  if (m) {
+    const a = vars[m[1]];
+    const b = vars[m[3]];
+    if (!a || !b) return void 0;
+    const p = Math.min(100, Number(m[2])) / 100;
+    const ca = toRgb(a);
+    const cb = toRgb(b);
+    return toHex(ca.map((x, i) => x * p + cb[i] * (1 - p)));
+  }
+  return /^--[\w-]+$/.test(s) ? vars[s] : void 0;
+}
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isStr = (v) => typeof v === "string";
 function percentSides(v) {
@@ -3166,28 +3185,138 @@ function presetContent(preset, target) {
 }
 const DEFAULT_SHADER = presetContent(SHADER_PRESETS[0], "layer");
 ({ ...presetContent(SHADER_PRESETS_BY_ID.wave, "filter") });
+const PALETTE_SNAPSHOT = {
+  "--blue-gradient-1": "#00497d",
+  "--blue-gradient-2": "#0080a8",
+  "--feature-colour-blue": "#0080a8",
+  "--feature-colour-charcoal": "#777777",
+  "--feature-colour-gold": "#ffb448",
+  "--feature-colour-green": "#3e8521",
+  "--feature-colour-orange": "#ed6a21",
+  "--feature-colour-purple": "#775d94",
+  "--gold-gradient-1": "#f58220",
+  "--gold-gradient-2": "#ffb448",
+  "--green-gradient-1": "#0e6a6f",
+  "--green-gradient-2": "#3e8521",
+  "--ilar-btn-active": "#777777",
+  "--ilar-btn-active-background": "#a0a0a0",
+  "--ilar-btn-active-border": "#a0a0a0",
+  "--ilar-btn-active-text": "#ffffff",
+  "--ilar-btn-border": "#a0a0a0",
+  "--ilar-btn-hover": "#cacaca",
+  "--ilar-btn-hover-active": "#4d4d4d",
+  "--ilar-btn-hover-active-background": "#4d4d4d",
+  "--ilar-btn-hover-active-border": "#4d4d4d",
+  "--ilar-btn-hover-active-text": "#ffffff",
+  "--ilar-btn-hover-background": "#dfdfdf",
+  "--ilar-btn-hover-border": "#a0a0a0",
+  "--ilar-btn-hover-text": "#777777",
+  "--ilar-btn-primary": "#ffffff",
+  "--ilar-btn-primary-active-background": "#fb9400",
+  "--ilar-btn-primary-active-border": "#fb9400",
+  "--ilar-btn-primary-active-text": "#1e1e1e",
+  "--ilar-btn-primary-background": "#ffb448",
+  "--ilar-btn-primary-border": "#ffb448",
+  "--ilar-btn-primary-hover-active-background": "#b36b03",
+  "--ilar-btn-primary-hover-active-border": "#b36b03",
+  "--ilar-btn-primary-hover-active-text": "#1e1e1e",
+  "--ilar-btn-primary-hover-background": "#fb9400",
+  "--ilar-btn-primary-hover-border": "#fb9400",
+  "--ilar-btn-primary-hover-text": "#1e1e1e",
+  "--ilar-btn-primary-selected-hover-background": "#b36b03",
+  "--ilar-btn-primary-selected-hover-border": "#b36b03",
+  "--ilar-btn-primary-selected-hover-text": "#1e1e1e",
+  "--ilar-btn-primary-text": "#1e1e1e",
+  "--ilar-btn-selected-hover-background": "#777777",
+  "--ilar-btn-selected-hover-border": "#777777",
+  "--ilar-btn-selected-hover-text": "#ffffff",
+  "--ilar-btn-text": "#a0a0a0",
+  "--ilar-dark-primary": "#fb9400",
+  "--ilar-darker-primary": "#b36b03",
+  "--ilar-primary": "#ffb448",
+  "--ilar-swatch-blue": "#0080a8",
+  "--ilar-swatch-error": "#f44336",
+  "--ilar-swatch-green": "#3e8521",
+  "--ilar-swatch-grey-1": "#f4f4f4",
+  "--ilar-swatch-grey-2": "#dfdfdf",
+  "--ilar-swatch-grey-3": "#cacaca",
+  "--ilar-swatch-grey-4": "#a0a0a0",
+  "--ilar-swatch-grey-5": "#777777",
+  "--ilar-swatch-grey-6": "#4d4d4d",
+  "--ilar-swatch-grey-7": "#1e1e1e",
+  "--ilar-swatch-grey-dim": "#888888",
+  "--ilar-swatch-grey-muted": "#999999",
+  "--ilar-swatch-grey-panel": "#eeeeee",
+  "--ilar-swatch-grey-text": "#333333",
+  "--ilar-swatch-hyperlink": "#428bca",
+  "--ilar-swatch-hyperlink-active": "#212529",
+  "--ilar-swatch-hyperlink-hover": "#2a6496",
+  "--ilar-swatch-hyperlink-visited": "#1e1e1e",
+  "--ilar-swatch-icon-blue": "#26a7de",
+  "--ilar-swatch-off-white": "#fefefe",
+  "--ilar-swatch-orange": "#ed6a21",
+  "--ilar-swatch-plum": "#3c2d4d",
+  "--ilar-swatch-purple": "#775d94",
+  "--ilar-swatch-yellow": "#ffb448",
+  "--ilar-swatch-yellow-dark": "#fb9400",
+  "--ilar-swatch-yellow-darker": "#b36b03",
+  "--orange-gradient-1": "#d0372b",
+  "--orange-gradient-2": "#ed6a21",
+  "--purple-gradient-1": "#3c2d4d",
+  "--purple-gradient-2": "#775d94",
+  "--red-gradient-1": "#eb6559",
+  "--red-gradient-2": "#eb6559",
+  "--yellow-gradient-1": "#f58220",
+  "--yellow-gradient-2": "#ffb448"
+};
+const listeners = /* @__PURE__ */ new Set();
+function currentPalette() {
+  return PALETTE_SNAPSHOT;
+}
+function onPaletteChange(fn) {
+  listeners.add(fn);
+  return () => void listeners.delete(fn);
+}
+function paletteColor(spec, vars = currentPalette()) {
+  return resolveSpec(spec, vars) ?? resolveSpec(spec, PALETTE_SNAPSHOT);
+}
 const t = (key, name, light, dark, highContrast) => ({ key, name, light, dark, highContrast });
+const WHITE = "--ilar-swatch-off-white";
+const INK = "--ilar-swatch-grey-7";
+const GREEN = "--ilar-swatch-green";
+const ERROR = "--ilar-swatch-error";
+const ORANGE = "--ilar-swatch-orange";
+const GOLD = "--ilar-swatch-yellow";
+const mix = (a, pct, over) => `mix(${a} ${pct}%, ${over})`;
 const STARTER_TOKEN_DEFS = [
-  t("background", "color/background", "#ffffff", "#1e1e1e", "#000000"),
-  t("surface", "color/surface", "#f4f4f4", "#2b2b2b", "#000000"),
-  t("surfaceMuted", "color/surface-muted", "#dfdfdf", "#3a3a3a", "#1e1e1e"),
-  t("text", "color/text", "#1e1e1e", "#f4f4f4", "#ffffff"),
-  t("muted", "color/muted", "#4d4d4d", "#cacaca", "#ffffff"),
-  t("primary", "color/primary", "#a35f00", "#ffb448", "#ffb448"),
-  t("onPrimary", "color/on-primary", "#ffffff", "#1e1e1e", "#000000"),
-  t("button", "color/button", "#ffb448", "#ffb448", "#ffb448"),
-  t("onButton", "color/on-button", "#1e1e1e", "#1e1e1e", "#000000"),
-  t("border", "color/border", "#777777", "#a0a0a0", "#ffffff"),
-  t("divider", "color/divider", "#cacaca", "#4d4d4d", "#ffffff"),
-  t("focus", "color/focus", "#a35f00", "#ffb448", "#ffffff"),
-  t("success", "color/success", "#2f6f17", "#7fd05f", "#7fe35a"),
-  t("successSurface", "color/success-surface", "#e6f2e0", "#1f3318", "#000000"),
-  t("error", "color/error", "#b3261e", "#ff8a80", "#ff9d94"),
-  t("errorSurface", "color/error-surface", "#fdeceb", "#401a17", "#000000"),
-  t("warning", "color/warning", "#8a5200", "#ffc566", "#ffd27a"),
-  t("warningSurface", "color/warning-surface", "#fff1d6", "#3d2c0a", "#000000")
+  t("background", "color/background", WHITE, INK, INK),
+  t("surface", "color/surface", "--ilar-swatch-grey-1", "--ilar-swatch-grey-text", INK),
+  t("surfaceMuted", "color/surface-muted", "--ilar-swatch-grey-2", "--ilar-swatch-grey-6", "--ilar-swatch-grey-6"),
+  t("text", "color/text", INK, "--ilar-swatch-grey-1", WHITE),
+  t("muted", "color/muted", "--ilar-swatch-grey-4", "--ilar-swatch-grey-3", WHITE),
+  t("primary", "color/primary", "--ilar-primary", GOLD, GOLD),
+  t("onPrimary", "color/on-primary", INK, INK, INK),
+  t("button", "color/button", "--ilar-btn-primary-background", "--ilar-btn-primary-background", "--ilar-btn-primary-background"),
+  t("onButton", "color/on-button", "--ilar-btn-primary-text", "--ilar-btn-primary-text", "--ilar-btn-primary-text"),
+  t("border", "color/border", "--ilar-swatch-grey-4", "--ilar-swatch-grey-4", WHITE),
+  t("divider", "color/divider", "--ilar-swatch-grey-2", "--ilar-swatch-grey-6", WHITE),
+  t("focus", "color/focus", "--ilar-primary", GOLD, WHITE),
+  t("success", "color/success", GREEN, mix(GREEN, 55, WHITE), mix(GREEN, 55, WHITE)),
+  t("successSurface", "color/success-surface", mix(GREEN, 12, WHITE), mix(GREEN, 25, INK), INK),
+  t("error", "color/error", ERROR, mix(ERROR, 60, WHITE), mix(ERROR, 60, WHITE)),
+  t("errorSurface", "color/error-surface", mix(ERROR, 12, WHITE), mix(ERROR, 25, INK), INK),
+  t("warning", "color/warning", ORANGE, GOLD, GOLD),
+  t("warningSurface", "color/warning-surface", mix(ORANGE, 14, WHITE), mix(GOLD, 20, INK), INK)
 ];
-const LIGHT_LOOK = Object.fromEntries(STARTER_TOKEN_DEFS.map((d) => [d.key, d.light]));
+function starterHex(def, column) {
+  return paletteColor(def[column], currentPalette()) ?? "#808080";
+}
+const LIGHT_LOOK = {};
+function refreshLook() {
+  for (const d of STARTER_TOKEN_DEFS) LIGHT_LOOK[d.key] = starterHex(d, "light");
+}
+refreshLook();
+onPaletteChange(refreshLook);
 const NAMES = {
   rect: "Rectangle",
   ellipse: "Ellipse",
@@ -3234,17 +3363,20 @@ const DEFAULT_TEXT_STYLE = {
   fontStyle: "normal",
   lineHeight: 1.3,
   letterSpacing: 0,
-  color: LIGHT_LOOK.text,
+  //Read when a layer is made, so a palette that loads later is picked up
+  get color() {
+    return LIGHT_LOOK.text;
+  },
   align: "left",
   verticalAlign: "top"
 };
 const DEFAULT_DRAW_CODE = DRAW_TEMPLATES[0].code;
-const GREY = { type: "solid", color: LIGHT_LOOK.surfaceMuted };
+const GREY = () => ({ type: "solid", color: LIGHT_LOOK.surfaceMuted });
 const FACTORIES = {
-  rect: () => ({ fill: GREY, stroke: null, cornerRadius: 0 }),
-  ellipse: () => ({ fill: GREY, stroke: null }),
-  polygon: () => ({ fill: GREY, stroke: null, sides: 6 }),
-  star: () => ({ fill: GREY, stroke: null, points: 5, innerRatio: 0.45 }),
+  rect: () => ({ fill: GREY(), stroke: null, cornerRadius: 0 }),
+  ellipse: () => ({ fill: GREY(), stroke: null }),
+  polygon: () => ({ fill: GREY(), stroke: null, sides: 6 }),
+  star: () => ({ fill: GREY(), stroke: null, points: 5, innerRatio: 0.45 }),
   path: () => ({
     fill: null,
     stroke: { paint: { type: "solid", color: LIGHT_LOOK.text }, width: 2 },
@@ -6982,14 +7114,16 @@ The **Broken** group lists references that point at something that has been dele
     keywords: "theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast",
     body: `![The Themes tab: the starter tokens down the side with their Light, Dark and High contrast colours, and the contrast check.](help/themes-panel.png)
 
-A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. Projects with no tokens behave exactly as before.
+A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. A **new project** starts with the three themes and the starter tokens already in it, the artboard on the Light background, and every layer you add follows the tokens, so it looks right in Dark and High contrast without you picking anything. Projects made before this, and imported ones, have none until you add them in the Themes tab, and behave exactly as before.
 
 ## The Themes panel
-Open the **Themes** tab (bottom panel). With none yet, **Add Light, Dark and High contrast** makes the three themes and the starter tokens, in the same look as the StudyDesk toolbox: its greys, and its gold for buttons with black, bolder text.
+Open the **Themes** tab (bottom panel). A new project already has the starter themes. For one without (an older or imported project), **Add Light, Dark and High contrast** makes the three themes and the starter tokens, in the same look as the StudyDesk toolbox: its greys, and its gold for buttons with black, bolder text.
 - **color/background**, **color/surface** and **color/surface-muted** are the page, a card and a hover or quiet grey. **color/text** and **color/muted** are the copy on them.
-- **color/button** and **color/on-button** are the gold button and its black label. **color/primary** and **color/on-primary** are the accent for links, selections and anything that has to read against the page (a darker gold in Light, because the toolbox gold is too pale to read as text).
+- **color/button** and **color/on-button** are the gold button and its black label. **color/primary** and **color/on-primary** are the accent for links and selections, which in the toolbox is the same gold.
 - **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus ring.
 - **color/success**, **color/error** and **color/warning** each come with a **-surface** tint, for the right, wrong and missed answers.
+
+**Toolbox colours come from the shared StudyDesk palette and stay in step with it.** Light is the toolbox exactly as the toolbox draws itself: each token takes the palette colour the toolbox uses for that job (cards are the palette's grey 1, text grey 7, outlines and quiet text grey 4, buttons the primary button colours, the accent and focus ring the primary gold), read from \`/styles/palette.min.css\`. A token made this way remembers the palette colour it came from, shown by a small link mark beside its colour. Whenever the editor opens the project it refreshes those colours from the live palette, and the player does the same when the page it runs in can reach \`/styles/palette.min.css\`, so a change to the palette reaches published pieces without re-editing them. **Change a colour by hand and that colour stops following the palette.** If the palette can't be reached (an exported file, offline, another host) the last stored colour is used. Dark and High contrast are built for contrast and take their colours from the same palette where it has suitable ones; a few tints and lighter or darker shades are mixed from two palette colours.
 
 Dark and High contrast are the same names with values made for them. Then:
 - Each row is a token, each column a theme. Click a colour to change it. **Used** counts the places that follow the token.
@@ -7010,7 +7144,7 @@ A new button is gold with black, bolder text, an input has a grey outline, a sha
 Lottie, Rive, PSD, SVG and package imports bring their colours in as plain colours. Nothing guesses which colour "is" the primary. Mixing plain and token colours in one project is normal.
 
 ## Contrast
-- The Themes panel checks the pairs that matter in every theme, by token name: **color/text** and **color/muted** on **color/background**, **color/surface** and **color/surface-muted**, **color/on-primary** on **color/primary**, **color/on-button** on **color/button**, each of **success**, **error** and **warning** on its surface, and **color/primary**, **color/border** and **color/focus** against **color/background** and **color/surface**. The starter tokens pass every one in all three themes. A pair that is too low shows its ratio on the cell and in the list.
+- The Themes panel checks the pairs that matter in every theme, by token name: **color/text** and **color/muted** on **color/background**, **color/surface** and **color/surface-muted**, **color/on-primary** on **color/primary**, **color/on-button** on **color/button**, each of **success**, **error** and **warning** on its surface, and **color/primary**, **color/border** and **color/focus** against **color/background** and **color/surface**. Dark and High contrast pass every one. **Light does not, and that is expected:** it is the shared StudyDesk palette as the toolbox uses it, and these pairs fall below WCAG AA in it: muted text on background 2.59:1, muted text on surface 2.38:1, muted text on muted surface 1.96:1, primary on background 1.75:1, outline against background 2.59:1, outline against surface 2.38:1, focus ring on background 1.75:1, focus ring on surface 1.61:1, success on its surface 3.90:1, error on its surface 3.13:1, warning on its surface 2.67:1. The Themes panel and the [Accessibility checker](accessibility-checker) report them as they are and are not told to ignore them. Choose different colours for a piece that has to pass. A pair that is too low shows its ratio on the cell and in the list.
 - The [Accessibility checker](accessibility-checker) checks text contrast in every theme, not only the one shown. A finding that starts "In Dark:" is about Dark. It offers no automatic fix for text that follows a token, since a fix would write a plain colour over the token.
 - **Theme colour on a fixed colour** is a warning for text that follows a token but sits on a plain colour. The theme changes one and not the other, so white text on a plain white card goes unreadable in Dark.
 
