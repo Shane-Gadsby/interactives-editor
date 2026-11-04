@@ -53,7 +53,8 @@ import {
 } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
-import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
+import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
+import { gapUnit, lineGapUnit, paddingOwnerWidth, paddingUnit, patchGap, patchLineGap, patchPadding } from '../lib/layout-units';
 import { Icons } from '../components/icons';
 import { assetKind } from '../lib/assets';
 import { pointTracks } from '../lib/path-edit';
@@ -1533,6 +1534,14 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
   const L = frame.layout;
   const update = (patch: Partial<AutoLayout>) => set({ layout: { ...(L as AutoLayout), ...patch } }, `layout-${frame.id}`);
   const pad = L?.padding;
+  // A percent here is a share of the width of the auto-layout frame this one is in (its own width when it is not in one)
+  const ownerW = paddingOwnerWidth(frame, store().artboard() ? locate(store().artboard()!, frame.id)?.parent : null);
+  const gapField = (label: string, title?: string) => (
+    <UnitField label={label} title={title} value={L!.gap} unit={gapUnit(L!)} min={0} ownerW={ownerW} onChange={(v, u) => update(patchGap(L!, v, u))} />
+  );
+  const lineGapField = (label: string, title?: string) => (
+    <UnitField label={label} title={title} value={L!.crossGap ?? L!.gap} unit={lineGapUnit(L!)} min={0} ownerW={ownerW} onChange={(v, u) => update(patchLineGap(L!, v, u))} />
+  );
   return (
     <Section help="auto-layout" title="Auto layout" defaultOpen={!!L} actions={!L && <IconButton icon={<Icons.plus />} title="Add auto layout" onClick={() => set({ layout: defaultAutoLayout('column') })} />}>
       {L && pad && (
@@ -1563,8 +1572,8 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
               <TextField label="Columns" title="Sizes of the columns: px, %, fr (a share of what is left) or auto. Like 100px 25% 1fr auto" value={formatTracks(L.grid.columns)} onChange={(v) => update({ grid: { ...L.grid!, columns: parseTracks(v) } })} />
               <TextField label="Rows" title="Sizes of the rows, written the same way. Rows past the ones listed are auto" value={formatTracks(L.grid.rows)} onChange={(v) => update({ grid: { ...L.grid!, rows: parseTracks(v) } })} />
               <Row>
-                <NumberField label="Column gap" value={L.gap} min={0} onChange={(v) => update({ gap: v })} />
-                <NumberField label="Row gap" value={L.crossGap ?? L.gap} min={0} onChange={(v) => update({ crossGap: v === L.gap ? undefined : v })} />
+                {gapField('Column gap')}
+                {lineGapField('Row gap')}
               </Row>
               <GridAlignFields grid={L.grid} onChange={(grid) => update({ grid })} />
             </>
@@ -1580,7 +1589,7 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
                   ]}
                   onChange={(v) => update({ direction: v })}
                 />
-                <NumberField label="Gap" value={L.gap} min={0} onChange={(v) => update({ gap: v })} />
+                {gapField('Gap')}
               </Row>
               <Row>
                 <SelectField
@@ -1613,7 +1622,7 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
           <div className="field-label block">Padding (top, right, bottom, left)</div>
           <Row>
             {(['top', 'right', 'bottom', 'left'] as const).map((k) => (
-              <NumberField key={k} value={pad[k]} min={0} onChange={(v) => update({ padding: { ...pad, [k]: v } })} />
+              <UnitField key={k} value={pad[k]} unit={paddingUnit(L, k)} min={0} ownerW={ownerW} title={`${k[0].toUpperCase()}${k.slice(1)} padding, in px or as a percent (type 10%) of the width around the frame`} onChange={(v, u) => update(patchPadding(L, k, v, u))} />
             ))}
           </Row>
           <Row>
@@ -1621,7 +1630,7 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
             <CheckField label="Hug width" value={L.hugWidth} onChange={(v) => update({ hugWidth: v })} />
             <CheckField label="Hug height" value={L.hugHeight} onChange={(v) => update({ hugHeight: v })} />
           </Row>
-          {L.wrap && !L.grid && <NumberField label="Line gap" title="The space between wrapped rows (or columns). Empty uses Gap" value={L.crossGap ?? L.gap} min={0} onChange={(v) => update({ crossGap: v === L.gap ? undefined : v })} />}
+          {L.wrap && !L.grid && lineGapField('Line gap', 'The space between wrapped rows (or columns). Empty uses Gap')}
           <LayoutAnimateFields value={L.animate} onChange={(animate) => update({ animate })} />
           <Row>
             <button className="btn" onClick={() => set({ layout: null })}>

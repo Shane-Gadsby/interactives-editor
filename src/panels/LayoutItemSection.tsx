@@ -1,5 +1,6 @@
 import type { Artboard, LayoutItem, LayoutSize, SceneNode } from 'interactives-player';
-import { CheckField, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
+import { CheckField, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
+import { marginOwnerWidth, marginUnit, patchMargin } from '../lib/layout-units';
 import { store } from '../store/store';
 import { locate } from '../store/doc';
 import { SIDES, commonValue, parentLayoutKind, patchLayoutItem, sizeMode, type LayoutKind } from '../lib/layout-item';
@@ -40,10 +41,10 @@ export function LayoutItemSection({ nodes, ab }: { nodes: SceneNode[]; ab: Artbo
       </Section>
     );
   }
-  return <ItemFields nodes={nodes} kind={kind} />;
+  return <ItemFields nodes={nodes} kind={kind} ownerW={marginOwnerWidth(locate(ab, nodes[0].id)?.parent)} />;
 }
 
-function ItemFields({ nodes, kind }: { nodes: SceneNode[]; kind: LayoutKind }) {
+function ItemFields({ nodes, kind, ownerW }: { nodes: SceneNode[]; kind: LayoutKind; ownerW: number }) {
   const item = (n: SceneNode): LayoutItem => n.layoutItem ?? {};
   /** Change every selected layer's item; `make` reads that layer's own item, so values that differ between them survive. */
   const change = (make: (it: LayoutItem, n: SceneNode) => Partial<LayoutItem>, coalesce?: string) =>
@@ -274,12 +275,14 @@ function ItemFields({ nodes, kind }: { nodes: SceneNode[]; kind: LayoutKind }) {
           <div className="field-label block">Margin (top, right, bottom, left)</div>
           <Row>
             {SIDES.map((side) => (
-              <NumberField
+              <UnitField
                 key={side}
-                title={`Space ${SIDE_TITLE[side]} of the layer, outside it`}
+                title={`Space ${SIDE_TITLE[side]} of the layer, outside it. In px, or a percent (type 10%) of the frame's inner width`}
                 value={num(commonValue(nodes, (n) => margin(item(n))[side]).value)}
-                mixed={commonValue(nodes, (n) => margin(item(n))[side]).mixed}
-                onChange={(v) => change((it) => ({ margin: { ...margin(it), [side]: v } }), `margin-${side}`)}
+                unit={commonValue(nodes, (n) => marginUnit(item(n), side)).value}
+                mixed={commonValue(nodes, (n) => margin(item(n))[side]).mixed || commonValue(nodes, (n) => marginUnit(item(n), side)).mixed}
+                ownerW={ownerW}
+                onChange={(v, unit) => change((it) => patchMargin(it, side, v, unit), `margin-${side}`)}
               />
             ))}
           </Row>

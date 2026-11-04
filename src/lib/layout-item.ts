@@ -35,6 +35,12 @@ export function patchLayoutItem(current: LayoutItem | null | undefined, patch: P
     if (it[axis] !== 'percent') delete it[pct];
   }
   if (it.margin && SIDES.every((s) => !it.margin![s])) delete it.margin;
+  if (it.marginUnits) {
+    //Only percent sides are listed, and only next to a margin
+    const on = SIDES.filter((s) => it.marginUnits![s] === 'percent');
+    if (on.length && it.margin) it.marginUnits = Object.fromEntries(on.map((s) => [s, 'percent'])) as LayoutItem['marginUnits'];
+    else delete it.marginUnits;
+  }
   if (it.marginAuto) {
     const on = SIDES.filter((s) => it.marginAuto![s]);
     if (on.length) it.marginAuto = Object.fromEntries(on.map((s) => [s, true]));

@@ -104,6 +104,93 @@ export function NumberField({
   );
 }
 
+/**
+ * A number in px or percent, for auto-layout padding, margin and gap. Type "10%" or "10px" to pick the unit, or press the unit
+ * button. With `ownerW` (the width a percent is a share of) switching units keeps the size: 20 px of 400 becomes 5%.
+ */
+export function UnitField({
+  label,
+  value,
+  unit,
+  onChange,
+  ownerW,
+  min,
+  mixed,
+  title,
+}: {
+  label?: ReactNode;
+  value: number;
+  unit: 'px' | 'percent';
+  onChange: (v: number, unit: 'px' | 'percent') => void;
+  ownerW?: number;
+  min?: number;
+  mixed?: boolean;
+  title?: string;
+}) {
+  const shown = (v: number, u: 'px' | 'percent') => (mixed ? '' : fmt(v) + (u === 'percent' ? '%' : ''));
+  const [text, setText] = useState(shown(value, unit));
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setText(shown(value, unit));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, unit, mixed]);
+  const clamp = (v: number) => Math.max(min ?? -Infinity, v);
+  const commitText = () => {
+    const m = /^(.*?)\s*(%|px)?\s*$/i.exec(text.trim());
+    const v = m ? evalNumber(m[1]) : null;
+    if (v === null) {
+      setText(shown(value, unit));
+      return;
+    }
+    const u = m![2] ? (m![2] === '%' ? 'percent' : 'px') : unit;
+    onChange(clamp(v), u);
+  };
+  const toggle = () => {
+    const to = unit === 'percent' ? 'px' : 'percent';
+    const owner = ownerW && ownerW > 0 ? ownerW : 0;
+    // Keep what it comes to now when the width is known
+    const v = owner ? (to === 'percent' ? (value / owner) * 100 : (value / 100) * owner) : value;
+    onChange(clamp(Math.round(v * 100) / 100), to);
+  };
+  return (
+    <label className="field number-field unit-field" title={tipFor(label, title)}>
+      {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
+      <input
+        value={text}
+        placeholder={mixed ? 'Mixed' : undefined}
+        onFocus={(e) => {
+          focused.current = true;
+          e.target.select();
+        }}
+        onBlur={() => {
+          focused.current = false;
+          commitText();
+        }}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            const v = clamp(Math.round((value + (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 10 : 1)) * 100) / 100);
+            onChange(v, unit);
+            setText(shown(v, unit));
+          }
+          e.stopPropagation();
+        }}
+      />
+      <button
+        type="button"
+        className={`unit-toggle${unit === 'percent' ? ' on' : ''}`}
+        title={unit === 'percent' ? 'A percent of the width around it. Click for px' : 'In px. Click for a percent of the width around it (or type 10%)'}
+        aria-label={unit === 'percent' ? 'Unit: percent. Switch to px' : 'Unit: px. Switch to percent'}
+        onClick={toggle}
+      >
+        {unit === 'percent' ? '%' : 'px'}
+      </button>
+    </label>
+  );
+}
+
 function fmt(v: number): string {
   if (!Number.isFinite(v)) return '';
   return String(Math.round(v * 100) / 100);

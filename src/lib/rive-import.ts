@@ -1860,8 +1860,9 @@ const ALIGN3 = ['start', 'center', 'end'] as const;
 /**
  * What percent values in a layout style resolve against. Rive resolves a percent padding, margin or gap against the
  * width of the layout that owns the node (its parent's inner width; the artboard's root layout uses its own width),
- * for both axes, and a percent inset against the parent's inner width or height. The file keeps a px size per layout,
- * so these are worked out once at import.
+ * for both axes, and a percent inset against the parent's inner width or height. Percent padding, margin and gap stay
+ * percents (the player resolves them against the same width on every layout); insets, sizes and the rest are worked out
+ * once at import, since the file keeps a px size per layout.
  */
 interface LayoutBox {
   w: number;
@@ -1897,6 +1898,11 @@ function unitPx(style: RObj | undefined, key: string, owner: number): number {
   if (!style) return 0;
   const u = get(style, `${key}UnitsValue`);
   return u === 1 ? get(style, key) : u === 2 ? (get(style, key) / 100) * owner : 0;
+}
+
+/** Rive units: 0 not set, 1 points, 2 percent, 3 auto. A style value that stays a percent: the percent itself, otherwise null. */
+function pctOf(style: RObj | undefined, key: string): number | null {
+  return style && get(style, `${key}UnitsValue`) === 2 ? get(style, key) : null;
 }
 
 function layoutBox(ac: ArtboardCtx, slot: number): LayoutBox {
@@ -1943,6 +1949,15 @@ function autoLayoutOf(fc: FileCtx, style: RObj | undefined, box?: LayoutBox, tra
   // Rive lays out with Yoga, which ignores negative gaps (negative margins still apply)
   const gapH = Math.max(0, unitPx(style, 'gapHorizontal', ownerW));
   const gapV = Math.max(0, unitPx(style, 'gapVertical', ownerW));
+  // A percent gap stays one (the percent is what the layout stores); Yoga ignores negative ones, so those stay px at 0
+  const gapPct = (key: string) => {
+    const p = pctOf(style, key);
+    return p !== null && p > 0 ? p : null;
+  };
+  const gapHP = gapPct('gapHorizontal');
+  const gapVP = gapPct('gapVertical');
+  const units: NonNullable<AutoLayout['units']> = {};
+  const gapValue = (px: number, p: number | null) => (p !== null ? p : r2(px));
   const wrap = style ? get(style, 'flexWrapValue') === 1 && kind === 0 : false;
   const layout: AutoLayout = {
     direction: row ? 'row' : 'column',
@@ -1957,17 +1972,39 @@ function autoLayoutOf(fc: FileCtx, style: RObj | undefined, box?: LayoutBox, tra
     reverse: !reversed,
   };
   // The gap between wrapped lines is the other axis's
-  if (wrap && gapH !== gapV) layout.crossGap = r2(row ? gapV : gapH);
+  const along = row ? [gapH, gapHP] : [gapV, gapVP];
+  const across = row ? [gapV, gapVP] : [gapH, gapHP];
+  const differs = (a: (number | null)[], b: (number | null)[]) => a[0] !== b[0] || a[1] !== b[1];
+  layout.gap = gapValue(along[0] as number, along[1]);
+  if (along[1] !== null) units.gap = 'percent';
+  if (wrap && differs(along, across)) {
+    layout.crossGap = gapValue(across[0] as number, across[1]);
+    if (across[1] !== null) units.crossGap = 'percent';
+  }
   if (kind === 1 || kind === 2) {
     // Grid (1) and stack (2): the columns' gap is the horizontal one, the rows' the vertical one
     layout.direction = 'row';
-    layout.gap = r2(gapH);
+    layout.gap = gapValue(gapH, gapHP);
+    delete units.gap;
+    delete units.crossGap;
+    if (gapHP !== null) units.gap = 'percent';
     layout.wrap = false;
     layout.reverse = true;
-    if (gapH !== gapV) layout.crossGap = r2(gapV);
-    else delete layout.crossGap;
+    if (differs([gapH, gapHP], [gapV, gapVP])) {
+      layout.crossGap = gapValue(gapV, gapVP);
+      if (gapVP !== null) units.crossGap = 'percent';
+    } else delete layout.crossGap;
     layout.grid = gridOf(fc, style!, tracks, kind === 2, t);
   }
+  // Percent padding stays a percent too (a border on the side takes px room beside it, so that side is worked out)
+  for (const [side, k] of [['top', 'Top'], ['right', 'Right'], ['bottom', 'Bottom'], ['left', 'Left']] as const) {
+    const p = pctOf(style, `padding${k}`);
+    if (p !== null && unitPx(style, `border${k}`, ownerW) === 0) {
+      layout.padding[side] = p;
+      (units.padding ??= {})[side] = 'percent';
+    }
+  }
+  if (units.gap || units.crossGap || units.padding) layout.units = units;
   return layout;
 }
 
@@ -2024,11 +2061,18 @@ function layoutItemOf(style: RObj | undefined, size: { width: number; height: nu
     const sides = [['top', 'Top'], ['right', 'Right'], ['bottom', 'Bottom'], ['left', 'Left']] as const;
     const m = { top: 0, right: 0, bottom: 0, left: 0 };
     const auto: NonNullable<LayoutItem['marginAuto']> = {};
+    const mUnits: NonNullable<LayoutItem['marginUnits']> = {};
     for (const [side, k] of sides) {
-      m[side] = unitPx(style, `margin${k}`, ownerW);
+      // A percent margin stays a percent: the player takes it of the same width (the parent's inner width) on every layout
+      const p = pctOf(style, `margin${k}`);
+      if (p !== null && p !== 0) {
+        m[side] = p;
+        mUnits[side] = 'percent';
+      } else m[side] = unitPx(style, `margin${k}`, ownerW);
       if (get(style, `margin${k}UnitsValue`) === 3) auto[side] = true;
     }
     if (m.top || m.right || m.bottom || m.left) it.margin = { top: r2(m.top), right: r2(m.right), bottom: r2(m.bottom), left: r2(m.left) };
+    if (Object.keys(mUnits).length) it.marginUnits = mUnits;
     if (Object.keys(auto).length) it.marginAuto = auto;
     if (get(style, 'positionTypeValue') === 2) {
       it.position = 'absolute';

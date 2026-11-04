@@ -69,7 +69,7 @@ export const FIELD_TIPS: Record<string, string> = {
   'Hot y': "Custom cursor's click point, from the image's top",
   Mode: 'URL shows another page in an iframe; HTML is your own markup',
   Direction: 'Row lays children out left to right, column top to bottom',
-  Gap: 'Space between children',
+  Gap: 'Space between children, in px or a percent (type 10%) of the width around the frame',
   Justify: 'Where children sit along the direction',
   Wrap: 'Start a new row or column when one is full',
   'Hug width': 'Shrink or grow the width to fit the children',

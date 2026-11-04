@@ -6418,4 +6418,36 @@ code {
 .invite-found button:disabled {
   opacity: 0.5;
   cursor: default;
+
+/* Percent or px unit button on padding, margin and gap fields */
+.unit-field {
+  position: relative;
+}
+.unit-field input {
+  padding-right: 22px !important;
+}
+.unit-toggle {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 18px;
+  cursor: pointer;
+}
+.unit-toggle:hover,
+.unit-toggle:focus-visible {
+  background: var(--line-2);
+  color: var(--text);
+}
+.unit-toggle.on {
+  background: var(--accent);
+  color: #fff;
 }
