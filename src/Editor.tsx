@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, defaultTheme, QUESTION_KINDS, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
+import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type BottomTab, type Tool } from './store/store';
 import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
@@ -65,6 +66,9 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         await assetUrls.load(p.id);
         // Nearly always done by now; never held up for long if the browser's database is slow
         await Promise.race([stills, new Promise((r) => setTimeout(r, 400))]);
+        if (cancelled) return;
+        // Colours linked to the shared palette follow it (the stored colour stands if it can't be reached)
+        await syncProjectWithPalette(p);
         if (cancelled) return;
         const s = new EditorStore(p);
         setCurrentStore(s);

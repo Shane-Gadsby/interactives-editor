@@ -46,9 +46,9 @@ describe('themes: starter, editing', () => {
     const s = new EditorStore(p);
     s.update((d) => void removeToken(d, id));
     const [r, t] = s.get().project.artboards[0].children as [RectNode, TextNode];
-    expect(r.fill).toEqual(solid('#a35f00'));
-    expect(r.stroke!.paint).toEqual(solid('#a35f00'));
-    expect(t.color).toBe('#a35f00');
+    expect(r.fill).toEqual(solid('#ffb448'));
+    expect(r.stroke!.paint).toEqual(solid('#ffb448'));
+    expect(t.color).toBe('#ffb448');
     expect(s.get().project.themes!.tokens.some((x) => x.id === id)).toBe(false);
   });
 
@@ -157,13 +157,14 @@ describe('themes: colour styles become tokens', () => {
 describe('themes: contrast', () => {
   it('flags the pairs that are too low, per theme', () => {
     const t = starterThemes();
-    expect(checkThemePairs(t).every((p) => p.pass)).toBe(true);
+    // Dark and High contrast are built to pass; Light is the toolbox palette as it is (see starter-look.test.ts for what falls short)
+    expect(checkThemePairs(t).filter((p) => !p.pass).every((p) => p.themeId === t.list[0].id)).toBe(true);
     const bg = t.tokens.find((x) => x.name === 'color/background')!;
     const text = t.tokens.find((x) => x.name === 'color/text')!;
     const dark = t.list[1].id;
     bg.values[dark] = '#777777';
     text.values[dark] = '#888888';
-    const bad = checkThemePairs(t).filter((p) => !p.pass);
+    const bad = checkThemePairs(t).filter((p) => !p.pass && p.themeId === dark);
     expect(bad.length).toBeGreaterThan(0);
     expect(bad.every((p) => p.themeId === dark)).toBe(true);
     expect(bad.some((p) => p.label === 'text on background' && p.ratio < 1.5)).toBe(true);

@@ -3,6 +3,7 @@ import {
   OLD_STARTER_VALUES,
   STARTER_TOKEN_DEFS,
   bakeTheme,
+  starterHex,
   countTokenUse,
   defaultTheme,
   fillList,
@@ -24,6 +25,7 @@ import {
   type Project,
   type ProjectThemes,
   type SceneNode,
+  type StarterTokenDef,
   type ThemeDef,
   type ThemeToken,
 } from 'interactives-player';
@@ -41,10 +43,25 @@ export const STARTER_THEMES: ThemeDef[] = [
   { id: 'theme-high-contrast', name: 'High contrast', mode: 'dark', highContrast: true },
 ];
 
+/** The starter tokens, made from the shared palette: each colour is the palette's now, and the token remembers the property it came from. */
 export function starterThemes(): ProjectThemes {
   const list = STARTER_THEMES.map((t) => ({ ...t }));
-  const tokens: ThemeToken[] = STARTER_TOKEN_DEFS.map((d) => ({ id: uid('tk'), name: d.name, values: { 'theme-light': d.light, 'theme-dark': d.dark, 'theme-high-contrast': d.highContrast } }));
+  const tokens: ThemeToken[] = STARTER_TOKEN_DEFS.map((d) => starterToken(d, list));
   return { list, tokens, follow: true };
+}
+
+type Column = 'light' | 'dark' | 'highContrast';
+const columnOf = (t: ThemeDef): Column => (t.highContrast ? 'highContrast' : t.mode === 'dark' ? 'dark' : 'light');
+
+/** A starter token's values and palette links for a list of themes (a theme goes by its mode: Light, Dark, or High contrast). */
+function starterToken(d: StarterTokenDef, list: ThemeDef[], id = uid('tk')): ThemeToken {
+  const token: ThemeToken = { id, name: d.name, values: {}, palette: {} };
+  for (const th of list) {
+    const column = columnOf(th);
+    token.values[th.id] = starterHex(d, column);
+    token.palette![th.id] = d[column];
+  }
+  return token;
 }
 
 // ---------------------------------------------------------------- the starter look in new layers
@@ -97,9 +114,6 @@ export function lookDefaults(project: Project, type: NodeType): Record<string, u
 
 // ---------------------------------------------------------------- projects made before the toolbox look
 
-type Column = 'light' | 'dark' | 'highContrast';
-const columnOf = (t: ThemeDef): Column => (t.highContrast ? 'highContrast' : t.mode === 'dark' ? 'dark' : 'light');
-
 export interface StarterUpgrade {
   /** Starter tokens still on their old, never edited values. */
   restyle: ThemeToken[];
@@ -131,16 +145,13 @@ export function upgradeStarterTokens(draft: Project): { restyled: number; added:
   const t = draft.themes;
   const todo = starterUpgrade(t);
   if (!t || (!todo.restyle.length && !todo.missing.length)) return { restyled: 0, added: 0 };
-  const put = (token: ThemeToken, name: string) => {
-    const d = STARTER_TOKEN_DEFS.find((x) => x.name === name)!;
-    for (const th of t.list) token.values[th.id] = d[columnOf(th)];
-  };
-  for (const token of todo.restyle) put(token, token.name.trim().toLowerCase());
-  for (const name of todo.missing) {
-    const token: ThemeToken = { id: uid('tk'), name, values: {} };
-    put(token, name);
-    t.tokens.push(token);
+  const def = (name: string) => STARTER_TOKEN_DEFS.find((x) => x.name === name)!;
+  for (const token of todo.restyle) {
+    const fresh = starterToken(def(token.name.trim().toLowerCase()), t.list, token.id);
+    token.values = fresh.values;
+    token.palette = fresh.palette;
   }
+  for (const name of todo.missing) t.tokens.push(starterToken(def(name), t.list));
   return { restyled: todo.restyle.length, added: todo.missing.length };
 }
 
@@ -198,6 +209,8 @@ export function addTheme(draft: Project, name: string, copyFrom?: string): Theme
   for (const token of t.tokens) {
     const v = token.values[from] ?? tokenValue(t, token, from);
     if (v) token.values[theme.id] = v;
+    // A copy of a colour that follows the palette follows it too
+    if (token.palette?.[from]) token.palette[theme.id] = token.palette[from];
   }
   return theme;
 }
@@ -207,7 +220,10 @@ export function removeTheme(draft: Project, id: string): boolean {
   const t = draft.themes;
   if (!t || t.list.length < 2 || !t.list.some((x) => x.id === id)) return false;
   t.list = t.list.filter((x) => x.id !== id);
-  for (const token of t.tokens) delete token.values[id];
+  for (const token of t.tokens) {
+    delete token.values[id];
+    if (token.palette) dropLink(token, id);
+  }
   if (t.default === id) delete t.default;
   return true;
 }
@@ -258,9 +274,18 @@ export function removeToken(draft: Project, id: string): boolean {
   return true;
 }
 
+/** Forget which palette property a theme's colour came from (the colour was edited by hand, so it no longer follows the palette). */
+export function dropLink(token: ThemeToken, themeId: string): void {
+  if (!token.palette) return;
+  delete token.palette[themeId];
+  if (!Object.keys(token.palette).length) delete token.palette;
+}
+
 export function setTokenValue(draft: Project, id: string, themeId: string, color: string): void {
   const token = draft.themes?.tokens.find((x) => x.id === id);
   if (!token) return;
+  // The same colour the palette link gives is not an edit; any other colour cuts the link
+  if (token.values[themeId] !== color) dropLink(token, themeId);
   token.values[themeId] = color;
   // A style that became this token keeps the default theme's colour, so its swatch and a library update still make sense
   const t = draft.themes!;

@@ -146,6 +146,11 @@ export function ThemesPanel() {
                   return (
                     <td key={t.id} className={`tk-cell${bad.length ? ' warn' : ''}`}>
                       <ColorField value={tokenValue(themes, token, t.id) ?? '#808080'} onChange={(c) => edit((d) => setTokenValue(d, token.id, t.id, c), `token-${token.id}-${t.id}`)} onCommit={() => store().commit()} />
+                      {token.palette?.[t.id] && (
+                        <span className="tk-link" title={`Follows ${token.palette[t.id]} in the shared StudyDesk palette, so it changes when the palette does. Changing the colour here unlinks it`}>
+                          <Icons.link width={11} />
+                        </span>
+                      )}
                       {bad.length > 0 && (
                         <span className="tk-warn" title={bad.map((p) => `${p.label}: ${p.ratio.toFixed(2)}:1, needs ${p.need}:1`).join('\n')}>
                           {bad[0].ratio.toFixed(1)}:1

@@ -6987,6 +6987,12 @@ code {
 .themes-table .tk-cell.warn .color-field .swatch {
   box-shadow: 0 0 0 2px var(--warn);
 }
+.tk-link {
+  color: var(--muted);
+  margin-left: 4px;
+  display: inline-flex;
+  vertical-align: middle;
+}
 .tk-warn,
 .tk-bad {
   color: var(--warn-text);

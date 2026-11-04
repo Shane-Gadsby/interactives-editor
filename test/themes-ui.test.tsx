@@ -61,7 +61,7 @@ describe('the colour picker and theme tokens', () => {
     expect(host.querySelector('.token-chip')!.textContent).toContain('High contrast');
     expect(host.querySelector('.swatch.linked')).not.toBeNull();
     expect(host.querySelector('input.color-text')).toBeNull();
-    expect(host.querySelector<HTMLElement>('.swatch.linked')!.style.background).toMatch(/163, 95, 0|#a35f00/i);
+    expect(host.querySelector<HTMLElement>('.swatch.linked')!.style.background).toMatch(/255, 180, 72|#ffb448/i);
     // the swatch follows the theme the canvas shows
     act(() => s.set({ canvasTheme: 'theme-dark' }));
     await flush();
@@ -100,7 +100,7 @@ describe('the canvas follows the theme', () => {
     const show = (theme: string | null) => act(() => root.render(<ArtboardView artboard={s.get().project.artboards[0]} project={s.get().project} timeline={null} time={0} active live assetVersion={0} dataVersion={0} canvasTheme={theme} />));
     const bgOf = (id: string) => host.querySelector<HTMLElement>(`[data-ix-id="${id}"]`)!.style.background;
     show(null);
-    expect(bgOf('card')).toMatch(/255, 255, 255|#fff/i);
+    expect(bgOf('card')).toMatch(/254, 254, 254|#fefefe/i);
     show('theme-dark');
     expect(bgOf('card')).toMatch(/30, 30, 30|#1e1e1e/i);
     expect(bgOf('plain')).toMatch(/18, 52, 86|#123456/i);

@@ -1,13 +1,16 @@
 //The toolbox look: what new layers, the question kit and the built-in starters are painted with, and how projects made before it
 //are left alone until someone asks.
-import { describe, expect, it } from 'vitest';
-import { LIGHT_LOOK, OLD_STARTER_VALUES, STARTER_TOKEN_DEFS, createNode, createProject, isTokenRef, makeColorResolver, type Project, type ProjectThemes } from 'interactives-player';
+import { readFileSync } from 'node:fs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LIGHT_LOOK, OLD_STARTER_VALUES, PALETTE_SNAPSHOT, STARTER_TOKEN_DEFS, createNode, createProject, currentPalette, forgetPaletteFetches, isTokenRef, makeColorResolver, refreshLinkedTokens, resolveSpec, setLivePalette, starterHex, type Project, type ProjectThemes } from 'interactives-player';
 import { EditorStore } from '../src/store/store';
 import { STARTERS } from '../src/lib/template-starters';
 import { addQuestion } from '../src/lib/question-kit';
 import { addStepBar, enableSteps } from '../src/lib/steps';
 import { checkAccessibility } from '../src/lib/a11y/checks';
-import { checkThemePairs, lookDefaults, lookFor, starterThemes, starterUpgrade, upgradeStarterTokens } from '../src/lib/themes';
+import { addTheme, checkThemePairs, lookDefaults, lookFor, setTokenValue, starterThemes, starterUpgrade, upgradeStarterTokens } from '../src/lib/themes';
+import { syncProjectWithPalette } from '../src/lib/palette-look';
+import { getTopic } from '../src/help/topics';
 
 /** Every string in a value, however deep. */
 function strings(v: unknown, out: string[] = []): string[] {
@@ -23,27 +26,135 @@ function oldThemes(): ProjectThemes {
   const t = starterThemes();
   t.tokens = t.tokens
     .filter((x) => OLD_STARTER_VALUES[x.name])
-    .map((x) => ({ ...x, values: Object.fromEntries(t.list.map((th, i) => [th.id, OLD_STARTER_VALUES[x.name][i]])) }));
+    .map((x) => ({ id: x.id, name: x.name, values: Object.fromEntries(t.list.map((th, i) => [th.id, OLD_STARTER_VALUES[x.name][i]])) }));
   return t;
 }
 
+//The Light theme is the toolbox as it draws itself, from the shared palette, so these pairs fall below WCAG AA. They are reported as
+//they are (Themes panel, accessibility checker) and listed in the themes help and the README. If the palette changes this list
+//changes: update the help and the README with it.
+const LIGHT_BELOW_AA = [
+  'muted text on background 2.59:1',
+  'muted text on surface 2.38:1',
+  'muted text on muted surface 1.96:1',
+  'primary on background 1.75:1',
+  'outline against background 2.59:1',
+  'outline against surface 2.38:1',
+  'focus ring on background 1.75:1',
+  'focus ring on surface 1.61:1',
+  'success on its surface 3.90:1',
+  'error on its surface 3.13:1',
+  'warning on its surface 2.67:1',
+];
+
 describe('the starter tokens', () => {
-  it('pass every contrast pair in Light, Dark and High contrast', () => {
-    const pairs = checkThemePairs(starterThemes());
+  const t = starterThemes();
+  const pairs = checkThemePairs(t);
+  const nameOf = (id: string) => t.list.find((x) => x.id === id)!.name;
+
+  it('pass every contrast pair in Dark and High contrast', () => {
     expect(pairs.length).toBeGreaterThan(40);
-    expect(pairs.filter((p) => !p.pass).map((p) => `${p.label} ${p.ratio.toFixed(2)}`)).toEqual([]);
+    expect(pairs.filter((p) => !p.pass && nameOf(p.themeId) !== 'Light').map((p) => `${nameOf(p.themeId)}: ${p.label} ${p.ratio.toFixed(2)}`)).toEqual([]);
   });
 
-  it('are the toolbox greys and gold', () => {
-    const t = starterThemes();
+  it('report the Light pairs that fall below AA as they really are, and the help and README list them', () => {
+    const low = pairs.filter((p) => !p.pass).map((p) => `${p.label} ${p.ratio.toFixed(2)}:1`);
+    expect(low).toEqual(LIGHT_BELOW_AA);
+    const help = getTopic('themes')!.body;
+    for (const line of LIGHT_BELOW_AA) expect(help, line).toContain(line);
+    const readme = readFileSync('README.md', 'utf8');
+    for (const line of LIGHT_BELOW_AA) expect(readme, line).toContain(line);
+  });
+
+  it('are the toolbox values, taken from the palette', () => {
     const light = (name: string) => t.tokens.find((x) => x.name === name)!.values['theme-light'];
+    expect(light('color/button')).toBe(PALETTE_SNAPSHOT['--ilar-btn-primary-background']);
+    expect(light('color/on-button')).toBe(PALETTE_SNAPSHOT['--ilar-btn-primary-text']);
+    expect(light('color/border')).toBe(PALETTE_SNAPSHOT['--ilar-swatch-grey-4']);
+    expect(light('color/primary')).toBe(PALETTE_SNAPSHOT['--ilar-primary']);
+    expect(light('color/focus')).toBe(PALETTE_SNAPSHOT['--ilar-primary']);
+    expect(light('color/surface')).toBe(PALETTE_SNAPSHOT['--ilar-swatch-grey-1']);
+    expect(light('color/text')).toBe(PALETTE_SNAPSHOT['--ilar-swatch-grey-7']);
     expect(light('color/button')).toBe('#ffb448');
-    expect(light('color/on-button')).toBe('#1e1e1e');
-    expect(light('color/background')).toBe('#ffffff');
-    expect(light('color/surface')).toBe('#f4f4f4');
-    expect(light('color/text')).toBe('#1e1e1e');
     expect(LIGHT_LOOK.button).toBe('#ffb448');
     expect(STARTER_TOKEN_DEFS.map((d) => d.name)).toEqual(expect.arrayContaining(['color/focus', 'color/divider', 'color/success', 'color/error', 'color/warning']));
+  });
+});
+
+describe('palette links', () => {
+  afterEach(() => setLivePalette(null));
+
+  it('every starter colour remembers the palette property it came from', () => {
+    const t = starterThemes();
+    for (const token of t.tokens) {
+      for (const th of t.list) {
+        const spec = token.palette?.[th.id];
+        expect(spec, `${token.name} in ${th.name}`).toBeTruthy();
+        expect(resolveSpec(spec!, PALETTE_SNAPSHOT)).toBe(token.values[th.id]);
+      }
+    }
+    const button = t.tokens.find((x) => x.name === 'color/button')!;
+    expect(button.palette!['theme-light']).toBe('--ilar-btn-primary-background');
+  });
+
+  it('are refreshed from the live palette when a project opens, and a hand edit drops the link', () => {
+    const p = createProject();
+    p.themes = starterThemes();
+    const button = () => p.themes!.tokens.find((x) => x.name === 'color/button')!;
+    const text = () => p.themes!.tokens.find((x) => x.name === 'color/text')!;
+    setLivePalette({ '--ilar-btn-primary-background': '#00aa55', '--ilar-swatch-grey-7': '#101010' });
+    const s = new EditorStore(p);
+    const edit = text().id;
+    s.update((d) => void setTokenValue(d, edit, 'theme-light', '#222222'));
+    const before = s.get().project;
+    expect(before.themes!.tokens.find((x) => x.id === edit)!.palette!['theme-light']).toBeUndefined();
+    expect(before.themes!.tokens.find((x) => x.id === edit)!.palette!['theme-dark']).toBeTruthy();
+    const opened = JSON.parse(JSON.stringify(before)) as Project;
+    expect(refreshLinkedTokens(opened.themes, currentPalette())).toBeGreaterThan(0);
+    const btn = opened.themes!.tokens.find((x) => x.name === 'color/button')!;
+    expect(btn.values).toEqual({ 'theme-light': '#00aa55', 'theme-dark': '#00aa55', 'theme-high-contrast': '#00aa55' });
+    const txt = opened.themes!.tokens.find((x) => x.id === edit)!;
+    // the edited colour stays; the linked ones follow
+    expect(txt.values['theme-light']).toBe('#222222');
+    expect(txt.values['theme-high-contrast']).toBe(starterHex(STARTER_TOKEN_DEFS.find((d) => d.key === 'text')!, 'highContrast'));
+    expect(button().values['theme-light']).toBe('#ffb448');
+  });
+
+  it('with the palette unreachable the stored colours stand', async () => {
+    forgetPaletteFetches();
+    vi.stubGlobal('fetch', async () => {
+      throw new Error('offline');
+    });
+    const p = createProject();
+    p.themes = starterThemes();
+    p.themes.tokens[0].values['theme-light'] = '#123456';
+    expect(await syncProjectWithPalette(p)).toBe(0);
+    expect(p.themes.tokens[0].values['theme-light']).toBe('#123456');
+    vi.unstubAllGlobals();
+    forgetPaletteFetches();
+  });
+
+  it('a colour set to what the palette gives keeps its link, any other colour cuts it', () => {
+    const s = new EditorStore({ ...createProject(), themes: starterThemes() });
+    const t = s.get().project.themes!.tokens.find((x) => x.name === 'color/button')!;
+    s.update((d) => void setTokenValue(d, t.id, 'theme-light', t.values['theme-light']));
+    expect(s.get().project.themes!.tokens.find((x) => x.id === t.id)!.palette!['theme-light']).toBeTruthy();
+    s.update((d) => void setTokenValue(d, t.id, 'theme-light', '#000000'));
+    expect(s.get().project.themes!.tokens.find((x) => x.id === t.id)!.palette!['theme-light']).toBeUndefined();
+  });
+
+  it('copying a theme copies the links, and the upgrade for an older project links what it writes', () => {
+    const p = createProject();
+    p.themes = starterThemes();
+    const s = new EditorStore(p);
+    s.update((d) => void addTheme(d, 'Sepia'));
+    const sepia = s.get().project.themes!.list.find((x) => x.name === 'Sepia')!;
+    expect(s.get().project.themes!.tokens.every((x) => x.palette![sepia.id] === x.palette!['theme-light'])).toBe(true);
+    const old = createProject();
+    old.themes = oldThemes();
+    const s2 = new EditorStore(old);
+    s2.update((d) => void upgradeStarterTokens(d));
+    expect(s2.get().project.themes!.tokens.every((x) => Object.keys(x.palette ?? {}).length === 3)).toBe(true);
   });
 });
 
@@ -127,9 +238,10 @@ describe('the built-in starters', () => {
       expect(used.every((r) => ids.has(r))).toBe(true);
     });
 
-    it(`${s.name} has no contrast findings in any theme`, () => {
+    it(`${s.name} has no contrast findings in Dark or High contrast`, () => {
       const { project } = s.build();
-      const bad = checkAccessibility(project).findings.filter((f) => f.check === 'contrast');
+      //Light is the toolbox palette as drawn, so it may report some; the other themes are built to pass
+      const bad = checkAccessibility(project).findings.filter((f) => f.check === 'contrast' && /^In (Dark|High contrast)/.test(f.detail));
       expect(bad.map((f) => f.detail)).toEqual([]);
     });
   }

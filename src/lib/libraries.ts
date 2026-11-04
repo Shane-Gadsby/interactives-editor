@@ -552,7 +552,15 @@ export function editStyle(draft: Project, id: string, patch: Partial<ColorStyle>
   Object.assign(s, patch, { id: s.id });
   // A style that became a token: its colour is the token's value in the default theme
   const tk = 'color' in patch && 'token' in s && s.token ? draft.themes?.tokens.find((x) => x.id === s.token) : undefined;
-  if (tk && typeof patch.color === 'string' && draft.themes) tk.values[draft.themes.default ?? draft.themes.list[0]?.id] = patch.color;
+  if (tk && typeof patch.color === 'string' && draft.themes) {
+    const at = draft.themes.default ?? draft.themes.list[0]?.id;
+    tk.values[at] = patch.color;
+    // Edited by hand, so it no longer follows the palette
+    if (tk.palette) {
+      delete tk.palette[at];
+      if (!Object.keys(tk.palette).length) delete tk.palette;
+    }
+  }
   syncNodeStyles(draft);
   return true;
 }
