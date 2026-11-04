@@ -5695,7 +5695,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 ## Uniforms: your own values
 
-The **Uniforms** list gives the shader values you can change. Press **Add a uniform**, choose a type, and give it a **name**: that name is a variable in the code. Types: **float**, **vec2**, **vec3**, **vec4**, **color** (a \`vec4\` of red, green, blue and alpha, 0 to 1) and **image** (a \`sampler2D\`, with \`name_size\` as a \`vec2\` of its pixel size, 0 until it has loaded).
+The **Uniforms** list gives the shader values you can change. Press **Add a uniform**, choose a type, and give it a **name**: that name is a variable in the code. Types: **Number** (a \`float\`), **Vector 2**, **Vector 3** and **Vector 4** (\`vec2\`, \`vec3\`, \`vec4\`), **Colour** (a \`vec4\` of red, green, blue and alpha, 0 to 1) and **Image** (a \`sampler2D\`, with \`name_size\` as a \`vec2\` of its pixel size, 0 until it has loaded).
 
 - **Animate** them: the **◆** beside a value keys it at the playhead on the timeline. A vector keys each part (x, y, z, w) on its own track, a colour fades between colours, and an image uniform switches picture at each key. The tracks are \`uniforms.<number>.value\`, and \`uniforms.<number>.value.<part>\` for the parts of a vector, counting from 0 in list order.
 - **Bind** them to variables in **Data bindings**: pick the uniform from the property list (for example *Uniform speed*) and type an expression, such as \`score / 100\`.
