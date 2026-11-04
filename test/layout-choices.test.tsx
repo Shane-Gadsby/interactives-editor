@@ -34,7 +34,8 @@ async function mount(el: () => Promise<React.ReactElement>) {
 }
 const titles = () => [...document.querySelectorAll('.toolbar .icon-btn')].map((b) => b.getAttribute('title') ?? '');
 
-describe('tools column in folding groups', () => {
+// importing the whole Editor module is slow on a loaded machine (about 3.5s alone)
+describe('tools column in folding groups', { timeout: 30000 }, () => {
   it('opens Shapes and Draw, folds Media, Web and Rig, and remembers a fold', async () => {
     const { Toolbar } = await import('../src/Editor');
     await mount(async () => <Toolbar />);
@@ -54,7 +55,7 @@ describe('tools column in folding groups', () => {
   });
 });
 
-describe('timeline settings in a popover', () => {
+describe('timeline settings in a popover', { timeout: 30000 }, () => {
   it('shows a summary in the bar and the fields behind the gear', async () => {
     const { TimelinePanel } = await import('../src/panels/Timeline');
     const s = await mount(async () => <TimelinePanel />);
