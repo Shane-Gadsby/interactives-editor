@@ -3226,8 +3226,9 @@ function base(type) {
     visible: true
   };
 }
+const DEFAULT_FONT = "Open Sans";
 const DEFAULT_TEXT_STYLE = {
-  fontFamily: "Inter, system-ui, sans-serif",
+  fontFamily: `"${DEFAULT_FONT}", system-ui, sans-serif`,
   fontSize: 16,
   fontWeight: 400,
   fontStyle: "normal",
@@ -5153,7 +5154,7 @@ Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pag
 
 ## Making and opening projects
 
-- **New project** (top right, or the **+** card) makes an empty project with one artboard called **Home**. Your default font is added to it. See [Preferences](preferences).
+- **New project** (top right, or the **+** card) makes an empty project with one artboard called **Home**. Your default font (Open Sans unless you changed it) is added to it. See [Preferences](preferences).
 - Click a card's picture to open the project. **Help** and the gear (**Preferences**) are at the top right too.
 - The **Templates** tab (next to **Projects**) starts a project from a template, or from one of the finished examples. See [Templates, examples and remix](templates).
 - **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`) or PhotoCraft (\`.pcraft\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
@@ -5283,7 +5284,7 @@ Open **Preferences** from the gear in the top bar (or on the projects page). The
 
 - **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*.
-- **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. Open Sans unless you change it; any Google font name works.
+- **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. It is Open Sans unless you change it. Click the box and type to search every Google font (the chips narrow it by Sans, Serif, Display, Handwriting or Mono), then pick one with <kbd>Enter</kbd> or a click; <kbd>Esc</kbd> closes the list. A name that isn't on the list can be used as typed. It applies to projects and text you make from now on, not to ones that exist.
 - **Show rulers**: rulers and guides on the canvas (also <kbd>Shift</kbd>+<kbd>R</kbd>).
 - **Show layers outside clipped artboards**: on by default. When an artboard has **Clip content to artboard** on, the parts of layers that hang outside it are drawn faintly, in diagonal stripes, beside it on the canvas, so you can still see them and click them to select. It is only how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
 - **Show tooltips**: explanations when you hover buttons and fields.
@@ -5612,7 +5613,7 @@ Most of these can be animated: look for the diamond next to a field. See [Animat
 
 - **Sizing**: *Auto width* (one line, grows sideways), *Auto height* (fixed width, wraps and grows down) or *Fixed* (you set both). With *Fixed*, **Overflow** says what happens to lines that don't fit: *Show* them anyway, *Clip* them at the box, or cut the last line that fits with an *Ellipsis …*. Untick **Wrap lines** to keep the lines as written (long ones run on, or are clipped or cut by the overflow setting).
 - **Animating the box**: a text layer's **Height**, **Width** and **Origin X / Y** can be keyed in a timeline like any other layer's. With *Fixed* sizing a changing height clips or ellipsises the lines that no longer fit, and the vertical alignment keeps following the box. *Auto width* and *Auto height* text work their size out from the text, so keys on the size they work out have no effect. **Origin Y** moves the pivot of the layer's turn and scale (0 top, 1 bottom).
-- **Font**: any Google font by name (add it in the **Fonts** section of the Project settings), or a font file you upload in the [Assets panel](assets), which is added to the fonts for you.
+- **Font**: a search box over every Google font. Click it and type to filter ("playf" finds Playfair Display), then use <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> or click to pick, <kbd>Esc</kbd> to close. Each row is drawn in its own font. The chips above the list narrow it to Sans, Serif, Display, Handwriting or Mono. The project's own fonts come first (tagged *In project* or *Uploaded*), then a few system fonts, then the rest. Picking a Google font the project doesn't have yet adds it to the project's **Fonts** with the weights the text uses, so the player and exports load it; one undo takes both back. Changing the **Weight** later loads that weight too. A name that isn't on the list can still be used as typed (it is not added to the project's fonts, so add it there if it is a Google font). A font file you upload in the [Assets panel](assets) is added to the fonts for you and shows in the list as *Uploaded*. New text starts in your [default font](preferences), Open Sans unless you changed it.
 - Weight, italic, size, line height, letter spacing, alignment, vertical alignment, case and decoration.
 - **Paragraph spacing**: extra space, in pixels, between paragraphs (the pieces of text between line breaks), on top of the line height. An *Auto height* or *Auto width* box grows to fit it. It does not apply to text with [modifiers](text-modifiers).
 
@@ -5626,7 +5627,7 @@ Select some of the text (or just put the caret in a word) and use:
 - **B**, **I**, **U** and **S**: bold, italic, underline and strikethrough. A button that is lit means all the selected text has it; a button with a ring around it means only some of it does (press it to switch it on for all of it).
 - **A** (colour): click it for the colour picker, or its arrow for the toolbox palette. The bar under the A shows the colour of the selection, a rainbow when it has several.
 - **Size**: type a size in pixels and press <kbd>Enter</kbd>, or pick one from the list. The box is empty (it says *mixed*) when the selection has several sizes.
-- **Font**: the project's fonts and the standard ones; *Mixed* when the selection has several.
+- **Font**: the project's fonts and the standard ones; *Mixed* when the selection has several. For any other Google font, pick it in the Inspector's **Font** field.
 - **Link**: add a link to the selection, or edit the one the caret is in. Type the address (a web address, \`mailto:\` or \`tel:\`; \`example.com\` becomes \`https://example.com\`), choose whether it opens in a new tab, and press <kbd>Enter</kbd>. **Remove** takes it off. Linked text is marked with a thin line under it while you edit.
 - **Tx** (clear formatting): takes every style off the selection, so it goes back to the layer's own.
 
@@ -7301,7 +7302,7 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
 | Results and progress | The score, pass mark and when the project counts as complete. See [Results and progress](results) |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
-| Fonts | Google fonts by name (type one and press **Add**), or font files you upload in the **Assets** panel |`
+| Fonts | The fonts the project loads. **Add a Google font…** is a search box over every Google font (type, then <kbd>Enter</kbd> or click; the chips narrow it by Sans, Serif, Display, Handwriting or Mono), or upload font files in the **Assets** panel. New projects start with Open Sans. Choosing a font for a text layer adds it here by itself |`
   },
   // ---------------------------------------------------------------- import/export
   {
