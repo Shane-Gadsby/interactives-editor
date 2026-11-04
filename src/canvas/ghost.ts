@@ -114,7 +114,7 @@ export function inGhostExtent(artboardId: string, x: number, y: number): boolean
 }
 
 /** The clip path that keeps a ghost to the outside of its artboard (a big rectangle with the artboard cut out of it). */
-export function outsideClipPath(width: number, height: number): string {
+export function outsideClipPath(width: number, height: number, x = 0, y = 0): string {
   const far = 1e6;
-  return `path(evenodd, 'M${-far} ${-far}H${far}V${far}H${-far}ZM0 0H${width}V${height}H0Z')`;
+  return `path(evenodd, 'M${-far} ${-far}H${far}V${far}H${-far}ZM${x} ${y}H${x + width}V${y + height}H${x}Z')`;
 }

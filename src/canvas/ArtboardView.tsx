@@ -247,6 +247,20 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       }
       ghostR.current.setColorResolver(resolver);
       ghostR.current.render({ ...artboard, clip: false, background: null }, ghost.nodes, { vars: previewScope(project, artboard) });
+      // The ghost's box covers everything it draws, since the stripes (a css mask) only reach as far as its box
+      const e = ghost.extent;
+      const l = Math.min(0, Math.floor(e.x0)),
+        t = Math.min(0, Math.floor(e.y0));
+      const w = Math.max(artboard.width, Math.ceil(e.x1)) - l,
+        h = Math.max(artboard.height, Math.ceil(e.y1)) - t;
+      const gs = ghostEl.current.style;
+      gs.left = `${l}px`;
+      gs.top = `${t}px`;
+      gs.width = `${w}px`;
+      gs.height = `${h}px`;
+      gs.clipPath = outsideClipPath(artboard.width, artboard.height, -l, -t);
+      ghostR.current.root.style.left = `${-l}px`;
+      ghostR.current.root.style.top = `${-t}px`;
     } else if (ghostR.current) {
       ghostR.current.destroy();
       ghostR.current = null;
@@ -367,7 +381,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       data-artboard={artboard.id}
     >
       {/* Layers hanging outside a clipping artboard, faintly, outside its edge only. Nothing in it takes the pointer. */}
-      <div ref={ghostEl} className="artboard-ghost" style={{ width: artboard.width, height: artboard.height, clipPath: outsideClipPath(artboard.width, artboard.height) }} />
+      <div ref={ghostEl} className="artboard-ghost" />
       {/* The live DOM stays (hidden) under a still, so switching back is instant and stills can be remade from it */}
       <div ref={host} className="artboard-host" style={showStill ? { display: 'none' } : undefined} />
       {/* Not drawn yet: the artboard's own background, so it is where it will be */}
