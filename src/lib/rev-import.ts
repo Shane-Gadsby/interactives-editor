@@ -286,6 +286,12 @@ export function revToRiveObjects(bytes: Uint8Array): { objects: RObj[]; info: Re
   // Decodes a value by the type the runtime definitions give its key
   type Pending = { name: string; target: RevObj };
   const decode = (o: RevObj, key: number, b: Uint8Array, pending: Pending[], props: Record<string, unknown>) => {
+    // Key 130 is the editor's own flags on a drawable (1 hidden, 2 locked). The exporter keeps the hidden bit in drawableFlags
+    // and drops the rest, so that is all that comes across
+    if (key === 130 && isA(o.type, 'Drawable')) {
+      props.drawableFlags = Number(props.drawableFlags ?? 0) | ((varuintOf(b) ?? 0) & 1);
+      return;
+    }
     const def = classProps(o.type).get(key) ?? propNameByKey.get(key);
     if (!def) {
       note(`key ${key}`);
@@ -314,7 +320,7 @@ export function revToRiveObjects(bytes: Uint8Array): { objects: RObj[]; info: Re
       }
       default: {
         const n = varuintOf(b);
-        if (n !== null) props[def.name] = n;
+        if (n !== null) props[def.name] = def.name === 'drawableFlags' ? n | (Number(props.drawableFlags ?? 0) & 1) : n;
         else {
           const i = idOf(b);
           const t = i && byId.get(idKey(i.client, i.id));

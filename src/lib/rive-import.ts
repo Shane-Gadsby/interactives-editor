@@ -1447,6 +1447,29 @@ function fontLineWidth(bytes: Uint8Array, line: string, size: number): number | 
 const lineRatios = new WeakMap<Uint8Array, number | null>();
 /** The file's own line height for texts whose single-line height was raised to the font's metrics. */
 const riveLineHeight = new Map<number, number>();
+/** The hhea ascent and (positive) descent of a font, as fractions of its em. */
+function fontAscDesc(bytes: Uint8Array): { asc: number; desc: number } | null {
+  try {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const magic = dv.getUint32(0);
+    if (magic !== 0x00010000 && magic !== 0x4f54544f && magic !== 0x74727565) return null;
+    const n = dv.getUint16(4);
+    let head = -1;
+    let hhea = -1;
+    for (let i = 0; i < n; i++) {
+      const rec = 12 + i * 16;
+      const tag = String.fromCharCode(bytes[rec], bytes[rec + 1], bytes[rec + 2], bytes[rec + 3]);
+      if (tag === 'head') head = dv.getUint32(rec + 8);
+      if (tag === 'hhea') hhea = dv.getUint32(rec + 8);
+    }
+    if (head < 0 || hhea < 0) return null;
+    const upm = dv.getUint16(head + 18);
+    return upm > 0 ? { asc: dv.getInt16(hhea + 4) / upm, desc: -dv.getInt16(hhea + 6) / upm } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** (ascender - descender) / unitsPerEm from an OpenType/TrueType font's head and hhea tables. */
 function fontLineRatio(bytes: Uint8Array): number | null {
   if (lineRatios.has(bytes)) return lineRatios.get(bytes)!;
@@ -1562,7 +1585,16 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
   const oy = get(o, 'originY');
   const sizing = get(o, 'sizingValue');
   let w = get(o, 'width') || 200;
-  const h = get(o, 'height') || fontSize * lineHeight;
+  // Rive puts the first baseline one ascent below the top of the box whatever the line height is, spaces the lines by the line
+  // height, and ends the box a descent's share of a line below the last baseline (measured against the real runtime). CSS
+  // centres the glyphs in each line instead, so the box is placed to line the first baseline up, and the height is Rive's.
+  const asd = fontBytes ? fontAscDesc(fontBytes) : null;
+  const ascR = asd?.asc ?? 0.95;
+  const descR = asd?.desc ?? 0.25;
+  const lineCount = Math.max(1, text.split('\n').length);
+  const linePx = fontSize * lineHeight;
+  const naturalPx = (ascR + descR) * fontSize;
+  const h = get(o, 'height') || ascR * fontSize + (lineCount - 1) * linePx + (linePx * descR) / (ascR + descR);
   let align = (['left', 'right', 'center', 'justify'] as const)[get(o, 'alignValue')] ?? 'left';
   // Auto-width text hangs off its origin (centred on 0.5, ending at 1). Ours is a box of fixed width, so the text
   // gets a box as wide as the font measures it (or an estimate) and aligns to the origin, which puts it where Rive draws it.
@@ -1595,8 +1627,9 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
   });
   if (get(o, 'overflowValue') === 4) fc.warnings.add('Text that shrinks to fit its box (fit overflow) is clipped at the box instead');
   if (get(o, 'paragraphSpacing') > 0) node.paragraphSpacing = r2(get(o, 'paragraphSpacing'));
-  // originValue 1 = the text's y is its first baseline (about 0.95 em below the top of our line box)
-  const baselineShift = get(o, 'originValue') === 1 ? -fontSize * 0.95 : 0;
+  // originValue 1 = the text's y is its first baseline (one ascent below the top of Rive's box)
+  const halfLeading = (get(o, 'verticalAlignValue') ?? 0) === 0 && asd ? (linePx - naturalPx) / 2 : 0;
+  const baselineShift = -halfLeading - (get(o, 'originValue') === 1 ? ascR * fontSize : 0);
   placeAtOrigin(node, o, { x: -w * ox, y: -h * oy + baselineShift }, w, h);
   addTarget(ac, slot, transformTarget(node, { x: -w * ox, y: -h * oy + baselineShift }));
   // Keys on the text's box (x, y, width, height, origin) are put together once the timeline is read, see `textBoxTracks`.
@@ -2241,6 +2274,8 @@ function convertSlot(ac: ArtboardCtx, fc: FileCtx, slot: number, abIndex: number
     // Handled by the layer they belong to (clipWrap, drawRules)
   }
   if (!node) return null;
+  // Drawable flag 1 = hidden: Rive never draws it (the breathing sample keeps three hidden texts in its bubbles)
+  if (isA(t, 'Drawable') && (Number(get(o, 'drawableFlags')) & 1)) node.visible = false;
   ac.nodeBySlot.set(slot, node);
   if (node.type === 'group' || node.type === 'frame' || node.type === 'bone') {
     // Rive lists children front-most first; ours go back to front
@@ -3330,12 +3365,14 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
     return n;
   };
   // Listener actions on a state or a transition (Rive's "on enter / on exit" and "at start / at end" actions): the
-  // ones that happen at `when`, chained after `from`. The flags are a bit set: 4 on enter, 1 on exit (state) or at the end (transition), 2 at the start of a transition.
-  const ACTION_AT = { enter: 4, exit: 1, start: 2, end: 1 };
+  // ones that happen at `when`, chained after `from`. In the flags, bit 0 is the occurrence (0 at the start, 1 at the end) and
+  // bits 1 and 2 say what the action hangs off (1 a transition, 2 a state), as in rive-runtime's ListenerAction. A state's
+  // start is its enter and its end its exit; a transition's end is when its mix finishes.
+  const ACTION_AT = { enter: 0, exit: 1, start: 0, end: 1 };
   const actionNodes = (actions: RObj[], when: number, from: LogicNode, port: string, x: number) => {
     let r = { last: from, port, x };
     for (const a of actions) {
-      if (!(Number(a.props.flags ?? 0) & when)) continue;
+      if ((Number(a.props.flags ?? 0) & 1) !== when) continue;
       if (a.type !== 'ListenerViewModelChange') {
         fc.warnings.add(`${a.type} actions on states and transitions are not imported`);
         continue;

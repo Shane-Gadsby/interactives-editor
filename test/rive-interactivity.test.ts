@@ -69,10 +69,13 @@ describe.skipIf(!existsSync(dir + '262426_-_breathing_for_calm.riv'))('the breat
       await t.pointer('Lets Begin', 'pointerdown');
       await t.run(500);
       expect(state()).toBe('Splash Screen to Countdown');
-      //entering the countdown sets the scene to 2 and the round to 1
+      //the countdown's actions run when it ends (flags bit 0 is 'at end', as the real Rive runtime reads them): the scene is 1
+      //and no round has started until then, which is what keeps the progress bubbles empty under the 3, 2, 1
+      expect(t.get('VM_sceneNum')).toBe(1);
+      expect(t.get('VM_roundNum')).toBe(0);
+      await t.run(8000);
       expect(t.get('VM_sceneNum')).toBe(2);
       expect(t.get('VM_roundNum')).toBe(1);
-      await t.run(8000);
       expect(state()).toBe('Breath Cycle Middle (3)');
       await t.run(14000);
       expect(t.get('VM_roundNum')).toBe(2);
