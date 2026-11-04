@@ -5465,9 +5465,28 @@ Most of these can be animated: look for the diamond next to a field. See [Animat
 - **Paragraph spacing**: extra space, in pixels, between paragraphs (the pieces of text between line breaks), on top of the line height. An *Auto height* or *Auto width* box grows to fit it. It does not apply to text with [modifiers](text-modifiers).
 
 ## Several styles in one text layer
-Double-click a text layer, select some of the text and press <kbd>Ctrl</kbd>+<kbd>B</kbd> (bold), <kbd>Ctrl</kbd>+<kbd>I</kbd> (italic), <kbd>Ctrl</kbd>+<kbd>U</kbd> (underline) or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> (strikethrough); <kbd>Cmd</kbd> on a Mac. While part of the text is selected, the Font, Size, Weight, Letter, Colour, Italic and Decoration fields in the inspector change just that selection. Select all of a layer that has no styled parts and they change the whole layer, as usual. Click outside the text to go back to styling the whole layer.
+Double-click a text layer to edit it. A small **toolbar floats over the text** while you do, like the one in a word processor:
 
-Each differently styled stretch is a **run**. A run only records how it differs from the layer's own style, so changing the layer's colour or font still changes every run that doesn't set its own. The **Text runs** list in the inspector shows them: edit a run's text, toggle bold/italic/underline/strikethrough, change its colour or size, give it a link, add a run, or clear all run styling. Neighbouring runs with the same style merge by themselves. Runs can also link: a run with a link URL is a hyperlink to that address in the player (links in runs are inert while editing).
+![The toolbar over a text layer being edited, with "big" bold and a colour, size and link set on other words.](help/text-toolbar.png)
+
+Select some of the text (or just put the caret in a word) and use:
+
+- **B**, **I**, **U** and **S**: bold, italic, underline and strikethrough. A button that is lit means all the selected text has it; a button with a ring around it means only some of it does (press it to switch it on for all of it).
+- **A** (colour): click it for the colour picker, or its arrow for the toolbox palette. The bar under the A shows the colour of the selection, a rainbow when it has several.
+- **Size**: type a size in pixels and press <kbd>Enter</kbd>, or pick one from the list. The box is empty (it says *mixed*) when the selection has several sizes.
+- **Font**: the project's fonts and the standard ones; *Mixed* when the selection has several.
+- **Link**: add a link to the selection, or edit the one the caret is in. Type the address (a web address, \`mailto:\` or \`tel:\`; \`example.com\` becomes \`https://example.com\`), choose whether it opens in a new tab, and press <kbd>Enter</kbd>. **Remove** takes it off. Linked text is marked with a thin line under it while you edit.
+- **Tx** (clear formatting): takes every style off the selection, so it goes back to the layer's own.
+
+With nothing selected the buttons work on the word the caret is in. Between words there is nothing to style, so they are switched off.
+
+Shortcuts, in the text or in the toolbar (<kbd>Cmd</kbd> on a Mac): <kbd>Ctrl</kbd>+<kbd>B</kbd> bold, <kbd>Ctrl</kbd>+<kbd>I</kbd> italic, <kbd>Ctrl</kbd>+<kbd>U</kbd> underline, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> strikethrough, <kbd>Ctrl</kbd>+<kbd>K</kbd> link (while editing text; <kbd>F1</kbd> still opens the help search), <kbd>Ctrl</kbd>+<kbd>\\</kbd> clear formatting.
+
+The toolbar works from the keyboard too. <kbd>Tab</kbd> (or <kbd>Alt</kbd>+<kbd>F10</kbd>) goes from the text into the toolbar, the left and right arrows move along its buttons, <kbd>Enter</kbd> or <kbd>Space</kbd> presses one and puts you back in the text with the selection as it was. <kbd>Esc</kbd> also goes back to the text, and <kbd>Shift</kbd>+<kbd>Tab</kbd> from the first button does too. The toolbar sits above the text box, or below it when there is no room, and stays on the canvas. It works the same for *Auto width*, *Auto height* and *Fixed* text.
+
+While part of the text is selected, the Font, Size, Weight, Letter, Colour, Italic and Decoration fields in the inspector change just that selection too. Select all of a layer that has no styled parts and they change the whole layer, as usual. Click outside the text to go back to styling the whole layer.
+
+Each differently styled stretch is stored as a **run**. A run only records how it differs from the layer's own style, so changing the layer's colour or font still changes every run that doesn't set its own. You never need to see them, but the **Text runs** list is still there under **Advanced** in the inspector (closed until you open it) for fixing them by hand: edit a run's text, its styles and its link, add a run, or clear all run styling. Neighbouring runs with the same style merge by themselves. A run with a link is a hyperlink to that address in the player (links are inert while editing).
 
 Things to know:
 - The layer's **Text** field always shows the runs joined. Typing in it keeps the styling around your edit.
