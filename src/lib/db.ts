@@ -272,6 +272,13 @@ export interface CollaboratorList {
   collaborators: Collaborator[];
   canManage: boolean;
 }
+export interface Person {
+  username: string;
+  name: string;
+  email: string | null;
+}
+/** Staff whose name, email or username contains what's typed (at least 2 characters). */
+export const findPeople = (q: string) => call<{ people: Person[] }>(`people?q=${encodeURIComponent(q)}`).then((r) => r.people);
 export const getCollaborators = (projectId: string) => call<CollaboratorList>(`projects/${encodeURIComponent(projectId)}/collaborators`);
 const postJson = (body: unknown): RequestInit => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 export const addCollaborator = (projectId: string, username: string, name = '') =>

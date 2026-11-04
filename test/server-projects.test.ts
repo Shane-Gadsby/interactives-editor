@@ -433,3 +433,20 @@ describe('collaborators', () => {
     expect((await h.call('GET', '/api/projects/prcollab02/collaborators', { user: bob })).json.canManage).toBe(false);
   });
 });
+
+describe('finding people to invite', () => {
+  it('finds staff by part of their name, email or username, never students, and keeps the input from being a regex', async () => {
+    h.db['user-lookup'].docs = [
+      { username: 'u1001', firstName: 'Priya', lastName: 'Shah', email: 'priya.shah@unisq.edu.au', isStudent: false },
+      { username: 'u1002', firstName: 'Priya', lastName: 'Nguyen', email: 'p.nguyen@umail.unisq.edu.au', isStudent: true },
+      { username: 'u1003', fullName: 'Sam Priyanka', email: 'sam@unisq.edu.au', isStudent: true },
+      { username: 'u1001', firstName: 'Priya', lastName: 'Shah', email: 'priya.shah@unisq.edu.au', isStudent: false },
+    ];
+    const r = await h.call('GET', '/api/people?q=priya', { user: ann });
+    expect(r.json.people.map((p: { username: string }) => p.username)).toEqual(['u1001', 'u1003']);
+    expect(r.json.people[0]).toEqual({ username: 'u1001', name: 'Priya Shah', email: 'priya.shah@unisq.edu.au' });
+    expect((await h.call('GET', '/api/people?q=u100', { user: ann })).json.people).toHaveLength(2);
+    expect((await h.call('GET', '/api/people?q=.*', { user: ann })).json.people).toEqual([]);
+    expect((await h.call('GET', '/api/people?q=p', { user: ann })).json.people).toEqual([]);
+  });
+});

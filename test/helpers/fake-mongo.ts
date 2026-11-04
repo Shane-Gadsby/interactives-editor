@@ -21,6 +21,9 @@ function matchField(value: any, cond: any): boolean {
     return Object.entries(cond).every(([op, arg]) => {
       if (op === '$in') return (arg as any[]).some((x) => matchField(value, x));
       if (op === '$ne') return !matchField(value, arg);
+      if (op === '$regex') return typeof value === 'string' && new RegExp(arg as string, (cond as any).$options ?? '').test(value);
+      if (op === '$options') return true;
+      if (op === '$not') return !(arg instanceof RegExp ? typeof value === 'string' && arg.test(value) : matchField(value, arg));
       if (op === '$gte') return value !== undefined && value !== null && compare(value, arg) >= 0;
       if (op === '$gt') return value !== undefined && value !== null && compare(value, arg) > 0;
       if (op === '$lte') return value !== undefined && value !== null && compare(value, arg) <= 0;
@@ -192,4 +195,5 @@ export class FakeDb {
   'comment-notices' = new FakeCollection();
   'interactives-user-data' = new FakeCollection();
   ingest = new FakeCollection();
+  'user-lookup' = new FakeCollection();
 }

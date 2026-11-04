@@ -6388,3 +6388,34 @@ code {
 .invite-list li .muted {
   margin-left: auto;
 }
+
+.invite-found {
+  list-style: none;
+  margin: -4px 0 10px;
+  padding: 4px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  max-height: 220px;
+  overflow: auto;
+}
+.invite-found button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.invite-found button:hover:not(:disabled),
+.invite-found button:focus-visible {
+  background: var(--panel-2);
+}
+.invite-found button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

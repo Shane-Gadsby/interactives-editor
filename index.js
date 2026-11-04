@@ -70,6 +70,7 @@ let port = Number(process.env.PORT) || 3048,
 	prefs,
 	libraries,
 	userData,
+	userLookup,
 	ingest,
 	commentRows,
 	commentNotices,
@@ -921,6 +922,51 @@ router.post('/api/projects/:id/revisions/:revID/restore', async (req, res) => {
 	}
 
 	res.json({ok: true, rev: next})
+})
+
+//Finding someone to invite by name: up to 8 staff from the suite's user-lookup whose name, email or username contains
+//what's been typed (escaped, so it's a "contains" match, not a regex anyone gets to write). The username is who they
+//are; the name and email are only how they're found. Same staff rule as media-catalogue's share box: isStudent comes
+//off someone's latest launch, so a staff address counts as staff whatever the flag says, and a student or disabled
+//address never does
+const STAFF_EMAIL = /@(test\.)?(usq|unisq)\.edu\.au(\.inv)?$/i,
+	NEVER_STAFF = /@umail\.|\.invalid$/i,
+	escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+router.get('/api/people', async (req, res) => {
+	let me = whoIs(req),
+		q = String(req.query.q ?? '').trim().slice(0, 80)
+
+	if (!me?.username && enforcing()) {
+		return res.status(401).json({error: 'Sign in to look people up'})
+	}
+
+	if (q.length < 2) {
+		return res.json({people: []})
+	}
+
+	let like = {$regex: escapeRegex(q), $options: 'i'},
+		rows = await userLookup.find({username: {$ne: null}, $or: [{username: like}, {firstName: like}, {lastName: like}, {fullName: like}, {email: like}]}, {projection: {_id: 0, username: 1, firstName: 1, lastName: 1, fullName: 1, email: 1, isStudent: 1}}).limit(60).toArray(),
+		seen = new Set(),
+		people = []
+
+	for (let r of rows) {
+		let email = String(r.email || ''),
+			staff = !NEVER_STAFF.test(email) && (r.isStudent === false || STAFF_EMAIL.test(email))
+
+		if (!staff || seen.has(r.username) || r.username === me?.username) {
+			continue
+		}
+
+		seen.add(r.username)
+		people.push({username: r.username, name: r.fullName || [r.firstName, r.lastName].filter(Boolean).join(' ') || r.username, email: email || null})
+
+		if (people.length >= 8) {
+			break
+		}
+	}
+
+	res.json({people})
 })
 
 //Collaborators: people the owner invited to open and edit the project with them (live editing, comments, sharing).
@@ -2262,6 +2308,7 @@ client.connect()
 		commentNotices = db.collection('comment-notices')
 		userData = analyticsDB.collection('interactives-user-data')
 		ingest = analyticsDB.collection('ingest')
+		userLookup = analyticsDB.collection('user-lookup')
 		fs.mkdirSync(storageDir, {recursive: true})
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)

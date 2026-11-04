@@ -2416,7 +2416,7 @@ The server keeps saved revisions of the project: a snapshot every few minutes wh
 If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).
 
 ## Inviting people
-**Share → Invite to collaborate…** lets other people open and edit the project with you. Type their StudyDesk username (for example *u1234567*) and press **Invite**. The project then shows on their own projects page, and when you both have it open you see each other's cursors and changes live. Collaborators can edit, comment, export and share it; only the owner can delete the project or change who's invited (a collaborator can take themselves off the list). To let someone look and comment without editing, use **Share for review** instead ([Review comments](comments)).`,
+**Share → Invite to collaborate…** lets other people open and edit the project with you. Start typing their name (or email, or username) and pick them from the list that appears; you can also type a StudyDesk username (for example *u1234567*) and press **Invite**. The project then shows on their own projects page, and when you both have it open you see each other's cursors and changes live. Collaborators can edit, comment, export and share it; only the owner can delete the project or change who's invited (a collaborator can take themselves off the list). To let someone look and comment without editing, use **Share for review** instead ([Review comments](comments)).`,
   },
 
   {

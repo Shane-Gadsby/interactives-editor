@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, prepareNodes, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
-import { addCollaborator, clearResults, getCollaborators, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
+import { addCollaborator, clearResults, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
 import { standaloneHtml } from '../lib/export';
 import { IconButton } from './ui';
@@ -443,21 +443,35 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
   const projectId = store().get().project.id;
   const [data, setData] = useState<CollaboratorList | null>(null);
   const [username, setUsername] = useState('');
+  const [found, setFound] = useState<Person[]>([]);
   const [busy, setBusy] = useState(false);
+  // Suggestions as you type a name (or an email or username), a moment after typing stops
+  useEffect(() => {
+    const q = username.trim();
+    if (q.length < 2) {
+      setFound([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      findPeople(q).then(setFound, () => setFound([]));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [username]);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     getCollaborators(projectId).then(setData, (e) => setError(e instanceof Error ? e.message : String(e)));
   }, [projectId]);
-  const add = async () => {
-    const u = username.trim();
+  const add = async (person?: Person) => {
+    const u = person?.username ?? username.trim();
     if (!u) return;
     setBusy(true);
     setError(null);
     try {
-      const collaborators = await addCollaborator(projectId, u);
+      const collaborators = await addCollaborator(projectId, u, person?.name ?? '');
       setData((d) => (d ? { ...d, collaborators } : d));
       setUsername('');
-      store().toast(`${u} can now open and edit this project.`);
+      setFound([]);
+      store().toast(`${person?.name ?? u} can now open and edit this project.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -485,11 +499,26 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
               void add();
             }}
           >
-            <input autoFocus placeholder="StudyDesk username, e.g. u1234567" aria-label="Username to invite" value={username} onChange={(e) => setUsername(e.target.value)} />
-            <button className="btn primary" disabled={busy || !username.trim()} title="Give this person access to open and edit the project">
+            <input autoFocus placeholder="Search by name, email or username" aria-label="Find someone to invite" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <button className="btn primary" disabled={busy || !username.trim()} title="Invite by the username typed (or pick someone from the list below)">
               Invite
             </button>
           </form>
+        )}
+        {found.length > 0 && (
+          <ul className="invite-found" role="listbox" aria-label="People found">
+            {found.map((p) => (
+              <li key={p.username}>
+                <button type="button" role="option" aria-selected={false} disabled={busy || !!data?.collaborators.some((c) => c.username === p.username)} onClick={() => void add(p)} title={`Invite ${p.name}`}>
+                  <span>{p.name}</span>
+                  <span className="muted small">
+                    {p.username}
+                    {p.email ? ` · ${p.email}` : ''}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
         <ul className="invite-list">
           {data?.owner && (
