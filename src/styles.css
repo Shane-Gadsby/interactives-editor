@@ -1404,8 +1404,11 @@ body.col-resizing * {
   position: absolute;
   left: 0;
   top: 0;
-  opacity: 0.35;
+  opacity: 0.5;
   pointer-events: none;
+  /* zebra striped, so it reads as there but not shown rather than just pale */
+  -webkit-mask-image: repeating-linear-gradient(-45deg, #000 0 6px, rgba(0, 0, 0, 0.3) 6px 12px);
+  mask-image: repeating-linear-gradient(-45deg, #000 0 6px, rgba(0, 0, 0, 0.3) 6px 12px);
 }
 .artboard-ghost * {
   pointer-events: none !important;
@@ -6469,15 +6472,14 @@ code {
   color: #fff;
 }
 
-.version-tag {
-  flex: none;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--panel-2);
+.version-info {
   color: var(--muted);
-  font-size: 11px;
-  white-space: nowrap;
-  user-select: text;
+}
+.quick-help-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 /* Templates: the tab on the projects page, the checklist, saving and updating */
 .home-tabs {
@@ -7020,4 +7022,10 @@ code {
 .themes-toolbar .select-field select {
   width: auto;
   min-width: 140px;
+}
+
+.help-page-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }

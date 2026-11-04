@@ -1,4 +1,5 @@
 import { track } from './lib/analytics';
+import { VersionInfo } from './components/VersionInfo';
 import { useEffect, useMemo, useState } from 'react';
 import { createProject, PACKAGE_EXTENSION } from 'interactives-player';
 import { createProjectRecord, deleteProject, duplicateProject, importPackage, listProjects, loadProjectRecord, META_MAX_LABEL, META_MAX_TAGS, session, setProjectMeta, type ProjectMeta, type SessionInfo } from './lib/db';
@@ -338,6 +339,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           <a className="btn" href="#/help" title="How to use Interactives (F1 to search)">
             <Icons.help width={14} /> Help
           </a>
+          <VersionInfo />
           <button className="btn" onClick={doImport} disabled={busy} title={`Import a file as a new project. Accepts ${PACKAGE_EXTENSION} packages, project JSON, and Lottie, Rive, Photoshop (PSD), Illustrator (AI), PDF, VectorCraft and PhotoCraft files`}>
             <Icons.upload width={14} /> Import
           </button>

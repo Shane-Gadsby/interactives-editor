@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { BUILD_ID, VERSION, VERSION_LABEL } from '../lib/version';
+import { VersionInfo } from '../components/VersionInfo';
 import { Markdown } from './markdown';
 import { searchHelp, type HelpHit } from './search';
 import { noteHelpSearch, track } from '../lib/analytics';
@@ -129,12 +129,12 @@ export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey }:
           if (e.key === 'Enter' && hits[0]) go(`${hits[0].topic.id}${hits[0].anchor ? `#${hits[0].anchor}` : ''}`);
           if (e.key === 'Escape') setQuery('');
         }} />
-        <span className="version-tag" title={`${VERSION_LABEL}. Mention it when reporting a problem`}>v{VERSION} · {BUILD_ID}</span>
         {compact && (
           <a className="icon-btn" title="Open the help in a new tab" href={`#/help/${topic.id}`} target="_blank" rel="noreferrer">
             <Icons.external />
           </a>
         )}
+        {compact && <VersionInfo />}
         {onClose && (
           <button className="icon-btn" title="Close help (Esc)" onClick={onClose}>
             <Icons.close />
@@ -252,7 +252,10 @@ function QuickSearch({ onPick, onClose }: { onPick: (h: HelpHit) => void; onClos
           {!hits.length && <li className="muted">Nothing matches. Try other words.</li>}
         </ul>
         <div className="quick-help-foot muted small">
-          <kbd>↑</kbd> <kbd>↓</kbd> to choose · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close
+          <span>
+            <kbd>↑</kbd> <kbd>↓</kbd> to choose · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close
+          </span>
+          <VersionInfo />
         </div>
       </div>
     </div>
@@ -270,7 +273,9 @@ export function HelpPage({ id, anchor }: { id: string; anchor?: string }) {
         <a className="brand" href="#/">
           Interactives
         </a>
-        <span className="muted">Help</span>
+        <span className="muted help-page-label">
+          Help <VersionInfo />
+        </span>
       </header>
       <HelpView id={id} anchor={anchor} onNavigate={(t, a) => (location.hash = `#/help/${t}${a ? `/${a}` : ''}`)} />
     </div>

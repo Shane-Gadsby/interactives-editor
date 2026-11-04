@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BUILD_ID, VERSION, VERSION_LABEL } from '../lib/version';
+import { VersionInfo } from './VersionInfo';
 import { setPrefs, usePrefs } from '../lib/prefs';
 import { IconButton, SelectField, CheckField, TextField } from './ui';
 import { Icons } from './icons';
@@ -20,7 +20,7 @@ export function PrefsModal({ onClose }: { onClose: () => void }) {
           <strong>Preferences</strong>
           <HelpLink topic="preferences" />
           <div className="spacer" />
-          <span className="version-tag" title={`${VERSION_LABEL}. Mention it when reporting a problem`}>v{VERSION} · {BUILD_ID}</span>
+          <VersionInfo />
           <IconButton icon={<Icons.close />} title="Close (Esc)" onClick={onClose} />
         </header>
         <div className="prefs-body">
