@@ -4267,6 +4267,9 @@ code {
   color: #fff;
 }
 .btn.danger-fill:hover:not(:disabled) {
+  /* the plain .btn hover would paint it the panel colour, white text on near white */
+  background: var(--danger);
+  border-color: var(--danger);
   filter: brightness(1.1);
 }
 .dialog .btn:focus-visible {

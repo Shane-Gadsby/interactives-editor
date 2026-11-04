@@ -3,7 +3,8 @@ import { formatColor, parseColor, type RunStyle, type TextNode } from 'interacti
 import { store, useEditor } from '../store/store';
 import { PaletteButton } from '../components/ui';
 import { Icons } from '../components/icons';
-import { FONT_FAMILIES } from '../lib/fonts';
+import { FontPicker } from '../components/FontPicker';
+import { ensureGoogleFont } from '../lib/font-catalog';
 import { setSelectionOffsets } from '../lib/rich-text-dom';
 import { actionPatch, linkPatch, shortcutAction, targetRange, toolbarState, unlinkPatch, type TextAction, type TextSel, type Tri } from '../lib/text-toolbar';
 
@@ -158,8 +159,6 @@ export function TextToolbar({ node, editor, box, bounds, commands }: { node: Tex
       {glyph}
     </button>
   );
-  const families = [...new Set([...project.fonts.map((f) => (f.family.includes(' ') ? `"${f.family}"` : f.family)), ...FONT_FAMILIES, node.fontFamily])];
-  const name = (f: string) => f.replace(/"/g, '').split(',')[0];
 
   return (
     <div
@@ -226,18 +225,21 @@ export function TextToolbar({ node, editor, box, bounds, commands }: { node: Tex
             }
           }}
         />
-        <select className="tt-font" aria-label="Font" title="Font" disabled={disabled} value={st.fontFamily === 'mixed' ? '' : st.fontFamily} onChange={(e) => (patch({ fontFamily: e.target.value }), refocus(sel))}>
-          {st.fontFamily === 'mixed' && (
-            <option value="" disabled>
-              Mixed
-            </option>
-          )}
-          {families.map((f) => (
-            <option key={f} value={f} style={{ fontFamily: f }}>
-              {name(f)}
-            </option>
-          ))}
-        </select>
+        <FontPicker
+          className="tt-font"
+          ariaLabel="Font"
+          title="Font: search every Google font (a new one is added to the project), or pick a project or system font"
+          disabled={disabled}
+          value={st.fontFamily === 'mixed' ? '' : st.fontFamily}
+          mixed={st.fontFamily === 'mixed'}
+          project={project.fonts}
+          onPick={(o) => {
+            //a Google font the project doesn't load yet gets added, in the same undo step
+            if (o.google) store().update((d) => void ensureGoogleFont(d.fonts, o.family, [node.fontWeight]), { coalesce: `tt-font-${id}` });
+            patch({ fontFamily: o.stack }, `tt-font-${id}`);
+            refocus(sel);
+          }}
+        />
         <span className="tt-sep" aria-hidden="true" />
         <button type="button" className={`tt-btn${st.link && st.link !== 'mixed' ? ' on' : st.link === 'mixed' ? ' mixed' : ''}`} aria-pressed={st.link === 'mixed' ? 'mixed' : !!st.link} aria-label="Link" title="Add or edit a link (Ctrl/Cmd+K)" disabled={disabled} onClick={() => apply('link')}>
           <Icons.link />

@@ -1,15 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { act, createRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createNode, createProject, type TextNode, type TextRun } from 'interactives-player';
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { TextToolbar, type ToolbarCommands } from '../src/canvas/TextToolbar';
 import { Inspector } from '../src/panels/Inspector';
+import { loadCatalog } from '../src/lib/font-catalog';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let root: Root;
 let host: HTMLElement;
+beforeAll(async () => {
+  await loadCatalog();
+});
 beforeEach(() => {
   host = document.createElement('div');
   document.body.appendChild(host);
@@ -83,7 +87,7 @@ describe('the toolbar shows the selection', () => {
     const size = host.querySelector<HTMLInputElement>('.tt-size')!;
     expect(size.value).toBe('');
     expect(size.placeholder).toBe('mixed');
-    expect(host.querySelector<HTMLSelectElement>('.tt-font')!.selectedOptions[0].textContent).toBe('Mixed');
+    expect(host.querySelector<HTMLInputElement>('.tt-font input')!.placeholder).toBe('Mixed');
     expect(host.querySelector('.tt-swatch')!.getAttribute('aria-label')).toMatch(/Text colour/);
   });
 
@@ -155,9 +159,19 @@ describe('the buttons', () => {
   });
 
   it('font and colour go to the selection', () => {
-    const { node } = mount('Hello world', undefined, { start: 6, end: 11 });
-    setValue(host.querySelector<HTMLSelectElement>('.tt-font')!, 'Georgia, serif', 'change');
-    expect(node().runs).toEqual([{ text: 'Hello ' }, { text: 'world', fontFamily: 'Georgia, serif' }]);
+    const { node, s: store } = mount('Hello world', undefined, { start: 6, end: 11 });
+    const font = host.querySelector<HTMLInputElement>('.tt-font input')!;
+    act(() => font.focus());
+    setValue(font, 'Georgia', 'input');
+    act(() => [...host.querySelectorAll<HTMLElement>('.tt-font [role=option]')].find((o) => o.querySelector('.font-opt-name')!.textContent === 'Georgia')!.click());
+    expect(node().runs![1].fontFamily).toMatch(/^Georgia/);
+    expect(node().runs![0]).toEqual({ text: 'Hello ' });
+    // a Google font the project doesn't have is added to it
+    act(() => font.focus());
+    setValue(font, 'Lobster', 'input');
+    act(() => [...host.querySelectorAll<HTMLElement>('.tt-font [role=option]')].find((o) => o.querySelector('.font-opt-name')!.textContent === 'Lobster')!.click());
+    expect(node().runs![1].fontFamily).toMatch(/Lobster/);
+    expect(store.get().project.fonts.some((f) => f.family === 'Lobster')).toBe(true);
     setValue(host.querySelector<HTMLInputElement>('.tt-swatch input')!, '#ff0000', 'input');
     expect(node().runs![1].color).toBe('#ff0000');
     expect(node().color).not.toBe('#ff0000');
