@@ -76,7 +76,7 @@ export function LibrariesPanel() {
         ))}
       </Section>
 
-      <Section title={`Available libraries${available.length ? ` (${available.length})` : ''}`}>
+      <Section help="libraries" title={`Available libraries${available.length ? ` (${available.length})` : ''}`}>
         {libs && !available.length && <p className="hint">{libs.length ? 'You are using every library you can see.' : 'No libraries yet. Mark a project as a library and publish it, and it shows up here for you and anyone you share it with.'}</p>}
         {available.map((l) => (
           <div key={l.id} className="lib-row">

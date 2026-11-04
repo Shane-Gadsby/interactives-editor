@@ -20,6 +20,15 @@
   --warn-text: #f2d48a;
   --danger-text: #ffc1c1;
   --key-on: #ffcf5a;
+  --key-off: #8e93a0;
+  --btn-hover-border: #6e7380;
+  --btn-hover-bg: #32343b;
+  --banner-warn-bg: #3a2f12;
+  --banner-warn-fg: #f2d48a;
+  --banner-error-bg: #3a1616;
+  --banner-error-fg: #f3a4a4;
+  --banner-rec-bg: #4a1d1d;
+  --banner-rec-fg: #ffb4b4;
   --radius: 6px;
   color-scheme: dark;
   font: 12.5px/1.4 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -49,6 +58,15 @@
   --warn-text: #7a5600;
   --danger-text: #a02424;
   --key-on: #b87800;
+  --key-off: #6b7280;
+  --btn-hover-border: #9aa1ad;
+  --btn-hover-bg: #e4e7ec;
+  --banner-warn-bg: #fbefc9;
+  --banner-warn-fg: #6a4a00;
+  --banner-error-bg: #fbe0e0;
+  --banner-error-fg: #8f1f1f;
+  --banner-rec-bg: #fbdcdc;
+  --banner-rec-fg: #8f1f1f;
   color-scheme: light;
 }
 @media (prefers-color-scheme: light) {
@@ -73,6 +91,15 @@
   --warn-text: #7a5600;
   --danger-text: #a02424;
   --key-on: #b87800;
+  --key-off: #6b7280;
+  --btn-hover-border: #9aa1ad;
+  --btn-hover-bg: #e4e7ec;
+  --banner-warn-bg: #fbefc9;
+  --banner-warn-fg: #6a4a00;
+  --banner-error-bg: #fbe0e0;
+  --banner-error-fg: #8f1f1f;
+  --banner-rec-bg: #fbdcdc;
+  --banner-rec-fg: #8f1f1f;
   color-scheme: light;
   }
 }
@@ -147,7 +174,8 @@ code,
   white-space: nowrap;
 }
 .btn:hover:not(:disabled) {
-  border-color: #5a5e66;
+  border-color: var(--btn-hover-border);
+  background: var(--btn-hover-bg);
 }
 .timeline-bar .btn.active {
   border-color: var(--accent);
@@ -196,7 +224,7 @@ code,
   flex: none;
 }
 .icon-btn:hover:not(:disabled) {
-  background: var(--panel-2);
+  background: var(--btn-hover-bg);
 }
 .icon-btn.active {
   background: var(--accent-2);
@@ -404,7 +432,7 @@ code,
   flex: none;
   border: none;
   background: none;
-  color: #5c606a;
+  color: var(--key-off);
   cursor: pointer;
   font-size: 10px;
   padding: 0 2px;
@@ -953,17 +981,19 @@ hr.item-sep {
 .tag-input,
 .tag-input:focus,
 .tag-input:focus-visible {
+  box-sizing: border-box;
   width: 96px;
   height: 20px;
   padding: 0 8px;
   font-size: 11px;
   line-height: 18px;
   border-radius: 10px;
-  border: 1px solid var(--accent);
+  /* Same pill as a finished tag: no ring, no halo, the caret says it is being typed in */
+  border: 1px solid var(--line-2);
   background: var(--panel-2);
   color: var(--text);
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: none;
 }
 .tag-input::placeholder {
   color: var(--muted);
@@ -1007,16 +1037,16 @@ hr.item-sep {
 .recording-banner,
 .conflict-banner {
   padding: 8px 24px;
-  background: #3a2f12;
-  color: #f2d48a;
+  background: var(--banner-warn-bg);
+  color: var(--banner-warn-fg);
 }
 .error-banner {
-  background: #3a1616;
-  color: #f3a4a4;
+  background: var(--banner-error-bg);
+  color: var(--banner-error-fg);
 }
 .recording-banner {
-  background: #4a1d1d;
-  color: #ffb4b4;
+  background: var(--banner-rec-bg);
+  color: var(--banner-rec-fg);
   padding: 6px 12px;
   font-size: 11px;
 }
@@ -3937,8 +3967,8 @@ code {
   font-size: 12px;
 }
 .link-banner.warn {
-  background: #3a2f12;
-  color: #f2d48a;
+  background: var(--banner-warn-bg);
+  color: var(--banner-warn-fg);
 }
 .link-banner .link-banner-text {
   flex: 1;

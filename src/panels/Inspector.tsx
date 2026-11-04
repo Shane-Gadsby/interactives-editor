@@ -880,10 +880,8 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
         <SelectField label="Align" value={n.align} options={['left', 'center', 'right', 'justify'] as const} onChange={(v) => set({ align: v })} />
         <SelectField label="V-align" value={n.verticalAlign} options={['top', 'middle', 'bottom'] as const} onChange={(v) => set({ verticalAlign: v })} />
       </Row>
-      <Row>
-        <CheckField label="Italic" value={n.fontStyle === 'italic'} onChange={(v) => set({ fontStyle: v ? 'italic' : 'normal' })} />
-        <SelectField label="Case" value={n.textTransform ?? 'none'} options={['none', 'uppercase', 'lowercase', 'capitalize'] as const} onChange={(v) => set({ textTransform: v })} />
-      </Row>
+      <CheckField label="Italic" value={n.fontStyle === 'italic'} onChange={(v) => set({ fontStyle: v ? 'italic' : 'normal' })} />
+      <SelectField label="Case" value={n.textTransform ?? 'none'} options={['none', 'uppercase', 'lowercase', 'capitalize'] as const} onChange={(v) => set({ textTransform: v })} />
       <SelectField label="Decoration" value={n.textDecoration ?? 'none'} options={['none', 'underline', 'line-through'] as const} onChange={(v) => set({ textDecoration: v })} />
     </>
   );
@@ -1721,6 +1719,9 @@ function TextModifiersSection({ node }: { node: Extract<SceneNode, { type: 'text
       actions={<IconButton icon={<Icons.plus />} title="Add a text modifier: animate letters, words or lines one after another" onClick={() => store().addTextModifier(node.id)} />}
     >
       <Row>
+        <span className="field-label" title="Ready-made animations: each adds a modifier and a timeline for it">
+          Presets
+        </span>
         {TEXT_PRESETS.map((p) => (
           <button key={p.id} className="btn" title={p.tip} onClick={() => store().applyTextPreset(node.id, p.id)}>
             {p.label}

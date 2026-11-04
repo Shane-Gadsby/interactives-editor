@@ -285,8 +285,8 @@ export function Home({ open }: { open: (id: string) => void }) {
           <a className="btn" href="#/help" title="How to use Interactives (F1 to search)">
             <Icons.help width={14} /> Help
           </a>
-          <button className="btn" onClick={doImport} disabled={busy}>
-            <Icons.upload width={14} /> Import ({PACKAGE_EXTENSION}, Lottie, Rive, PSD, AI, PDF, VectorCraft, PhotoCraft)
+          <button className="btn" onClick={doImport} disabled={busy} title={`Import a file as a new project. Accepts ${PACKAGE_EXTENSION} packages, project JSON, and Lottie, Rive, Photoshop (PSD), Illustrator (AI), PDF, VectorCraft and PhotoCraft files`}>
+            <Icons.upload width={14} /> Import
           </button>
           <button className="btn primary" onClick={create} disabled={busy}>
             <Icons.plus width={14} /> New project

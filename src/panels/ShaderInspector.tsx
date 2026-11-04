@@ -21,7 +21,8 @@ import { addUniform, applyShaderPreset, removeUniform, retypeUniform, type Shade
 import { Color, KeyButton, Num } from './Inspector';
 
 const PIXEL_RATIOS = ['auto', '1', '2', '3'] as const;
-const TYPE_LABEL: Record<ShaderUniform['type'], string> = { float: 'float (number)', vec2: 'vec2', vec3: 'vec3', vec4: 'vec4', color: 'color', image: 'image' };
+// Plain words in the picker; the stored type stays the GLSL one
+const TYPE_LABEL: Record<ShaderUniform['type'], string> = { float: 'Number', vec2: 'Vector 2', vec3: 'Vector 3', vec4: 'Vector 4', color: 'Colour', image: 'Image' };
 
 /** What the code editor and the uniform list edit: a shader layer itself, or an image layer's `shaderFilter`. */
 interface Target {

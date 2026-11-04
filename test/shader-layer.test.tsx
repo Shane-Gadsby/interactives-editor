@@ -459,8 +459,12 @@ describe('shader inspector', () => {
     render();
     expect(host.textContent).toContain('No uniforms');
     const add = Array.from(host.querySelectorAll('select')).find((x) => Array.from(x.options).some((o) => o.textContent === '+ Add a uniform…'))!;
+    // Plain words for the types, the stored value is still the GLSL one
+    expect(Array.from(add.options).map((o) => o.textContent)).toEqual(['+ Add a uniform…', 'Number', 'Vector 2', 'Vector 3', 'Vector 4', 'Colour', 'Image']);
     change(add, 'vec3');
     render();
+    expect(shaderOf(s).uniforms[0].type).toBe('vec3');
+    expect(host.textContent).toContain('Vector 3');
     expect(shaderOf(s).uniforms).toHaveLength(1);
     expect(host.querySelectorAll('.key-btn')).toHaveLength(3);
     act(() => (host.querySelector('button[title="Remove value1"]') as HTMLElement).click());
