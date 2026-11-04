@@ -1008,6 +1008,11 @@ const ANIMATABLE_PROPS = [
   { prop: "opacity", label: "Opacity", kind: "number" },
   { prop: "visible", label: "Visible", kind: "boolean" },
   { prop: "cornerRadius", label: "Corner radius", kind: "number" },
+  // One corner of a rect or frame with radii per corner (top-left, top-right, bottom-right, bottom-left)
+  { prop: "cornerRadii.0", label: "Corner radius top-left", kind: "number" },
+  { prop: "cornerRadii.1", label: "Corner radius top-right", kind: "number" },
+  { prop: "cornerRadii.2", label: "Corner radius bottom-right", kind: "number" },
+  { prop: "cornerRadii.3", label: "Corner radius bottom-left", kind: "number" },
   { prop: "originX", label: "Origin X (0-1)", kind: "number" },
   { prop: "originY", label: "Origin Y (0-1)", kind: "number" },
   { prop: "fill.color", label: "Fill colour", kind: "color" },
@@ -4392,7 +4397,7 @@ Draw freehand. The stroke is smoothed into a few bezier curves when you let go. 
 Select a path and press <kbd>Enter</kbd> (or double-click). Drag points and handles, click a point and press <kbd>Delete</kbd> to remove it, and <kbd>Alt</kbd>-click a point to switch it between a curve and a corner. <kbd>Escape</kbd> or <kbd>Enter</kbd> finishes. Double-click the outline to add a point. Drag an edge with the Bend tool (<kbd>W</kbd>) to curve it, and animate points to morph the shape: see [Shape morphing and the Bend tool](shape-morphing).
 
 ## Shape settings
-- **Rectangle**: corner radius.
+- **Rectangle** (and **Frame**): corner radius. There are four fields, one per corner (top-left, top-right, bottom-left, bottom-right) and a padlock. Locked (the default while all four are the same), changing any field sets all four. Unlock it to give each corner its own radius, and each corner gets its own keyframe diamond so you can animate them separately. Locking again sets all four to the top-left value.
 - **Polygon**: number of sides. **Star**: points and inner ratio (how deep the points are).
 - **Path**: closed or open, fill rule (non-zero or even-odd for holes).
 - Any shape can be a **mask** for the layers above it: tick *Use as mask* ([Groups and frames](groups-frames#masks)).
