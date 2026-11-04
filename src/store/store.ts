@@ -18,6 +18,8 @@ import {
   nodeRuns,
   retextRuns,
   sanitizeLayerInPlace,
+  setBase,
+  setMembers,
   type Artboard,
   type Keyframe,
   type Project,
@@ -38,6 +40,7 @@ import type { Peer } from '../lib/live';
 import { getArtboard, locate, parentToArtboard, selectionBounds, topmost, uniqueName, nodeNames } from './doc';
 import { dropRefsToRemoved, retargetChildRefs } from './refs';
 import { adoptQuestions, dropOrphanKitNodes } from '../lib/question-kit';
+import { variantPlan, type VariantSide } from '../lib/variants-edit';
 
 /** Whether any frame in a tree has auto layout. */
 function hasAutoLayout(list: SceneNode[]): boolean {
@@ -932,15 +935,100 @@ export class EditorStore {
       return;
     }
     this.update((d) => {
+      // The base of a responsive set goes: its narrowest variant becomes the base of the rest
+      const gone = d.artboards.find((a) => a.id === id);
+      const heirs = d.artboards.filter((a) => a.variantOf === id);
+      if (gone && heirs.length) {
+        const heir = setMembers(d.artboards as Artboard[], gone as Artboard).find((a) => a.id !== id)!;
+        delete heir.variantOf;
+        for (const a of heirs) if (a !== heir) a.variantOf = heir.id;
+        if (d.settings.startArtboardId === id) d.settings.startArtboardId = heir.id;
+        if (d.settings.reporting?.completionArtboard === id) d.settings.reporting.completionArtboard = heir.id;
+      }
       d.artboards = d.artboards.filter((a) => a.id !== id);
       if (d.settings.startArtboardId === id) d.settings.startArtboardId = d.artboards[0].id;
     });
     this.set({ artboardSelected: false, selection: [] });
   }
 
+  /**
+   * Add an artboard to a responsive set: a copy of the artboard (layers, timelines and interactions, all with fresh ids) that
+   * is shown at another width. The set is the artboard's own, so adding a variant to a variant adds it to the same set.
+   * Returns the new artboard's id.
+   */
+  addVariant(id: string, side: VariantSide = 'narrower'): string | null {
+    const src = getArtboard(this.state.project, id);
+    if (!src) return null;
+    const all = this.state.project.artboards;
+    const base = setBase(all, src);
+    const members = setMembers(all, src);
+    const plan = variantPlan(members, side);
+    const copy = this.copyArtboard(src);
+    copy.name = uniqueName(
+      all.map((a) => a.name),
+      `${base.name} ${side === 'narrower' ? 'narrow' : 'wide'}`,
+    );
+    copy.width = plan.width;
+    copy.height = plan.height;
+    copy.minWidth = plan.minWidth;
+    copy.variantOf = base.id;
+    const right = members.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0);
+    copy.canvasX = right + 100;
+    copy.canvasY = src.canvasY;
+    this.update((d) => {
+      if (plan.edgeMinWidth !== undefined) {
+        const edge = d.artboards.find((a) => a.id === members[0].id);
+        if (edge) edge.minWidth = plan.edgeMinWidth;
+      }
+      d.artboards.push(copy);
+    });
+    this.set({ activeArtboardId: copy.id, selection: [], artboardSelected: true, activeTimelineId: null });
+    return copy.id;
+  }
+
+  /** Make an artboard a variant of another one's set (`baseId` null: it stands on its own again). */
+  setVariantOf(id: string, baseId: string | null): void {
+    const p = this.state.project;
+    const ab = getArtboard(p, id);
+    if (!ab) return;
+    const base = baseId ? getArtboard(p, baseId) : null;
+    const target = base ? setBase(p.artboards, base) : null;
+    // Not itself, and not an artboard that has variants of its own
+    if (target && (target.id === id || p.artboards.some((a) => a.variantOf === id))) return;
+    this.update((d) => {
+      const a = getArtboard(d as Project, id);
+      if (!a) return;
+      if (target) a.variantOf = target.id;
+      else delete a.variantOf;
+    });
+  }
+
+  /** The width, in px, from which an artboard of a set is shown. */
+  setBreakpoint(id: string, minWidth: number): void {
+    const v = Math.max(0, Math.min(100000, Math.round(Number(minWidth) || 0)));
+    this.update(
+      (d) => {
+        const a = getArtboard(d as Project, id);
+        if (!a) return;
+        if (v) a.minWidth = v;
+        else delete a.minWidth;
+      },
+      { coalesce: `ab-bp-${id}` },
+    );
+  }
+
   duplicateArtboard(id: string): void {
     const src = getArtboard(this.state.project, id);
     if (!src) return;
+    const copy = this.copyArtboard(src);
+    this.update((d) => {
+      d.artboards.push(copy);
+    });
+    this.set({ activeArtboardId: copy.id, selection: [], artboardSelected: true });
+  }
+
+  /** A copy of an artboard with new ids all through (layers, timelines, joysticks, blends and the interactions that point at them), next to it on the canvas. Not added to the project. */
+  private copyArtboard(src: Artboard): Artboard {
     const idMap = new Map<string, string>();
     const children = src.children.map((c) => cloneWithNewIds(JSON.parse(JSON.stringify(c)) as SceneNode, idMap));
     const copy: Artboard = {
@@ -955,6 +1043,9 @@ export class EditorStore {
     };
     // a copy isn't linked to the file: its layers have new ids, so it couldn't be matched to the file's anyway
     delete copy.source;
+    // and it stands on its own: a copy of a set's base is not the base of the same variants
+    delete copy.variantOf;
+    delete copy.minWidth;
     // and a copy of a library artboard is your own to edit
     delete copy.library;
     delete copy.publish;
@@ -996,10 +1087,7 @@ export class EditorStore {
         if (typeof n.params[k] === 'string' && tlMap.has(n.params[k] as string)) n.params[k] = tlMap.get(n.params[k] as string);
       }
     }
-    this.update((d) => {
-      d.artboards.push(copy);
-    });
-    this.set({ activeArtboardId: copy.id, selection: [], artboardSelected: true });
+    return copy;
   }
 
   // ---------------------------------------------------------------- text modifiers

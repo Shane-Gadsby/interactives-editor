@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { PACKAGE_EXTENSION, QUESTION_KINDS, walk, type Project, type QuestionKind } from 'interactives-player';
+import { PACKAGE_EXTENSION, QUESTION_KINDS, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
 import { EditorStore, setCurrentStore, store, useEditor, type BottomTab, type Tool } from './store/store';
 import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
@@ -21,6 +21,7 @@ import { InsightsPanel } from './panels/InsightsPanel';
 import { AccessibilityPanel } from './panels/AccessibilityPanel';
 import { Icons, type IconName } from './components/icons';
 import { IconButton } from './components/ui';
+import { PreviewWidth, responsiveSets, widthInside } from './components/PreviewWidth';
 import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink, openHelp } from './help/Help';
@@ -791,7 +792,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const [from, setFrom] = useState<'start' | 'current'>('start');
   const [log, setLog] = useState<string[]>([]);
   const [vars, setVars] = useState<Record<string, unknown> | null>(null);
-  type DebugState = { artboard: string; timelines: { name: string; playing: boolean; time: number; duration: number }[]; instances: number };
+  type DebugState = { artboard: string; timelines: { name: string; playing: boolean; time: number; duration: number }[]; instances: number; variant?: { set: string; width: number } };
   type Trace = { artboard: string; event: string; target?: string; then: string[]; note?: string; depth: number; at: number };
   const [dbg, setDbg] = useState<DebugState | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
@@ -802,6 +803,27 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const [showVars, setShowVars] = useState(true);
   const [nonce, setNonce] = useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
+  // Responsive sets: the width of the page the preview runs in (null: all the room there is), and how much room that is
+  const sets = responsiveSets(project as Project);
+  const [pageWidth, setPageWidth] = useState<number | null>(null);
+  const stageBox = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState(1000);
+  useEffect(() => {
+    const el = stageBox.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => setRoom(el.clientWidth));
+    ro.observe(el);
+    setRoom(el.clientWidth);
+    return () => ro.disconnect();
+  }, [html === null]);
+  // Previewing from a variant opens on a page width that shows it
+  useEffect(() => {
+    const cur = from === 'current' ? getArtboard(project, abId) : null;
+    if (!cur || !sets.length) return;
+    const members = setMembers(project.artboards, cur);
+    if (members.length > 1) setPageWidth(widthInside(members, cur, room));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, abId]);
   // Drag and drop: outline every draggable layer and drop zone in the running preview
   const [hitAreas, setHitAreas] = useState(false);
   const hasDrag = project.artboards.some((a) => {
@@ -905,6 +927,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           </button>
           <IconButton icon={<Icons.close />} title="Close (Esc)" onClick={onClose} />
         </header>
+        {sets.length > 0 && <PreviewWidth sets={sets} width={pageWidth} max={room} current={dbg?.variant ? dbg.artboard : undefined} onChange={setPageWidth} />}
         <div className="preview-body">
           {showVars && vars && (
             <aside className="preview-vars">
@@ -960,7 +983,9 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               ))}
             </aside>
           )}
-          {html ? <iframe key={nonce} ref={frame} title="Preview" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => hitAreas && showHitAreas(true)} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
+          <div className="preview-stage" ref={stageBox}>
+          {html ? <iframe key={nonce} ref={frame} title="Preview" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => hitAreas && showHitAreas(true)} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
+          </div>
         </div>
         {accessibility && screenReader && (
           <div className="preview-said" aria-hidden="true" title="What a screen reader is told by Announce nodes and ix.announce, as it is spoken">

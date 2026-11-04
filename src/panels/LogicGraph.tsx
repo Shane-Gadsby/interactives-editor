@@ -46,6 +46,7 @@ import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { usePrefs } from '../lib/prefs';
 import { compatibleKinds, newNodePort, type DragDirection } from '../lib/graph';
+import { artboardChoices } from '../lib/variants-edit';
 
 type IxNodeData = { logic: LogicNode; summary: string };
 
@@ -481,7 +482,7 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
       case 'variable':
         return pick(project.variables.map((x) => ({ value: x.id, label: x.name })), project.variables.length ? 'Choose variable…' : 'No variables yet', [addVariableOption()], { variableType: 'number' });
       case 'artboard':
-        return pick(project.artboards.map((a) => ({ value: a.id, label: a.name })), 'Choose artboard…');
+        return pick(artboardChoices(project, v), 'Choose artboard…');
       case 'script':
         return pick(project.scripts.map((x) => ({ value: x.id, label: x.name })), project.scripts.length ? 'Choose script…' : 'No scripts yet');
       case 'asset':

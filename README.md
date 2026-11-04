@@ -8,6 +8,7 @@ The browser editor for Interactives. You use it to build interactive 2D experien
 - variables and data bindings;
 - custom JavaScript;
 - step-through explainers: a timeline's markers become steps (Next plays to the next marker, Back plays back, dots, a generated step bar, scroll to scrub);
+- responsive artboard sets: variants of an artboard shown by the page's width (Responsive section of the artboard, Add narrow/wide variant, breakpoints, a pairing report of what would not carry), listed under their base in Layers, with pills on the canvas and a Page width slider with breakpoint marks in Preview. The runtime side is the player's `variants.ts`.
 - script layers: a box painted by a script every frame (generative art, charts), with starter templates.
 - shader layers: a box painted by a GPU fragment shader (WebGL) with animatable, bindable uniforms, a library of starter presets, and a shader filter for image layers.
 

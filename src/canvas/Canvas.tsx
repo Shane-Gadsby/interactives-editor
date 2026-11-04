@@ -10,6 +10,7 @@ import {
   strokeList,
   strokePath,
   invert,
+  setMembers,
   isContainer,
   nodeMatrix,
   pathBounds,
@@ -56,6 +57,7 @@ import { liveSession } from '../lib/live';
 import { bendPaths, hasShapeKeys, nearestSegment, shapeToPaths, type SegmentHit } from '../lib/path-edit';
 import { confirmDialog } from '../components/dialogs';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
+import { rangeLabel } from '../lib/variants-edit';
 import { boneEndAt, boneFromDrag, boneGlyphs } from '../lib/rig';
 
 type Pt = { x: number; y: number };
@@ -366,6 +368,10 @@ export function Canvas() {
     // Handles (drawn on the overlay)
     if (handle) {
       const [kind, a, b] = handle.split(':');
+      if (kind === 'abvar') {
+        store().set({ activeArtboardId: a, artboardSelected: true, selection: [], focusId: null, activeTimelineId: a === st.activeArtboardId ? st.activeTimelineId : null });
+        return;
+      }
       if (kind === 'ab') {
         const target = getArtboard(st.project, a)!;
         store().set({ activeArtboardId: a, artboardSelected: true, selection: [], focusId: null, activeTimelineId: a === st.activeArtboardId ? st.activeTimelineId : null });
@@ -1279,6 +1285,29 @@ export function Canvas() {
         {ab.library ? '  ◆ library' : ''}
       </text>,
     );
+    // Artboards of a responsive set: one pill per member on the label line, to jump between them
+    const members = setMembers(project.artboards, ab);
+    const pillText = (m: Artboard) => `${m.name} ${rangeLabel(project.artboards, m)}`;
+    const pillW = (m: Artboard) => Math.round(pillText(m).length * 5.6 + 14);
+    // (only when they fit above the artboard)
+    if (members.length > 1 && ab.width * zoom > members.reduce((n, m) => n + pillW(m) + 4, 0) + 60) {
+      let right = tl.x + ab.width * zoom;
+      for (const m of [...members].reverse()) {
+        const text = pillText(m);
+        const w = pillW(m);
+        right -= w;
+        overlay.push(
+          <g key={`var-${ab.id}-${m.id}`} data-handle={`abvar:${m.id}`} className={`var-pill${m.id === ab.id ? ' on' : ''}`} transform={`translate(${right},${tl.y - 22})`}>
+            <title>{`${m.name}: shown when the page is ${rangeLabel(project.artboards, m)} wide. Click to edit it`}</title>
+            <rect width={w} height={16} rx={8} />
+            <text x={w / 2} y={11.5} textAnchor="middle">
+              {text}
+            </text>
+          </g>,
+        );
+        right -= 4;
+      }
+    }
   }
 
   if (active) {

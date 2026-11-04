@@ -5018,3 +5018,145 @@ code {
   border-radius: 6px;
   padding: 8px;
 }
+
+/* Responsive sets: variants listed under their base, the pills on the canvas, the section in the inspector */
+.artboard-row.variant {
+  padding-left: 18px;
+}
+.var-pill rect {
+  fill: var(--panel-2);
+  stroke: var(--border);
+}
+.var-pill text {
+  fill: var(--muted);
+  font-size: 10px;
+  pointer-events: none;
+}
+.var-pill {
+  cursor: pointer;
+}
+.var-pill.on rect {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+.var-pill.on text {
+  fill: #fff;
+}
+.variant-list {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+}
+.variant-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+}
+.variant-list li.current .variant-name {
+  color: var(--text);
+  font-weight: 600;
+}
+.variant-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.variant-name .badge {
+  margin-left: 6px;
+}
+.variant-report {
+  margin-top: 8px;
+}
+.variant-warnings {
+  margin: 4px 0 0;
+  padding-left: 16px;
+}
+
+/* The Preview's page width slider */
+.preview-stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+.preview-stage .center-msg {
+  align-self: center;
+}
+.preview-stage iframe {
+  background: #fff;
+}
+.preview-width {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 36px;
+  border-bottom: 1px solid var(--line);
+}
+.pw-track {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+  height: 22px;
+}
+.pw-track input[type='range'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  z-index: 1;
+  background: transparent;
+}
+.pw-mark {
+  position: absolute;
+  top: 0;
+  height: 22px;
+  width: 0;
+  border: 0;
+  border-left: 2px solid var(--accent);
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 2;
+  pointer-events: none;
+}
+.pw-mark span {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  transform: translateX(-50%);
+  font: 10px ui-monospace, monospace;
+  color: var(--accent);
+  pointer-events: auto;
+}
+.pw-zone {
+  position: absolute;
+  top: 24px;
+  margin-left: 0;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform: translateY(12px);
+}
+.pw-zone.on {
+  color: var(--text);
+  font-weight: 600;
+}
+.pw-value {
+  min-width: 52px;
+  text-align: right;
+}
+.pw-now {
+  min-width: 130px;
+}

@@ -11,6 +11,7 @@ import { getArtboard, locate } from '../store/doc';
 import { deleteAsset } from '../lib/db';
 import { analyzeUsage, unusedAssetIds } from '../lib/dependencies';
 import { LibrariesPanel } from './LibrariesPanel';
+import { orderedArtboards, rangeLabel } from '../lib/variants-edit';
 
 export function LeftPanel() {
   const [tab, setTab] = useState<'layers' | 'assets' | 'libraries'>('layers');
@@ -94,7 +95,7 @@ function Layers() {
         if (isContainer(n) && !collapsed.has(n.id)) add(ab, n.children, depth + 1, n);
       }
     };
-    for (const ab of s.project.artboards) {
+    for (const ab of orderedArtboards(s.project.artboards)) {
       out.push({ kind: 'artboard', ab });
       if (!collapsed.has(ab.id)) add(ab, ab.children, 1);
     }
@@ -135,7 +136,7 @@ function Layers() {
     return (
       <div
         key={`ab-${ab.id}`}
-        className={`artboard-row${active && s.artboardSelected ? ' selected' : ''}${active ? ' active' : ''}`}
+        className={`artboard-row${active && s.artboardSelected ? ' selected' : ''}${active ? ' active' : ''}${ab.variantOf ? ' variant' : ''}`}
         onClick={() => store().set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? store().get().activeTimelineId : null })}
         onDragOver={(e) => {
           if (dragId && active) e.preventDefault();
@@ -160,6 +161,11 @@ function Layers() {
         <Icons.artboard width={14} height={14} />
         <span className="layer-name">{ab.name}</span>
         {s.project.settings.startArtboardId === ab.id && <span className="badge">start</span>}
+        {rangeLabel(s.project.artboards, ab) && (
+          <span className="badge" title={`${ab.variantOf ? 'A variant' : 'The base'} of a responsive set: shown when the page is ${rangeLabel(s.project.artboards, ab)} wide`}>
+            {rangeLabel(s.project.artboards, ab)}
+          </span>
+        )}
         {ab.library && (
           <span className="badge" title={ab.library.internal ? 'Used inside a library component. Read-only until detached' : 'From a library. Read-only until detached'}>
             {ab.library.internal ? 'library · inner' : 'library'}

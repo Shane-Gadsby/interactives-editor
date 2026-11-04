@@ -70,6 +70,7 @@ import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
 import { RecordsSection } from './RecordsSection';
 import { CaptionsSection, VideoCaptions } from './CaptionsSection';
+import { VariantsSection } from './VariantsSection';
 import { StepsSection } from './StepsSection';
 import { blendExample } from '../lib/blend-example';
 import { BindingsSection as BindingsSectionView } from './BindingsSection';
@@ -469,6 +470,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           <IconButton icon={<Icons.trash />} title="Delete artboard" onClick={() => store().deleteArtboard(ab.id)} />
         </Row>
       </Section>
+      <VariantsSection ab={ab} project={project} />
       <TabOrderSection ab={ab} />
       <StepsSection ab={ab} project={project} />
       <JoysticksSection ab={ab} />

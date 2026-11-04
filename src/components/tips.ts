@@ -95,6 +95,7 @@ export const FIELD_TIPS: Record<string, string> = {
   'Repeat the first child for each item': 'Copies the first child once per item, with item and index in scope',
   'Clip content': 'Hide anything outside the frame',
   'Clip content to artboard': 'Hide anything outside the artboard in the player',
+  from: 'The container width, in px, from which this artboard of a responsive set is shown (up to the next one\'s)',
   Artboard: 'Which artboard this instance shows',
   Inputs: "Values for the instance's own variables",
   Visible: 'Shown or hidden',

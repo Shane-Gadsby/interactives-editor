@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { artboardChoices } from '../lib/variants-edit';
 import type { Project, ReportingSettings } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, NumberField, Row, Section, SelectField } from '../components/ui';
@@ -64,7 +65,7 @@ export function ReportingSection({ project }: { project: Project }) {
           label="Artboard"
           title="Reaching this artboard completes the project"
           value={r.completionArtboard ?? ''}
-          options={[{ value: '', label: 'Choose an artboard' }, ...project.artboards.map((a) => ({ value: a.id, label: a.name }))]}
+          options={[{ value: '', label: 'Choose an artboard' }, ...artboardChoices(project, r.completionArtboard)]}
           onChange={(v) => set({ completionArtboard: v })}
         />
       )}
