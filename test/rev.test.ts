@@ -226,6 +226,58 @@ describe.skipIf(!pair)('.rev against the .riv exported from it (research/rive)',
     expect(rev.warnings).toEqual(riv.warnings);
   });
 
+  it('brings the same interactivity as the .riv: listeners and their targets, hit settings, the state machines and the graph made from them', async () => {
+    const riv = await importRive(read('riv'), 'riv');
+    const rev = await importRev(read('rev'), 'rev');
+    // A listener's target is told by where it sits in its artboard (the .rev has names the .riv stripped, so not by name)
+    const where = (ab: Doc) => {
+      const at = new Map<string, Doc>();
+      const walk = (list: Doc[], path: string) =>
+        list.forEach((n, i) => {
+          at.set(n.id, { path: `${path}${i}`, n });
+          if (n.children) walk(n.children, `${path}${i}/`);
+        });
+      walk(ab.children, '');
+      return at;
+    };
+    const facets = (r: typeof riv, name: string) => {
+      const ab = r.artboards.find((a) => a.name === name) as Doc;
+      const at = where(ab);
+      const nodes = ab.logic.nodes as Doc[];
+      const listeners = nodes
+        .filter((n) => n.kind === 'event.pointer')
+        .map((n) => {
+          const t = at.get(n.params.target);
+          // What the listener leads to: the kinds of the nodes that follow it
+          const next = (ab.logic.edges as Doc[]).filter((e) => e.from === n.id).map((e) => (nodes.find((x) => x.id === e.to) as Doc).kind);
+          return JSON.stringify([n.params.type, t?.path, t?.n.type, t?.n.opacity, t?.n.interactiveWhenFaded ?? false, t?.n.visible, next.sort()]);
+        })
+        .sort();
+      const kinds: Record<string, number> = {};
+      for (const n of nodes) kinds[n.kind] = (kinds[n.kind] ?? 0) + 1;
+      return { listeners, kinds, edges: ab.logic.edges.length, pointerThrough: !!ab.pointerThrough, clip: !!ab.clip };
+    };
+    let withListeners = 0;
+    for (const a of riv.artboards) {
+      const left = facets(riv, a.name);
+      const right = facets(rev, a.name);
+      expect(right, a.name).toEqual(left);
+      withListeners += left.listeners.length;
+    }
+    // The buttons really are wired: hover in, hover out and press on each, see-through so each is tested by its shapes
+    expect(withListeners).toBe(27);
+    const info = facets(rev, 'Info Button');
+    expect(info.pointerThrough).toBe(true);
+    expect(info.listeners.map((l) => JSON.parse(l)[0]).sort()).toEqual(['pointerdown', 'pointerenter', 'pointerleave']);
+    expect(info.listeners.every((l) => JSON.parse(l)[4] === true)).toBe(true);
+    // The state machines' inputs: the same variables with the same starting values
+    const vars = (r: typeof riv) => Object.fromEntries(r.variables.map((v) => [v.name, [v.type, v.initial]]));
+    const want = vars(riv);
+    const got = vars(rev);
+    for (const [name, v] of Object.entries(want)) expect(got[name], name).toEqual(v);
+    expect(Object.keys(want).length).toBeGreaterThan(30);
+  });
+
   it('keeps what the export left out: the artboard it dropped and the layer names it stripped', async () => {
     const riv = await importRive(read('riv'), 'riv');
     const rev = await importRev(read('rev'), 'rev');
