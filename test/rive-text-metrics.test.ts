@@ -59,6 +59,12 @@ describe.skipIf(!existsSync(sample))('Rive text boxes, measured against the real
     expect(n.y).toBeCloseTo(200 - ASC * 60, 0);
   });
 
+  it('turns the font optical sizing off, as Rive never follows the size', async () => {
+    const font = await fontOf();
+    const n = (await textOf(textFile(font, {}, { fontSize: 30 }))) as unknown as { fontOpticalSizing?: string };
+    expect(n.fontOpticalSizing).toBe('none');
+  });
+
   it('keeps the lines of a taller line height spaced by it, with the box one line plus the first ascent', async () => {
     const font = await fontOf();
     const n = await textOf(textFile(font, { originY: 0 }, { fontSize: 25, lineHeight: 73 }, 'HHH\nHHH'));

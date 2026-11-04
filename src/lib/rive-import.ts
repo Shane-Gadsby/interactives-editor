@@ -1619,6 +1619,8 @@ function convertText(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode {
     letterSpacing,
     lineHeight,
     align,
+    // Rive never follows a variable font's optical size (Inter's text sits wider than the browser's automatic sizing draws it)
+    fontOpticalSizing: 'none',
     autoSize: sizing === 0 ? 'width' : sizing === 1 ? 'height' : 'none',
     // Vertical alignment inside a fixed box, what happens to lines that don't fit, and no-wrap
     verticalAlign: (['top', 'middle', 'bottom'] as const)[get(o, 'verticalAlignValue')] ?? 'top',
