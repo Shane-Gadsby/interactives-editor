@@ -76,3 +76,14 @@ describe.skipIf(!existsSync(sample))('Rive drawables flagged hidden', () => {
     expect(texts.every((t) => t.visible === false)).toBe(true);
   });
 });
+
+describe.skipIf(!existsSync(sample))('Rive keys that do not name an interpolation', () => {
+  it('hold, as in the runtime: a button the breathing sample moves off screen jumps there instead of sliding', async () => {
+    const res = await importRive(new Uint8Array(readFileSync(sample)), 'b');
+    const tl = res.artboards[0].timelines.find((t) => t.name === 'Choice to End Screen')!;
+    // x keyed 175 -> -175 over half a second with no interpolation written
+    const track = tl.tracks.find((t) => t.prop === 'x' && t.keys.length === 2 && t.keys[0].value === 175 && t.keys[1].value === -175)!;
+    expect(track).toBeTruthy();
+    expect(track.keys[0].ease).toBe('step');
+  });
+});

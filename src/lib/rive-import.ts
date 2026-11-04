@@ -2718,7 +2718,7 @@ function constrainNode(c: RObj, node: SceneNode, target: SceneNode, fc: FileCtx)
  * normalised against the segment's start and end values: the curve is the same one, so only the y numbers change.
  */
 function easeOf(ac: ArtboardCtx, k: RObj, next?: RObj): Easing {
-  const type = Number(k.props.interpolationType ?? 1);
+  const type = Number(k.props.interpolationType ?? 0); // an unwritten interpolationType is the runtime default, 0: hold
   if (type === 0) return 'step';
   if (type === 1) return 'linear';
   const ip = k.props.interpolatorId;

@@ -25,7 +25,16 @@ export function writeRiv(objects: Spec[]): Uint8Array {
   varuint(0);
   varuint(0);
   varuint(0); // no extra properties
-  for (const [cls, props] of objects) {
+  for (const [cls, rawProps] of objects) {
+    // A key that does not say how it interpolates holds, which is the runtime default and what the importer now reads. The tests
+    // mostly want a ramp, so keys written here are linear unless they say otherwise.
+    let props = rawProps;
+    try {
+      find(cls, 'interpolationType');
+      if (!('interpolationType' in props)) props = { ...props, interpolationType: 1 };
+    } catch {
+      /* not an interpolating key */
+    }
     varuint(RIVE_CLASSES[cls][0]);
     for (const [name, v] of Object.entries(props)) {
       const [key, type] = find(cls, name);
