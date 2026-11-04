@@ -104,7 +104,10 @@ export function DataPanel() {
                 <TextField
                   label="URL"
                   title="The address is fetched as soon as you press Enter or leave the field"
-                  value={active.url ?? ''} commitOnBlur placeholder="https://…/items.json" onChange={(v) => {
+                  value={active.url ?? ''}
+                  commitOnBlur
+                  placeholder="https://…/items.json"
+                  onChange={(v) => {
                     setSource(active.id, { url: v.trim() });
                     // Committed (Enter or leaving the field): fetch it now rather than waiting for Reload
                     dataCache.sync(store().get().project);

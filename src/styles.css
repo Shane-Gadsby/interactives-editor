@@ -4770,6 +4770,9 @@ code {
 
 /* The "new version, reload" notice after a deploy (lib/stale-build.ts) */
 .toast.stale-toast {
+  /* outside .editor the --bottom-h the plain toast sits above is not set, so place it itself */
+  bottom: auto;
+  top: 16px;
   display: flex;
   align-items: center;
   gap: 10px;
