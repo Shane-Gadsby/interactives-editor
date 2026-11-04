@@ -139,7 +139,15 @@ export type Tool =
   | 'shader'
   | 'bone';
 
-export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y';
+export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights';
+
+/** Where learners clicked on one artboard (from Insights), drawn over the canvas as a heat map. Never saved. */
+export interface HeatOverlay {
+  artboardId: string;
+  cell: number;
+  cells: { x: number; y: number; n: number }[];
+  max: number;
+}
 
 export interface EditorState {
   project: Project;
@@ -161,6 +169,8 @@ export interface EditorState {
   textSelection: { id: string; start: number; end: number } | null;
   bottomTab: BottomTab | null;
   bottomHeight: number;
+  /** The click heat overlay Insights asked the canvas to draw, or null. */
+  heat: HeatOverlay | null;
   activeTimelineId: string | null;
   playhead: number;
   previewPlaying: boolean;
@@ -235,6 +245,7 @@ export class EditorStore {
       textSelection: null,
       bottomTab: 'timeline',
       bottomHeight: 260,
+      heat: null,
       activeTimelineId: null,
       playhead: 0,
       previewPlaying: false,

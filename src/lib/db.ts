@@ -279,6 +279,37 @@ export const getResults = (projectId: string) => call<Results>(`projects/${encod
 
 export const clearResults = (projectId: string) => call<{ ok: boolean; deleted: number }>(`projects/${encodeURIComponent(projectId)}/results`, { method: 'DELETE' });
 
+// ---------------------------------------------------------------- learner insights
+
+/** What learners did in a project, as counts (`GET /api/projects/:id/insights`). Nobody is named: totals and numbers of different learners. */
+export interface Insights {
+  records: number;
+  learners: number;
+  visits: number;
+  first: number | null;
+  last: number | null;
+  truncated: boolean;
+  days: number;
+  shared: boolean;
+  artboards: { id: string; name: string; views: number; learners: number }[];
+  clicks: {
+    total: number;
+    positioned: number;
+    onLayers: number;
+    cell: number;
+    artboards: { id: string; name: string; clicks: number; cells: { x: number; y: number; n: number }[] }[];
+    layers: { artboard: string; layer: string; label: string; clicks: number; learners: number }[];
+  };
+  steps: { artboard: string; name: string; step: number; steps: number; visits: number; learners: number }[];
+  questions: { question: string; kind: string; checks: number; correct: number; learners: number; firstTry: number; firstTryRight: number; options: { id: string; n: number }[] }[];
+  custom: { name: string; count: number; learners: number; values: { value: string; n: number }[] }[];
+  courses: { course: string; learners: number }[];
+  daily: { day: string; learners: number }[];
+}
+
+/** `days` is 7, 30, 90, 365 or 0 for everything. */
+export const getInsights = (projectId: string, days: number) => call<Insights>(`projects/${encodeURIComponent(projectId)}/insights?days=${days}`);
+
 // ---------------------------------------------------------------- libraries
 
 export const listLibraries = () => call<LibraryInfo[]>('libraries');

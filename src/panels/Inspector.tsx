@@ -67,6 +67,7 @@ import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
 import { GridAlignFields } from '../components/GridAlignFields';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
+import { RecordsSection } from './RecordsSection';
 import { StepsSection } from './StepsSection';
 import { blendExample } from '../lib/blend-example';
 import { BindingsSection as BindingsSectionView } from './BindingsSection';
@@ -523,6 +524,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         />
       </Section>
       <ReportingSection project={project} />
+      <RecordsSection project={project} />
       <Section help="text" title="Fonts">
         {project.fonts.map((f, i) => (
           <Row key={i} className="font-row">

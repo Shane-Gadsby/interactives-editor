@@ -96,6 +96,7 @@ ix.goTo('Page 2', 'fade')
 ix.report({ completed: true })  // send the result
 ix.result   // {completed, score, percent, passed}
 ix.startOver()
+ix.record('chose B', 'route') // count it in Insights
 ix.emit('done', data)  // to host page
 ix.setInstanceInput('Badge', 'level', 3)
 ix.fireInstanceTrigger('Badge', 'ping')

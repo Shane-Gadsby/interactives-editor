@@ -118,6 +118,7 @@ export function Canvas() {
     focusId: st.focusId,
     showBones: st.showBones,
     bottomTab: st.bottomTab,
+    heat: st.heat,
     activeTimelineId: st.activeTimelineId,
     playhead: st.playhead,
   }));
@@ -1228,6 +1229,24 @@ export function Canvas() {
     y: ((ab?.canvasY ?? 0) + p.y) * zoom,
   });
   const toS = (ab: Artboard, p: Pt) => oscreen(ab, p);
+
+  // Where learners clicked (Insights > Click heat): one square per grid cell, hotter the more clicks
+  if (s.heat) {
+    const hab = getArtboard(project, s.heat.artboardId);
+    if (hab) {
+      const size = s.heat.cell * zoom;
+      overlay.push(
+        <g key="click-heat" className="click-heat" pointerEvents="none">
+          {s.heat.cells.map((c) => {
+            const p = oscreen(hab, { x: c.x, y: c.y });
+            const t = Math.sqrt(c.n / s.heat!.max);
+            // cool blue through green and yellow to red, cells touching so a busy area reads as one patch
+            return <rect key={`${c.x},${c.y}`} x={p.x} y={p.y} width={size + 0.5} height={size + 0.5} fill={`hsl(${Math.round(230 - 230 * t)} 95% 52%)`} opacity={0.2 + 0.55 * t}><title>{`${c.n} click${c.n === 1 ? '' : 's'}`}</title></rect>;
+          })}
+        </g>,
+      );
+    }
+  }
 
   for (const ab of project.artboards) {
     const tl = oscreen(ab, { x: 0, y: 0 });

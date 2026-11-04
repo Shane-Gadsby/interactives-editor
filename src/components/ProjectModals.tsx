@@ -196,7 +196,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
               <p className="small muted">Last updated {when(share.updated)}.</p>
               <div className="learner-link">
                 <strong>Link for StudyDesk</strong>
-                <p className="small muted">Use this one in StudyDesk instead, when you want each learner's score, completion and progress kept. Learners signed in to StudyDesk resume where they left off; anyone else plays as with the link above.</p>
+                <p className="small muted">Use this one in StudyDesk instead, when you want each learner's score, completion and progress kept, and what they do counted for Insights. Learners signed in to StudyDesk resume where they left off; anyone else plays as with the link above.</p>
                 <div className="share-url">
                   <input readOnly value={learnerUrl(share.token)} aria-label="Link for StudyDesk" onFocus={(e) => e.target.select()} />
                   <button

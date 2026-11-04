@@ -17,6 +17,7 @@ import { LogicGraph } from './panels/LogicGraph';
 import { ScriptsPanel, VariablesPanel } from './panels/ScriptsVariables';
 import { DataPanel } from './panels/DataPanel';
 import { UsagePanel } from './panels/UsagePanel';
+import { InsightsPanel } from './panels/InsightsPanel';
 import { AccessibilityPanel } from './panels/AccessibilityPanel';
 import { Icons, type IconName } from './components/icons';
 import { IconButton } from './components/ui';
@@ -727,6 +728,7 @@ const TABS: { id: BottomTab; label: string; icon: IconName; help: string; tip: s
   { id: 'variables', label: 'Variables', icon: 'variable', help: 'variables', tip: 'Named values shared by the whole project' },
   { id: 'data', label: 'Data', icon: 'table', help: 'data-sources', tip: 'JSON, CSV, TSV or text from files or URLs' },
   { id: 'a11y', label: 'Accessibility', icon: 'a11y', help: 'accessibility-checker', tip: 'Check accessibility: contrast, small text, keyboard access, names and descriptions, autoplay and flashing, with what each means and a report for sign-off' },
+  { id: 'insights', label: 'Insights', icon: 'insights', help: 'insights', tip: 'What learners did: artboards reached, where they clicked, steps, answers to questions and your own records, as counts' },
   { id: 'usage', label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each artboard, asset, variable, data source, script and timeline is used, and what is unused' },
 ];
 
@@ -768,6 +770,7 @@ function BottomPanel() {
           {s.tab === 'variables' && <VariablesPanel />}
           {s.tab === 'data' && <DataPanel />}
           {s.tab === 'usage' && <UsagePanel />}
+          {s.tab === 'insights' && <InsightsPanel />}
           {s.tab === 'a11y' && <AccessibilityPanel />}
         </div>
       )}
