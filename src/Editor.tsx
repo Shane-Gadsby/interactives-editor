@@ -32,6 +32,7 @@ import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
 import { LinkChanges } from './components/LinkChanges';
 import { PanelResizeHandle, usePanelWidths } from './components/PanelResize';
+import { noteIfStale } from './lib/stale-build';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
   const [ready, setReady] = useState<EditorStore | null>(null);
@@ -498,6 +499,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
     try {
       await fn();
     } catch (err) {
+      if (noteIfStale(err)) return;
       st.toast(err instanceof Error ? err.message : String(err), 'error');
     }
   };

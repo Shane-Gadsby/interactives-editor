@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
-import { paletteTip, parseCustomProperties, parsePaletteCss } from '../src/lib/palette';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { nameFromComment, paletteTip, parseCustomProperties, parsePaletteCss } from '../src/lib/palette';
 
 const SAMPLE = `
 /*Declare the pallet*/
@@ -92,6 +94,97 @@ describe('palette parser', () => {
   });
 });
 
+describe('palette name comments', () => {
+  const css = (body: string) => `:root {\n${body}\n}`;
+  const labels = (c: string) => Object.fromEntries(all(c).map((x) => [x.name, x.label]));
+
+  it('recognises /***name: …***/ and nothing looser', () => {
+    expect(nameFromComment('/***name: Gold***/')).toBe('Gold');
+    expect(nameFromComment('/***  Name :  Pale   gold  ***/')).toBe('Pale gold');
+    expect(nameFromComment('/****name: Gold****/')).toBe('Gold');
+    expect(nameFromComment('/*name: Gold*/')).toBeNull();
+    expect(nameFromComment('/**name: Gold**/')).toBeNull();
+    expect(nameFromComment('/* name: Gold */')).toBeNull();
+    expect(nameFromComment('/***name:***/')).toBeNull();
+    expect(nameFromComment('/***note: Gold***/')).toBeNull();
+    expect(nameFromComment('/***name: ' + 'x'.repeat(100) + '***/')).toHaveLength(60);
+  });
+
+  it('a comment after a declaration, on the same line, names that declaration', () => {
+    const l = labels(css('\t--feature-colour-gold: #ffb448; /***name: Gold***/\n\t--feature-colour-green: #3E8521;'));
+    expect(l['--feature-colour-gold']).toBe('Gold');
+    expect(l['--feature-colour-green']).toBe('Green');
+  });
+
+  it('a comment on a line of its own names the declaration on the next line', () => {
+    const l = labels(css('\t--feature-colour-green: #3E8521;\n\t/***name: Gold***/\n\t--feature-colour-gold: #ffb448;\n\t--feature-colour-blue: #0080A8;'));
+    expect(l['--feature-colour-gold']).toBe('Gold');
+    expect(l['--feature-colour-green']).toBe('Green');
+    expect(l['--feature-colour-blue']).toBe('Blue');
+  });
+
+  it('a comment inside the declaration, before its semicolon, names it', () => {
+    expect(labels(css('--feature-colour-gold: #ffb448 /***name: Gold***/;'))['--feature-colour-gold']).toBe('Gold');
+  });
+
+  it('the last declaration in the rule can carry one too, and the value still parses', () => {
+    const c = css('--ilar-swatch-yellow: #ffb448;\n--ilar-swatch-blue: #0080A8; /***name: Sky***/');
+    expect(find(c, '--ilar-swatch-blue')).toMatchObject({ label: 'Sky', value: '#0080a8', named: true });
+    expect(find(c, '--ilar-swatch-yellow')?.named).toBeUndefined();
+  });
+
+  it('a first declaration on the opening line is named by a comment before it', () => {
+    expect(labels(':root { /***name: Gold***/ --feature-colour-gold: #ffb448; --feature-colour-blue: #0080A8; }')).toEqual({ '--feature-colour-gold': 'Gold', '--feature-colour-blue': 'Blue' });
+  });
+
+  it('works on a var() reference, keeps the property name in the tooltip, and ignores ordinary comments', () => {
+    const c = css('--ilar-swatch-yellow: #ffb448;\n--feature-colour-gold: var(--ilar-swatch-yellow); /***name: Gold***/\n/* name: Not this */\n--feature-colour-blue: #0080A8; /* a note */');
+    const gold = find(c, '--feature-colour-gold')!;
+    expect(gold.label).toBe('Gold');
+    expect(find(c, '--feature-colour-blue')!.label).toBe('Blue');
+    // yellow and gold share a colour in different groups, so each is listed under its own name
+    expect(paletteTip(gold)).toBe('Gold #ffb448 (--feature-colour-gold)');
+  });
+
+  it('a name on a role that repeats a swatch is not used for the swatch', () => {
+    const c = css('--ilar-swatch-yellow: #ffb448;\n--ilar-primary: var(--ilar-swatch-yellow); /***name: Primary***/');
+    expect(find(c, '--ilar-swatch-yellow')!.label).toBe('Yellow');
+    expect(find(c, '--ilar-swatch-yellow')!.aliases).toEqual(['--ilar-primary']);
+  });
+
+  it('a name comment does not disturb other declarations, brackets or comments with braces', () => {
+    const c = css('/* { odd } */\n--ilar-radius: 4px;\n--ilar-swatch-green: rgb(1, 2, 3); /***name: Leaf***/\n--ilar-swatch-blue: #0080A8; /*{*/');
+    expect(find(c, '--ilar-swatch-green')).toMatchObject({ label: 'Leaf', value: 'rgb(1, 2, 3)' });
+    expect(find(c, '--ilar-swatch-blue')!.label).toBe('Blue');
+  });
+
+  it('minified css (no comments survive) just falls back to the property names', () => {
+    expect(labels(':root{--feature-colour-gold:#ffb448;--feature-colour-blue:#0080A8}')).toEqual({ '--feature-colour-gold': 'Gold', '--feature-colour-blue': 'Blue' });
+  });
+
+  it('the repo minifier (csso) drops these comments, which is why the source is read', () => {
+    const dir = new URL('../../../si-studydesk-styles/node_modules/csso', import.meta.url);
+    if (!existsSync(dir)) return;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const csso = createRequire(import.meta.url)(fileURLToPath(dir)) as { minify(css: string): { css: string } };
+    const source = css('--feature-colour-gold: #ffb448; /***name: Gold***/\n/*! keep */\n--feature-colour-blue: #0080A8;');
+    const min = csso.minify(source).css;
+    expect(min).not.toContain('Gold');
+    expect(labels(source)['--feature-colour-gold']).toBe('Gold');
+    expect(labels(min)['--feature-colour-gold']).toBe('Gold'); // the property's own name, as before
+  });
+
+  it('reads the real palette.css source too', () => {
+    const file = new URL('../../../si-studydesk-styles/styles/palette.css', import.meta.url);
+    if (!existsSync(file)) return;
+    const real = readFileSync(file, 'utf8');
+    expect(all(real).length).toBeGreaterThan(10);
+    // the same colours as the minified copy
+    const min = new URL('../../../si-studydesk-styles/public/palette.min.css', import.meta.url);
+    if (existsSync(min)) expect(all(real).map((c) => c.value)).toEqual(all(readFileSync(min, 'utf8')).map((c) => c.value));
+  });
+});
+
 describe('loadPalette', () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -114,7 +207,25 @@ describe('loadPalette', () => {
     const g = await m.loadPalette();
     await m.loadPalette();
     expect(f).toHaveBeenCalledTimes(1);
-    expect(f.mock.calls[0][0]).toBe('/styles/palette.min.css');
+    // the source first: it is the one that still has the name comments
+    expect(f.mock.calls[0][0]).toBe('/styles/palette.css');
     expect(g[0].colors[0]).toMatchObject({ label: 'Blue', value: '#0080a8' });
+  });
+
+  it('falls back to the minified stylesheet when the source is not served', async () => {
+    vi.resetModules();
+    const f = vi.fn(async (url: string) => (url.endsWith('.min.css') ? { ok: true, text: async () => ':root{--ilar-swatch-blue:#0080A8}' } : { ok: false, text: async () => '' }));
+    vi.stubGlobal('fetch', f);
+    const m = await import('../src/lib/palette');
+    const g = await m.loadPalette();
+    expect(f.mock.calls.map((c) => c[0])).toEqual(['/styles/palette.css', '/styles/palette.min.css']);
+    expect(g[0].colors[0].label).toBe('Blue');
+  });
+
+  it('names come through the loader from the source', async () => {
+    vi.resetModules();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => ':root{--ilar-swatch-blue:#0080A8; /***name: Sky***/}' }));
+    const m = await import('../src/lib/palette');
+    expect((await m.loadPalette())[0].colors[0].label).toBe('Sky');
   });
 });

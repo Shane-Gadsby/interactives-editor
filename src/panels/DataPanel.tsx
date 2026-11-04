@@ -101,7 +101,15 @@ export function DataPanel() {
             />
             {active.source === 'url' ? (
               <>
-                <TextField label="URL" value={active.url ?? ''} commitOnBlur placeholder="https://…/items.json" onChange={(v) => setSource(active.id, { url: v.trim() })} />
+                <TextField
+                  label="URL"
+                  title="The address is fetched as soon as you press Enter or leave the field"
+                  value={active.url ?? ''} commitOnBlur placeholder="https://…/items.json" onChange={(v) => {
+                    setSource(active.id, { url: v.trim() });
+                    // Committed (Enter or leaving the field): fetch it now rather than waiting for Reload
+                    dataCache.sync(store().get().project);
+                  }}
+                />
                 <NumberField label="Refresh" suffix="s" title="Re-fetch every n seconds; 0 loads once" value={active.refresh ?? 0} min={0} onChange={(v) => setSource(active.id, { refresh: Math.round(v) }, `ds-refresh-${active.id}`)} />
                 <p className="hint">The server must allow cross-origin requests (CORS) from wherever the interactive is published.</p>
               </>

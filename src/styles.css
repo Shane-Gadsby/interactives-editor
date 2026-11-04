@@ -4767,6 +4767,15 @@ code {
   font-size: 12px;
   line-height: 1.35;
   pointer-events: none;
+
+/* The "new version, reload" notice after a deploy (lib/stale-build.ts) */
+.toast.stale-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(640px, calc(100vw - 32px));
+  border-color: var(--accent, var(--line-2));
+  z-index: 400;
 }
 /* ---------------------------------------------------------------- narration and captions on the timeline */
 .timeline-labels,

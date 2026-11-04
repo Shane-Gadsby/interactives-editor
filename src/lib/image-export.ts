@@ -3,6 +3,7 @@ import { assetBytes } from './db';
 import { download, fileSafe } from './export';
 import { previewScope } from './data';
 import { editInstanceMount } from '../canvas/instances';
+import { fontUseIn, neededFonts, type FontNeed } from './font-use';
 
 /** A small JPEG of the start artboard, for the projects page. */
 export async function projectThumbnail(project: Project, width = 400): Promise<Blob | null> {
@@ -35,13 +36,16 @@ const toDataUrl = (bytes: Uint8Array, mime: string) =>
     r.readAsDataURL(new Blob([bytes as BlobPart], { type: mime }));
   });
 
-// Font CSS per project font list (Google stylesheets and their files are fetched once)
+// Font CSS per set of fonts a picture needs (Google stylesheets and their files are fetched once)
 const fontCssCache = new Map<string, Promise<string>>();
-function fontCssCached(project: Project): Promise<string> {
-  const key = JSON.stringify(project.fonts);
+/** The @font-face CSS for just the fonts (and weights) the text in `root` uses; nothing when it has no project-font text */
+function fontCssCached(project: Project, root: Element): Promise<string> {
+  const needs = neededFonts(project.fonts, fontUseIn(root));
+  if (!needs.length) return Promise.resolve('');
+  const key = `${project.id}|${JSON.stringify(needs)}`;
   let p = fontCssCache.get(key);
   if (!p) {
-    p = fontCss(project);
+    p = fontCss(project, needs);
     fontCssCache.set(key, p);
   }
   return p;
@@ -61,7 +65,7 @@ export async function snapshotFromDom(project: Project, ab: Artboard, root: HTML
     const data = await dataUrlOf(project, a);
     if (data) html = html.split(url.replace(/&/g, '&amp;')).join(data);
   }
-  const css = await fontCssCached(project);
+  const css = await fontCssCached(project, root);
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${ab.width}" height="${ab.height}" viewBox="0 0 ${ab.width} ${ab.height}">` +
     (css ? `<defs><style>${css.replace(/]]>/g, '')}</style></defs>` : '') +
@@ -89,16 +93,16 @@ function withCanvasesAsImages(root: HTMLElement): HTMLElement {
   return copy;
 }
 
-async function fontCss(project: Project): Promise<string> {
+async function fontCss(project: Project, needs: FontNeed[]): Promise<string> {
   const parts: string[] = [];
-  for (const f of project.fonts) {
+  for (const { font: f, weights: used } of needs) {
     try {
       if (f.source === 'asset' && f.assetId) {
         const a = project.assets.find((x) => x.id === f.assetId);
         const bytes = a && (await assetBytes(project.id, a));
         if (bytes) parts.push(`@font-face{font-family:${JSON.stringify(f.family)};src:url("${await toDataUrl(bytes, a!.mime || 'font/woff2')}")}`);
       } else if (f.source === 'google') {
-        const weights = (f.weights?.length ? f.weights : [400, 700]).slice().sort((a, b) => a - b).join(';');
+        const weights = used.join(';');
         let css = await (await fetch(`https://fonts.googleapis.com/css2?family=${encodeURIComponent(f.family).replace(/%20/g, '+')}:wght@${weights}`)).text();
         // Inline each font file the stylesheet points at
         for (const m of [...css.matchAll(/url\((https:[^)]+)\)/g)]) {
@@ -173,7 +177,7 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
       if (shaders.problems.length) warnings.push('Some shader layers could not be drawn (WebGL is unavailable or the shader has errors) and show as placeholders in pictures.');
     }
     const html = new XMLSerializer().serializeToString(r.root);
-    const css = opts.fonts === false ? '' : await fontCssCached(project);
+    const css = opts.fonts === false ? '' : await fontCssCached(project, r.root);
     const svg =
       `<svg xmlns="http://www.w3.org/2000/svg" width="${ab.width}" height="${ab.height}" viewBox="0 0 ${ab.width} ${ab.height}">` +
       (css ? `<defs><style>${css.replace(/]]>/g, '')}</style></defs>` : '') +

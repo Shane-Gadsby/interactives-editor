@@ -8,6 +8,7 @@ import { Icons } from './components/icons';
 import { PrefsModal } from './components/PrefsModal';
 import { prefs } from './lib/prefs';
 import { sessionUser, type SessionUser } from './lib/session';
+import { noteIfStale } from './lib/stale-build';
 
 declare global {
   interface Window {
@@ -130,9 +131,19 @@ export function Home({ open }: { open: (id: string) => void }) {
     try {
       await fn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (!noteIfStale(err)) setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
+    }
+  };
+
+  /** A project made while a folder is selected goes into that folder (a failure here must not lose the new project) */
+  const intoSelectedFolder = async (id: string) => {
+    if (folderSel.kind !== 'folder') return;
+    try {
+      await setProjectMeta(id, { folder: folderSel.name });
+    } catch {
+      /* it stays in "No folder" and can be moved from its card */
     }
   };
 
@@ -143,6 +154,7 @@ export function Home({ open }: { open: (id: string) => void }) {
       const font = prefs().defaultFont.trim();
       if (font) p.fonts.push({ family: font, source: 'google', weights: [400, 600, 700] });
       await createProjectRecord(p);
+      await intoSelectedFolder(p.id);
       open(p.id);
     });
 
@@ -160,11 +172,13 @@ export function Home({ open }: { open: (id: string) => void }) {
         const linking = await chooseLinking([f]);
         if (!linking) return;
         const id = await projectFromAnimation(f, linking.get(f));
+        await intoSelectedFolder(id);
         await refresh();
         open(id);
         return;
       }
       const p = await importPackage(f);
+      await intoSelectedFolder(p.id);
       await refresh();
       open(p.id);
     });
@@ -359,7 +373,7 @@ export function Home({ open }: { open: (id: string) => void }) {
         )}
         {!!list?.length && (
           <article className="project-card new-card">
-            <button className="project-thumb new-thumb" onClick={create} disabled={busy} title="Start an empty project with one artboard">
+            <button className="project-thumb new-thumb" onClick={create} disabled={busy} title={`Start an empty project with one artboard${folderSel.kind === 'folder' ? `, in the folder "${folderSel.name}"` : ''}`}>
               <Icons.plus width={34} height={34} />
             </button>
             <div className="project-info">

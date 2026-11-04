@@ -5,6 +5,7 @@ import { HelpHost, HelpPage } from './help/Help';
 import { DialogHost } from './components/dialogs';
 import { installTooltips } from './components/tooltips';
 import { sessionUser } from './lib/session';
+import { installStaleBuildNotice } from './lib/stale-build';
 import { loadUserPrefs } from './lib/prefs'; // importing applies the cached theme before the first paint
 
 type Route = { page: 'home' } | { page: 'editor'; id: string } | { page: 'help'; id: string; anchor?: string };
@@ -19,6 +20,7 @@ function parse(): Route {
 }
 
 installTooltips();
+installStaleBuildNotice();
 // Ask the toolbox session who this is early (it also stores the session id utilities.js sends with requests)
 void sessionUser();
 void loadUserPrefs();

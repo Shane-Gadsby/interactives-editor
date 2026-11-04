@@ -15,6 +15,7 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { silenceFlowAttributionWarning } from '../lib/flow-licence';
 import {
   ANIMATABLE_PROPS,
   CATALOG,
@@ -37,6 +38,9 @@ import { getArtboard } from '../store/doc';
 import { CheckField, NumberField, SelectField, TextField } from '../components/ui';
 import { CodeEditor } from '../components/CodeEditor';
 import { SplitColumns } from '../components/SplitColumns';
+
+// We hold the React Flow Pro licence (hideAttribution below); drop the library's dev-only notice about it
+if (import.meta.env.DEV) silenceFlowAttributionWarning();
 import { assetKind } from '../lib/assets';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { uid, type Script, type Variable, type VariableType } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueIdentifier, uniqueName } from '../store/doc';
@@ -122,6 +122,37 @@ function validList(text: string): boolean {
   }
 }
 
+/**
+ * A variable's name. Only a valid name is saved into the project: an empty or invalid one stays in the field as a draft,
+ * with the warning, until it is fixed (or the field is reverted by undo or someone else's edit).
+ */
+function VariableNameField({ name, onValid }: { name: string; onValid: (name: string) => void }) {
+  const [draft, setDraft] = useState(name);
+  useEffect(() => setDraft(name), [name]);
+  const bad = !isIdentifier(draft.trim());
+  return (
+    <>
+      <TextField
+        value={name}
+        mono
+        commitOnBlur
+        title="Letters, digits and _ only, not starting with a digit. A name that is not valid is not saved until you fix it."
+        onInput={setDraft}
+        onChange={(text) => {
+          const t = text.trim();
+          if (isIdentifier(t)) onValid(t);
+        }}
+      />
+      {bad && (
+        <div className="error small">
+          {draft.trim() === '' ? 'A variable needs a name.' : 'Use letters, digits and _ only, not starting with a digit.'}
+          {draft.trim() !== name && ' Not saved yet, the project still uses ' + name + '.'}
+        </div>
+      )}
+    </>
+  );
+}
+
 export function VariablesPanel() {
   const vars = useEditor((st) => st.project.variables);
   const setVar = (id: string, patch: Partial<Variable>, coalesce?: string) =>
@@ -155,8 +186,7 @@ export function VariablesPanel() {
           {vars.map((v) => (
             <tr key={v.id}>
               <td>
-                <TextField value={v.name} mono commitOnBlur onChange={(name) => setVar(v.id, { name: name.trim() })} />
-                {!isIdentifier(v.name) && <div className="error small">Use letters, digits and _ only, not starting with a digit.</div>}
+                <VariableNameField name={v.name} onValid={(name) => setVar(v.id, { name })} />
               </td>
               <td>
                 <SelectField<VariableType>

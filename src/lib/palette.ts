@@ -5,13 +5,17 @@ import { parseColor } from 'interactives-player';
  * The toolbox palette: the colours si-studydesk-styles publishes as CSS custom properties in /styles/palette.min.css.
  * The editor reads that stylesheet at runtime, so a change to the palette shows up here without a rebuild.
  * Picking a colour stores a plain value on the layer; nothing that is exported refers back to the stylesheet.
+ *
+ * Display names: see the comment above PALETTE_NAME_FORMAT below.
  */
 
 export interface PaletteColor {
   /** The custom property, e.g. --ilar-swatch-yellow */
   name: string;
-  /** Readable name for tooltips, e.g. "Yellow" */
+  /** Readable name for tooltips, e.g. "Yellow": the stylesheet's name comment when it has one, else made from the property name */
   label: string;
+  /** True when the label came from a name comment */
+  named?: boolean;
   /** Plain colour value (hex or rgb) */
   value: string;
   /** Other properties that resolve to the same colour in this group */
@@ -24,8 +28,24 @@ export interface PaletteGroup {
   colors: PaletteColor[];
 }
 
+// Display names. A colour is called after its custom property (--ilar-swatch-yellow-dark is "Yellow dark") unless the
+// stylesheet gives it a name in a comment with three or more stars each side: /***name: Gold***/
+// The comment belongs to the declaration it sits on the same line as, written after it:
+//     --feature-colour-gold: var(--ilar-swatch-yellow); /***name: Gold***/
+// or, when it is on a line of its own, to the declaration on the next line:
+//     /***name: Gold***/
+//     --feature-colour-gold: var(--ilar-swatch-yellow);
+// Comments with fewer stars are ordinary comments and ignored. The name replaces the readable label on the swatch's tooltip
+// (the property name is still listed there). A blank name falls back to the property's name.
+//
+// csso, the minifier si-studydesk-styles runs, strips every comment from palette.min.css, even /*! */ ones inside a
+// rule (it only keeps them at the top of the sheet), so the names can only be read from the unminified palette.css
+// that the same server serves at /styles/palette.css. The editor loads that first and falls back to palette.min.css,
+// which has the colours and never the names.
 /** Where the stylesheet is served from, through haproxy on the same host */
 export const PALETTE_URL = '/styles/palette.min.css';
+/** The unminified source beside it, the only one that still has the name comments */
+export const PALETTE_SOURCE_URL = '/styles/palette.css';
 
 const GROUPS: { id: string; title: string }[] = [
   { id: 'brand', title: 'Brand colours' },
@@ -36,14 +56,37 @@ const GROUPS: { id: string; title: string }[] = [
   { id: 'roles', title: 'Roles and buttons' },
 ];
 
-function stripComments(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, '');
+const MAX_NAME = 60;
+// /***name: Gold***/ : three or more stars each side, so an ordinary comment that starts with "name:" is left alone
+const NAME_COMMENT = /^\/\*{3,}\s*name\s*:([^*]*?)\s*\*{3,}\/$/i;
+const MARK = '\u0001';
+
+/** The name a comment gives, or null when it is not a name comment (or the name is blank) */
+export function nameFromComment(comment: string): string | null {
+  const m = NAME_COMMENT.exec(comment);
+  const name = m?.[1].trim().replace(/\s+/g, ' ').slice(0, MAX_NAME);
+  return name || null;
 }
 
 /** Every `--name: value` declared in a :root rule, later declarations winning. */
 export function parseCustomProperties(css: string): Map<string, string> {
-  const out = new Map<string, string>();
-  for (const rule of stripComments(css).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+  return parseDeclarations(css).props;
+}
+
+/** The properties and, for each one a name comment belongs to, its display name. */
+export function parseDeclarations(css: string): { props: Map<string, string>; names: Map<string, string> } {
+  const props = new Map<string, string>();
+  const names = new Map<string, string>();
+  // Name comments become a marker (so they survive the rest of the parse, newlines around them included); other comments go
+  const found: string[] = [];
+  const text = css.replace(/\/\*[\s\S]*?\*\//g, (c) => {
+    const n = nameFromComment(c);
+    if (n === null) return ' ';
+    found.push(n);
+    return `${MARK}${found.length - 1}${MARK}`;
+  });
+  const marks = (chunk: string) => [...chunk.matchAll(new RegExp(`${MARK}(\\d+)${MARK}`, 'g'))].map((m) => found[Number(m[1])]);
+  for (const rule of text.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     if (!rule[1].split(',').some((sel) => sel.trim() === ':root')) continue;
     // Split on semicolons that are not inside brackets
     let depth = 0;
@@ -58,12 +101,33 @@ export function parseCustomProperties(css: string): Map<string, string> {
       } else cur += ch;
     }
     decls.push(cur);
+    let previous: string | null = null;
+    const blank = new RegExp(`^(?:\\s|${MARK}\\d+${MARK})*$`);
+    const custom = new RegExp(`^((?:\\s|${MARK}\\d+${MARK})*)(--[\\w-]+)\\s*:([\\s\\S]*?)\\s*(?:!important)?\\s*$`);
     for (const d of decls) {
-      const m = /^\s*(--[\w-]+)\s*:\s*([\s\S]*?)\s*(?:!important)?\s*$/.exec(d);
-      if (m && m[2]) out.set(m[1], m[2]);
+      const m = custom.exec(d);
+      if (!m) {
+        // Only comments after the last declaration: on its line they name it. Any other declaration ends the run.
+        if (previous && blank.test(d)) for (const n of marks(d.split('\n')[0])) names.set(previous, n);
+        else if (!blank.test(d)) previous = null;
+        continue;
+      }
+      const [, lead, name, rest] = m;
+      // Before this declaration: what is on the previous declaration's line names that one, what is on later lines names this one
+      const nl = lead.indexOf('\n');
+      const sameLine = nl === -1 ? lead : lead.slice(0, nl);
+      const ownLines = nl === -1 ? '' : lead.slice(nl);
+      if (previous) for (const n of marks(sameLine)) names.set(previous, n);
+      const mine = [...marks(ownLines), ...(previous ? [] : marks(sameLine)), ...marks(rest)];
+      if (mine.length) names.set(name, mine[mine.length - 1]);
+      const value = rest.replace(new RegExp(`${MARK}\\d+${MARK}`, 'g'), '').trim();
+      if (value) {
+        props.set(name, value);
+        previous = name;
+      }
     }
   }
-  return out;
+  return { props, names };
 }
 
 /** Replaces var(--x, fallback) with what it points at. Null when it can't be settled (a loop, or an unknown property with no fallback). */
@@ -123,7 +187,7 @@ function classify(name: string): { group: string; label: string } {
 
 /** Turns the stylesheet text into named, grouped colours. Empty when it holds none (an error page, another stylesheet, an empty file). */
 export function parsePaletteCss(css: string): PaletteGroup[] {
-  const props = parseCustomProperties(css);
+  const { props, names } = parseDeclarations(css);
   const groups = new Map<string, PaletteGroup>(GROUPS.map((g) => [g.id, { ...g, colors: [] }]));
   const shownAlready = new Map<string, PaletteColor>();
   for (const [name, raw] of props) {
@@ -145,7 +209,8 @@ export function parsePaletteCss(css: string): PaletteGroup[] {
         continue;
       }
     }
-    const color: PaletteColor = { name, label, value, aliases: [] };
+    const given = names.get(name);
+    const color: PaletteColor = { name, label: given ?? label, ...(given ? { named: true } : {}), value, aliases: [] };
     g.colors.push(color);
     if (group !== 'roles' && !shownAlready.has(value)) shownAlready.set(value, color);
   }
@@ -163,16 +228,22 @@ let pending: Promise<PaletteGroup[]> | null = null;
 const listeners = new Set<(g: PaletteGroup[]) => void>();
 
 /** Fetches and parses the stylesheet once per page load. Never rejects: any failure is an empty palette. */
-export function loadPalette(url: string = PALETTE_URL): Promise<PaletteGroup[]> {
+export function loadPalette(url?: string): Promise<PaletteGroup[]> {
   if (!pending) {
-    pending = (async () => {
+    const read = async (from: string): Promise<PaletteGroup[]> => {
       try {
-        const res = await fetch(url, { credentials: 'same-origin', cache: 'no-cache' });
+        const res = await fetch(from, { credentials: 'same-origin', cache: 'no-cache' });
         if (!res.ok) return [];
         return parsePaletteCss(await res.text());
       } catch {
         return [];
       }
+    };
+    pending = (async () => {
+      if (url) return read(url);
+      // The source has the name comments; the minified copy only has the colours
+      const withNames = await read(PALETTE_SOURCE_URL);
+      return withNames.length ? withNames : read(PALETTE_URL);
     })().then((g) => {
       loaded = g;
       listeners.forEach((fn) => fn(g));

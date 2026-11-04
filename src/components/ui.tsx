@@ -138,6 +138,7 @@ export function TextField({
   commitOnBlur,
   rows,
   title,
+  onInput,
 }: {
   label?: ReactNode;
   value: string;
@@ -148,6 +149,8 @@ export function TextField({
   commitOnBlur?: boolean;
   rows?: number;
   title?: string;
+  /** Every keystroke, even with commitOnBlur (for a live warning about text that is not committed yet) */
+  onInput?: (v: string) => void;
 }) {
   const [text, setText] = useState(value);
   const focused = useRef(false);
@@ -163,7 +166,11 @@ export function TextField({
       focused.current = false;
       if (commitOnBlur && text !== value) onChange(text);
     },
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => (commitOnBlur ? setText(e.target.value) : onChange(e.target.value)),
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      onInput?.(e.target.value);
+      if (commitOnBlur) setText(e.target.value);
+      else onChange(e.target.value);
+    },
     onKeyDown: (e: React.KeyboardEvent) => {
       e.stopPropagation();
       if (!multiline && e.key === 'Enter') (e.target as HTMLInputElement).blur();
