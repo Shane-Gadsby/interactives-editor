@@ -4767,6 +4767,7 @@ code {
   font-size: 12px;
   line-height: 1.35;
   pointer-events: none;
+}
 
 /* The "new version, reload" notice after a deploy (lib/stale-build.ts) */
 .toast.stale-toast {
