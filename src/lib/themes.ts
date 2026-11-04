@@ -119,7 +119,7 @@ export function lookDefaults(project: Project, type: NodeType): Record<string, u
     case 'input':
       return { fill: solid(l.background), stroke: { paint: solid(l.border), width: 1 }, color: l.text };
     case 'link':
-      return { color: l.primary };
+      return { color: l.link };
     default:
       return {};
   }
@@ -384,6 +384,8 @@ const PAIRS: { fg: string; bg: string; label: string; need: number }[] = [
   { fg: 'color/on-primary', bg: 'color/primary', label: 'label on primary', need: 4.5 },
   { fg: 'color/on-button', bg: 'color/button', label: 'label on button', need: 4.5 },
   { fg: 'color/primary', bg: 'color/background', label: 'primary on background', need: 3 },
+  { fg: 'color/link', bg: 'color/background', label: 'link on background', need: 4.5 },
+  { fg: 'color/link', bg: 'color/surface', label: 'link on surface', need: 4.5 },
   { fg: 'color/border', bg: 'color/background', label: 'outline against background', need: 3 },
   { fg: 'color/border', bg: 'color/surface', label: 'outline against surface', need: 3 },
   { fg: 'color/focus', bg: 'color/background', label: 'focus ring on background', need: 3 },

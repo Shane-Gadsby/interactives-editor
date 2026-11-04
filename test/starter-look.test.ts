@@ -38,6 +38,8 @@ const LIGHT_BELOW_AA = [
   'muted text on surface 2.38:1',
   'muted text on muted surface 1.96:1',
   'primary on background 1.75:1',
+  'link on background 3.60:1',
+  'link on surface 3.30:1',
   'outline against background 2.59:1',
   'outline against surface 2.38:1',
   'focus ring on background 1.75:1',
@@ -176,6 +178,10 @@ describe('new layers', () => {
     expect(i.fill).toEqual({ type: 'solid', color: id('color/background') });
     expect(i.stroke!.paint).toEqual({ type: 'solid', color: id('color/border') });
     expect(createNode('text', lookDefaults(p, 'text') as never).color).toBe(id('color/text'));
+    // a Link layer takes the palette's hyperlink colour, not the gold accent
+    expect(createNode('link', lookDefaults(p, 'link') as never).color).toBe(id('color/link'));
+    expect(createNode('link').color).toBe(PALETTE_SNAPSHOT['--ilar-swatch-hyperlink']);
+    expect(p.themes!.tokens.find((t) => t.name === 'color/link')!.palette!['theme-light']).toBe('--ilar-swatch-hyperlink');
     expect(createNode('rect', lookDefaults(p, 'rect') as never).fill).toEqual({ type: 'solid', color: id('color/surface-muted') });
     // and a button reads gold with dark text in Light, the same gold in Dark
     const light = makeColorResolver(p.themes, 'theme-light');
