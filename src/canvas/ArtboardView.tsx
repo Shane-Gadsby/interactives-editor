@@ -8,6 +8,8 @@ import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
 import { createEditorShader, type EditorShader } from '../lib/shader-edit';
 import { assetUrls } from '../lib/assets';
 import { store } from '../store/store';
+import { usePrefs } from '../lib/prefs';
+import { ghostLayers, outsideClipPath, setGhostExtent } from './ghost';
 import { cachedStill, isCachedUrl, saveStill, stillHash } from '../lib/still-cache';
 
 interface Props {
@@ -135,6 +137,10 @@ let snapSeq = 0;
 export function ArtboardView({ artboard, project, timeline, time, active, assetVersion, dataVersion, live, deferred = false, rank = 0 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const renderer = useRef<Renderer | null>(null);
+  // The faint copy of the layers hanging outside a clipping artboard (see ghost.ts): a second renderer for just those layers
+  const ghostEl = useRef<HTMLDivElement>(null);
+  const ghostR = useRef<Renderer | null>(null);
+  const { ghostOutside } = usePrefs();
   const draw = useRef<EditorDraw | null>(null);
   const shader = useRef<EditorShader | null>(null);
   // Instances draw other artboards, so they redraw when any artboard changes
@@ -182,6 +188,9 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       d.dispose();
       sh.dispose();
       renderer.current = null;
+      ghostR.current?.destroy();
+      ghostR.current = null;
+      setGhostExtent(artboard.id, null);
       draw.current = null;
       shader.current = null;
     };
@@ -193,6 +202,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     const last = lastDraw.current;
     const sampled: SceneNode[] = timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children;
     let drawn = false;
+    // What got drawn (bindings, repeaters and layout applied), which the ghost layers are picked from
+    let shown: SceneNode[] = sampled;
     // Nothing derived from the whole tree (bindings, repeaters, constraints, layout, script layers, instances) and nothing
     // else the drawing depends on changed: find the layers that did (immer shares the rest, so this only follows what
     // changed) and redraw just those. Any change in structure, or anything unusual, draws the whole artboard instead
@@ -211,12 +222,26 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       draw.current?.configure(timeline ? time / 1000 : 0, `${assetVersion}|${dataVersion}`);
       shader.current?.configure(timeline ? time / 1000 : 0, assetVersion);
       r.render(artboard, nodes, { vars });
+      shown = nodes;
       // Where layers ended up after bindings, repeaters and layout, for the selection outline and hit testing (only for the
       // design view: a timeline's pose is not where the document has the layer)
       if (!timeline) recordDrawnGeometry(artboard.id, artboard.children, nodes);
       let plain = nodes === sampled;
       if (plain) walk(sampled, (n) => void (plain &&= !drawnDifferently(n)));
       lastDraw.current = { renderer: r, artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };
+    }
+    // Layers past the edge of an artboard that clips: a faint copy of just those, outside the artboard only
+    const ghost = ghostOutside && artboard.clip ? ghostLayers(shown, artboard.width, artboard.height) : null;
+    setGhostExtent(artboard.id, ghost?.extent ?? null);
+    if (ghost && ghostEl.current) {
+      if (!ghostR.current) {
+        ghostR.current = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve });
+        ghostEl.current.appendChild(ghostR.current.root);
+      }
+      ghostR.current.render({ ...artboard, clip: false, background: null }, ghost.nodes, { vars: previewScope(project, artboard) });
+    } else if (ghostR.current) {
+      ghostR.current.destroy();
+      ghostR.current = null;
     }
     // Auto-sized text: measure and write the size back (no undo step).
     const updates: { id: string; width?: number; height?: number; x?: number; y?: number }[] = [];
@@ -269,7 +294,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, depsKey, started, live]);
+  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, depsKey, started, live, ghostOutside]);
 
   // ---- stills
   const keyRef = useRef(key);
@@ -333,6 +358,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       style={{ left: artboard.canvasX, top: artboard.canvasY, width: artboard.width, height: artboard.height }}
       data-artboard={artboard.id}
     >
+      {/* Layers hanging outside a clipping artboard, faintly, outside its edge only. Nothing in it takes the pointer. */}
+      <div ref={ghostEl} className="artboard-ghost" style={{ width: artboard.width, height: artboard.height, clipPath: outsideClipPath(artboard.width, artboard.height) }} />
       {/* The live DOM stays (hidden) under a still, so switching back is instant and stills can be remade from it */}
       <div ref={host} className="artboard-host" style={showStill ? { display: 'none' } : undefined} />
       {/* Not drawn yet: the artboard's own background, so it is where it will be */}

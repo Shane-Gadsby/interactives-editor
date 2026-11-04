@@ -1399,6 +1399,20 @@ body.col-resizing * {
   position: absolute;
   box-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
 }
+/* Layers past the edge of an artboard that clips, drawn faintly (the player and exports still clip) */
+.artboard-ghost {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.artboard-ghost * {
+  pointer-events: none !important;
+}
+.artboard-ghost:empty {
+  display: none;
+}
 .artboard-host .ix-edit .ix-node * {
   pointer-events: none;
 }

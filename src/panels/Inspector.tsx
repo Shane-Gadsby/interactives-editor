@@ -443,7 +443,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         />
         <div className="field-label block">Background</div>
         <PaintField paint={ab.background} project={project} box={{ w: ab.width, h: ab.height }} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
-        <CheckField label="Clip content to artboard" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
+        <CheckField label="Clip content to artboard" title="Preview and exports cut off whatever hangs outside the artboard. On the canvas it still shows faintly there (Preferences: Show layers outside clipped artboards)" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
         {project.settings.library && !ab.library && (
           <CheckField
             label="Publish to library"

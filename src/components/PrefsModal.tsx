@@ -55,6 +55,12 @@ export function PrefsModal({ onClose }: { onClose: () => void }) {
           />
           <CheckField label="Show rulers" title="Rulers along the canvas edges; drag from them to make guides (Shift+R)" value={p.rulers} onChange={(v) => setPrefs({ rulers: v })} />
           <CheckField
+            label="Show layers outside clipped artboards"
+            title="Draws the parts of layers that hang outside an artboard that clips faintly beside it, so you can still see and pick them. Preview and exports still clip"
+            value={p.ghostOutside}
+            onChange={(v) => setPrefs({ ghostOutside: v })}
+          />
+          <CheckField
             label="Accessibility features"
             title="Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview. Switch it off to see whether a problem comes from it"
             value={p.accessibility}

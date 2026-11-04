@@ -47,6 +47,7 @@ import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { copySelection, pasteNodes } from '../lib/clipboard';
+import { inGhostExtent } from './ghost';
 import { openHelp } from '../help/Help';
 import { Rulers } from './Rulers';
 import { Icons } from '../components/icons';
@@ -221,11 +222,12 @@ export function Canvas() {
   const local = (ab: Artboard, w: Pt): Pt => ({ x: w.x - ab.canvasX, y: w.y - ab.canvasY });
   /**
    * The layer under the pointer. The artboard under the pointer goes first; then layers hanging outside their
-   * artboard (the open one, or any that doesn't clip), so things moved past the edge can still be picked.
+   * artboard (the open one, or any that doesn't clip), so things moved past the edge can still be picked. So can the faint
+   * ghosts of layers hanging outside an artboard that clips (see ghost.ts), where they are drawn.
    */
   const layerAt = (w: Pt, pickDeepest: boolean): { ab: Artboard; hit: SceneNode } | null => {
     const under = abAt(w);
-    const others = [...(active ? [active] : []), ...[...onCanvas].reverse().filter((a) => a.id !== active?.id && a.clip === false)].filter((a) => a.id !== under?.id);
+    const others = [...(active ? [active] : []), ...[...onCanvas].reverse().filter((a) => a.id !== active?.id && (a.clip === false || (!under && inGhostExtent(a.id, w.x - a.canvasX, w.y - a.canvasY))))].filter((a) => a.id !== under?.id);
     const order = [...(under ? [under] : []), ...others];
     // Visible layers win; hidden ones (drawn as ghosts) are picked only where nothing visible is
     for (const includeHidden of [false, true]) {

@@ -320,7 +320,8 @@ function matchRow(q: Question, p: QuestionPair, i: number): SceneNode {
         decorative: true,
         width: TERM_W,
         height: 18,
-        //Out of the flow, so showing it does not move the rows (the drop zones are measured from where the rows sit)
+        //Out of the flow on purpose. A hidden layer takes no room in the layout now (task 217), so it is not about measuring any more,
+        //but showing it in the flow would still push the rows below it down on Check, and the terms already dropped in the slots stay put
         layoutItem: { position: 'absolute', inset: { left: 402 - TERM_W, top: TERM_H + 2 } },
         bindings: { visible: `!!${at}?.state` },
       }),
