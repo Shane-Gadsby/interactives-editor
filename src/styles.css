@@ -1444,14 +1444,39 @@ div.text-editor {
 .layer-row.hidden-layer .layer-name {
   opacity: 0.45;
 }
-.layer-row.drop-before {
-  border-top-color: var(--accent);
+/* Dragging a layer: a line at the gap it will land in (indented to the depth it will join), and an outline on the group when it goes inside */
+.layers {
+  position: relative;
 }
-.layer-row.drop-after {
-  border-bottom-color: var(--accent);
+.layer-row.dragging {
+  opacity: 0.4;
 }
 .layer-row.drop-inside {
-  background: rgba(77, 124, 255, 0.35);
+  background: rgba(77, 124, 255, 0.22);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 3px;
+}
+.drop-line {
+  position: absolute;
+  right: 6px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 2;
+}
+.drop-line::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--panel, var(--bg));
 }
 .twisty {
   width: 14px;

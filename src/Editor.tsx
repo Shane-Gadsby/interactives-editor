@@ -34,6 +34,7 @@ import { LinkBanner } from './components/LinkBanner';
 import { LinkChanges } from './components/LinkChanges';
 import { PanelResizeHandle, usePanelWidths } from './components/PanelResize';
 import { noteIfStale } from './lib/stale-build';
+import { keyMoveTarget } from './lib/layer-drop';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
   const [ready, setReady] = useState<EditorStore | null>(null);
@@ -281,6 +282,14 @@ function useShortcuts() {
         if (n?.type === 'group' || n?.type === 'frame') s.set({ focusId: n.id, selection: n.children.map((c) => c.id).slice(-1) });
         else if (n?.type === 'path') s.set({ editingPathId: n.id });
         else if (n?.type === 'text' || n?.type === 'button' || n?.type === 'link') s.set({ editingTextId: n.id });
+        return;
+      }
+      if (e.altKey && !mod && k.startsWith('arrow') && st.selection.length === 1) {
+        // Keyboard version of dragging in the Layers panel: up/down step past a layer, left/right leave or enter a group
+        e.preventDefault();
+        const ab = s.artboard();
+        const to = ab && keyMoveTarget(ab, st.selection[0], k === 'arrowup' ? 'up' : k === 'arrowdown' ? 'down' : k === 'arrowleft' ? 'out' : 'in');
+        if (to) s.moveNode(st.selection[0], to.parentId, to.at);
         return;
       }
       if (k.startsWith('arrow') && st.selection.length) {

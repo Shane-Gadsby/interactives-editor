@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { createNode, isContainer, nodeTypeLabel, type Artboard, type SceneNode } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { Icons, type IconName } from '../components/icons';
@@ -12,6 +12,7 @@ import { deleteAsset } from '../lib/db';
 import { analyzeUsage, unusedAssetIds } from '../lib/dependencies';
 import { LibrariesPanel } from './LibrariesPanel';
 import { orderedArtboards, rangeLabel } from '../lib/variants-edit';
+import { INDENT, ROW_H, ROW_PAD, depthAtX, dropRows, slotAt, type DropSlot } from '../lib/layer-drop';
 
 export function LeftPanel() {
   const [tab, setTab] = useState<'layers' | 'assets' | 'libraries'>('layers');
@@ -54,15 +55,12 @@ const TYPE_ICON: Record<string, IconName> = {
   bone: 'bone',
 };
 
-const ROW_H = 26;
-
-type DropPos = { id: string; where: 'before' | 'after' | 'inside' } | null;
 
 function Layers() {
   const s = useEditor((st) => ({ project: st.project, activeArtboardId: st.activeArtboardId, selection: st.selection, artboardSelected: st.artboardSelected }));
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
-  const [drop, setDrop] = useState<DropPos>(null);
+  const [drop, setDrop] = useState<DropSlot | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
 
   const toggle = (id: string) => {
@@ -72,17 +70,60 @@ function Layers() {
     setCollapsed(next);
   };
 
-  const doDrop = (ab: Artboard) => {
-    if (!dragId || !drop || dragId === drop.id) return;
-    const target = locate(ab, drop.id);
-    if (!target) return;
-    if (drop.where === 'inside' && isContainer(target.node)) {
-      store().moveNode(dragId, target.node.id, Infinity);
-    } else {
-      // The list is drawn top-most first, so "before" in the list is "after" in the children array.
-      const index = drop.where === 'before' ? target.index + 1 : target.index;
-      store().moveNode(dragId, target.parent?.id ?? null, index);
+  const endDrag = () => {
+    setDragId(null);
+    setDrop(null);
+  };
+
+  // Where a drag over the list would land. Works from the pointer, not from the row under it, so the space below the
+  // last row counts too and the horizontal position can pick the depth.
+  const slotFor = (e: DragEvent): DropSlot | null => {
+    const el = scroller.current;
+    const ab = s.project.artboards.find((a) => a.id === s.activeArtboardId);
+    if (!el || !dragId || !ab) return null;
+    const base = flat.findIndex((r) => r.kind === 'artboard' && r.ab.id === ab.id);
+    if (base < 0) return null;
+    const rect = el.getBoundingClientRect();
+    const y = e.clientY - rect.top + el.scrollTop - 4;
+    let i = Math.floor(y / ROW_H);
+    let frac = (y - i * ROW_H) / ROW_H;
+    if (i >= flat.length) {
+      i = flat.length - 1;
+      frac = 1;
     }
+    if (i < 0) return null;
+    const hit = flat[i];
+    // Over a different artboard: only the row straight after the active artboard's last layer is the end of it
+    const end = base + 1 + activeRows.length;
+    if (hit.kind === 'artboard' && hit.ab.id !== ab.id) {
+      if (i !== end || frac > 0.5) return null;
+      return slotAt(ab, activeRows, end, base, 1, depthAtX(e.clientX, rect.left), dragId);
+    }
+    if (hit.kind === 'node' && hit.ab.id !== ab.id) return null;
+    if (i > end) return null;
+    return slotAt(ab, activeRows, i, base, frac, depthAtX(e.clientX, rect.left), dragId);
+  };
+  const sameSlot = (a: DropSlot | null, b: DropSlot | null) => a === b || (!!a && !!b && a.gap === b.gap && a.depth === b.depth && a.row === b.row && a.parentId === b.parentId && a.at === b.at);
+  const onListDragOver = (e: DragEvent) => {
+    if (!dragId) return;
+    const slot = slotFor(e);
+    if (!slot) {
+      setDrop(null);
+      return;
+    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDrop((prev) => (sameSlot(prev, slot) ? prev : slot));
+  };
+  const onListDragLeave = (e: DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDrop(null);
+  };
+  const onListDrop = (e: DragEvent) => {
+    if (!dragId) return;
+    e.preventDefault();
+    const slot = slotFor(e);
+    if (slot && !slot.noop) store().moveNode(dragId, slot.parentId, slot.at);
+    endDrag();
   };
 
   // Only the rows in view are drawn: big imports have thousands of layers
@@ -101,6 +142,10 @@ function Layers() {
     }
     return out;
   }, [s.project.artboards, collapsed]);
+  const activeRows = useMemo(() => {
+    const ab = s.project.artboards.find((a) => a.id === s.activeArtboardId);
+    return ab ? dropRows(ab, collapsed) : [];
+  }, [s.project.artboards, s.activeArtboardId, collapsed]);
   const scroller = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ top: 0, height: 800 });
   useLayoutEffect(() => {
@@ -138,15 +183,6 @@ function Layers() {
         key={`ab-${ab.id}`}
         className={`artboard-row${active && s.artboardSelected ? ' selected' : ''}${active ? ' active' : ''}${ab.variantOf ? ' variant' : ''}`}
         onClick={() => store().set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? store().get().activeTimelineId : null })}
-        onDragOver={(e) => {
-          if (dragId && active) e.preventDefault();
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          if (dragId) store().moveNode(dragId, null, Infinity);
-          setDragId(null);
-          setDrop(null);
-        }}
       >
         <button
           className="twisty"
@@ -185,7 +221,7 @@ function Layers() {
     const container = isContainer(n);
     const open = container && !collapsed.has(n.id);
     const Icon = Icons[TYPE_ICON[n.type] ?? 'rect'];
-    const dropClass = drop?.id === n.id ? ` drop-${drop.where}` : '';
+    const dropClass = `${drop?.row !== undefined && activeRows[drop.row]?.n.id === n.id && ab.id === s.activeArtboardId ? ' drop-inside' : ''}${dragId === n.id ? ' dragging' : ''}`;
     return (
       <div
         key={n.id}
@@ -197,23 +233,7 @@ function Layers() {
           e.dataTransfer.effectAllowed = 'move';
           e.dataTransfer.setData('text/plain', n.id);
         }}
-        onDragEnd={() => {
-          setDragId(null);
-          setDrop(null);
-        }}
-        onDragOver={(e) => {
-          if (!dragId || ab.id !== s.activeArtboardId) return;
-          e.preventDefault();
-          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          const f = (e.clientY - r.top) / r.height;
-          setDrop({ id: n.id, where: container && f > 0.3 && f < 0.7 ? 'inside' : f < 0.5 ? 'before' : 'after' });
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          doDrop(ab);
-          setDrop(null);
-          setDragId(null);
-        }}
+        onDragEnd={endDrag}
         onClick={(e) => {
           const st = store().get();
           let sel = ab.id === st.activeArtboardId ? st.selection : [];
@@ -297,7 +317,10 @@ function Layers() {
   };
 
   return (
-    <div className="layers" ref={scroller}>
+    <div className="layers" ref={scroller} onDragOver={onListDragOver} onDrop={onListDrop} onDragLeave={onListDragLeave}>
+      {drop && drop.gap >= 0 && (
+        <div className="drop-line" style={{ top: 4 + (flat.findIndex((r) => r.kind === 'artboard' && r.ab.id === s.activeArtboardId) + 1 + drop.gap) * ROW_H - 1, left: ROW_PAD + drop.depth * INDENT - 4 }} aria-hidden="true" />
+      )}
       <div style={{ height: first * ROW_H }} />
       {flat.slice(first, last).map((r) => (r.kind === 'artboard' ? artboardRow(r.ab) : row(r.ab, r.n, r.depth, r.parent)))}
       <div style={{ height: (flat.length - last) * ROW_H }} />
