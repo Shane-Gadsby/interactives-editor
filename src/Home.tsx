@@ -20,6 +20,11 @@ type FolderSel = { kind: 'all' } | { kind: 'none' } | { kind: 'folder'; name: st
 type SortKey = 'updated' | 'name';
 
 const SORT_KEY = 'ix.home.sort';
+const VIEW_KEY = 'ix.home.view';
+const SIZE_KEY = 'ix.home.size';
+export const HOME_SIZE_MIN = 140;
+export const HOME_SIZE_MAX = 360;
+export const HOME_SIZE_DEFAULT = 220;
 const NEW_FOLDER = '\u0000new';
 
 /** The tag text as the server will keep it: collapsed spaces, trimmed, capped. */
@@ -32,6 +37,31 @@ function readSort(): SortKey {
     return 'updated';
   }
 }
+
+function readView(): 'grid' | 'list' {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid';
+  } catch {
+    return 'grid';
+  }
+}
+
+function readSize(): number {
+  try {
+    const n = Number(localStorage.getItem(SIZE_KEY));
+    return n ? Math.min(HOME_SIZE_MAX, Math.max(HOME_SIZE_MIN, n)) : HOME_SIZE_DEFAULT;
+  } catch {
+    return HOME_SIZE_DEFAULT;
+  }
+}
+
+const keep = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* private window */
+  }
+};
 
 /** Add-a-tag input on a project card: a "+" button that turns into a small text field. */
 function TagAdder({ onAdd, disabled, suggestions }: { onAdd: (tag: string) => void; disabled: boolean; suggestions: string[] }) {
@@ -94,6 +124,9 @@ export function Home({ open }: { open: (id: string) => void }) {
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortKey>(readSort);
+  // Thumbnails or a details list, and how big the thumbnails are: the same two controls the Assets panel has
+  const [view, setView] = useState<'grid' | 'list'>(readView);
+  const [size, setSize] = useState(readSize);
 
   const refresh = async (all = power) => {
     try {
@@ -277,7 +310,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           <span>Interactives</span>
         </div>
         <div className="home-actions">
-          {(who?.user || me2) && <span className="muted" title="Signed in through the toolbox">{who?.user?.name ?? me2?.name ?? who?.user?.username}</span>}
+          {(who?.user || me2) && <span className="muted home-user" title="Signed in through the toolbox">{who?.user?.name ?? me2?.name ?? who?.user?.username}</span>}
           <button className="icon-btn" title="Preferences (theme, mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)}>
             <Icons.gear width={16} />
           </button>
@@ -312,6 +345,32 @@ export function Home({ open }: { open: (id: string) => void }) {
               <option value="name">Name</option>
             </select>
           </label>
+          <div className="asset-toolbar home-view">
+            <div className="seg">
+              <button className={view === 'grid' ? 'on' : ''} title="Show projects as thumbnails" onClick={() => { setView('grid'); keep(VIEW_KEY, 'grid'); }}>
+                Thumbnails
+              </button>
+              <button className={view === 'list' ? 'on' : ''} title="Show projects as a list with details" onClick={() => { setView('list'); keep(VIEW_KEY, 'list'); }}>
+                Details
+              </button>
+            </div>
+            {view === 'grid' && (
+              <input
+                type="range"
+                className="asset-size"
+                min={HOME_SIZE_MIN}
+                max={HOME_SIZE_MAX}
+                step={4}
+                value={size}
+                title="Thumbnail size"
+                aria-label="Thumbnail size"
+                onChange={(e) => {
+                  setSize(Number(e.target.value));
+                  keep(SIZE_KEY, e.target.value);
+                }}
+              />
+            )}
+          </div>
           {tagCounts.length > 0 && (
             <div className="tag-filter" title="Click a tag to show only projects that have it">
               <Icons.tag width={13} height={13} />
@@ -360,7 +419,7 @@ export function Home({ open }: { open: (id: string) => void }) {
             <div className="hint">Use a card's folder menu to move a project into a folder, or to start a new one.</div>
           </aside>
         )}
-      <main className="project-grid">
+      <main className={`project-grid${view === 'list' ? ' as-list' : ''}`} style={{ '--card-size': `${size}px` } as React.CSSProperties}>
         {list === null && !error && <p className="muted">Loading…</p>}
         {list?.length === 0 && (
           <div className="empty-state">

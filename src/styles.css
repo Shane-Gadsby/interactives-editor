@@ -748,8 +748,10 @@ hr.item-sep {
 }
 .home-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 10px 16px;
   padding: 16px 24px;
   border-bottom: 1px solid var(--line);
   position: sticky;
@@ -766,12 +768,28 @@ hr.item-sep {
 }
 .home-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.home-actions .btn,
+.home-actions .icon-btn {
+  flex: none;
+}
+.brand {
+  flex: none;
+}
+.home-user {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--card-size, 220px), 100%), 1fr));
   gap: 16px;
   padding: 24px;
 }
@@ -787,7 +805,8 @@ hr.item-sep {
   border-color: var(--line-2);
 }
 .project-thumb {
-  height: 140px;
+  /* follows the thumbnail size slider on the projects page */
+  height: calc(var(--card-size, 220px) * 0.64);
   background: var(--canvas);
   border: none;
   display: flex;
@@ -827,9 +846,27 @@ hr.item-sep {
   padding: 12px 24px 0;
 }
 .home-search {
+  flex: 1 1 160px;
   width: 240px;
+  max-width: 280px;
+  min-width: 0;
   height: 28px;
   padding: 0 10px;
+}
+.home-sort {
+  flex: none;
+  white-space: nowrap;
+}
+.asset-toolbar.home-view {
+  margin: 0;
+  flex: 0 1 260px;
+  min-width: 0;
+}
+.asset-toolbar.home-view .seg button {
+  white-space: nowrap;
+}
+.asset-toolbar.home-view .asset-size {
+  min-width: 70px;
 }
 .home-sort select {
   height: 28px;
@@ -911,6 +948,7 @@ hr.item-sep {
   gap: 6px;
   flex: 1;
   min-width: 0;
+  white-space: nowrap;
   height: 28px;
   padding: 0 8px;
   border: none;
@@ -1012,15 +1050,87 @@ hr.item-sep {
 @media (max-width: 760px) {
   .home-body {
     flex-direction: column;
+    align-items: stretch;
   }
   .folder-side {
     width: auto;
     flex-direction: row;
     flex-wrap: wrap;
+    gap: 6px;
     padding: 12px 24px 0;
+  }
+  /* a chip keeps its own width and wraps to the next row, instead of squeezing */
+  .folder-side > .folder-item,
+  .folder-side .folder-row {
+    flex: none;
+    max-width: 100%;
+  }
+  .folder-side > .folder-item {
+    padding: 0 10px;
   }
   .folder-side .hint {
     display: none;
+  }
+}
+@media (max-width: 560px) {
+  .home-head,
+  .home-tools,
+  .folder-side {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .project-grid {
+    padding: 14px;
+    gap: 12px;
+  }
+  .home-user {
+    display: none;
+  }
+  .home-search {
+    max-width: none;
+  }
+}
+/* projects page: details view, one row per project */
+.project-grid.as-list {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.as-list .project-card {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  grid-template-areas: 'thumb info actions';
+  align-items: center;
+}
+.as-list .project-thumb {
+  grid-area: thumb;
+  height: 72px;
+  padding: 8px;
+}
+.as-list .project-info {
+  grid-area: info;
+  padding: 8px 12px;
+  min-width: 0;
+}
+.as-list .project-actions {
+  grid-area: actions;
+  padding: 0 10px 0 0;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.as-list .card-tags {
+  margin-top: 4px;
+}
+.as-list .new-card .project-info {
+  padding: 8px 12px;
+}
+@media (max-width: 640px) {
+  .as-list .project-card {
+    grid-template-columns: 88px minmax(0, 1fr);
+    grid-template-areas: 'thumb info' 'actions actions';
+  }
+  .as-list .project-actions {
+    justify-content: space-between;
+    padding: 0 10px 8px;
   }
 }
 .empty-state {
