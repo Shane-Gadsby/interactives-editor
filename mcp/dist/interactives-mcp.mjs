@@ -5216,7 +5216,7 @@ A report that can be acted on has:
 - the **project name**, and the steps from a fresh project if you can find them. If the project is the problem and you can share it, send a **.ixp** package: **Export**, then **Project package**;
 - your **browser**, and anything red in its console (<kbd>F12</kbd>, then **Console**) if you know how to look.
 
-Send it to whoever invited you to the beta. The editor also records its own faults on its own, without any names or content (see [What the editor records](what-is-recorded)), so a short note from you about what you were doing is what tells us the rest. Quick answers to common questions are in [Troubleshooting and common questions](troubleshooting).
+Send it straight to whoever invited you to the beta, by email or Teams. The editor also records its own faults on its own, without any names or content (see [What the editor records](what-is-recorded)), so a short note from you about what you were doing is what tells us the rest. Quick answers to common questions are in [Troubleshooting and common questions](troubleshooting).
 
 ### Known limits in 0.5
 
