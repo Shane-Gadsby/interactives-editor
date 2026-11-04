@@ -350,7 +350,7 @@ describe('Rive artboard component lists', () => {
     expect(rows.layout).toMatchObject({ direction: 'column', gap: 6, hugHeight: true });
     expect(rows.children[0]).toMatchObject({ type: 'instance', artboardId: res.artboards.find((a) => a.name === 'Row')!.id, width: 100, height: 30 });
     expect(res.variables.find((v) => v.name === 'Main_rows')).toMatchObject({ type: 'list' });
-    expect(res.warnings.some((w) => /values each item carries/.test(w))).toBe(true);
+    expect(res.warnings.some((w) => /values each item carries/.test(w))).toBe(false);
     expect(res.warnings.some((w) => /Data binds on listSource/.test(w))).toBe(false);
   });
 
@@ -362,6 +362,79 @@ describe('Rive artboard component lists', () => {
     const player = new Player(document.getElementById('stage')!, project, { artboard: res.artboards.find((a) => a.name === 'Main')!.id, loadData: false });
     player.step(16);
     expect(document.querySelectorAll('[data-ix-id*="~"]').length).toBeGreaterThanOrEqual(2);
+    player.destroy();
+    vi.unstubAllGlobals();
+  });
+
+  //Row shows its item's label; each item has its own
+  const labelled = (extra: Spec[] = []) =>
+    writeRiv([
+      ['Backboard', {}],
+      ['ViewModel', { name: 'Item' }], // 0
+      ['ViewModelPropertyString', { name: 'label' }],
+      ['ViewModelPropertyNumber', { name: 'size' }],
+      ['ViewModelPropertyColor', { name: 'tint' }],
+      ['ViewModelInstance', { viewModelId: 0, name: 'a' }],
+      ['ViewModelInstanceString', { parentId: 0, viewModelPropertyId: 0, propertyValue: 'alpha' }],
+      ['ViewModelInstanceNumber', { parentId: 0, viewModelPropertyId: 1, propertyValue: 10 }],
+      ['ViewModelInstanceColor', { parentId: 0, viewModelPropertyId: 2, propertyValue: 0xffff0000 }],
+      ['ViewModelInstance', { viewModelId: 0, name: 'b' }],
+      ['ViewModelInstanceString', { parentId: 0, viewModelPropertyId: 0, propertyValue: 'beta' }],
+      ['ViewModelInstanceNumber', { parentId: 0, viewModelPropertyId: 1, propertyValue: 20 }],
+      ['ViewModelInstanceColor', { parentId: 0, viewModelPropertyId: 2, propertyValue: 0xff00ff00 }],
+      ['ViewModel', { name: 'Main' }], // 1
+      ['ViewModelPropertyList', { name: 'rows' }],
+      ['ViewModelInstance', { viewModelId: 1, name: 'Instance' }],
+      ['ViewModelInstanceList', { parentId: 0, viewModelPropertyId: 0 }],
+      ['ViewModelInstanceListItem', { viewModelId: 0, viewModelInstanceId: 0 }],
+      ['ViewModelInstanceListItem', { viewModelId: 0, viewModelInstanceId: 1 }],
+      ['Artboard', { name: 'Row', width: 100, height: 30 }],
+      ['Text', { name: 'Label', parentId: 0, sizingValue: 0 }], // 1
+      ['TextStylePaint', { parentId: 1, fontSize: 12 }], // 2
+      ['TextValueRun', { parentId: 1, text: '', styleId: 2 }], // 3
+      ['DataBindContext', { propertyKey: propKey('TextValueRun', 'text'), sourcePathIds: path(0, 0) }],
+      ['Shape', { name: 'Chip', parentId: 0 }], // 4
+      ['Rectangle', { parentId: 4, width: 10, height: 10 }], // 5
+      ['Fill', { parentId: 4 }], // 6
+      ['SolidColor', { parentId: 6, colorValue: 0xff000000 }], // 7
+      ['DataBindContext', { propertyKey: propKey('SolidColor', 'colorValue'), sourcePathIds: path(0, 2) }],
+      ...extra,
+      ['Artboard', { name: 'Main', width: 300, height: 300 }],
+      ['LayoutComponentStyle', { parentId: 0, flexDirectionValue: 0, gapVertical: 6, gapVerticalUnitsValue: 1 }], // 1
+      ['LayoutComponent', { name: 'Col', parentId: 0, width: 300, height: 300, styleId: 1 }], // 2
+      ['ArtboardComponentList', { name: 'Rows', parentId: 2 }], // 3
+      ['DataBindContext', { propertyKey: propKey('ArtboardComponentList', 'listSource'), sourcePathIds: path(1, 0) }],
+      ['ArtboardListMapRule', { parentId: 3, artboardId: 0, viewModelId: 0 }],
+    ] as Spec[]);
+
+  it('passes each item its own values: the item properties the artboard reads become per-item inputs of the instance', async () => {
+    const res = await importRive(labelled(), 'l');
+    const rows = find(res.artboards.find((a) => a.name === 'Main')!.children, 'Rows') as unknown as { children: { type: string; bindings?: Record<string, string> }[] };
+    expect(rows.children[0].bindings).toEqual({ 'inputs.Item_label': 'item.label', 'inputs.Item_tint': 'item.tint' });
+    //those are one value per instance now, not one for the whole page
+    expect(res.variables.find((v) => v.name === 'Item_label')?.shared).toBeUndefined();
+    expect(res.variables.find((v) => v.name === 'Item_tint')?.shared).toBeUndefined();
+    expect(res.variables.find((v) => v.name === 'Main_rows')?.initial).toBe(JSON.stringify([{ label: 'alpha', size: 10, tint: 'rgba(255, 0, 0, 1)' }, { label: 'beta', size: 20, tint: 'rgba(0, 255, 0, 1)' }]));
+    expect(res.warnings.some((w) => /values each item carries/.test(w))).toBe(false);
+  });
+
+  it('shows each item with its own values in the player', async () => {
+    vi.stubGlobal('requestAnimationFrame', () => 0);
+    document.body.innerHTML = '<div id="stage" style="width:300px;height:300px"></div>';
+    const res = await importRive(labelled(), 'l');
+    const project = { ...(await import('interactives-player')).createProject(), artboards: res.artboards, variables: res.variables };
+    const player = new Player(document.getElementById('stage')!, project, { artboard: res.artboards.find((a) => a.name === 'Main')!.id, loadData: false });
+    player.step(16);
+    player.step(16);
+    const copies = [...document.querySelectorAll('[data-ix-type="instance"]')];
+    expect(copies).toHaveLength(2);
+    expect(copies.map((c) => c.textContent)).toEqual(['alpha', 'beta']);
+    //changing the list changes what the items show
+    player.setVariable('Main_rows', JSON.stringify([{ label: 'gamma', size: 1, tint: '#0000ff' }]));
+    player.step(16);
+    player.step(16);
+    const after = [...document.querySelectorAll('[data-ix-type="instance"]')];
+    expect(after.map((c) => c.textContent)).toEqual(['gamma']);
     player.destroy();
     vi.unstubAllGlobals();
   });

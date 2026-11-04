@@ -763,6 +763,8 @@ interface FileCtx {
   nestedKeys: NestedKey[];
   /** Flow nodes that name a nested input, filled in once every artboard's state machine inputs have names. */
   pendingNested: { node: LogicNode; ref: NestedRef; toggle?: boolean }[];
+  /** Component lists: the instance repeated per item, and the view model each item carries (its properties become the instance's inputs). */
+  pendingLists: { inst: InstanceNode; vm: number }[];
   /** Number tracks on a nested input: they point at `inputs.<name>` once every artboard's inputs are named (dropped when the input has no name). */
   pendingInputTracks: { track: Track; tracks: Track[]; ref: NestedRef }[];
 }
@@ -2061,7 +2063,6 @@ function convertList(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | nu
     return null;
   }
   if (artboards.length > 1) fc.warnings.add(`The list "${name}" shows different artboards for different kinds of items; every item shows the first (${String(fc.file.artboards[artboards[0]].obj.props.name ?? 'artboard')})`);
-  fc.warnings.add(`The list "${name}" repeats its item artboard once per item; the values each item carries (its own view model) are not passed to the items`);
   const target = artboards[0];
   const tab = fc.file.artboards[target].obj;
   const w = Math.max(1, Math.round(get(tab, 'width')));
@@ -2073,6 +2074,11 @@ function convertList(ac: ArtboardCtx, fc: FileCtx, slot: number): SceneNode | nu
   inst.y = 0;
   inst.originX = 0;
   inst.originY = 0;
+  // Each item's own values reach its instance as inputs once every artboard's binds have made their variables
+  const rule = rules.map((i) => ac.rab.slots[i]).find((r) => Number(r.props.artboardId ?? -1) === target);
+  const itemVm = Number(rule?.props.viewModelId ?? -1);
+  if (fc.viewModels[itemVm]) fc.pendingLists.push({ inst, vm: itemVm });
+  else fc.warnings.add(`The list "${name}" repeats its item artboard once per item, but the view model its items carry could not be found, so the items do not get their own values`);
   // Along the parent's direction, with its gap
   const parentSlot = Number(o.props.parentId ?? 0);
   const parent = ac.nodeBySlot.get(parentSlot);
@@ -3938,6 +3944,7 @@ export async function importRiveObjects(objects: RObj[], name: string): Promise<
     nestedKeys: [],
     pendingNested: [],
     pendingInputTracks: [],
+    pendingLists: [],
   };
   if (!s.artboards.length) throw new Error('The .riv file has no artboards');
   // Embedded fonts become project fonts
@@ -4021,6 +4028,36 @@ export async function importRiveObjects(objects: RObj[], name: string): Promise<
     const name = fc.inputNames.get(`${p.artboard}/${p.machine}/${p.input}`);
     const node = (finished.get(p.node.id) ?? p.node) as InstanceNode;
     if (name) node.inputs = { ...(node.inputs ?? {}), [name]: p.value };
+  }
+  // List items: the view model properties an item artboard reads become per-item variables, set from the item the instance stands for
+  for (const pl of fc.pendingLists) {
+    //every view model reachable from the item's (a nested view model is a field of the item holding an object)
+    const reach = new Map<number, string[]>([[pl.vm, []]]);
+    const queue = [pl.vm];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      const path = reach.get(cur)!;
+      fc.viewModels[cur]?.props.forEach((p) => {
+        const sub = Number(p.props.viewModelReferenceId ?? -1);
+        if (p.type === 'ViewModelPropertyViewModel' && fc.viewModels[sub] && !reach.has(sub) && path.length < 3) {
+          reach.set(sub, [...path, String(p.props.name ?? '')]);
+          queue.push(sub);
+        }
+      });
+    }
+    const bindings: Record<string, string> = {};
+    for (const [key, vv] of fc.vmVars) {
+      const [vmIdx, propIdx] = key.split('/').map(Number);
+      const path = reach.get(vmIdx);
+      const v = fc.variables.find((x) => x.id === vv.id);
+      const prop = fc.viewModels[vmIdx]?.props[propIdx];
+      if (!path || !v || !prop || vv.kind === 'trigger') continue;
+      //one value for the whole page would show the same thing in every item
+      delete v.shared;
+      bindings[`inputs.${v.name}`] = [...path, String(prop.props.name ?? `prop${propIdx}`)].reduce((acc, part) => acc + (/^[A-Za-z_$][\w$]*$/.test(part) ? `.${part}` : `[${JSON.stringify(part)}]`), 'item');
+    }
+    const target = (finished.get(pl.inst.id) ?? pl.inst) as InstanceNode;
+    if (Object.keys(bindings).length) target.bindings = { ...(target.bindings ?? {}), ...bindings };
   }
   // Nested input flows, now that every input has a name; a marker is named after the instance and input
   for (const p of fc.pendingNested) {
