@@ -1,4 +1,5 @@
 /** Pure helpers over the project document (work on immer drafts or plain objects). */
+import { hitsPaintedShape } from '../lib/shape-hit';
 import {
   apply,
   IDENTITY,
@@ -193,7 +194,8 @@ export function hitTest(artboard: Artboard, x: number, y: number, opts: { includ
         }
       }
       const p = apply(invert(m), x, y);
-      if (p.x >= 0 && p.y >= 0 && p.x <= box.width && p.y <= box.height) return [...trail, n];
+      // Paths, polygons and stars are hit where they're painted (fill or stroke), not anywhere in their box
+      if (p.x >= 0 && p.y >= 0 && p.x <= box.width && p.y <= box.height && hitsPaintedShape(box, p.x, p.y, 3)) return [...trail, n];
     }
     return null;
   };
