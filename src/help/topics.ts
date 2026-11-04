@@ -37,7 +37,7 @@ About half an hour, in this order. Each step says what should happen, so you can
 1. **Play something finished.** On the projects page open the **Templates** tab, then **Examples**. Press **Play** on *Lamp*, *Bones and IK*, *Matching question* and *Hotspot question*. They should run with nothing to set up. Press **Make my copy** on one and change something in it. See [Templates, examples and remix](templates).
 2. **Build something small.** Do [Tutorial 1](tutorial-first-animation) and [Tutorial 2](tutorial-first-interaction). A box should slide across the artboard, then a button should make it slide.
 3. **Add a question.** Open **Web** in the tool bar, press **Add question** and choose **Matching (drag and drop)**. Press **Preview**, drop two terms in the wrong places and press **Check answer**, then fix them and check again. See [Questions and quizzes](question-kit).
-4. **Start from a template.** On the **Templates** tab choose **Built-in**, then **Quiz**, then **Use template**. Work down the **Checklist** tab along the bottom, ticking things off as you change them.
+4. **Start from a template.** Press **New project**: the **Start a new project** window opens. Choose **Built-in template**, then **Quiz**, then **Create project**. Work down the **Checklist** tab along the bottom, ticking things off as you change them. (The **Templates** tab has the same starters.) Also try the other choices in that window: **Copy a project or template** and **Copy an example** each have a search box, and the arrow keys move through the list.
 5. **Share it.** Choose **Share**, then **Share link**, and open the link in a private window: it should play. Then choose **Share for review**, press **Create review link** and open it (tick **Let people comment without signing in** if you open it somewhere you aren't signed in to StudyDesk). Click on the artboard and write a note. Back in the editor the **Comments** tab shows it. See [Exporting](export#sharing) and [Review comments](comments).
 6. **Bring in a file of your own.** Use **Import** on the projects page with a Rive, Photoshop, Illustrator, SVG or Lottie file you already have. The import report lists anything that didn't come across exactly. See [Importing](import).
 
@@ -130,20 +130,26 @@ Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pag
     id: 'projects',
     title: 'Projects page',
     group: 'Getting started',
-    summary: 'Create, open, duplicate, import and delete projects, and organise them with folders, tags, search and sort.',
-    keywords: 'home new import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter',
+    summary: 'Start a new project (blank, a copy, a built-in template or an example), open, duplicate, import and delete projects, and organise them with folders, tags, search and sort.',
+    keywords: 'home new project start blank chooser copy clone import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter',
     body: `The projects page lists the projects you own. Each card shows a picture of the project's start artboard, its name, when it last changed, how many artboards it has, its tags and a folder menu.
 
 ![The projects page: the folder list on the left, the search box, sort menu and tag filter along the top, and a card for each project.](help/projects-page.png)
 
 ## Making and opening projects
 
-- **New project** (top right, or the **+** card) makes an empty project with one artboard called **Home**. Your default font (Open Sans unless you changed it) is added to it. See [Preferences](preferences).
+- **New project** (top right, or the **+** card) opens **Start a new project**, one window with four ways to begin. Pick one on the left (<kbd>Up</kbd> and <kbd>Down</kbd> move between them), then give the project a name and a folder at the bottom and press **Create project**. It opens straight away.
+  - **Blank project**: one empty artboard called **Home**, with the Light, Dark and High contrast themes. Your default font (Open Sans unless you changed it) is added to it. See [Preferences](preferences).
+  - **Copy a project or template**: a list of your own projects, your own templates and the ones shared with you. A project is copied whole, with its pictures, and the copy is called **Copy of ...**. A template opens with its checklist, as under [Templates](templates).
+  - **Built-in template**: the starters that come with Interactives, shown with their pictures.
+  - **Copy an example**: the finished examples, shown with their pictures. You get your own copy to change.
+  
+  The search box above each list filters it as you type. Press <kbd>Down</kbd> to move from the search box to the list, the arrow keys to move through it, and <kbd>Enter</kbd> to create the project from the one you picked. <kbd>Esc</kbd> closes the window without making anything. The name starts as something sensible and follows what you pick until you type your own. The folder starts as the one you were looking at, and you can change it.
 - Click a card's picture to open the project. **Help** and the gear (**Preferences**) are at the top right too.
 - The **Templates** tab (next to **Projects**) starts a project from a template, or from one of the finished examples. See [Templates, examples and remix](templates).
 - **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`) or PhotoCraft (\`.pcraft\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
 - Each card has three icon buttons: **Duplicate** (a copy of the project and its assets), **Export** a \`${PACKAGE_EXTENSION}\` package (a download of the whole project) and **Delete**. Delete asks first, and can't be undone, so download a package if you might want the project back.
-- With no projects yet the page shows **Create your first project**.
+- With no projects yet the page shows **Create your first project**, which opens the same **Start a new project** window.
 
 ## Search and sort
 
@@ -157,7 +163,7 @@ Folders keep a long list tidy. A project is in one folder at most, and folders a
 
 - The list on the left shows **All projects**, **No folder** and each folder with its project count. Click one to show only those projects.
 - Use the folder menu at the bottom of a card to **move the project to a folder**. Choose **New folder…** to start a new one: a dialog asks for its name. A folder exists as long as at least one project is in it.
-- With a folder selected, a project you create or import goes into that folder. With **All projects** or **No folder** selected it starts in *No folder*.
+- With a folder selected, a project you create or import goes into that folder, and **Start a new project** has it chosen in its **Folder** menu (change it there if you like). With **All projects** or **No folder** selected it starts in *No folder*.
 - With a folder selected, the pencil **renames** it and the bin **deletes** it (both ask in a dialog). Deleting a folder never deletes projects: they just go back to *No folder*.
 
 ## Tags
@@ -2584,6 +2590,7 @@ What is kept when you update: the instances you placed in your own artboards, th
 ## The Templates tab
 - **Mine**: templates you saved. **Shared**: templates other people saved and let everyone use. **Built-in**: starters that come with Interactives. **Examples**: finished projects to play and copy (below).
 - A card shows the picture, title, what it is for, its version, and how many things it asks you to change. **Use template** makes your own project from it, in the folder you pick.
+- **New project** on the **Projects** tab opens **Start a new project**, which offers the same templates and examples as one of its choices (**Copy a project or template**, **Built-in template**, **Copy an example**) next to **Blank project**, without leaving the projects page. It makes the project the same way as **Use template** and **Make my copy** do, so a template still opens with its checklist.
 - On your own templates, the pencil changes the title, description, checklist and who can use it; the bin deletes it (projects already made from it keep their content).
 
 ## Use a template

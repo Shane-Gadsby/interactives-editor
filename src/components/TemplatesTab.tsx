@@ -35,7 +35,7 @@ function starterThumb(s: Starter): Promise<string | null> {
   return p;
 }
 
-function StarterPicture({ starter }: { starter: Starter }) {
+export function StarterPicture({ starter }: { starter: Starter }) {
   const [url, setUrl] = useState<string | null | undefined>(undefined);
   useEffect(() => {
     let live = true;
@@ -48,7 +48,31 @@ function StarterPicture({ starter }: { starter: Starter }) {
   return <span className="thumb-board template-blank">{url === undefined ? '' : starter.name}</span>;
 }
 
-type Pick = { kind: 'saved'; t: TemplateInfo } | { kind: 'builtin'; s: Starter } | { kind: 'example'; e: ExampleInfo };
+export type Pick = { kind: 'saved'; t: TemplateInfo } | { kind: 'builtin'; s: Starter } | { kind: 'example'; e: ExampleInfo };
+
+/** Makes the project for a pick (a saved template, a built-in starter or an example) and says which, so the checklist opens for the ones that have one. Returns the new project's id. */
+export async function makeFromPick(pick: Pick, o: { name: string; folder: string | null }): Promise<string> {
+  let id: string;
+  if (pick.kind === 'saved') {
+    id = await useTemplate(pick.t.id, { name: o.name, folder: o.folder });
+  } else if (pick.kind === 'example') {
+    id = await useExample(pick.e.key, { name: o.name, folder: o.folder });
+  } else {
+    const p = projectFromStarter(pick.s, o.name);
+    await createProjectRecord(p);
+    if (o.folder) await setProjectMeta(p.id, { folder: o.folder }).catch(() => undefined);
+    id = p.id;
+  }
+  track('feature', 'template-use', { thing: pick.kind === 'saved' ? 'saved' : pick.kind === 'example' ? `example-${pick.e.key}`.slice(0, 40) : pick.s.key });
+  if (pick.kind !== 'example') {
+    try {
+      sessionStorage.setItem(CHECKLIST_FLAG, id);
+    } catch {
+      /* the checklist tab just won't open by itself */
+    }
+  }
+  return id;
+}
 
 /** "Use template": what it expects of you (its checklist), a name, then a new project in the folder you have open. */
 function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { pick: Pick; folder: string | null; folders: string[]; onClose: () => void; onMade: (id: string) => void }) {
@@ -63,26 +87,7 @@ function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { p
     setBusy(true);
     setError(null);
     try {
-      let id: string;
-      if (pick.kind === 'saved') {
-        id = await useTemplate(pick.t.id, { name: name.trim() || title, folder });
-      } else if (pick.kind === 'example') {
-        id = await useExample(pick.e.key, { name: name.trim() || title, folder });
-      } else {
-        const p = projectFromStarter(pick.s, name.trim() || title);
-        await createProjectRecord(p);
-        if (folder) await setProjectMeta(p.id, { folder }).catch(() => undefined);
-        id = p.id;
-      }
-      track('feature', 'template-use', { thing: pick.kind === 'saved' ? 'saved' : pick.kind === 'example' ? `example-${pick.e.key}`.slice(0, 40) : pick.s.key });
-      if (pick.kind !== 'example') {
-        try {
-          sessionStorage.setItem(CHECKLIST_FLAG, id);
-        } catch {
-          /* the checklist tab just won't open by itself */
-        }
-      }
-      onMade(id);
+      onMade(await makeFromPick(pick, { name: name.trim() || title, folder }));
     } catch (e) {
       if (!noteIfStale(e)) setError(e instanceof Error ? e.message : String(e));
       setBusy(false);

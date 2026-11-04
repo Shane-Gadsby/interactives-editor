@@ -19,7 +19,7 @@ This is how it looks when it is done:
 
 ## 1. Make a project
 
-1. Open the Interactives page and press **New project**. The editor opens with one white artboard called **Home**, 800 by 600.
+1. Open the Interactives page and press **New project**. A window called **Start a new project** asks how to begin: keep **Blank project**, leave the name as it is (or type your own) and press **Create project**. The editor opens with one artboard called **Home**, 800 by 600.
 2. Click the project name at the top left (it says *Untitled project*), type **My first animation** and press <kbd>Enter</kbd>. Everything saves by itself. The label next to the name says **Saved** when it has.
 
 ## 2. Draw the box
@@ -148,7 +148,7 @@ You will build a lamp. A button switches it on and off, and a counter shows how 
 
 ## 1. Make a project and two variables
 
-1. Press **New project** on the projects page. Rename the project **Lamp**.
+1. Press **New project** on the projects page. In **Start a new project** keep **Blank project**, type **Lamp** as the name and press **Create project**.
 2. Open the **Variables** tab at the bottom and press **+ Add variable**. A row appears.
 3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). Set **Type** to **True/false**. Leave the starting value unticked (false).
 4. Press **+ Add variable** again. Name it \`taps\`. Leave **Type** on **Number** with the starting value 0.

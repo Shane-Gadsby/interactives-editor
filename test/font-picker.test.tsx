@@ -327,6 +327,8 @@ describe('new projects start in Open Sans', () => {
     await flush();
     await act(async () => host.querySelector<HTMLElement>('.new-thumb')!.click());
     await flush();
+    await act(async () => host.querySelector<HTMLElement>('.np-buttons .btn.primary')!.click());
+    await flush();
     expect(created()).toHaveLength(1);
     expect(created()[0].fonts).toEqual([{ family: 'Open Sans', source: 'google', weights: [400, 600, 700] }]);
   });
@@ -336,6 +338,8 @@ describe('new projects start in Open Sans', () => {
     await act(async () => root.render(<Home open={() => undefined} />));
     await flush();
     await act(async () => host.querySelector<HTMLElement>('.new-thumb')!.click());
+    await flush();
+    await act(async () => host.querySelector<HTMLElement>('.np-buttons .btn.primary')!.click());
     await flush();
     expect(created()[0].fonts).toEqual([{ family: 'Lato', source: 'google', weights: [400, 700] }]);
   });

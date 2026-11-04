@@ -35,6 +35,13 @@ let host: HTMLElement;
 const opened: string[] = [];
 const flush = () => act(async () => void (await new Promise((r) => setTimeout(r, 0))));
 const click = (el: Element | null | undefined) => act(async () => void (el as HTMLElement).click());
+//New project asks how to start first: the blank choice is the one that is open, so Create project makes it
+const makeBlank = async () => {
+  await click(host.querySelector('.new-thumb'));
+  await flush();
+  await click(host.querySelector('.np-buttons .btn.primary'));
+  await flush();
+};
 const folderButton = (name: string) => [...host.querySelectorAll<HTMLButtonElement>('.folder-item')].find((b) => b.textContent?.includes(name));
 
 beforeEach(async () => {
@@ -57,8 +64,7 @@ afterEach(() => {
 describe('new projects and imports land in the selected folder', () => {
   it('create goes into the selected folder', async () => {
     await click(folderButton('Maths'));
-    await click(host.querySelector('.new-thumb'));
-    await flush();
+    await makeBlank();
     expect(db.createProjectRecord).toHaveBeenCalledTimes(1);
     expect(db.setProjectMeta).toHaveBeenCalledWith(opened[0], { folder: 'Maths' });
   });
@@ -79,11 +85,14 @@ describe('new projects and imports land in the selected folder', () => {
   });
 
   it('create with All projects or No folder selected does not set a folder', async () => {
-    await click(host.querySelector('.new-thumb'));
+    await makeBlank();
+    //opening the project leaves the page, so the next one starts from a fresh page
+    act(() => root.unmount());
+    root = createRoot(host);
+    await act(async () => root.render(<Home open={(id) => opened.push(id)} />));
     await flush();
     await click(folderButton('No folder'));
-    await click(host.querySelector('.new-thumb'));
-    await flush();
+    await makeBlank();
     expect(db.createProjectRecord).toHaveBeenCalledTimes(2);
     expect(db.setProjectMeta).not.toHaveBeenCalled();
   });
@@ -100,8 +109,7 @@ describe('new projects and imports land in the selected folder', () => {
   it('a failure to set the folder still opens the new project', async () => {
     db.setProjectMeta.mockRejectedValueOnce(new Error('nope'));
     await click(folderButton('Maths'));
-    await click(host.querySelector('.new-thumb'));
-    await flush();
+    await makeBlank();
     expect(opened).toHaveLength(1);
   });
 });

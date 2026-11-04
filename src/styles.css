@@ -7167,3 +7167,256 @@ code {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Start a new project: the chooser (blank, copy a project or template, built-in template, copy an example) */
+.np-modal {
+  width: min(1000px, calc(100vw - 24px));
+  height: min(700px, calc(100vh - 24px));
+  max-width: 100%;
+  overflow: hidden;
+}
+.np-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.np-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+  width: 230px;
+  padding: 12px;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+.np-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 10px;
+}
+.np-tab:hover {
+  background: var(--panel-2);
+}
+.np-tab.on {
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+.np-tab:focus-visible,
+.np-opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.np-tab-label {
+  font-weight: 600;
+}
+.np-tab-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+.np-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 16px;
+}
+.np-search {
+  flex: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.np-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.np-group h4 {
+  margin: 8px 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.np-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr));
+  gap: 10px;
+}
+.np-options.as-rows {
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+}
+.np-opt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.np-opt:hover {
+  border-color: var(--line-2);
+}
+.np-opt.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.np-options.as-rows .np-opt {
+  flex-direction: row;
+  align-items: center;
+}
+.np-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  box-sizing: border-box;
+  width: 100%;
+  height: 120px;
+  padding: 10px;
+  overflow: hidden;
+  background: var(--canvas);
+}
+.np-options.as-rows .np-thumb {
+  width: 84px;
+  height: 64px;
+  padding: 6px;
+}
+.np-thumb img,
+.np-thumb .thumb-board {
+  max-width: 100%;
+  max-height: 100%;
+}
+.np-thumb .template-blank {
+  width: 90%;
+}
+.np-opt-text {
+  min-width: 0;
+  padding: 8px 10px 10px;
+}
+.np-options.as-rows .np-opt-text {
+  padding: 6px 10px;
+}
+.np-opt-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.np-opt-meta {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.np-opt-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.np-detail {
+  flex: none;
+  min-height: 20px;
+  max-height: 96px;
+  overflow-y: auto;
+}
+.np-detail p {
+  margin: 0 0 4px;
+}
+.np-blank h3 {
+  margin: 4px 0 8px;
+}
+.np-blank p {
+  margin: 0 0 8px;
+  max-width: 52ch;
+}
+.np-empty {
+  padding: 16px 0;
+}
+.np-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+.np-foot .field {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  margin: 0;
+}
+.np-foot .field > span {
+  color: var(--muted);
+}
+.np-name {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.np-folder {
+  flex: 0 1 200px;
+  min-width: 0;
+}
+.np-buttons {
+  display: flex;
+  gap: 8px;
+}
+.np-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+@media (max-width: 700px) {
+  .np-modal {
+    height: calc(100vh - 16px);
+  }
+  .np-body {
+    flex-direction: column;
+  }
+  .np-nav {
+    flex-direction: row;
+    width: auto;
+    padding: 8px 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .np-tab {
+    flex: none;
+    max-width: 200px;
+  }
+  .np-tab-hint {
+    display: none;
+  }
+  .np-panel {
+    padding: 8px 12px;
+  }
+  .np-options,
+  .np-options.as-rows {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .np-foot {
+    padding: 8px 12px;
+  }
+  .np-name,
+  .np-folder {
+    flex-basis: 100%;
+  }
+}

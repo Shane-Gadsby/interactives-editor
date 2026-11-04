@@ -16,6 +16,7 @@ import { sessionUser, type SessionUser } from './lib/session';
 import { noteIfStale } from './lib/stale-build';
 import { NoticeBell } from './components/NoticeBell';
 import { TemplatesTab } from './components/TemplatesTab';
+import { NewProjectModal } from './components/NewProjectModal';
 
 declare global {
   interface Window {
@@ -203,19 +204,22 @@ export function Home({ open }: { open: (id: string) => void }) {
     }
   };
 
-  const create = () =>
-    run(async () => {
-      // The toolbox look from the start: the starter themes, with colours from the shared palette
-      await whenPaletteReady();
-      const p = newProjectWithThemes('Untitled project');
-      // Every new project starts with the person's default font (Open Sans unless they changed it)
-      await loadCatalog().catch(() => []);
-      ensureGoogleFont(p.fonts, prefs().defaultFont.trim() || DEFAULT_FONT, [400, 600, 700], { force: true });
-      await createProjectRecord(p);
-      track('project', 'create');
-      await intoSelectedFolder(p.id);
-      open(p.id);
-    });
+  //New project and the + card both ask how to start first (blank, a copy, a built-in starter, an example)
+  const [choosing, setChoosing] = useState(false);
+
+  /** A blank project in the folder the chooser asked for. Returns its id for the chooser to open. */
+  const createBlank = async (name: string, folder: string | null) => {
+    // The toolbox look from the start: the starter themes, with colours from the shared palette
+    await whenPaletteReady();
+    const p = newProjectWithThemes(name);
+    // Every new project starts with the person's default font (Open Sans unless they changed it)
+    await loadCatalog().catch(() => []);
+    ensureGoogleFont(p.fonts, prefs().defaultFont.trim() || DEFAULT_FONT, [400, 600, 700], { force: true });
+    await createProjectRecord(p);
+    track('project', 'create');
+    if (folder) await setProjectMeta(p.id, { folder }).catch(() => undefined);
+    return p.id;
+  };
 
   const doImport = () =>
     run(async () => {
@@ -350,7 +354,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           <button className="btn" onClick={doImport} disabled={busy} title={`Import a file as a new project. Accepts ${PACKAGE_EXTENSION} packages, project JSON, and Lottie, Rive, Photoshop (PSD), Illustrator (AI), PDF, VectorCraft and PhotoCraft files`}>
             <Icons.upload width={14} /> Import
           </button>
-          <button className="btn primary" onClick={create} disabled={busy}>
+          <button className="btn primary" onClick={() => setChoosing(true)} disabled={busy} title="Start a new project: blank, a copy of one of yours, a built-in template or an example">
             <Icons.plus width={14} /> New project
           </button>
         </div>
@@ -361,6 +365,7 @@ export function Home({ open }: { open: (id: string) => void }) {
         </div>
       )}
       {error && <div className="error-banner">{error}</div>}
+      {choosing && <NewProjectModal projects={list ?? []} me={me ?? undefined} folder={folderSel.kind === 'folder' ? folderSel.name : null} folders={folders.names} onBlank={createBlank} onMade={open} onClose={() => setChoosing(false)} />}
       <nav className="home-tabs" role="tablist" aria-label="Projects or templates">
         <button role="tab" aria-selected={tab === 'projects'} className={tab === 'projects' ? 'on' : ''} onClick={() => pickTab('projects')} title="Your projects">
           Projects
@@ -467,14 +472,14 @@ export function Home({ open }: { open: (id: string) => void }) {
           <div className="empty-state">
             <h2>No projects yet</h2>
             <p>Interactives builds interactive 2D experiences for the web: vector artboards, web controls, timelines, node-based interactions and your own JavaScript, exported as a single HTML file or a {PACKAGE_EXTENSION} package.</p>
-            <button className="btn primary" onClick={create}>
+            <button className="btn primary" onClick={() => setChoosing(true)}>
               Create your first project
             </button>
           </div>
         )}
         {!!list?.length && (
           <article className="project-card new-card">
-            <button className="project-thumb new-thumb" onClick={create} disabled={busy} title={`Start an empty project with one artboard${folderSel.kind === 'folder' ? `, in the folder "${folderSel.name}"` : ''}`}>
+            <button className="project-thumb new-thumb" onClick={() => setChoosing(true)} disabled={busy} title={`Start a new project: blank, a copy of one of yours, a built-in template or an example${folderSel.kind === 'folder' ? `. It goes in the folder "${folderSel.name}"` : ''}`}>
               <Icons.plus width={34} height={34} />
             </button>
             <div className="project-info">
