@@ -5457,6 +5457,7 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 | \`ix.goTo('Artboard', 'fade')\` | Go to another artboard |
 | \`ix.emit(name, data)\` / \`ix.on(name, fn)\` | Send messages to the host page / react to them |
 | \`ix.announce(text, 'polite' | 'assertive')\` | Say something to screen readers (see [Accessibility](accessibility)) |
+| \`ix.record(name, value?)\` | Count that something happened, for [Insights](insights) (a name up to 60 characters, a short value) |
 | \`ix.setInstanceInput(layer, name, v)\` / \`ix.fireInstanceTrigger(layer, name, data)\` | Set a variable inside an [instance](instances), or send a message into it only |
 | \`ix.onFrame((dt, t) => …)\` | Run every frame |
 | \`ix.pointer\`, \`ix.artboard\` | Pointer \`{x, y, down}\`, artboard \`{name, width, height}\` |
@@ -5777,7 +5778,7 @@ Then tick **Remember** on each variable that should keep its value between visit
 ## Where it goes
 The player works with no server: with nothing else around it, **Remember** keeps values in the browser and a reported result goes nowhere (the page around an iframe also receives it as a message).
 
-Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It plays the same project, and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session. Someone opening it with no session plays as normal and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
+Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It plays the same project, and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session. The same link also counts what learners do for [Insights](insights). Someone opening it with no session plays as normal and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
 
 ## See the results
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. It is for the project's owner. **Clear results** deletes every record for the project (handy after testing).
@@ -5786,6 +5787,42 @@ Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](exp
 - A result is what the learner's browser says. It is good for tracking progress, not for marks that must be tamper-proof.
 - The project's share link has to be on: results are only kept while it is.
 - **Update to the latest version** in Share link after changing these settings, so the link plays the new version.`
+  },
+  {
+    id: "insights",
+    title: "Insights: what learners did",
+    group: "Getting started",
+    summary: "See where learners go, click and struggle: artboards reached, a click heat map, steps, answers to each question and your own records, as counts.",
+    keywords: "insights analytics records record learners activity funnel heat map heatmap clicks steps answers questions struggle csv export privacy consent studydesk",
+    body: `The **Insights** tab (bottom panel) answers "where do learners get stuck?" with counts. It shows nothing until learners have played the project from the **Link for StudyDesk** (see [Share link](export#share-link)) while signed in to StudyDesk.
+
+## What you see
+- **Learners, visits, clicks, answers checked.** A learner is one StudyDesk user however many times they came back. A visit is one time the page was opened.
+- **Artboards reached.** A bar per artboard, in the project's order, of how many different learners saw it, and what share of the people who reached the start artboard that is. A big drop between two bars is where people left, or where nothing led them on.
+- **Steps reached** for each step-through artboard, so you can see which step people stopped at.
+- **One card per question.** How many learners answered, how many checks were right, how many were right the first time, and a bar for how often each option was chosen (the right answer in green). An option nobody chose shows as zero. Typed and ordered answers are only counted as right or wrong.
+- **Where learners clicked.** The buttons, links and clickable layers learners clicked most. Tick **Click heat on the canvas** to draw every click over the artboard you are editing: blue is a few, red is many. Clicks that land on nothing show up too, which is how you find the thing people expected to be clickable.
+- **Your records**, from the *Record* node and \`ix.record\`.
+- **Courses**, when the project is used in more than one.
+
+Choose how far back to count (7 days to all time) and press **Refresh**. **Export CSV** downloads every count in a spreadsheet-friendly file.
+
+## Your own records
+Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **Name** ("opened hint") and, if you like, a **Value** (an expression: a choice, a level, a score band). Insights counts how often each name happened, how many learners it happened to, and how often each value came up. In scripts: \`ix.record('chose route', 'B')\`. Names are cut at 60 characters and values at 120.
+
+## What is and is not recorded
+- Automatic records: an artboard was shown, a click (where, and which button or link), a step was reached, and a question was checked (right or wrong, which options were chosen).
+- Nothing a learner types is recorded. A typed answer is only marked right or wrong.
+- Insights shows counts and numbers of different learners. It never lists a learner. With only a handful of learners a count can be one person, so wait for more before drawing conclusions.
+- The records go to the Toolbox's usual analytics as the learner's StudyDesk session (the same way every other toolbox item is counted), so the people who read those reports can see which user they came from. Tell learners what is counted, the way you would for any other usage statistics.
+- A page load sends at most 500 records, 300 of them clicks.
+- Switch recording off, or any kind of automatic record, in **Learner records** in the Project section (click an empty part of the canvas). Off means off: Record nodes send nothing either.
+- The player on its own sends nothing anywhere. A standalone export, the editor's Preview and a plain share link keep no records. Only the Link for StudyDesk passes them on.
+
+## Good to know
+- Records are the learner's browser's word, so they are good for seeing patterns, not for proof.
+- Only the project's owner (and power users) can open Insights.
+- **Update to the latest version** in Share link after changing record settings or adding Record nodes, so the link plays the new version.`
   },
   {
     id: "project-settings",
