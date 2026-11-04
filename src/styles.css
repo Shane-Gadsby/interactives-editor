@@ -6418,6 +6418,7 @@ code {
 .invite-found button:disabled {
   opacity: 0.5;
   cursor: default;
+}
 
 /* Percent or px unit button on padding, margin and gap fields */
 .unit-field {
