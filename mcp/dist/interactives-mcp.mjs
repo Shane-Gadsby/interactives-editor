@@ -1560,6 +1560,7 @@ function sanitizeNode(raw, seen) {
   if ("paragraphSpacing" in n && !isNum(n.paragraphSpacing)) delete n.paragraphSpacing;
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
   for (const k of ["mask", "locked"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  if ("maskMode" in n && !["alpha", "inverted", "luminance", "invertedLuminance"].includes(n.maskMode)) delete n.maskMode;
   for (const k of ["blur", "fontWeight"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
   for (const k of ["blendMode", "cursor", "ariaLabel", "ariaDescription", "className"]) if (k in n && !isStr(n[k])) delete n[k];
   if ("role" in n && !["button", "checkbox", "radio", "radiogroup", "heading", "image", "region"].includes(n.role)) delete n.role;
@@ -4578,6 +4579,8 @@ Press <kbd>Enter</kbd> on a group or frame to work inside it; <kbd>Escape</kbd> 
 ## Masks
 Tick **Use as mask** on a shape or group and it clips the layers above it in the same group, up to the next mask, so they only show inside its outline (the way masks work in most design tools). A group masks with the shapes inside it. A picture used as a mask clips by its transparency (so a cut-out PNG works as a stencil), as long as it is stretched to its box (fit *fill*) and only moved or scaled. The mask itself is not drawn in the player; on the canvas it shows as a faint ghost so you can still pick it. Hide the mask layer to turn the clipping off. To clip just one layer, put the mask and that layer together in their own group.
 
+**Mask mode** (shown once *Use as mask* is on) chooses how the mask's coverage is worked out. *Alpha* (the default) shows the layers where the mask has shapes. *Inverted* shows them everywhere the mask has none, a hole where the shapes are. *Luminance* shows them as brightly as the mask's painted shapes are: white lets everything through, black nothing, a grey, a gradient or a half-transparent shape part-way (a picture counts as the picture itself). *Inverted luminance* is the opposite of that. The inverted and luminance modes are drawn with an SVG mask, so they are not limited to the layer's box (and a picture works by its pixels in them); the plain alpha mode is the crisp clip path.
+
 ## Solo groups
 Tick **Solo** on a group or frame and it shows only one child at a time, the one chosen under **Active child**. Use it for states of a character or a button: build each state as a child, then switch between them. The active child can be keyed on a timeline (a step change, like a cut) or set from interactions with **Set property** and the property *Solo: active child*, whose value can be a quoted layer name such as \`"Happy"\`. Children that are not active take no room in auto layout.
 
@@ -5950,7 +5953,7 @@ Rive **view models** become shared [variables](variables): numbers, true/false, 
 
 Rive **joysticks** become [joysticks](joysticks): a joystick that has a handle layer gets that layer and its rectangle as the **Handle** and **Area**, so the timelines follow where the handle sits (inverted axes are turned round, and a joystick without a handle keeps its set position). A *listener action that aligns a layer to the pointer* (what moves a joystick handle on drag) becomes *Set property* nodes that set the layer's x and y from the pointer. Keys that move a joystick's own x and y are not imported.
 
-Rive **layer masks** become [masks](groups-frames#masks): the masked layer goes in a group with a masking copy of the source layer (a shape, a group of shapes, an image) in front of it, and the source itself is hidden unless the mask says it keeps drawing. Masks that invert the source are skipped, luminance masks are used as alpha masks, and custom bounds are ignored; all of those are listed in the report.
+Rive **layer masks** become [masks](groups-frames#masks): the masked layer goes in a group with a masking copy of the source layer (a shape, a group of shapes, an image) in front of it, and the source itself is hidden unless the mask says it keeps drawing. Inverted, luminance and inverted luminance masks keep their mode (see *Mask mode* in [Groups and frames](groups-frames#masks)); custom bounds and the mask resolution are ignored, and the report lists those.
 
 Rive **text modifiers** become [text modifiers](text-modifiers): each range of a group is one modifier, with the group's move, turn, scale and fade (the units are letters, words or lines, ranges by percent or by index, with the offset, strength and falloff) and keys on a range or group follow onto it. Falloffs are approximated by a ramp or triangle, and ranges that combine by subtracting, multiplying, min or max, ranges limited to one text run, text follow path and per-letter variable font axes are not imported; the report lists them.
 
