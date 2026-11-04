@@ -361,8 +361,9 @@ describe('PSD import', () => {
       ),
       'x',
     );
-    expect(imp.artboard.children.map((c) => c.name)).toEqual(['Big title', 'Soft']);
+    expect(imp.artboard.children.map((c) => c.name)).toEqual(['Big title (text as picture)', 'Soft']);
     expect((imp.artboard.children[0] as { ariaLabel?: string }).ariaLabel).toBe('Big title');
+    expect(imp.warnings.join(' ')).toMatch(/1 text layer kept as pictures.*“Big title” \(its type data could not be read\)/);
     expect(imp.warnings.join(' ')).toMatch(/imported as normal: subtract/);
     expect(imp.warnings.join(' ')).not.toMatch(/empty/);
   });
@@ -541,15 +542,25 @@ describe('PSD type layers', () => {
     expect(r.y + r.height / 2).toBeCloseTo(190, 5);
   });
 
-  it('keeps warped, vertical and masked text as pictures, and honours the option', () => {
+  it('keeps warped text as a picture named so, says why in the report, and honours the option', () => {
     const warped = importPsd(buildPsd([textLayer({ warp: true })], { width: 20, height: 20 }), 't');
-    expect(warped.artboard.children[0].type).toBe('image');
-    expect(warped.warnings.join(' ')).toMatch(/kept as pictures/);
-    const masked = importPsd(buildPsd([textLayer({}, { mask: { top: 4, left: 8, w: 4, h: 2, samples: new Array(8).fill(255), def: 0 } })], { width: 20, height: 20 }), 't');
-    expect(masked.artboard.children[0].type).toBe('image');
+    const pic = warped.artboard.children[0];
+    expect(pic.type).toBe('image');
+    expect(pic.name).toMatch(/\(text as picture\)$/);
+    expect(warped.warnings.join(' ')).toMatch(/kept as pictures, so the text is not editable: “.*” \(warped\)/);
     const off = importPsd(buildPsd([textLayer({})], { width: 20, height: 20 }), 't', { text: false });
     expect(off.artboard.children[0].type).toBe('image');
     expect(off.warnings.join(' ')).not.toMatch(/kept as pictures/);
+  });
+
+  it('keeps masked text as real text, with the layer mask over it as an image mask', () => {
+    const masked = importPsd(buildPsd([textLayer({}, { mask: { top: 4, left: 8, w: 4, h: 2, samples: new Array(8).fill(255), def: 0 } })], { width: 20, height: 20 }), 't');
+    const g = masked.artboard.children[0];
+    if (g.type !== 'group') throw new Error('a group of mask and text expected');
+    expect(g.children.map((c) => c.type)).toEqual(['image', 'text']);
+    expect(g.children[0].mask).toBe(true);
+    expect(masked.warnings.join(' ')).not.toMatch(/kept as pictures/);
+    expect(masked.assets.some((a) => /layer mask/.test(a.name))).toBe(true);
   });
 
   it('turns PostScript names into families, weights and slants', () => {
@@ -702,6 +713,11 @@ describe.skipIf(!existsSync('../research/psd/Untitled-1.psd'))('real Photoshop f
       expect(texts.map((t) => (t as { text: string }).text)).toEqual(['Lorem Ipsum']);
       expect((texts[0] as { fontFamily: string }).fontFamily).toBe('JetBrains Mono');
       expect(r.fonts.some((x) => x.family === 'JetBrains Mono')).toBe(true);
+      // no type layer fell back to a picture, and nothing is named or reported as one
+      const names: string[] = [];
+      walk(r.artboard.children, (n) => void names.push(n.name));
+      expect(names.filter((n) => /text as picture/.test(n))).toEqual([]);
+      expect(r.warnings.join(' ')).not.toMatch(/kept as pictures/);
     });
   }
 });

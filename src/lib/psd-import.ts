@@ -9,8 +9,9 @@
  * Supported: 8 and 16 bit RGB and grayscale layers. Other modes and depths use the flattened picture saved in the file.
  * Clipping groups (a layer and the layers clipped to it) become a group with a copy of the base used as a mask,
  * vector masks become a path mask, and layer masks are baked into the layer's pixels (group masks become an image mask).
- * Type layers become real text layers (`psd-type.ts` reads the styles), unless they are warped, vertical or masked, which
- * keep their pixels.
+ * Type layers become real text layers (`psd-type.ts` reads the styles), with a layer mask going over the text as an image
+ * mask. Warped and vertical text, and type data that can't be read, keep their pixels as a picture named "(text as picture)",
+ * and the import report lists them.
  * Not carried over: layer styles and effects, smart-object contents (their raster is used), adjustment layers,
  * and blend modes we don't have.
  */
@@ -47,6 +48,10 @@ export interface PsdLayer {
   vectorMask?: PsdVectorMask;
   /** An enabled pixel mask is already multiplied into the pixels. */
   hasPixelMask?: boolean;
+  /** The mask itself, kept only on type layers: their text stays live and the mask goes over it as an image mask. */
+  pixelMask?: PsdGroup['pixelMask'];
+  /** The file had type data for this layer that could not be read (the layer keeps its pixels). */
+  typeUnread?: boolean;
   /** A layer with no pixels that changes what is below it (levels, curves, ...). */
   adjustment: boolean;
   /** Decode the pixels as RGBA, `width * height * 4` bytes. Empty when the layer has no pixels. */
@@ -527,7 +532,7 @@ function toNode(ctx: Ctx, raw: RawLayer): PsdLayer {
     width: w,
     height: h,
     text: raw.text,
-    ...(raw.typeData ? optional('type', parseTypeBlock(raw.typeData)) : {}),
+    ...(raw.typeData ? typeFields(ctx, raw) : {}),
     ...vmaskOf(ctx, raw),
     hasPixelMask: !!raw.mask && !raw.mask.disabled && raw.channels.some((c) => c.id === -2),
     adjustment: raw.adjustment && !(w > 0 && h > 0),
@@ -543,6 +548,13 @@ function optional<K extends string, V>(key: K, v: V | null): { [P in K]?: V } {
 function vmaskOf(ctx: Ctx, raw: RawLayer): { vectorMask?: PsdVectorMask } {
   if (!raw.vectorData || raw.fillLayer) return {};
   return optional('vectorMask', parseVectorMask(raw.vectorData, ctx.width, ctx.height));
+}
+
+/** A type layer's readable type data and its mask, or a note that the type data could not be read. */
+function typeFields(ctx: Ctx, raw: RawLayer): Pick<PsdLayer, 'type' | 'pixelMask' | 'typeUnread'> {
+  const type = parseTypeBlock(raw.typeData!);
+  if (!type) return { typeUnread: true };
+  return { type, ...optional('pixelMask', folderMask(ctx, raw)) };
 }
 
 /** A folder's pixel mask (folders have no pixels, so the mask is carried on its own). */
@@ -917,7 +929,7 @@ export function importPsd(bytes: Uint8Array, baseName: string, options: PsdImpor
   const unsupportedBlends = new Set<string>();
   const approxBlends = new Set<string>();
   let adjustments = 0;
-  let keptTextPictures = 0;
+  const keptTextPictures: string[] = [];
 
   const common = (n: PsdLayer | PsdGroup) => ({
     visible: n.visible,
@@ -1087,6 +1099,28 @@ export function importPsd(bytes: Uint8Array, baseName: string, options: PsdImpor
     mask: () => SceneNode | null;
   }
 
+  /** A layer or folder's pixel mask as an image mask over `b` (and the mask's own box): alpha from the mask, its default colour outside it. */
+  const pixelMaskNode = (name: string, pm: NonNullable<PsdGroup['pixelMask']>, b: { x0: number; y0: number; x1: number; y1: number }): SceneNode => {
+    const hasBox = pm.width > 0 && pm.height > 0;
+    const x0 = Math.floor(hasBox ? Math.min(pm.left, b.x0) : b.x0);
+    const y0 = Math.floor(hasBox ? Math.min(pm.top, b.y0) : b.y0);
+    const x1 = Math.ceil(hasBox ? Math.max(pm.left + pm.width, b.x1) : b.x1);
+    const y1 = Math.ceil(hasBox ? Math.max(pm.top + pm.height, b.y1) : b.y1);
+    const W = Math.max(1, x1 - x0);
+    const H = Math.max(1, y1 - y0);
+    const rgba = new Uint8Array(W * H * 4);
+    const alpha = hasBox ? pm.getAlpha() : new Uint8Array(0);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const mx = x0 + x - pm.left;
+        const my = y0 + y - pm.top;
+        rgba[(y * W + x) * 4 + 3] = hasBox && mx >= 0 && my >= 0 && mx < pm.width && my < pm.height ? alpha[my * pm.width + mx] : pm.defaultColor;
+      }
+    }
+    const id = addImage(`${name} layer mask`, W, H, rgba);
+    return createNode('image', { name: `${name} (layer mask)`, assetId: id, x: x0, y: y0, width: W, height: H, fit: 'fill', mask: true });
+  };
+
   const convertOne = (n: PsdNode): Unit | null => {
     let core: SceneNode;
     let mask: () => SceneNode | null;
@@ -1100,29 +1134,7 @@ export function importPsd(bytes: Uint8Array, baseName: string, options: PsdImpor
       // the mask copy for layers clipped to this folder, taken while its children are still in document coordinates
       const snapshot = cloneWithNewIds(core);
       mask = () => cloneWithNewIdsMask(snapshot);
-      if (n.pixelMask) {
-        // a folder's pixel mask becomes an image mask over the whole folder (alpha from the mask, default colour outside it)
-        const pm = n.pixelMask;
-        const hasBox = pm.width > 0 && pm.height > 0;
-        const x0 = Math.floor(hasBox ? Math.min(pm.left, b.x0) : b.x0);
-        const y0 = Math.floor(hasBox ? Math.min(pm.top, b.y0) : b.y0);
-        const x1 = Math.ceil(hasBox ? Math.max(pm.left + pm.width, b.x1) : b.x1);
-        const y1 = Math.ceil(hasBox ? Math.max(pm.top + pm.height, b.y1) : b.y1);
-        const W = Math.max(1, x1 - x0);
-        const H = Math.max(1, y1 - y0);
-        const rgba = new Uint8Array(W * H * 4);
-        const alpha = hasBox ? pm.getAlpha() : new Uint8Array(0);
-        for (let y = 0; y < H; y++) {
-          for (let x = 0; x < W; x++) {
-            const mx = x0 + x - pm.left;
-            const my = y0 + y - pm.top;
-            rgba[(y * W + x) * 4 + 3] = hasBox && mx >= 0 && my >= 0 && mx < pm.width && my < pm.height ? alpha[my * pm.width + mx] : pm.defaultColor;
-          }
-        }
-        const id = addImage(`${name} layer mask`, W, H, rgba);
-        const maskNode = createNode('image', { name: `${name} (layer mask)`, assetId: id, x: x0, y: y0, width: W, height: H, fit: 'fill', mask: true });
-        core = makeGroup(name, [maskNode, core]);
-      }
+      if (n.pixelMask) core = makeGroup(name, [pixelMaskNode(name, n.pixelMask, b), core]);
     } else {
       if (n.adjustment) {
         adjustments++;
@@ -1130,10 +1142,16 @@ export function importPsd(bytes: Uint8Array, baseName: string, options: PsdImpor
       }
       const hasPx = n.width >= 1 && n.height >= 1;
       const t = n.type;
-      const real = asText && !!t && !t.vertical && !t.warped && !n.hasPixelMask;
-      if (t && asText && !real && (t.vertical || t.warped || n.hasPixelMask)) keptTextPictures++;
+      const real = asText && !!t && !t.vertical && !t.warped;
       const text = n.text?.replace(/[\r\n\u0003]+/g, ' ').trim();
-      const label = n.name || (text ? text.slice(0, 80) : 'Layer');
+      const baseLabel = n.name || (text ? text.slice(0, 80) : 'Layer');
+      // Text that has to stay a picture is said so in its name (the layers panel shows the picture icon either way) and in the report
+      if (asText && !real && (t || n.typeUnread)) {
+        const why = t?.warped ? 'warped' : t?.vertical ? 'vertical' : 'its type data could not be read';
+        keptTextPictures.push(`“${baseLabel}” (${why})`);
+      }
+      const asPicture = asText && !real && (!!t || !!n.typeUnread);
+      const label = asPicture ? `${baseLabel} (text as picture)` : baseLabel;
       let raster: string | null = null;
       const rasterId = (): string | null => {
         if (!hasPx) return null;
@@ -1143,11 +1161,14 @@ export function importPsd(bytes: Uint8Array, baseName: string, options: PsdImpor
       const imageNode = (id: string, extra: Record<string, unknown> = {}) =>
         createNode('image', { name: label, assetId: id, x: n.left, y: n.top, width: n.width, height: n.height, fit: 'fill', ...extra });
       if (real && t) {
-        core = textNode(n, t, label);
+        const plain = textNode(n, t, label);
+        core = plain;
         mask = () => {
           const id = rasterId();
           return id ? imageNode(id, { name: `${label} (mask)`, mask: true }) : null;
         };
+        // the text stays live; a layer mask goes over it as an image mask, the way a folder's does
+        if (n.pixelMask) core = makeGroup(label, [pixelMaskNode(label, n.pixelMask, { x0: plain.x, y0: plain.y, x1: plain.x + plain.width, y1: plain.y + plain.height }), plain]);
       } else {
         if (!hasPx) return null;
         noteBlend(n);
@@ -1209,7 +1230,10 @@ export function importPsd(bytes: Uint8Array, baseName: string, options: PsdImpor
   if (adjustments) warnings.add(`${adjustments} adjustment layer${adjustments > 1 ? 's were' : ' was'} not carried over (they change how layers below look, which can't be reproduced)`);
   if (unsupportedBlends.size) warnings.add(`Blend modes with no equivalent were imported as normal: ${[...unsupportedBlends].join(', ')}`);
   if (approxBlends.size) warnings.add(`Blend modes drawn with the nearest one there is: ${[...approxBlends].join(', ')}`);
-  if (keptTextPictures) warnings.add(`${keptTextPictures} text layer${keptTextPictures > 1 ? 's' : ''} (warped, vertical or masked) kept as pictures`);
+  if (keptTextPictures.length) {
+    const shown = keptTextPictures.slice(0, 4).join(', ');
+    warnings.add(`${keptTextPictures.length} text layer${keptTextPictures.length > 1 ? 's' : ''} kept as pictures, so the text is not editable: ${shown}${keptTextPictures.length > 4 ? ` and ${keptTextPictures.length - 4} more` : ''}`);
+  }
   if (!children.length) throw new Error('This PSD file has no pixels to import');
 
   const fonts: FontRef[] = [...googleWeights].map(([family, w]) => ({ family, source: 'google', weights: [...w].sort((a, b) => a - b) }));
