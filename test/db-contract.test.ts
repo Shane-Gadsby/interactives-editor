@@ -110,7 +110,7 @@ describe('assets and packages', () => {
     const p = fresh();
     await db.createProjectRecord(p);
     await db.putAsset(p.id, 'asset00001', new NodeBlob([new Uint8Array([1, 2, 3, 4])], { type: 'image/png' }));
-    await db.putAsset(p.id, 'asset00002', new NodeBlob(['a,b\n1,2'], { type: 'text/csv' }));
+    await db.putAsset(p.id, 'asset00002', new (require('node:buffer').Blob as typeof Blob)(['a,b\n1,2'], { type: 'text/csv' }));
     const all = await db.listAssetBlobs(p.id);
     expect([...all.keys()].sort()).toEqual(['asset00001', 'asset00002']);
     expect(all.get('asset00001')!.type).toBe('image/png');
@@ -221,6 +221,20 @@ describe('revisions, sharing and libraries', () => {
     await db.unpublishLibrary(p.id);
     expect(await db.getOwnLibrary(p.id)).toBeNull();
     await expect(db.getLibrary(p.id)).rejects.toThrow('No such library');
+  });
+
+  it('reads a library\'s .json data file as bytes, so placing a component that uses one can register it', async () => {
+    const p = fresh('Lib with data');
+    p.settings.library = true;
+    p.artboards[0].publish = true;
+    p.assets.push({ id: 'asset00002', name: 'rows.json', mime: 'application/json', size: 9 } as never);
+    p.dataSources.push({ id: 'ds000001', name: 'rows', kind: 'json', source: 'asset', assetId: 'asset00002' } as never);
+    await db.createProjectRecord(p);
+    await db.putAsset(p.id, 'asset00002', new (require('node:buffer').Blob as typeof Blob)(['[{\"a\":1}]'], { type: 'application/json' }));
+    await db.publishLibrary(p.id, 'first');
+    const blob = await db.getLibraryAsset(p.id, 'asset00002');
+    expect(typeof blob.arrayBuffer).toBe('function');
+    expect(await blob.text()).toBe('[{"a":1}]');
   });
 
   it('will not publish a project that is not marked as a library', async () => {

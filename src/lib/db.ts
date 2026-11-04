@@ -316,7 +316,8 @@ export const listLibraries = () => call<LibraryInfo[]>('libraries');
 
 export const getLibrary = (id: string) => call<{ library: LibraryInfo; snapshot: LibraryContent }>(`libraries/${encodeURIComponent(id)}`);
 
-export const getLibraryAsset = (libraryId: string, assetId: string) => call<Blob>(`libraries/${encodeURIComponent(libraryId)}/assets/${encodeURIComponent(assetId)}`);
+/** Always bytes: a library's .json data file is served as application/json and must not come back parsed (createObjectURL would refuse it). */
+export const getLibraryAsset = (libraryId: string, assetId: string) => call<Blob>(`libraries/${encodeURIComponent(libraryId)}/assets/${encodeURIComponent(assetId)}`, {}, 'blob');
 
 /** This project's own library record (published or not), for its owner. */
 export const getOwnLibrary = (projectId: string) => call<{ library: LibraryInfo | null }>(`projects/${encodeURIComponent(projectId)}/library`).then((r) => r.library);
