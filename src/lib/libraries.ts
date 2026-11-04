@@ -426,7 +426,12 @@ export function syncLibraryStyles(draft: Project, libraryId: string, styles: { c
     for (const s of have) if (!s.library || s.library.libraryId !== libraryId) out.push(s);
     for (const s of from) {
       const was = have.find((x) => x.library?.libraryId === libraryId && x.library.styleId === s.id);
-      out.push({ ...JSON.parse(JSON.stringify(s)), id: was?.id ?? uid('st'), library: { libraryId, styleId: s.id } });
+      // (a style converted to a token stays one when the library updates)
+      const copy = { ...JSON.parse(JSON.stringify(s)), id: was?.id ?? uid('st'), library: { libraryId, styleId: s.id } };
+      // The library's own token ids mean nothing here; the link is the one this project made
+      delete copy.token;
+      const mine = (was as ColorStyle | undefined)?.token;
+      out.push(mine ? { ...copy, token: mine } : copy);
     }
     return out;
   };
@@ -437,14 +442,17 @@ export function syncLibraryStyles(draft: Project, libraryId: string, styles: { c
 
 const TEXT_KEYS = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing'] as const;
 
+/** The colour a layer holds while it follows a style: the style's token when it became one, else its colour. */
+export const styleColor = (s: ColorStyle): string => (s.token ? `token:${s.token}` : s.color);
+
 /** Set a layer's fill, stroke colour or text colour from a colour style, and remember that it follows it. */
 export function applyColorStyle(node: SceneNode, part: 'fill' | 'stroke' | 'color', style: ColorStyle): boolean {
   const n = node as unknown as Record<string, unknown>;
-  if (part === 'fill' && 'fill' in n) n.fill = { type: 'solid', color: style.color };
+  if (part === 'fill' && 'fill' in n) n.fill = { type: 'solid', color: styleColor(style) };
   else if (part === 'stroke' && 'stroke' in n) {
     const cur = n.stroke as { width: number } | null;
-    n.stroke = { ...(cur ?? { width: 1 }), paint: { type: 'solid', color: style.color } };
-  } else if (part === 'color' && 'fontFamily' in n) n.color = style.color;
+    n.stroke = { ...(cur ?? { width: 1 }), paint: { type: 'solid', color: styleColor(style) } };
+  } else if (part === 'color' && 'fontFamily' in n) n.color = styleColor(style);
   else return false;
   node.styleRefs = { ...node.styleRefs, [part]: style.id };
   return true;
@@ -510,14 +518,15 @@ export function syncNodeStyles(draft: Project): void {
 
 function setIfDifferent(n: SceneNode, part: 'fill' | 'stroke' | 'color', s: ColorStyle): void {
   const r = n as unknown as Record<string, unknown>;
+  const color = styleColor(s);
   if (part === 'fill') {
     const f = r.fill as { type: string; color?: string } | null;
-    if (!f || f.type !== 'solid' || f.color !== s.color) r.fill = { type: 'solid', color: s.color };
+    if (!f || f.type !== 'solid' || f.color !== color) r.fill = { type: 'solid', color };
   } else if (part === 'stroke') {
     const st = r.stroke as { paint: { type: string; color?: string }; width: number } | null;
     if (!st) return;
-    if (st.paint.type !== 'solid' || st.paint.color !== s.color) r.stroke = { ...st, paint: { type: 'solid', color: s.color } };
-  } else if (r.color !== s.color) r.color = s.color;
+    if (st.paint.type !== 'solid' || st.paint.color !== color) r.stroke = { ...st, paint: { type: 'solid', color } };
+  } else if (r.color !== color) r.color = color;
 }
 
 // ---------------------------------------------------------------- own styles
@@ -541,6 +550,9 @@ export function editStyle(draft: Project, id: string, patch: Partial<ColorStyle>
   const s = [...(draft.styles?.colors ?? []), ...(draft.styles?.texts ?? [])].find((x) => x.id === id);
   if (!s || s.library) return false;
   Object.assign(s, patch, { id: s.id });
+  // A style that became a token: its colour is the token's value in the default theme
+  const tk = 'color' in patch && 'token' in s && s.token ? draft.themes?.tokens.find((x) => x.id === s.token) : undefined;
+  if (tk && typeof patch.color === 'string' && draft.themes) tk.values[draft.themes.default ?? draft.themes.list[0]?.id] = patch.color;
   syncNodeStyles(draft);
   return true;
 }

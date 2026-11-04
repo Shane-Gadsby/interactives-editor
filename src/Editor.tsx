@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { PACKAGE_EXTENSION, QUESTION_KINDS, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
+import { PACKAGE_EXTENSION, defaultTheme, QUESTION_KINDS, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
 import { EditorStore, setCurrentStore, store, useEditor, type BottomTab, type Tool } from './store/store';
 import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
@@ -19,6 +19,7 @@ import { DataPanel } from './panels/DataPanel';
 import { UsagePanel } from './panels/UsagePanel';
 import { InsightsPanel } from './panels/InsightsPanel';
 import { InterfacePanel, ReferenceModal } from './panels/InterfacePanel';
+import { ThemesPanel } from './panels/ThemesPanel';
 import { exportProblems, typeDefinitions } from 'interactives-player';
 import { confirmDialog } from './components/dialogs';
 import { AccessibilityPanel } from './panels/AccessibilityPanel';
@@ -532,6 +533,27 @@ function ConflictBanner() {
 /** A live variable's value as text in the preview panel: lists show as JSON. */
 const shown = (v: unknown): string => (v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v ?? ''));
 
+/** The theme the canvas draws while you edit (not saved). Only a project with themes has one. */
+function ThemeSwitch() {
+  const project = useEditor((s) => s.project);
+  const shown = useEditor((s) => s.canvasTheme);
+  const themes = project.themes;
+  if (!themes?.list.length) return null;
+  const current = themes.list.find((t) => t.id === shown) ?? defaultTheme(themes);
+  return (
+    <label className="theme-switch" title="The theme the canvas shows while you edit. Layers with theme colours change, plain colours don't. Exports and pictures use it too. It is not saved with the project">
+      <Icons.themes width={14} />
+      <select value={current.id} onChange={(e) => store().set({ canvasTheme: e.target.value })} onKeyDown={(e) => e.stopPropagation()} aria-label="Theme shown on the canvas">
+        {themes.list.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }) {
   const s = useEditor((st) => ({ name: st.project.name, saveState: st.saveState, saveError: st.saveError, zoom: st.zoom, rev: st.project.updated, live: st.live, peers: st.peers }));
   const [menu, setMenu] = useState(false);
@@ -559,7 +581,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
     if (!ab) throw new Error('Open an artboard first.');
     const tl = ab.timelines.find((t) => t.id === state.activeTimelineId) ?? null;
     const { downloadArtboardPng, downloadArtboardSvg } = await import('./lib/image-export');
-    const warnings = kind === 'png' ? await downloadArtboardPng(state.project, ab, tl, state.playhead, scale) : await downloadArtboardSvg(state.project, ab, tl, state.playhead);
+    const warnings = kind === 'png' ? await downloadArtboardPng(state.project, ab, tl, state.playhead, scale, state.canvasTheme) : await downloadArtboardSvg(state.project, ab, tl, state.playhead, state.canvasTheme);
     for (const w of warnings) st.toast(w);
   };
   //An export of a project whose public interface has drifted (renamed or removed variables, messages nothing handles) asks first
@@ -630,6 +652,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
           </span>
         ))}
       </div>
+      <ThemeSwitch />
       <IconButton icon={<Icons.history />} title="Revision history: earlier saved versions of this project" onClick={() => setHistoryOpen(true)} />
       <IconButton icon={<Icons.undo />} title="Undo (Ctrl+Z)" onClick={() => st.undo()} disabled={!st.canUndo()} />
       <IconButton icon={<Icons.redo />} title="Redo (Ctrl+Shift+Z)" onClick={() => st.redo()} disabled={!st.canRedo()} />
@@ -916,6 +939,7 @@ const TABS: { id: BottomTab; label: string; icon: IconName; help: string; tip: s
   { id: 'insights', label: 'Insights', icon: 'insights', help: 'insights', tip: 'What learners did: artboards reached, where they clicked, steps, answers to questions and your own records, as counts' },
   { id: 'interface', label: 'Public interface', icon: 'plug', help: 'public-interface', tip: 'What a page that embeds this project can set, read, send and hear: variables as inputs and outputs, messages, with descriptions. Makes the reference page and TypeScript definitions' },
   { id: 'checklist', label: 'Checklist', icon: 'check', help: 'templates#the-checklist', tip: 'The things to change in a project made from a template: tick them off, click one to find its layer, review before you share' },
+  { id: 'themes', label: 'Themes', icon: 'themes', help: 'themes', tip: 'Colour tokens and the themes that give them values (Light, Dark, High contrast), with a contrast check per theme' },
   { id: 'usage', label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each artboard, asset, variable, data source, script and timeline is used, and what is unused' },
 ];
 
@@ -965,6 +989,7 @@ function BottomPanel() {
           {s.tab === 'interface' && <InterfacePanel />}
           {s.tab === 'a11y' && <AccessibilityPanel />}
           {s.tab === 'checklist' && <ChecklistPanel />}
+          {s.tab === 'themes' && <ThemesPanel />}
         </div>
       )}
     </section>
@@ -1030,6 +1055,18 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   }, [from, abId]);
   // Drag and drop: outline every draggable layer and drop zone in the running preview
   const [hitAreas, setHitAreas] = useState(false);
+  // Themes: which one the preview shows (auto follows the viewer), the viewer it pretends to be, and a host page that supplies CSS variables
+  const themes = (project as Project).themes;
+  const [theme, setTheme] = useState('auto');
+  const [viewer, setViewer] = useState<'device' | 'dark' | 'contrast' | 'dark-contrast'>('device');
+  const [host, setHost] = useState<'none' | 'moodle'>('none');
+  const applyTheme = (t = theme, v = viewer, h = host) => {
+    const w = frame.current?.contentWindow;
+    if (!w || !themes?.list.length) return;
+    w.postMessage({ target: 'interactives', type: 'hostVars', vars: h === 'moodle' ? SIMULATED_MOODLE : {}, clear: h === 'moodle' ? [] : Object.keys(SIMULATED_MOODLE) }, '*');
+    w.postMessage({ target: 'interactives', type: 'simulateViewer', prefs: v === 'device' ? null : { dark: v === 'dark' || v === 'dark-contrast', contrast: v === 'contrast' || v === 'dark-contrast' } }, '*');
+    w.postMessage({ target: 'interactives', type: 'setTheme', theme: t }, '*');
+  };
   const hasDrag = project.artboards.some((a) => {
     let found = false;
     walk(a.children, (n) => {
@@ -1104,6 +1141,37 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           >
             Screen reader {screenReader ? 'on' : 'off'}
           </button>
+          {themes?.list.length ? (
+            <>
+              <select
+                value={theme}
+                title="The theme the preview shows. Follow the viewer picks one from the colour scheme and contrast settings, the way the finished interactive does"
+                aria-label="Theme in the preview"
+                onChange={(e) => (setTheme(e.target.value), applyTheme(e.target.value))}
+              >
+                <option value="auto">Theme: follow the viewer</option>
+                {themes.list.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    Theme: {t.name}
+                  </option>
+                ))}
+              </select>
+              {theme === 'auto' && (
+                <select value={viewer} title="Pretend the viewer has dark mode or more contrast switched on, to see which theme they would get" aria-label="Simulated viewer" onChange={(e) => (setViewer(e.target.value as typeof viewer), applyTheme(theme, e.target.value as typeof viewer))}>
+                  <option value="device">Viewer: this device</option>
+                  <option value="dark">Viewer: dark mode</option>
+                  <option value="contrast">Viewer: more contrast</option>
+                  <option value="dark-contrast">Viewer: dark and more contrast</option>
+                </select>
+              )}
+              {themes.host?.enabled && (
+                <select value={host} title="Pretend the page around the interactive supplies Moodle's CSS variables (--bs-primary and so on), to check the tokens that map from them" aria-label="Simulated host page" onChange={(e) => (setHost(e.target.value as typeof host), applyTheme(theme, viewer, e.target.value as typeof host))}>
+                  <option value="none">Host: plain page</option>
+                  <option value="moodle">Host: Moodle variables</option>
+                </select>
+              )}
+            </>
+          ) : null}
           {hasDrag && (
             <button
               className={`btn${hitAreas ? ' active' : ''}`}
@@ -1195,7 +1263,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             </aside>
           )}
           <div className="preview-stage" ref={stageBox}>
-          {html ? <iframe key={nonce} ref={frame} title="Preview" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => hitAreas && showHitAreas(true)} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (hitAreas && showHitAreas(true), applyTheme())} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
           </div>
         </div>
         {accessibility && screenReader && (
@@ -1249,6 +1317,15 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+/** What the Preview's "Moodle variables" host sets on the page around the interactive: a plausible Boost theme. */
+const SIMULATED_MOODLE: Record<string, string> = {
+  '--bs-primary': '#0f6cbf',
+  '--bs-body-bg': '#ffffff',
+  '--bs-body-color': '#1d2125',
+  '--bs-border-color': '#ced4da',
+  '--bs-secondary-color': '#495057',
+};
 
 function ReportModal({ title, lines }: { title: string; lines: string[] }) {
   const close = () => store().set({ report: null });

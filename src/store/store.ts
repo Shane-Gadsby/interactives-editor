@@ -145,7 +145,7 @@ export type Tool =
   | 'bone'
   | 'comment';
 
-export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface' | 'checklist';
+export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface' | 'checklist' | 'themes';
 
 /** Where learners clicked on one artboard (from Insights), drawn over the canvas as a heat map. Never saved. */
 export interface HeatOverlay {
@@ -175,6 +175,8 @@ export interface EditorState {
   textSelection: { id: string; start: number; end: number } | null;
   bottomTab: BottomTab | null;
   bottomHeight: number;
+  /** The theme (id) the canvas shows while editing; null is the project's default. Never saved. */
+  canvasTheme: string | null;
   /** The click heat overlay Insights asked the canvas to draw, or null. */
   heat: HeatOverlay | null;
   activeTimelineId: string | null;
@@ -251,6 +253,7 @@ export class EditorStore {
       textSelection: null,
       bottomTab: 'timeline',
       bottomHeight: 260,
+      canvasTheme: null,
       heat: null,
       activeTimelineId: null,
       playhead: 0,
@@ -1426,6 +1429,11 @@ let current: EditorStore | null = null;
 
 export function setCurrentStore(s: EditorStore | null): void {
   current = s;
+}
+
+/** The open project's store, or null outside an editor (a component that only sometimes has a project behind it). */
+export function maybeStore(): EditorStore | null {
+  return current;
 }
 
 export function store(): EditorStore {

@@ -38,6 +38,7 @@ export const Icons = {
   unlock: P('M6 11h12v10H6zM8 11V7a4 4 0 017.7-1.5'),
   trash: P('M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3'),
   plus: P('M12 5v14M5 12h14'),
+  themes: P('M12 3a9 9 0 100 18 9 9 0 000-18zM12 3v18M12 8h4M12 12h5M12 16h3'),
   info: P('M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v6M12 7.5v.01'),
   copy: P('M8 8h12v12H8zM16 8V4H4v12h4'),
   home: P('M3 11l9-8 9 8M5 9v11h14V9'),

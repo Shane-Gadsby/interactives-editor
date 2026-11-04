@@ -5,6 +5,7 @@ import { assetBytes, createProjectRecord, putAsset, saveProject } from './db';
 import { assetUrls } from './assets';
 import { download, fileSafe } from './export';
 import { exportLottie, toDotLottie } from './lottie-export';
+import { bakedForExport } from './themes';
 import { NO_LINK_REASON, currentUser, designKind, handleOf, hashAssets, isDesignFile, newLinkId, rememberHandle, sourcesFor, supportsLinking, type FileHandle } from './links';
 import { extOf, reportError, span, track } from './analytics';
 import { linkChoiceDialog, type LinkChoiceRow } from '../components/dialogs';
@@ -218,8 +219,9 @@ export function showReport(title: string, lines: string[]): void {
 /** Export the active artboard as Lottie JSON or dotLottie. */
 export async function exportActiveAsLottie(kind: 'json' | 'lottie'): Promise<void> {
   const st = store();
-  const p = st.get().project;
-  const ab = st.artboard();
+  // Lottie has no tokens: the colours are the theme being shown
+  const p = bakedForExport(st.get().project, st.get().canvasTheme);
+  const ab = p.artboards.find((a) => a.id === st.artboard()?.id);
   if (!ab) return;
   const bytes = new Map<string, Uint8Array | null>();
   for (const a of p.assets) bytes.set(a.id, await assetBytes(p.id, a));

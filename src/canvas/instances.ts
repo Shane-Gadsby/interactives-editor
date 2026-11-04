@@ -1,4 +1,4 @@
-import { Renderer, prepareNodes, walk, type Artboard, type InstanceMount, type InstanceNode, type Project } from 'interactives-player';
+import { Renderer, prepareNodes, walk, type ColorResolver, type Artboard, type InstanceMount, type InstanceNode, type Project } from 'interactives-player';
 import { assetUrls } from '../lib/assets';
 import { previewScope } from '../lib/data';
 
@@ -59,9 +59,9 @@ export function instanceDepsKey(project: Project, ab: Artboard, depth = 0, seen 
  * Instances on the editor canvas: the referenced artboard drawn statically (bindings and repeaters against
  * initial values), with nested instances down to a few levels.
  */
-export function editInstanceMount(getProject: () => Project, depth = 0, resolveAsset: (id: string) => string | undefined = assetUrls.resolve): (node: InstanceNode, host: HTMLElement) => InstanceMount {
+export function editInstanceMount(getProject: () => Project, depth = 0, resolveAsset: (id: string) => string | undefined = assetUrls.resolve, getColors: () => ColorResolver | null = () => null): (node: InstanceNode, host: HTMLElement) => InstanceMount {
   return (node, host) => {
-    const r = new Renderer({ mode: 'edit', resolveAsset, mountInstance: depth < 4 ? editInstanceMount(getProject, depth + 1, resolveAsset) : undefined });
+    const r = new Renderer({ mode: 'edit', resolveAsset, mountInstance: depth < 4 ? editInstanceMount(getProject, depth + 1, resolveAsset, getColors) : undefined });
     Object.assign(r.root.style, { position: 'absolute', left: '0', top: '0', transformOrigin: '0 0' });
     host.appendChild(r.root);
     let last = '';
@@ -70,9 +70,11 @@ export function editInstanceMount(getProject: () => Project, depth = 0, resolveA
       const ab = project.artboards.find((a) => a.id === n.artboardId);
       if (!ab) return;
       // Same artboard (and nested ones), same box, same inputs: nothing to redraw
-      const key = `${refKey(ab)}|${instanceDepsKey(project, ab)}|${n.width}x${n.height}|${n.fit}|${JSON.stringify(n.inputs ?? null)}|${refKey(project.variables)}`;
+      const colors = getColors();
+      const key = `${refKey(ab)}|${instanceDepsKey(project, ab)}|${n.width}x${n.height}|${n.fit}|${JSON.stringify(n.inputs ?? null)}|${refKey(project.variables)}|${colors ? refKey(colors) : 0}`;
       if (key === last) return;
       last = key;
+      r.setColorResolver(colors);
       const vars = previewScope(project, ab);
       for (const [k, v] of Object.entries(n.inputs ?? {})) vars[k] = v;
       r.render(ab, prepareNodes(ab.children, { vars }), { vars });

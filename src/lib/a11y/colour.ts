@@ -1,5 +1,5 @@
 /** Colour maths for the accessibility checker (WCAG 2 relative luminance and contrast ratio). Pure: nothing here touches the DOM. */
-import { parseColor, type RGBA } from 'interactives-player';
+import { isTokenRef, parseColor, type ColorResolver, type RGBA } from 'interactives-player';
 
 export type RGB = [number, number, number];
 
@@ -28,10 +28,24 @@ const NAMED: Record<string, RGB> = {
   brown: [165, 42, 42],
 };
 
+let tokens: ColorResolver | null = null;
+
+/** Run `fn` with theme tokens read as the colours of one theme (outside it a `token:` colour cannot be read). */
+export function withTokens<T>(resolve: ColorResolver | null, fn: () => T): T {
+  const was = tokens;
+  tokens = resolve;
+  try {
+    return fn();
+  } finally {
+    tokens = was;
+  }
+}
+
 /** A CSS colour as [r, g, b, a], or null when it can't be read (a name the browser doesn't know, a var(), ...). */
 export function toRgba(input: unknown): RGBA | null {
   if (typeof input !== 'string') return null;
-  const s = input.trim().toLowerCase();
+  if (tokens && isTokenRef(input)) input = tokens(input);
+  const s = (input as string).trim().toLowerCase();
   if (!s || /^(var|calc|env|color-mix|currentcolor)/.test(s)) return null;
   const named = NAMED[s];
   if (named) return [named[0], named[1], named[2], 1];

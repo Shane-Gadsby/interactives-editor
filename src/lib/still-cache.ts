@@ -99,11 +99,13 @@ function targetsOf(ab: Artboard, project: Project, seen: Set<string>, depth: num
 }
 
 /** What a still of this artboard depends on, as one short string. Same string, same picture. */
-export function stillHash(project: Project, ab: Artboard): string {
+export function stillHash(project: Project, ab: Artboard, theme: string | null = null): string {
   const deps = targetsOf(ab, project, new Set([ab.id]), 0)
     .map(artboardHash)
     .join('.');
-  return `${artboardHash(ab)}${deps ? '+' + deps : ''}@${contextHash(project)}`;
+  // Theme tokens draw differently per theme: the themes and the one shown are part of what the picture depends on
+  const themed = project.themes?.tokens.length ? `~${cyrb53(JSON.stringify([project.themes, theme]))}` : '';
+  return `${artboardHash(ab)}${deps ? '+' + deps : ''}@${contextHash(project)}${themed}`;
 }
 
 // ---------------------------------------------------------------- reading

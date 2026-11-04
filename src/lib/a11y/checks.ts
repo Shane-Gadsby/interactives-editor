@@ -3,9 +3,9 @@
  * found, per artboard. It reports "checks found", never "compliant": some things it can't see (a photo behind text, what a
  * script does), and those come back as `review` findings so a person looks instead of assuming.
  */
-import { coveredMs, isContainer, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
+import { coveredMs, defaultTheme, hasTokens, isContainer, isTokenRef, makeColorResolver, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
 import { backdropAt, buildPaintList, samplePoints, textExtent, type ArtboardPaint, type ImageColours, type Target, type TextMeasure } from './backdrop';
-import { contrastRatio, luminance, over, requiredRatio, suggestColour, toRgba, type RGB } from './colour';
+import { contrastRatio, luminance, over, requiredRatio, suggestColour, toRgba, withTokens, type RGB } from './colour';
 import { FLASH_PROPS, maxFlashesPerSecond, trackSignal } from './flash';
 import type { A11yReport, CheckId, CheckInfo, Finding, Fix, Severity } from './types';
 
@@ -243,23 +243,68 @@ function interactionsOf(ab: Artboard): Interactions {
 
 const RANK: Record<Severity, number> = { issue: 0, warning: 1, review: 2 };
 
+/** Which theme a run reads tokens as, and what it reports: the first run is everything, the others only contrast (a theme's own failures). */
+interface ThemeRun {
+  /** Id suffix and the start of each detail, so a finding says which theme it is about. Empty for the main run. */
+  suffix: string;
+  prefix: string;
+  /** Only this check is reported. */
+  only?: CheckId;
+  /** Report theme colours sitting on fixed colours. */
+  mixed: boolean;
+  /** Only a finding that involves a token gets the prefix (the main run: a fixed pair reads the same in every theme). */
+  themedOnly?: boolean;
+}
+
+const usesToken = (n: SceneNode): boolean => {
+  const x = n as unknown as { color?: unknown; runs?: { color?: string }[] };
+  return isTokenRef(x.color) || !!x.runs?.some((r) => isTokenRef(r.color));
+};
+
+/**
+ * With theme tokens the checks run on the theme being shown (the default one), and the contrast check runs again for every
+ * other theme: a pair that fails only in Dark is a finding "In Dark: ...". Text in a token colour that sits on a fixed colour
+ * is a warning of its own, since nothing keeps the two apart in step when the theme changes. Projects without tokens run once.
+ */
 export function checkAccessibility(project: Project, opts: CheckOptions = {}): A11yReport {
+  const themes = project.themes;
+  if (!hasTokens(themes)) return runChecks(project, opts, { suffix: '', prefix: '', mixed: false });
+  const main = defaultTheme(themes);
+  const report = withTokens(makeColorResolver(themes, main.id), () => runChecks(project, opts, { suffix: '', prefix: `In ${main.name}: `, mixed: true, themedOnly: true }));
+  const seen = new Set(report.findings.map((f) => `${f.nodeId}|${f.title}|${f.detail.replace(/^In [^:]+: /, '')}`));
+  for (const theme of themes.list) {
+    if (theme.id === main.id) continue;
+    const other = withTokens(makeColorResolver(themes, theme.id), () => runChecks(project, opts, { suffix: `@${theme.id}`, prefix: `In ${theme.name}: `, only: 'contrast', mixed: false }));
+    for (const f of other.findings) {
+      // A pair of fixed colours fails the same way in every theme: said once
+      if (seen.has(`${f.nodeId}|${f.title}|${f.detail.replace(/^In [^:]+: /, '')}`)) continue;
+      report.findings.push(f);
+    }
+  }
+  report.findings.sort((a, b) => RANK[a.severity] - RANK[b.severity]);
+  return report;
+}
+
+function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yReport {
   const findings: Finding[] = [];
 
-  const add = (ab: Artboard | null, node: SceneNode | null, check: CheckId, severity: Severity, title: string, detail: string, extra: { fix?: Fix; key?: string } = {}) => {
+  const add = (ab: Artboard | null, node: SceneNode | null, check: CheckId, severity: Severity, title: string, detail: string, extra: { fix?: Fix; key?: string; themed?: boolean } = {}) => {
+    if (run.only && check !== run.only) return;
+    // A fix writes a plain colour over the layer's own, which would cut a token loose: no fix for a layer that follows one, or for another theme
+    const fix = extra.fix && check === 'contrast' && (run.suffix || (node && usesToken(node))) ? undefined : extra.fix;
     findings.push({
-      id: `${check}:${ab?.id ?? 'project'}:${extra.key ?? node?.id ?? ''}`,
+      id: `${check}:${ab?.id ?? 'project'}:${extra.key ?? node?.id ?? ''}${run.suffix}`,
       check,
       severity,
       title: title || INFO.get(check)!.title,
-      detail,
+      detail: run.prefix && check === 'contrast' && (!run.themedOnly || extra.themed) ? run.prefix + detail : detail,
       artboardId: ab?.id ?? null,
       artboardName: ab?.name ?? '',
       nodeId: node?.id ?? null,
       nodeName: node?.name ?? '',
       nodeType: node?.type ?? '',
       readOnly: ab?.library ? true : undefined,
-      fix: ab?.library ? undefined : extra.fix,
+      fix: ab?.library ? undefined : fix,
     });
   };
 
@@ -333,6 +378,11 @@ export function checkAccessibility(project: Project, opts: CheckOptions = {}): A
       }
     }
     const changes = [target.alpha < 1 ? ' The layer is partly transparent.' : '', n.bindings?.color || ab.timelines.some((t) => t.tracks.some((tr) => tr.nodeId === n.id && tr.prop === 'color')) ? ' A binding or timeline changes its colour, and only the starting colour was checked.' : ''].join('');
+    // Words in a theme colour over a fixed colour: the theme can change one and not the other
+    const tokenText = usesToken(n);
+    if (run.mixed && tokenText && backs.some((b) => !b.unknown && !b.token)) {
+      add(ab, n, 'contrast', 'warning', 'Theme colour on a fixed colour', `${n.name}: its text follows the theme, but what is behind it is a fixed colour that stays the same in every theme, so the two can fall out of step (white text on a fixed white card in Dark, say). Use a theme colour for the background too, or a fixed colour for the text.${hiddenNote}`, { key: `${n.id}:mixed` });
+    }
     if (worst) {
       // A fix needs one colour that clears every colour that is behind the words, and a layer that is not styled or driven from elsewhere
       const all = backs.flatMap((b) => b.colours);
@@ -348,9 +398,9 @@ export function checkAccessibility(project: Project, opts: CheckOptions = {}): A
         if (ownOpacity < 1) set.opacity = 1;
         fix = layerFix(ab, n, `Change the text colour to ${[...new Set(sugg.values())].join(' and ')}${ownOpacity < 1 ? ' and make it opaque' : ''}`, set);
       }
-      add(ab, n, 'contrast', 'issue', 'Low text contrast', `${n.name}: ${Math.round(worst.ratio * 100) / 100}:1 against what is behind it (${worst.colour}); it needs ${worst.need}:1.${changes}${hiddenNote}`, { fix });
+      add(ab, n, 'contrast', 'issue', 'Low text contrast', `${n.name}: ${Math.round(worst.ratio * 100) / 100}:1 against what is behind it (${worst.colour}); it needs ${worst.need}:1.${changes}${hiddenNote}`, { fix, themed: tokenText || backs.some((b) => b.token) });
     } else if (review) {
-      add(ab, n, 'contrast', 'review', 'Text contrast could not be confirmed', `${n.name}: ${review}${changes}${hiddenNote}`);
+      add(ab, n, 'contrast', 'review', 'Text contrast could not be confirmed', `${n.name}: ${review}${changes}${hiddenNote}`, { themed: tokenText || backs.some((b) => b.token) });
     }
   };
 

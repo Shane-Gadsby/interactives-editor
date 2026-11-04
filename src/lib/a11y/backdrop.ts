@@ -4,15 +4,15 @@
  * range (a gradient behind the text) it is a set of possible colours, and where it can't be known at all (a photo, a
  * video, a script layer, a blend mode) the point says so instead of guessing.
  */
-import { apply, fillList, invert, isContainer, multiply, nodeMatrix, type Artboard, type ContainerNode, type ImageFit, type Matrix, type Paint, type Project, type RGBA, type SceneNode } from 'interactives-player';
+import { apply, fillList, invert, isContainer, isTokenRef, multiply, nodeMatrix, type Artboard, type ContainerNode, type ImageFit, type Matrix, type Paint, type Project, type RGBA, type SceneNode } from 'interactives-player';
 import { over, toRgba, type RGB } from './colour';
 
 /** Colours of the part of an image under a point (layer-local pixels). Null: the picture isn't known (not loaded, or not sampled). An empty list: the picture is see-through there. */
 export type ImageColours = (assetId: string, fit: ImageFit | 'none', boxW: number, boxH: number, x: number, y: number) => RGB[] | null;
 
 type Fill =
-  | { kind: 'solid'; rgba: RGBA; alpha: number }
-  | { kind: 'stops'; colours: RGBA[]; alpha: number }
+  | { kind: 'solid'; rgba: RGBA; alpha: number; token?: boolean }
+  | { kind: 'stops'; colours: RGBA[]; alpha: number; token?: boolean }
   | { kind: 'image'; assetId: string; fit: ImageFit | 'none'; alpha: number }
   | { kind: 'unknown'; reason: string };
 
@@ -79,13 +79,13 @@ function paintToFill(p: Paint | null | undefined, alpha = 1): Fill | null {
   switch (p.type) {
     case 'solid': {
       const c = toRgba(p.color);
-      return c ? { kind: 'solid', rgba: c, alpha: a } : { kind: 'unknown', reason: 'a colour that could not be read' };
+      return c ? { kind: 'solid', rgba: c, alpha: a, token: isTokenRef(p.color) } : { kind: 'unknown', reason: 'a colour that could not be read' };
     }
     case 'linear':
     case 'radial': {
       const cols = (p.stops ?? []).map((s) => toRgba(s.color));
       if (!cols.length || cols.some((c) => !c)) return { kind: 'unknown', reason: 'a gradient that could not be read' };
-      return { kind: 'stops', colours: cols as RGBA[], alpha: a };
+      return { kind: 'stops', colours: cols as RGBA[], alpha: a, token: p.stops.some((st) => isTokenRef(st.color)) };
     }
     case 'image':
       return { kind: 'image', assetId: p.assetId, fit: p.fit, alpha: a };
@@ -165,6 +165,8 @@ export interface PointBackdrop {
   unknown: string | null;
   /** True when the colours are a range from a gradient or a picture rather than one flat colour. */
   varies: boolean;
+  /** The colour on top at this point comes from a theme token, not a fixed colour. */
+  token: boolean;
 }
 
 const MAX_COLOURS = 10;
@@ -201,6 +203,8 @@ export function backdropAt(paint: ArtboardPaint, target: Target, x: number, y: n
   let colours: RGB[] = [paint.base];
   let unknown: string | null = null;
   let varies = false;
+  // Whether the colour on top comes from a theme token (the page behind everything is a fixed colour)
+  let token = false;
   for (let i = 0; i < target.before; i++) {
     const item = paint.items[i];
     if (item.hidden.length && !item.hidden.every((id) => target.hidden.includes(id))) continue;
@@ -230,6 +234,8 @@ export function backdropAt(paint: ArtboardPaint, target: Target, x: number, y: n
         top = got.map((c) => [c[0], c[1], c[2], 1] as RGBA);
         varies = true;
       }
+      if (f.kind === 'solid' || f.kind === 'stops') token = !!f.token;
+      else token = false;
       if (top.every((c) => c[3] * alpha >= 0.999)) {
         colours = thin(top.map((c) => [c[0], c[1], c[2]] as RGB));
         unknown = null;
@@ -239,7 +245,7 @@ export function backdropAt(paint: ArtboardPaint, target: Target, x: number, y: n
     }
     if (item.shape === 'approx') unknown = unknown ?? 'a freeform shape';
   }
-  return { colours, unknown, varies };
+  return { colours, unknown, varies, token };
 }
 
 /**

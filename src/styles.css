@@ -6743,3 +6743,281 @@ code {
 .check-row .block {
   display: block;
 }
+
+/* ---- theme tokens: the picker's Tokens tab, linked colours, the Themes panel */
+.theme-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+.theme-switch select {
+  max-width: 130px;
+}
+.picker-tabs {
+  display: flex;
+  gap: 2px;
+  margin: -2px 0 6px;
+  border-bottom: 1px solid var(--line);
+}
+.picker-tabs button {
+  flex: 1;
+  padding: 4px 6px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.picker-tabs button.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.token-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.token-row {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  grid-template-areas: 'sw name' 'sw vals';
+  column-gap: 8px;
+  align-items: center;
+  padding: 4px 6px;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+}
+.token-row:hover,
+.token-row:focus-visible {
+  background: var(--line);
+}
+.token-row.on {
+  border-color: var(--accent);
+}
+.token-row .token-swatch {
+  grid-area: sw;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--line-2);
+}
+.token-row .token-name {
+  grid-area: name;
+  font-size: 12px;
+}
+.token-row .token-values {
+  grid-area: vals;
+}
+.token-row.token-more {
+  display: flex;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.token-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.token-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.token-value i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  border: 1px solid var(--line-2);
+}
+.token-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+.color-field .swatch.linked {
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--accent);
+  overflow: visible;
+}
+.color-field .swatch.linked svg {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  padding: 2px;
+  box-sizing: content-box;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+}
+.token-chip {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  padding: 2px 20px 2px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  font-size: 12px;
+  line-height: 1.25;
+}
+.token-chip.missing {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+.token-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.token-chip .token-values {
+  gap: 0 6px;
+}
+.token-detach {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.token-detach:hover,
+.token-detach:focus-visible {
+  background: var(--line-2);
+  color: var(--text);
+}
+.themes-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.themes-empty {
+  max-width: 560px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.themes-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.themes-raw {
+  color: var(--muted);
+  font-size: 11px;
+}
+.themes-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.themes-table {
+  border-collapse: collapse;
+  align-self: flex-start;
+  margin: 8px 12px;
+}
+.themes-table th,
+.themes-table td {
+  padding: 3px 6px;
+  vertical-align: top;
+  text-align: left;
+  font-weight: 400;
+}
+.themes-table th {
+  border-bottom: 1px solid var(--line);
+}
+.themes-table .tk-theme.shown {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.themes-table .tk-name {
+  min-width: 150px;
+}
+.themes-table .tk-used {
+  text-align: right;
+  color: var(--muted);
+  font-size: 11px;
+}
+.themes-table .theme-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.themes-table .theme-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.themes-table .tk-cell {
+  min-width: 190px;
+}
+.themes-table .tk-cell.warn .color-field .swatch {
+  box-shadow: 0 0 0 2px var(--warn);
+}
+.tk-warn,
+.tk-bad {
+  color: var(--warn-text);
+  font-size: 11px;
+}
+.themes-side {
+  flex: none;
+  width: 280px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-left: 1px solid var(--line);
+}
+.contrast-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 3px 0;
+  font-size: 11px;
+}
+.contrast-sample {
+  flex: none;
+  width: 28px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  font-weight: 600;
+}
+.themes-toolbar .select-field {
+  flex: none;
+}
+.themes-toolbar .select-field select {
+  width: auto;
+  min-width: 140px;
+}

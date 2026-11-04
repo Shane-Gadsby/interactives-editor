@@ -1723,6 +1723,7 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 | \`ix.goTo('Artboard', 'fade')\` | Go to another artboard |
 | \`ix.emit(name, data)\` / \`ix.on(name, fn)\` | Send messages to the host page / react to them |
 | \`ix.announce(text, 'polite' | 'assertive')\` | Say something to screen readers (see [Accessibility](accessibility)) |
+| \`ix.setTheme(name)\` / \`ix.getTheme()\` / \`ix.themes()\` | Show a [theme](themes) by name (\`'auto'\` follows the viewer), read the one showing, list them |
 | \`ix.record(name, value?)\` | Count that something happened, for [Insights](insights) (a name up to 60 characters, a short value) |
 | \`ix.setInstanceInput(layer, name, v)\` / \`ix.getInstanceInput(layer, name)\` / \`ix.fireInstanceTrigger(layer, name, data)\` | Set or read a variable inside an [instance](instances), or send a message into it only |
 | \`ix.onFrame((dt, t) => …)\` | Run every frame |
@@ -1897,6 +1898,50 @@ Uses found by reading script or *Run code* text are marked **?**. A name in code
 The **Broken** group lists references that point at something that has been deleted, such as a button that targets a layer that no longer exists. Click one to go to the thing holding the reference and fix it.`,
   },
   {
+    id: 'themes',
+    title: 'Themes and colour tokens',
+    group: 'Design',
+    summary: 'Name a colour once, give it a value for Light, Dark and High contrast, and let layers follow it.',
+    keywords: 'theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast',
+    body: `A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. Projects with no tokens behave exactly as before.
+
+## The Themes panel
+Open the **Themes** tab (bottom panel). With none yet, **Add Light, Dark and High contrast** makes the three themes and seven starter tokens: background, surface, text, muted, primary, on-primary and border. Then:
+- Each row is a token, each column a theme. Click a colour to change it. **Used** counts the places that follow the token.
+- **+ Theme** copies the default theme. **+ Token** adds a row. Rename either; layers keep following a renamed token.
+- A theme can answer to a **Light** or **Dark scheme**, be marked **High contrast**, and be the **Default**. These decide which theme a viewer gets (see below).
+- **Showing** (and the theme box in the top bar) picks the theme the canvas draws while you edit. It is not saved with the project. Pictures, SVG and PNG exports, and Lottie, write the colours of the theme being shown.
+- **Convert colour styles to tokens** makes a token from every colour style, with its colour in every theme to start with. Layers that follow a style keep following it, now through the token. Styles from a library convert too, and a library update keeps the link.
+- The count at the top says how many plain colours are **not following a theme**.
+
+## Using a token
+In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a named chip replaces the hex box with the token's value in each theme underneath. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
+
+## Imported files keep plain colours
+Lottie, Rive, PSD, SVG and package imports bring their colours in as plain colours. Nothing guesses which colour "is" the primary. Mixing plain and token colours in one project is normal.
+
+## Contrast
+- The Themes panel checks the pairs that matter in every theme, by token name: **color/text** and **color/muted** on **color/background** and **color/surface**, **color/on-primary** on **color/primary**, **color/primary** and **color/border** against **color/background**. A pair that is too low shows its ratio on the cell and in the list.
+- The [Accessibility checker](accessibility-checker) checks text contrast in every theme, not only the one shown. A finding that starts "In Dark:" is about Dark. It offers no automatic fix for text that follows a token, since a fix would write a plain colour over the token.
+- **Theme colour on a fixed colour** is a warning for text that follows a token but sits on a plain colour. The theme changes one and not the other, so white text on a plain white card goes unreadable in Dark.
+
+## How the finished interactive picks a theme
+In this order:
+1. The page or a script chose one: \`player.setTheme('Dark')\`, \`ix.setTheme('Dark')\`, the **Set theme** action, or \`theme="Dark"\` on \`<interactives-player>\`. A message \`{ target: 'interactives', type: 'setTheme', theme: 'Dark' }\` to the single-file export does the same.
+2. Otherwise, with **Follow the viewer's settings** on (the default): a **High contrast** theme for a viewer who asks for more contrast (\`prefers-contrast: more\`) or uses forced colours, a **Dark scheme** theme for \`prefers-color-scheme: dark\`, else the default theme. It changes live when the viewer's setting does.
+3. \`"auto"\` or \`null\` in step 1 goes back to step 2.
+
+\`player.getTheme()\` / \`ix.getTheme()\` give the name showing and \`ix.themes()\` the list. A \`themechange\` event (\`ix-theme\` on the element, with \`{ id, name }\`) says when it changed. The player's stage carries \`data-ix-theme\`.
+
+**Preview** has a theme box (a theme, or follow the viewer), a **Viewer** box to pretend dark mode or more contrast is on, and, with the page option below, a **Host** box.
+
+## Taking colours from the page
+Tick **Map tokens from the page's CSS variables** and a token is read from a CSS variable on the page that holds the player before the theme's own value. The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` to \`--bs-primary\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other. A missing or odd variable just leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
+
+## Not yet
+Tokens are colours only. Fonts, radii and spacing are not tokens. Colours inside script and shader layers, captions settings, and images do not follow themes. A keyframe that animates a colour between two token colours snaps instead of blending.`,
+  },
+  {
     id: 'accessibility-checker',
     title: 'Accessibility checker',
     group: 'Reference',
@@ -1922,7 +1967,7 @@ Click a finding to **select the layer** (and open its artboard). The right side 
 
 | Check | Looks for |
 |---|---|
-| **Text contrast** | Text colour against what is behind it: layers drawn under the text, solid fills, gradients (every stop must pass), pictures (sampled from the file) and the layer's own opacity. Normal text needs 4.5:1, large text (24 px, or 18.66 px and bold) needs 3:1. Rich text is checked run by run. |
+| **Text contrast** | Text colour against what is behind it (in every [theme](themes) when the project has colour tokens): layers drawn under the text, solid fills, gradients (every stop must pass), pictures (sampled from the file) and the layer's own opacity. Normal text needs 4.5:1, large text (24 px, or 18.66 px and bold) needs 3:1. Rich text is checked run by run. |
 | **Small text** | Text under 12 px on the artboard, counting the scale of any group it is in. This is a rule of thumb, not a WCAG number. |
 | **Needs a mouse or touch** | A layer that reacts to a click, hover or drag, is not a Button or link, and has no *On key* interaction that does the same thing. |
 | **No name for assistive technology** | Clickable layers, buttons, links and fields with no text and no ARIA label. A field named only by its placeholder is a probable problem. |
@@ -2379,7 +2424,7 @@ Upload the **Single HTML file** and show it in an iframe. Inside the StudyDesk T
 <script src="interactives-player.iife.js"></script>
 <interactives-player src="scene.ixp" fit="contain" style="width:800px;height:600px"></interactives-player>
 \`\`\`
-Messages the project sends arrive as \`ix-message\` events. Add \`accessibility="off"\` to play without layer roles and keyboard operation (see [Accessibility](accessibility)).
+Messages the project sends arrive as \`ix-message\` events. Add \`accessibility="off"\` to play without layer roles and keyboard operation (see [Accessibility](accessibility)). Add \`theme="Dark"\` to show one of the project's [themes](themes); without it the viewer's colour scheme and contrast settings choose, and \`ix-theme\` events report a change.
 
 ## From JavaScript
 \`\`\`
@@ -2390,6 +2435,7 @@ player.send('addToCart', { sku: 'A1' });
 player.setVariable('score', 10);
 player.timeline('Intro').play();
 player.goTo('Checkout', 'fade');
+player.setTheme('Dark');   // or null to follow the viewer
 player.setData('products', [...]);
 \`\`\``,
   },

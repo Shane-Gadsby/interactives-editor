@@ -3,6 +3,7 @@ import { assetBytes } from './db';
 import { download, fileSafe } from './export';
 import { previewScope } from './data';
 import { editInstanceMount } from '../canvas/instances';
+import { canvasResolver } from './themes';
 import { fontUseIn, neededFonts, type FontNeed } from './font-use';
 
 /** A small JPEG of the start artboard, for the projects page. */
@@ -130,7 +131,7 @@ function dataUrlOf(project: Project, a: Project['assets'][number]): Promise<stri
   return p;
 }
 
-export async function artboardSvg(project: Project, ab: Artboard, timeline: Timeline | null, time: number, opts: { fonts?: boolean } = {}): Promise<{ svg: string; warnings: string[] }> {
+export async function artboardSvg(project: Project, ab: Artboard, timeline: Timeline | null, time: number, opts: { fonts?: boolean; theme?: string | null } = {}): Promise<{ svg: string; warnings: string[] }> {
   const warnings: string[] = [];
   const urls = new Map<string, string>();
   for (const a of project.assets) {
@@ -153,7 +154,9 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
       time: timeline ? time / 1000 : 0,
       ratio: opts.fonts === false ? 1 : 2,
     }));
-    const r = new Renderer({ mode: 'play', placeholderEmbeds: true, resolveAsset: resolve, mountInstance: editInstanceMount(() => project, 0, resolve), mountShader: shaders.mount });
+    const r = new Renderer({ mode: 'play', placeholderEmbeds: true, resolveAsset: resolve, mountInstance: editInstanceMount(() => project, 0, resolve, () => canvasResolver(project, opts.theme ?? null)), mountShader: shaders.mount });
+    // Tokens are written out as the colours of the theme being shown
+    r.setColorResolver(canvasResolver(project, opts.theme ?? null));
     host.appendChild(r.root);
     const vars = previewScope(project, ab);
     const sampled: SceneNode[] = timeline ? sampleArtboard(ab.children, timeline, time) : ab.children;
@@ -189,14 +192,14 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
   }
 }
 
-export async function downloadArtboardSvg(project: Project, ab: Artboard, timeline: Timeline | null, time: number): Promise<string[]> {
-  const { svg, warnings } = await artboardSvg(project, ab, timeline, time);
+export async function downloadArtboardSvg(project: Project, ab: Artboard, timeline: Timeline | null, time: number, theme: string | null = null): Promise<string[]> {
+  const { svg, warnings } = await artboardSvg(project, ab, timeline, time, { theme });
   download(new Blob([svg], { type: 'image/svg+xml' }), `${fileSafe(ab.name)}.svg`);
   return warnings;
 }
 
-export async function downloadArtboardPng(project: Project, ab: Artboard, timeline: Timeline | null, time: number, scale = 2): Promise<string[]> {
-  const { svg, warnings } = await artboardSvg(project, ab, timeline, time);
+export async function downloadArtboardPng(project: Project, ab: Artboard, timeline: Timeline | null, time: number, scale = 2, theme: string | null = null): Promise<string[]> {
+  const { svg, warnings } = await artboardSvg(project, ab, timeline, time, { theme });
   const img = new Image();
   img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   await img.decode();

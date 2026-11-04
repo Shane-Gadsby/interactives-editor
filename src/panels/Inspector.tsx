@@ -166,7 +166,7 @@ export function Color({ node, ids, prop, label }: { node: SceneNode; ids: string
   const set = useSetter(ids);
   return (
     <div className="keyed">
-      <ColorField label={label} value={String(shown(prop) ?? '#000000')} onChange={(c) => set({ [prop]: c })} onCommit={() => store().commit()} />
+      <ColorField label={label} tokens value={String(shown(prop) ?? '#000000')} onChange={(c) => set({ [prop]: c })} onCommit={() => store().commit()} />
       <KeyButton node={node} prop={prop} />
     </div>
   );
@@ -281,14 +281,14 @@ export function PaintField({ paint, onChange, project, allowNone = true, box }: 
         onChange={setType}
         options={[...(allowNone ? [{ value: 'none', label: 'None' }] : []), { value: 'solid', label: 'Solid' }, { value: 'linear', label: 'Linear gradient' }, { value: 'radial', label: 'Radial gradient' }, { value: 'image', label: 'Image' }]}
       />
-      {paint?.type === 'solid' && <ColorField value={paint.color} onChange={(c) => onChange({ ...paint, color: c })} onCommit={() => store().commit()} />}
+      {paint?.type === 'solid' && <ColorField tokens value={paint.color} onChange={(c) => onChange({ ...paint, color: c })} onCommit={() => store().commit()} />}
       {(paint?.type === 'linear' || paint?.type === 'radial') && (
         <>
           {paint.type === 'linear' && !paint.from && !paint.to && <NumberField label="Angle" value={paint.angle} suffix="°" onChange={(a) => onChange({ ...paint, angle: a })} onCommit={() => store().commit()} />}
           <GradientPoints paint={paint} onChange={onChange} box={box ?? { w: 100, h: 100 }} />
           {paint.stops.map((stop, i) => (
             <Row key={i} className="stop-row">
-              <ColorField value={stop.color} onChange={(c) => onChange({ ...paint, stops: paint.stops.map((x, j) => (j === i ? { ...x, color: c } : x)) })} />
+              <ColorField tokens value={stop.color} onChange={(c) => onChange({ ...paint, stops: paint.stops.map((x, j) => (j === i ? { ...x, color: c } : x)) })} />
               <NumberField
                 value={Math.round(stop.offset * 100)}
                 suffix="%"
@@ -831,7 +831,7 @@ function RunsEditor({ node: n }: { node: Extract<SceneNode, { type: 'text' }> })
                   <IconButton icon={<i>I</i>} title="Italic" active={r.italic ?? n.fontStyle === 'italic'} onClick={() => toggle(i, 'italic', n.fontStyle === 'italic')} />
                   <IconButton icon={<u>U</u>} title="Underline" active={r.underline ?? n.textDecoration === 'underline'} onClick={() => toggle(i, 'underline', n.textDecoration === 'underline')} />
                   <IconButton icon={<s>S</s>} title="Strikethrough" active={r.strike ?? n.textDecoration === 'line-through'} onClick={() => toggle(i, 'strike', n.textDecoration === 'line-through')} />
-                  <ColorField value={r.color ?? n.color} onChange={(c) => edit(i, { color: c }, `run-color-${n.id}-${i}`)} onCommit={() => store().commit()} title="Colour of this run" />
+                  <ColorField tokens value={r.color ?? n.color} onChange={(c) => edit(i, { color: c }, `run-color-${n.id}-${i}`)} onCommit={() => store().commit()} title="Colour of this run" />
                   <NumberField value={r.fontSize ?? n.fontSize} min={1} onChange={(v) => edit(i, { fontSize: v }, `run-size-${n.id}-${i}`)} onCommit={() => store().commit()} title="Size of this run" />
                 </div>
                 <div className="run-tools">

@@ -54,6 +54,7 @@ import { Icons } from '../components/icons';
 import { freehandToPath } from './freehand';
 import { ArtboardView, holdView, whenViewDrawn } from './ArtboardView';
 import { hasCachedStill, stillHash } from '../lib/still-cache';
+import { shownTheme } from '../lib/themes';
 import { viewPlan } from './viewPlan';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
 import { ADD_POINT_CURSOR, BEND_CURSOR, BONE_CHAIN_CURSOR, PEN_CLOSE_CURSOR, dragCursor, resizeCursor, rotateCursor, rotateCursorAt, toolCursor } from './cursors';
@@ -135,6 +136,7 @@ export function Canvas() {
     activeTimelineId: st.activeTimelineId,
     playhead: st.playhead,
     previewPlaying: st.previewPlaying,
+    canvasTheme: st.canvasTheme,
   }));
   const assetVersion = useSyncExternalStore(
     (fn) => assetUrls.subscribe(fn),
@@ -1815,7 +1817,7 @@ export function Canvas() {
   // and never for longer than OPENING_MAX. (Whether they are in view isn't known yet: the workspace fits the zoom after this first
   // render. A project of a few artboards isn't worth it.)
   const [opening, setOpening] = useState(() => onCanvas.length > 3);
-  const [allSaved] = useState(() => onCanvas.every((ab) => ab.id === s.activeArtboardId || hasCachedStill(project.id, ab.id, stillHash(project, ab))));
+  const [allSaved] = useState(() => onCanvas.every((ab) => ab.id === s.activeArtboardId || hasCachedStill(project.id, ab.id, stillHash(project, ab, shownTheme(project, s.canvasTheme)?.id ?? null))));
   useEffect(() => {
     if (!opening) return;
     let off = false;
@@ -1874,6 +1876,7 @@ export function Canvas() {
             assetVersion={assetVersion}
             dataVersion={dataVersion}
             live={ab.id === s.activeArtboardId}
+            canvasTheme={s.canvasTheme}
           />
         ))}
       </div>

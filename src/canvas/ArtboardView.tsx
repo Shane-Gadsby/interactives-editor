@@ -4,6 +4,7 @@ import { flushSync } from 'react-dom';
 import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
+import { canvasResolver, shownTheme } from '../lib/themes';
 import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
 import { createEditorShader, type EditorShader } from '../lib/shader-edit';
 import { assetUrls } from '../lib/assets';
@@ -30,6 +31,8 @@ interface Props {
   deferred?: boolean;
   /** How far the artboard is from the viewport (0 when it is in it): the nearest deferred ones are drawn first. */
   rank?: number;
+  /** The theme (id) whose colours theme tokens are drawn with; null is the project's default. */
+  canvasTheme?: string | null;
 }
 
 /** A picture standing in for an artboard that isn't live (an SVG made of its DOM) */
@@ -134,7 +137,10 @@ const idle = () => new Promise<void>((r) => ((window as unknown as { requestIdle
 let snapSeq = 0;
 
 /** One artboard on the canvas, drawn by the player's own renderer in edit mode. */
-export function ArtboardView({ artboard, project, timeline, time, active, assetVersion, dataVersion, live, deferred = false, rank = 0 }: Props) {
+export function ArtboardView({ artboard, project, timeline, time, active, assetVersion, dataVersion, live, deferred = false, rank = 0, canvasTheme = null }: Props) {
+  // What theme tokens are drawn as (the same function while neither the themes nor the theme shown change)
+  const resolver = canvasResolver(project, canvasTheme);
+  const themeSig = `${project.themes ? snapKey(project.themes) : 0}|${shownTheme(project, canvasTheme)?.id ?? ''}`;
   const host = useRef<HTMLDivElement>(null);
   const renderer = useRef<Renderer | null>(null);
   // The faint copy of the layers hanging outside a clipping artboard (see ghost.ts): a second renderer for just those layers
@@ -148,9 +154,9 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
 
   // What the artboard looks like, as one image, while you work elsewhere (see the stills below). One saved from the last session
   // is here from the first render, so the artboard is never an empty background that fills in later.
-  const key = `${snapKey(artboard)}|${depsKey}|${assetVersion}|${dataVersion}|${snapKey(project.variables)}|${snapKey(project.fonts)}`;
+  const key = `${snapKey(artboard)}|${depsKey}|${assetVersion}|${dataVersion}|${snapKey(project.variables)}|${snapKey(project.fonts)}|${themeSig}`;
   const [snap, setSnap] = useState<Snap | null>(() => {
-    const url = active ? null : cachedStill(project.id, artboard.id, stillHash(project, artboard));
+    const url = active ? null : cachedStill(project.id, artboard.id, stillHash(project, artboard, shownTheme(project, canvasTheme)?.id ?? null));
     return url ? { url, key } : null;
   });
 
@@ -168,7 +174,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   // What was drawn last, so a change to a few layers (a keystroke in a field, a timeline frame) redraws just those.
   // Tied to the renderer it was drawn into: a new renderer has drawn nothing, whatever the props say.
   // (Declared above the renderer effect, whose cleanup clears it.)
-  const lastDraw = useRef<{ renderer: Renderer; artboard: Artboard; variables: unknown; dataSources: unknown; assetVersion: number; dataVersion: number; depsKey: string; nodes: SceneNode[]; plain: boolean } | null>(null);
+  const lastDraw = useRef<{ renderer: Renderer; resolver: unknown; artboard: Artboard; variables: unknown; dataSources: unknown; assetVersion: number; dataVersion: number; depsKey: string; nodes: SceneNode[]; plain: boolean } | null>(null);
 
   // A layout effect, declared before the render one, so the renderer exists for the very first render.
   useLayoutEffect(() => {
@@ -176,7 +182,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     const d = createEditorDraw(() => store().get().project);
     // Shaders paint a still frame each (or run live when the layer asks to), on one shared WebGL context
     const sh = createEditorShader(() => store().get().project);
-    const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve, mountInstance: editInstanceMount(() => store().get().project), mountDraw: d.mount, mountShader: sh.mount });
+    const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve, mountInstance: editInstanceMount(() => store().get().project, 0, assetUrls.resolve, () => canvasResolver(store().get().project, store().get().canvasTheme)), mountDraw: d.mount, mountShader: sh.mount });
     renderer.current = r;
     draw.current = d;
     shader.current = sh;
@@ -199,6 +205,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   useLayoutEffect(() => {
     const r = renderer.current;
     if (!r || !started) return;
+    r.setColorResolver(resolver);
     const last = lastDraw.current;
     const sampled: SceneNode[] = timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children;
     let drawn = false;
@@ -207,7 +214,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     // Nothing derived from the whole tree (bindings, repeaters, constraints, layout, script layers, instances) and nothing
     // else the drawing depends on changed: find the layers that did (immer shares the rest, so this only follows what
     // changed) and redraw just those. Any change in structure, or anything unusual, draws the whole artboard instead
-    if (last?.plain && last.renderer === r && last.variables === project.variables && last.dataSources === project.dataSources && last.assetVersion === assetVersion && last.dataVersion === dataVersion && last.depsKey === depsKey && sameFrame(last.artboard, artboard)) {
+    if (last?.plain && last.renderer === r && last.resolver === resolver && last.variables === project.variables && last.dataSources === project.dataSources && last.assetVersion === assetVersion && last.dataVersion === dataVersion && last.depsKey === depsKey && sameFrame(last.artboard, artboard)) {
       const changed = new Map<string, SceneNode>();
       if (diffTrees(last.nodes, sampled, changed)) {
         drawn = !changed.size || r.updateNodes(changed.keys(), changed);
@@ -228,7 +235,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       if (!timeline) recordDrawnGeometry(artboard.id, artboard.children, nodes);
       let plain = nodes === sampled;
       if (plain) walk(sampled, (n) => void (plain &&= !drawnDifferently(n)));
-      lastDraw.current = { renderer: r, artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };
+      lastDraw.current = { renderer: r, resolver, artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };
     }
     // Layers past the edge of an artboard that clips: a faint copy of just those, outside the artboard only
     const ghost = ghostOutside && artboard.clip ? ghostLayers(shown, artboard.width, artboard.height) : null;
@@ -294,7 +301,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, depsKey, started, live, ghostOutside]);
+  }, [artboard, project.variables, project.dataSources, timeline, time, assetVersion, dataVersion, depsKey, started, live, ghostOutside, resolver]);
 
   // ---- stills
   const keyRef = useRef(key);
@@ -316,7 +323,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
         }
         setSnap({ url, key });
         // For the next session (the key just confirmed this is the artboard as it is now)
-        saveStill(store().get().project.id, artboard.id, stillHash(store().get().project, artboard), url);
+        saveStill(store().get().project.id, artboard.id, stillHash(store().get().project, artboard, shownTheme(project, canvasTheme)?.id ?? null), url);
       } catch (err) {
         console.warn('[interactives] artboard still failed', mine, err);
       }
