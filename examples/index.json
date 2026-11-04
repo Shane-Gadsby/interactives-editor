@@ -1,0 +1,293 @@
+[
+	{
+		"key": "first-animation",
+		"title": "First animation",
+		"description": "A box animated on a timeline: the project the First animation tutorial builds. Play it, then make your copy and change the keyframes.",
+		"group": "Getting started",
+		"tags": [
+			"tutorial",
+			"timeline"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "first-interaction",
+		"title": "First interaction",
+		"description": "A button that slides a box, with an On pointer event and an action in the interaction graph: the First interaction tutorial's project.",
+		"group": "Getting started",
+		"tags": [
+			"tutorial",
+			"interactions"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "lamp",
+		"title": "Lamp",
+		"description": "A bulb switched by a button through a boolean variable, with a tap counter in the text and a binding that follows the variable.",
+		"group": "Getting started",
+		"tags": [
+			"tutorial",
+			"variables"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "canvas-tour",
+		"title": "Canvas tour",
+		"description": "Two artboards with a sun, a title and pictures: something to pan, zoom, select and rearrange while you learn the canvas and the Layers panel.",
+		"group": "Getting started",
+		"tags": [
+			"tour",
+			"artboards",
+			"images"
+		],
+		"artboards": 2,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "blends",
+		"title": "Blends",
+		"description": "A ball that mixes between two poses as you drag a slider: a 1D blend of two timelines.",
+		"group": "Animation",
+		"tags": [
+			"blends",
+			"timeline"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "grid-and-stack",
+		"title": "Grid and stack layouts",
+		"description": "A gallery of tiles laid out as a grid, and a badge stack, with alignment, gaps and spans.",
+		"group": "Layout",
+		"tags": [
+			"auto-layout"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 700,
+			"height": 460,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "layout-item",
+		"title": "Layout item",
+		"description": "A toolbar and cards where each child sizes itself differently: fixed, hug, fill, percent, grow and aspect ratio.",
+		"group": "Layout",
+		"tags": [
+			"auto-layout"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 600,
+			"height": 500,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "line-gap",
+		"title": "Line gap",
+		"description": "A wrapping row of cards, to see how the gap between rows and between items is set.",
+		"group": "Layout",
+		"tags": [
+			"auto-layout"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 520,
+			"height": 410,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "paint-order",
+		"title": "Paint order",
+		"description": "One shape with a fill and two strokes, drawn in different orders.",
+		"group": "Drawing",
+		"tags": [
+			"fills",
+			"strokes"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 400,
+			"height": 390,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "ui-layers",
+		"title": "Layers and web controls",
+		"description": "A card with a headline, a button, a name field, a link, a video and an embed, shapes and paths, driven by three variables and a few interactions.",
+		"group": "Web elements",
+		"tags": [
+			"buttons",
+			"inputs",
+			"video"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 900,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "script-and-shader",
+		"title": "Script, shader and bones",
+		"description": "A box painted by JavaScript every frame, a box painted by a GPU shader, wavy text, and a two-bone chain moving a picture.",
+		"group": "Drawing",
+		"tags": [
+			"script",
+			"shader",
+			"bones"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 900,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "dusk-poster",
+		"title": "Dusk poster",
+		"description": "A vector poster (39 paths and gradients) brought in from a VectorCraft file.",
+		"group": "Drawing",
+		"tags": [
+			"illustration",
+			"paths"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 600,
+			"height": 800,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "little-house",
+		"title": "Little house",
+		"description": "A line drawing of a house, from a VectorCraft file: walls, roof and a sun in groups.",
+		"group": "Drawing",
+		"tags": [
+			"illustration",
+			"paths"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 1320,
+			"height": 1640,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "rive-breathing",
+		"title": "Breathing for calm (imported from Rive)",
+		"description": "A guided breathing exercise imported from a Rive file: a splash screen, choices, progress bubbles and an end screen, with its states and transitions mapped onto timelines and the interaction graph.",
+		"group": "Imported",
+		"tags": [
+			"rive",
+			"import",
+			"interactive"
+		],
+		"artboards": 18,
+		"preview": {
+			"width": 850,
+			"height": 850,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "text-patterns",
+		"title": "Text patterns",
+		"description": "Text with regular expressions in its {} slots: a phone number found in a sentence, a date reformatted, and a pattern that is refused because it could take forever.",
+		"group": "Web elements",
+		"tags": [
+			"text",
+			"expressions"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 520,
+			"height": 170,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "bones",
+		"title": "Bones and IK",
+		"description": "A three-bone arm with a skinned shape, a draggable orange dot the tip chases (IK), and a Wave timeline on a button. The project the Try bones in two minutes steps build.",
+		"group": "Animation",
+		"tags": [
+			"bones",
+			"ik",
+			"timeline"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "matching-question",
+		"title": "Matching question",
+		"description": "Drag each country onto its capital city: a ready-made matching question with scoring, a hint and feedback. Play it, then make your copy and change the pairs.",
+		"group": "Questions",
+		"tags": [
+			"question",
+			"matching",
+			"drag-and-drop"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "hotspot-question",
+		"title": "Hotspot question",
+		"description": "Click the roof of the house: a ready-made hotspot question with a picture, four areas, scoring, a hint and feedback. Play it, then make your copy and change the picture and the right area.",
+		"group": "Questions",
+		"tags": [
+			"question",
+			"hotspot"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	}
+]

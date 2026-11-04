@@ -1,0 +1,72 @@
+import playerSource from '@player-iife?raw';
+import { buildStandaloneHtml, PACKAGE_EXTENSION, type Asset, type Project } from 'interactives-player';
+import { hasScriptLayers } from './draw-templates';
+import { assetBytes, exportPackage } from './db';
+import { extOf, reportError, track } from './analytics';
+
+export function download(blob: Blob, filename: string): void {
+  // What kind of file and how big, never its name
+  track('export', 'download', { thing: extOf(filename), sum: { kb: Math.round(blob.size / 1024) } });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+export function fileSafe(name: string): string {
+  return name.replace(/[^\w.\- ]+/g, '').trim().replace(/\s+/g, '-') || 'project';
+}
+
+/** The sandbox (~735 kB) is only fetched when a project runs scripts in it. */
+let sandboxSource: Promise<string> | null = null;
+function loadSandboxSource(): Promise<string> {
+  sandboxSource ??= import('@player-sandbox-iife?raw').then((m) => m.default);
+  return sandboxSource;
+}
+
+/** The project without its links to files on this computer (what an export or a share shouldn't carry). */
+export function withoutLinks(project: Project): Project {
+  if (!project.artboards.some((a) => a.source)) return project;
+  return { ...project, artboards: project.artboards.map(({ source: _source, ...a }) => a) };
+}
+
+export async function standaloneHtml(project: Project, opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; bytesFor?: (asset: Asset) => Promise<Uint8Array | null> } = {}): Promise<string> {
+  const clean = withoutLinks(project);
+  const p = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
+  const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
+  return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: opts.bytesFor ?? ((a) => assetBytes(project.id, a)), debug: opts.debug, accessibility: opts.accessibility });
+}
+
+function hasCodeNodes(p: Project): boolean {
+  return p.artboards.some((a) => a.logic.nodes.some((n) => n.kind === 'action.code' || n.kind === 'action.script'));
+}
+
+export async function downloadStandalone(project: Project): Promise<void> {
+  const html = await failsAs('export', 'html', () => standaloneHtml(project));
+  download(new Blob([html], { type: 'text/html' }), `${fileSafe(project.name)}.html`);
+}
+
+export async function downloadPackage(project: Project): Promise<void> {
+  const blob = await failsAs('export', 'ixp', () => exportPackage(withoutLinks(project)));
+  download(blob, `${fileSafe(project.name)}${PACKAGE_EXTENSION}`);
+}
+
+export function downloadJson(project: Project): void {
+  download(new Blob([JSON.stringify(withoutLinks(project), null, 2)], { type: 'application/json' }), `${fileSafe(project.name)}.json`);
+}
+
+export { playerSource };
+
+/** Runs an export step; if it throws, the fault is reported (the format and the kind of failure, nothing of the project) and goes on up. */
+async function failsAs<T>(kind: string, format: string, step: () => Promise<T>): Promise<T> {
+  try {
+    return await step();
+  } catch (err) {
+    reportError({ kind, error: err, where: format, detail: { format } });
+    throw err;
+  }
+}
