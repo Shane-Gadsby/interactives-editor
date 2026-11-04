@@ -1043,9 +1043,24 @@ hr.item-sep {
   height: 24px;
   max-width: 120px;
   font-size: 11px;
+  /* shrinks before the buttons do, so small cards don't push it past their edge */
+  flex: 0 1 auto;
+  min-width: 0;
 }
 .project-actions {
   align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.project-actions .icon-btn {
+  flex: none;
+}
+.project-card {
+  min-width: 0;
+}
+.project-info {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 @media (max-width: 760px) {
   .home-body {
