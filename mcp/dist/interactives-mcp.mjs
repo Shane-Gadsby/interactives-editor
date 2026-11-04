@@ -1196,7 +1196,7 @@ function parseQuantifier(src, i) {
 }
 function checkPattern(src, flags = "") {
   if (src.length > MAX_PATTERN) throw new RegexRefused(`the pattern is longer than ${MAX_PATTERN} characters`);
-  const stack = [];
+  const stack2 = [];
   let cur = newGroup();
   let unbounded = 0;
   const nestedClasses = flags.includes("v");
@@ -1242,13 +1242,13 @@ function checkPattern(src, flags = "") {
         j += 1 + (m ? m[0].length : 0);
       }
       noteAtom(null, null);
-      stack.push(cur);
+      stack2.push(cur);
       cur = newGroup();
       i = j;
       last = void 0;
     } else if (c2 === ")") {
       const done = cur;
-      const parent = stack.pop();
+      const parent = stack2.pop();
       if (!parent) throw new RegexRefused("the parentheses do not match");
       cur = parent;
       cur.multi ||= done.multi;
@@ -1298,7 +1298,7 @@ function checkPattern(src, flags = "") {
       }
     }
   }
-  if (stack.length) throw new RegexRefused("the parentheses do not match");
+  if (stack2.length) throw new RegexRefused("the parentheses do not match");
   if (cur.work > MAX_WORK) throw new RegexRefused("too many optional or bounded parts that can overlap, like a?a?a?...a?aaa... or a{0,30}a{0,30}a{0,30}");
   return { unbounded, work: cur.work };
 }
@@ -1330,6 +1330,924 @@ function assertSafeMatch(source, flags, text) {
   assertSafePattern(source, flags);
   const { limit } = verdict(source, flags);
   if (text.length > limit) throw new RegexRefused(`Text is too long to match against this pattern (${text.length} characters; the limit is ${limit})`);
+}
+class RegexBudget extends RegexRefused {
+}
+const STEP_BUDGET = 3e5;
+const WINDOW_STEPS = 4e6;
+const WINDOW_MS = 250;
+const MAX_PROGRAM = 4e3;
+const MAX_STATES = 6e6;
+const isWord = (c2) => c2 >= 48 && c2 <= 57 || c2 >= 65 && c2 <= 90 || c2 === 95 || c2 >= 97 && c2 <= 122;
+const isDigit = (c2) => c2 >= 48 && c2 <= 57;
+const isSpace = (c2) => c2 === 32 || c2 >= 9 && c2 <= 13 || c2 === 160 || c2 === 5760 || c2 >= 8192 && c2 <= 8202 || c2 === 8232 || c2 === 8233 || c2 === 8239 || c2 === 8287 || c2 === 12288 || c2 === 65279;
+const isLine = (c2) => c2 === 10 || c2 === 13 || c2 === 8232 || c2 === 8233;
+const propCache = /* @__PURE__ */ new Map();
+function property(name, negated) {
+  const key = (negated ? "P" : "p") + name;
+  let f2 = propCache.get(key);
+  if (!f2) {
+    const re = new RegExp(`^\\${negated ? "P" : "p"}{${name}}$`, "u");
+    const memo = /* @__PURE__ */ new Map();
+    f2 = (cp) => {
+      let v = memo.get(cp);
+      if (v === void 0) {
+        v = re.test(String.fromCodePoint(cp));
+        if (memo.size > 4e3) memo.clear();
+        memo.set(cp, v);
+      }
+      return v;
+    };
+    propCache.set(key, f2);
+  }
+  return f2;
+}
+const refuse = (why) => {
+  throw new RegexRefused(`Pattern not allowed: ${why}`);
+};
+function parse(src, flags) {
+  const u = flags.u;
+  let p = 0;
+  let ncap = 0;
+  const names = [void 0];
+  const hasNamed = /\(\?<[^=!]/.test(src);
+  const peek = () => src[p];
+  const next = () => {
+    const cp = u ? src.codePointAt(p) : src.charCodeAt(p);
+    p += cp > 65535 ? 2 : 1;
+    return cp;
+  };
+  function alternation() {
+    const list = [sequence()];
+    while (peek() === "|") {
+      p++;
+      list.push(sequence());
+    }
+    return list.length === 1 ? list[0] : { t: "alt", list };
+  }
+  function sequence() {
+    const list = [];
+    while (p < src.length && peek() !== "|" && peek() !== ")") list.push(term());
+    return list.length === 0 ? { t: "empty" } : list.length === 1 ? list[0] : { t: "cat", list };
+  }
+  function braces() {
+    const m = /^\{(\d+)(?:(,)(\d*))?\}/.exec(src.slice(p, p + 24));
+    if (!m) return null;
+    const min = Number(m[1]);
+    const max = m[2] ? m[3] === "" ? Infinity : Number(m[3]) : min;
+    p += m[0].length;
+    return [min, max];
+  }
+  function term() {
+    const c2 = peek();
+    const capStart = ncap;
+    let node2;
+    let quantifiable = true;
+    if (c2 === "^") {
+      p++;
+      return { t: "assert", k: "bol" };
+    } else if (c2 === "$") {
+      p++;
+      return { t: "assert", k: "eol" };
+    } else if (c2 === "(") {
+      p++;
+      if (src.startsWith("?:", p)) {
+        p += 2;
+        node2 = alternation();
+      } else if (src.startsWith("?=", p) || src.startsWith("?!", p)) {
+        const neg = src[p + 1] === "!";
+        p += 2;
+        node2 = { t: "look", behind: false, neg, node: alternation() };
+        quantifiable = !u;
+      } else if (src.startsWith("?<=", p) || src.startsWith("?<!", p)) {
+        const neg = src[p + 2] === "!";
+        p += 3;
+        node2 = { t: "look", behind: true, neg, node: alternation() };
+        quantifiable = false;
+      } else if (src.startsWith("?<", p)) {
+        const end = src.indexOf(">", p);
+        const name = src.slice(p + 2, end);
+        p = end + 1;
+        const idx = ++ncap;
+        names[idx] = name;
+        node2 = { t: "group", idx, node: alternation() };
+      } else if (peek() === "?") {
+        return refuse("this group syntax is not supported");
+      } else {
+        const idx = ++ncap;
+        names[idx] = void 0;
+        node2 = { t: "group", idx, node: alternation() };
+      }
+      if (peek() !== ")") return refuse("unbalanced parentheses");
+      p++;
+    } else if (c2 === ".") {
+      p++;
+      node2 = { t: "any" };
+    } else if (c2 === "[") {
+      p++;
+      node2 = { t: "class", cls: classBody() };
+    } else if (c2 === "\\") {
+      p++;
+      const e = escape(false);
+      if (typeof e === "object" && "assert" in e) return { t: "assert", k: e.assert };
+      node2 = typeof e === "number" ? { t: "char", c: e } : { t: "class", cls: e };
+    } else if (c2 === "*" || c2 === "+" || c2 === "?") {
+      return refuse("nothing to repeat");
+    } else if (c2 === "{" && !u && braces() === null) {
+      p++;
+      node2 = { t: "char", c: 123 };
+    } else if (c2 === "{" && !u) {
+      return refuse("nothing to repeat");
+    } else {
+      node2 = { t: "char", c: next() };
+    }
+    let min = -1;
+    let max = -1;
+    const q = peek();
+    if (q === "*") min = 0, max = Infinity, p++;
+    else if (q === "+") min = 1, max = Infinity, p++;
+    else if (q === "?") min = 0, max = 1, p++;
+    else if (q === "{") {
+      const b = braces();
+      if (b) [min, max] = b;
+    }
+    if (min < 0) return node2;
+    if (!quantifiable) return refuse("a repeated lookaround");
+    if (max < min) return refuse("numbers out of order in {} quantifier");
+    let greedy = true;
+    if (peek() === "?") {
+      greedy = false;
+      p++;
+    }
+    return { t: "rep", node: node2, min, max, greedy, lo: capStart + 1, hi: ncap + 1 };
+  }
+  const hex = (n) => {
+    const s = src.slice(p, p + n);
+    if (s.length === n && /^[0-9a-fA-F]+$/.test(s)) {
+      p += n;
+      return parseInt(s, 16);
+    }
+    return null;
+  };
+  function escape(inClass) {
+    if (p >= src.length) return refuse("a pattern cannot end with a backslash");
+    const c2 = src[p++];
+    switch (c2) {
+      case "d":
+        return { test: isDigit };
+      case "D":
+        return { test: (x) => !isDigit(x) };
+      case "w":
+        return { test: isWord };
+      case "W":
+        return { test: (x) => !isWord(x) };
+      case "s":
+        return { test: isSpace };
+      case "S":
+        return { test: (x) => !isSpace(x) };
+      case "b":
+        return inClass ? 8 : { assert: "wb" };
+      case "B":
+        return inClass ? refuse("\\B in a class") : { assert: "nwb" };
+      case "f":
+        return 12;
+      case "n":
+        return 10;
+      case "r":
+        return 13;
+      case "t":
+        return 9;
+      case "v":
+        return 11;
+      case "0":
+        if (isDigit(src.charCodeAt(p))) return refuse("octal escapes");
+        return 0;
+      case "c": {
+        const l = src[p];
+        if (l && /[A-Za-z]/.test(l)) {
+          p++;
+          return l.charCodeAt(0) % 32;
+        }
+        return 92;
+      }
+      case "x": {
+        const v = hex(2);
+        return v ?? 120;
+      }
+      case "u": {
+        if (u && src[p] === "{") {
+          const end = src.indexOf("}", p);
+          const v2 = parseInt(src.slice(p + 1, end), 16);
+          p = end + 1;
+          return v2;
+        }
+        const v = hex(4);
+        if (v === null) return 117;
+        if (u && v >= 55296 && v <= 56319 && src.startsWith("\\u", p)) {
+          const save = p;
+          p += 2;
+          const lo = hex(4);
+          if (lo !== null && lo >= 56320 && lo <= 57343) return (v - 55296) * 1024 + (lo - 56320) + 65536;
+          p = save;
+        }
+        return v;
+      }
+      case "p":
+      case "P": {
+        if (!u) return c2.charCodeAt(0);
+        const end = src.indexOf("}", p);
+        const name = src.slice(p + 1, end);
+        p = end + 1;
+        return { test: property(name, c2 === "P") };
+      }
+      case "k":
+        return hasNamed ? refuse("named backreferences") : 107;
+      default:
+        if (c2 >= "1" && c2 <= "9") return refuse("backreferences");
+        if (c2 === "-" && !inClass && u) return 45;
+        {
+          p--;
+          return next();
+        }
+    }
+  }
+  function classBody() {
+    let neg = false;
+    if (peek() === "^") {
+      neg = true;
+      p++;
+    }
+    const ranges = [];
+    const tests = [];
+    const atom = () => {
+      if (peek() === "\\") {
+        p++;
+        return escape(true);
+      }
+      return next();
+    };
+    while (p < src.length && peek() !== "]") {
+      const a = atom();
+      if (peek() === "-" && src[p + 1] !== "]" && p + 1 < src.length) {
+        p++;
+        const b = atom();
+        if (typeof a === "number" && typeof b === "number") {
+          ranges.push(a, b);
+          continue;
+        }
+        if (u) return refuse("a class range that is not a range");
+        if (typeof a === "number") ranges.push(a, a);
+        else tests.push(a.test);
+        ranges.push(45, 45);
+        if (typeof b === "number") ranges.push(b, b);
+        else tests.push(b.test);
+        continue;
+      }
+      if (typeof a === "number") ranges.push(a, a);
+      else tests.push(a.test);
+    }
+    if (peek() !== "]") return refuse("unterminated class");
+    p++;
+    const n = ranges.length;
+    const raw = (cp) => {
+      for (let i = 0; i < n; i += 2) if (cp >= ranges[i] && cp <= ranges[i + 1]) return true;
+      for (let i = 0; i < tests.length; i++) if (tests[i](cp)) return true;
+      return false;
+    };
+    const test = flags.i ? (cp) => {
+      if (raw(cp)) return true;
+      const s = String.fromCodePoint(cp);
+      const lo = s.toLowerCase();
+      const up = s.toUpperCase();
+      return lo.length === s.length && lo !== s && raw(lo.codePointAt(0)) || up.length === s.length && up !== s && raw(up.codePointAt(0));
+    } : raw;
+    const ascii = new Uint8Array(128);
+    for (let i = 0; i < 128; i++) ascii[i] = test(i) !== neg ? 1 : 0;
+    return { test: (cp) => cp < 128 ? ascii[cp] === 1 : test(cp) !== neg };
+  }
+  const node = alternation();
+  if (p < src.length) refuse("unbalanced parentheses");
+  return { node, ncap: ncap + 1, names };
+}
+function widthOf(n, u) {
+  const unit = u ? 2 : 1;
+  switch (n.t) {
+    case "empty":
+    case "assert":
+    case "look":
+      return [0, 0];
+    case "char":
+      return [n.c > 65535 ? 2 : 1, n.c > 65535 ? 2 : 1];
+    case "any":
+    case "class":
+      return [1, unit];
+    case "cat": {
+      let lo = 0;
+      let hi = 0;
+      for (const x of n.list) {
+        const [a, b] = widthOf(x, u);
+        lo += a;
+        hi += b;
+      }
+      return [lo, hi];
+    }
+    case "alt": {
+      let lo = Infinity;
+      let hi = 0;
+      for (const x of n.list) {
+        const [a, b] = widthOf(x, u);
+        lo = Math.min(lo, a);
+        hi = Math.max(hi, b);
+      }
+      return [lo, hi];
+    }
+    case "group":
+      return widthOf(n.node, u);
+    case "rep": {
+      const [a, b] = widthOf(n.node, u);
+      return [a * n.min, n.max === Infinity ? b === 0 ? 0 : Infinity : b * n.max];
+    }
+  }
+}
+function canon(cp, u) {
+  const s = String.fromCodePoint(cp);
+  if (u) {
+    const l = s.toLowerCase();
+    return l.length === s.length ? l.codePointAt(0) : cp;
+  }
+  const up = s.toUpperCase();
+  if (up.length !== s.length) return cp;
+  const c2 = up.charCodeAt(0);
+  return cp >= 128 && c2 < 128 ? cp : c2;
+}
+function compileProgram(source, flagText) {
+  const f2 = { g: flagText.includes("g"), y: flagText.includes("y"), d: flagText.includes("d"), i: flagText.includes("i"), m: flagText.includes("m"), s: flagText.includes("s"), u: flagText.includes("u") };
+  const { node, ncap, names } = parse(source, f2);
+  const op = [];
+  const a = [];
+  const b = [];
+  const classes = [];
+  const widths = /* @__PURE__ */ new Map();
+  let nloops = 0;
+  const active = [];
+  const encl = [];
+  let deepest = 0;
+  const emit = (o, x = 0, y = 0) => {
+    if (op.length >= MAX_PROGRAM) refuse("too big once its repeats are counted out");
+    op.push(o);
+    encl.push(active.length ? active.slice(-3) : null);
+    if (active.length > deepest) deepest = Math.min(active.length, 3);
+    a.push(x);
+    b.push(y);
+    return op.length - 1;
+  };
+  function gen(n) {
+    switch (n.t) {
+      case "empty":
+        return;
+      case "char": {
+        if (f2.i) {
+          const c2 = canon(n.c, f2.u);
+          const s = String.fromCodePoint(n.c);
+          if (s.toLowerCase() !== s.toUpperCase()) {
+            const lo = s.toLowerCase();
+            const up = s.toUpperCase();
+            if (lo.length === s.length && up.length === s.length) {
+              classes.push({ test: (cp) => cp === n.c || canon(cp, f2.u) === c2 });
+              emit(2, classes.length - 1);
+              return;
+            }
+          }
+        }
+        emit(0, n.c);
+        return;
+      }
+      case "any":
+        emit(
+          1
+          /* Any */
+        );
+        return;
+      case "class":
+        classes.push(n.cls);
+        emit(2, classes.length - 1);
+        return;
+      case "assert":
+        emit(
+          n.k === "bol" ? 3 : n.k === "eol" ? 4 : n.k === "wb" ? 5 : 6
+          /* Nwb */
+        );
+        return;
+      case "cat":
+        for (const x of n.list) gen(x);
+        return;
+      case "alt": {
+        const jumps = [];
+        for (let k = 0; k < n.list.length; k++) {
+          if (k < n.list.length - 1) {
+            const sp = emit(
+              8
+              /* Split */
+            );
+            a[sp] = op.length;
+            gen(n.list[k]);
+            jumps.push(emit(
+              9
+              /* Jmp */
+            ));
+            b[sp] = op.length;
+          } else gen(n.list[k]);
+        }
+        for (const j of jumps) a[j] = op.length;
+        return;
+      }
+      case "group":
+        emit(7, n.idx * 2);
+        gen(n.node);
+        emit(7, n.idx * 2 + 1);
+        return;
+      case "look": {
+        const at = emit(11, n.neg ? 1 : 0, 0);
+        op[at] = 11;
+        if (n.behind) {
+          a[at] |= 2;
+          widths.set(at, widthOf(n.node, f2.u));
+        }
+        gen(n.node);
+        emit(
+          12
+          /* LookEnd */
+        );
+        b[at] = op.length;
+        return;
+      }
+      case "rep": {
+        const reset = n.hi > n.lo;
+        const canBeEmpty = widthOf(n.node, f2.u)[0] === 0;
+        const body = (optional) => {
+          const slot = optional && canBeEmpty ? ncap * 2 + nloops++ : -1;
+          if (reset) emit(10, n.lo * 2, n.hi * 2);
+          if (slot >= 0) {
+            emit(14, slot);
+            active.push(slot);
+          }
+          gen(n.node);
+          if (slot >= 0) {
+            emit(15, slot);
+            active.pop();
+          }
+        };
+        for (let k = 0; k < n.min; k++) body(false);
+        if (n.max === Infinity) {
+          const sp = emit(
+            8
+            /* Split */
+          );
+          const start = op.length;
+          body(true);
+          emit(9, sp);
+          const exit = op.length;
+          if (n.greedy) a[sp] = start, b[sp] = exit;
+          else a[sp] = exit, b[sp] = start;
+        } else {
+          const splits = [];
+          for (let k = n.min; k < n.max; k++) {
+            const sp = emit(
+              8
+              /* Split */
+            );
+            splits.push(sp);
+            if (n.greedy) a[sp] = op.length;
+            else b[sp] = op.length;
+            body(true);
+          }
+          for (const sp of splits) {
+            if (n.greedy) b[sp] = op.length;
+            else a[sp] = op.length;
+          }
+        }
+        return;
+      }
+    }
+  }
+  emit(7, 0);
+  gen(node);
+  emit(7, 1);
+  emit(
+    13
+    /* Match */
+  );
+  let first = -1;
+  if (!f2.i && op[1] === 0 && a[1] <= 65535) first = a[1];
+  return {
+    op: Int8Array.from(op),
+    a: Int32Array.from(a),
+    b: Int32Array.from(b),
+    classes,
+    encl,
+    mult: 1 << deepest,
+    ncap,
+    nslots: ncap * 2 + nloops,
+    names,
+    hasNames: names.some((x) => x !== void 0),
+    ...f2,
+    first,
+    widths
+  };
+}
+const programs = /* @__PURE__ */ new Map();
+function compile$1(source, flags) {
+  const key = `${flags}/${source}`;
+  let p = programs.get(key);
+  if (!p) {
+    p = compileProgram(source, flags);
+    if (programs.size > 300) programs.clear();
+    programs.set(key, p);
+  }
+  return p;
+}
+let visited = new Uint32Array(0);
+let generation = 0;
+let stack = new Int32Array(4096);
+let steps = 0;
+const nextGen = () => {
+  if (++generation >= 4294967280) {
+    visited.fill(0);
+    generation = 1;
+  }
+  return generation;
+};
+let windowStart = 0;
+let windowSpent = 0;
+const now = () => typeof performance !== "undefined" ? performance.now() : Date.now();
+function charge(n) {
+  const t = now();
+  if (t - windowStart > WINDOW_MS) {
+    windowStart = t;
+    windowSpent = 0;
+  }
+  windowSpent += n;
+  if (windowSpent > WINDOW_STEPS) throw new RegexBudget("Patterns are taking too long to run here; try a simpler pattern or less text");
+}
+function execProgram(prog, text, from, sticky) {
+  const n = text.length;
+  const ninst = prog.op.length;
+  const width = n + 1;
+  if (ninst * width * prog.mult > MAX_STATES) throw new RegexBudget(`Text is too long to match against this pattern (${n} characters)`);
+  const need = ninst * width * prog.mult;
+  if (visited.length < need) visited = new Uint32Array(Math.max(need, visited.length * 2 > MAX_STATES ? MAX_STATES : visited.length * 2));
+  steps = 0;
+  const caps = new Int32Array(prog.nslots).fill(-1);
+  const gen = nextGen();
+  const ctx = { prog, text, n, width, caps, target: -1 };
+  try {
+    for (let s = from; s <= n; ) {
+      if (!sticky && prog.first >= 0) {
+        const at = text.indexOf(String.fromCharCode(prog.first), s);
+        if (at < 0) break;
+        s = at;
+      }
+      if (run(ctx, 0, s, gen)) return caps;
+      if (sticky) break;
+      s += prog.u && s < n && text.codePointAt(s) > 65535 ? 2 : 1;
+    }
+    return null;
+  } finally {
+    charge(steps);
+    if (visited.length > 6e5) visited = new Uint32Array(0);
+  }
+}
+function run(ctx, startPc, startPos, gen) {
+  const { prog, text, n, width, caps } = ctx;
+  const { op, a, b, encl } = prog;
+  const base2 = stackBase;
+  let sp = base2;
+  const push = (x, y) => {
+    if (sp + 2 > stack.length) {
+      const bigger = new Int32Array(stack.length * 2);
+      bigger.set(stack);
+      stack = bigger;
+    }
+    stack[sp++] = x;
+    stack[sp++] = y;
+  };
+  push(startPc, startPos);
+  const unicode = prog.u;
+  while (sp > base2) {
+    const pos0 = stack[--sp];
+    const pc0 = stack[--sp];
+    if (pc0 < 0) {
+      caps[-pc0 - 1] = pos0;
+      continue;
+    }
+    let pc = pc0;
+    let pos = pos0;
+    thread: for (; ; ) {
+      if (op[pc] !== 15) {
+        let key = pc * width + pos;
+        const e = encl[pc];
+        if (e !== null) {
+          let bits = 0;
+          for (let k = 0; k < e.length; k++) if (caps[e[k]] === pos) bits |= 1 << k;
+          key = key * prog.mult + bits;
+        } else if (prog.mult > 1) key *= prog.mult;
+        if (visited[key] === gen) break;
+        visited[key] = gen;
+      }
+      if (++steps > STEP_BUDGET) throw new RegexBudget("A pattern is taking too long to run here; try a simpler pattern or less text");
+      switch (op[pc]) {
+        case 0: {
+          if (pos >= n) break thread;
+          const c2 = a[pc];
+          if (c2 > 65535) {
+            if (text.codePointAt(pos) !== c2) break thread;
+            pos += 2;
+          } else {
+            if (text.charCodeAt(pos) !== c2) break thread;
+            pos++;
+          }
+          pc++;
+          break;
+        }
+        case 1: {
+          if (pos >= n) break thread;
+          const c2 = unicode ? text.codePointAt(pos) : text.charCodeAt(pos);
+          if (!prog.s && isLine(c2)) break thread;
+          pos += c2 > 65535 ? 2 : 1;
+          pc++;
+          break;
+        }
+        case 2: {
+          if (pos >= n) break thread;
+          const c2 = unicode ? text.codePointAt(pos) : text.charCodeAt(pos);
+          if (!prog.classes[a[pc]].test(c2)) break thread;
+          pos += c2 > 65535 ? 2 : 1;
+          pc++;
+          break;
+        }
+        case 3:
+          if (!(pos === 0 || prog.m && isLine(text.charCodeAt(pos - 1)))) break thread;
+          pc++;
+          break;
+        case 4:
+          if (!(pos === n || prog.m && isLine(text.charCodeAt(pos)))) break thread;
+          pc++;
+          break;
+        case 5:
+        case 6: {
+          const before = pos > 0 && isWord(text.charCodeAt(pos - 1));
+          const after = pos < n && isWord(text.charCodeAt(pos));
+          if (before !== after !== (op[pc] === 5)) break thread;
+          pc++;
+          break;
+        }
+        case 15:
+          if (caps[a[pc]] === pos) break thread;
+          pc++;
+          break;
+        case 7:
+        case 14:
+          push(-1 - a[pc], caps[a[pc]]);
+          caps[a[pc]] = pos;
+          pc++;
+          break;
+        case 10:
+          for (let k = a[pc]; k < b[pc]; k++) {
+            if (caps[k] !== -1) {
+              push(-1 - k, caps[k]);
+              caps[k] = -1;
+            }
+          }
+          pc++;
+          break;
+        case 8:
+          push(b[pc], pos);
+          pc = a[pc];
+          break;
+        case 9:
+          pc = a[pc];
+          break;
+        case 11: {
+          const neg = (a[pc] & 1) === 1;
+          const behind = (a[pc] & 2) === 2;
+          const snapshot = caps.slice();
+          stackBase = sp;
+          const saveTarget = ctx.target;
+          let ok = false;
+          try {
+            if (!behind) {
+              ctx.target = -1;
+              ok = run(ctx, pc + 1, pos, nextGen());
+            } else {
+              const [lo, hi] = prog.widths.get(pc);
+              ctx.target = pos;
+              const g = nextGen();
+              for (let s = pos - lo; s >= 0 && (hi === Infinity || s >= pos - hi); s--) {
+                if (run(ctx, pc + 1, s, g)) {
+                  ok = true;
+                  break;
+                }
+              }
+            }
+          } finally {
+            stackBase = base2;
+            ctx.target = saveTarget;
+          }
+          if (ok === neg) {
+            caps.set(snapshot);
+            break thread;
+          }
+          if (neg) caps.set(snapshot);
+          else {
+            for (let k = 0; k < caps.length; k++) if (caps[k] !== snapshot[k]) push(-1 - k, snapshot[k]);
+          }
+          pc = b[pc];
+          break;
+        }
+        case 12:
+          if (ctx.target >= 0 && pos !== ctx.target) break thread;
+          return true;
+        case 13:
+          return true;
+      }
+    }
+  }
+  return false;
+}
+let stackBase = 0;
+const progOf = (re) => compile$1(re.source, re.flags);
+const advance = (s, i, u) => u && i + 1 < s.length && s.codePointAt(i) > 65535 ? i + 2 : i + 1;
+function result(prog, s, caps) {
+  const out = [];
+  for (let k = 0; k < prog.ncap; k++) out.push(caps[2 * k] < 0 || caps[2 * k + 1] < 0 ? void 0 : s.slice(caps[2 * k], caps[2 * k + 1]));
+  out.index = caps[0];
+  out.input = s;
+  let groups;
+  if (prog.hasNames) {
+    groups = /* @__PURE__ */ Object.create(null);
+    for (let k = 1; k < prog.ncap; k++) if (prog.names[k] !== void 0) groups[prog.names[k]] = out[k];
+  }
+  out.groups = groups;
+  if (prog.d) {
+    const ind = [];
+    for (let k = 0; k < prog.ncap; k++) ind.push(caps[2 * k] < 0 || caps[2 * k + 1] < 0 ? void 0 : [caps[2 * k], caps[2 * k + 1]]);
+    let g;
+    if (prog.hasNames) {
+      g = /* @__PURE__ */ Object.create(null);
+      for (let k = 1; k < prog.ncap; k++) if (prog.names[k] !== void 0) g[prog.names[k]] = ind[k];
+    }
+    ind.groups = g;
+    out.indices = ind;
+  }
+  return out;
+}
+function linearExec(re, s) {
+  const prog = progOf(re);
+  const use = prog.g || prog.y;
+  let from = use ? Math.min(re.lastIndex, Number.MAX_SAFE_INTEGER) : 0;
+  if (from > s.length) {
+    if (use) re.lastIndex = 0;
+    return null;
+  }
+  from = Math.max(0, from);
+  const caps = execProgram(prog, s, from, prog.y);
+  if (!caps) {
+    if (use) re.lastIndex = 0;
+    return null;
+  }
+  if (use) re.lastIndex = caps[1];
+  return result(prog, s, caps);
+}
+function linearMatch(re, s) {
+  const prog = progOf(re);
+  if (!prog.g) return linearExec(re, s);
+  re.lastIndex = 0;
+  const out = [];
+  for (; ; ) {
+    const m = linearExec(re, s);
+    if (!m) break;
+    out.push(m[0]);
+    if (m[0] === "") re.lastIndex = advance(s, re.lastIndex, prog.u);
+  }
+  return out.length ? out : null;
+}
+function linearMatchAll(re, s) {
+  const prog = progOf(re);
+  if (!prog.g) throw new TypeError("String.prototype.matchAll called with a non-global RegExp argument");
+  const copy = new RegExp(re.source, re.flags);
+  copy.lastIndex = re.lastIndex;
+  const out = [];
+  for (; ; ) {
+    const m = linearExec(copy, s);
+    if (!m) break;
+    out.push(m);
+    if (m[0] === "") copy.lastIndex = advance(s, copy.lastIndex, prog.u);
+  }
+  return out;
+}
+function linearSearch(re, s) {
+  const prog = progOf(re);
+  const caps = execProgram(prog, s, 0, prog.y);
+  return caps ? caps[0] : -1;
+}
+function substitute(m, s, template) {
+  const pos = m.index;
+  const matched = m[0];
+  const ncap = m.length - 1;
+  let out = "";
+  for (let i = 0; i < template.length; i++) {
+    const c2 = template[i];
+    if (c2 !== "$" || i + 1 >= template.length) {
+      out += c2;
+      continue;
+    }
+    const n = template[i + 1];
+    if (n === "$") out += "$", i++;
+    else if (n === "&") out += matched, i++;
+    else if (n === "`") out += s.slice(0, pos), i++;
+    else if (n === "'") out += s.slice(Math.min(s.length, pos + matched.length)), i++;
+    else if (n >= "0" && n <= "9") {
+      let digits = 1;
+      let idx = Number(n);
+      if (i + 2 < template.length && template[i + 2] >= "0" && template[i + 2] <= "9") {
+        const two = idx * 10 + Number(template[i + 2]);
+        if (two >= 1 && two <= ncap) idx = two, digits = 2;
+      }
+      if (idx >= 1 && idx <= ncap) {
+        out += m[idx] ?? "";
+        i += digits;
+      } else out += "$";
+    } else if (n === "<") {
+      const end = template.indexOf(">", i + 2);
+      if (m.groups === void 0 || end < 0) out += "$";
+      else {
+        out += m.groups[template.slice(i + 2, end)] ?? "";
+        i = end;
+      }
+    } else out += "$";
+  }
+  return out;
+}
+function linearReplace(re, s, replacement, all) {
+  const prog = progOf(re);
+  if (all && !prog.g) throw new TypeError("replaceAll must be called with a global RegExp");
+  const fn = typeof replacement === "function" ? replacement : null;
+  const template = fn ? "" : String(replacement);
+  const matches = [];
+  if (prog.g) {
+    re.lastIndex = 0;
+    for (; ; ) {
+      const m = linearExec(re, s);
+      if (!m) break;
+      matches.push(m);
+      if (m[0] === "") re.lastIndex = advance(s, re.lastIndex, prog.u);
+    }
+  } else {
+    const m = linearExec(re, s);
+    if (m) matches.push(m);
+  }
+  let out = "";
+  let last = 0;
+  for (const m of matches) {
+    if (m.index < last) continue;
+    out += s.slice(last, m.index);
+    if (fn) {
+      const args = [...m, m.index, s];
+      if (m.groups !== void 0) args.push(m.groups);
+      out += String(fn(...args));
+    } else out += substitute(m, s, template);
+    last = m.index + m[0].length;
+  }
+  return out + s.slice(last);
+}
+function linearSplit(re, s, limit) {
+  const prog = progOf(re);
+  const lim = limit === void 0 ? 4294967295 : Number(limit) >>> 0;
+  const out = [];
+  if (lim === 0) return out;
+  const size = s.length;
+  if (size === 0) return execProgram(prog, s, 0, true) ? out : [s];
+  let p = 0;
+  let q = 0;
+  while (q < size) {
+    const caps = execProgram(prog, s, q, false);
+    if (!caps || caps[0] >= size) break;
+    const e = Math.min(caps[1], size);
+    if (e === p) {
+      q = advance(s, caps[0], prog.u);
+      continue;
+    }
+    out.push(s.slice(p, caps[0]));
+    if (out.length === lim) return out;
+    p = e;
+    for (let k = 1; k < prog.ncap; k++) {
+      out.push(caps[2 * k] < 0 || caps[2 * k + 1] < 0 ? void 0 : s.slice(caps[2 * k], caps[2 * k + 1]));
+      if (out.length === lim) return out;
+    }
+    q = p;
+  }
+  out.push(s.slice(p));
+  return out;
 }
 const QUESTION_KINDS = [
   { value: "single", label: "Multiple choice (one answer)", hint: "Pick the one right option" },
@@ -3038,6 +3956,7 @@ class Parser {
     try {
       assertSafePattern(source, flags);
       new RegExp(source, flags);
+      compile$1(source, flags);
     } catch (e) {
       this.fail(e instanceof RegexRefused ? e.message : `Bad regular expression: ${e.message}`, start);
     }
@@ -3203,18 +4122,46 @@ STRING_METHODS.padEnd = function(n, fill) {
   guardLen(n);
   return this.padEnd(n, fill);
 };
-STRING_METHODS.matchAll = function(re) {
-  return [...this.matchAll(re)];
-};
 for (const m of ["match", "matchAll", "search", "replace", "replaceAll", "split"]) {
   const inner = STRING_METHODS[m];
   const compiles = m === "match" || m === "matchAll" || m === "search";
   STRING_METHODS[m] = function(...a) {
     const p = a[0];
-    if (p instanceof RegExp) guardRegex(p, this);
-    else if (compiles && p !== void 0 && p !== null) guardRegex(new PatternText(String(p)), this);
-    return inner.apply(this, a);
+    let re = null;
+    if (p instanceof RegExp) {
+      guardRegex(p, this);
+      re = p;
+    } else if (compiles && p !== void 0 && p !== null) {
+      const text = String(p);
+      guardRegex(new PatternText(text), this);
+      re = new RegExp(text, m === "matchAll" ? "g" : "");
+    }
+    if (!re) return inner.apply(this, a);
+    return linearly(() => {
+      switch (m) {
+        case "match":
+          return linearMatch(re, this);
+        case "matchAll":
+          return linearMatchAll(re, this);
+        case "search":
+          return linearSearch(re, this);
+        case "replace":
+          return linearReplace(re, this, a[1], false);
+        case "replaceAll":
+          return linearReplace(re, this, a[1], true);
+        default:
+          return linearSplit(re, this, a[1]);
+      }
+    });
   };
+}
+function linearly(f2) {
+  try {
+    return f2();
+  } catch (e) {
+    if (e instanceof RegexRefused) throw new ExprError(e.message);
+    throw e;
+  }
 }
 const ARRAY_METHODS = {};
 for (const m of [
@@ -3310,11 +4257,11 @@ for (const m of [
 const REGEXP_METHODS = {
   test: function(s) {
     guardRegex(this, String(s));
-    return this.test(String(s));
+    return linearly(() => linearExec(this, String(s)) !== null);
   },
   exec: function(s) {
     guardRegex(this, String(s));
-    return this.exec(String(s));
+    return linearly(() => linearExec(this, String(s)));
   },
   toString: function() {
     return this.toString();
@@ -5512,6 +6459,8 @@ A \`/pattern/flags\` works with \`match\`, \`matchAll\`, \`search\`, \`replace\`
 
 The text a pattern runs over is limited too: 10,000 characters for a pattern with no more than one open-ended repetition, 1,000 with two and 200 with three. Patterns with bounded repetitions such as \`\\w{0,50}\` get a shorter limit still. Longer text gives an error rather than a freeze. Text you pass to \`match\`, \`matchAll\` and \`search\` is a pattern and follows the same rules; to \`replace\`, \`replaceAll\` and \`split\` it is plain text. The rules are cautious on purpose: some harmless patterns, like \`(\\.[a-z]+)+\`, are refused too.
 
+A pattern that gets past these rules still never runs in the browser's own pattern engine, which can't be stopped once it is going. The player runs it with its own matcher, which remembers every place it has been and never works through the same one twice, so how a pattern is written can't make it slow, and each match has a time allowance (and so do all the matches in a page together, such as one pattern run over every row of a long list). A match that uses its allowance gives an error like the other refusals, instead of freezing the page. The matches are the same ones the browser would find (greedy and lazy, groups, \`$1\` and \`$<name>\` in replacements, lookahead and lookbehind, the \`i\`, \`m\`, \`s\`, \`u\`, \`g\`, \`y\` and \`d\` flags). The one difference: the text a group inside a lookbehind (or inside a repeat that can match nothing, \`(a*)*\`) captures can differ in rare corner cases.
+
 In a text layer, a slot whose pattern is refused (or whose text is too long for it) is left as written, braces and all, as in the last line below; elsewhere it gives nothing.
 
 ![Three text slots with patterns: the first two work, the third, with a nested repetition, is refused and left as written.](help/patterns-refused.png)
@@ -6920,7 +7869,7 @@ function people(s, p) {
 }
 const send = (msg) => process.stdout.write(JSON.stringify(msg) + "\n");
 async function handle(msg) {
-  const reply = (result) => msg.id !== void 0 && send({ jsonrpc: "2.0", id: msg.id, result });
+  const reply = (result2) => msg.id !== void 0 && send({ jsonrpc: "2.0", id: msg.id, result: result2 });
   const fail = (code, message) => msg.id !== void 0 && send({ jsonrpc: "2.0", id: msg.id, error: { code, message } });
   switch (msg.method) {
     case "initialize":
