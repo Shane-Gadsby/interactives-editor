@@ -5195,6 +5195,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>W</kbd> | Bend (drag an edge into a curve) |
 | <kbd>T</kbd> | Text |
 | <kbd>B</kbd> | Button |
+| <kbd>C</kbd> | Comment (pin a review note where you click) |
 
 ## Editing
 | Key | Does |
@@ -7256,6 +7257,49 @@ The server keeps saved revisions of the project: a snapshot every few minutes wh
 
 ## When two copies disagree
 If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).`
+  },
+  {
+    id: "comments",
+    title: "Review comments",
+    group: "Working together",
+    summary: "Pin notes to a layer or a spot, reply, resolve and assign them, and collect comments from reviewers with a review link.",
+    keywords: "comment comments review reviewer feedback note pin thread reply resolve assign assignee mention notify notification guest share link subject expert",
+    body: `Comments are notes pinned to the project. Subject experts and reviewers can say what they think right where it applies, and you can reply, hand a note to someone, and tick it off when it is dealt with, instead of collecting email and screenshots.
+
+Comments are kept on the server apart from the project. They are never part of the project file, an **export**, a **.ixp package**, a **share link** or **Preview**, and a duplicate of the project starts with none. Deleting the project deletes its comments.
+
+## Leaving a comment
+Pick the **Comment** tool (<kbd>C</kbd>) and click where you want to say something. If there is a layer under the click, the note is pinned to that layer at that spot, so the pin **follows the layer** when it moves, scales or rotates. If the layer is deleted the pin stays where it was, drawn with a dashed edge, and the **Comments** panel says the layer is gone. A click on empty artboard pins the note to that point of the artboard.
+
+Type the note and press **Comment** (<kbd>Ctrl</kbd>+<kbd>Enter</kbd> sends too). Type **@** to mention someone from the list of people in the project. As the owner you can pick an **Assign to** person as you send it.
+
+## Replies, resolve and assign
+Click a pin to open its conversation next to it. Reply in the box under it; edit or delete your own messages (the owner and power users can delete any). **Resolve** marks a conversation as dealt with and **Reopen** brings it back. **Assigned to** hands it to a person from the list: the owner, and everyone who has commented. They are told (see below), and it shows under **Assigned to me** in their Comments panel.
+
+Pins are numbered. A resolved pin turns grey with a tick, a pin handed to you has an amber ring, and the one that is open has a halo. **Escape** puts a conversation away.
+
+## The Comments panel
+The **Comments** tab beside Layers lists every conversation with its first words, where it is, who wrote it and how many replies it has. Click one to go to it: the artboard, the layer, the pin in the middle of the canvas and its conversation open.
+
+Filter by **Open**, **Resolved** or **All**, by **Everyone**, **Mine** (conversations you took part in) or **Assigned to me**, and by **artboard**. The eye button hides the pins on the canvas (your choice is remembered in this browser); the panel still lists them. The number on the tab is how many are open. The projects page shows the same number on each project's card, ringed in amber when some are for you.
+
+## The review link
+In **Share**, **Can comment: review link** makes a second link, apart from the share link. Send it to reviewers. They see the project as it is now, one artboard at a time as a still with the pins on it, can open any artboard from the top, **Play** the real thing, and leave, reply to and resolve comments. They cannot change the project. Because the page always reads the project as it is, there is nothing to update when you change it.
+
+- **Signed in to StudyDesk** (open the link from StudyDesk): comments carry the reviewer's own name. They can resolve, and edit or delete their own.
+- **Let people comment without signing in**: anyone with the link can comment after giving a **display name**. Guests are marked *(guest)*, cannot resolve, assign or mention, and are limited to a few comments every few minutes per address and per link. Leave this off when the project is not meant for people outside StudyDesk. Without it, the link asks for a signed in StudyDesk user.
+- **Turn off review link** ends the link at once, including for anyone who has it open. The comments are kept.
+
+Anyone who has the review link can read the whole project, as with a share link. The link is long and random so it cannot be guessed; do not post it anywhere public.
+
+## Notices
+When a conversation is **assigned to you**, you are **mentioned**, or someone **replies** in a conversation you are in, you are told: a message appears while a project is open, and a bell on the projects page counts what is unread. Opening the project clears its notices. Turn this off with **Comment notices** in [Preferences](preferences). There is no email.
+
+## Live
+Comments arrive for everyone looking at the project as they are written, in the editor and on the review page, without reloading. If the connection drops, *offline* shows in the panel and anything missed is fetched when it is back.
+
+## Limits
+A note is up to 2000 characters, a conversation holds 200 messages, and a project 1000 comments. See [Keyboard shortcuts](shortcuts) and [Share links](export#share-link).`
   },
   {
     id: "ai-agents",
