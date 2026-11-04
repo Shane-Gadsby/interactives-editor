@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { createNode, type BoneNode, type Project, type SceneNode, type SkinInfluence } from 'interactives-player';
+import { createNode, type Artboard, type BoneNode, type Project, type SceneNode, type SkinInfluence } from 'interactives-player';
 import { store } from '../store/store';
 import { getArtboard } from '../store/doc';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField } from '../components/ui';
 import { Icons } from '../components/icons';
+import { addBonesExample } from '../lib/bones-example';
 import { autoWeightPoint, bindLayer, bonesOf, setPointWeights, skinOf, unbindLayer } from '../lib/rig';
 
 /** Run a change on the open artboard through the store (one undo step). */
@@ -14,6 +15,32 @@ function edit(abId: string, fn: (ab: NonNullable<ReturnType<typeof getArtboard>>
       if (ab) fn(ab);
     },
     { coalesce },
+  );
+}
+
+const EXAMPLE_TIP =
+  "Add a three-bone arm with a shape skinned to it, an orange dot the arm reaches for (IK), a Wave timeline with a button, and the instructions on the artboard. Then open Preview and drag the dot";
+
+/** Adds the example rig to an artboard, as one undo step. */
+function buildExample(abId: string): void {
+  edit(abId, (ab) => void addBonesExample(ab as Artboard));
+  store().toast('Added an example arm. Click Preview (top right) and drag the orange dot: the arm reaches for it. Wave plays a keyed pose.');
+}
+
+/** The artboard's Bones section: what bones are for, and a one-click example to try. */
+export function BonesArtboardSection({ ab }: { ab: Artboard }) {
+  const count = bonesOf(ab.children).length;
+  return (
+    <Section help="bones#try-bones-in-two-minutes" title="Bones" defaultOpen={false}>
+      <p className="hint">
+        {count
+          ? `${count} bone${count > 1 ? 's' : ''} on this artboard. Draw more with the Bone tool (J), then bind paths and images to them.`
+          : 'Rig a character: draw bones with the Bone tool (J), bind paths and images to them, and pose limbs with IK. Not sure where to start?'}
+      </p>
+      <button className="link-btn" title={EXAMPLE_TIP} onClick={() => buildExample(ab.id)}>
+        Build an example to try
+      </button>
+    </Section>
   );
 }
 
@@ -31,6 +58,9 @@ export function BoneSection({ node, abId }: { node: BoneNode; abId: string }) {
           Add child bone
         </button>
       </Row>
+      <button className="link-btn" title={EXAMPLE_TIP} onClick={() => buildExample(abId)}>
+        Build an example to try
+      </button>
     </Section>
   );
 }

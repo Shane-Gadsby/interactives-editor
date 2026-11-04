@@ -84,7 +84,7 @@ import { detach as detachFromLibrary } from '../lib/library-actions';
 import { ShaderFilterFields, ShaderSection } from './ShaderInspector';
 import { FillSection, PaintOrderSection, StrokeSection } from './PaintLayers';
 import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
-import { BindSelectionSection, BoneSection, SkinSection } from './RigSection';
+import { BindSelectionSection, BonesArtboardSection, BoneSection, SkinSection } from './RigSection';
 import { skinnable } from '../lib/rig';
 import { FONT_FAMILIES } from '../lib/fonts';
 import { CornerRadii } from './CornerRadii';
@@ -479,6 +479,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <StepsSection ab={ab} project={project} />
       <JoysticksSection ab={ab} />
       <BlendsSection ab={ab} project={project} />
+      <BonesArtboardSection ab={ab} />
       <Section help="project-settings" title="Project">
         <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
         <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />

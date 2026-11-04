@@ -890,8 +890,23 @@ Every constraint has a **Strength** (0–100%) that mixes between the layer's ow
     title: 'Bones and skinning',
     group: 'Motion',
     summary: 'Rig a character with bones, bend paths and images with them, and pose limbs with IK.',
-    keywords: 'bone skeleton rig rigging skin skinning weights bind mesh deform ik inverse kinematics distance constraint character puppet',
+    keywords: 'bone skeleton rig rigging skin skinning weights bind mesh deform ik inverse kinematics distance constraint character puppet example demo try tutorial arm',
     body: `A **bone** is a layer that only exists to be posed. Draw a chain of bones, **bind** paths and images to them, and the shapes bend where the bones turn. Bones are drawn on the canvas as blue glyphs while you edit; the player never shows them.
+
+## Try bones in two minutes
+Not sure where to start? Let the editor build a working rig, then take it apart.
+
+1. With nothing selected, open the **Bones** section in the Inspector (the right panel) and click **Build an example to try**. (A selected bone has the same button.)
+2. On the artboard you get a three-bone arm with a shape skinned to it, an **orange dot**, a **Wave** button and the instruction *Drag the orange dot*. The blue lines inside the arm are the bones; they show in the editor, never in the player. Click a bone in **Layers** (*Upper arm*, *Forearm*, *Hand*) to see it.
+3. Click **Preview** (top right) and **drag the orange dot**. The arm bends to follow it: the dot is the target of an **IK** constraint on the *Hand* bone, three bones long. Drag it out of reach and the arm straightens toward it.
+4. Press **Wave**. A timeline called *Example: wave* swings the bones by hand for two seconds, with the IK **Strength** keyed down to 0 so the keyed poses win. As the strength comes back to 1 the arm returns to the dot.
+5. Close Preview, select the *Hand* bone and look at **Constraints**: *IK*, target *IK target (drag me)*, 3 bones. Try **Bend the other way**, or drop the bones to 2 to see the hand end swing free. Select *Arm* to see its **Skin**, and a point's weights in **Weights of**.
+
+![The example arm bent toward the orange dot, with the Bones section of the Inspector open.](help/bones-example.png)
+
+![Dragging the orange dot in Preview: the arm follows it. Then Wave swings the bones and hands the arm back to the dot.](help/bones-example.mp4)
+
+The example is ordinary layers, bones, a timeline and two interaction nodes, so everything in it can be changed, copied or deleted. Press **Build an example to try** again for another copy.
 
 ## Drawing bones
 Pick the **Bone** tool (<kbd>J</kbd>) and drag from a bone's base to its tip. To carry on a chain, start the next drag on the tip of the last bone: the new bone becomes its child, and turning a parent moves everything below it. A drag that starts anywhere else begins a new bone (inside the group you went into, if you double-clicked into one). Hold <kbd>Shift</kbd> to snap angles to 15°. The eye button in the toolbar (<kbd>Shift</kbd>+<kbd>J</kbd>) hides the glyphs.
