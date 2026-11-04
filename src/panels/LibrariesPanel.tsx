@@ -242,7 +242,8 @@ function UsedLibrary({
   run: (label: string, fn: () => Promise<void>) => Promise<void>;
   onChanged: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  // Open: right after Add the person wants to drag a component, and the components are what this row is for
+  const [open, setOpen] = useState(true);
   const [review, setReview] = useState<{ components: UpdateReview[]; styles: string[] } | null>(null);
   const updates = info ? changedComponents(project, id, info.components) : [];
   const styleChanges = info ? reviewStyleCount(project, info) : 0;
@@ -460,7 +461,16 @@ function StylesSection({ project }: { project: Project }) {
     const from = sel?.fill?.type === 'solid' ? sel.fill.color : undefined;
     const name = await promptDialog({ title: 'New colour style', label: 'Name', initial: 'Colour', confirmLabel: 'Create' });
     if (!name?.trim()) return;
-    store().update((d) => void addColorStyle(d as Project, name.trim(), from ?? '#4d7cff'));
+    // Made from a layer's fill, the style is that layer's fill from now on, so editing the colour changes it (and anything else you apply it to)
+    const sourceId = from ? sel?.id : undefined;
+    const { activeArtboardId } = store().get();
+    store().update((d) => {
+      const style = addColorStyle(d as Project, name.trim(), from ?? '#4d7cff');
+      if (!sourceId) return;
+      const ab = (d as Project).artboards.find((a) => a.id === activeArtboardId);
+      const n = ab && locate(ab, sourceId)?.node;
+      if (n) applyColorStyle(n as SceneNode, 'fill', style);
+    });
   };
   const newText = async () => {
     const sel = store().selectedNodes()[0] as (SceneNode & Partial<TextStyleDef> & { color?: string }) | undefined;
