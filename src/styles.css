@@ -4752,3 +4752,19 @@ code {
   color: var(--text);
   font-weight: 600;
 }
+
+/* the note beside the pointer when pressing will ask something first (Canvas toolHint) */
+.tool-hint {
+  position: absolute;
+  z-index: 30;
+  max-width: 260px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+}

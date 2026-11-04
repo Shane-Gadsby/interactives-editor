@@ -31,6 +31,7 @@ import {
   type SceneNode,
   type Stroke,
   type TextRun,
+  nodeTypeLabel,
 } from 'interactives-player';
 import { toggleRunStyle, type ToggleKind } from '../lib/rich-text';
 import { paintRuns, readRuns, selectionOffsets, setSelectionOffsets } from '../lib/rich-text-dom';
@@ -139,6 +140,13 @@ export function Canvas() {
   const spaceDown = useRef(false);
   // What the pointer would do here (set while it moves with no drag going), and what the drag going now is doing
   const [hoverCursor, setHoverCursor] = useState<string | null>(null);
+  // A note beside the pointer when pressing here will ask something first (the Bend tool converting a shape to a path,
+  // a drag moving layers to another artboard), so it isn't a surprise
+  const [toolHint, setToolHint] = useState<{ text: string; x: number; y: number } | null>(null);
+  const hintAt = (text: string | null, cx: number, cy: number) => {
+    const r = vp.current?.getBoundingClientRect();
+    setToolHint((cur) => (!text || !r ? (cur ? null : cur) : cur?.text === text && Math.abs(cur.x - (cx - r.left)) < 2 && Math.abs(cur.y - (cy - r.top)) < 2 ? cur : { text, x: cx - r.left, y: cy - r.top }));
+  };
   const [dragCursorNow, setDragCursorNow] = useState<string | null>(null);
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
@@ -564,9 +572,12 @@ export function Canvas() {
     const w = toWorld(cx, cy);
     // The Bend tool only does something on an edge it can bend, so only there does the cursor say so
     if (st.tool === 'bend') {
-      setHoverCursor(bendTargetAt(w, deep)?.h ? BEND_CURSOR : null);
+      const t = bendTargetAt(w, deep);
+      setHoverCursor(t?.h ? BEND_CURSOR : null);
+      hintAt(t?.h && t.n && t.n.type !== 'path' ? `Bending this ${nodeTypeLabel(t.n.type).toLowerCase()} will ask to turn it into a path first` : null, cx, cy);
       return;
     }
+    if (toolHint) setToolHint(null);
     if (st.tool !== 'select') return;
     const found = layerAt(w, deep);
     const hab = found?.ab ?? abAt(w);
@@ -651,6 +662,9 @@ export function Canvas() {
           changes.set(it.id, { x: round(it.x0 + q.x), y: round(it.y0 + q.y) });
         }
         store().setEach(changes, 'move');
+        // Letting go over another artboard offers to move the layers there: say so while it's possible
+        const over = abAt(w);
+        hintAt(over && over.id !== d.abId && !d.duplicated ? `Let go to move to “${over.name}” (you'll be asked first)` : null, e.clientX, e.clientY);
         break;
       }
       case 'resize': {
@@ -945,6 +959,7 @@ export function Canvas() {
       setBox(null);
       return;
     }
+    setToolHint(null);
     if (d.kind === 'move' && d.moved && !d.duplicated) {
       // Dropped over a different artboard: offer to move the layers there
       const target = abAt(toWorld(e.clientX, e.clientY));
@@ -1746,6 +1761,7 @@ export function Canvas() {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onPointerLeave={() => setToolHint(null)}
       onDoubleClick={onDoubleClick}
       onDragOver={(e) => {
         e.preventDefault();
@@ -1834,6 +1850,11 @@ export function Canvas() {
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} />}
+      {toolHint && (
+        <div className="tool-hint" role="status" style={{ left: toolHint.x + 18, top: toolHint.y + 20 }}>
+          {toolHint.text}
+        </div>
+      )}
     </div>
   );
 }

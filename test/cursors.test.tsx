@@ -175,6 +175,23 @@ describe('the canvas', () => {
     expect(vp.style.cursor).toBe(BEND_CURSOR);
   });
 
+  it('warns beside the pointer when bending a shape will ask to turn it into a path, and not on a path', async () => {
+    const rect = createNode('rect', { x: 100, y: 100, width: 100, height: 100 });
+    const { vp, s } = mount('bend', [rect]);
+    const ab = s.get().project.artboards[0];
+    const { zoom, panX, panY } = s.get();
+    const at = (x: number, y: number) => [(x + ab.canvasX) * zoom + panX, (y + ab.canvasY) * zoom + panY] as const;
+    await move(vp, ...at(150, 100));
+    expect(vp.style.cursor).toBe(BEND_CURSOR);
+    expect(host!.querySelector('.tool-hint')?.textContent).toBe('Bending this rectangle will ask to turn it into a path first');
+    await move(vp, ...at(150, 150));
+    expect(host!.querySelector('.tool-hint')).toBeNull();
+    s.convertToPath(rect.id);
+    await move(vp, ...at(150, 100));
+    expect(vp.style.cursor).toBe(BEND_CURSOR);
+    expect(host!.querySelector('.tool-hint')).toBeNull();
+  });
+
   it('says a double-click adds a point on the outline of the path being edited, and a drag moves a selected layer', async () => {
     const path = createNode('path', {
       x: 100,
