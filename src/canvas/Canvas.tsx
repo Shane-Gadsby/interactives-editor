@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
+  LIGHT_LOOK,
   apply,
   createNode,
   fillList,
@@ -54,7 +55,7 @@ import { Icons } from '../components/icons';
 import { freehandToPath } from './freehand';
 import { ArtboardView, holdView, whenViewDrawn } from './ArtboardView';
 import { hasCachedStill, stillHash } from '../lib/still-cache';
-import { shownTheme } from '../lib/themes';
+import { lookDefaults, lookFor, shownTheme } from '../lib/themes';
 import { viewPlan } from './viewPlan';
 import { HANDLE_POS, HANDLES, normalizePath, placeBox, resizeBox, scalePaths, type Handle } from './transform';
 import { ADD_POINT_CURSOR, BEND_CURSOR, BONE_CHAIN_CURSOR, PEN_CLOSE_CURSOR, dragCursor, resizeCursor, rotateCursor, rotateCursorAt, toolCursor } from './cursors';
@@ -967,7 +968,8 @@ export function Canvas() {
         width: Math.max(1, b.width),
         height: Math.max(1, b.height),
         paths: [{ closed, points: pts.map((p) => ({ ...p, x: round(p.x - b.x, 2), y: round(p.y - b.y, 2) })) }],
-        fill: closed ? { type: 'solid', color: '#d9d9d9' } : null,
+        fill: closed ? { type: 'solid', color: lookFor(store().get().project.themes).surfaceMuted } : null,
+        ...lookDefaults(store().get().project, 'path'),
       });
       store().addNodes([node], { artboardId: pab.id });
       return;
@@ -1094,6 +1096,7 @@ export function Canvas() {
         width: Math.max(1, Math.abs(b.width)),
         height: Math.max(1, Math.abs(b.height)),
         paths: [{ closed: false, points: [{ x: x1 - minX, y: y1 - minY }, { x: x2 - minX, y: y2 - minY }] }],
+        ...lookDefaults(store().get().project, 'path'),
       });
     } else {
       const type = CREATE_TYPES[tool]!;
@@ -1104,7 +1107,7 @@ export function Canvas() {
       const y = tiny && type !== 'text' ? b.y - height / 2 : b.y;
       const extra: Record<string, unknown> = {};
       if (type === 'text') extra.autoSize = tiny ? 'width' : 'height';
-      node = createNode(type, { x: round(x - parentOffset.x), y: round(y - parentOffset.y), width: round(width), height: round(height), ...extra, ...fontDefaults(type) } as never);
+      node = createNode(type, { x: round(x - parentOffset.x), y: round(y - parentOffset.y), width: round(width), height: round(height), ...extra, ...fontDefaults(type), ...lookDefaults(store().get().project, type) } as never);
     }
     store().addNodes([node], { parentId, artboardId: ab.id });
     if (!shift) store().set({ tool: 'select' });
@@ -1125,7 +1128,8 @@ export function Canvas() {
       width: Math.max(1, b.width),
       height: Math.max(1, b.height),
       paths: [{ closed: close, points }],
-      fill: close ? { type: 'solid', color: '#d9d9d9' } : null,
+      fill: close ? { type: 'solid', color: lookFor(store().get().project.themes).surfaceMuted } : null,
+      ...lookDefaults(store().get().project, 'path'),
     });
     store().addNodes([node], { artboardId: ab.id });
   }
@@ -1674,7 +1678,7 @@ export function Canvas() {
         onClick: () => {
           const p = local(ab, w);
           const proto = createNode(t.type);
-          const node = createNode(t.type, { x: round(p.x - (t.type === 'text' ? 0 : proto.width / 2)), y: round(p.y - (t.type === 'text' ? 0 : proto.height / 2)), ...fontDefaults(t.type) } as never);
+          const node = createNode(t.type, { x: round(p.x - (t.type === 'text' ? 0 : proto.width / 2)), y: round(p.y - (t.type === 'text' ? 0 : proto.height / 2)), ...fontDefaults(t.type), ...lookDefaults(store().get().project, t.type) } as never);
           s2.set({ activeArtboardId: ab.id });
           s2.addNodes([node], { artboardId: ab.id });
           if (node.type === 'text') s2.set({ editingTextId: node.id });
@@ -2187,7 +2191,7 @@ function snapMove(ab: Artboard, b: Rect, dx: number, dy: number, moving: string[
 /** What a shape will look like while it is being drawn, in screen pixels (the defaults the new layer gets). */
 function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zoom: number) {
   if (w < 1 || h < 1) return null;
-  const grey = { fill: '#d9d9d9', fillOpacity: 0.85 };
+  const grey = { fill: LIGHT_LOOK.surfaceMuted, fillOpacity: 0.85 };
   const label = (text: string, color: string, size = 16, extra: Record<string, unknown> = {}) => (
     <text x={x + w / 2} y={y + h / 2} fill={color} fontSize={size * zoom} fontFamily="Inter, system-ui, sans-serif" textAnchor="middle" dominantBaseline="central" {...extra}>
       {text}
@@ -2203,18 +2207,18 @@ function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zo
     case 'star':
       return <path transform={`translate(${x} ${y})`} d={subPathsToD([{ points: starPoints(5, 0.45, w, h), closed: true }])} {...grey} />;
     case 'frame':
-      return <rect x={x} y={y} width={w} height={h} fill="#ffffff" fillOpacity={0.92} />;
+      return <rect x={x} y={y} width={w} height={h} fill={LIGHT_LOOK.background} fillOpacity={0.92} />;
     case 'button':
       return (
         <>
-          <rect x={x} y={y} width={w} height={h} rx={8 * zoom} fill="#3b5bfd" fillOpacity={0.9} />
-          {h > 12 * zoom && label('Button', '#fff', 16, { fontWeight: 600 })}
+          <rect x={x} y={y} width={w} height={h} rx={6 * zoom} fill={LIGHT_LOOK.button} fillOpacity={0.9} />
+          {h > 12 * zoom && label('Button', LIGHT_LOOK.onButton, 16, { fontWeight: 700 })}
         </>
       );
     case 'input':
       return (
         <>
-          <rect x={x} y={y} width={w} height={h} rx={6 * zoom} fill="#fff" stroke="#c4c4c4" />
+          <rect x={x} y={y} width={w} height={h} rx={6 * zoom} fill={LIGHT_LOOK.background} stroke={LIGHT_LOOK.border} />
           {h > 12 * zoom && (
             <text x={x + 10 * zoom} y={y + h / 2} fill="#999" fontSize={16 * zoom} fontFamily="Inter, system-ui, sans-serif" dominantBaseline="central">
               Type here
@@ -2223,7 +2227,7 @@ function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zo
         </>
       );
     case 'link':
-      return label('Link', '#3b5bfd', 16, { textDecoration: 'underline' });
+      return label('Link', LIGHT_LOOK.primary, 16, { textDecoration: 'underline' });
     case 'embed':
     case 'video':
       return (

@@ -1632,7 +1632,7 @@ Add them in the **Variables** tab. Each has a name, a type and a starting value.
 | Number | \`0\`, \`3.5\` |
 | Text | \`"Hello"\` |
 | True/false | \`true\` or \`false\` |
-| Colour | \`#3b5bfd\` |
+| Colour | \`#ffb448\` |
 | Choice | One of a list of options you define, like \`easy\`, \`medium\`, \`hard\` |
 | List | Items, usually objects: \`[{"name": "Ann"}, {"name": "Bo"}]\` |
 
@@ -1973,25 +1973,37 @@ The **Broken** group lists references that point at something that has been dele
     group: 'Design',
     summary: 'Name a colour once, give it a value for Light, Dark and High contrast, and let layers follow it.',
     keywords: 'theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast',
-    body: `A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. Projects with no tokens behave exactly as before.
+    body: `![The Themes tab: the starter tokens down the side with their Light, Dark and High contrast colours, and the contrast check.](help/themes-panel.png)
+
+A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. Projects with no tokens behave exactly as before.
 
 ## The Themes panel
-Open the **Themes** tab (bottom panel). With none yet, **Add Light, Dark and High contrast** makes the three themes and seven starter tokens: background, surface, text, muted, primary, on-primary and border. Then:
+Open the **Themes** tab (bottom panel). With none yet, **Add Light, Dark and High contrast** makes the three themes and the starter tokens, in the same look as the StudyDesk toolbox: its greys, and its gold for buttons with black, bolder text.
+- **color/background**, **color/surface** and **color/surface-muted** are the page, a card and a hover or quiet grey. **color/text** and **color/muted** are the copy on them.
+- **color/button** and **color/on-button** are the gold button and its black label. **color/primary** and **color/on-primary** are the accent for links, selections and anything that has to read against the page (a darker gold in Light, because the toolbox gold is too pale to read as text).
+- **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus ring.
+- **color/success**, **color/error** and **color/warning** each come with a **-surface** tint, for the right, wrong and missed answers.
+
+Dark and High contrast are the same names with values made for them. Then:
 - Each row is a token, each column a theme. Click a colour to change it. **Used** counts the places that follow the token.
 - **+ Theme** copies the default theme. **+ Token** adds a row. Rename either; layers keep following a renamed token.
 - A theme can answer to a **Light** or **Dark scheme**, be marked **High contrast**, and be the **Default**. These decide which theme a viewer gets (see below).
 - **Showing** (and the theme box in the top bar) picks the theme the canvas draws while you edit. It is not saved with the project. Pictures, SVG and PNG exports, and Lottie, write the colours of the theme being shown.
 - **Convert colour styles to tokens** makes a token from every colour style, with its colour in every theme to start with. Layers that follow a style keep following it, now through the token. Styles from a library convert too, and a library update keeps the link.
+- **Update starter colours** shows on a project made before this look that still has the old starter tokens. It gives the tokens you never edited the new values and adds the ones the project lacks. Layers that follow those tokens change with them; plain colours and tokens you edited do not. Nothing changes until you press it.
 - The count at the top says how many plain colours are **not following a theme**.
 
 ## Using a token
 In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a named chip replaces the hex box with the token's value in each theme underneath. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
 
+## New layers, questions and starters
+A new button is gold with black, bolder text, an input has a grey outline, a shape is a neutral grey, text is the toolbox black. In a project that has the starter tokens, new layers, the [question kit](question-kit) and the step bar follow those tokens instead, so a new layer looks right in Dark and High contrast without you picking anything. In a project with no tokens they get the same colours as plain ones. The built-in [starters](templates) come with the themes and use the tokens.
+
 ## Imported files keep plain colours
 Lottie, Rive, PSD, SVG and package imports bring their colours in as plain colours. Nothing guesses which colour "is" the primary. Mixing plain and token colours in one project is normal.
 
 ## Contrast
-- The Themes panel checks the pairs that matter in every theme, by token name: **color/text** and **color/muted** on **color/background** and **color/surface**, **color/on-primary** on **color/primary**, **color/primary** and **color/border** against **color/background**. A pair that is too low shows its ratio on the cell and in the list.
+- The Themes panel checks the pairs that matter in every theme, by token name: **color/text** and **color/muted** on **color/background**, **color/surface** and **color/surface-muted**, **color/on-primary** on **color/primary**, **color/on-button** on **color/button**, each of **success**, **error** and **warning** on its surface, and **color/primary**, **color/border** and **color/focus** against **color/background** and **color/surface**. The starter tokens pass every one in all three themes. A pair that is too low shows its ratio on the cell and in the list.
 - The [Accessibility checker](accessibility-checker) checks text contrast in every theme, not only the one shown. A finding that starts "In Dark:" is about Dark. It offers no automatic fix for text that follows a token, since a fix would write a plain colour over the token.
 - **Theme colour on a fixed colour** is a warning for text that follows a token but sits on a plain colour. The theme changes one and not the other, so white text on a plain white card goes unreadable in Dark.
 
@@ -2006,7 +2018,7 @@ In this order:
 **Preview** has a theme box (a theme, or follow the viewer), a **Viewer** box to pretend dark mode or more contrast is on, and, with the page option below, a **Host** box.
 
 ## Taking colours from the page
-Tick **Map tokens from the page's CSS variables** and a token is read from a CSS variable on the page that holds the player before the theme's own value. The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` to \`--bs-primary\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other. A missing or odd variable just leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
+Tick **Map tokens from the page's CSS variables** and a token is read from a CSS variable on the page that holds the player before the theme's own value. The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` and \`color/button\` to \`--bs-primary\`, \`color/on-button\` to \`--bs-white\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other. A missing or odd variable just leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
 
 ## Not yet
 Tokens are colours only. Fonts, radii and spacing are not tokens. Colours inside script and shader layers, captions settings, and images do not follow themes. A keyframe that animates a colour between two token colours snaps instead of blending.`,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createNode, createProject, type Project, type RectNode, type TextNode } from 'interactives-player';
+import { STARTER_TOKEN_DEFS, createNode, createProject, type Project, type RectNode, type TextNode } from 'interactives-player';
 import { EditorStore } from '../src/store/store';
 import { addColorStyle, applyColorStyle, editStyle, syncLibraryStyles } from '../src/lib/libraries';
 import { addTheme, addToken, bakedForExport, canvasResolver, checkThemePairs, convertStylesToTokens, ensureThemes, removeTheme, removeToken, setTokenValue, shownTheme, starterThemes, themeCounts } from '../src/lib/themes';
@@ -15,11 +15,12 @@ function themed(): Project {
 }
 
 describe('themes: starter, editing', () => {
-  it('starts with three themes and seven tokens that have a value in each', () => {
+  it('starts with three themes and the toolbox-look tokens, each with a value in every theme', () => {
     const t = starterThemes();
     expect(t.list.map((x) => x.name)).toEqual(['Light', 'Dark', 'High contrast']);
     expect(t.list[2].highContrast).toBe(true);
-    expect(t.tokens).toHaveLength(7);
+    expect(t.tokens).toHaveLength(STARTER_TOKEN_DEFS.length);
+    expect(t.tokens.map((x) => x.name)).toEqual(expect.arrayContaining(['color/button', 'color/on-button', 'color/surface-muted', 'color/focus', 'color/border']));
     for (const token of t.tokens) expect(Object.keys(token.values).sort()).toEqual(t.list.map((x) => x.id).sort());
   });
 
@@ -45,9 +46,9 @@ describe('themes: starter, editing', () => {
     const s = new EditorStore(p);
     s.update((d) => void removeToken(d, id));
     const [r, t] = s.get().project.artboards[0].children as [RectNode, TextNode];
-    expect(r.fill).toEqual(solid('#3b5bfd'));
-    expect(r.stroke!.paint).toEqual(solid('#3b5bfd'));
-    expect(t.color).toBe('#3b5bfd');
+    expect(r.fill).toEqual(solid('#a35f00'));
+    expect(r.stroke!.paint).toEqual(solid('#a35f00'));
+    expect(t.color).toBe('#a35f00');
     expect(s.get().project.themes!.tokens.some((x) => x.id === id)).toBe(false);
   });
 
@@ -75,11 +76,11 @@ describe('themes: starter, editing', () => {
     expect(shownTheme(p, null)!.name).toBe('Light');
     expect(shownTheme(p, 'theme-dark')!.name).toBe('Dark');
     expect(shownTheme(p, 'gone')!.name).toBe('Light');
-    expect(canvasResolver(p, 'theme-dark')!(`token:${id}`)).toBe('#16181d');
+    expect(canvasResolver(p, 'theme-dark')!(`token:${id}`)).toBe('#1e1e1e');
     expect(canvasResolver(p, 'theme-dark')).toBe(canvasResolver(p, 'theme-dark'));
     expect(canvasResolver(createProject(), null)).toBeNull();
     const baked = bakedForExport(p, 'theme-dark');
-    expect((baked.artboards[0].children[0] as RectNode).fill).toEqual(solid('#16181d'));
+    expect((baked.artboards[0].children[0] as RectNode).fill).toEqual(solid('#1e1e1e'));
     expect(bakedForExport(createProject(), null)).toBeInstanceOf(Object);
   });
 });

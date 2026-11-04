@@ -4,7 +4,7 @@ import { store, useEditor } from '../store/store';
 import { CheckField, ColorField, IconButton, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { confirmDialog, promptDialog } from '../components/dialogs';
-import { addTheme, addToken, checkThemePairs, convertStylesToTokens, ensureThemes, removeTheme, removeToken, setTokenValue, themeCounts, type PairResult } from '../lib/themes';
+import { addTheme, addToken, checkThemePairs, convertStylesToTokens, ensureThemes, removeTheme, removeToken, setTokenValue, starterUpgrade, themeCounts, upgradeStarterTokens, type PairResult } from '../lib/themes';
 
 /** The Themes tab: tokens down the side, themes across, a colour in each cell. */
 export function ThemesPanel() {
@@ -15,6 +15,7 @@ export function ThemesPanel() {
   const pairs = useMemo(() => checkThemePairs(themes), [themes]);
   const edit = (fn: (d: typeof project) => void, coalesce?: string) => store().update((d) => fn(d), { coalesce });
   const styleCount = (project.styles?.colors ?? []).filter((s) => !s.token).length;
+  const upgrade = useMemo(() => starterUpgrade(themes), [themes]);
 
   if (!themes?.list.length) {
     return (
@@ -24,7 +25,7 @@ export function ThemesPanel() {
             <strong>Themes</strong> let one interactive look right in light, dark and high contrast. A colour token is a name (like <code>color/primary</code>) with a colour for each theme; a fill, stroke or text colour that uses it changes when the theme does.
           </p>
           <p className="muted small">Nothing changes until a layer uses a token. Imported files keep their own colours.</p>
-          <button className="btn primary" title="Add Light, Dark and High contrast themes with starter tokens for background, surface, text, muted text, primary, text on primary and outline" onClick={() => edit((d) => void ensureThemes(d))}>
+          <button className="btn primary" title="Add Light, Dark and High contrast themes with starter tokens in the toolbox look: greys, gold buttons with black text, outlines, the focus ring and the right, wrong and missed colours" onClick={() => edit((d) => void ensureThemes(d))}>
             <Icons.plus width={13} /> Add Light, Dark and High contrast
           </button>
           {styleCount > 0 && (
@@ -81,6 +82,18 @@ export function ThemesPanel() {
             title="Make a token from each colour style (the same colour in every theme to start with) and point the layers that follow a style at it. Styles from libraries convert too, and a library update keeps the link"
           >
             Convert {styleCount} colour {styleCount === 1 ? 'style' : 'styles'} to tokens
+          </button>
+        )}
+        {(upgrade.restyle.length > 0 || upgrade.missing.length > 0) && (
+          <button
+            className="btn small-btn"
+            onClick={() => {
+              edit((d) => void upgradeStarterTokens(d));
+              store().toast('Starter colours updated. Layers that follow a token changed with it; plain colours and tokens you edited did not.');
+            }}
+            title={`Move the starter tokens to the toolbox look. ${upgrade.restyle.length ? `Starter tokens you never edited get the new colours (${upgrade.restyle.map((t) => t.name).join(', ')}). ` : ''}${upgrade.missing.length ? `Adds the ones this project lacks (${upgrade.missing.length}). ` : ''}Layers that follow a token change with it. Plain colours and tokens you edited stay as they are`}
+          >
+            Update starter colours
           </button>
         )}
         <div className="spacer" />
@@ -225,16 +238,8 @@ function setHostVar(t: ProjectThemes, tokenId: string, text: string): void {
 
 /** Whether a failing pair is about this token (by name, so two tokens with one colour are told apart). */
 function pairUses(p: PairResult, token: ThemeToken): boolean {
-  const names: Record<string, string[]> = {
-    'text on background': ['color/text', 'color/background'],
-    'text on surface': ['color/text', 'color/surface'],
-    'muted text on background': ['color/muted', 'color/background'],
-    'muted text on surface': ['color/muted', 'color/surface'],
-    'label on primary': ['color/on-primary', 'color/primary'],
-    'primary on background': ['color/primary', 'color/background'],
-    'outline against background': ['color/border', 'color/background'],
-  };
-  return (names[p.label] ?? []).includes(token.name.trim().toLowerCase());
+  const name = token.name.trim().toLowerCase();
+  return p.fgName === name || p.bgName === name;
 }
 
 function ContrastList({ themes, pairs }: { themes: ProjectThemes; pairs: PairResult[] }) {

@@ -6,13 +6,10 @@
 import { createArtboard, createNode, createProject, uid, type Artboard, type LogicEdge, type LogicNode, type Project, type SceneNode, type TemplateChecklistItem, type Timeline, type TextNode } from 'interactives-player';
 import { addQuestion } from './question-kit';
 import { addStepsExample } from './steps';
+import { lookFor, starterThemes } from './themes';
 
-const INK = '#1b2333';
-const MUTED = '#5b6577';
-const LINE = '#cfd6e0';
-const ACCENT = '#3b5bfd';
-const SOFT = '#e8edff';
-const GOOD = '#0a7d33';
+//The starters use the starter theme tokens: base() gives each project the Light, Dark and High contrast themes and picks these up.
+let L = lookFor(undefined);
 
 export interface Starter {
   key: string;
@@ -27,7 +24,7 @@ const solid = (color: string) => ({ type: 'solid' as const, color });
 const stroke = (color: string, width = 1.5) => ({ paint: solid(color), width });
 
 const text = (name: string, value: string, x: number, y: number, width: number, extra: Partial<TextNode> = {}): TextNode =>
-  createNode('text', { name, text: value, x, y, width, fontSize: 18, color: INK, ...extra });
+  createNode('text', { name, text: value, x, y, width, fontSize: 18, color: L.text, ...extra });
 
 const heading = (name: string, value: string, x: number, y: number, width: number, extra: Partial<TextNode> = {}): TextNode =>
   text(name, value, x, y, width, { fontSize: 34, fontWeight: 700, role: 'heading', headingLevel: 1, ...extra });
@@ -41,9 +38,9 @@ const button = (name: string, label: string, x: number, y: number, width = 180, 
     width,
     height: 46,
     cornerRadius: 10,
-    fill: solid(primary ? ACCENT : '#ffffff'),
-    stroke: primary ? null : stroke(ACCENT),
-    color: primary ? '#ffffff' : ACCENT,
+    fill: solid(primary ? L.button : L.background),
+    stroke: primary ? null : stroke(L.border),
+    color: primary ? L.onButton : L.text,
     fontSize: 16,
     fontWeight: 600,
   });
@@ -60,7 +57,9 @@ function base(name: string, boardName: string, width = 960, height = 640): { pro
   ab.name = boardName;
   ab.width = width;
   ab.height = height;
-  ab.background = solid('#ffffff');
+  project.themes = starterThemes();
+  L = lookFor(project.themes);
+  ab.background = solid(L.background);
   project.fonts.push({ family: 'Open Sans', source: 'google', weights: [400, 600, 700] });
   return { project, ab };
 }
@@ -84,7 +83,7 @@ const byName = (ab: Artboard, name: string): SceneNode | undefined => {
 function quiz() {
   const { project, ab } = base('Quiz', 'Quiz');
   const title = heading('Quiz title', 'Check your understanding', 80, 36, 800);
-  const intro = text('Quiz intro', 'Choose the best answer, then press Check.', 80, 86, 800, { color: MUTED });
+  const intro = text('Quiz intro', 'Choose the best answer, then press Check.', 80, 86, 800, { color: L.muted });
   ab.children.push(title, intro);
   const frameId = addQuestion(project, ab.id, 'single', { at: { x: 80, y: 140 } });
   const frame = ab.children.find((n) => n.id === frameId)!;
@@ -124,7 +123,7 @@ function steps() {
 function flipCards() {
   const { project, ab } = base('Flip cards', 'Cards');
   const title = heading('Cards title', 'Flip each card', 80, 36, 800);
-  const hint = text('Cards hint', 'Click a card, or press Enter on it, to see the other side.', 80, 86, 800, { color: MUTED });
+  const hint = text('Cards hint', 'Click a card, or press Enter on it, to see the other side.', 80, 86, 800, { color: L.muted });
   ab.children.push(title, hint);
   const nodes: LogicNode[] = [];
   const edges: LogicEdge[] = [];
@@ -147,11 +146,11 @@ function flipCards() {
       width: 260,
       height: 320,
       cornerRadius: 16,
-      fill: solid(SOFT),
-      stroke: stroke(ACCENT, 2),
+      fill: solid(L.surface),
+      stroke: stroke(L.primary, 2),
       clip: false,
       bindings: { visible: `!${v.name}` },
-      children: [text('Front text', front, 20, 120, 220, { fontSize: 26, fontWeight: 700, align: 'center', color: ACCENT })],
+      children: [text('Front text', front, 20, 120, 220, { fontSize: 26, fontWeight: 700, align: 'center', color: L.text })],
     });
     const backFace = createNode('frame', {
       name: `Card ${i + 1} back`,
@@ -160,8 +159,8 @@ function flipCards() {
       width: 260,
       height: 320,
       cornerRadius: 16,
-      fill: solid('#ffffff'),
-      stroke: stroke(GOOD, 2),
+      fill: solid(L.background),
+      stroke: stroke(L.success, 2),
       clip: false,
       bindings: { visible: v.name },
       children: [text('Back text', back, 24, 110, 212, { fontSize: 18, align: 'center' })],
@@ -200,7 +199,7 @@ function flipCards() {
 function sorting() {
   const { project, ab } = base('Drag and drop sorting', 'Sort it');
   const title = heading('Sorting title', 'Sort the items', 60, 30, 840);
-  const prompt = text('Sorting prompt', 'Drag each item into the group it belongs to.', 60, 78, 840, { color: MUTED });
+  const prompt = text('Sorting prompt', 'Drag each item into the group it belongs to.', 60, 78, 840, { color: L.muted });
   ab.children.push(title, prompt);
 
   const placed = { id: uid('v'), name: 'placed', type: 'number' as const, initial: 0 };
@@ -216,13 +215,13 @@ function sorting() {
       height: 220,
       cornerRadius: 16,
       fill: solid(tint),
-      stroke: stroke(LINE, 2),
+      stroke: stroke(L.border, 2),
       clip: false,
       dropZone: { accepts: [tag], label },
       children: [text(`${name} label`, label, 20, 14, 360, { fontSize: 22, fontWeight: 700, align: 'center' })],
     });
-  const zoneA = zone('Group A', 'Group A', 60, 'a', SOFT);
-  const zoneB = zone('Group B', 'Group B', 500, 'b', '#e3f6e9');
+  const zoneA = zone('Group A', 'Group A', 60, 'a', L.surfaceMuted);
+  const zoneB = zone('Group B', 'Group B', 500, 'b', L.successSurface);
   ab.children.push(zoneA, zoneB);
 
   const chips: SceneNode[] = [];
@@ -240,8 +239,8 @@ function sorting() {
       width: 180,
       height: 56,
       cornerRadius: 12,
-      fill: solid('#ffffff'),
-      stroke: stroke(ACCENT, 2),
+      fill: solid(L.background),
+      stroke: stroke(L.primary, 2),
       clip: false,
       shadow: { x: 0, y: 2, blur: 6, spread: 0, color: 'rgba(16,24,40,0.18)' },
       draggable: { tags: [tag], onMiss: 'return' },
@@ -253,8 +252,8 @@ function sorting() {
   });
 
   const total = things.length;
-  const status = text('Sort progress', `Sorted {placed} of ${total}`, 60, 500, 400, { fontSize: 16, color: MUTED });
-  const feedback = text('Sort feedback', '{message}', 60, 530, 560, { fontSize: 20, fontWeight: 600, color: ACCENT });
+  const status = text('Sort progress', `Sorted {placed} of ${total}`, 60, 500, 400, { fontSize: 16, color: L.muted });
+  const feedback = text('Sort feedback', '{message}', 60, 530, 560, { fontSize: 20, fontWeight: 600, color: L.primary });
   const again = button('Start again', 'Start again', 720, 520, 180, false);
   ab.children.push(status, feedback, again);
 
@@ -288,14 +287,14 @@ function branching() {
   const { project, ab } = base('Branching story', 'Opening');
   const scene = (board: Artboard, h: string, body: string, x: number) => {
     board.canvasX = x;
-    board.background = solid('#ffffff');
+    board.background = solid(L.background);
     const t = heading(`${board.name} title`, h, 80, 60, 800);
-    const b = text(`${board.name} text`, body, 80, 140, 800, { fontSize: 22, color: INK });
+    const b = text(`${board.name} text`, body, 80, 140, 800, { fontSize: 22, color: L.text });
     board.children.push(t, b);
     return { t, b };
   };
   const mk = (name: string, x: number): Artboard => {
-    const board = createArtboard({ name, width: ab.width, height: ab.height, background: solid('#ffffff'), canvasX: x });
+    const board = createArtboard({ name, width: ab.width, height: ab.height, background: solid(L.background), canvasX: x });
     project.artboards.push(board);
     return board;
   };
@@ -336,14 +335,16 @@ function branching() {
 
 function timelineIntro() {
   const { project, ab } = base('Animated intro', 'Intro');
-  ab.background = solid('#101828');
-  const bar = createNode('rect', { name: 'Accent bar', x: 120, y: 250, width: 240, height: 8, cornerRadius: 4, fill: solid('#7a93ff'), originX: 0, originY: 0.5 });
+  ab.background = solid('#1e1e1e');
+  const bar = createNode('rect', { name: 'Accent bar', x: 120, y: 250, width: 240, height: 8, cornerRadius: 4, fill: solid('#ffb448'), originX: 0, originY: 0.5 });
   const title = heading('Intro title', 'Your title arrives here', 120, 150, 720, { fontSize: 56, color: '#ffffff', opacity: 0 });
-  const sub = text('Intro subtitle', 'A line that says what this is about', 120, 280, 720, { fontSize: 24, color: '#c7d2fe', opacity: 0 });
+  const sub = text('Intro subtitle', 'A line that says what this is about', 120, 280, 720, { fontSize: 24, color: '#cacaca', opacity: 0 });
   const replay = button('Replay', 'Replay', 120, 400, 140, false);
   replay.opacity = 0;
-  replay.color = '#ffffff';
-  replay.stroke = stroke('#7a93ff');
+  //The dark hero keeps its own fixed colours in every theme
+  replay.fill = solid('#ffb448');
+  replay.color = '#1e1e1e';
+  replay.stroke = null;
   ab.children.push(bar, title, sub, replay);
   const key = (t: number, value: number, ease: 'easeOut' | 'easeInOut' = 'easeOut') => ({ id: uid('k'), t, value, ease });
   const track = (nodeId: string, prop: string, keys: ReturnType<typeof key>[]) => ({ id: uid('tr'), nodeId, prop, keys });

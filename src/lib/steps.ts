@@ -1,5 +1,6 @@
 import { createNode, uid, type Artboard, type LogicEdge, type LogicNode, type Project, type SceneNode, type StepsConfig, type Timeline, type Variable } from 'interactives-player';
 import { uniqueIdentifier } from '../store/doc';
+import { lookFor } from './themes';
 
 /**
  * Step-through explainers, the editor's side: switching Steps on for an artboard (the project variables the player keeps up
@@ -8,11 +9,9 @@ import { uniqueIdentifier } from '../store/doc';
  * the step variables, so nothing here has to run again when the markers change.
  */
 
-/** The look of the generated bar. Colours match the default button so it sits with the rest of a new project. */
-const INK = '#101828';
-const MUTED = '#667085';
-const LINE = '#d0d5dd';
-const ACCENT = '#3b5bfd';
+//The look of the generated bar: the starter colours, so it sits with the rest of a new project (tokens when the project has the starter ones).
+//Set when a bar or a scroll column is built.
+let L = lookFor(undefined);
 
 /** Size and place of the bar on an artboard: along the bottom, centred. */
 export function stepBarBox(ab: Pick<Artboard, 'width' | 'height'>): { x: number; y: number; width: number; height: number } {
@@ -70,9 +69,9 @@ function barButton(name: string, label: string, x: number, y: number, primary: b
     y,
     width: 96,
     height: 40,
-    fill: { type: 'solid', color: primary ? ACCENT : '#ffffff' },
-    stroke: primary ? null : { paint: { type: 'solid', color: ACCENT }, width: 1 },
-    color: primary ? '#ffffff' : ACCENT,
+    fill: { type: 'solid', color: primary ? L.button : L.background },
+    stroke: primary ? null : { paint: { type: 'solid', color: L.border }, width: 1 },
+    color: primary ? L.onButton : L.text,
     bindings: { disabled },
   });
 }
@@ -83,6 +82,7 @@ function barButton(name: string, label: string, x: number, y: number, primary: b
  * step they go to, and jump there. `frame` is the card, `logic` the nodes that make the buttons and dots work.
  */
 export function buildStepBar(project: Project, ab: Artboard, cfg: StepsConfig): { frame: SceneNode; nodes: LogicNode[]; edges: LogicEdge[] } {
+  L = lookFor(project.themes);
   const box = stepBarBox(ab);
   const step = nameOf(project, cfg.stepVar, 'step');
   const count = nameOf(project, cfg.countVar, 'stepCount');
@@ -90,9 +90,9 @@ export function buildStepBar(project: Project, ab: Artboard, cfg: StepsConfig): 
   const caption = nameOf(project, cfg.captionVar, 'stepCaption');
   const inner = box.width - 32;
 
-  const counter = createNode('text', { name: 'Step counter', text: `Step {${step}} of {${count}}`, x: 16, y: 14, width: inner, fontSize: 13, fontWeight: 600, color: MUTED });
-  const heading = createNode('text', { name: 'Step title', text: `{${title}}`, x: 16, y: 36, width: inner, fontSize: 20, fontWeight: 700, color: INK, role: 'heading', headingLevel: 2 });
-  const words = createNode('text', { name: 'Step caption', text: `{${caption}}`, x: 16, y: 68, width: inner, fontSize: 15, color: '#344054' });
+  const counter = createNode('text', { name: 'Step counter', text: `Step {${step}} of {${count}}`, x: 16, y: 14, width: inner, fontSize: 13, fontWeight: 600, color: L.muted });
+  const heading = createNode('text', { name: 'Step title', text: `{${title}}`, x: 16, y: 36, width: inner, fontSize: 20, fontWeight: 700, color: L.text, role: 'heading', headingLevel: 2 });
+  const words = createNode('text', { name: 'Step caption', text: `{${caption}}`, x: 16, y: 68, width: inner, fontSize: 15, color: L.text });
   const back = barButton('Back button', 'Back', 16, 112, false, `${step} <= 1`);
   const next = barButton('Next button', 'Next', box.width - 16 - 96, 112, true, `${step} >= ${count}`);
 
@@ -114,8 +114,8 @@ export function buildStepBar(project: Project, ab: Artboard, cfg: StepsConfig): 
         width: 12,
         height: 12,
         decorative: true,
-        fill: { type: 'solid', color: LINE },
-        bindings: { 'fill.color': `item.current ? "${ACCENT}" : "${LINE}"` },
+        fill: { type: 'solid', color: L.divider },
+        bindings: { 'fill.color': `item.current ? "${L.primary}" : "${L.divider}"` },
       }),
     ],
   });
@@ -137,9 +137,9 @@ export function buildStepBar(project: Project, ab: Artboard, cfg: StepsConfig): 
     y: box.y,
     width: box.width,
     height: box.height,
-    fill: { type: 'solid', color: '#ffffff' },
-    stroke: { paint: { type: 'solid', color: LINE }, width: 1 },
-    cornerRadius: 12,
+    fill: { type: 'solid', color: L.surface },
+    stroke: null,
+    cornerRadius: 8,
     clip: false,
     role: 'region',
     ariaLabel: 'Steps',
@@ -176,7 +176,8 @@ export function addStepBar(project: Project, ab: Artboard): string {
 }
 
 /** A tall transparent column the steps scrub by scrolling, at the right of the artboard (or wherever there is room). Returns its id. */
-export function addScrollColumn(ab: Artboard): string {
+export function addScrollColumn(ab: Artboard, project?: Project): string {
+  L = lookFor(project?.themes);
   const width = 220;
   const height = Math.max(120, Math.min(ab.height - 220, 360));
   const steps = Math.max(2, ab.timelines.find((t) => t.id === ab.steps?.timeline)?.markers?.filter((m) => m.step !== false).length ?? 2);
@@ -188,12 +189,12 @@ export function addScrollColumn(ab: Artboard): string {
     height,
     scroll: 'vertical',
     clip: true,
-    fill: { type: 'solid', color: '#f2f4f7' },
-    stroke: { paint: { type: 'solid', color: LINE }, width: 1 },
+    fill: { type: 'solid', color: L.surface },
+    stroke: { paint: { type: 'solid', color: L.divider }, width: 1 },
     cornerRadius: 8,
     children: [
-      createNode('rect', { name: 'Scroll length', x: 0, y: 0, width: width - 16, height: height * (steps + 1), fill: { type: 'solid', color: '#f2f4f7' }, decorative: true }),
-      createNode('text', { name: 'Scroll hint', text: 'Scroll to move through the steps', x: 12, y: 12, width: width - 40, fontSize: 14, color: MUTED }),
+      createNode('rect', { name: 'Scroll length', x: 0, y: 0, width: width - 16, height: height * (steps + 1), fill: { type: 'solid', color: L.surface }, decorative: true }),
+      createNode('text', { name: 'Scroll hint', text: 'Scroll to move through the steps', x: 12, y: 12, width: width - 40, fontSize: 14, color: L.muted }),
     ],
   });
   ab.children.push(column);
@@ -211,7 +212,7 @@ export function addStepsExample(project: Project, ab: Artboard): void {
   const cx = Math.round(ab.width / 2);
   const cy = Math.max(60, Math.round(room / 2));
   const ball = createNode('ellipse', { name: 'Example ball', x: cx - 150, y: cy - 40, width: 80, height: 80, fill: { type: 'solid', color: '#e5484d' } });
-  const flag = createNode('rect', { name: 'Example target', x: cx + 110, y: cy - 40, width: 40, height: 80, cornerRadius: 6, fill: { type: 'solid', color: '#cfd6ff' } });
+  const flag = createNode('rect', { name: 'Example target', x: cx + 110, y: cy - 40, width: 40, height: 80, cornerRadius: 6, fill: { type: 'solid', color: '#ffb448' } });
   ab.children.push(flag, ball);
   const key = (t: number, value: number | string) => ({ id: uid('k'), t, value, ease: 'easeInOut' as const });
   const track = (prop: string, keys: ReturnType<typeof key>[]) => ({ id: uid('tr'), nodeId: ball.id, prop, keys });

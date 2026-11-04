@@ -1,4 +1,7 @@
 import {
+  LIGHT_LOOK,
+  OLD_STARTER_VALUES,
+  STARTER_TOKEN_DEFS,
   bakeTheme,
   countTokenUse,
   defaultTheme,
@@ -8,12 +11,15 @@ import {
   isTokenRef,
   makeColorResolver,
   strokeList,
+  tokenByName,
   tokenIdOf,
   tokenRef,
   tokenValue,
   uid,
   walk,
   type ColorResolver,
+  type LookKey,
+  type NodeType,
   type Paint,
   type Project,
   type ProjectThemes,
@@ -35,21 +41,107 @@ export const STARTER_THEMES: ThemeDef[] = [
   { id: 'theme-high-contrast', name: 'High contrast', mode: 'dark', highContrast: true },
 ];
 
-/** The starter tokens: name, then the value in Light, Dark and High contrast. */
-const STARTER_TOKENS: [string, string, string, string][] = [
-  ['color/background', '#ffffff', '#16181d', '#000000'],
-  ['color/surface', '#f3f4f8', '#23262e', '#000000'],
-  ['color/text', '#1c1e26', '#f1f2f6', '#ffffff'],
-  ['color/muted', '#555b6b', '#b4b9c6', '#ffffff'],
-  ['color/primary', '#3b5bfd', '#8fa3ff', '#ffff00'],
-  ['color/on-primary', '#ffffff', '#0e1020', '#000000'],
-  ['color/border', '#8a90a0', '#6d7384', '#ffffff'],
-];
-
 export function starterThemes(): ProjectThemes {
   const list = STARTER_THEMES.map((t) => ({ ...t }));
-  const tokens: ThemeToken[] = STARTER_TOKENS.map(([name, ...values]) => ({ id: uid('tk'), name, values: Object.fromEntries(list.map((t, i) => [t.id, values[i]])) }));
+  const tokens: ThemeToken[] = STARTER_TOKEN_DEFS.map((d) => ({ id: uid('tk'), name: d.name, values: { 'theme-light': d.light, 'theme-dark': d.dark, 'theme-high-contrast': d.highContrast } }));
   return { list, tokens, follow: true };
+}
+
+// ---------------------------------------------------------------- the starter look in new layers
+
+/**
+ * The starter colours for a project: a reference to the project's own token where it has one by the starter name
+ * (`color/text`, `color/button`, ...), else the Light colour as a plain value. A project with no tokens gets plain values only.
+ */
+export function lookFor(themes: ProjectThemes | undefined | null): Record<LookKey, string> {
+  const out = { ...LIGHT_LOOK };
+  if (!hasTokens(themes)) return out;
+  for (const d of STARTER_TOKEN_DEFS) {
+    const token = tokenByName(themes, d.name);
+    if (token) out[d.key] = tokenRef(token.id);
+  }
+  return out;
+}
+
+const solid = (color: string) => ({ type: 'solid' as const, color });
+
+/**
+ * What a new layer of this type paints with in a project that has theme tokens: the same colours `createNode` starts with,
+ * as references to the starter tokens the project has. Nothing for a project without tokens (its layers keep the plain defaults).
+ */
+export function lookDefaults(project: Project, type: NodeType): Record<string, unknown> {
+  if (!hasTokens(project.themes)) return {};
+  const l = lookFor(project.themes);
+  switch (type) {
+    case 'rect':
+    case 'ellipse':
+    case 'polygon':
+    case 'star':
+      return { fill: solid(l.surfaceMuted) };
+    case 'path':
+      return { stroke: { paint: solid(l.text), width: 2 } };
+    case 'text':
+      return { color: l.text };
+    case 'frame':
+      return { fill: solid(l.background) };
+    case 'button':
+      return { fill: solid(l.button), color: l.onButton };
+    case 'input':
+      return { fill: solid(l.background), stroke: { paint: solid(l.border), width: 1 }, color: l.text };
+    case 'link':
+      return { color: l.primary };
+    default:
+      return {};
+  }
+}
+
+// ---------------------------------------------------------------- projects made before the toolbox look
+
+type Column = 'light' | 'dark' | 'highContrast';
+const columnOf = (t: ThemeDef): Column => (t.highContrast ? 'highContrast' : t.mode === 'dark' ? 'dark' : 'light');
+
+export interface StarterUpgrade {
+  /** Starter tokens still on their old, never edited values. */
+  restyle: ThemeToken[];
+  /** Starter tokens the project does not have yet. */
+  missing: string[];
+}
+
+/** What "Update the starter colours" would do to a project's themes. Nothing to do when both are empty. */
+export function starterUpgrade(t: ProjectThemes | undefined): StarterUpgrade {
+  const none = { restyle: [], missing: [] };
+  if (!hasTokens(t)) return none;
+  const old = t.tokens.filter((x) => OLD_STARTER_VALUES[x.name.trim().toLowerCase()]);
+  // Only a project that started from the starter tokens gets offered the rest of them
+  if (!old.length) return none;
+  const col = { light: 0, dark: 1, highContrast: 2 } as const;
+  const restyle = old.filter((x) => {
+    const was = OLD_STARTER_VALUES[x.name.trim().toLowerCase()];
+    return t.list.every((th) => (x.values[th.id] ?? '').toLowerCase() === was[col[columnOf(th)]]);
+  });
+  const missing = STARTER_TOKEN_DEFS.filter((d) => !tokenByName(t, d.name)).map((d) => d.name);
+  return { restyle, missing };
+}
+
+/**
+ * Move a project's starter tokens to the toolbox look: tokens still on their old values get the new ones, and the starter
+ * tokens it lacks are added. Layers that follow a token change with it; raw colours and edited tokens are left alone.
+ */
+export function upgradeStarterTokens(draft: Project): { restyled: number; added: number } {
+  const t = draft.themes;
+  const todo = starterUpgrade(t);
+  if (!t || (!todo.restyle.length && !todo.missing.length)) return { restyled: 0, added: 0 };
+  const put = (token: ThemeToken, name: string) => {
+    const d = STARTER_TOKEN_DEFS.find((x) => x.name === name)!;
+    for (const th of t.list) token.values[th.id] = d[columnOf(th)];
+  };
+  for (const token of todo.restyle) put(token, token.name.trim().toLowerCase());
+  for (const name of todo.missing) {
+    const token: ThemeToken = { id: uid('tk'), name, values: {} };
+    put(token, name);
+    t.tokens.push(token);
+  }
+  return { restyled: todo.restyle.length, added: todo.missing.length };
 }
 
 /** The project's themes, created from the starters on first use. */
@@ -235,6 +327,9 @@ export interface PairResult {
   label: string;
   foreground: string;
   background: string;
+  /** The two tokens' names, as PAIRS spells them. */
+  fgName: string;
+  bgName: string;
   ratio: number;
   need: number;
   pass: boolean;
@@ -246,9 +341,21 @@ const PAIRS: { fg: string; bg: string; label: string; need: number }[] = [
   { fg: 'color/text', bg: 'color/surface', label: 'text on surface', need: 4.5 },
   { fg: 'color/muted', bg: 'color/background', label: 'muted text on background', need: 4.5 },
   { fg: 'color/muted', bg: 'color/surface', label: 'muted text on surface', need: 4.5 },
+  { fg: 'color/text', bg: 'color/surface-muted', label: 'text on muted surface', need: 4.5 },
+  { fg: 'color/muted', bg: 'color/surface-muted', label: 'muted text on muted surface', need: 4.5 },
   { fg: 'color/on-primary', bg: 'color/primary', label: 'label on primary', need: 4.5 },
+  { fg: 'color/on-button', bg: 'color/button', label: 'label on button', need: 4.5 },
   { fg: 'color/primary', bg: 'color/background', label: 'primary on background', need: 3 },
   { fg: 'color/border', bg: 'color/background', label: 'outline against background', need: 3 },
+  { fg: 'color/border', bg: 'color/surface', label: 'outline against surface', need: 3 },
+  { fg: 'color/focus', bg: 'color/background', label: 'focus ring on background', need: 3 },
+  { fg: 'color/focus', bg: 'color/surface', label: 'focus ring on surface', need: 3 },
+  { fg: 'color/success', bg: 'color/success-surface', label: 'success on its surface', need: 4.5 },
+  { fg: 'color/error', bg: 'color/error-surface', label: 'error on its surface', need: 4.5 },
+  { fg: 'color/warning', bg: 'color/warning-surface', label: 'warning on its surface', need: 4.5 },
+  { fg: 'color/text', bg: 'color/success-surface', label: 'text on success surface', need: 4.5 },
+  { fg: 'color/text', bg: 'color/error-surface', label: 'text on error surface', need: 4.5 },
+  { fg: 'color/text', bg: 'color/warning-surface', label: 'text on warning surface', need: 4.5 },
 ];
 
 /** Every token pair above, in every theme, with its contrast ratio. Pairs where a token is missing or its value cannot be read are left out. */
@@ -268,7 +375,7 @@ export function checkThemePairs(t: ProjectThemes | undefined): PairResult[] {
       if (!fc || !bc) continue;
       const back: [number, number, number] = over(bc, [255, 255, 255]);
       const ratio = contrastRatio(over(fc, back), back);
-      out.push({ themeId: theme.id, label: p.label, foreground: f!, background: b!, ratio, need: p.need, pass: ratio >= p.need });
+      out.push({ themeId: theme.id, label: p.label, foreground: f!, background: b!, fgName: p.fg, bgName: p.bg, ratio, need: p.need, pass: ratio >= p.need });
     }
   }
   return out;

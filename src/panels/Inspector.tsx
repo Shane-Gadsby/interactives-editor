@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
 import {
+  LIGHT_LOOK,
   ANIMATABLE_PROPS,
   animatableProp,
   linearLine,
@@ -261,14 +262,14 @@ export function PaintField({ paint, onChange, project, allowNone = true, box }: 
     p && (p.type === 'linear' || p.type === 'radial')
       ? p.stops
       : [
-          { offset: 0, color: p?.type === 'solid' ? p.color : '#3b5bfd' },
+          { offset: 0, color: p?.type === 'solid' ? p.color : LIGHT_LOOK.button },
           { offset: 1, color: '#00c2a8' },
         ];
   // Changing the type keeps what the paint does besides its colour: opacity, blend, feather, offset
   const setType = (t: string) => {
     const change = (p: Paint | null) => onChange(p && paint ? { ...paintFx(paint), ...p } : p);
     if (t === 'none') change(null);
-    else if (t === 'solid') change({ type: 'solid', color: paint && paint.type !== 'solid' && paint.type !== 'image' ? paint.stops[0]?.color ?? '#d9d9d9' : '#d9d9d9' });
+    else if (t === 'solid') change({ type: 'solid', color: paint && paint.type !== 'solid' && paint.type !== 'image' ? paint.stops[0]?.color ?? LIGHT_LOOK.surfaceMuted : LIGHT_LOOK.surfaceMuted });
     else if (t === 'linear') change({ type: 'linear', angle: 180, stops: stopsOf(paint) });
     else if (t === 'radial') change({ type: 'radial', stops: stopsOf(paint) });
     else if (t === 'image') change({ type: 'image', assetId: project.assets.find((a) => assetKind(a.mime) === 'image')?.id ?? '', fit: 'cover' });

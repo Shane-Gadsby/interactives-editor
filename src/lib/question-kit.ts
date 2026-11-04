@@ -30,19 +30,16 @@ import {
   type Variable,
 } from 'interactives-player';
 import { locate, uniqueName, nodeNames } from '../store/doc';
+import { lookFor } from './themes';
 
-//The look a new question starts with. Everything is a plain layer afterwards: change any of it.
-const INK = '#1b2333';
-const MUTED = '#5b6577';
-const LINE = '#cfd6e0';
-const ACCENT = '#3b5bfd';
-const SELECTED_BG = '#e8edff';
-const OK = '#0a7d33';
-const OK_BG = '#e3f6e9';
-const BAD = '#b3261e';
-const BAD_BG = '#fde8e6';
-const MISS = '#8a5a00';
-const MISS_BG = '#fff4d6';
+//The look a new question starts with: the starter colours (see lookFor), so a project with the starter tokens gets tokens and one
+//without gets the toolbox Light values. Set when a question is added or synced. Everything is a plain layer afterwards: change any of it.
+let L = lookFor(undefined);
+const AREA_OFF = '#00000000';
+const AREA_ON = '#fb940033';
+const AREA_OK = '#2f6f1740';
+const AREA_BAD = '#b3261e40';
+const AREA_MISS = '#8a520040';
 
 type Style = 'radio' | 'check' | 'blank' | 'order' | 'match' | 'spot';
 
@@ -98,13 +95,13 @@ export function sharedPrefix(p: Project, frame: FrameNode): FrameNode[] {
 // ---------------------------------------------------------------------------------------------------------------------
 //Layers
 
-const STATE_FILL = (c: string) => `item.state == "correct" ? "${OK_BG}" : item.state == "wrong" ? "${BAD_BG}" : item.state == "missed" ? "${MISS_BG}" : ${c}`;
-const STATE_LINE = (c: string) => `item.state == "correct" ? "${OK}" : item.state == "wrong" ? "${BAD}" : item.state == "missed" ? "${MISS}" : ${c}`;
+const STATE_FILL = (c: string) => `item.state == "correct" ? "${L.successSurface}" : item.state == "wrong" ? "${L.errorSurface}" : item.state == "missed" ? "${L.warningSurface}" : ${c}`;
+const STATE_LINE = (c: string) => `item.state == "correct" ? "${L.success}" : item.state == "wrong" ? "${L.error}" : item.state == "missed" ? "${L.warning}" : ${c}`;
 const STATE_WORDS = '{item.state == "correct" ? "✓ Right" : item.state == "wrong" ? "✗ Wrong" : item.state == "missed" ? "← Right answer" : ""}';
 const STATE_DESCRIPTION = 'item.state == "correct" ? "Right" : item.state == "wrong" ? "Wrong" : item.state == "missed" ? "This was the right answer" : ""';
 
 function text(name: string, part: string, value: string, o: Record<string, unknown> = {}): SceneNode {
-  return createNode('text', { name, questionPart: part, text: value, fontSize: 16, color: INK, autoSize: 'height', width: 200, height: 24, ...o });
+  return createNode('text', { name, questionPart: part, text: value, fontSize: 16, color: L.text, autoSize: 'height', width: 200, height: 24, ...o });
 }
 
 function button(name: string, part: string, label: string, primary: boolean, bindings?: Record<string, string>): SceneNode {
@@ -114,52 +111,52 @@ function button(name: string, part: string, label: string, primary: boolean, bin
     label,
     width: 150,
     height: 44,
-    fill: solid(primary ? ACCENT : '#eef1f8'),
-    color: primary ? '#ffffff' : INK,
+    fill: solid(primary ? L.button : L.surfaceMuted),
+    color: primary ? L.onButton : L.text,
     ...(bindings ? { bindings } : {}),
   });
 }
 
 function optionTemplate(style: Style): SceneNode {
-  const base = { height: 52, fill: solid('#ffffff'), cornerRadius: 10, clip: false };
+  const base = { height: 52, fill: solid(L.background), cornerRadius: 10, clip: false };
   if (style === 'order') {
     return createNode('frame', {
       ...base,
       name: 'Item',
       questionPart: 'option',
-      stroke: stroke(LINE),
+      stroke: stroke(L.border),
       layout: { ...row(12), padding: { top: 10, right: 12, bottom: 10, left: 16 } },
-      bindings: { 'fill.color': STATE_FILL('"#ffffff"'), 'stroke.paint.color': STATE_LINE(`"${LINE}"`), ariaDescription: STATE_DESCRIPTION },
+      bindings: { 'fill.color': STATE_FILL(`"${L.background}"`), 'stroke.paint.color': STATE_LINE(`"${L.border}"`), ariaDescription: STATE_DESCRIPTION },
       children: [
-        text('Number', 'optionNumber', '{item.number}.', { width: 28, color: MUTED, fontWeight: 600, decorative: true }),
+        text('Number', 'optionNumber', '{item.number}.', { width: 28, color: L.muted, fontWeight: 600, decorative: true }),
         text('Label', 'optionLabel', '{item.text}', { layoutItem: { width: 'fill' } }),
-        text('Result', 'optionState', STATE_WORDS, { fontSize: 13, fontWeight: 600, color: MUTED, autoSize: 'width', width: 90, decorative: true }),
-        createNode('button', { name: 'Move up', questionPart: 'moveUp', label: '↑', width: 40, height: 36, fill: solid('#eef1f8'), color: INK, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
-        createNode('button', { name: 'Move down', questionPart: 'moveDown', label: '↓', width: 40, height: 36, fill: solid('#eef1f8'), color: INK, bindings: { ariaLabel: '"Move " + item.text + " down"' } }),
+        text('Result', 'optionState', STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L.muted, autoSize: 'width', width: 90, decorative: true }),
+        createNode('button', { name: 'Move up', questionPart: 'moveUp', label: '↑', width: 40, height: 36, fill: solid(L.surfaceMuted), color: L.text, bindings: { ariaLabel: '"Move " + item.text + " up"' } }),
+        createNode('button', { name: 'Move down', questionPart: 'moveDown', label: '↓', width: 40, height: 36, fill: solid(L.surfaceMuted), color: L.text, bindings: { ariaLabel: '"Move " + item.text + " down"' } }),
       ],
     });
   }
   const checkbox = style === 'check';
-  const markerBase = { name: 'Marker', questionPart: 'marker', width: 22, height: 22, fill: solid('#ffffff'), stroke: stroke('#8a94a6', 2), decorative: true, bindings: { 'fill.color': 'item.selected ? "' + ACCENT + '" : "#ffffff"', 'stroke.paint.color': 'item.selected ? "' + ACCENT + '" : "#8a94a6"' } };
+  const markerBase = { name: 'Marker', questionPart: 'marker', width: 22, height: 22, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true, bindings: { 'fill.color': 'item.selected ? "' + L.primary + '" : "' + L.background + '"', 'stroke.paint.color': 'item.selected ? "' + L.primary + '" : "' + L.border + '"' } };
   return createNode('frame', {
     ...base,
     name: 'Option',
     questionPart: 'option',
     role: checkbox ? 'checkbox' : 'radio',
     focusable: true,
-    stroke: stroke(LINE),
+    stroke: stroke(L.border),
     layout: { ...row(12), padding: { top: 12, right: 16, bottom: 12, left: 16 } },
     bindings: {
       ariaChecked: 'item.selected',
       ariaLabel: 'item.text',
       ariaDescription: STATE_DESCRIPTION,
-      'fill.color': STATE_FILL(`item.selected ? "${SELECTED_BG}" : "#ffffff"`),
-      'stroke.paint.color': STATE_LINE(`item.selected ? "${ACCENT}" : "${LINE}"`),
+      'fill.color': STATE_FILL(`item.selected ? "${L.surfaceMuted}" : "${L.background}"`),
+      'stroke.paint.color': STATE_LINE(`item.selected ? "${L.primary}" : "${L.border}"`),
     },
     children: [
       checkbox ? createNode('rect', { ...markerBase, cornerRadius: 5 }) : createNode('ellipse', markerBase),
       text('Label', 'optionLabel', '{item.text}', { layoutItem: { width: 'fill' }, decorative: true }),
-      text('Result', 'optionState', STATE_WORDS, { fontSize: 13, fontWeight: 600, color: MUTED, autoSize: 'width', width: 110, decorative: true }),
+      text('Result', 'optionState', STATE_WORDS, { fontSize: 13, fontWeight: 600, color: L.muted, autoSize: 'width', width: 110, decorative: true }),
     ],
   });
 }
@@ -191,7 +188,7 @@ function blankRow(q: Question, i: number, variableId: string): SceneNode {
     clip: false,
     layout: { ...column(6), align: 'stretch' as const },
     children: [
-      text('Blank label', 'blankLabel', q.blanks[i]?.label ?? '', { fontSize: 14, fontWeight: 600, color: MUTED, bindings: { text: `${at}?.label ?? ""` } }),
+      text('Blank label', 'blankLabel', q.blanks[i]?.label ?? '', { fontSize: 14, fontWeight: 600, color: L.muted, bindings: { text: `${at}?.label ?? ""` } }),
       createNode('input', {
         name: 'Blank input',
         questionPart: 'blankInput',
@@ -200,9 +197,9 @@ function blankRow(q: Question, i: number, variableId: string): SceneNode {
         variableId,
         width: 280,
         height: 44,
-        bindings: { 'stroke.paint.color': `${at}?.state == "correct" ? "${OK}" : ${at}?.state == "wrong" ? "${BAD}" : "#c4c4c4"`, ariaLabel: `${at}?.label || "Answer"` },
+        bindings: { 'stroke.paint.color': `${at}?.state == "correct" ? "${L.success}" : ${at}?.state == "wrong" ? "${L.error}" : "${L.border}"`, ariaLabel: `${at}?.label || "Answer"` },
       }),
-      text('Blank answer', 'blankAnswer', `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: MISS, bindings: { visible: `!!${at}?.answer` } }),
+      text('Blank answer', 'blankAnswer', `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L.warning, bindings: { visible: `!!${at}?.answer` } }),
     ],
   });
 }
@@ -237,8 +234,8 @@ const itemAt = (q: Question, i: number) => `${varName(q, 'items')}[${i}]`;
 const stateFor = (ref: string) => {
   const r = `${ref}?`;
   return {
-    fill: (c: string) => `${r}.state == "correct" ? "${OK_BG}" : ${r}.state == "wrong" ? "${BAD_BG}" : ${r}.state == "missed" ? "${MISS_BG}" : ${c}`,
-    line: (c: string) => `${r}.state == "correct" ? "${OK}" : ${r}.state == "wrong" ? "${BAD}" : ${r}.state == "missed" ? "${MISS}" : ${c}`,
+    fill: (c: string) => `${r}.state == "correct" ? "${L.successSurface}" : ${r}.state == "wrong" ? "${L.errorSurface}" : ${r}.state == "missed" ? "${L.warningSurface}" : ${c}`,
+    line: (c: string) => `${r}.state == "correct" ? "${L.success}" : ${r}.state == "wrong" ? "${L.error}" : ${r}.state == "missed" ? "${L.warning}" : ${c}`,
     description: (right: string, wrong: string) => `${r}.state == "correct" ? "Right" : ${r}.state == "wrong" ? ${wrong} : ${r}.state == "missed" ? ${right} : ""`,
   };
 };
@@ -266,15 +263,15 @@ function matchTerm(q: Question, p: QuestionPair, i: number, slot: number): Scene
     y: slot * TERM_PITCH,
     width: TERM_W,
     height: TERM_H,
-    fill: solid('#ffffff'),
-    stroke: stroke('#8a94a6', 2),
+    fill: solid(L.background),
+    stroke: stroke(L.border, 2),
     cornerRadius: 10,
     clip: false,
     layout: { ...row(8), padding: { top: 8, right: 12, bottom: 8, left: 12 }, hugHeight: false },
     ariaLabel: p.term,
     draggable: { tags: [termTag(q)], onMiss: 'return', label: p.term },
-    shadow: { x: 0, y: 2, blur: 6, spread: 0, color: 'rgba(20,30,60,0.12)' },
-    bindings: { 'fill.color': st.fill('"#ffffff"'), 'stroke.paint.color': st.line('"#8a94a6"') },
+    shadow: { x: 0, y: 2, blur: 6, spread: 0, color: 'rgba(0,0,0,0.15)' },
+    bindings: { 'fill.color': st.fill(`"${L.background}"`), 'stroke.paint.color': st.line(`"${L.border}"`) },
     children: [text('Term text', 'matchTermText', `{${itemAt(q, i)}?.text}`, { layoutItem: { width: 'fill' }, decorative: true })],
   });
 }
@@ -305,18 +302,18 @@ function matchRow(q: Question, p: QuestionPair, i: number): SceneNode {
             width: TERM_W,
             height: TERM_H,
             fill: null,
-            stroke: { ...stroke('#8a94a6', 2), dash: [6, 4] },
+            stroke: { ...stroke(L.border, 2), dash: [6, 4] },
             cornerRadius: 10,
             clip: false,
             dropZone: { accepts: [termTag(q)], capacity: 1, whenFull: 'swap', snap: 'center', label: p.match },
-            bindings: { 'stroke.paint.color': st.line('"#8a94a6"'), ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) },
+            bindings: { 'stroke.paint.color': st.line(`"${L.border}"`), ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) },
           }),
         ],
       }),
       text('Match result', 'matchState', `{${at}?.state == "correct" ? "✓ Right" : ${at}?.state == "wrong" ? "✗ Wrong" + (${at}?.answer ? ". The answer is " + ${at}.answer : "") : ""}`, {
         fontSize: 13,
         fontWeight: 600,
-        color: MUTED,
+        color: L.muted,
         decorative: true,
         width: TERM_W,
         height: 18,
@@ -394,11 +391,6 @@ export interface Box {
   h: number;
 }
 
-const AREA_OFF = '#00000000';
-const AREA_ON = '#3b5bfd33';
-const AREA_OK = '#0a7d3340';
-const AREA_BAD = '#b3261e40';
-const AREA_MISS = '#8a5a0040';
 
 /** Where the sample question's four areas sit on its sample picture. */
 const SAMPLE_AREAS: Record<string, { shape: AreaShape; box: Box; points?: [number, number][] }> = {
@@ -438,7 +430,7 @@ function spotArea(q: Question, o: QuestionOption, i: number, shape: AreaShape, b
       ariaLabel: `${r}.text`,
       ariaDescription: stateFor(at).description('"This was the right answer"', '"Wrong"'),
       'fill.color': `${r}.state == "correct" ? "${AREA_OK}" : ${r}.state == "wrong" ? "${AREA_BAD}" : ${r}.state == "missed" ? "${AREA_MISS}" : ${r}.selected ? "${AREA_ON}" : "#ffffff01"`,
-      'stroke.paint.color': `${r}.state == "correct" ? "${OK}" : ${r}.state == "wrong" ? "${BAD}" : ${r}.state == "missed" ? "${MISS}" : ${r}.selected ? "${ACCENT}" : "${AREA_OFF}"`,
+      'stroke.paint.color': `${r}.state == "correct" ? "${L.success}" : ${r}.state == "wrong" ? "${L.error}" : ${r}.state == "missed" ? "${L.warning}" : ${r}.selected ? "${L.primary}" : "${AREA_OFF}"`,
     },
   };
   if (shape === 'ellipse') return createNode('ellipse', common);
@@ -494,7 +486,7 @@ function hotspotBody(q: Question): SceneNode {
         width: AREA_W,
         height: AREA_H,
         fill: null,
-        stroke: stroke('#dfe3ea', 1),
+        stroke: stroke(L.divider, 1),
         cornerRadius: 10,
         clip: false,
         role: isMultiple(q) ? 'region' : 'radiogroup',
@@ -503,13 +495,13 @@ function hotspotBody(q: Question): SceneNode {
       }),
       text('Picks', 'spotPicks', `Selected: {${items}.filter(i => i.selected).map(i => i.text + (i.state == "correct" ? " (right)" : i.state == "wrong" ? " (wrong)" : "")).join(", ")}`, {
         fontSize: 14,
-        color: MUTED,
+        color: L.muted,
         bindings: { visible: `${items}.some(i => i.selected)` },
       }),
       text('Right areas', 'spotAnswer', `Right answer: {${items}.filter(i => i.state == "missed").map(i => i.text).join(", ")}`, {
         fontSize: 14,
         fontWeight: 600,
-        color: MISS,
+        color: L.warning,
         bindings: { visible: `${items}.some(i => i.state == "missed")` },
       }),
     ],
@@ -539,20 +531,20 @@ function frameFor(q: Question, blankVars: string[], at: { x: number; y: number }
     height: 420,
     role: 'region',
     question: q,
-    fill: solid('#ffffff'),
-    stroke: stroke('#dfe3ea', 1),
-    cornerRadius: 14,
+    //A flat grey card on the page, like the toolbox's cards
+    fill: solid(L.surface),
+    stroke: null,
+    cornerRadius: 8,
     clip: false,
-    shadow: { x: 0, y: 4, blur: 16, spread: 0, color: 'rgba(20,30,60,0.10)' },
     bindings: { ariaLabel: `"Question: " + ${p('prompt')}` },
     layout: { ...defaultAutoLayout('column'), gap: 16, padding: { top: 24, right: 24, bottom: 24, left: 24 }, align: 'stretch', hugHeight: true },
     children: [
       text('Prompt', 'prompt', `{${p('prompt')}}`, { role: 'heading', headingLevel: 3, fontSize: 20, fontWeight: 600, lineHeight: 1.35 }),
       body,
-      text('Hint text', 'hintText', `Hint: {${p('hint')}}`, { fontSize: 14, fontStyle: 'italic', color: MUTED, bindings: { visible: `${p('hint')} != ""` } }),
+      text('Hint text', 'hintText', `Hint: {${p('hint')}}`, { fontSize: 14, fontStyle: 'italic', color: L.muted, bindings: { visible: `${p('hint')} != ""` } }),
       text('Feedback', 'feedback', `{${p('feedback')}}`, {
         fontWeight: 600,
-        bindings: { visible: `${p('feedback')} != ""`, color: `${p('answered')} ? (${p('correct')} ? "${OK}" : "${BAD}") : "${MUTED}"` },
+        bindings: { visible: `${p('feedback')} != ""`, color: `${p('answered')} ? (${p('correct')} ? "${L.success}" : "${L.error}") : "${L.muted}"` },
       }),
       createNode('frame', {
         name: 'Buttons',
@@ -565,7 +557,7 @@ function frameFor(q: Question, blankVars: string[], at: { x: number; y: number }
           button('Check answer', 'check', 'Check answer', true, { disabled: p('locked') }),
           button('Hint', 'hint', 'Hint', false, { visible: `${p('hintsLeft')} > 0 && !${p('locked')}` }),
           button('Try again', 'reset', resetLabel(q), false, { visible: resetVisible(q) }),
-          text('Score', 'score', `Score: {${p('score')}}`, { fontWeight: 600, color: MUTED, autoSize: 'width', width: 90, bindings: { visible: p('locked') } }),
+          text('Score', 'score', `Score: {${p('score')}}`, { fontWeight: 600, color: L.muted, autoSize: 'width', width: 90, bindings: { visible: p('locked') } }),
         ],
       }),
     ],
@@ -895,6 +887,7 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
   const frame = loc?.node;
   if (!ab || !frame || frame.type !== 'frame' || !frame.question) return;
   const q = frame.question;
+  L = lookFor(d.themes);
   if (before && before.prefix !== q.prefix) {
     //Rename in place when nobody else keeps variables under the old prefix (a copy that is being made independent leaves
     //its original alone); the new variables are created below
@@ -945,6 +938,7 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
 export function addQuestion(d: Project, abId: string, kind: QuestionKind, opts: { parentId?: string | null; at?: { x: number; y: number } } = {}): string | null {
   const ab = d.artboards.find((a) => a.id === abId);
   if (!ab) return null;
+  L = lookFor(d.themes);
   const q = newQuestion(kind, freePrefix(d));
   const variables = ensureVariables(d, q);
   const blankVars = q.blanks.map((_, i) => variables.find((v) => v.name === varName(q, `blank${i + 1}`))!.id);

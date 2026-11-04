@@ -134,7 +134,7 @@ export function StepsSection({ ab, project }: { ab: Artboard; project: Project }
         onChange={(v) => patch({ scrub: v })}
       />
       <Row>
-        <button className="btn" data-track="steps-scroll-column" title="Add a tall frame at the right to scroll. It becomes the scrub frame; restyle it, and put your own words in it" onClick={() => setAb((a) => void addScrollColumn(a))}>
+        <button className="btn" data-track="steps-scroll-column" title="Add a tall frame at the right to scroll. It becomes the scrub frame; restyle it, and put your own words in it" onClick={() => setAb((a, p) => void addScrollColumn(a, p))}>
           Add a scroll column
         </button>
       </Row>

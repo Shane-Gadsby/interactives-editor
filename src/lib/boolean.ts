@@ -1,5 +1,6 @@
 import polygonClipping, { type MultiPolygon, type Pair, type Polygon } from 'polygon-clipping';
 import {
+  LIGHT_LOOK,
   apply,
   cornerRadiiOf,
   createNode,
@@ -180,7 +181,7 @@ export function booleanPath(ab: Artboard, ids: string[], op: BooleanOp): { node:
     height: Math.max(1, r2(maxY - minY)),
     paths,
     fillRule: 'evenodd',
-    fill: ('fill' in base ? base.fill : { type: 'solid', color: '#d9d9d9' }) as PathNode['fill'],
+    fill: ('fill' in base ? base.fill : { type: 'solid', color: LIGHT_LOOK.surfaceMuted }) as PathNode['fill'],
     stroke: ('stroke' in base ? base.stroke : null) as PathNode['stroke'],
     // the extra fills and strokes of the first shape come along
     ...('fills' in base && base.fills?.length ? { fills: structuredClone(base.fills) } : {}),

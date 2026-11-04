@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { PAINT_BLEND_OPTIONS } from '../lib/blend-modes';
-import { fillList, fillPath, formatColor, movePaint, orderedPaints, paintToCss, parseColor, orderWithAdded, orderWithRemoved, paintFields, paintOrder, strokeList, strokePath, type BlendMode, type Paint, type PaintEntry, type PaintKind, type Project, type SceneNode, type ShapeStyle, type Stroke } from 'interactives-player';
+import { LIGHT_LOOK, fillList, fillPath, formatColor, movePaint, orderedPaints, paintToCss, parseColor, orderWithAdded, orderWithRemoved, paintFields, paintOrder, strokeList, strokePath, type BlendMode, type Paint, type PaintEntry, type PaintKind, type Project, type SceneNode, type ShapeStyle, type Stroke } from 'interactives-player';
 import { store } from '../store/store';
 import { assetUrls } from '../lib/assets';
 import { IconButton, Row, Section, SelectField, TextField } from '../components/ui';
@@ -127,7 +127,7 @@ export function FillSection({ nodes, project }: { nodes: SceneNode[]; project: P
     <Section
       help="fill-stroke"
       title="Fill"
-      actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add fill" onClick={() => write([...list, { type: 'solid', color: list.length ? '#ffffff' : '#d9d9d9' }], orderWithAdded(order, 'fill'))} />}
+      actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add fill" onClick={() => write([...list, { type: 'solid', color: list.length ? LIGHT_LOOK.background : LIGHT_LOOK.surfaceMuted }], orderWithAdded(order, 'fill'))} />}
     >
       {rows.map(({ p, i }) => {
         const prefix = fillPath(i, n);

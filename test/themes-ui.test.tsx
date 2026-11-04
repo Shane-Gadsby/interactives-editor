@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { createNode, createProject, type Project } from 'interactives-player';
+import { OLD_STARTER_VALUES, STARTER_TOKEN_DEFS, createNode, createProject, type Project } from 'interactives-player';
 import { ArtboardView } from '../src/canvas/ArtboardView';
 import { ColorField } from '../src/components/ui';
 import { ThemesPanel } from '../src/panels/ThemesPanel';
@@ -52,7 +52,7 @@ describe('the colour picker and theme tokens', () => {
     expect(tabs.map((t) => t.textContent)).toContain('Tokens');
     click(tabs.find((t) => t.textContent === 'Tokens')!);
     const rows = [...document.querySelectorAll<HTMLElement>('.token-row:not(.token-more)')];
-    expect(rows).toHaveLength(7);
+    expect(rows).toHaveLength(STARTER_TOKEN_DEFS.length);
     const primary = p.themes!.tokens.find((t) => t.name === 'color/primary')!;
     click(rows.find((r) => r.textContent!.includes('color/primary'))!);
     expect(value).toBe(`token:${primary.id}`);
@@ -61,11 +61,11 @@ describe('the colour picker and theme tokens', () => {
     expect(host.querySelector('.token-chip')!.textContent).toContain('High contrast');
     expect(host.querySelector('.swatch.linked')).not.toBeNull();
     expect(host.querySelector('input.color-text')).toBeNull();
-    expect(host.querySelector<HTMLElement>('.swatch.linked')!.style.background).toMatch(/59, 91, 253|#3b5bfd/i);
+    expect(host.querySelector<HTMLElement>('.swatch.linked')!.style.background).toMatch(/163, 95, 0|#a35f00/i);
     // the swatch follows the theme the canvas shows
     act(() => s.set({ canvasTheme: 'theme-dark' }));
     await flush();
-    expect(host.querySelector<HTMLElement>('.swatch.linked')!.style.background).toMatch(/143, 163, 255|#8fa3ff/i);
+    expect(host.querySelector<HTMLElement>('.swatch.linked')!.style.background).toMatch(/255, 180, 72|#ffb448/i);
     // detach keeps the colour showing now, as a plain one
     click(host.querySelector('.token-detach'));
     expect(value).not.toContain('token:');
@@ -102,7 +102,7 @@ describe('the canvas follows the theme', () => {
     show(null);
     expect(bgOf('card')).toMatch(/255, 255, 255|#fff/i);
     show('theme-dark');
-    expect(bgOf('card')).toMatch(/22, 24, 29|#16181d/i);
+    expect(bgOf('card')).toMatch(/30, 30, 30|#1e1e1e/i);
     expect(bgOf('plain')).toMatch(/18, 52, 86|#123456/i);
     // editing a token's value redraws it too
     act(() => s.update((d) => void (d.themes!.tokens.find((t) => t.id === bg.id)!.values['theme-dark'] = '#000000')));
@@ -118,7 +118,9 @@ describe('the Themes panel', () => {
     expect(host.textContent).toContain('Add Light, Dark and High contrast');
     click(host.querySelector('.themes-empty .btn.primary'));
     await flush();
-    expect(host.querySelectorAll('.themes-table tbody tr')).toHaveLength(7);
+    expect(host.querySelectorAll('.themes-table tbody tr')).toHaveLength(STARTER_TOKEN_DEFS.length);
+    // a project that just got the starters has nothing to update
+    expect([...host.querySelectorAll('button')].some((b) => b.textContent === 'Update starter colours')).toBe(false);
     expect(host.querySelectorAll('.themes-table thead .tk-theme')).toHaveLength(3);
     expect(host.querySelector('.themes-raw')!.textContent).toContain('0 colours not following a theme');
   });
@@ -138,5 +140,25 @@ describe('the Themes panel', () => {
     const eye = host.querySelectorAll<HTMLElement>('.theme-head button')[2];
     click(eye);
     expect(s.get().canvasTheme).toBe(dark);
+  });
+
+  it('offers to update the starter colours on a project made before the toolbox look, and only then', async () => {
+    const p = themed();
+    const t = p.themes!;
+    t.tokens = t.tokens.filter((x) => OLD_STARTER_VALUES[x.name]).map((x) => ({ ...x, values: Object.fromEntries(t.list.map((th, i) => [th.id, OLD_STARTER_VALUES[x.name][i]])) }));
+    const text = t.tokens.find((x) => x.name === 'color/text')!;
+    p.artboards[0].children.push(createNode('rect', { id: 'r', fill: { type: 'solid', color: `token:${text.id}` } }));
+    open(p);
+    act(() => root.render(<ThemesPanel />));
+    await flush();
+    const button = () => [...host.querySelectorAll('button')].find((b) => b.textContent === 'Update starter colours');
+    expect(button()).toBeTruthy();
+    // nothing moved by itself
+    expect(s.get().project.themes!.tokens.find((x) => x.id === text.id)!.values['theme-light']).toBe('#1c1e26');
+    click(button()!);
+    await flush();
+    expect(s.get().project.themes!.tokens.find((x) => x.id === text.id)!.values['theme-light']).toBe('#1e1e1e');
+    expect(s.get().project.themes!.tokens).toHaveLength(STARTER_TOKEN_DEFS.length);
+    expect(button()).toBeUndefined();
   });
 });

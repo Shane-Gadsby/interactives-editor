@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { uid, type Script, type Variable, type VariableType } from 'interactives-player';
+import { LIGHT_LOOK, uid, type Script, type Variable, type VariableType } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueIdentifier, uniqueName } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -169,7 +169,7 @@ export function VariablesPanel() {
       d.variables.push({ id: uid('v'), name, type: 'number', initial: 0 });
     });
   };
-  const defaultFor = (t: VariableType) => (t === 'number' ? 0 : t === 'boolean' ? false : t === 'color' ? '#3b5bfd' : t === 'enum' ? 'first' : t === 'list' ? '[]' : '');
+  const defaultFor = (t: VariableType) => (t === 'number' ? 0 : t === 'boolean' ? false : t === 'color' ? LIGHT_LOOK.button : t === 'enum' ? 'first' : t === 'list' ? '[]' : '');
   return (
     <div className="variables">
       <table className="var-table">

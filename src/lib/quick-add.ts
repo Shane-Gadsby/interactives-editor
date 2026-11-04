@@ -1,4 +1,4 @@
-import { uid, type VariableType } from 'interactives-player';
+import { LIGHT_LOOK, uid, type VariableType } from 'interactives-player';
 import { store } from '../store/store';
 import { uniqueIdentifier } from '../store/doc';
 import { insertFiles, pickFiles } from './insert';
@@ -46,7 +46,7 @@ export async function createVariable(type: VariableType = 'number', suggested = 
   if (raw === null) return null;
   const name = variableNameFrom(raw, store().get().project.variables.map((v) => v.name), suggested);
   const id = uid('v');
-  const initial = type === 'number' ? 0 : type === 'boolean' ? false : type === 'color' ? '#3b5bfd' : '';
+  const initial = type === 'number' ? 0 : type === 'boolean' ? false : type === 'color' ? LIGHT_LOOK.button : '';
   store().update((d) => {
     d.variables.push({ id, name, type, initial });
   });
