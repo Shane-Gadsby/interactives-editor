@@ -11,6 +11,7 @@ import { prefs } from './lib/prefs';
 import { sessionUser, type SessionUser } from './lib/session';
 import { noteIfStale } from './lib/stale-build';
 import { NoticeBell } from './components/NoticeBell';
+import { TemplatesTab } from './components/TemplatesTab';
 
 declare global {
   interface Window {
@@ -24,6 +25,7 @@ type SortKey = 'updated' | 'name';
 const SORT_KEY = 'ix.home.sort';
 const VIEW_KEY = 'ix.home.view';
 const SIZE_KEY = 'ix.home.size';
+const TAB_KEY = 'ix.home.tab';
 export const HOME_SIZE_MIN = 140;
 export const HOME_SIZE_MAX = 360;
 export const HOME_SIZE_DEFAULT = 220;
@@ -110,7 +112,20 @@ function TagAdder({ onAdd, disabled, suggestions }: { onAdd: (tag: string) => vo
   );
 }
 
+function readTab(): 'projects' | 'templates' {
+  try {
+    return localStorage.getItem(TAB_KEY) === 'templates' ? 'templates' : 'projects';
+  } catch {
+    return 'projects';
+  }
+}
+
 export function Home({ open }: { open: (id: string) => void }) {
+  const [tab, setTab] = useState<'projects' | 'templates'>(readTab);
+  const pickTab = (t: 'projects' | 'templates') => {
+    setTab(t);
+    keep(TAB_KEY, t);
+  };
   const [list, setList] = useState<ProjectMeta[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -337,7 +352,16 @@ export function Home({ open }: { open: (id: string) => void }) {
         </div>
       )}
       {error && <div className="error-banner">{error}</div>}
-      {!!list?.length && (
+      <nav className="home-tabs" role="tablist" aria-label="Projects or templates">
+        <button role="tab" aria-selected={tab === 'projects'} className={tab === 'projects' ? 'on' : ''} onClick={() => pickTab('projects')} title="Your projects">
+          Projects
+        </button>
+        <button role="tab" aria-selected={tab === 'templates'} className={tab === 'templates' ? 'on' : ''} onClick={() => pickTab('templates')} title="Start from a template: yours, shared ones, the built-in starters and the examples">
+          Templates
+        </button>
+      </nav>
+      {tab === 'templates' && <TemplatesTab folder={folderSel.kind === 'folder' ? folderSel.name : null} folders={folders.names} open={open} />}
+      {tab === 'projects' && !!list?.length && (
         <div className="home-tools">
           <input
             type="search"
@@ -392,7 +416,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           )}
         </div>
       )}
-      <div className="home-body">
+      {tab === 'projects' && <div className="home-body">
         {!!list?.length && (
           <aside className="folder-side" aria-label="Folders">
             <button className={`folder-item${folderSel.kind === 'all' ? ' active' : ''}`} onClick={() => setFolderSel({ kind: 'all' })} title="Every project">
@@ -582,7 +606,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           </article>
         ))}
       </main>
-      </div>
+      </div>}
     </div>
   );
 }

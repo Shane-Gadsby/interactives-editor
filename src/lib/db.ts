@@ -7,6 +7,7 @@
  * adds `X-Session-ID` to every same-origin fetch when the page loads it.
  */
 import type { LibraryContent, LibraryInfo } from './libraries';
+import type { TemplateInfo } from './templates';
 import { reportError, routePattern, track } from './analytics';
 import { normalizeProject, readPackage, uid, writePackage, type Asset, type Project } from 'interactives-player';
 
@@ -257,6 +258,8 @@ export interface ShareInfo {
   token: string;
   created: string;
   updated: string;
+  /** Signed in people who play it from the learner link get a "Remix this" button that copies the project into their own. */
+  remix?: boolean;
 }
 
 export const getShare = (projectId: string) => call<{ share: ShareInfo | null }>(`projects/${projectId}/share`).then((r) => r.share);
@@ -288,6 +291,10 @@ export const removeCollaborator = (projectId: string, username: string) =>
 
 export const publishShare = (projectId: string, html: string) =>
   call<{ share: ShareInfo }>(`projects/${projectId}/share`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html }).then((r) => r.share);
+
+/** Turn "Allow remix" on or off for an existing share link. */
+export const setShareRemix = (projectId: string, remix: boolean) =>
+  call<{ share: ShareInfo }>(`projects/${encodeURIComponent(projectId)}/share`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ remix }) }).then((r) => r.share);
 
 export const stopShare = (projectId: string) => call<{ ok: boolean }>(`projects/${projectId}/share`, { method: 'DELETE' });
 
@@ -385,6 +392,70 @@ export const shareLibrary = (projectId: string, share: { everyone: boolean; user
   call<{ shared: { everyone: boolean; users: string[] } }>(`projects/${encodeURIComponent(projectId)}/library/share`, json(share));
 
 export const unpublishLibrary = (projectId: string) => call<{ ok: boolean }>(`projects/${encodeURIComponent(projectId)}/library`, { method: 'DELETE' });
+
+// ---------------------------------------------------------------- templates
+
+export interface SaveTemplateBody {
+  name: string;
+  description: string;
+  checklist: { id?: string; text: string; artboardId?: string; nodeId?: string }[];
+  everyone: boolean;
+  /** Save over one of yours as its next version. */
+  templateId?: string;
+  note?: string;
+}
+
+export const listTemplates = () => call<TemplateInfo[]>('templates');
+
+export const getTemplate = (id: string) => call<{ template: TemplateInfo }>(`templates/${encodeURIComponent(id)}`).then((r) => r.template);
+
+/** The template with the project it holds, for "Update from template". */
+export const getTemplateFull = (id: string) => call<{ template: TemplateInfo; snapshot: Project }>(`templates/${encodeURIComponent(id)}?full=1`);
+
+export const saveAsTemplate = (projectId: string, body: SaveTemplateBody) =>
+  call<{ ok: boolean; id: string; unchanged: boolean; version: number }>(`projects/${encodeURIComponent(projectId)}/template`, postJson(body));
+
+export const changeTemplate = (id: string, patch: Partial<Pick<SaveTemplateBody, 'name' | 'description' | 'checklist' | 'everyone'>>) => call<TemplateInfo>(`templates/${encodeURIComponent(id)}`, json(patch));
+
+export const deleteTemplate = (id: string) => call<{ ok: boolean }>(`templates/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+/** A new project from a saved template (the server copies it, its files and thumbnail, and makes the id). */
+export const useTemplate = (id: string, opts: { name?: string; folder?: string | null } = {}) => call<{ id: string }>(`templates/${encodeURIComponent(id)}/use`, postJson(opts)).then((r) => r.id);
+
+export const getTemplateAsset = (templateId: string, assetId: string) => call<Blob>(`templates/${encodeURIComponent(templateId)}/assets/${encodeURIComponent(assetId)}`, {}, 'blob');
+
+export const templateThumbUrl = (id: string, v: number | null | undefined) => `api/templates/${encodeURIComponent(id)}/thumbnail?v=${v ?? 0}`;
+
+// ---------------------------------------------------------------- examples (read-only, shipped in the repo)
+
+export interface ExampleInfo {
+  key: string;
+  title: string;
+  description: string;
+  group: string;
+  tags: string[];
+  artboards: number;
+  preview: { width: number; height: number; background: string } | null;
+}
+
+export const listExamples = () => call<ExampleInfo[]>('examples');
+
+export const getExample = (key: string) => call<{ example: ExampleInfo; project: Project }>(`examples/${encodeURIComponent(key)}`).then((r) => ({ example: r.example, project: normalizeProject(r.project) }));
+
+/** The bytes of one of an example's files (for playing it). */
+export const exampleAssetBytes = async (key: string, assetId: string): Promise<Uint8Array | null> => {
+  try {
+    const blob = await call<Blob>(`examples/${encodeURIComponent(key)}/assets/${encodeURIComponent(assetId)}`, {}, 'blob');
+    return new Uint8Array(await blob.arrayBuffer());
+  } catch {
+    return null;
+  }
+};
+
+export const exampleThumbUrl = (key: string) => `api/examples/${encodeURIComponent(key)}/thumbnail`;
+
+/** Your own copy of an example, as a new project. */
+export const useExample = (key: string, opts: { name?: string; folder?: string | null } = {}) => call<{ id: string }>(`examples/${encodeURIComponent(key)}/use`, postJson(opts)).then((r) => r.id);
 
 // ---------------------------------------------------------------- usage and errors (power users)
 

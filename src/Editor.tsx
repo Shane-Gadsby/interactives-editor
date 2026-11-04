@@ -31,6 +31,9 @@ import { HelpLink, openHelp } from './help/Help';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrefsModal } from './components/PrefsModal';
 import { HistoryModal, InviteModal, ShareForReviewModal, ShareModal } from './components/ProjectModals';
+import { SaveTemplateModal } from './components/TemplateModals';
+import { ChecklistPanel } from './panels/ChecklistPanel';
+import { CHECKLIST_FLAG, checklistProgress, hasChecklist } from './lib/templates';
 import { prefs, setPrefs, usePrefs } from './lib/prefs';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
@@ -94,6 +97,15 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         if (pending) {
           sessionStorage.removeItem(`ix-import-report:${p.id}`);
           s.set({ report: JSON.parse(pending) });
+        }
+        // Just made from a template: the checklist opens beside it
+        try {
+          if (sessionStorage.getItem(CHECKLIST_FLAG) === p.id) {
+            sessionStorage.removeItem(CHECKLIST_FLAG);
+            if (hasChecklist(p)) s.set({ bottomTab: 'checklist' });
+          }
+        } catch {
+          /* no session storage */
         }
         setProject(p.id);
         stopWatching = observeStore(s);
@@ -529,6 +541,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMenu, setShareMenu] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
   const exportDefinitions = () => {
     const project = st.get().project;
@@ -632,6 +645,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       {prefsOpen && <PrefsModal onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
+      {templateOpen && <SaveTemplateModal onClose={() => setTemplateOpen(false)} />}
       {referenceOpen && <ReferenceModal onClose={() => setReferenceOpen(false)} />}
       {reviewOpen && <ShareForReviewModal onClose={() => setReviewOpen(false)} />}
       {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
@@ -700,6 +714,10 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
             <button onClick={() => (setShareMenu(false), setInviteOpen(true))}>
               Invite to collaborate…
               <span className="muted small">People who can open and edit it with you, live</span>
+            </button>
+            <button onClick={() => (setShareMenu(false), setTemplateOpen(true))}>
+              Save as template…
+              <span className="muted small">A copy other people (or you) start new projects from, with a checklist of what to change</span>
             </button>
             <button onClick={() => (setShareMenu(false), openShareForReview())}>
               Share for review…
@@ -897,11 +915,15 @@ const TABS: { id: BottomTab; label: string; icon: IconName; help: string; tip: s
   { id: 'a11y', label: 'Accessibility', icon: 'a11y', help: 'accessibility-checker', tip: 'Check accessibility: contrast, small text, keyboard access, names and descriptions, autoplay and flashing, with what each means and a report for sign-off' },
   { id: 'insights', label: 'Insights', icon: 'insights', help: 'insights', tip: 'What learners did: artboards reached, where they clicked, steps, answers to questions and your own records, as counts' },
   { id: 'interface', label: 'Public interface', icon: 'plug', help: 'public-interface', tip: 'What a page that embeds this project can set, read, send and hear: variables as inputs and outputs, messages, with descriptions. Makes the reference page and TypeScript definitions' },
+  { id: 'checklist', label: 'Checklist', icon: 'check', help: 'templates#the-checklist', tip: 'The things to change in a project made from a template: tick them off, click one to find its layer, review before you share' },
   { id: 'usage', label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each artboard, asset, variable, data source, script and timeline is used, and what is unused' },
 ];
 
 function BottomPanel() {
   const s = useEditor((st) => ({ tab: st.bottomTab, h: st.bottomHeight }));
+  const template = useEditor((st) => st.project.template);
+  const progress = useEditor((st) => (st.project.template ? checklistProgress(st.project) : null));
+  const tabs = TABS.filter((t) => t.id !== 'checklist' || !!template);
   const startResize = (e: React.PointerEvent) => {
     const y0 = e.clientY;
     const h0 = s.h;
@@ -919,16 +941,17 @@ function BottomPanel() {
     <section className="bottom-dock">
       {s.tab && <div className="resize-handle" onPointerDown={startResize} />}
       <div className="tabs bottom-tabs">
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const I = Icons[t.icon];
           return (
             <button key={t.id} className={s.tab === t.id ? 'active' : ''} title={t.tip} onClick={() => store().set({ bottomTab: s.tab === t.id ? null : t.id, previewPlaying: false })}>
               <I width={14} /> {t.label}
+              {t.id === 'checklist' && progress && progress.total > 0 && <span className="badge">{progress.done}/{progress.total}</span>}
             </button>
           );
         })}
         <div className="spacer" />
-        {s.tab && <HelpLink topic={TABS.find((t) => t.id === s.tab)!.help} />}
+        {s.tab && <HelpLink topic={TABS.find((t) => t.id === s.tab)!.help.split('#')[0]} anchor={TABS.find((t) => t.id === s.tab)!.help.split('#')[1]} />}
       </div>
       {s.tab && (
         <div className="bottom-body">
@@ -941,6 +964,7 @@ function BottomPanel() {
           {s.tab === 'insights' && <InsightsPanel />}
           {s.tab === 'interface' && <InterfacePanel />}
           {s.tab === 'a11y' && <AccessibilityPanel />}
+          {s.tab === 'checklist' && <ChecklistPanel />}
         </div>
       )}
     </section>

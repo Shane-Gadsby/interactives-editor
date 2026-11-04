@@ -2433,6 +2433,70 @@ What is kept when you update: the instances you placed in your own artboards, th
 - Only the latest version is kept on the server, so you cannot go back to an older one (undo works right after an update, and the [revision history](live-editing#revision-history) goes further back).`,
   },
   {
+    id: 'templates',
+    title: 'Templates, examples and remix',
+    group: 'Working together',
+    summary: 'Start a project from a template with a checklist of what to change, save your own, play and copy the examples, allow remix on a share link, and pull template updates in.',
+    keywords: 'template starter checklist example remix copy duplicate update version save share quiz flip cards sorting branching story timeline intro review',
+    body: `A **template** is a whole project saved so other people (or you) can start new projects from it. Nobody has to begin from a blank artboard, and a **checklist** walks whoever uses it through replacing the sample content, so a template's wording does not end up in front of learners. Everything is on the **Templates** tab of the projects page (next to **Projects**).
+
+![The Templates tab on the projects page: Mine, Shared, Built-in and Examples, with a card for each built-in starter.](help/templates-tab.png)
+
+## The Templates tab
+- **Mine**: templates you saved. **Shared**: templates other people saved and let everyone use. **Built-in**: starters that come with Interactives. **Examples**: finished projects to play and copy (below).
+- A card shows the picture, title, what it is for, its version, and how many things it asks you to change. **Use template** makes your own project from it, in the folder you pick.
+- On your own templates, the pencil changes the title, description, checklist and who can use it; the bin deletes it (projects already made from it keep their content).
+
+## Use a template
+1. **Templates** > pick a card > **Use template**. The window lists the checklist first, so you see what it expects of you.
+2. Give the project a name and pick a folder, then **Create project**. It opens with the **Checklist** tab already open along the bottom.
+3. Work down the list. **Click an item** and the editor selects the layer it is about and puts it in the middle of the canvas; change it, then **tick the item off**.
+4. A badge saying **Still the template's** means the layer an item points at has not been changed at all yet, even if you ticked it. **Layer deleted** means it was removed.
+5. **Review** (top of the Checklist tab) before you share: it lists what is not ticked and what is ticked but untouched, each one a link to the layer. **Mark as reviewed** when you are happy. **Remove** takes the checklist away and leaves the project as it is.
+
+![A project made from the Quiz starter, with the Checklist tab open along the bottom: one item ticked, the layer of the next one selected.](help/templates-checklist.png)
+
+### A worked example
+Pick **Quiz** under **Built-in**, then **Use template**. The checklist asks you to:
+- change the title and the line under it: click the item, then double-click the text on the canvas and type;
+- write your own question and answer options: click the item and look under **Question** in the Inspector;
+- mark the right option and add a hint, reword the feedback, and set the points.
+Tick each as you go. When all five are ticked, press **Review**. If you ticked "Change the quiz title" without actually changing it, the Review lists it under "ticked, but the layer is still exactly the template's".
+
+## Save as template
+Open a project and choose **Share > Save as template**.
+- **Title** and **Description** are what the card shows. Say what the template is for.
+- **Everyone can use this template** (off: only you see it). People who use it get their own copy; yours is never changed.
+- **Checklist**: one line for each thing to change ("Replace the question text"). Select a layer first and press **Link** on an item to point it at that layer, or **Add for the selected layers** for one item per layer. Clicking an item later selects the layer. Reword the items for the person who will use it, not for you.
+- The picture on the card is the project's own thumbnail, and the whole project (artboards, pictures, fonts, variables, interactions) goes with it. Review comments and results do not.
+- Saving again from the same project, choosing **The next version of ...**, makes **version 2**, **3** and so on. Saving with nothing changed only updates the title, description, checklist and visibility.
+
+![The Save as template window: title, description, who can use it, and a checklist whose first item points at the selected layer.](help/templates-save.png)
+
+Do not leave real names, private pictures or course content in a template that is shared with everyone: anyone can use it, and the pictures go with it.
+
+## Update from template
+Projects made from a saved template remember which version they came from, and what every artboard, layer, timeline, interaction node and variable was when they were copied. When the author saves a newer version, the Checklist tab shows **Update available**. Press it to see:
+- parts the template changed that **you have not touched**: they are updated, in place, with your own layers inside them left alone;
+- parts the template **added**: they are added where they sit in the template;
+- parts you changed: **kept as they are**, listed so you know the template changed them too;
+- things you deleted stay deleted, and things the author removed stay in your project.
+![The Update from template window: a changed layer and a new layer offered, and the layer the person had edited kept as it is.](help/templates-update.png)
+
+Untick anything you do not want, then **Update**. It is one undo step (Ctrl+Z). Built-in starters are generated by the editor, so they have no newer versions to pull.
+
+## Examples
+**Examples** are finished projects that ship with Interactives: getting-started projects, layout and drawing demos, web controls, an imported Rive animation and more. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
+
+## Allow remix on a share link
+In **Share > Share link**, tick **Allow remix**. People who open the **Link for StudyDesk** while signed in to the editor get a **Remix this** button; pressing it copies the project into their own projects and opens it. The copy is theirs: it does not change your project, and it is not tied to it. A remix copies the project **as it is now** (not the version last published to the link), with every artboard, layer and picture, including parts the page does not show, so only allow it for projects you are happy to give away. Turn it off at any time; copies already made stay.
+
+## Good to know
+- Layer ids stay the same in a copy, so a checklist and updates can find things. Duplicating or pasting layers inside the copy makes new ids as usual.
+- The server keeps a template as a snapshot with its own copy of the files, so deleting or editing the project it came from does not change it.
+- Templates are one level: a copy of a template does not become a template of its own until you save it as one.`,
+  },
+  {
     id: 'live-editing',
     title: 'Live editing and saving',
     group: 'Working together',

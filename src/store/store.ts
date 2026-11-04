@@ -145,7 +145,7 @@ export type Tool =
   | 'bone'
   | 'comment';
 
-export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface';
+export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface' | 'checklist';
 
 /** Where learners clicked on one artboard (from Insights), drawn over the canvas as a heat map. Never saved. */
 export interface HeatOverlay {

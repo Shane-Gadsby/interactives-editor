@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, prepareNodes, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
-import { addCollaborator, clearResults, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
+import { addCollaborator, clearResults, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
 import { standaloneHtml } from '../lib/export';
 import { IconButton } from './ui';
@@ -219,6 +219,30 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
                   </button>
                 </div>
               </div>
+              <label className="check-row remix-row" title="Signed-in StudyDesk staff who play it from the Link for StudyDesk get a Remix this button, which copies the project into their own projects">
+                <input
+                  type="checkbox"
+                  checked={!!share.remix}
+                  disabled={!!busy}
+                  onChange={async (e) => {
+                    const on = e.target.checked;
+                    setBusy('Saving…');
+                    setError(null);
+                    try {
+                      setShare(await setShareRemix(projectId, on));
+                      track('feature', 'share-remix', { detail: { on } });
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : String(err));
+                    } finally {
+                      setBusy(null);
+                    }
+                  }}
+                />
+                <span>
+                  <strong>Allow remix</strong>
+                  <span className="muted small block"> Staff who open the Link for StudyDesk get a "Remix this" button that copies the project, as it is now, into their own projects. Your project is not changed, and the copy is theirs.</span>
+                </span>
+              </label>
               <div className="row">
                 <button className="btn primary" disabled={!!busy} onClick={publish} title="Publish the project as it is now to the same link">
                   {busy ?? 'Update to the latest version'}

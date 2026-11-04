@@ -6,7 +6,7 @@ import {randomBytes} from 'node:crypto'
 
 //Names storage/ already uses for its own folders. A project id is a folder name too (storage/<id>), so these would
 //land on the share pages, the thumbnails or the published libraries. Lower case, because a laptop's disk isn't case sensitive
-export const RESERVED_IDS = new Set(['shares', 'thumbs', '_libraries'])
+export const RESERVED_IDS = new Set(['shares', 'thumbs', '_libraries', '_templates'])
 
 //Ids come from the editor (uid() in the player's format.ts), nothing else should ever get near a query or a path.
 //Nothing starting with _ either: that's the namespace for the server's own folders
@@ -14,6 +14,10 @@ export const validID = (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{4,64}$/
 
 //A new project id made here, so a client can't pick one that is somebody else's
 export const newProjectID = () => `pr${randomBytes(9).toString('hex')}`
+
+//Same for a template, and for the id of a checklist item someone adds
+export const newTemplateID = () => `tp${randomBytes(9).toString('hex')}`
+export const newItemID = () => `ck${randomBytes(6).toString('hex')}`
 
 //Shared pages are whole interactives with their own scripts, served from the same origin as the editor. A sandbox
 //without allow-same-origin makes them a stranger to it: they run, open links and post forms, but they can't read the

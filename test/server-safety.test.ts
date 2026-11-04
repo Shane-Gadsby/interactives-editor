@@ -81,7 +81,7 @@ describe('share headers', () => {
 describe('index.js wiring', () => {
   const src = readFileSync(resolve(process.cwd(), 'index.js'), 'utf8');
   it('uses the shared checks on every asset route and the share route', () => {
-    expect(src.match(/safety\.assetHeaders\(res, meta\.mime\)/g)?.length).toBe(3);
+    expect(src.match(/safety\.assetHeaders\(res, meta\.mime\)/g)?.length).toBe(5);
     expect(src).toContain('safety.shareHeaders(res)');
     expect(src).not.toMatch(/res\.type\(meta\.mime\)/);
     expect(src).toContain('validID = (id) => safety.validID(id)');

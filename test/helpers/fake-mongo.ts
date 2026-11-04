@@ -191,6 +191,7 @@ export class FakeDb {
   revisions = new FakeCollection();
   prefs = new FakeCollection();
   libraries = new FakeCollection();
+  templates = new FakeCollection();
   comments = new FakeCollection();
   'comment-notices' = new FakeCollection();
   'interactives-user-data' = new FakeCollection();
