@@ -399,3 +399,37 @@ describe('delete', () => {
     expect((await h.call('DELETE', '/api/projects/shares', { user: ann })).status).toBe(400);
   });
 });
+
+describe('collaborators', () => {
+  it('the owner invites someone, who can then open, save and see it in their list, but not delete it or invite others', async () => {
+    await put('prcollab01', project('prcollab01'));
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('GET', '/api/projects/prcollab01', { user: bob })).status).toBe(403);
+    // only the owner invites
+    expect((await h.call('POST', '/api/projects/prcollab01/collaborators', { user: bob, json: { username: 'bob' } })).status).toBe(403);
+    const add = await h.call('POST', '/api/projects/prcollab01/collaborators', { user: ann, json: { username: 'Bob', name: 'Bob B' } });
+    expect(add.json.collaborators.map((c: { username: string }) => c.username)).toEqual(['bob']);
+    // bob can open and save it, and it's in his list
+    const got = await h.call('GET', '/api/projects/prcollab01', { user: bob });
+    expect(got.status).toBe(200);
+    expect((await put('prcollab01', project('prcollab01', { name: 'Bob was here' }), bob, { rev: got.json.rev })).status).toBe(200);
+    expect((await h.call('GET', '/api/projects', { user: bob })).json.map((p: { id: string }) => p.id)).toContain('prcollab01');
+    // but he can't delete it or invite others
+    expect((await h.call('DELETE', '/api/projects/prcollab01', { user: bob })).status).toBe(403);
+    expect((await h.call('POST', '/api/projects/prcollab01/collaborators', { user: bob, json: { username: 'cat' } })).status).toBe(403);
+    // he can take himself off
+    expect((await h.call('DELETE', '/api/projects/prcollab01/collaborators/bob', { user: bob })).json.collaborators).toEqual([]);
+    expect((await h.call('GET', '/api/projects/prcollab01', { user: bob })).status).toBe(403);
+  });
+
+  it('refuses a bad username, the owner, and lists who is on it with whether you can manage it', async () => {
+    await put('prcollab02', project('prcollab02'));
+    expect((await h.call('POST', '/api/projects/prcollab02/collaborators', { user: ann, json: { username: '<script>' } })).status).toBe(400);
+    expect((await h.call('POST', '/api/projects/prcollab02/collaborators', { user: ann, json: { username: 'ann' } })).status).toBe(400);
+    await h.call('POST', '/api/projects/prcollab02/collaborators', { user: ann, json: { username: 'bob' } });
+    const list = await h.call('GET', '/api/projects/prcollab02/collaborators', { user: ann });
+    expect(list.json.canManage).toBe(true);
+    expect(list.json.collaborators[0].username).toBe('bob');
+    expect((await h.call('GET', '/api/projects/prcollab02/collaborators', { user: bob })).json.canManage).toBe(false);
+  });
+});

@@ -115,7 +115,7 @@ Folders and tags belong to the project record on the server, not to the project 
 
 ## Who sees what
 
-You see only your own projects. Staff with power-user access can toggle the power-user view (the suite's shared shortcut, shown in a banner as **F9**) to see and open every project; the server checks that access again. In that view you can also file and tag other people's projects.`,
+You see your own projects and the ones other people have invited you to collaborate on (their cards say *shared with you by* and the owner's name; see [Inviting people](live-editing#inviting-people)). Staff with power-user access can toggle the power-user view (the suite's shared shortcut, shown in a banner as **F9**) to see and open every project; the server checks that access again. In that view you can also file and tag other people's projects.`,
   },
   {
     id: 'interface',
@@ -2279,14 +2279,24 @@ After an import, a report lists anything that couldn't be carried over exactly. 
 | Lottie JSON (this artboard), dotLottie (this artboard) | The open artboard's shapes and timeline, for Lottie players (no interactivity). A report lists what couldn't be written |
 | PNG image (this artboard), PNG image, 1× | The open artboard as a picture, at 2× or at actual size, at the timeline's playhead |
 | SVG image (this artboard) | The open artboard as an SVG file that scales cleanly. It uses HTML inside the SVG for text and web elements, so it opens in browsers but not in every drawing program |
-| Share link… | A link that plays the project in the browser (below), and a second one for StudyDesk that keeps learners' results |
+
+Sharing is on its own button, **Share**, next to Export (below).
 
 The files are named after the project (and the artboard, for pictures and Lottie).
 
 ![The Export menu.](help/export-menu.png)
 
+## Sharing
+**Share** in the top bar (next to Export) has three ways to share a project:
+
+| Share | Gives you |
+|---|---|
+| Share link… | A link that plays the project in the browser (below), and a second one, the **Link for StudyDesk**, that keeps learners' results |
+| Invite to collaborate… | People who can open and edit the project with you, live, by their StudyDesk username (see [Collaborating](live-editing#inviting-people)) |
+| Share for review… | A link where reviewers look at the project and leave comments, without editing it (see [Review comments](comments)) |
+
 ## Share link
-**Export → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. It is a snapshot: press **Update to the latest version** to publish later changes, or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). **Copy** copies the link and **Open** opens it in a new tab.
+**Share → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. It is a snapshot: press **Update to the latest version** to publish later changes, or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). **Copy** copies the link and **Open** opens it in a new tab.
 
 ![The Share link dialog.](help/share-link-dialog.png)
 
@@ -2369,7 +2379,7 @@ What is kept when you update: the instances you placed in your own artboards, th
     group: 'Working together',
     summary: 'Several people in one project, autosave, revisions and conflicts.',
     keywords: 'multiplayer collaborate live share presence cursor save autosave conflict undo revision history version restore',
-    body: `Everything saves as you work. A project can be opened by its owner and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). When more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
+    body: `Everything saves as you work. A project can be opened by its owner, by people the owner has invited to collaborate (below), and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). When more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
 
 - **Undo** only undoes your own changes.
 - If two people change the same setting at the same moment, the later change wins.
@@ -2382,7 +2392,10 @@ The server keeps saved revisions of the project: a snapshot every few minutes wh
 ![The Revision history dialog.](help/revision-history.png)
 
 ## When two copies disagree
-If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).`,
+If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).
+
+## Inviting people
+**Share → Invite to collaborate…** lets other people open and edit the project with you. Type their StudyDesk username (for example *u1234567*) and press **Invite**. The project then shows on their own projects page, and when you both have it open you see each other's cursors and changes live. Collaborators can edit, comment, export and share it; only the owner can delete the project or change who's invited (a collaborator can take themselves off the list). To let someone look and comment without editing, use **Share for review** instead ([Review comments](comments)).`,
   },
 
   {

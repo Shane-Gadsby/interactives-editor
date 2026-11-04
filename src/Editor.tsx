@@ -30,7 +30,7 @@ import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink, openHelp } from './help/Help';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrefsModal } from './components/PrefsModal';
-import { HistoryModal, ShareForReviewModal, ShareModal } from './components/ProjectModals';
+import { HistoryModal, InviteModal, ShareForReviewModal, ShareModal } from './components/ProjectModals';
 import { prefs, setPrefs, usePrefs } from './lib/prefs';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
@@ -41,7 +41,7 @@ import { primeStills, releaseStills } from './lib/still-cache';
 import { noteProjectDiagnostic, reportError, setProject, span, track } from './lib/analytics';
 import { observeStore } from './lib/usage';
 import { keyMoveTarget } from './lib/layer-drop';
-import { SHARE_FOR_REVIEW_EVENT, comments, readNotices } from './lib/comments';
+import { SHARE_FOR_REVIEW_EVENT, comments, openShareForReview, readNotices } from './lib/comments';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
   const [ready, setReady] = useState<EditorStore | null>(null);
@@ -527,6 +527,8 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   const [historyOpen, setHistoryOpen] = useState(false);
   const st = store();
   const [shareOpen, setShareOpen] = useState(false);
+  const [shareMenu, setShareMenu] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
   const exportDefinitions = () => {
     const project = st.get().project;
@@ -629,6 +631,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       <IconButton icon={<Icons.help />} title="Help (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp()} />
       {prefsOpen && <PrefsModal onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
+      {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
       {referenceOpen && <ReferenceModal onClose={() => setReferenceOpen(false)} />}
       {reviewOpen && <ShareForReviewModal onClose={() => setReviewOpen(false)} />}
       {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
@@ -636,7 +639,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         <Icons.preview width={14} /> Preview
       </button>
       <div className="menu-wrap">
-        <button className="btn" onClick={() => setMenu(!menu)}>
+        <button className="btn" onClick={() => setMenu(!menu)} title="Export: save the project, or a picture or animation of it, as files">
           <Icons.download width={14} /> Export
         </button>
         {menu && (
@@ -681,9 +684,26 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
               SVG image (this artboard)
               <span className="muted small">Scales cleanly; opens in browsers</span>
             </button>
-            <button onClick={() => run(() => setShareOpen(true))}>
+          </div>
+        )}
+      </div>
+      <div className="menu-wrap">
+        <button className="btn" onClick={() => setShareMenu(!shareMenu)} title="Share the project: a link to play it, people to edit it with, reviewers to comment on it">
+          <Icons.share width={14} /> Share
+        </button>
+        {shareMenu && (
+          <div className="menu" onMouseLeave={() => setShareMenu(false)}>
+            <button onClick={() => (setShareMenu(false), setShareOpen(true))}>
               Share link…
-              <span className="muted small">A link that plays the project in the browser</span>
+              <span className="muted small">A link that plays the project in the browser, and the Link for StudyDesk that keeps learners' results</span>
+            </button>
+            <button onClick={() => (setShareMenu(false), setInviteOpen(true))}>
+              Invite to collaborate…
+              <span className="muted small">People who can open and edit it with you, live</span>
+            </button>
+            <button onClick={() => (setShareMenu(false), openShareForReview())}>
+              Share for review…
+              <span className="muted small">A link where reviewers can look and leave comments, without editing</span>
             </button>
           </div>
         )}
@@ -862,6 +882,7 @@ export function Toolbar() {
         );
       })}
       <div className="toolbar-fill" />
+      {btn('comment')}
       <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
     </nav>
   );

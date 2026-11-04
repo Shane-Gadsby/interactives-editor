@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, prepareNodes, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
-import { clearResults, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
+import { addCollaborator, clearResults, getCollaborators, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
 import { standaloneHtml } from '../lib/export';
 import { IconButton } from './ui';
@@ -229,7 +229,6 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
               </div>
             </>
           )}
-          <ReviewLinkSection projectId={projectId} />
           {error && <p className="error">{error}</p>}
         </div>
       </Modal>
@@ -433,6 +432,82 @@ export function ResultsModal({ onClose }: { onClose: () => void }) {
             </div>
           </>
         )}
+      </div>
+    </Modal>
+  );
+}
+
+
+/** Invite to collaborate: people who can open and edit this project with you (live), by their StudyDesk username. */
+export function InviteModal({ onClose }: { onClose: () => void }) {
+  const projectId = store().get().project.id;
+  const [data, setData] = useState<CollaboratorList | null>(null);
+  const [username, setUsername] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    getCollaborators(projectId).then(setData, (e) => setError(e instanceof Error ? e.message : String(e)));
+  }, [projectId]);
+  const add = async () => {
+    const u = username.trim();
+    if (!u) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const collaborators = await addCollaborator(projectId, u);
+      setData((d) => (d ? { ...d, collaborators } : d));
+      setUsername('');
+      store().toast(`${u} can now open and edit this project.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const remove = async (u: string) => {
+    if (!(await confirmDialog({ title: 'Remove collaborator', message: `${u} won't be able to open this project any more. Their changes stay.`, confirmLabel: 'Remove', danger: true }))) return;
+    try {
+      const collaborators = await removeCollaborator(projectId, u);
+      setData((d) => (d ? { ...d, collaborators } : d));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+  return (
+    <Modal title="Invite to collaborate" help="live-editing#inviting-people" onClose={onClose} className="share-modal">
+      <div className="share-body">
+        <p className="muted">People you invite can open this project from their own projects page and edit it with you, live. They can comment and share it too; only you can delete it or change who's invited.</p>
+        {data?.canManage !== false && (
+          <form
+            className="invite-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void add();
+            }}
+          >
+            <input autoFocus placeholder="StudyDesk username, e.g. u1234567" aria-label="Username to invite" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <button className="btn primary" disabled={busy || !username.trim()} title="Give this person access to open and edit the project">
+              Invite
+            </button>
+          </form>
+        )}
+        <ul className="invite-list">
+          {data?.owner && (
+            <li>
+              <span>{data.owner.name || data.owner.username}</span>
+              <span className="muted small">{data.owner.username} · owner</span>
+            </li>
+          )}
+          {data?.collaborators.map((c) => (
+            <li key={c.username}>
+              <span>{c.name || c.username}</span>
+              <span className="muted small">{c.username} · can edit</span>
+              {data.canManage && <IconButton icon={<Icons.trash />} title={`Remove ${c.username}`} onClick={() => void remove(c.username)} />}
+            </li>
+          ))}
+          {data && !data.collaborators.length && <li className="muted small">Nobody else yet.</li>}
+        </ul>
+        {error && <p className="error">{error}</p>}
       </div>
     </Modal>
   );

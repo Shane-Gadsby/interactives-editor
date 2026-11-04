@@ -17,6 +17,8 @@ export interface ProjectMeta {
   created: string;
   rev: number;
   artboards: number;
+  /** People the owner invited to open and edit it. */
+  collaborators?: { username: string; name: string | null }[];
   owner: { username: string | null; name: string | null } | null;
   preview?: { width: number; height: number; background: string } | null;
   /** Time of the latest thumbnail (api/projects/<id>/thumbnail?v=<thumb>), if there is one. */
@@ -258,6 +260,24 @@ export interface ShareInfo {
 }
 
 export const getShare = (projectId: string) => call<{ share: ShareInfo | null }>(`projects/${projectId}/share`).then((r) => r.share);
+
+// ---------------------------------------------------------------- collaborators
+
+export interface Collaborator {
+  username: string;
+  name: string | null;
+}
+export interface CollaboratorList {
+  owner: { username: string; name?: string | null } | null;
+  collaborators: Collaborator[];
+  canManage: boolean;
+}
+export const getCollaborators = (projectId: string) => call<CollaboratorList>(`projects/${encodeURIComponent(projectId)}/collaborators`);
+const postJson = (body: unknown): RequestInit => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+export const addCollaborator = (projectId: string, username: string, name = '') =>
+  call<{ collaborators: Collaborator[] }>(`projects/${encodeURIComponent(projectId)}/collaborators`, postJson({ username, name })).then((r) => r.collaborators);
+export const removeCollaborator = (projectId: string, username: string) =>
+  call<{ collaborators: Collaborator[] }>(`projects/${encodeURIComponent(projectId)}/collaborators/${encodeURIComponent(username)}`, { method: 'DELETE' }).then((r) => r.collaborators);
 
 export const publishShare = (projectId: string, html: string) =>
   call<{ share: ShareInfo }>(`projects/${projectId}/share`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html }).then((r) => r.share);

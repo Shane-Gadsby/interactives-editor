@@ -7,7 +7,9 @@ type Doc = Record<string, any>;
 
 const clone = <T>(v: T): T => (v === undefined ? v : structuredClone(v));
 
-const getPath = (doc: Doc, path: string): any => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), doc);
+//Like mongo, a dotted path goes into arrays of documents (collaborators.username matches any element's username)
+const getPath = (doc: Doc, path: string): any =>
+  path.split('.').reduce((o, k) => (o == null ? undefined : Array.isArray(o) && !/^\d+$/.test(k) ? o.flatMap((x) => (x == null ? [] : [x[k]])).filter((x) => x !== undefined) : o[k]), doc);
 
 const eq = (a: any, b: any): boolean => {
   if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();

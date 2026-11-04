@@ -191,9 +191,10 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//Admins and power users, minus presentation mode. Same rule as everywhere else in the suite
 	isPower = (req) => powerUser.canUse(req.sessionData?.access),
 
-	//Your own projects only, unless you're a power user. Logs instead of refusing until the box enforces
-	//sessions, same as session-check
-	mayChange = (req, res, doc) => {
+	//Your own projects only (or ones you've been invited to collaborate on), unless you're a power user. ownerOnly is
+	//for the things only the owner does: deleting the project, changing who collaborates. Logs instead of refusing
+	//until the box enforces sessions, same as session-check
+	mayChange = (req, res, doc, {ownerOnly = false} = {}) => {
 		if (!doc?.owner?.username) {
 			return true
 		}
@@ -201,6 +202,10 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 		let me = whoIs(req)
 
 		if (me && (me.username === doc.owner.username || isPower(req))) {
+			return true
+		}
+
+		if (!ownerOnly && me?.username && Array.isArray(doc.collaborators) && doc.collaborators.some((c) => c.username === me.username)) {
 			return true
 		}
 
@@ -222,6 +227,7 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 		updated: doc.updated,
 		rev: doc.rev,
 		owner: doc.owner || null,
+		collaborators: Array.isArray(doc.collaborators) ? doc.collaborators : [],
 		thumb: doc.thumb || null,
 
 		//A library project: marked as one in its settings (meta.library, from every save) and, once published, its version
@@ -316,7 +322,7 @@ router.get('/api/session', (req, res) => {
 //all (dev without si-manager) there's nobody to filter on, so it's everything until the box enforces sessions
 router.get('/api/projects', async (req, res) => {
 	let me = whoIs(req),
-		filter = (req.query.all === '1' && isPower(req)) || (!me?.username && !enforcing()) ? {} : {'owner.username': me?.username ?? null},
+		filter = (req.query.all === '1' && isPower(req)) || (!me?.username && !enforcing()) ? {} : {$or: [{'owner.username': me?.username ?? null}, {'collaborators.username': me?.username ?? null}]},
 		list = await projects.find(filter, {projection: {doc: 0}}).sort({updated: -1}).limit(1000).toArray(),
 		open = new Map()
 
@@ -508,7 +514,7 @@ router.delete('/api/projects/:id', async (req, res) => {
 		return res.json({ok: true})
 	}
 
-	if (!mayChange(req, res, existing)) {
+	if (!mayChange(req, res, existing, {ownerOnly: true})) {
 		return
 	}
 
@@ -915,6 +921,80 @@ router.post('/api/projects/:id/revisions/:revID/restore', async (req, res) => {
 	}
 
 	res.json({ok: true, rev: next})
+})
+
+//Collaborators: people the owner invited to open and edit the project with them (live editing, comments, sharing).
+//Anyone can see who's on it; only the owner (or a power user) adds or removes people, and only the owner deletes it
+const mayManage = (req, doc) => !doc?.owner?.username || whoIs(req)?.username === doc.owner.username || isPower(req)
+
+router.get('/api/projects/:id/collaborators', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	res.json({owner: doc.owner || null, collaborators: Array.isArray(doc.collaborators) ? doc.collaborators : [], canManage: mayManage(req, doc)})
+})
+
+router.post('/api/projects/:id/collaborators', express.json({limit: '4kb'}), async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	if (!mayChange(req, res, doc, {ownerOnly: true})) {
+		return
+	}
+
+	//A username as StudyDesk knows it (letters, digits, dots, dashes, underscores, @), and a name to show if we have one
+	let username = String(req.body?.username ?? '').trim().toLowerCase(),
+		name = String(req.body?.name ?? '').trim().slice(0, 120)
+
+	if (!/^[a-z0-9._@-]{2,80}$/.test(username)) {
+		return res.status(400).json({error: 'That doesn\'t look like a username'})
+	}
+
+	if (username === doc.owner?.username) {
+		return res.status(400).json({error: 'That\'s the project\'s owner'})
+	}
+
+	let list = Array.isArray(doc.collaborators) ? doc.collaborators : []
+
+	if (list.length >= 50) {
+		return res.status(400).json({error: 'A project can have up to 50 collaborators'})
+	}
+
+	if (!list.some((c) => c.username === username)) {
+		list = [...list, {username, name: name || null, added: new Date(), by: whoIs(req)?.username ?? null}]
+		await projects.updateOne({_id: id}, {$set: {collaborators: list}})
+	}
+
+	res.json({collaborators: list})
+})
+
+router.delete('/api/projects/:id/collaborators/:username', async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	//The owner removes anyone; a collaborator can take themselves off
+	let me = whoIs(req),
+		leaving = me?.username && me.username === req.params.username
+
+	if (!leaving && !mayChange(req, res, doc, {ownerOnly: true})) {
+		return
+	}
+
+	let list = (Array.isArray(doc.collaborators) ? doc.collaborators : []).filter((c) => c.username !== req.params.username)
+
+	await projects.updateOne({_id: id}, {$set: {collaborators: list}})
+	res.json({collaborators: list})
 })
 
 //Share links: the project as one standalone HTML file (built by the editor), at /interactives/s/<token>.

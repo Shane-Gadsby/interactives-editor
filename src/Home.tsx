@@ -506,7 +506,7 @@ export function Home({ open }: { open: (id: string) => void }) {
               </div>
               <div className="muted small">
                 {new Date(p.updated).toLocaleString()} · {p.artboards} artboard{p.artboards === 1 ? '' : 's'}
-                {p.owner && p.owner.username !== me && ` · ${p.owner.name ?? p.owner.username}`}
+                {p.owner && p.owner.username !== me && ` · ${p.collaborators?.some((c) => c.username === me) ? 'shared with you by ' : ''}${p.owner.name ?? p.owner.username}`}
               </div>
               <div className="card-tags">
                 {(p.tags ?? []).map((t) => (
