@@ -10,6 +10,7 @@ The browser editor for Interactives. You use it to build interactive 2D experien
 - step-through explainers: a timeline's markers become steps (Next plays to the next marker, Back plays back, dots, a generated step bar, scroll to scrub);
 - responsive artboard sets: variants of an artboard shown by the page's width (Responsive section of the artboard, Add narrow/wide variant, breakpoints, a pairing report of what would not carry), listed under their base in Layers, with pills on the canvas and a Page width slider with breakpoint marks in Preview. The runtime side is the player's `variants.ts`.
 - script layers: a box painted by a script every frame (generative art, charts), with starter templates.
+- a public interface for developers who embed a project (Public interface tab: variables as inputs and outputs, messages sent and received, with descriptions; a generated reference page and TypeScript definitions; export warns when the list has drifted; an option to take only public inputs from outside). The player side is in `interactives-player/src/interface.ts`; the list is edited by `src/lib/public-interface.ts` and `src/panels/InterfacePanel.tsx`.
 - shader layers: a box painted by a GPU fragment shader (WebGL) with animatable, bindable uniforms, a library of starter presets, and a shader filter for image layers.
 
 Projects are stored on the server in MongoDB. They export as a single self-contained HTML file or as a `.ixp` package (zip), and import back from `.ixp`.

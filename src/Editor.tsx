@@ -5,7 +5,7 @@ import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
-import { downloadJson, downloadPackage, downloadStandalone, standaloneHtml } from './lib/export';
+import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, standaloneHtml } from './lib/export';
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
 import { copySelection, pasteNodes } from './lib/clipboard';
@@ -18,6 +18,9 @@ import { ScriptsPanel, VariablesPanel } from './panels/ScriptsVariables';
 import { DataPanel } from './panels/DataPanel';
 import { UsagePanel } from './panels/UsagePanel';
 import { InsightsPanel } from './panels/InsightsPanel';
+import { InterfacePanel, ReferenceModal } from './panels/InterfacePanel';
+import { exportProblems, typeDefinitions } from 'interactives-player';
+import { confirmDialog } from './components/dialogs';
 import { AccessibilityPanel } from './panels/AccessibilityPanel';
 import { Icons, type IconName } from './components/icons';
 import { IconButton } from './components/ui';
@@ -505,6 +508,11 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   const [historyOpen, setHistoryOpen] = useState(false);
   const st = store();
   const [shareOpen, setShareOpen] = useState(false);
+  const [referenceOpen, setReferenceOpen] = useState(false);
+  const exportDefinitions = () => {
+    const project = st.get().project;
+    download(new Blob([typeDefinitions(project)], { type: 'text/plain' }), `${fileSafe(project.name)}.d.ts`);
+  };
   const exportPicture = async (kind: 'png' | 'svg', scale: number) => {
     const state = st.get();
     const ab = getArtboard(state.project, state.activeArtboardId);
@@ -513,6 +521,25 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
     const { downloadArtboardPng, downloadArtboardSvg } = await import('./lib/image-export');
     const warnings = kind === 'png' ? await downloadArtboardPng(state.project, ab, tl, state.playhead, scale) : await downloadArtboardSvg(state.project, ab, tl, state.playhead);
     for (const w of warnings) st.toast(w);
+  };
+  //An export of a project whose public interface has drifted (renamed or removed variables, messages nothing handles) asks first
+  const checked = (fn: () => Promise<void> | void) => async () => {
+    const problems = exportProblems(st.get().project);
+    if (problems.length) {
+      const shown = problems.slice(0, 6).map((i) => `• ${i.message}`);
+      if (problems.length > shown.length) shown.push(`…and ${problems.length - shown.length} more`);
+      const ok = await confirmDialog({
+        title: 'The public interface is out of date',
+        message: `Pages that embed this project may rely on the list in Public interface, and it no longer matches the project:\n\n${shown.join('\n')}`,
+        confirmLabel: 'Export anyway',
+        cancelLabel: 'Fix the list first',
+      });
+      if (!ok) {
+        st.set({ bottomTab: 'interface', previewPlaying: false });
+        return;
+      }
+    }
+    await fn();
   };
   const run = async (fn: () => Promise<void> | void) => {
     setMenu(false);
@@ -577,6 +604,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       <IconButton icon={<Icons.help />} title="Help (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp()} />
       {prefsOpen && <PrefsModal onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
+      {referenceOpen && <ReferenceModal onClose={() => setReferenceOpen(false)} />}
       {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
       <button className="btn primary" onClick={onPreview} title="Play the project exactly as the exported file will">
         <Icons.preview width={14} /> Preview
@@ -587,17 +615,25 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         </button>
         {menu && (
           <div className="menu" onMouseLeave={() => setMenu(false)}>
-            <button onClick={() => run(() => downloadStandalone(st.get().project))}>
+            <button onClick={() => run(checked(() => downloadStandalone(st.get().project)))}>
               Single HTML file
               <span className="muted small">Player, project and assets in one file</span>
             </button>
-            <button onClick={() => run(() => downloadPackage(st.get().project))}>
+            <button onClick={() => run(checked(() => downloadPackage(st.get().project)))}>
               Project package ({PACKAGE_EXTENSION})
               <span className="muted small">Whole project, re-importable</span>
             </button>
-            <button onClick={() => run(() => downloadJson(st.get().project))}>
+            <button onClick={() => run(checked(() => downloadJson(st.get().project)))}>
               Project JSON
               <span className="muted small">Document only, no asset bytes</span>
+            </button>
+            <button onClick={() => run(() => setReferenceOpen(true))}>
+              Public interface reference…
+              <span className="muted small">What an embedding page can set, read and hear</span>
+            </button>
+            <button onClick={() => run(checked(() => exportDefinitions()))}>
+              TypeScript definitions (.d.ts)
+              <span className="muted small">Typed names for the public interface</span>
             </button>
             <button onClick={() => run(() => exportActiveAsLottie('json'))}>
               Lottie JSON (this artboard)
@@ -751,6 +787,7 @@ const TABS: { id: BottomTab; label: string; icon: IconName; help: string; tip: s
   { id: 'data', label: 'Data', icon: 'table', help: 'data-sources', tip: 'JSON, CSV, TSV or text from files or URLs' },
   { id: 'a11y', label: 'Accessibility', icon: 'a11y', help: 'accessibility-checker', tip: 'Check accessibility: contrast, small text, keyboard access, names and descriptions, autoplay and flashing, with what each means and a report for sign-off' },
   { id: 'insights', label: 'Insights', icon: 'insights', help: 'insights', tip: 'What learners did: artboards reached, where they clicked, steps, answers to questions and your own records, as counts' },
+  { id: 'interface', label: 'Public interface', icon: 'plug', help: 'public-interface', tip: 'What a page that embeds this project can set, read, send and hear: variables as inputs and outputs, messages, with descriptions. Makes the reference page and TypeScript definitions' },
   { id: 'usage', label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each artboard, asset, variable, data source, script and timeline is used, and what is unused' },
 ];
 
@@ -793,6 +830,7 @@ function BottomPanel() {
           {s.tab === 'data' && <DataPanel />}
           {s.tab === 'usage' && <UsagePanel />}
           {s.tab === 'insights' && <InsightsPanel />}
+          {s.tab === 'interface' && <InterfacePanel />}
           {s.tab === 'a11y' && <AccessibilityPanel />}
         </div>
       )}

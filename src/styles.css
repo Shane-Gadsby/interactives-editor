@@ -5419,3 +5419,161 @@ code {
   cursor: pointer;
   font-family: var(--font, inherit);
 }
+
+/* Public interface panel */
+.pi-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.pi-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.pi-toolbar .field {
+  margin: 0;
+}
+.pi-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 12px 12px;
+}
+.pi-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.pi-columns h4 {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+}
+.pi-row {
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+.pi-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pi-line .text-field {
+  flex: 1;
+  min-width: 80px;
+}
+.pi-line .select-field select {
+  width: auto;
+}
+.pi-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pi-dir.receive {
+  background: var(--action);
+  color: var(--bg);
+}
+.pi-dir.send {
+  background: var(--event);
+  color: var(--bg);
+}
+.pi-issue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  background: var(--banner-warn-bg);
+  color: var(--banner-warn-fg);
+  font-size: 11.5px;
+}
+.pi-issue.error {
+  background: var(--banner-error-bg);
+  color: var(--banner-error-fg);
+}
+.pi-issue > span {
+  flex: 1;
+}
+.pi-summary {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--banner-warn-bg);
+  color: var(--banner-warn-fg);
+}
+.pi-payload {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: flex-start;
+}
+.pi-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pi-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pi-found {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.pi-empty {
+  max-width: 62ch;
+  line-height: 1.5;
+}
+.pi-reference-modal {
+  width: min(92vw, 960px);
+  height: 88vh;
+}
+.pi-reference-frame {
+  flex: 1;
+  min-height: 0;
+  border: 0;
+  background: #fff;
+}
+.pi-reference-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+}
+.pi-toolbar .field {
+  flex: 0 1 auto;
+}
+.pi-toolbar .text-field {
+  width: 190px;
+}
+.pi-toolbar .select-field select {
+  width: auto;
+  max-width: 220px;
+}
+.pi-name {
+  min-width: 8.5em;
+}
+.pi-payload .select-field {
+  flex: 0 0 auto;
+}
+.pi-payload .select-field select {
+  width: auto;
+}
+.pi-payload .select-field .field-label {
+  margin-right: 6px;
+}
