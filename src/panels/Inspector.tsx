@@ -1313,6 +1313,13 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
           + On hover
         </button>
       </Row>
+      <CheckField
+        label="Clickable while see-through"
+        title="When playing, a layer that is partly see-through (opacity under 100%) normally lets the pointer through to what's underneath: no link, no hand cursor, no clicks or hovers, for it and everything inside it. Tick this to keep it clickable anyway. Hidden layers are never clickable."
+        value={!!node.interactiveWhenFaded}
+        onChange={(v) => store().setProps([node.id], { interactiveWhenFaded: v || undefined })}
+      />
+      {node.opacity < 1 && !node.interactiveWhenFaded && (events.length > 0 || !!node.link?.url) ? <p className="hint">This layer is see-through ({Math.round(node.opacity * 100)}%), so it can't be clicked while playing until it's fully opaque.</p> : null}
     </Section>
   );
 }
