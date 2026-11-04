@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { AudioMixer, ANIMATABLE_PROPS, animatableProp, instanceInputProps, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
+import { AudioMixer, ANIMATABLE_PROPS, animatableProp, instanceInputProps, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL, type TimelineMarker } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -9,6 +9,8 @@ import { ChildOrder } from '../components/ChildOrder';
 import { CurveEditor, bezierFor } from '../components/CurveEditor';
 import { MarkerStepFields } from './StepsSection';
 import { enableSteps } from '../lib/steps';
+import { addMarkerInteraction, markerEvents, nextMarkerName, nudgeMarker, renameMarker } from '../lib/marker-actions';
+import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import type { Project } from 'interactives-player';
 import { assetKind, assetUrls } from '../lib/assets';
 import { ensureCaptionTrack, addCue } from '../lib/captions-edit';
@@ -96,6 +98,7 @@ export function TimelinePanel() {
   const [addProp, setAddProp] = useState('x');
   // The marker on the ruler being edited
   const [markerId, setMarkerId] = useState<string | null>(null);
+  const [markerMenu, setMarkerMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   // The tween (span between a key and the next) whose easing is being edited, named by its starting key
   const [tween, setTween] = useState<{ trackId: string; keyId: string } | null>(null);
   // Shape-key point groups opened or folded by hand (otherwise by how many there are)
@@ -248,21 +251,64 @@ export function TimelinePanel() {
     }
   };
 
-  const addMarker = () => {
+  const addMarker = (at?: number) => {
     const id = uid('mk');
-    const n = (tl.markers?.length ?? 0) + 1;
+    const time = Math.round(Math.max(0, Math.min(tl.duration, at ?? s.playhead)));
     setTl((d) => {
-      (d.markers ??= []).push({ id, time: Math.round(Math.min(s.playhead, d.duration)), name: `Marker ${n}` });
+      (d.markers ??= []).push({ id, time, name: nextMarkerName(d.markers) });
       d.markers.sort((a, b) => a.time - b.time);
     });
     setMarkerId(id);
   };
 
+  const renameSelected = (m: { id: string }, name: string) =>
+    store().update((d) => renameMarker(d as Project, ab.id, tl.id, m.id, name));
+
+  /** "+ When the playhead reaches this…": the On timeline marker event with a Set variable action, opened in Interactions. */
+  const addInteraction = (m: { id: string }) => {
+    let made: { actionId: string } | null = null;
+    store().update((d) => void (made = addMarkerInteraction(d as Project, ab.id, tl.id, m.id)));
+    if (made) store().set({ bottomTab: 'logic', logicSelection: (made as { actionId: string }).actionId });
+  };
+
+  const removeMarker = (id: string) => {
+    setTl((d) => void (d.markers = (d.markers ?? []).filter((x) => x.id !== id)));
+    setMarkerId(null);
+  };
+
+  const markerMenuItems = (m: TimelineMarker): MenuItem[] => [
+    { label: 'When the playhead reaches this…', hint: 'On timeline marker → Set variable', onClick: () => addInteraction(m) },
+    { label: 'Move the playhead here', onClick: () => store().set({ playhead: Math.min(m.time, tl.duration), previewPlaying: false }) },
+    { label: 'Rename…', onClick: () => void promptDialog({ title: 'Rename marker', label: 'Marker name', initial: m.name, confirmLabel: 'Rename' }).then((v) => v && v.trim() && renameSelected(m, v.trim())) },
+    { separator: true },
+    { label: 'Delete marker', danger: true, onClick: () => removeMarker(m.id) },
+  ];
+
+  /** Arrow keys nudge the focused marker (10 ms, Shift 100 ms, a whole frame on a frame-rate timeline); Delete removes it. */
+  const markerKey = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      e.stopPropagation();
+      removeMarker(id);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      e.stopPropagation();
+      const step = e.shiftKey ? 100 : tl.fps ? 1000 / tl.fps : 10;
+      setTl((d) => {
+        nudgeMarker(d, id, e.key === 'ArrowLeft' ? -step : step);
+        d.markers?.sort((a, b) => a.time - b.time);
+      }, `marker-${id}`);
+    } else if (e.key === 'Escape') setMarkerId(null);
+  };
+
   /** Press on a marker: select it, then drag to retime it. */
   const markerDown = (e: React.PointerEvent, id: string) => {
+    if (e.button > 0) return;
     e.stopPropagation();
     setMarkerId(id);
+    store().set({ selectedKeys: [] });
     const el = e.currentTarget as HTMLElement;
+    el.focus();
     try {
       el.setPointerCapture(e.pointerId);
     } catch {
@@ -398,7 +444,7 @@ export function TimelinePanel() {
           }
         />
         {tl.fps ? <CheckField label="Whole frames" title="Read the keys at the start of the frame, so values step from frame to frame instead of gliding (how frame-snapped animations from other tools look)" value={!!tl.snap} onChange={(v) => setTl((d) => void (v ? (d.snap = true) : delete d.snap))} /> : null}
-        <button className="btn" title="Add a marker at the playhead. An On timeline marker node runs when playback passes it" onClick={addMarker}>
+        <button className="btn" title="Add a marker at the playhead. An On timeline marker node runs when playback passes it" onClick={() => addMarker()}>
           + Marker
         </button>
         <button
@@ -409,20 +455,6 @@ export function TimelinePanel() {
         >
           Steps
         </button>
-        {selMarker && (
-          <>
-            <TextField value={selMarker.name} commitOnBlur onChange={(v) => setTl((d) => void (d.markers!.find((x) => x.id === selMarker.id)!.name = v || selMarker.name))} />
-            <NumberField label="At" value={selMarker.time} min={0} max={tl.duration} suffix="ms" onChange={(v) => setTl((d) => void (d.markers!.find((x) => x.id === selMarker.id)!.time = Math.round(v)), `marker-${selMarker.id}`)} />
-            <IconButton
-              icon={<Icons.trash />}
-              title="Delete marker"
-              onClick={() => {
-                setTl((d) => void (d.markers = d.markers!.filter((x) => x.id !== selMarker.id)));
-                setMarkerId(null);
-              }}
-            />
-          </>
-        )}
         <IconButton
           icon={<Icons.trash />}
           title="Delete timeline"
@@ -461,14 +493,40 @@ export function TimelinePanel() {
           <TrackLabels byNode={byNode} nodeIndex={nodeIndex} pointsOpen={pointsOpen} setPointsOpen={setPointsOpen} setTl={setTl} />
         </div>
         <div className="timeline-lanes" ref={lane}>
-          <div className="ruler" onPointerDown={scrub}>
+          <div
+            className="ruler"
+            onPointerDown={scrub}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const at = snap(T(e.clientX), e);
+              setMarkerMenu({ x: e.clientX, y: e.clientY, items: [{ label: `Add a marker here (${at} ms)`, onClick: () => addMarker(at) }] });
+            }}
+          >
             {ticks.map((t) => (
               <span key={t} className="tick" style={{ left: X(t) }}>
                 {t >= 1000 ? `${(t / 1000).toFixed(t % 1000 ? 1 : 0)}s` : `${t}`}
               </span>
             ))}
             {(tl.markers ?? []).map((m) => (
-              <span key={m.id} className={`marker${m.id === markerId ? ' selected' : ''}${isSteps && !stepNumber.has(m.id) ? ' not-step' : ''}`} style={{ left: X(Math.min(m.time, tl.duration)) }} title={`${stepNumber.has(m.id) ? `Step ${stepNumber.get(m.id)}: ` : ''}${m.name} at ${m.time} ms. Drag to move it`} onPointerDown={(e) => markerDown(e, m.id)} />
+              <span
+                key={m.id}
+                className={`marker${m.id === markerId ? ' selected' : ''}${isSteps && !stepNumber.has(m.id) ? ' not-step' : ''}`}
+                style={{ left: X(Math.min(m.time, tl.duration)) }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={m.id === markerId}
+                aria-label={`Marker ${m.name} at ${m.time} ms`}
+                title={`${stepNumber.has(m.id) ? `Step ${stepNumber.get(m.id)}: ` : ''}${m.name} at ${m.time} ms. Click to select it, drag to move it, arrow keys nudge it, right-click for more`}
+                onPointerDown={(e) => markerDown(e, m.id)}
+                onKeyDown={(e) => markerKey(e, m.id)}
+                onFocus={() => setMarkerId(m.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setMarkerId(m.id);
+                  setMarkerMenu({ x: e.clientX, y: e.clientY, items: markerMenuItems(m) });
+                }}
+              />
             ))}
             {(tl.markers ?? []).map((m) =>
               stepNumber.has(m.id) ? (
@@ -480,15 +538,39 @@ export function TimelinePanel() {
           </div>
           <MediaLanes ctx={mediaCtx} />
           <TrackLanes byNode={byNode} duration={tl.duration} pxPerMs={pxPerMs} selectedKeys={s.selectedKeys} tween={tween} pointsOpen={pointsOpen} h={{ scrub, keyDown, keysDown, setTween }} />
+          {selMarker && <div className="marker-line" style={{ left: X(Math.min(selMarker.time, tl.duration)) }} aria-hidden="true" />}
           <div className="playhead" style={{ left: X(Math.min(s.playhead, tl.duration)) }} />
         </div>
         <MediaEditor ctx={mediaCtx} onPaste={() => media && 'track' in media && setPasteTrack(media.track)} />
-        {selMarker && isSteps && (
-          <div className="key-editor marker-editor">
-            <div className="field-label block">Step: {selMarker.name}</div>
-            <MarkerStepFields abId={ab.id} tlId={tl.id} marker={selMarker} />
+        {selMarker && (
+          <div className="key-editor marker-editor" onKeyDown={(e) => (e.key === 'Escape' ? setMarkerId(null) : undefined)}>
+            <div className="field-label block">Marker{isSteps && stepNumber.has(selMarker.id) ? `, step ${stepNumber.get(selMarker.id)}` : ''}</div>
+            <TextField label="Name" title="The name an On timeline marker event matches. Renaming it keeps the events that already use it" value={selMarker.name} commitOnBlur onChange={(v) => v && renameSelected(selMarker, v)} />
+            <NumberField label="At" value={selMarker.time} min={0} max={tl.duration} suffix="ms" onChange={(v) => setTl((d) => void (d.markers!.find((x) => x.id === selMarker.id)!.time = Math.round(v)), `marker-${selMarker.id}`)} />
+            {isSteps && <MarkerStepFields abId={ab.id} tlId={tl.id} marker={selMarker} />}
+            <button className="btn primary marker-when" title="Add an On timeline marker event for this marker with a Set variable action, and open it in the Interactions tab" onClick={() => addInteraction(selMarker)}>
+              + When the playhead reaches this…
+            </button>
+            {(() => {
+              const evs = markerEvents(ab, tl, selMarker);
+              return evs.length ? (
+                <div className="hint">
+                  {evs.length} interaction{evs.length === 1 ? ' runs' : 's run'} when playback passes it.{' '}
+                  <button className="link-btn inline" onClick={() => store().set({ bottomTab: 'logic', logicSelection: evs[0].id })}>
+                    Open
+                  </button>
+                </div>
+              ) : null;
+            })()}
+            <div className="marker-editor-foot">
+              <button className="btn" title="Put the playhead on this marker" onClick={() => store().set({ playhead: Math.min(selMarker.time, tl.duration), previewPlaying: false })}>
+                Go to marker
+              </button>
+              <IconButton icon={<Icons.trash />} title="Delete marker (Delete key)" onClick={() => removeMarker(selMarker.id)} />
+            </div>
           </div>
         )}
+        {markerMenu && <ContextMenu x={markerMenu.x} y={markerMenu.y} items={markerMenu.items} onClose={() => setMarkerMenu(null)} />}
         {selectedKey && (
           <div className="key-editor">
             <div className="field-label block">Keyframe</div>

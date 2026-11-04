@@ -2005,9 +2005,9 @@ button.twisty:hover {
 .marker {
   position: absolute;
   top: 0;
-  width: 10px;
-  height: 14px;
-  margin-left: -5px;
+  width: 14px;
+  height: 18px;
+  margin-left: -7px;
   background: var(--accent, #4f9dff);
   clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
   cursor: ew-resize;
@@ -2018,6 +2018,23 @@ button.twisty:hover {
 .marker.selected {
   opacity: 1;
   background: #ffc247;
+}
+.marker:focus-visible {
+  outline: none;
+}
+.marker:focus-visible:not(.selected) {
+  background: #fff;
+}
+/* the selected marker's line down through the lanes, so it is plain which one is selected */
+.marker-line {
+  position: absolute;
+  top: 18px;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed #ffc247;
+  pointer-events: none;
+  opacity: 0.8;
+  z-index: 1;
 }
 .marker.not-step {
   opacity: 0.35;
@@ -2034,7 +2051,25 @@ button.twisty:hover {
   z-index: 2;
 }
 .marker-editor {
-  width: 260px;
+  width: 270px;
+  overflow-y: auto;
+}
+.marker-editor .marker-when {
+  width: 100%;
+  height: auto;
+  min-height: 28px;
+  margin: 6px 0 2px;
+  padding: 4px 8px;
+  justify-content: center;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+}
+.marker-editor-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 6px 0;
 }
 .marker-editor textarea {
   min-height: 56px;
