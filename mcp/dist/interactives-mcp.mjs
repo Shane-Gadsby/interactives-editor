@@ -1089,6 +1089,8 @@ const ANIMATABLE_PROPS = [
   { prop: "modifiers.0.start", label: "Text modifier start %", kind: "number" },
   { prop: "modifiers.0.end", label: "Text modifier end %", kind: "number" },
   { prop: "modifiers.0.strength", label: "Text modifier strength %", kind: "number" },
+  { prop: "modifiers.0.falloffStart", label: "Text modifier falloff start %", kind: "number" },
+  { prop: "modifiers.0.falloffEnd", label: "Text modifier falloff end %", kind: "number" },
   { prop: "modifiers.0.x", label: "Text modifier X", kind: "number" },
   { prop: "modifiers.0.y", label: "Text modifier Y", kind: "number" },
   { prop: "modifiers.0.rotation", label: "Text modifier rotation", kind: "number" },
@@ -1099,7 +1101,7 @@ const ANIMATABLE_PROPS = [
   { prop: "modifiers.0.blur", label: "Text modifier blur", kind: "number" }
 ];
 const MODIFIER_UNITS = ["letter", "word", "line"];
-const MODIFIER_SHAPES = ["square", "ramp-up", "ramp-down", "triangle", "round", "smooth"];
+const MODIFIER_SHAPES = ["square", "ramp-up", "ramp-down", "triangle", "round", "smooth", "falloff"];
 function defaultModifier(patch = {}) {
   return { unit: "letter", start: 0, end: 100, offset: 0, shape: "square", strength: 100, x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0, blur: 0, ...patch };
 }
@@ -1123,6 +1125,8 @@ function normalizeModifier(raw) {
     letterSpacing: num$1(r2.letterSpacing, d.letterSpacing),
     blur: num$1(r2.blur, d.blur)
   };
+  if (isNum$2(r2.falloffStart)) m.falloffStart = r2.falloffStart;
+  if (isNum$2(r2.falloffEnd)) m.falloffEnd = r2.falloffEnd;
   if (typeof r2.name === "string") m.name = r2.name;
   if (typeof r2.color === "string" && r2.color) m.color = r2.color;
   if (r2.ease !== void 0 && r2.ease !== null) m.ease = r2.ease;
@@ -4500,7 +4504,7 @@ Both create a new timeline named after the preset and open it, so you can change
 ## How a modifier works
 - **Per**: the unit the range counts: *Letters* (spaces are skipped), *Words* or *Lines* (found from how the text wraps, so they follow the layer's width).
 - **Start** and **End**: the range, as a percent of the text. **Offset** slides the whole range along the text, even past either end (-100 to 100). Keying the **Offset** is how most effects are made.
-- **Shape**: how strongly units are hit across the range. *Square* hits all of them equally, *Ramp up* and *Ramp down* grow or fade across it, *Triangle*, *Round* and *Smooth* peak in the middle (*Smooth* has soft edges). **Ease** shapes the falloff.
+- **Shape**: how strongly units are hit across the range. *Square* hits all of them equally, *Ramp up* and *Ramp down* grow or fade across it, *Triangle*, *Round* and *Smooth* peak in the middle (*Smooth* has soft edges). *Falloff (ramps)* is Rive's range falloff: the weight climbs in a straight line from **Start** to **Ramp up to**, stays full, then falls in a straight line from **Ramp down from** to **End** (a Ramp up to at or before Start, or a Ramp down from at or after End, leaves that side a hard edge, and where the two cross the ramp up wins). Both points are percents of the text and move with **Offset**, and can be keyed. **Ease** shapes the weight.
 - **Randomize** hits the units in a scrambled but repeatable order; change the **Seed** for another order.
 - **Strength** is how much of the modifier applies, 0 to 100.
 - The changes at full strength: **X** and **Y** move, **↻** turns and **Scale** scales (around the centre of each letter, word or line), **Opacity** fades, **Tint** mixes toward a colour, **Spacing** adds letter spacing and **Blur** blurs.
@@ -6011,7 +6015,7 @@ Rive **joysticks** become [joysticks](joysticks): a joystick that has a handle l
 
 Rive **layer masks** become [masks](groups-frames#masks): the masked layer goes in a group with a masking copy of the source layer (a shape, a group of shapes, an image) in front of it, and the source itself is hidden unless the mask says it keeps drawing. Inverted, luminance and inverted luminance masks keep their mode (see *Mask mode* in [Groups and frames](groups-frames#masks)); custom bounds and the mask resolution are ignored, and the report lists those.
 
-Rive **text modifiers** become [text modifiers](text-modifiers): each range of a group is one modifier, with the group's move, turn, scale and fade (the units are letters, words or lines, ranges by percent or by index, with the offset, strength and falloff) and keys on a range or group follow onto it. Falloffs are approximated by a ramp or triangle, and ranges that combine by subtracting, multiplying, min or max, ranges limited to one text run, text follow path and per-letter variable font axes are not imported; the report lists them.
+Rive **text modifiers** become [text modifiers](text-modifiers): each range of a group is one modifier, with the group's move, turn, scale and fade (the units are letters, words or lines, ranges by percent or by index, with the offset, strength and falloff) and keys on a range or group follow onto it. Falloffs import as the *Falloff* shape, which matches Rive letter for letter (it was measured against Rive's own runtime), and ranges that combine by subtracting, multiplying, min or max, ranges limited to one text run, text follow path and per-letter variable font axes are not imported; the report lists them.
 
 Rive **scroll constraints** make the layout a scrollable [frame](groups-frames) in the direction they scroll, and the browser scrolls it. Elastic bounce and momentum, snapping, endless and virtualised lists, drag speed and a starting offset are not imported, and neither are scroll bars (the browser draws its own). A scroll constraint the viewer cannot drag is skipped.
 
