@@ -1890,9 +1890,9 @@ let windowStart = 0;
 let windowSpent = 0;
 const now = () => typeof performance !== "undefined" ? performance.now() : Date.now();
 function charge(n) {
-  const t = now();
-  if (t - windowStart > WINDOW_MS) {
-    windowStart = t;
+  const t2 = now();
+  if (t2 - windowStart > WINDOW_MS) {
+    windowStart = t2;
     windowSpent = 0;
   }
   windowSpent += n;
@@ -2439,7 +2439,7 @@ function dragSettings(raw, draggable) {
   const nonNeg = (v) => isNum(v) && v >= 0;
   pick("enabled", bool);
   pick("label", isStr);
-  if (Array.isArray(raw[draggable ? "tags" : "accepts"])) out[draggable ? "tags" : "accepts"] = arr(raw[draggable ? "tags" : "accepts"], isStr).map((t) => t.trim()).filter(Boolean).slice(0, 50);
+  if (Array.isArray(raw[draggable ? "tags" : "accepts"])) out[draggable ? "tags" : "accepts"] = arr(raw[draggable ? "tags" : "accepts"], isStr).map((t2) => t2.trim()).filter(Boolean).slice(0, 50);
   if (draggable) {
     pick("axis", oneOf2(["both", "x", "y"]));
     pick("bounds", isStr);
@@ -2708,7 +2708,7 @@ function paint(v) {
 const oneOf = (v, list) => list.includes(v) ? v : void 0;
 function gridLayout(v) {
   if (!isObj(v)) return null;
-  const tracks = (list) => objs(list).map((t) => ({ type: oneOf(t.type, ["auto", "px", "percent", "fr"]), value: t.value })).filter((t) => t.type).map((t) => isNum(t.value) ? { type: t.type, value: t.value } : { type: t.type });
+  const tracks = (list) => objs(list).map((t2) => ({ type: oneOf(t2.type, ["auto", "px", "percent", "fr"]), value: t2.value })).filter((t2) => t2.type).map((t2) => isNum(t2.value) ? { type: t2.type, value: t2.value } : { type: t2.type });
   const g = { columns: tracks(v.columns), rows: tracks(v.rows) };
   for (const [k, list] of [["justifyItems", ["start", "center", "end"]], ["alignItems", ["start", "center", "end"]], ["justifyContent", ["start", "center", "space-between"]], ["alignContent", ["start", "center"]]]) {
     const x = oneOf(v[k], list);
@@ -3166,6 +3166,28 @@ function presetContent(preset, target) {
 }
 const DEFAULT_SHADER = presetContent(SHADER_PRESETS[0], "layer");
 ({ ...presetContent(SHADER_PRESETS_BY_ID.wave, "filter") });
+const t = (key, name, light, dark, highContrast) => ({ key, name, light, dark, highContrast });
+const STARTER_TOKEN_DEFS = [
+  t("background", "color/background", "#ffffff", "#1e1e1e", "#000000"),
+  t("surface", "color/surface", "#f4f4f4", "#2b2b2b", "#000000"),
+  t("surfaceMuted", "color/surface-muted", "#dfdfdf", "#3a3a3a", "#1e1e1e"),
+  t("text", "color/text", "#1e1e1e", "#f4f4f4", "#ffffff"),
+  t("muted", "color/muted", "#4d4d4d", "#cacaca", "#ffffff"),
+  t("primary", "color/primary", "#a35f00", "#ffb448", "#ffb448"),
+  t("onPrimary", "color/on-primary", "#ffffff", "#1e1e1e", "#000000"),
+  t("button", "color/button", "#ffb448", "#ffb448", "#ffb448"),
+  t("onButton", "color/on-button", "#1e1e1e", "#1e1e1e", "#000000"),
+  t("border", "color/border", "#777777", "#a0a0a0", "#ffffff"),
+  t("divider", "color/divider", "#cacaca", "#4d4d4d", "#ffffff"),
+  t("focus", "color/focus", "#a35f00", "#ffb448", "#ffffff"),
+  t("success", "color/success", "#2f6f17", "#7fd05f", "#7fe35a"),
+  t("successSurface", "color/success-surface", "#e6f2e0", "#1f3318", "#000000"),
+  t("error", "color/error", "#b3261e", "#ff8a80", "#ff9d94"),
+  t("errorSurface", "color/error-surface", "#fdeceb", "#401a17", "#000000"),
+  t("warning", "color/warning", "#8a5200", "#ffc566", "#ffd27a"),
+  t("warningSurface", "color/warning-surface", "#fff1d6", "#3d2c0a", "#000000")
+];
+const LIGHT_LOOK = Object.fromEntries(STARTER_TOKEN_DEFS.map((d) => [d.key, d.light]));
 const NAMES = {
   rect: "Rectangle",
   ellipse: "Ellipse",
@@ -3211,12 +3233,12 @@ const DEFAULT_TEXT_STYLE = {
   fontStyle: "normal",
   lineHeight: 1.3,
   letterSpacing: 0,
-  color: "#111111",
+  color: LIGHT_LOOK.text,
   align: "left",
   verticalAlign: "top"
 };
 const DEFAULT_DRAW_CODE = DRAW_TEMPLATES[0].code;
-const GREY = { type: "solid", color: "#d9d9d9" };
+const GREY = { type: "solid", color: LIGHT_LOOK.surfaceMuted };
 const FACTORIES = {
   rect: () => ({ fill: GREY, stroke: null, cornerRadius: 0 }),
   ellipse: () => ({ fill: GREY, stroke: null }),
@@ -3224,7 +3246,7 @@ const FACTORIES = {
   star: () => ({ fill: GREY, stroke: null, points: 5, innerRatio: 0.45 }),
   path: () => ({
     fill: null,
-    stroke: { paint: { type: "solid", color: "#111111" }, width: 2 },
+    stroke: { paint: { type: "solid", color: LIGHT_LOOK.text }, width: 2 },
     paths: [],
     lineCap: "round",
     lineJoin: "round"
@@ -3234,28 +3256,29 @@ const FACTORIES = {
   group: () => ({ children: [] }),
   frame: () => ({
     children: [],
-    fill: { type: "solid", color: "#ffffff" },
+    fill: { type: "solid", color: LIGHT_LOOK.background },
     stroke: null,
     cornerRadius: 0,
     clip: true
   }),
   button: () => ({
     ...DEFAULT_TEXT_STYLE,
-    fill: { type: "solid", color: "#3b5bfd" },
+    //Gold with black, bolder text, like the toolbox's buttons
+    fill: { type: "solid", color: LIGHT_LOOK.button },
     stroke: null,
-    color: "#ffffff",
-    fontWeight: 600,
+    color: LIGHT_LOOK.onButton,
+    fontWeight: 700,
     align: "center",
     verticalAlign: "middle",
     label: "Button",
-    cornerRadius: 8,
+    cornerRadius: 6,
     width: 140,
     height: 44
   }),
   input: () => ({
     ...DEFAULT_TEXT_STYLE,
-    fill: { type: "solid", color: "#ffffff" },
-    stroke: { paint: { type: "solid", color: "#c4c4c4" }, width: 1 },
+    fill: { type: "solid", color: LIGHT_LOOK.background },
+    stroke: { paint: { type: "solid", color: LIGHT_LOOK.border }, width: 1 },
     inputType: "text",
     placeholder: "Type here",
     variableId: null,
@@ -3266,7 +3289,7 @@ const FACTORIES = {
   }),
   link: () => ({
     ...DEFAULT_TEXT_STYLE,
-    color: "#3b5bfd",
+    color: LIGHT_LOOK.primary,
     textDecoration: "underline",
     text: "Link",
     href: "https://example.com",
@@ -3841,16 +3864,16 @@ class Parser {
     return e;
   }
   primary() {
-    const t = this.tok;
-    switch (t.t) {
+    const t2 = this.tok;
+    switch (t2.t) {
       case "num": {
         this.advance();
-        const n = t.n;
+        const n = t2.n;
         return () => n;
       }
       case "str": {
         this.advance();
-        const s = t.v;
+        const s = t2.v;
         return () => s;
       }
       case "tick":
@@ -3862,7 +3885,7 @@ class Parser {
       default:
         return this.fail("Unexpected end of expression");
     }
-    switch (t.v) {
+    switch (t2.v) {
       case "(": {
         this.advance();
         const e = this.sequence();
@@ -3877,7 +3900,7 @@ class Parser {
       case "/=":
         return this.regex();
       default:
-        return this.fail(`Unexpected "${t.v}"`);
+        return this.fail(`Unexpected "${t2.v}"`);
     }
   }
   identifier() {
@@ -4412,8 +4435,8 @@ function getMember(obj, rawKey) {
     case "boolean":
       return hasOwn(BOOLEAN_METHODS, key) ? bind(BOOLEAN_METHODS[key], obj) : void 0;
     case "function": {
-      const t = STATICS.get(obj);
-      return t && hasOwn(t, key) ? t[key] : void 0;
+      const t2 = STATICS.get(obj);
+      return t2 && hasOwn(t2, key) ? t2[key] : void 0;
     }
     case "object":
       if (Array.isArray(obj)) {
@@ -4542,8 +4565,8 @@ const FORMULA_HELPERS = {
     return int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (frac ? "." + frac : "");
   },
   remap(v, inMin, inMax, outMin, outMax, clamp = false) {
-    const t = inMax === inMin ? 0 : (v - inMin) / (inMax - inMin);
-    const k = clamp ? Math.min(1, Math.max(0, t)) : t;
+    const t2 = inMax === inMin ? 0 : (v - inMin) / (inMax - inMin);
+    const k = clamp ? Math.min(1, Math.max(0, t2)) : t2;
     return outMin + (outMax - outMin) * k;
   },
   clamp: (v, min, max) => Math.min(max, Math.max(min, v)),
@@ -4572,8 +4595,8 @@ function compile(src) {
   return hit;
 }
 function checkExpression(src) {
-  const t = src.trim();
-  if (t) compile(t);
+  const t2 = src.trim();
+  if (t2) compile(t2);
 }
 const isIdArray = (a) => Array.isArray(a) && a.length > 0 && a.every((e) => e && typeof e === "object" && typeof e.id === "string");
 const same = (a, b) => {
@@ -6617,7 +6640,7 @@ Add them in the **Variables** tab. Each has a name, a type and a starting value.
 | Number | \`0\`, \`3.5\` |
 | Text | \`"Hello"\` |
 | True/false | \`true\` or \`false\` |
-| Colour | \`#3b5bfd\` |
+| Colour | \`#ffb448\` |
 | Choice | One of a list of options you define, like \`easy\`, \`medium\`, \`hard\` |
 | List | Items, usually objects: \`[{"name": "Ann"}, {"name": "Bo"}]\` |
 
@@ -6801,7 +6824,7 @@ New projects run scripts in a sandbox: a separate JavaScript engine compiled to 
     keywords: "script layer draw canvas generative art particles chart graph visualisation visualization animation code g.rect g.circle fps pixel ratio sandbox",
     body: () => `A **Script layer** is a box that a script paints every frame. Use it for things shapes and timelines can't do well: particles, generative art, live charts, custom meters and any other visualisation that is easier to compute than to draw by hand.
 
-Pick the **Script layer** tool (in the **Media** group of the tool bar, which starts folded: click **Media** to open it) and drag a box. It starts with a small script that already runs, and the **Start from** menu in the inspector replaces it with a starter: ${DRAW_TEMPLATES.map((t) => `**${t.name}**`).join(", ")}.
+Pick the **Script layer** tool (in the **Media** group of the tool bar, which starts folded: click **Media** to open it) and drag a box. It starts with a small script that already runs, and the **Start from** menu in the inspector replaces it with a starter: ${DRAW_TEMPLATES.map((t2) => `**${t2.name}**`).join(", ")}.
 
 ## The script
 
@@ -6956,25 +6979,37 @@ The **Broken** group lists references that point at something that has been dele
     group: "Design",
     summary: "Name a colour once, give it a value for Light, Dark and High contrast, and let layers follow it.",
     keywords: "theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast",
-    body: `A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. Projects with no tokens behave exactly as before.
+    body: `![The Themes tab: the starter tokens down the side with their Light, Dark and High contrast colours, and the contrast check.](help/themes-panel.png)
+
+A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. Projects with no tokens behave exactly as before.
 
 ## The Themes panel
-Open the **Themes** tab (bottom panel). With none yet, **Add Light, Dark and High contrast** makes the three themes and seven starter tokens: background, surface, text, muted, primary, on-primary and border. Then:
+Open the **Themes** tab (bottom panel). With none yet, **Add Light, Dark and High contrast** makes the three themes and the starter tokens, in the same look as the StudyDesk toolbox: its greys, and its gold for buttons with black, bolder text.
+- **color/background**, **color/surface** and **color/surface-muted** are the page, a card and a hover or quiet grey. **color/text** and **color/muted** are the copy on them.
+- **color/button** and **color/on-button** are the gold button and its black label. **color/primary** and **color/on-primary** are the accent for links, selections and anything that has to read against the page (a darker gold in Light, because the toolbox gold is too pale to read as text).
+- **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus ring.
+- **color/success**, **color/error** and **color/warning** each come with a **-surface** tint, for the right, wrong and missed answers.
+
+Dark and High contrast are the same names with values made for them. Then:
 - Each row is a token, each column a theme. Click a colour to change it. **Used** counts the places that follow the token.
 - **+ Theme** copies the default theme. **+ Token** adds a row. Rename either; layers keep following a renamed token.
 - A theme can answer to a **Light** or **Dark scheme**, be marked **High contrast**, and be the **Default**. These decide which theme a viewer gets (see below).
 - **Showing** (and the theme box in the top bar) picks the theme the canvas draws while you edit. It is not saved with the project. Pictures, SVG and PNG exports, and Lottie, write the colours of the theme being shown.
 - **Convert colour styles to tokens** makes a token from every colour style, with its colour in every theme to start with. Layers that follow a style keep following it, now through the token. Styles from a library convert too, and a library update keeps the link.
+- **Update starter colours** shows on a project made before this look that still has the old starter tokens. It gives the tokens you never edited the new values and adds the ones the project lacks. Layers that follow those tokens change with them; plain colours and tokens you edited do not. Nothing changes until you press it.
 - The count at the top says how many plain colours are **not following a theme**.
 
 ## Using a token
 In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a named chip replaces the hex box with the token's value in each theme underneath. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
 
+## New layers, questions and starters
+A new button is gold with black, bolder text, an input has a grey outline, a shape is a neutral grey, text is the toolbox black. In a project that has the starter tokens, new layers, the [question kit](question-kit) and the step bar follow those tokens instead, so a new layer looks right in Dark and High contrast without you picking anything. In a project with no tokens they get the same colours as plain ones. The built-in [starters](templates) come with the themes and use the tokens.
+
 ## Imported files keep plain colours
 Lottie, Rive, PSD, SVG and package imports bring their colours in as plain colours. Nothing guesses which colour "is" the primary. Mixing plain and token colours in one project is normal.
 
 ## Contrast
-- The Themes panel checks the pairs that matter in every theme, by token name: **color/text** and **color/muted** on **color/background** and **color/surface**, **color/on-primary** on **color/primary**, **color/primary** and **color/border** against **color/background**. A pair that is too low shows its ratio on the cell and in the list.
+- The Themes panel checks the pairs that matter in every theme, by token name: **color/text** and **color/muted** on **color/background**, **color/surface** and **color/surface-muted**, **color/on-primary** on **color/primary**, **color/on-button** on **color/button**, each of **success**, **error** and **warning** on its surface, and **color/primary**, **color/border** and **color/focus** against **color/background** and **color/surface**. The starter tokens pass every one in all three themes. A pair that is too low shows its ratio on the cell and in the list.
 - The [Accessibility checker](accessibility-checker) checks text contrast in every theme, not only the one shown. A finding that starts "In Dark:" is about Dark. It offers no automatic fix for text that follows a token, since a fix would write a plain colour over the token.
 - **Theme colour on a fixed colour** is a warning for text that follows a token but sits on a plain colour. The theme changes one and not the other, so white text on a plain white card goes unreadable in Dark.
 
@@ -6989,7 +7024,7 @@ In this order:
 **Preview** has a theme box (a theme, or follow the viewer), a **Viewer** box to pretend dark mode or more contrast is on, and, with the page option below, a **Host** box.
 
 ## Taking colours from the page
-Tick **Map tokens from the page's CSS variables** and a token is read from a CSS variable on the page that holds the player before the theme's own value. The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` to \`--bs-primary\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other. A missing or odd variable just leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
+Tick **Map tokens from the page's CSS variables** and a token is read from a CSS variable on the page that holds the player before the theme's own value. The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` and \`color/button\` to \`--bs-primary\`, \`color/on-button\` to \`--bs-white\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other. A missing or odd variable just leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
 
 ## Not yet
 Tokens are colours only. Fonts, radii and spacing are not tokens. Colours inside script and shader layers, captions settings, and images do not follow themes. A keyframe that animates a colour between two token colours snaps instead of blending.`
@@ -7857,8 +7892,8 @@ Check the projects page for an active folder, tag or search (the **Clear filters
 - **? links**: inspector sections have a **?** that opens their page here.`
   }
 ];
-function topicBody(t) {
-  return typeof t.body === "function" ? t.body() : t.body;
+function topicBody(t2) {
+  return typeof t2.body === "function" ? t2.body() : t2.body;
 }
 const BASE = (process.env.INTERACTIVES_URL ?? "http://127.0.0.1:3048/interactives").replace(/\/$/, "");
 const SESSION = process.env.INTERACTIVES_SESSION_ID ?? "";
@@ -7967,7 +8002,7 @@ function overview(p, opts2) {
   for (const ab of p.artboards) {
     if (opts2.artboardId && ab.id !== opts2.artboardId) continue;
     lines.push(`## Artboard ${ab.name} [${ab.id}] ${ab.width}x${ab.height}`);
-    if (ab.timelines.length) lines.push(`Timelines: ${ab.timelines.map((t) => `${t.name} [${t.id}] ${t.duration}ms ${t.loop}${t.autoplay ? " autoplay" : ""} (${t.tracks.length} tracks)`).join("; ")}`);
+    if (ab.timelines.length) lines.push(`Timelines: ${ab.timelines.map((t2) => `${t2.name} [${t2.id}] ${t2.duration}ms ${t2.loop}${t2.autoplay ? " autoplay" : ""} (${t2.tracks.length} tracks)`).join("; ")}`);
     if (ab.blends?.length) lines.push(`Blends: ${ab.blends.map((b) => `${b.name} [${b.id}] ${b.mode} (${b.entries.length} timelines)`).join("; ")}`);
     if (ab.logic.nodes.length) lines.push(`Interactions: ${ab.logic.nodes.length} nodes, ${ab.logic.edges.length} connections (use get_interactions)`);
     const out = [];
@@ -7999,8 +8034,8 @@ function validate(p) {
   for (const ab of p.artboards) {
     const ids = /* @__PURE__ */ new Set();
     walk(ab.children, (n) => ids.add(n.id));
-    const tl = new Set(ab.timelines.map((t) => t.id));
-    for (const t of ab.timelines) for (const tr of t.tracks) if (!ids.has(tr.nodeId)) problems.push(`${ab.name}: timeline "${t.name}" animates a layer that is gone (${tr.nodeId}, ${tr.prop})`);
+    const tl = new Set(ab.timelines.map((t2) => t2.id));
+    for (const t2 of ab.timelines) for (const tr of t2.tracks) if (!ids.has(tr.nodeId)) problems.push(`${ab.name}: timeline "${t2.name}" animates a layer that is gone (${tr.nodeId}, ${tr.prop})`);
     for (const n of ab.logic.nodes) {
       const def = CATALOG.find((d) => d.kind === n.kind);
       if (!def) {
@@ -8222,15 +8257,15 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n");
   if (topic === "layers") {
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "bone"];
-    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, decorative (hide from assistive tech), focusable (tab stop override), tabOrder, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it).\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t2) => `"${t2.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, decorative (hide from assistive tech), focusable (tab stop override), tabOrder, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it).\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
-Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t2) => `- ${t2}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t2)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
+Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t22) => `- ${t22}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t22)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
-  const t = TOPICS.find((x) => x.id === topic);
-  if (t) return `# ${t.title}
-${t.summary}
+  const t2 = TOPICS.find((x) => x.id === topic);
+  if (t2) return `# ${t2.title}
+${t2.summary}
 
-${topicBody(t)}`;
+${topicBody(t2)}`;
   return `Topics: interactions, properties, layers, and the help pages: ${TOPICS.map((x) => x.id).join(", ")}`;
 }
 const S = (props, required = []) => ({ type: "object", properties: props, required });
@@ -8382,7 +8417,7 @@ async function handle(msg) {
     case "tools/list":
       return reply({ tools: TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) });
     case "tools/call": {
-      const tool = TOOLS.find((t) => t.name === msg.params?.name);
+      const tool = TOOLS.find((t2) => t2.name === msg.params?.name);
       if (!tool) return fail(-32602, `Unknown tool ${String(msg.params?.name)}`);
       try {
         const text = await tool.run(msg.params?.arguments ?? {});
