@@ -4069,6 +4069,7 @@ Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pag
 
 - The **Search name or tag** box shows only projects whose name or tags contain what you type. **Clear filters** appears if nothing matches.
 - **Sort** orders the cards by **Last updated** (newest first, the default) or **Name**. The choice is remembered in this browser.
+- **Thumbnails** and **Details** switch between cards with a picture and a one-row-per-project list. In Thumbnails, the slider next to them makes the pictures bigger or smaller. Both choices are remembered in this browser, the same as in the Assets tab. The page lays out at any window width: the header and folder list wrap instead of squeezing.
 
 ## Folders
 
