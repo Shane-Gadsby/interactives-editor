@@ -1164,6 +1164,7 @@ export class EditorStore {
       // Draw order starts as the layers' own order; solo starts on the first child
       if (prop === 'drawOrder') value = kids.map((k) => k.id);
       else if (prop === 'solo.active') value = kids[0]?.id ?? '';
+      else if (/^cornerRadii\.\d$/.test(prop)) value = Number(getPath(loc.node, 'cornerRadius')) || 0;
       else if (prop.startsWith('inputs.')) value = this.state.project.variables.find((v) => v.name === prop.slice(7))?.initial ?? 0;
       else value = prop.endsWith('color') ? '#000000' : 0;
     }
@@ -1283,9 +1284,9 @@ export class EditorStore {
       if (!loc) return;
       const old = loc.node as unknown as Record<string, unknown>;
       const next: Record<string, unknown> = { ...old, type: 'path', paths };
-      for (const k of ['cornerRadius', 'sides', 'points', 'innerRatio']) delete next[k];
+      for (const k of ['cornerRadius', 'cornerRadii', 'sides', 'points', 'innerRatio']) delete next[k];
       loc.siblings.splice(loc.index, 1, next as unknown as SceneNode);
-      for (const tl of dab.timelines) tl.tracks = tl.tracks.filter((tr) => !(tr.nodeId === id && (tr.prop === 'cornerRadius' || tr.prop === 'innerRatio')));
+      for (const tl of dab.timelines) tl.tracks = tl.tracks.filter((tr) => !(tr.nodeId === id && (tr.prop === 'cornerRadius' || tr.prop.startsWith('cornerRadii.') || tr.prop === 'innerRatio')));
     });
     return true;
   }

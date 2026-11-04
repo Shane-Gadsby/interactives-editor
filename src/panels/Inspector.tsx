@@ -84,6 +84,8 @@ import { FillSection, PaintOrderSection, StrokeSection } from './PaintLayers';
 import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
 import { BindSelectionSection, BoneSection, SkinSection } from './RigSection';
 import { skinnable } from '../lib/rig';
+import { CornerRadii } from './CornerRadii';
+import { hasCornerRadii } from '../lib/corner-radii';
 
 const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
 
@@ -937,7 +939,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'rect':
       return (
         <Section help="shapes#shape-settings" title="Rectangle">
-          {radius}
+          <CornerRadii nodes={nodes.filter(hasCornerRadii)} />
           {nodes.length === 1 && <ConvertToPath node={n} />}
         </Section>
       );
@@ -945,7 +947,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return (
         <>
           <Section help="groups-frames" title="Frame">
-            {radius}
+            <CornerRadii nodes={nodes.filter(hasCornerRadii)} />
             <CheckField label="Clip content" value={n.clip || (!!n.scroll && n.scroll !== 'none')} onChange={(v) => set({ clip: v })} />
             <SelectField<'none' | 'vertical' | 'horizontal' | 'both'>
               label="Overflow"
