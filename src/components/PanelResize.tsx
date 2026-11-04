@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 /**
  * Widths of the side panels (layers on the left, properties on the right), dragged from their inner edge. They're
  * about this screen, so they're kept in this browser rather than with the other preferences.
  */
 export type Side = 'left' | 'right';
-export const PANEL_WIDTH = { left: { def: 240, min: 180, max: 560 }, right: { def: 280, min: 240, max: 640 } } as const;
-const KEY = 'ix-panel-widths';
+export const PANEL_WIDTH = { left: { def: 240, min: 180, max: 560 }, right: { def: 320, min: 240, max: 640 } } as const;
+// Only widths someone dragged to are kept (the old key also saved the defaults on every load, so a new default never
+// reached anyone who had opened the editor before)
+const KEY = 'ix-panel-widths-v2';
 
 export const clampWidth = (side: Side, w: number): number => {
   const { min, max } = PANEL_WIDTH[side];
@@ -27,14 +29,19 @@ function load(): Record<Side, number> {
 /** The panel widths, and a setter that remembers them. */
 export function usePanelWidths(): [Record<Side, number>, (side: Side, w: number) => void] {
   const [w, setW] = useState(load);
-  useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(w));
-    } catch {
-      /* storage unavailable */
-    }
-  }, [w]);
-  return [w, (side, px) => setW((cur) => ({ ...cur, [side]: clampWidth(side, px) }))];
+  return [
+    w,
+    (side, px) =>
+      setW((cur) => {
+        const next = { ...cur, [side]: clampWidth(side, px) };
+        try {
+          localStorage.setItem(KEY, JSON.stringify(next));
+        } catch {
+          /* storage unavailable */
+        }
+        return next;
+      }),
+  ];
 }
 
 /** The strip on a panel's inner edge: drag it, use the arrow keys on it, or double-click it to put the width back. */

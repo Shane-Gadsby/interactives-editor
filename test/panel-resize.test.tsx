@@ -35,19 +35,19 @@ describe('side panel widths', () => {
     act(() => root!.render(<Host />));
     const strip = document.querySelector<HTMLElement>('.col-resize.right')!;
     expect(strip.getAttribute('role')).toBe('separator');
-    expect(seen).toBe(280);
+    expect(seen).toBe(320);
     // the properties panel is on the right, so the left arrow widens it
     act(() => void strip.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })));
-    expect(seen).toBe(290);
-    act(() => void strip.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: true, bubbles: true })));
     expect(seen).toBe(330);
-    expect(JSON.parse(localStorage.getItem('ix-panel-widths')!).right).toBe(330);
+    act(() => void strip.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: true, bubbles: true })));
+    expect(seen).toBe(370);
+    expect(JSON.parse(localStorage.getItem('ix-panel-widths-v2')!).right).toBe(370);
     act(() => void strip.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
-    expect(seen).toBe(280);
+    expect(seen).toBe(320);
   });
 
   it('starts from the remembered width', () => {
-    localStorage.setItem('ix-panel-widths', JSON.stringify({ left: 300, right: 420 }));
+    localStorage.setItem('ix-panel-widths-v2', JSON.stringify({ left: 300, right: 420 }));
     let w: { left: number; right: number } | null = null;
     function Host() {
       w = usePanelWidths()[0];

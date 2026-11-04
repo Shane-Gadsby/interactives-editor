@@ -767,30 +767,89 @@ function AddQuestion() {
   );
 }
 
-function Toolbar() {
+// The tools column in groups that fold (Shapes and Draw start open), so it fits without scrolling. Select and Hand
+// always show; a folded group still shows its tool when that's the one in use
+const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
+  { id: 'shapes', label: 'Shapes', tools: ['artboard', 'frame', 'rect', 'ellipse', 'polygon', 'star'], open: true },
+  { id: 'draw', label: 'Draw', tools: ['line', 'pen', 'pencil', 'bend'], open: true },
+  { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', 'video'], open: false },
+  { id: 'web', label: 'Web', tools: ['button', 'input', 'link', 'embed'], open: false },
+  { id: 'rig', label: 'Rig', tools: ['bone'], open: false },
+];
+const GROUPS_KEY = 'ix-tool-groups';
+
+function useToolGroups(): [Record<string, boolean>, (id: string) => void] {
+  const [open, setOpen] = useState<Record<string, boolean>>(() => {
+    const def = Object.fromEntries(TOOL_GROUPS.map((g) => [g.id, g.open]));
+    try {
+      return { ...def, ...(JSON.parse(localStorage.getItem(GROUPS_KEY) ?? '{}') as Record<string, boolean>) };
+    } catch {
+      return def;
+    }
+  });
+  const toggle = (id: string) =>
+    setOpen((cur) => {
+      const next = { ...cur, [id]: !cur[id] };
+      try {
+        localStorage.setItem(GROUPS_KEY, JSON.stringify(next));
+      } catch {
+        /* storage unavailable */
+      }
+      return next;
+    });
+  return [open, toggle];
+}
+
+export function Toolbar() {
   const tool = useEditor((st) => st.tool);
   const showBones = useEditor((st) => st.showBones);
-  const btn = (t: (typeof TOOLS)[number]) => {
+  const [open, toggle] = useToolGroups();
+  const all = [...TOOLS, ...WEB_TOOLS];
+  const btn = (id: Tool) => {
+    const t = all.find((x) => x.tool === id);
+    if (!t) return null;
     const I = Icons[t.icon];
     return <IconButton key={t.tool} icon={<I />} title={`${t.label}${t.key ? ` (${t.key})` : ''}`} active={tool === t.tool} onClick={() => store().set({ tool: t.tool, editingPathId: null })} />;
   };
+  const image = (
+    <IconButton
+      key="image"
+      icon={<Icons.image />}
+      title="Image"
+      onClick={async () => {
+        const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft');
+        const ab = store().artboard();
+        if (files.length && ab) await insertFiles(files, ab.id, { x: ab.width / 2, y: ab.height / 2 });
+      }}
+    />
+  );
+  const bones = <IconButton key="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={showBones ? 'Hide bones on the canvas (Shift+J)' : 'Show bones on the canvas (Shift+J)'} onClick={() => store().set({ showBones: !showBones })} />;
   return (
     <nav className="toolbar">
-      {TOOLS.map(btn)}
-      <IconButton icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={showBones ? 'Hide bones on the canvas (Shift+J)' : 'Show bones on the canvas (Shift+J)'} onClick={() => store().set({ showBones: !showBones })} />
-      <IconButton
-        icon={<Icons.image />}
-        title="Image"
-        onClick={async () => {
-          const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft');
-          const ab = store().artboard();
-          if (files.length && ab) await insertFiles(files, ab.id, { x: ab.width / 2, y: ab.height / 2 });
-        }}
-      />
-      <div className="toolbar-sep" />
-      {WEB_TOOLS.map(btn)}
-      <div className="toolbar-sep" />
-      <AddQuestion />
+      {btn('select')}
+      {btn('hand')}
+      {TOOL_GROUPS.map((g) => {
+        const isOpen = !!open[g.id];
+        const activeHere = g.tools.includes(tool);
+        return (
+          <div key={g.id} className={`tool-group${isOpen ? ' open' : ''}`}>
+            <button type="button" className="tool-group-head" aria-expanded={isOpen} title={`${isOpen ? 'Fold' : 'Show'} the ${g.label} tools`} onClick={() => toggle(g.id)}>
+              <span className="section-chev" aria-hidden="true" />
+              {g.label}
+            </button>
+            {isOpen ? (
+              <>
+                {g.tools.map(btn)}
+                {g.id === 'media' && image}
+                {g.id === 'web' && <AddQuestion key="q" />}
+                {g.id === 'rig' && bones}
+              </>
+            ) : (
+              activeHere && btn(tool)
+            )}
+          </div>
+        );
+      })}
       <div className="toolbar-fill" />
       <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
     </nav>

@@ -1,4 +1,5 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AudioMixer, ANIMATABLE_PROPS, animatableProp, instanceInputProps, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL, type TimelineMarker } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
@@ -408,13 +409,18 @@ export function TimelinePanel() {
             v === '__new' ? store().addTimeline() : store().set({ activeTimelineId: v === '__design' ? null : v, playhead: 0, selectedKeys: [], recording: v === '__design' ? false : store().get().recording })
           }
         />
-        <TextField value={tl.name} commitOnBlur onChange={(v) => setTl((d) => (d.name = v || d.name))} />
         <IconButton icon={s.playing ? <Icons.pause /> : <Icons.play />} title={s.playing ? 'Pause preview' : 'Play preview'} onClick={() => store().set({ previewPlaying: !s.playing, playhead: !s.playing && s.playhead >= tl.duration ? 0 : s.playhead })} />
         <IconButton icon={<Icons.stop />} title="Back to start" onClick={() => store().set({ previewPlaying: false, playhead: 0 })} />
         <IconButton icon={<Icons.record />} className="record-btn" title="Record: property changes become keyframes" active={s.recording} onClick={() => store().set({ recording: !s.recording })} />
         <span className="time-readout mono">{Math.round(s.playhead)} ms</span>
-        <NumberField label="Length" value={tl.duration} min={50} step={50} suffix="ms" onChange={(v) => setTl((d) => (d.duration = Math.round(v)), 'tl-dur')} />
-        <SelectField
+        <span className="tl-summary muted small" title="This timeline's settings; the gear changes them">
+          {tl.duration} ms · {{ once: 'Play once', loop: 'Loop', pingpong: 'Ping-pong' }[tl.loop] ?? tl.loop} · {tl.speed}×{tl.autoplay ? ' · autoplay' : ''}
+          {tl.fps ? ` · ${tl.fps} fps${tl.snap ? ' (whole frames)' : ''}` : ''}
+        </span>
+        <TimelineSettings>
+          <TextField label="Name" value={tl.name} commitOnBlur onChange={(v) => setTl((d) => (d.name = v || d.name))} />
+          <NumberField label="Length" value={tl.duration} min={50} step={50} suffix="ms" onChange={(v) => setTl((d) => (d.duration = Math.round(v)), 'tl-dur')} />
+          <SelectField
           value={tl.loop}
           options={[
             { value: 'once', label: 'Play once' },
@@ -423,9 +429,9 @@ export function TimelinePanel() {
           ]}
           onChange={(v) => setTl((d) => (d.loop = v))}
         />
-        <CheckField label="Autoplay" title="Start when the artboard is shown" value={tl.autoplay} onChange={(v) => setTl((d) => (d.autoplay = v))} />
-        <NumberField label="Speed" value={tl.speed} step={0.1} min={0.1} onChange={(v) => setTl((d) => (d.speed = v), 'tl-speed')} />
-        <NumberField
+          <CheckField label="Autoplay" title="Start when the artboard is shown" value={tl.autoplay} onChange={(v) => setTl((d) => (d.autoplay = v))} />
+          <NumberField label="Speed" value={tl.speed} step={0.1} min={0.1} onChange={(v) => setTl((d) => (d.speed = v), 'tl-speed')} />
+          <NumberField
           label="Frame rate"
           title="Frames per second the animation was made at. 0 leaves it free. Turn on Whole frames to make values step from frame to frame"
           value={tl.fps ?? 0}
@@ -444,6 +450,7 @@ export function TimelinePanel() {
           }
         />
         {tl.fps ? <CheckField label="Whole frames" title="Read the keys at the start of the frame, so values step from frame to frame instead of gliding (how frame-snapped animations from other tools look)" value={!!tl.snap} onChange={(v) => setTl((d) => void (v ? (d.snap = true) : delete d.snap))} /> : null}
+        </TimelineSettings>
         <button className="btn" title="Add a marker at the playhead. An On timeline marker node runs when playback passes it" onClick={() => addMarker()}>
           + Marker
         </button>
@@ -890,3 +897,48 @@ function EaseCurve({ ease: e, width, height = 14, big }: { ease: Easing; width: 
   );
 }
 
+
+
+/** The gear in the Timeline bar: the timeline's settings (name, length, loop, speed, frame rate, autoplay) in a popover. */
+function TimelineSettings({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const pop = useRef<HTMLDivElement>(null);
+  // Drawn over the page (the bottom panel would clip it), below the gear or above it when there's no room below
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!open || !box.current) return;
+    const r = box.current.getBoundingClientRect();
+    const h = pop.current?.offsetHeight ?? 260;
+    const w = pop.current?.offsetWidth ?? 270;
+    const below = r.bottom + 6;
+    setAt({ left: Math.max(8, Math.min(window.innerWidth - w - 8, r.left)), top: below + h > window.innerHeight - 8 ? Math.max(8, r.top - h - 6) : below });
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => !box.current?.contains(e.target as Node) && !pop.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && (e.stopPropagation(), setOpen(false));
+    const close = () => setOpen(false);
+    document.addEventListener('pointerdown', away, true);
+    document.addEventListener('keydown', esc, true);
+    window.addEventListener('resize', close);
+    return () => {
+      document.removeEventListener('pointerdown', away, true);
+      document.removeEventListener('keydown', esc, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [open]);
+  return (
+    <div className="tl-settings" ref={box}>
+      <IconButton icon={<Icons.gear />} title="Timeline settings: name, length, loop, speed, frame rate, autoplay" active={open} onClick={() => setOpen(!open)} />
+      {open &&
+        createPortal(
+          <div ref={pop} className="tl-settings-pop" role="dialog" aria-label="Timeline settings" style={{ left: at?.left ?? -9999, top: at?.top ?? -9999 }} onKeyDown={(e) => e.stopPropagation()}>
+            <strong>Timeline settings</strong>
+            {children}
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
+}
