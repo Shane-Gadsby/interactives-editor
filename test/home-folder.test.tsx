@@ -70,8 +70,7 @@ describe('new projects and imports land in the selected folder', () => {
   });
 
   it('a blank new project starts with the starter themes and palette-linked tokens, on the Light background', async () => {
-    await click(host.querySelector('.new-thumb'));
-    await flush();
+    await makeBlank();
     const p = (db.createProjectRecord.mock.calls[0] as unknown as [Project])[0];
     expect(p.themes!.list.map((t) => t.name)).toEqual(['Light', 'Dark', 'High contrast']);
     expect(p.themes!.tokens.length).toBe(STARTER_TOKEN_DEFS.length);
