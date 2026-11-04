@@ -69,6 +69,7 @@ import { GridAlignFields } from '../components/GridAlignFields';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
 import { RecordsSection } from './RecordsSection';
+import { CaptionsSection, VideoCaptions } from './CaptionsSection';
 import { StepsSection } from './StepsSection';
 import { blendExample } from '../lib/blend-example';
 import { BindingsSection as BindingsSectionView } from './BindingsSection';
@@ -524,6 +525,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           onChange={(v) => setProject((p) => (p.settings.reducedMotion = v))}
         />
       </Section>
+      <CaptionsSection project={project} />
       <ReportingSection project={project} />
       <RecordsSection project={project} />
       <Section help="text" title="Fonts">
@@ -1181,6 +1183,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           </Row>
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
           {radius}
+          <VideoCaptions node={n} set={(patch) => set(patch)} />
         </Section>
       );
     case 'instance':

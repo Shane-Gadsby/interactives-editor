@@ -4768,3 +4768,231 @@ code {
   line-height: 1.35;
   pointer-events: none;
 }
+/* ---------------------------------------------------------------- narration and captions on the timeline */
+.timeline-labels,
+.timeline-lanes {
+  align-self: flex-start;
+  min-height: 100%;
+}
+.media-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border-top: 1px solid var(--line);
+  height: 24px;
+}
+.track-node.media-head {
+  cursor: default;
+}
+.media-add {
+  max-width: 128px;
+  font-size: 11px;
+  background: var(--bg);
+  color: var(--text, inherit);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 1px 2px;
+}
+.media-label {
+  cursor: pointer;
+  padding-left: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+.media-label.selected {
+  background: rgba(77, 124, 255, 0.16);
+  color: var(--text, inherit);
+}
+.media-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1.15;
+}
+.media-name small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.media-btns {
+  display: flex;
+  gap: 2px;
+}
+.media-btns .mini {
+  visibility: visible;
+  min-width: 18px;
+}
+.media-btns .mini.on {
+  color: #ffc247;
+  font-weight: 700;
+}
+.audio-lane {
+  background: rgba(255, 255, 255, 0.02);
+}
+.audio-clip {
+  position: absolute;
+  border-radius: 4px;
+  background: rgba(60, 130, 120, 0.55);
+  border: 1px solid rgba(120, 220, 200, 0.55);
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.audio-clip.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.audio-clip.muted {
+  opacity: 0.5;
+}
+.audio-clip.missing {
+  background: repeating-linear-gradient(45deg, rgba(200, 80, 80, 0.4) 0 6px, rgba(200, 80, 80, 0.2) 6px 12px);
+}
+.audio-clip .wave {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+.clip-name {
+  position: absolute;
+  left: 8px;
+  top: 2px;
+  font-size: 10.5px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 3px #000;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.audio-clip .envelope {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+.audio-clip .envelope path {
+  fill: none;
+  stroke: #ffc247;
+  stroke-width: 1.5;
+}
+.vkey {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: 0 0 0 -4.5px;
+  border-radius: 50%;
+  background: #ffc247;
+  border: 1px solid #000;
+  cursor: ns-resize;
+}
+.vkey.selected {
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  background: rgba(255, 255, 255, 0.0);
+}
+.trim-handle:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+.trim-handle.left {
+  left: 0;
+}
+.trim-handle.right {
+  right: 0;
+}
+.clip-over {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ff5f5f;
+  opacity: 0.8;
+  pointer-events: none;
+}
+.caption-lane {
+  background: rgba(255, 255, 255, 0.015);
+}
+.cue {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 4px;
+  background: rgba(90, 120, 220, 0.5);
+  border: 1px solid rgba(140, 170, 255, 0.7);
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.cue.live {
+  background: rgba(110, 150, 255, 0.8);
+}
+.cue.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.cue-text {
+  display: block;
+  padding: 0 7px;
+  font-size: 11px;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+  pointer-events: none;
+}
+.cue-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+.cue-edge.start {
+  left: 0;
+}
+.cue-edge.end {
+  right: 0;
+}
+.cue-edge:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+.lane-hint {
+  position: absolute;
+  left: 12px;
+  top: 7px;
+  font-size: 11px;
+  color: var(--muted);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.media-editor {
+  width: 260px;
+}
+.media-editor .row.wrap {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.transcript-dialog {
+  min-width: min(560px, 90vw);
+}
+.transcript-text {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 150px;
+  resize: vertical;
+  font: inherit;
+  background: var(--bg);
+  color: var(--text, inherit);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 8px;
+}

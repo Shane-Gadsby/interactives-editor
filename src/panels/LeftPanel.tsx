@@ -356,6 +356,14 @@ function Assets() {
     store().update((d) => {
       d.assets = d.assets.filter((a) => !ids.includes(a.id));
       d.fonts = d.fonts.filter((f) => !f.assetId || !ids.includes(f.assetId));
+      // A sound on a timeline with no file behind it plays nothing: take it off the timeline too
+      for (const ab of d.artboards) {
+        for (const t of ab.timelines) {
+          if (!t.audio?.some((a) => ids.includes(a.assetId))) continue;
+          t.audio = t.audio.filter((a) => !ids.includes(a.assetId));
+          if (!t.audio.length) delete t.audio;
+        }
+      }
     });
     for (const id of ids) {
       try {

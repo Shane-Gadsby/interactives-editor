@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { ANIMATABLE_PROPS, animatableProp, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
+import { AudioMixer, ANIMATABLE_PROPS, animatableProp, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -10,6 +10,10 @@ import { CurveEditor, bezierFor } from '../components/CurveEditor';
 import { MarkerStepFields } from './StepsSection';
 import { enableSteps } from '../lib/steps';
 import type { Project } from 'interactives-player';
+import { assetKind, assetUrls } from '../lib/assets';
+import { ensureCaptionTrack, addCue } from '../lib/captions-edit';
+import { MediaEditor, MediaLabels, MediaLanes, TranscriptDialog, addSoundToTimeline, exportCaptions, importCaptionsInto, type MediaCtx, type MediaSel } from './TimelineMedia';
+import { promptDialog } from '../components/dialogs';
 
 const LABEL_W = 220;
 
@@ -96,6 +100,23 @@ export function TimelinePanel() {
   const [tween, setTween] = useState<{ trackId: string; keyId: string } | null>(null);
   // Shape-key point groups opened or folded by hand (otherwise by how many there are)
   const [pointsOpen, setPointsOpen] = useState<Record<string, boolean>>({});
+  // The sound or caption row being edited, and the caption track whose Paste a transcript dialog is open
+  const [media, setMedia] = useState<MediaSel>(null);
+  const [pasteTrack, setPasteTrack] = useState<string | null>(null);
+  // Sounds play with the preview, and sit parked at the playhead when it is scrubbed
+  const mixer = useMemo(() => new AudioMixer({ resolve: assetUrls.resolve }), []);
+  const lastHead = useRef(0);
+  useEffect(() => () => mixer.destroy(), [mixer]);
+  useEffect(() => {
+    if (!tl?.audio?.length) {
+      mixer.update([]);
+      return;
+    }
+    // A ping-pong's way back runs against the sound, which does not play backwards
+    const dir = s.playing && tl.loop === 'pingpong' && s.playhead < lastHead.current ? -1 : 1;
+    lastHead.current = s.playhead;
+    mixer.update([{ tl, time: s.playhead, playing: s.playing, direction: dir, active: true }]);
+  }, [mixer, tl, s.playhead, s.playing]);
 
   useEffect(() => {
     const el = lane.current;
@@ -174,7 +195,6 @@ export function TimelinePanel() {
   const snap = (t: number, e: { shiftKey: boolean }) => Math.round(t / (e.shiftKey ? 100 : 10)) * (e.shiftKey ? 100 : 10);
 
   const setTl = (fn: (t: TL) => void, coalesce?: string) => store().updateTimeline((d) => fn(d as TL), coalesce);
-
   const scrub = (e: React.PointerEvent) => {
     const el = e.currentTarget as HTMLElement;
     el.setPointerCapture(e.pointerId);
@@ -186,6 +206,46 @@ export function TimelinePanel() {
     };
     el.addEventListener('pointermove', move);
     el.addEventListener('pointerup', up);
+  };
+
+  const mediaCtx: MediaCtx = { tl, pxPerMs, playhead: s.playhead, sel: media, setSel: setMedia, setTl, timeAt: T, snap, scrub };
+  const soundAssets = s.project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio' || assetKind(a.mime, a.name) === 'video').map((a) => ({ id: a.id, name: a.name }));
+  /** The caption track to work on: the selected one, else the first (made when there is none). */
+  const captionTrackId = (): string => {
+    const sel = media && media.kind !== 'audio' && media.kind !== 'vkey' ? media.track : null;
+    let id = sel && tl.captions?.some((c) => c.id === sel) ? sel : tl.captions?.[0]?.id ?? '';
+    if (!id) store().updateTimeline((d) => void (id = ensureCaptionTrack(d as TL).id));
+    return id;
+  };
+  const captionAction = async (action: string) => {
+    if (action === 'cue') {
+      const id = captionTrackId();
+      let cue = '';
+      setTl((d) => {
+        const t = d.captions?.find((c) => c.id === id);
+        if (t) cue = addCue(t, s.playhead).id;
+      });
+      setMedia({ kind: 'cue', track: id, cue });
+    } else if (action === 'paste') {
+      const id = captionTrackId();
+      setMedia({ kind: 'captions', track: id });
+      setPasteTrack(id);
+    } else if (action === 'import') {
+      const id = captionTrackId();
+      setMedia({ kind: 'captions', track: id });
+      const msg = await importCaptionsInto(id);
+      if (msg) store().toast(msg);
+    } else if (action === 'vtt' || action === 'srt') {
+      const id = captionTrackId();
+      const track = tl.captions?.find((c) => c.id === id);
+      if (track) exportCaptions(s.project, tl, track, action);
+    } else if (action === 'track') {
+      const lang = await promptDialog({ title: 'Add a caption language', label: 'Language tag (en, fr, pt-BR ...)', initial: '', placeholder: 'fr', confirmLabel: 'Add' });
+      if (lang === null) return;
+      let id = '';
+      setTl((d) => void (id = ensureCaptionTrack(d, lang.trim() || undefined).id));
+      setMedia({ kind: 'captions', track: id });
+    }
   };
 
   const addMarker = () => {
@@ -389,6 +449,15 @@ export function TimelinePanel() {
               <span className="muted small">Select a layer to add keys</span>
             )}
           </div>
+          <MediaLabels
+            ctx={mediaCtx}
+            assetsFor={soundAssets}
+            onAddSound={async (id) => {
+              const made = await addSoundToTimeline(id, s.playhead);
+              if (made) setMedia({ kind: 'audio', track: made });
+            }}
+            onCaptionAction={captionAction}
+          />
           <TrackLabels byNode={byNode} nodeIndex={nodeIndex} pointsOpen={pointsOpen} setPointsOpen={setPointsOpen} setTl={setTl} />
         </div>
         <div className="timeline-lanes" ref={lane}>
@@ -409,9 +478,11 @@ export function TimelinePanel() {
               ) : null,
             )}
           </div>
+          <MediaLanes ctx={mediaCtx} />
           <TrackLanes byNode={byNode} duration={tl.duration} pxPerMs={pxPerMs} selectedKeys={s.selectedKeys} tween={tween} pointsOpen={pointsOpen} h={{ scrub, keyDown, keysDown, setTween }} />
           <div className="playhead" style={{ left: X(Math.min(s.playhead, tl.duration)) }} />
         </div>
+        <MediaEditor ctx={mediaCtx} onPaste={() => media && 'track' in media && setPasteTrack(media.track)} />
         {selMarker && isSteps && (
           <div className="key-editor marker-editor">
             <div className="field-label block">Step: {selMarker.name}</div>
@@ -496,6 +567,9 @@ export function TimelinePanel() {
           </div>
         )}
       </div>
+      {pasteTrack && tl.captions?.some((c) => c.id === pasteTrack) && (
+        <TranscriptDialog tl={tl} track={tl.captions.find((c) => c.id === pasteTrack)!} onClose={() => setPasteTrack(null)} onDone={(m) => store().toast(m)} />
+      )}
     </div>
   );
 }

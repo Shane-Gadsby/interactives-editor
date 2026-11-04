@@ -430,7 +430,7 @@ function Workspace({ home }: { home: () => void }) {
   }, []);
   return (
     <div className="workspace" style={{ ['--bottom-h' as string]: s.bottomTab ? `${s.bottomHeight}px` : '34px', ['--left-w' as string]: `${widths.left}px`, ['--right-w' as string]: `${widths.right}px` }}>
-      <TopBar home={home} onPreview={() => setPreview(true)} />
+      <TopBar home={home} onPreview={() => (store().set({ previewPlaying: false }), setPreview(true))} />
       <div className="banner-area">
         {conflict && <ConflictBanner />}
         <LinkBanner />

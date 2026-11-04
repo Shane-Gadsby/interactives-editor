@@ -10,7 +10,7 @@ import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
 import { confirmDialog } from './dialogs';
 
-function Modal({ title, help, onClose, children, className }: { title: string; help?: string; onClose: () => void; children: React.ReactNode; className?: string }) {
+export function Modal({ title, help, onClose, children, className }: { title: string; help?: string; onClose: () => void; children: React.ReactNode; className?: string }) {
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', k);

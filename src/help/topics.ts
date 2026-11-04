@@ -884,6 +884,8 @@ The **Open URL** action does the same from an interaction.
 | Frame rate | Frames per second the animation was made at (1 to 240); 0 leaves it free |
 | Whole frames | Shown once a frame rate is set. Values are read at the start of the frame, so they step from frame to frame instead of gliding. Playback time, markers, sound and captions still use the real time. Applies in the player, blends and the canvas. Imported animations that snap to frames (for example 24 fps hand-drawn motion) come in with it on |
 
+A timeline can also carry **sound** (a voice-over that follows the playhead, with a waveform) and **captions** (timed text with a transcript for viewers). See [Narration, captions and transcript](captions).
+
 The line between two keys is a **tween**: it shows its [easing](easing) as a little curve. Click it to choose how the value moves from the first key to the second (or *Use for all tweens*). In the Tween panel, drag the two handles on the graph to make your own curve; the dashed lines mark the start (0) and end (1) values, and the graph grows to show overshoot. Select a key to change its time or value.
 
 ## Markers
@@ -1117,6 +1119,54 @@ Pick a frame under **Scroll to scrub** and scrolling it moves the timeline: the 
 - Each artboard has its own steps. A marker's title and caption live on the marker, so editing them in the timeline changes the step bar at once.
 - A timeline with no markers has no steps, and then plays as a normal timeline.
 - **Turn off Steps** (the bin in the section header) keeps the timeline, markers, variables and step bar.`,
+  },
+  {
+    id: 'captions',
+    title: 'Narration, captions and transcript',
+    group: 'Motion',
+    summary: 'Put a voice-over on a timeline, caption it by pasting a transcript, and let viewers turn captions on, change their size and jump around with the transcript.',
+    keywords: 'captions subtitles narration voice over voiceover audio sound transcript srt vtt webvtt waveform speech read aloud closed captions cc accessibility music volume fade deaf hearing',
+    body: `A [timeline](timelines) can carry **sound** and **captions**. The sound plays while the timeline plays and stays with it: pause the timeline and it pauses, jump the playhead and it jumps, change the speed and it follows. The captions are timed text that the player draws over the page, with buttons so each viewer can switch them off, make them bigger, or open a **transcript** that jumps the timeline to any line.
+
+## Worked example: narrate a short explanation
+![The timeline with a narration clip and its waveform, and four captions under it.](help/narration-timeline.png)
+
+1. Open the **Timeline** tab and pick or make a timeline. In the **Sound** row choose **+ Add sound…** and pick an audio file (**Upload audio…** adds a new one to the project). It appears as a clip with its waveform, starting at the playhead, and the timeline grows to hold it.
+2. In the **Captions** row choose **Paste a transcript…**. Paste what the voice says, leave **Timing** on **Across the narration** and press **Make captions**. Each sentence becomes a caption, long ones are split at a comma, and the time is shared out in proportion to the words.
+3. Play the timeline (the sound plays in the editor too). Where a caption comes in early or late, drag the caption's edges in the lane, or select it and press **Start = playhead** or **End = playhead** at the right moment.
+4. Press **Preview**. The captions show over the page, the **CC**, **A−**, **A+**, **Transcript**, **Sound** and **Pause** buttons sit in the top corner, and pressing a line in the transcript jumps to it.
+5. Run the [accessibility check](accessibility-checker). If the narration has no captions, or they cover little of it, it says so.
+
+## Sound
+- **Moving and trimming.** Drag a clip to start it later or earlier. Drag its left edge to skip the start of the file, its right edge to stop it sooner. The fields beside the timeline give exact milliseconds.
+- **Volume.** The clip has a level, and **volume keys** that multiply it over time: double-click the clip to add one, drag it up and down for the level and sideways for the time. **Fade out** adds two keys for you.
+- **Role.** **Narration** (the default) is speech and needs captions. **Music** and **Sound effect** do not. Muting a clip (the **M** button) keeps it in step but silent.
+- **It follows the timeline.** The sound plays when the timeline plays forwards inside the clip. It is silent when the timeline is paused, reversed or outside the clip, and it follows the timeline's speed (between a quarter and four times). When a timeline blends in, its sound comes in with it. A timeline that never started stays silent.
+- **When the browser says no.** Browsers will not start sound until the viewer has clicked, tapped or pressed a key. Then the player shows **Sound is waiting. Press to start it**, and any click or key press on the page starts it too. Put a **Start** button in front of an autoplaying narration if the first seconds matter.
+
+## Captions
+- **Typing, pasting, importing.** Double-click empty space in a caption lane for a new caption, or use the **Captions** menu: **New caption at the playhead**, **Paste a transcript…**, **Import WebVTT or SRT…**, **Export WebVTT**, **Export SRT** and **Add a language…**.
+- **Pasting.** Cut by sentence, line or paragraph. Time them **across the narration** (or the whole timeline), **one per marker** (a [marker](timelines) at the start of each new caption), or **at reading speed**. A transcript with times at the start of its lines ("0:12 Welcome", "[01:05] Next") keeps them.
+- **Each caption** has its words, an optional **speaker** (shown as "Dr Lee: …"), and a start and end. **Split at playhead** and **Merge with next** reshape them.
+- **Languages.** Add a track per language. With more than one the viewer gets a language menu; the transcript follows.
+- **Video layers** take captions too: select the layer and use **Captions** in its settings. They show through the video's own caption display and follow the viewer's CC button.
+
+## What viewers see
+Captions are on to start (unless you turn **Captions on to start** off in Project settings) and the viewer's choices (on or off, size, language, sound) are remembered in their browser. The **Captions and narration** section of the Project settings sets the look: the caption box's position, size, colours and font, or **A text layer of my own** (the player fills a text variable, and **Add a caption layer** makes the layer), and whether the buttons show. If you hide them, the **Captions and sound** [node](interaction-nodes) does the same jobs from your own buttons.
+
+## Transcript and screen readers
+The transcript is a labelled region of buttons, one per caption, with its time, the speaker and the words; the one showing is marked current. It is the way for a screen reader user to read what is said, so the caption box itself is hidden from screen readers (they would otherwise talk over the narration). Escape closes the transcript and returns focus to its button. Every viewer button works from the keyboard.
+
+## Draft voice
+Tick **Read aloud (draft voice)** on a caption track and the player reads each caption aloud with a voice installed on the viewer's computer, as a stand-in until the real recording is made. It uses only voices that run on the device: a voice that sends the words to an internet service is never used, and a device with no suitable voice says nothing. Browsers cannot save speech as a file, so this cannot make a recording for you; record the narration and add it as sound.
+
+## With Steps
+A [Steps](steps) timeline can carry sound and captions too: Next plays the narration to the next marker and it stops there. The step's own caption (on the marker) stays a separate thing in the step bar.
+
+## Good to know
+- Sound and captions belong to a timeline, so they stop with the artboard. An artboard shown inside another (an instance) brings its own.
+- Exported files and share links carry the audio inside them, so a long recording makes a larger file.
+- The timeline length is not changed by captions; adding a sound makes the timeline at least as long as the sound.`,
   },
   {
     id: 'interactions',
@@ -1710,9 +1760,9 @@ Click a finding to **select the layer** (and open its artboard). The right side 
 | **Small click target** | Anything clicked or used that is under 24 by 24 px. |
 | **Animation starts by itself** | Autoplay timelines when the project does not respect reduced motion. |
 | **No way to pause moving content** | An autoplaying timeline that loops or runs over 5 seconds, with no *Control timeline* node set to pause, stop or toggle it. |
-| **Video starts by itself** | Autoplay video with sound or without controls. |
+| **Video starts by itself** | Autoplay video with sound or without controls. Also a timeline that plays sound on its own when the viewer buttons are hidden and nothing mutes or pauses it. |
 | **Flashing** | A timeline that makes a large layer (a tenth of the artboard or more) go bright and dark more than three times in a second. |
-| **Video needs captions** | Always listed to look at: a program cannot tell if a video has captions. |
+| **Video and narration need captions** | Narration on a timeline with no captions is an issue, and captions that cover under half of it a warning (music and effects are left alone; see [Narration, captions and transcript](captions)). A video layer with imported captions passes; one without is listed to look at, since a program cannot tell if the file has them. |
 | **Page title** | The project has no title. |
 
 ### How contrast is worked out

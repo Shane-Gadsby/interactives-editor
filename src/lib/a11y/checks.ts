@@ -3,7 +3,7 @@
  * found, per artboard. It reports "checks found", never "compliant": some things it can't see (a photo behind text, what a
  * script does), and those come back as `review` findings so a person looks instead of assuming.
  */
-import { isContainer, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
+import { coveredMs, isContainer, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
 import { backdropAt, buildPaintList, samplePoints, textExtent, type ArtboardPaint, type ImageColours, type Target, type TextMeasure } from './backdrop';
 import { contrastRatio, luminance, over, requiredRatio, suggestColour, toRgba, type RGB } from './colour';
 import { FLASH_PROPS, maxFlashesPerSecond, trackSignal } from './flash';
@@ -89,10 +89,10 @@ export const CHECKS: CheckInfo[] = [
   },
   {
     id: 'captions',
-    title: 'Video needs captions',
-    wcag: '1.2.2 Captions (Prerecorded), A; 1.2.5 Audio Description, AA',
-    why: 'Deaf and hard of hearing people need captions for the speech and sounds in a video, and blind people need the pictures described. A checker cannot hear a file.',
-    how: 'Check that the video file or its player has captions (and a description track or transcript when the pictures matter), then mark this reviewed.',
+    title: 'Video and narration need captions',
+    wcag: '1.2.1 Audio-only and Video-only (Prerecorded), A; 1.2.2 Captions (Prerecorded), A; 1.2.5 Audio Description, AA',
+    why: 'Deaf and hard of hearing people need captions for the speech and sounds in a video or a narration, and blind people need the pictures described. A checker cannot hear a file, but it can see that a narration on a timeline has no captions, or only some.',
+    how: 'For narration on a timeline: add captions in the timeline\'s Captions row (paste the transcript, or import a WebVTT or SRT file); the player shows them and offers the transcript. For a video layer: import its captions in the layer\'s settings, or check the file has them and mark this reviewed.',
   },
   {
     id: 'title',
@@ -109,7 +109,7 @@ const INFO = new Map(CHECKS.map((c) => [c.id, c]));
 export const NOT_CHECKED = [
   'Whether text is right: reading order, heading structure, plain language, or the language of the page.',
   'Anything a script does (script and code nodes, embedded HTML and pages): keyboard handling, focus, flashing, announcements.',
-  'Whether a video has captions or audio description, or an audio file has a transcript.',
+  'Whether a video has captions or audio description. Whether captions say what is actually spoken, or are timed to it (only that narration on a timeline has some, and how much of it they cover).',
   'Colour as the only way to tell things apart, and text that is part of a picture.',
   'Flashing from anything but timelines (timers, scripts, video, shader layers).',
   'Contrast over photos that are not loaded, over video, shaders and blend modes, and anything a binding or timeline changes while it runs.',
@@ -436,7 +436,8 @@ export function checkAccessibility(project: Project, opts: CheckOptions = {}): A
             add(ab, n, 'autoplay-media', loud ? 'issue' : 'warning', 'Video starts by itself', `${n.name} plays as soon as it is shown${loud ? ', with sound' : ''}${still ? `${loud ? ' and' : ','} has no controls to pause it` : ''}.${hiddenNote}`, { fix: layerFix(ab, n, loud && still ? 'Mute it and show controls' : loud ? 'Mute it' : 'Show controls', set) });
           }
         }
-        add(ab, n, 'captions', 'review', 'Check this video has captions', `${n.name} is a video. A checker cannot tell whether it has captions or an audio description.`);
+        // Captions imported for the layer are there to see; the pictures may still need describing
+        if (!(n as { captions?: unknown[] }).captions?.length) add(ab, n, 'captions', 'review', 'Check this video has captions', `${n.name} is a video. A checker cannot tell whether it has captions or an audio description. Import its captions in the layer's settings, or mark this reviewed when the file has them.`);
       }
 
       // ---- Text: contrast and size
@@ -452,6 +453,37 @@ export function checkAccessibility(project: Project, opts: CheckOptions = {}): A
     for (const t of auto) {
       if ((t.loop !== 'once' || t.duration > 5000) && !inter.pausable.has(t.id)) {
         add(ab, null, 'pause', 'warning', 'No way to pause moving content', `"${t.name}" starts by itself and ${t.loop === 'once' ? `runs for ${Math.round(t.duration / 100) / 10} seconds` : 'loops'}. Nothing on this artboard pauses or stops it.`, { key: t.id });
+      }
+    }
+    // ---- Narration: sound that carries words needs captions; sound that starts itself needs a way to stop it
+    const soundNodes = ab.logic.nodes.some((ln) => ln.kind === 'action.captions' && String(ln.params.op ?? '').startsWith('sound'));
+    for (const t of ab.timelines) {
+      const narration = (t.audio ?? []).filter((a) => (a.role ?? 'narration') === 'narration' && !a.muted);
+      if (narration.length) {
+        const names = narration.map((a) => `"${a.name}"`).join(', ');
+        const best = (t.captions ?? []).map((c) => c.cues).sort((a, b) => coveredMs(b) - coveredMs(a))[0] ?? [];
+        // How much of the time the narration plays do the captions cover
+        let span = 0;
+        let covered = 0;
+        for (const a of narration) {
+          const from = a.offset;
+          const to = Math.min(t.duration, a.offset + (Number.isFinite(trackSpan(a)) ? trackSpan(a) : t.duration));
+          if (to <= from) continue;
+          span += to - from;
+          covered += coveredMs(best.map((c) => ({ ...c, start: Math.max(c.start, from), end: Math.min(c.end, to) })).filter((c) => c.end > c.start));
+        }
+        if (!best.length) {
+          add(ab, null, 'captions', 'issue', 'Narration has no captions', `"${t.name}" plays ${names} and has no captions. People who cannot hear it get nothing. Paste the transcript or import a WebVTT or SRT file in the timeline's Captions row.`, { key: `narration:${t.id}` });
+        } else if (span > 0 && covered < span * 0.5) {
+          add(ab, null, 'captions', 'warning', 'Captions cover little of the narration', `"${t.name}": the captions cover ${Math.round((covered / span) * 100)}% of the time ${names} ${narration.length === 1 ? 'plays' : 'play'}. Check that every spoken part has a caption.`, { key: `narration:${t.id}` });
+        }
+      }
+      const loud = (t.audio ?? []).filter((a) => !a.muted && a.volume > 0);
+      if (t.autoplay && loud.length && project.settings.captions?.controls === 'hidden' && !soundNodes && !inter.pausable.has(t.id)) {
+        add(ab, null, 'autoplay-media', 'warning', 'Sound starts by itself with no way to stop it', `"${t.name}" plays sound on its own, the viewer buttons are hidden, and nothing on this artboard mutes it or pauses the timeline. Sound that runs for more than 3 seconds needs a control.`, {
+          key: `sound:${t.id}`,
+          fix: { label: 'Show the viewer buttons (they include Sound and Pause)', target: { scope: 'project' }, set: { 'settings.captions.controls': 'auto' } },
+        });
       }
     }
     for (const t of moving) {

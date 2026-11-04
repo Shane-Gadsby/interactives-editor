@@ -191,6 +191,7 @@ export function analyzeUsage(project: Project): UsageReport {
   // Settings, fonts, data sources
   const projectSrc: UsageSource = { type: 'project', id: 'settings', name: 'Project settings' };
   if (project.settings.startArtboardId) use('artboard', project.settings.startArtboardId, projectSrc, 'start artboard');
+  useId('variable', project.settings.captions?.textVar, projectSrc, 'caption text');
   for (const f of project.fonts) {
     if (f.assetId) useId('asset', f.assetId, { type: 'font', id: f.family, name: f.family }, 'font file');
   }
@@ -283,6 +284,7 @@ export function analyzeUsage(project: Project): UsageReport {
       const by: UsageSource = { type: 'timeline', artboardId: ab.id, artboardName: ab.name, id: t.id, name: t.name };
       if (t.autoplay) use('timeline', t.id, by, 'autoplays');
       for (const tr of t.tracks) useLayer(tr.nodeId, by, `track ${tr.prop}`);
+      for (const a of t.audio ?? []) useId('asset', a.assetId, by, 'sound on a timeline');
     }
 
     // Blends: the timelines they mix and the variables that weight them
