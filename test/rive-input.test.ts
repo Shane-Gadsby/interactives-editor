@@ -54,15 +54,27 @@ describe('Rive keyboard and focus listeners', () => {
     expect(kinds(res.artboards[0].logic.nodes, 'event.key').map((n) => n.params.key)).toEqual(['Space', '0', '9', 'z', 'Escape', 'Enter', 'ArrowUp', 'F1', 'F12', 'Numpad0', 'NumpadEnter', 'ControlLeft']);
   });
 
-  it('warns about a keyboard listener on a layer and a key with no browser name', async () => {
+  it('imports a keyboard listener on a layer as only heard while that layer has the focus, and warns about a key with no browser name', async () => {
     const res = await scene([
       ['StateMachineListener', { targetId: 1 }],
       ['ListenerInputTypeKeyboard', {}],
       ['KeyboardInput', { keyType: 161, keyPhase: 1 }],
       ['ListenerBoolChange', { inputId: 0, value: 1 }],
     ]);
-    expect(res.warnings.some((w) => /Keyboard listeners on a layer/.test(w))).toBe(true);
+    const hot = res.artboards[0].children.find((n) => n.name === 'Hot')!;
+    expect(kinds(res.artboards[0].logic.nodes, 'event.key')[0].params).toMatchObject({ target: hot.id });
+    expect(res.warnings.some((w) => /Keyboard listeners on a layer/.test(w))).toBe(false);
     expect(res.warnings.some((w) => /code 161/.test(w))).toBe(true);
+  });
+
+  it('leaves an artboard keyboard listener page-wide', async () => {
+    const res = await scene([
+      ['StateMachineListener', { targetId: 0 }],
+      ['ListenerInputTypeKeyboard', {}],
+      ['KeyboardInput', { keyType: 65, keyPhase: 1 }],
+      ['ListenerBoolChange', { inputId: 0, value: 1 }],
+    ]);
+    expect(kinds(res.artboards[0].logic.nodes, 'event.key')[0].params.target).toBeUndefined();
   });
 
   it('imports focus and blur listeners, and focus actions', async () => {
@@ -218,6 +230,48 @@ describe('Rive keyboard listeners driving nested inputs, played', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(player.getInstanceInput('Badge', 'level')).toBe(3);
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b' }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(player.getInstanceInput('Badge', 'level')).toBe(9);
+    player.destroy();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('Rive keyboard listeners on a layer, played', () => {
+  it('only hear the key while that layer has the focus', async () => {
+    document.body.innerHTML = '<div id="stage" style="width:200px;height:200px"></div>';
+    vi.stubGlobal('requestAnimationFrame', () => 0);
+    const res = await importRive(
+      writeRiv([
+        ['Artboard', { name: 'Main', width: 200, height: 200 }],
+        ['NestedArtboard', { name: 'Badge', parentId: 0, artboardId: 1 }], // 1
+        ['NestedStateMachine', { parentId: 1, animationId: 0 }], // 2
+        ['NestedNumber', { parentId: 2, inputId: 0, nestedValue: 3 }], // 3
+        ['StateMachine', { name: 'Main SM' }],
+        ['StateMachineListener', { targetId: 1 }],
+        ['ListenerInputTypeKeyboard', {}],
+        ['KeyboardInput', { keyType: 66, keyPhase: 1 }],
+        ['ListenerNumberChange', { nestedInputId: 3, value: 9 }],
+        ['Artboard', { name: 'Child', width: 50, height: 50 }],
+        ['StateMachine', { name: 'Child SM' }],
+        ['StateMachineNumber', { name: 'level' }],
+      ]),
+      'focus',
+    );
+    const project = createProject('focus');
+    project.artboards = res.artboards;
+    project.variables = res.variables;
+    project.settings.startArtboardId = res.artboard.id;
+    const player = new Player(document.getElementById('stage')!, project, { loadData: false });
+    await new Promise((r) => setTimeout(r, 0));
+    const badge = res.artboards[0].children.find((n) => n.name === 'Badge')!;
+    const el = document.querySelector<HTMLElement>(`[data-ix-id="${badge.id}"]`)!;
+    expect(el.tabIndex).toBe(0);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b' }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(player.getInstanceInput('Badge', 'level')).toBe(3);
+    el.focus();
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true }));
     await new Promise((r) => setTimeout(r, 0));
     expect(player.getInstanceInput('Badge', 'level')).toBe(9);
     player.destroy();

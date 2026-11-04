@@ -3688,13 +3688,14 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
       }
     });
     // Listeners -> pointer, key and focus events setting inputs
-    const keyEvents = (key: RObj): LogicNode[] => {
+    const keyEvents = (key: RObj, focusOn: string): LogicNode[] => {
       const code = Number(key.props.keyType ?? -1);
       const name = code < 0 || code > 0xffff ? '' : RIVE_KEYS[code];
       if (code >= 0 && code <= 0xffff && !name) fc.warnings.add(`Keyboard listeners for the key with code ${code} react to any key`);
       const mods = Number(key.props.modifiers ?? 0);
       const phase = Number(key.props.keyPhase ?? 0) || 1;
-      const base = { key: name ?? '', shift: !!(mods & 1), ctrl: !!(mods & 2), alt: !!(mods & 4), meta: !!(mods & 8) };
+      //a listener on a layer only hears the keys while that layer (or one inside it) has the focus
+      const base = { key: name ?? '', shift: !!(mods & 1), ctrl: !!(mods & 2), alt: !!(mods & 4), meta: !!(mods & 8), ...(focusOn ? { target: focusOn } : {}) };
       const out: LogicNode[] = [];
       if (phase & 3) out.push(add('event.key', { ...base, type: 'keydown', repeat: !!(phase & 2) }, 40));
       if (phase & 4) out.push(add('event.key', { ...base, type: 'keyup' }, 40));
@@ -3719,9 +3720,8 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
         } else if (trig.type === 13 || trig.type === 14) {
           sources.push(add('event.focus', { target: targetNode?.id ?? '', type: trig.type === 13 ? 'focus' : 'blur' }, 40));
         } else if (trig.type === 15) {
-          if (targetNode) fc.warnings.add('Keyboard listeners on a layer react to the key wherever the focus is, not only while that layer has it');
-          if (!l.keys.length) sources.push(add('event.key', { key: '', type: 'keydown' }, 40));
-          for (const key of l.keys) sources.push(...keyEvents(key));
+          if (!l.keys.length) sources.push(add('event.key', { key: '', type: 'keydown', ...(targetNode ? { target: targetNode.id } : {}) }, 40));
+          for (const key of l.keys) sources.push(...keyEvents(key, targetNode?.id ?? ''));
         } else fc.warnings.add(`Listener type ${trig.type} (only enter, exit, down, up, move, click, drag, focus, blur, keyboard and event listeners are imported)`);
       }
       if (!sources.length) continue;
