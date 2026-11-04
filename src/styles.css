@@ -7029,3 +7029,117 @@ code {
   align-items: center;
   gap: 4px;
 }
+
+/* the font picker (FontPicker): a combobox over every Google font */
+.font-picker {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.font-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.font-input-wrap svg {
+  position: absolute;
+  right: 6px;
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.font-picker .font-input {
+  padding-right: 22px;
+  text-overflow: ellipsis;
+}
+.font-picker.open .font-input {
+  border-color: var(--accent);
+}
+.font-pop {
+  position: fixed;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.font-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.font-cats button {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 11px;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.font-cats button:hover {
+  color: var(--text);
+  border-color: var(--btn-hover-border);
+}
+.font-cats button.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.font-list {
+  position: relative;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.font-spacer {
+  position: relative;
+}
+.font-opt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.font-opt.on {
+  background: var(--accent);
+  color: #fff;
+}
+.font-opt.current:not(.on) {
+  background: var(--panel);
+}
+.font-opt-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+}
+.font-opt-name.typed {
+  font-size: 12px;
+}
+.font-opt-tag {
+  flex: none;
+  color: var(--muted);
+  font-size: 10px;
+}
+.font-opt.on .font-opt-tag {
+  color: rgba(255, 255, 255, 0.8);
+}
+.font-empty {
+  padding: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}

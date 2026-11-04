@@ -52,7 +52,7 @@ export function fontUseIn(root: Element): Map<string, FontUse> {
 }
 
 /** The weight a browser falls back to when a family lacks the one asked for (nearest; for 500 and over the heavier first) */
-function nearest(want: number, have: number[]): number {
+export function nearestWeight(want: number, have: number[]): number {
   let best = have[0];
   for (const h of have) {
     const d = Math.abs(h - want);
@@ -76,7 +76,7 @@ export function neededFonts(fonts: FontRef[], use: Map<string, FontUse>): FontNe
     const u = use.get(f.family.toLowerCase());
     if (!u) continue;
     const have = (f.weights?.length ? f.weights : [400, 700]).slice().sort((a, b) => a - b);
-    const weights = [...new Set([...u.weights].map((w) => nearest(w, have)))].sort((a, b) => a - b);
+    const weights = [...new Set([...u.weights].map((w) => nearestWeight(w, have)))].sort((a, b) => a - b);
     out.push({ font: f, weights });
   }
   return out;

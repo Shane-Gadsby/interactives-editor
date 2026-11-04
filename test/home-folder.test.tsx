@@ -24,6 +24,7 @@ vi.mock('../src/lib/insert', () => ({ pickFiles: async () => [Object.assign(new 
 vi.mock('../src/lib/session', () => ({ sessionUser: async () => null }));
 
 import { Home } from '../src/Home';
+import { loadCatalog } from '../src/lib/font-catalog';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -35,6 +36,8 @@ const click = (el: Element | null | undefined) => act(async () => void (el as HT
 const folderButton = (name: string) => [...host.querySelectorAll<HTMLButtonElement>('.folder-item')].find((b) => b.textContent?.includes(name));
 
 beforeEach(async () => {
+  //New project reads the default font's weights from the font list, which the page has loaded long before anyone clicks
+  await loadCatalog();
   db.createProjectRecord.mockClear();
   db.setProjectMeta.mockClear();
   opened.length = 0;

@@ -46,6 +46,7 @@ import { drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeTo
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
+import { fontStack } from '../lib/font-catalog';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { copySelection, pasteNodes } from '../lib/clipboard';
 import { inGhostExtent } from './ghost';
@@ -2259,5 +2260,5 @@ function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zo
 function fontDefaults(type: NodeType): { fontFamily?: string } {
   if (type !== 'text' && type !== 'button' && type !== 'input' && type !== 'link') return {};
   const f = prefs().defaultFont.trim();
-  return f ? { fontFamily: `${f.includes(' ') ? `"${f}"` : f}, system-ui, sans-serif` } : {};
+  return f ? { fontFamily: fontStack(f) } : {};
 }

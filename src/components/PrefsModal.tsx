@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { VersionInfo } from './VersionInfo';
-import { setPrefs, usePrefs } from '../lib/prefs';
-import { IconButton, SelectField, CheckField, TextField } from './ui';
+import { DEFAULT_FONT, setPrefs, usePrefs } from '../lib/prefs';
+import { FontField } from './FontPicker';
+import { IconButton, SelectField, CheckField } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
 
@@ -45,13 +46,14 @@ export function PrefsModal({ onClose }: { onClose: () => void }) {
             ]}
             onChange={(v) => setPrefs({ theme: v })}
           />
-          <TextField
+          <FontField
             label="Default font"
-            title="Font for new text, buttons, inputs and links, included in every new project. Any Google font name works"
+            title="Font for new text, buttons, inputs and links, included in every new project. Search any Google font, or type a name"
             value={p.defaultFont}
+            system={false}
             placeholder="Open Sans"
-            commitOnBlur
-            onChange={(v) => setPrefs({ defaultFont: v.trim() || 'Open Sans' })}
+            typedLabel={(name) => `Use “${name}” (not in the list)`}
+            onPick={(o) => setPrefs({ defaultFont: o.family.trim() || DEFAULT_FONT })}
           />
           <CheckField label="Show rulers" title="Rulers along the canvas edges; drag from them to make guides (Shift+R)" value={p.rulers} onChange={(v) => setPrefs({ rulers: v })} />
           <CheckField

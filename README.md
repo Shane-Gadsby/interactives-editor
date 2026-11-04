@@ -83,6 +83,7 @@ npm run build:mcp   # just the MCP bundle, mcp/dist/interactives-mcp.mjs (commit
 npm run player:build   # builds ../interactives-player (build and predev run it for you)
 PORT=3249 node index.js   # a second copy beside the one on 3048 (same database; mind what you create)
 node scripts/export-example.mjs <projectId> <key> --title "..." --description "..."   # ship a project as an example, see examples/README.md
+node scripts/google-fonts.mjs   # refresh src/data/google-fonts.json (every Google Fonts family) from fonts.google.com/metadata/fonts, no key needed
 ```
 
 Before every commit that changes `src/`: `npm run build` (it type-checks, builds the player first, and rebuilds `dist/` and `mcp/dist/`), then `npm test`.
@@ -229,7 +230,7 @@ db.ingest.find({app: 'Interactives Editor', 'meta.user.username': '<username>', 
 | `dist/`, `mcp/dist/` | the committed builds (`npm run build`), served by `index.js` and used by the MCP clients |
 | `public/help/` | the pictures and clips the in-app help shows (`![Caption](help/name.png)`; pictures under 150 KB, clips under 1.5 MB and H.264 so every browser plays them, checked by `test/help.test.ts`) |
 | `examples/` | finished projects that show on the Templates tab, read only (see `examples/README.md`) |
-| `scripts/` | `export-example.mjs`, which copies a project from a running editor into `examples/` |
+| `scripts/` | `export-example.mjs`, which copies a project from a running editor into `examples/`; `google-fonts.mjs`, which rebuilds `src/data/google-fonts.json` |
 | `../research/` | not in this repo: the importers' format notes and sample files (`rive/`, `craft/`, `psd/`) sit beside both repos in the interactives folder, and the tests that use them skip when it is missing |
 | `test/` | Vitest, one file per area (jsdom for the UI, a fake request harness for the server) |
 | `storage/` | asset files, share pages and template files (gitignored), see *Data lives in two places* |
@@ -280,6 +281,7 @@ db.ingest.find({app: 'Interactives Editor', 'meta.user.username': '<username>', 
 | `panels/AccessibilitySections.tsx` | the inspector's Accessibility section (role, text alternative, description, tab stop) and the artboard's Tab order list |
 | `help/` | the in-app help: `topics.ts` (the docs, with the node and property references generated from the catalog), `tutorials.ts` (the Getting started tutorials), search, drawer, `#/help/<topic>` page, F1 / Ctrl+K quick search. `markdown.tsx` also shows pictures and clips: put `![Caption](help/name.png)` (or `.mp4`) on a line of its own and the file in `public/help/` (Vite copies it to `dist/help/`; keep pictures under 150 KB and clips under 1.5 MB). `test/help.test.ts` checks every topic link, anchor and media file |
 | `components/tooltips.ts`, `components/tips.ts` | styled tooltips for every `title`, and the standard explanations for field labels |
+| `components/FontPicker.tsx`, `lib/font-catalog.ts`, `data/google-fonts.json` | The font combobox (ARIA combobox + listbox, windowed rows, category chips) used for a text layer's Font, the project Fonts section's "Add a Google font" and Preferences' Default font. `google-fonts.json` is `[family, category, weights]` for every Google family (its own lazy chunk; `lib/google-fonts.ts` derives the importers' name list from it). Rows are previewed in their own font through css2 `text=` for the rows on screen only, never for a family the project already loads in full. `ensureGoogleFont` adds a picked family to `project.fonts` with the weights in use (and tops up a weight later), in the same undo step as the layer change. New projects start with the Preferences default font (Open Sans), added by `Home.tsx` |
 | `components/ContextMenu.tsx` | right-click menus (interaction graph) |
 
 Preview runs the single-file export in a sandboxed iframe, so it behaves exactly like the downloaded file.

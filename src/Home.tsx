@@ -8,7 +8,8 @@ import { pickFiles } from './lib/insert';
 import { confirmDialog, promptDialog } from './components/dialogs';
 import { Icons } from './components/icons';
 import { PrefsModal } from './components/PrefsModal';
-import { prefs } from './lib/prefs';
+import { DEFAULT_FONT, prefs } from './lib/prefs';
+import { ensureGoogleFont, loadCatalog } from './lib/font-catalog';
 import { sessionUser, type SessionUser } from './lib/session';
 import { noteIfStale } from './lib/stale-build';
 import { NoticeBell } from './components/NoticeBell';
@@ -128,6 +129,8 @@ export function Home({ open }: { open: (id: string) => void }) {
     keep(TAB_KEY, t);
   };
   const [list, setList] = useState<ProjectMeta[] | null>(null);
+  //the font list is what New project reads the default font's weights from: have it by the time it is clicked
+  useEffect(() => void loadCatalog().catch(() => []), []);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [who, setWho] = useState<SessionInfo | null>(null);
@@ -202,8 +205,8 @@ export function Home({ open }: { open: (id: string) => void }) {
     run(async () => {
       const p = createProject('Untitled project');
       // Every new project starts with the person's default font (Open Sans unless they changed it)
-      const font = prefs().defaultFont.trim();
-      if (font) p.fonts.push({ family: font, source: 'google', weights: [400, 600, 700] });
+      await loadCatalog().catch(() => []);
+      ensureGoogleFont(p.fonts, prefs().defaultFont.trim() || DEFAULT_FONT, [400, 600, 700], { force: true });
       await createProjectRecord(p);
       track('project', 'create');
       await intoSelectedFolder(p.id);

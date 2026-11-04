@@ -39,7 +39,7 @@ export const FIELD_TIPS: Record<string, string> = {
   'Layer blur': 'Blurs the whole layer',
   Spread: 'Grows or shrinks the shadow before blurring',
   Blend: 'How the layer mixes with what is under it',
-  Font: 'Font family: a Google font name or an uploaded font',
+  Font: "Font family: search every Google font, or pick one of the project's fonts. A Google font you pick is added to the project (with the weights the text uses) so the player loads it",
   Size: 'Font size in pixels',
   Weight: 'Font weight (400 regular, 700 bold)',
   Italic: 'Slanted text',

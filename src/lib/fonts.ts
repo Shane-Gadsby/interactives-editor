@@ -26,5 +26,5 @@ export function ensureFonts(project: Project): void {
   }
 }
 
-/** The font stacks offered before any of the project's own fonts. */
-export const FONT_FAMILIES = ['Inter, system-ui, sans-serif', 'system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];
+/** The system font stacks the text toolbar offers after the project's own fonts (the Inspector's font picker has them too, and every Google font). */
+export const FONT_FAMILIES = ['system-ui, sans-serif', 'Georgia, serif', '"Times New Roman", serif', 'Arial, Helvetica, sans-serif', '"Courier New", monospace', 'ui-monospace, monospace'];

@@ -8,7 +8,7 @@ import { TokensTab, TokenValues, linked, useThemeState } from './TokenPicker';
 import { FIELD_TIPS } from './tips';
 
 /** An explicit title, or the standard explanation for a field label. */
-function tipFor(label: ReactNode, title?: string): string | undefined {
+export function tipFor(label: ReactNode, title?: string): string | undefined {
   if (title) return title;
   return typeof label === 'string' ? FIELD_TIPS[label] : undefined;
 }

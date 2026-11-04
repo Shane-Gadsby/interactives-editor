@@ -87,7 +87,8 @@ import { FillSection, PaintOrderSection, StrokeSection } from './PaintLayers';
 import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
 import { BindSelectionSection, BonesArtboardSection, BoneSection, SkinSection } from './RigSection';
 import { skinnable } from '../lib/rig';
-import { FONT_FAMILIES } from '../lib/fonts';
+import { FontField, FontPicker, type FontPick } from '../components/FontPicker';
+import { ensureGoogleFont, firstFamily } from '../lib/font-catalog';
 import { CornerRadii } from './CornerRadii';
 import { hasCornerRadii } from '../lib/corner-radii';
 
@@ -410,7 +411,6 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       { coalesce },
     );
   const setProject = (fn: (p: Project) => void, coalesce?: string) => store().update((d) => fn(d as Project), { coalesce });
-  const [font, setFont] = useState('');
   return (
     <>
       {ab.source?.linkId && <LinkedFileSection ab={ab} />}
@@ -546,19 +546,18 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             <IconButton icon={<Icons.trash />} title="Remove font" onClick={() => setProject((p) => p.fonts.splice(i, 1))} />
           </Row>
         ))}
-        <Row>
-          <TextField value={font} placeholder="Google font, e.g. Poppins" onChange={setFont} />
-          <button
-            className="btn"
-            disabled={!font.trim()}
-            onClick={() => {
-              setProject((p) => p.fonts.push({ family: font.trim(), source: 'google', weights: [400, 500, 600, 700] }));
-              setFont('');
-            }}
-          >
-            Add
-          </button>
-        </Row>
+        <FontPicker
+          ariaLabel="Add a font"
+          title="Search every Google font and add it to this project (the player loads it). Fonts you upload in Assets show here too"
+          placeholder="Add a Google font…"
+          clearOnPick
+          system={false}
+          project={project.fonts}
+          typedLabel={(name) => `Add “${name}” as a Google font`}
+          onPick={(o) => {
+            if (o.kind !== 'system') setProject((p) => void ensureGoogleFont(p.fonts, o.family, [400, 600, 700], { force: true }));
+          }}
+        />
         <p className="hint">Upload .woff2/.ttf files in Assets to use your own fonts.</p>
       </Section>
     </>
@@ -868,17 +867,30 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
   const set = useSetter(ids);
-  const families = [...new Set([...project.fonts.map((f) => (f.family.includes(' ') ? `"${f.family}"` : f.family)), ...FONT_FAMILIES, n.fontFamily])];
+  const mixedFont = nodes.some((x) => x.fontFamily !== n.fontFamily);
+  //Picking a Google font the project doesn't list yet adds it (with the weights these layers use), in the same undo step
+  const pickFont = (o: FontPick) => {
+    const key = `font-${ids.join(',')}`;
+    const wanted = nodes.flatMap((x) => [x.fontWeight, ...((x as { runs?: { fontWeight?: number }[] }).runs ?? []).map((r) => r.fontWeight ?? x.fontWeight)]);
+    if (o.google) store().update((d) => void ensureGoogleFont(d.fonts, o.family, wanted), { coalesce: key });
+    set({ fontFamily: o.stack }, key);
+  };
+  const setWeight = (w: number) => {
+    const key = `weight-${ids.join(',')}`;
+    //a weight the font was added without gets loaded too
+    store().update((d) => void ensureGoogleFont(d.fonts, firstFamily(n.fontFamily), [w], { existing: true }), { coalesce: key });
+    set({ fontWeight: w }, key);
+  };
   return (
     <>
-      <SelectField label="Font" value={n.fontFamily} options={families.map((f) => ({ value: f, label: f.replace(/"/g, '').split(',')[0] }))} onChange={(v) => set({ fontFamily: v })} />
+      <FontField label="Font" value={n.fontFamily} mixed={mixedFont} project={project.fonts} onPick={pickFont} />
       <Row>
         <Num node={n} ids={ids} prop="fontSize" label="Size" min={1} />
         <SelectField
           label="Weight"
           value={String(n.fontWeight)}
           options={['100', '200', '300', '400', '500', '600', '700', '800', '900']}
-          onChange={(v) => set({ fontWeight: Number(v) })}
+          onChange={(v) => setWeight(Number(v))}
         />
       </Row>
       <Row>
