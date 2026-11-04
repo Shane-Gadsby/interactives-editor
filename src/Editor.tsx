@@ -30,7 +30,7 @@ import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink, openHelp } from './help/Help';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrefsModal } from './components/PrefsModal';
-import { HistoryModal, ShareModal } from './components/ProjectModals';
+import { HistoryModal, ShareForReviewModal, ShareModal } from './components/ProjectModals';
 import { prefs, setPrefs, usePrefs } from './lib/prefs';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
@@ -39,6 +39,7 @@ import { PanelResizeHandle, usePanelWidths } from './components/PanelResize';
 import { noteIfStale } from './lib/stale-build';
 import { primeStills, releaseStills } from './lib/still-cache';
 import { keyMoveTarget } from './lib/layer-drop';
+import { SHARE_FOR_REVIEW_EVENT, comments, readNotices } from './lib/comments';
 
 export function Editor({ projectId, home }: { projectId: string; home: () => void }) {
   const [ready, setReady] = useState<EditorStore | null>(null);
@@ -61,6 +62,11 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
         setCurrentStore(s);
         // Live editing: ops instead of whole-document saves, and other people's changes as they happen
         setLiveSession(new LiveSession(p.id, s, liveSeqOf(p.id)));
+        // Review comments: their own stream, apart from the editing room
+        comments.onNotice = (text) => prefs().commentNotices && s.toast(text, 'info');
+        void comments.startEditor(p.id);
+        // Whatever the bell on the projects page said about this project, you are looking at it now
+        void readNotices({ project: p.id }).catch(() => undefined);
         // Linked design files: handles from this browser, watching, re-importing
         const links = new LinkManager(s);
         links.start();
@@ -95,6 +101,8 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
       stopLinks?.();
       liveSession()?.close();
       setLiveSession(null);
+      comments.stop();
+      comments.onNotice = null;
       setCurrentStore(null);
       releaseStills();
     };
@@ -203,6 +211,7 @@ const TOOL_KEYS: Record<string, Tool> = {
   t: 'text',
   b: 'button',
   j: 'bone',
+  c: 'comment',
 };
 
 function useShortcuts() {
@@ -513,6 +522,12 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
     const project = st.get().project;
     download(new Blob([typeDefinitions(project)], { type: 'text/plain' }), `${fileSafe(project.name)}.d.ts`);
   };
+  const [reviewOpen, setReviewOpen] = useState(false);
+  useEffect(() => {
+    const on = () => setReviewOpen(true);
+    window.addEventListener(SHARE_FOR_REVIEW_EVENT, on);
+    return () => window.removeEventListener(SHARE_FOR_REVIEW_EVENT, on);
+  }, []);
   const exportPicture = async (kind: 'png' | 'svg', scale: number) => {
     const state = st.get();
     const ab = getArtboard(state.project, state.activeArtboardId);
@@ -605,6 +620,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       {prefsOpen && <PrefsModal onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
       {referenceOpen && <ReferenceModal onClose={() => setReferenceOpen(false)} />}
+      {reviewOpen && <ShareForReviewModal onClose={() => setReviewOpen(false)} />}
       {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
       <button className="btn primary" onClick={onPreview} title="Play the project exactly as the exported file will">
         <Icons.preview width={14} /> Preview
@@ -672,6 +688,7 @@ function helpTopicForTool(tool: Tool): string {
   if (tool === 'draw') return 'script-layers';
   if (tool === 'shader') return 'shader-layers';
   if (tool === 'bone') return 'bones';
+  if (tool === 'comment') return 'comments';
   if (tool === 'text') return 'text';
   if (tool === 'artboard') return 'artboards';
   if (tool === 'frame') return 'groups-frames';
@@ -696,6 +713,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
   { tool: 'shader', icon: 'shader', label: 'Shader layer (GPU effects, backdrops)' },
   { tool: 'bone', icon: 'bone', label: 'Bone (drag to draw one; start on a bone tip to continue the chain)', key: 'J' },
+  { tool: 'comment', icon: 'comment', label: 'Comment (click where you want to say something; reviewers see these, exports never do)', key: 'C' },
 ];
 
 const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [

@@ -5576,4 +5576,518 @@ code {
 }
 .pi-payload .select-field .field-label {
   margin-right: 6px;
+/* ---------------------------------------------------------------- review comments */
+.cm-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 6;
+}
+.cm-layer > * {
+  pointer-events: auto;
+}
+.cm-pin {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* The sharp corner (bottom left) is the spot the comment is about */
+  border-radius: 50% 50% 50% 3px;
+  transform: translate(0, -100%);
+  border: 2px solid #fff;
+  background: var(--accent);
+  color: #fff;
+  font: 600 11px/1 system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+/* In a list or a card header it is just a marker */
+.cm-row .cm-pin,
+.cm-thread-head .cm-pin {
+  position: static;
+  transform: none;
+  flex: none;
+}
+.cm-pin:hover {
+  filter: brightness(1.15);
+}
+.cm-pin.resolved {
+  background: var(--line-2);
+  color: var(--muted);
+  border-color: var(--panel);
+}
+.cm-pin.mine {
+  box-shadow: 0 0 0 2px var(--warn), 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+.cm-pin.selected {
+  box-shadow: 0 0 0 3px var(--accent-2), 0 0 0 5px rgba(255, 255, 255, 0.85);
+  z-index: 2;
+}
+.cm-pin.detached {
+  border-style: dashed;
+}
+.cm-pin.draft {
+  background: var(--panel);
+  color: var(--accent);
+  border-color: var(--accent);
+  cursor: default;
+}
+.cm-pin:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+.cm-card {
+  position: absolute;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  z-index: 3;
+}
+.cm-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+.cm-thread.resolved .cm-messages {
+  opacity: 0.75;
+}
+.cm-thread-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cm-where {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cm-where strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.cm-assign {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cm-assign select {
+  flex: 1;
+  min-width: 0;
+}
+.cm-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 340px;
+  overflow: auto;
+}
+.cm-msg {
+  display: flex;
+  gap: 8px;
+}
+.cm-avatar {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 10px/1 system-ui, sans-serif;
+}
+.cm-avatar.guest {
+  background: var(--line-2);
+  color: var(--text);
+}
+.cm-body {
+  flex: 1;
+  min-width: 0;
+}
+.cm-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cm-head strong {
+  font-size: 12px;
+}
+.cm-text {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.cm-mention {
+  color: var(--accent);
+}
+.cm-composer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cm-composer textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 56px;
+  font: inherit;
+  font-size: 12.5px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.cm-composer textarea:focus {
+  outline: 2px solid var(--accent-2);
+  outline-offset: -1px;
+}
+.cm-name {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cm-name input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+.cm-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cm-actions select {
+  min-width: 0;
+  max-width: 150px;
+}
+.cm-people {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 44px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+}
+.cm-people button {
+  background: none;
+  border: 0;
+  color: var(--text);
+  text-align: left;
+  padding: 5px 8px;
+  cursor: pointer;
+  font: inherit;
+}
+.cm-people button:hover,
+.cm-people button:focus-visible {
+  background: var(--btn-hover-bg);
+}
+.cm-error {
+  color: var(--danger-text);
+  font-size: 12px;
+}
+.cm-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+}
+.cm-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 4px;
+}
+.cm-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 12px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.cm-filter-row {
+  display: flex;
+  gap: 6px;
+}
+.cm-filter-row select {
+  flex: 1;
+  min-width: 0;
+}
+.cm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cm-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.cm-row:hover {
+  background: var(--panel-2);
+}
+.cm-row.on {
+  background: var(--panel-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.cm-row.resolved .cm-row-text {
+  color: var(--muted);
+}
+.cm-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.cm-row-text {
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.cm-row-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-empty {
+  padding: 10px 12px;
+}
+.cm-tab-badge {
+  margin-left: 5px;
+  background: var(--accent);
+  color: #fff;
+}
+.project-card .cm-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.project-card .cm-count.mine {
+  background: var(--warn);
+  color: #1b1c1f;
+}
+
+/* the review page */
+.review {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+.review-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.review-head h1 {
+  font-size: 15px;
+  margin: 0;
+  font-weight: 600;
+}
+.review-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.review-stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--canvas);
+}
+.review-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+}
+.review-board {
+  position: relative;
+  margin: 24px auto;
+  box-shadow: 0 2px 18px rgba(0, 0, 0, 0.4);
+}
+.review-board .artboard-host {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.review-board.placing {
+  cursor: crosshair;
+}
+.review-side {
+  width: 340px;
+  flex: none;
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.review-note {
+  max-width: 520px;
+  margin: 12vh auto;
+  padding: 20px;
+  text-align: center;
+}
+.review-pins {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.review-pins > * {
+  pointer-events: auto;
+}
+.review-play {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.review-play iframe {
+  width: min(96vw, 1400px);
+  height: 92vh;
+  border: 0;
+  background: #fff;
+  border-radius: 6px;
+}
+@media (max-width: 800px) {
+  .review-body {
+    flex-direction: column;
+  }
+  .review-side {
+    width: auto;
+    max-height: 45%;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+.notice-bell {
+  position: relative;
+  display: inline-flex;
+}
+.notice-bell .icon-btn {
+  position: relative;
+}
+.notice-n {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--danger);
+  color: #fff;
+  font: 600 10px/15px system-ui, sans-serif;
+}
+.notice-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 60;
+  width: 340px;
+  max-height: 60vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+}
+.notice-list button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  text-align: left;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.notice-list button:hover {
+  background: var(--panel-2);
+}
+.notice-list button.read {
+  opacity: 0.6;
+}
+.notice-list .notice-all {
+  color: var(--accent);
+}
+.review-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 2px 12px;
+  border-radius: 12px;
+}
+.review-play-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+}
+/* Four tabs in a panel that can be 180px wide: tighter, and a scroll rather than a cut-off if it is still too much */
+.left-panel .tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.left-panel .tabs button {
+  padding: 8px 6px;
+  gap: 3px;
+  flex: none;
+  font-size: 12px;
+}
+.left-panel .tabs button .badge {
+  margin-left: 3px;
 }

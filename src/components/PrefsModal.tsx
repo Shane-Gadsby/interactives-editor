@@ -64,6 +64,12 @@ export function PrefsModal({ onClose }: { onClose: () => void }) {
             value={p.screenReader}
             onChange={(v) => setPrefs({ screenReader: v })}
           />
+          <CheckField
+            label="Comment notices"
+            title="Tell me (a bell on the projects page, a message while a project is open) when a review comment is handed to me, mentions me, or gets a reply in a conversation I am in"
+            value={p.commentNotices}
+            onChange={(v) => setPrefs({ commentNotices: v })}
+          />
           <CheckField label="Show tooltips" title="Explanations when you hover buttons and field names" value={p.tooltips} onChange={(v) => setPrefs({ tooltips: v })} />
           <p className="hint">These settings are yours: they follow you to any browser you sign in on.</p>
         </div>

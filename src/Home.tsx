@@ -9,6 +9,7 @@ import { PrefsModal } from './components/PrefsModal';
 import { prefs } from './lib/prefs';
 import { sessionUser, type SessionUser } from './lib/session';
 import { noteIfStale } from './lib/stale-build';
+import { NoticeBell } from './components/NoticeBell';
 
 declare global {
   interface Window {
@@ -311,6 +312,7 @@ export function Home({ open }: { open: (id: string) => void }) {
         </div>
         <div className="home-actions">
           {(who?.user || me2) && <span className="muted home-user" title="Signed in through the toolbox">{who?.user?.name ?? me2?.name ?? who?.user?.username}</span>}
+          <NoticeBell open={open} />
           <button className="icon-btn" title="Preferences (theme, mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)}>
             <Icons.gear width={16} />
           </button>
@@ -484,6 +486,11 @@ export function Home({ open }: { open: (id: string) => void }) {
             <div className="project-info">
               <div className="project-name">
                 {p.name}
+                {!!p.openComments && (
+                  <span className={`cm-count${p.assignedComments ? ' mine' : ''}`} title={`${p.openComments} open review comment${p.openComments === 1 ? '' : 's'}${p.assignedComments ? `, ${p.assignedComments} for you` : ''}. Open the project and look under Comments`}>
+                    <Icons.comment width={11} height={11} /> {p.openComments}
+                  </span>
+                )}
                 {p.isLibrary && (
                   <span className="badge library-badge" title={p.libraryVersion ? `A component library, published as version ${p.libraryVersion}` : 'A component library that has not been published yet'}>
                     Library{p.libraryVersion ? ` v${p.libraryVersion}` : ''}

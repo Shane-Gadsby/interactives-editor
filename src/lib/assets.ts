@@ -21,7 +21,10 @@ class AssetUrls {
     this.bump();
   }
 
-  resolve = (id: string): string | undefined => this.urls.get(id);
+  /** Where to fetch an asset that has no blob URL: the review page loads them straight from the server by its link. */
+  external: ((id: string) => string) | null = null;
+
+  resolve = (id: string): string | undefined => this.urls.get(id) ?? this.external?.(id);
 
   clear(): void {
     for (const u of this.urls.values()) URL.revokeObjectURL(u);

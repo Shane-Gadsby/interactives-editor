@@ -40,6 +40,9 @@ export const PENCIL_CURSOR = svgCursor(`${edged('M4 28l2-7L21 6l5 5L11 26z')}${e
 /** Over a bone's tip with the Bone tool: a crosshair with a ring, because the next bone grows from this joint. */
 export const BONE_CHAIN_CURSOR = svgCursor(`${edged('M16 3v8M16 21v8M3 16h8M21 16h8')}<circle cx="16" cy="16" r="3.6" fill="none" stroke="#fff" stroke-width="3.4"/><circle cx="16" cy="16" r="3.6" fill="none" stroke="#111" stroke-width="1.4"/>`, 32, 16, 16, 'crosshair');
 
+/** A speech bubble with the point at its tail (bottom left), where the pin will land. */
+export const COMMENT_CURSOR = svgCursor(`${edged('M4 28V8a3 3 0 013-3h18a3 3 0 013 3v12a3 3 0 01-3 3H12z')}${edged('M10 12h12M10 17h7')}`, 32, 4, 28, 'crosshair');
+
 const rotateCache = new Map<number, string>();
 
 /**
@@ -130,6 +133,8 @@ export function toolCursor(tool: string): string {
       return PEN_CURSOR;
     case 'pencil':
       return PENCIL_CURSOR;
+    case 'comment':
+      return COMMENT_CURSOR;
     default:
       return 'crosshair';
   }

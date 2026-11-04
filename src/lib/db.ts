@@ -28,6 +28,9 @@ export interface ProjectMeta {
   isLibrary?: boolean;
   /** The published version, 0 when it has never been published. */
   libraryVersion?: number;
+  /** Review comments still open, and how many of them are handed to you. */
+  openComments?: number;
+  assignedComments?: number;
 }
 
 /** Limits the server enforces on tags and folder names. */

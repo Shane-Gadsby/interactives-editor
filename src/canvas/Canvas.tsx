@@ -37,6 +37,9 @@ import {
 import { toggleRunStyle, type ToggleKind } from '../lib/rich-text';
 import { paintRuns, readRuns, selectionOffsets, setSelectionOffsets } from '../lib/rich-text-dom';
 import { store, useEditor, type Tool } from '../store/store';
+import { CommentLayer } from './CommentLayer';
+import { anchorAt } from '../lib/comment-anchor';
+import { comments } from '../lib/comments';
 import { drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
@@ -129,6 +132,7 @@ export function Canvas() {
     heat: st.heat,
     activeTimelineId: st.activeTimelineId,
     playhead: st.playhead,
+    previewPlaying: st.previewPlaying,
   }));
   const assetVersion = useSyncExternalStore(
     (fn) => assetUrls.subscribe(fn),
@@ -342,6 +346,22 @@ export function Canvas() {
     drag.current = { kind: 'move', abId: ab.id, start, items, bounds0, alt, duplicated: false, moved: false };
   }
 
+  // ---------------------------------------------------------------- comments
+
+  /** A click with the Comment tool: the spot (and the layer under it) a new review comment is pinned to. */
+  const placeComment = (e: React.MouseEvent) => {
+    if (store().get().tool !== 'comment' || e.button !== 0 || spaceDown.current) return;
+    if ((e.target as HTMLElement).closest('.cm-card, [data-pin]')) return;
+    const w = toWorld(e.clientX, e.clientY);
+    const ab = abAt(w);
+    if (!ab) return;
+    const p = local(ab, w);
+    const where = anchorAt(store().get().project, ab.id, p.x, p.y);
+    if (!where) return;
+    store().set({ activeArtboardId: ab.id });
+    comments.startDraft(where);
+  };
+
   // ---------------------------------------------------------------- pointer down
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -354,6 +374,9 @@ export function Canvas() {
   };
   const pointerDown = (e: React.PointerEvent) => {
     if (e.button === 2) return;
+    // The Comment tool places its pin on click (see placeComment), so there is no drag to start and no pointer to capture.
+    // Panning (middle button, Space, the Hand tool) still goes through below
+    if (store().get().tool === 'comment' && e.button === 0 && !spaceDown.current) return;
     const st = store().get();
     const target = e.target as HTMLElement;
     const handle = (target.closest('[data-handle]') as HTMLElement | null)?.dataset.handle;
@@ -1821,6 +1844,7 @@ export function Canvas() {
       onPointerCancel={onPointerUp}
       onPointerLeave={() => setToolHint(null)}
       onDoubleClick={onDoubleClick}
+      onClick={placeComment}
       onDragOver={(e) => {
         e.preventDefault();
         // Files and library components are copied in, not moved
@@ -1905,6 +1929,7 @@ export function Canvas() {
             </div>
           );
         })()}
+      <CommentLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} />
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} />}

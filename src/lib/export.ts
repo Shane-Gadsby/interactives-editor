@@ -1,5 +1,5 @@
 import playerSource from '@player-iife?raw';
-import { buildStandaloneHtml, PACKAGE_EXTENSION, type Project } from 'interactives-player';
+import { buildStandaloneHtml, PACKAGE_EXTENSION, type Asset, type Project } from 'interactives-player';
 import { hasScriptLayers } from './draw-templates';
 import { assetBytes, exportPackage } from './db';
 
@@ -31,11 +31,11 @@ export function withoutLinks(project: Project): Project {
   return { ...project, artboards: project.artboards.map(({ source: _source, ...a }) => a) };
 }
 
-export async function standaloneHtml(project: Project, opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean } = {}): Promise<string> {
+export async function standaloneHtml(project: Project, opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; bytesFor?: (asset: Asset) => Promise<Uint8Array | null> } = {}): Promise<string> {
   const clean = withoutLinks(project);
   const p = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
-  return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: (a) => assetBytes(project.id, a), debug: opts.debug, accessibility: opts.accessibility });
+  return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: opts.bytesFor ?? ((a) => assetBytes(project.id, a)), debug: opts.debug, accessibility: opts.accessibility });
 }
 
 function hasCodeNodes(p: Project): boolean {

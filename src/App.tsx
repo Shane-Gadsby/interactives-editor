@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Home } from './Home';
 import { Editor } from './Editor';
+import { Review } from './Review';
 import { HelpHost, HelpPage } from './help/Help';
 import { DialogHost } from './components/dialogs';
 import { installTooltips } from './components/tooltips';
@@ -8,10 +9,12 @@ import { sessionUser } from './lib/session';
 import { installStaleBuildNotice } from './lib/stale-build';
 import { loadUserPrefs } from './lib/prefs'; // importing applies the cached theme before the first paint
 
-type Route = { page: 'home' } | { page: 'editor'; id: string } | { page: 'help'; id: string; anchor?: string };
+type Route = { page: 'home' } | { page: 'review'; token: string } | { page: 'editor'; id: string } | { page: 'help'; id: string; anchor?: string };
 
 /** Hash routes: `#/` projects list, `#/p/<id>` editor, `#/help/<topic>[/<anchor>]` help. Hash routing keeps the server to one document. */
 function parse(): Route {
+  const r = /^#\/review\/([\w-]{16,64})/.exec(location.hash);
+  if (r) return { page: 'review', token: r[1] };
   const m = /^#\/p\/([\w-]+)/.exec(location.hash);
   if (m) return { page: 'editor', id: m[1] };
   const h = /^#\/help(?:\/([\w-]+))?(?:\/([\w-]+))?/.exec(location.hash);
@@ -34,7 +37,9 @@ export function App() {
   }, []);
   return (
     <>
-      {route.page === 'editor' ? (
+      {route.page === 'review' ? (
+        <Review key={route.token} token={route.token} />
+      ) : route.page === 'editor' ? (
         <Editor key={route.id} projectId={route.id} home={() => (location.hash = '#/')} />
       ) : route.page === 'help' ? (
         <HelpPage id={route.id} anchor={route.anchor} />

@@ -22,10 +22,12 @@ export interface Prefs {
   accessibility: boolean;
   /** The Screen reader strip under Preview, showing what would be announced. Off by default; it only shows while accessibility is on too. */
   screenReader: boolean;
+  /** In-app notices for review comments handed to you, mentioning you, or replied to. On by default; the server checks it too. */
+  commentNotices: boolean;
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false };
+const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 

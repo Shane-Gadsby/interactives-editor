@@ -140,7 +140,8 @@ export type Tool =
   | 'video'
   | 'draw'
   | 'shader'
-  | 'bone';
+  | 'bone'
+  | 'comment';
 
 export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface';
 

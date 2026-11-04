@@ -11,11 +11,18 @@ import { getArtboard, locate } from '../store/doc';
 import { deleteAsset } from '../lib/db';
 import { analyzeUsage, unusedAssetIds } from '../lib/dependencies';
 import { LibrariesPanel } from './LibrariesPanel';
+import { CommentsPanel } from './CommentsPanel';
+import { jumpToThread } from '../lib/comment-jump';
+import { useComments } from '../lib/comments';
+import { countsOf } from '../../shared/comments.mjs';
 import { orderedArtboards, rangeLabel } from '../lib/variants-edit';
 import { INDENT, ROW_H, ROW_PAD, depthAtX, dropRows, slotAt, type DropSlot } from '../lib/layer-drop';
 
 export function LeftPanel() {
-  const [tab, setTab] = useState<'layers' | 'assets' | 'libraries'>('layers');
+  const [tab, setTab] = useState<'layers' | 'assets' | 'libraries' | 'comments'>('layers');
+  const c = useComments();
+  const open = countsOf(c.threads, c.me).open;
+  const project = useEditor((st) => st.project);
   return (
     <aside className="left-panel">
       <div className="tabs">
@@ -28,8 +35,11 @@ export function LeftPanel() {
         <button className={tab === 'libraries' ? 'active' : ''} onClick={() => setTab('libraries')} title="Share components and styles between projects">
           Libraries
         </button>
+        <button className={tab === 'comments' ? 'active' : ''} onClick={() => setTab('comments')} title={`Review comments: notes pinned on the canvas by you and by reviewers, with replies, resolve and assignees${open ? `. ${open} open` : ''}`}>
+          Comments
+        </button>
       </div>
-      {tab === 'layers' ? <Layers /> : tab === 'assets' ? <Assets /> : <LibrariesPanel />}
+      {tab === 'layers' ? <Layers /> : tab === 'assets' ? <Assets /> : tab === 'comments' ? <CommentsPanel project={project} onJump={jumpToThread} hint /> : <LibrariesPanel />}
     </aside>
   );
 }

@@ -9,6 +9,7 @@ import { IconButton } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
 import { confirmDialog } from './dialogs';
+import { getReview, putReview, reviewUrl, stopReview, type ReviewLink } from '../lib/comments';
 
 export function Modal({ title, help, onClose, children, className }: { title: string; help?: string; onClose: () => void; children: React.ReactNode; className?: string }) {
   useEffect(() => {
@@ -225,11 +226,107 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
               </div>
             </>
           )}
+          <ReviewLinkSection projectId={projectId} />
           {error && <p className="error">{error}</p>}
         </div>
       </Modal>
       {resultsOpen && <ResultsModal onClose={() => setResultsOpen(false)} />}
     </>
+  );
+}
+
+/**
+ * The "Can comment" link: a second link, apart from the share link, that opens the project for looking at and commenting on
+ * (still artboards with pins, or play it). It always shows the project as it is now, and can allow guests who give a name.
+ */
+export function ReviewLinkSection({ projectId }: { projectId: string }) {
+  const [link, setLink] = useState<ReviewLink | null | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    getReview(projectId).then(setLink, (e) => setError(String(e.message ?? e)));
+  }, [projectId]);
+  const run = async (f: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await f();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const url = link ? reviewUrl(link.token) : '';
+  return (
+    <div className="learner-link review-link">
+      <strong>Can comment: review link</strong>
+      {link === undefined && !error && <p className="small muted">Checking…</p>}
+      {link === null && (
+        <>
+          <p className="small muted">For subject experts and reviewers. They see the project as it is now, leave notes pinned to a layer or a spot, reply and resolve, and you see them under Comments. The notes stay on the server: they are never part of the project, an export or the share link.</p>
+          <button className="btn" disabled={busy} onClick={() => void run(async () => setLink(await putReview(projectId, false)))} title="Create a link that lets signed in StudyDesk users view the project and comment">
+            Create review link
+          </button>
+        </>
+      )}
+      {link && (
+        <>
+          <div className="share-url">
+            <input readOnly value={url} aria-label="Review link" onFocus={(e) => e.target.select()} />
+            <button
+              className="btn"
+              onClick={() => {
+                void navigator.clipboard.writeText(url).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                });
+              }}
+            >
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+            <a className="btn" href={url} target="_blank" rel="noreferrer">
+              Open
+            </a>
+          </div>
+          <label className="check-row" title="Without this, reviewers have to be signed in to StudyDesk and their comments carry their own name. With it, anyone who has the link can comment after giving a display name (limited to a few comments every few minutes)">
+            <input type="checkbox" checked={link.guests} disabled={busy} onChange={(e) => void run(async () => setLink(await putReview(projectId, e.target.checked)))} />
+            Let people comment without signing in (they give a display name)
+          </label>
+          <div className="row">
+            <button
+              className="btn danger"
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  if (!(await confirmDialog({ title: 'Turn off review link', message: 'Turn the review link off? Reviewers using it get a "turned off" page. The comments are kept.', confirmLabel: 'Turn off', danger: true }))) return;
+                  await stopReview(projectId);
+                  setLink(null);
+                })
+              }
+            >
+              Turn off review link
+            </button>
+          </div>
+        </>
+      )}
+      {error && <p className="error">{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * "Share for review" as a dialog of its own: the Can comment link (create, copy, allow guests, turn off). The Share menu
+ * calls openShareForReview() and the open editor shows this; the same section also sits inside the Share link dialog.
+ */
+export function ShareForReviewModal({ onClose }: { onClose: () => void }) {
+  return (
+    <Modal title="Share for review" help="comments#the-review-link" onClose={onClose} className="share-modal">
+      <div className="share-body">
+        <ReviewLinkSection projectId={store().get().project.id} />
+      </div>
+    </Modal>
   );
 }
 
