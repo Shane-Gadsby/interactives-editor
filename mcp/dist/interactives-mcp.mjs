@@ -5178,7 +5178,7 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     id: "preferences",
     title: "Preferences",
     group: "Getting started",
-    summary: "Your own editor settings: wheel, theme, default font, rulers, tooltips.",
+    summary: "Your own editor settings: wheel, theme, default font, rulers, tooltips, layers outside clipped artboards.",
     keywords: "settings options wheel tooltips",
     body: `![The Preferences dialog.](help/preferences.png)
 
@@ -5188,6 +5188,7 @@ Open **Preferences** from the gear in the top bar (or on the projects page). The
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*.
 - **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. Open Sans unless you change it; any Google font name works.
 - **Show rulers**: rulers and guides on the canvas (also <kbd>Shift</kbd>+<kbd>R</kbd>).
+- **Show layers outside clipped artboards**: on by default. When an artboard has **Clip content to artboard** on, the parts of layers that hang outside it are drawn faintly beside it on the canvas, so you can still see them and click them to select. It is only how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
 - **Show tooltips**: explanations when you hover buttons and fields.
 - **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
 - **Recording**: there is none to set. See [What the editor records](what-is-recorded).
@@ -5357,7 +5358,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 
 - Make a new one with the **Artboard** tool (<kbd>A</kbd>), the **+ Add artboard** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New artboard here**.
 - Click an artboard's name above it on the canvas, or its row in the **Layers** panel, to select it. Drag the name to move the artboard around the canvas, and drag its corners to resize it.
-- With an artboard selected, the Inspector shows **Name**, **W** and **H** (and **Size presets…** such as Desktop, Tablet or Phone), **Background**, **Clip content to artboard**, **Make start artboard**, **Duplicate artboard** and **Delete artboard**. Then come its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**.
+- With an artboard selected, the Inspector shows **Name**, **W** and **H** (and **Size presets…** such as Desktop, Tablet or Phone), **Background**, **Clip content to artboard** (the parts of layers outside it still show faintly on the canvas, see [Preferences](preferences)), **Make start artboard**, **Duplicate artboard** and **Delete artboard**. Then come its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**.
 - The **start artboard** is the one the player shows first. It has a **start** badge in the Layers panel. Use **Make start artboard** (also in the right-click menu) to change it.
 - Drag layers and let go over another artboard and you're asked whether to move them there. See [Moving layers to another artboard](layers-panel#moving-layers-to-another-artboard).
 - To show a different arrangement of an artboard on narrow or wide pages, add a variant: see [Responsive artboards](responsive).
@@ -5388,6 +5389,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 Hover a row and two small buttons appear at its right: a padlock (**Lock** / **Unlock**) and an eye (**Hide** / **Show**). They stay visible for any layer that is locked or hidden. The **Visible** and **Locked** ticks in the Inspector do the same.
 
 - **Hidden** layers are not drawn by the player or in Preview. In the editor they show as a faint **ghost** on the canvas, so you can still see where they are and pick them. Their names are faded in the Layers panel. Hide a mask layer and its clipping stops.
+- **Outside a clipping artboard**: when an artboard has **Clip content to artboard** on, the part of a layer that hangs past its edge is also drawn as a faint ghost on the canvas, and clicking it selects the layer. Preview and exports still cut it off. You can switch this off in [Preferences](preferences).
 - **Locked** layers can't be selected or moved by clicking on the canvas, so a backdrop never gets in your way. You can still select one in the Layers panel and edit it in the Inspector.
 - A layer that is hidden only because its parent is a [Solo group](groups-frames#solo-groups) and it isn't the active child looks the same. Its eye says **Hidden by Solo on …: show this one instead**, and pressing it makes it the active child.
 
@@ -7616,7 +7618,7 @@ Record is still on. Press the red dot to switch it off.
 It is probably **locked**, or **hidden** (shown as a faint ghost). Hover it for the badge that unlocks or shows it, or use the eye and padlock in the Layers panel. See [Layers, hidden and locked layers](layers-panel).
 
 **A layer is in the editor but not in Preview.**
-Check that it is **Visible**; that it isn't hidden by a **Solo** group's active child; that it sits inside the artboard (**Clip content to artboard** hides what is outside); and that no mask above it is clipping it. See [Groups and frames](groups-frames).
+Check that it is **Visible**; that it isn't hidden by a **Solo** group's active child; that it sits inside the artboard (**Clip content to artboard** hides what is outside in Preview and in exports; on the canvas the part outside shows faintly); and that no mask above it is clipping it. See [Groups and frames](groups-frames).
 
 **A field is greyed out and has a link icon.**
 It is bound to an expression. Remove the binding in **Data bindings** to edit it by hand. See [Bindings](bindings).
