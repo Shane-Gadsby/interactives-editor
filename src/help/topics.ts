@@ -58,6 +58,8 @@ Everything here is new or much changed in 0.5, and each has a page in this help:
 
 A small **(i)** icon shows which version you are running. It sits beside **Help** at the top of the help page and of the projects page, next to the open-in-new-tab icon in the help drawer, at the bottom right of the <kbd>F1</kbd> quick search, and in the title bar of **Preferences**. **Hover** it to read the version, for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build. **Click** it to copy that line, then paste it into your report. **Put it in every report**, because it tells us exactly which code you had.
 
+![The version icon beside Help at the top right of the help page.](help/version-icon.png)
+
 A report that can be acted on has:
 - the **version** (click the **(i)** icon to copy it);
 - what you were trying to do, what you expected and what happened instead (a screenshot helps, and a short screen recording is better still);
