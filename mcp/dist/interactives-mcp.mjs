@@ -5038,7 +5038,7 @@ About half an hour, in this order. Each step says what should happen, so you can
 Everything here is new or much changed in 0.5, and each has a page in this help:
 
 - [Themes and colour tokens](themes): name a colour once and give it a value for Light, Dark and High contrast.
-- Layers that hang outside a clipping artboard now show faintly beside it on the canvas, and a hidden layer in an auto-layout frame takes no space. See [Layers](layers-panel) and [Auto layout](auto-layout).
+- Layers that hang outside a clipping artboard now show as a faint, diagonally striped copy beside it on the canvas, and a hidden layer in an auto-layout frame takes no space. See [Layers](layers-panel) and [Auto layout](auto-layout).
 - [Questions and quizzes](question-kit): matching and hotspot questions. [Bones and skinning](bones): **Build an example to try**.
 - [Auto layout](auto-layout#percent-padding-margin-and-gap): percent padding, margin and gap.
 - [Review comments](comments), [inviting people by name](live-editing#inviting-people) and the **Share** menu next to **Export**.
@@ -5048,12 +5048,12 @@ Everything here is new or much changed in 0.5, and each has a page in this help:
 
 ### Reporting a problem
 
-Beside the help search box, and in the title bar of **Preferences**, is a small tag like \`v0.5.0 · 1a2b3c4.5d6e7f8\`. It is the version you are running: the release, then the editor build and the player build. **Put it in every report**, because it tells us exactly which code you had.
+A small **(i)** icon shows which version you are running. It sits beside **Help** at the top of the help page and of the projects page, next to the open-in-new-tab icon in the help drawer, at the bottom right of the <kbd>F1</kbd> quick search, and in the title bar of **Preferences**. **Hover** it to read the version, for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build. **Click** it to copy that line, then paste it into your report. **Put it in every report**, because it tells us exactly which code you had.
 
-![The version tag beside the help search box.](help/version-tag.png)
+![The version icon beside Help at the top right of the help page.](help/version-icon.png)
 
 A report that can be acted on has:
-- the **version tag**;
+- the **version** (click the **(i)** icon to copy it);
 - what you were trying to do, what you expected and what happened instead (a screenshot helps, and a short screen recording is better still);
 - the **project name**, and the steps from a fresh project if you can find them. If the project is the problem and you can share it, send a **.ixp** package: **Export**, then **Project package**;
 - your **browser**, and anything red in its console (<kbd>F12</kbd>, then **Console**) if you know how to look.
@@ -5113,7 +5113,7 @@ Prefer to start from something finished? The **Templates** tab on the projects p
 
 ## Where to get help
 
-Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pages. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small grey tag beside the search box (for example \`v0.5.0 · 1a2b3c4.5d6e7f8\`) is the version you are running: quote it when you report a problem. See [Using this help](help).
+Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pages. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
 
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`
   },
@@ -5183,7 +5183,7 @@ From left to right:
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
 - Zoom: **−**, the percentage (click it to fit everything) and **+**.
-- **Preferences** (the gear, with the version tag in its title bar) and **Help**.
+- **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**.
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge)
@@ -5256,7 +5256,7 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     keywords: "settings options wheel tooltips",
     body: `![The Preferences dialog.](help/preferences.png)
 
-Open **Preferences** from the gear in the top bar (or on the projects page). They are yours: saved with your account, so they follow you to any browser you sign in on. The small tag in the title bar (for example \`v0.5.0 · 1a2b3c4.5d6e7f8\`) is the version of Interactives you are running: the release, then the editor build and the player build. It is the first thing to put in a problem report, and it is shown beside the help search too.
+Open **Preferences** from the gear in the top bar (or on the projects page). They are yours: saved with your account, so they follow you to any browser you sign in on. The small **(i)** icon in the title bar shows the version of Interactives you are running when you hover it (for example \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`: the release, then the editor build and the player build), and copies it when you click it. It is the first thing to put in a problem report, and the same icon is beside **Help** on the help and projects pages.
 
 - **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*.
@@ -7798,7 +7798,7 @@ Re-save it from Illustrator with that option ticked. **A DWG file** must be save
 
 ## Beta tester questions
 **Where is the version number?**
-Beside the help search box, and in the title bar of **Preferences**. It looks like \`v0.5.0 · 1a2b3c4.5d6e7f8\`. Put it in any problem report. See [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
+Hover the small **(i)** icon beside **Help** (on the help page and the projects page), or the one in the title bar of **Preferences**: it reads like \`Version 0.5.0 · build 1a2b3c4.5d6e7f8\`. Click it to copy it, and put it in any problem report. See [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
 
 **A tool I'm looking for isn't in the tool bar.**
 Some groups start folded. Click **Media** (text, script layer, shader layer, video, image), **Web** (button, input, link, embed, Add question) or **Rig** (bones) to open them. See [The editor at a glance](interface).
@@ -7853,7 +7853,7 @@ Check the projects page for an active folder, tag or search (the **Clear filters
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
 - **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
-- **Version tag**: the grey \`v0.5.0 · 1a2b3c4.5d6e7f8\` beside the search box is the version you are running. Hover it for the full label, and include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
+- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
 - **? links**: inspector sections have a **?** that opens their page here.`
   }
 ];
