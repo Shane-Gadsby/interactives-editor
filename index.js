@@ -1920,12 +1920,18 @@ const learnerPage = (token, base, nonce, project) => `<!doctype html>
 	}
 	//One request at a time, so a save and a report that leave together can't both try to make the learner's first record
 	var chain = Promise.resolve()
+	var diagQueue = [], diagTaken = 0, diagSettled = false, diagTimer = null
 	var call = function (method, path, body) {
 		var headers = {'Content-Type': 'application/json'}
 		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
 		var run = function () {
 			return fetch(base + '/learn/' + token + '/' + path, {method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body), keepalive: body !== undefined}).then(function (r) {
+				//Saving and reporting results is this page's own job, so when it fails that is worth knowing (the route and status, nothing else)
+				if (!r.ok && r.status >= 500) takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), status: r.status, fingerprint: 'learn-' + method.toLowerCase() + '-' + r.status})
 				return r.ok ? r.json() : {available: false}
+			}, function () {
+				takeDiag({kind: 'error', where: 'learn-' + method.toLowerCase(), fingerprint: 'learn-' + method.toLowerCase() + '-network'})
+				throw new Error('network')
 			})
 		}
 		var done = chain.then(run, run)
@@ -1939,12 +1945,35 @@ const learnerPage = (token, base, nonce, project) => `<!doctype html>
 	//is sent without a signed-in StudyDesk user, and utilities.js drops it in a preview
 	var cleanRecord = ${records.cleanRecord.toString()}
 	var rowFor = ${records.rowFor.toString()}
+	var cleanDiag = ${records.cleanDiag.toString()}
+	var diagRow = ${records.diagRow.toString()}
 	var project = ${JSON.stringify(project)}, run = Math.random().toString(36).slice(2) + Date.now().toString(36), queue = [], taken = 0, known = false, timer = null
 	var flushRecords = function () {
 		timer = null
 		if (!known || typeof reportAnalytics !== 'function') return
 		while (queue.length) reportAnalytics.apply(null, rowFor(project, run, queue.shift()))
 	}
+	//How the project ran (the player's diagnostics: load time, scripts and layers that failed, assets that would not load), for
+	//bug triage only. Unlike the learner's records these are sent whether or not anybody is signed in, since nothing in one is
+	//about a person; the user is on the row when the session knows it. At most 40 a page load
+	var flushDiags = function () {
+		diagTimer = null
+		if (!diagSettled || typeof reportAnalytics !== 'function') return
+		while (diagQueue.length) reportAnalytics.apply(null, diagRow(project, run, diagQueue.shift()))
+	}
+	var takeDiag = function (raw) {
+		var diag = cleanDiag(raw)
+		if (!diag || diagTaken >= 40) return
+		diagTaken++
+		diagQueue.push(diag)
+		if (diagSettled && !diagTimer) diagTimer = setTimeout(flushDiags, 1500)
+	}
+	var settleDiags = function () {
+		diagSettled = true
+		if (diagQueue.length && !diagTimer) diagTimer = setTimeout(flushDiags, 300)
+	}
+	//Waiting to hear who this is, but not for long
+	setTimeout(settleDiags, 4000)
 	var takeRecord = function (raw) {
 		var rec = cleanRecord(raw)
 		if (!rec || taken >= 600) return
@@ -1956,6 +1985,7 @@ const learnerPage = (token, base, nonce, project) => `<!doctype html>
 		window.m = window.m || {}
 		window.m.app = 'Interactives'
 		fetchActivity(function (err, data) {
+			settleDiags()
 			if (err || !data || !data.user || !data.user.username) return
 			window.m.user = data.user
 			window.m.activity = data.activity || {}
@@ -1967,6 +1997,7 @@ const learnerPage = (token, base, nonce, project) => `<!doctype html>
 		if (e.source !== frame.contentWindow) return
 		var m = e.data
 		if (m && m.source === 'interactives-record') return takeRecord(m.record)
+		if (m && m.source === 'interactives-diag') return takeDiag(m.diag)
 		if (!m || m.source !== 'interactives-progress') return
 		var failed = function () {
 			answer(m, {ok: false, available: false})
@@ -2055,6 +2086,25 @@ router.get('/api/projects/:id/insights', async (req, res) => {
 	let rows = await ingest.find(filter, {projection: {feature: 1, timestamp: 1, 'meta.user.username': 1, 'meta.activity.courseLabel': 1, 'meta.run': 1, 'meta.rec': 1}}).sort({timestamp: -1}).limit(records.MAX_ROWS).toArray()
 
 	res.json({...records.insights(rows, {truncated: rows.length >= records.MAX_ROWS}), days, shared: !!doc.share?.token})
+})
+
+//How the product is used and where it breaks, for the people who make it (power users only): the editor's own analytics
+//('Interactives Editor', src/lib/analytics.ts) and the published projects' diagnostics ('Interactives Player', the learner
+//page), read back from lti-analytics.ingest and counted. Nothing in those rows is content, so nothing here is either.
+//?days= is 1, 7 (the default), 30, 90 or 365. The rows are read with a projection and counted here, like Insights
+router.get('/api/analytics/usage', async (req, res) => {
+	if (!isPower(req)) {
+		return res.status(403).json({error: 'Usage and errors are for power users'})
+	}
+
+	let report = await import('./shared/usage-report.mjs'),
+		asked = Number(req.query.days),
+		days = [1, 7, 30, 90, 365].includes(asked) ? asked : 7,
+		since = {$gte: Date.now() - days * 24 * 60 * 60 * 1000},
+		read = (app) => ingest.find({app, timestamp: since}, {projection: {feature: 1, featureID: 1, timestamp: 1, 'meta.sid': 1, 'meta.build': 1, 'meta.run': 1, 'meta.user.username': 1, 'meta.ev': 1, 'meta.err': 1, 'meta.diag': 1}}).sort({timestamp: -1}).limit(report.MAX_ROWS).maxTimeMS(20000).toArray(),
+		[editor, player] = await Promise.all([read(report.EDITOR_APP), read(report.PLAYER_APP)])
+
+	res.json(report.usageReport(editor, player, days))
 })
 
 //Start the results afresh (a test run that left records behind, or a new intake)

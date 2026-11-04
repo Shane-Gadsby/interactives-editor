@@ -6156,3 +6156,58 @@ code {
   border-radius: 8px;
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.4);
 }
+
+/* usage and errors (power users) */
+.usage-page .usage-body {
+  padding: 12px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.usage-pad {
+  padding: 16px 24px;
+}
+.usage-tiles {
+  padding: 0;
+}
+.usage-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.usage-tabs button {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.usage-tabs button.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.usage-table th,
+.usage-table td {
+  text-align: left;
+  padding: 3px 8px 3px 0;
+  border-bottom: 1px solid var(--line-2);
+  vertical-align: top;
+}
+.usage-table th {
+  color: var(--muted);
+  font-weight: 500;
+}
+.usage-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.usage-table.faults td:nth-child(4) {
+  max-width: 420px;
+  overflow-wrap: anywhere;
+}

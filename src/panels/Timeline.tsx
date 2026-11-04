@@ -1,3 +1,4 @@
+import { track as usage } from '../lib/analytics';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AudioMixer, ANIMATABLE_PROPS, animatableProp, instanceInputProps, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL, type TimelineMarker } from 'interactives-player';
@@ -218,7 +219,7 @@ export function TimelinePanel() {
   const captionTrackId = (): string => {
     const sel = media && media.kind !== 'audio' && media.kind !== 'vkey' ? media.track : null;
     let id = sel && tl.captions?.some((c) => c.id === sel) ? sel : tl.captions?.[0]?.id ?? '';
-    if (!id) store().updateTimeline((d) => void (id = ensureCaptionTrack(d as TL).id));
+    if (!id) (usage('feature', 'captions-track-add'), store().updateTimeline((d) => void (id = ensureCaptionTrack(d as TL).id)));
     return id;
   };
   const captionAction = async (action: string) => {
@@ -247,6 +248,7 @@ export function TimelinePanel() {
       const lang = await promptDialog({ title: 'Add a caption language', label: 'Language tag (en, fr, pt-BR ...)', initial: '', placeholder: 'fr', confirmLabel: 'Add' });
       if (lang === null) return;
       let id = '';
+      usage('feature', 'captions-track-add', { thing: 'language' });
       setTl((d) => void (id = ensureCaptionTrack(d, lang.trim() || undefined).id));
       setMedia({ kind: 'captions', track: id });
     }
@@ -339,6 +341,7 @@ export function TimelinePanel() {
       if (!a) return;
       if (isSteps) delete a.steps;
       else enableSteps(d as Project, a, tl.id);
+      usage('feature', isSteps ? 'steps-disable' : 'steps-enable', { thing: 'timeline' });
     });
 
   const keyDown = (e: React.PointerEvent, trackId: string, key: Keyframe) => keysDown(e, [`${trackId}:${key.id}`], key.t);

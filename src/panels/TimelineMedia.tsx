@@ -1,3 +1,4 @@
+import { extOf, track as usage } from '../lib/analytics';
 import { useEffect, useRef, useState } from 'react';
 import { clockLabel, cuesToSrt, cuesToVtt, localVoices, parseCaptions, trackSpan, uid, type AudioRole, type AudioTrack, type CaptionCue, type CaptionTrack, type Project, type Timeline as TL } from 'interactives-player';
 import { store } from '../store/store';
@@ -667,6 +668,7 @@ export function TranscriptDialog({ tl, track, onClose, onDone }: { tl: TL; track
       setError(result.error);
       return;
     }
+    usage('feature', 'captions-transcript', { detail: { timing, by, append }, sum: { cues: result.made } });
     onDone(`${result.made} caption${result.made === 1 ? '' : 's'} made${result.stamped ? ' from the times in the transcript' : ''}. Check them against the sound and drag the edges where they are off.`);
     onClose();
   };
@@ -735,6 +737,7 @@ export async function addSoundToTimeline(assetId: string, playhead: number): Pro
   st.updateTimeline((d) => {
     made = addAudioTrack(d as TL, asset, ms, playhead).id;
   });
+  usage('feature', 'narration-audio-add');
   if (!ms) st.toast('Added, but the browser could not read how long it is, so it will play to the end of the file.');
   return made;
 }
@@ -749,6 +752,7 @@ export async function importCaptionsInto(trackId: string): Promise<string | null
   const files = await pickFiles('.vtt,.srt,text/vtt,application/x-subrip,text/plain', false);
   if (!files.length) return null;
   const text = await files[0].text();
+  usage('feature', 'captions-import', { thing: extOf(files[0].name) });
   const check = parseCaptions(text);
   if (!check.cues.length) {
     await alertDialog({ title: 'No captions found', message: check.warnings.join(' ') || 'That file has no captions in it.' });

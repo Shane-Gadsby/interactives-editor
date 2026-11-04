@@ -2,8 +2,11 @@ import playerSource from '@player-iife?raw';
 import { buildStandaloneHtml, PACKAGE_EXTENSION, type Asset, type Project } from 'interactives-player';
 import { hasScriptLayers } from './draw-templates';
 import { assetBytes, exportPackage } from './db';
+import { extOf, reportError, track } from './analytics';
 
 export function download(blob: Blob, filename: string): void {
+  // What kind of file and how big, never its name
+  track('export', 'download', { thing: extOf(filename), sum: { kb: Math.round(blob.size / 1024) } });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -43,12 +46,12 @@ function hasCodeNodes(p: Project): boolean {
 }
 
 export async function downloadStandalone(project: Project): Promise<void> {
-  const html = await standaloneHtml(project);
+  const html = await failsAs('export', 'html', () => standaloneHtml(project));
   download(new Blob([html], { type: 'text/html' }), `${fileSafe(project.name)}.html`);
 }
 
 export async function downloadPackage(project: Project): Promise<void> {
-  const blob = await exportPackage(withoutLinks(project));
+  const blob = await failsAs('export', 'ixp', () => exportPackage(withoutLinks(project)));
   download(blob, `${fileSafe(project.name)}${PACKAGE_EXTENSION}`);
 }
 
@@ -57,3 +60,13 @@ export function downloadJson(project: Project): void {
 }
 
 export { playerSource };
+
+/** Runs an export step; if it throws, the fault is reported (the format and the kind of failure, nothing of the project) and goes on up. */
+async function failsAs<T>(kind: string, format: string, step: () => Promise<T>): Promise<T> {
+  try {
+    return await step();
+  } catch (err) {
+    reportError({ kind, error: err, where: format, detail: { format } });
+    throw err;
+  }
+}

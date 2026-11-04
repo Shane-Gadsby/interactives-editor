@@ -1,3 +1,4 @@
+import { noteLayerFault } from './analytics';
 import { useSyncExternalStore } from 'react';
 import { DrawLayer, type DrawFrameInput, type DrawFrameResult, type DrawMount, type DrawNode, type DrawRunner, type Project, type ScriptApi, type ScriptHost } from 'interactives-player';
 import { assetUrls } from './assets';
@@ -192,7 +193,7 @@ export function createEditorDraw(getProject: () => Project): EditorDraw {
         },
         autoRatio: () => Math.min(2, typeof devicePixelRatio === 'number' ? devicePixelRatio : 1),
         errorOnCanvas: true,
-        onError: (message, kind) => setProblem(node.id, { message, kind }),
+        onError: (message, kind) => (noteLayerFault('draw', message, kind === 'error' ? 'error' : 'warning'), setProblem(node.id, { message, kind })),
       });
       const paint = (): void => {
         const p = getProject();

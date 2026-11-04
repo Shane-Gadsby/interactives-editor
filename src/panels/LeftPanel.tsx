@@ -10,6 +10,7 @@ import { ANIMATION_ACCEPT, chooseLinking, importAnimationFile } from '../lib/imp
 import { getArtboard, locate } from '../store/doc';
 import { deleteAsset } from '../lib/db';
 import { analyzeUsage, unusedAssetIds } from '../lib/dependencies';
+import { track } from '../lib/analytics';
 import { LibrariesPanel } from './LibrariesPanel';
 import { CommentsPanel } from './CommentsPanel';
 import { jumpToThread } from '../lib/comment-jump';
@@ -23,6 +24,7 @@ export function LeftPanel() {
   const c = useComments();
   const open = countsOf(c.threads, c.me).open;
   const project = useEditor((st) => st.project);
+  useEffect(() => track('panel', 'open', { thing: `left-${tab}` }), [tab]);
   return (
     <aside className="left-panel">
       <div className="tabs">

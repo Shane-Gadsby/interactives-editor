@@ -7,7 +7,8 @@ import vm from 'node:vm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startServer, type Harness, type User } from './helpers/server-harness';
 // @ts-expect-error plain ESM shared with index.js
-import { cleanRecord, insights, rowFor, CELL } from '../shared/records.mjs';
+import { cleanRecord, cleanDiag, diagRow, insights, rowFor, CELL } from '../shared/records.mjs';
+import { cleanDiagnostic } from '../../interactives-player/src/diagnostics';
 
 const ann: User = { username: 'ann', fullName: 'Ann A' };
 const bob: User = { username: 'bob' };
@@ -169,6 +170,100 @@ describe('the learner page passes records on to the suite analytics', () => {
     p.send({ source: 'interactives-progress', op: 'load', rid: 'r1' });
     await new Promise((r) => setTimeout(r, 0));
     expect(p.frame.contentWindow.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'progress', rid: 'r1' }), '*');
+  });
+});
+
+describe('how a published project ran (diagnostics), for bug triage', () => {
+  const run = async (opts: { user?: Record<string, unknown> | null } = {}) => {
+    //same stand-ins as the records page tests above
+    const html = (await h.call('GET', `/play/${token}`)).text;
+    const script = [...html.matchAll(/<script nonce="[^"]+">([\s\S]*?)<\/script>/g)][0][1];
+    const listeners: Record<string, (e: unknown) => void> = {};
+    const frame = { contentWindow: { postMessage: vi.fn() } };
+    const reported: unknown[][] = [];
+    const timers: (() => void)[] = [];
+    const ctx: Record<string, unknown> = {
+      document: { getElementById: () => frame },
+      location: { search: '' },
+      sessionStorage: { getItem: () => null, setItem: () => undefined },
+      URLSearchParams,
+      fetch: vi.fn(async () => ({ ok: false, status: 503, json: async () => ({}) })),
+      Promise,
+      Object,
+      Math,
+      Date,
+      JSON,
+      setTimeout: (fn: () => void) => (timers.push(fn), timers.length),
+      reportAnalytics: (...args: unknown[]) => reported.push(args),
+      fetchActivity: (cb: (err: unknown, data: unknown) => void) => cb(null, opts.user === null ? {} : { user: opts.user ?? { username: 'sam', userID: 7 }, activity: { courseLabel: 'MAT1000_2026_S1' } }),
+    };
+    ctx.window = { addEventListener: (type: string, fn: (e: unknown) => void) => (listeners[type] = fn) };
+    (ctx.window as Record<string, unknown>).parent = ctx.window;
+    vm.runInNewContext(script, ctx);
+    const send = (data: unknown, source: unknown = frame.contentWindow) => listeners.message({ source, data });
+    const flush = () => {
+      for (let i = 0; i < 3; i++) timers.splice(0).forEach((t) => t());
+    };
+    return { send, flush, reported, ctx };
+  };
+
+  it('cleanDiag agrees with the player\'s own check, and refuses what is not a diagnostic', () => {
+    const cases = [
+      { kind: 'load', project: 'p1', version: '0.1.0', ms: 123.6, artboards: 2, scripts: 1, layers: 30, sandbox: true, learner: 'sam' },
+      { kind: 'script', version: '0.1.0', where: 'sandbox', message: 'bad "typed" at https://x.y/z 123456', fingerprint: 'abcd1234' },
+      { kind: 'shader', where: 'layer', level: 'error', message: 'compile failed' },
+      { kind: 'data', where: 'fetch', status: 503, fingerprint: 'zz zz' },
+      { kind: 'asset', where: 'img' },
+    ];
+    for (const c of cases) {
+      const mine = { ...cleanDiag(c) };
+      const theirs = { ...cleanDiagnostic(c) };
+      delete theirs.project;
+      expect(mine).toEqual(theirs);
+    }
+    for (const bad of [null, 'x', [], {}, { kind: 'login' }, { kind: 'keylog', text: 'abc' }]) expect(cleanDiag(bad)).toBeNull();
+    expect(cleanDiag({ kind: 'error', message: 'Bad "typed words" for 1234567' }).message).toBe('Bad "?" for N');
+  });
+
+  it('is filed under its own app, with the kind as feature and the project as featureID, like the records', () => {
+    expect(diagRow('prins001', 'run1', { kind: 'error', where: 'frame' })).toEqual(['Interactives Player', 'error', 'prins001', { project: 'prins001', run: 'run1', diag: { kind: 'error', where: 'frame' } }]);
+  });
+
+  it('passes a diagnostic from the project on, under this link\'s project, with the user when the session knows it', async () => {
+    const p = await run();
+    p.send({ source: 'interactives-diag', diag: { kind: 'load', project: 'someone-elses', version: '0.1.0', ms: 250, artboards: 2 } });
+    p.send({ source: 'interactives-diag', diag: { kind: 'script', where: 'sandbox', message: 'x is not a function "secret"', fingerprint: 'abcd1234', version: '0.1.0' } });
+    p.flush();
+    expect(p.reported.map((r) => [r[0], r[1], r[2]])).toEqual([['Interactives Player', 'load', 'prins001'], ['Interactives Player', 'script', 'prins001']]);
+    expect(JSON.stringify(p.reported)).not.toMatch(/someone-elses|secret/);
+    expect((p.reported[1][3] as { diag: { message: string } }).diag.message).toBe('x is not a function "?"');
+  });
+
+  it('sends them with no signed-in user too (they say nothing about a person), but holds them until the session has answered', async () => {
+    const p = await run({ user: null });
+    p.send({ source: 'interactives-diag', diag: { kind: 'error', where: 'frame', version: '0.1.0' } });
+    expect(p.reported).toHaveLength(0);
+    p.flush();
+    expect(p.reported).toHaveLength(1);
+  });
+
+  it('drops what is not a diagnostic, listens only to its own frame, and stops after 40 a page load', async () => {
+    const p = await run();
+    p.send({ source: 'interactives-diag', diag: { kind: 'keylog', text: 'abc' } });
+    p.send({ source: 'interactives-diag', diag: 'x' });
+    p.send({ source: 'interactives-diag', diag: { kind: 'error' } }, {});
+    for (let i = 0; i < 60; i++) p.send({ source: 'interactives-diag', diag: { kind: 'error', where: 'frame', fingerprint: `f${i}` } });
+    p.flush();
+    expect(p.reported).toHaveLength(40);
+  });
+
+  it('says so when saving a learner\'s progress fails on the server', async () => {
+    const p = await run();
+    p.send({ source: 'interactives-progress', op: 'save', rid: 'r1', data: { a: 1 } });
+    await new Promise((r) => setTimeout(r, 0));
+    p.flush();
+    const d = p.reported.find((r) => r[1] === 'error');
+    expect((d![3] as { diag: Record<string, unknown> }).diag).toMatchObject({ where: 'learn-put', status: 503 });
   });
 });
 

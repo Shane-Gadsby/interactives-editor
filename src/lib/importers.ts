@@ -6,6 +6,7 @@ import { assetUrls } from './assets';
 import { download, fileSafe } from './export';
 import { exportLottie, toDotLottie } from './lottie-export';
 import { NO_LINK_REASON, currentUser, designKind, handleOf, hashAssets, isDesignFile, newLinkId, rememberHandle, sourcesFor, supportsLinking, type FileHandle } from './links';
+import { extOf, reportError, span, track } from './analytics';
 import { linkChoiceDialog, type LinkChoiceRow } from '../components/dialogs';
 
 export interface AnimationImport {
@@ -23,6 +24,23 @@ export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg
 
 /** Read a Lottie (.json/.lottie), Rive (.riv, or the editor's own .rev), Photoshop (.psd), Illustrator (.ai), PDF, AutoCAD (.dxf/.dwg), VectorCraft (.vectorcraft) or PhotoCraft (.pcraft) file into artboards. */
 export async function readAnimationFile(file: File): Promise<AnimationImport> {
+  const ext = extOf(file.name);
+  const done = span('import', 'read', { thing: ext });
+  try {
+    const imp = await readAnimationFileInner(file);
+    track('import', 'ok', { thing: ext, detail: { source: imp.source.toLowerCase().replace(/[^a-z0-9]+/g, '-') }, sum: { kb: Math.round(file.size / 1024), artboards: (imp.artboards ?? [imp.artboard]).length, warnings: imp.warnings.length } });
+    done();
+    return imp;
+  } catch (err) {
+    // The format and the kind of failure, not the file (no name, no contents)
+    track('import', 'failed', { thing: ext });
+    reportError({ kind: 'import', error: err, where: ext, detail: { format: ext, kb: Math.round(file.size / 1024) } });
+    done({ detail: { failed: true } });
+    throw err;
+  }
+}
+
+async function readAnimationFileInner(file: File): Promise<AnimationImport> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const base = file.name.replace(/\.[^.]+$/, '');
   if (/\.psd$/i.test(file.name) || (bytes[0] === 0x38 && bytes[1] === 0x42 && bytes[2] === 0x50 && bytes[3] === 0x53)) {

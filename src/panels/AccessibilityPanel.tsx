@@ -1,3 +1,4 @@
+import { track } from '../lib/analytics';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { store, useEditor } from '../store/store';
 import { assetUrls } from '../lib/assets';
@@ -32,6 +33,7 @@ function applyOne(f: Finding, typed?: string): void {
     return;
   }
   const fix = f.fix;
+  track('feature', 'a11y-fix', { thing: f.check, detail: { severity: f.severity } });
   store().update((d) => void applyFix(d as Project, fix, typed));
   store().toast(`${f.fix.label}: done. Undo with Ctrl+Z`);
 }
@@ -40,6 +42,8 @@ function applyOne(f: Finding, typed?: string): void {
 function applyQuick(list: Finding[]): void {
   const fixes = list.map((f) => f.fix).filter((x): x is Fix => !!x && !x.input);
   if (!fixes.length) return;
+  track('feature', 'a11y-fix-all', { sum: { fixes: fixes.length } });
+  for (const f of list) if (f.fix && !f.fix.input) track('feature', 'a11y-fix', { thing: f.check, detail: { severity: f.severity, bulk: true } });
   store().update((d) => {
     for (const fx of fixes) applyFix(d as Project, fx);
   });

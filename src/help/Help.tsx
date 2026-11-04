@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Markdown } from './markdown';
 import { searchHelp, type HelpHit } from './search';
+import { noteHelpSearch, track } from '../lib/analytics';
 import { GROUPS, TOPICS, getTopic, topicBody } from './topics';
 import { Icons } from '../components/icons';
 
@@ -70,7 +71,7 @@ export function HelpHost() {
           <HelpView id={s.drawer.id} anchor={s.drawer.anchor} onNavigate={showTopic} focusKey={s.opened} compact onClose={closeHelp} />
         </aside>
       )}
-      {s.search && <QuickSearch onPick={(h) => openHelp(h.topic.id, h.anchor)} onClose={() => emit({ search: false })} />}
+      {s.search && <QuickSearch onPick={(h) => (track('help', 'search-pick', { thing: h.topic.id, detail: { in: 'quick' } }), openHelp(h.topic.id, h.anchor))} onClose={() => emit({ search: false })} />}
     </>
   );
 }
@@ -91,9 +92,14 @@ export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey }:
   }, [focusKey]);
   const go = (href: string) => {
     const [tid, a] = href.split('#');
+    if (query.trim()) track('help', 'search-pick', { thing: tid || topic.id });
     onNavigate(tid || topic.id, a);
     setQuery('');
   };
+  useEffect(() => {
+    track('help', 'topic', { thing: topic.id, detail: { in: compact ? 'drawer' : 'page' } });
+  }, [topic.id, compact]);
+  useEffect(() => noteHelpSearch(query, hits.length), [query, hits.length]);
   useLayoutEffect(() => {
     const el = body.current;
     if (!el) return;
@@ -213,6 +219,7 @@ function QuickSearch({ onPick, onClose }: { onPick: (h: HelpHit) => void; onClos
   const [sel, setSel] = useState(0);
   const hits = useMemo(() => (q ? searchHelp(q, 10) : TOPICS.slice(0, 8).map((t) => ({ topic: t, snippet: t.summary, score: 0 }) as HelpHit)), [q]);
   useEffect(() => setSel(0), [q]);
+  useEffect(() => noteHelpSearch(q, q ? hits.length : -1), [q, hits.length]);
   return (
     <div className="modal-backdrop quick-help-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="quick-help" role="dialog" aria-label="Search help">

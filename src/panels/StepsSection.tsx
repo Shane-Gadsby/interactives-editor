@@ -73,10 +73,10 @@ export function StepsSection({ ab, project }: { ab: Artboard; project: Project }
       <Section help="steps" title="Steps" defaultOpen={false}>
         <p className="hint">Turn the markers of a timeline into the steps of an explainer: Next plays to the next marker, Back plays back, and a step bar does the clicking.</p>
         <Row>
-          <button className="btn" title="Use a timeline's markers as steps. Adds a marker at the start and the step variables" onClick={() => setAb((a, p) => void enableSteps(p, a, store().get().activeTimelineId ?? undefined))}>
+          <button className="btn" data-track="steps-enable" title="Use a timeline's markers as steps. Adds a marker at the start and the step variables" onClick={() => setAb((a, p) => void enableSteps(p, a, store().get().activeTimelineId ?? undefined))}>
             Turn on Steps
           </button>
-          <button className="btn" title="Add a small working explainer to this artboard: a ball, a timeline with four markers and a step bar. Preview it and click Next" onClick={() => setAb((a, p) => addStepsExample(p, a))}>
+          <button className="btn" data-track="steps-example" title="Add a small working explainer to this artboard: a ball, a timeline with four markers and a step bar. Preview it and click Next" onClick={() => setAb((a, p) => addStepsExample(p, a))}>
             Build an example to try
           </button>
         </Row>
@@ -134,7 +134,7 @@ export function StepsSection({ ab, project }: { ab: Artboard; project: Project }
         onChange={(v) => patch({ scrub: v })}
       />
       <Row>
-        <button className="btn" title="Add a tall frame at the right to scroll. It becomes the scrub frame; restyle it, and put your own words in it" onClick={() => setAb((a) => void addScrollColumn(a))}>
+        <button className="btn" data-track="steps-scroll-column" title="Add a tall frame at the right to scroll. It becomes the scrub frame; restyle it, and put your own words in it" onClick={() => setAb((a) => void addScrollColumn(a))}>
           Add a scroll column
         </button>
       </Row>
@@ -142,7 +142,7 @@ export function StepsSection({ ab, project }: { ab: Artboard; project: Project }
         Variables kept up to date: <span className="mono">{varName(cfg.stepVar)}</span> (the step number, from 1), <span className="mono">{varName(cfg.countVar)}</span>, <span className="mono">{varName(cfg.titleVar)}</span>, <span className="mono">{varName(cfg.captionVar)}</span>. Tick Remember on the step variable to bring learners back to where they were. A frame repeating <span className="mono">steps</span> draws a dot per step.
       </p>
       <Row>
-        <button className="btn" title="Add a step bar to this artboard: Back, Next, a dot per step, the counter, title and caption. It is made once as ordinary layers and nodes, so restyle it freely" onClick={() => setAb((a, p) => void addStepBar(p, a))}>
+        <button className="btn" data-track="steps-bar" title="Add a step bar to this artboard: Back, Next, a dot per step, the counter, title and caption. It is made once as ordinary layers and nodes, so restyle it freely" onClick={() => setAb((a, p) => void addStepBar(p, a))}>
           {barHere ? 'Add another step bar' : 'Add a step bar'}
         </button>
         {barHere && (

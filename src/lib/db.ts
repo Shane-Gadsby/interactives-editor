@@ -7,6 +7,7 @@
  * adds `X-Session-ID` to every same-origin fetch when the page loads it.
  */
 import type { LibraryContent, LibraryInfo } from './libraries';
+import { reportError, routePattern, track } from './analytics';
 import { normalizeProject, readPackage, uid, writePackage, type Asset, type Project } from 'interactives-player';
 
 export interface ProjectMeta {
@@ -54,14 +55,23 @@ export class ConflictError extends Error {
 
 const API = new URL('api/', document.baseURI).href;
 
+
 /** `as: 'blob'` reads the body as bytes whatever its content type (an uploaded .json asset is served as application/json). */
 async function call<T>(path: string, init: RequestInit = {}, as?: 'blob'): Promise<T> {
   let res: Response;
+  const started = Date.now();
+  const method = (init.method ?? 'GET').toUpperCase();
+  const route = routePattern(path).slice(0, 46);
   try {
     res = await fetch(API + path, { credentials: 'same-origin', ...init });
-  } catch {
+  } catch (err) {
+    reportError({ kind: 'api', error: err, where: route, detail: { method, status: 0 } });
     throw new Error('Could not reach the Interactives server');
   }
+  // Which parts of the server get used (the route with its ids taken out), how long they take, and what it refused or broke on
+  if (res.ok) track('api', 'call', { thing: route, ms: Date.now() - started, detail: { method } });
+  else if (res.status >= 500) reportError({ kind: 'api', error: `Server error ${res.status}`, where: route, detail: { method, status: res.status } });
+  else track('api', 'rejected', { thing: route, detail: { method, status: res.status } });
   if (!res.ok) {
     let body: { error?: string; rev?: number } = {};
     try {
@@ -174,6 +184,18 @@ export async function exportPackage(p: Project): Promise<Blob> {
  * gets a fresh id, so importing the same file twice keeps both copies.
  */
 export async function importPackage(file: Blob): Promise<Project> {
+  try {
+    const p = await importPackageInner(file);
+    track('import', 'ok', { thing: 'ixp', sum: { kb: Math.round(file.size / 1024), artboards: p.artboards.length } });
+    return p;
+  } catch (err) {
+    track('import', 'failed', { thing: 'ixp' });
+    reportError({ kind: 'import', error: err, where: 'ixp', detail: { format: 'ixp', kb: Math.round(file.size / 1024) } });
+    throw err;
+  }
+}
+
+async function importPackageInner(file: Blob): Promise<Project> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let project: Project;
   const blobs = new Map<string, Blob>();
@@ -336,3 +358,91 @@ export const shareLibrary = (projectId: string, share: { everyone: boolean; user
   call<{ shared: { everyone: boolean; users: string[] } }>(`projects/${encodeURIComponent(projectId)}/library/share`, json(share));
 
 export const unpublishLibrary = (projectId: string) => call<{ ok: boolean }>(`projects/${encodeURIComponent(projectId)}/library`, { method: 'DELETE' });
+
+// ---------------------------------------------------------------- usage and errors (power users)
+
+export interface UsageRow {
+  key: string;
+  uses: number;
+  users: number;
+  ms: number;
+  last: number;
+}
+
+export interface EditorFault {
+  fp: string;
+  kind: string;
+  where: string;
+  cls: string;
+  msg: string;
+  frame: string;
+  status: number | null;
+  via: string;
+  reports: number;
+  count: number;
+  users: number;
+  visits: number;
+  builds: string[];
+  projects: number;
+  first: number;
+  last: number;
+}
+
+export interface PlayerFault {
+  fp: string;
+  kind: string;
+  where: string;
+  msg: string;
+  level: string;
+  status: number | null;
+  count: number;
+  learners: number;
+  runs: number;
+  versions: string[];
+  projects: number;
+  first: number;
+  last: number;
+}
+
+export interface UsageReport {
+  days: number;
+  generatedAt: number;
+  truncated: boolean;
+  editor: {
+    rows: number;
+    visits: number;
+    users: number;
+    activeMs: number;
+    builds: { build: string; rows: number }[];
+    browsers: { browser: string; visits: number }[];
+    funnel: { label: string; people: number }[];
+    features: UsageRow[];
+    inspector: UsageRow[];
+    nodes: UsageRow[];
+    doc: UsageRow[];
+    history: UsageRow[];
+    tools: { tool: string; uses: number; users: number; ms: number }[];
+    panels: { panel: string; opens: number; users: number; ms: number }[];
+    imports: { format: string; ok: number; failed: number; kb: number; users: number }[];
+    exports: UsageRow[];
+    help: { topics: UsageRow[]; searches: number; notFound: number };
+    preview: { loads: number; avgLoadMs: number };
+    live: UsageRow[];
+    api: UsageRow[];
+    faults: EditorFault[];
+    faultCount: number;
+  };
+  player: {
+    rows: number;
+    pageLoads: number;
+    learners: number;
+    loads: { n: number; p50: number; p90: number; p99: number };
+    byKind: { kind: string; rows: number }[];
+    versions: { version: string; rows: number }[];
+    faults: PlayerFault[];
+    projects: { project: string; loads: number; faults: number }[];
+  };
+}
+
+/** How the editor is used and where it and published projects break (`GET /api/analytics/usage`, power users only). */
+export const getUsageReport = (days: number) => call<UsageReport>(`analytics/usage?days=${days}`);

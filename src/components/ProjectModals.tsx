@@ -1,3 +1,4 @@
+import { track } from '../lib/analytics';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, prepareNodes, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
@@ -142,6 +143,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
     setError(null);
     try {
       setShare(await publishShare(projectId, await standaloneHtml(store().get().project)));
+      track('feature', 'share-publish');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -153,6 +155,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
     setBusy('Turning off…');
     try {
       await stopShare(projectId);
+      track('feature', 'share-stop');
       setShare(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

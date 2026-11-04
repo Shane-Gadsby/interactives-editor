@@ -2,6 +2,7 @@
  * What the Libraries panel does: fetch from the server, bring the assets over, and change the document through
  * `store().update` (so undo works and other people editing see it). The document logic itself is in `libraries.ts`.
  */
+import { track } from './analytics';
 import type { Project } from 'interactives-player';
 import { store } from '../store/store';
 import { nodeNames, uniqueName } from '../store/doc';
@@ -71,6 +72,7 @@ async function bringAssets(libraryId: string, ids: string[]): Promise<void> {
 
 /** Add a library to the project: remember it and take its styles. */
 export async function addLibraryToProject(info: LibraryInfo): Promise<void> {
+  track('feature', 'library-add');
   const content = await fetchContent(info);
   store().update((d) => addLibrary(d as Project, info, content), { library: true });
 }
@@ -85,6 +87,7 @@ export async function useComponent(info: LibraryInfo, componentId: string, host?
     st.toast('That artboard comes from a library and is read-only. Pick one of your own.', 'error');
     return null;
   }
+  track('feature', 'library-use-component', { thing: host?.at ? 'drop' : host ? 'place' : 'copy' });
   const content = await fetchContent(info);
   if (!content.components.some((c) => c.id === componentId)) {
     st.toast('That component is not in the library any more', 'error');
@@ -140,6 +143,7 @@ export async function reviewUpdates(info: LibraryInfo): Promise<{ components: Up
 /** Update the given components (by library component id), or every changed one. */
 export async function applyUpdates(info: LibraryInfo, componentIds?: string[]): Promise<number> {
   const st = store();
+  track('feature', 'library-update', { thing: componentIds ? 'some' : 'all' });
   const content = await fetchContent(info);
   const ids = componentIds ?? changedComponents(st.get().project, info.id, content.components).map((u) => u.componentId);
   await bringAssets(info.id, missingAssets(st.get().project, content, ids));
@@ -158,10 +162,12 @@ export async function applyUpdates(info: LibraryInfo, componentIds?: string[]): 
 }
 
 export function detach(artboardId: string): void {
+  track('feature', 'library-detach');
   store().update((d) => void detachArtboard(d as Project, artboardId), { library: true });
 }
 
 export function dropLibrary(libraryId: string): void {
+  track('feature', 'library-remove');
   store().update((d) => removeLibrary(d as Project, libraryId), { library: true });
 }
 

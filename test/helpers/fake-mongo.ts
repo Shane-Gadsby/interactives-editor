@@ -85,6 +85,9 @@ class Cursor {
     this.limitN = n || Infinity;
     return this;
   }
+  maxTimeMS(_ms: number) {
+    return this;
+  }
   async toArray() {
     let rows = [...this.rows];
     if (this.sortSpec) {

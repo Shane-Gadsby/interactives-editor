@@ -1,3 +1,5 @@
+import { reportError } from './analytics';
+
 // After a deploy the tab that was already open still runs the old build, and the old build's lazy chunks (importers, the
 // sandbox, image export...) are gone from the server. Say so with a Reload button instead of leaving the feature dead.
 
@@ -40,6 +42,7 @@ export function showStaleBuildNotice(): void {
 /** For callers that catch an error themselves: shows the notice when it was a failed chunk load. Returns true when it was. */
 export function noteIfStale(err: unknown): boolean {
   if (!isChunkLoadError(err)) return false;
+  reportError({ kind: 'chunk', error: err, where: 'lazy-load' });
   showStaleBuildNotice();
   return true;
 }

@@ -38,6 +38,8 @@ import { LinkChanges } from './components/LinkChanges';
 import { PanelResizeHandle, usePanelWidths } from './components/PanelResize';
 import { noteIfStale } from './lib/stale-build';
 import { primeStills, releaseStills } from './lib/still-cache';
+import { noteProjectDiagnostic, reportError, setProject, span, track } from './lib/analytics';
+import { observeStore } from './lib/usage';
 import { keyMoveTarget } from './lib/layer-drop';
 import { SHARE_FOR_REVIEW_EVENT, comments, readNotices } from './lib/comments';
 
@@ -48,6 +50,8 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
   useEffect(() => {
     let cancelled = false;
     let stopLinks: (() => void) | null = null;
+    let stopWatching: (() => void) | null = null;
+    const openedAt = Date.now();
     (async () => {
       try {
         // The saved pictures of its artboards are read while the project downloads, so the canvas opens with them showing
@@ -91,13 +95,19 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
           sessionStorage.removeItem(`ix-import-report:${p.id}`);
           s.set({ report: JSON.parse(pending) });
         }
+        setProject(p.id);
+        stopWatching = observeStore(s);
+        track('project', 'open', { ms: Date.now() - openedAt, sum: { artboards: p.artboards.length, assets: p.assets.length } });
         setReady(s);
       } catch (err) {
+        reportError({ kind: 'open', error: err, where: 'editor-load' });
         setError(err instanceof Error ? err.message : String(err));
       }
     })();
     return () => {
       cancelled = true;
+      stopWatching?.();
+      setProject(null);
       stopLinks?.();
       liveSession()?.close();
       setLiveSession(null);
@@ -430,7 +440,7 @@ function useThumbnails() {
 }
 
 /** An error boundary that tries its part again whenever the document changes (an undo, a remote edit that fixes it). */
-function Guard(props: { message: string; className?: string; children: React.ReactNode }) {
+function Guard(props: { message: string; name?: string; className?: string; children: React.ReactNode }) {
   const project = useEditor((st) => st.project);
   return <ErrorBoundary {...props} resetKey={project} />;
 }
@@ -470,20 +480,20 @@ function Workspace({ home }: { home: () => void }) {
         <LinkChanges />
       </div>
       <Toolbar />
-      <Guard message="This panel couldn't be shown." className="left-panel">
+      <Guard name="left-panel" message="This panel couldn't be shown." className="left-panel">
         <LeftPanel />
       </Guard>
       <main className="stage">
-        <Guard message="Something on this artboard couldn't be drawn.">
+        <Guard name="canvas" message="Something on this artboard couldn't be drawn.">
           <Canvas />
         </Guard>
         <PanelResizeHandle side="left" width={widths.left} onWidth={(w) => setWidth('left', w)} />
         <PanelResizeHandle side="right" width={widths.right} onWidth={(w) => setWidth('right', w)} />
       </main>
-      <Guard message="This panel couldn't be shown." className="inspector">
+      <Guard name="inspector" message="This panel couldn't be shown." className="inspector">
         <Inspector />
       </Guard>
-      <Guard message="This panel couldn't be shown." className="bottom-dock">
+      <Guard name="bottom-dock" message="This panel couldn't be shown." className="bottom-dock">
         <BottomPanel />
       </Guard>
       {preview && <PreviewModal onClose={() => setPreview(false)} />}
@@ -733,6 +743,7 @@ function AddQuestion() {
     setAt(null);
     if (!ab) return;
     let id: string | null = null;
+    track('feature', 'question-add', { thing: kind });
     s.update((d) => void (id = addQuestion(d as Project, ab.id, kind)));
     if (id) s.select([id], { artboardId: ab.id });
   };
@@ -996,6 +1007,11 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow) return;
+      // How the previewed project ran (the player's diagnostics): the load time, and faults for triage
+      if (e.data?.source === 'interactives-diag') {
+        noteProjectDiagnostic(e.data.diag, 'preview');
+        return;
+      }
       if (e.data?.source === 'interactives-debug') {
         if (e.data.vars) setVars(e.data.vars);
         if (e.data.state) setDbg(e.data.state);
@@ -1010,9 +1026,11 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('message', onMsg);
     window.addEventListener('keydown', onKey);
+    const timeInPreview = span('preview', 'open', { thing: 'modal' });
     return () => {
       window.removeEventListener('message', onMsg);
       window.removeEventListener('keydown', onKey);
+      timeInPreview();
     };
   }, [onClose]);
   const ab = getArtboard(project, from === 'current' ? abId : project.settings.startArtboardId);

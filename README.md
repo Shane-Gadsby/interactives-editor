@@ -114,6 +114,47 @@ Access works like this:
 | `INTERACTIVES_STORAGE` | `./storage` | asset files |
 | `SUITE_SESSION_ENFORCE` | unset | `1` to refuse instead of log |
 
+## Analytics: editor usage, published projects, errors
+
+The editor records how it is used and where it breaks, and published projects report how they ran. It is mandatory (no setting), written down for users in the help topic "What the editor records" (`src/help/topics.ts`, id `what-is-recorded`), and goes the way every toolbox app's analytics do: si-manager's `utilities.js` `reportAnalytics` -> `si-analytics` `/analytics/ingest-bulk` -> `lti-analytics.ingest` (slimmed by `suite-libs/ingest-lean.js`). The editor page already loads `/utilities.js`; `src/lib/analytics.ts` sets the global `m` it reads (`m.user` from `fetchActivity`) and holds rows until the person is known (4 s at most).
+
+**Editor rows** (`app: 'Interactives Editor'`, `src/lib/analytics.ts`, `usage.ts`):
+- `feature` is the area: `session` (`start`, `active` = time with the tab showing and used, `end`), `project` (`open`, `close`, `create`, `list`...), `tool` (`use`, `time`), `panel` (`open`, `close`, `time`; the bottom tabs and `left-layers/assets/libraries`), `inspector` (`change`, by property name and `detail.node` layer type, once per drag), `node` (`add`, `first-add`), `doc` (`edit`, `duplicate`, `align`, `delete`...), `history` (`undo`, `redo`), `import` (`ok`, `failed`, `read`, `asset`), `export` (`download`), `help` (`topic`, `page`, `search`, `search-pick`), `preview` (`open`, `loaded`, `play`), `live` (`status`, `fallback`, `peer-joined`), `feature` (questions, steps, captions, variants, interface, libraries, a11y fixes, sharing; the action is the feature: `question-add`, `steps-enable`, `a11y-fix`...), `api` (`call`, `rejected`: server routes with ids taken out), `error`, `meta` (`dropped`).
+- `featureID` is the action. `meta.ev` is `{thing, project, n, ms, detail, sum, t0, t1}`: what it was done to (a tool, property, layer kind, file type), the project id, how many times and how long over the window, low-cardinality facts, and numbers that add up. `meta.sid` is one id per tab visit, `meta.build` the editor build, `meta.v` the player version.
+- Nothing is sent per event. Events are added up by (area, action, thing, project, detail) and one row per bucket goes out every minute and when the tab is hidden or closed (a beacon). A visit sends at most 2500 rows, 150 per flush, 300 buckets are held; the rest is counted in one `meta/dropped` row. `data-track="name"` on a button counts a click as `feature/name`.
+- Never recorded: anything typed, any name (project, layer, variable, file, library), values, document contents, file names (only the extension). `thing` and detail values must be plain tokens (no spaces), numbers or booleans or they are dropped; the only free text anywhere is an error message, scrubbed.
+- Faults are `feature: 'error'`, `featureID` the kind (`window`, `promise`, `boundary`, `api`, `chunk`, `import`, `export`, `save`, `live`, `open`, `project-script`, `project-shader`, `project-draw`...), `meta.err = {fp, kind, cls, msg, frame, where, detail, project, at}`. `fp` is a hash of the error class, the scrubbed message (quoted text, urls, ids, long numbers removed, 160 characters), the top stack frame without line, column or build hash, the kind and the place, so duplicates group across rebuilds. A fingerprint is sent in full 3 times per visit and at most 20 faults a minute; every occurrence is still counted in an `error` row with `meta.ev.n` and `detail.fp`. Sources: window `error`, `unhandledrejection`, `vite:preloadError` and caught lazy-chunk failures (`stale-build.ts`), the `ErrorBoundary` (its `name`, the first React component names), failed server calls (`db.ts`: 5xx and network failures are faults, 4xx are counted as `api/rejected`), importers and exports, save and live failures, and the preview's and canvas's script, shader and draw faults.
+
+**Published project rows** (`app: 'Interactives Player'`): the player emits `diagnostic` events (`interactives-player/src/diagnostics.ts`: load time to first frame, frame/node/handler errors, scripts in the page or sandbox, script and shader layers, data sources, assets that would not load), exports forward them with `{source: 'interactives-diag'}` posts, and the learner page (`/play/:token`) checks each with `cleanDiag` (`shared/records.mjs`, embedded in the page) and sends `reportAnalytics('Interactives Player', <kind>, <project id>, {project, run, diag})` like learner records (feature is the kind, featureID the project id, so `idx_app_featureID_timestamp` serves per-project reads). They are sent whether or not anyone is signed in (nothing in one is about a person), at most 40 a page load. The plain `/s/<token>` page and a downloaded export have no analytics channel and send nothing. They are separate from learner activity (`app: 'Interactives'`, above), which a project can switch off.
+
+**Reading it** (power users, `#/usage`, linked from the F9 banner on the projects page): `GET /api/analytics/usage?days=1|7|30|90|365` (`shared/usage-report.mjs`, counted in JS like Insights) gives a funnel (opened the editor, a project, added a layer, changed a property, preview, export or share), tools, panels, features, properties, layers, imports by format with failures, exports, help topics and searches that found nothing, server calls, builds and browsers, editor faults grouped by fingerprint with counts, people, visits, builds and last seen, and the published side: page loads, first-frame percentiles, faults by fingerprint, versions, projects with the most faults. Power users only (403 otherwise). No new index: the queries start with `app` and use `app_1_feature_1` / `idx_app_featureID_timestamp`.
+
+Example queries against `lti-analytics.ingest` (mongosh):
+
+```js
+const since = Date.now() - 30 * 864e5
+// which tools people use, and for how long
+db.ingest.aggregate([{$match: {app: 'Interactives Editor', feature: 'tool', timestamp: {$gte: since}}},
+  {$group: {_id: {a: '$featureID', t: '$meta.ev.thing'}, n: {$sum: '$meta.ev.n'}, ms: {$sum: '$meta.ev.ms'}, people: {$addToSet: '$meta.user.username'}}},
+  {$project: {n: 1, ms: 1, people: {$size: '$people'}}}, {$sort: {n: -1}}])
+// properties changed, by layer type
+db.ingest.aggregate([{$match: {app: 'Interactives Editor', feature: 'inspector', timestamp: {$gte: since}}},
+  {$group: {_id: {p: '$meta.ev.thing', node: '$meta.ev.detail.node'}, n: {$sum: '$meta.ev.n'}}}, {$sort: {n: -1}}])
+// imports by format: worked, failed
+db.ingest.aggregate([{$match: {app: 'Interactives Editor', feature: 'import', featureID: {$in: ['ok', 'failed']}}},
+  {$group: {_id: {f: '$meta.ev.thing', r: '$featureID'}, n: {$sum: '$meta.ev.n'}}}])
+// editor faults grouped by fingerprint, newest first
+db.ingest.aggregate([{$match: {app: 'Interactives Editor', feature: 'error', 'meta.err': {$exists: true}}},
+  {$group: {_id: '$meta.err.fp', kind: {$first: '$meta.err.kind'}, msg: {$first: '$meta.err.msg'}, where: {$first: '$meta.err.where'}, reports: {$sum: 1}, builds: {$addToSet: '$meta.build'}, last: {$max: '$timestamp'}}}, {$sort: {last: -1}}])
+// the true count of one fault (including those held back from being sent in full)
+db.ingest.aggregate([{$match: {app: 'Interactives Editor', feature: 'error', 'meta.ev.detail.fp': '<fp>'}}, {$group: {_id: null, n: {$sum: '$meta.ev.n'}}}])
+// published projects: first-frame time by project, and script faults
+db.ingest.aggregate([{$match: {app: 'Interactives Player', feature: 'load'}}, {$group: {_id: '$featureID', loads: {$sum: 1}, avgMs: {$avg: '$meta.diag.ms'}}}])
+db.ingest.find({app: 'Interactives Player', feature: {$in: ['script', 'shader', 'draw', 'data', 'asset', 'error']}}).sort({timestamp: -1})
+// one person's visits
+db.ingest.find({app: 'Interactives Editor', 'meta.user.username': '<username>', featureID: {$in: ['start', 'end']}})
+```
+
 ## MCP server (`mcp/`)
 
 `mcp/server.ts` is an MCP server (stdio JSON-RPC, no dependencies) that lets an AI agent join a project's live room as `<name> (AI)`, read it, edit it through the same ops as the editor, and see each person's selection. `npm run build:mcp` (also part of `npm run build`) bundles it with the player's catalog and the help topics into `mcp/dist/interactives-mcp.mjs`, which is committed like `dist/`. Env: `INTERACTIVES_URL`, `INTERACTIVES_SESSION_ID` (sent as `X-Session-ID`), `INTERACTIVES_AGENT_NAME`. The help page "AI agents (MCP)" has the client setup. The live stream takes `?agent=<name>` for this.

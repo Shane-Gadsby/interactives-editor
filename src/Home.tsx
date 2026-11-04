@@ -1,3 +1,4 @@
+import { track } from './lib/analytics';
 import { useEffect, useMemo, useState } from 'react';
 import { createProject, PACKAGE_EXTENSION } from 'interactives-player';
 import { createProjectRecord, deleteProject, duplicateProject, importPackage, listProjects, loadProjectRecord, META_MAX_LABEL, META_MAX_TAGS, session, setProjectMeta, type ProjectMeta, type SessionInfo } from './lib/db';
@@ -188,6 +189,7 @@ export function Home({ open }: { open: (id: string) => void }) {
       const font = prefs().defaultFont.trim();
       if (font) p.fonts.push({ family: font, source: 'google', weights: [400, 600, 700] });
       await createProjectRecord(p);
+      track('project', 'create');
       await intoSelectedFolder(p.id);
       open(p.id);
     });
@@ -206,6 +208,7 @@ export function Home({ open }: { open: (id: string) => void }) {
         const linking = await chooseLinking([f]);
         if (!linking) return;
         const id = await projectFromAnimation(f, linking.get(f));
+        track('project', 'create', { thing: 'import' });
         await intoSelectedFolder(id);
         await refresh();
         open(id);
@@ -328,7 +331,11 @@ export function Home({ open }: { open: (id: string) => void }) {
           </button>
         </div>
       </header>
-      {power && <div className="power-banner">Power user mode: showing everyone's projects (F9 to turn off)</div>}
+      {power && (
+        <div className="power-banner">
+          Power user mode: showing everyone's projects (F9 to turn off). <a href="#/usage">Usage and errors</a>
+        </div>
+      )}
       {error && <div className="error-banner">{error}</div>}
       {!!list?.length && (
         <div className="home-tools">
@@ -537,6 +544,7 @@ export function Home({ open }: { open: (id: string) => void }) {
                 title="Duplicate"
                 onClick={() =>
                   run(async () => {
+                    track('project', 'duplicate');
                     await duplicateProject(p.id);
                     await refresh();
                   })
@@ -562,6 +570,7 @@ export function Home({ open }: { open: (id: string) => void }) {
                 onClick={async () => {
                   if (!(await confirmDialog({ title: 'Delete project', message: `Delete "${p.name}"? This cannot be undone.`, confirmLabel: 'Delete project', danger: true }))) return;
                   await run(async () => {
+                    track('project', 'delete');
                     await deleteProject(p.id);
                     await refresh();
                   });

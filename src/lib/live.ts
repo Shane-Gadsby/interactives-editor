@@ -18,6 +18,7 @@
  * the session ends and the whole document is saved the normal way instead.
  * Network errors and 5xx are retried with a growing delay.
  */
+import { reportError, track } from './analytics';
 import { sessionId, sessionUser } from './session';
 import { apply as applyOps, diff, opKey, orderFixes, type Op } from '../../shared/ops.mjs';
 import type { Project } from 'interactives-player';
@@ -267,6 +268,8 @@ export class LiveSession {
    * normal whole-document save (with its revision check) takes over, and the person is told.
    */
   private giveUp(message: string): void {
+    reportError({ kind: 'live', error: message, where: 'ops-refused' });
+    track('live', 'fallback');
     this.queue = [];
     this.inflight = [];
     this.pending.clear();

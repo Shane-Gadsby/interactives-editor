@@ -131,6 +131,84 @@ export function rowFor(project, run, rec) {
 	return ['Interactives', rec.kind, project, {project, run, rec}]
 }
 
+//How a published project ran (the player's diagnostics, see interactives-player/src/diagnostics.ts), for bug triage: load
+//time, scripts that threw, shader and script layers that failed, data and pictures that would not load. Not learner
+//activity, so it has its own app ('Interactives Player'), and nothing in one is a name, a url or anything typed. Like
+//cleanRecord this is written out in the learner page (toString), so it can't lean on anything outside itself. It gives back a
+//clean copy, or null when it isn't one
+export const PLAYER_APP = 'Interactives Player'
+export const DIAG_KINDS = ['load', 'error', 'script', 'shader', 'draw', 'asset', 'data']
+
+export function cleanDiag(raw) {
+	let kinds = ['load', 'error', 'script', 'shader', 'draw', 'asset', 'data'],
+		tok = (v, max) => typeof v === 'string' && v.length <= max && /^[\w.$@<>-]+$/.test(v) ? v : undefined,
+		num = (v, max) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max ? Math.round(v) : undefined,
+		scrub = (v) => {
+			let t = typeof v === 'string' ? v : ''
+			t = t.replace(/[\u0000-\u001f\u007f]+/g, ' ')
+				.replace(/\b[a-z][a-z0-9+.-]*:\/\/\S+/gi, '<url>')
+				.replace(/(["'`])(?:(?!\1).){0,400}\1/g, '$1?$1')
+				.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '<id>')
+				.replace(/\b[A-Za-z0-9_-]{24,}\b/g, '<id>')
+				.replace(/\d{4,}/g, 'N')
+				.replace(/\s+/g, ' ')
+				.trim()
+			return t.length > 160 ? t.slice(0, 159) + '\u2026' : t
+		}
+
+	if (!raw || typeof raw !== 'object' || Array.isArray(raw) || kinds.indexOf(raw.kind) < 0) {
+		return null
+	}
+
+	let out = {kind: raw.kind, version: tok(raw.version, 20) || ''},
+		fp = tok(raw.fingerprint, 16),
+		where = tok(raw.where, 30),
+		ms = num(raw.ms, 3600000),
+		artboards = num(raw.artboards, 100000),
+		scripts = num(raw.scripts, 100000),
+		layers = num(raw.layers, 10000000),
+		status = num(raw.status, 999)
+
+	if (fp) {
+		out.fingerprint = fp
+	}
+	if (typeof raw.message === 'string' && raw.message) {
+		out.message = scrub(raw.message)
+	}
+	if (where) {
+		out.where = where
+	}
+	if (raw.level === 'error' || raw.level === 'warning') {
+		out.level = raw.level
+	}
+	if (ms !== undefined) {
+		out.ms = ms
+	}
+	if (artboards !== undefined) {
+		out.artboards = artboards
+	}
+	if (scripts !== undefined) {
+		out.scripts = scripts
+	}
+	if (layers !== undefined) {
+		out.layers = layers
+	}
+	if (typeof raw.sandbox === 'boolean') {
+		out.sandbox = raw.sandbox
+	}
+	if (status !== undefined) {
+		out.status = status
+	}
+
+	return out
+}
+
+//The row for one diagnostic. Like learner records, featureID is the project's id (so the read uses the existing
+//app + featureID + timestamp index) and feature is the kind. The project is whatever the page was made for.
+export function diagRow(project, run, diag) {
+	return ['Interactives Player', diag.kind, project, {project, run, diag}]
+}
+
 const learnerOf = (row) => {
 	let name = row?.meta?.user?.username
 

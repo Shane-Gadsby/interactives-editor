@@ -1,3 +1,4 @@
+import { track } from '../lib/analytics';
 import { useMemo, useState } from 'react';
 import { checkInterface, referencePage, typeDefinitions, typeStem, type InterfaceIssue, type PayloadField, type PayloadShape, type PayloadType, type Project, type PublicDirection, type PublicMessage, type PublicVariable } from 'interactives-player';
 import { store, useEditor } from '../store/store';
@@ -162,6 +163,7 @@ export function InterfacePanel() {
   };
   const addMsg = () => {
     if (!newMsg.trim()) return;
+    track('feature', 'interface-add-message', { thing: newDir });
     edit((p) => void addMessage(p, newMsg, newDir));
     setNewMsg('');
   };
@@ -169,7 +171,7 @@ export function InterfacePanel() {
   return (
     <div className="pi-panel">
       <div className="pi-toolbar">
-        <button className="btn" onClick={addFound} title="Add the messages the project sends and listens for, and the variables its flows and controls work with. Pick any others from the list beside it">
+        <button className="btn" data-track="interface-add-found" onClick={addFound} title="Add the messages the project sends and listens for, and the variables its flows and controls work with. Pick any others from the list beside it">
           <Icons.plus width={14} /> Add from what the project uses
         </button>
         <SelectField
@@ -177,7 +179,7 @@ export function InterfacePanel() {
           options={[{ value: '', label: found.variables.length ? 'Add a variable…' : 'Every variable is on the list' }, ...found.variables.map((x) => ({ value: x.variable.id, label: `${x.variable.name} (${x.direction})` }))]}
           title="Make one more variable public. It starts as an input unless the project changes it itself"
           onChange={(id) => {
-            if (id) edit((p) => void addVariable(p, id));
+            if (id) (track('feature', 'interface-add-variable'), edit((p) => void addVariable(p, id)));
             setPickVar('');
           }}
         />

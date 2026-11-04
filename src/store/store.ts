@@ -40,6 +40,8 @@ import type { Peer } from '../lib/live';
 import { getArtboard, locate, parentToArtboard, selectionBounds, topmost, uniqueName, nodeNames } from './doc';
 import { dropRefsToRemoved, retargetChildRefs } from './refs';
 import { adoptQuestions, dropOrphanKitNodes } from '../lib/question-kit';
+import { track } from '../lib/analytics';
+import { noteNodeAdded, noteProps } from '../lib/usage';
 import { variantPlan, type VariantSide } from '../lib/variants-edit';
 
 /** Whether any frame in a tree has auto layout. */
@@ -316,6 +318,7 @@ export class EditorStore {
       if (this.past.length > HISTORY_LIMIT) this.past.shift();
     }
     this.lastCoalesce = opts.coalesce ? { key: opts.coalesce, time: t } : null;
+    if (!merge) track('doc', 'edit');
     this.future = [];
     this.revision++;
     const updated = produce(next, (d) => {
@@ -411,6 +414,7 @@ export class EditorStore {
   undo(): void {
     const prev = this.past.pop();
     if (!prev) return;
+    track('history', 'undo');
     this.future.push({ project: this.state.project, selection: this.state.selection, activeArtboardId: this.state.activeArtboardId, seen: this.remoteTotal });
     this.restore(this.caughtUp(prev));
   }
@@ -418,6 +422,7 @@ export class EditorStore {
   redo(): void {
     const next = this.future.pop();
     if (!next) return;
+    track('history', 'redo');
     this.past.push({ project: this.state.project, selection: this.state.selection, activeArtboardId: this.state.activeArtboardId, seen: this.remoteTotal });
     this.restore(this.caughtUp(next));
   }
@@ -518,6 +523,7 @@ export class EditorStore {
     }
     const tl = this.timeline();
     const record = s.recording && tl && s.bottomTab === 'timeline';
+    noteProps(changes, coalesce, (id) => this.nodeById(id)?.type, !!record);
     this.update((d) => {
       const ab = getArtboard(d as Project, s.activeArtboardId) as Draft<Artboard> | undefined;
       if (!ab) return;
@@ -567,6 +573,7 @@ export class EditorStore {
 
   addNodes(nodes: SceneNode[], opts: { parentId?: string | null; select?: boolean; artboardId?: string } = {}): void {
     const abId = opts.artboardId ?? this.state.activeArtboardId;
+    for (const n of nodes) noteNodeAdded(n);
     this.update((d) => {
       const ab = getArtboard(d as Project, abId);
       if (!ab) return;
@@ -592,6 +599,7 @@ export class EditorStore {
     }
     const ids = new Set(this.state.selection);
     if (!ids.size) return;
+    track('doc', 'delete', { sum: { layers: ids.size } });
     this.update((d) => {
       const dab = getArtboard(d as Project, ab.id)!;
       // Everything that goes with the deleted layers: a deleted group or frame takes its descendants with it, and
@@ -615,6 +623,7 @@ export class EditorStore {
   }
 
   duplicateSelection(offset = 10): void {
+    track('doc', 'duplicate');
     const ab = this.artboard();
     if (!ab) return;
     const ids = topmost(ab, this.state.selection);
@@ -640,6 +649,7 @@ export class EditorStore {
   }
 
   groupSelection(): void {
+    track('doc', 'group');
     const ab = this.artboard();
     if (!ab) return;
     const ids = topmost(ab, this.state.selection);
@@ -693,6 +703,7 @@ export class EditorStore {
   }
 
   ungroupSelection(): void {
+    track('doc', 'ungroup');
     const ab = this.artboard();
     if (!ab) return;
     const released: string[] = [];
@@ -746,6 +757,7 @@ export class EditorStore {
 
   /** Move selection in z-order: +1 forward, -1 back, Infinity front, -Infinity back. */
   reorder(delta: number): void {
+    track('doc', 'reorder', { thing: delta > 0 ? 'forward' : 'back' });
     const ab = this.artboard();
     if (!ab) return;
     const ids = this.state.selection;
@@ -768,6 +780,7 @@ export class EditorStore {
    * lists them).
    */
   moveToArtboard(ids: string[], targetId: string): void {
+    track('doc', 'move-to-artboard');
     const src = this.artboard();
     if (!src || src.id === targetId) return;
     const moved: string[] = [];
@@ -829,6 +842,7 @@ export class EditorStore {
    * container (or the artboard) when one is.
    */
   align(edge: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'): void {
+    track('doc', 'align', { thing: edge });
     const ab = this.artboard();
     if (!ab) return;
     const ids = topmost(ab, this.state.selection).filter((id) => !locate(ab, id)?.node.locked);
@@ -857,6 +871,7 @@ export class EditorStore {
 
   /** Space the selection evenly between its outermost layers (3 or more). */
   distribute(axis: 'horizontal' | 'vertical'): void {
+    track('doc', 'distribute', { thing: axis });
     const ab = this.artboard();
     if (!ab) return;
     const ids = topmost(ab, this.state.selection).filter((id) => !locate(ab, id)?.node.locked);
@@ -880,6 +895,7 @@ export class EditorStore {
 
   /** Replace the selected shapes with their boolean combination (a path). */
   booleanSelection(op: BooleanOp): void {
+    track('doc', 'boolean', { thing: String(op) });
     const ab = this.artboard();
     if (!ab) return;
     const ids = topmost(ab, this.state.selection);
@@ -912,6 +928,7 @@ export class EditorStore {
   // ---------------------------------------------------------------- artboards
 
   addArtboard(partial: Partial<Artboard> = {}): string {
+    track('doc', 'artboard-add');
     const p = this.state.project;
     const right = p.artboards.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0);
     const ab = createArtboard({
@@ -931,6 +948,7 @@ export class EditorStore {
   }
 
   deleteArtboard(id: string): void {
+    track('doc', 'artboard-delete');
     if (this.state.project.artboards.length <= 1) {
       this.toast('A project needs at least one artboard', 'error');
       return;
@@ -958,6 +976,7 @@ export class EditorStore {
    * Returns the new artboard's id.
    */
   addVariant(id: string, side: VariantSide = 'narrower'): string | null {
+    track('feature', 'variant-add', { thing: side });
     const src = getArtboard(this.state.project, id);
     if (!src) return null;
     const all = this.state.project.artboards;
@@ -989,6 +1008,7 @@ export class EditorStore {
 
   /** Make an artboard a variant of another one's set (`baseId` null: it stands on its own again). */
   setVariantOf(id: string, baseId: string | null): void {
+    track('feature', 'variant-pair', { thing: baseId ? 'pair' : 'unpair' });
     const p = this.state.project;
     const ab = getArtboard(p, id);
     if (!ab) return;
@@ -1006,6 +1026,7 @@ export class EditorStore {
 
   /** The width, in px, from which an artboard of a set is shown. */
   setBreakpoint(id: string, minWidth: number): void {
+    track('feature', 'variant-breakpoint');
     const v = Math.max(0, Math.min(100000, Math.round(Number(minWidth) || 0)));
     this.update(
       (d) => {
@@ -1019,6 +1040,7 @@ export class EditorStore {
   }
 
   duplicateArtboard(id: string): void {
+    track('doc', 'artboard-duplicate');
     const src = getArtboard(this.state.project, id);
     if (!src) return;
     const copy = this.copyArtboard(src);
@@ -1094,6 +1116,7 @@ export class EditorStore {
   // ---------------------------------------------------------------- text modifiers
 
   addTextModifier(nodeId: string, patch: Partial<TextModifier> = {}): void {
+    track('feature', 'text-modifier-add');
     const ab = this.artboard();
     if (ab) this.update((d) => void addModifier(d as Project, ab.id, nodeId, patch));
   }
@@ -1105,6 +1128,7 @@ export class EditorStore {
 
   /** Typewriter or wave: a modifier and a timeline for it, in one undo step. The new timeline becomes the open one. */
   applyTextPreset(nodeId: string, preset: TextPresetId): void {
+    track('feature', 'text-preset', { thing: String(preset) });
     const ab = this.artboard();
     if (!ab) return;
     let tlId: string | null = null;
@@ -1117,6 +1141,7 @@ export class EditorStore {
   // ---------------------------------------------------------------- timelines
 
   addTimeline(): string {
+    track('feature', 'timeline-add');
     const ab = this.artboard();
     if (!ab) return '';
     const tl: Timeline = {
@@ -1153,6 +1178,7 @@ export class EditorStore {
 
   /** Add/replace a keyframe for a node property at the playhead, using its current value. */
   keyCurrent(nodeId: string, prop: string): void {
+    track('feature', 'keyframe-add', { thing: String(prop).split('.')[0] });
     const ab = this.artboard();
     let tlId = this.state.activeTimelineId;
     if (!ab) return;
@@ -1234,6 +1260,7 @@ export class EditorStore {
    * value in the frame shown there. Key the shape, move the playhead, edit points while recording, and the shape morphs.
    */
   keyShape(nodeId: string): void {
+    track('feature', 'shape-keyframe');
     const ab = this.artboard();
     if (!ab) return;
     const node = locate(ab, nodeId)?.node;
@@ -1275,6 +1302,7 @@ export class EditorStore {
    * The layer keeps its id, place, fill and stroke; keys on its corner radius or inner ratio go, since those no longer exist.
    */
   convertToPath(id: string): boolean {
+    track('doc', 'convert-to-path');
     const ab = this.artboard();
     const node = ab && locate(ab, id)?.node;
     const paths = node && shapeToPaths(node);

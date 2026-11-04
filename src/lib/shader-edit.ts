@@ -1,3 +1,4 @@
+import { noteLayerFault } from './analytics';
 import { useSyncExternalStore } from 'react';
 import { ShaderLayer, shaderSpec, type ImageNode, type Project, type SceneNode, type ShaderMount, type ShaderNode, type ShaderProblem } from 'interactives-player';
 import { assetUrls } from './assets';
@@ -90,7 +91,7 @@ export function createEditorShader(getProject: () => Project): EditorShader {
         },
         autoRatio: () => Math.min(2, typeof devicePixelRatio === 'number' ? devicePixelRatio : 1),
         errorOnCanvas: true,
-        onError: (message, kind, list) => setProblem(id, { message, kind, problems: list }),
+        onError: (message, kind, list) => (noteLayerFault('shader', message, kind === 'error' ? 'error' : 'warning'), setProblem(id, { message, kind, problems: list })),
       });
       const animated = (): boolean => !!shaderSpec(current)?.animateInEditor;
       const runner = {

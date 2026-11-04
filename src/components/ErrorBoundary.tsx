@@ -1,8 +1,11 @@
-import { Component, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { reportError } from '../lib/analytics';
 
 interface Props {
   /** What to tell the person when it fails. */
   message: string;
+  /** Which part this is, for the fault report (a short lowercase name; defaults to the start of the message). */
+  name?: string;
   /** Class of the element shown instead (the failed part's own class keeps it in its place in the grid). */
   className?: string;
   /** When this changes after a failure, the part is tried again (a new document revision, a different artboard). */
@@ -25,8 +28,17 @@ export class ErrorBoundary extends Component<Props, State> {
     return { error };
   }
 
-  componentDidCatch(error: Error): void {
+  componentDidCatch(error: Error, info?: ErrorInfo): void {
     console.error('[interactives-editor]', this.props.message, error);
+    // For triage: which part, and the first component names of the React stack (code names, nothing of the person's)
+    const where = this.props.name ?? this.props.message.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+    const comps = (info?.componentStack ?? '')
+      .split('\n')
+      .map((l) => /^\s*at ([A-Z][\w$]*)/.exec(l)?.[1])
+      .filter(Boolean)
+      .slice(0, 3)
+      .join('.');
+    reportError({ kind: 'boundary', error, where, detail: { in: comps || undefined } });
   }
 
   componentDidUpdate(prev: Props): void {

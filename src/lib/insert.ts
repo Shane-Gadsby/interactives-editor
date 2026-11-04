@@ -1,3 +1,4 @@
+import { extOf, reportError, track } from './analytics';
 import { createNode, type Asset, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { assetKind, assetUrls, imageSize, storeFile, videoSize } from './assets';
@@ -45,12 +46,14 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
             children: svg.nodes,
           });
           nodes.push(group);
+          track('import', 'ok', { thing: 'svg', detail: { as: 'layers' } });
           offset += 20;
           if (svg.skipped.length) st.toast(`${file.name}: not carried over: ${svg.skipped.join(', ')}`);
           continue;
         }
       } catch (err) {
         console.warn('[interactives] SVG import failed, adding it as an image instead', err);
+        reportError({ kind: 'import', error: err, where: 'svg', detail: { format: 'svg' } });
       }
     }
     let asset: Asset;
@@ -58,8 +61,11 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
       asset = await storeFile(projectId, file);
     } catch (err) {
       st.toast(err instanceof Error ? err.message : String(err), 'error');
+      track('import', 'failed', { thing: extOf(file.name) });
+      reportError({ kind: 'import', error: err, where: 'asset', detail: { format: extOf(file.name), kb: Math.round(file.size / 1024) } });
       continue;
     }
+    track('import', 'ok', { thing: extOf(file.name), detail: { as: 'asset' }, sum: { kb: Math.round(file.size / 1024) } });
     added.push(asset);
     const kind = assetKind(asset.mime, asset.name);
     const url = assetUrls.resolve(asset.id)!;
