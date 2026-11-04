@@ -3440,6 +3440,16 @@ function buildMachines(ac: ArtboardCtx, fc: FileCtx, ab: Artboard, timelines: Ti
       const stateName = (st: RState) => stateNames.get(st) ?? baseName(st);
       const layerTimelines = layer.states.map(tlOf).filter(Boolean) as Timeline[];
       for (const tl of layerTimelines) if (!layerRank.has(tl)) layerRank.set(tl, layerRank.size + 1);
+      //A state's animation that played out holds its last pose, over the earlier layers' (Rive applies every layer's state each frame)
+      //(one that goes on to the layer's Exit state when it has played out is done with the layer: nothing of it applies after)
+      const keeps = new Map<Timeline, boolean>();
+      for (const st of layer.states) {
+        const tl = tlOf(st);
+        if (!tl) continue;
+        const leaves = st.transitions.some((tr) => !(Number(tr.obj.props.flags ?? 0) & 1) && (Number(tr.obj.props.flags ?? 0) & 4) && layer.states[Number(tr.obj.props.stateToId ?? 0)]?.obj.type === 'ExitState');
+        keeps.set(tl, (keeps.get(tl) ?? true) && !leaves);
+      }
+      for (const [tl, keep] of keeps) tl.holdsEnd = keep;
       // Blend states become blends on the artboard: entering the state plays its blend, leaving stops it
       const blendOf = new Map<RState, Blend>();
       for (const st of layer.states) {

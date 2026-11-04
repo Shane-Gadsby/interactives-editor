@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
-import { Player, createProject } from 'interactives-player';
+import { Player, createProject, hitTargets } from 'interactives-player';
 import { importRive } from '../src/lib/rive-import';
 import { propKey, writeRiv, type Spec } from './rive-writer';
 
@@ -38,20 +38,76 @@ async function open(bytes: Uint8Array) {
       if (process.env.WATCH) { const cur = String(player.getVariable('Main_Animation_SM_layer1_state')) + ' r' + player.getVariable('VM_roundNum') + ' s' + player.getVariable('VM_sceneNum'); if (cur !== last) console.log('W', clock, cur); last = cur; }
     }
   };
-  const kids = () => [...(player as unknown as { instances: Set<Player> }).instances] as unknown as { session: { artboard: { name: string; logic: { nodes: { kind: string; params: Record<string, unknown> }[] } }; renderer: { element(id: string): Element } } }[];
-  //the pointer listener of a nested artboard's own state machine, as the browser would send it
-  const pointer = async (artboard: string, kind: 'pointerenter' | 'pointerdown' | 'pointerleave') => {
-    const k = kids().find((x) => x.session.artboard.name === artboard);
-    const ev = k?.session.artboard.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.type === kind);
-    const el = k && ev ? k.session.renderer.element(String(ev.params.target)) : null;
-    if (!el) throw new Error(`no ${kind} listener on ${artboard}`);
-    if (kind === 'pointerenter') el.dispatchEvent(new MouseEvent('pointerover', { bubbles: true, relatedTarget: document.body }));
-    else if (kind === 'pointerleave') el.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: document.body }));
-    else el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+  // The player's sessions, the artboards nested in it at any depth
+  type Sess = { artboard: { name: string; width: number; height: number; logic: { nodes: { id: string; kind: string; params: Record<string, unknown> }[]; edges: { from: string; to: string }[] } }; renderer: { root: HTMLElement; element(id: string): HTMLElement }; hitTree?: unknown[]; live: unknown[] };
+  type Node = { player: Player; session: Sess };
+  const all = (): Node[] => {
+    const out: Node[] = [];
+    const visit = (p: Player) => {
+      for (const k of (p as unknown as { instances: Set<Player> }).instances) {
+        out.push({ player: k, session: (k as unknown as { session: Sess }).session });
+        visit(k);
+      }
+    };
+    visit(player);
+    return out;
+  };
+  //jsdom has no layout: every artboard gets a place of its own on an imaginary page (each 10000px further along), so a position is over one artboard only
+  const places = new Map<Sess, number>();
+  const place = (n: Node) => {
+    if (!places.has(n.session)) places.set(n.session, places.size);
+    const left = places.get(n.session)! * 10000;
+    const { width, height } = n.session.artboard;
+    n.session.renderer.root.getBoundingClientRect = () => ({ left, top: 0, right: left + width, bottom: height, width, height, x: left, y: 0, toJSON: () => ({}) });
+    return left;
+  };
+  const named = (artboard: string) => {
+    const k = all().find((x) => x.session.artboard.name === artboard);
+    if (!k) throw new Error(`no artboard ${artboard}`);
+    place(k);
+    return k;
+  };
+  //where, in the artboard, the listeners' targets given are under the pointer
+  const hitsAt = (k: Node, ids: string[] | Set<string>, x: number, y: number) => hitTargets((k.session.hitTree ?? k.session.live) as never, ids instanceof Set ? ids : new Set(ids), x, y);
+  const targetsOf = (k: Node, type: string) => k.session.artboard.logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.type === type).map((n) => String(n.params.target));
+  //a point in the artboard (a step of 6) that is over every one of the targets given, and none of `not`
+  const spot = (k: Node, ids: string[], not: string[] = []) => {
+    const every = (x: number, y: number) => ids.every((id) => hitsAt(k, [id], x, y).length) && !not.some((id) => hitsAt(k, [id], x, y).length);
+    const { width, height } = k.session.artboard;
+    for (let y = 3; y < height; y += 9) for (let x = 3 - width; x < width * 2; x += 9) if (every(x, y)) return { x, y };
+    throw new Error(`no point over ${ids.length} targets of ${k.session.artboard.name}`);
+  };
+  //the pointer, as the browser sends it: client positions on the page
+  const send = (type: string, k: Node | null, at: { x: number; y: number } | null) => {
+    const left = k ? place(k) : 0;
+    const target = (k?.session ?? (player as unknown as { session: Sess }).session).renderer.root;
+    const clientX = at ? left + at.x : -5000;
+    const clientY = at ? at.y : -5000;
+    if (type === 'click') target.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX, clientY, detail: 1 }));
+    else target.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX, clientY }));
+  };
+  const move = async (k: Node | null, at: { x: number; y: number } | null) => {
+    send('pointermove', k, at);
     await flush();
   };
+  const press = async (k: Node, at: { x: number; y: number }) => {
+    await move(k, at);
+    send('pointerdown', k, at);
+    send('pointerup', k, at);
+    send('click', k, at);
+    await flush();
+  };
+  //the pointer listener of a nested artboard's own state machine, as the browser would send it
+  const pointer = async (artboard: string, kind: 'pointerenter' | 'pointerdown' | 'pointerleave') => {
+    const k = named(artboard);
+    const id = targetsOf(k, kind)[0];
+    if (!id) throw new Error(`no ${kind} listener on ${artboard}`);
+    if (kind === 'pointerleave') await move(null, null);
+    else if (kind === 'pointerenter') await move(k, spot(k, [id]));
+    else await press(k, spot(k, [id]));
+  };
   const get = (name: string) => player.getVariable(name);
-  return { res, player, run, pointer, get, time: () => clock };
+  return { res, player, run, pointer, get, time: () => clock, all, named, spot, hitsAt, targetsOf, move, press, send };
 }
 
 describe.skipIf(!existsSync(dir + '262426_-_breathing_for_calm.riv'))('the breathing sample plays through its buttons', () => {
@@ -142,9 +198,19 @@ describe.skipIf(!existsSync(dir + '262426_-_breathing_for_calm.riv'))('the breat
       expect(opened).not.toHaveBeenCalled();
       //the layer waits in its entry state until the button is pressed
       expect(t.get('Main_Animation_SM_layer3_state')).toBe('EntryState');
-      const main = t.player as unknown as { session: { artboard: { logic: { nodes: { kind: string; params: Record<string, unknown> }[] } }; renderer: { element(id: string): Element } } };
+      const main = { player: t.player, session: (t.player as unknown as { session: never }).session } as never as ReturnType<typeof t.all>[number];
       const ev = main.session.artboard.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.type === 'pointerdown')!;
-      main.session.renderer.element(String(ev.params.target)).dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      //the button slides in with the splash; it can be pressed where it is
+      let at: { x: number; y: number } | null = null;
+      for (let i = 0; i < 20 && !at; i++) {
+        try {
+          at = t.spot(main, [String(ev.params.target)]);
+        } catch {
+          await t.run(500);
+        }
+      }
+      expect(opened).not.toHaveBeenCalled();
+      await t.press(main, at!);
       await t.run(1500);
       expect(opened).toHaveBeenCalledTimes(1);
       expect(String(opened.mock.calls[0][0])).toMatch(/mental-health/);
@@ -158,30 +224,167 @@ async function open0() {
   return open(new Uint8Array(readFileSync(dir + '262426_-_breathing_for_calm.riv')));
 }
 
-describe.skipIf(!existsSync(dir + 'treasure_valley_interactive_map.riv'))('the Treasure Valley map reacts to the pointer', () => {
-  it('hovering a region shows its click target, and clicking it picks the region', async () => {
-    const t = await open(new Uint8Array(readFileSync(dir + 'treasure_valley_interactive_map.riv')));
+const tvFile = dir + 'treasure_valley_interactive_map.riv';
+
+describe.skipIf(!existsSync(tvFile))('the Treasure Valley map reacts to the pointer like the Rive runtime does', () => {
+  //what the real runtime (@rive-app/webgl2 2.49.2, MAIN with its default machine) answered for the same pointer, checked side by side
+  async function map() {
+    const t = await open(new Uint8Array(readFileSync(tvFile)));
+    await t.run(4000);
+    const tv = t.named('TREASURE VALLEY');
+    const val = (k: ReturnType<typeof t.named>, type: string) => {
+      const out = new Map<string, string>();
+      const { nodes, edges } = k.session.artboard.logic;
+      for (const n of nodes.filter((x) => x.kind === 'event.pointer' && x.params.type === type)) {
+        const to = edges.filter((e) => e.from === n.id).map((e) => nodes.find((x) => x.id === e.to)!.params.value);
+        out.set(String(n.params.target), String(to[0]));
+      }
+      return out;
+    };
+    const enters = val(tv, 'pointerenter');
+    const clicks = val(tv, 'click');
+    const city = () => String(t.get('TargetingTreasureValleyVM_targetingCitiesNum'));
+    const index = () => String(t.get('MainVM_indexNum'));
+    //where, on the map, each region's hover shapes are under the pointer
+    const enterSet = new Set(enters.keys());
+    const hits = (x: number, y: number) => t.hitsAt(tv, enterSet, x, y).map((id) => enters.get(id)!);
+    const find = (want: (h: string[]) => boolean) => {
+      for (let y = 3; y < 1080; y += 9) for (let x = 3; x < 1920; x += 9) if (want(hits(x, y))) return { x, y };
+      throw new Error('no such point');
+    };
+    return { t, tv, enters, clicks, city, index, hits, find };
+  }
+
+  it('hovering a region is a hover of that region, wherever its shapes are (not their boxes), and leaving ends it', async () => {
+    const m = await map();
     try {
-      await t.run(1000);
-      type Sess = { session: { artboard: { name: string; logic: { nodes: { id: string; kind: string; params: Record<string, unknown> }[]; edges: { from: string; to: string }[] } }; byId: Map<string, { name: string; solo?: { active: string | null }; children?: { id: string }[] }>; parents: Map<string, { id: string; solo?: { active: string | null } } | undefined>; renderer: { element(id: string): HTMLElement } } };
-      const tv = ([...(t.player as unknown as { instances: Set<Sess> }).instances] as Sess[]).find((k) => k.session.artboard.name === 'TREASURE VALLEY')!.session;
-      const nodes = tv.artboard.logic.nodes;
-      const sets = (id: string) => tv.artboard.logic.edges.filter((e) => e.from === id).map((e) => nodes.find((n) => n.id === e.to)!.params.value);
-      const enter = nodes.find((n) => n.kind === 'event.pointer' && n.params.type === 'pointerenter' && sets(n.id)[0] === '6')!;
-      const click = nodes.find((n) => n.kind === 'event.pointer' && n.params.type === 'click' && sets(n.id)[0] === '6')!;
-      tv.renderer.element(String(enter.params.target)).dispatchEvent(new MouseEvent('pointerover', { bubbles: true, relatedTarget: document.body }));
-      await t.run(1000);
-      expect(t.get('TargetingTreasureValleyVM_targetingCitiesNum')).toBe(6);
-      //the click targets' solo shows the hovered region's (the layer that follows the hover wins over the first layer's "nothing")
-      const parent = [...tv.byId.values()].find((n) => n.children?.some((c) => c.id === String(click.params.target)))!;
-      expect(parent.solo?.active).toBe(String(click.params.target));
-      tv.renderer.element(String(click.params.target)).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await flush();
-      expect(t.get('MainVM_indexNum')).toBe(6);
+      for (const region of ['6', '4', '3', '1']) {
+        const at = m.find((h) => h.length === 1 && h[0] === region);
+        await m.t.move(m.tv, at);
+        await m.t.run(300);
+        expect(m.city()).toBe(region);
+      }
+      //just off the edge of a region (inside the box that holds it): the pointer is not over it any more
+      const from = m.find((h) => h.length === 1 && h[0] === '3');
+      await m.t.move(m.tv, from);
+      await m.t.run(300);
+      expect(m.city()).toBe('3');
+      let near: { x: number; y: number } | null = null;
+      for (let r = 9; r < 400 && !near; r += 9) for (let a = 0; a < 360 && !near; a += 20) {
+        const p = { x: from.x + r * Math.cos((a * Math.PI) / 180), y: from.y + r * Math.sin((a * Math.PI) / 180) };
+        if (m.hits(p.x, p.y).length === 0) near = p;
+      }
+      await m.t.move(m.tv, near);
+      await m.t.run(300);
+      expect(m.city()).toBe('0');
+      await m.t.move(m.tv, m.find((h) => h.length === 1 && h[0] === '2'));
+      await m.t.run(300);
+      expect(m.city()).toBe('2');
+      await m.t.move(null, null);
+      await m.t.run(300);
+      expect(m.city()).toBe('0');
     } finally {
-      t.player.destroy();
+      m.t.player.destroy();
     }
-  }, 30000);
+  }, 60000);
+
+  it('regions that overlap are each under the pointer: the one entered last of those at once is the one lowest in the layers', async () => {
+    const m = await map();
+    try {
+      const combos = new Map<string, { x: number; y: number }>();
+      const aloneIn = new Map<string, { x: number; y: number }>();
+      for (let y = 3; y < 1080; y += 5) {
+        for (let x = 3; x < 1920; x += 5) {
+          const h = m.hits(x, y);
+          if (h.length > 1 && !combos.has(h.join())) combos.set(h.join(), { x, y });
+        }
+      }
+      //(east Boise and Garden City, Eagle and Garden City, Boise and Meridian: what the file's author drew)
+      expect(combos.size).toBeGreaterThan(1);
+      for (const [key, at] of combos) {
+        const regions = key.split(',');
+        await m.t.move(null, null);
+        await m.t.run(300);
+        await m.t.move(m.tv, at);
+        await m.t.run(300);
+        //hits come back from the back of the layers to the front: the real runtime answered with the back one, wherever the pointer came from
+        expect(m.city()).toBe(regions[0]);
+        //pointer already in one of them: the other one is the one that was entered
+        for (const from of regions) {
+          if (!aloneIn.has(from)) aloneIn.set(from, m.find((h) => h.length === 1 && h[0] === from));
+          await m.t.move(m.tv, aloneIn.get(from)!);
+          await m.t.run(300);
+          await m.t.move(m.tv, at);
+          await m.t.run(300);
+          const entered = regions.filter((r) => r !== from);
+          if (entered.length === 1) expect(m.city()).toBe(entered[0]);
+        }
+      }
+    } finally {
+      m.t.player.destroy();
+    }
+  }, 120000);
+
+  it('a click on a hovered region opens its view, the Boise view picks its areas, and the X goes back one view at a time', async () => {
+    const m = await map();
+    try {
+      const t = m.t;
+      //the click target of the hovered region only answers once the hover has shown it
+      const clickOf = (region: string) => [...m.clicks].find(([, v]) => v === region)![0];
+      const hoverOf = (region: string) => [...m.enters].find(([, v]) => v === region)![0];
+      const at = m.find((h) => h.length === 1 && h[0] === '6');
+      await t.move(m.tv, at);
+      await t.run(700);
+      const both = t.spot(m.tv, [hoverOf('6'), clickOf('6')]);
+      await t.press(m.tv, both);
+      await t.run(3000);
+      expect(m.index()).toBe('6');
+      //in a region view the map's own hovers are not in the way
+      await t.move(m.tv, at);
+      await t.run(500);
+      expect(String(t.get('TargetingTreasureValleyVM_targetingCitiesNum'))).toBe('0');
+      //the Boise view's own areas: hovering one, then clicking it
+      const boise = t.named('BOISE');
+      const area = (v: string) => [...boise.session.artboard.logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.type === 'pointerenter')].find((n) => String(boise.session.artboard.logic.edges.filter((e) => e.from === n.id).map((e) => boise.session.artboard.logic.nodes.find((x) => x.id === e.to)!.params.value)[0]) === v)!.params.target as string;
+      const south = t.spot(boise, [area('5')]);
+      await t.move(boise, south);
+      await t.run(500);
+      expect(String(t.get('TargetingBoiseVM_targetingSuburbanNeighborhoodNum'))).toBe('5');
+      await t.press(boise, south);
+      await t.run(3000);
+      expect(m.index()).toBe('11');
+      //X: one view back each time
+      const button = t.named('Button');
+      const x = { x: 43, y: 43 };
+      await t.press(button, x);
+      await t.run(3000);
+      expect(m.index()).toBe('6');
+      await t.press(button, x);
+      await t.run(3000);
+      expect(m.index()).toBe('0');
+      //and the map answers again once its intro has played
+      await t.run(3000);
+      const caldwell = m.find((h) => h.length === 1 && h[0] === '1');
+      await t.move(m.tv, caldwell);
+      await t.run(500);
+      expect(m.city()).toBe('1');
+    } finally {
+      m.t.player.destroy();
+    }
+  }, 120000);
+
+  it('keeps the pose of a state whose animation has played out, except for the ones that end the layer', async () => {
+    const res = await importRive(new Uint8Array(readFileSync(tvFile)), 'tv');
+    const tv = res.artboards.find((a) => a.name === 'TREASURE VALLEY')!;
+    const tl = (name: string) => tv.timelines.find((x) => x.name === name)!;
+    //the layer sits in the region's view until the file says otherwise
+    expect(tl('BOISE').holdsEnd).toBe(true);
+    expect(tl('TREASURE VALLEY_IDLE').holdsEnd).toBe(true);
+    //an exit animation that ends in the layer's Exit state is done with the layer
+    expect(tl('NAMPA exit').holdsEnd).toBe(false);
+    //(the first layer rests in its exit state until the hover changes)
+    expect(tl('Cities exit').holdsEnd).toBe(true);
+  });
 });
 
 const path = (...ids: number[]) => new Uint8Array(ids);
