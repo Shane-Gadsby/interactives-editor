@@ -482,6 +482,18 @@ const CATALOG = [
     ]
   },
   {
+    kind: "action.record",
+    label: "Record",
+    category: "action",
+    description: "Record that something happened, for Insights: counts of how often each name was recorded, and of each value it carried. Counts only, nobody is named, so do not put anything personal in the name or value. Learners' browsers send it to the page around the project (the StudyDesk learner page, which passes it to the analytics); nothing is sent from an export on its own, or when recording is off in Project > Learner records.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "name", label: "Name", type: "text", default: "milestone", help: 'What happened, in a few words ("opened hint", "chose route B"). Up to 60 characters.' },
+      { key: "value", label: "Value", type: "expr", default: "", placeholder: "optional", help: "Something short to count separately: a choice, a level, a score band. Leave empty for just the name." }
+    ]
+  },
+  {
     kind: "action.startOver",
     label: "Start over",
     category: "action",
@@ -579,6 +591,36 @@ const CATALOG = [
         default: "next"
       },
       { key: "step", label: "Step number", type: "expr", default: "1", showIf: { key: "op", values: ["goto"] }, help: "From 1. In a dot of the step bar: event.index + 1" }
+    ]
+  },
+  {
+    kind: "action.captions",
+    label: "Captions and sound",
+    category: "action",
+    description: "Change what the viewer has chosen for captions, the transcript panel and sound: turn captions on or off, make them larger or smaller, open the transcript, mute or unmute. For your own buttons when the built-in ones are hidden in Project settings. The choices are remembered in the viewer's browser.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "captionsToggle", label: "Captions: flip" },
+          { value: "captionsOn", label: "Captions: on" },
+          { value: "captionsOff", label: "Captions: off" },
+          { value: "larger", label: "Captions: larger text" },
+          { value: "smaller", label: "Captions: smaller text" },
+          { value: "transcriptToggle", label: "Transcript: flip" },
+          { value: "transcriptShow", label: "Transcript: show" },
+          { value: "transcriptHide", label: "Transcript: hide" },
+          { value: "soundToggle", label: "Sound: flip" },
+          { value: "soundOn", label: "Sound: on" },
+          { value: "soundOff", label: "Sound: off" },
+          { value: "start", label: "Sound: start what the browser held back" }
+        ],
+        default: "captionsToggle"
+      }
     ]
   },
   {
@@ -1060,8 +1102,8 @@ const MODIFIER_SHAPES = ["square", "ramp-up", "ramp-down", "triangle", "round", 
 function defaultModifier(patch = {}) {
   return { unit: "letter", start: 0, end: 100, offset: 0, shape: "square", strength: 100, x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0, blur: 0, ...patch };
 }
-const isNum$1 = (v) => typeof v === "number" && Number.isFinite(v);
-const num$1 = (v, d) => isNum$1(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
+const isNum$2 = (v) => typeof v === "number" && Number.isFinite(v);
+const num$1 = (v, d) => isNum$2(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeModifier(raw) {
   const r2 = raw && typeof raw === "object" ? raw : {};
   const d = defaultModifier();
@@ -1084,7 +1126,7 @@ function normalizeModifier(raw) {
   if (typeof r2.color === "string" && r2.color) m.color = r2.color;
   if (r2.ease !== void 0 && r2.ease !== null) m.ease = r2.ease;
   if (r2.randomize === true) m.randomize = true;
-  if (isNum$1(r2.seed)) m.seed = r2.seed;
+  if (isNum$2(r2.seed)) m.seed = r2.seed;
   return m;
 }
 const MAX_PATTERN = 300;
@@ -1328,15 +1370,15 @@ function newQuestion(kind, prefix = "q1") {
 function opts(texts, right) {
   return texts.map((text2, i) => ({ id: `o${i + 1}`, text: text2, ...right.includes(i) ? { correct: true } : {} }));
 }
-const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isObj$2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const str$1 = (v, d = "") => typeof v === "string" ? v : d;
 const num = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
 function normaliseQuestion(raw) {
-  if (!isObj$1(raw)) return null;
+  if (!isObj$2(raw)) return null;
   const kind = QUESTION_KINDS.some((k) => k.value === raw.kind) ? raw.kind : null;
   if (!kind) return null;
   const d = newQuestion(kind);
-  const list = (v, max) => Array.isArray(v) ? v.filter(isObj$1).slice(0, max) : [];
+  const list = (v, max) => Array.isArray(v) ? v.filter(isObj$2).slice(0, max) : [];
   const options = list(raw.options, MAX_OPTIONS).map((o, i) => ({
     id: str$1(o.id) || `o${i + 1}`,
     text: str$1(o.text),
@@ -1351,7 +1393,7 @@ function normaliseQuestion(raw) {
     ...b.caseSensitive === true ? { caseSensitive: true } : {},
     ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {}
   }));
-  const bank = isObj$1(raw.bank) && str$1(raw.bank.items).trim() ? { items: str$1(raw.bank.items), order: raw.bank.order === "sequence" ? "sequence" : "random" } : null;
+  const bank = isObj$2(raw.bank) && str$1(raw.bank.items).trim() ? { items: str$1(raw.bank.items), order: raw.bank.order === "sequence" ? "sequence" : "random" } : null;
   return {
     kind,
     prefix: isIdentifier(str$1(raw.prefix)) ? str$1(raw.prefix) : d.prefix,
@@ -1373,6 +1415,23 @@ function normaliseQuestion(raw) {
     bank,
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {}
   };
+}
+const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isNum$1 = (v) => typeof v === "number" && Number.isFinite(v);
+function cleanCues(v) {
+  if (!Array.isArray(v)) return [];
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const raw of v) {
+    if (!isObj$1(raw) || typeof raw.text !== "string" || !isNum$1(raw.start)) continue;
+    const start = Math.max(0, raw.start);
+    const end = isNum$1(raw.end) && raw.end > start ? raw.end : start + 1e3;
+    let id = typeof raw.id === "string" && raw.id && !seen.has(raw.id) ? raw.id : uid("cu");
+    while (seen.has(id)) id = uid("cu");
+    seen.add(id);
+    out.push({ id, start, end, text: raw.text, ...typeof raw.speaker === "string" && raw.speaker ? { speaker: raw.speaker } : {} });
+  }
+  return out;
 }
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isStr = (v) => typeof v === "string";
@@ -1546,6 +1605,14 @@ function sanitizeNode(raw, seen) {
   if ("disabled" in n && typeof n.disabled !== "boolean") delete n.disabled;
   if ("slice" in n && n.slice !== null && !(isObj(n.slice) && ["top", "right", "bottom", "left"].every((k) => isNum(n.slice[k])))) delete n.slice;
   if ("sliceTile" in n && n.sliceTile !== "stretch" && n.sliceTile !== "repeat") delete n.sliceTile;
+  if (raw.type === "video") {
+    if ("captions" in n) {
+      const cues = cleanCues(n.captions);
+      if (cues.length) n.captions = cues;
+      else delete n.captions;
+    }
+    if ("captionLang" in n && !isStr(n.captionLang)) delete n.captionLang;
+  }
   if ("inputs" in n && !isObj(n.inputs)) delete n.inputs;
   if (isObj(n.inputs)) n.inputs = Object.fromEntries(Object.entries(n.inputs).filter(([, v]) => isNum(v) || isStr(v) || typeof v === "boolean"));
   if (raw.type === "path") {
@@ -4037,6 +4104,9 @@ From left to right:
 ## Tool bar (left edge)
 Drawing tools, then the web-element tools, then **Help** at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
+## What the pointer shows
+The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
+
 ## Left panel
 Two tabs:
 
@@ -4103,6 +4173,7 @@ Open **Preferences** from the gear in the top bar (or on the projects page). The
 - **Show rulers**: rulers and guides on the canvas (also <kbd>Shift</kbd>+<kbd>R</kbd>).
 - **Show tooltips**: explanations when you hover buttons and fields.
 - **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
+- **Screen reader strip**: off by default. A strip under Preview that shows what a screen reader would be told by Announce nodes, as it is spoken. It only shows while Accessibility features is on. The same switch is in the Preview header, next to Accessibility.
 
 Press <kbd>Esc</kbd> or the **×** to close. Project-wide settings (start artboard, fit, sandbox) are in the inspector with nothing selected. See [Project settings](project-settings).`
   },
@@ -4725,10 +4796,10 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 With nothing selected, the **Tab order** section in the inspector lists every tab stop on the artboard in the order Tab visits them. Use the arrows to move a layer earlier or later, or click its name to select it. **Reset to layer order** goes back to the default. The order only applies within the player; stops you haven't placed follow the others in layer order.
 
 ## Announce
-The **Announce** action says something to screen readers without showing anything: write the text as an expression, such as \`"Correct, " + score + " of 5"\`. *Polite* waits for the current speech to finish; *Assertive* interrupts, for errors and urgent feedback. Scripts do the same with \`ix.announce(text, 'polite' | 'assertive')\`. In **Preview**, a strip under the preview shows what would be said.
+The **Announce** action says something to screen readers without showing anything: write the text as an expression, such as \`"Correct, " + score + " of 5"\`. *Polite* waits for the current speech to finish; *Assertive* interrupts, for errors and urgent feedback. Scripts do the same with \`ix.announce(text, 'polite' | 'assertive')\`. In **Preview**, a strip under the preview shows what would be said, once you switch **Screen reader** on (a button in the Preview header, or Preferences; it is off by default).
 
 ## Turning it off
-**Preferences → Accessibility features** (also a button in Preview) switches all of the above off in Preview: no extra tab stops, no keyboard clicks, no roles, no announcements, as projects played before these features existed. It is on by default. If something looks wrong, check it with the setting off; if it goes away, report it. Exported files and embedded players keep the features on. A page embedding the player can pass \`accessibility: false\` (or \`accessibility="off"\` on the web component) to turn them off.
+**Preferences → Accessibility features** (also a button in Preview) switches all of the above off in Preview: no extra tab stops, no keyboard clicks, no roles, no announcements, as projects played before these features existed. It is on by default. The **Screen reader** strip under Preview, which shows what would be announced, is a separate preference (also a button in the Preview header) and is off by default. If something looks wrong, check it with the setting off; if it goes away, report it. Exported files and embedded players keep the features on. A page embedding the player can pass \`accessibility: false\` (or \`accessibility="off"\` on the web component) to turn them off.
 
 ## What it doesn't do
 Reading order is the layer order (rearrange layers to change it). Moving focus after a button changes the artboard isn't automatic; use *Focus layer* to put it somewhere sensible. Colour contrast, missing descriptions and other problems are for an accessibility checker, not these settings.`
@@ -4821,7 +4892,7 @@ Put **Wait for time in timeline** after a condition to leave "no sooner than" a 
 
 ## Bend an edge
 1. Pick the **Bend** tool (<kbd>W</kbd>).
-2. Press on an edge of a path and drag. The edge turns into a curve that follows the pointer; a straight edge becomes curved by moving the handles of the two points at its ends.
+2. Move over an edge: the pointer becomes the **bend cursor** (an arrow with a bowed line) when a press there would bend it, and stays a plain arrow when it wouldn't. Press on the edge and drag. The edge turns into a curve that follows the pointer; a straight edge becomes curved by moving the handles of the two points at its ends.
 3. Hold <kbd>Alt</kbd> to bend one side only: just the handle at the nearer end moves and the far end stays as it is.
 
 On a rectangle, ellipse, polygon or star the tool first asks to **convert it to a path** (its outline needs points to bend). Its place, fill, stroke and keys stay; its corner radius, sides or inner ratio are replaced by the points, and its width and height no longer stretch the outline. You can also convert from the inspector (*Convert to path*).
