@@ -261,9 +261,10 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       gs.clipPath = outsideClipPath(artboard.width, artboard.height, -l, -t);
       ghostR.current.root.style.left = `${-l}px`;
       ghostR.current.root.style.top = `${-t}px`;
-    } else if (ghostR.current) {
-      ghostR.current.destroy();
+    } else {
+      ghostR.current?.destroy();
       ghostR.current = null;
+      ghostEl.current?.removeAttribute('style');
     }
     // Auto-sized text: measure and write the size back (no undo step).
     const updates: { id: string; width?: number; height?: number; x?: number; y?: number }[] = [];
