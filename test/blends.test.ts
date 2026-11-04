@@ -58,6 +58,39 @@ describe('blends in the editor', () => {
   });
 });
 
+describe('blend example, what to drag', () => {
+  it('labels the slider on the artboard, keeps everything inside it, and the help says where it is', async () => {
+    const { blendExample } = await import('../src/lib/blend-example');
+    const { createProject } = await import('interactives-player');
+    const { TOPICS, topicBody } = await import('../src/help/topics');
+    for (const [w, h] of [[800, 600], [390, 844], [1280, 720]]) {
+      const ab = createProject('ex').artboards[0];
+      ab.width = w;
+      ab.height = h;
+      const ex = blendExample(ab, ['mix']);
+      const slider = ex.nodes[1] as unknown as { x: number; y: number; width: number; height: number; type: string };
+      const texts = ex.nodes.filter((n) => n.type === 'text') as unknown as { text: string; x: number; y: number; width: number; height: number }[];
+      const caption = texts.find((t) => t.text === 'Drag me: blend weight')!;
+      expect(caption).toBeTruthy();
+      // the caption sits right above the slider
+      expect(caption.y + caption.height).toBeLessThanOrEqual(slider.y);
+      expect(slider.y - (caption.y + caption.height)).toBeLessThan(40);
+      expect(texts.some((t) => t.text === `${ex.variable.name} = {${ex.variable.name}}`)).toBe(true);
+      expect(ex.variable.name).toBe('mix2');
+      // on the artboard, wide screens and narrow ones alike (the slider and its caption, at least)
+      for (const n of [slider, caption, ...texts]) {
+        expect(n.y).toBeGreaterThanOrEqual(0);
+        expect(n.y + n.height).toBeLessThanOrEqual(h);
+        expect(n.x).toBeGreaterThanOrEqual(0);
+        expect(n.x + n.width).toBeLessThanOrEqual(w);
+      }
+    }
+    const body = topicBody(TOPICS.find((t) => t.id === 'blends')!);
+    expect(body).toContain('Drag me: blend weight');
+    expect(body).toMatch(/Preview.*top right/);
+  });
+});
+
 describe('blend example', () => {
   it('builds a ball, two poses, a slider bound to a 0..1 variable and a 1D blend that plays', async () => {
     const { blendExample } = await import('../src/lib/blend-example');

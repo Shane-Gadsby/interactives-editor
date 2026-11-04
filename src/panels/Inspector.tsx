@@ -2023,7 +2023,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
       {!list.length && (
         <button
           className="link-btn"
-          title="Add a circle, two pose timelines, a 0 to 1 variable with a slider, and a blend between the poses. Open Preview and drag the slider"
+          title="Add a circle, two pose timelines, a 0 to 1 variable with a labelled slider ('Drag me: blend weight') on the artboard, and a blend between the poses. Then open Preview and drag that slider"
           onClick={() => {
             const ex = blendExample(ab, project.variables.map((v) => v.name));
             store().update((d) => {
@@ -2034,7 +2034,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
               a.timelines.push(...ex.timelines);
               (a.blends ??= []).push(ex.blend);
             });
-            store().toast('Added an example blend. Open Preview and drag the slider: the ball mixes between the two timelines.');
+            store().toast('Added an example blend. Click Preview (top right) and drag the slider labelled “Drag me: blend weight” under the ball: it mixes between the two timelines.');
           }}
         >
           Build an example to try
