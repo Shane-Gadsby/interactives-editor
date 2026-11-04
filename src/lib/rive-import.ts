@@ -1650,10 +1650,12 @@ function importTextModifiers(ac: ArtboardCtx, fc: FileCtx, slot: number, node: S
       if (unit === 'line') fc.warnings.add('Text modifier ranges that count lines count the lines as laid out; wrapped text may differ');
       if (get(r, 'modeValue')) fc.warnings.add('Text modifier ranges that combine with others by subtracting, multiplying, min, max or difference are imported as adding');
       if (get(r, 'runId')) fc.warnings.add('Text modifier ranges limited to one text run apply to the whole text');
-      const from = get(r, 'falloffFrom');
-      const to = get(r, 'falloffTo');
-      const shape = from <= 0 && to >= 1 ? 'square' : from > 0 && to < 1 ? 'triangle' : from > 0 ? 'ramp-up' : 'ramp-down';
-      if (shape !== 'square') fc.warnings.add('Text modifier falloffs are approximated by a ramp or a triangle');
+      //Rive's falloff points sit on the same axis as the range: the weight climbs from the range's start to the first, and falls from the second to the range's end
+      const rise = get(r, 'falloffFrom');
+      const fall = get(r, 'falloffTo');
+      //(a range counted by index with the default points, 0 and 1, has no falloff; other points on one are taken on the range's own scale)
+      const ramps = byIndex && rise === 0 && fall === 1 ? false : rise > get(r, 'modifyFrom') || fall < get(r, 'modifyTo');
+      if (ramps && byIndex) fc.warnings.add('Falloff points on text modifier ranges that count by index are taken on the range\'s own scale, which has not been checked against Rive');
       const index = mods.length;
       mods.push(
         defaultModifier({
@@ -1662,7 +1664,8 @@ function importTextModifiers(ac: ArtboardCtx, fc: FileCtx, slot: number, node: S
           start: r2(pct(get(r, 'modifyFrom'))),
           end: r2(pct(get(r, 'modifyTo'))),
           offset: r2(pct(get(r, 'offset'))),
-          shape,
+          shape: ramps ? 'falloff' : 'square',
+          ...(ramps ? { falloffStart: r2(pct(rise)), falloffEnd: r2(pct(fall)) } : {}),
           strength: r2(get(r, 'strength') * 100),
           ...(move ? { x: r2(get(g, 'x')), y: r2(get(g, 'y')) } : {}),
           ...(turn ? { rotation: r2(get(g, 'rotation') * DEG) } : {}),
@@ -1676,6 +1679,10 @@ function importTextModifiers(ac: ArtboardCtx, fc: FileCtx, slot: number, node: S
         map.modifyFrom = { prop: `modifiers.${index}.start`, f: num((v) => v * 100) };
         map.modifyTo = { prop: `modifiers.${index}.end`, f: num((v) => v * 100) };
         map.offset = { prop: `modifiers.${index}.offset`, f: num((v) => v * 100) };
+        if (ramps) {
+          map.falloffFrom = { prop: `modifiers.${index}.falloffStart`, f: num((v) => v * 100) };
+          map.falloffTo = { prop: `modifiers.${index}.falloffEnd`, f: num((v) => v * 100) };
+        }
       } else fc.warnings.add('Keys on the range of text modifiers that count by index are not imported');
       addTarget(ac, ri, { nodeId: node.id, map });
       const gmap: Target['map'] = {};

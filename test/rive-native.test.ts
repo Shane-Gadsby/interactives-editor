@@ -207,11 +207,43 @@ describe('Rive text modifiers', () => {
     expect(textOf(res).modifiers![0]).toMatchObject({ x: 3, y: 4, rotation: 0, scale: 1, opacity: 1 });
   });
 
-  it('reads words, index ranges and falloffs, and warns where it approximates', async () => {
-    const res = await importRive(scene({ modifierFlags: 4, y: -5 }, [{ unitsValue: 2, typeValue: 1, modifyFrom: 1, modifyTo: 3, falloffFrom: 0.5, falloffTo: 0.5 }], 'one two three four'), 't');
+  it('reads words and index ranges', async () => {
+    const res = await importRive(scene({ modifierFlags: 4, y: -5 }, [{ unitsValue: 2, typeValue: 1, modifyFrom: 1, modifyTo: 3 }], 'one two three four'), 't');
     // words 1 to 3 of 4
-    expect(textOf(res).modifiers![0]).toMatchObject({ unit: 'word', start: 25, end: 75, shape: 'triangle' });
-    expect(res.warnings.some((w) => /falloffs are approximated/.test(w))).toBe(true);
+    expect(textOf(res).modifiers![0]).toMatchObject({ unit: 'word', start: 25, end: 75, shape: 'square' });
+    expect(res.warnings.some((w) => /falloff/.test(w))).toBe(false);
+  });
+
+  it('imports Rive falloffs as a native falloff shape, with its points', async () => {
+    const res = await importRive(scene({ modifierFlags: 4, y: -5 }, [{ modifyFrom: 0.2, modifyTo: 0.8, falloffFrom: 0.5, falloffTo: 0.6 }, { falloffFrom: 0.3 }, { modifyTo: 0.6, falloffFrom: 0, falloffTo: 0.5 }, { modifyFrom: 0.3, modifyTo: 0.7, falloffFrom: 0.25, falloffTo: 0.75 }]), 't');
+    const [a, b, c, d] = textOf(res).modifiers!;
+    expect(a).toMatchObject({ shape: 'falloff', start: 20, end: 80, falloffStart: 50, falloffEnd: 60 });
+    expect(b).toMatchObject({ shape: 'falloff', falloffStart: 30, falloffEnd: 100 });
+    expect(c).toMatchObject({ shape: 'falloff', start: 0, end: 60, falloffStart: 0, falloffEnd: 50 });
+    //points that fall outside the window leave a hard edge: a plain square
+    expect(d.shape).toBe('square');
+    expect(d.falloffStart).toBeUndefined();
+    expect(res.warnings.some((w) => /falloffs are approximated/.test(w))).toBe(false);
+  });
+
+  it('keys on the falloff points follow onto the modifier', async () => {
+    const res = await importRive(
+      writeRiv([
+        ['Artboard', { name: 'Main', width: 400, height: 200 }],
+        ['Text', { name: 'T', parentId: 0, x: 10, y: 10, sizingValue: 0 }], // 1
+        ['TextStyle', { parentId: 1, fontSize: 20 }], // 2
+        ['TextValueRun', { parentId: 1, text: 'Hello big wide world', styleId: 2 }], // 3
+        ['TextModifierGroup', { name: 'Wave', parentId: 1, modifierFlags: 4, y: -5 }], // 4
+        ['TextModifierRange', { parentId: 4, falloffFrom: 0.5 }], // 5
+        ['LinearAnimation', { name: 'A', duration: 60, fps: 60 }],
+        ['KeyedObject', { objectId: 5 }],
+        ['KeyedProperty', { propertyKey: propKey('TextModifierRange', 'falloffFrom') }],
+        ['KeyFrameDouble', { frame: 0, value: 0.2 }],
+        ['KeyFrameDouble', { frame: 60, value: 0.8 }],
+      ]),
+      't',
+    );
+    expect(res.artboards[0].timelines[0].tracks.map((t) => t.prop)).toEqual(['modifiers.0.falloffStart']);
   });
 
   it('puts one modifier on each range of a group', async () => {

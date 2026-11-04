@@ -1677,7 +1677,7 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
 }
 
 const UNIT_LABELS: Record<TextModifierUnit, string> = { letter: 'Letters', word: 'Words', line: 'Lines' };
-const SHAPE_LABELS: Record<TextModifierShape, string> = { square: 'Square', 'ramp-up': 'Ramp up', 'ramp-down': 'Ramp down', triangle: 'Triangle', round: 'Round', smooth: 'Smooth' };
+const SHAPE_LABELS: Record<TextModifierShape, string> = { square: 'Square', 'ramp-up': 'Ramp up', 'ramp-down': 'Ramp down', triangle: 'Triangle', round: 'Round', smooth: 'Smooth', falloff: 'Falloff (ramps)' };
 
 /** A number with a slider under it and a keyframe button, for a text modifier's range. */
 function ModRange({ node, prop, label, title, min, max, step = 1, fallback = 0 }: { node: SceneNode; prop: string; label: ReactNode; title: string; min: number; max: number; step?: number; fallback?: number }) {
@@ -1746,6 +1746,12 @@ function TextModifiersSection({ node }: { node: Extract<SceneNode, { type: 'text
               <CheckField label="Randomize" title="Hit the units in a scrambled (but repeatable) order" value={!!m.randomize} onChange={(v) => update(i, { randomize: v || undefined })} />
               {m.randomize && <NumberField label="Seed" title="Another seed, another order" value={m.seed ?? 0} step={1} onChange={(v) => update(i, { seed: Math.round(v) })} onCommit={() => store().commit()} />}
             </Row>
+            {m.shape === 'falloff' && (
+              <>
+                <ModRange node={node} prop={P('falloffStart')} label="Ramp up to" title="Where the weight reaches full, as a percent of the text. It climbs in a straight line from Start. At or before Start there is no ramp" min={0} max={100} fallback={m.start} />
+                <ModRange node={node} prop={P('falloffEnd')} label="Ramp down from" title="Where the weight starts to fall, as a percent of the text. It falls in a straight line to End. At or after End there is no ramp" min={0} max={100} fallback={m.end} />
+              </>
+            )}
             <ModRange node={node} prop={P('strength')} label="Strength" title="How much of the modifier applies" min={0} max={100} fallback={100} />
             <p className="hint">At full strength, inside the range:</p>
             <Row>
