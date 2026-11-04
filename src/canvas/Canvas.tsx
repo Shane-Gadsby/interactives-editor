@@ -177,6 +177,8 @@ export function Canvas() {
   penRef.current = pen;
 
   const { project, zoom, panX, panY } = s;
+  // Library copies that only back instances stay off the canvas (see canvasHidden)
+  const onCanvas = useMemo(() => project.artboards.filter((a) => !a.canvasHidden), [project.artboards]);
   const baseActive = getArtboard(project, s.activeArtboardId);
   const timeline = s.bottomTab === 'timeline' ? baseActive?.timelines.find((t) => t.id === s.activeTimelineId) ?? null : null;
   // While a timeline is open the canvas shows its frame at the playhead, so outlines and handles follow that frame too.
@@ -203,7 +205,7 @@ export function Canvas() {
   // Hit tests use what's drawn: for the open artboard that's the timeline frame at the playhead (and constraints),
   // not the layers' base values, or keyed layers couldn't be clicked once the playhead moved
   const abAt = (w: Pt): Artboard | undefined => {
-    const ab = [...project.artboards].reverse().find((a) => w.x >= a.canvasX && w.y >= a.canvasY && w.x <= a.canvasX + a.width && w.y <= a.canvasY + a.height);
+    const ab = [...onCanvas].reverse().find((a) => w.x >= a.canvasX && w.y >= a.canvasY && w.x <= a.canvasX + a.width && w.y <= a.canvasY + a.height);
     return ab && active && ab.id === active.id ? active : ab;
   };
   const local = (ab: Artboard, w: Pt): Pt => ({ x: w.x - ab.canvasX, y: w.y - ab.canvasY });
@@ -213,7 +215,7 @@ export function Canvas() {
    */
   const layerAt = (w: Pt, pickDeepest: boolean): { ab: Artboard; hit: SceneNode } | null => {
     const under = abAt(w);
-    const others = [...(active ? [active] : []), ...[...project.artboards].reverse().filter((a) => a.id !== active?.id && a.clip === false)].filter((a) => a.id !== under?.id);
+    const others = [...(active ? [active] : []), ...[...onCanvas].reverse().filter((a) => a.id !== active?.id && a.clip === false)].filter((a) => a.id !== under?.id);
     const order = [...(under ? [under] : []), ...others];
     // Visible layers win; hidden ones (drawn as ghosts) are picked only where nothing visible is
     for (const includeHidden of [false, true]) {
@@ -1269,7 +1271,7 @@ export function Canvas() {
     }
   }
 
-  for (const ab of project.artboards) {
+  for (const ab of onCanvas) {
     const tl = oscreen(ab, { x: 0, y: 0 });
     const isActive = ab.id === s.activeArtboardId;
     overlay.push(
@@ -1775,7 +1777,7 @@ export function Canvas() {
   };
 
   // Which artboards to draw at once and which to leave for the scheduler (see `viewPlan`)
-  const views = viewPlan(project.artboards, s.activeArtboardId, zoom, panX, panY, vp.current?.clientWidth || window.innerWidth, vp.current?.clientHeight || window.innerHeight);
+  const views = viewPlan(onCanvas, s.activeArtboardId, zoom, panX, panY, vp.current?.clientWidth || window.innerWidth, vp.current?.clientHeight || window.innerHeight);
 
   const showRulers = usePrefs().rulers;
   // Space pans, a drag shows what it is doing, then what a press under the pointer would do, then the tool's own
@@ -1805,7 +1807,7 @@ export function Canvas() {
       <div ref={scrollRef} className="canvas-scroll" onScroll={onScroll}>
         <div className="canvas-space" style={{ width: PAN_ORIGIN * 2, height: PAN_ORIGIN * 2 }}>
       <div className="world" style={{ left: PAN_ORIGIN, top: PAN_ORIGIN, transform: `scale(${zoom})` }}>
-        {project.artboards.map((ab) => (
+        {onCanvas.map((ab) => (
           <ArtboardView
             key={ab.id}
             deferred={views.get(ab.id)!.deferred}

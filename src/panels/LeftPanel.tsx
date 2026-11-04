@@ -182,7 +182,11 @@ function Layers() {
       <div
         key={`ab-${ab.id}`}
         className={`artboard-row${active && s.artboardSelected ? ' selected' : ''}${active ? ' active' : ''}${ab.variantOf ? ' variant' : ''}`}
-        onClick={() => store().set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? store().get().activeTimelineId : null })}
+        onClick={() => {
+          // Picking a library copy that was kept off the canvas brings it onto the canvas, so what is selected is there to see
+          if (ab.canvasHidden) setOnCanvas(ab.id, true);
+          store().set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? store().get().activeTimelineId : null });
+        }}
       >
         <button
           className="twisty"
@@ -208,9 +212,33 @@ function Layers() {
           </span>
         )}
         {ab.publish && s.project.settings.library && <span className="badge" title="Published to the library">published</span>}
+        {ab.library && (
+          <button
+            className="icon-btn row-eye"
+            title={ab.canvasHidden ? 'Off the canvas (instances still show it). Click to show it on the canvas' : 'Hide this library copy from the canvas (instances still show it)'}
+            aria-label={ab.canvasHidden ? 'Show on the canvas' : 'Hide from the canvas'}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOnCanvas(ab.id, !!ab.canvasHidden);
+            }}
+          >
+            {ab.canvasHidden ? <Icons.eyeOff width={13} /> : <Icons.eye width={13} />}
+          </button>
+        )}
       </div>
     );
   };
+  /** Library copies are read-only, but whether they are drawn on the canvas is the person's own choice. */
+  const setOnCanvas = (id: string, on: boolean) =>
+    store().update(
+      (d) => {
+        const a = d.artboards.find((x) => x.id === id);
+        if (!a) return;
+        if (on) delete a.canvasHidden;
+        else a.canvasHidden = true;
+      },
+      { library: true },
+    );
 
   const row = (ab: Artboard, n: SceneNode, depth: number, parent: SceneNode | null): JSX.Element => {
     // A Solo group or frame shows one child; the others are hidden even though their own Visible is on

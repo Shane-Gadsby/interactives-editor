@@ -27,7 +27,7 @@ export const stable = (value) => JSON.stringify(value, (key, v) => v && typeof v
 export const hashOf = (value) => cyrb53(stable(value)).toString(36)
 
 //Where an artboard sits and who it is linked to is not part of what it looks like
-const LOCAL_KEYS = ['canvasX', 'canvasY', 'guides', 'publish', 'library', 'source']
+const LOCAL_KEYS = ['canvasX', 'canvasY', 'canvasHidden', 'guides', 'publish', 'library', 'source']
 
 export const hashArtboard = (ab) => hashOf(Object.fromEntries(Object.entries(ab).filter(([k]) => !LOCAL_KEYS.includes(k))))
 
@@ -38,6 +38,7 @@ export const cleanArtboard = (ab) => {
 	delete copy.publish
 	delete copy.library
 	delete copy.source
+	delete copy.canvasHidden
 
 	return copy
 }

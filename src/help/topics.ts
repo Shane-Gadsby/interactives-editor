@@ -2247,7 +2247,7 @@ player.setData('products', [...]);
 
 ## Using a library
 - Under **Available libraries** press **Add**. Its components and colours appear under **Libraries in this project**.
-- **Drag a component onto the canvas**, or press **Place** to put it in the open artboard. The first time, the component's artboard is copied into your project as a **library artboard** (badged *library* in the layers list) and an [instance](instances) of it is placed. Placing it again reuses the same copy. **Add artboard** copies it in without placing anything.
+- **Drag a component onto the canvas**, or press **Place** to put it in the open artboard. The first time, the component's artboard is copied into your project as a **library artboard** (badged *library* in the layers list) and an [instance](instances) of it is placed. That copy is only there for the instance to use, so it is kept **off the canvas**: you see one thing placed, not two. The eye on its row in Layers shows it on the canvas (and hides it again), and picking the row shows it too. Placing it again reuses the same copy. **Add artboard** copies it onto the canvas as an artboard of its own, without placing anything.
 - A library artboard is **read-only**: its layers, timelines and interactions come from the library. You can move it and rename it. Variables, fonts, data sources and assets it needs are added to your project (a variable or data source you already have with the same name is left alone).
 - Libraries are copied, not linked live: the artboards, assets and styles are in your project, so [exports](export) and the player are self-contained.
 

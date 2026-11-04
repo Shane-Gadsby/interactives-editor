@@ -84,7 +84,7 @@ export function lockViolation(before: Project, after: Project): Artboard | null 
     if (!b || b === a) continue;
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
     for (const k of keys) {
-      if (k === 'canvasX' || k === 'canvasY' || k === 'name' || k === 'guides') continue;
+      if (k === 'canvasX' || k === 'canvasY' || k === 'canvasHidden' || k === 'name' || k === 'guides') continue;
       if ((a as unknown as Record<string, unknown>)[k] !== (b as unknown as Record<string, unknown>)[k]) return a;
     }
   }
@@ -202,6 +202,7 @@ export function applyComponents(draft: Project, libraryId: string, snap: Library
       // Where it sits on the canvas, and what you called it, stay yours until the library renames it
       copy.canvasX = old.canvasX;
       copy.canvasY = old.canvasY;
+      if (old.canvasHidden) copy.canvasHidden = true;
       draft.artboards[at] = copy;
     } else {
       copy.canvasX = right + 100;
@@ -268,12 +269,17 @@ export function detachArtboard(draft: Project, artboardId: string): boolean {
   const ab = draft.artboards.find((a) => a.id === artboardId);
   if (!ab?.library) return false;
   delete ab.library;
+  delete ab.canvasHidden;
   return true;
 }
 
 /** Stop using a library: its copies become ordinary artboards, its styles become your own. */
 export function removeLibrary(draft: Project, libraryId: string): void {
-  for (const a of draft.artboards) if (a.library?.libraryId === libraryId) delete a.library;
+  for (const a of draft.artboards) {
+    if (a.library?.libraryId !== libraryId) continue;
+    delete a.library;
+    delete a.canvasHidden;
+  }
   for (const s of [...(draft.styles?.colors ?? []), ...(draft.styles?.texts ?? [])]) if (s.library?.libraryId === libraryId) delete s.library;
   draft.libraries = (draft.libraries ?? []).filter((l) => l.id !== libraryId);
 }
@@ -330,7 +336,7 @@ function asInLibrary(project: Project, libraryId: string, ab: Artboard): Artboar
   return out;
 }
 
-const LOCAL = ['canvasX', 'canvasY', 'guides', 'publish', 'library', 'source', 'id', 'name'];
+const LOCAL = ['canvasX', 'canvasY', 'canvasHidden', 'guides', 'publish', 'library', 'source', 'id', 'name'];
 const without = (o: object) => Object.fromEntries(Object.entries(o).filter(([k]) => !LOCAL.includes(k)));
 
 function flatNodes(ab: Artboard): Map<string, { n: SceneNode; path: string }> {

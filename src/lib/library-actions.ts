@@ -53,6 +53,12 @@ export async function fetchContent(info: LibraryInfo): Promise<LibraryContent> {
   return snapshot;
 }
 
+/** Keep a library copy off the editor canvas (the instances that use it still draw). */
+function hideOnCanvas(p: Project, artboardId: string): void {
+  const ab = p.artboards.find((a) => a.id === artboardId);
+  if (ab?.library) ab.canvasHidden = true;
+}
+
 /** Download assets the project is missing from the library's copy and store them in the project. */
 async function bringAssets(libraryId: string, ids: string[]): Promise<void> {
   const projectId = store().get().project.id;
@@ -90,7 +96,16 @@ export async function useComponent(info: LibraryInfo, componentId: string, host?
     (d) => {
       const p = d as Project;
       addLibrary(p, info, content);
-      localId = applyComponents(p, info.id, content, [componentId]).ids[componentId] ?? null;
+      const applied = applyComponents(p, info.id, content, [componentId]);
+      localId = applied.ids[componentId] ?? null;
+      // Placing an instance needs the component's own copy in the project, but the person asked for one thing on the
+      // canvas, not two: copies made just for this stay off the canvas (Layers has an eye to show them)
+      if (host) for (const id of applied.added) hideOnCanvas(p, id);
+      else if (localId) {
+        // "Add artboard" asks for the artboard itself, so it shows even when a drop had left its copy hidden
+        const copy = p.artboards.find((a) => a.id === localId);
+        if (copy) delete copy.canvasHidden;
+      }
       if (host && localId) {
         const node = makeInstance(p, host.artboardId, localId, host.at);
         const ab = p.artboards.find((a) => a.id === host.artboardId);

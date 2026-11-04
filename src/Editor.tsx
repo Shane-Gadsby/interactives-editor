@@ -348,7 +348,8 @@ function zoomTo(mode: 'fit' | '100' | 'selection') {
     const b = ab && (st.selection.length ? selectionBounds(ab, st.selection) : { x: 0, y: 0, width: ab.width, height: ab.height });
     if (ab && b) box = { x: ab.canvasX + b.x, y: ab.canvasY + b.y, width: b.width, height: b.height };
   } else {
-    const abs = st.project.artboards;
+    const drawn = st.project.artboards.filter((a) => !a.canvasHidden);
+    const abs = drawn.length ? drawn : st.project.artboards;
     const minX = Math.min(...abs.map((a) => a.canvasX));
     const minY = Math.min(...abs.map((a) => a.canvasY));
     const maxX = Math.max(...abs.map((a) => a.canvasX + a.width));
