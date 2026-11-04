@@ -19,6 +19,44 @@ Projects are stored on the server in MongoDB. They export as a single self-conta
 
 The runtime lives in the sibling repo [interactives-player](https://github.com/Shane-Gadsby/interactives-player). The editor draws its canvas with that player's renderer, and its exports embed that player.
 
+## What's in 0.5
+
+Interactives 0.5 is the first beta. A short tour of what is in it, newest ideas first; every item has a page in the in-app help (F1), and the Welcome page has a **Getting started as a beta tester** section with what to try first, how to report a problem and the known limits.
+
+**Working together**
+- **Share and Export are separate.** Export only makes files (single HTML, package, JSON, Lottie, PNG, SVG, the public interface reference). Share holds the links and people: **Share link** (plus the **Link for StudyDesk**), **Invite to collaborate**, **Save as template** and **Share for review**.
+- **Collaborators**, invited by name, email or username (`/api/people` looks them up in the suite's `user-lookup`, staff only), edit live with the owner.
+- **Review comments**: pins that follow their layer, replies, resolve, assign, @mention, in-app notices, a review link with its own page (guests optional), kept apart from the project so they are never exported.
+- **Templates, examples and remix**: Save as template with a checklist of what to change, a Templates tab (Mine, Shared, Built-in, Examples), a Checklist tab in projects made from one, Update from template, **Allow remix** on a share link, and read-only examples shipped in `examples/` (now including a bones rig, a matching question and a hotspot question).
+- **Libraries** of components and styles, and **live editing** with revision history.
+
+**Learners**
+- The **learner page** (`/play/:token`, the Link for StudyDesk) remembers progress, reports score and completion, and passes on what learners do.
+- **Results and progress**, **Insights** (artboards reached, a click heat map on the canvas, steps, answers per question, your own records) and **Learner records** switches.
+
+**Questions and interactivity**
+- The **question kit**: multiple choice and response, true/false, fill in the blank, ordering, **matching** and **hotspot**, with hints, tries, scoring, shuffle and banks. Drag and drop, step-through explainers, narration and captions, a public interface for hosts, scripts, script layers and shader layers.
+- **Accessibility**: layer roles and keyboard operation, and a checker with a sign-off report.
+
+**Design and layout**
+- **Themes and colour tokens** (Light, Dark, High contrast), colour presets from the toolbox palette, several fills and strokes per shape, paint order, per-corner radius.
+- **Auto layout** with grids, stacks, a layout item section, line gap, **percent padding, margin and gap**, and hidden layers that take no space.
+- **See-through layers are not clickable** by default while playing (a faded layer lets clicks through), with a per-layer **Clickable while see-through**; paths, polygons and stars take clicks only where painted.
+- **Layers hanging outside a clipping artboard** show faintly beside it on the canvas (a preference), so they can still be found and picked.
+- The editor itself: **tool groups** that fold (Shapes and Draw open, Media, Web and Rig folded), a 320 px Inspector, resizable panels, a **timeline settings** gear, a floating text toolbar, themed dialogs everywhere.
+
+**Motion**
+- Timelines with markers, frame snapping, blends and transitions, joysticks, text modifiers, shape morphing and the Bend tool, and **bones and IK** with a **Build an example to try** button.
+
+**Import and export**
+- Rive **.riv** (state machines, view models, layouts, joysticks, masks, scroll, lists, bones) and the Rive editor's **.rev**, Lottie and dotLottie, Photoshop, Illustrator, PDF, AutoCAD DXF, VectorCraft, PhotoCraft and SVG, with linked design files that update when the file does.
+
+**Under the hood**
+- The editor records how it is used and where it breaks (mandatory, scrubbed, written down in the help topic *What the editor records*), and published projects report how they ran. The **version tag** (`v<release> · <editor commit>.<player commit>`, from `src/lib/version.ts` and `vite.config.ts`) shows beside the help search and in the Preferences title bar so a bug report can name the exact build.
+- An MCP server lets an AI agent join a live session and edit alongside people.
+
+**Known limits** are listed in the help (Welcome, *Known limits in 0.5*): results go to the Toolbox's records and not the StudyDesk gradebook yet; themes are colours only; libraries keep only their latest version and carry no scripts; comments have no email; linking design files needs Chrome or Edge; `.dwg` files must be saved as `.dxf`.
+
 ## Layout on disk
 
 Like the rest of the StudyDesk Toolbox suite, this app expects sibling checkouts:
@@ -39,8 +77,15 @@ npm run build    # builds ../interactives-player, then the editor into dist/ (co
 npm start        # node index.js, http://127.0.0.1:3048/interactives/ (behind haproxy: /interactives)
 npm run server   # same, under nodemon
 npm run dev      # vite dev server with HMR; /api is proxied to the server on 3048
-npm test         # vitest
+npm test         # vitest (read the summary lines: a red file is a real failure)
+npm run typecheck   # tsc --noEmit for the app and for the MCP server
+npm run build:mcp   # just the MCP bundle, mcp/dist/interactives-mcp.mjs (committed)
+npm run player:build   # builds ../interactives-player (build and predev run it for you)
+PORT=3249 node index.js   # a second copy beside the one on 3048 (same database; mind what you create)
+node scripts/export-example.mjs <projectId> <key> --title "..." --description "..."   # ship a project as an example, see examples/README.md
 ```
+
+Before every commit that changes `src/`: `npm run build` (it type-checks, builds the player first, and rebuilds `dist/` and `mcp/dist/`), then `npm test`.
 
 `dist/` is committed on purpose. Test and prod deploy with `git pull` + `npm install` + restart and have no build step. Run `npm run build` before every commit that changes `src/`.
 
@@ -51,11 +96,15 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | Route | Does |
 |---|---|
 | `GET /api/session` | who the session is, and whether they're a power user |
+| `GET/PUT /api/prefs` | the person's own preferences (`{prefs}`, whitelisted keys: wheel, theme, default font, rulers, tooltips, accessibility, comment notices and so on), kept by username in `prefs` (`guest` with no session) |
+| `GET /api/people?q=` | people to invite, by name, email or username (2 characters or more, at most 8 back): the suite's `lti-analytics.user-lookup`, staff only (students are never listed). 401 for no session once `SUITE_SESSION_ENFORCE=1` |
 | `GET /api/projects` | your projects. `?all=1` returns everyone's, and is honoured only for admins and power users |
 | `GET/PUT/DELETE /api/projects/:id` | load / save (`{project, rev}`, a stale `rev` gets a 409) / delete with assets |
 | `PATCH /api/projects/:id/meta` | `{tags?, folder?}`: the projects page's tags (up to 20, 40 characters each) and one-level folder. Stored on the mongo document beside `name`, not in the project JSON, and no rev bump |
 | `POST /api/projects/:id/duplicate` | copy a project and its assets under a new id made by the server (`{name?}` in, `{id}` out) |
 | `GET /api/projects/:id/assets` | asset list |
+| `GET/PUT /api/projects/:id/thumbnail` | the projects page picture: a small JPEG of the start artboard, put by the editor as people work |
+| `GET/POST /api/projects/:id/collaborators`, `DELETE .../collaborators/:username` | the people the owner invited: who is on it (anyone who can open the project), add one (`{username, name?}`, owner or power user), remove one (the owner removes anyone, a collaborator can take themselves off). Stored on the project record as `collaborators[]`; they see the project on their own list and can edit, comment, export and share it, but only the owner deletes it |
 | `PUT/GET/DELETE /api/projects/:id/assets/:assetId` | raw asset bytes |
 | `GET /api/projects/:id/live?clientId&since` | live editing stream (Server-Sent Events: `hello`, `ops`, `presence`, `reset`, `deleted`) |
 | `POST /api/projects/:id/ops` | a batch of document ops (`shared/ops.mjs`); the server orders, applies and broadcasts them |
@@ -98,6 +147,7 @@ Data lives in two places:
   - `projects`: `{_id, name, owner, created, updated, rev, meta, doc, share?}`, where `doc` is the project JSON stored as a string.
   - `libraries`: `{_id (the project id), name, owner, version, hash, updated, note, shared: {everyone, users[]}, components, internals, styles, history[], snapshot}`. One per published library; `snapshot` is the latest version's JSON string (artboards, variables, fonts, data sources, asset records, styles) and `history` keeps a short list of what each version held. A project's own document gets `library: {version, updated}` when published, and `meta.library` says it is marked as a library.
   - `templates`: `{_id, name, description, owner, created, updated, version, hash, shared: {everyone}, checklist[], source (the project it was saved from), thumb, artboards, preview, history[], snapshot}`. One per saved template; `snapshot` is the project JSON as a string. Files: `storage/_templates/<id>/` (asset files with `<id>.json` sidecars, and `thumb.jpg`). Indexes `owner.username_1` and `shared.everyone_1` in `suite-libs/indexes.js`.
+  - `prefs`: `{_id (username, or `guest`), prefs, updated}`: the person's own editor preferences, read and written by `/api/prefs` and kept by the browser too.
   - `revisions`: `{_id, project, created, rev, by, reason, size, doc}`. A snapshot at most every 5 minutes per project while it is saved (PUT or live room save), plus one before each restore. The newest 100 per project are kept.
 - **Asset files:** stored under `storage/<projectId>/<assetId>`, each with a `.json` sidecar. A published library's snapshot assets are copied to `storage/_libraries/<projectId>/` (same layout) so they survive edits to the library project. Share links are `storage/shares/<token>.html`. `INTERACTIVES_STORAGE` moves that folder; on test and prod it is symlinked to the larger storage pool. `storage/` is gitignored. Because a project id is a folder name, `validID` (in `shared/safety.mjs`) refuses `shares`, `thumbs`, `_libraries` and anything starting with `_`. Asset responses (project and library) go through `assetHeaders` in the same file: `nosniff`; images (not svg), video, audio, fonts, JSON, CSV and plain text keep their type; svg gets a CSP that stops scripts; anything else is served as `application/octet-stream` with `Content-Disposition: attachment`.
 
@@ -169,6 +219,21 @@ db.ingest.find({app: 'Interactives Editor', 'meta.user.username': '<username>', 
 
 `mcp/server.ts` is an MCP server (stdio JSON-RPC, no dependencies) that lets an AI agent join a project's live room as `<name> (AI)`, read it, edit it through the same ops as the editor, and see each person's selection. `npm run build:mcp` (also part of `npm run build`) bundles it with the player's catalog and the help topics into `mcp/dist/interactives-mcp.mjs`, which is committed like `dist/`. Env: `INTERACTIVES_URL`, `INTERACTIVES_SESSION_ID` (sent as `X-Session-ID`), `INTERACTIVES_AGENT_NAME`. The help page "AI agents (MCP)" has the client setup. The live stream takes `?agent=<name>` for this.
 
+## Repo map
+
+| Path | What |
+|---|---|
+| `index.js` | the whole server (Express 5 + MongoDB), see above |
+| `shared/` | plain ESM used by both the server and the browser: ops, comments, learner records, templates, library snapshots, usage report, safety checks (each has its tests in `test/`) |
+| `src/` | the editor (React + TypeScript + Vite), below |
+| `dist/`, `mcp/dist/` | the committed builds (`npm run build`), served by `index.js` and used by the MCP clients |
+| `public/help/` | the pictures and clips the in-app help shows (`![Caption](help/name.png)`; pictures under 150 KB, clips under 1.5 MB and H.264 so every browser plays them, checked by `test/help.test.ts`) |
+| `examples/` | finished projects that show on the Templates tab, read only (see `examples/README.md`) |
+| `scripts/` | `export-example.mjs`, which copies a project from a running editor into `examples/` |
+| `../research/` | not in this repo: the importers' format notes and sample files (`rive/`, `craft/`, `psd/`) sit beside both repos in the interactives folder, and the tests that use them skip when it is missing |
+| `test/` | Vitest, one file per area (jsdom for the UI, a fake request harness for the server) |
+| `storage/` | asset files, share pages and template files (gitignored), see *Data lives in two places* |
+
 ## Frontend (`src/`)
 
 | Path | What |
@@ -210,7 +275,8 @@ db.ingest.find({app: 'Interactives Editor', 'meta.user.username': '<username>', 
 | `lib/image-export.ts` | PNG/SVG pictures of an artboard (the renderer inside `<foreignObject>`, assets and fonts inlined) |
 | `lib/question-kit.ts`, `panels/QuestionSection.tsx` | The question kit. Add question (toolbar) builds a frame of real layers (prompt, one option layer repeated over `<prefix>_items`, buttons, feedback), the question's variables and a few interaction nodes (tagged `kit`). `syncQuestion` brings variables, answer area and graph in line after any settings change without rewriting the look of layers that exist (a type change rebuilds only the answer area; a prefix change renames variables and what reads them; a copy of a question is made independent by `adoptQuestions`). Layers are found by their `questionPart` marker. Settings, grading and banks are the player's `question.ts`. Matching and hotspot are static layer sets rather than a repeater (draggables cannot be repeated): `syncPairs` and `syncAreas` add, remove and re-index the per-pair or per-area layers (found by `matchTerm:<id>`, `matchZone:<id>`, `spot:<id>`), `setAreaShape` swaps an area between rectangle, ellipse and polygon keeping its id, and `growAreas` is the hotspot tolerance. Keep a layer that sits in a drag layout out of the flow (`position: absolute`): the drag engine measures zones from the computed layout. Tests: `test/question-kit.test.ts`, `test/question-match-spot.test.ts` |
 | `canvas/ghost.ts` | which top-level layers hang outside a clipping artboard (they get a faint second copy, drawn by `ArtboardView` with its own renderer, outside the artboard only), and where a click can pick them. Editor canvas only: the player and exports clip. Switch: the `ghostOutside` preference |
-| `lib/prefs.ts` | per-person preferences in localStorage (wheel zoom vs pan, tooltips, rulers, accessibility features, `ghostOutside`). `accessibility` (default on) is passed to Preview as the player's `accessibility` option through `standaloneHtml`; exports and embeds keep it on |
+| `lib/version.ts`, `components/PrefsModal.tsx`, `help/Help.tsx` | the version tag. `lib/version.ts` reads `__IX_VERSION__` (package.json `version`) and `__IX_BUILD_ID__` (editor commit `.` player commit), both set by `vite.config.ts` at build time (`dev` when run from vite's dev server). It renders in the Preferences title bar and beside the help search, with the full label as its tooltip |
+| `lib/prefs.ts` | per-person preferences, kept in localStorage and mirrored to `/api/prefs` (wheel zoom vs pan, theme, default font, tooltips, rulers, accessibility features, comment notices, `ghostOutside`). `accessibility` (default on) is passed to Preview as the player's `accessibility` option through `standaloneHtml`; exports and embeds keep it on |
 | `panels/AccessibilitySections.tsx` | the inspector's Accessibility section (role, text alternative, description, tab stop) and the artboard's Tab order list |
 | `help/` | the in-app help: `topics.ts` (the docs, with the node and property references generated from the catalog), `tutorials.ts` (the Getting started tutorials), search, drawer, `#/help/<topic>` page, F1 / Ctrl+K quick search. `markdown.tsx` also shows pictures and clips: put `![Caption](help/name.png)` (or `.mp4`) on a line of its own and the file in `public/help/` (Vite copies it to `dist/help/`; keep pictures under 150 KB and clips under 1.5 MB). `test/help.test.ts` checks every topic link, anchor and media file |
 | `components/tooltips.ts`, `components/tips.ts` | styled tooltips for every `title`, and the standard explanations for field labels |

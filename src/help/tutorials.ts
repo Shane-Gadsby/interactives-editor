@@ -15,7 +15,7 @@ export const TUTORIALS: HelpTopic[] = [
 
 This is how it looks when it is done:
 
-![The finished animation: Record is on, two keyframes are set, and the box slides when you press Play.](help/first-animation.mp4)
+![The finished animation in the Timeline tab: Play slides the box from the left to the right in one second, and the Record button turns the Inspector's top bar red so every change becomes a keyframe.](help/first-animation.mp4)
 
 ## 1. Make a project
 
@@ -203,7 +203,7 @@ You now have: click → flip \`lit\` → add 1 to \`taps\`.
 - Make a variable called \`mode\` with **Type** **Choice** and the options \`off, on, broken\`. A choice shows as a dropdown wherever you set it.
 - Bind the bulb's fill through a **Look up** converter (use **+ Convert…** under the binding): it lists every option for you to give a colour.
 - Use an **If** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **If** has a **true** and a **false** output.
-- Tick **Persist** on a variable in the Variables tab to remember its value in the visitor's browser between visits.
+- Tick **Remember** on a variable in the Variables tab to remember its value in the visitor's browser between visits.
 
 ## What you learned
 
@@ -314,7 +314,7 @@ Full details, including what each format does and doesn't carry over, are in [Im
 
 ## 3. Export a single file
 
-1. Press **Export** at the top right.
+1. Press **Export** at the top right (it is only for files).
 2. Choose **Single HTML file**. Your browser downloads one \`.html\` file that holds the player, the project and every image, font and sound.
 3. Upload it anywhere that serves web pages, or show it in an iframe. It works offline too.
 
@@ -324,11 +324,15 @@ Full details, including what each format does and doesn't carry over, are in [Im
 
 A share link needs no uploading. Anyone with the link can play the project in their browser. They can't edit it.
 
-1. Choose **Export → Share link…**.
+1. Choose **Share → Share link…** (the **Share** button is next to **Export**).
 2. Press **Create share link**. A link appears.
 3. Press **Copy** and send it, or **Open** to try it.
 4. The link is a snapshot. When you've changed the project, open the dialog again and press **Update to the latest version**.
 5. To stop sharing, press **Turn off link** and confirm. The link then shows a "turned off" page.
+
+Under it is the **Link for StudyDesk**. Use that one inside StudyDesk when you want each learner's score and progress kept, or when you want to see [Insights](insights). Tick **Allow remix** if you are happy for staff to copy the project into their own projects.
+
+![The Share menu: Share link, Invite to collaborate, Save as template and Share for review.](help/share-menu.png)
 
 ![The Share link dialog: the link with Copy and Open, then Update to the latest version and Turn off link.](help/share-link-dialog.png)
 
@@ -344,7 +348,10 @@ See [Embedding and the player API](embedding) for the iframe snippet, how the pa
 
 ## 7. Work with other people
 
-- A project can be opened by its owner, and by staff with power-user access (they use the all-projects view on the projects page). When two or more people are in the same project, a **Live** badge shows, their initials appear at the top, and you see each other's cursors. To let someone else play it without editing, send a share link instead. See [Live editing and saving](live-editing).
+- **Invite someone to edit with you.** Choose **Share → Invite to collaborate…**, type their name and pick them from the list. The project appears on their projects page. When two or more people are in it, their initials appear at the top and you see each other's cursors. See [Live editing and saving](live-editing#inviting-people).
+- **Ask for comments, not edits.** Choose **Share → Share for review…** and send the review link. Reviewers pin notes on the project and you answer them in the **Comments** tab. See [Review comments](comments).
+- **Let others start from yours.** Choose **Share → Save as template…** to make a template with a checklist, or tick **Allow remix** on the Link for StudyDesk. See [Templates, examples and remix](templates).
+- To let someone just play it, send a share link.
 - An AI agent can join the same way. See [AI agents (MCP)](ai-agents).
 
 ## You're done

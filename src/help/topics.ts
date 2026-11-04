@@ -24,7 +24,62 @@ export const TOPICS: HelpTopic[] = [
     keywords: 'intro overview start getting started tutorial beginner first learn new user onboarding glossary words',
     body: `Interactives builds 2D interactive pieces for the web: animated diagrams, explainers, quizzes, small games and UI prototypes. You draw on artboards, animate with timelines, wire up behaviour with an interaction graph, and publish a single HTML file or a package that the player runs anywhere. Everything runs in your browser and saves as you work.
 
-![The editor: tools down the left edge, then Layers and Assets, the artboards in the middle, the Inspector on the right, and the Timeline, Interactions, Scripts, Variables, Data and Usage tabs along the bottom.](help/editor-overview.png)
+![The editor: tools down the left edge, then Layers, Assets, Libraries and Comments, the artboards in the middle, the Inspector on the right, and the Timeline, Interactions, Scripts, Variables, Data and other tabs along the bottom. Share and Export are at the top right.](help/editor-overview.png)
+
+## Getting started as a beta tester
+
+Thank you for trying Interactives 0.5. It is a beta: the main parts work, a few edges are rough, and what you find now decides what gets fixed next. You don't need to read anything first. Follow the list below, and open the help page it links to when you want the detail.
+
+### What to try first
+
+About half an hour, in this order. Each step says what should happen, so you can tell when it doesn't.
+
+1. **Play something finished.** On the projects page open the **Templates** tab, then **Examples**. Press **Play** on *Lamp*, *Bones and IK*, *Matching question* and *Hotspot question*. They should run with nothing to set up. Press **Make my copy** on one and change something in it. See [Templates, examples and remix](templates).
+2. **Build something small.** Do [Tutorial 1](tutorial-first-animation) and [Tutorial 2](tutorial-first-interaction). A box should slide across the artboard, then a button should make it slide.
+3. **Add a question.** Open **Web** in the tool bar, press **Add question** and choose **Matching (drag and drop)**. Press **Preview**, drop two terms in the wrong places and press **Check answer**, then fix them and check again. See [Questions and quizzes](question-kit).
+4. **Start from a template.** On the **Templates** tab choose **Built-in**, then **Quiz**, then **Use template**. Work down the **Checklist** tab along the bottom, ticking things off as you change them.
+5. **Share it.** Choose **Share**, then **Share link**, and open the link in a private window: it should play. Then choose **Share for review**, press **Create review link** and open it (tick **Let people comment without signing in** if you open it somewhere you aren't signed in to StudyDesk). Click on the artboard and write a note. Back in the editor the **Comments** tab shows it. See [Exporting](export#sharing) and [Review comments](comments).
+6. **Bring in a file of your own.** Use **Import** on the projects page with a Rive, Photoshop, Illustrator, SVG or Lottie file you already have. The import report lists anything that didn't come across exactly. See [Importing](import).
+
+### What is new to look at
+
+Everything here is new or much changed in 0.5, and each has a page in this help:
+
+- [Themes and colour tokens](themes): name a colour once and give it a value for Light, Dark and High contrast.
+- Layers that hang outside a clipping artboard now show faintly beside it on the canvas, and a hidden layer in an auto-layout frame takes no space. See [Layers](layers-panel) and [Auto layout](auto-layout).
+- [Questions and quizzes](question-kit): matching and hotspot questions. [Bones and skinning](bones): **Build an example to try**.
+- [Auto layout](auto-layout#percent-padding-margin-and-gap): percent padding, margin and gap.
+- [Review comments](comments), [inviting people by name](live-editing#inviting-people) and the **Share** menu next to **Export**.
+- [Insights](insights) and [Results and progress](results), through the **Link for StudyDesk**.
+- [Importing](import): Rive **.riv** files and the Rive editor's **.rev** files.
+- Folding tool groups in the tool bar, and the gear beside the timeline for its settings. See [The editor at a glance](interface) and [Timelines and keyframes](timelines#timeline-settings).
+
+### Reporting a problem
+
+Beside the help search box, and in the title bar of **Preferences**, is a small tag like \`v0.5.0 · 1a2b3c4.5d6e7f8\`. It is the version you are running: the release, then the editor build and the player build. **Put it in every report**, because it tells us exactly which code you had.
+
+![The version tag beside the help search box.](help/version-tag.png)
+
+A report that can be acted on has:
+- the **version tag**;
+- what you were trying to do, what you expected and what happened instead (a screenshot helps, and a short screen recording is better still);
+- the **project name**, and the steps from a fresh project if you can find them. If the project is the problem and you can share it, send a **.ixp** package: **Export**, then **Project package**;
+- your **browser**, and anything red in its console (<kbd>F12</kbd>, then **Console**) if you know how to look.
+
+Send it to whoever invited you to the beta. The editor also records its own faults on its own, without any names or content (see [What the editor records](what-is-recorded)), so a short note from you about what you were doing is what tells us the rest. Quick answers to common questions are in [Troubleshooting and common questions](troubleshooting).
+
+### Known limits in 0.5
+
+- **Browser.** Use a current Chrome or Edge. Linking design files (so changes in Photoshop or Illustrator flow in) needs the browser's file access, which only those two have. Everything else is meant to work in any current browser.
+- **Results are the Toolbox's own.** A learner's score and completion are kept per learner and course in the Toolbox, not sent to the StudyDesk gradebook yet. Results and Insights only come from the **Link for StudyDesk**, and only for learners signed in to StudyDesk. See [Results and progress](results) and [Insights](insights).
+- **Share links are snapshots.** After you change a project, press **Update to the latest version** in the Share link dialog, or learners keep seeing the old one.
+- **Undo is yours alone.** In a live session it only undoes your own changes. Use the revision history to go further back. See [Live editing and saving](live-editing).
+- **Comments have no email.** You are told in the editor (and by the bell on the projects page), not by mail. Anyone with a review link can read the whole project.
+- **Libraries** carry artboards, styles, variables, fonts, data and assets, not project scripts, and only the latest version is kept. See [Libraries](libraries).
+- **Themes are colours only.** Fonts, sizes and spacing don't follow a theme yet, and colours inside script and shader layers don't either.
+- **Bones** have no weight painting brush yet: set weights per point in the Inspector.
+- **Imports are close, not exact.** Lottie expressions, masks and mattes, and some Rive and Photoshop effects, can't be carried over, and \`.dwg\` files have to be saved as \`.dxf\` first. The import report is the whole list.
+- **The accessibility checker reports what it found**, never that a project is compliant. See [Accessibility checker](accessibility-checker).
 
 ## New here? Start with the tutorials
 
@@ -36,7 +91,7 @@ Five short, hands-on tutorials, in order. Each has numbered steps you can follow
 4. [Importing a design file](tutorial-import-design): bring in a Photoshop, Illustrator, PDF, AutoCAD, Rive or Lottie file.
 5. [Publishing and sharing](tutorial-publish): export a single HTML file or make a share link.
 
-If you like to look around first, read [The editor at a glance](interface). If something isn't working as you expect, try [Troubleshooting and common questions](troubleshooting).
+Prefer to start from something finished? The **Templates** tab on the projects page has built-in starters and example projects you can play and copy: see [Templates, examples and remix](templates). If you like to look around first, read [The editor at a glance](interface). If something isn't working as you expect, try [Troubleshooting and common questions](troubleshooting).
 
 ## How a project fits together
 
@@ -66,7 +121,7 @@ If you like to look around first, read [The editor at a glance](interface). If s
 
 ## Where to get help
 
-Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pages. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. See [Using this help](help).
+Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pages. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small grey tag beside the search box (for example \`v0.5.0 · 1a2b3c4.5d6e7f8\`) is the version you are running: quote it when you report a problem. See [Using this help](help).
 
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`,
   },
@@ -85,6 +140,7 @@ Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pag
 
 - **New project** (top right, or the **+** card) makes an empty project with one artboard called **Home**. Your default font is added to it. See [Preferences](preferences).
 - Click a card's picture to open the project. **Help** and the gear (**Preferences**) are at the top right too.
+- The **Templates** tab (next to **Projects**) starts a project from a template, or from one of the finished examples. See [Templates, examples and remix](templates).
 - **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`) or PhotoCraft (\`.pcraft\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
 - Each card has three icon buttons: **Duplicate** (a copy of the project and its assets), **Export** a \`${PACKAGE_EXTENSION}\` package (a download of the whole project) and **Delete**. Delete asks first, and can't be undone, so download a package if you might want the project back.
 - With no projects yet the page shows **Create your first project**.
@@ -131,15 +187,15 @@ From left to right:
 - **All projects** (the house): back to the projects page.
 - The **project name**. Click to rename.
 - The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason).
-- **Live**, when others are in the project too: **Live**, **Reconnecting** or **Deleted**. Their initials show beside it. See [Live editing and saving](live-editing).
+- **Live**: the project's live connection, **Live**, **Reconnecting** or **Deleted**. When other people are in the project too, their initials show beside it. See [Live editing and saving](live-editing).
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
 - Zoom: **−**, the percentage (click it to fit everything) and **+**.
-- **Preferences** (the gear) and **Help**.
-- **Preview** and **Export**.
+- **Preferences** (the gear, with the version tag in its title bar) and **Help**.
+- **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge)
-**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## What the pointer shows
 The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
@@ -147,10 +203,12 @@ The pointer says what a press will do. Over a selected layer it is the **move** 
 When pressing will ask you something first, a note beside the pointer says so before you press: over a rectangle, ellipse, polygon or star the **Bend** tool says it will ask to turn it into a path, and dragging layers over another artboard says letting go will offer to move them there.
 
 ## Left panel
-Two tabs:
+Four tabs:
 
 - **Layers**: every artboard in the project, with its layer tree. Click to select, drag to reorder or nest, hover for the lock and the eye. See [Layers, hidden and locked layers](layers-panel).
 - **Assets**: images, video, audio, fonts and data files in the project. See [The Assets panel](assets).
+- **Libraries**: components and styles shared between projects. See [Libraries](libraries).
+- **Comments**: the review notes pinned on the project, with filters. See [Review comments](comments).
 
 Drag the left and right panels' inner edges (beside the canvas) to make them wider or narrower; double-click an edge to put it back. With an edge focused, the arrow keys move it (<kbd>Shift</kbd> for bigger steps). The widths are remembered in this browser.
 
@@ -158,10 +216,10 @@ Drag the left and right panels' inner edges (beside the canvas) to make them wid
 All artboards side by side. See [Moving around the canvas](canvas). Right-click for menus: see [Layers, hidden and locked layers](layers-panel#right-click-menus).
 
 ## Inspector (right)
-Settings for the selection. A layer's settings start with **Layer** (name, position, size, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard, its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
+Settings for the selection. A layer's settings start with **Layer** (name, position, size, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard and its **Responsive**, **Steps**, **Joysticks**, **Blends** and **Bones** sections, then the **Project** settings and the **Fonts**. The Inspector starts 320 px wide. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
 
 ## Bottom panel
-**Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility** and **Usage**. Click a tab to open it, click it again to close it, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker) and [Usage](usage).
+**Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility**, **Insights**, **Public interface**, **Themes** and **Usage**. A project made from a template also has a **Checklist** tab. Click a tab to open it, click it again to close it, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker), [Insights](insights), [Public interface](public-interface), [Themes](themes), [Usage](usage) and [Templates](templates#use-a-template).
 
 ## Preview
 **Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. The **Debug** panel (on by default) shows:
@@ -206,7 +264,7 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     keywords: 'settings options wheel tooltips',
     body: `![The Preferences dialog.](help/preferences.png)
 
-Open **Preferences** from the gear in the top bar (or on the projects page). They are yours: saved with your account, so they follow you to any browser you sign in on.
+Open **Preferences** from the gear in the top bar (or on the projects page). They are yours: saved with your account, so they follow you to any browser you sign in on. The small tag in the title bar (for example \`v0.5.0 · 1a2b3c4.5d6e7f8\`) is the version of Interactives you are running: the release, then the editor build and the player build. It is the first thing to put in a problem report, and it is shown beside the help search too.
 
 - **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*.
@@ -708,6 +766,8 @@ Set a frame's **Overflow** to *Scroll vertically*, *Scroll horizontally* or *Scr
 | Hug width / height | The frame shrinks or grows to fit its children |
 | Layout | *Row or column* (above), *Grid* or *Stack*: see [Grids and stacks](#grids-and-stacks) below |
 
+A **hidden** layer takes no space in the frame, in the editor and in the player: hide one and the others close up over the gap it left, show it and they make room again.
+
 ![A frame whose Wrap is ticked: the nine cards fill a row, then continue on the next. Gap is 12 between cards and Line gap is 40 between the rows.](help/line-gap.png)
 
 ![Changing Line gap and Gap: the rows move apart and the cards spread or regroup.](help/line-gap.mp4)
@@ -719,6 +779,8 @@ A percent is worked out again on every layout, so it follows the frame as it is 
 
 - **Padding and gap**: the inner width of the auto-layout frame this one sits in, or this frame's own width when it is not in one (the artboard's top layout, for one).
 - **Margin**: the inner width of the frame that lays the layer out.
+
+![The Auto layout section of a frame with the Gap switched to a percent: the small button at the right of the field says % and shows px again when pressed.](help/layout-percent.png)
 
 A frame that hugs its width measures a percent against the width it had before the layout ran, so it settles in a pass or two rather than chasing itself. Percent **sizes** of a layer are separate (see *Percent* under child sizing); a track in a grid can be a percent too.
 
@@ -854,7 +916,7 @@ A page has a **Score** variable, a bar chart that grows on a timeline called **I
     keywords: 'component nested artboard reuse symbol instance inputs',
     body: `Any artboard can be placed inside another as an **instance**: a live copy that runs its own timelines and interactions on the parent's clock. Edit the source artboard and every instance updates.
 
-- Select the artboard you want to reuse and pick the artboard to put it in from **Use in** (it says **Place as an instance in…**). Or choose an artboard in an instance layer's **Artboard** field.
+- Select the artboard you want to reuse and pick the artboard to put it in from **Use in** (it says **Instance in…**). Or choose an artboard in an instance layer's **Artboard** field.
 - **Fit** decides how the artboard sits in the instance's box: **Stretch to the box**, **Contain**, **Cover** or **Actual size, centred**. **Reset size** puts the box back to the artboard's own size, and **Edit** followed by the artboard's name jumps to the source artboard.
 - **Inputs** set the instance's own variable values (for example a different label or colour per copy) without changing the source. Write them as JSON, such as \`{"level": 3}\`.
 - Messages sent inside an instance (**Send message**, \`ix.emit\`) bubble up to the parent.
@@ -907,6 +969,8 @@ Not sure where to start? Let the editor build a working rig, then take it apart.
 ![The example arm bent toward the orange dot, with the Bones section of the Inspector open.](help/bones-example.png)
 
 ![Dragging the orange dot in Preview: the arm follows it. Then Wave swings the bones and hands the arm back to the dot.](help/bones-example.mp4)
+
+The finished result is also on the **Templates** tab, under **Examples**, as **Bones and IK**: play it, or make your own copy.
 
 The example is ordinary layers, bones, a timeline and two interaction nodes, so everything in it can be changed, copied or deleted. Press **Build an example to try** again for another copy.
 
@@ -1033,6 +1097,8 @@ The Timeline bar shows a short summary (length, loop, speed, autoplay, frame rat
 | Speed | Playback rate (2 is twice as fast). To play backwards use a **Control timeline** node set to **Play in reverse** |
 | Frame rate | Frames per second the animation was made at (1 to 240); 0 leaves it free |
 | Whole frames | Shown once a frame rate is set. Values are read at the start of the frame, so they step from frame to frame instead of gliding. Playback time, markers, sound and captions still use the real time. Applies in the player, blends and the canvas. Imported animations that snap to frames (for example 24 fps hand-drawn motion) come in with it on |
+
+![The Timeline bar with its settings open: name, length, loop, autoplay, speed and frame rate.](help/timeline-settings.png)
 
 A timeline can also carry **sound** (a voice-over that follows the playhead, with a waveform) and **captions** (timed text with a transcript for viewers). See [Narration, captions and transcript](captions).
 
@@ -1330,6 +1396,8 @@ A [Steps](steps) timeline can carry sound and captions too: Next plays the narra
 
 **See-through layers don't take clicks.** While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
 
+![The Interactions section of a layer whose opacity is 50%: the note says it can't be clicked while playing until it is fully showing, and the Clickable while see-through tick overrides that.](help/see-through-toggle.png)
+
 - **Events** (green) start a flow: a click, a key, a timer, a variable changing, a timeline ending, a message from the host page, scrolling, data loading, or the artboard starting.
 - **Actions** (blue) do something and continue: **Control timeline**, **Play blend**, **Wait for blend-in**, **Wait for time in timeline**, **Set variable**, **Set property**, **Animate property**, **Show / hide**, **Go to artboard**, **Open URL**, **Play sound**, **Run script**, **Send message**, **Wait** and more.
 - **Logic** (purple) chooses where to go: **If** (a **true** and a **false** output), **Toggle** (alternates between **a** and **b**), **Once**, **Sequence** (runs **1**, then **2**, then **3**) and **Random** (continues down one of up to six outputs, picked at random; *Weights* is a list that sets each output's chance, [1, 3] making the second three times as likely, and *Only if* is a list of conditions, so an output whose condition is false is never picked).
@@ -1450,7 +1518,7 @@ Everyone should be able to finish the activity, so every drag has two ways that 
     group: 'Interactivity',
     summary: 'Add multiple choice, true/false, fill in the blank, ordering, matching (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks.',
     keywords: 'question quiz test assessment multiple choice true false fill blank ordering sequence matching match drag drop pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning',
-    body: `Quizzes without wiring every button by hand. **Add question** (the speech bubble in the toolbar) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
+    body: `Quizzes without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
 
 ## Add one
 
@@ -1486,6 +1554,8 @@ Each question keeps its state in variables named from its **Name prefix** (\`q1\
 **Score** is the question's points times the share that is right, less **Retry −%** for each check after the first and **Hint −%** for each hint taken. With **Part marks** on, a multiple response, ordering or fill in the blank question is worth the share it got right.
 
 ## Worked examples
+
+Two finished ones to play first: **Matching question** and **Hotspot question** on the **Templates** tab, under **Examples**. Press **Make my copy** and change the pairs, or the picture and the right area.
 
 **Multiple choice.** Add question, *Multiple choice*. Type the prompt, type each option, and tick the right one. Set **Tries** to 2 and write a hint. In Preview pick a wrong option and press **Check answer**: the feedback says *Not quite*, and with a try left you can pick again. The second miss locks the question and (if **Show the right answer** is on) marks the right option.
 
@@ -1746,7 +1816,7 @@ New projects run scripts in a sandbox: a separate JavaScript engine compiled to 
     keywords: 'script layer draw canvas generative art particles chart graph visualisation visualization animation code g.rect g.circle fps pixel ratio sandbox',
     body: () => `A **Script layer** is a box that a script paints every frame. Use it for things shapes and timelines can't do well: particles, generative art, live charts, custom meters and any other visualisation that is easier to compute than to draw by hand.
 
-Pick the **Script layer** tool in the toolbar and drag a box. It starts with a small script that already runs, and the **Start from** menu in the inspector replaces it with a starter: ${DRAW_TEMPLATES.map((t) => `**${t.name}**`).join(', ')}.
+Pick the **Script layer** tool (in the **Media** group of the tool bar, which starts folded: click **Media** to open it) and drag a box. It starts with a small script that already runs, and the **Start from** menu in the inspector replaces it with a starter: ${DRAW_TEMPLATES.map((t) => `**${t.name}**`).join(', ')}.
 
 ## The script
 
@@ -1803,7 +1873,7 @@ The layer is an ordinary layer otherwise: move, rotate, fade, blend, mask and an
     keywords: 'shader glsl webgl gpu fragment effect filter noise clouds plasma ripples glow voronoi grain crt scanlines halftone wave distortion uniform u_time u_mouse u_resolution preset image texture bloom',
     body: () => `A **Shader layer** is a box painted by a small program that runs on the graphics card for every pixel, many times a second. Use it for backgrounds that move, glows, noise, ripples and distortions of pictures: effects that shapes and timelines can't do.
 
-Pick the **Shader layer** tool in the toolbar and drag a box. It starts with drifting clouds, so you have a result at once. The **Start from** menu in the inspector replaces the shader with a preset: ${SHADER_PRESETS.map((p) => `**${p.name}**`).join(', ')}. The presets marked *(image)* filter a picture: choose an image for their \`u_image\` uniform (until you do, they show a built-in test picture).
+Pick the **Shader layer** tool (in the **Media** group of the tool bar, which starts folded) and drag a box. It starts with drifting clouds, so you have a result at once. The **Start from** menu in the inspector replaces the shader with a preset: ${SHADER_PRESETS.map((p) => `**${p.name}**`).join(', ')}. The presets marked *(image)* filter a picture: choose an image for their \`u_image\` uniform (until you do, they show a built-in test picture).
 
 ## The code
 
@@ -2398,8 +2468,13 @@ The files are named after the project (and the artboard, for pictures and Lottie
 | Share | Gives you |
 |---|---|
 | Share link… | A link that plays the project in the browser (below), and a second one, the **Link for StudyDesk**, that keeps learners' results |
-| Invite to collaborate… | People who can open and edit the project with you, live, by their StudyDesk username (see [Collaborating](live-editing#inviting-people)) |
+| Invite to collaborate… | People who can open and edit the project with you, live, found by name, email or username (see [Collaborating](live-editing#inviting-people)) |
+| Save as template… | A copy other people (or you) start new projects from, with a checklist of what to change (see [Templates](templates#save-as-template)) |
 | Share for review… | A link where reviewers look at the project and leave comments, without editing it (see [Review comments](comments)) |
+
+![The Share menu.](help/share-menu.png)
+
+Export gives you **files**; Share gives you **links and people**. Nothing under Share downloads anything.
 
 ## Share link
 **Share → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. It is a snapshot: press **Update to the latest version** to publish later changes, or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). **Copy** copies the link and **Open** opens it in a new tab.
@@ -2407,6 +2482,8 @@ The files are named after the project (and the artboard, for pictures and Lottie
 ![The Share link dialog.](help/share-link-dialog.png)
 
 **Link for StudyDesk** plays the same project but keeps each signed-in learner's score, completion and progress. Use it in StudyDesk when you set a score or tick **Remember** on variables, and see [Results and progress](results). **Results…** shows how learners did.
+
+That link opens the **learner page**: a small page around your project that knows who the learner is from their StudyDesk session. It gives the project the learner's saved progress, keeps their results, and, when **Learner records** is on, passes on the activity that [Insights](insights) counts. Put this link in your StudyDesk page, not the plain one. A learner who isn't signed in just plays it, and their progress stays in their own browser. **Allow remix**, under the link, adds a **Remix this** button for signed-in staff who open it, which copies the project into their own projects: see [Templates, examples and remix](templates#allow-remix-on-a-share-link).
 
 For a walk-through, see [Tutorial 5](tutorial-publish).`,
   },
@@ -2534,7 +2611,7 @@ Projects made from a saved template remember which version they came from, and w
 Untick anything you do not want, then **Update**. It is one undo step (Ctrl+Z). Built-in starters are generated by the editor, so they have no newer versions to pull.
 
 ## Examples
-**Examples** are finished projects that ship with Interactives: getting-started projects, layout and drawing demos, web controls, an imported Rive animation and more. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
+**Examples** are finished projects that ship with Interactives: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
 
 ## Allow remix on a share link
 In **Share > Share link**, tick **Allow remix**. People who open the **Link for StudyDesk** while signed in to the editor get a **Remix this** button; pressing it copies the project into their own projects and opens it. The copy is theirs: it does not change your project, and it is not tied to it. A remix copies the project **as it is now** (not the version last published to the link), with every artboard, layer and picture, including parts the page does not show, so only allow it for projects you are happy to give away. Turn it off at any time; copies already made stay.
@@ -2566,7 +2643,16 @@ The server keeps saved revisions of the project: a snapshot every few minutes wh
 If the project was saved from another tab, or by someone else without live editing, a red bar says **This project was changed in another tab or by someone else since you opened it. Your edits are not saved.** **Reload theirs** loads what is saved. **Overwrite with mine** replaces it with your copy. Pick carefully: the other one is lost (the revision history may still have it).
 
 ## Inviting people
-**Share → Invite to collaborate…** lets other people open and edit the project with you. Start typing their name (or email, or username) and pick them from the list that appears; you can also type a StudyDesk username (for example *u1234567*) and press **Invite**. The project then shows on their own projects page, and when you both have it open you see each other's cursors and changes live. Collaborators can edit, comment, export and share it; only the owner can delete the project or change who's invited (a collaborator can take themselves off the list). To let someone look and comment without editing, use **Share for review** instead ([Review comments](comments)).`,
+**Share → Invite to collaborate…** lets other people open and edit the project with you.
+
+1. Open the project and choose **Share**, then **Invite to collaborate…**.
+2. Start typing their name, email or username. A list of matching people appears: pick the right one and they are invited at once. If you already know their StudyDesk username (for example *u1234567*) you can type it and press **Invite**.
+3. They are listed under the box. The bin beside a name takes them off again (you are asked first, and their changes stay).
+4. The project now shows on their own projects page, marked *shared with you by* your name. When you both have it open you see each other's cursors and changes live.
+
+![The Invite to collaborate window: a search box for a name, email or username, and the list of people already invited.](help/invite-dialog.png)
+
+Only staff who have used the StudyDesk Toolbox before can be found by name, and students are never listed. Someone who isn't found can still be invited by typing their exact username. Collaborators can edit, comment, export and share it; only the owner can delete the project or change who's invited (a collaborator can take themselves off the list). To let someone look and comment without editing, use **Share for review** instead ([Review comments](comments)).`,
   },
 
   {
@@ -2578,6 +2664,8 @@ If the project was saved from another tab, or by someone else without live editi
     body: `Comments are notes pinned to the project. Subject experts and reviewers can say what they think right where it applies, and you can reply, hand a note to someone, and tick it off when it is dealt with, instead of collecting email and screenshots.
 
 Comments are kept on the server apart from the project. They are never part of the project file, an **export**, a **.ixp package**, a **share link** or **Preview**, and a duplicate of the project starts with none. Deleting the project deletes its comments.
+
+![The Comments tab with two open conversations, and the first one open on the canvas: its pin follows the Bulb layer, with Resolve, Assigned to and a reply box.](help/comments-panel.png)
 
 ## Leaving a comment
 Pick the **Comment** tool (<kbd>C</kbd>) and click where you want to say something. If there is a layer under the click, the note is pinned to that layer at that spot, so the pin **follows the layer** when it moves, scales or rotates. If the layer is deleted the pin stays where it was, drawn with a dashed edge, and the **Comments** panel says the layer is gone. A click on empty artboard pins the note to that point of the artboard.
@@ -2728,6 +2816,22 @@ Put it back where it was, or press **Unlink (keep as embedded)** on the artboard
 **An Illustrator file says to save with "Create PDF Compatible File".**
 Re-save it from Illustrator with that option ticked. **A DWG file** must be saved as DXF first. See [Importing](import).
 
+## Beta tester questions
+**Where is the version number?**
+Beside the help search box, and in the title bar of **Preferences**. It looks like \`v0.5.0 · 1a2b3c4.5d6e7f8\`. Put it in any problem report. See [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
+
+**A tool I'm looking for isn't in the tool bar.**
+Some groups start folded. Click **Media** (text, script layer, shader layer, video, image), **Web** (button, input, link, embed, Add question) or **Rig** (bones) to open them. See [The editor at a glance](interface).
+
+**A faded layer won't take clicks in Preview.**
+A layer that is partly see-through lets the pointer through. Tick **Clickable while see-through** in its **Interactions** section. See [Interactions](interactions).
+
+**I invited someone and they can't see the project.**
+They need to be signed in to StudyDesk, and to reload their projects page. Check you picked them from the list, or typed their username exactly. See [Live editing and saving](live-editing#inviting-people).
+
+**The Link for StudyDesk shows no Results or Insights.**
+Both only count learners who are signed in to StudyDesk and opened the **Link for StudyDesk** (not the plain share link) while it was on. After you change score or record settings, press **Update to the latest version**. See [Results and progress](results) and [Insights](insights).
+
 ## Saving and sharing
 **A red bar says the project changed in another tab or by someone else.**
 Another copy saved first. **Reload theirs** brings in what is saved, and **Overwrite with mine** keeps your version. Pick carefully: the other one is lost. See [Live editing and saving](live-editing).
@@ -2751,6 +2855,9 @@ That's the default. Set **Mouse wheel** to **Pan (Ctrl+wheel zooms)** in [Prefer
 **A shortcut doesn't work.**
 Shortcuts are ignored while a text box is focused. Click the canvas first. See [Keyboard shortcuts](shortcuts).
 
+**Export doesn't have my share link any more.**
+Sharing moved to its own **Share** button next to Export. See [Exporting](export#sharing).
+
 **Where's my project?**
 Check the projects page for an active folder, tag or search (the **Clear filters** button resets them). You only see your own projects. See [Projects page](projects).`,
   },
@@ -2766,6 +2873,7 @@ Check the projects page for an active folder, tag or search (the **Clear filters
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
 - **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
+- **Version tag**: the grey \`v0.5.0 · 1a2b3c4.5d6e7f8\` beside the search box is the version you are running. Hover it for the full label, and include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
 - **? links**: inspector sections have a **?** that opens their page here.`,
   },
 ];

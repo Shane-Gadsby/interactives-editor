@@ -239,5 +239,55 @@
 			"height": 170,
 			"background": "#ffffff"
 		}
+	},
+	{
+		"key": "bones",
+		"title": "Bones and IK",
+		"description": "A three-bone arm with a skinned shape, a draggable orange dot the tip chases (IK), and a Wave timeline on a button. The project the Try bones in two minutes steps build.",
+		"group": "Animation",
+		"tags": [
+			"bones",
+			"ik",
+			"timeline"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "matching-question",
+		"title": "Matching question",
+		"description": "Drag each country onto its capital city: a ready-made matching question with scoring, a hint and feedback. Play it, then make your copy and change the pairs.",
+		"group": "Questions",
+		"tags": [
+			"question",
+			"matching",
+			"drag-and-drop"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
+	},
+	{
+		"key": "hotspot-question",
+		"title": "Hotspot question",
+		"description": "Click the roof of the house: a ready-made hotspot question with a picture, four areas, scoring, a hint and feedback. Play it, then make your copy and change the picture and the right area.",
+		"group": "Questions",
+		"tags": [
+			"question",
+			"hotspot"
+		],
+		"artboards": 1,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#ffffff"
+		}
 	}
 ]
