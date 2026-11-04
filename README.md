@@ -29,6 +29,7 @@ Interactives 0.5 is the first beta. A short tour of what is in it, newest ideas 
 - **Review comments**: pins that follow their layer, replies, resolve, assign, @mention, in-app notices, a review link with its own page (guests optional), kept apart from the project so they are never exported.
 - **Templates, examples and remix**: Save as template with a checklist of what to change, a Templates tab (Mine, Shared, Built-in, Examples), a Checklist tab in projects made from one, Update from template, **Allow remix** on a share link, and read-only examples shipped in `examples/` (now including a bones rig, a matching question and a hotspot question).
 - **Libraries** of components and styles, and **live editing** with revision history.
+- **Start a new project** asks how: blank (with the Light, Dark and High contrast themes), a copy of one of your projects or templates, a built-in template, or a copy of an example.
 
 **Learners**
 - The **learner page** (`/play/:token`, the Link for StudyDesk) remembers progress, reports score and completion, and passes on what learners do.
@@ -39,7 +40,7 @@ Interactives 0.5 is the first beta. A short tour of what is in it, newest ideas 
 - **Accessibility**: layer roles and keyboard operation, and a checker with a sign-off report.
 
 **Design and layout**
-- **Themes and colour tokens** (Light, Dark, High contrast), colour presets from the toolbox palette, several fills and strokes per shape, paint order, per-corner radius.
+- **Themes and colour tokens** (Light, Dark, High contrast). The starter look is the toolbox's, read live from the shared StudyDesk palette (`/styles/palette.min.css`) so it stays in step, with the pairs that fall below AA listed in the help. A **font picker** searches every Google font (Open Sans by default) in the Inspector, the text toolbar, the project Fonts and Preferences. Also colour presets from the toolbox palette, several fills and strokes per shape, paint order, per-corner radius.
 - **Auto layout** with grids, stacks, a layout item section, line gap, **percent padding, margin and gap**, and hidden layers that take no space.
 - **See-through layers are not clickable** by default while playing (a faded layer lets clicks through), with a per-layer **Clickable while see-through**; paths, polygons and stars take clicks only where painted.
 - **Layers hanging outside a clipping artboard** show as a faint, diagonally striped copy beside it on the canvas (a preference), so they can still be found and picked.
