@@ -319,6 +319,25 @@ export function TimelinePanel() {
         />
         <CheckField label="Autoplay" title="Start when the artboard is shown" value={tl.autoplay} onChange={(v) => setTl((d) => (d.autoplay = v))} />
         <NumberField label="Speed" value={tl.speed} step={0.1} min={0.1} onChange={(v) => setTl((d) => (d.speed = v), 'tl-speed')} />
+        <NumberField
+          label="Frame rate"
+          title="Frames per second the animation was made at. 0 leaves it free. Turn on Whole frames to make values step from frame to frame"
+          value={tl.fps ?? 0}
+          min={0}
+          max={240}
+          suffix="fps"
+          onChange={(v) =>
+            setTl((d) => {
+              const f = Math.round(v);
+              if (f >= 1) d.fps = f;
+              else {
+                delete d.fps;
+                delete d.snap;
+              }
+            }, 'tl-fps')
+          }
+        />
+        {tl.fps ? <CheckField label="Whole frames" title="Read the keys at the start of the frame, so values step from frame to frame instead of gliding (how frame-snapped animations from other tools look)" value={!!tl.snap} onChange={(v) => setTl((d) => void (v ? (d.snap = true) : delete d.snap))} /> : null}
         <button className="btn" title="Add a marker at the playhead. An On timeline marker node runs when playback passes it" onClick={addMarker}>
           + Marker
         </button>

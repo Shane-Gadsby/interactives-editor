@@ -30,6 +30,7 @@ import {
   type LinkTarget,
   type Repeat,
   getPath,
+  frameTime,
   sampleKeys,
   type Artboard,
   type GroupNode,
@@ -119,7 +120,7 @@ export function useShown(node: SceneNode) {
   const tl = st.bottomTab === 'timeline' ? ab?.timelines.find((t) => t.id === st.activeTimelineId) : undefined;
   return (prop: string): unknown => {
     const track = tl?.tracks.find((t) => t.nodeId === node.id && t.prop === prop);
-    if (track && track.keys.length) return sampleKeys(track.keys, st.playhead);
+    if (track && track.keys.length) return sampleKeys(track.keys, frameTime(tl!, st.playhead));
     return getPath(node, prop);
   };
 }

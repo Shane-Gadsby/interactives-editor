@@ -25,6 +25,8 @@ export const FIELD_TIPS: Record<string, string> = {
   Image: 'Which image asset to show',
   Video: 'Which video asset to play (or set a URL)',
   FPS: 'Frame rate cap for the script layer; 0 draws on every frame',
+  'Frame rate': 'Frames per second the animation was made at. 0 leaves it free',
+  'Whole frames': 'Read the keys at the start of each frame, so values step from frame to frame',
   'Pixel ratio': 'Canvas pixels per layer pixel: Auto follows the screen and the artboard scale',
   Autoplay: 'Start playing as soon as it is shown',
   Loop: 'Start again from the beginning when it ends',

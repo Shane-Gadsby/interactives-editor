@@ -1,4 +1,4 @@
-import { cornerRadiiOf, pathPointProp, pathPointPropName, polygonPoints, roundedBoxPoints, sampleKeys, setPath, starPoints, type PathPoint, type PathPointProp, type SceneNode, type SubPath, type Timeline } from 'interactives-player';
+import { cornerRadiiOf, pathPointProp, pathPointPropName, polygonPoints, frameTime, roundedBoxPoints, sampleKeys, setPath, starPoints, type PathPoint, type PathPointProp, type SceneNode, type SubPath, type Timeline } from 'interactives-player';
 
 /**
  * Geometry for editing path points: bending a segment, splitting it to add a point, finding the segment under a
@@ -269,8 +269,9 @@ export function remapPointTracks(tl: Timeline, nodeId: string, map: (sub: number
 /** A path layer's points in the frame of a timeline at time t (its own points where nothing is keyed). */
 export function posedPaths(tl: Timeline, node: SceneNode, t: number): SubPath[] {
   const holder = { paths: structuredClone((node as { paths?: SubPath[] }).paths ?? []) } as Record<string, unknown>;
+  const at = frameTime(tl, t);
   for (const tr of pointTracks(tl, node.id)) {
-    const v = tr.keys.length ? sampleKeys(tr.keys, t) : undefined;
+    const v = tr.keys.length ? sampleKeys(tr.keys, at) : undefined;
     if (v !== undefined) setPath(holder, tr.prop, v);
   }
   return holder.paths as SubPath[];

@@ -2849,6 +2849,11 @@ function buildTimeline(ac: ArtboardCtx, fc: FileCtx, anim: RAnim, offsetFor: (no
     speed: r2(get(o, 'speed') || 1),
     tracks,
   };
+  // "Snap to frames" on the animation: the keys are read on whole frames of its fps
+  if (get<boolean>(o, 'quantize') && fps >= 1 && fps <= 240) {
+    tl.fps = fps;
+    tl.snap = true;
+  }
   if (markers.length) {
     tl.markers = markers.sort((a, b) => a.time - b.time);
     fc.timelineEvents.set(tl, events);
