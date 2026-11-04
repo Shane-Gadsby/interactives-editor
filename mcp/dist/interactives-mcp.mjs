@@ -6226,7 +6226,7 @@ What is kept when you update: the instances you placed in your own artboards, th
 
 ## Styles
 **Styles** holds named colours and text styles.
-- **+ Colour** and **+ Text** create one from the selected layer. Double-click a name to rename it; the colour box edits a colour.
+- **+ Colour** and **+ Text** create one from the selected layer. A colour made from a layer's fill is also that layer's fill from then on, so changing the colour changes the layer; select other layers and press **Fill**, **Stroke** or **Text** on a style to make them follow it too. Double-click a name to rename it; the colour box edits a colour.
 - **Fill**, **Stroke** and **Text** (colours), and **Apply** (text styles) set the selected layers from a style. A layer **follows** the style: edit the style, or update the library it came from, and the layer changes too. Changing that property on the layer yourself stops it following.
 - A library's styles are added to your project when you add the library, kept in step on update, and cannot be edited here.
 
