@@ -70,6 +70,7 @@ let port = Number(process.env.PORT) || 3048,
 	prefs,
 	libraries,
 	userData,
+	ingest,
 
 	//Revision ids are strings (time first, so they sort), keeps mongodb's ObjectId out of this app's requires
 	revisionID = () => `${Date.now().toString(36)}${crypto.randomBytes(5).toString('hex')}`,
@@ -80,7 +81,8 @@ let port = Number(process.env.PORT) || 3048,
 let ops = null,
 	library = null,
 	safety = null,
-	learner = null
+	learner = null,
+	records = null
 const rooms = new Map(),
 	LOG_KEEP = 2000,
 	PALETTE = ['#e5484d', '#30a46c', '#3e63dd', '#f76b15', '#8e4ec6', '#12a594', '#d6409f', '#ad7f58'],
@@ -1298,7 +1300,7 @@ router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, r
 //the routes above with the session id, so the sandboxed project never sees a session itself. Embed this in
 //StudyDesk instead of /s/<token> to collect results. The session id comes from the url or sessionStorage the way
 //utilities.js finds it, but is added here directly so the page has nothing to load from the suite's host root
-const learnerPage = (token, base, nonce) => `<!doctype html>
+const learnerPage = (token, base, nonce, project) => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1308,6 +1310,7 @@ const learnerPage = (token, base, nonce) => `<!doctype html>
 </head>
 <body>
 <iframe id="project" src="${base}/s/${token}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen" title="Interactive"></iframe>
+<script src="/utilities.js"></script>
 <script nonce="${nonce}">
 (function () {
 	var token = ${JSON.stringify(token)}, base = ${JSON.stringify(base)}, frame = document.getElementById('project'), sessionID = null
@@ -1335,9 +1338,40 @@ const learnerPage = (token, base, nonce) => `<!doctype html>
 		})
 		return done
 	}
+	//What the learner does, for the project's Insights: the project says it (postMessage), and it goes into the suite's
+	//analytics the way every toolbox app's does (reportAnalytics, si-manager's utilities.js), as a lean row with the
+	//usual user and course fields. The project is whatever this page was made for, whatever the record claims. Nothing
+	//is sent without a signed-in StudyDesk user, and utilities.js drops it in a preview
+	var cleanRecord = ${records.cleanRecord.toString()}
+	var rowFor = ${records.rowFor.toString()}
+	var project = ${JSON.stringify(project)}, run = Math.random().toString(36).slice(2) + Date.now().toString(36), queue = [], taken = 0, known = false, timer = null
+	var flushRecords = function () {
+		timer = null
+		if (!known || typeof reportAnalytics !== 'function') return
+		while (queue.length) reportAnalytics.apply(null, rowFor(project, run, queue.shift()))
+	}
+	var takeRecord = function (raw) {
+		var rec = cleanRecord(raw)
+		if (!rec || taken >= 600) return
+		taken++
+		queue.push(rec)
+		if (known && !timer) timer = setTimeout(flushRecords, 1500)
+	}
+	if (typeof fetchActivity === 'function') {
+		window.m = window.m || {}
+		window.m.app = 'Interactives'
+		fetchActivity(function (err, data) {
+			if (err || !data || !data.user || !data.user.username) return
+			window.m.user = data.user
+			window.m.activity = data.activity || {}
+			known = true
+			if (queue.length && !timer) timer = setTimeout(flushRecords, 300)
+		})
+	}
 	window.addEventListener('message', function (e) {
 		if (e.source !== frame.contentWindow) return
 		var m = e.data
+		if (m && m.source === 'interactives-record') return takeRecord(m.record)
 		if (!m || m.source !== 'interactives-progress') return
 		var failed = function () {
 			answer(m, {ok: false, available: false})
@@ -1366,21 +1400,29 @@ const learnerPage = (token, base, nonce) => `<!doctype html>
 </html>
 `
 
-router.get('/play/:token', cacheHeaders.api, (req, res) => {
+router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	let token = req.params.token
 
 	if (!/^[\w-]{16,64}$/.test(token) || !fs.existsSync(shareFile(token))) {
 		return res.status(404).send('This share link has been turned off, or never existed')
 	}
 
+	//The project the link is for, so the records its learners make are filed under it
+	let project = await projects.findOne({'share.token': token}, {projection: {_id: 1}})
+
+	if (!project) {
+		return res.status(404).send('This share link has been turned off, or never existed')
+	}
+
 	let nonce = crypto.randomBytes(16).toString('base64')
 
-	//Only its own script and its own api, and the project in its sandbox as the one frame. It can be framed by StudyDesk
-	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'`)
+	//Its own script, the suite's utilities.js from this host (script-src 'self') and its own api and the suite's
+	//analytics (connect-src 'self'), and the project in its sandbox as the one frame. It can be framed by StudyDesk
+	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'`)
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('Referrer-Policy', 'no-referrer')
 	res.setHeader('X-Robots-Tag', 'noindex')
-	res.type('html').send(learnerPage(token, req.baseUrl, nonce))
+	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id))
 })
 
 //What the project's learners have done, for its owner (this is under /api, which is staff). Counts and averages
@@ -1395,6 +1437,29 @@ router.get('/api/projects/:id/results', async (req, res) => {
 	let rows = await userData.find({project: doc._id}, {projection: {variables: 0}}).sort({updated: -1}).limit(5000).toArray()
 
 	res.json({...learner.summarise(rows), truncated: rows.length >= 5000, shared: !!doc.share?.token})
+})
+
+//What learners did in the project (the records its learner page sent to the suite's analytics), as counts: artboard
+//views, clicks, steps, question answers and named records, for its owner. Totals and numbers of different learners
+//only, nobody is listed. ?days= is 7, 30 (the default), 90, 365 or 0 for all of it
+router.get('/api/projects/:id/insights', async (req, res) => {
+	let doc = await projectFor(req, res)
+
+	if (!doc) {
+		return
+	}
+
+	let asked = Number(req.query.days),
+		days = [0, 7, 30, 90, 365].includes(asked) ? asked : 30,
+		filter = {app: records.APP, featureID: doc._id}
+
+	if (days) {
+		filter.timestamp = {$gte: Date.now() - days * 24 * 60 * 60 * 1000}
+	}
+
+	let rows = await ingest.find(filter, {projection: {feature: 1, timestamp: 1, 'meta.user.username': 1, 'meta.activity.courseLabel': 1, 'meta.run': 1, 'meta.rec': 1}}).sort({timestamp: -1}).limit(records.MAX_ROWS).toArray()
+
+	res.json({...records.insights(rows, {truncated: rows.length >= records.MAX_ROWS}), days, shared: !!doc.share?.token})
 })
 
 //Start the results afresh (a test run that left records behind, or a new intake)
@@ -1469,17 +1534,19 @@ client.connect()
 		prefs = db.collection('prefs')
 		libraries = db.collection('libraries')
 		userData = analyticsDB.collection('interactives-user-data')
+		ingest = analyticsDB.collection('ingest')
 		fs.mkdirSync(storageDir, {recursive: true})
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/records.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, recordsMod]) => {
 		ops = opsMod
 		library = libraryMod
 		safety = safetyMod
 		learner = learnerMod
+		records = recordsMod
 		cacheHeaders.watchEpoch()
 
 		app.listen(port, (err) => {

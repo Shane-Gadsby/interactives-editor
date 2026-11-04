@@ -1,7 +1,7 @@
 //A tiny in-memory stand-in for the few mongodb collection methods the editor server uses (findOne, find with
 //sort/skip/limit/projection, insertOne, updateOne with $set/$setOnInsert/$unset and upsert, deleteOne,
 //deleteMany). Filters understand equality, dotted paths, null matching a missing field, arrays containing a value,
-//$or, $and and $in. That is all index.js asks of mongo, so the real route code runs against it untouched.
+//$or, $and, $in, $ne and the $gt/$gte/$lt/$lte comparisons. That is all index.js asks of mongo, so the real route code runs against it untouched.
 
 type Doc = Record<string, any>;
 
@@ -19,6 +19,10 @@ function matchField(value: any, cond: any): boolean {
     return Object.entries(cond).every(([op, arg]) => {
       if (op === '$in') return (arg as any[]).some((x) => matchField(value, x));
       if (op === '$ne') return !matchField(value, arg);
+      if (op === '$gte') return value !== undefined && value !== null && compare(value, arg) >= 0;
+      if (op === '$gt') return value !== undefined && value !== null && compare(value, arg) > 0;
+      if (op === '$lte') return value !== undefined && value !== null && compare(value, arg) <= 0;
+      if (op === '$lt') return value !== undefined && value !== null && compare(value, arg) < 0;
       throw new Error(`fake mongo: ${op} is not supported`);
     });
   }
@@ -42,7 +46,15 @@ function project(doc: Doc, projection?: Doc): Doc {
   if (keys.length && keys.every((k) => projection[k])) {
     const keep: Doc = {};
     if (projection._id !== 0) keep._id = out._id;
-    for (const k of keys) if (k in out) keep[k] = out[k];
+    for (const k of keys) {
+      //dotted paths keep just that branch
+      const v = getPath(out, k);
+      if (v === undefined) continue;
+      const parts = k.split('.');
+      let at = keep;
+      parts.slice(0, -1).forEach((part) => (at = at[part] ??= {}));
+      at[parts[parts.length - 1]] = v;
+    }
     return keep;
   }
   for (const k of keys) delete out[k];
@@ -161,4 +173,5 @@ export class FakeDb {
   prefs = new FakeCollection();
   libraries = new FakeCollection();
   'interactives-user-data' = new FakeCollection();
+  ingest = new FakeCollection();
 }
