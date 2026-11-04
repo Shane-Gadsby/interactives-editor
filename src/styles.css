@@ -4902,6 +4902,8 @@ code {
   border-radius: 8px;
   padding: 4px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
 }
 .q-menu-title {
   padding: 6px 10px 4px;

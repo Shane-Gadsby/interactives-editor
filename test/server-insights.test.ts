@@ -54,6 +54,9 @@ describe('what a record may hold', () => {
     expect(cleanRecord({ kind: 'click', artboard: 'ab1', x: -5, y: 1e9 })).toEqual({ kind: 'click', artboard: 'ab1' });
     expect(cleanRecord({ kind: 'step', artboard: 'ab1', step: 2, steps: 5 })).toMatchObject({ step: 2, steps: 5 });
     expect(cleanRecord({ kind: 'answer', question: 'q1', questionKind: 'single', correct: true, attempt: 2, fraction: 0.5, options: ['o1', 'bad id!', 'o3'], typed: 'Sam Smith' })).toEqual({ kind: 'answer', question: 'q1', questionKind: 'single', correct: true, attempt: 2, fraction: 0.5, options: ['o1', 'o3'] });
+    //the matching and hotspot kinds are recorded as what they are; a hotspot's areas are options, a matching question has none
+    expect(cleanRecord({ kind: 'answer', question: 'q2', questionKind: 'hotspot', correct: false, attempt: 1, fraction: 0, options: ['o2'] })).toEqual({ kind: 'answer', question: 'q2', questionKind: 'hotspot', correct: false, attempt: 1, fraction: 0, options: ['o2'] });
+    expect(cleanRecord({ kind: 'answer', question: 'q3', questionKind: 'matching', correct: false, attempt: 1, fraction: 0.5 })).toEqual({ kind: 'answer', question: 'q3', questionKind: 'matching', correct: false, attempt: 1, fraction: 0.5 });
     expect(cleanRecord({ kind: 'custom', label: '  chose B ', value: 3, artboard: 'ab1' })).toEqual({ kind: 'custom', label: 'chose B', value: 3, artboard: 'ab1' });
   });
   it('refuses what is not a record', () => {

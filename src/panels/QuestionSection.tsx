@@ -2,8 +2,12 @@ import { useState } from 'react';
 import {
   MAX_BLANKS,
   MAX_HINTS,
+  MAX_HOTSPOTS,
   MAX_OPTIONS,
+  MAX_PAIRS,
   QUESTION_KINDS,
+  isMultiple,
+  newQuestion,
   questionProblems,
   questionVars,
   type Artboard,
@@ -13,17 +17,26 @@ import {
   type QuestionBlank,
   type QuestionKind,
   type QuestionOption,
+  type QuestionPair,
   type SceneNode,
 } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
-import { makeIndependent, partOf, partsOf, setQuestionSettings, sharedPrefix } from '../lib/question-kit';
+import { growAreas, makeIndependent, partOf, partsOf, setAreaShape, setQuestionSettings, shapeOfArea, sharedPrefix, type AreaShape } from '../lib/question-kit';
 
 const PART_LABELS: [string, string][] = [
   ['prompt', 'Prompt'],
   ['option', 'Option'],
   ['optionLabel', 'Option text'],
   ['marker', 'Marker'],
+  ['matchTerm', 'Term'],
+  ['matchDefinition', 'Definition'],
+  ['matchZone', 'Slot'],
+  ['matchState', 'Pair result'],
+  ['picture', 'Picture'],
+  ['spots', 'Picture area'],
+  ['spot', 'Area'],
+  ['spotPicks', 'Picks text'],
   ['blankInput', 'Blank input'],
   ['check', 'Check button'],
   ['hint', 'Hint button'],
@@ -60,6 +73,13 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
     apply({ options: list });
   };
   const setBlank = (i: number, patch: Partial<QuestionBlank>, key?: string) => apply({ blanks: q.blanks.map((b, j) => (j === i ? { ...b, ...patch } : b)) }, key ?? `blank-${i}`);
+  const setPair = (i: number, patch: Partial<QuestionPair>, key?: string) => apply({ pairs: q.pairs.map((pr, j) => (j === i ? { ...pr, ...patch } : pr)) }, key ?? `pair-${i}`);
+  const movePair = (i: number, by: number) => {
+    const list = q.pairs.slice();
+    const [moved] = list.splice(i, 1);
+    list.splice(i + by, 0, moved);
+    apply({ pairs: list });
+  };
   const changeKind = (kind: QuestionKind) => {
     if (kind === q.kind) return;
     //Each kind keeps what it can: the options carry over between the choice kinds and ordering, true/false has its two
@@ -72,8 +92,15 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       options = options.map((o, i) => ({ ...o, correct: i === first ? true : undefined }));
     }
     if (kind === 'blank' && !blanks.length) blanks = [{ id: 'b1', label: 'Answer', answers: [''] }];
-    if (kind !== 'blank' && kind !== 'truefalse' && options.length < 2) options = [{ id: 'o1', text: 'First', correct: true }, { id: 'o2', text: 'Second' }, { id: 'o3', text: 'Third' }];
-    apply({ kind, options, blanks, partial: kind === 'multiple' || kind === 'ordering' || kind === 'blank' });
+    const pairs = kind === 'matching' && q.pairs.length < 2 ? newQuestion('matching').pairs : q.pairs;
+    if (kind === 'hotspot') {
+      //The options become the areas: at least one, with one right
+      if (!options.length || q.kind === 'blank' || q.kind === 'matching') options = newQuestion('hotspot').options;
+      if (!options.some((o) => o.correct)) options = options.map((o, i) => ({ ...o, correct: i === 0 ? true : undefined }));
+      options = options.slice(0, MAX_HOTSPOTS);
+    }
+    if (kind !== 'blank' && kind !== 'truefalse' && kind !== 'matching' && kind !== 'hotspot' && options.length < 2) options = [{ id: 'o1', text: 'First', correct: true }, { id: 'o2', text: 'Second' }, { id: 'o3', text: 'Third' }];
+    apply({ kind, options, blanks, pairs, partial: kind === 'multiple' || kind === 'ordering' || kind === 'blank' || kind === 'matching', ...(kind === 'matching' || kind === 'hotspot' ? { bank: null } : {}) });
   };
   const select = (id: string) => store().select([id]);
   return (
@@ -199,6 +226,91 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         </div>
       )}
 
+      {q.kind === 'matching' && (
+        <div className="q-list" role="group" aria-label="Pairs">
+          <div className="muted small">Each pair is a term the learner drags and the definition it belongs to. Learners see the terms {q.shuffle ? 'shuffled' : 'in this order'}.</div>
+          {q.pairs.map((pr, i) => (
+            <div key={pr.id} className="q-option">
+              <Row>
+                <span className="muted small q-num">{i + 1}.</span>
+                <TextField value={pr.term} placeholder="Term" title="The layer the learner drags" onChange={(v) => setPair(i, { term: v }, `pair-term-${i}`)} />
+                <IconButton icon={<span aria-hidden="true">↑</span>} title="Move this pair up" disabled={i === 0} onClick={() => movePair(i, -1)} />
+                <IconButton icon={<span aria-hidden="true">↓</span>} title="Move this pair down" disabled={i === q.pairs.length - 1} onClick={() => movePair(i, 1)} />
+                <IconButton icon={<span aria-hidden="true">×</span>} title="Remove this pair" disabled={q.pairs.length <= 2} onClick={() => apply({ pairs: q.pairs.filter((_, j) => j !== i) })} />
+              </Row>
+              <TextField value={pr.match} placeholder="What it matches" title="The text beside the slot the term goes into" onChange={(v) => setPair(i, { match: v }, `pair-match-${i}`)} />
+            </div>
+          ))}
+          <button className="btn" disabled={q.pairs.length >= MAX_PAIRS} onClick={() => apply({ pairs: [...q.pairs, { id: nextId(q.pairs, 'p'), term: '', match: '' }] })}>
+            + Add pair
+          </button>
+          <div className="muted small">Terms, definitions and slots are ordinary layers: restyle them, or move the slots onto a diagram to match labels to places.</div>
+        </div>
+      )}
+
+      {q.kind === 'hotspot' && (
+        <div className="q-list" role="group" aria-label="Areas">
+          <div className="muted small">
+            Put your picture in the Picture layer, then place each area over it (the layers named Area). {isMultiple(q) ? 'Tick every right area; the learner marks all of them.' : 'Mark the one right area.'}
+          </div>
+          {q.options.map((o, i) => {
+            const area = (parts.spot ?? []).find((n) => n.questionPart === `spot:${o.id}`);
+            return (
+              <div key={o.id} className="q-option">
+                <Row>
+                  <input
+                    type="checkbox"
+                    checked={!!o.correct}
+                    aria-label={`Area ${i + 1} is right`}
+                    title="Right area"
+                    onChange={(e) => setOption(i, { correct: e.target.checked ? true : undefined })}
+                  />
+                  <TextField value={o.text} placeholder={`Area ${i + 1} name`} title="Screen readers say this name for the area" onChange={(v) => setOption(i, { text: v }, `option-text-${i}`)} />
+                  <IconButton icon={<span aria-hidden="true">↑</span>} title="Move up" disabled={i === 0} onClick={() => moveOption(i, -1)} />
+                  <IconButton icon={<span aria-hidden="true">↓</span>} title="Move down" disabled={i === q.options.length - 1} onClick={() => moveOption(i, 1)} />
+                  <IconButton icon={<span aria-hidden="true">×</span>} title="Remove this area" disabled={q.options.length <= 1} onClick={() => apply({ options: q.options.filter((_, j) => j !== i) })} />
+                </Row>
+                <Row>
+                  <SelectField<AreaShape>
+                    label="Shape"
+                    title="The shape of the clickable area. Edit its outline on the canvas with the usual tools"
+                    value={area ? shapeOfArea(area) : 'rect'}
+                    options={[
+                      { value: 'rect', label: 'Rectangle' },
+                      { value: 'ellipse', label: 'Ellipse' },
+                      { value: 'polygon', label: 'Polygon' },
+                    ]}
+                    onChange={(v) => store().update((d) => setAreaShape(d as Project, ab.id, frame.id, o.id, v))}
+                  />
+                  <button className="btn" disabled={!area} title="Select the area's layer so you can move, resize or reshape it on the canvas" onClick={() => area && select(area.id)}>
+                    Edit on canvas
+                  </button>
+                </Row>
+                <TextField value={o.feedback ?? ''} placeholder="Feedback if clicked (optional)" onChange={(v) => setOption(i, { feedback: v || undefined }, `option-fb-${i}`)} />
+              </div>
+            );
+          })}
+          <button
+            className="btn"
+            disabled={q.options.length >= MAX_HOTSPOTS}
+            onClick={() => apply({ options: [...q.options, { id: nextId(q.options, 'o'), text: `Area ${q.options.length + 1}` }] })}
+          >
+            + Add area
+          </button>
+          <button className="btn" disabled={!(parts.spot ?? []).length} title="Select every area at once: the areas are invisible until a learner picks one, so this shows where they are" onClick={() => store().select((parts.spot ?? []).map((n) => n.id))}>
+            Show all areas
+          </button>
+          <Row>
+            <button className="btn" title="Every area gets 8 px bigger on each side, so a click a little off still counts" onClick={() => store().update((d) => growAreas(d as Project, ab.id, frame.id, 8))}>
+              Grow areas 8 px
+            </button>
+            <button className="btn" title="Every area gets 8 px smaller on each side" onClick={() => store().update((d) => growAreas(d as Project, ab.id, frame.id, -8))}>
+              Shrink areas 8 px
+            </button>
+          </Row>
+        </div>
+      )}
+
       <div className="q-sub">Marking</div>
       <Row>
         <NumberField label="Points" title="Points a right answer is worth" value={q.points} min={0} step={0.5} onChange={(v) => apply({ points: v }, 'points')} />
@@ -208,10 +320,10 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         <NumberField label="Retry −%" title="Points taken off for each check after the first, as a percentage" value={Math.round(q.attemptPenalty * 100)} min={0} max={100} onChange={(v) => apply({ attemptPenalty: Math.min(1, Math.max(0, v / 100)) }, 'attemptPenalty')} />
         <NumberField label="Hint −%" title="Points taken off for each hint shown, as a percentage" value={Math.round(q.hintPenalty * 100)} min={0} max={100} onChange={(v) => apply({ hintPenalty: Math.min(1, Math.max(0, v / 100)) }, 'hintPenalty')} />
       </Row>
-      {(q.kind === 'multiple' || q.kind === 'ordering' || q.kind === 'blank') && (
+      {(q.kind === 'multiple' || q.kind === 'ordering' || q.kind === 'blank' || q.kind === 'matching' || isMultiple(q)) && (
         <CheckField label="Part marks" title="Give a share of the points for the parts that are right" value={q.partial} onChange={(v) => apply({ partial: v })} />
       )}
-      {q.kind !== 'truefalse' && q.kind !== 'blank' && <CheckField label="Shuffle" title="A different order each time the question starts" value={q.shuffle} onChange={(v) => apply({ shuffle: v })} />}
+      {q.kind !== 'truefalse' && q.kind !== 'blank' && q.kind !== 'hotspot' && <CheckField label="Shuffle" title="A different order each time the question starts" value={q.shuffle} onChange={(v) => apply({ shuffle: v })} />}
       <CheckField label="Show the right answer when finished wrong" value={q.reveal} onChange={(v) => apply({ reveal: v })} />
 
       <div className="q-sub">Hints and feedback</div>
@@ -241,7 +353,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         onChange={(v) => apply({ report: v || null })}
       />
 
-      <QuestionBank q={q} project={project} apply={apply} />
+      {q.kind !== 'matching' && q.kind !== 'hotspot' && <QuestionBank q={q} project={project} apply={apply} />}
 
       <div className="q-sub">Variables</div>
       <TextField

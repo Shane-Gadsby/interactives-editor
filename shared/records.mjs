@@ -18,7 +18,7 @@ export const MAX_ROWS = 100000
 //anything outside itself. It gives back a clean copy of a record, or null when it isn't one
 export function cleanRecord(raw) {
 	let kinds = ['view', 'click', 'step', 'answer', 'custom'],
-		qkinds = ['single', 'multiple', 'truefalse', 'blank', 'ordering'],
+		qkinds = ['single', 'multiple', 'truefalse', 'blank', 'ordering', 'matching', 'hotspot'],
 		text = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '',
 		id = (v, max) => typeof v === 'string' && v.length <= max && /^[\w.~:$-]+$/.test(v) ? v : '',
 		int = (v, min, max) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? Math.round(v) : null

@@ -10,6 +10,7 @@ import {
   defaultAutoLayout,
   defaultParams,
   isContainer,
+  isMultiple,
   newQuestion,
   questionVars,
   renamePrefix,
@@ -23,6 +24,8 @@ import {
   type Project,
   type Question,
   type QuestionKind,
+  type QuestionOption,
+  type QuestionPair,
   type SceneNode,
   type Variable,
 } from 'interactives-player';
@@ -41,9 +44,10 @@ const BAD_BG = '#fde8e6';
 const MISS = '#8a5a00';
 const MISS_BG = '#fff4d6';
 
-type Style = 'radio' | 'check' | 'blank' | 'order';
+type Style = 'radio' | 'check' | 'blank' | 'order' | 'match' | 'spot';
 
-export const bodyStyle = (kind: QuestionKind): Style => (kind === 'multiple' ? 'check' : kind === 'blank' ? 'blank' : kind === 'ordering' ? 'order' : 'radio');
+export const bodyStyle = (kind: QuestionKind): Style =>
+  kind === 'multiple' ? 'check' : kind === 'blank' ? 'blank' : kind === 'ordering' ? 'order' : kind === 'matching' ? 'match' : kind === 'hotspot' ? 'spot' : 'radio';
 
 export const RESET_LABELS = { again: 'Try again', next: 'Next question' };
 
@@ -215,14 +219,317 @@ function blanksBody(q: Question, variableIds: string[]): SceneNode {
   });
 }
 
+
+// ---------------------------------------------------------------------------------------------------------------------
+//Matching: a static layer set per pair, because draggables can't sit inside a repeater
+
+const TERM_W = 170;
+const TERM_H = 52;
+const TERM_PITCH = 76;
+const AREA_W = 592;
+const AREA_H = 280;
+
+/** The binding scope's tag for a matching question's terms: only they go into its slots. */
+const termTag = (q: Question) => `${q.prefix}-term`;
+const itemAt = (q: Question, i: number) => `${varName(q, 'items')}[${i}]`;
+
+/** The same state wording as the choice options, for any row reference (the repeater's `item`, or `q1_items[2]`). */
+const stateFor = (ref: string) => {
+  const r = `${ref}?`;
+  return {
+    fill: (c: string) => `${r}.state == "correct" ? "${OK_BG}" : ${r}.state == "wrong" ? "${BAD_BG}" : ${r}.state == "missed" ? "${MISS_BG}" : ${c}`,
+    line: (c: string) => `${r}.state == "correct" ? "${OK}" : ${r}.state == "wrong" ? "${BAD}" : ${r}.state == "missed" ? "${MISS}" : ${c}`,
+    description: (right: string, wrong: string) => `${r}.state == "correct" ? "Right" : ${r}.state == "wrong" ? ${wrong} : ${r}.state == "missed" ? ${right} : ""`,
+  };
+};
+
+/** A fixed order that is not the pairs' own, so the first deal is never already right (the player deals again when it starts). */
+export function dealOrder(n: number, seed: string): number[] {
+  const out = Array.from({ length: n }, (_, i) => i);
+  let h = 7;
+  for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  for (let i = n - 1; i > 0; i--) {
+    h = (Math.imul(h, 1103515245) + 12345) >>> 0;
+    const j = h % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  if (n > 1 && out.every((v, i) => v === i)) out.push(out.shift()!);
+  return out;
+}
+
+function matchTerm(q: Question, p: QuestionPair, i: number, slot: number): SceneNode {
+  const st = stateFor(itemAt(q, i));
+  return createNode('frame', {
+    name: `Term ${i + 1}`,
+    questionPart: `matchTerm:${p.id}`,
+    x: 0,
+    y: slot * TERM_PITCH,
+    width: TERM_W,
+    height: TERM_H,
+    fill: solid('#ffffff'),
+    stroke: stroke('#8a94a6', 2),
+    cornerRadius: 10,
+    clip: false,
+    layout: { ...row(8), padding: { top: 8, right: 12, bottom: 8, left: 12 }, hugHeight: false },
+    ariaLabel: p.term,
+    draggable: { tags: [termTag(q)], onMiss: 'return', label: p.term },
+    shadow: { x: 0, y: 2, blur: 6, spread: 0, color: 'rgba(20,30,60,0.12)' },
+    bindings: { 'fill.color': st.fill('"#ffffff"'), 'stroke.paint.color': st.line('"#8a94a6"') },
+    children: [text('Term text', 'matchTermText', `{${itemAt(q, i)}?.text}`, { layoutItem: { width: 'fill' }, decorative: true })],
+  });
+}
+
+function matchRow(q: Question, p: QuestionPair, i: number): SceneNode {
+  const at = itemAt(q, i);
+  const st = stateFor(at);
+  return createNode('frame', {
+    name: `Match ${i + 1}`,
+    questionPart: `matchRow:${p.id}`,
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: { ...column(4), align: 'stretch' as const },
+    children: [
+      createNode('frame', {
+        name: 'Match line',
+        questionPart: 'matchLine',
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: row(12),
+        children: [
+          text('Definition', 'matchDefinition', `{${at}?.label}`, { layoutItem: { width: 'fill' } }),
+          createNode('frame', {
+            name: `Slot ${i + 1}`,
+            questionPart: `matchZone:${p.id}`,
+            width: TERM_W,
+            height: TERM_H,
+            fill: null,
+            stroke: { ...stroke('#8a94a6', 2), dash: [6, 4] },
+            cornerRadius: 10,
+            clip: false,
+            dropZone: { accepts: [termTag(q)], capacity: 1, whenFull: 'swap', snap: 'center', label: p.match },
+            bindings: { 'stroke.paint.color': st.line('"#8a94a6"'), ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) },
+          }),
+        ],
+      }),
+      text('Match result', 'matchState', `{${at}?.state == "correct" ? "✓ Right" : ${at}?.state == "wrong" ? "✗ Wrong" + (${at}?.answer ? ". The answer is " + ${at}.answer : "") : ""}`, {
+        fontSize: 13,
+        fontWeight: 600,
+        color: MUTED,
+        decorative: true,
+        width: TERM_W,
+        height: 18,
+        //Out of the flow, so showing it does not move the rows (the drop zones are measured from where the rows sit)
+        layoutItem: { position: 'absolute', inset: { left: 402 - TERM_W, top: TERM_H + 2 } },
+        bindings: { visible: `!!${at}?.state` },
+      }),
+    ],
+  });
+}
+
+function matchingBody(q: Question): SceneNode {
+  const n = q.pairs.length;
+  const order = dealOrder(n, q.prefix);
+  return createNode('frame', {
+    name: 'Matching',
+    questionPart: 'matching',
+    fill: null,
+    stroke: null,
+    clip: false,
+    //The terms are the later layer so they paint over the slots, and the reversed layout puts them on the left
+    layout: { ...row(20), align: 'start' as const, reverse: true },
+    children: [
+      createNode('frame', {
+        name: 'Matches',
+        questionPart: 'matches',
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: { ...column(24), align: 'stretch' as const },
+        layoutItem: { width: 'fill' },
+        children: q.pairs.map((p, i) => matchRow(q, p, i)),
+      }),
+      createNode('frame', {
+        name: 'Terms',
+        questionPart: 'terms',
+        width: TERM_W,
+        height: Math.max(TERM_H, n * TERM_PITCH - (TERM_PITCH - TERM_H)),
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: null,
+        children: order.map((pi, slot) => matchTerm(q, q.pairs[pi], pi, slot)),
+      }),
+    ],
+  });
+}
+
+/** `[n]` of this question's items in a layer's bindings and text, pointed at row `idx`. */
+function reindex(frameNode: SceneNode, q: Question, idx: number): void {
+  const re = new RegExp(`${varName(q, 'items').replace(/\$/g, '\\$')}\\[\\d+\\]`, 'g');
+  const to = itemAt(q, idx);
+  walk([frameNode], (n) => {
+    if (n.bindings) for (const k of Object.keys(n.bindings)) n.bindings[k] = n.bindings[k].replace(re, to);
+    if (n.type === 'text') {
+      n.text = n.text.replace(re, to);
+      for (const r of n.runs ?? []) r.text = r.text.replace(re, to);
+    }
+  });
+}
+
+/** The layer a kit part marks for one pair or area: `matchTerm:p1`. */
+function partWithId(frame: ContainerNode, part: string, id: string): SceneNode | undefined {
+  return (partsOf(frame)[part] ?? []).find((n) => n.questionPart === `${part}:${id}`);
+}
+
+//Hotspot: a picture, with the clickable areas drawn over it as layers of their own
+
+export type AreaShape = 'rect' | 'ellipse' | 'polygon';
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const AREA_OFF = '#00000000';
+const AREA_ON = '#3b5bfd33';
+const AREA_OK = '#0a7d3340';
+const AREA_BAD = '#b3261e40';
+const AREA_MISS = '#8a5a0040';
+
+/** Where the sample question's four areas sit on its sample picture. */
+const SAMPLE_AREAS: Record<string, { shape: AreaShape; box: Box; points?: [number, number][] }> = {
+  Roof: { shape: 'polygon', box: { x: 130, y: 58, w: 210, h: 80 }, points: [[0, 80], [105, 0], [210, 80]] },
+  Sun: { shape: 'ellipse', box: { x: 456, y: 18, w: 98, h: 98 } },
+  Tree: { shape: 'rect', box: { x: 384, y: 92, w: 112, h: 150 } },
+  Door: { shape: 'rect', box: { x: 216, y: 168, w: 54, h: 76 } },
+};
+
+export const shapeOfArea = (n: SceneNode): AreaShape => (n.type === 'ellipse' ? 'ellipse' : n.type === 'path' ? 'polygon' : 'rect');
+
+/** Where a new area goes when nothing says: a modest box, stepped along so they do not sit on each other. */
+const defaultBox = (k: number): Box => ({ x: 40 + ((k * 46) % 360), y: 40 + ((k * 38) % 150), w: 90, h: 70 });
+
+function pentagon(w: number, h: number) {
+  return [[0.5, 0], [1, 0.4], [0.8, 1], [0.2, 1], [0, 0.4]].map(([x, y]) => ({ x: Math.round(x * w), y: Math.round(y * h) }));
+}
+
+function spotArea(q: Question, o: QuestionOption, i: number, shape: AreaShape, box: Box, points?: [number, number][]): SceneNode {
+  const at = itemAt(q, i);
+  const r = `${at}?`;
+  const common = {
+    name: `Area: ${o.text || i + 1}`,
+    questionPart: `spot:${o.id}`,
+    x: box.x,
+    y: box.y,
+    width: box.w,
+    height: box.h,
+    role: isMultiple(q) ? ('checkbox' as const) : ('radio' as const),
+    focusable: true,
+    ariaLabel: o.text,
+    fill: solid('#ffffff01'),
+    stroke: stroke(AREA_OFF, 3),
+    cursor: 'pointer',
+    bindings: {
+      ariaChecked: `${r}.selected`,
+      ariaLabel: `${r}.text`,
+      ariaDescription: stateFor(at).description('"This was the right answer"', '"Wrong"'),
+      'fill.color': `${r}.state == "correct" ? "${AREA_OK}" : ${r}.state == "wrong" ? "${AREA_BAD}" : ${r}.state == "missed" ? "${AREA_MISS}" : ${r}.selected ? "${AREA_ON}" : "#ffffff01"`,
+      'stroke.paint.color': `${r}.state == "correct" ? "${OK}" : ${r}.state == "wrong" ? "${BAD}" : ${r}.state == "missed" ? "${MISS}" : ${r}.selected ? "${ACCENT}" : "${AREA_OFF}"`,
+    },
+  };
+  if (shape === 'ellipse') return createNode('ellipse', common);
+  if (shape === 'polygon') return createNode('path', { ...common, paths: [{ closed: true, points: points ? points.map(([x, y]) => ({ x, y })) : pentagon(box.w, box.h) }] });
+  return createNode('rect', { ...common, cornerRadius: 8 });
+}
+
+/** The sample picture: a house, a tree and the sun, drawn with shapes so the question works before there is any image. Swap it for yours. */
+function samplePicture(): SceneNode {
+  const shape = (type: 'rect' | 'ellipse', name: string, x: number, y: number, w: number, h: number, color: string, extra: object = {}) =>
+    createNode(type, { name, x, y, width: w, height: h, fill: solid(color), stroke: null, decorative: true, ...extra } as never);
+  return createNode('frame', {
+    name: 'Picture',
+    questionPart: 'picture',
+    width: AREA_W,
+    height: AREA_H,
+    fill: solid('#cfe8ff'),
+    stroke: null,
+    cornerRadius: 10,
+    clip: true,
+    role: 'image',
+    ariaLabel: 'A house with a red roof and a door, a tree beside it and the sun in the sky',
+    children: [
+      shape('ellipse', 'Sun', 466, 28, 78, 78, '#ffcf33'),
+      shape('rect', 'Ground', 0, 224, AREA_W, 56, '#9bd18b'),
+      shape('rect', 'Walls', 150, 138, 170, 104, '#e8c9a0'),
+      createNode('path', { name: 'Roof', x: 130, y: 62, width: 210, height: 76, fill: solid('#b5523b'), stroke: null, decorative: true, paths: [{ closed: true, points: [{ x: 0, y: 76 }, { x: 105, y: 0 }, { x: 210, y: 76 }] }] } as never),
+      shape('rect', 'Door', 224, 178, 38, 64, '#7a4a2b'),
+      shape('rect', 'Trunk', 428, 168, 20, 74, '#7a4a2b'),
+      shape('ellipse', 'Leaves', 394, 98, 90, 88, '#3f9a4a'),
+    ],
+  });
+}
+
+function hotspotBody(q: Question): SceneNode {
+  const areas = q.options.map((o, i) => {
+    const sample = SAMPLE_AREAS[o.text];
+    return sample ? spotArea(q, o, i, sample.shape, sample.box, sample.points) : spotArea(q, o, i, 'rect', defaultBox(i));
+  });
+  const prompt = varName(q, 'prompt');
+  const items = varName(q, 'items');
+  return createNode('frame', {
+    name: 'Hotspots',
+    questionPart: 'hotspots',
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: column(8),
+    children: [
+      createNode('frame', {
+        name: 'Picture area',
+        questionPart: 'spots',
+        width: AREA_W,
+        height: AREA_H,
+        fill: null,
+        stroke: stroke('#dfe3ea', 1),
+        cornerRadius: 10,
+        clip: false,
+        role: isMultiple(q) ? 'region' : 'radiogroup',
+        bindings: { ariaLabel: prompt },
+        children: [samplePicture(), ...areas],
+      }),
+      text('Picks', 'spotPicks', `Selected: {${items}.filter(i => i.selected).map(i => i.text + (i.state == "correct" ? " (right)" : i.state == "wrong" ? " (wrong)" : "")).join(", ")}`, {
+        fontSize: 14,
+        color: MUTED,
+        bindings: { visible: `${items}.some(i => i.selected)` },
+      }),
+      text('Right areas', 'spotAnswer', `Right answer: {${items}.filter(i => i.state == "missed").map(i => i.text).join(", ")}`, {
+        fontSize: 14,
+        fontWeight: 600,
+        color: MISS,
+        bindings: { visible: `${items}.some(i => i.state == "missed")` },
+      }),
+    ],
+  });
+}
+
 /** The default look of the Try again / Next question button for this question. */
 export const resetLabel = (q: Question): string => (q.bank ? RESET_LABELS.next : RESET_LABELS.again);
 const resetVisible = (q: Question): string => (q.bank ? varName(q, 'locked') : `${varName(q, 'locked')} && !${varName(q, 'correct')}`);
 
+function bodyFor(q: Question, style: Style, blankVars: string[]): SceneNode {
+  if (style === 'blank') return blanksBody(q, blankVars);
+  if (style === 'match') return matchingBody(q);
+  if (style === 'spot') return hotspotBody(q);
+  return optionsBody(q, style);
+}
+
 function frameFor(q: Question, blankVars: string[], at: { x: number; y: number }): FrameNode {
   const p = (s: string) => varName(q, s);
   const style = bodyStyle(q.kind);
-  const body = style === 'blank' ? blanksBody(q, blankVars) : optionsBody(q, style);
+  const body = bodyFor(q, style, blankVars);
   return createNode('frame', {
     name: 'Question',
     x: at.x,
@@ -286,6 +593,8 @@ function ensureVariables(d: Project, q: Question): Variable[] {
 //The interaction graph
 
 interface Slot {
+  /** A fixed option number for the Choose option node (hotspot areas: the node is about one area). */
+  option?: string;
   /** Which event node and which action node of the question this wire is (several events can feed one action). */
   eventSlot: string;
   actionSlot: string;
@@ -313,6 +622,12 @@ function wantedSlots(d: Project, frame: FrameNode, q: Question): Slot[] {
   };
   const style = bodyStyle(q.kind);
   if (style === 'radio' || style === 'check') click('option', 'action.questionChoose', { option: 'event.index' });
+  if (style === 'spot') {
+    q.options.forEach((o, i) => {
+      const target = partWithId(frame, 'spot', o.id)?.id;
+      if (target) out.push({ eventSlot: `spot:${o.id}:event`, actionSlot: `spot:${o.id}:action`, option: String(i), event: { kind: 'event.pointer', params: { target, type: 'click' } }, action: { kind: 'action.questionChoose', params: { question: frame.id, option: String(i) } } });
+    });
+  }
   if (style === 'order') {
     click('moveUp', 'action.questionMove', { item: 'event.index', direction: 'up' });
     click('moveDown', 'action.questionMove', { item: 'event.index', direction: 'down' });
@@ -350,6 +665,7 @@ function ensureGraph(d: Project, ab: Artboard, frame: FrameNode, q: Question): v
     const own = w.event.kind === 'event.pointer' ? ['target'] : w.event.kind === 'event.dataLoaded' ? ['source'] : [];
     for (const k of own) ev.params[k] = w.event.params[k];
     ac.params.question = frame.id;
+    if (w.option !== undefined) ac.params.option = w.option;
     keep.add(ev.id);
     keep.add(ac.id);
     const evId = ev.id;
@@ -444,6 +760,129 @@ function syncBlankRows(frame: FrameNode, q: Question, variables: Variable[]): vo
   });
 }
 
+
+/** Matching: one term, definition and slot per pair, in the settings' order. Added and removed pairs change the layers; the rest keep their look. */
+function syncPairs(frame: FrameNode, q: Question, ab: Artboard): void {
+  const matches = partsOf(frame).matches?.[0] as FrameNode | undefined;
+  const terms = partsOf(frame).terms?.[0] as FrameNode | undefined;
+  if (!matches || !terms) return;
+  const ids = new Set(q.pairs.map((p) => p.id));
+  const rowId = (n: SceneNode) => /^matchRow:(.+)$/.exec(n.questionPart ?? '')?.[1];
+  const termId = (n: SceneNode) => /^matchTerm:(.+)$/.exec(n.questionPart ?? '')?.[1];
+  const had = terms.children.filter((c) => termId(c)).map((c) => termId(c)!);
+  matches.children = matches.children.filter((c) => !rowId(c) || ids.has(rowId(c)!));
+  terms.children = terms.children.filter((c) => !termId(c) || ids.has(termId(c)!));
+  const names = nodeNames(ab);
+  let changed = had.length !== terms.children.filter((c) => termId(c)).length;
+  q.pairs.forEach((p, i) => {
+    if (!matches.children.some((c) => rowId(c) === p.id)) {
+      const made = matchRow(q, p, i);
+      made.name = uniqueName(names, made.name);
+      matches.children.push(made);
+    }
+    if (!terms.children.some((c) => termId(c) === p.id)) {
+      const made = matchTerm(q, p, i, terms.children.length);
+      made.name = uniqueName(names, made.name);
+      terms.children.push(made);
+      changed = true;
+    }
+  });
+  //The rows follow the settings' order
+  const rank = new Map(q.pairs.map((p, i) => [p.id, i]));
+  matches.children.sort((a, b) => (rank.get(rowId(a) ?? '') ?? 0) - (rank.get(rowId(b) ?? '') ?? 0));
+  q.pairs.forEach((p, i) => {
+    const row = matches.children.find((c) => rowId(c) === p.id)!;
+    const term = terms.children.find((c) => termId(c) === p.id)!;
+    reindex(row, q, i);
+    reindex(term, q, i);
+    //Names follow the position while they are still the kit's own
+    if (/^Match \d+$/.test(row.name)) row.name = `Match ${i + 1}`;
+    if (/^Term \d+$/.test(term.name)) term.name = `Term ${i + 1}`;
+    const slot = partWithId(matches, 'matchZone', p.id);
+    if (slot && /^Slot \d+$/.test(slot.name)) slot.name = `Slot ${i + 1}`;
+    term.ariaLabel = p.term;
+    if (term.draggable) {
+      term.draggable.label = p.term;
+      term.draggable.tags = [termTag(q)];
+    }
+    const zone = partWithId(matches, 'matchZone', p.id);
+    if (zone?.dropZone) {
+      zone.dropZone.label = p.match;
+      zone.dropZone.accepts = [termTag(q)];
+    }
+  });
+  //A different number of pairs: lay the pile out again, one under the other
+  if (changed) {
+    terms.children.forEach((c, k) => {
+      c.x = 0;
+      c.y = k * TERM_PITCH;
+    });
+  }
+  terms.height = Math.max(TERM_H, q.pairs.length * TERM_PITCH - (TERM_PITCH - TERM_H));
+}
+
+/** Hotspot: one area layer per option. New options get a default box on the picture; the rest keep their shape, place and look. */
+function syncAreas(frame: FrameNode, q: Question, ab: Artboard): void {
+  const spots = partsOf(frame).spots?.[0] as FrameNode | undefined;
+  if (!spots) return;
+  const idOf = (n: SceneNode) => /^spot:(.+)$/.exec(n.questionPart ?? '')?.[1];
+  const ids = new Set(q.options.map((o) => o.id));
+  spots.children = spots.children.filter((c) => !idOf(c) || ids.has(idOf(c)!));
+  const names = nodeNames(ab);
+  const several = isMultiple(q);
+  let fresh = 0;
+  q.options.forEach((o, i) => {
+    let area = spots.children.find((c) => idOf(c) === o.id);
+    if (!area) {
+      area = spotArea(q, o, i, 'rect', defaultBox(spots.children.filter((c) => idOf(c)).length + fresh++));
+      area.name = uniqueName(names, area.name);
+      spots.children.push(area);
+    }
+    reindex(area, q, i);
+    area.role = several ? 'checkbox' : 'radio';
+    area.ariaLabel = o.text;
+    if (area.name.startsWith('Area: ')) area.name = `Area: ${o.text || i + 1}`;
+  });
+  spots.role = several ? 'region' : 'radiogroup';
+}
+
+/** Change the shape of one area (rectangle, ellipse or polygon), keeping its place, size, look and the wiring that points at it. */
+export function setAreaShape(d: Project, abId: string, frameId: string, optionId: string, shape: AreaShape): void {
+  const ab = d.artboards.find((a) => a.id === abId);
+  const frame = ab && locate(ab, frameId)?.node;
+  if (!ab || !frame || frame.type !== 'frame' || !frame.question) return;
+  const old = partWithId(frame, 'spot', optionId);
+  const at = old && locate(ab, old.id);
+  if (!old || !at || shapeOfArea(old) === shape) return;
+  const q = frame.question;
+  const i = q.options.findIndex((o) => o.id === optionId);
+  if (i < 0) return;
+  const made = spotArea(q, q.options[i], i, shape, { x: old.x, y: old.y, w: old.width, h: old.height });
+  const look = old as unknown as { fill?: unknown; stroke?: unknown };
+  Object.assign(made, { id: old.id, name: old.name, bindings: old.bindings, fill: look.fill, stroke: look.stroke, rotation: old.rotation, opacity: old.opacity });
+  at.siblings.splice(at.index, 1, made);
+}
+
+/** Make every area bigger (or smaller, with a negative number) by `px` on each side, so a click a little off still lands. */
+export function growAreas(d: Project, abId: string, frameId: string, px: number): void {
+  const ab = d.artboards.find((a) => a.id === abId);
+  const frame = ab && locate(ab, frameId)?.node;
+  if (!ab || !frame || frame.type !== 'frame') return;
+  for (const n of partsOf(frame).spot ?? []) {
+    const w = Math.max(8, n.width + 2 * px);
+    const h = Math.max(8, n.height + 2 * px);
+    if (n.type === 'path' && n.width > 0 && n.height > 0) {
+      const sx = w / n.width;
+      const sy = h / n.height;
+      for (const sp of n.paths) for (const pt of sp.points) Object.assign(pt, { x: Math.round(pt.x * sx * 10) / 10, y: Math.round(pt.y * sy * 10) / 10 });
+    }
+    n.x -= (w - n.width) / 2;
+    n.y -= (h - n.height) / 2;
+    n.width = w;
+    n.height = h;
+  }
+}
+
 /**
  * Bring a question frame's variables, answer area and graph in line with its settings. `before` is what the settings were
  * (a changed prefix renames the variables and what refers to them; a changed type rebuilds the answer area). Layers the person
@@ -471,12 +910,12 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
   const variables = ensureVariables(d, q);
   const style = bodyStyle(q.kind);
   const parts = partsOf(frame);
-  const bodyNow = parts.blanks?.[0] ? 'blank' : (parts.options?.[0]?.questionPart ?? '').split(':')[1];
+  const bodyNow = parts.blanks?.[0] ? 'blank' : parts.matching?.[0] ? 'match' : parts.hotspots?.[0] ? 'spot' : (parts.options?.[0]?.questionPart ?? '').split(':')[1];
   if (bodyNow !== style) {
     //A different kind of answer needs a different answer area
-    const old = parts.blanks?.[0] ?? parts.options?.[0];
+    const old = parts.blanks?.[0] ?? parts.matching?.[0] ?? parts.hotspots?.[0] ?? parts.options?.[0];
     const blankVars = q.blanks.map((_, i) => variables.find((v) => v.name === varName(q, `blank${i + 1}`))?.id ?? '');
-    const body = style === 'blank' ? blanksBody(q, blankVars) : optionsBody(q, style);
+    const body = bodyFor(q, style, blankVars);
     const names = nodeNames(ab);
     body.name = uniqueName(names, body.name);
     if (old) {
@@ -484,6 +923,8 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
       if (at) at.siblings.splice(at.index, 1, body);
     } else (frame as FrameNode).children.splice(1, 0, body);
   } else if (style === 'blank') syncBlankRows(frame, q, variables);
+  else if (style === 'match') syncPairs(frame as FrameNode, q, ab);
+  else if (style === 'spot') syncAreas(frame as FrameNode, q, ab);
   //The reset button's wording and when it shows depend on there being a bank. Only the default wording follows.
   const reset = partsOf(frame).reset?.[0];
   if (reset && reset.type === 'button') {

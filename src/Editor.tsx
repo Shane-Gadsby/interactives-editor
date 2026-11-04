@@ -771,11 +771,11 @@ function AddQuestion() {
     <>
       <IconButton
         icon={<Icons.question />}
-        title="Add question: multiple choice, true/false, fill in the blank, ordering"
+        title="Add question: multiple choice, true/false, fill in the blank, ordering, matching, hotspot"
         active={!!at}
         onClick={(e) => {
           const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          setAt(at ? null : { left: r.right + 6, top: Math.max(8, Math.min(r.top, window.innerHeight - 330)) });
+          setAt(at ? null : { left: r.right + 6, top: Math.max(8, Math.min(r.top, window.innerHeight - 440)) });
         }}
       />
       {at && (
