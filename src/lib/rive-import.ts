@@ -4138,6 +4138,20 @@ export async function importRiveObjects(objects: RObj[], name: string): Promise<
   });
   void name;
   const start = artboards.find((a) => a.name === String(s.artboards[0].obj.props.name)) ?? artboards[0];
+  // Rive hit-tests a pointer listener's target by its shape whatever its opacity (hover areas are often fully
+  // see-through), so those targets and what's inside them stay clickable, with the hand cursor, while faded
+  for (const ab of artboards) {
+    const targets = new Set(ab.logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.target).map((n) => String(n.params.target)));
+    if (!targets.size) continue;
+    const mark = (list: SceneNode[], inside: boolean) => {
+      for (const n of list) {
+        const on = inside || targets.has(n.id);
+        if (on) n.interactiveWhenFaded = true;
+        if ('children' in n) mark((n as { children: SceneNode[] }).children, on);
+      }
+    };
+    mark(ab.children, false);
+  }
   return { artboard: start, artboards, assets: fc.assets, variables, fonts: fc.fonts, warnings: [...fc.warnings] };
 }
 

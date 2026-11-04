@@ -488,3 +488,19 @@ describe('Rive state machines wait for what a transition needs', () => {
     expect(open_).not.toHaveBeenCalled();
   });
 });
+
+describe('Rive hover targets stay clickable while see-through', () => {
+  it('marks every pointer-listener target (and what is inside it) interactiveWhenFaded', async () => {
+    const { existsSync, readFileSync } = await import('node:fs');
+    const f = `${process.cwd()}/../research/rive/treasure_valley_interactive_map.riv`;
+    if (!existsSync(f)) return;
+    const { importRive } = await import('../src/lib/rive-import');
+    const imp = await importRive(new Uint8Array(readFileSync(f)), 'tv');
+    const byId = new Map<string, { interactiveWhenFaded?: boolean }>();
+    const { walk } = await import('interactives-player');
+    for (const ab of imp.artboards) walk(ab.children, (n) => void byId.set(n.id, n as never));
+    const targets = imp.artboards.flatMap((ab) => ab.logic.nodes.filter((n) => n.kind === 'event.pointer').map((n) => String(n.params.target)));
+    expect(targets.length).toBeGreaterThan(0);
+    for (const t of targets) expect(byId.get(t)?.interactiveWhenFaded).toBe(true);
+  });
+});
