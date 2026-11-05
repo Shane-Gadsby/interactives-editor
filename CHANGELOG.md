@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- **Save user data** / **Load user data** nodes, kept per learner per course in `lti-analytics.interactives-activity-user-data` through the learner page (new `/learn/:token/user-data` routes), and in the browser elsewhere. The graph's settings show a tick list for the variables.
+- **Before activity loads** / **On activity load** events in the graph palette.
+- The projects list with no session now lists only projects nobody owns, instead of everyone's until sessions are enforced. Admins still see only their own until they press F9.
+- Keyframe buttons (◆) made consistent with what the inspector shows:
+  - ◆ keys the value shown at the playhead. It used to key the layer's own value, so between two keys it held an old value instead of the in-between one.
+  - Changing a property the open timeline already animates changes its key at the playhead, with Record on or not. It used to change the layer's hidden own value, so the field snapped back and a later ◆ keyed that hidden value. Design view still edits the layer's own value.
+  - On a **Whole frames** timeline keys go on the start of the frame, so the frame on screen shows them straight away and the filled-diamond "on a key" state matches.
+  - With several layers selected, ◆ keys all of them (it keyed only the first).
+
+Deploying: restart the server, and apply the new `interactives-activity-user-data` index in `suite-libs/indexes.js` on the box before the nodes are used there (it is the upsert key).
+
 ## 0.5.0 (beta), 2026-11-04
 
 The first beta. The full tour is in the README under **What's in 0.5**, and every feature has a page in the in-app help (F1). The Welcome page has **Getting started as a beta tester**: what to try first, how to report a problem (with the version from the (i) icon) and the known limits.

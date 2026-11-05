@@ -55,7 +55,7 @@ export function CornerRadii({ nodes }: { nodes: SceneNode[] }) {
   const field = (i: number, label: string) => (
     <div className="keyed">
       <NumberField label={label} title={`${CORNER_NAMES[i]} corner radius in pixels${locked ? '. The corners are locked together, so this sets all four' : ''}`} value={values[i]} min={0} onChange={(v) => setOne(i, v)} onCommit={() => store().commit()} />
-      {!locked && <KeyButton node={n} prop={`cornerRadii.${i}`} />}
+      {!locked && <KeyButton node={n} ids={ids} prop={`cornerRadii.${i}`} />}
     </div>
   );
   return (
@@ -71,7 +71,7 @@ export function CornerRadii({ nodes }: { nodes: SceneNode[] }) {
         >
           {locked ? <Icons.lock width={13} /> : <Icons.unlock width={13} />}
         </button>
-        {locked && <KeyButton node={n} prop="cornerRadius" />}
+        {locked && <KeyButton node={n} ids={ids} prop="cornerRadius" />}
       </div>
       <Row>
         {field(0, 'Top-left')}

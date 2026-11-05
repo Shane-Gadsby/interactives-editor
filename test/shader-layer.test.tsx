@@ -209,9 +209,10 @@ describe('shader uniform keys and bindings', () => {
     for (const prop of ['uniforms.0.value', 'uniforms.1.value.0', 'uniforms.2.value', 'uniforms.3.value']) s.keyCurrent(n.id, prop);
     s.set({ playhead: 1000 });
     s.setProps([n.id], { 'uniforms.0.value': 10, 'uniforms.1.value.0': 4, 'uniforms.2.value': '#ffffff', 'uniforms.3.value': 'asset2' });
-    // Not recording: the base values changed, so key them at 1000 too
+    // Not recording, but each of them is animated already, so the edits are keys at 1000 (pressing ◆ again holds the same values)
     for (const prop of ['uniforms.0.value', 'uniforms.1.value.0', 'uniforms.2.value', 'uniforms.3.value']) s.keyCurrent(n.id, prop);
     const tl = s.artboard()!.timelines[0];
+    expect(tl.tracks.map((t) => t.keys.length)).toEqual([2, 2, 2, 2]);
     expect(tl.tracks.map((t) => t.prop)).toEqual(['uniforms.0.value', 'uniforms.1.value.0', 'uniforms.2.value', 'uniforms.3.value']);
     const at = (t: number) => sampleArtboard(s.artboard()!.children, tl, t)[0] as ShaderNode;
     const mid = at(500);
@@ -220,8 +221,8 @@ describe('shader uniform keys and bindings', () => {
     expect(mid.uniforms[2].value).toBe('#808080');
     expect(mid.uniforms[3].value).toBe('');
     expect(at(1000).uniforms[3].value).toBe('asset2');
-    // The document's own node was not touched by sampling
-    expect(shaderOf(s).uniforms[1].value).toEqual([4, 0]);
+    // The document's own values were left alone: the edits went to keys, and sampling doesn't touch it
+    expect(shaderOf(s).uniforms[1].value).toEqual([0, 0]);
   });
 
   it('records a uniform change as a key while recording', () => {

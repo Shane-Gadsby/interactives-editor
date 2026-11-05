@@ -99,7 +99,7 @@ export function extOf(name: unknown): string {
 }
 
 /** A server route with the ids and names taken out: `projects/<id>/comments` -> `projects/:id/comments`. */
-export const ROUTE_WORDS = new Set(['api', 'assets', 'collaborators', 'comments', 'people', 'duplicate', 'insights', 'learn', 'libraries', 'library', 'live', 'messages', 'meta', 'notices', 'ops', 'play', 'prefs', 'presence', 'progress', 'projects', 'publish', 'read', 'replies', 'report', 'restore', 'results', 'review', 'revisions', 's', 'session', 'share', 'thumbnail', 'analytics', 'usage', 'templates', 'template', 'use', 'examples', 'remix']);
+export const ROUTE_WORDS = new Set(['api', 'assets', 'collaborators', 'comments', 'people', 'duplicate', 'insights', 'learn', 'libraries', 'library', 'live', 'messages', 'meta', 'notices', 'ops', 'play', 'prefs', 'presence', 'progress', 'projects', 'user-data', 'publish', 'read', 'replies', 'report', 'restore', 'results', 'review', 'revisions', 's', 'session', 'share', 'thumbnail', 'analytics', 'usage', 'templates', 'template', 'use', 'examples', 'remix']);
 export function routePattern(url: string): string {
   let path = url;
   try {

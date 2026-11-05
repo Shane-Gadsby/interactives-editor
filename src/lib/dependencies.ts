@@ -325,6 +325,9 @@ export function analyzeUsage(project: Project): UsageReport {
           case 'variable':
             useId('variable', value, by, how);
             break;
+          case 'variables':
+            for (const id of Array.isArray(value) ? value : []) useId('variable', id, by, how);
+            break;
           case 'script':
             useId('script', value, by, how);
             break;

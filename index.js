@@ -71,6 +71,7 @@ let port = Number(process.env.PORT) || 3048,
 	libraries,
 	templates,
 	userData,
+	activityData,
 	userLookup,
 	ingest,
 	commentRows,
@@ -324,11 +325,13 @@ router.get('/api/session', (req, res) => {
 	res.json({user: whoIs(req), power: isPower(req)})
 })
 
-//The projects list, mine only. ?all=1 gets everyone's, but only for power users (god mode). With no session at
-//all (dev without si-manager) there's nobody to filter on, so it's everything until the box enforces sessions
+//The projects list, mine only (owned or invited to). ?all=1 gets everyone's, but only for power users (god mode),
+//and admins don't get it without asking. With no session at all it used to be everything until the box enforced
+//sessions, which on test meant anyone whose session didn't come through saw every project. Now it's just the
+//ones nobody owns (made in dev without si-manager), which anyone could open anyway
 router.get('/api/projects', async (req, res) => {
 	let me = whoIs(req),
-		filter = (req.query.all === '1' && isPower(req)) || (!me?.username && !enforcing()) ? {} : {$or: [{'owner.username': me?.username ?? null}, {'collaborators.username': me?.username ?? null}]},
+		filter = req.query.all === '1' && isPower(req) ? {} : me?.username ? {$or: [{'owner.username': me.username}, {'collaborators.username': me.username}]} : {'owner.username': null},
 		list = await projects.find(filter, {projection: {doc: 0}}).sort({updated: -1}).limit(1000).toArray(),
 		open = new Map()
 
@@ -540,6 +543,7 @@ router.delete('/api/projects/:id', async (req, res) => {
 
 	//The learners' records go with it, and so do the review comments
 	await userData.deleteMany({project: id})
+	await activityData.deleteMany({project: id})
 	await commentRows.deleteMany({project: id})
 	await commentNotices.deleteMany({project: id})
 	hubEnd(id)
@@ -2420,14 +2424,20 @@ const sharedProject = async (req, res) => {
 	return doc
 }
 
-//Two first saves at once both try to insert, the unique index lets one win and the other goes again as an update
-const saveRecord = async (key, build) => {
+//Two first saves at once both try to insert, the unique index lets one win and the other goes again as an update.
+//build can say no (null) to what it was given, and then nothing is written and this answers false
+const saveRecord = async (key, build, into = userData) => {
 	for (let tries = 0; ; tries++) {
-		let existing = await userData.findOne(key)
+		let existing = await into.findOne(key),
+			set = build(existing)
+
+		if (!set) {
+			return false
+		}
 
 		try {
-			await userData.updateOne(key, {$set: build(existing), $setOnInsert: {created: new Date()}}, {upsert: true})
-			return
+			await into.updateOne(key, {$set: set, $setOnInsert: {created: new Date()}}, {upsert: true})
+			return true
 		}
 		catch (e) {
 			if (e.code !== 11000 || tries > 2) {
@@ -2540,6 +2550,54 @@ router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, r
 	}
 
 	await saveRecord({project: project._id, username: who.username, course: who.course}, (existing) => learner.reportUpdate(existing, result, who, new Date()))
+	res.json({available: true, ok: true})
+})
+
+//User data (Save user data / Load user data nodes), for the learner whose session this is, in the project the share
+//token belongs to. Its own collection, interactives-activity-user-data, so it never gets mixed up with progress. Same
+//rules as progress: identity off the session, {available: false} with no session so the player uses the browser
+router.get('/learn/:token/user-data', async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let names = learner.userDataNames(req.query.names),
+		doc = names.length ? await activityData.findOne({project: project._id, username: who.username, course: who.course}) : null
+
+	res.json({available: true, variables: learner.userDataOut(doc, names)})
+})
+
+router.put('/learn/:token/user-data', express.json({limit: '100kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let clean = learner.cleanUserData(req.body)
+
+	if (!clean) {
+		return res.status(400).json({error: 'That user data is not the right shape'})
+	}
+
+	if (!await saveRecord({project: project._id, username: who.username, course: who.course}, (existing) => learner.userDataUpdate(existing, clean, who, new Date()), activityData)) {
+		return res.status(413).json({error: 'That is more user data than one person can keep in a project'})
+	}
+
 	res.json({available: true, ok: true})
 })
 
@@ -2700,6 +2758,17 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		else if (m.op === 'save') {
 			call('PUT', 'progress', m.data).then(function (j) {
 				answer(m, {ok: true, available: !!j.available})
+			}, failed)
+		}
+		else if (m.op === 'userdata-save') {
+			call('PUT', 'user-data', {variables: m.variables}).then(function (j) {
+				answer(m, {ok: !!j.ok, available: !!j.available})
+			}, failed)
+		}
+		else if (m.op === 'userdata-load') {
+			var names = Array.isArray(m.names) ? m.names.filter(function (n) { return typeof n === 'string' }) : []
+			call('GET', 'user-data?names=' + encodeURIComponent(names.join(','))).then(function (j) {
+				answer(m, {ok: true, available: !!j.available, data: j.variables || null})
 			}, failed)
 		}
 		else if (m.op === 'report') {
@@ -2872,6 +2941,7 @@ client.connect()
 		commentRows = db.collection('comments')
 		commentNotices = db.collection('comment-notices')
 		userData = analyticsDB.collection('interactives-user-data')
+		activityData = analyticsDB.collection('interactives-activity-user-data')
 		ingest = analyticsDB.collection('ingest')
 		userLookup = analyticsDB.collection('user-lookup')
 		fs.mkdirSync(storageDir, {recursive: true})

@@ -92,6 +92,7 @@ function summarize(n: LogicNode, ab: Artboard, project: Project): string {
     else if (p.type === 'timeline') text = ab.timelines.find((t) => t.id === v)?.name ?? '(missing timeline)';
     else if (p.type === 'blend') text = ab.blends?.find((b) => b.id === v)?.name ?? '(missing blend)';
     else if (p.type === 'variable') text = project.variables.find((x) => x.id === v)?.name ?? '(missing variable)';
+    else if (p.type === 'variables') text = (Array.isArray(v) ? v : []).map((id) => project.variables.find((x) => x.id === id)?.name ?? '(missing variable)').join(', ');
     else if (p.type === 'artboard') text = project.artboards.find((x) => x.id === v)?.name ?? '(missing artboard)';
     else if (p.type === 'script') text = project.scripts.find((x) => x.id === v)?.name ?? '(missing script)';
     else if (p.type === 'data') text = project.dataSources.find((x) => x.id === v)?.name ?? '(missing data)';
@@ -481,6 +482,23 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
         return pick((ab.blends ?? []).map((b) => ({ value: b.id, label: b.name })), ab.blends?.length ? 'Choose blend…' : 'No blends yet (add one on the artboard)');
       case 'variable':
         return pick(project.variables.map((x) => ({ value: x.id, label: x.name })), project.variables.length ? 'Choose variable…' : 'No variables yet', [addVariableOption()], { variableType: 'number' });
+      case 'variables': {
+        // Several variables: one box each, kept as a list of ids (in the order they were ticked)
+        const chosen = Array.isArray(v) ? v.map(String) : [];
+        return (
+          <div key={p.key} className="param-variables">
+            <div className="field-label block">{p.label}</div>
+            {project.variables.length ? (
+              project.variables.map((x) => (
+                <CheckField key={x.id} label={x.name} value={chosen.includes(x.id)} onChange={(on) => set(p.key, on ? [...chosen, x.id] : chosen.filter((id) => id !== x.id))} />
+              ))
+            ) : (
+              <div className="hint">No variables yet. Add some in the Variables panel.</div>
+            )}
+            {p.help && <div className="hint">{p.help}</div>}
+          </div>
+        );
+      }
       case 'artboard':
         return pick(artboardChoices(project, v), 'Choose artboard…');
       case 'script':

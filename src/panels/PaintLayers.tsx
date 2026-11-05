@@ -158,7 +158,7 @@ export function FillSection({ nodes, project }: { nodes: SceneNode[]; project: P
                 else write(list.map((x, j) => (j === i ? np : x)));
               }}
             />
-            {p.type === 'solid' && <KeyRow node={n} prop={`${prefix}.color`} />}
+            {p.type === 'solid' && <KeyRow node={n} ids={ids} prop={`${prefix}.color`} />}
             {!simple && <FxFields n={n} ids={ids} prefix={prefix} set={set} />}
           </div>
         );

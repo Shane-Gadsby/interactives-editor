@@ -147,6 +147,74 @@ export const progressOut = (doc) => {
 	return {variables, artboard: doc.artboard || null, attempts: doc.attempts || 1, completed: !!doc.attemptCompleted}
 }
 
+//User data, the Save user data and Load user data nodes: lti-analytics.interactives-activity-user-data, one record per
+//project + username + course same as progress, but only what a flow chose to save and only when it said to. One JSON
+//string again, so a variable's name never turns into a mongo key, and merged here so a save only touches what it names
+const userDataOf = (doc) => {
+	try {
+		let v = JSON.parse(doc?.variables || '{}')
+
+		return v && typeof v === 'object' && !Array.isArray(v) ? v : {}
+	}
+	catch (e) {
+		return {}
+	}
+}
+
+//What a save may hold: {variables: {name: value}}. Null for anything else, or nothing worth saving
+export const cleanUserData = (body) => {
+	let vars = body?.variables
+
+	if (!vars || typeof vars !== 'object' || Array.isArray(vars)) {
+		return null
+	}
+
+	let names = Object.keys(vars),
+		out = {}
+
+	if (names.length > MAX_VARIABLES) {
+		return null
+	}
+
+	for (let name of names) {
+		if (NAME.test(name) && name !== '__proto__') {
+			out[name] = vars[name]
+		}
+	}
+
+	return Object.keys(out).length ? out : null
+}
+
+//The fields to set for a save: what was there with this save's variables over the top. Null when the result is too
+//big to keep (the same limits as remembered progress), so the route can say so instead of quietly dropping some
+export const userDataUpdate = (existing, clean, who, now) => {
+	let merged = {...userDataOf(existing), ...clean},
+		json = JSON.stringify(merged)
+
+	if (Object.keys(merged).length > MAX_VARIABLES || json.length > MAX_VARIABLE_BYTES) {
+		return null
+	}
+
+	return {...identity(who), variables: json, updated: now}
+}
+
+//The names a load asks for, off the query string (a,b,c). Anything that isn't a variable name is dropped
+export const userDataNames = (raw) => String(raw || '').split(',').filter((n) => NAME.test(n) && n !== '__proto__').slice(0, MAX_VARIABLES)
+
+//What a load gets back: only the names asked for, and only the ones that were saved
+export const userDataOut = (doc, names) => {
+	let all = userDataOf(doc),
+		out = {}
+
+	for (let name of names) {
+		if (Object.prototype.hasOwnProperty.call(all, name)) {
+			out[name] = all[name]
+		}
+	}
+
+	return out
+}
+
 const mean = (list) => list.length ? round2(list.reduce((a, b) => a + b, 0) / list.length) : null
 
 //The project owner's view: counts, averages and the people. `rows` are records without their variables

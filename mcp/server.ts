@@ -215,6 +215,7 @@ function validate(p: Project): string[] {
         if (pd.type === 'timeline' && !tl.has(String(v))) problems.push(`${ab.name}: "${def.label}" (${n.id}) points at a missing timeline ${v}`);
         if (pd.type === 'blend' && !ab.blends?.some((b) => b.id === String(v))) problems.push(`${ab.name}: "${def.label}" (${n.id}) points at a missing blend ${v}`);
         if (pd.type === 'variable' && !varIds.has(String(v))) problems.push(`${ab.name}: "${def.label}" (${n.id}) points at a missing variable ${v}`);
+        if (pd.type === 'variables') for (const id of Array.isArray(v) ? v : []) if (!varIds.has(String(id))) problems.push(`${ab.name}: "${def.label}" (${n.id}) points at a missing variable ${id}`);
         if (pd.type === 'expr') {
           try {
             checkExpression(String(v));

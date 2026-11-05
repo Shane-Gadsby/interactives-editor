@@ -30,9 +30,6 @@ import {
   LINK_TARGETS,
   type LinkTarget,
   type Repeat,
-  getPath,
-  frameTime,
-  sampleKeys,
   type Artboard,
   type GroupNode,
   type Blend,
@@ -52,7 +49,7 @@ import {
   walk,
   shownAmount,
 } from 'interactives-player';
-import { store, useEditor } from '../store/store';
+import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
 import { gapUnit, lineGapUnit, paddingOwnerWidth, paddingUnit, patchGap, patchLineGap, patchPadding } from '../lib/layout-units';
@@ -126,25 +123,25 @@ export function useShown(node: SceneNode) {
   const st = store().get();
   const ab = store().artboard();
   const tl = st.bottomTab === 'timeline' ? ab?.timelines.find((t) => t.id === st.activeTimelineId) : undefined;
-  return (prop: string): unknown => {
-    const track = tl?.tracks.find((t) => t.nodeId === node.id && t.prop === prop);
-    if (track && track.keys.length) return sampleKeys(track.keys, frameTime(tl!, st.playhead));
-    return getPath(node, prop);
-  };
+  return (prop: string): unknown => valueAt(tl, node, prop, st.playhead);
 }
 
-export function KeyButton({ node, prop }: { node: SceneNode; prop: string }) {
+/** Keys the property at the playhead, for every layer in `ids` (the selection the field edits; just `node` without it). */
+export function KeyButton({ node, prop, ids }: { node: SceneNode; prop: string; ids?: string[] }) {
   const s = useEditor((st) => ({ bottomTab: st.bottomTab, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
   if (s.bottomTab !== 'timeline' || !animatableProp(prop)) return null;
   const ab = store().artboard();
   const tl = ab?.timelines.find((t) => t.id === s.tl);
   const track = tl?.tracks.find((t) => t.nodeId === node.id && t.prop === prop);
-  const onKey = track?.keys.some((k) => Math.abs(k.t - s.playhead) < 1);
+  // Where a key added now would go (on whole frames, the frame's start), so the button lights up on the frame the key is read in
+  const at = tl ? keyTime(tl, s.playhead) : Math.round(s.playhead);
+  const onKey = track?.keys.some((k) => Math.abs(k.t - at) < 1);
+  const targets = ids?.length ? ids : [node.id];
   return (
     <button
       className={`key-btn${track ? ' tracked' : ''}${onKey ? ' on-key' : ''}`}
-      title={tl ? `Add keyframe for ${prop} at ${Math.round(s.playhead)} ms` : `Add keyframe (creates a timeline)`}
-      onClick={() => store().keyCurrent(node.id, prop)}
+      title={`${onKey ? 'Update the keyframe' : 'Add a keyframe'} for ${prop} at ${at} ms${targets.length > 1 ? ` on all ${targets.length} selected layers` : ''}${tl ? '' : ' (creates a timeline)'}`}
+      onClick={() => store().keyCurrent(targets, prop)}
     >
       ◆
     </button>
@@ -158,7 +155,7 @@ export function Num({ node, ids, prop, label, step, min, max, suffix, fallback =
   return (
     <div className="keyed">
       <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
-      <KeyButton node={node} prop={prop} />
+      <KeyButton node={node} prop={prop} ids={ids} />
     </div>
   );
 }
@@ -169,7 +166,7 @@ export function Color({ node, ids, prop, label }: { node: SceneNode; ids: string
   return (
     <div className="keyed">
       <ColorField label={label} tokens value={String(shown(prop) ?? '#000000')} onChange={(c) => set({ [prop]: c })} onCommit={() => store().commit()} />
-      <KeyButton node={node} prop={prop} />
+      <KeyButton node={node} prop={prop} ids={ids} />
     </div>
   );
 }
@@ -665,13 +662,13 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
   );
 }
 
-export function KeyRow({ node, prop }: { node: SceneNode; prop: string }) {
+export function KeyRow({ node, prop, ids }: { node: SceneNode; prop: string; ids?: string[] }) {
   const s = useEditor((st) => st.bottomTab);
   if (s !== 'timeline') return null;
   return (
     <div className="key-row">
       <span className="muted small">Animate {(ANIMATABLE_PROPS.find((a) => a.prop === prop)?.label ?? prop).toLowerCase()}</span>
-      <KeyButton node={node} prop={prop} />
+      <KeyButton node={node} prop={prop} ids={ids} />
     </div>
   );
 }
@@ -925,13 +922,14 @@ function ShapeKeys({ node }: { node: SceneNode }) {
   const s = useEditor((st) => ({ bottomTab: st.bottomTab, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
   const tl = s.bottomTab === 'timeline' ? store().artboard()?.timelines.find((t) => t.id === s.tl) : undefined;
   const tracks = tl ? pointTracks(tl, node.id) : [];
-  const onKey = tracks.some((t) => t.keys.some((k) => Math.abs(k.t - s.playhead) < 1));
+  const at = tl ? keyTime(tl, s.playhead) : Math.round(s.playhead);
+  const onKey = tracks.some((t) => t.keys.some((k) => Math.abs(k.t - at) < 1));
   return (
     <>
       <Row>
         <button
           className={`btn key-btn${tracks.length ? ' tracked' : ''}${onKey ? ' on-key' : ''}`}
-          title={tl ? `Key the whole shape (every point and handle) at ${Math.round(s.playhead)} ms. Key it at one time, move the playhead, edit the points with recording on, and the shape morphs` : 'Key the whole shape at the playhead (creates a timeline)'}
+          title={tl ? `Key the whole shape (every point and handle) at ${at} ms. Key it at one time, move the playhead, edit the points with recording on, and the shape morphs` : 'Key the whole shape at the playhead (creates a timeline)'}
           onClick={() => store().keyShape(node.id)}
         >
           ◆ Key shape
