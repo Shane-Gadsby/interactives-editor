@@ -5,6 +5,7 @@
 - **Save user data** / **Load user data** nodes, kept per learner per course in `lti-analytics.interactives-activity-user-data` through the learner page (new `/learn/:token/user-data` routes), and in the browser elsewhere. The graph's settings show a tick list for the variables.
 - **Before activity loads** / **On activity load** events in the graph palette.
 - The projects list with no session now lists only projects nobody owns, instead of everyone's until sessions are enforced. Admins still see only their own until they press F9.
+- On test and prod (`NODE_ENV` `testing` or `production`) the projects list with no session is empty. The projects nobody owns are every beta tester's Guest project from before direct sign in, and they were showing to anyone whose session didn't reach the server. Dev keeps listing them.
 - Keyframe buttons (◆) made consistent with what the inspector shows:
   - ◆ keys the value shown at the playhead. It used to key the layer's own value, so between two keys it held an old value instead of the in-between one.
   - Changing a property the open timeline already animates changes its key at the playhead, with Record on or not. It used to change the layer's hidden own value, so the field snapped back and a later ◆ keyed that hidden value. Design view still edits the layer's own value.
