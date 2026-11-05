@@ -459,6 +459,12 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
         <NumberField label="Play for" title="How much of the file to play after the skipped start, in ms. 0 plays to the end of the file" value={a.length ?? 0} min={0} step={10} suffix="ms" onChange={(v) => set((t) => void (t.length = v > 0 ? Math.round(v) : undefined), `audio-len-${a.id}`)} />
         <NumberField label="Volume" title="0 is silent, 1 is the file as recorded" value={a.volume} min={0} max={1} step={0.05} onChange={(v) => set((t) => void (t.volume = Math.max(0, Math.min(1, v))), `audio-vol-${a.id}`)} />
         <CheckField label="Muted" title="Silent in the player, but still in step" value={!!a.muted} onChange={(v) => set((t) => void (t.muted = v ? true : undefined))} />
+        <CheckField
+          label="Keep pitch at other speeds"
+          title="When the timeline's speed isn't 1, the sound is time-stretched so voices and music keep their pitch. Untick it for the record-player effect: faster is higher, slower is lower"
+          value={a.keepPitch !== false}
+          onChange={(v) => set((t) => void (t.keepPitch = v ? undefined : false))}
+        />
         <div className="field-label block">Volume keys</div>
         <p className="hint">Double-click the clip to add one; drag it up and down for the level, sideways for the time. They multiply the volume above, so a fade is two keys.</p>
         <div className="row">
