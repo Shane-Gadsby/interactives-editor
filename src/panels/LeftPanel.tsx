@@ -491,12 +491,35 @@ function Assets() {
     setView(v);
     writeLocal(ASSET_VIEW_KEY, v);
   };
+  //Files dropped on the panel are uploaded as assets and nothing is placed (the canvas is where a drop places them)
+  const [dropping, setDropping] = useState(false);
+  const hasFiles = (e: DragEvent) => [...e.dataTransfer.types].includes('Files');
   return (
-    <div className="assets">
+    <div
+      className={`assets${dropping ? ' dropping' : ''}`}
+      onDragOver={(e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'copy';
+        setDropping(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropping(false);
+      }}
+      onDrop={(e) => {
+        setDropping(false);
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const files = [...e.dataTransfer.files];
+        if (files.length) void insertFiles(files, null, null);
+      }}
+    >
       <button className="btn wide" onClick={upload}>
         <Icons.upload width={14} /> Upload files
       </button>
-      <p className="hint">Images, video, audio, fonts and data files (JSON/CSV/TSV/text, used from the Data tab). Drop files on the canvas to place them.</p>
+      <p className="hint">Images, video, audio, fonts and data files (JSON/CSV/TSV/text, used from the Data tab). Drop files here to add them, or on the canvas to place them.</p>
       {assets.length > 0 && (
         <div className="asset-toolbar">
           <div className="seg">

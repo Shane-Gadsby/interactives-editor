@@ -5871,13 +5871,14 @@ A unit halfway into the range gets half of each change. Several modifiers stack,
     title: "The Assets panel",
     group: "Design",
     summary: "Every file in the project: upload, preview as thumbnails or a list, place on an artboard, check several and delete.",
-    keywords: "assets files upload thumbnails details size slider checkbox select all delete remove place unused image video audio font data panel",
+    keywords: "assets files upload drop drag thumbnails details size slider checkbox select all delete remove place unused image video audio font data panel",
     body: `The **Assets** tab in the left panel lists every file in the project: images, video, audio, fonts and data files.
 
 ![The Assets panel in thumbnail view, with one asset checked and the Delete button showing.](help/assets-panel.png)
 
 ## Adding files
 - **Upload files** opens a file picker. You can pick several at once.
+- Drop files on the **Assets** panel itself to add them without placing anything: images, video, audio (\`.mp3\`, \`.wav\`, \`.ogg\`...), fonts and data files. The panel shows a dashed outline while you're over it.
 - Or drop files on the canvas, or paste them. Dropped pictures and video are also placed on the artboard where you dropped them.
 - Font files (\`.woff\`, \`.woff2\`, \`.ttf\`, \`.otf\`) are added to the project's fonts as well, and a message tells you.
 - Data files (JSON, CSV, TSV, text) are used from the **Data** tab. See [Data sources](data-sources).

@@ -1747,6 +1747,11 @@ div.text-editor {
 .assets {
   padding: 10px;
 }
+.assets.dropping {
+  outline: 2px dashed var(--accent-2);
+  outline-offset: -4px;
+  background: color-mix(in srgb, var(--accent-2) 8%, transparent);
+}
 .layer-row,
 .artboard-row {
   display: flex;

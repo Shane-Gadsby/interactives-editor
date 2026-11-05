@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Files dropped on the **Assets** panel are uploaded as assets (audio, video, images, fonts, data), with a dashed outline while you're over it. Nothing is placed on the artboard; the canvas still does that. Before, a drop there did nothing.
 - The tools column holds two tools per row (it's a little wider), and when it still has to scroll it scrolls only up and down, never sideways.
 - Accessibility panel: the **to look at** chip is one row like the others. The Review page's `.review` class was styling it (and every other `.review` dot) as a full-height column; that class is now `.review-page`.
 - **Play sound** nodes in the graph show the sound's name instead of its id.
