@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Linked sizes**: a chain toggle between W and H, Sx and Sy, and an artboard's W and H. Linked, changing one keeps the ratio (per layer, timeline keys included), and the resize handles keep a linked layer's ratio unless Shift is held. Saved on the layer (`lockRatio`, `lockScale`) and the artboard (`lockRatio`).
 - **On drag move** event: fires while a held layer moves (pointer, Shift+arrow nudges, arrow keys between zones), once a frame at most, with `event.layerX/layerY` and `event.dx/dy`.
 - A video layer's settings have **Playback into variables**: Position (seconds, and setting it jumps the video), Playing and Length, each a variable picker with + Create new variable…. The Usage tab counts them as uses.
 - Resize bars are all a 7 px strip with the same 3 px gold line (the bottom one and the split columns were thinner).

@@ -23,6 +23,8 @@ export const Icons = {
   button: P('M3 8h18v8H3zM8 12h8'),
   input: P('M3 7h18v10H3zM7 10v4'),
   link: P('M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1'),
+  // the same chain pulled apart, with the gap marked
+  unlink: P('M15 9l3.3-3.3a2.8 2.8 0 00-4-4L11 5M9 15l-3.3 3.3a2.8 2.8 0 004 4L13 19M4 9h3M9 4v3M20 15h-3M15 20v-3'),
   embed: P('M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14'),
   video: P('M3 6h13v12H3zM16 10l5-3v10l-5-3'),
   draw: P('M3 4h18v14H3zM7 14l3-4 3 3 2-3 3 4M8 21h8'),

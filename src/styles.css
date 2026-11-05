@@ -6019,6 +6019,22 @@ code {
   color: var(--muted);
   cursor: pointer;
 }
+.linked-pair {
+  flex-wrap: nowrap !important;
+  align-items: center;
+}
+.linked-pair > .keyed,
+.linked-pair > .field {
+  flex: 1;
+  min-width: 0;
+}
+.link-toggle {
+  flex: none;
+  width: 20px;
+}
+.link-toggle.on {
+  color: var(--accent);
+}
 .lock-toggle:hover {
   background: var(--panel-2);
   color: var(--text);

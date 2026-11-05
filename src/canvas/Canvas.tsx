@@ -714,8 +714,9 @@ export function Canvas() {
         if (!ab) break;
         const pp = apply(invert(d.parentM), w.x - ab.canvasX, w.y - ab.canvasY);
         const lp = apply(invert(nodeMatrix(d.node0)), pp.x, pp.y);
-        const keep = e.shiftKey || d.node0.type === 'image';
-        const nb = resizeBox(d.node0.width, d.node0.height, d.handle, lp.x, lp.y, e.shiftKey ? true : keep && e.shiftKey, e.altKey);
+        // Shift keeps the ratio, and a layer whose W and H are linked keeps it unless Shift is held
+        const keep = d.node0.lockRatio ? !e.shiftKey : e.shiftKey;
+        const nb = resizeBox(d.node0.width, d.node0.height, d.handle, lp.x, lp.y, keep, e.altKey);
         const placed = placeBox(d.node0, nb.l, nb.t, nb.w, nb.h);
         const props: Record<string, unknown> = { x: round(placed.x), y: round(placed.y), width: round(nb.w), height: round(nb.h) };
         if (d.node0.type === 'path') props.paths = scalePaths(d.node0.paths, nb.w / Math.max(1, d.node0.width), nb.h / Math.max(1, d.node0.height));
@@ -742,7 +743,9 @@ export function Canvas() {
         if (!ab) break;
         const b0 = d.bounds0;
         const p = local(ab, w);
-        const nb = resizeBox(b0.width, b0.height, d.handle, p.x - b0.x, p.y - b0.y, e.shiftKey, e.altKey);
+        // all of them linked: the selection keeps its ratio unless Shift is held
+        const linked = d.items.length > 0 && d.items.every((it) => it.node0.lockRatio);
+        const nb = resizeBox(b0.width, b0.height, d.handle, p.x - b0.x, p.y - b0.y, linked ? !e.shiftKey : e.shiftKey, e.altKey);
         const sx = nb.w / Math.max(1, b0.width);
         const sy = nb.h / Math.max(1, b0.height);
         const changes = new Map<string, Record<string, unknown>>();

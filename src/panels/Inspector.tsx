@@ -162,6 +162,55 @@ export function Num({ node, ids, prop, label, step, min, max, suffix, fallback =
   );
 }
 
+/**
+ * Two numbers with a chain between them (W and H, Sx and Sy). Linked, changing one changes the other too, keeping the
+ * ratio they had, for each selected layer. The chain is saved on the layer (`lockKey`), and the canvas's resize handles
+ * keep the ratio of a layer with lockRatio on as well.
+ */
+export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min }: { node: SceneNode; ids: string[]; a: string; b: string; labelA: string; labelB: string; lockKey: 'lockRatio' | 'lockScale'; step?: number; min?: number }) {
+  const shown = useShown(node);
+  const locked = !!node[lockKey];
+  const set = useSetter(ids);
+  const change = (prop: string, other: string, x: number) => {
+    if (!locked) return set({ [prop]: x });
+    const ab = store().artboard();
+    const changes = new Map<string, Record<string, unknown>>();
+    for (const id of ids) {
+      // the first layer by what's on screen (it may be animated), the others by their own values
+      const nd = id === node.id ? null : ab ? (locate(ab, id)?.node as unknown as Record<string, unknown> | undefined) : undefined;
+      const cur = Number(nd ? nd[prop] : shown(prop)) || 0;
+      const oth = Number(nd ? nd[other] : shown(other)) || 0;
+      const next = cur ? (oth * x) / cur : oth;
+      const round = lockKey === 'lockRatio' ? Math.round(next * 100) / 100 : Math.round(next * 1000) / 1000;
+      changes.set(id, { [prop]: x, [other]: round });
+    }
+    store().setEach(changes, `insp-${a}${b}-${ids.join(',')}`);
+  };
+  const what = lockKey === 'lockRatio' ? 'width and height' : 'horizontal and vertical scale';
+  return (
+    <Row className="linked-pair">
+      <div className="keyed">
+        <NumberField label={labelA} value={Number(shown(a) ?? 0)} step={step} min={min} onChange={(x) => change(a, b, x)} onCommit={() => store().commit()} />
+        <KeyButton node={node} prop={a} ids={ids} />
+      </div>
+      <button
+        type="button"
+        className={`lock-toggle link-toggle${locked ? ' on' : ''}`}
+        aria-pressed={locked}
+        aria-label={locked ? `Unlink ${what}` : `Link ${what}`}
+        title={locked ? `Linked: changing one changes the other, keeping the ratio. Click to change ${what} separately` : `Link ${what}: changing one changes the other, keeping the ratio${lockKey === 'lockRatio' ? ' (the resize handles keep it too)' : ''}`}
+        onClick={() => store().setProps(ids, { [lockKey]: locked ? undefined : true })}
+      >
+        {locked ? <Icons.link width={13} /> : <Icons.unlink width={13} />}
+      </button>
+      <div className="keyed">
+        <NumberField label={labelB} value={Number(shown(b) ?? 0)} step={step} min={min} onChange={(x) => change(b, a, x)} onCommit={() => store().commit()} />
+        <KeyButton node={node} prop={b} ids={ids} />
+      </div>
+    </Row>
+  );
+}
+
 export function Color({ node, ids, prop, label }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode }) {
   const shown = useShown(node);
   const set = useSetter(ids);
@@ -453,9 +502,39 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       {ab.library && <LibraryArtboardSection ab={ab} project={project} />}
       <Section help="artboards" title="Artboard">
         <TextField label="Name" value={ab.name} onChange={(v) => setAb((a) => (a.name = v), `ab-name-${ab.id}`)} />
-        <Row>
-          <NumberField label="W" value={ab.width} min={1} onChange={(v) => setAb((a) => (a.width = Math.round(v)), `ab-w-${ab.id}`)} />
-          <NumberField label="H" value={ab.height} min={1} onChange={(v) => setAb((a) => (a.height = Math.round(v)), `ab-h-${ab.id}`)} />
+        <Row className="linked-pair">
+          <NumberField
+            label="W"
+            value={ab.width}
+            min={1}
+            onChange={(v) =>
+              setAb((a) => {
+                if (a.lockRatio && a.width) a.height = Math.max(1, Math.round((a.height * v) / a.width));
+                a.width = Math.round(v);
+              }, `ab-w-${ab.id}`)
+            }
+          />
+          <button
+            type="button"
+            className={`lock-toggle link-toggle${ab.lockRatio ? ' on' : ''}`}
+            aria-pressed={!!ab.lockRatio}
+            aria-label={ab.lockRatio ? "Unlink the artboard's width and height" : "Link the artboard's width and height"}
+            title={ab.lockRatio ? 'Linked: changing one changes the other, keeping the ratio. Click to change them separately' : 'Link width and height: changing one changes the other, keeping the ratio'}
+            onClick={() => setAb((a) => void (a.lockRatio ? delete a.lockRatio : (a.lockRatio = true)))}
+          >
+            {ab.lockRatio ? <Icons.link width={13} /> : <Icons.unlink width={13} />}
+          </button>
+          <NumberField
+            label="H"
+            value={ab.height}
+            min={1}
+            onChange={(v) =>
+              setAb((a) => {
+                if (a.lockRatio && a.height) a.width = Math.max(1, Math.round((a.width * v) / a.height));
+                a.height = Math.round(v);
+              }, `ab-h-${ab.id}`)
+            }
+          />
         </Row>
         <SelectField
           label="Preset"
@@ -625,20 +704,14 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
           </Row>
         ) : (
           <>
-            <Row>
-              <Num node={n} ids={ids} prop="width" label="W" min={0} />
-              <Num node={n} ids={ids} prop="height" label="H" min={0} />
-            </Row>
+            <LinkedPair node={n} ids={ids} a="width" b="height" labelA="W" labelB="H" lockKey="lockRatio" min={0} />
             <Row>
               <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
               <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
             </Row>
           </>
         )}
-        <Row>
-          <Num node={n} ids={ids} prop="scaleX" label="Sx" step={0.05} />
-          <Num node={n} ids={ids} prop="scaleY" label="Sy" step={0.05} />
-        </Row>
+        <LinkedPair node={n} ids={ids} a="scaleX" b="scaleY" labelA="Sx" labelB="Sy" lockKey="lockScale" step={0.05} />
         {!(sameType && n.type === 'bone') && (
           <Row>
             <NumberField label="Ox" title="Transform origin X (0-1)" value={n.originX} step={0.05} min={0} max={1} onChange={(v) => set({ originX: v })} />
