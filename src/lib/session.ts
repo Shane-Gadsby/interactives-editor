@@ -28,10 +28,16 @@ function isDirectLoad(): boolean {
   }
 }
 
+let signing: Promise<unknown> | null = null;
+
+/** The direct sign in, started once: settled straight away when the page isn't a direct load (or can't sign in). */
 function signInDirectly(): Promise<unknown> {
-  const directSignIn = (window as unknown as { directSignIn?: DirectSignIn }).directSignIn;
-  if (typeof directSignIn !== 'function' || !isDirectLoad()) return Promise.resolve(null);
-  return directSignIn('interactives', { title: 'Interactives' }).catch(() => null);
+  signing ??= (() => {
+    const directSignIn = (window as unknown as { directSignIn?: DirectSignIn }).directSignIn;
+    if (typeof directSignIn !== 'function' || !isDirectLoad()) return Promise.resolve(null);
+    return directSignIn('interactives', { title: 'Interactives' }).catch(() => null);
+  })();
+  return signing;
 }
 
 export function sessionUser(): Promise<SessionUser | null> {
@@ -74,12 +80,16 @@ let headerInstalled = false;
  * else this tab's sessionStorage). The editor's own server only knows who's asking through that header, and the
  * utilities.js a box serves may predate the wrapper: prod's did, so everyone there was nobody and every project was
  * saved without an owner. Wrapping on top of utilities.js' wrapper is harmless, it sets the same value.
+ *
+ * Opened directly, the session id only exists once the direct sign in has finished, and the projects page asks for
+ * its list straight away, so calls to the editor's own server (under its base path) wait for that sign in first.
+ * Nothing else waits: si-manager's own sign in requests are outside that path.
  */
 export function installSessionHeader(): void {
   if (headerInstalled || typeof window === 'undefined' || typeof window.fetch !== 'function') return;
   headerInstalled = true;
   const plain = window.fetch.bind(window);
-  window.fetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
+  const withSession = (input: RequestInfo | URL, init: RequestInit): RequestInit => {
     // A bad url or blocked storage is no reason for a request to throw where it wouldn't have before
     try {
       const url = new URL(input instanceof Request ? input.url : String(input), location.href);
@@ -87,11 +97,22 @@ export function installSessionHeader(): void {
       if (url.origin === location.origin && id) {
         const headers = new Headers(init.headers ?? (input instanceof Request ? input.headers : undefined));
         headers.set('X-Session-ID', id);
-        init = { ...init, headers };
+        return { ...init, headers };
       }
     } catch {
       /* send it as it was */
     }
-    return plain(input, init);
+    return init;
+  };
+  const ownServer = (input: RequestInfo | URL): boolean => {
+    try {
+      return new URL(input instanceof Request ? input.url : String(input), location.href).href.startsWith(new URL('.', document.baseURI).href);
+    } catch {
+      return false;
+    }
+  };
+  window.fetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    if (ownServer(input)) await signInDirectly();
+    return plain(input, withSession(input, init));
   };
 }

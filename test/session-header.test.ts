@@ -32,6 +32,30 @@ describe('installSessionHeader', () => {
     expect(seen[1].headers.get('X-Session-ID')).toBeNull();
   });
 
+  it('holds calls to its own server until a direct sign in has stored the session, and nothing else', async () => {
+    let finish!: () => void;
+    (window as unknown as { directSignIn: unknown }).directSignIn = () =>
+      new Promise<void>((resolve) => {
+        finish = () => {
+          sessionStorage.setItem('sessionID', 'dt_late');
+          resolve();
+        };
+      });
+    try {
+      const { installSessionHeader } = await import('../src/lib/session');
+      installSessionHeader();
+      const own = fetch(new URL('api/projects', document.baseURI).href);
+      const other = fetch('https://example.org/x');
+      await other;
+      expect(seen.map((s) => s.url)).toEqual(['https://example.org/x']);
+      finish();
+      await own;
+      expect(seen[1].headers.get('X-Session-ID')).toBe('dt_late');
+    } finally {
+      delete (window as unknown as { directSignIn?: unknown }).directSignIn;
+    }
+  });
+
   it('sends nothing extra without a session', async () => {
     const { installSessionHeader } = await import('../src/lib/session');
     installSessionHeader();
