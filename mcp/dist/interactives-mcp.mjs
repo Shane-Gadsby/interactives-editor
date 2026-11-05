@@ -6612,7 +6612,7 @@ A [Steps](steps) timeline can carry sound and captions too: Next plays the narra
     title: "Interactions",
     group: "Interactivity",
     summary: "The node graph: events start a flow, actions do things, logic chooses the way.",
-    keywords: "interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box",
+    keywords: "interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing",
     body: `Open the **Interactions** tab. Each artboard has its own graph.
 
 **See-through layers don't take clicks.** While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
@@ -6644,6 +6644,9 @@ Click a node in the palette on the left (or drag it onto the graph) to add it; s
 - Right-click a node for **Connect to new node**, **Connect to existing node**, **Disconnect**, **Cut**, **Copy** (<kbd>Ctrl</kbd>+<kbd>C</kbd>), **Duplicate** (<kbd>Ctrl</kbd>+<kbd>D</kbd>), **Help for this node** and **Delete** (<kbd>Del</kbd>).
 - With a node selected in the graph, <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd> copy and paste that node, not the layers on the artboard. A pasted node keeps its settings but not its connections.
 - Right-click a connection to **Delete connection**.
+
+## Tidy up
+**Tidy up** (the button under the zoom buttons, or right-click empty graph) lays the whole graph out for you: events in the first column and each step one column to the right of what leads into it, nodes ordered so as few connections cross as possible (a node's outputs stay in their order), separate chains stacked one under another, and every group resized to fit its nodes. A loop back to an earlier node doesn't push things further right. It's one undo step.
 
 ## Groups
 A **group** is a labelled frame around nodes that belong together ("Score", "Intro", "Wrong answers"), so a big graph stays readable. It doesn't change what runs.

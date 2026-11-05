@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Tidy up** for the interaction graph (button under the zoom controls, or the graph's right-click menu): a layered layout from the events rightwards, ordered to cross as few connections as possible, port order kept, loops ignored for depth, separate chains stacked, groups fitted to their nodes. One undo step.
 - **Data bindings go both ways**: each binding is **In** (as before), **Out** (the property writes into a variable as it changes) or **Both** (kept equal, whichever changed). Every plain setting of a layer can be bound now, not only animatable ones, and video layers add Playback position, Playing, Length and Ended. The video layer's own "Playback into variables" fields (from earlier today) are gone: projects that used them get the same thing as bindings (position both ways, playing and length out).
 - Graph groups select with one click on their title or any empty space inside, and drag from anywhere on them; right-click inside a group has **Add node here**. A selected group stays behind its nodes.
 - **Linked sizes**: a chain toggle between W and H, Sx and Sy, and an artboard's W and H. Linked, changing one keeps the ratio (per layer, timeline keys included), and the resize handles keep a linked layer's ratio unless Shift is held. Saved on the layer (`lockRatio`, `lockScale`) and the artboard (`lockRatio`).

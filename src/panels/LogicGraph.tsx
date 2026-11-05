@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
+  ControlButton,
   Controls,
   Handle,
   NodeResizer,
@@ -47,6 +48,9 @@ if (import.meta.env.DEV) silenceFlowAttributionWarning();
 import { assetKind } from '../lib/assets';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { promptDialog } from '../components/dialogs';
+import { tidyGraph } from '../lib/graph-tidy';
+import { track } from '../lib/analytics';
+import { Icons } from '../components/icons';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { usePrefs } from '../lib/prefs';
 import { compatibleKinds, newNodePort, type DragDirection } from '../lib/graph';
@@ -396,6 +400,32 @@ export function LogicGraph() {
     store().set({ logicSelection: nid });
     focusGraph();
   };
+  /**
+   * Tidy up: lay the graph out in columns from its events, with as few crossing connections as it can manage, and fit
+   * each group to its nodes. One undo step.
+   */
+  const tidy = () => {
+    if (!ab || !ab.logic.nodes.length) return;
+    const nodes = ab.logic.nodes.map((n) => ({ id: n.id, x: n.x, y: n.y, ...sizeOf(n.id) }));
+    const edges = ab.logic.edges.map((e) => ({ from: e.from, to: e.to, port: Math.max(0, CATALOG_BY_KIND[ab.logic.nodes.find((n) => n.id === e.from)?.kind ?? '']?.outputs.findIndex((o) => o.id === e.fromPort) ?? 0) }));
+    const groups = (ab.logic.groups ?? []).map((g) => ({ id: g.id, members: membersOf(ab, g).map((n) => n.id) }));
+    const out = tidyGraph(nodes, edges, groups);
+    updateLogic((a) => {
+      for (const n of a.logic.nodes) {
+        const p = out.positions.get(n.id);
+        if (p) {
+          n.x = p.x;
+          n.y = p.y;
+        }
+      }
+      for (const g of a.logic.groups ?? []) {
+        const b = out.groups.get(g.id);
+        if (b) Object.assign(g, { x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height) });
+      }
+    });
+    track('feature', 'graph-tidy', { sum: { nodes: nodes.length } });
+    requestAnimationFrame(() => rf.current?.fitView({ maxZoom: 1, padding: 0.2, duration: 250 }));
+  };
   const addGroup = (rect: { x: number; y: number; width: number; height: number }, label = 'Group') => {
     const id = uid('lgg');
     updateLogic((a) => {
@@ -508,6 +538,7 @@ export function LogicGraph() {
         ...paletteItems((kind) => add(kind, at)),
         { separator: true },
         { label: 'New group here', onClick: () => addGroup({ x: at?.x ?? 0, y: at?.y ?? 0, width: 360, height: 220 }) },
+        { label: 'Tidy up', title: 'Lay the graph out in columns from its events, with as few crossing connections as possible, and fit groups to their nodes', onClick: tidy },
         { label: 'Paste', hint: 'Ctrl+V', onClick: () => pasteFromClipboard(at) },
       ],
       search: 'Find a node…',
@@ -682,7 +713,11 @@ export function LogicGraph() {
           minZoom={0.2}
         >
           <Background gap={16} />
-          <Controls showInteractive={false} />
+          <Controls showInteractive={false}>
+            <ControlButton onClick={tidy} title="Tidy up: lay the graph out in columns from its events, with as few crossing connections as possible (one undo)" aria-label="Tidy up the graph">
+              <Icons.distH width={14} />
+            </ControlButton>
+          </Controls>
         </ReactFlow>
         {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} search={menu.search} onClose={() => setMenu(null)} />}
         {!ab.logic.nodes.length && (
