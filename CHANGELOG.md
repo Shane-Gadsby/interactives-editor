@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **On drag move** event: fires while a held layer moves (pointer, Shift+arrow nudges, arrow keys between zones), once a frame at most, with `event.layerX/layerY` and `event.dx/dy`.
 - A video layer's settings have **Playback into variables**: Position (seconds, and setting it jumps the video), Playing and Length, each a variable picker with + Create new variable…. The Usage tab counts them as uses.
 - Resize bars are all a 7 px strip with the same 3 px gold line (the bottom one and the split columns were thinner).
 - Sound through Web Audio (the player's `webaudio.ts`): timeline clips, **Play sound** and the timeline panel's preview all play through one `AudioContext`, so media keys, headset buttons and the system's media controls no longer pause them behind the project's back. Clips at another speed keep their pitch through a time-stretch (WSOLA) AudioWorklet; the new **Keep pitch at other speeds** clip setting (`keepPitch`, default on) can turn that off. Where there's no Web Audio the old `<audio>` mixer is used.

@@ -247,6 +247,15 @@ const CATALOG = [
     params: [{ key: "target", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty to fire for every draggable layer" }]
   },
   {
+    kind: "event.dragMove",
+    label: "On drag move",
+    category: "event",
+    description: "Over and over while a draggable layer is held and moving: dragged by the mouse or a finger, nudged with Shift+arrows, or sent to another zone with the arrow keys. At most once a frame. `event.layerX` and `event.layerY` are where the layer is now, `event.dx` and `event.dy` how far it has come since it was picked up, `event.x` and `event.y` the pointer, `event.zone` the zone it is over (empty if none), `event.keyboard` true when it is not being dragged.",
+    outputs: OUT,
+    hasInput: false,
+    params: [{ key: "target", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty to fire for every draggable layer" }]
+  },
+  {
     kind: "event.dragOver",
     label: "On drag over zone",
     category: "event",
@@ -6692,6 +6701,7 @@ Two buckets, four cards. Dropping a card in the right bucket keeps it there; dro
 
 ## Events and actions
 - **On drag start**, **On drag over zone** (moves over / off), **On drop** (taken, refused, or dropped on no zone) and **On drag end** (always fires, after On drop, and also when the pick-up is cancelled). Leave the layer empty to hear every draggable layer or zone. Each fires once per drag, however it ends.
+- **On drag move** fires over and over while a layer is held and moving (dragged, nudged with Shift+arrows, or sent between zones with the arrow keys), at most once a frame. \`event.layerX\`/\`event.layerY\` say where the layer is, \`event.dx\`/\`event.dy\` how far it has come since it was picked up: set a variable from them to drive a gauge, move another layer along, or play a sound as it crosses a line.
 - Their \`event\` holds \`layer\` (the draggable layer's name), \`zone\` (the zone it is in now), \`from\` (where it was), \`accepted\`, \`reason\` (\`tags\` or \`full\`), \`swapped\`, \`tags\`, \`result\` (accepted, rejected, missed or cancelled) and \`keyboard\` (true when it was not dragged).
 - **Put layer in drop zone** moves a layer into a zone as if it had been dropped there; **Reset draggable** sends one (or all of them, for *Start again*) back to where it started; **Allow dragging** switches a draggable layer or a drop zone on and off. None of them fires the drag events, so they cannot start a loop.
 - The older **On pointer → Dragging** events still work for scripted drags. Use the draggable settings when the point is to move a layer and drop it somewhere.
