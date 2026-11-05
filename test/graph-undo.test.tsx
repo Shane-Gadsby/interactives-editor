@@ -21,12 +21,20 @@ describe('adding a node to the interaction graph', () => {
     vi.stubGlobal('DOMMatrixReadOnly', class { m22 = 1; constructor() {} });
     vi.stubGlobal('requestAnimationFrame', (fn: () => void) => void setTimeout(fn, 0));
     const { LogicGraph } = await import('../src/panels/LogicGraph');
+    const { DialogHost } = await import('../src/components/dialogs');
     const s = new EditorStore(createProject('T'));
     setCurrentStore(s);
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
-    act(() => root!.render(<LogicGraph />));
+    act(() =>
+      root!.render(
+        <>
+          <LogicGraph />
+          <DialogHost />
+        </>,
+      ),
+    );
     return s;
   }
   /** Right-click the pane and pick a node from the menu, with real clicks on its buttons */
@@ -104,9 +112,8 @@ describe('adding a node to the interaction graph', () => {
     expect(s.artboard()!.children).toHaveLength(0);
   });
 
-  it('adds a labelled group from the pane menu, and Delete on it takes the frame away but keeps the nodes', async () => {
-    const s = await mount();
-    const canvas = host!.querySelector('.logic-canvas') as HTMLElement;
+  /** A group from the pane menu, with the On start node inside it, selected and ready for Delete. */
+  async function groupWithNode(s: EditorStore) {
     pick('On start');
     await act(async () => void (await new Promise((r) => setTimeout(r, 5))));
     const pane = host!.querySelector('.react-flow__pane') as HTMLElement;
@@ -119,9 +126,63 @@ describe('adding a node to the interaction graph', () => {
     expect(s.get().logicSelection).toBe(groups[0].id);
     expect(host!.querySelector('.ix-group-head')?.textContent).toBe('Group');
     await act(async () => void (await new Promise((r) => setTimeout(r, 5))));
+    const canvas = host!.querySelector('.logic-canvas') as HTMLElement;
     act(() => void canvas.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Delete' })));
+  }
+  const answer = async (label: string) => {
+    const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+    expect(dialog.textContent).toContain('1 node inside');
+    const btn = Array.from(dialog.querySelectorAll('button')).find((b) => b.textContent === label)!;
+    await act(async () => {
+      btn.click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+  };
+
+  it('Delete on a group with nodes inside asks: Just the group keeps the nodes', async () => {
+    const s = await mount();
+    await groupWithNode(s);
+    //nothing goes until it's answered
+    expect(s.artboard()!.logic.groups).toHaveLength(1);
+    await answer('Just the group');
     expect(s.artboard()!.logic.groups).toBeUndefined();
     expect(s.artboard()!.logic.nodes).toHaveLength(1);
+  });
+
+  it('Delete on a group with nodes inside asks: Group and its nodes takes both, in one undo', async () => {
+    const s = await mount();
+    await groupWithNode(s);
+    await answer('Group and 1 node');
+    expect(s.artboard()!.logic.groups).toBeUndefined();
+    expect(s.artboard()!.logic.nodes).toHaveLength(0);
+    act(() => s.undo());
+    expect(s.artboard()!.logic.groups).toHaveLength(1);
+    expect(s.artboard()!.logic.nodes).toHaveLength(1);
+  });
+
+  it('Ctrl+A selects everything, and Ctrl+D duplicates it with the copies wired to each other', async () => {
+    const s = await mount();
+    act(() =>
+      s.update((d) => {
+        d.artboards[0].logic.nodes.push({ id: 'n1', kind: 'event.start', x: 0, y: 0, params: {} }, { id: 'n2', kind: 'action.setVariable', x: 260, y: 0, params: {} });
+        d.artboards[0].logic.edges.push({ id: 'e1', from: 'n1', fromPort: 'out', to: 'n2', toPort: 'in' });
+      }),
+    );
+    const canvas = host!.querySelector('.logic-canvas') as HTMLElement;
+    const key = (k: string) => act(() => void canvas.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: k, ctrlKey: true })));
+    key('a');
+    expect(new Set(s.get().logicPicked)).toEqual(new Set(['n1', 'n2']));
+    expect(host!.querySelectorAll('.react-flow__node.selected').length).toBe(2);
+    key('d');
+    const { nodes, edges } = s.artboard()!.logic;
+    expect(nodes).toHaveLength(4);
+    const copies = nodes.filter((n) => n.id !== 'n1' && n.id !== 'n2');
+    const start = copies.find((n) => n.kind === 'event.start')!;
+    const action = copies.find((n) => n.kind === 'action.setVariable')!;
+    expect(edges).toHaveLength(2);
+    expect(edges.find((e) => e.id !== 'e1')).toMatchObject({ from: start.id, to: action.id });
+    //the copies are what's selected now
+    expect(new Set(s.get().logicPicked)).toEqual(new Set(copies.map((n) => n.id)));
   });
 
   it('selects a group with a click on the empty space inside it, not only its title', async () => {

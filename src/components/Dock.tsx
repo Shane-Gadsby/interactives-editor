@@ -482,7 +482,9 @@ export function FloatingTools({ children }: { children: ReactNode }) {
   const box = clampWin({ x: l.tools.x, y: l.tools.y, w: size.w, h: size.h });
   return (
     <div ref={ref} className="dock-float dock-tools-float front" style={{ left: box.x, top: box.y }} role="toolbar" aria-label="Tools (floating)">
-      <div className="dock-tools-grip" title="Drag to move the tools. Right-click the tools to dock them again" onPointerDown={(e) => dragBox(e, box, 'move', (b) => setDock((x) => ({ ...x, tools: { ...x.tools, x: b.x, y: b.y } })))} />
+      <div className="dock-tools-grip" title="Drag to move the tools. Right-click the tools to dock them again" onPointerDown={(e) => dragBox(e, box, 'move', (b) => setDock((x) => ({ ...x, tools: { ...x.tools, x: b.x, y: b.y } })))}>
+        Tools
+      </div>
       {children}
     </div>
   );

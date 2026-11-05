@@ -1223,7 +1223,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             </aside>
           )}
           <div className="preview-stage" ref={stageBox}>
-          {html ? <iframe key={nonce} ref={frame} title="Preview" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (hitAreas && showHitAreas(true), applyTheme())} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (hitAreas && showHitAreas(true), applyTheme())} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
           </div>
         </div>
         {accessibility && screenReader && (

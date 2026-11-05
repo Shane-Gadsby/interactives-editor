@@ -945,6 +945,9 @@ hr.item-sep {
 }
 .tag-chip.static {
   cursor: default;
+}
+/* The tight right side is room for the remove button; a chip without one (template and example cards) keeps even padding */
+.tag-chip.static:has(.tag-x) {
   padding: 0 2px 0 8px;
 }
 .tag-chip button {
@@ -1421,11 +1424,21 @@ body.dock-dragging * {
   min-width: 72px;
   max-height: calc(100vh - 40px);
 }
+/* The floating tool rail's title bar, and what it's dragged by (the same look as a floating panel's header) */
 .dock-tools-grip {
   flex: none;
-  height: 12px;
+  padding: 5px 8px;
   cursor: move;
-  background: repeating-linear-gradient(90deg, var(--line-2) 0 2px, transparent 2px 5px) center / 28px 4px no-repeat, var(--panel-2);
+  user-select: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+}
+.dock-tools-grip:hover {
+  color: var(--text);
 }
 .topbar {
   grid-area: top;
@@ -7869,4 +7882,10 @@ code {
 /* a binding's which-way switch, above where its value comes from */
 .binding-dir {
   margin: 4px 0 6px;
+}
+
+/* After a marquee the selected nodes show their own highlight, like a click does. React Flow's box round the whole
+   selection isn't needed for anything: dragging any selected node moves them all */
+.logic-canvas .react-flow__nodesselection-rect {
+  display: none;
 }

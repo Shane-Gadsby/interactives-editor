@@ -2626,7 +2626,7 @@ const learnerPage = (token, base, nonce, project, remix) => `<!doctype html>
 <style>html,body{margin:0;height:100%;background:#111}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
 </head>
 <body>
-<iframe id="project" src="${base}/s/${token}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen" title="Interactive"></iframe>
+<iframe id="project" src="${base}/s/${token}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
 ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into your own projects, to change as you like">Remix this</a>' : ''}
 <script src="/utilities.js"></script>
 <script nonce="${nonce}">

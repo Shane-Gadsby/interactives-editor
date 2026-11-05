@@ -199,6 +199,11 @@ export interface EditorState {
   recording: boolean;
   selectedKeys: string[]; // "trackId:keyId"
   logicSelection: string | null;
+  /**
+   * Everything selected in the interaction graph (nodes and groups) when more than one thing is. `logicSelection` is the
+   * one of them the settings column shows; it wins when it isn't in this list (something else selected a single node).
+   */
+  logicPicked: string[];
   saveState: 'saved' | 'saving' | 'dirty' | 'error';
   saveError: string | null;
   toast: { text: string; kind: 'info' | 'error' } | null;
@@ -276,6 +281,7 @@ export class EditorStore {
       recording: false,
       selectedKeys: [],
       logicSelection: null,
+      logicPicked: [],
       saveState: 'saved',
       saveError: null,
       toast: null,
@@ -471,16 +477,20 @@ export class EditorStore {
     const activeTimelineId = ab?.timelines.some((t) => t.id === s.activeTimelineId) ? s.activeTimelineId : null;
     const focusId = ab && s.focusId && locate(ab, s.focusId) ? s.focusId : null;
     const editingPathId = ab && s.editingPathId && locate(ab, s.editingPathId) ? s.editingPathId : null;
-    const logicSelection = ab?.logic.nodes.some((n) => n.id === s.logicSelection) ? s.logicSelection : null;
+    // a group can be selected too, not only a node
+    const inGraph = (id: string) => !!ab && (ab.logic.nodes.some((n) => n.id === id) || !!ab.logic.groups?.some((g) => g.id === id));
+    const logicSelection = s.logicSelection && inGraph(s.logicSelection) ? s.logicSelection : null;
+    const logicPicked = s.logicPicked.every(inGraph) ? s.logicPicked : s.logicPicked.filter(inGraph);
     if (
       activeArtboardId !== s.activeArtboardId ||
       selection.length !== s.selection.length ||
       activeTimelineId !== s.activeTimelineId ||
       focusId !== s.focusId ||
       editingPathId !== s.editingPathId ||
-      logicSelection !== s.logicSelection
+      logicSelection !== s.logicSelection ||
+      logicPicked !== s.logicPicked
     ) {
-      this.state = { ...s, activeArtboardId, selection, activeTimelineId, focusId, editingPathId, logicSelection };
+      this.state = { ...s, activeArtboardId, selection, activeTimelineId, focusId, editingPathId, logicSelection, logicPicked };
     }
   }
 

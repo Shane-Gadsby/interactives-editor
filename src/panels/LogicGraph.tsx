@@ -7,6 +7,7 @@ import {
   Handle,
   NodeResizer,
   Position,
+  SelectionMode,
   type Connection,
   type Edge,
   type EdgeChange,
@@ -18,7 +19,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { silenceFlowAttributionWarning } from '../lib/flow-licence';
-import { copyLogicNodes, logicNodesToPaste } from '../lib/logic-clipboard';
+import { cloneFragment, copyLogic, fragmentOf, fragmentOrigin, logicToPaste, type LogicFragment } from '../lib/logic-clipboard';
 import {
   ANIMATABLE_PROPS,
   CATALOG,
@@ -47,7 +48,7 @@ import { SplitColumns } from '../components/SplitColumns';
 if (import.meta.env.DEV) silenceFlowAttributionWarning();
 import { assetKind } from '../lib/assets';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
-import { promptDialog } from '../components/dialogs';
+import { choiceDialog, promptDialog } from '../components/dialogs';
 import { tidyGraph } from '../lib/graph-tidy';
 import { track } from '../lib/analytics';
 import { Icons } from '../components/icons';
@@ -184,7 +185,7 @@ function summarize(n: LogicNode, ab: Artboard, project: Project): string {
 }
 
 export function LogicGraph() {
-  const s = useEditor((st) => ({ project: st.project, abId: st.activeArtboardId, sel: st.logicSelection }));
+  const s = useEditor((st) => ({ project: st.project, abId: st.activeArtboardId, sel: st.logicSelection, picked: st.logicPicked }));
   const theme = usePrefs().theme;
   const ab = getArtboard(s.project, s.abId);
   const rf = useRef<ReactFlowInstance<Node<IxNodeData>, Edge> | null>(null);
@@ -197,6 +198,18 @@ export function LogicGraph() {
       if (here && here !== document.body && !canvasRef.current?.contains(here)) return;
       canvasRef.current?.focus({ preventScroll: true });
     });
+
+  // Everything selected: the store's list when the main item is in it, otherwise just the main item (another panel
+  // selected one node, or nothing is selected)
+  const chosen = useMemo(() => (s.sel ? (s.picked.includes(s.sel) ? s.picked : [s.sel]) : []), [s.sel, s.picked]);
+  const chosenNow = () => {
+    const st = store().get();
+    return st.logicSelection ? (st.logicPicked.includes(st.logicSelection) ? st.logicPicked : [st.logicSelection]) : [];
+  };
+  /** Select these nodes and groups; `main` (the last one by default) is the one the settings column shows. */
+  const select = (ids: string[], main?: string | null) => store().set({ logicPicked: ids, logicSelection: main !== undefined ? main : (ids[ids.length - 1] ?? null) });
+  /** What a menu on `id` acts on: the whole selection when `id` is part of it, otherwise just `id`. */
+  const targetIds = (id: string) => (chosenNow().includes(id) ? chosenNow() : [id]);
 
   const nodes: Node<IxNodeData>[] = useMemo(
     () =>
@@ -213,7 +226,7 @@ export function LogicGraph() {
               height: g.height,
               zIndex: -1,
               data: { group: g },
-              selected: g.id === s.sel,
+              selected: chosen.includes(g.id),
             }) as unknown as Node<IxNodeData>,
         ),
         ...(ab?.logic.nodes ?? []).map((n) => ({
@@ -221,10 +234,10 @@ export function LogicGraph() {
           type: 'ix',
           position: { x: n.x, y: n.y },
           data: { logic: n, summary: ab ? summarize(n, ab, s.project) : '' },
-          selected: n.id === s.sel,
+          selected: chosen.includes(n.id),
         })),
       ],
-    [ab, s.project, s.sel],
+    [ab, s.project, chosen],
   );
   // Selected connections live here (the document only stores the graph), so Delete can remove them
   const [selEdges, setSelEdges] = useState<string[]>([]);
@@ -261,29 +274,56 @@ export function LogicGraph() {
       return cx >= g.x && cx <= g.x + g.width && cy >= g.y && cy <= g.y + g.height;
     });
   const onNodesChange = (changes: NodeChange<Node<IxNodeData>>[]) => {
-    for (const c of changes) {
-      if (c.type === 'position' && c.position && isGroup(c.id)) {
-        const pos = c.position;
-        updateLogic((a) => {
+    // Selection: a click, Ctrl+click or a marquee all arrive as select changes, often several at once
+    const selects = changes.filter((c) => c.type === 'select');
+    if (selects.length) {
+      const next = new Set(chosenNow());
+      for (const c of selects) c.selected ? next.add(c.id) : next.delete(c.id);
+      const added = selects.filter((c) => c.selected).map((c) => c.id);
+      const cur = store().get().logicSelection;
+      const list = [...next];
+      select(list, added.length ? added[added.length - 1] : cur && next.has(cur) ? cur : (list[list.length - 1] ?? null));
+    }
+    // Moves: everything dragged together is one edit (one undo step). A group carries the nodes inside it, except the
+    // ones that are selected and so being moved already, which would otherwise go twice as far
+    const moves = changes.filter((c) => c.type === 'position' && c.position) as Extract<NodeChange, { type: 'position' }>[];
+    if (moves.length) {
+      const moving = new Set(moves.map((c) => c.id));
+      updateLogic((a) => {
+        const carried = new Set<string>();
+        for (const c of moves) {
+          const pos = c.position!;
           const g = a.logic.groups?.find((x) => x.id === c.id);
-          if (!g) return;
-          const dx = Math.round(pos.x) - g.x;
-          const dy = Math.round(pos.y) - g.y;
-          if (!dx && !dy) return;
-          if (resizingGroup === g.id) {
-            // Grown to the left or up: the right and bottom edges stay put
-            g.width -= dx;
-            g.height -= dy;
-          } else
-            for (const n of membersOf(a, g)) {
-              n.x += dx;
-              n.y += dy;
-            }
-          g.x += dx;
-          g.y += dy;
-        }, `logic-move-${c.id}`);
-        if (!c.dragging && resizingGroup !== c.id) store().commit();
-      } else if (c.type === 'dimensions' && c.dimensions && c.resizing && isGroup(c.id)) {
+          if (g) {
+            const dx = Math.round(pos.x) - g.x;
+            const dy = Math.round(pos.y) - g.y;
+            if (!dx && !dy) continue;
+            if (resizingGroup === g.id) {
+              // Grown to the left or up: the right and bottom edges stay put
+              g.width -= dx;
+              g.height -= dy;
+            } else
+              for (const n of membersOf(a, g)) {
+                if (moving.has(n.id) || carried.has(n.id)) continue;
+                carried.add(n.id);
+                n.x += dx;
+                n.y += dy;
+              }
+            g.x += dx;
+            g.y += dy;
+            continue;
+          }
+          const n = a.logic.nodes.find((x) => x.id === c.id);
+          if (n) {
+            n.x = Math.round(pos.x);
+            n.y = Math.round(pos.y);
+          }
+        }
+      }, `logic-move-${[...moving].sort().join(',')}`);
+      if (moves.every((c) => !c.dragging) && !(resizingGroup && moving.has(resizingGroup))) store().commit();
+    }
+    for (const c of changes) {
+      if (c.type === 'dimensions' && c.dimensions && c.resizing && isGroup(c.id)) {
         const d = c.dimensions;
         updateLogic((a) => {
           const g = a.logic.groups?.find((x) => x.id === c.id);
@@ -291,21 +331,7 @@ export function LogicGraph() {
           g.width = Math.round(d.width);
           g.height = Math.round(d.height);
         }, `logic-resize-${c.id}`);
-      } else if (c.type === 'position' && c.position) {
-        const pos = c.position;
-        updateLogic((a) => {
-          const n = a.logic.nodes.find((x) => x.id === c.id);
-          if (n) {
-            n.x = Math.round(pos.x);
-            n.y = Math.round(pos.y);
-          }
-        }, `logic-move-${c.id}`);
-        if (!c.dragging) store().commit();
-      } else if (c.type === 'select' && c.selected) {
-        store().set({ logicSelection: c.id });
-        setSelEdges([]);
-      }
-      else if (c.type === 'remove') {
+      } else if (c.type === 'remove') {
         updateLogic((a) => {
           a.logic.nodes = a.logic.nodes.filter((x) => x.id !== c.id);
           a.logic.edges = a.logic.edges.filter((e) => e.from !== c.id && e.to !== c.id);
@@ -316,8 +342,9 @@ export function LogicGraph() {
   const onEdgesChange = (changes: EdgeChange[]) => {
     for (const c of changes)
       if (c.type === 'select') {
+        //No clearing the nodes here: a marquee selects connections and nodes together, and a plain click on a connection
+        //deselects the nodes itself (as select changes in onNodesChange)
         setSelEdges((cur) => (c.selected ? [...cur.filter((x) => x !== c.id), c.id] : cur.filter((x) => x !== c.id)));
-        if (c.selected) store().set({ logicSelection: null });
       }
     const removed = changes.filter((c) => c.type === 'remove').map((c) => c.id);
     if (removed.length)
@@ -343,7 +370,7 @@ export function LogicGraph() {
       // Dragged backwards from an input: the new node feeds the original one
       if (back) a.logic.edges.push({ id: uid('e'), from: id, fromPort: back.port, to: back.id, toPort: 'in' });
     });
-    store().set({ logicSelection: id });
+    select([id]);
     setSelEdges([]);
     focusGraph();
     return id;
@@ -381,24 +408,83 @@ export function LogicGraph() {
     updateLogic((a) => {
       a.logic.edges = a.logic.edges.filter((e) => !ids.includes(e.id));
     });
-  const deleteSelected = () => {
-    const st = store().get();
-    if (selEdges.length) removeEdges(selEdges);
-    //Deleting a group takes the frame away and leaves its nodes (Delete group and nodes in its menu takes both)
-    if (st.logicSelection && isGroup(st.logicSelection)) ungroup(st.logicSelection);
-    else if (st.logicSelection) removeNodes([st.logicSelection]);
-    setSelEdges([]);
-    store().set({ logicSelection: null });
-  };
-  const duplicate = (id: string) => {
-    const n = ab?.logic.nodes.find((x) => x.id === id);
-    if (!n) return;
-    const nid = uid('lg');
+  /**
+   * Delete what's selected (nodes, groups and connections) in one undo step. A selected group with nodes inside that
+   * aren't selected themselves asks first: just the group, keeping its nodes, or the group and everything in it.
+   */
+  const deleteSelected = async () => {
+    if (!ab) return;
+    const ids = chosenNow();
+    const edgeIds = selEdges;
+    const groups = (ab.logic.groups ?? []).filter((g) => ids.includes(g.id));
+    const picked = new Set(ids.filter((id) => !isGroup(id)));
+    const inside = new Set<string>();
+    for (const g of groups) for (const n of membersOf(ab, g)) if (!picked.has(n.id)) inside.add(n.id);
+    let withInside = false;
+    if (inside.size) {
+      const one = groups.length === 1;
+      const nodes = `${inside.size} node${inside.size === 1 ? '' : 's'}`;
+      const answer = await choiceDialog({
+        title: one ? `Delete “${groups[0].label || 'Group'}”?` : `Delete ${groups.length} groups?`,
+        message: `${one ? 'It has' : 'They have'} ${nodes} inside. Delete just the ${one ? 'group' : 'groups'} and keep the nodes where they are, or delete the nodes too?`,
+        confirmLabel: one ? 'Just the group' : 'Just the groups',
+        altLabel: `${one ? 'Group' : 'Groups'} and ${nodes}`,
+        altDanger: true,
+      });
+      if (!answer) return focusGraph();
+      withInside = answer === 'alt';
+    }
+    const gone = new Set([...picked, ...(withInside ? inside : [])]);
+    const groupIds = new Set(groups.map((g) => g.id));
+    if (!gone.size && !groupIds.size && !edgeIds.length) return;
     updateLogic((a) => {
-      a.logic.nodes.push({ ...structuredClone(n), id: nid, x: n.x + 30, y: n.y + 30 });
+      a.logic.nodes = a.logic.nodes.filter((x) => !gone.has(x.id));
+      a.logic.edges = a.logic.edges.filter((e) => !gone.has(e.from) && !gone.has(e.to) && !edgeIds.includes(e.id));
+      if (a.logic.groups && groupIds.size) {
+        a.logic.groups = a.logic.groups.filter((g) => !groupIds.has(g.id));
+        if (!a.logic.groups.length) delete a.logic.groups;
+      }
     });
-    store().set({ logicSelection: nid });
+    setSelEdges([]);
+    select([], null);
     focusGraph();
+  };
+  /** The piece of graph these ids copy: the nodes, what's inside any of the groups, and the connections between them. */
+  const fragment = (ids: string[]): LogicFragment => (ab ? fragmentOf(ab.logic, ids, (g) => membersOf(ab, g)) : { nodes: [], edges: [], groups: [] });
+  //Pasted copies get new ids, with their connections rewired to each other. Where the originals are still on this
+  //graph the copy sits just off them, so it doesn't land exactly on top, otherwise it keeps the position it was copied
+  //from (or goes where the menu was opened)
+  const pasteFragment = (f: LogicFragment, at?: { x: number; y: number }) => {
+    if (!ab || (!f.nodes.length && !f.groups.length)) return false;
+    const o = fragmentOrigin(f);
+    const here = f.nodes.some((n) => ab.logic.nodes.some((x) => x.id === n.id)) || f.groups.some((g) => ab.logic.groups?.some((x) => x.id === g.id));
+    const c = cloneFragment(f, at ? at.x - o.x : here ? 30 : 0, at ? at.y - o.y : here ? 30 : 0);
+    updateLogic((a) => {
+      a.logic.nodes.push(...c.nodes);
+      a.logic.edges.push(...c.edges);
+      if (c.groups.length) a.logic.groups = [...(a.logic.groups ?? []), ...c.groups];
+    });
+    select([...c.groups.map((g) => g.id), ...c.nodes.map((n) => n.id)]);
+    setSelEdges([]);
+    focusGraph();
+    return true;
+  };
+  const duplicate = (ids: string[]) => pasteFragment(fragment(ids));
+  const copySelection = (ids: string[], cut = false) => {
+    const f = fragment(ids);
+    copyLogic(f);
+    if (!cut) return;
+    const gone = new Set(f.nodes.map((n) => n.id));
+    const groupIds = new Set(f.groups.map((g) => g.id));
+    updateLogic((a) => {
+      a.logic.nodes = a.logic.nodes.filter((x) => !gone.has(x.id));
+      a.logic.edges = a.logic.edges.filter((e) => !gone.has(e.from) && !gone.has(e.to));
+      if (a.logic.groups && groupIds.size) {
+        a.logic.groups = a.logic.groups.filter((g) => !groupIds.has(g.id));
+        if (!a.logic.groups.length) delete a.logic.groups;
+      }
+    });
+    select([], null);
   };
   /**
    * Tidy up: lay the graph out in columns from its events, with as few crossing connections as it can manage, and fit
@@ -431,17 +517,21 @@ export function LogicGraph() {
     updateLogic((a) => {
       a.logic.groups = [...(a.logic.groups ?? []), { id, label, x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }];
     });
-    store().set({ logicSelection: id });
+    select([id]);
     setSelEdges([]);
     focusGraph();
     return id;
   };
-  /** A group around one node, with room for a few more beside it and the title bar above. */
-  const groupAround = (nodeId: string) => {
-    const n = ab?.logic.nodes.find((x) => x.id === nodeId);
-    if (!n) return;
-    const z = sizeOf(nodeId);
-    addGroup({ x: n.x - 24, y: n.y - 48, width: z.width + 48, height: z.height + 72 });
+  /** A group around these nodes, with room round them and the title bar above. */
+  const groupAround = (ids: string[]) => {
+    const list = ab?.logic.nodes.filter((x) => ids.includes(x.id)) ?? [];
+    if (!list.length) return;
+    const boxes = list.map((n) => ({ ...sizeOf(n.id), x: n.x, y: n.y }));
+    const x = Math.min(...boxes.map((b) => b.x));
+    const y = Math.min(...boxes.map((b) => b.y));
+    const right = Math.max(...boxes.map((b) => b.x + b.width));
+    const bottom = Math.max(...boxes.map((b) => b.y + b.height));
+    addGroup({ x: x - 24, y: y - 48, width: right - x + 48, height: bottom - y + 72 });
   };
   const ungroup = (id: string) =>
     updateLogic((a) => {
@@ -456,8 +546,8 @@ export function LogicGraph() {
     e.preventDefault();
     const g = ab?.logic.groups?.find((x) => x.id === id);
     if (!g || !ab) return;
-    store().set({ logicSelection: id });
-    setSelEdges([]);
+    if (!chosenNow().includes(id)) select([id]);
+    else if (chosenNow().length > 1) return selectionMenu(e, chosenNow());
     const inside = membersOf(ab, g).map((n) => n.id);
     setMenu({
       x: e.clientX,
@@ -470,7 +560,10 @@ export function LogicGraph() {
         { label: 'Rename…', onClick: () => void renameGroup(g) },
         { label: 'Colour', items: GROUP_COLORS.map((c) => ({ label: c.label, color: c.value || 'var(--muted)', onClick: () => updateGroup(g.id, (x) => (c.value ? (x.color = c.value) : delete x.color)) })) },
         { separator: true },
-        { label: 'Ungroup (keep the nodes)', hint: 'Del', onClick: () => ungroup(id) },
+        { label: 'Copy group and its nodes', hint: 'Ctrl+C', onClick: () => copySelection([id]) },
+        { label: 'Duplicate group and its nodes', hint: 'Ctrl+D', onClick: () => duplicate([id]) },
+        { separator: true },
+        { label: 'Ungroup (keep the nodes)', onClick: () => ungroup(id) },
         {
           label: `Delete group and ${inside.length} node${inside.length === 1 ? '' : 's'}`,
           danger: true,
@@ -485,36 +578,10 @@ export function LogicGraph() {
       ],
     });
   };
-  const copyNode = (id: string, cut = false) => {
-    const n = ab?.logic.nodes.find((x) => x.id === id);
-    if (!n) return;
-    copyLogicNodes([n]);
-    if (cut) {
-      removeNodes([id]);
-      store().set({ logicSelection: null });
-    }
-  };
-  //Pasted nodes get new ids. Where the original is still on this graph the copy sits just off it, so it doesn't land
-  //exactly on top, otherwise it keeps the position it was copied from (or goes where the menu was opened)
-  const pasteNodes = (list: LogicNode[], at?: { x: number; y: number }) => {
-    if (!ab || !list.length) return false;
-    const first = list[0];
-    const here = ab.logic.nodes.some((x) => x.id === first.id);
-    const dx = at ? at.x - first.x : here ? 30 : 0;
-    const dy = at ? at.y - first.y : here ? 30 : 0;
-    const copies = list.map((n) => ({ ...structuredClone(n), id: uid('lg'), x: Math.round(n.x + dx), y: Math.round(n.y + dy) }));
-    updateLogic((a) => {
-      a.logic.nodes.push(...copies);
-    });
-    store().set({ logicSelection: copies[copies.length - 1].id });
-    setSelEdges([]);
-    focusGraph();
-    return true;
-  };
   const pasteFromClipboard = (at?: { x: number; y: number }) =>
     void (navigator.clipboard?.readText?.() ?? Promise.resolve('')).then(
-      (t) => pasteNodes(logicNodesToPaste(t), at),
-      () => pasteNodes(logicNodesToPaste(), at),
+      (t) => pasteFragment(logicToPaste(t), at),
+      () => pasteFragment(logicToPaste(), at),
     );
 
   /** Node palette as menu items: categories with their nodes, each calling `pick(kind)`. */
@@ -551,8 +618,10 @@ export function LogicGraph() {
     const n = ab.logic.nodes.find((x) => x.id === id);
     const def = n && CATALOG_BY_KIND[n.kind];
     if (!n || !def) return;
-    store().set({ logicSelection: id });
-    setSelEdges([]);
+    // Right-clicking a node that's part of the selection keeps the selection: Copy, Duplicate, Group and Delete act on all of it
+    if (!chosenNow().includes(id)) select([id]);
+    const many = targetIds(id);
+    if (many.length > 1) return selectionMenu(e, many);
     const names = new Map(ab.logic.nodes.map((x) => [x.id, CATALOG_BY_KIND[x.kind]?.label ?? x.kind]));
     const outs = def.outputs;
     const ins = ab.logic.edges.filter((x) => x.to === id);
@@ -589,10 +658,10 @@ export function LogicGraph() {
       });
     items.push(
       { separator: true },
-      { label: 'Cut', hint: 'Ctrl+X', onClick: () => copyNode(id, true) },
-      { label: 'Copy', hint: 'Ctrl+C', onClick: () => copyNode(id) },
-      { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate(id) },
-      { label: 'Put in a new group', title: 'Draw a labelled frame around this node; drag other nodes into it', onClick: () => groupAround(id) },
+      { label: 'Cut', hint: 'Ctrl+X', onClick: () => copySelection([id], true) },
+      { label: 'Copy', hint: 'Ctrl+C', onClick: () => copySelection([id]) },
+      { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate([id]) },
+      { label: 'Put in a new group', hint: 'Ctrl+G', title: 'Draw a labelled frame around this node; drag other nodes into it', onClick: () => groupAround([id]) },
       { label: 'Help for this node', onClick: () => openHelp('interaction-nodes', slug(def.label)) },
       { separator: true },
       { label: 'Delete', hint: 'Del', danger: true, onClick: () => removeNodes([id]) },
@@ -600,10 +669,39 @@ export function LogicGraph() {
     setMenu({ x: e.clientX, y: e.clientY, items });
   };
 
+  /** Right-click on a selection of several nodes and groups: what applies to all of them together. */
+  const selectionMenu = (e: React.MouseEvent, ids: string[]) => {
+    if (!ab) return;
+    const nodeIds = ids.filter((x) => !isGroup(x));
+    const groupCount = ids.length - nodeIds.length;
+    const inside = new Set(nodeIds);
+    const between = ab.logic.edges.filter((x) => inside.has(x.from) && inside.has(x.to));
+    const touching = ab.logic.edges.filter((x) => inside.has(x.from) || inside.has(x.to));
+    const what = [nodeIds.length && `${nodeIds.length} node${nodeIds.length === 1 ? '' : 's'}`, groupCount && `${groupCount} group${groupCount === 1 ? '' : 's'}`].filter(Boolean).join(' and ');
+    const items: MenuItem[] = [
+      { heading: `${what} selected` },
+      { label: 'Cut', hint: 'Ctrl+X', onClick: () => copySelection(ids, true) },
+      { label: 'Copy', hint: 'Ctrl+C', title: 'Copies them with the connections between them; pasted copies are wired to each other the same way', onClick: () => copySelection(ids) },
+      { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate(ids) },
+    ];
+    if (nodeIds.length) items.push({ label: 'Put in a new group', hint: 'Ctrl+G', title: 'Draw a labelled frame around the selected nodes', onClick: () => groupAround(nodeIds) });
+    if (touching.length)
+      items.push({
+        label: 'Disconnect',
+        items: [
+          { label: `Between them (${between.length})`, disabled: !between.length, onClick: () => removeEdges(between.map((x) => x.id)) },
+          { label: `From everything else (${touching.length - between.length})`, disabled: touching.length === between.length, onClick: () => removeEdges(touching.filter((x) => !between.includes(x)).map((x) => x.id)) },
+          { label: `All (${touching.length})`, onClick: () => removeEdges(touching.map((x) => x.id)) },
+        ],
+      });
+    items.push({ label: 'Tidy up the graph', onClick: tidy }, { separator: true }, { label: 'Delete', hint: 'Del', danger: true, onClick: () => void deleteSelected() });
+    setMenu({ x: e.clientX, y: e.clientY, items });
+  };
+
   const edgeMenu = (e: React.MouseEvent, edgeId: string) => {
     e.preventDefault();
     setSelEdges([edgeId]);
-    store().set({ logicSelection: null });
+    select([], null);
     setMenu({ x: e.clientX, y: e.clientY, items: [{ label: 'Delete connection', hint: 'Del', danger: true, onClick: () => removeEdges([edgeId]) }] });
   };
 
@@ -660,22 +758,30 @@ export function LogicGraph() {
           e.stopPropagation();
           const t = e.target as HTMLElement;
           if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.closest('.cm-editor')) return;
+          const mod = e.ctrlKey || e.metaKey;
+          const k = e.key.toLowerCase();
           if (e.key === 'Delete' || e.key === 'Backspace') {
             e.preventDefault();
-            deleteSelected();
+            void deleteSelected();
+          } else if (mod && k === 'a') {
+            e.preventDefault();
+            select([...(ab.logic.groups ?? []).map((g) => g.id), ...ab.logic.nodes.map((n) => n.id)]);
+          } else if (mod && k === 'g' && chosenNow().some((id) => !isGroup(id))) {
+            e.preventDefault();
+            groupAround(chosenNow());
           } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
             // The graph keeps the key to itself (stopPropagation above), so undo and redo have to be handled here
             e.preventDefault();
             if (e.key.toLowerCase() === 'y' || e.shiftKey) store().redo();
             else store().undo();
-          } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && store().get().logicSelection) {
+          } else if (mod && k === 'd' && chosenNow().length) {
             e.preventDefault();
-            duplicate(store().get().logicSelection!);
-          } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'x') && store().get().logicSelection) {
+            duplicate(chosenNow());
+          } else if (mod && (k === 'c' || k === 'x') && chosenNow().length) {
             //Leave it alone when there's text selected in a node, so copying that still works
             if (window.getSelection()?.toString()) return;
             e.preventDefault();
-            copyNode(store().get().logicSelection!, e.key.toLowerCase() === 'x');
+            copySelection(chosenNow(), k === 'x');
           }
         }}
         onPaste={(e) => {
@@ -684,7 +790,7 @@ export function LogicGraph() {
           if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.closest('.cm-editor')) return;
           e.stopPropagation();
           e.preventDefault();
-          pasteNodes(logicNodesToPaste(e.clipboardData.getData('text/plain')));
+          pasteFragment(logicToPaste(e.clipboardData.getData('text/plain')));
         }}
       >
         <ReactFlow
@@ -697,7 +803,7 @@ export function LogicGraph() {
           onConnectEnd={onConnectEnd}
           onInit={(inst) => (rf.current = inst)}
           onPaneClick={() => {
-            store().set({ logicSelection: null });
+            select([], null);
             setSelEdges([]);
           }}
           onPaneContextMenu={paneMenu}
@@ -706,6 +812,14 @@ export function LogicGraph() {
           fitView={ab.logic.nodes.length > 0}
           fitViewOptions={{ maxZoom: 1 }}
           deleteKeyCode={null}
+          // Dragging on empty space draws a marquee (Shift+drag draws one from anywhere, groups included, since a group
+          // takes every press on it); the middle button, or Space held with the left, pans. The wheel still zooms
+          selectionOnDrag
+          selectionMode={SelectionMode.Full}
+          panOnDrag={[1]}
+          panActivationKeyCode="Space"
+          selectionKeyCode="Shift"
+          multiSelectionKeyCode={['Control', 'Meta']}
           // A selected group stays behind its nodes (React Flow would raise it over them, and they couldn't be clicked)
           elevateNodesOnSelect={false}
           colorMode={theme === 'auto' ? 'system' : theme}
@@ -729,14 +843,18 @@ export function LogicGraph() {
         )}
       </div>
       <div className="logic-settings">
-        {selected ? <ParamForm node={selected} ab={ab} project={s.project} onChange={(params) => updateLogic((a) => {
+        {chosen.length > 1 ? (
+          <p className="hint">
+            {chosen.length} selected. Drag any of them to move them all. <b>Ctrl+C</b> copies them with the connections between them (pasted copies are wired to each other the same way), <b>Ctrl+D</b> duplicates, <b>Ctrl+G</b> puts them in a new group and <b>Del</b> deletes them. Ctrl+click adds or removes one.
+          </p>
+        ) : selected ? <ParamForm node={selected} ab={ab} project={s.project} onChange={(params) => updateLogic((a) => {
           const n = a.logic.nodes.find((x) => x.id === selected.id);
           if (n) n.params = params;
         }, `logic-params-${selected.id}`)} onNote={(note) => updateLogic((a) => {
           const n = a.logic.nodes.find((x) => x.id === selected.id);
           if (n) n.note = note || undefined;
         }, `logic-note-${selected.id}`)} /> : s.sel && ab.logic.groups?.some((g) => g.id === s.sel) ? (
-          <p className="hint">A group. Drag it (its title or the empty space inside) to move it with the nodes in it, drag its edges to resize it, double-click the title to rename it, and right-click it to add a node inside or change its colour. Delete removes the frame and keeps the nodes.</p>
+          <p className="hint">A group. Drag it (its title or the empty space inside) to move it with the nodes in it, drag its edges to resize it, double-click the title to rename it, and right-click it to add a node inside or change its colour. Delete asks whether to keep the nodes inside or delete them too.</p>
         ) : (
           <p className="hint">Select a node to edit its settings.</p>
         )}

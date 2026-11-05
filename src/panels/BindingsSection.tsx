@@ -1,6 +1,7 @@
 import { Fragment, useState } from 'react';
-import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
-import { isIdentifier } from '../store/doc';
+import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
+import { findArtboardOf, isIdentifier } from '../store/doc';
+import { previewScope } from '../lib/data';
 import { IconButton, Section, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { SearchPicker, type PickerOption } from '../components/SearchPicker';
@@ -27,9 +28,9 @@ const CONVERTER_NAME: Record<string, string> = { format: 'Number to text', round
  * What the binding does with the starting values: the variable's value, what each converter turns it into, and what the
  * property ends up as. So "value2 is 1 → Look up: no line for 1, kept 1 → Opacity 1" is visible instead of a surprise.
  */
-function trace(expr: string, list: Converter[], variables: Variable[]): { steps: string[]; error?: string } {
+function trace(expr: string, list: Converter[], variables: Variable[], base: Record<string, unknown>): { steps: string[]; error?: string } {
   if (!expr.trim()) return { steps: [], error: 'Pick a variable (or write a formula) to set this from.' };
-  const vars = Object.fromEntries(variables.map((v) => [v.name, startValue(v)]));
+  const vars = { ...base, ...Object.fromEntries(variables.map((v) => [v.name, startValue(v)])) };
   let value: unknown;
   try {
     value = evaluate(expr, { vars });
@@ -76,6 +77,8 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
   const bindings = node.bindings ?? {};
   const converters = node.converters ?? {};
   const modes = node.bindingModes ?? {};
+  // data, enums, artboard, layer() and self, so a formula that reads them works out in the grey line the way it will play
+  const base = { ...previewScope(project, findArtboardOf(project, node.id)), self: layerScope(node) };
   const entries = Object.entries(bindings);
   const update = (next: Record<string, string>, conv: Record<string, Converter[]> = converters, m: Record<string, BindingMode> = modes) => {
     const keep = Object.fromEntries(Object.entries(conv).filter(([k, list]) => k in next && list.length && (m[k] ?? 'in') === 'in'));
@@ -131,6 +134,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
             expr={expr}
             list={converters[p] ?? []}
             variables={project.variables}
+            base={base}
             onExpr={(v) => update({ ...bindings, [p]: v })}
             onConverters={(list) => update(bindings, { ...converters, [p]: list })}
             onRemove={() => {
@@ -158,6 +162,7 @@ function BindingItem({
   expr,
   list,
   variables,
+  base,
   onExpr,
   onConverters,
   onRemove,
@@ -171,13 +176,14 @@ function BindingItem({
   expr: string;
   list: Converter[];
   variables: Variable[];
+  base: Record<string, unknown>;
   onExpr: (v: string) => void;
   onConverters: (list: Converter[]) => void;
   onRemove: () => void;
 }) {
   const plain = !expr.trim() || variables.some((v) => v.name === expr.trim());
   const [formula, setFormula] = useState(!plain);
-  const t = trace(expr, list, variables);
+  const t = trace(expr, list, variables, base);
   const varOptions: PickerOption[] = variables.filter((v) => isIdentifier(v.name)).map((v) => ({ value: v.name, label: v.name, hint: v.type }));
   return (
     <div className="binding">
@@ -248,7 +254,7 @@ function BindingItem({
       <div className={`binding-trace${t.error ? ' err' : ''}`} title="Worked out with every variable at its starting value">
         {t.error ? t.error : (
           <>
-            At the start: {t.steps.join(' → ')} → <strong>{label}</strong> is set to {show(lastValue(expr, list, variables))}
+            At the start: {t.steps.join(' → ')} → <strong>{label}</strong> is set to {show(lastValue(expr, list, variables, base))}
           </>
         )}
       </div>
@@ -289,8 +295,8 @@ function SyncedSource({ label, prop, kind, mode, expr, variables, varOptions, on
   );
 }
 
-function lastValue(expr: string, list: Converter[], variables: Variable[]): unknown {
-  const vars = Object.fromEntries(variables.map((v) => [v.name, startValue(v)]));
+function lastValue(expr: string, list: Converter[], variables: Variable[], base: Record<string, unknown>): unknown {
+  const vars = { ...base, ...Object.fromEntries(variables.map((v) => [v.name, startValue(v)])) };
   try {
     return applyConverters(list, evaluate(expr, { vars }), { vars });
   } catch {

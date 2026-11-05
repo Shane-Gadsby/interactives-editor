@@ -260,7 +260,7 @@ function ReviewPlay({ token, project, startArtboardId, onClose }: { token: strin
   }, [project, startArtboardId, bytesFor]);
   return (
     <div className="review-play" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      {html ? <iframe title="Play" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : <div className="center-msg muted">{error ? `Could not build it: ${error}` : 'Building…'}</div>}
+      {html ? <iframe title="Play" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : <div className="center-msg muted">{error ? `Could not build it: ${error}` : 'Building…'}</div>}
       <button type="button" className="btn review-play-close" onClick={onClose} title="Back to the comments (Esc)">
         Close
       </button>

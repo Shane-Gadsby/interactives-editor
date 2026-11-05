@@ -744,7 +744,7 @@ Turn on **9-slice** and set the four insets (in image pixels). The corners keep 
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
 
 ## Video playback in variables
-Add a [data binding](bindings) on the video layer: **Playback position (s)**, **Playing**, **Length (s)** or **Ended**, and pick which way it goes. **Out** keeps a variable up to date with the video (show the time in text, \`{videoTime} s\`, or bind a progress bar's width to \`videoTime / videoLength\`). **Both** lets the variable drive the video too: set the position variable from a slider, a **Set variable** node or a script and the video jumps there; set **Playing** to false and it pauses. Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`,
+Add a [data binding](bindings) on the video layer: **Playback position (s)**, **Playing**, **Length (s)** or **Ended**, and pick which way it goes. **Out** keeps a variable up to date with the video (show the time in text, \`{videoTime} s\`, or bind a progress bar's width to \`videoTime / videoLength\`). **Both** lets the variable drive the video too: set the position variable from a slider, a **Set variable** node or a script and the video jumps there; set **Playing** to false and it pauses. **In** drives it from a formula: to scrub the video with a dragged knob, bind the knob's **X** out to \`knobX\`, **Length (s)** out to \`videoLength\`, and **Playback position (s)** in to \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, videoLength, true)\`. For the position as a percentage, use \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, 100, true)\` (in a text layer, or another binding). Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`,
   },
   {
     id: 'groups-frames',
@@ -1388,7 +1388,7 @@ Pick a frame under **Scroll to scrub** and scrolling it moves the timeline: the 
 - **It follows the timeline.** The sound plays when the timeline plays forwards inside the clip. It is silent when the timeline is paused, reversed or outside the clip, and it follows the timeline's speed (between a quarter and four times). When a timeline blends in, its sound comes in with it. A timeline that never started stays silent.
 - **Speed and pitch.** At another speed a clip keeps its pitch (it is time-stretched, like a browser's own audio player does it), so a voice at 1.25x sounds quicker, not higher. Untick **Keep pitch at other speeds** in the clip's settings for the record-player effect instead: faster is higher, slower is lower.
 - **Media keys don't touch it.** Sound plays through the browser's Web Audio, not an audio player of its own, so the keyboard's play/pause key, headphone buttons and the system's media controls don't stop it behind the project's back. Only the project (its timelines and **Play sound**) decides what sounds.
-- **When the browser says no.** Browsers will not start sound until the viewer has clicked, tapped or pressed a key. Then the player shows **Sound is waiting. Press to start it**, and any click or key press on the page starts it too. Put a **Start** button in front of an autoplaying narration if the first seconds matter.
+- **When the browser says no.** Browsers will not start sound until the viewer has clicked, tapped or pressed a key. Then the player shows **Sound is waiting. Press to start it**, and any click or key press on the page starts it too. That includes a **Play sound** that runs before anyone has clicked (from **On start** or a timer): it waits and plays at that first press. If several are waiting, only the latest plays, so a run of hover sounds doesn't all go off at once. Put a **Start** button in front of an autoplaying narration if the first seconds matter.
 
 ## Captions
 - **Typing, pasting, importing.** Double-click empty space in a caption lane for a new caption, or use the **Captions** menu: **New caption at the playhead**, **Paste a transcript…**, **Import WebVTT or SRT…**, **Export WebVTT**, **Export SRT** and **Add a language…**.
@@ -1446,10 +1446,17 @@ Drag from an output port to the next node's input to connect them. Actions that 
 
 Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Settings that name a variable or a sound also offer **+ Create new variable…** or **+ Add a new sound…** in their dropdown, so you don't have to leave the graph. Each node has a **Note** box for a reminder to yourself, and **Delete node** at the bottom.
 
+## Selecting, moving around and copying
+- **Drag on empty space** to draw a selection box: the nodes (and groups) entirely inside it are selected. <kbd>Shift</kbd>+drag draws one from anywhere, inside a group too. <kbd>Ctrl</kbd>+click (<kbd>Cmd</kbd>+click on a Mac) adds a node to the selection or takes it out, as many as you like. <kbd>Ctrl</kbd>+<kbd>A</kbd> selects everything.
+- **Pan** by holding <kbd>Space</kbd> and dragging, or dragging with the middle mouse button. The wheel zooms.
+- Drag any selected node to move them all (one undo step).
+- <kbd>Ctrl</kbd>+<kbd>C</kbd> copies the selection with the connections between the copied nodes; <kbd>Ctrl</kbd>+<kbd>V</kbd> pastes copies that are wired to each other the same way (never to the originals). A copied group brings the nodes inside it. <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicates, <kbd>Ctrl</kbd>+<kbd>G</kbd> puts the selected nodes in a new group, <kbd>Del</kbd> deletes them.
+
 ## Right-click and shortcuts
 - Right-click empty graph for **Add node** and **Paste**. Start typing to filter the menu down to the nodes whose name (or description) matches, then use the arrow keys and <kbd>Enter</kbd>, or click one. The menu you get by dragging a connection into empty space filters the same way.
+- Right-click one of several selected nodes for what applies to all of them: **Cut**, **Copy**, **Duplicate**, **Put in a new group**, **Disconnect** (between them, from everything else, or all) and **Delete**.
 - Right-click a node for **Connect to new node**, **Connect to existing node**, **Disconnect**, **Cut**, **Copy** (<kbd>Ctrl</kbd>+<kbd>C</kbd>), **Duplicate** (<kbd>Ctrl</kbd>+<kbd>D</kbd>), **Help for this node** and **Delete** (<kbd>Del</kbd>).
-- With a node selected in the graph, <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd> copy and paste that node, not the layers on the artboard. A pasted node keeps its settings but not its connections.
+- In the graph, <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd> copy and paste nodes, not the layers on the artboard.
 - Right-click a connection to **Delete connection**.
 
 ## Tidy up
@@ -1457,10 +1464,10 @@ Click a node in the palette on the left (or drag it onto the graph) to add it; s
 
 ## Groups
 A **group** is a labelled frame around nodes that belong together ("Score", "Intro", "Wrong answers"), so a big graph stays readable. It doesn't change what runs.
-- Right-click empty graph and choose **New group here**, or right-click a node and choose **Put in a new group** to frame it. Drag more nodes into the frame.
+- Right-click empty graph and choose **New group here**, or select some nodes and press <kbd>Ctrl</kbd>+<kbd>G</kbd> (or right-click and choose **Put in a new group**) to frame them. Drag more nodes into the frame.
 - A node is in a group when its middle is inside the frame. Click the group (its title or any empty space inside it) to select it, and drag it the same way to move it with every node in it; drag its edges or corners to resize it. Right-click inside a group for **Add node here** as well as its own settings.
 - Double-click the title to rename it (or **Rename…** in its right-click menu). **Colour** gives it one of a few tints.
-- <kbd>Del</kbd> with a group selected, or **Ungroup (keep the nodes)**, takes the frame away. **Delete group and N nodes** takes both.
+- <kbd>Del</kbd> on a group with nodes inside asks: **Just the group** (the frame goes, the nodes stay where they are) or **Group and N nodes** (everything goes, in one undo step). An empty group just goes. Its right-click menu has **Ungroup (keep the nodes)** and **Delete group and N nodes** too, and **Copy** and **Duplicate** for the group with its nodes.
 - Right-click a *layer* on the canvas, choose **Add interaction**, then **On click…** or **On hover…** to add an **On pointer** event with a **Control timeline** action already joined to it.
 - In the Inspector, a layer's **Interactions** section lists its events and has **+ On click** and **+ On hover**.
 
@@ -1731,13 +1738,16 @@ These work in every expression:
 | \`pad(n, width)\` | Zero padding: \`pad(7, 3)\` is \`007\` |
 | \`enums.name\` | The options of a choice variable |
 | \`instanceInput(layer, name)\` | The current value of a variable inside an [instance](instances) layer (by name or id) |
+| \`artboard.width\`, \`artboard.height\` | The artboard's size (and \`artboard.name\`), in the same units as a layer's X and Y, whatever size the player is shown at |
+| \`self\` | In a [binding](bindings) (and its converters): the layer it's on. \`self.width\`, \`self.opacity\`, \`self.text\`, any plain setting it has, and for a video \`self.time\`, \`self.duration\`, \`self.playing\` and \`self.ended\` |
+| \`layer(name)\` | The same for any layer, by name or id: \`layer('Knob').width\`. X and Y are inside its parent, as in the Inspector |
 
 ## What you can write
 Expressions are read by a small interpreter, not run as JavaScript, so a project can't use them to reach the page. These work:
 
 - **Values**: numbers (\`12\`, \`.5\`, \`1e3\`, \`0xff\`), text in \`"…"\`, \`'…'\` or backticks with \`\${…}\` slots, \`true\`, \`false\`, \`null\`, \`undefined\`, lists \`[1, 2, ...more]\`, objects \`{a: 1, b}\`, and patterns \`/regex/flags\`.
 - **Operators**: \`+ - * / % **\`, \`== != === !==\`, \`< > <= >=\`, \`&& || ??\`, \`!\`, \`typeof\`, \`in\`, \`a ? b : c\`, bit operators, and \`,\` inside brackets.
-- **Looking inside**: \`a.b\`, \`a[b]\` and \`a?.b\`. Only the values you put there are readable: your variables, data and \`item\`, \`event\`, \`value\`; \`__proto__\`, \`constructor\` and \`prototype\` never are.
+- **Looking inside**: \`a.b\`, \`a[b]\` and \`a?.b\`. Only the values you put there are readable: your variables, data, \`artboard\`, \`self\`, what \`layer()\` gives and \`item\`, \`event\`, \`value\`; \`__proto__\`, \`constructor\` and \`prototype\` never are.
 - **Calls**: the helpers above, \`Math.*\`, \`Number\`, \`String\`, \`Boolean\`, \`parseInt\`, \`parseFloat\`, \`isNaN\`, \`JSON.parse/stringify\`, \`Object.keys/values/entries\`, \`Array.isArray/from\`, \`Date.now()\` and \`new Date(…)\`, and the usual methods of text (\`slice\`, \`split\`, \`replace\`, \`padStart\`, \`toUpperCase\`…), numbers (\`toFixed\`, \`toLocaleString\`…), lists (\`map\`, \`filter\`, \`find\`, \`some\`, \`every\`, \`reduce\`, \`join\`, \`includes\`, \`slice\`, \`sort\`…) and dates.
 - **Arrow functions** for those list methods: \`x => x * 2\`, \`(a, b) => a + b\`. They take plain names and an expression, not a block.
 
@@ -1768,7 +1778,7 @@ In a text layer, a slot whose pattern is refused (or whose text is too long for 
     title: 'Bindings',
     group: 'Interactivity',
     summary: 'Tie a layer property to a variable: in (the variable sets it), out (it sets the variable) or both ways.',
-    keywords: 'bind binding data binding property drive reactive two-way both ways out in video position playing length drag x y attribute',
+    keywords: 'bind binding data binding property drive reactive two-way both ways out in video position playing length drag x y attribute scrub artboard size width layer',
     body: `A binding sets a layer's property from an [expression](expressions), and keeps it up to date as variables and data change. In the **Data bindings** section of the Inspector, press **+ Add binding** (or the **+** in the section's header) and pick the property; type in the search box at the top to find it quickly (*opa* finds Opacity).
 
 Each binding then says where its value comes from:
@@ -1794,13 +1804,13 @@ A bound property shows a link icon and can't be changed by hand or keyframed unt
 
 ## Which way: in, out or both
 Each binding has **← In**, **Out →** and **⇄ Both** at the top.
-- **In** (the usual): the variable or formula sets the property, as above.
+- **In** (the usual): the variable or formula sets the property, as above. The formula can read the layer it's on as \`self\`: \`self.width / 2\` for a height, \`self.time / self.duration\` on a video for how far through it is. \`self\` is the layer before its own bindings apply, so a binding never reads its own result. On the editing canvas a video has no time or length yet. On a video's **Playback position** and **Playing** it seeks, plays or pauses the video whenever the formula's value changes, and leaves the video alone while it doesn't, so it still plays on by itself.
 - **Out**: the property's value is written into a variable whenever it changes, and nothing sets the property from it. Use it to *read* something: a draggable layer's **X** as it is dragged, a video's **Playback position**, a timeline-animated **Opacity**. Read-only attributes (a video's **Length**, **Ended**) can only go out.
 - **Both**: the property and the variable are kept equal. At the start the property takes the variable's value; after that, change either one and the other follows. A slider bound to the same variable as a video's **Playback position** both shows the position and scrubs the video; setting a video's **Playing** to false pauses it.
 
 Out and Both name a variable (no formula, no converters), and the grey line says what will happen in words.
 
-The value is made to fit the property: a number property takes a number (\`true\`/\`false\` become 1/0, numeric text is read) and is left as it was if the expression gives something that is not a number; a true/false property takes a boolean; text and colour properties take text.
+The value is made to fit the property (settings that can't be animated, like a video's **Loop**, go by the type they already have): a number property takes a number (\`true\`/\`false\` become 1/0, numeric text is read) and is left as it was if the expression gives something that is not a number; a true/false property takes a boolean; text and colour properties take text.
 
 ## Converters
 Under a binding, the **+ Convert…** menu changes its value before it is set. They run in order, so a few can be chained.
