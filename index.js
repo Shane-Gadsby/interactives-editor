@@ -292,7 +292,7 @@ router.use((req, res, next) => {
 router.use(cacheHeaders.stampGate)
 
 //Every api route: never cached, staff session wanted (log only until SUITE_SESSION_ENFORCE=1)
-router.use('/api', cacheHeaders.api, sessionCheck({staff: true}))
+router.use('/api', cacheHeaders.api, sessionCheck({staff: true, tool: 'interactives'}))
 
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
@@ -2257,7 +2257,7 @@ router.post('/api/notices/read', express.json({limit: '4kb'}), async (req, res) 
 //allows no guests wants one
 const REVIEW_TOKEN = /^[\w-]{16,64}$/
 
-router.use('/review', cacheHeaders.api, sessionCheck({optional: true}), (req, res, next) => {
+router.use('/review', cacheHeaders.api, sessionCheck({optional: true, tool: 'interactives'}), (req, res, next) => {
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('X-Robots-Tag', 'noindex')
 	next()
@@ -2437,12 +2437,12 @@ const saveRecord = async (key, build) => {
 	}
 }
 
-router.use('/learn', cacheHeaders.api, sessionCheck())
+router.use('/learn', cacheHeaders.api, sessionCheck({tool: 'interactives'}))
 
 //Remix: someone who opened a share link that allows it copies the project into their own projects. Needs a signed in
 //editor user (the new project is theirs), so it sits under the same staff session check as the api. The copy is the project
 //as it is now, with its files, and nothing else: no tags, folder, collaborators, share link, review link or results
-router.use('/remix', cacheHeaders.api, sessionCheck({staff: true}))
+router.use('/remix', cacheHeaders.api, sessionCheck({staff: true, tool: 'interactives'}))
 
 router.post('/remix/:token', async (req, res) => {
 	let token = req.params.token
