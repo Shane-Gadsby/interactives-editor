@@ -221,6 +221,23 @@ describe('loading and listing', () => {
     //?all=1 needs a power user, not just the absence of anyone to check
     expect((await h.call('GET', '/api/projects?all=1')).json.map((p: { id: string }) => p.id)).toEqual(['prdev00002']);
   });
+
+  it('with no session lists nothing on test and prod, not even the projects nobody owns', async () => {
+    await put('prdev00003', project('prdev00003'), null);
+    const was = process.env.NODE_ENV;
+    try {
+      for (const env of ['testing', 'production']) {
+        process.env.NODE_ENV = env;
+        expect((await h.call('GET', '/api/projects')).json).toEqual([]);
+        expect((await h.call('GET', '/api/projects?all=1')).json).toEqual([]);
+      }
+      // a signed in power user who asks still sees them
+      expect((await h.call('GET', '/api/projects?all=1', { user: pat })).json.map((p: { id: string }) => p.id)).toContain('prdev00003');
+    } finally {
+      if (was === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = was;
+    }
+  });
 });
 
 describe('who may change what', () => {

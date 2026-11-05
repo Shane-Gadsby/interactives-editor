@@ -66,3 +66,32 @@ export function sessionId(): string | null {
     return null;
   }
 }
+
+let headerInstalled = false;
+
+/**
+ * Put `X-Session-ID` on every same-origin fetch, the same rule as si-manager's utilities.js (the url's ?sessionID=,
+ * else this tab's sessionStorage). The editor's own server only knows who's asking through that header, and the
+ * utilities.js a box serves may predate the wrapper: prod's did, so everyone there was nobody and every project was
+ * saved without an owner. Wrapping on top of utilities.js' wrapper is harmless, it sets the same value.
+ */
+export function installSessionHeader(): void {
+  if (headerInstalled || typeof window === 'undefined' || typeof window.fetch !== 'function') return;
+  headerInstalled = true;
+  const plain = window.fetch.bind(window);
+  window.fetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
+    // A bad url or blocked storage is no reason for a request to throw where it wouldn't have before
+    try {
+      const url = new URL(input instanceof Request ? input.url : String(input), location.href);
+      const id = new URLSearchParams(location.search).get('sessionID') || sessionId();
+      if (url.origin === location.origin && id) {
+        const headers = new Headers(init.headers ?? (input instanceof Request ? input.headers : undefined));
+        headers.set('X-Session-ID', id);
+        init = { ...init, headers };
+      }
+    } catch {
+      /* send it as it was */
+    }
+    return plain(input, init);
+  };
+}

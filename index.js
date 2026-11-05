@@ -327,11 +327,14 @@ router.get('/api/session', (req, res) => {
 
 //The projects list, mine only (owned or invited to). ?all=1 gets everyone's, but only for power users (god mode),
 //and admins don't get it without asking. With no session at all it used to be everything until the box enforced
-//sessions, which on test meant anyone whose session didn't come through saw every project. Now it's just the
-//ones nobody owns (made in dev without si-manager), which anyone could open anyway
+//sessions, which on test meant anyone whose session didn't come through saw every project. Then it was the ones
+//nobody owns, which on prod turned out to be every beta tester's Guest project from before direct sign in, handed
+//to anyone whose session didn't arrive. So that's dev only now (no si-manager there, so nobody owns anything),
+//and everywhere else no session is an empty list
 router.get('/api/projects', async (req, res) => {
 	let me = whoIs(req),
-		filter = req.query.all === '1' && isPower(req) ? {} : me?.username ? {$or: [{'owner.username': me.username}, {'collaborators.username': me.username}]} : {'owner.username': null},
+		guests = !['testing', 'production'].includes(process.env.NODE_ENV),
+		filter = req.query.all === '1' && isPower(req) ? {} : me?.username ? {$or: [{'owner.username': me.username}, {'collaborators.username': me.username}]} : guests ? {'owner.username': null} : {_id: null},
 		list = await projects.find(filter, {projection: {doc: 0}}).sort({updated: -1}).limit(1000).toArray(),
 		open = new Map()
 
