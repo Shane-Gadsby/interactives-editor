@@ -6648,7 +6648,7 @@ Click a node in the palette on the left (or drag it onto the graph) to add it; s
 ## Groups
 A **group** is a labelled frame around nodes that belong together ("Score", "Intro", "Wrong answers"), so a big graph stays readable. It doesn't change what runs.
 - Right-click empty graph and choose **New group here**, or right-click a node and choose **Put in a new group** to frame it. Drag more nodes into the frame.
-- A node is in a group when its middle is inside the frame. Drag the group's title to move it and every node in it; select it and drag its edges or corners to resize it.
+- A node is in a group when its middle is inside the frame. Click the group (its title or any empty space inside it) to select it, and drag it the same way to move it with every node in it; drag its edges or corners to resize it. Right-click inside a group for **Add node here** as well as its own settings.
 - Double-click the title to rename it (or **Rename…** in its right-click menu). **Colour** gives it one of a few tints.
 - <kbd>Del</kbd> with a group selected, or **Ungroup (keep the nodes)**, takes the frame away. **Delete group and N nodes** takes both.
 - Right-click a *layer* on the canvas, choose **Add interaction**, then **On click…** or **On hover…** to add an **On pointer** event with a **Control timeline** action already joined to it.

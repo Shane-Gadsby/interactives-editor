@@ -127,7 +127,7 @@ function GroupNode({ data, selected }: NodeProps<Node<GroupData>>) {
           store().commit();
         }}
       />
-      <div className="ix-group-head" title="Drag to move the group and the nodes in it. Double-click to rename" onDoubleClick={() => setEditing(true)}>
+      <div className="ix-group-head" title="Click to select the group, drag to move it with the nodes in it, double-click to rename" onDoubleClick={() => setEditing(true)}>
         {editing ? (
           <input
             className="ix-group-input nodrag"
@@ -197,7 +197,8 @@ export function LogicGraph() {
   const nodes: Node<IxNodeData>[] = useMemo(
     () =>
       [
-        // Groups first and below everything, moved only by their title bar so the empty space inside acts like the pane
+        // Groups first and below everything. A click anywhere in one (its title or the empty space inside) selects it,
+        // and dragging it moves it with its nodes
         ...(ab?.logic.groups ?? []).map(
           (g) =>
             ({
@@ -207,7 +208,6 @@ export function LogicGraph() {
               width: g.width,
               height: g.height,
               zIndex: -1,
-              dragHandle: '.ix-group-head',
               data: { group: g },
               selected: g.id === s.sel,
             }) as unknown as Node<IxNodeData>,
@@ -434,6 +434,9 @@ export function LogicGraph() {
       y: e.clientY,
       items: [
         { heading: g.label || 'Group' },
+        // right-clicking inside a group no longer reaches the graph behind it, so its menu adds nodes too
+        { label: 'Add node here', items: paletteItems((kind) => add(kind, rf.current?.screenToFlowPosition({ x: e.clientX, y: e.clientY }))) },
+        { separator: true },
         { label: 'Rename…', onClick: () => void renameGroup(g) },
         { label: 'Colour', items: GROUP_COLORS.map((c) => ({ label: c.label, color: c.value || 'var(--muted)', onClick: () => updateGroup(g.id, (x) => (c.value ? (x.color = c.value) : delete x.color)) })) },
         { separator: true },
@@ -672,6 +675,8 @@ export function LogicGraph() {
           fitView={ab.logic.nodes.length > 0}
           fitViewOptions={{ maxZoom: 1 }}
           deleteKeyCode={null}
+          // A selected group stays behind its nodes (React Flow would raise it over them, and they couldn't be clicked)
+          elevateNodesOnSelect={false}
           colorMode={theme === 'auto' ? 'system' : theme}
           proOptions={{ hideAttribution: true }}
           minZoom={0.2}
@@ -696,7 +701,7 @@ export function LogicGraph() {
           const n = a.logic.nodes.find((x) => x.id === selected.id);
           if (n) n.note = note || undefined;
         }, `logic-note-${selected.id}`)} /> : s.sel && ab.logic.groups?.some((g) => g.id === s.sel) ? (
-          <p className="hint">A group. Drag its title to move it with the nodes inside, drag its edges to resize it, double-click the title to rename it, and right-click it for its colour. Delete removes the frame and keeps the nodes.</p>
+          <p className="hint">A group. Drag it (its title or the empty space inside) to move it with the nodes in it, drag its edges to resize it, double-click the title to rename it, and right-click it to add a node inside or change its colour. Delete removes the frame and keeps the nodes.</p>
         ) : (
           <p className="hint">Select a node to edit its settings.</p>
         )}

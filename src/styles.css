@@ -2744,15 +2744,8 @@ button.twisty:hover {
 .ix-graph-node.selected {
   box-shadow: 0 0 0 2px var(--accent);
 }
-/* Group frames in the graph: a tinted box behind the nodes. Only the title bar and the resize handles take the
-   pointer, so clicks and right-clicks in the empty middle reach the pane underneath */
-.react-flow__node-ixgroup {
-  pointer-events: none !important;
-}
-.react-flow__node-ixgroup .ix-group-head,
-.react-flow__node-ixgroup .react-flow__resize-control {
-  pointer-events: all;
-}
+/* Group frames in the graph: a tinted box behind the nodes. The whole box takes the pointer: a click selects it, a
+   drag moves it with its nodes */
 .ix-group {
   --group: var(--muted);
   width: 100%;
@@ -2763,6 +2756,9 @@ button.twisty:hover {
 }
 .ix-group.selected {
   border-color: var(--accent);
+}
+.ix-group {
+  cursor: grab;
 }
 .ix-group-head {
   display: inline-block;

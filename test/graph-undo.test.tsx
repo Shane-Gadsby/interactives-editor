@@ -123,4 +123,17 @@ describe('adding a node to the interaction graph', () => {
     expect(s.artboard()!.logic.groups).toBeUndefined();
     expect(s.artboard()!.logic.nodes).toHaveLength(1);
   });
+
+  it('selects a group with a click on the empty space inside it, not only its title', async () => {
+    const s = await mount();
+    const pane = host!.querySelector('.react-flow__pane') as HTMLElement;
+    act(() => void pane.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 })));
+    act(() => Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((b) => b.textContent?.startsWith('New group here'))!.click());
+    const id = s.artboard()!.logic.groups![0].id;
+    act(() => s.set({ logicSelection: null }));
+    const body = host!.querySelector('.react-flow__node-ixgroup .ix-group') as HTMLElement;
+    expect(getComputedStyle(body.parentElement!).pointerEvents).not.toBe('none');
+    act(() => void body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: 200, clientY: 150 })));
+    expect(s.get().logicSelection).toBe(id);
+  });
 });
