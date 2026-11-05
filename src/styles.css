@@ -3338,6 +3338,9 @@ button.twisty:hover {
 }
 .help-code-wrap .help-code {
   padding-right: 64px;
+  /* Long commands wrap rather than scroll under the Copy button */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .help-code-copy {
   position: absolute;
