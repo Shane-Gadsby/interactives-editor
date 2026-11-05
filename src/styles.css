@@ -3810,6 +3810,65 @@ kbd {
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px 16px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+.prefs-workspaces {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.prefs-workspaces .hint {
+  margin: 0;
+}
+.ws-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ws-item,
+.ws-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ws-item:hover,
+.ws-main:hover {
+  border-color: var(--btn-hover-border);
+}
+.ws-item.on {
+  border-color: var(--brand);
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+.ws-saved {
+  flex-direction: row;
+  align-items: center;
+  padding: 0 4px 0 0;
+  cursor: default;
+}
+.ws-saved .ws-main {
+  border: 0;
+  background: none;
+  flex: 1;
+}
+.ws-name {
+  font-weight: 600;
+}
+.ws-about {
+  color: var(--muted);
+  font-size: 11px;
 }
 .pencil-stroke {
   fill: none;

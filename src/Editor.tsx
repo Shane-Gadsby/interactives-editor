@@ -678,7 +678,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       </div>
       <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)} />
       <IconButton icon={<Icons.help />} title="Help (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp()} />
-      {prefsOpen && <PrefsModal onClose={() => setPrefsOpen(false)} />}
+      {prefsOpen && <PrefsModal workspace onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
       {templateOpen && <SaveTemplateModal onClose={() => setTemplateOpen(false)} />}

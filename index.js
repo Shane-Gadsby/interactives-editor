@@ -304,6 +304,14 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], to
 			let v = p?.[k]
 			if (Array.isArray(rule) ? rule.includes(v) : rule === 'string' ? typeof v === 'string' && v.length < 120 : typeof v === rule) out[k] = v
 		}
+		//Saved workspaces (panel layouts under a name). The editor checks the layout inside each one itself, so here
+		//it's only the shape and the size: at most 12, each with an id and a name and no bigger than 8 KB
+		if (Array.isArray(p?.workspaces)) {
+			out.workspaces = p.workspaces
+				.filter((w) => w && typeof w === 'object' && !Array.isArray(w) && typeof w.id === 'string' && w.id.length <= 40 && typeof w.name === 'string' && w.name.length <= 60)
+				.filter((w) => JSON.stringify(w).length <= 8000)
+				.slice(-12)
+		}
 		return out
 	}
 
@@ -313,7 +321,7 @@ router.get('/api/prefs', async (req, res) => {
 	res.json({user, prefs: doc?.prefs || {}})
 })
 
-router.put('/api/prefs', express.json({limit: '16kb'}), async (req, res) => {
+router.put('/api/prefs', express.json({limit: '128kb'}), async (req, res) => {
 	let user = whoIs(req)?.username || 'guest',
 		clean = cleanPrefs(req.body.prefs)
 	await prefs.updateOne({_id: user}, {$set: {prefs: clean, updated: new Date()}}, {upsert: true})

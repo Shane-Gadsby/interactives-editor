@@ -26,6 +26,8 @@ export interface Prefs {
   commentNotices: boolean;
   /** Draw the parts of layers that hang outside an artboard that clips faintly beside it, so they can be seen and picked. On by default; the player and exports still clip. */
   ghostOutside: boolean;
+  /** Panel arrangements saved under a name (lib/workspaces.ts checks each one before using it). */
+  workspaces?: unknown[];
 }
 
 export const DEFAULT_FONT = 'Open Sans';

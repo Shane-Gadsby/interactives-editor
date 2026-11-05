@@ -1,13 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { VersionInfo } from './VersionInfo';
 import { DEFAULT_FONT, setPrefs, usePrefs } from '../lib/prefs';
 import { FontField } from './FontPicker';
 import { IconButton, SelectField, CheckField } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
+import { BUILT_IN, applyWorkspace, deleteWorkspace, renameWorkspace, saveWorkspace, savedWorkspaces, MAX_SAVED } from '../lib/workspaces';
+import { confirmDialog, promptDialog } from './dialogs';
 
 /** Personal preferences, kept in this browser. */
-export function PrefsModal({ onClose }: { onClose: () => void }) {
+export function PrefsModal({ onClose, workspace = false }: { onClose: () => void; workspace?: boolean }) {
   const p = usePrefs();
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -81,9 +83,82 @@ export function PrefsModal({ onClose }: { onClose: () => void }) {
             onChange={(v) => setPrefs({ commentNotices: v })}
           />
           <CheckField label="Show tooltips" title="Explanations when you hover buttons and field names" value={p.tooltips} onChange={(v) => setPrefs({ tooltips: v })} />
+          {workspace && <WorkspaceSection />}
           <p className="hint">These settings are yours: they follow you to any browser you sign in on.</p>
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Workspace: switch the whole panel arrangement in one go (the built-in ones, or ones saved under a name), and save
+ * the current one. Only offered in the editor, where there are panels to arrange.
+ */
+function WorkspaceSection() {
+  usePrefs();
+  const saved = savedWorkspaces();
+  const [applied, setApplied] = useState<string | null>(null);
+  const use = (id: string, w: Parameters<typeof applyWorkspace>[0]) => {
+    applyWorkspace(w);
+    setApplied(id);
+  };
+  return (
+    <section className="prefs-workspaces" aria-label="Workspace">
+      <div className="field-label block">Workspace</div>
+      <p className="hint">The panels' arrangement: where each one is docked or floating, the panel widths and the height of the bottom area.</p>
+      <div className="ws-list">
+        {BUILT_IN.map((w) => (
+          <button key={w.id} type="button" className={`ws-item${applied === w.id ? ' on' : ''}`} title={w.about} onClick={() => use(w.id, w.make())}>
+            <span className="ws-name">{w.name}</span>
+            <span className="ws-about">{w.about}</span>
+          </button>
+        ))}
+      </div>
+      {saved.length > 0 && (
+        <div className="ws-list">
+          {saved.map((w) => (
+            <div key={w.id} className={`ws-item ws-saved${applied === w.id ? ' on' : ''}`}>
+              <button type="button" className="ws-main" title={`Switch to ${w.name}`} onClick={() => use(w.id, w)}>
+                <span className="ws-name">{w.name}</span>
+                <span className="ws-about">Saved</span>
+              </button>
+              <IconButton
+                icon={<Icons.pencil width={13} />}
+                title="Rename"
+                onClick={async () => {
+                  const v = await promptDialog({ title: 'Rename workspace', label: 'Name', initial: w.name, confirmLabel: 'Rename' });
+                  if (v !== null) renameWorkspace(w.id, v);
+                }}
+              />
+              <IconButton
+                icon={<Icons.trash width={13} />}
+                title="Delete this workspace"
+                onClick={async () => {
+                  if (await confirmDialog({ title: 'Delete workspace', message: `Delete “${w.name}”? The panels stay as they are now.`, confirmLabel: 'Delete', danger: true })) deleteWorkspace(w.id);
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        type="button"
+        className="btn"
+        title={`Keep the panels as they are now under a name of your own${saved.length >= MAX_SAVED ? ` (you have ${MAX_SAVED}, the oldest makes way)` : ''}`}
+        onClick={async () => {
+          const name = await promptDialog({
+            title: 'Save workspace',
+            label: 'Name',
+            placeholder: 'e.g. Animating on the laptop',
+            confirmLabel: 'Save',
+            validate: (v) => (v.trim() ? null : 'Give it a name'),
+          });
+          if (name) saveWorkspace(name);
+        }}
+      >
+        Save current layout as…
+      </button>
+    </section>
   );
 }
