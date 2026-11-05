@@ -1433,9 +1433,9 @@ body.dock-dragging * {
   align-items: center;
   gap: 8px;
   padding: 0 10px;
-  border-bottom: 1px solid var(--line);
-  /* The one bit of UniSQ gold that's always there, kept to a hairline */
-  box-shadow: inset 0 -2px 0 var(--brand);
+  /* The one bit of UniSQ gold that's always there, kept to a hairline. It is the border itself, so nothing (no grey
+     line) sits between it and the resize lines that meet it */
+  border-bottom: 2px solid var(--brand);
   background: var(--panel);
 }
 .conflict-banner {
@@ -1614,7 +1614,8 @@ body.col-resizing * {
 .resize-handle:hover,
 .resize-handle:active,
 .resize-handle:focus-visible {
-  background: linear-gradient(180deg, transparent 2px, var(--resizer) 2px, var(--resizer) 5px, transparent 5px);
+  /* flush with the top: the line covers the panel's border and the 2px under it, with no gap above */
+  background: linear-gradient(180deg, var(--resizer) 3px, transparent 3px);
   outline: none;
 }
 .bottom-body {
