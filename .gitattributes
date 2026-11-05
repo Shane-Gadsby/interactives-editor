@@ -1,0 +1,26 @@
+# Text files are stored and checked out with LF line endings on every platform.
+* text=auto eol=lf
+
+# Binary formats, never converted
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.mp3 binary
+*.mp4 binary
+*.webm binary
+*.wav binary
+*.ogg binary
+*.pdf binary
+*.ai binary
+*.psd binary
+*.dwg binary
+*.riv binary
+*.pcraft binary
+*.wasm binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.ixp binary
+*.zip binary
