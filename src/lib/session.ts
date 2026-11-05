@@ -11,10 +11,31 @@ export interface SessionUser {
 
 type FetchActivity = (cb: (err: unknown, data: { user?: Record<string, unknown> } | null) => void) => void;
 
+type DirectSignIn = (tool: string, options?: { title?: string; prompt?: boolean }) => Promise<unknown>;
+
 let pending: Promise<SessionUser | null> | null = null;
 
+/**
+ * Opened straight in a tab rather than inside StudyDesk: no session id in the url or in this tab's sessionStorage,
+ * and not framed. There's no LTI launch to hand that a session, so it signs in through StaffDesk first
+ * (directSignIn in si-manager's utilities.js), which leaves the session where fetchActivity looks for one.
+ */
+function isDirectLoad(): boolean {
+  try {
+    return window.top === window && !new URLSearchParams(location.search).get('sessionID') && !sessionId();
+  } catch {
+    return false;
+  }
+}
+
+function signInDirectly(): Promise<unknown> {
+  const directSignIn = (window as unknown as { directSignIn?: DirectSignIn }).directSignIn;
+  if (typeof directSignIn !== 'function' || !isDirectLoad()) return Promise.resolve(null);
+  return directSignIn('interactives', { title: 'Interactives' }).catch(() => null);
+}
+
 export function sessionUser(): Promise<SessionUser | null> {
-  pending ??= new Promise((resolve) => {
+  pending ??= signInDirectly().then(() => new Promise<SessionUser | null>((resolve) => {
     const fetchActivity = (window as unknown as { fetchActivity?: FetchActivity }).fetchActivity;
     if (typeof fetchActivity !== 'function') return resolve(null);
     // fetchActivity waits for a session id to appear; don't hold the editor up if there never is one
@@ -32,7 +53,7 @@ export function sessionUser(): Promise<SessionUser | null> {
       clearTimeout(timer);
       resolve(null);
     }
-  });
+  }));
   return pending;
 }
 
