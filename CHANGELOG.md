@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- AI agents connect over the network: the editor serves its MCP server at `/interactives/mcp` (streamable HTTP). Nothing to download; `claude mcp add --transport http interactives "https://<host>/interactives/mcp?agent=Claude" --header "X-Session-ID: <id>"`. Each connection has its own session, name and live rooms; idle ones close after 2 hours.
+- The **AI agents (MCP)** help page shows the exact address and commands for the server it's opened on, with your own session id filled in, and every help code block has a **Copy** button.
 - Files dropped on the **Assets** panel are uploaded as assets (audio, video, images, fonts, data), with a dashed outline while you're over it. Nothing is placed on the artboard; the canvas still does that. Before, a drop there did nothing.
 - The tools column holds two tools per row (it's a little wider), and when it still has to scroll it scrolls only up and down, never sideways.
 - Accessibility panel: the **to look at** chip is one row like the others. The Review page's `.review` class was styling it (and every other `.review` dot) as a full-height column; that class is now `.review-page`.

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { AsyncLocalStorage } from "node:async_hooks";
 const OUT = [{ id: "out", label: "" }];
 const CONTINUE = [
   {
@@ -1947,7 +1948,7 @@ function execProgram(prog, text, from, sticky) {
   steps = 0;
   const caps = new Int32Array(prog.nslots).fill(-1);
   const gen = nextGen();
-  const ctx = { prog, text, n, width, caps, target: -1 };
+  const ctx2 = { prog, text, n, width, caps, target: -1 };
   try {
     for (let s = from; s <= n; ) {
       if (!sticky && prog.first >= 0) {
@@ -1955,7 +1956,7 @@ function execProgram(prog, text, from, sticky) {
         if (at < 0) break;
         s = at;
       }
-      if (run(ctx, 0, s, gen)) return caps;
+      if (run(ctx2, 0, s, gen)) return caps;
       if (sticky) break;
       s += prog.u && s < n && text.codePointAt(s) > 65535 ? 2 : 1;
     }
@@ -1965,8 +1966,8 @@ function execProgram(prog, text, from, sticky) {
     if (visited.length > 6e5) visited = new Uint32Array(0);
   }
 }
-function run(ctx, startPc, startPos, gen) {
-  const { prog, text, n, width, caps } = ctx;
+function run(ctx2, startPc, startPos, gen) {
+  const { prog, text, n, width, caps } = ctx2;
   const { op, a, b, encl } = prog;
   const base2 = stackBase;
   let sp = base2;
@@ -2080,18 +2081,18 @@ function run(ctx, startPc, startPos, gen) {
           const behind = (a[pc] & 2) === 2;
           const snapshot = caps.slice();
           stackBase = sp;
-          const saveTarget = ctx.target;
+          const saveTarget = ctx2.target;
           let ok = false;
           try {
             if (!behind) {
-              ctx.target = -1;
-              ok = run(ctx, pc + 1, pos, nextGen());
+              ctx2.target = -1;
+              ok = run(ctx2, pc + 1, pos, nextGen());
             } else {
               const [lo, hi] = prog.widths.get(pc);
-              ctx.target = pos;
+              ctx2.target = pos;
               const g = nextGen();
               for (let s = pos - lo; s >= 0 && (hi === Infinity || s >= pos - hi); s--) {
-                if (run(ctx, pc + 1, s, g)) {
+                if (run(ctx2, pc + 1, s, g)) {
                   ok = true;
                   break;
                 }
@@ -2099,7 +2100,7 @@ function run(ctx, startPc, startPos, gen) {
             }
           } finally {
             stackBase = base2;
-            ctx.target = saveTarget;
+            ctx2.target = saveTarget;
           }
           if (ok === neg) {
             caps.set(snapshot);
@@ -2113,7 +2114,7 @@ function run(ctx, startPc, startPos, gen) {
           break;
         }
         case 12:
-          if (ctx.target >= 0 && pos !== ctx.target) break thread;
+          if (ctx2.target >= 0 && pos !== ctx2.target) break thread;
           return true;
         case 13:
           return true;
@@ -7915,30 +7916,64 @@ A note is up to 2000 characters, a conversation holds 200 messages, and a projec
     title: "AI agents (MCP)",
     group: "Working together",
     summary: "Let an AI agent join your editing session to build, change and debug alongside you.",
-    keywords: "ai agent claude mcp model context protocol assistant automation llm copilot",
-    body: `An AI agent can join a project like another person: it shows in the top bar as **<name> (AI)**, its edits appear for everyone as it makes them, and it can see what you have selected, so you can say "make the selected button pulse when hovered".
+    keywords: "ai agent claude mcp model context protocol assistant automation llm copilot url connect http",
+    body: () => {
+      const page = typeof location !== "undefined" && /^https?:$/.test(location.protocol) ? location : null;
+      const base2 = page ? `${page.origin}${page.pathname.replace(/\/(index\.html)?$/, "")}` : "https://<your server>/interactives";
+      const url = `${base2}/mcp?agent=Claude`;
+      let sid = "";
+      try {
+        const v = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("sessionID") : null;
+        if (v && v !== "null") sid = v;
+      } catch {
+      }
+      const session = sid || "<your session id>";
+      return `An AI agent can join a project like another person: it shows in the top bar as **<name> (AI)**, its edits appear for everyone as it makes them, and it can see what you have selected, so you can say "make the selected button pulse when hovered".
 
-It connects through the **Interactives MCP server**, a small program any MCP client (Claude Code, Claude Desktop and others) can start.
+It connects to this editor's **MCP server** over the network. There is nothing to download or install: any MCP client that can use an HTTP server (Claude Code, Claude Desktop and others) only needs the address below.
 
 ## A first conversation
 1. Open a project in the editor, so you can watch.
-2. Add the MCP server to your agent's settings (below).
+2. Add the MCP server to your agent (below).
 3. Ask the agent: *List my projects, then join the one called Lamp.* A person called **<name> (AI)** appears in the top bar.
 4. Select a layer yourself, then ask: *Make the selected button pulse when I hover over it.* The agent reads your selection and makes the change while you watch.
 5. Ask it to run **validate** when it is done, to find broken references and expressions that don't parse.
 
 ## Setting it up
-The server is \`mcp/dist/interactives-mcp.mjs\` in the editor's repository. Add it to your MCP client, for example in Claude Code:
+The MCP server for this editor is at:
 
 \`\`\`
-claude mcp add interactives -e INTERACTIVES_URL=https://<your server>/interactives -e INTERACTIVES_AGENT_NAME=Claude -- node /path/to/interactives-editor/mcp/dist/interactives-mcp.mjs
+${url}
 \`\`\`
 
-| Setting | Meaning |
+In **Claude Code**, run:
+
+\`\`\`
+claude mcp add --transport http interactives "${url}" --header "X-Session-ID: ${session}"
+\`\`\`
+
+For a client set up with a JSON file (Claude Desktop and most others):
+
+\`\`\`
+{
+  "mcpServers": {
+    "interactives": {
+      "type": "http",
+      "url": "${url}",
+      "headers": { "X-Session-ID": "${session}" }
+    }
+  }
+}
+\`\`\`
+
+Use the **Copy** button on each box.
+
+${sid ? `> The \`X-Session-ID\` above is **your** sign-in for this tab. The agent can open and change whatever you can, so treat it like a password and don't paste it anywhere shared. It stops working when your StudyDesk session ends: open this page again for a fresh one and update the setting.` : `> **<your session id>** is your StudyDesk sign-in. Open this page from the editor while signed in and it is filled in for you. Without one the agent sees what a signed-out visitor sees, which on most servers is nothing.`}
+
+| Part | Meaning |
 |---|---|
-| \`INTERACTIVES_URL\` | The editor's address (default \`http://127.0.0.1:3048/interactives\`) |
-| \`INTERACTIVES_SESSION_ID\` | Your suite session id, where the server requires a signed-in session |
-| \`INTERACTIVES_AGENT_NAME\` | The name people see (default Agent) |
+| \`?agent=Claude\` | The name people see in the top bar, as **Claude (AI)**. Change it to anything (up to 40 letters) |
+| \`X-Session-ID\` | Who the agent works as. It can only open the projects that session can open. \`Authorization: Bearer <session id>\` works too |
 
 ## What the agent can do
 | Tool | Does |
@@ -7955,7 +7990,9 @@ claude mcp add interactives -e INTERACTIVES_URL=https://<your server>/interactiv
 ## Staying in control
 - Everything the agent does goes through the same live editing as people, so you watch it happen.
 - Your **Undo** only undoes your own changes. To roll back an agent's work, use the [revision history](live-editing#revision-history) (a snapshot is kept every few minutes while the project changes).
-- The agent can only open projects your session can open.`
+- The agent can only open projects its session can open.
+- An agent that goes quiet for two hours is disconnected and leaves any project it was in. Its client reconnects by itself the next time it is used.`;
+    }
   },
   // ---------------------------------------------------------------- reference
   {
@@ -8090,14 +8127,22 @@ Check the projects page for an active folder, tag or search (the **Clear filters
 function topicBody(t2) {
   return typeof t2.body === "function" ? t2.body() : t2.body;
 }
-const BASE = (process.env.INTERACTIVES_URL ?? "http://127.0.0.1:3048/interactives").replace(/\/$/, "");
-const SESSION = process.env.INTERACTIVES_SESSION_ID ?? "";
-const AGENT = process.env.INTERACTIVES_AGENT_NAME ?? "Agent";
+const envContext = {
+  base: (process.env.INTERACTIVES_URL ?? "http://127.0.0.1:3048/interactives").replace(/\/$/, ""),
+  sessionId: process.env.INTERACTIVES_SESSION_ID ?? "",
+  agent: process.env.INTERACTIVES_AGENT_NAME ?? "Agent",
+  sessions: /* @__PURE__ */ new Map()
+};
+const contexts = new AsyncLocalStorage();
+const ctx = () => contexts.getStore() ?? envContext;
+function runAs(c2, fn) {
+  return contexts.run(c2, fn);
+}
 const VERSION = "0.1.0";
 async function api(path, init = {}) {
   const headers = { ...init.headers };
-  if (SESSION) headers["X-Session-ID"] = SESSION;
-  const res = await fetch(`${BASE}/api/${path}`, { ...init, headers });
+  if (ctx().sessionId) headers["X-Session-ID"] = ctx().sessionId;
+  const res = await fetch(`${ctx().base}/api/${path}`, { ...init, headers });
   const text = await res.text();
   let body = text;
   try {
@@ -8108,17 +8153,17 @@ async function api(path, init = {}) {
   return body;
 }
 const loadProject = async (id) => (await api(`projects/${encodeURIComponent(id)}`)).project;
-const sessions = /* @__PURE__ */ new Map();
+const sessions = envContext.sessions;
 function join(projectId) {
-  const existing = sessions.get(projectId);
+  const existing = ctx().sessions.get(projectId);
   if (existing) return existing;
   const clientId = `agent-${uid("")}`;
   const abort = new AbortController();
   const s = { projectId, clientId, peers: /* @__PURE__ */ new Map(), abort, ready: Promise.resolve() };
   s.ready = new Promise((resolve, reject) => {
     const headers = { Accept: "text/event-stream" };
-    if (SESSION) headers["X-Session-ID"] = SESSION;
-    fetch(`${BASE}/api/projects/${encodeURIComponent(projectId)}/live?clientId=${clientId}&agent=${encodeURIComponent(AGENT)}`, { headers, signal: abort.signal }).then(async (res) => {
+    if (ctx().sessionId) headers["X-Session-ID"] = ctx().sessionId;
+    fetch(`${ctx().base}/api/projects/${encodeURIComponent(projectId)}/live?clientId=${clientId}&agent=${encodeURIComponent(ctx().agent)}`, { headers, signal: abort.signal }).then(async (res) => {
       if (!res.ok || !res.body) throw new Error(`Could not join the live session (${res.status})`);
       const reader = res.body.getReader();
       const dec = new TextDecoder();
@@ -8145,11 +8190,11 @@ function join(projectId) {
         }
       }
     }).catch((err) => {
-      sessions.delete(projectId);
+      ctx().sessions.delete(projectId);
       reject(err);
     });
   });
-  sessions.set(projectId, s);
+  ctx().sessions.set(projectId, s);
   return s;
 }
 async function presence(s, p) {
@@ -8486,7 +8531,7 @@ const TOOLS = [
       const s = join(String(a.project_id));
       await s.ready;
       const p = await loadProject(s.projectId);
-      return `Joined "${p.name}" as ${AGENT} (AI).
+      return `Joined "${p.name}" as ${ctx().agent} (AI).
 
 ${people(s, p)}
 
@@ -8579,9 +8624,9 @@ Problems now in the project:
     description: "Leave a project's live session (people stop seeing you).",
     inputSchema: S({ project_id: str("Project id") }, ["project_id"]),
     run: async (a) => {
-      const s = sessions.get(String(a.project_id));
+      const s = ctx().sessions.get(String(a.project_id));
       s?.abort.abort();
-      sessions.delete(String(a.project_id));
+      ctx().sessions.delete(String(a.project_id));
       return s ? "Left the session." : "Was not in that session.";
     }
   }
@@ -8596,9 +8641,9 @@ function people(s, p) {
   }).join("\n");
 }
 const send = (msg) => process.stdout.write(JSON.stringify(msg) + "\n");
-async function handle(msg) {
-  const reply = (result2) => msg.id !== void 0 && send({ jsonrpc: "2.0", id: msg.id, result: result2 });
-  const fail = (code, message) => msg.id !== void 0 && send({ jsonrpc: "2.0", id: msg.id, error: { code, message } });
+async function respond(msg) {
+  const reply = (result2) => msg.id !== void 0 ? { jsonrpc: "2.0", id: msg.id, result: result2 } : void 0;
+  const fail = (code, message) => msg.id !== void 0 ? { jsonrpc: "2.0", id: msg.id, error: { code, message } } : void 0;
   switch (msg.method) {
     case "initialize":
       return reply({
@@ -8628,6 +8673,14 @@ async function handle(msg) {
       return fail(-32601, `Method not found: ${msg.method}`);
   }
 }
+async function handle(msg) {
+  const r2 = await respond(msg);
+  if (r2) send(r2);
+}
+function closeContext(c2) {
+  for (const s of c2.sessions.values()) s.abort.abort();
+  c2.sessions.clear();
+}
 if (!process.env.INTERACTIVES_MCP_NO_STDIO) {
   let buffer = "";
   process.stdin.setEncoding("utf8");
@@ -8646,18 +8699,21 @@ if (!process.env.INTERACTIVES_MCP_NO_STDIO) {
     }
   });
   process.stdin.on("end", () => {
-    for (const s of sessions.values()) s.abort.abort();
+    closeContext(envContext);
     process.exit(0);
   });
 }
 export {
   TOOLS,
   applyChanges,
+  closeContext,
   handle,
   interactions,
   locate,
   overview,
   reference,
+  respond,
+  runAs,
   sessions,
   setPath,
   syncRuns,

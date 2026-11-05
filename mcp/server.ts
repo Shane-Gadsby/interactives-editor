@@ -22,18 +22,38 @@ import { sanitizeLayerInPlace } from '../../interactives-player/src/sanitize';
 import { checkExpression } from '../../interactives-player/src/expr';
 import { diff } from '../shared/ops.mjs';
 import { TOPICS, topicBody } from '../src/help/topics';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
-const BASE = (process.env.INTERACTIVES_URL ?? 'http://127.0.0.1:3048/interactives').replace(/\/$/, '');
-const SESSION = process.env.INTERACTIVES_SESSION_ID ?? '';
-const AGENT = process.env.INTERACTIVES_AGENT_NAME ?? 'Agent';
+/**
+ * Who this agent is and which editor it talks to. Over stdio there is one, from the environment. Over HTTP (the editor
+ * server's /mcp route) each connection brings its own, and `runAs` makes it the current one for everything that call
+ * starts, including the live session streams it opens.
+ */
+export interface McpContext {
+  base: string;
+  sessionId: string;
+  agent: string;
+  sessions: Map<string, Session>;
+}
+const envContext: McpContext = {
+  base: (process.env.INTERACTIVES_URL ?? 'http://127.0.0.1:3048/interactives').replace(/\/$/, ''),
+  sessionId: process.env.INTERACTIVES_SESSION_ID ?? '',
+  agent: process.env.INTERACTIVES_AGENT_NAME ?? 'Agent',
+  sessions: new Map(),
+};
+const contexts = new AsyncLocalStorage<McpContext>();
+const ctx = (): McpContext => contexts.getStore() ?? envContext;
+export function runAs<T>(c: McpContext, fn: () => T): T {
+  return contexts.run(c, fn);
+}
 const VERSION = '0.1.0';
 
 // ---------------------------------------------------------------- server API
 
 async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = { ...(init.headers as Record<string, string>) };
-  if (SESSION) headers['X-Session-ID'] = SESSION;
-  const res = await fetch(`${BASE}/api/${path}`, { ...init, headers });
+  if (ctx().sessionId) headers['X-Session-ID'] = ctx().sessionId;
+  const res = await fetch(`${ctx().base}/api/${path}`, { ...init, headers });
   const text = await res.text();
   let body: unknown = text;
   try {
@@ -63,18 +83,19 @@ interface Session {
   abort: AbortController;
   ready: Promise<void>;
 }
-const sessions = new Map<string, Session>();
+//The stdio agent's sessions (the tests look at these). HTTP connections each have their own in their context
+const sessions = envContext.sessions;
 
 function join(projectId: string): Session {
-  const existing = sessions.get(projectId);
+  const existing = ctx().sessions.get(projectId);
   if (existing) return existing;
   const clientId = `agent-${uid('')}`;
   const abort = new AbortController();
   const s: Session = { projectId, clientId, peers: new Map(), abort, ready: Promise.resolve() };
   s.ready = new Promise<void>((resolve, reject) => {
     const headers: Record<string, string> = { Accept: 'text/event-stream' };
-    if (SESSION) headers['X-Session-ID'] = SESSION;
-    fetch(`${BASE}/api/projects/${encodeURIComponent(projectId)}/live?clientId=${clientId}&agent=${encodeURIComponent(AGENT)}`, { headers, signal: abort.signal })
+    if (ctx().sessionId) headers['X-Session-ID'] = ctx().sessionId;
+    fetch(`${ctx().base}/api/projects/${encodeURIComponent(projectId)}/live?clientId=${clientId}&agent=${encodeURIComponent(ctx().agent)}`, { headers, signal: abort.signal })
       .then(async (res) => {
         if (!res.ok || !res.body) throw new Error(`Could not join the live session (${res.status})`);
         const reader = res.body.getReader();
@@ -103,11 +124,11 @@ function join(projectId: string): Session {
         }
       })
       .catch((err) => {
-        sessions.delete(projectId);
+        ctx().sessions.delete(projectId);
         reject(err);
       });
   });
-  sessions.set(projectId, s);
+  ctx().sessions.set(projectId, s);
   return s;
 }
 
@@ -475,7 +496,7 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       const s = join(String(a.project_id));
       await s.ready;
       const p = await loadProject(s.projectId);
-      return `Joined "${p.name}" as ${AGENT} (AI).\n\n${people(s, p)}\n\n${overview(p, {})}`;
+      return `Joined "${p.name}" as ${ctx().agent} (AI).\n\n${people(s, p)}\n\n${overview(p, {})}`;
     },
   },
   {
@@ -569,9 +590,9 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
     description: 'Leave a project\'s live session (people stop seeing you).',
     inputSchema: S({ project_id: str('Project id') }, ['project_id']),
     run: async (a) => {
-      const s = sessions.get(String(a.project_id));
+      const s = ctx().sessions.get(String(a.project_id));
       s?.abort.abort();
-      sessions.delete(String(a.project_id));
+      ctx().sessions.delete(String(a.project_id));
       return s ? 'Left the session.' : 'Was not in that session.';
     },
   },
@@ -596,9 +617,13 @@ function people(s: Session, p: Project): string {
 
 const send = (msg: unknown) => process.stdout.write(JSON.stringify(msg) + '\n');
 
-async function handle(msg: { id?: number | string; method: string; params?: Record<string, unknown> }) {
-  const reply = (result: unknown) => msg.id !== undefined && send({ jsonrpc: '2.0', id: msg.id, result });
-  const fail = (code: number, message: string) => msg.id !== undefined && send({ jsonrpc: '2.0', id: msg.id, error: { code, message } });
+type RpcMessage = { id?: number | string; method: string; params?: Record<string, unknown> };
+type RpcReply = { jsonrpc: '2.0'; id: number | string; result?: unknown; error?: { code: number; message: string } };
+
+/** One JSON-RPC message in, its reply out (undefined for a notification). The stdio loop and the HTTP route both use it. */
+async function respond(msg: RpcMessage): Promise<RpcReply | undefined> {
+  const reply = (result: unknown): RpcReply | undefined => (msg.id !== undefined ? { jsonrpc: '2.0', id: msg.id, result } : undefined);
+  const fail = (code: number, message: string): RpcReply | undefined => (msg.id !== undefined ? { jsonrpc: '2.0', id: msg.id, error: { code, message } } : undefined);
   switch (msg.method) {
     case 'initialize':
       return reply({
@@ -630,8 +655,19 @@ async function handle(msg: { id?: number | string; method: string; params?: Reco
   }
 }
 
+async function handle(msg: RpcMessage) {
+  const r = await respond(msg);
+  if (r) send(r);
+}
+
+/** Stop every live session a context has open (an HTTP connection ending, or stdin closing). */
+function closeContext(c: McpContext) {
+  for (const s of c.sessions.values()) s.abort.abort();
+  c.sessions.clear();
+}
+
 // The stdio loop only runs when this file is the server. The tests import the pieces below and drive them directly
-export { TOOLS, applyChanges, handle, interactions, locate, overview, reference, sessions, setPath, syncRuns, validate };
+export { TOOLS, applyChanges, closeContext, handle, interactions, locate, overview, reference, respond, sessions, setPath, syncRuns, validate };
 
 if (!process.env.INTERACTIVES_MCP_NO_STDIO) {
   let buffer = '';
@@ -651,7 +687,7 @@ if (!process.env.INTERACTIVES_MCP_NO_STDIO) {
     }
   });
   process.stdin.on('end', () => {
-    for (const s of sessions.values()) s.abort.abort();
+    closeContext(envContext);
     process.exit(0);
   });
 }

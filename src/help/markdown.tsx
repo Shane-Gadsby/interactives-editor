@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 
 /**
  * A small Markdown subset for the help pages: # headings, paragraphs, - and 1. lists, ``` code blocks,
@@ -78,11 +78,7 @@ function blocks(text: string, onLink: (href: string) => void): ReactNode[] {
       i++;
       while (i < lines.length && !lines[i].startsWith('```')) body.push(lines[i++]);
       i++;
-      out.push(
-        <pre key={k++} className="help-code">
-          <code>{body.join('\n')}</code>
-        </pre>,
-      );
+      out.push(<CodeBlock key={k++} text={body.join('\n')} />);
       continue;
     }
     if (line.startsWith('|')) {
@@ -200,4 +196,32 @@ export function plain(s: string): string {
     .replace(/[*`#>|]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/** A code block with a Copy button, since most of them are commands or settings to paste somewhere else. */
+function CodeBlock({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="help-code-wrap">
+      <pre className="help-code">
+        <code>{text}</code>
+      </pre>
+      <button
+        type="button"
+        className="help-code-copy"
+        title="Copy to the clipboard"
+        onClick={() =>
+          void navigator.clipboard?.writeText(text).then(
+            () => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            },
+            () => undefined,
+          )
+        }
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+    </div>
+  );
 }

@@ -98,6 +98,7 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | Route | Does |
 |---|---|
 | `GET /api/session` | who the session is, and whether they're a power user |
+| `POST/DELETE /mcp` (`GET` is 405) | the MCP server for AI agents over HTTP, see [MCP server](#mcp-server-mcp) |
 | `GET/PUT /api/prefs` | the person's own preferences (`{prefs}`, whitelisted keys: wheel, theme, default font, rulers, tooltips, accessibility, comment notices and so on), kept by username in `prefs` (`guest` with no session) |
 | `GET /api/people?q=` | people to invite, by name, email or username (2 characters or more, at most 8 back): the suite's `lti-analytics.user-lookup`, staff only (students are never listed). 401 for no session once `SUITE_SESSION_ENFORCE=1` |
 | `GET /api/projects` | your projects: the ones you own or were invited to. `?all=1` returns everyone's, honoured only for admins and power users, and only sent by the projects page while power user mode (F9) is on. With no session it lists only projects nobody owns |
@@ -222,7 +223,11 @@ db.ingest.find({app: 'Interactives Editor', 'meta.user.username': '<username>', 
 
 ## MCP server (`mcp/`)
 
-`mcp/server.ts` is an MCP server (stdio JSON-RPC, no dependencies) that lets an AI agent join a project's live room as `<name> (AI)`, read it, edit it through the same ops as the editor, and see each person's selection. `npm run build:mcp` (also part of `npm run build`) bundles it with the player's catalog and the help topics into `mcp/dist/interactives-mcp.mjs`, which is committed like `dist/`. Env: `INTERACTIVES_URL`, `INTERACTIVES_SESSION_ID` (sent as `X-Session-ID`), `INTERACTIVES_AGENT_NAME`. The help page "AI agents (MCP)" has the client setup. The live stream takes `?agent=<name>` for this.
+`mcp/server.ts` is an MCP server (JSON-RPC, no dependencies) that lets an AI agent join a project's live room as `<name> (AI)`, read it, edit it through the same ops as the editor, and see each person's selection. `npm run build:mcp` (also part of `npm run build`) bundles it with the player's catalog and the help topics into `mcp/dist/interactives-mcp.mjs`, which is committed like `dist/`.
+
+Agents connect over the network: `index.js` serves the bundle at **`/interactives/mcp`** (MCP streamable HTTP, JSON replies only; `GET` is 405, `DELETE` with `Mcp-Session-Id` ends a connection). Each connection gets its own context (`runAs` + `AsyncLocalStorage` in `server.ts`): the caller's `X-Session-ID` (or `Authorization: Bearer <id>`), the name from `?agent=` (or `X-Agent-Name`), and its own live rooms. Tool calls go back into this server's api over loopback (`127.0.0.1:<port>`) with that session id, so an agent can do exactly what the session can. Connections idle for 2 hours are closed (rooms left), at most 200 are kept (the quietest goes first), and a request with an `Origin` from another host gets 403. The help page "AI agents (MCP)" builds the exact `claude mcp add --transport http ...` command and JSON config for the server it's opened on, with the reader's own session id filled in.
+
+The same bundle still runs over stdio from a checkout (`node mcp/dist/interactives-mcp.mjs`, env `INTERACTIVES_URL`, `INTERACTIVES_SESSION_ID`, `INTERACTIVES_AGENT_NAME`), which the tests and local debugging use. `INTERACTIVES_MCP_NO_STDIO=1` stops the stdio loop; `index.js` sets it before importing the bundle. The live stream takes `?agent=<name>` for the agent's presence.
 
 ## Repo map
 

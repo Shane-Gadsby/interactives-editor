@@ -3333,6 +3333,29 @@ button.twisty:hover {
   padding: 0;
   background: none;
 }
+.help-code-wrap {
+  position: relative;
+}
+.help-code-wrap .help-code {
+  padding-right: 64px;
+}
+.help-code-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.help-code-copy:hover,
+.help-code-copy:focus-visible {
+  background: var(--btn-hover-bg);
+}
 kbd {
   display: inline-block;
   min-width: 18px;
