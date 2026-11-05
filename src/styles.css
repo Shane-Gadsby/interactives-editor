@@ -3513,7 +3513,8 @@ kbd {
   color: var(--muted);
   font-size: 11px;
 }
-.ctx-item:hover .ctx-hint {
+.ctx-item:hover .ctx-hint,
+.ctx-item.open .ctx-hint {
   color: inherit;
 }
 .ctx-arrow {
