@@ -45,6 +45,8 @@
   --primary-bg: var(--u-gold);
   --primary-bg-hover: var(--u-gold-dark);
   --primary-fg: var(--u-g7);
+  /* Every panel resize bar, while hovered, focused or dragged */
+  --resizer: var(--u-gold);
   /* Text colours for notes and toasts that sit on a pale tint or the panel colour */
   --ok-text: #9fe3c4;
   --warn-text: #f2d48a;
@@ -88,6 +90,8 @@
   --primary-bg: var(--u-gold);
   --primary-bg-hover: var(--u-gold-dark);
   --primary-fg: var(--u-g7);
+  /* Every panel resize bar, while hovered, focused or dragged */
+  --resizer: var(--u-gold);
   --ok-text: #12724c;
   --warn-text: #7a5600;
   --danger-text: #a02424;
@@ -125,6 +129,8 @@
   --primary-bg: var(--u-gold);
   --primary-bg-hover: var(--u-gold-dark);
   --primary-fg: var(--u-g7);
+  /* Every panel resize bar, while hovered, focused or dragged */
+  --resizer: var(--u-gold);
   --ok-text: #12724c;
   --warn-text: #7a5600;
   --danger-text: #a02424;
@@ -1400,6 +1406,10 @@ body.dock-dragging * {
   cursor: nwse-resize;
   background: linear-gradient(135deg, transparent 50%, var(--line-2) 50%, var(--line-2) 60%, transparent 60%, transparent 72%, var(--line-2) 72%, var(--line-2) 82%, transparent 82%);
 }
+.dock-float-size:hover,
+.dock-float-size:active {
+  background: linear-gradient(135deg, transparent 50%, var(--resizer) 50%, var(--resizer) 62%, transparent 62%, transparent 72%, var(--resizer) 72%, var(--resizer) 84%, transparent 84%);
+}
 .dock-tools-float {
   width: auto;
   height: auto;
@@ -1573,7 +1583,7 @@ body.dock-dragging * {
 .col-resize:hover,
 .col-resize:focus-visible,
 body.col-resizing .col-resize:focus {
-  background: linear-gradient(90deg, transparent 2px, var(--accent) 2px, var(--accent) 5px, transparent 5px);
+  background: linear-gradient(90deg, transparent 2px, var(--resizer) 2px, var(--resizer) 5px, transparent 5px);
   outline: none;
 }
 body.col-resizing,
@@ -1598,6 +1608,13 @@ body.col-resizing * {
   height: 6px;
   cursor: ns-resize;
   z-index: 5;
+  touch-action: none;
+}
+.resize-handle:hover,
+.resize-handle:active,
+.resize-handle:focus-visible {
+  background: linear-gradient(180deg, transparent 1.5px, var(--resizer) 1.5px, var(--resizer) 4.5px, transparent 4.5px);
+  outline: none;
 }
 .bottom-body {
   flex: 1;
@@ -3431,9 +3448,9 @@ button.twisty:hover {
   z-index: 5;
 }
 .split-divider:hover,
-.split-divider:active {
-  background: var(--accent);
-  opacity: 0.5;
+.split-divider:active,
+.split-divider:focus-visible {
+  background: linear-gradient(90deg, transparent 1.5px, var(--resizer) 1.5px, var(--resizer) 4.5px, transparent 4.5px);
 }
 .script-list .link-btn {
   display: block;

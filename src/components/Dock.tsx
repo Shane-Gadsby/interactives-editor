@@ -350,7 +350,26 @@ export function DockZone({ zone }: { zone: Zone }) {
   const cls = zone === 'bottom' ? 'bottom-dock' : zone === 'left' ? 'left-panel dock-side' : 'dock-right dock-side';
   return (
     <section className={`${cls} dock-zone`} aria-label={`${zone === 'bottom' ? 'Bottom' : zone === 'left' ? 'Left' : 'Right'} panels`}>
-      {zone === 'bottom' && !folded && <div className="resize-handle" onPointerDown={startResize} />}
+      {zone === 'bottom' && !folded && (
+        <div
+          className="resize-handle"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize the bottom panels"
+          aria-valuenow={h}
+          tabIndex={0}
+          title="Drag to resize the bottom panels (double-click to reset)"
+          onPointerDown={startResize}
+          onDoubleClick={() => store().set({ bottomHeight: 260 })}
+          onKeyDown={(e) => {
+            const step = e.shiftKey ? 40 : 10;
+            if (e.key === 'ArrowUp') store().set({ bottomHeight: Math.min(window.innerHeight - 200, h + step) });
+            else if (e.key === 'ArrowDown') store().set({ bottomHeight: Math.max(140, h - step) });
+            else return;
+            e.preventDefault();
+          }}
+        />
+      )}
       <DockTabs group={g} at={{ zone }} folded={folded} />
       {active && !folded && <PanelBody key={active} p={active} />}
     </section>
