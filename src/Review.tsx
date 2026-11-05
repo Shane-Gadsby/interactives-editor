@@ -117,7 +117,7 @@ function ReviewPage({ token, data }: { token: string; data: Loaded }) {
 
   const me = c.me;
   return (
-    <div className="review">
+    <div className="review-page">
       <header className="review-head">
         <img src="./favicon.svg" alt="" width={22} height={22} />
         <h1 title={data.name}>{data.name}</h1>
@@ -260,7 +260,7 @@ function ReviewPlay({ token, project, startArtboardId, onClose }: { token: strin
   }, [project, startArtboardId, bytesFor]);
   return (
     <div className="review-play" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      {html ? <iframe title="Play" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : <div className="center-msg muted">{error ? `Could not build it: ${error}` : 'Building…'}</div>}
+      {html ? <iframe title="Play" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : <div className="center-msg muted">{error ? `Could not build it: ${error}` : 'Building…'}</div>}
       <button type="button" className="btn review-play-close" onClick={onClose} title="Back to the comments (Esc)">
         Close
       </button>

@@ -81,6 +81,24 @@
 		}
 	},
 	{
+		"key": "joysticks",
+		"title": "Joysticks",
+		"description": "Two joysticks. Eyes that follow the pointer (two timelines, left-right and up-down, scrubbed from where the pointer is), and a draggable knob that scrubs a sunrise timeline as the joystick's handle.",
+		"group": "Animation",
+		"tags": [
+			"joystick",
+			"timeline",
+			"pointer",
+			"drag"
+		],
+		"artboards": 2,
+		"preview": {
+			"width": 800,
+			"height": 600,
+			"background": "#eef3f8"
+		}
+	},
+	{
 		"key": "grid-and-stack",
 		"title": "Grid and stack layouts",
 		"description": "A gallery of tiles laid out as a grid, and a badge stack, with alignment, gaps and spans.",

@@ -55,6 +55,8 @@ import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectFi
 import { gapUnit, lineGapUnit, paddingOwnerWidth, paddingUnit, patchGap, patchLineGap, patchPadding } from '../lib/layout-units';
 import { Icons } from '../components/icons';
 import { assetKind } from '../lib/assets';
+import { acceptFor, pickFiles, replaceAssetFile } from '../lib/insert';
+import { updateFromFile } from '../lib/importers';
 import { pointTracks } from '../lib/path-edit';
 import { formatTracks, parseTracks } from '../lib/grid-tracks';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
@@ -96,7 +98,7 @@ export function Inspector() {
     selection: st.selection,
     artboardSelected: st.artboardSelected,
     activeArtboardId: st.activeArtboardId,
-    bottomTab: st.bottomTab,
+    timelineShown: st.timelineShown,
     activeTimelineId: st.activeTimelineId,
     playhead: st.playhead,
     recording: st.recording,
@@ -106,7 +108,7 @@ export function Inspector() {
   const nodes = s.selection.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
   return (
     <aside className="inspector">
-      {s.recording && s.bottomTab === 'timeline' && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
+      {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
       {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />}
     </aside>
   );
@@ -122,14 +124,14 @@ export function useSetter(ids: string[]) {
 export function useShown(node: SceneNode) {
   const st = store().get();
   const ab = store().artboard();
-  const tl = st.bottomTab === 'timeline' ? ab?.timelines.find((t) => t.id === st.activeTimelineId) : undefined;
+  const tl = st.timelineShown ? ab?.timelines.find((t) => t.id === st.activeTimelineId) : undefined;
   return (prop: string): unknown => valueAt(tl, node, prop, st.playhead);
 }
 
 /** Keys the property at the playhead, for every layer in `ids` (the selection the field edits; just `node` without it). */
 export function KeyButton({ node, prop, ids }: { node: SceneNode; prop: string; ids?: string[] }) {
-  const s = useEditor((st) => ({ bottomTab: st.bottomTab, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
-  if (s.bottomTab !== 'timeline' || !animatableProp(prop)) return null;
+  const s = useEditor((st) => ({ timelineShown: st.timelineShown, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
+  if (!s.timelineShown || !animatableProp(prop)) return null;
   const ab = store().artboard();
   const tl = ab?.timelines.find((t) => t.id === s.tl);
   const track = tl?.tracks.find((t) => t.nodeId === node.id && t.prop === prop);
@@ -157,6 +159,55 @@ export function Num({ node, ids, prop, label, step, min, max, suffix, fallback =
       <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
       <KeyButton node={node} prop={prop} ids={ids} />
     </div>
+  );
+}
+
+/**
+ * Two numbers with a chain between them (W and H, Sx and Sy). Linked, changing one changes the other too, keeping the
+ * ratio they had, for each selected layer. The chain is saved on the layer (`lockKey`), and the canvas's resize handles
+ * keep the ratio of a layer with lockRatio on as well.
+ */
+export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min }: { node: SceneNode; ids: string[]; a: string; b: string; labelA: string; labelB: string; lockKey: 'lockRatio' | 'lockScale'; step?: number; min?: number }) {
+  const shown = useShown(node);
+  const locked = !!node[lockKey];
+  const set = useSetter(ids);
+  const change = (prop: string, other: string, x: number) => {
+    if (!locked) return set({ [prop]: x });
+    const ab = store().artboard();
+    const changes = new Map<string, Record<string, unknown>>();
+    for (const id of ids) {
+      // the first layer by what's on screen (it may be animated), the others by their own values
+      const nd = id === node.id ? null : ab ? (locate(ab, id)?.node as unknown as Record<string, unknown> | undefined) : undefined;
+      const cur = Number(nd ? nd[prop] : shown(prop)) || 0;
+      const oth = Number(nd ? nd[other] : shown(other)) || 0;
+      const next = cur ? (oth * x) / cur : oth;
+      const round = lockKey === 'lockRatio' ? Math.round(next * 100) / 100 : Math.round(next * 1000) / 1000;
+      changes.set(id, { [prop]: x, [other]: round });
+    }
+    store().setEach(changes, `insp-${a}${b}-${ids.join(',')}`);
+  };
+  const what = lockKey === 'lockRatio' ? 'width and height' : 'horizontal and vertical scale';
+  return (
+    <Row className="linked-pair">
+      <div className="keyed">
+        <NumberField label={labelA} value={Number(shown(a) ?? 0)} step={step} min={min} onChange={(x) => change(a, b, x)} onCommit={() => store().commit()} />
+        <KeyButton node={node} prop={a} ids={ids} />
+      </div>
+      <button
+        type="button"
+        className={`lock-toggle link-toggle${locked ? ' on' : ''}`}
+        aria-pressed={locked}
+        aria-label={locked ? `Unlink ${what}` : `Link ${what}`}
+        title={locked ? `Linked: changing one changes the other, keeping the ratio. Click to change ${what} separately` : `Link ${what}: changing one changes the other, keeping the ratio${lockKey === 'lockRatio' ? ' (the resize handles keep it too)' : ''}`}
+        onClick={() => store().setProps(ids, { [lockKey]: locked ? undefined : true })}
+      >
+        {locked ? <Icons.link width={13} /> : <Icons.unlink width={13} />}
+      </button>
+      <div className="keyed">
+        <NumberField label={labelB} value={Number(shown(b) ?? 0)} step={step} min={min} onChange={(x) => change(b, a, x)} onCommit={() => store().commit()} />
+        <KeyButton node={node} prop={b} ids={ids} />
+      </div>
+    </Row>
   );
 }
 
@@ -330,47 +381,84 @@ function ago(iso: string, now: number): string {
   return `${Math.round(s / 86400)} d ago`;
 }
 
-/** The file this artboard is linked to: when it was last brought in, and the controls for it. */
+/** The design file this artboard was imported from: when it was last brought in, and Update from file. */
 function LinkedFileSection({ ab }: { ab: Artboard }) {
   const src = ab.source!;
   const status = useLinks().find((l) => l.linkId === src.linkId);
   const [now, setNow] = useState(() => Date.now());
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 15000);
     return () => clearInterval(t);
   }, []);
   const state = status?.state ?? 'checking';
-  const mine = state === 'connected' || state === 'needs-permission';
+  //Only a file linked from this browser (before linking was turned off) can still be watched and re-read on its own
+  const watched = state === 'connected' || state === 'needs-permission';
   const note =
-    state === 'no-handle'
-      ? `Linked from ${src.by ? `${src.by}’s` : 'another'} browser; this one can’t read the file. It updates here when they save.`
-      : state === 'needs-permission'
-        ? 'Click Re-import now (or Reconnect in the bar above) to allow reading the file again.'
-        : state === 'missing'
-          ? 'The file was moved, renamed or deleted.'
-          : status?.error
-            ? status.error
-            : status?.changed
-              ? 'The file has been saved since it was brought in. Re-import now to bring the changes in.'
-              : '';
+    state === 'needs-permission'
+      ? 'Click Re-import now (or Reconnect in the bar above) to allow reading the file again.'
+      : state === 'missing'
+        ? 'The linked file was moved, renamed or deleted. Use Update from file to pick it again.'
+        : status?.error
+          ? status.error
+          : status?.changed
+            ? 'The file has been saved since it was brought in. Re-import now to bring the changes in.'
+            : '';
   return (
-    <Section help="import" title="Linked file">
+    <Section help="import#updating-a-design-file" title="Source file">
       <div className="link-info">
         <div className="link-title">
-          Linked to {src.fileName} <span className="link-sub">({KIND_LABEL[src.kind] ?? src.kind}, updated {ago(src.importedAt, now)})</span>
+          From {src.fileName} <span className="link-sub">({KIND_LABEL[src.kind] ?? src.kind}, updated {ago(src.importedAt, now)})</span>
         </div>
         {note && <div className={`link-sub${status?.error || state === 'missing' ? ' err' : ''}`}>{note}</div>}
         <Row>
-          <button className="btn" disabled={!mine || status?.busy} title="Read the file now and bring its changes in; your own edits are kept" onClick={() => void linkManager()?.reimportNow(src.linkId)}>
-            {status?.busy ? 'Importing…' : 'Re-import now'}
+          <button
+            className="btn"
+            disabled={busy}
+            title={`Pick the new version of ${src.fileName}. What changed in it comes in, and the edits made here are kept`}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await updateFromFile(src.linkId);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? 'Updating…' : 'Update from file…'}
           </button>
-          <button className="btn" title="Stop watching the file. The layers stay in the project as they are" onClick={() => void linkManager()?.unlink(src.linkId)}>
-            Unlink (keep as embedded)
-          </button>
+          {watched && (
+            <button className="btn" disabled={status?.busy} title="Read the linked file now and bring its changes in; your own edits are kept" onClick={() => void linkManager()?.reimportNow(src.linkId)}>
+              {status?.busy ? 'Importing…' : 'Re-import now'}
+            </button>
+          )}
         </Row>
-        <CheckField label="Watch for changes" title="Ask to re-import when the file is saved (looked at every few seconds while this tab is open)" value={!!status?.watch && mine} onChange={(v) => void linkManager()?.setWatch(src.linkId, v)} />
+        {watched && <CheckField label="Watch for changes" title="Ask to re-import when the file is saved (looked at every few seconds while this tab is open)" value={!!status?.watch} onChange={(v) => void linkManager()?.setWatch(src.linkId, v)} />}
+        <button className="link-btn" title="Forget which file these artboards came from. The layers stay as they are, and Update from file goes away" onClick={() => void linkManager()?.unlink(src.linkId)}>
+          Forget source file
+        </button>
       </div>
     </Section>
+  );
+}
+
+/** Swap the file behind a picture or video for a new version of it, everywhere it's used (see replaceAssetFile). */
+function ReplaceAssetButton({ assetId }: { assetId: string }) {
+  const asset = useEditor((st) => st.project.assets.find((a) => a.id === assetId));
+  if (!asset) return null;
+  return (
+    <Row>
+      <button
+        className="link-btn"
+        title={`Pick a new version of ${asset.name}. Every layer, fill and action that uses it shows the new file`}
+        onClick={async () => {
+          const [file] = await pickFiles(acceptFor(asset.mime, asset.name), false);
+          if (file) await replaceAssetFile(asset.id, file);
+        }}
+      >
+        Replace file…
+      </button>
+    </Row>
   );
 }
 
@@ -414,9 +502,39 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       {ab.library && <LibraryArtboardSection ab={ab} project={project} />}
       <Section help="artboards" title="Artboard">
         <TextField label="Name" value={ab.name} onChange={(v) => setAb((a) => (a.name = v), `ab-name-${ab.id}`)} />
-        <Row>
-          <NumberField label="W" value={ab.width} min={1} onChange={(v) => setAb((a) => (a.width = Math.round(v)), `ab-w-${ab.id}`)} />
-          <NumberField label="H" value={ab.height} min={1} onChange={(v) => setAb((a) => (a.height = Math.round(v)), `ab-h-${ab.id}`)} />
+        <Row className="linked-pair">
+          <NumberField
+            label="W"
+            value={ab.width}
+            min={1}
+            onChange={(v) =>
+              setAb((a) => {
+                if (a.lockRatio && a.width) a.height = Math.max(1, Math.round((a.height * v) / a.width));
+                a.width = Math.round(v);
+              }, `ab-w-${ab.id}`)
+            }
+          />
+          <button
+            type="button"
+            className={`lock-toggle link-toggle${ab.lockRatio ? ' on' : ''}`}
+            aria-pressed={!!ab.lockRatio}
+            aria-label={ab.lockRatio ? "Unlink the artboard's width and height" : "Link the artboard's width and height"}
+            title={ab.lockRatio ? 'Linked: changing one changes the other, keeping the ratio. Click to change them separately' : 'Link width and height: changing one changes the other, keeping the ratio'}
+            onClick={() => setAb((a) => void (a.lockRatio ? delete a.lockRatio : (a.lockRatio = true)))}
+          >
+            {ab.lockRatio ? <Icons.link width={13} /> : <Icons.unlink width={13} />}
+          </button>
+          <NumberField
+            label="H"
+            value={ab.height}
+            min={1}
+            onChange={(v) =>
+              setAb((a) => {
+                if (a.lockRatio && a.height) a.width = Math.max(1, Math.round((a.width * v) / a.height));
+                a.height = Math.round(v);
+              }, `ab-h-${ab.id}`)
+            }
+          />
         </Row>
         <SelectField
           label="Preset"
@@ -586,20 +704,14 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
           </Row>
         ) : (
           <>
-            <Row>
-              <Num node={n} ids={ids} prop="width" label="W" min={0} />
-              <Num node={n} ids={ids} prop="height" label="H" min={0} />
-            </Row>
+            <LinkedPair node={n} ids={ids} a="width" b="height" labelA="W" labelB="H" lockKey="lockRatio" min={0} />
             <Row>
               <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
               <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
             </Row>
           </>
         )}
-        <Row>
-          <Num node={n} ids={ids} prop="scaleX" label="Sx" step={0.05} />
-          <Num node={n} ids={ids} prop="scaleY" label="Sy" step={0.05} />
-        </Row>
+        <LinkedPair node={n} ids={ids} a="scaleX" b="scaleY" labelA="Sx" labelB="Sy" lockKey="lockScale" step={0.05} />
         {!(sameType && n.type === 'bone') && (
           <Row>
             <NumberField label="Ox" title="Transform origin X (0-1)" value={n.originX} step={0.05} min={0} max={1} onChange={(v) => set({ originX: v })} />
@@ -663,8 +775,8 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
 }
 
 export function KeyRow({ node, prop, ids }: { node: SceneNode; prop: string; ids?: string[] }) {
-  const s = useEditor((st) => st.bottomTab);
-  if (s !== 'timeline') return null;
+  const shown = useEditor((st) => st.timelineShown);
+  if (!shown) return null;
   return (
     <div className="key-row">
       <span className="muted small">Animate {(ANIMATABLE_PROPS.find((a) => a.prop === prop)?.label ?? prop).toLowerCase()}</span>
@@ -919,8 +1031,8 @@ function ConvertToPath({ node }: { node: SceneNode }) {
 
 /** Shape morphing: key every point of the path at the playhead. */
 function ShapeKeys({ node }: { node: SceneNode }) {
-  const s = useEditor((st) => ({ bottomTab: st.bottomTab, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
-  const tl = s.bottomTab === 'timeline' ? store().artboard()?.timelines.find((t) => t.id === s.tl) : undefined;
+  const s = useEditor((st) => ({ timelineShown: st.timelineShown, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
+  const tl = s.timelineShown ? store().artboard()?.timelines.find((t) => t.id === s.tl) : undefined;
   const tracks = tl ? pointTracks(tl, node.id) : [];
   const at = tl ? keyTime(tl, s.playhead) : Math.round(s.playhead);
   const onKey = tracks.some((t) => t.keys.some((k) => Math.abs(k.t - at) < 1));
@@ -1084,6 +1196,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'image' })}
             options={[{ value: '', label: images.length ? 'Choose…' : 'No image' }, ...images.map((a) => ({ value: a.id, label: a.name })), addAssetOption('image')]}
           />
+          {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
           {radius}
           <CheckField
@@ -1206,6 +1319,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'video' })}
             options={[{ value: '', label: 'Use a URL' }, ...videos.map((a) => ({ value: a.id, label: a.name })), addAssetOption('video')]}
           />
+          {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
           {!n.assetId && <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />}
           <Row>
             <CheckField label="Autoplay" value={n.autoplay} onChange={(v) => set({ autoplay: v })} />
@@ -1217,6 +1331,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           </Row>
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
           {radius}
+          <p className="hint">To use where the video is, whether it's playing or how long it is, add a <strong>Data binding</strong> below (Playback position, Playing, Length) and pick which way it goes.</p>
           <VideoCaptions node={n} set={(patch) => set(patch)} />
         </Section>
       );

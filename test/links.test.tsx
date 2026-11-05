@@ -303,7 +303,7 @@ describe('LinkManager', () => {
 
 // ---------------------------------------------------------------- choosing link or embed
 
-describe('chooseLinking', () => {
+describe('chooseLinking and the Link / Embed dialog (askLinking)', () => {
   let root: Root;
   let host: HTMLElement;
   beforeEach(() => {
@@ -334,12 +334,18 @@ describe('chooseLinking', () => {
     expect(document.querySelector('.dialog')).toBeNull();
   });
 
+  it('asks nothing for design files either, now that linking is off: they are embedded', async () => {
+    const a = dropped('a.psd');
+    expect((await importers.chooseLinking([a.f]))?.size).toBe(0);
+    expect(document.querySelector('.dialog')).toBeNull();
+  });
+
   it('lists every file with Link / Embed per row, and Import uses the row choices', async () => {
     const a = dropped('a.psd');
     const b = dropped('b.psd');
     const c = dropped('c.png');
     const files = captureDrop({ items: [a.item, b.item, c.item], files: [] } as unknown as DataTransfer);
-    const p = importers.chooseLinking(files);
+    const p = importers.askLinking(files);
     await flush();
     const rows = [...document.querySelectorAll('.link-row')];
     expect(rows).toHaveLength(3);
@@ -359,11 +365,11 @@ describe('chooseLinking', () => {
     const a = dropped('a.psd');
     const b = dropped('b.psd');
     const files = captureDrop({ items: [a.item, b.item], files: [] } as unknown as DataTransfer);
-    let p = importers.chooseLinking(files);
+    let p = importers.askLinking(files);
     await flush();
     click(btn('Embed all'));
     expect((await p)!.size).toBe(0);
-    p = importers.chooseLinking(files);
+    p = importers.askLinking(files);
     await flush();
     click(btn('Link all'));
     expect((await p)!.size).toBe(2);
@@ -372,7 +378,7 @@ describe('chooseLinking', () => {
   it('Cancel (and Escape) cancels the whole import', async () => {
     const a = dropped('a.psd');
     const files = captureDrop({ items: [a.item], files: [] } as unknown as DataTransfer);
-    const p = importers.chooseLinking(files);
+    const p = importers.askLinking(files);
     await flush();
     click(btn('Cancel'));
     expect(await p).toBeNull();
@@ -381,7 +387,7 @@ describe('chooseLinking', () => {
   it('a file without a handle can only be embedded, with the reason', async () => {
     const a = dropped('a.psd', false);
     const files = captureDrop({ items: [a.item], files: [] } as unknown as DataTransfer);
-    const p = importers.chooseLinking(files);
+    const p = importers.askLinking(files);
     await flush();
     expect(document.querySelector('.link-reason')!.textContent).toContain('no access');
     expect(document.body.textContent).not.toContain('Link all');
@@ -393,7 +399,7 @@ describe('chooseLinking', () => {
     delete (window as unknown as { showOpenFilePicker?: unknown }).showOpenFilePicker;
     const a = dropped('a.psd');
     const files = captureDrop({ items: [a.item], files: [] } as unknown as DataTransfer);
-    const p = importers.chooseLinking(files);
+    const p = importers.askLinking(files);
     await flush();
     expect(document.querySelector('.dialog-message')!.textContent).toContain('File System Access');
     expect((document.querySelector('[role=radio]') as HTMLButtonElement).disabled).toBe(true);
@@ -404,11 +410,11 @@ describe('chooseLinking', () => {
   it('remembers the last choice as the default next time', async () => {
     const a = dropped('a.psd');
     const files = captureDrop({ items: [a.item], files: [] } as unknown as DataTransfer);
-    let p = importers.chooseLinking(files);
+    let p = importers.askLinking(files);
     await flush();
     click(btn('Embed all'));
     await p;
-    p = importers.chooseLinking(files);
+    p = importers.askLinking(files);
     await flush();
     expect(document.querySelector('.link-row [aria-checked=true]')!.textContent).toBe('Embed');
     click(btn('Cancel'));

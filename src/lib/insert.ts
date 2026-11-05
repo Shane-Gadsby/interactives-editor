@@ -1,7 +1,7 @@
 import { extOf, reportError, track } from './analytics';
 import { createNode, type Asset, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
-import { assetKind, assetUrls, imageSize, storeFile, videoSize } from './assets';
+import { assetKind, assetUrls, imageSize, storeFile, swapAssetId, videoSize } from './assets';
 import { importSvg } from './svg-import';
 import { acceptsDesignFiles, isDesignFile, pickWithHandles } from './links';
 
@@ -120,4 +120,58 @@ export async function pickFiles(accept: string, multiple = true): Promise<File[]
     input.onchange = () => resolve([...(input.files ?? [])]);
     input.click();
   });
+}
+
+/** The file picker filter for replacing an asset of a kind: the same kind of file. */
+export function acceptFor(mime: string, name: string): string {
+  switch (assetKind(mime, name)) {
+    case 'image':
+      return 'image/*';
+    case 'video':
+      return 'video/*';
+    case 'audio':
+      return 'audio/*';
+    case 'font':
+      return '.woff,.woff2,.ttf,.otf';
+    case 'data':
+      return '.json,.csv,.tsv,.txt';
+    default:
+      return '';
+  }
+}
+
+/**
+ * Replace an asset's file with another of the same kind (a new version of a picture, sound or font). The new file is
+ * uploaded under a new asset id and every reference to the old id is pointed at it, in one undo step, so it reaches
+ * everyone in a live session like any new upload does (keeping the id would leave other tabs on their cached copy of
+ * the old bytes). The record keeps its place in the list. The old bytes stay on the server, so an undo brings them back;
+ * the Usage tab's "Remove unused assets" clears them for good.
+ */
+export async function replaceAssetFile(oldId: string, file: File): Promise<boolean> {
+  const st = store();
+  const p = st.get().project;
+  const old = p.assets.find((a) => a.id === oldId);
+  if (!old) return false;
+  const was = assetKind(old.mime, old.name);
+  const now = assetKind(file.type, file.name);
+  if (was !== now && was !== 'other') {
+    st.toast(`${file.name} isn't ${was === 'audio' ? 'a sound' : `a ${was} file`}, so it can't replace ${old.name}`, 'error');
+    return false;
+  }
+  let asset: Asset;
+  try {
+    asset = await storeFile(p.id, file);
+  } catch (err) {
+    st.toast(err instanceof Error ? err.message : String(err), 'error');
+    return false;
+  }
+  track('feature', 'asset-replace', { thing: extOf(file.name) });
+  st.update((d) => {
+    swapAssetId(d, oldId, asset.id);
+    const i = d.assets.findIndex((a) => a.id === asset.id);
+    if (i >= 0) d.assets[i] = asset;
+    else d.assets.push(asset);
+  });
+  st.toast(old.name === file.name ? `Updated ${file.name}` : `Replaced ${old.name} with ${file.name}`, 'info');
+  return true;
 }

@@ -1,7 +1,7 @@
 import { track as usage } from '../lib/analytics';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AudioMixer, ANIMATABLE_PROPS, animatableProp, instanceInputProps, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL, type TimelineMarker } from 'interactives-player';
+import { createMixer, unlockAudio, ANIMATABLE_PROPS, animatableProp, instanceInputProps, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL, type TimelineMarker } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -109,7 +109,8 @@ export function TimelinePanel() {
   const [media, setMedia] = useState<MediaSel>(null);
   const [pasteTrack, setPasteTrack] = useState<string | null>(null);
   // Sounds play with the preview, and sit parked at the playhead when it is scrubbed
-  const mixer = useMemo(() => new AudioMixer({ resolve: assetUrls.resolve }), []);
+  // Web Audio, like the player: the keyboard's play/pause key can't stop it
+  const mixer = useMemo(() => createMixer({ resolve: assetUrls.resolve }), []);
   const lastHead = useRef(0);
   useEffect(() => () => mixer.destroy(), [mixer]);
   useEffect(() => {
@@ -120,6 +121,8 @@ export function TimelinePanel() {
     // A ping-pong's way back runs against the sound, which does not play backwards
     const dir = s.playing && tl.loop === 'pingpong' && s.playhead < lastHead.current ? -1 : 1;
     lastHead.current = s.playhead;
+    // Pressing play is the gesture that lets the page start sound
+    if (s.playing) unlockAudio();
     mixer.update([{ tl, time: s.playhead, playing: s.playing, direction: dir, active: true }]);
   }, [mixer, tl, s.playhead, s.playing]);
 

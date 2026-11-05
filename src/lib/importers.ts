@@ -6,7 +6,8 @@ import { assetUrls } from './assets';
 import { download, fileSafe } from './export';
 import { exportLottie, toDotLottie } from './lottie-export';
 import { bakedForExport } from './themes';
-import { NO_LINK_REASON, currentUser, designKind, handleOf, hashAssets, isDesignFile, newLinkId, rememberHandle, sourcesFor, supportsLinking, type FileHandle } from './links';
+import { KIND_LABEL, NO_LINK_REASON, currentUser, designKind, handleOf, hashAssets, isDesignFile, newLinkId, reimportLink, rememberHandle, sourcesFor, supportsLinking, type FileHandle } from './links';
+import { pickFiles } from './insert';
 import { extOf, reportError, span, track } from './analytics';
 import { linkChoiceDialog, type LinkChoiceRow } from '../components/dialogs';
 
@@ -19,6 +20,9 @@ export interface AnimationImport {
   fonts?: FontRef[];
   warnings: string[];
   source: string;
+  /** The file it was read from (set by readAnimationFile), so a design file's artboards can remember it. */
+  fileName?: string;
+  lastModified?: number;
 }
 
 export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft';
@@ -28,7 +32,7 @@ export async function readAnimationFile(file: File): Promise<AnimationImport> {
   const ext = extOf(file.name);
   const done = span('import', 'read', { thing: ext });
   try {
-    const imp = await readAnimationFileInner(file);
+    const imp: AnimationImport = { ...(await readAnimationFileInner(file)), fileName: file.name, lastModified: file.lastModified };
     track('import', 'ok', { thing: ext, detail: { source: imp.source.toLowerCase().replace(/[^a-z0-9]+/g, '-') }, sum: { kb: Math.round(file.size / 1024), artboards: (imp.artboards ?? [imp.artboard]).length, warnings: imp.warnings.length } });
     done();
     return imp;
@@ -110,6 +114,14 @@ export interface FileLink {
  * null when the person cancelled. Nothing is asked when no file is a design file.
  */
 export async function chooseLinking(files: File[]): Promise<Map<File, FileHandle> | null> {
+  //Linking is off: the editor is a hosted page, so it can't notice a file changing on someone's disk in any browser but
+  //Chrome, and even there only while a tab holds the permission. Design files are embedded, remember where they came
+  //from (Artboard.source), and get a new version with Update from file. askLinking stays for when that changes
+  return LINKING_OFFERED ? askLinking(files) : new Map();
+}
+
+/** The Link / Embed dialog behind chooseLinking, when linking is offered. */
+export async function askLinking(files: File[]): Promise<Map<File, FileHandle> | null> {
   const out = new Map<File, FileHandle>();
   if (!files.some(isDesignFile)) return out;
   const can = supportsLinking();
@@ -132,6 +144,9 @@ export async function chooseLinking(files: File[]): Promise<Map<File, FileHandle
   return out;
 }
 
+/** Whether imports offer to link a design file instead of embedding it (see chooseLinking). */
+const LINKING_OFFERED = false;
+
 /** Read one animation or design file and add it to the open project, linked when `link` is given. Errors become a toast. */
 export async function importAnimationFile(file: File, linking?: Map<File, FileHandle>): Promise<void> {
   try {
@@ -149,11 +164,13 @@ export async function addImportedArtboard(imp: AnimationImport, link?: FileLink)
   await uploadAssets(p.id, imp.assets);
   const right = p.artboards.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0);
   let list = placeArtboards(imp.artboards ?? [imp.artboard], right + 100, 0);
-  if (link) {
-    // the handle is saved first, so the watcher finds it as soon as the artboards appear
+  // Design files remember where they came from, linked or not, so Update from file can merge a new version in later
+  const fileName = link?.file.name ?? imp.fileName;
+  if (fileName && isDesignFile({ name: fileName })) {
     const linkId = newLinkId();
-    const sources = sourcesFor(imp.artboards ?? [imp.artboard], hashAssets(imp), { fileName: link.file.name, linkId, lastModified: link.file.lastModified, by: await currentUser() });
-    await rememberHandle(p.id, linkId, link.handle, designKind(link.file.name));
+    const sources = sourcesFor(imp.artboards ?? [imp.artboard], hashAssets(imp), { fileName, linkId, lastModified: link?.file.lastModified ?? imp.lastModified ?? Date.now(), by: await currentUser() });
+    // the handle is saved first, so the watcher finds it as soon as the artboards appear
+    if (link) await rememberHandle(p.id, linkId, link.handle, designKind(fileName));
     list = list.map((a, i) => ({ ...a, source: sources[i] }));
   }
   const start = list.find((a) => a.id === imp.artboard.id) ?? list[0];
@@ -172,11 +189,11 @@ export async function projectFromAnimation(file: File, handle?: FileHandle): Pro
   const imp = await readAnimationFile(file);
   const p = createProject(imp.artboard.name);
   p.artboards = placeArtboards(imp.artboards ?? [imp.artboard], 0, 0);
-  if (handle) {
+  if (isDesignFile(file)) {
     const linkId = newLinkId();
     const sources = sourcesFor(imp.artboards ?? [imp.artboard], hashAssets(imp), { fileName: file.name, linkId, lastModified: file.lastModified, by: await currentUser() });
     p.artboards = p.artboards.map((a, i) => ({ ...a, source: sources[i] }));
-    await rememberHandle(p.id, linkId, handle, designKind(file.name));
+    if (handle) await rememberHandle(p.id, linkId, handle, designKind(file.name));
   }
   p.settings.startArtboardId = imp.artboard.id;
   p.variables = imp.variables ?? [];
@@ -230,4 +247,36 @@ export async function exportActiveAsLottie(kind: 'json' | 'lottie'): Promise<voi
   if (kind === 'json') download(new Blob([JSON.stringify(json)], { type: 'application/json' }), `${name}.json`);
   else download(new Blob([toDotLottie(json, fileSafe(ab.name)) as BlobPart], { type: 'application/zip' }), `${name}.lottie`);
   showReport(`Exported ${ab.name} as ${kind === 'json' ? 'Lottie JSON' : 'dotLottie'}`, warnings);
+}
+
+/** The extensions a design file of a kind can be updated from (VectorCraft has two). */
+const UPDATE_ACCEPT: Record<string, string> = { vectorcraft: '.vectorcraft,.drawcraft', drawcraft: '.vectorcraft,.drawcraft' };
+
+/**
+ * Update from file: pick a new version of the design file some artboards were imported from, and merge it in the same
+ * way a linked file's re-import does: what changed in the file comes in, edits made here are kept, one undo step.
+ */
+export async function updateFromFile(linkId: string): Promise<void> {
+  const st = store();
+  const src = st.get().project.artboards.find((a) => a.source?.linkId === linkId)?.source;
+  if (!src) return;
+  const [file] = await pickFiles(UPDATE_ACCEPT[src.kind] ?? `.${src.kind}`, false);
+  if (!file) return;
+  const kind = designKind(file.name);
+  if (kind !== src.kind && !(UPDATE_ACCEPT[src.kind] ?? '').includes(`.${kind}`)) {
+    st.toast(`${file.name} isn't a ${KIND_LABEL[src.kind] ?? src.kind} file, so it can't update ${src.fileName}`, 'error');
+    return;
+  }
+  try {
+    track('feature', 'design-update', { thing: kind });
+    const r = await reimportLink(st, linkId, file);
+    // A new version saved under a new name: the artboards say where they came from now
+    if (file.name !== src.fileName)
+      st.update((d) => {
+        for (const ab of d.artboards) if (ab.source?.linkId === linkId) ab.source.fileName = file.name;
+      });
+    st.toast(`${r.changed ? r.message : `${file.name}: nothing has changed since the last update.`}${r.missing.length ? ` Not in the new file: ${r.missing.join(', ')}.` : ''}`, 'info');
+  } catch (err) {
+    st.toast(`${file.name}: ${err instanceof Error ? err.message : String(err)}`, 'error');
+  }
 }

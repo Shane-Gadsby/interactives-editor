@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createNode, createProject, type Project, type SceneNode } from 'interactives-player';
-import { BindingsSection } from '../src/panels/BindingsSection';
+import { BindingsSection, bindableProps } from '../src/panels/BindingsSection';
 import { Section } from '../src/components/ui';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -64,8 +64,32 @@ describe('Data bindings section', () => {
   it('shows a formula as a formula, and works a look-up through so a missing line is plain to see', () => {
     const node = createNode('rect', { id: 'r1', bindings: { opacity: 'value2 * 1' }, converters: { opacity: [{ type: 'map', map: { true: 'Open', false: 'Closed' } }] } });
     setup(node, [{ id: 'v', name: 'value2', type: 'number', initial: 1 }]);
-    expect(document.querySelector('.seg-btn.on')?.textContent).toBe('Formula');
+    expect(document.querySelector('.binding-source .seg-btn.on')?.textContent).toBe('Formula');
     expect(document.querySelector('.binding-trace')?.textContent).toMatch(/Look up: no line for 1, so it stays 1/);
+  });
+
+  it('switches a binding to out or both, which ties it to a variable (a formula is dropped)', () => {
+    const { get } = setup(createNode('rect', { id: 'r1', bindings: { x: 'a', opacity: 'a * 2' } }), [{ id: 'a', name: 'a', type: 'number', initial: 1 }]);
+    const dir = (prop: string, m: string) => [...document.querySelectorAll<HTMLButtonElement>('.binding')].find((b) => b.querySelector('.mono')?.textContent === prop)!.querySelector<HTMLButtonElement>(`.binding-dir [role="radio"]:nth-child(${['in', 'out', 'both'].indexOf(m) + 1})`)!;
+    click(dir('x', 'out'));
+    expect(get().bindingModes).toEqual({ x: 'out' });
+    expect(get().bindings).toEqual({ x: 'a', opacity: 'a * 2' });
+    expect(document.querySelector('.binding-trace')?.textContent).toMatch(/Whenever X changes, a is set to it/);
+    click(dir('opacity', 'both'));
+    expect(get().bindingModes).toEqual({ x: 'out', opacity: 'both' });
+    expect(get().bindings!.opacity).toBe('');
+    click(dir('x', 'in'));
+    expect(get().bindingModes).toEqual({ opacity: 'both' });
+  });
+
+  it("offers every plain setting of a layer, and a video's playback, with read-only ones out only", () => {
+    const v = createNode('video', { id: 'v1', name: 'Clip' });
+    const project = createProject('P');
+    project.artboards[0].children.push(v);
+    const props = bindableProps(v, project).map((p) => p.prop);
+    expect(props).toEqual(expect.arrayContaining(['x', 'opacity', 'autoplay', 'loop', 'src', 'media.time', 'media.playing', 'media.duration']));
+    expect(props).not.toContain('id');
+    expect(bindableProps(v, project).find((p) => p.prop === 'media.duration')?.readOnly).toBe(true);
   });
 
   it('puts a rule between bindings, and removes one with its bin', () => {

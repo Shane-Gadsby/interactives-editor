@@ -1,4 +1,4 @@
-import { dataPolicyFor, enumOptions, fetchDataSource, initialValue, stepList, stepsScope, stepsTimeline, type Artboard, type DataPolicy, type DataSource, type Project } from 'interactives-player';
+import { artboardScope, dataPolicyFor, enumOptions, fetchDataSource, initialValue, layerScope, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -74,7 +74,18 @@ export const dataCache = new DataCache();
 /** Variables (initial values) and data, the way the player scopes them. */
 export function previewScope(project: Project, artboard?: Artboard): Record<string, unknown> {
   const data = dataCache.scope(project);
-  const vars: Record<string, unknown> = { ...data, data, enums: enumOptions(project.variables) };
+  // `artboard` and `layer(name)` as the player has them, below data and variables of the same name
+  const board: Record<string, unknown> = {};
+  if (artboard) {
+    const byKey = new Map<string, SceneNode>();
+    walk(artboard.children, (n) => {
+      byKey.set(n.id, n);
+      if (!byKey.has(n.name)) byKey.set(n.name, n);
+    });
+    board.artboard = artboardScope(artboard);
+    board.layer = (key: unknown) => layerScope(byKey.get(String(key)));
+  }
+  const vars: Record<string, unknown> = { ...board, ...data, data, enums: enumOptions(project.variables) };
   for (const v of project.variables) vars[v.name] = initialValue(v);
   // An artboard with steps shows its first step: the dots of a step bar, and the variables the player would keep up to date
   const cfg = artboard?.steps;

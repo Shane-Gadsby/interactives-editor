@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { PANEL_WIDTH, PanelResizeHandle, clampWidth, usePanelWidths } from '../src/components/PanelResize';
+import { PANEL_WIDTH, PanelResizeHandle, clampWidth, usePanelWidths, reloadPanelWidths } from '../src/components/PanelResize';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -48,6 +48,7 @@ describe('side panel widths', () => {
 
   it('starts from the remembered width', () => {
     localStorage.setItem('ix-panel-widths-v2', JSON.stringify({ left: 300, right: 420 }));
+    reloadPanelWidths();
     let w: { left: number; right: number } | null = null;
     function Host() {
       w = usePanelWidths()[0];

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 /**
  * Widths of the side panels (layers on the left, properties on the right), dragged from their inner edge. They're
@@ -26,22 +26,36 @@ function load(): Record<Side, number> {
   }
 }
 
+//Read from storage the first time anything asks, not when the module loads
+let widths: Record<Side, number> | null = null;
+const current = (): Record<Side, number> => (widths ??= typeof window !== 'undefined' ? load() : { left: PANEL_WIDTH.left.def, right: PANEL_WIDTH.right.def });
+const listeners = new Set<() => void>();
+
+/** Set the side panels' widths (dragging an edge, or a workspace being applied) and remember them. */
+export function setPanelWidths(next: Partial<Record<Side, number>>): void {
+  const cur = current();
+  widths = { left: clampWidth('left', next.left ?? cur.left), right: clampWidth('right', next.right ?? cur.right) };
+  try {
+    localStorage.setItem(KEY, JSON.stringify(widths));
+  } catch {
+    /* storage unavailable */
+  }
+  for (const fn of listeners) fn();
+}
+export const getPanelWidths = (): Record<Side, number> => current();
+/** Read the widths from storage again (the tests; another tab having changed them). */
+export function reloadPanelWidths(): void {
+  widths = null;
+  for (const fn of listeners) fn();
+}
+
 /** The panel widths, and a setter that remembers them. */
 export function usePanelWidths(): [Record<Side, number>, (side: Side, w: number) => void] {
-  const [w, setW] = useState(load);
-  return [
-    w,
-    (side, px) =>
-      setW((cur) => {
-        const next = { ...cur, [side]: clampWidth(side, px) };
-        try {
-          localStorage.setItem(KEY, JSON.stringify(next));
-        } catch {
-          /* storage unavailable */
-        }
-        return next;
-      }),
-  ];
+  const w = useSyncExternalStore(
+    (fn) => (listeners.add(fn), () => listeners.delete(fn)),
+    current,
+  );
+  return [w, (side, px) => setPanelWidths({ [side]: px })];
 }
 
 /** The strip on a panel's inner edge: drag it, use the arrow keys on it, or double-click it to put the width back. */

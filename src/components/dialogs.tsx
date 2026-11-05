@@ -23,6 +23,13 @@ export interface PromptOptions extends ConfirmOptions {
   validate?: (value: string) => string | null;
 }
 
+/** Two answers and Cancel: the confirm button (Enter) and a second one beside it. */
+export interface ChoiceOptions extends ConfirmOptions {
+  altLabel: string;
+  /** The second answer is the destructive one: it turns red (the confirm button stays the safe default). */
+  altDanger?: boolean;
+}
+
 export interface AlertOptions {
   title: string;
   message?: string;
@@ -45,6 +52,7 @@ export interface LinkChoiceOptions {
 
 type Request =
   | { kind: 'confirm'; opts: ConfirmOptions; done: (v: boolean) => void }
+  | { kind: 'choice'; opts: ChoiceOptions; done: (v: 'confirm' | 'alt' | null) => void }
   | { kind: 'link'; opts: LinkChoiceOptions; done: (v: LinkMode[] | null) => void }
   | { kind: 'prompt'; opts: PromptOptions; done: (v: string | null) => void }
   | { kind: 'alert'; opts: AlertOptions; done: () => void };
@@ -64,6 +72,8 @@ function settle(r: Request) {
 }
 
 export const confirmDialog = (opts: ConfirmOptions): Promise<boolean> => new Promise((done) => enqueue({ kind: 'confirm', opts, done }));
+/** Resolves 'confirm' (the main button, or Enter), 'alt' (the second button) or null (Cancel, Esc). */
+export const choiceDialog = (opts: ChoiceOptions): Promise<'confirm' | 'alt' | null> => new Promise((done) => enqueue({ kind: 'choice', opts, done }));
 export const promptDialog = (opts: PromptOptions): Promise<string | null> => new Promise((done) => enqueue({ kind: 'prompt', opts, done }));
 export const alertDialog = (opts: AlertOptions): Promise<void> => new Promise((done) => enqueue({ kind: 'alert', opts, done }));
 /**
@@ -93,7 +103,7 @@ export function dismissAllDialogs() {
   const all = queue;
   queue = [];
   emit();
-  for (const r of all) r.kind === 'confirm' ? r.done(false) : r.kind === 'prompt' || r.kind === 'link' ? r.done(null) : r.done();
+  for (const r of all) r.kind === 'confirm' ? r.done(false) : r.kind === 'prompt' || r.kind === 'link' || r.kind === 'choice' ? r.done(null) : r.done();
 }
 
 const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -142,6 +152,7 @@ function DialogView({ req }: { req: Request }) {
       }
       finish(() => req.done(live.current.value));
     } else if (req.kind === 'confirm') finish(() => req.done(true));
+    else if (req.kind === 'choice') finish(() => req.done('confirm'));
     else if (req.kind === 'link') answerLink(live.current.modes);
     else finish(() => req.done());
   };
@@ -156,6 +167,7 @@ function DialogView({ req }: { req: Request }) {
     if (req.kind === 'link') finish(() => req.done(null));
     else if (req.kind === 'prompt') finish(() => req.done(null));
     else if (req.kind === 'confirm') finish(() => req.done(false));
+    else if (req.kind === 'choice') finish(() => req.done(null));
     else finish(() => req.done());
   };
   const finish = (resolve: () => void) => {
@@ -287,6 +299,11 @@ function DialogView({ req }: { req: Request }) {
                 Link all
               </button>
             </>
+          )}
+          {req.kind === 'choice' && (
+            <button className={`btn${req.opts.altDanger ? ' danger' : ''}`} onClick={() => finish(() => req.done('alt'))}>
+              {req.opts.altLabel}
+            </button>
           )}
           <button ref={okBtn} className={`btn ${danger ? 'danger-fill' : 'primary'}`} title={`${confirmLabel} (Enter)`} onClick={accept}>
             {confirmLabel}

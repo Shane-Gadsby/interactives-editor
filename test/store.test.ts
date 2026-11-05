@@ -104,8 +104,8 @@ describe('EditorStore', () => {
     expect(node.y).toBe(30);
     expect(ab.timelines[0].tracks.map((t) => t.prop)).toEqual(['x']);
     expect(ab.timelines[0].tracks[0].keys.map((k) => [k.t, k.value])).toEqual([[0, 10], [400, 70]]);
-    // Off the timeline tab the layer's own value is what's edited
-    s.set({ bottomTab: null });
+    // With the timeline panel out of sight (the dock reports that through timelineShown) the layer's own value is what's edited
+    s.set({ timelineShown: false });
     s.setProps([a.id], { x: 15 });
     expect(locate(s.artboard()!, a.id)!.node.x).toBe(15);
   });

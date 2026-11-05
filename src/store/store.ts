@@ -147,6 +147,12 @@ export type Tool =
   | 'bone'
   | 'comment';
 
+/** Called whenever something sets bottomTab: the dock shows that panel (lib/dock.ts registers it). */
+let panelRequestHandler: ((id: BottomTab | null) => void) | null = null;
+export function onPanelRequest(fn: ((id: BottomTab | null) => void) | null): void {
+  panelRequestHandler = fn;
+}
+
 export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface' | 'checklist' | 'themes';
 
 /** Where learners clicked on one artboard (from Insights), drawn over the canvas as a heat map. Never saved. */
@@ -175,7 +181,13 @@ export interface EditorState {
   showBones: boolean;
   /** The selected range (UTF-16 offsets into the layer's text) while editing text on the canvas; style changes apply to it. */
   textSelection: { id: string; start: number; end: number } | null;
+  /**
+   * The tool panel last asked for (timeline, interactions, ...). Setting it shows that panel wherever it's docked (see
+   * onPanelRequest and lib/dock.ts); null folds the bottom panel area away.
+   */
   bottomTab: BottomTab | null;
+  /** Whether the timeline panel is on screen (it can be docked anywhere, or floating). Timeline editing follows this. */
+  timelineShown: boolean;
   bottomHeight: number;
   /** The theme (id) the canvas shows while editing; null is the project's default. Never saved. */
   canvasTheme: string | null;
@@ -187,6 +199,11 @@ export interface EditorState {
   recording: boolean;
   selectedKeys: string[]; // "trackId:keyId"
   logicSelection: string | null;
+  /**
+   * Everything selected in the interaction graph (nodes and groups) when more than one thing is. `logicSelection` is the
+   * one of them the settings column shows; it wins when it isn't in this list (something else selected a single node).
+   */
+  logicPicked: string[];
   saveState: 'saved' | 'saving' | 'dirty' | 'error';
   saveError: string | null;
   toast: { text: string; kind: 'info' | 'error' } | null;
@@ -254,6 +271,7 @@ export class EditorStore {
       showBones: true,
       textSelection: null,
       bottomTab: 'timeline',
+      timelineShown: true,
       bottomHeight: 260,
       canvasTheme: null,
       heat: null,
@@ -263,6 +281,7 @@ export class EditorStore {
       recording: false,
       selectedKeys: [],
       logicSelection: null,
+      logicPicked: [],
       saveState: 'saved',
       saveError: null,
       toast: null,
@@ -288,6 +307,8 @@ export class EditorStore {
     const p = typeof partial === 'function' ? partial(this.state) : partial;
     this.state = { ...this.state, ...p };
     this.emit();
+    //Asking for a panel shows it even when it's the one already asked for (it may be docked out of sight since)
+    if ('bottomTab' in p) panelRequestHandler?.(p.bottomTab ?? null);
   }
 
   /**
@@ -456,16 +477,20 @@ export class EditorStore {
     const activeTimelineId = ab?.timelines.some((t) => t.id === s.activeTimelineId) ? s.activeTimelineId : null;
     const focusId = ab && s.focusId && locate(ab, s.focusId) ? s.focusId : null;
     const editingPathId = ab && s.editingPathId && locate(ab, s.editingPathId) ? s.editingPathId : null;
-    const logicSelection = ab?.logic.nodes.some((n) => n.id === s.logicSelection) ? s.logicSelection : null;
+    // a group can be selected too, not only a node
+    const inGraph = (id: string) => !!ab && (ab.logic.nodes.some((n) => n.id === id) || !!ab.logic.groups?.some((g) => g.id === id));
+    const logicSelection = s.logicSelection && inGraph(s.logicSelection) ? s.logicSelection : null;
+    const logicPicked = s.logicPicked.every(inGraph) ? s.logicPicked : s.logicPicked.filter(inGraph);
     if (
       activeArtboardId !== s.activeArtboardId ||
       selection.length !== s.selection.length ||
       activeTimelineId !== s.activeTimelineId ||
       focusId !== s.focusId ||
       editingPathId !== s.editingPathId ||
-      logicSelection !== s.logicSelection
+      logicSelection !== s.logicSelection ||
+      logicPicked !== s.logicPicked
     ) {
-      this.state = { ...s, activeArtboardId, selection, activeTimelineId, focusId, editingPathId, logicSelection };
+      this.state = { ...s, activeArtboardId, selection, activeTimelineId, focusId, editingPathId, logicSelection, logicPicked };
     }
   }
 
@@ -527,7 +552,7 @@ export class EditorStore {
       }
     }
     const tl = this.timeline();
-    const onTimeline = !!tl && s.bottomTab === 'timeline';
+    const onTimeline = !!tl && s.timelineShown;
     const record = s.recording && onTimeline;
     // On the timeline, a property the open timeline already animates shows its value at the playhead (the inspector and
     // the canvas both), so changing it changes that value: a key at the playhead, with Record on or not. Writing the
@@ -1234,7 +1259,7 @@ export class EditorStore {
   setPathPoints(id: string, paths: SubPath[], opts: { from?: SubPath[]; coalesce?: string } = {}): void {
     const s = this.state;
     const tl = this.timeline();
-    const record = !!(s.recording && tl && s.bottomTab === 'timeline');
+    const record = !!(s.recording && tl && s.timelineShown);
     const from = opts.from;
     const sameShape = !!from && from.length === paths.length && from.every((sp, i) => sp.points.length === paths[i].points.length);
     if (!record || !from || !sameShape) {

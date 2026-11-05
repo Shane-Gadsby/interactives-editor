@@ -133,7 +133,7 @@ export function Canvas() {
     editingTextId: st.editingTextId,
     focusId: st.focusId,
     showBones: st.showBones,
-    bottomTab: st.bottomTab,
+    timelineShown: st.timelineShown,
     heat: st.heat,
     activeTimelineId: st.activeTimelineId,
     playhead: st.playhead,
@@ -195,7 +195,7 @@ export function Canvas() {
   // Library copies that only back instances stay off the canvas (see canvasHidden)
   const onCanvas = useMemo(() => project.artboards.filter((a) => !a.canvasHidden), [project.artboards]);
   const baseActive = getArtboard(project, s.activeArtboardId);
-  const timeline = s.bottomTab === 'timeline' ? baseActive?.timelines.find((t) => t.id === s.activeTimelineId) ?? null : null;
+  const timeline = s.timelineShown ? baseActive?.timelines.find((t) => t.id === s.activeTimelineId) ?? null : null;
   // While a timeline is open the canvas shows its frame at the playhead, so outlines and handles follow that frame too.
   // Constrained layers are drawn where their constraints put them, so their outlines go there too.
   const active = useMemo(() => {
@@ -714,8 +714,9 @@ export function Canvas() {
         if (!ab) break;
         const pp = apply(invert(d.parentM), w.x - ab.canvasX, w.y - ab.canvasY);
         const lp = apply(invert(nodeMatrix(d.node0)), pp.x, pp.y);
-        const keep = e.shiftKey || d.node0.type === 'image';
-        const nb = resizeBox(d.node0.width, d.node0.height, d.handle, lp.x, lp.y, e.shiftKey ? true : keep && e.shiftKey, e.altKey);
+        // Shift keeps the ratio, and a layer whose W and H are linked keeps it unless Shift is held
+        const keep = d.node0.lockRatio ? !e.shiftKey : e.shiftKey;
+        const nb = resizeBox(d.node0.width, d.node0.height, d.handle, lp.x, lp.y, keep, e.altKey);
         const placed = placeBox(d.node0, nb.l, nb.t, nb.w, nb.h);
         const props: Record<string, unknown> = { x: round(placed.x), y: round(placed.y), width: round(nb.w), height: round(nb.h) };
         if (d.node0.type === 'path') props.paths = scalePaths(d.node0.paths, nb.w / Math.max(1, d.node0.width), nb.h / Math.max(1, d.node0.height));
@@ -742,7 +743,9 @@ export function Canvas() {
         if (!ab) break;
         const b0 = d.bounds0;
         const p = local(ab, w);
-        const nb = resizeBox(b0.width, b0.height, d.handle, p.x - b0.x, p.y - b0.y, e.shiftKey, e.altKey);
+        // all of them linked: the selection keeps its ratio unless Shift is held
+        const linked = d.items.length > 0 && d.items.every((it) => it.node0.lockRatio);
+        const nb = resizeBox(b0.width, b0.height, d.handle, p.x - b0.x, p.y - b0.y, linked ? !e.shiftKey : e.shiftKey, e.altKey);
         const sx = nb.w / Math.max(1, b0.width);
         const sy = nb.h / Math.max(1, b0.height);
         const changes = new Map<string, Record<string, unknown>>();
@@ -1181,7 +1184,7 @@ export function Canvas() {
   /** The layer as the canvas shows it while recording (its frame at the playhead); otherwise as it is. */
   function recordedNode(n: PathNode): PathNode {
     const st = store().get();
-    if (!(st.recording && st.bottomTab === 'timeline' && st.activeTimelineId) || !active) return n;
+    if (!(st.recording && st.timelineShown && st.activeTimelineId) || !active) return n;
     const shown = locate(active, n.id)?.node;
     return shown?.type === 'path' ? shown : n;
   }
@@ -1208,7 +1211,7 @@ export function Canvas() {
     if (!bab) return null;
     const base = getArtboard(st.project, bab.id) ?? bab;
     const p = local(base, w);
-    const recording = st.recording && st.bottomTab === 'timeline' && !!st.activeTimelineId;
+    const recording = st.recording && st.timelineShown && !!st.activeTimelineId;
     const src = recording && active && active.id === base.id ? active : base;
     // The selected layer is tried first, so its edge wins over layers on top of it
     const cands: SceneNode[] = [];

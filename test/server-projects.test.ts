@@ -98,10 +98,20 @@ describe('preferences', () => {
     expect(guest).toEqual({ user: 'guest', prefs: { theme: 'auto' } });
   });
 
-  it('refuses a body over 16kb with the too-big message', async () => {
-    const r = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(20000) } } });
+  it('refuses a body over 128kb (room for saved workspaces) with the too-big message', async () => {
+    const r = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(140000) } } });
     expect(r.status).toBe(413);
     expect(r.json.error).toBe('That is too big to save');
+  });
+});
+
+describe('saved workspaces in preferences', () => {
+  it('keeps up to 12 well-formed ones and drops the rest', async () => {
+    const ok = (i: number) => ({ id: `ws${i}`, name: `W${i}`, layout: {}, widths: { left: 240, right: 320 }, bottomHeight: 260 });
+    const list = [...Array.from({ length: 13 }, (_, i) => ok(i)), null, { id: 'x' }, { id: 'big', name: 'Big', layout: 'y'.repeat(9000) }];
+    const r = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { theme: 'light', workspaces: list } } });
+    expect(r.status).toBe(200);
+    expect(r.json.prefs.workspaces.map((w: { id: string }) => w.id)).toEqual(Array.from({ length: 12 }, (_, i) => `ws${i + 1}`));
   });
 });
 

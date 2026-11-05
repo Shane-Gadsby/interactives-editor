@@ -304,6 +304,14 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], to
 			let v = p?.[k]
 			if (Array.isArray(rule) ? rule.includes(v) : rule === 'string' ? typeof v === 'string' && v.length < 120 : typeof v === rule) out[k] = v
 		}
+		//Saved workspaces (panel layouts under a name). The editor checks the layout inside each one itself, so here
+		//it's only the shape and the size: at most 12, each with an id and a name and no bigger than 8 KB
+		if (Array.isArray(p?.workspaces)) {
+			out.workspaces = p.workspaces
+				.filter((w) => w && typeof w === 'object' && !Array.isArray(w) && typeof w.id === 'string' && w.id.length <= 40 && typeof w.name === 'string' && w.name.length <= 60)
+				.filter((w) => JSON.stringify(w).length <= 8000)
+				.slice(-12)
+		}
 		return out
 	}
 
@@ -313,7 +321,7 @@ router.get('/api/prefs', async (req, res) => {
 	res.json({user, prefs: doc?.prefs || {}})
 })
 
-router.put('/api/prefs', express.json({limit: '16kb'}), async (req, res) => {
+router.put('/api/prefs', express.json({limit: '128kb'}), async (req, res) => {
 	let user = whoIs(req)?.username || 'guest',
 		clean = cleanPrefs(req.body.prefs)
 	await prefs.updateOne({_id: user}, {$set: {prefs: clean, updated: new Date()}}, {upsert: true})
@@ -2618,7 +2626,7 @@ const learnerPage = (token, base, nonce, project, remix) => `<!doctype html>
 <style>html,body{margin:0;height:100%;background:#111}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
 </head>
 <body>
-<iframe id="project" src="${base}/s/${token}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen" title="Interactive"></iframe>
+<iframe id="project" src="${base}/s/${token}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
 ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into your own projects, to change as you like">Remix this</a>' : ''}
 <script src="/utilities.js"></script>
 <script nonce="${nonce}">
@@ -2909,6 +2917,120 @@ router.get('/s/:token', cacheHeaders.api, (req, res) => {
 	res.sendFile(shareFile(req.params.token), {headers: {'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex'}}, (err) => {
 		if (err && !res.headersSent) res.status(404).send('This share link has been turned off, or never existed')
 	})
+})
+
+//The MCP server over the network (MCP's "streamable HTTP", plain JSON replies, no server push), so an agent connects
+//with a URL instead of needing a copy of mcp/dist on its own machine. It's the same code as the stdio one, loaded
+//once, with each connection carrying its own session id, agent name and live sessions. Its tool calls go back
+//into this server's own api over loopback with the caller's X-Session-ID, so an agent can only do what that
+//session could do in the editor, and with no session it gets what a signed out browser gets
+let mcpModule = null,
+	mcpConnections = new Map(),
+	MCP_IDLE_MS = 2 * 60 * 60 * 1000,
+	MCP_MAX_CONNECTIONS = 200
+
+let loadMCP = () => {
+	if (!mcpModule) {
+		//Stops the bundle starting its own stdio loop on our stdin
+		process.env.INTERACTIVES_MCP_NO_STDIO = '1'
+		mcpModule = import('./mcp/dist/interactives-mcp.mjs')
+	}
+	return mcpModule
+}
+
+//Who's calling: X-Session-ID like every other suite request, or the same id as a bearer token, since that's what most
+//MCP clients have a setting for
+let mcpSessionID = (req) => {
+	let auth = String(req.get('authorization') || '')
+	return String(req.get('x-session-id') || (auth.match(/^Bearer\s+(\S+)$/i) || [])[1] || '').slice(0, 200)
+}
+
+//Connections that went quiet: drop them and leave any live rooms they were sitting in
+setInterval(async () => {
+	if (!mcpConnections.size) return
+	let mcp = await loadMCP(),
+		now = Date.now()
+	for (let [id, c] of mcpConnections) {
+		if (now - c.used > MCP_IDLE_MS) {
+			mcp.closeContext(c.ctx)
+			mcpConnections.delete(id)
+		}
+	}
+}, 10 * 60 * 1000).unref()
+
+router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, res) => {
+	//A browser page on some other site has no business driving this (DNS rebinding and friends). Agents send no Origin
+	let origin = req.get('origin'),
+		originHost = null
+	try {
+		originHost = origin ? new URL(origin).host : null
+	}
+	catch {
+		originHost = '(bad)'
+	}
+	if (origin && originHost !== req.get('host')) {
+		return res.status(403).json({jsonrpc: '2.0', id: null, error: {code: -32000, message: 'Origin not allowed'}})
+	}
+
+	let mcp = await loadMCP(),
+		msg = req.body,
+		id = req.get('mcp-session-id'),
+		conn = id ? mcpConnections.get(id) : null
+
+	if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.method !== 'string') {
+		//A reply from the client to something we asked (we never ask), or a batch (dropped from the spec)
+		if (msg && typeof msg === 'object' && !Array.isArray(msg) && ('result' in msg || 'error' in msg)) return res.status(202).end()
+		return res.status(400).json({jsonrpc: '2.0', id: null, error: {code: -32600, message: 'Send one JSON-RPC request per POST'}})
+	}
+
+	if (msg.method === 'initialize') {
+		if (mcpConnections.size >= MCP_MAX_CONNECTIONS) {
+			//Full up: make room by dropping whoever has been quiet longest
+			let oldest = [...mcpConnections.entries()].sort((a, b) => a[1].used - b[1].used)[0]
+			mcp.closeContext(oldest[1].ctx)
+			mcpConnections.delete(oldest[0])
+		}
+		id = crypto.randomBytes(18).toString('base64url')
+		conn = {
+			used: Date.now(),
+			ctx: {
+				base: `http://127.0.0.1:${port}/${appName}`,
+				sessionId: mcpSessionID(req),
+				agent: String(req.query.agent || req.get('x-agent-name') || 'Agent').replace(/[^\w .'()-]/g, '').slice(0, 40) || 'Agent',
+				sessions: new Map(),
+			},
+		}
+		mcpConnections.set(id, conn)
+		res.set('Mcp-Session-Id', id)
+	}
+	else if (!conn) {
+		//Unknown or expired: the spec says 404, and the client starts again with initialize
+		return res.status(404).json({jsonrpc: '2.0', id: msg.id ?? null, error: {code: -32001, message: 'Unknown or expired MCP session, initialize again'}})
+	}
+	else {
+		conn.used = Date.now()
+		//A session that signed in again since: follow the newest id it sends
+		let sid = mcpSessionID(req)
+		if (sid) conn.ctx.sessionId = sid
+	}
+
+	let reply = await mcp.runAs(conn.ctx, () => mcp.respond(msg))
+	if (!reply) return res.status(202).end()
+	res.json(reply)
+})
+
+//No server-initiated stream: every reply comes back on its own POST
+router.get('/mcp', (req, res) => {
+	res.set('Allow', 'POST, DELETE').status(405).end()
+})
+
+router.delete('/mcp', async (req, res) => {
+	let id = req.get('mcp-session-id'),
+		conn = id && mcpConnections.get(id)
+	if (!conn) return res.status(404).end()
+	;(await loadMCP()).closeContext(conn.ctx)
+	mcpConnections.delete(id)
+	res.status(204).end()
 })
 
 //The document. no-cache, it's what hands out everyone else's stamps

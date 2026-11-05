@@ -160,7 +160,7 @@ function PlayModal({ e, onClose, onCopy }: { e: ExampleInfo; onClose: () => void
   return (
     <Modal title={`Example: ${e.title}`} help="templates#examples" onClose={onClose} className="preview-modal example-play">
       <div className="preview-body">
-        {html ? <iframe title={e.title} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} /> : error ? <div className="center-msg">Could not play it: {error}</div> : <div className="center-msg muted">Building…</div>}
+        {html ? <iframe title={e.title} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : error ? <div className="center-msg">Could not play it: {error}</div> : <div className="center-msg muted">Building…</div>}
       </div>
       <div className="row example-bar">
         <span className="muted small">{e.description}</span>

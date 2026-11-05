@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, defaultTheme, QUESTION_KINDS, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
-import { EditorStore, setCurrentStore, store, useEditor, type BottomTab, type Tool } from './store/store';
+import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
 import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
@@ -11,19 +11,10 @@ import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
 import { copySelection, pasteNodes } from './lib/clipboard';
 import { Canvas } from './canvas/Canvas';
-import { LeftPanel } from './panels/LeftPanel';
-import { Inspector } from './panels/Inspector';
-import { TimelinePanel, deleteSelectedKeys } from './panels/Timeline';
-import { LogicGraph } from './panels/LogicGraph';
-import { ScriptsPanel, VariablesPanel } from './panels/ScriptsVariables';
-import { DataPanel } from './panels/DataPanel';
-import { UsagePanel } from './panels/UsagePanel';
-import { InsightsPanel } from './panels/InsightsPanel';
-import { InterfacePanel, ReferenceModal } from './panels/InterfacePanel';
-import { ThemesPanel } from './panels/ThemesPanel';
+import { deleteSelectedKeys } from './panels/Timeline';
+import { ReferenceModal } from './panels/InterfacePanel';
 import { exportProblems, typeDefinitions } from 'interactives-player';
 import { confirmDialog } from './components/dialogs';
-import { AccessibilityPanel } from './panels/AccessibilityPanel';
 import { Icons, type IconName } from './components/icons';
 import { IconButton } from './components/ui';
 import { PreviewWidth, responsiveSets, widthInside } from './components/PreviewWidth';
@@ -31,11 +22,12 @@ import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink, openHelp } from './help/Help';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ContextMenu } from './components/ContextMenu';
+import { DockDragLayer, DockFloats, DockZone, FloatingTools, toolsMenu, useDockSync, useZoneSizes } from './components/Dock';
 import { PrefsModal } from './components/PrefsModal';
 import { HistoryModal, InviteModal, ShareForReviewModal, ShareModal } from './components/ProjectModals';
 import { SaveTemplateModal } from './components/TemplateModals';
-import { ChecklistPanel } from './panels/ChecklistPanel';
-import { CHECKLIST_FLAG, checklistProgress, hasChecklist } from './lib/templates';
+import { CHECKLIST_FLAG, hasChecklist } from './lib/templates';
 import { prefs, setPrefs, usePrefs } from './lib/prefs';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
@@ -462,12 +454,27 @@ function Guard(props: { message: string; name?: string; className?: string; chil
   return <ErrorBoundary {...props} resetKey={project} />;
 }
 
+//Assets someone else added or replaced while we were both in the project come in as records only: fetch their files
+function useRemoteAssets() {
+  const projectId = useEditor((st) => st.project.id);
+  const assets = useEditor((st) => st.project.assets);
+  useEffect(() => {
+    void assetUrls.ensure(
+      projectId,
+      assets.map((a) => a.id),
+    );
+  }, [projectId, assets]);
+}
+
 function Workspace({ home }: { home: () => void }) {
   const conflict = useAutosave();
+  useRemoteAssets();
   useThumbnails();
   useShortcuts();
-  const s = useEditor((st) => ({ bottomTab: st.bottomTab, bottomHeight: st.bottomHeight, toast: st.toast, report: st.report }));
+  const s = useEditor((st) => ({ toast: st.toast, report: st.report }));
   const [widths, setWidth] = usePanelWidths();
+  useDockSync();
+  const z = useZoneSizes(widths);
   const [preview, setPreview] = useState(false);
   // Fitted before the first paint (the canvas opens at its final zoom, not at 100% for a frame), and again a frame later in
   // case the panels settled the canvas to a different size
@@ -489,30 +496,32 @@ function Workspace({ home }: { home: () => void }) {
     });
   }, []);
   return (
-    <div className="workspace" style={{ ['--bottom-h' as string]: s.bottomTab ? `${s.bottomHeight}px` : '34px', ['--left-w' as string]: `${widths.left}px`, ['--right-w' as string]: `${widths.right}px` }}>
+    <div className={`workspace tools-${z.tools}`} style={{ ['--bottom-h' as string]: `${z.bottom}px`, ['--left-w' as string]: `${z.left}px`, ['--right-w' as string]: `${z.right}px` }}>
       <TopBar home={home} onPreview={() => (store().set({ previewPlaying: false }), setPreview(true))} />
       <div className="banner-area">
         {conflict && <ConflictBanner />}
         <LinkBanner />
         <LinkChanges />
       </div>
-      <Toolbar />
-      <Guard name="left-panel" message="This panel couldn't be shown." className="left-panel">
-        <LeftPanel />
-      </Guard>
+      {z.tools === 'float' ? (
+        <FloatingTools>
+          <Toolbar />
+        </FloatingTools>
+      ) : (
+        <Toolbar />
+      )}
+      <DockZone zone="left" />
       <main className="stage">
         <Guard name="canvas" message="Something on this artboard couldn't be drawn.">
           <Canvas />
         </Guard>
-        <PanelResizeHandle side="left" width={widths.left} onWidth={(w) => setWidth('left', w)} />
-        <PanelResizeHandle side="right" width={widths.right} onWidth={(w) => setWidth('right', w)} />
+        {z.left > 0 && <PanelResizeHandle side="left" width={widths.left} onWidth={(w) => setWidth('left', w)} />}
+        {z.right > 0 && <PanelResizeHandle side="right" width={widths.right} onWidth={(w) => setWidth('right', w)} />}
       </main>
-      <Guard name="inspector" message="This panel couldn't be shown." className="inspector">
-        <Inspector />
-      </Guard>
-      <Guard name="bottom-dock" message="This panel couldn't be shown." className="bottom-dock">
-        <BottomPanel />
-      </Guard>
+      <DockZone zone="right" />
+      <DockZone zone="bottom" />
+      <DockFloats />
+      <DockDragLayer />
       {preview && <PreviewModal onClose={() => setPreview(false)} />}
       {s.toast && <div className={`toast ${s.toast.kind}`}>{s.toast.text}</div>}
       {s.report && <ReportModal title={s.report.title} lines={s.report.lines} />}
@@ -669,7 +678,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       </div>
       <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)} />
       <IconButton icon={<Icons.help />} title="Help (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp()} />
-      {prefsOpen && <PrefsModal onClose={() => setPrefsOpen(false)} />}
+      {prefsOpen && <PrefsModal workspace onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
       {templateOpen && <SaveTemplateModal onClose={() => setTemplateOpen(false)} />}
@@ -877,6 +886,7 @@ function useToolGroups(): [Record<string, boolean>, (id: string) => void] {
 }
 
 export function Toolbar() {
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const tool = useEditor((st) => st.tool);
   const showBones = useEditor((st) => st.showBones);
   const [open, toggle] = useToolGroups();
@@ -901,9 +911,18 @@ export function Toolbar() {
   );
   const bones = <IconButton key="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={showBones ? 'Hide bones on the canvas (Shift+J)' : 'Show bones on the canvas (Shift+J)'} onClick={() => store().set({ showBones: !showBones })} />;
   return (
-    <nav className="toolbar">
-      {btn('select')}
-      {btn('hand')}
+    <nav
+      className="toolbar"
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setMenu({ x: e.clientX, y: e.clientY });
+      }}
+    >
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={toolsMenu()} onClose={() => setMenu(null)} />}
+      <div className="tool-grid">
+        {btn('select')}
+        {btn('hand')}
+      </div>
       {TOOL_GROUPS.map((g) => {
         const isOpen = !!open[g.id];
         const activeHere = g.tools.includes(tool);
@@ -913,90 +932,27 @@ export function Toolbar() {
               <span className="section-chev" aria-hidden="true" />
               {g.label}
             </button>
-            {isOpen ? (
-              <>
-                {g.tools.map(btn)}
-                {g.id === 'media' && image}
-                {g.id === 'web' && <AddQuestion key="q" />}
-                {g.id === 'rig' && bones}
-              </>
-            ) : (
-              activeHere && btn(tool)
-            )}
+            <div className="tool-grid">
+              {isOpen ? (
+                <>
+                  {g.tools.map(btn)}
+                  {g.id === 'media' && image}
+                  {g.id === 'web' && <AddQuestion key="q" />}
+                  {g.id === 'rig' && bones}
+                </>
+              ) : (
+                activeHere && btn(tool)
+              )}
+            </div>
           </div>
         );
       })}
       <div className="toolbar-fill" />
-      {btn('comment')}
-      <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
-    </nav>
-  );
-}
-
-const TABS: { id: BottomTab; label: string; icon: IconName; help: string; tip: string }[] = [
-  { id: 'timeline', label: 'Timeline', icon: 'timeline', help: 'timelines', tip: 'Animate properties with keyframes' },
-  { id: 'logic', label: 'Interactions', icon: 'logic', help: 'interactions', tip: 'Events, actions and logic as a node graph' },
-  { id: 'scripts', label: 'Scripts', icon: 'code', help: 'scripts', tip: 'JavaScript with the ix API' },
-  { id: 'variables', label: 'Variables', icon: 'variable', help: 'variables', tip: 'Named values shared by the whole project' },
-  { id: 'data', label: 'Data', icon: 'table', help: 'data-sources', tip: 'JSON, CSV, TSV or text from files or URLs' },
-  { id: 'a11y', label: 'Accessibility', icon: 'a11y', help: 'accessibility-checker', tip: 'Check accessibility: contrast, small text, keyboard access, names and descriptions, autoplay and flashing, with what each means and a report for sign-off' },
-  { id: 'insights', label: 'Insights', icon: 'insights', help: 'insights', tip: 'What learners did: artboards reached, where they clicked, steps, answers to questions and your own records, as counts' },
-  { id: 'interface', label: 'Public interface', icon: 'plug', help: 'public-interface', tip: 'What a page that embeds this project can set, read, send and hear: variables as inputs and outputs, messages, with descriptions. Makes the reference page and TypeScript definitions' },
-  { id: 'checklist', label: 'Checklist', icon: 'check', help: 'templates#the-checklist', tip: 'The things to change in a project made from a template: tick them off, click one to find its layer, review before you share' },
-  { id: 'themes', label: 'Themes', icon: 'themes', help: 'themes', tip: 'Colour tokens and the themes that give them values (Light, Dark, High contrast), with a contrast check per theme' },
-  { id: 'usage', label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each artboard, asset, variable, data source, script and timeline is used, and what is unused' },
-];
-
-function BottomPanel() {
-  const s = useEditor((st) => ({ tab: st.bottomTab, h: st.bottomHeight }));
-  const template = useEditor((st) => st.project.template);
-  const progress = useEditor((st) => (st.project.template ? checklistProgress(st.project) : null));
-  const tabs = TABS.filter((t) => t.id !== 'checklist' || !!template);
-  const startResize = (e: React.PointerEvent) => {
-    const y0 = e.clientY;
-    const h0 = s.h;
-    const el = e.currentTarget as HTMLElement;
-    el.setPointerCapture(e.pointerId);
-    const move = (ev: PointerEvent) => store().set({ bottomHeight: Math.max(140, Math.min(window.innerHeight - 200, h0 - (ev.clientY - y0))) });
-    const up = () => {
-      el.removeEventListener('pointermove', move);
-      el.removeEventListener('pointerup', up);
-    };
-    el.addEventListener('pointermove', move);
-    el.addEventListener('pointerup', up);
-  };
-  return (
-    <section className="bottom-dock">
-      {s.tab && <div className="resize-handle" onPointerDown={startResize} />}
-      <div className="tabs bottom-tabs">
-        {tabs.map((t) => {
-          const I = Icons[t.icon];
-          return (
-            <button key={t.id} className={s.tab === t.id ? 'active' : ''} title={t.tip} onClick={() => store().set({ bottomTab: s.tab === t.id ? null : t.id, previewPlaying: false })}>
-              <I width={14} /> {t.label}
-              {t.id === 'checklist' && progress && progress.total > 0 && <span className="badge">{progress.done}/{progress.total}</span>}
-            </button>
-          );
-        })}
-        <div className="spacer" />
-        {s.tab && <HelpLink topic={TABS.find((t) => t.id === s.tab)!.help.split('#')[0]} anchor={TABS.find((t) => t.id === s.tab)!.help.split('#')[1]} />}
+      <div className="tool-grid">
+        {btn('comment')}
+        <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
       </div>
-      {s.tab && (
-        <div className="bottom-body">
-          {s.tab === 'timeline' && <TimelinePanel />}
-          {s.tab === 'logic' && <LogicGraph />}
-          {s.tab === 'scripts' && <ScriptsPanel />}
-          {s.tab === 'variables' && <VariablesPanel />}
-          {s.tab === 'data' && <DataPanel />}
-          {s.tab === 'usage' && <UsagePanel />}
-          {s.tab === 'insights' && <InsightsPanel />}
-          {s.tab === 'interface' && <InterfacePanel />}
-          {s.tab === 'a11y' && <AccessibilityPanel />}
-          {s.tab === 'checklist' && <ChecklistPanel />}
-          {s.tab === 'themes' && <ThemesPanel />}
-        </div>
-      )}
-    </section>
+    </nav>
   );
 }
 
@@ -1267,7 +1223,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             </aside>
           )}
           <div className="preview-stage" ref={stageBox}>
-          {html ? <iframe key={nonce} ref={frame} title="Preview" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (hitAreas && showHitAreas(true), applyTheme())} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (hitAreas && showHitAreas(true), applyTheme())} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
           </div>
         </div>
         {accessibility && screenReader && (

@@ -1,15 +1,17 @@
 import { linkManager, useLinks, type LinkStatus } from '../lib/links';
 
-/** Shown when linked files can't be watched in this browser yet: ask for permission, or say whose computer has the file. */
+/**
+ * Shown when a file linked from this browser can't be watched yet: ask for permission, or say it's gone. A design file
+ * imported without a link (every import now, see chooseLinking) is updated by hand with Update from file, so it gets no
+ * banner here.
+ */
 export function LinkBanner() {
   const links = useLinks();
   const needs = links.filter((l) => l.state === 'needs-permission');
-  const nobody = links.filter((l) => l.state === 'no-handle');
   const missing = links.filter((l) => l.state === 'missing');
-  if (!needs.length && !nobody.length && !missing.length) return null;
+  if (!needs.length && !missing.length) return null;
   const names = (l: LinkStatus[]) => l.map((x) => x.fileName).join(', ');
-  const who = (l: LinkStatus[]) => [...new Set(l.map((x) => x.by).filter(Boolean))].join(', ');
-  return (
+    return (
     <>
       {needs.length > 0 && (
         <div className="link-banner" role="status">
@@ -24,13 +26,6 @@ export function LinkBanner() {
       {missing.length > 0 && (
         <div className="link-banner warn" role="status">
           <span className="link-banner-text">{names(missing)}: the file was moved, renamed or deleted. Put it back to carry on watching, or unlink it in the artboard’s settings.</span>
-        </div>
-      )}
-      {nobody.length > 0 && (
-        <div className="link-banner" role="status">
-          <span className="link-banner-text">
-            {names(nobody)} {nobody.length > 1 ? 'are' : 'is'} linked from {who(nobody) ? `${who(nobody)}’s` : 'another'} browser, so this one can’t reconnect it. You see the last imported version and it updates when they save changes.
-          </span>
         </div>
       )}
     </>
