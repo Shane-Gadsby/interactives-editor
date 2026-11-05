@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Play sound** nodes in the graph show the sound's name instead of its id.
+- Copy, cut and paste for interaction nodes: <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd> with a node selected in the graph, and **Cut** / **Copy** / **Paste** in its right-click menus. A graph paste no longer drops the artboard's copied layers onto the artboard. Pasted nodes keep their settings, not their connections.
+- The graph's **Add node** and **Add and connect** menus have a filter box: type to narrow every category to matching nodes (by name, then description), arrows and Enter to pick.
 - **Save user data** / **Load user data** nodes, kept per learner per course in `lti-analytics.interactives-activity-user-data` through the learner page (new `/learn/:token/user-data` routes), and in the browser elsewhere. The graph's settings show a tick list for the variables.
 - **Before activity loads** / **On activity load** events in the graph palette.
 - The projects list with no session now lists only projects nobody owns, instead of everyone's until sessions are enforced. Admins still see only their own until they press F9.

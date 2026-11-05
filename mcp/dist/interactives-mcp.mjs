@@ -5610,6 +5610,7 @@ Double-click a text layer to edit it. Select some of the text, then:
 |---|---|
 | <kbd>Del</kbd> / <kbd>Backspace</kbd> | Delete the selected node or connection in the graph |
 | <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate the selected node |
+| <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>Ctrl</kbd>+<kbd>X</kbd> / <kbd>Ctrl</kbd>+<kbd>V</kbd> | Copy, cut or paste the selected node in the graph (it pastes into another artboard's graph too) |
 | <kbd>Enter</kbd> / <kbd>Esc</kbd> | Accept / cancel a [dialog](dialogs) |
 | <kbd>Esc</kbd> | Close the Preview, Preferences or any open box |
 
@@ -6610,8 +6611,9 @@ Drag from an output port to the next node's input to connect them. Actions that 
 Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Settings that name a variable or a sound also offer **+ Create new variable…** or **+ Add a new sound…** in their dropdown, so you don't have to leave the graph. Each node has a **Note** box for a reminder to yourself, and **Delete node** at the bottom.
 
 ## Right-click and shortcuts
-- Right-click empty graph for **Add node**.
-- Right-click a node for **Connect to new node**, **Connect to existing node**, **Disconnect**, **Duplicate** (<kbd>Ctrl</kbd>+<kbd>D</kbd>), **Help for this node** and **Delete** (<kbd>Del</kbd>).
+- Right-click empty graph for **Add node** and **Paste**. Start typing to filter the menu down to the nodes whose name (or description) matches, then use the arrow keys and <kbd>Enter</kbd>, or click one. The menu you get by dragging a connection into empty space filters the same way.
+- Right-click a node for **Connect to new node**, **Connect to existing node**, **Disconnect**, **Cut**, **Copy** (<kbd>Ctrl</kbd>+<kbd>C</kbd>), **Duplicate** (<kbd>Ctrl</kbd>+<kbd>D</kbd>), **Help for this node** and **Delete** (<kbd>Del</kbd>).
+- With a node selected in the graph, <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd> copy and paste that node, not the layers on the artboard. A pasted node keeps its settings but not its connections.
 - Right-click a connection to **Delete connection**.
 - Right-click a *layer* on the canvas, choose **Add interaction**, then **On click…** or **On hover…** to add an **On pointer** event with a **Control timeline** action already joined to it.
 - In the Inspector, a layer's **Interactions** section lists its events and has **+ On click** and **+ On hover**.

@@ -16,6 +16,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { silenceFlowAttributionWarning } from '../lib/flow-licence';
+import { copyLogicNodes, logicNodesToPaste } from '../lib/logic-clipboard';
 import {
   ANIMATABLE_PROPS,
   CATALOG,
@@ -96,6 +97,7 @@ function summarize(n: LogicNode, ab: Artboard, project: Project): string {
     else if (p.type === 'artboard') text = project.artboards.find((x) => x.id === v)?.name ?? '(missing artboard)';
     else if (p.type === 'script') text = project.scripts.find((x) => x.id === v)?.name ?? '(missing script)';
     else if (p.type === 'data') text = project.dataSources.find((x) => x.id === v)?.name ?? '(missing data)';
+    else if (p.type === 'asset') text = project.assets.find((x) => x.id === v)?.name ?? '(missing sound)';
     else if (p.type === 'select') text = p.options?.find((o) => o.value === v)?.label ?? text;
     else if (p.type === 'boolean') text = v ? p.label : '';
     else if (p.type === 'text' && n.kind === 'action.code') text = text.split('\n')[0].slice(0, 40);
@@ -132,7 +134,7 @@ export function LogicGraph() {
   );
   // Selected connections live here (the document only stores the graph), so Delete can remove them
   const [selEdges, setSelEdges] = useState<string[]>([]);
-  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[]; search?: string } | null>(null);
   const edges: Edge[] = useMemo(
     () => (ab?.logic.edges ?? []).map((e) => ({ id: e.id, source: e.from, sourceHandle: e.fromPort, target: e.to, targetHandle: e.toPort, animated: false, selected: selEdges.includes(e.id) })),
     [ab, selEdges],
@@ -230,7 +232,7 @@ export function LogicGraph() {
       (k) => kinds.has(k),
     );
     if (!items.length) return;
-    setMenu({ x: pt.clientX, y: pt.clientY, items: [{ heading: 'Add and connect' }, ...items] });
+    setMenu({ x: pt.clientX, y: pt.clientY, items: [{ heading: 'Add and connect' }, ...items], search: 'Find a node…' });
   };
 
   const removeNodes = (ids: string[]) =>
@@ -259,6 +261,37 @@ export function LogicGraph() {
     store().set({ logicSelection: nid });
     focusGraph();
   };
+  const copyNode = (id: string, cut = false) => {
+    const n = ab?.logic.nodes.find((x) => x.id === id);
+    if (!n) return;
+    copyLogicNodes([n]);
+    if (cut) {
+      removeNodes([id]);
+      store().set({ logicSelection: null });
+    }
+  };
+  //Pasted nodes get new ids. Where the original is still on this graph the copy sits just off it, so it doesn't land
+  //exactly on top, otherwise it keeps the position it was copied from (or goes where the menu was opened)
+  const pasteNodes = (list: LogicNode[], at?: { x: number; y: number }) => {
+    if (!ab || !list.length) return false;
+    const first = list[0];
+    const here = ab.logic.nodes.some((x) => x.id === first.id);
+    const dx = at ? at.x - first.x : here ? 30 : 0;
+    const dy = at ? at.y - first.y : here ? 30 : 0;
+    const copies = list.map((n) => ({ ...structuredClone(n), id: uid('lg'), x: Math.round(n.x + dx), y: Math.round(n.y + dy) }));
+    updateLogic((a) => {
+      a.logic.nodes.push(...copies);
+    });
+    store().set({ logicSelection: copies[copies.length - 1].id });
+    setSelEdges([]);
+    focusGraph();
+    return true;
+  };
+  const pasteFromClipboard = (at?: { x: number; y: number }) =>
+    void (navigator.clipboard?.readText?.() ?? Promise.resolve('')).then(
+      (t) => pasteNodes(logicNodesToPaste(t), at),
+      () => pasteNodes(logicNodesToPaste(), at),
+    );
 
   /** Node palette as menu items: categories with their nodes, each calling `pick(kind)`. */
   const paletteItems = (pick: (kind: string) => void, only?: (kind: string) => boolean): MenuItem[] =>
@@ -276,7 +309,8 @@ export function LogicGraph() {
     setMenu({
       x: e.clientX,
       y: e.clientY,
-      items: [{ heading: 'Add node' }, ...paletteItems((kind) => add(kind, at))],
+      items: [{ heading: 'Add node' }, ...paletteItems((kind) => add(kind, at)), { separator: true }, { label: 'Paste', hint: 'Ctrl+V', onClick: () => pasteFromClipboard(at) }],
+      search: 'Find a node…',
     });
   };
 
@@ -324,6 +358,8 @@ export function LogicGraph() {
       });
     items.push(
       { separator: true },
+      { label: 'Cut', hint: 'Ctrl+X', onClick: () => copyNode(id, true) },
+      { label: 'Copy', hint: 'Ctrl+C', onClick: () => copyNode(id) },
       { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate(id) },
       { label: 'Help for this node', onClick: () => openHelp('interaction-nodes', slug(def.label)) },
       { separator: true },
@@ -403,7 +439,20 @@ export function LogicGraph() {
           } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && store().get().logicSelection) {
             e.preventDefault();
             duplicate(store().get().logicSelection!);
+          } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'x') && store().get().logicSelection) {
+            //Leave it alone when there's text selected in a node, so copying that still works
+            if (window.getSelection()?.toString()) return;
+            e.preventDefault();
+            copyNode(store().get().logicSelection!, e.key.toLowerCase() === 'x');
           }
+        }}
+        onPaste={(e) => {
+          //The editor pastes layers onto the artboard from a window listener, so the graph has to keep its pastes to itself
+          const t = e.target as HTMLElement;
+          if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.closest('.cm-editor')) return;
+          e.stopPropagation();
+          e.preventDefault();
+          pasteNodes(logicNodesToPaste(e.clipboardData.getData('text/plain')));
         }}
       >
         <ReactFlow
@@ -432,7 +481,7 @@ export function LogicGraph() {
           <Background gap={16} />
           <Controls showInteractive={false} />
         </ReactFlow>
-        {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
+        {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} search={menu.search} onClose={() => setMenu(null)} />}
         {!ab.logic.nodes.length && (
           <div className="logic-empty">
             <p>

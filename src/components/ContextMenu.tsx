@@ -6,8 +6,18 @@ export type MenuItem =
   | { separator: true }
   | { heading: string };
 
-/** A right-click menu at a screen point, with nested submenus. Closes on pick, Escape or a click outside. */
-export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; items: MenuItem[]; onClose: () => void }) {
+type Leaf = Extract<MenuItem, { onClick: () => void }>;
+
+/** Every pickable item, through the submenus, with the submenu it came from (for its colour and as a hint). */
+function leaves(items: MenuItem[], parent?: { label: string; color?: string }): { item: Leaf; parent?: { label: string; color?: string } }[] {
+  return items.flatMap((it) => ('items' in it ? leaves(it.items, { label: it.label, color: it.color }) : 'onClick' in it && !it.disabled ? [{ item: it, parent }] : []));
+}
+
+/**
+ * A right-click menu at a screen point, with nested submenus. Closes on pick, Escape or a click outside.
+ * `search` puts a filter box at the top (its placeholder): typing flattens every submenu into one list of matches.
+ */
+export function ContextMenu({ x, y, items, onClose, search }: { x: number; y: number; items: MenuItem[]; onClose: () => void; search?: string }) {
   useEffect(() => {
     const down = (e: PointerEvent) => {
       if (!(e.target as Element).closest?.('.ctx-menu')) onClose();
@@ -27,10 +37,95 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
       window.removeEventListener('blur', onClose);
     };
   }, [onClose]);
-  return <MenuList x={x} y={y} items={items} onClose={onClose} />;
+  return search ? <SearchMenu x={x} y={y} items={items} onClose={onClose} placeholder={search} /> : <MenuList x={x} y={y} items={items} onClose={onClose} />;
 }
 
-function MenuList({ x, y, items, onClose, side }: { x: number; y: number; items: MenuItem[]; onClose: () => void; side?: { left: number } }) {
+function SearchMenu({ x, y, items, onClose, placeholder }: { x: number; y: number; items: MenuItem[]; onClose: () => void; placeholder: string }) {
+  const [q, setQ] = useState('');
+  const [active, setActive] = useState(0);
+  const input = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    input.current?.focus({ preventScroll: true });
+  }, []);
+  const term = q.trim().toLowerCase();
+  //Label matches first, then the ones that only match on their description
+  const all = leaves(items);
+  const matches = term
+    ? [
+        ...all.filter((l) => l.item.label.toLowerCase().includes(term) || l.parent?.label.toLowerCase().includes(term)),
+        ...all.filter((l) => !l.item.label.toLowerCase().includes(term) && !l.parent?.label.toLowerCase().includes(term) && l.item.title?.toLowerCase().includes(term)),
+      ]
+    : [];
+  const pick = (l: Leaf) => {
+    onClose();
+    l.onClick();
+  };
+  useEffect(() => {
+    listRef.current?.querySelector('.ctx-item.open')?.scrollIntoView({ block: 'nearest' });
+  }, [active]);
+  const box = (
+    <input
+      ref={input}
+      className="ctx-search"
+      type="search"
+      value={q}
+      placeholder={placeholder}
+      aria-label={placeholder}
+      onChange={(e) => {
+        setQ(e.target.value);
+        setActive(0);
+      }}
+      onKeyDown={(e) => {
+        if (!term) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const n = matches.length;
+          if (n) setActive((a) => (a + (e.key === 'ArrowDown' ? 1 : n - 1)) % n);
+        } else if (e.key === 'Enter' && matches[active]) {
+          e.preventDefault();
+          pick(matches[active].item);
+        }
+      }}
+    />
+  );
+  //The box has to stay at the same spot in the tree whether or not there's a filter, or it remounts and loses focus
+  return (
+    <MenuList
+      x={x}
+      y={y}
+      items={term ? [] : items}
+      onClose={onClose}
+      top={
+        <>
+          {box}
+          {term && <div ref={listRef} role="presentation">
+            {matches.length ? (
+              matches.map((l, i) => (
+                <button
+                  key={i}
+                  role="menuitem"
+                  className={`ctx-item${i === active ? ' open' : ''}`}
+                  title={l.item.title}
+                  onPointerEnter={() => setActive(i)}
+                  onClick={() => pick(l.item)}
+                >
+                  {(l.item.color ?? l.parent?.color) && <span className="ctx-dot" style={{ background: l.item.color ?? l.parent?.color }} />}
+                  <span className="ctx-label">{l.item.label}</span>
+                  {(l.item.hint ?? l.parent?.label) && <span className="ctx-hint">{l.item.hint ?? l.parent?.label}</span>}
+                </button>
+              ))
+            ) : (
+              <div className="ctx-empty">Nothing matches</div>
+            )}
+          </div>}
+        </>
+      }
+    />
+  );
+}
+
+function MenuList({ x, y, items, onClose, side, top }: { x: number; y: number; items: MenuItem[]; onClose: () => void; side?: { left: number }; top?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x, y });
   const [open, setOpen] = useState<{ i: number; x: number; y: number; left: number } | null>(null);
@@ -47,6 +142,7 @@ function MenuList({ x, y, items, onClose, side }: { x: number; y: number; items:
   }, [x, y, side]);
   return (
     <div ref={ref} className="ctx-menu" role="menu" style={{ left: pos.x, top: pos.y }} onContextMenu={(e) => e.preventDefault()}>
+      {top}
       {items.map((it, i) => {
         if ('separator' in it) return <div key={i} className="ctx-sep" />;
         if ('heading' in it) return <div key={i} className="ctx-heading">{it.heading}</div>;

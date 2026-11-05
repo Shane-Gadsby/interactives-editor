@@ -3530,6 +3530,25 @@ kbd {
   margin: 4px 2px;
   background: var(--line);
 }
+.ctx-search {
+  display: block;
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 5px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.ctx-search:focus {
+  outline: 2px solid var(--accent-2);
+  outline-offset: -1px;
+}
+.ctx-empty {
+  padding: 5px 8px;
+  color: var(--muted);
+}
 .ctx-heading {
   padding: 4px 8px 2px;
   color: var(--muted);
