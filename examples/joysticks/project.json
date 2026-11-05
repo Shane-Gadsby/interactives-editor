@@ -1,0 +1,922 @@
+{
+	"format": "interactives",
+	"version": 1,
+	"id": "ex-joysticks",
+	"name": "Joysticks",
+	"created": "2026-11-05T14:36:01.570Z",
+	"updated": "2026-11-05T14:36:01.570Z",
+	"artboards": [
+		{
+			"id": "abneq3m114nmzc",
+			"name": "Eyes",
+			"width": 800,
+			"height": 600,
+			"background": {
+				"type": "solid",
+				"color": "#eef3f8"
+			},
+			"canvasX": 0,
+			"canvasY": 0,
+			"children": [
+				{
+					"id": "nneq3m38nujfp",
+					"type": "ellipse",
+					"name": "Face",
+					"x": 220,
+					"y": 110,
+					"width": 360,
+					"height": 360,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#ffd9a8"
+					},
+					"stroke": null
+				},
+				{
+					"id": "nneq3md9s6ncd",
+					"type": "rect",
+					"name": "Left brow",
+					"x": 285,
+					"y": 168,
+					"width": 90,
+					"height": 12,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#5a3b22"
+					},
+					"stroke": null,
+					"cornerRadius": 6
+				},
+				{
+					"id": "nneq3mfq51509",
+					"type": "rect",
+					"name": "Right brow",
+					"x": 425,
+					"y": 168,
+					"width": 90,
+					"height": 12,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#5a3b22"
+					},
+					"stroke": null,
+					"cornerRadius": 6
+				},
+				{
+					"id": "nneq3m5wjy0qm",
+					"type": "ellipse",
+					"name": "Left eye",
+					"x": 275,
+					"y": 195,
+					"width": 110,
+					"height": 110,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#ffffff"
+					},
+					"stroke": {
+						"paint": {
+							"type": "solid",
+							"color": "#3a2a1a"
+						},
+						"width": 3
+					}
+				},
+				{
+					"id": "nneq3m7b24g0o",
+					"type": "ellipse",
+					"name": "Right eye",
+					"x": 415,
+					"y": 195,
+					"width": 110,
+					"height": 110,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#ffffff"
+					},
+					"stroke": {
+						"paint": {
+							"type": "solid",
+							"color": "#3a2a1a"
+						},
+						"width": 3
+					}
+				},
+				{
+					"id": "nneq3m9czu03t",
+					"type": "ellipse",
+					"name": "Left pupil",
+					"x": 308,
+					"y": 228,
+					"width": 44,
+					"height": 44,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#23303f"
+					},
+					"stroke": null
+				},
+				{
+					"id": "nneq3mb5xikt1",
+					"type": "ellipse",
+					"name": "Right pupil",
+					"x": 448,
+					"y": 228,
+					"width": 44,
+					"height": 44,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#23303f"
+					},
+					"stroke": null
+				},
+				{
+					"id": "nneq3mhahm3q6",
+					"type": "rect",
+					"name": "Mouth",
+					"x": 340,
+					"y": 380,
+					"width": 120,
+					"height": 18,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#b5523b"
+					},
+					"stroke": null,
+					"cornerRadius": 9
+				},
+				{
+					"id": "nneq3mjjgpr2r",
+					"type": "text",
+					"name": "Title",
+					"x": 40,
+					"y": 28,
+					"width": 720,
+					"height": 36,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fontFamily": "\"Open Sans\", system-ui, sans-serif",
+					"fontSize": 26,
+					"fontWeight": 700,
+					"fontStyle": "normal",
+					"lineHeight": 1.3,
+					"letterSpacing": 0,
+					"color": "#1d2733",
+					"align": "center",
+					"verticalAlign": "top",
+					"text": "Eyes that follow the pointer",
+					"autoSize": "height"
+				},
+				{
+					"id": "nneq3mlrxhy7m",
+					"type": "text",
+					"name": "How it works",
+					"x": 60,
+					"y": 488,
+					"width": 680,
+					"height": 48,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fontFamily": "\"Open Sans\", system-ui, sans-serif",
+					"fontSize": 15,
+					"fontWeight": 400,
+					"fontStyle": "normal",
+					"lineHeight": 1.3,
+					"letterSpacing": 0,
+					"color": "#3a4654",
+					"align": "center",
+					"verticalAlign": "top",
+					"text": "Move the pointer around. A joystick on this artboard turns where the pointer is into the positions of two timelines: Look left-right and Look up-down. Select the artboard and open Joysticks to see it.",
+					"autoSize": "height"
+				},
+				{
+					"id": "nneq3mnn98cdk",
+					"type": "button",
+					"name": "Next",
+					"x": 600,
+					"y": 544,
+					"width": 180,
+					"height": 40,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fontFamily": "\"Open Sans\", system-ui, sans-serif",
+					"fontSize": 16,
+					"fontWeight": 700,
+					"fontStyle": "normal",
+					"lineHeight": 1.3,
+					"letterSpacing": 0,
+					"color": "#1e1e1e",
+					"align": "center",
+					"verticalAlign": "middle",
+					"fill": {
+						"type": "solid",
+						"color": "#ffb448"
+					},
+					"stroke": null,
+					"label": "Scrub a timeline →",
+					"cornerRadius": 6
+				}
+			],
+			"timelines": [
+				{
+					"id": "tlneq3mvxbjfsv",
+					"name": "Look left-right",
+					"duration": 1000,
+					"loop": "once",
+					"autoplay": false,
+					"speed": 1,
+					"tracks": [
+						{
+							"id": "trneq3mrym40qo",
+							"nodeId": "nneq3m9czu03t",
+							"prop": "x",
+							"keys": [
+								{
+									"id": "kneq3mp73rue7",
+									"t": 0,
+									"value": 280,
+									"ease": "linear"
+								},
+								{
+									"id": "kneq3mql44htz",
+									"t": 1000,
+									"value": 336,
+									"ease": "linear"
+								}
+							]
+						},
+						{
+							"id": "trneq3muu2wjf6",
+							"nodeId": "nneq3mb5xikt1",
+							"prop": "x",
+							"keys": [
+								{
+									"id": "kneq3msdr0lkx",
+									"t": 0,
+									"value": 420,
+									"ease": "linear"
+								},
+								{
+									"id": "kneq3mt8181av",
+									"t": 1000,
+									"value": 476,
+									"ease": "linear"
+								}
+							]
+						}
+					],
+					"markers": []
+				},
+				{
+					"id": "tlneq3m18qf5i0q",
+					"name": "Look up-down",
+					"duration": 1000,
+					"loop": "once",
+					"autoplay": false,
+					"speed": 1,
+					"tracks": [
+						{
+							"id": "trneq3my6d50jl",
+							"nodeId": "nneq3m9czu03t",
+							"prop": "y",
+							"keys": [
+								{
+									"id": "kneq3mwy5jxms",
+									"t": 0,
+									"value": 200,
+									"ease": "linear"
+								},
+								{
+									"id": "kneq3mxupkwm1",
+									"t": 1000,
+									"value": 256,
+									"ease": "linear"
+								}
+							]
+						},
+						{
+							"id": "trneq3m11z5uyg6",
+							"nodeId": "nneq3mb5xikt1",
+							"prop": "y",
+							"keys": [
+								{
+									"id": "kneq3mzr61ww1",
+									"t": 0,
+									"value": 200,
+									"ease": "linear"
+								},
+								{
+									"id": "kneq3m10qixqis",
+									"t": 1000,
+									"value": 256,
+									"ease": "linear"
+								}
+							]
+						},
+						{
+							"id": "trneq3m14ap7eqv",
+							"nodeId": "nneq3md9s6ncd",
+							"prop": "y",
+							"keys": [
+								{
+									"id": "kneq3m12fdoxs6",
+									"t": 0,
+									"value": 156,
+									"ease": "linear"
+								},
+								{
+									"id": "kneq3m13a3rtas",
+									"t": 1000,
+									"value": 176,
+									"ease": "linear"
+								}
+							]
+						},
+						{
+							"id": "trneq3m17dqzbin",
+							"nodeId": "nneq3mfq51509",
+							"prop": "y",
+							"keys": [
+								{
+									"id": "kneq3m158xp9oj",
+									"t": 0,
+									"value": 156,
+									"ease": "linear"
+								},
+								{
+									"id": "kneq3m16odmz1j",
+									"t": 1000,
+									"value": 176,
+									"ease": "linear"
+								}
+							]
+						}
+					],
+					"markers": []
+				}
+			],
+			"logic": {
+				"nodes": [
+					{
+						"id": "lgneq3m2agfrfr8",
+						"kind": "event.pointer",
+						"x": 80,
+						"y": 80,
+						"params": {
+							"target": "nneq3mnn98cdk",
+							"type": "click"
+						}
+					},
+					{
+						"id": "lgneq3m2bk6pkpg",
+						"kind": "action.artboard",
+						"x": 360,
+						"y": 80,
+						"params": {
+							"artboard": "abneq3m1ahv91lv",
+							"transition": "slideLeft"
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "eneq3m2cr8ce1j",
+						"from": "lgneq3m2agfrfr8",
+						"fromPort": "out",
+						"to": "lgneq3m2bk6pkpg",
+						"toPort": "in"
+					}
+				],
+				"groups": [
+					{
+						"id": "lgneq3m2dnalcku",
+						"label": "Next artboard",
+						"x": 50,
+						"y": 30,
+						"width": 560,
+						"height": 150
+					}
+				]
+			},
+			"clip": true,
+			"joysticks": [
+				{
+					"id": "jsneq3m19h5s3co",
+					"name": "Follow the pointer",
+					"xTimeline": "tlneq3mvxbjfsv",
+					"x": "pointer.x || pointer.y ? pointer.x / artboard.width : 0.5",
+					"yTimeline": "tlneq3m18qf5i0q",
+					"y": "pointer.x || pointer.y ? pointer.y / artboard.height : 0.5"
+				}
+			]
+		},
+		{
+			"id": "abneq3m1ahv91lv",
+			"name": "Scrub a timeline",
+			"width": 800,
+			"height": 600,
+			"background": {
+				"type": "solid",
+				"color": "#1b2a4a"
+			},
+			"canvasX": 900,
+			"canvasY": 0,
+			"children": [
+				{
+					"id": "nneq3m1bxh57dl",
+					"type": "rect",
+					"name": "Sky",
+					"x": 0,
+					"y": 0,
+					"width": 800,
+					"height": 600,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#1b2a4a"
+					},
+					"stroke": null,
+					"cornerRadius": 0
+				},
+				{
+					"id": "nneq3m1deyr1tj",
+					"type": "ellipse",
+					"name": "Sun",
+					"x": 340,
+					"y": 460,
+					"width": 120,
+					"height": 120,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#ff6a3d"
+					},
+					"stroke": null
+				},
+				{
+					"id": "nneq3m1finwaab",
+					"type": "rect",
+					"name": "Ground",
+					"x": 0,
+					"y": 430,
+					"width": 800,
+					"height": 170,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#2f5d3a"
+					},
+					"stroke": null,
+					"cornerRadius": 0
+				},
+				{
+					"id": "nneq3m1h8eviyq",
+					"type": "rect",
+					"name": "Track",
+					"x": 100,
+					"y": 520,
+					"width": 600,
+					"height": 8,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 0.6,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#ffffff"
+					},
+					"stroke": null,
+					"cornerRadius": 4
+				},
+				{
+					"id": "nneq3m1j7ugnam",
+					"type": "rect",
+					"name": "Knob room",
+					"x": 82,
+					"y": 506,
+					"width": 636,
+					"height": 36,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": null,
+					"stroke": null,
+					"cornerRadius": 0
+				},
+				{
+					"id": "nneq3m1l7jkubo",
+					"type": "ellipse",
+					"name": "Knob",
+					"x": 82,
+					"y": 506,
+					"width": 36,
+					"height": 36,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#ffd23f"
+					},
+					"stroke": {
+						"paint": {
+							"type": "solid",
+							"color": "#1d2733"
+						},
+						"width": 3
+					},
+					"draggable": {
+						"axis": "x",
+						"bounds": "nneq3m1j7ugnam"
+					},
+					"ariaLabel": "Time of day"
+				},
+				{
+					"id": "nneq3m1r3apm82",
+					"type": "rect",
+					"name": "Caption panel",
+					"x": 40,
+					"y": 20,
+					"width": 720,
+					"height": 108,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 0.6,
+					"visible": true,
+					"fill": {
+						"type": "solid",
+						"color": "#0b1424"
+					},
+					"stroke": null,
+					"cornerRadius": 12
+				},
+				{
+					"id": "nneq3m1nk9m2kc",
+					"type": "text",
+					"name": "Title",
+					"x": 40,
+					"y": 28,
+					"width": 720,
+					"height": 36,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fontFamily": "\"Open Sans\", system-ui, sans-serif",
+					"fontSize": 26,
+					"fontWeight": 700,
+					"fontStyle": "normal",
+					"lineHeight": 1.3,
+					"letterSpacing": 0,
+					"color": "#ffffff",
+					"align": "center",
+					"verticalAlign": "top",
+					"text": "Drag the knob to scrub a timeline",
+					"autoSize": "height"
+				},
+				{
+					"id": "nneq3m1pbaeo64",
+					"type": "text",
+					"name": "How it works",
+					"x": 60,
+					"y": 72,
+					"width": 680,
+					"height": 48,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fontFamily": "\"Open Sans\", system-ui, sans-serif",
+					"fontSize": 15,
+					"fontWeight": 400,
+					"fontStyle": "normal",
+					"lineHeight": 1.3,
+					"letterSpacing": 0,
+					"color": "#dfe7f1",
+					"align": "center",
+					"verticalAlign": "top",
+					"text": "The knob is the joystick's handle. handle.x is where it sits along the track, 0 at the left to 1 at the right, and that is the position of the Sunrise timeline.",
+					"autoSize": "height"
+				},
+				{
+					"id": "nneq3m1tmxrwco",
+					"type": "button",
+					"name": "Back",
+					"x": 20,
+					"y": 556,
+					"width": 140,
+					"height": 36,
+					"rotation": 0,
+					"scaleX": 1,
+					"scaleY": 1,
+					"originX": 0.5,
+					"originY": 0.5,
+					"opacity": 1,
+					"visible": true,
+					"fontFamily": "\"Open Sans\", system-ui, sans-serif",
+					"fontSize": 16,
+					"fontWeight": 700,
+					"fontStyle": "normal",
+					"lineHeight": 1.3,
+					"letterSpacing": 0,
+					"color": "#1e1e1e",
+					"align": "center",
+					"verticalAlign": "middle",
+					"fill": {
+						"type": "solid",
+						"color": "#ffb448"
+					},
+					"stroke": null,
+					"label": "← Eyes",
+					"cornerRadius": 6
+				}
+			],
+			"timelines": [
+				{
+					"id": "tlneq3m280ye6l2",
+					"name": "Sunrise",
+					"duration": 1000,
+					"loop": "once",
+					"autoplay": false,
+					"speed": 1,
+					"tracks": [
+						{
+							"id": "trneq3m1ynykr7i",
+							"nodeId": "nneq3m1bxh57dl",
+							"prop": "fill.color",
+							"keys": [
+								{
+									"id": "kneq3m1v1ovb6t",
+									"t": 0,
+									"value": "#1b2a4a",
+									"ease": "linear"
+								},
+								{
+									"id": "kneq3m1womyf42",
+									"t": 450,
+									"value": "#e98aa6",
+									"ease": "linear"
+								},
+								{
+									"id": "kneq3m1xrb4qjp",
+									"t": 1000,
+									"value": "#8fd3ff",
+									"ease": "linear"
+								}
+							]
+						},
+						{
+							"id": "trneq3m216ievae",
+							"nodeId": "nneq3m1deyr1tj",
+							"prop": "y",
+							"keys": [
+								{
+									"id": "kneq3m1zom8yes",
+									"t": 0,
+									"value": 460,
+									"ease": "easeOut"
+								},
+								{
+									"id": "kneq3m20pk4aav",
+									"t": 1000,
+									"value": 150,
+									"ease": "easeOut"
+								}
+							]
+						},
+						{
+							"id": "trneq3m24gur8he",
+							"nodeId": "nneq3m1deyr1tj",
+							"prop": "fill.color",
+							"keys": [
+								{
+									"id": "kneq3m224ooviy",
+									"t": 0,
+									"value": "#ff6a3d",
+									"ease": "linear"
+								},
+								{
+									"id": "kneq3m23k883rn",
+									"t": 1000,
+									"value": "#ffd23f",
+									"ease": "linear"
+								}
+							]
+						},
+						{
+							"id": "trneq3m27nbiusp",
+							"nodeId": "nneq3m1finwaab",
+							"prop": "fill.color",
+							"keys": [
+								{
+									"id": "kneq3m25qqj90o",
+									"t": 0,
+									"value": "#1f3a26",
+									"ease": "linear"
+								},
+								{
+									"id": "kneq3m266jwp0i",
+									"t": 1000,
+									"value": "#3f8a4e",
+									"ease": "linear"
+								}
+							]
+						}
+					],
+					"markers": []
+				}
+			],
+			"logic": {
+				"nodes": [
+					{
+						"id": "lgneq3m2elxyypt",
+						"kind": "event.pointer",
+						"x": 80,
+						"y": 80,
+						"params": {
+							"target": "nneq3m1tmxrwco",
+							"type": "click"
+						}
+					},
+					{
+						"id": "lgneq3m2fhfc8ga",
+						"kind": "action.artboard",
+						"x": 360,
+						"y": 80,
+						"params": {
+							"artboard": "abneq3m114nmzc",
+							"transition": "slideRight"
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "eneq3m2guveutw",
+						"from": "lgneq3m2elxyypt",
+						"fromPort": "out",
+						"to": "lgneq3m2fhfc8ga",
+						"toPort": "in"
+					}
+				],
+				"groups": [
+					{
+						"id": "lgneq3m2h3eqkcq",
+						"label": "Back to the eyes",
+						"x": 50,
+						"y": 30,
+						"width": 560,
+						"height": 150
+					}
+				]
+			},
+			"clip": true,
+			"joysticks": [
+				{
+					"id": "jsneq3m29qzqoue",
+					"name": "Time of day",
+					"xTimeline": "tlneq3m280ye6l2",
+					"x": "handle.x",
+					"handle": "nneq3m1l7jkubo",
+					"area": {
+						"x": 100,
+						"y": 506,
+						"width": 600,
+						"height": 36
+					}
+				}
+			]
+		}
+	],
+	"variables": [],
+	"scripts": [],
+	"assets": [],
+	"fonts": [
+		{
+			"family": "Open Sans",
+			"source": "google",
+			"weights": [
+				400,
+				600,
+				700
+			]
+		}
+	],
+	"dataSources": [],
+	"settings": {
+		"startArtboardId": "abneq3m114nmzc",
+		"fit": "contain",
+		"pageBackground": "#111111",
+		"title": "Joysticks",
+		"description": "Two joysticks: eyes that follow the pointer, and a knob that scrubs a timeline.",
+		"scriptSandbox": true
+	}
+}
