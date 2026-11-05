@@ -1194,7 +1194,7 @@ hr.item-sep {
 .workspace {
   height: 100%;
   display: grid;
-  grid-template-columns: 56px var(--left-w, 240px) 1fr var(--right-w, 320px);
+  grid-template-columns: 72px var(--left-w, 240px) 1fr var(--right-w, 320px);
   grid-template-rows: 44px auto 1fr var(--bottom-h);
   grid-template-areas:
     'top top top top'
@@ -1295,7 +1295,20 @@ hr.item-sep {
   padding: 8px 0;
   border-right: 1px solid var(--line);
   background: var(--panel);
+  /* Tools two to a row so it overflows less, and when it does scroll on y the scrollbar never pushes it into an x scroll */
+  overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-width: thin;
+  min-width: 0;
+}
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 28px);
+  gap: 2px;
+  justify-content: center;
+}
+.tool-grid:empty {
+  display: none;
 }
 .toolbar-sep {
   width: 24px;
@@ -2664,6 +2677,8 @@ button.twisty:hover {
   background: none;
   color: var(--muted);
   cursor: pointer;
+  flex: none;
+  white-space: nowrap;
 }
 .a11y-chip.on {
   color: var(--text);
@@ -6110,7 +6125,7 @@ code {
 }
 
 /* the review page */
-.review {
+.review-page {
   display: flex;
   flex-direction: column;
   height: 100%;

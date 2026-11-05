@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The tools column holds two tools per row (it's a little wider), and when it still has to scroll it scrolls only up and down, never sideways.
+- Accessibility panel: the **to look at** chip is one row like the others. The Review page's `.review` class was styling it (and every other `.review` dot) as a full-height column; that class is now `.review-page`.
 - **Play sound** nodes in the graph show the sound's name instead of its id.
 - Copy, cut and paste for interaction nodes: <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd> with a node selected in the graph, and **Cut** / **Copy** / **Paste** in its right-click menus. A graph paste no longer drops the artboard's copied layers onto the artboard. Pasted nodes keep their settings, not their connections.
 - The graph's **Add node** and **Add and connect** menus have a filter box: type to narrow every category to matching nodes (by name, then description), arrows and Enter to pick.

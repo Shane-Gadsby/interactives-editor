@@ -117,7 +117,7 @@ function ReviewPage({ token, data }: { token: string; data: Loaded }) {
 
   const me = c.me;
   return (
-    <div className="review">
+    <div className="review-page">
       <header className="review-head">
         <img src="./favicon.svg" alt="" width={22} height={22} />
         <h1 title={data.name}>{data.name}</h1>

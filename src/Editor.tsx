@@ -902,8 +902,10 @@ export function Toolbar() {
   const bones = <IconButton key="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={showBones ? 'Hide bones on the canvas (Shift+J)' : 'Show bones on the canvas (Shift+J)'} onClick={() => store().set({ showBones: !showBones })} />;
   return (
     <nav className="toolbar">
-      {btn('select')}
-      {btn('hand')}
+      <div className="tool-grid">
+        {btn('select')}
+        {btn('hand')}
+      </div>
       {TOOL_GROUPS.map((g) => {
         const isOpen = !!open[g.id];
         const activeHere = g.tools.includes(tool);
@@ -913,22 +915,26 @@ export function Toolbar() {
               <span className="section-chev" aria-hidden="true" />
               {g.label}
             </button>
-            {isOpen ? (
-              <>
-                {g.tools.map(btn)}
-                {g.id === 'media' && image}
-                {g.id === 'web' && <AddQuestion key="q" />}
-                {g.id === 'rig' && bones}
-              </>
-            ) : (
-              activeHere && btn(tool)
-            )}
+            <div className="tool-grid">
+              {isOpen ? (
+                <>
+                  {g.tools.map(btn)}
+                  {g.id === 'media' && image}
+                  {g.id === 'web' && <AddQuestion key="q" />}
+                  {g.id === 'rig' && bones}
+                </>
+              ) : (
+                activeHere && btn(tool)
+              )}
+            </div>
           </div>
         );
       })}
       <div className="toolbar-fill" />
-      {btn('comment')}
-      <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
+      <div className="tool-grid">
+        {btn('comment')}
+        <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
+      </div>
     </nav>
   );
 }
