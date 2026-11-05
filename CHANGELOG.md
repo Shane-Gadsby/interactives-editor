@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Save user data** / **Load user data** nodes, kept per learner per course in `lti-analytics.interactives-activity-user-data` through the learner page (new `/learn/:token/user-data` routes), and in the browser elsewhere. The graph's settings show a tick list for the variables.
+- **Before activity loads** / **On activity load** events in the graph palette.
+- The projects list with no session now lists only projects nobody owns, instead of everyone's until sessions are enforced. Admins still see only their own until they press F9.
+
+Deploying: restart the server, and apply the new `interactives-activity-user-data` index in `suite-libs/indexes.js` on the box before the nodes are used there (it is the upsert key).
+
 ## 0.5.0 (beta), 2026-11-04
 
 The first beta. The full tour is in the README under **What's in 0.5**, and every feature has a page in the in-app help (F1). The Welcome page has **Getting started as a beta tester**: what to try first, how to report a problem (with the version from the (i) icon) and the known limits.

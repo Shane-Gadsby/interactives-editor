@@ -195,6 +195,7 @@ export class FakeDb {
   comments = new FakeCollection();
   'comment-notices' = new FakeCollection();
   'interactives-user-data' = new FakeCollection();
+  'interactives-activity-user-data' = new FakeCollection();
   ingest = new FakeCollection();
   'user-lookup' = new FakeCollection();
 }

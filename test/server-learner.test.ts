@@ -27,7 +27,7 @@ beforeEach(async () => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'trace').mockImplementation(() => {});
   process.env.SUITE_SESSION_ENFORCE = '';
-  for (const c of [h.db.projects, h.db.revisions, h.db.prefs, h.db.libraries, h.db['interactives-user-data']]) c.docs = [];
+  for (const c of [h.db.projects, h.db.revisions, h.db.prefs, h.db.libraries, h.db['interactives-user-data'], h.db['interactives-activity-user-data']]) c.docs = [];
   await h.call('PUT', '/api/projects/prlearn001', { user: ann, json: { project: project('prlearn001'), rev: 0 } });
   token = (await h.call('PUT', '/api/projects/prlearn001/share', { user: ann, body: '<html><body>shared</body></html>', type: 'text/plain' })).json.share.token;
 });
@@ -159,7 +159,60 @@ describe('learner routes', () => {
   });
 });
 
+describe('user data (Save user data / Load user data)', () => {
+  const kept = () => h.db['interactives-activity-user-data'].docs;
+  const saveUD = (user: User | null, variables: unknown, t = token) => h.call('PUT', `/learn/${t}/user-data`, { user, json: { variables } });
+  const loadUD = (user: User | null, names: string, t = token) => h.call('GET', `/learn/${t}/user-data?names=${encodeURIComponent(names)}`, { user });
+
+  it("keeps what a flow saves for the session's learner and course, apart from progress, and merges later saves", async () => {
+    expect((await saveUD(sam, { answer: 'blue', tries: 2 })).json).toEqual({ available: true, ok: true });
+    expect((await saveUD(sam, { tries: 3 })).json.ok).toBe(true);
+    expect(kept()).toHaveLength(1);
+    expect(kept()[0]).toMatchObject({ project: 'prlearn001', username: 'sam', course: 'MAT1000_2026_S1', name: 'Sam S' });
+    expect(records()).toHaveLength(0);
+    expect((await loadUD(sam, 'answer,tries,never')).json).toEqual({ available: true, variables: { answer: 'blue', tries: 3 } });
+  });
+
+  it("is one record per person per course, and nobody else's", async () => {
+    await saveUD(lee, { answer: 'maths' });
+    await saveUD(lee2, { answer: 'physics' });
+    expect((await loadUD(lee, 'answer')).json.variables).toEqual({ answer: 'maths' });
+    expect((await loadUD(lee2, 'answer')).json.variables).toEqual({ answer: 'physics' });
+    expect((await loadUD(sam, 'answer')).json.variables).toEqual({});
+  });
+
+  it('keeps nothing without a session, so the player uses the browser', async () => {
+    expect((await saveUD(null, { a: 1 })).json).toEqual({ available: false });
+    expect((await loadUD(null, 'a')).json).toEqual({ available: false });
+    expect(kept()).toHaveLength(0);
+  });
+
+  it('turns away the wrong shape, names that are not variables, and too much', async () => {
+    expect((await saveUD(sam, [1, 2])).status).toBe(400);
+    expect((await saveUD(sam, { 'a.b': 1, 'has space': 2 })).status).toBe(400);
+    expect((await saveUD(sam, { __proto__: 1 } as unknown)).status).toBe(400);
+    expect((await saveUD(sam, { big: 'x'.repeat(70 * 1024) })).status).toBe(413);
+    expect(kept()).toHaveLength(0);
+    await saveUD(sam, { ok: 1 });
+    expect((await loadUD(sam, 'ok,a.b,__proto__')).json.variables).toEqual({ ok: 1 });
+  });
+
+  it('only works while the share link is on, and goes when the project does', async () => {
+    await saveUD(sam, { a: 1 });
+    expect((await saveUD(sam, { a: 1 }, 'nosuchtokennosuchtoken1')).status).toBe(404);
+    await h.call('DELETE', '/api/projects/prlearn001', { user: ann });
+    expect(kept()).toHaveLength(0);
+  });
+});
+
 describe('the learner page', () => {
+  it('passes user data requests on to the user-data routes', async () => {
+    const r = await h.call('GET', `/play/${token}`);
+    expect(r.text).toContain("m.op === 'userdata-save'");
+    expect(r.text).toContain("call('PUT', 'user-data'");
+    expect(r.text).toContain("'user-data?names='");
+  });
+
   it('frames the share link in its sandbox, with a nonce script and a locked-down policy', async () => {
     const r = await h.call('GET', `/play/${token}`);
     expect(r.status).toBe(200);

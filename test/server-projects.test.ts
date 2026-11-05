@@ -214,9 +214,12 @@ describe('loading and listing', () => {
     expect((await h.call('GET', '/api/projects', { user: pat })).json).toHaveLength(0);
   });
 
-  it('shows everything when there is no session and sessions are not enforced yet', async () => {
+  it('with no session lists only projects nobody owns, even when sessions are not enforced yet', async () => {
     await put('prdev00001', project('prdev00001'), ann);
-    expect((await h.call('GET', '/api/projects')).json).toHaveLength(1);
+    await put('prdev00002', project('prdev00002'), null);
+    expect((await h.call('GET', '/api/projects')).json.map((p: { id: string }) => p.id)).toEqual(['prdev00002']);
+    //?all=1 needs a power user, not just the absence of anyone to check
+    expect((await h.call('GET', '/api/projects?all=1')).json.map((p: { id: string }) => p.id)).toEqual(['prdev00002']);
   });
 });
 
