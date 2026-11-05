@@ -69,7 +69,7 @@ const TYPE_ICON: Record<string, IconName> = {
 };
 
 
-function Layers() {
+export function Layers() {
   const s = useEditor((st) => ({ project: st.project, activeArtboardId: st.activeArtboardId, selection: st.selection, artboardSelected: st.artboardSelected }));
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
@@ -443,7 +443,7 @@ function DesignFiles() {
   );
 }
 
-function Assets() {
+export function Assets() {
   const s = useEditor((st) => ({ project: st.project, activeArtboardId: st.activeArtboardId }));
   //Thumbnails for files that arrive after the list (someone else's upload, fetched by useRemoteAssets)
   useSyncExternalStore(

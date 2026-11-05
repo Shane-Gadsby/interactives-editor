@@ -5373,8 +5373,8 @@ You see your own projects and the ones other people have invited you to collabor
     id: "interface",
     title: "The editor at a glance",
     group: "Getting started",
-    summary: "Top bar, tools, Layers and Assets, canvas, Inspector, bottom tabs and Preview.",
-    keywords: "layout panels toolbar inspector layers dock ui top bar save live history undo zoom preview debug tabs tour",
+    summary: "Top bar, tools, Layers and Assets, canvas, Inspector, bottom tabs, arranging the panels, and Preview.",
+    keywords: "layout panels toolbar inspector layers dock undock float floating window drag tab rearrange move panel reset layout ui top bar save live history undo zoom preview debug tabs tour",
     body: `![The editor with a project open.](help/editor-overview.png)
 
 ## Top bar
@@ -5390,7 +5390,7 @@ From left to right:
 - **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**.
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
-## Tool bar (left edge)
+## Tool bar (left edge, unless you move it)
 **Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## What the pointer shows
@@ -5415,7 +5415,17 @@ All artboards side by side. See [Moving around the canvas](canvas). Right-click 
 Settings for the selection. A layer's settings start with **Layer** (name, position, size, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard and its **Responsive**, **Steps**, **Joysticks**, **Blends** and **Bones** sections, then the **Project** settings and the **Fonts**. The Inspector starts 320 px wide. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
 
 ## Bottom panel
-**Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility**, **Insights**, **Public interface**, **Themes** and **Usage**. A project made from a template also has a **Checklist** tab. Click a tab to open it, click it again to close it, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker), [Insights](insights), [Public interface](public-interface), [Themes](themes), [Usage](usage) and [Templates](templates#use-a-template).
+**Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility**, **Insights**, **Public interface**, **Themes** and **Usage**. A project made from a template also has a **Checklist** tab. Click a tab to open it, click the open one again to fold the bottom panel down to its tabs, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker), [Insights](insights), [Public interface](public-interface), [Themes](themes), [Usage](usage) and [Templates](templates#use-a-template).
+
+## Arranging the panels
+Every panel can go anywhere: the left, right or bottom area, or a window of its own floating over the canvas. Drag a panel by its tab.
+- Onto another area's tabs: it docks there, in the gap you drop it in (a line shows where). Drag along its own tabs to change their order.
+- Onto the canvas: it opens in its own window there (an outline shows where). While you drag, **Dock left**, **Dock right** and **Dock at the bottom** strips appear on the canvas's edges, so an area can be docked into even when nothing is in it yet.
+- Onto a floating window's tabs: it joins that window.
+
+A floating window moves by its title bar and resizes from its bottom-right corner. Its **×** closes it and sends its panels back to where they started. An area nothing is docked in takes no room.
+
+Right-click a tab for **Dock on the left / right / at the bottom**, **Float in its own window** and **Reset panel layout** (everything back where it started). Right-click the tool bar to put it **On the left**, **On the right** or **Floating** (drag a floating tool bar by the strip along its top). The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
 **Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. The **Debug** panel (on by default) shows:

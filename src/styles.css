@@ -1241,6 +1241,182 @@ hr.item-sep {
     'tools left stage right'
     'bottom bottom bottom bottom';
 }
+/* The tool rail docked on the right, or floating (then it takes no column) */
+.workspace.tools-right {
+  grid-template-columns: var(--left-w, 240px) 1fr var(--right-w, 320px) 72px;
+  grid-template-areas:
+    'top top top top'
+    'banner banner banner banner'
+    'left stage right tools'
+    'bottom bottom bottom bottom';
+}
+.workspace.tools-right .toolbar {
+  border-right: 0;
+  border-left: 1px solid var(--line);
+}
+.workspace.tools-float {
+  grid-template-columns: var(--left-w, 240px) 1fr var(--right-w, 320px);
+  grid-template-areas:
+    'top top top'
+    'banner banner banner'
+    'left stage right'
+    'bottom bottom bottom';
+}
+
+/* ---------------------------------------------------------------- docking (components/Dock.tsx) */
+.dock-zone {
+  min-width: 0;
+  overflow: hidden;
+}
+.dock-right {
+  grid-area: right;
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.dock-body {
+  display: flex;
+  flex-direction: column;
+}
+.dock-body > .inspector,
+.dock-body > .left-panel {
+  border: 0;
+  flex: 1;
+}
+.dock-tabs {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  white-space: nowrap;
+  align-items: center;
+}
+.dock-tabs button {
+  flex: none;
+  touch-action: none;
+}
+.dock-tabs button.dragging {
+  opacity: 0.4;
+}
+.dock-tabs.drop-over {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.dock-tabs button.drop-before {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.dock-tabs .drop-end {
+  flex: none;
+  width: 3px;
+  align-self: stretch;
+  background: var(--accent);
+}
+body.dock-dragging,
+body.dock-dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+.dock-edge {
+  position: fixed;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: auto;
+}
+.dock-edge.left,
+.dock-edge.right {
+  writing-mode: vertical-rl;
+}
+.dock-edge.over {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-style: solid;
+}
+.dock-float-ghost {
+  position: fixed;
+  z-index: 69;
+  width: 380px;
+  height: 320px;
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  pointer-events: none;
+}
+.dock-drag-tab {
+  position: fixed;
+  z-index: 71;
+  padding: 4px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.3);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.dock-float {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 12px 34px rgb(0 0 0 / 0.35);
+  overflow: hidden;
+}
+.dock-float.front {
+  z-index: 61;
+}
+.dock-float-head {
+  flex: none;
+  cursor: move;
+  background: var(--panel-2);
+}
+.dock-float-head .dock-tabs {
+  border-bottom: 1px solid var(--line);
+}
+.dock-float-close {
+  margin: 0 4px;
+}
+.dock-float .dock-body {
+  flex: 1;
+  min-height: 0;
+}
+.dock-float-size {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, var(--line-2) 50%, var(--line-2) 60%, transparent 60%, transparent 72%, var(--line-2) 72%, var(--line-2) 82%, transparent 82%);
+}
+.dock-tools-float {
+  width: auto;
+  height: auto;
+  max-height: calc(100vh - 20px);
+}
+.dock-tools-float .toolbar {
+  grid-area: auto;
+  border-right: 0;
+  min-width: 72px;
+  max-height: calc(100vh - 40px);
+}
+.dock-tools-grip {
+  flex: none;
+  height: 12px;
+  cursor: move;
+  background: repeating-linear-gradient(90deg, var(--line-2) 0 2px, transparent 2px 5px) center / 28px 4px no-repeat, var(--panel-2);
+}
 .topbar {
   grid-area: top;
   display: flex;

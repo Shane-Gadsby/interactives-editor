@@ -133,7 +133,7 @@ export function Canvas() {
     editingTextId: st.editingTextId,
     focusId: st.focusId,
     showBones: st.showBones,
-    bottomTab: st.bottomTab,
+    timelineShown: st.timelineShown,
     heat: st.heat,
     activeTimelineId: st.activeTimelineId,
     playhead: st.playhead,
@@ -195,7 +195,7 @@ export function Canvas() {
   // Library copies that only back instances stay off the canvas (see canvasHidden)
   const onCanvas = useMemo(() => project.artboards.filter((a) => !a.canvasHidden), [project.artboards]);
   const baseActive = getArtboard(project, s.activeArtboardId);
-  const timeline = s.bottomTab === 'timeline' ? baseActive?.timelines.find((t) => t.id === s.activeTimelineId) ?? null : null;
+  const timeline = s.timelineShown ? baseActive?.timelines.find((t) => t.id === s.activeTimelineId) ?? null : null;
   // While a timeline is open the canvas shows its frame at the playhead, so outlines and handles follow that frame too.
   // Constrained layers are drawn where their constraints put them, so their outlines go there too.
   const active = useMemo(() => {
@@ -1181,7 +1181,7 @@ export function Canvas() {
   /** The layer as the canvas shows it while recording (its frame at the playhead); otherwise as it is. */
   function recordedNode(n: PathNode): PathNode {
     const st = store().get();
-    if (!(st.recording && st.bottomTab === 'timeline' && st.activeTimelineId) || !active) return n;
+    if (!(st.recording && st.timelineShown && st.activeTimelineId) || !active) return n;
     const shown = locate(active, n.id)?.node;
     return shown?.type === 'path' ? shown : n;
   }
@@ -1208,7 +1208,7 @@ export function Canvas() {
     if (!bab) return null;
     const base = getArtboard(st.project, bab.id) ?? bab;
     const p = local(base, w);
-    const recording = st.recording && st.bottomTab === 'timeline' && !!st.activeTimelineId;
+    const recording = st.recording && st.timelineShown && !!st.activeTimelineId;
     const src = recording && active && active.id === base.id ? active : base;
     // The selected layer is tried first, so its edge wins over layers on top of it
     const cands: SceneNode[] = [];

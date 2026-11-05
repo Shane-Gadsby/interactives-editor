@@ -98,7 +98,7 @@ export function Inspector() {
     selection: st.selection,
     artboardSelected: st.artboardSelected,
     activeArtboardId: st.activeArtboardId,
-    bottomTab: st.bottomTab,
+    timelineShown: st.timelineShown,
     activeTimelineId: st.activeTimelineId,
     playhead: st.playhead,
     recording: st.recording,
@@ -108,7 +108,7 @@ export function Inspector() {
   const nodes = s.selection.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
   return (
     <aside className="inspector">
-      {s.recording && s.bottomTab === 'timeline' && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
+      {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
       {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />}
     </aside>
   );
@@ -124,14 +124,14 @@ export function useSetter(ids: string[]) {
 export function useShown(node: SceneNode) {
   const st = store().get();
   const ab = store().artboard();
-  const tl = st.bottomTab === 'timeline' ? ab?.timelines.find((t) => t.id === st.activeTimelineId) : undefined;
+  const tl = st.timelineShown ? ab?.timelines.find((t) => t.id === st.activeTimelineId) : undefined;
   return (prop: string): unknown => valueAt(tl, node, prop, st.playhead);
 }
 
 /** Keys the property at the playhead, for every layer in `ids` (the selection the field edits; just `node` without it). */
 export function KeyButton({ node, prop, ids }: { node: SceneNode; prop: string; ids?: string[] }) {
-  const s = useEditor((st) => ({ bottomTab: st.bottomTab, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
-  if (s.bottomTab !== 'timeline' || !animatableProp(prop)) return null;
+  const s = useEditor((st) => ({ timelineShown: st.timelineShown, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
+  if (!s.timelineShown || !animatableProp(prop)) return null;
   const ab = store().artboard();
   const tl = ab?.timelines.find((t) => t.id === s.tl);
   const track = tl?.tracks.find((t) => t.nodeId === node.id && t.prop === prop);
@@ -702,8 +702,8 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
 }
 
 export function KeyRow({ node, prop, ids }: { node: SceneNode; prop: string; ids?: string[] }) {
-  const s = useEditor((st) => st.bottomTab);
-  if (s !== 'timeline') return null;
+  const shown = useEditor((st) => st.timelineShown);
+  if (!shown) return null;
   return (
     <div className="key-row">
       <span className="muted small">Animate {(ANIMATABLE_PROPS.find((a) => a.prop === prop)?.label ?? prop).toLowerCase()}</span>
@@ -958,8 +958,8 @@ function ConvertToPath({ node }: { node: SceneNode }) {
 
 /** Shape morphing: key every point of the path at the playhead. */
 function ShapeKeys({ node }: { node: SceneNode }) {
-  const s = useEditor((st) => ({ bottomTab: st.bottomTab, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
-  const tl = s.bottomTab === 'timeline' ? store().artboard()?.timelines.find((t) => t.id === s.tl) : undefined;
+  const s = useEditor((st) => ({ timelineShown: st.timelineShown, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
+  const tl = s.timelineShown ? store().artboard()?.timelines.find((t) => t.id === s.tl) : undefined;
   const tracks = tl ? pointTracks(tl, node.id) : [];
   const at = tl ? keyTime(tl, s.playhead) : Math.round(s.playhead);
   const onKey = tracks.some((t) => t.keys.some((k) => Math.abs(k.t - at) < 1));
