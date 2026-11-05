@@ -73,7 +73,7 @@ export function LinkChanges() {
       <div className="modal dialog link-dialog link-changes" role="dialog" aria-modal="true" aria-labelledby="link-changes-title" ref={box}>
         <header>
           <strong id="link-changes-title">{waiting.length === 1 ? 'A linked file has changed' : `${waiting.length} linked files have changed`}</strong>
-          <HelpLink topic="import" anchor="linking-design-files-instead-of-embedding-them" />
+          <HelpLink topic="import" anchor="updating-a-design-file" />
         </header>
         <div className="dialog-body">
           <p className="dialog-message">Pick which ones to bring in. Your own edits to their layers are kept.</p>

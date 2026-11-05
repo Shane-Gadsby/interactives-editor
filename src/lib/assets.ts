@@ -1,5 +1,5 @@
 import { uid, type Asset } from 'interactives-player';
-import { listAssetBlobs, putAsset } from './db';
+import { getAsset, listAssetBlobs, putAsset } from './db';
 
 /** Blob URLs for the open project's assets, so the canvas can show them. */
 class AssetUrls {
@@ -19,6 +19,30 @@ class AssetUrls {
     if (old) URL.revokeObjectURL(old);
     this.urls.set(id, URL.createObjectURL(blob));
     this.bump();
+  }
+
+  has = (id: string): boolean => this.urls.has(id);
+
+  private fetching = new Set<string>();
+
+  /**
+   * Fetch the assets the document names that this tab has no copy of: the ones someone else added (or replaced) during
+   * a live session, which arrive as ops with only the record. Each is asked for once at a time.
+   */
+  async ensure(projectId: string, ids: string[]): Promise<void> {
+    const need = ids.filter((id) => !this.urls.has(id) && !this.fetching.has(id));
+    if (!need.length) return;
+    for (const id of need) this.fetching.add(id);
+    await Promise.all(
+      need.map(async (id) => {
+        try {
+          const blob = await getAsset(projectId, id);
+          if (blob && !this.urls.has(id)) this.register(id, blob);
+        } finally {
+          this.fetching.delete(id);
+        }
+      }),
+    );
   }
 
   /** Where to fetch an asset that has no blob URL: the review page loads them straight from the server by its link. */
@@ -111,4 +135,24 @@ export function videoSize(url: string): Promise<{ width: number; height: number 
     v.onerror = () => resolve({ width: 320, height: 180 });
     v.src = url;
   });
+}
+
+/**
+ * Point every reference to one asset id at another, anywhere in a document (asset ids are random and unique, so a
+ * string equal to one is a reference to it). Used to replace an asset's file under a new id: see replaceAssetFile.
+ */
+export function swapAssetId<T>(doc: T, oldId: string, newId: string): T {
+  // Only the matching strings are written, so an immer draft only copies the branches that really change
+  const walk = (v: unknown): unknown => {
+    if (v === oldId) return newId;
+    if (v && typeof v === 'object') {
+      const o = v as Record<string, unknown>;
+      for (const k of Object.keys(o)) {
+        const r = walk(o[k]);
+        if (r !== o[k]) o[k] = r;
+      }
+    }
+    return v;
+  };
+  return walk(doc) as T;
 }

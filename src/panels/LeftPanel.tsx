@@ -1,12 +1,13 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from 'react';
 import { createNode, isContainer, nodeTypeLabel, type Artboard, type SceneNode } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { Icons, type IconName } from '../components/icons';
 import { IconButton } from '../components/ui';
 import { confirmDialog } from '../components/dialogs';
 import { assetKind, assetUrls } from '../lib/assets';
-import { insertFiles, pickFiles } from '../lib/insert';
-import { ANIMATION_ACCEPT, chooseLinking, importAnimationFile } from '../lib/importers';
+import { acceptFor, insertFiles, pickFiles, replaceAssetFile } from '../lib/insert';
+import { ANIMATION_ACCEPT, chooseLinking, importAnimationFile, updateFromFile } from '../lib/importers';
+import { KIND_LABEL, linksOf } from '../lib/links';
 import { getArtboard, locate } from '../store/doc';
 import { deleteAsset } from '../lib/db';
 import { analyzeUsage, unusedAssetIds } from '../lib/dependencies';
@@ -402,8 +403,53 @@ const writeLocal = (k: string, v: string) => {
 };
 const kb = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
+/** The design files (Photoshop, Illustrator, ...) artboards were imported from, each with Update from file. */
+function DesignFiles() {
+  const project = useEditor((st) => st.project);
+  const files = useMemo(() => [...linksOf(project).entries()], [project]);
+  const [busy, setBusy] = useState<string | null>(null);
+  if (!files.length) return null;
+  return (
+    <div className="design-files">
+      <div className="design-files-title">Design files</div>
+      {files.map(([linkId, f]) => (
+        <div key={linkId} className="design-file-row">
+          <div className="asset-row-text">
+            <div className="asset-name" title={f.fileName}>
+              {f.fileName}
+            </div>
+            <div className="asset-meta">
+              {KIND_LABEL[f.kind] ?? f.kind} · {f.artboards.length === 1 ? f.artboards[0].name : `${f.artboards.length} artboards`}
+            </div>
+          </div>
+          <button
+            className="btn small"
+            disabled={busy === linkId}
+            title={`Pick the new version of ${f.fileName}. What changed in it comes in, and the edits made here are kept`}
+            onClick={async () => {
+              setBusy(linkId);
+              try {
+                await updateFromFile(linkId);
+              } finally {
+                setBusy(null);
+              }
+            }}
+          >
+            {busy === linkId ? 'Updating…' : 'Update…'}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Assets() {
   const s = useEditor((st) => ({ project: st.project, activeArtboardId: st.activeArtboardId }));
+  //Thumbnails for files that arrive after the list (someone else's upload, fetched by useRemoteAssets)
+  useSyncExternalStore(
+    (fn) => assetUrls.subscribe(fn),
+    () => assetUrls.version,
+  );
   const ab = getArtboard(s.project, s.activeArtboardId);
   const center = ab ? { x: ab.width / 2, y: ab.height / 2 } : null;
   const [view, setView] = useState<'grid' | 'list'>(() => (readLocal(ASSET_VIEW_KEY, 'grid') === 'list' ? 'list' : 'grid'));
@@ -487,6 +533,10 @@ function Assets() {
       { artboardId: ab.id },
     );
   };
+  const replace = async (a: (typeof assets)[number]) => {
+    const [file] = await pickFiles(acceptFor(a.mime, a.name), false);
+    if (file) await replaceAssetFile(a.id, file);
+  };
   const setViewKeep = (v: 'grid' | 'list') => {
     setView(v);
     writeLocal(ASSET_VIEW_KEY, v);
@@ -520,6 +570,7 @@ function Assets() {
         <Icons.upload width={14} /> Upload files
       </button>
       <p className="hint">Images, video, audio, fonts and data files (JSON/CSV/TSV/text, used from the Data tab). Drop files here to add them, or on the canvas to place them.</p>
+      <DesignFiles />
       {assets.length > 0 && (
         <div className="asset-toolbar">
           <div className="seg">
@@ -589,6 +640,11 @@ function Assets() {
                   Place
                 </button>
               )}
+              <IconButton
+                icon={<Icons.upload width={13} />}
+                title={`Replace with a new version of the file. Everything that uses “${a.name}” shows the new one`}
+                onClick={(e) => (e?.stopPropagation(), void replace(a))}
+              />
               <IconButton icon={<Icons.trash width={13} />} title="Delete asset" onClick={(e) => (e?.stopPropagation(), void remove(a.id))} />
             </div>
           );

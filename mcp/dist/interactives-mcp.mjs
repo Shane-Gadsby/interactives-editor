@@ -5536,7 +5536,6 @@ The people who make the product, as counts and lists of errors. If you are one o
 | **Delete asset**, **Delete N assets**, **Remove unused assets** | Deleting from the [Assets panel](assets) or the [Usage](usage) tab. They list the files and warn about any still in use |
 | **Delete timeline**, **Delete script** | The bin beside a timeline or script |
 | **New variable** | Choosing **+ Create new variable…** in a node's settings |
-| **Import design file** | Dropping or picking Photoshop, Illustrator, PDF, AutoCAD, VectorCraft or PhotoCraft files: **Link** or **Embed** each one. See [Importing](import#linking-design-files-instead-of-embedding-them) |
 | **Restore version** | Restoring from the [revision history](live-editing#revision-history) |
 | **Turn off share link** | Stopping a [share link](export#share-link) |
 
@@ -5883,7 +5882,10 @@ A unit halfway into the range gets half of each change. Several modifiers stack,
 - Or drop files on the canvas, or paste them. Dropped pictures and video are also placed on the artboard where you dropped them.
 - Font files (\`.woff\`, \`.woff2\`, \`.ttf\`, \`.otf\`) are added to the project's fonts as well, and a message tells you.
 - Data files (JSON, CSV, TSV, text) are used from the **Data** tab. See [Data sources](data-sources).
-- Design files (\`.psd\`, \`.ai\`, \`.pdf\`, \`.dxf\`) aren't stored as assets: they become new artboards. See [Importing](import).
+- Design files (\`.psd\`, \`.ai\`, \`.pdf\`, \`.dxf\`) aren't stored as assets: they become new artboards. They are listed under **Design files** at the top of the panel, each with **Update…** to bring in a new version. See [Updating a design file](import#updating-a-design-file).
+
+## Replacing a file
+The **↑** button on an asset (beside the bin) replaces its file with a new version of the same kind: a new picture, sound, video, font or data file. Everything that uses it (layers, fills, **Play sound** actions, timeline audio, fonts, data sources) shows the new file, and one undo puts the old one back. An image or video layer's inspector has **Replace file…** for the same thing.
 
 ## Looking at them
 - **Thumbnails** shows a picture for each asset. Drag the slider beside it to make the thumbnails bigger or smaller.
@@ -7504,8 +7506,8 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
     title: "Importing Lottie, Rive (.riv and .rev), Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and SVG",
     group: "Import and export",
     summary: "Bring in Lottie JSON / dotLottie, Rive .riv and Rive editor .rev files, Photoshop .psd files, Illustrator .ai files, PDFs, AutoCAD DXF (and what to do with DWG), VectorCraft .vectorcraft and PhotoCraft .pcraft files, SVG and project packages.",
-    keywords: "import vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv rev editor project backup svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update changes reconnect",
-    body: `| File | Becomes | Can be linked |
+    keywords: "import vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv rev editor project backup svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update new version source file changes reconnect",
+    body: `| File | Becomes | Update from file |
 |---|---|---|
 | Lottie (\`.json\`, \`.lottie\`) | An artboard and a timeline | No |
 | Rive (\`.riv\`) | An artboard for each Rive artboard, with timelines, state machines and bindings | No |
@@ -7603,7 +7605,7 @@ A **DXF** file becomes one artboard of editable vector layers, named after the f
 
 Not carried over, and listed in the report: hatch pattern lines (a pattern hatch is a light tint of its colour), images, 3D solids and surfaces, multileaders, external references, infinite lines, mesh surfaces and proxy objects.
 
-**DWG files** (the AutoCAD drawing format itself) can't be read directly: you'll see "DWG version AC1032 (AutoCAD 2018 and later): save it as DXF from your CAD program". In AutoCAD, BricsCAD, DraftSight, LibreCAD and similar, use **File > Save As > DXF** (any version; R2000 or later keeps the most) and import that file. Like Photoshop and Illustrator files, a DXF can be linked and watched for changes.
+**DWG files** (the AutoCAD drawing format itself) can't be read directly: you'll see "DWG version AC1032 (AutoCAD 2018 and later): save it as DXF from your CAD program". In AutoCAD, BricsCAD, DraftSight, LibreCAD and similar, use **File > Save As > DXF** (any version; R2000 or later keeps the most) and import that file. Like Photoshop and Illustrator files, a DXF can be updated later with **Update from file…**.
 
 ## VectorCraft (.vectorcraft)
 A VectorCraft file (and the older \`.drawcraft\` name) is read as editable vector art. Each artboard in the file becomes an artboard (one artboard is named after the file, several are named *file - Artboard name*), holding the artwork that touches it.
@@ -7630,8 +7632,12 @@ Not carried over, and listed in the report: adjustment layers, other layer style
 ## SVG
 Drop an SVG file on the canvas, paste it, or pick it with the **Image** tool. It becomes a group of editable vector layers: shapes and paths (with their transforms applied), groups, solid and gradient fills, strokes and dashes, and simple text. Masks, filters, patterns and embedded images are listed as not carried over.
 
-## Linking design files instead of embedding them
-When you drop (or pick) a Photoshop, Illustrator, PDF, VectorCraft or PhotoCraft file, a dialog asks for each file whether to **Link** or **Embed** it, with **Link all** and **Embed all** for the lot. Embed copies the file in once. **Link** keeps a connection to the file on your computer: the editor looks at it every few seconds while the tab is open and when you come back to it. When you save it in the design app, a dialog lists every linked file that changed, all ticked: untick any you don't want yet (or use **All** / **None**) and press **Re-import**. **Not now** (or Esc) leaves them as they are until the file is saved again; **Re-import now** in the inspector still brings them in whenever you like.
+## Updating a design file
+A Photoshop, Illustrator, PDF, AutoCAD (DXF), VectorCraft or PhotoCraft file is copied into the project when you import it, and its artboards remember which file they came from. When the designer saves a new version, bring it in with **Update from file…**:
+- Select one of its artboards: the inspector's **Source file** section says **From Poster.psd (Photoshop, updated 2 h ago)** and has **Update from file…**.
+- Or open the **Assets** panel: **Design files** at the top lists each file with **Update…**.
+
+Pick the new version (it can have a new name; the artboards then say they came from that one). The editor can't notice a file changing on your computer by itself, since it runs in a web page, so updating is always this one step.
 
 How a re-import merges (your edits are kept):
 - Layers are matched by name (in the same folder, the nth layer of a repeated name), and a layer renamed in the file is recognised by its picture or text and position.
@@ -7640,11 +7646,9 @@ How a re-import merges (your edits are kept):
 - A layer the file no longer has is removed. If you gave it keys, interactions or bindings it stays instead, hidden, and is renamed "(removed from file)", so nothing you built is lost. A layer you deleted here stays deleted.
 - One undo step undoes a whole re-import. Pictures the file no longer uses are kept in the project (so undo can bring them back); they show as unused in the Usage tab, and **Remove unused assets** deletes them. A toast says what happened ("Poster.psd updated: 3 layers changed, 1 added").
 
-Select a linked artboard to see **Linked to Poster.psd (updated 2 min ago)** in the inspector, with **Re-import now**, **Unlink (keep as embedded)** and a **Watch for changes** switch (off: the file isn't looked at, and the changes dialog never asks about it). When the file has changes you said **Not now** to, it says so there. Unlinking leaves the layers as they are.
+**Forget source file**, under the button, drops the connection: the layers stay as they are and **Update from file** goes away.
 
-Linking needs a browser with the File System Access API (Chrome or Edge). In Firefox and Safari files are embedded, and the dialog says so. Each time you open the project the browser must be allowed to read the file again, so a bar asks you to click **Reconnect**. The link lives in the browser that made it: other people in the project see the last imported state and get updates when the person with the file saves them, and the bar tells them whose computer has it. A copy of a linked artboard is not linked.
-
-![The Import design file dialog.](help/link-or-embed-dialog.png)
+Artboards that were *linked* to a file on disk before (an older way of doing this, in Chrome and Edge only) keep **Re-import now** and **Watch for changes** beside **Update from file…** in the browser that linked them.
 
 After an import, a report lists anything that couldn't be carried over exactly. It is the whole list: nothing is skipped without a note. Press the **×** to close it.
 
@@ -8050,15 +8054,15 @@ Variable and data source names are used inside expressions, so they can't contai
 **A script does nothing.**
 Open **Preview** and look at the **Events** list for an error message. Scripts in the sandbox can only use \`ix\`, timers and \`console\`. See [Scripts](scripts).
 
-## Importing and linking
-**It says Link isn't available, or "Embedded in this browser".**
-Linking needs the File System Access API, which is in Chrome and Edge. In other browsers files are embedded. A file *dropped* from some places can be embedded only; use the import button in the **Layers** panel to pick it instead.
+## Importing and updating design files
+**The designer saved a new version of the Photoshop (or Illustrator, ...) file.**
+Select one of its artboards and press **Update from file…** in the inspector, or **Update…** beside it under **Design files** in the Assets panel, then pick the new file. Your own edits are kept. See [Updating a design file](import#updating-a-design-file).
 
 **A bar asks me to Reconnect.**
-Press **Reconnect**. The browser needs your permission each time you open a project before it can read a linked file again. See [Importing](import#linking-design-files-instead-of-embedding-them).
+That's an artboard linked to a file on disk the older way. Press **Reconnect** to let the browser read it again, or just use **Update from file…**.
 
-**"The file was moved, renamed or deleted."**
-Put it back where it was, or press **Unlink (keep as embedded)** on the artboard.
+**"The linked file was moved, renamed or deleted."**
+Use **Update from file…** and pick it where it is now.
 
 **An Illustrator file says to save with "Create PDF Compatible File".**
 Re-save it from Illustrator with that option ticked. **A DWG file** must be saved as DXF first. See [Importing](import).

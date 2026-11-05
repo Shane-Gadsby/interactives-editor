@@ -55,6 +55,8 @@ import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectFi
 import { gapUnit, lineGapUnit, paddingOwnerWidth, paddingUnit, patchGap, patchLineGap, patchPadding } from '../lib/layout-units';
 import { Icons } from '../components/icons';
 import { assetKind } from '../lib/assets';
+import { acceptFor, pickFiles, replaceAssetFile } from '../lib/insert';
+import { updateFromFile } from '../lib/importers';
 import { pointTracks } from '../lib/path-edit';
 import { formatTracks, parseTracks } from '../lib/grid-tracks';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
@@ -330,47 +332,84 @@ function ago(iso: string, now: number): string {
   return `${Math.round(s / 86400)} d ago`;
 }
 
-/** The file this artboard is linked to: when it was last brought in, and the controls for it. */
+/** The design file this artboard was imported from: when it was last brought in, and Update from file. */
 function LinkedFileSection({ ab }: { ab: Artboard }) {
   const src = ab.source!;
   const status = useLinks().find((l) => l.linkId === src.linkId);
   const [now, setNow] = useState(() => Date.now());
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 15000);
     return () => clearInterval(t);
   }, []);
   const state = status?.state ?? 'checking';
-  const mine = state === 'connected' || state === 'needs-permission';
+  //Only a file linked from this browser (before linking was turned off) can still be watched and re-read on its own
+  const watched = state === 'connected' || state === 'needs-permission';
   const note =
-    state === 'no-handle'
-      ? `Linked from ${src.by ? `${src.by}’s` : 'another'} browser; this one can’t read the file. It updates here when they save.`
-      : state === 'needs-permission'
-        ? 'Click Re-import now (or Reconnect in the bar above) to allow reading the file again.'
-        : state === 'missing'
-          ? 'The file was moved, renamed or deleted.'
-          : status?.error
-            ? status.error
-            : status?.changed
-              ? 'The file has been saved since it was brought in. Re-import now to bring the changes in.'
-              : '';
+    state === 'needs-permission'
+      ? 'Click Re-import now (or Reconnect in the bar above) to allow reading the file again.'
+      : state === 'missing'
+        ? 'The linked file was moved, renamed or deleted. Use Update from file to pick it again.'
+        : status?.error
+          ? status.error
+          : status?.changed
+            ? 'The file has been saved since it was brought in. Re-import now to bring the changes in.'
+            : '';
   return (
-    <Section help="import" title="Linked file">
+    <Section help="import#updating-a-design-file" title="Source file">
       <div className="link-info">
         <div className="link-title">
-          Linked to {src.fileName} <span className="link-sub">({KIND_LABEL[src.kind] ?? src.kind}, updated {ago(src.importedAt, now)})</span>
+          From {src.fileName} <span className="link-sub">({KIND_LABEL[src.kind] ?? src.kind}, updated {ago(src.importedAt, now)})</span>
         </div>
         {note && <div className={`link-sub${status?.error || state === 'missing' ? ' err' : ''}`}>{note}</div>}
         <Row>
-          <button className="btn" disabled={!mine || status?.busy} title="Read the file now and bring its changes in; your own edits are kept" onClick={() => void linkManager()?.reimportNow(src.linkId)}>
-            {status?.busy ? 'Importing…' : 'Re-import now'}
+          <button
+            className="btn"
+            disabled={busy}
+            title={`Pick the new version of ${src.fileName}. What changed in it comes in, and the edits made here are kept`}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await updateFromFile(src.linkId);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? 'Updating…' : 'Update from file…'}
           </button>
-          <button className="btn" title="Stop watching the file. The layers stay in the project as they are" onClick={() => void linkManager()?.unlink(src.linkId)}>
-            Unlink (keep as embedded)
-          </button>
+          {watched && (
+            <button className="btn" disabled={status?.busy} title="Read the linked file now and bring its changes in; your own edits are kept" onClick={() => void linkManager()?.reimportNow(src.linkId)}>
+              {status?.busy ? 'Importing…' : 'Re-import now'}
+            </button>
+          )}
         </Row>
-        <CheckField label="Watch for changes" title="Ask to re-import when the file is saved (looked at every few seconds while this tab is open)" value={!!status?.watch && mine} onChange={(v) => void linkManager()?.setWatch(src.linkId, v)} />
+        {watched && <CheckField label="Watch for changes" title="Ask to re-import when the file is saved (looked at every few seconds while this tab is open)" value={!!status?.watch} onChange={(v) => void linkManager()?.setWatch(src.linkId, v)} />}
+        <button className="link-btn" title="Forget which file these artboards came from. The layers stay as they are, and Update from file goes away" onClick={() => void linkManager()?.unlink(src.linkId)}>
+          Forget source file
+        </button>
       </div>
     </Section>
+  );
+}
+
+/** Swap the file behind a picture or video for a new version of it, everywhere it's used (see replaceAssetFile). */
+function ReplaceAssetButton({ assetId }: { assetId: string }) {
+  const asset = useEditor((st) => st.project.assets.find((a) => a.id === assetId));
+  if (!asset) return null;
+  return (
+    <Row>
+      <button
+        className="link-btn"
+        title={`Pick a new version of ${asset.name}. Every layer, fill and action that uses it shows the new file`}
+        onClick={async () => {
+          const [file] = await pickFiles(acceptFor(asset.mime, asset.name), false);
+          if (file) await replaceAssetFile(asset.id, file);
+        }}
+      >
+        Replace file…
+      </button>
+    </Row>
   );
 }
 
@@ -1084,6 +1123,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'image' })}
             options={[{ value: '', label: images.length ? 'Choose…' : 'No image' }, ...images.map((a) => ({ value: a.id, label: a.name })), addAssetOption('image')]}
           />
+          {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
           {radius}
           <CheckField
@@ -1206,6 +1246,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'video' })}
             options={[{ value: '', label: 'Use a URL' }, ...videos.map((a) => ({ value: a.id, label: a.name })), addAssetOption('video')]}
           />
+          {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
           {!n.assetId && <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />}
           <Row>
             <CheckField label="Autoplay" value={n.autoplay} onChange={(v) => set({ autoplay: v })} />

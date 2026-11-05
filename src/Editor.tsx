@@ -462,8 +462,21 @@ function Guard(props: { message: string; name?: string; className?: string; chil
   return <ErrorBoundary {...props} resetKey={project} />;
 }
 
+//Assets someone else added or replaced while we were both in the project come in as records only: fetch their files
+function useRemoteAssets() {
+  const projectId = useEditor((st) => st.project.id);
+  const assets = useEditor((st) => st.project.assets);
+  useEffect(() => {
+    void assetUrls.ensure(
+      projectId,
+      assets.map((a) => a.id),
+    );
+  }, [projectId, assets]);
+}
+
 function Workspace({ home }: { home: () => void }) {
   const conflict = useAutosave();
+  useRemoteAssets();
   useThumbnails();
   useShortcuts();
   const s = useEditor((st) => ({ bottomTab: st.bottomTab, bottomHeight: st.bottomHeight, toast: st.toast, report: st.report }));
