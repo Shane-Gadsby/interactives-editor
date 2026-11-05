@@ -6,6 +6,8 @@ import {
   pathPointPropName,
   relayoutTree,
   createArtboard,
+  frameTime,
+  sampleKeys,
   cloneWithNewIds,
   getPath,
   isContainer,
@@ -525,7 +527,12 @@ export class EditorStore {
       }
     }
     const tl = this.timeline();
-    const record = s.recording && tl && s.bottomTab === 'timeline';
+    const onTimeline = !!tl && s.bottomTab === 'timeline';
+    const record = s.recording && onTimeline;
+    // On the timeline, a property the open timeline already animates shows its value at the playhead (the inspector and
+    // the canvas both), so changing it changes that value: a key at the playhead, with Record on or not. Writing the
+    // layer's own value instead would change nothing on screen and come back later as a surprise.
+    const animated = (id: string, prop: string) => onTimeline && tl!.tracks.some((t) => t.nodeId === id && t.prop === prop && t.keys.length > 0);
     noteProps(changes, coalesce, (id) => this.nodeById(id)?.type, !!record);
     this.update((d) => {
       const ab = getArtboard(d as Project, s.activeArtboardId) as Draft<Artboard> | undefined;
@@ -534,9 +541,9 @@ export class EditorStore {
         const loc = locate(ab as Artboard, id);
         if (!loc) continue;
         for (const [prop, value] of Object.entries(props)) {
-          if (record && animatableProp(prop)) {
+          if (animatableProp(prop) && (record || animated(id, prop))) {
             const dtl = ab.timelines.find((t) => t.id === tl!.id)!;
-            setKey(dtl as Timeline, id, prop, s.playhead, value as Keyframe['value']);
+            setKey(dtl as Timeline, id, prop, keyTime(dtl as Timeline, s.playhead), value as Keyframe['value']);
           } else if (prop === 'text' && loc.node.type === 'text' && loc.node.runs?.length) {
             // Editing the plain text of a rich text layer keeps the styling around the edit
             applyRuns(loc.node, retextRuns(loc.node.runs, String(value ?? '')));
@@ -1179,29 +1186,39 @@ export class EditorStore {
     );
   }
 
-  /** Add/replace a keyframe for a node property at the playhead, using its current value. */
-  keyCurrent(nodeId: string, prop: string): void {
+  /**
+   * Add/replace a keyframe for a property of one or more layers at the playhead, holding the value each one shows
+   * there: the timeline's value when it already animates the property (between two keys that's the in-between value),
+   * otherwise the layer's own. All in one undo step.
+   */
+  keyCurrent(nodeIds: string | string[], prop: string): void {
     track('feature', 'keyframe-add', { thing: String(prop).split('.')[0] });
     const ab = this.artboard();
     let tlId = this.state.activeTimelineId;
     if (!ab) return;
     if (!tlId) tlId = this.addTimeline();
-    const loc = locate(ab, nodeId);
-    if (!loc) return;
-    let value = getPath(loc.node, prop) as Keyframe['value'] | undefined;
-    if (value === undefined) {
-      const kids = isContainer(loc.node) ? loc.node.children : [];
-      // Draw order starts as the layers' own order; solo starts on the first child
-      if (prop === 'drawOrder') value = kids.map((k) => k.id);
-      else if (prop === 'solo.active') value = kids[0]?.id ?? '';
-      else if (/^cornerRadii\.\d$/.test(prop)) value = Number(getPath(loc.node, 'cornerRadius')) || 0;
-      else if (prop.startsWith('inputs.')) value = this.state.project.variables.find((v) => v.name === prop.slice(7))?.initial ?? 0;
-      else value = prop.endsWith('color') ? '#000000' : 0;
-    }
+    const tl = this.artboard()?.timelines.find((x) => x.id === tlId);
     const t = this.state.playhead;
+    const keys: [string, Keyframe['value']][] = [];
+    for (const nodeId of Array.isArray(nodeIds) ? nodeIds : [nodeIds]) {
+      const loc = locate(ab, nodeId);
+      if (!loc) continue;
+      let value = valueAt(tl, loc.node, prop, t) as Keyframe['value'] | undefined;
+      if (value === undefined) {
+        const kids = isContainer(loc.node) ? loc.node.children : [];
+        // Draw order starts as the layers' own order; solo starts on the first child
+        if (prop === 'drawOrder') value = kids.map((k) => k.id);
+        else if (prop === 'solo.active') value = kids[0]?.id ?? '';
+        else if (/^cornerRadii\.\d$/.test(prop)) value = Number(valueAt(tl, loc.node, 'cornerRadius', t)) || 0;
+        else if (prop.startsWith('inputs.')) value = this.state.project.variables.find((v) => v.name === prop.slice(7))?.initial ?? 0;
+        else value = prop.endsWith('color') ? '#000000' : 0;
+      }
+      keys.push([nodeId, value]);
+    }
+    if (!keys.length) return;
     this.update((d) => {
-      const tl = getArtboard(d as Project, ab.id)?.timelines.find((x) => x.id === tlId);
-      if (tl) setKey(tl as Timeline, nodeId, prop, t, value!);
+      const dtl = getArtboard(d as Project, ab.id)?.timelines.find((x) => x.id === tlId);
+      if (dtl) for (const [nodeId, value] of keys) setKey(dtl as Timeline, nodeId, prop, keyTime(dtl as Timeline, t), value);
     });
   }
 
@@ -1253,7 +1270,7 @@ export class EditorStore {
           const baseValue = base ? pointParts(base as never)[c.part] : 0;
           for (const kt of times) setKey(dtl as Timeline, id, prop, kt, baseValue);
         }
-        setKey(dtl as Timeline, id, prop, t, c.value);
+        setKey(dtl as Timeline, id, prop, keyTime(dtl as Timeline, t), c.value);
       }
     }, { coalesce: opts.coalesce });
   }
@@ -1285,7 +1302,7 @@ export class EditorStore {
             const tracked = dtl.tracks.some((tr) => tr.nodeId === nodeId && tr.prop === prop);
             // handles only when the point has them (or they are keyed already)
             if (part.includes('.') && !tracked && !pt[part.startsWith('in') ? 'in' : 'out']) continue;
-            setKey(dtl as Timeline, nodeId, prop, t, parts[part]);
+            setKey(dtl as Timeline, nodeId, prop, keyTime(dtl as Timeline, t), parts[part]);
           }
         }),
       );
@@ -1407,7 +1424,23 @@ export class EditorStore {
   }
 }
 
-/** Set a keyframe value at time t (within 1ms an existing key is replaced). */
+/**
+ * Where a key set with the playhead at t lands: a whole ms inside the timeline. On a timeline read on whole frames it's
+ * the start of the frame t is in (rounded down), since the keys are read there: a key a few ms into the frame wouldn't
+ * be reached until the next one, and the frame on screen would keep showing the old value.
+ */
+export function keyTime(tl: Pick<Timeline, 'duration' | 'fps' | 'snap'>, t: number): number {
+  const at = tl.snap && tl.fps! > 0 ? Math.floor(frameTime(tl, t) + 1e-6) : Math.round(t);
+  return Math.max(0, Math.min(Math.floor(tl.duration), at));
+}
+
+/** A layer property's value at time t of a timeline: its track's value there when the timeline animates it, otherwise the layer's own. */
+export function valueAt(tl: Timeline | undefined, node: SceneNode, prop: string, t: number): unknown {
+  const track = tl?.tracks.find((x) => x.nodeId === node.id && x.prop === prop);
+  return track?.keys.length ? sampleKeys(track.keys, frameTime(tl!, t)) : getPath(node, prop);
+}
+
+/** Set a keyframe value at time t (within 1ms an existing key is replaced). Keys made at the playhead pass keyTime(tl, playhead). */
 export function setKey(tl: Timeline, nodeId: string, prop: string, t: number, value: Keyframe['value']): void {
   let track = tl.tracks.find((x) => x.nodeId === nodeId && x.prop === prop);
   if (!track) {

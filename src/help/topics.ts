@@ -1088,7 +1088,9 @@ The **Open URL** action does the same from an interaction.
 
 ## Adding keyframes
 - Press **Record** (the red dot). A red bar at the top of the Inspector says **Recording keyframes at …**. While recording, every change you make to an animatable property at the playhead becomes a keyframe. Press it again to stop.
-- Or click the diamond next to a field in the inspector to key its current value.
+- Or click the diamond next to a field in the inspector to key the value it shows at the playhead (between two keys, that's the in-between value). With several layers selected it keys all of them. The diamond is filled when there's already a key at the playhead, and clicking it then updates that key.
+- Once a property has keys on the open timeline, changing it in the inspector or on the canvas changes its key at the playhead (or adds one there), with or without Record, since the value you see is the timeline's. To change a layer's own value, the one it has before the timeline plays, switch to **Design view (no timeline)**.
+- On a timeline set to **Whole frames**, a key goes on the start of the frame the playhead is in.
 - Or select a layer, choose a property in the dropdown at the top left of the Timeline and press **+ Key**.
 - Drag keys to retime them (<kbd>Shift</kbd> snaps to 100 ms), <kbd>Shift</kbd>-click to select several, <kbd>Delete</kbd> to remove. The diamond on a layer's own row moves all of that layer's keys at that time.
 

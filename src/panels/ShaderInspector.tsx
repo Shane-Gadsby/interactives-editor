@@ -201,7 +201,7 @@ function UniformValue({ node, u, index, prefix, images }: { node: SceneNode; u: 
         options={[{ value: '', label: images.length ? '(none)' : '(none: upload an image in Assets)' }, ...images.map((a) => ({ value: a.id, label: a.name }))]}
         onChange={(v) => store().setProps(ids, { [prop]: v }, `uimg-${node.id}-${index}`)}
       />
-      <KeyButton node={node} prop={prop} />
+      <KeyButton node={node} prop={prop} ids={ids} />
     </div>
   );
 }

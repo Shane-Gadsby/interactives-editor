@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { apply, createNode, createProject, nodeMatrix, type Project } from 'interactives-player';
-import { EditorStore } from '../src/store/store';
+import { EditorStore, keyTime, valueAt } from '../src/store/store';
 import { hitTest, locate, selectionBounds } from '../src/store/doc';
 import { placeBox, resizeBox } from '../src/canvas/transform';
 
@@ -72,6 +72,70 @@ describe('EditorStore', () => {
     const track = ab.timelines[0].tracks[0];
     expect(track.prop).toBe('x');
     expect(track.keys.map((k) => [k.t, k.value])).toEqual([[500, 300]]);
+  });
+
+  it('keys the value shown at the playhead, not the layer\'s own value', () => {
+    const { s, a } = setup();
+    s.addTimeline();
+    s.set({ playhead: 0 });
+    s.keyCurrent(a.id, 'x');
+    s.set({ recording: true, playhead: 1000, bottomTab: 'timeline' });
+    s.setProps([a.id], { x: 110 });
+    s.set({ recording: false, playhead: 500 });
+    const tl = s.timeline()!;
+    const shown = valueAt(tl, locate(s.artboard()!, a.id)!.node, 'x', 500) as number;
+    expect(shown).toBeGreaterThan(10);
+    expect(shown).toBeLessThan(110);
+    s.keyCurrent(a.id, 'x');
+    expect(s.timeline()!.tracks[0].keys.map((k) => [k.t, k.value])).toEqual([[0, 10], [500, shown], [1000, 110]]);
+  });
+
+  it('turns an edit of an animated property into a key at the playhead, without Record', () => {
+    const { s, a } = setup();
+    s.addTimeline();
+    s.set({ playhead: 0, bottomTab: 'timeline' });
+    s.keyCurrent(a.id, 'x');
+    s.set({ playhead: 400 });
+    s.setProps([a.id], { x: 70, y: 30 });
+    const ab = s.artboard()!;
+    const node = locate(ab, a.id)!.node;
+    // x is animated, so the edit is a key; y isn't, so it's the layer's own value as before
+    expect(node.x).toBe(10);
+    expect(node.y).toBe(30);
+    expect(ab.timelines[0].tracks.map((t) => t.prop)).toEqual(['x']);
+    expect(ab.timelines[0].tracks[0].keys.map((k) => [k.t, k.value])).toEqual([[0, 10], [400, 70]]);
+    // Off the timeline tab the layer's own value is what's edited
+    s.set({ bottomTab: null });
+    s.setProps([a.id], { x: 15 });
+    expect(locate(s.artboard()!, a.id)!.node.x).toBe(15);
+  });
+
+  it('puts keys on the start of the frame when the timeline reads whole frames', () => {
+    const { s, a } = setup();
+    s.addTimeline();
+    s.updateTimeline((d) => {
+      d.fps = 24;
+      d.snap = true;
+    });
+    const tl = s.timeline()!;
+    expect(keyTime(tl, 50)).toBe(41);
+    expect(keyTime(tl, 125)).toBe(125);
+    expect(keyTime({ duration: 1000 }, 50.4)).toBe(50);
+    s.set({ playhead: 50, bottomTab: 'timeline' });
+    s.keyCurrent(a.id, 'opacity');
+    // still the same frame: the same key, not a second one a few ms later
+    s.set({ recording: true, playhead: 70 });
+    s.setProps([a.id], { opacity: 0.5 });
+    expect(s.timeline()!.tracks[0].keys.map((k) => [k.t, k.value])).toEqual([[41, 0.5]]);
+  });
+
+  it('keys every layer it is given, in one undo step', () => {
+    const { s, a, b } = setup();
+    s.addTimeline();
+    s.keyCurrent([a.id, b.id], 'opacity');
+    expect(s.timeline()!.tracks.map((t) => t.nodeId)).toEqual([a.id, b.id]);
+    s.undo();
+    expect(s.timeline()!.tracks).toHaveLength(0);
   });
 
   it('keys a group\'s draw order and solo child, and records order changes', () => {
