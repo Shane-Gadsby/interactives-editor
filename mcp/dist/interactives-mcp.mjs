@@ -5942,7 +5942,7 @@ Turn on **9-slice** and set the four insets (in image pixels). The corners keep 
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
 
 ## Video playback in variables
-Under **Playback into variables**, pick (or create, with **+ Create new variable…**) variables for the video's **Position** (seconds, a number), whether it is **Playing** (true/false) and its **Length** (seconds). The player keeps them up to date while the video plays, so you can show the time in text (\`{videoTime} s\`), bind a progress bar's width to \`videoTime / videoLength\`, run a [Variable changed](interaction-nodes) event when it passes a point, or check it in a condition. It works the other way too: set the **Position** variable from anywhere else (a slider bound to it, a **Set variable** node, a script) and the video jumps there. Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`
+Add a [data binding](bindings) on the video layer: **Playback position (s)**, **Playing**, **Length (s)** or **Ended**, and pick which way it goes. **Out** keeps a variable up to date with the video (show the time in text, \`{videoTime} s\`, or bind a progress bar's width to \`videoTime / videoLength\`). **Both** lets the variable drive the video too: set the position variable from a slider, a **Set variable** node or a script and the video jumps there; set **Playing** to false and it pauses. Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`
   },
   {
     id: "groups-frames",
@@ -6956,8 +6956,8 @@ In a text layer, a slot whose pattern is refused (or whose text is too long for 
     id: "bindings",
     title: "Bindings",
     group: "Interactivity",
-    summary: "Drive a layer property from a variable, data or expression, live.",
-    keywords: "bind binding data binding property drive reactive",
+    summary: "Tie a layer property to a variable: in (the variable sets it), out (it sets the variable) or both ways.",
+    keywords: "bind binding data binding property drive reactive two-way both ways out in video position playing length drag x y attribute",
     body: `A binding sets a layer's property from an [expression](expressions), and keeps it up to date as variables and data change. In the **Data bindings** section of the Inspector, press **+ Add binding** (or the **+** in the section's header) and pick the property; type in the search box at the top to find it quickly (*opa* finds Opacity).
 
 Each binding then says where its value comes from:
@@ -6979,7 +6979,15 @@ Examples:
 | Rotation | \`speed * 3\` |
 | Solo: active child | \`mode\` (a choice whose options are the children's names) |
 
-A bound property shows a link icon and can't be changed by hand or keyframed until you remove the binding. Every animatable property can be bound; see [Animatable properties](animatable-properties).
+A bound property shows a link icon and can't be changed by hand or keyframed until you remove the binding. Every animatable property can be bound (see [Animatable properties](animatable-properties)), and so can every other plain setting the layer has, such as a video's **Autoplay** or **Src**, or a polygon's sides. A video layer also lists **Playback position (s)**, **Playing**, **Length (s)** and **Ended**, which come from the video itself.
+
+## Which way: in, out or both
+Each binding has **← In**, **Out →** and **⇄ Both** at the top.
+- **In** (the usual): the variable or formula sets the property, as above.
+- **Out**: the property's value is written into a variable whenever it changes, and nothing sets the property from it. Use it to *read* something: a draggable layer's **X** as it is dragged, a video's **Playback position**, a timeline-animated **Opacity**. Read-only attributes (a video's **Length**, **Ended**) can only go out.
+- **Both**: the property and the variable are kept equal. At the start the property takes the variable's value; after that, change either one and the other follows. A slider bound to the same variable as a video's **Playback position** both shows the position and scrubs the video; setting a video's **Playing** to false pauses it.
+
+Out and Both name a variable (no formula, no converters), and the grey line says what will happen in words.
 
 The value is made to fit the property: a number property takes a number (\`true\`/\`false\` become 1/0, numeric text is read) and is left as it was if the expression gives something that is not a number; a true/false property takes a boolean; text and colour properties take text.
 

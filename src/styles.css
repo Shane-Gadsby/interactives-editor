@@ -7866,3 +7866,7 @@ code {
     flex-basis: 100%;
   }
 }
+/* a binding's which-way switch, above where its value comes from */
+.binding-dir {
+  margin: 4px 0 6px;
+}

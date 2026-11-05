@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { ANIMATABLE_PROPS, animatableProp, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
+import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { isIdentifier } from '../store/doc';
 import { IconButton, Section, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
@@ -46,19 +46,54 @@ function trace(expr: string, list: Converter[], variables: Variable[]): { steps:
   return { steps };
 }
 
-/** Data bindings: each one sets a property from a variable (or a formula of variables) every frame. */
+/** Settings that are the layer's bookkeeping rather than something to bind. */
+const NOT_BINDABLE = new Set(['id', 'type', 'name', 'locked', 'lockRatio', 'lockScale', 'kit', 'bindings', 'bindingModes', 'converters', 'children', 'paths', 'runs', 'tabOrder', 'className']);
+const humanize = (k: string) => k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
+
+/**
+ * Everything on a layer a binding can reach: the animatable properties, a shader's uniforms, an instance's inputs, every
+ * other plain setting the layer has (text, true/false or a number: its URL, autoplay, a polygon's sides...), and for a
+ * video what it is doing (media.time, media.playing...).
+ */
+export function bindableProps(node: SceneNode, project: Project): { prop: string; label: string; kind?: string; readOnly?: boolean }[] {
+  const out: { prop: string; label: string; kind?: string; readOnly?: boolean }[] = [...ANIMATABLE_PROPS, ...nodeUniformProps(node), ...instanceInputProps(node, project.variables)];
+  const have = new Set(out.map((p) => p.prop));
+  for (const [k, v] of Object.entries(node)) {
+    if (have.has(k) || NOT_BINDABLE.has(k)) continue;
+    const kind = typeof v === 'string' ? 'string' : typeof v === 'number' ? 'number' : typeof v === 'boolean' ? 'boolean' : null;
+    if (kind) out.push({ prop: k, label: humanize(k), kind });
+  }
+  for (const m of MEDIA_ATTRIBUTES) if (m.types.includes(node.type)) out.push(m);
+  return out;
+}
+
+/**
+ * Data bindings: each ties one of the layer's properties to a variable. In (the default): the variable (or a formula of
+ * variables) sets the property every frame. Out: the property's value goes into the variable as it changes. Both: they're
+ * kept equal, whichever changed.
+ */
 export function BindingsSection({ node, project, set }: { node: SceneNode; project: Project; set: (patch: Record<string, unknown>, coalesce?: string) => void }) {
   const bindings = node.bindings ?? {};
   const converters = node.converters ?? {};
+  const modes = node.bindingModes ?? {};
   const entries = Object.entries(bindings);
-  const update = (next: Record<string, string>, conv: Record<string, Converter[]> = converters) => {
-    const keep = Object.fromEntries(Object.entries(conv).filter(([k, list]) => k in next && list.length));
-    set({ bindings: Object.keys(next).length ? next : undefined, converters: Object.keys(keep).length ? keep : undefined }, `bind-${node.id}`);
+  const update = (next: Record<string, string>, conv: Record<string, Converter[]> = converters, m: Record<string, BindingMode> = modes) => {
+    const keep = Object.fromEntries(Object.entries(conv).filter(([k, list]) => k in next && list.length && (m[k] ?? 'in') === 'in'));
+    const keepModes = Object.fromEntries(Object.entries(m).filter(([k, v]) => k in next && v !== 'in'));
+    set(
+      {
+        bindings: Object.keys(next).length ? next : undefined,
+        converters: Object.keys(keep).length ? keep : undefined,
+        bindingModes: Object.keys(keepModes).length ? keepModes : undefined,
+      },
+      `bind-${node.id}`,
+    );
   };
-  const props = [...ANIMATABLE_PROPS, ...nodeUniformProps(node), ...instanceInputProps(node, project.variables)];
+  const props = bindableProps(node, project);
   const labelOf = (p: string) => props.find((a) => a.prop === p)?.label ?? p;
   const free: PickerOption[] = props.filter((a) => !(a.prop in bindings)).map((a) => ({ value: a.prop, label: a.label, hint: a.prop === a.label.toLowerCase() ? undefined : a.prop }));
-  const add = (p: string) => update({ ...bindings, [p]: '' });
+  // a read-only attribute (a video's length) can only be written out
+  const add = (p: string) => update({ ...bindings, [p]: '' }, converters, props.find((x) => x.prop === p)?.readOnly ? { ...modes, [p]: 'out' } : modes);
 
   const addPicker = (compact: boolean) => (
     <SearchPicker
@@ -74,14 +109,25 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
 
   return (
     <Section help="bindings" title="Data bindings" defaultOpen={entries.length > 0} actions={addPicker(true)}>
-      {entries.length === 0 && <p className="hint">Nothing is bound yet. A binding sets a property from a variable every frame, e.g. visible ← lives &gt; 0, or the text ← score.</p>}
+      {entries.length === 0 && (
+        <p className="hint">
+          Nothing is bound yet. A binding ties a property to a variable: in (visible ← lives &gt; 0, the text ← score), out (a dragged layer's x → boxX, a video's position → videoTime) or both ways.
+        </p>
+      )}
       {entries.map(([p, expr], i) => (
         <Fragment key={p}>
           {i > 0 && <hr className="item-sep" />}
           <BindingItem
             prop={p}
             label={labelOf(p)}
-            kind={animatableProp(p, node)?.kind}
+            kind={animatableProp(p, node)?.kind ?? props.find((x) => x.prop === p)?.kind}
+            readOnly={!!props.find((x) => x.prop === p)?.readOnly}
+            mode={modes[p] ?? 'in'}
+            onMode={(m) => {
+              // out and both name a variable: a formula can't be written into
+              const keepExpr = m === 'in' || project.variables.some((v) => v.name === expr.trim());
+              update({ ...bindings, [p]: keepExpr ? expr : '' }, converters, { ...modes, [p]: m });
+            }}
             expr={expr}
             list={converters[p] ?? []}
             variables={project.variables}
@@ -106,6 +152,9 @@ function BindingItem({
   prop,
   label,
   kind,
+  readOnly,
+  mode,
+  onMode,
   expr,
   list,
   variables,
@@ -116,6 +165,9 @@ function BindingItem({
   prop: string;
   label: string;
   kind?: string;
+  readOnly: boolean;
+  mode: BindingMode;
+  onMode: (m: BindingMode) => void;
   expr: string;
   list: Converter[];
   variables: Variable[];
@@ -137,6 +189,32 @@ function BindingItem({
         <span className="spacer" />
         <IconButton icon={<Icons.trash />} title={`Remove the ${label} binding`} onClick={onRemove} />
       </div>
+      <div className="seg binding-dir" role="radiogroup" aria-label={`${label}: which way`}>
+        {(
+          [
+            ['in', '← In', `The variable (or a formula) sets ${label}`],
+            ['out', 'Out →', `${label} is written into the variable as it changes`],
+            ['both', '⇄ Both', `${label} and the variable are kept equal: change either and the other follows`],
+          ] as const
+        ).map(([m, text, tip]) => (
+          <button
+            key={m}
+            type="button"
+            role="radio"
+            aria-checked={mode === m}
+            disabled={readOnly && m !== 'out'}
+            className={`seg-btn${mode === m ? ' on' : ''}`}
+            title={readOnly && m !== 'out' ? `${label} can only be read, so it can only go out to a variable` : tip}
+            onClick={() => onMode(m)}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+      {mode !== 'in' ? (
+        <SyncedSource label={label} prop={prop} kind={kind} mode={mode} expr={expr} variables={variables} varOptions={varOptions} onExpr={onExpr} />
+      ) : (
+      <>
       <div className="binding-source">
         <div className="seg" role="radiogroup" aria-label={`${label}: set from`}>
           <button type="button" role="radio" aria-checked={!formula} className={`seg-btn${!formula ? ' on' : ''}`} title="Set it straight from one variable" onClick={() => {
@@ -174,7 +252,40 @@ function BindingItem({
           </>
         )}
       </div>
+      </>
+      )}
     </div>
+  );
+}
+
+/** An out or both-ways binding: the variable it's tied to, and what will happen, in words. */
+function SyncedSource({ label, prop, kind, mode, expr, variables, varOptions, onExpr }: { label: string; prop: string; kind?: string; mode: BindingMode; expr: string; variables: Variable[]; varOptions: PickerOption[]; onExpr: (v: string) => void }) {
+  const name = expr.trim();
+  const v = variables.find((x) => x.name === name);
+  return (
+    <>
+      <div className="binding-source">
+        <SearchPicker
+          value={name}
+          options={varOptions}
+          onChange={onExpr}
+          placeholder="Choose a variable…"
+          searchPlaceholder="Search variables"
+          title={mode === 'out' ? `The variable ${label} is written into` : `The variable kept equal to ${label}`}
+          actions={[{ label: '+ New variable…', onSelect: () => void createVariable(kind === 'boolean' ? 'boolean' : kind === 'string' ? 'string' : kind === 'color' ? 'color' : 'number', prop.split('.').pop()).then((id) => {
+            const nv = id && store().get().project.variables.find((x) => x.id === id);
+            if (nv) onExpr(nv.name);
+          }) }]}
+        />
+      </div>
+      <div className={`binding-trace${v ? '' : ' err'}`}>
+        {!v
+          ? 'Pick the variable to tie it to.'
+          : mode === 'out'
+            ? <>Whenever <strong>{label}</strong> changes, <strong>{v.name}</strong> is set to it. Setting {v.name} doesn't change {label}.</>
+            : <>At the start <strong>{label}</strong> takes <strong>{v.name}</strong> ({show(startValue(v))}). After that, change either and the other follows.</>}
+      </div>
+    </>
   );
 }
 
