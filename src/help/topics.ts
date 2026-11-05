@@ -741,7 +741,10 @@ Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for 
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.
 
 ## Video
-Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.`,
+Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
+
+## Video playback in variables
+Under **Playback into variables**, pick (or create, with **+ Create new variable…**) variables for the video's **Position** (seconds, a number), whether it is **Playing** (true/false) and its **Length** (seconds). The player keeps them up to date while the video plays, so you can show the time in text (\`{videoTime} s\`), bind a progress bar's width to \`videoTime / videoLength\`, run a [Variable changed](interaction-nodes) event when it passes a point, or check it in a condition. It works the other way too: set the **Position** variable from anywhere else (a slider bound to it, a **Set variable** node, a script) and the video jumps there. Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`,
   },
   {
     id: 'groups-frames',

@@ -1258,6 +1258,30 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           </Row>
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
           {radius}
+          <div className="field-label block" title="Variables the player keeps up to date while the video plays, for text, bindings, conditions and scripts to use">
+            Playback into variables
+          </div>
+          <SelectField
+            label="Position"
+            title="Where the video is, in seconds (a number variable). Setting this variable from anywhere else (a slider, a Set variable node, a script) jumps the video there"
+            value={n.timeVariable ?? ''}
+            options={[...varOptions, addVariableOption()]}
+            onChange={withQuickAdd((v) => set({ timeVariable: v || undefined }), { variableType: 'number', variableName: `${n.name.replace(/\W+/g, '') || 'video'}Time` })}
+          />
+          <SelectField
+            label="Playing"
+            title="true while the video plays, false while it is paused or has ended"
+            value={n.playingVariable ?? ''}
+            options={[...varOptions, addVariableOption()]}
+            onChange={withQuickAdd((v) => set({ playingVariable: v || undefined }), { variableType: 'boolean', variableName: `${n.name.replace(/\W+/g, '') || 'video'}Playing` })}
+          />
+          <SelectField
+            label="Length"
+            title="How long the video is, in seconds, once it has loaded"
+            value={n.durationVariable ?? ''}
+            options={[...varOptions, addVariableOption()]}
+            onChange={withQuickAdd((v) => set({ durationVariable: v || undefined }), { variableType: 'number', variableName: `${n.name.replace(/\W+/g, '') || 'video'}Length` })}
+          />
           <VideoCaptions node={n} set={(patch) => set(patch)} />
         </Section>
       );

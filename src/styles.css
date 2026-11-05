@@ -45,7 +45,7 @@
   --primary-bg: var(--u-gold);
   --primary-bg-hover: var(--u-gold-dark);
   --primary-fg: var(--u-g7);
-  /* Every panel resize bar, while hovered, focused or dragged */
+  /* Every panel resize bar, while hovered, focused or dragged: a 3px line, 2px into a 7px strip, the same on all of them */
   --resizer: var(--u-gold);
   /* Text colours for notes and toasts that sit on a pale tint or the panel colour */
   --ok-text: #9fe3c4;
@@ -90,7 +90,7 @@
   --primary-bg: var(--u-gold);
   --primary-bg-hover: var(--u-gold-dark);
   --primary-fg: var(--u-g7);
-  /* Every panel resize bar, while hovered, focused or dragged */
+  /* Every panel resize bar, while hovered, focused or dragged: a 3px line, 2px into a 7px strip, the same on all of them */
   --resizer: var(--u-gold);
   --ok-text: #12724c;
   --warn-text: #7a5600;
@@ -129,7 +129,7 @@
   --primary-bg: var(--u-gold);
   --primary-bg-hover: var(--u-gold-dark);
   --primary-fg: var(--u-g7);
-  /* Every panel resize bar, while hovered, focused or dragged */
+  /* Every panel resize bar, while hovered, focused or dragged: a 3px line, 2px into a 7px strip, the same on all of them */
   --resizer: var(--u-gold);
   --ok-text: #12724c;
   --warn-text: #7a5600;
@@ -1602,10 +1602,10 @@ body.col-resizing * {
 }
 .resize-handle {
   position: absolute;
-  top: -3px;
+  top: -4px;
   left: 0;
   right: 0;
-  height: 6px;
+  height: 7px;
   cursor: ns-resize;
   z-index: 5;
   touch-action: none;
@@ -1613,7 +1613,7 @@ body.col-resizing * {
 .resize-handle:hover,
 .resize-handle:active,
 .resize-handle:focus-visible {
-  background: linear-gradient(180deg, transparent 1.5px, var(--resizer) 1.5px, var(--resizer) 4.5px, transparent 4.5px);
+  background: linear-gradient(180deg, transparent 2px, var(--resizer) 2px, var(--resizer) 5px, transparent 5px);
   outline: none;
 }
 .bottom-body {
@@ -3442,15 +3442,15 @@ button.twisty:hover {
   position: absolute;
   top: 0;
   bottom: 0;
-  right: -3px;
-  width: 6px;
+  right: -4px;
+  width: 7px;
   cursor: col-resize;
   z-index: 5;
 }
 .split-divider:hover,
 .split-divider:active,
 .split-divider:focus-visible {
-  background: linear-gradient(90deg, transparent 1.5px, var(--resizer) 1.5px, var(--resizer) 4.5px, transparent 4.5px);
+  background: linear-gradient(90deg, transparent 2px, var(--resizer) 2px, var(--resizer) 5px, transparent 5px);
 }
 .script-list .link-btn {
   display: block;

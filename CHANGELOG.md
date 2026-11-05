@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A video layer's settings have **Playback into variables**: Position (seconds, and setting it jumps the video), Playing and Length, each a variable picker with + Create new variable…. The Usage tab counts them as uses.
+- Resize bars are all a 7 px strip with the same 3 px gold line (the bottom one and the split columns were thinner).
 - Sound through Web Audio (the player's `webaudio.ts`): timeline clips, **Play sound** and the timeline panel's preview all play through one `AudioContext`, so media keys, headset buttons and the system's media controls no longer pause them behind the project's back. Clips at another speed keep their pitch through a time-stretch (WSOLA) AudioWorklet; the new **Keep pitch at other speeds** clip setting (`keepPitch`, default on) can turn that off. Where there's no Web Audio the old `<audio>` mixer is used.
 - **Workspaces** in Preferences (editor only): Standard, Animate, Interactions, Big canvas and Review switch the whole panel arrangement (dock layout, panel widths, bottom height) at once, and **Save current layout as…** keeps your own under a name (up to 12, rename, delete). Saved ones are stored with your preferences on the server (`workspaces`, checked for shape and size; the prefs body limit is now 128 KB).
 - Every panel resize bar (side panels, bottom panels, split columns, a floating window's corner) shows the same gold line (`--resizer`) when hovered, focused or dragged. The bottom panels' bar is now a focusable separator too: arrow keys resize it, double-click puts it back.
