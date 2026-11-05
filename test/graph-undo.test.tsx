@@ -103,4 +103,24 @@ describe('adding a node to the interaction graph', () => {
     expect(reachedWindow).toBe(false);
     expect(s.artboard()!.children).toHaveLength(0);
   });
+
+  it('adds a labelled group from the pane menu, and Delete on it takes the frame away but keeps the nodes', async () => {
+    const s = await mount();
+    const canvas = host!.querySelector('.logic-canvas') as HTMLElement;
+    pick('On start');
+    await act(async () => void (await new Promise((r) => setTimeout(r, 5))));
+    const pane = host!.querySelector('.react-flow__pane') as HTMLElement;
+    act(() => void pane.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 })));
+    const item = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((b) => b.textContent?.startsWith('New group here'))!;
+    act(() => item.click());
+    const groups = s.artboard()!.logic.groups!;
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ label: 'Group', width: 360, height: 220 });
+    expect(s.get().logicSelection).toBe(groups[0].id);
+    expect(host!.querySelector('.ix-group-head')?.textContent).toBe('Group');
+    await act(async () => void (await new Promise((r) => setTimeout(r, 5))));
+    act(() => void canvas.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Delete' })));
+    expect(s.artboard()!.logic.groups).toBeUndefined();
+    expect(s.artboard()!.logic.nodes).toHaveLength(1);
+  });
 });

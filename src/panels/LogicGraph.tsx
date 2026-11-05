@@ -4,6 +4,7 @@ import {
   Background,
   Controls,
   Handle,
+  NodeResizer,
   Position,
   type Connection,
   type Edge,
@@ -28,6 +29,7 @@ import {
   isContainer,
   walk,
   type Artboard,
+  type LogicGroup,
   type LogicNode,
   type ParamDef,
   type Project,
@@ -44,6 +46,7 @@ import { SplitColumns } from '../components/SplitColumns';
 if (import.meta.env.DEV) silenceFlowAttributionWarning();
 import { assetKind } from '../lib/assets';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
+import { promptDialog } from '../components/dialogs';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { usePrefs } from '../lib/prefs';
 import { compatibleKinds, newNodePort, type DragDirection } from '../lib/graph';
@@ -76,7 +79,77 @@ function IxNode({ data, selected }: NodeProps<Node<IxNodeData>>) {
   );
 }
 
-const nodeTypes = { ix: IxNode };
+type GroupData = { group: LogicGroup };
+
+/** Colours a group can take. The empty one is the default (the frame takes the editor's muted line colour). */
+export const GROUP_COLORS = [
+  { label: 'Grey', value: '' },
+  { label: 'Blue', value: '#3b82f6' },
+  { label: 'Green', value: '#16a34a' },
+  { label: 'Amber', value: '#d97706' },
+  { label: 'Purple', value: '#9333ea' },
+  { label: 'Red', value: '#dc2626' },
+];
+
+/** A change to one group of the open artboard's graph, through the store like every other edit. */
+function updateGroup(id: string, fn: (g: LogicGroup) => void, coalesce?: string) {
+  const st = store();
+  const abId = st.get().activeArtboardId;
+  st.update(
+    (d) => {
+      const g = d.artboards.find((x) => x.id === abId)?.logic.groups?.find((x) => x.id === id);
+      if (g) fn(g as LogicGroup);
+    },
+    { coalesce },
+  );
+}
+
+//Set while a group's resize handles are held: its position changes then are the frame growing to the left or up,
+//not the group being dragged, so the nodes inside stay where they are
+let resizingGroup: string | null = null;
+
+function GroupNode({ data, selected }: NodeProps<Node<GroupData>>) {
+  const g = data.group;
+  const [editing, setEditing] = useState(false);
+  const commit = (v: string) => {
+    setEditing(false);
+    if (v.trim() !== g.label) updateGroup(g.id, (x) => void (x.label = v.trim().slice(0, 200)));
+  };
+  return (
+    <div className={`ix-group${selected ? ' selected' : ''}`} style={g.color ? { ['--group' as string]: g.color } : undefined}>
+      <NodeResizer
+        isVisible={selected}
+        minWidth={160}
+        minHeight={80}
+        onResizeStart={() => (resizingGroup = g.id)}
+        onResizeEnd={() => {
+          resizingGroup = null;
+          store().commit();
+        }}
+      />
+      <div className="ix-group-head" title="Drag to move the group and the nodes in it. Double-click to rename" onDoubleClick={() => setEditing(true)}>
+        {editing ? (
+          <input
+            className="ix-group-input nodrag"
+            autoFocus
+            defaultValue={g.label}
+            aria-label="Group name"
+            onBlur={(e) => commit(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') commit(e.currentTarget.value);
+              else if (e.key === 'Escape') setEditing(false);
+            }}
+          />
+        ) : (
+          g.label || 'Group'
+        )}
+      </div>
+    </div>
+  );
+}
+
+const nodeTypes = { ix: IxNode, ixgroup: GroupNode };
 
 function summarize(n: LogicNode, ab: Artboard, project: Project): string {
   const def = CATALOG_BY_KIND[n.kind];
@@ -123,13 +196,30 @@ export function LogicGraph() {
 
   const nodes: Node<IxNodeData>[] = useMemo(
     () =>
-      (ab?.logic.nodes ?? []).map((n) => ({
-        id: n.id,
-        type: 'ix',
-        position: { x: n.x, y: n.y },
-        data: { logic: n, summary: ab ? summarize(n, ab, s.project) : '' },
-        selected: n.id === s.sel,
-      })),
+      [
+        // Groups first and below everything, moved only by their title bar so the empty space inside acts like the pane
+        ...(ab?.logic.groups ?? []).map(
+          (g) =>
+            ({
+              id: g.id,
+              type: 'ixgroup',
+              position: { x: g.x, y: g.y },
+              width: g.width,
+              height: g.height,
+              zIndex: -1,
+              dragHandle: '.ix-group-head',
+              data: { group: g },
+              selected: g.id === s.sel,
+            }) as unknown as Node<IxNodeData>,
+        ),
+        ...(ab?.logic.nodes ?? []).map((n) => ({
+          id: n.id,
+          type: 'ix',
+          position: { x: n.x, y: n.y },
+          data: { logic: n, summary: ab ? summarize(n, ab, s.project) : '' },
+          selected: n.id === s.sel,
+        })),
+      ],
     [ab, s.project, s.sel],
   );
   // Selected connections live here (the document only stores the graph), so Delete can remove them
@@ -152,9 +242,52 @@ export function LogicGraph() {
     [s.abId],
   );
 
+  const isGroup = (id: string) => !!ab?.logic.groups?.some((g) => g.id === id);
+  /** A node's size on screen (it isn't in the document); a typical node's size before it has been measured. */
+  const sizeOf = (id: string) => {
+    const m = rf.current?.getInternalNode(id)?.measured;
+    return { width: m?.width ?? 180, height: m?.height ?? 70 };
+  };
+  /** The nodes in a group: the ones whose centre is inside its frame. */
+  const membersOf = (a: Artboard, g: LogicGroup) =>
+    a.logic.nodes.filter((n) => {
+      const z = sizeOf(n.id);
+      const cx = n.x + z.width / 2;
+      const cy = n.y + z.height / 2;
+      return cx >= g.x && cx <= g.x + g.width && cy >= g.y && cy <= g.y + g.height;
+    });
   const onNodesChange = (changes: NodeChange<Node<IxNodeData>>[]) => {
     for (const c of changes) {
-      if (c.type === 'position' && c.position) {
+      if (c.type === 'position' && c.position && isGroup(c.id)) {
+        const pos = c.position;
+        updateLogic((a) => {
+          const g = a.logic.groups?.find((x) => x.id === c.id);
+          if (!g) return;
+          const dx = Math.round(pos.x) - g.x;
+          const dy = Math.round(pos.y) - g.y;
+          if (!dx && !dy) return;
+          if (resizingGroup === g.id) {
+            // Grown to the left or up: the right and bottom edges stay put
+            g.width -= dx;
+            g.height -= dy;
+          } else
+            for (const n of membersOf(a, g)) {
+              n.x += dx;
+              n.y += dy;
+            }
+          g.x += dx;
+          g.y += dy;
+        }, `logic-move-${c.id}`);
+        if (!c.dragging && resizingGroup !== c.id) store().commit();
+      } else if (c.type === 'dimensions' && c.dimensions && c.resizing && isGroup(c.id)) {
+        const d = c.dimensions;
+        updateLogic((a) => {
+          const g = a.logic.groups?.find((x) => x.id === c.id);
+          if (!g) return;
+          g.width = Math.round(d.width);
+          g.height = Math.round(d.height);
+        }, `logic-resize-${c.id}`);
+      } else if (c.type === 'position' && c.position) {
         const pos = c.position;
         updateLogic((a) => {
           const n = a.logic.nodes.find((x) => x.id === c.id);
@@ -247,7 +380,9 @@ export function LogicGraph() {
   const deleteSelected = () => {
     const st = store().get();
     if (selEdges.length) removeEdges(selEdges);
-    if (st.logicSelection) removeNodes([st.logicSelection]);
+    //Deleting a group takes the frame away and leaves its nodes (Delete group and nodes in its menu takes both)
+    if (st.logicSelection && isGroup(st.logicSelection)) ungroup(st.logicSelection);
+    else if (st.logicSelection) removeNodes([st.logicSelection]);
     setSelEdges([]);
     store().set({ logicSelection: null });
   };
@@ -260,6 +395,62 @@ export function LogicGraph() {
     });
     store().set({ logicSelection: nid });
     focusGraph();
+  };
+  const addGroup = (rect: { x: number; y: number; width: number; height: number }, label = 'Group') => {
+    const id = uid('lgg');
+    updateLogic((a) => {
+      a.logic.groups = [...(a.logic.groups ?? []), { id, label, x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }];
+    });
+    store().set({ logicSelection: id });
+    setSelEdges([]);
+    focusGraph();
+    return id;
+  };
+  /** A group around one node, with room for a few more beside it and the title bar above. */
+  const groupAround = (nodeId: string) => {
+    const n = ab?.logic.nodes.find((x) => x.id === nodeId);
+    if (!n) return;
+    const z = sizeOf(nodeId);
+    addGroup({ x: n.x - 24, y: n.y - 48, width: z.width + 48, height: z.height + 72 });
+  };
+  const ungroup = (id: string) =>
+    updateLogic((a) => {
+      a.logic.groups = (a.logic.groups ?? []).filter((g) => g.id !== id);
+      if (!a.logic.groups.length) delete a.logic.groups;
+    });
+  const renameGroup = async (g: LogicGroup) => {
+    const v = await promptDialog({ title: 'Rename group', label: 'Name', initial: g.label, confirmLabel: 'Rename' });
+    if (v !== null) updateGroup(g.id, (x) => void (x.label = v.trim().slice(0, 200)));
+  };
+  const groupMenu = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    const g = ab?.logic.groups?.find((x) => x.id === id);
+    if (!g || !ab) return;
+    store().set({ logicSelection: id });
+    setSelEdges([]);
+    const inside = membersOf(ab, g).map((n) => n.id);
+    setMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { heading: g.label || 'Group' },
+        { label: 'Rename…', onClick: () => void renameGroup(g) },
+        { label: 'Colour', items: GROUP_COLORS.map((c) => ({ label: c.label, color: c.value || 'var(--muted)', onClick: () => updateGroup(g.id, (x) => (c.value ? (x.color = c.value) : delete x.color)) })) },
+        { separator: true },
+        { label: 'Ungroup (keep the nodes)', hint: 'Del', onClick: () => ungroup(id) },
+        {
+          label: `Delete group and ${inside.length} node${inside.length === 1 ? '' : 's'}`,
+          danger: true,
+          onClick: () =>
+            updateLogic((a) => {
+              a.logic.nodes = a.logic.nodes.filter((x) => !inside.includes(x.id));
+              a.logic.edges = a.logic.edges.filter((x) => !inside.includes(x.from) && !inside.includes(x.to));
+              a.logic.groups = (a.logic.groups ?? []).filter((x) => x.id !== id);
+              if (!a.logic.groups.length) delete a.logic.groups;
+            }),
+        },
+      ],
+    });
   };
   const copyNode = (id: string, cut = false) => {
     const n = ab?.logic.nodes.find((x) => x.id === id);
@@ -309,7 +500,13 @@ export function LogicGraph() {
     setMenu({
       x: e.clientX,
       y: e.clientY,
-      items: [{ heading: 'Add node' }, ...paletteItems((kind) => add(kind, at)), { separator: true }, { label: 'Paste', hint: 'Ctrl+V', onClick: () => pasteFromClipboard(at) }],
+      items: [
+        { heading: 'Add node' },
+        ...paletteItems((kind) => add(kind, at)),
+        { separator: true },
+        { label: 'New group here', onClick: () => addGroup({ x: at?.x ?? 0, y: at?.y ?? 0, width: 360, height: 220 }) },
+        { label: 'Paste', hint: 'Ctrl+V', onClick: () => pasteFromClipboard(at) },
+      ],
       search: 'Find a node…',
     });
   };
@@ -361,6 +558,7 @@ export function LogicGraph() {
       { label: 'Cut', hint: 'Ctrl+X', onClick: () => copyNode(id, true) },
       { label: 'Copy', hint: 'Ctrl+C', onClick: () => copyNode(id) },
       { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate(id) },
+      { label: 'Put in a new group', title: 'Draw a labelled frame around this node; drag other nodes into it', onClick: () => groupAround(id) },
       { label: 'Help for this node', onClick: () => openHelp('interaction-nodes', slug(def.label)) },
       { separator: true },
       { label: 'Delete', hint: 'Del', danger: true, onClick: () => removeNodes([id]) },
@@ -469,7 +667,7 @@ export function LogicGraph() {
             setSelEdges([]);
           }}
           onPaneContextMenu={paneMenu}
-          onNodeContextMenu={(e, node) => nodeMenu(e, node.id)}
+          onNodeContextMenu={(e, node) => (isGroup(node.id) ? groupMenu(e, node.id) : nodeMenu(e, node.id))}
           onEdgeContextMenu={(e, edge) => edgeMenu(e, edge.id)}
           fitView={ab.logic.nodes.length > 0}
           fitViewOptions={{ maxZoom: 1 }}
@@ -497,7 +695,11 @@ export function LogicGraph() {
         }, `logic-params-${selected.id}`)} onNote={(note) => updateLogic((a) => {
           const n = a.logic.nodes.find((x) => x.id === selected.id);
           if (n) n.note = note || undefined;
-        }, `logic-note-${selected.id}`)} /> : <p className="hint">Select a node to edit its settings.</p>}
+        }, `logic-note-${selected.id}`)} /> : s.sel && ab.logic.groups?.some((g) => g.id === s.sel) ? (
+          <p className="hint">A group. Drag its title to move it with the nodes inside, drag its edges to resize it, double-click the title to rename it, and right-click it for its colour. Delete removes the frame and keeps the nodes.</p>
+        ) : (
+          <p className="hint">Select a node to edit its settings.</p>
+        )}
       </div>
     </SplitColumns>
   );

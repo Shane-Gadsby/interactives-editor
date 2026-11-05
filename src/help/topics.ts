@@ -1403,7 +1403,7 @@ A [Steps](steps) timeline can carry sound and captions too: Next plays the narra
     title: 'Interactions',
     group: 'Interactivity',
     summary: 'The node graph: events start a flow, actions do things, logic chooses the way.',
-    keywords: 'interaction graph node event action logic state machine wire edge connect flow',
+    keywords: 'interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box',
     body: `Open the **Interactions** tab. Each artboard has its own graph.
 
 **See-through layers don't take clicks.** While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
@@ -1435,6 +1435,13 @@ Click a node in the palette on the left (or drag it onto the graph) to add it; s
 - Right-click a node for **Connect to new node**, **Connect to existing node**, **Disconnect**, **Cut**, **Copy** (<kbd>Ctrl</kbd>+<kbd>C</kbd>), **Duplicate** (<kbd>Ctrl</kbd>+<kbd>D</kbd>), **Help for this node** and **Delete** (<kbd>Del</kbd>).
 - With a node selected in the graph, <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd> copy and paste that node, not the layers on the artboard. A pasted node keeps its settings but not its connections.
 - Right-click a connection to **Delete connection**.
+
+## Groups
+A **group** is a labelled frame around nodes that belong together ("Score", "Intro", "Wrong answers"), so a big graph stays readable. It doesn't change what runs.
+- Right-click empty graph and choose **New group here**, or right-click a node and choose **Put in a new group** to frame it. Drag more nodes into the frame.
+- A node is in a group when its middle is inside the frame. Drag the group's title to move it and every node in it; select it and drag its edges or corners to resize it.
+- Double-click the title to rename it (or **Rename…** in its right-click menu). **Colour** gives it one of a few tints.
+- <kbd>Del</kbd> with a group selected, or **Ungroup (keep the nodes)**, takes the frame away. **Delete group and N nodes** takes both.
 - Right-click a *layer* on the canvas, choose **Add interaction**, then **On click…** or **On hover…** to add an **On pointer** event with a **Control timeline** action already joined to it.
 - In the Inspector, a layer's **Interactions** section lists its events and has **+ On click** and **+ On hover**.
 
