@@ -1,28 +1,58 @@
+/* The editor's own colours, from the shared StudyDesk palette (/styles/palette.min.css, loaded in index.html) so it
+   looks like the rest of the toolbox: its greys, its blue for focus and selection, and its gold kept for a few touches
+   (primary buttons, the open tab, the line under the top bar). Each falls back to the same colour written out, for a
+   server without the palette. Dark mixes the palette's darkest greys, since it has no dark panel colours of its own */
 :root {
-  --bg: #1b1c1f;
-  --panel: #232428;
-  --panel-2: #2a2b30;
-  --line: #34363c;
-  --line-2: #42454c;
-  --text: #e6e7ea;
-  --muted: #9a9ea8;
-  --accent: #4d7cff;
-  --accent-2: #3b5bfd;
-  --danger: #ef5b5b;
-  --ok: #40c08a;
-  --warn: #e7b14c;
-  --canvas: #141518;
-  --event: #e7a33e;
-  --action: #4d9cff;
-  --logic: #b07cff;
+  --u-gold: var(--ilar-swatch-yellow, #ffb448);
+  --u-gold-dark: var(--ilar-swatch-yellow-dark, #fb9400);
+  --u-gold-darker: var(--ilar-swatch-yellow-darker, #b36b03);
+  --u-blue: var(--ilar-swatch-blue, #0080a8);
+  --u-sky: var(--ilar-swatch-icon-blue, #26a7de);
+  --u-purple: var(--ilar-swatch-purple, #775d94);
+  --u-plum: var(--ilar-swatch-plum, #3c2d4d);
+  --u-green: var(--ilar-swatch-green, #3e8521);
+  --u-orange: var(--ilar-swatch-orange, #ed6a21);
+  --u-red: var(--ilar-swatch-error, #f44336);
+  --u-white: var(--ilar-swatch-off-white, #fefefe);
+  --u-g1: var(--ilar-swatch-grey-1, #f4f4f4);
+  --u-gp: var(--ilar-swatch-grey-panel, #eeeeee);
+  --u-g2: var(--ilar-swatch-grey-2, #dfdfdf);
+  --u-g3: var(--ilar-swatch-grey-3, #cacaca);
+  --u-g4: var(--ilar-swatch-grey-4, #a0a0a0);
+  --u-g5: var(--ilar-swatch-grey-5, #777777);
+  --u-g6: var(--ilar-swatch-grey-6, #4d4d4d);
+  --u-gt: var(--ilar-swatch-grey-text, #333333);
+  --u-g7: var(--ilar-swatch-grey-7, #1e1e1e);
+
+  --bg: color-mix(in srgb, var(--u-g7) 85%, #000);
+  --panel: var(--u-g7);
+  --panel-2: color-mix(in srgb, var(--u-g7) 80%, var(--u-g6));
+  --line: color-mix(in srgb, var(--u-gt) 85%, var(--u-g7));
+  --line-2: color-mix(in srgb, var(--u-g6) 80%, var(--u-g7));
+  --text: var(--u-g1);
+  --muted: var(--u-g4);
+  /* The palette blue in both themes: it sits under white text in menus, chips and toggles all over */
+  --accent: var(--u-blue);
+  --accent-2: var(--u-blue);
+  --danger: color-mix(in srgb, var(--u-red) 85%, #fff);
+  --ok: color-mix(in srgb, var(--u-green) 70%, #fff);
+  --warn: var(--u-gold);
+  --canvas: color-mix(in srgb, var(--u-g7) 70%, #000);
+  --event: var(--u-gold-dark);
+  --action: var(--u-sky);
+  --logic: color-mix(in srgb, var(--u-purple) 70%, #fff);
+  --brand: var(--u-gold);
+  --primary-bg: var(--u-gold);
+  --primary-bg-hover: var(--u-gold-dark);
+  --primary-fg: var(--u-g7);
   /* Text colours for notes and toasts that sit on a pale tint or the panel colour */
   --ok-text: #9fe3c4;
   --warn-text: #f2d48a;
   --danger-text: #ffc1c1;
-  --key-on: #ffcf5a;
-  --key-off: #8e93a0;
-  --btn-hover-border: #6e7380;
-  --btn-hover-bg: #32343b;
+  --key-on: var(--u-gold);
+  --key-off: var(--u-g4);
+  --btn-hover-border: var(--u-g5);
+  --btn-hover-bg: color-mix(in srgb, var(--u-g7) 70%, var(--u-g6));
   --banner-warn-bg: #3a2f12;
   --banner-warn-fg: #f2d48a;
   --banner-error-bg: #3a1616;
@@ -36,31 +66,35 @@
   background: var(--bg);
 }
 
-/* Light theme: Preferences > Theme. "auto" follows the system setting */
+/* Light theme: Preferences > Theme. "auto" follows the system setting. The palette's own light greys, as the toolbox uses them */
 :root[data-theme='light'] {
-  --bg: #f3f4f6;
-  --panel: #ffffff;
-  --panel-2: #eef0f3;
-  --line: #e1e4e9;
-  --line-2: #cdd2da;
-  --text: #1d2026;
-  --muted: #646b78;
-  --accent: #3b5bfd;
-  --accent-2: #3b5bfd;
-  --danger: #d93c3c;
-  --ok: #1f9d68;
-  --warn: #b7831c;
-  --canvas: #e4e6ea;
-  --event: #c9821c;
-  --action: #2f7fe0;
-  --logic: #8b55e8;
+  --bg: var(--u-g1);
+  --panel: var(--u-white);
+  --panel-2: var(--u-gp);
+  --line: var(--u-g2);
+  --line-2: var(--u-g3);
+  --text: var(--u-gt);
+  --muted: var(--u-g5);
+  --accent: var(--u-blue);
+  --accent-2: var(--u-blue);
+  --danger: var(--u-red);
+  --ok: var(--u-green);
+  --warn: var(--u-gold-darker);
+  --canvas: var(--u-g2);
+  --event: var(--u-gold-darker);
+  --action: var(--u-blue);
+  --logic: var(--u-purple);
+  --brand: var(--u-gold);
+  --primary-bg: var(--u-gold);
+  --primary-bg-hover: var(--u-gold-dark);
+  --primary-fg: var(--u-g7);
   --ok-text: #12724c;
   --warn-text: #7a5600;
   --danger-text: #a02424;
-  --key-on: #b87800;
-  --key-off: #6b7280;
-  --btn-hover-border: #9aa1ad;
-  --btn-hover-bg: #e4e7ec;
+  --key-on: var(--u-gold-darker);
+  --key-off: var(--u-g6);
+  --btn-hover-border: var(--u-g4);
+  --btn-hover-bg: var(--u-g2);
   --banner-warn-bg: #fbefc9;
   --banner-warn-fg: #6a4a00;
   --banner-error-bg: #fbe0e0;
@@ -71,29 +105,33 @@
 }
 @media (prefers-color-scheme: light) {
   :root[data-theme='auto'] {
-  --bg: #f3f4f6;
-  --panel: #ffffff;
-  --panel-2: #eef0f3;
-  --line: #e1e4e9;
-  --line-2: #cdd2da;
-  --text: #1d2026;
-  --muted: #646b78;
-  --accent: #3b5bfd;
-  --accent-2: #3b5bfd;
-  --danger: #d93c3c;
-  --ok: #1f9d68;
-  --warn: #b7831c;
-  --canvas: #e4e6ea;
-  --event: #c9821c;
-  --action: #2f7fe0;
-  --logic: #8b55e8;
+  --bg: var(--u-g1);
+  --panel: var(--u-white);
+  --panel-2: var(--u-gp);
+  --line: var(--u-g2);
+  --line-2: var(--u-g3);
+  --text: var(--u-gt);
+  --muted: var(--u-g5);
+  --accent: var(--u-blue);
+  --accent-2: var(--u-blue);
+  --danger: var(--u-red);
+  --ok: var(--u-green);
+  --warn: var(--u-gold-darker);
+  --canvas: var(--u-g2);
+  --event: var(--u-gold-darker);
+  --action: var(--u-blue);
+  --logic: var(--u-purple);
+  --brand: var(--u-gold);
+  --primary-bg: var(--u-gold);
+  --primary-bg-hover: var(--u-gold-dark);
+  --primary-fg: var(--u-g7);
   --ok-text: #12724c;
   --warn-text: #7a5600;
   --danger-text: #a02424;
-  --key-on: #b87800;
-  --key-off: #6b7280;
-  --btn-hover-border: #9aa1ad;
-  --btn-hover-bg: #e4e7ec;
+  --key-on: var(--u-gold-darker);
+  --key-off: var(--u-g6);
+  --btn-hover-border: var(--u-g4);
+  --btn-hover-bg: var(--u-g2);
   --banner-warn-bg: #fbefc9;
   --banner-warn-fg: #6a4a00;
   --banner-error-bg: #fbe0e0;
@@ -186,12 +224,13 @@ code,
   cursor: default;
 }
 .btn.primary {
-  background: var(--accent-2);
-  border-color: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .btn.primary:hover:not(:disabled) {
-  background: var(--accent);
+  background: var(--primary-bg-hover);
+  border-color: var(--primary-bg-hover);
 }
 .btn.danger {
   color: var(--danger);
@@ -1209,6 +1248,8 @@ hr.item-sep {
   gap: 8px;
   padding: 0 10px;
   border-bottom: 1px solid var(--line);
+  /* The one bit of UniSQ gold that's always there, kept to a hairline */
+  box-shadow: inset 0 -2px 0 var(--brand);
   background: var(--panel);
 }
 .conflict-banner {
@@ -1405,7 +1446,7 @@ body.col-resizing * {
 }
 .tabs button.active {
   color: var(--text);
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--brand);
 }
 
 /* ---------------------------------------------------------------- canvas */
@@ -1519,7 +1560,7 @@ body.col-resizing * {
   stroke-linejoin: round;
 }
 .marquee {
-  fill: rgba(77, 124, 255, 0.08);
+  fill: color-mix(in srgb, var(--accent) 8%, transparent);
   stroke: var(--accent);
   stroke-dasharray: 3 2;
 }
@@ -1554,7 +1595,7 @@ body.col-resizing * {
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
 }
 .grad-handle:hover {
-  stroke: var(--accent, #3b5bfd);
+  stroke: var(--accent, #0080a8);
 }
 .grad-line {
   stroke: #fff;
@@ -1806,7 +1847,7 @@ div.text-editor {
 }
 .layer-row.selected,
 .artboard-row.selected {
-  background: rgba(77, 124, 255, 0.25);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .layer-row.hidden-layer .layer-name {
   opacity: 0.45;
@@ -1819,7 +1860,7 @@ div.text-editor {
   opacity: 0.4;
 }
 .layer-row.drop-inside {
-  background: rgba(77, 124, 255, 0.22);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
   outline: 2px solid var(--accent);
   outline-offset: -2px;
   border-radius: 3px;
@@ -2356,7 +2397,7 @@ button.twisty:hover {
   background: rgba(231, 177, 76, 0.12);
 }
 .segment.selected {
-  background: rgba(77, 124, 255, 0.18);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 .ease-curve {
@@ -2898,7 +2939,7 @@ button.twisty:hover {
   background: var(--panel-2);
 }
 .list-item.active {
-  background: rgba(77, 124, 255, 0.25);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .script-main {
   display: flex;
@@ -3472,7 +3513,7 @@ kbd {
 }
 @keyframes help-flash {
   from {
-    background: rgb(77 124 255 / 0.35);
+    background: color-mix(in srgb, var(--accent) 35%, transparent);
   }
 }
 .help-pager {
@@ -4827,7 +4868,7 @@ code {
 
 /* Bones: glyphs on the canvas (never drawn in the player) */
 .bone-body {
-  fill: rgba(77, 124, 255, 0.28);
+  fill: color-mix(in srgb, var(--accent) 28%, transparent);
   stroke: var(--accent);
   stroke-width: 1.2;
   stroke-linejoin: round;
@@ -5362,7 +5403,7 @@ code {
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 .media-label.selected {
-  background: rgba(77, 124, 255, 0.16);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--text, inherit);
 }
 .media-name {

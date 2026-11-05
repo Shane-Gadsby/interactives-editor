@@ -66,7 +66,15 @@ describe('theme variables', () => {
   const block = (re: RegExp) => re.exec(css)![0];
   const dark = block(/:root \{[\s\S]*?\n\}/);
   const light = block(/:root\[data-theme='light'\] \{[\s\S]*?\n\}/);
-  const v = (b: string, name: string) => new RegExp(`${name}:\\s*(#[0-9a-f]{6})`, 'i').exec(b)![1];
+  // A theme variable's colour: written out, or a var() to follow (in the block, then in :root, where the palette
+  // stand-ins live), or a palette variable's fallback
+  const v = (b: string, name: string): string => {
+    const raw = (new RegExp(`${name}:\\s*([^;]+);`).exec(b) ?? new RegExp(`${name}:\\s*([^;]+);`).exec(dark))![1].trim();
+    if (/^#[0-9a-f]{6}$/i.test(raw)) return raw;
+    const ref = /^var\((--[\w-]+)(?:,\s*(#[0-9a-f]{6}))?\)$/i.exec(raw)!;
+    if (ref[1].startsWith('--ilar-')) return ref[2];
+    return v(b, ref[1]);
+  };
   const lum = (h: string) => {
     const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
