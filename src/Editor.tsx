@@ -23,7 +23,7 @@ import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink, openHelp } from './help/Help';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ContextMenu } from './components/ContextMenu';
-import { DockDragLayer, DockFloats, DockZone, FloatingTools, toolsMenu, useDockSync, useZoneSizes } from './components/Dock';
+import { DockDragLayer, DockFloats, DockZone, FloatingTools, ToolsHead, toolsMenu, useDockSync, useZoneSizes } from './components/Dock';
 import { PrefsModal } from './components/PrefsModal';
 import { HistoryModal, InviteModal, ShareForReviewModal, ShareModal } from './components/ProjectModals';
 import { SaveTemplateModal } from './components/TemplateModals';
@@ -919,6 +919,7 @@ export function Toolbar() {
       }}
     >
       {menu && <ContextMenu x={menu.x} y={menu.y} items={toolsMenu()} onClose={() => setMenu(null)} />}
+      <ToolsHead />
       <div className="tool-grid">
         {btn('select')}
         {btn('hand')}

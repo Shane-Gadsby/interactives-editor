@@ -8,9 +8,13 @@ const playerDir = fileURLToPath(new URL('../interactives-player', import.meta.ur
 
 // The version (package.json) and build id (the editor and player commits it was built from), shown in Preferences and help
 const version = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version as string;
+// A "+" after the commit means it was built with changes not committed yet (dist is committed with its source, so a
+// build is usually made before the commit it lands in: without the mark it reads as the commit before)
 const commit = (dir: string) => {
   try {
-    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+    const sha = execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+    const dirty = execFileSync('git', ['status', '--porcelain', '--', '.', ':!dist', ':!mcp/dist'], { cwd: dir, encoding: 'utf8' }).trim();
+    return dirty ? `${sha}+` : sha;
   } catch {
     return '';
   }

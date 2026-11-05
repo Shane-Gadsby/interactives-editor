@@ -1440,6 +1440,14 @@ body.dock-dragging * {
 .dock-tools-grip:hover {
   color: var(--text);
 }
+/* Docked, it's the top of the rail: out to the rail's edges, over its top padding */
+.dock-tools-grip.docked {
+  align-self: stretch;
+  margin: -8px 0 4px;
+  position: sticky;
+  top: -8px;
+  z-index: 1;
+}
 .topbar {
   grid-area: top;
   display: flex;
