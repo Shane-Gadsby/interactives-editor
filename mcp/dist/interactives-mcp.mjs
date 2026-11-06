@@ -5599,7 +5599,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | Key | Does |
 |---|---|
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> (<kbd>Ctrl</kbd>+<kbd>Y</kbd>) | Undo / redo |
-| <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd> | Copy / cut / paste (pasting image files inserts them) |
+| <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd> | Copy / cut / paste (pasting image files inserts them). After clicking in the timeline they copy and paste the selected keys, see [Copy, snap and stagger keys](timelines#copy-snap-and-stagger-keys) |
 | <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate |
 | <kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> | Group / ungroup |
 | <kbd>Ctrl</kbd>+<kbd>A</kbd> | Select all on the artboard |
@@ -5692,6 +5692,8 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 - Drag a row to reorder. A line shows where the layer will land, and how far it is indented shows which list it joins. Over the top or bottom third of a row the layer goes before or after it. Over the middle of a group or frame row the group is outlined and the layer goes inside it, at the front.
 - Where a group ends, move the pointer left to drop the layer under the group instead of inside it: the line steps out one level for each step left. The empty space under the last row is the end of the list, so you can always drop at the very bottom without landing in a group that happens to be last. Drop on the artboard's own row to bring the layer to the top level, in front.
 - From the keyboard, select one layer and press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Down</kbd> to step it past a neighbour (and out of its group at the end), <kbd>Alt</kbd>+<kbd>Right</kbd> to put it inside the group just above it and <kbd>Alt</kbd>+<kbd>Left</kbd> to take it out, under that group.
+- Type in **Filter layers** above the list to show only the layers whose name has those letters. The groups and artboards they sit in stay, faded, so you can see where each one is, and a collapsed group doesn't hide a match. Press **Text** beside the box to match the words in text layers, buttons and links as well, rich text included. <kbd>Esc</kbd> clears the box. While a filter is on, the rows can't be dragged.
+- Right-click a layer for **Select same fill** and **Select same font**. They select every unlocked layer on the same artboard with that fill (any of a layer's fills counts, and a text layer's colour counts as a fill) or set in that font (a rich-text run in it counts). Then change them all at once in the Inspector. To change a colour or font across the whole project, use the named colour and text styles in [Libraries](libraries#styles) instead: layers that follow a style change with it.
 - **+ Add artboard** and **+ Import file as artboard** are at the bottom. See [Artboards](artboards) and [Importing](import).
 
 ## Hide and lock
@@ -5724,7 +5726,7 @@ Select layers and drag them on the canvas. If you let go over a **different artb
 - Interactions in the old artboard that used them will need fixing. The [Usage](usage) tab's **Broken** list shows exactly which.
 
 ## Right-click menus
-- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Add interaction** (**On click…**, **On hover…**) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
+- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**On click…**, **On hover…**) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
 - **An artboard**: **New** (a menu of layers to add where you clicked), **Paste**, **Make start artboard**, **Duplicate artboard**, **Zoom to artboard** and **Delete artboard**.
 - **Empty canvas**: **New artboard here**, **Paste**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`
   },
@@ -6307,7 +6309,7 @@ The **Open URL** action does the same from an interaction.
     title: "Timelines and keyframes",
     group: "Motion",
     summary: "Animate properties with keyframes, record mode, looping and playback.",
-    keywords: "animation animate keyframe key record playhead loop ping pong autoplay speed duration track",
+    keywords: "animation animate keyframe key record playhead loop ping pong autoplay speed duration track copy paste snap stagger offset",
     body: `Each artboard can have any number of timelines. A timeline has **tracks**; each track animates one property of one layer through **keyframes**.
 
 ## Adding keyframes
@@ -6316,7 +6318,20 @@ The **Open URL** action does the same from an interaction.
 - Once a property has keys on the open timeline, changing it in the inspector or on the canvas changes its key at the playhead (or adds one there), with or without Record, since the value you see is the timeline's. To change a layer's own value, the one it has before the timeline plays, switch to **Design view (no timeline)**.
 - On a timeline set to **Whole frames**, a key goes on the start of the frame the playhead is in.
 - Or select a layer, choose a property in the dropdown at the top left of the Timeline and press **+ Key**.
-- Drag keys to retime them (<kbd>Shift</kbd> snaps to 100 ms), <kbd>Shift</kbd>-click to select several, <kbd>Delete</kbd> to remove. The diamond on a layer's own row moves all of that layer's keys at that time.
+- Drag keys to retime them, <kbd>Shift</kbd>-click to select several, <kbd>Delete</kbd> to remove. The diamond on a layer's own row moves all of that layer's keys at that time. See [Copy, snap and stagger keys](timelines#copy-snap-and-stagger-keys) for the rest.
+
+## Copy, snap and stagger keys
+**Copy and paste.** Select keys (on one track or several, with <kbd>Shift</kbd>-click or by pressing a layer's own diamond), press <kbd>Ctrl</kbd>+<kbd>C</kbd>, move the playhead and press <kbd>Ctrl</kbd>+<kbd>V</kbd>. The first copied key lands on the playhead and the others keep their spacing, values and easing. <kbd>Ctrl</kbd>+<kbd>X</kbd> copies and removes them. The pasted keys end up selected, and one <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes the whole paste back. Where they go:
+- By default back onto the tracks they came from.
+- Select a different layer on the canvas (when the keys came from one layer) and they go onto the same properties of that layer, with a new track where it has none. Properties that only mean something on the layer they came from (draw order, solo child, shape points, shader uniforms) are left out, and the message says so.
+- Select the keys of one other track (when you copied from one track) and they go onto that track. The two properties must hold the same kind of value (a number onto a number, a colour onto a colour); otherwise nothing is pasted.
+- A pasted key replaces any key already at that time on the track. Keys that would land past the end of the timeline are left out.
+
+Pressing <kbd>Ctrl</kbd>+<kbd>C</kbd> copies keys while your last click was in the timeline, and layers otherwise.
+
+**Snapping.** While you drag keys they pull onto the playhead (where it was when you grabbed the key) and onto markers when they come within a few pixels, and the keys you are dragging keep their spacing. Away from both they follow the 10 ms grid (100 ms with <kbd>Shift</kbd>). Hold <kbd>Alt</kbd> to drag without the pull.
+
+**Stagger.** Select two or more layers that have keys on the timeline and press **Stagger…** in the Timeline bar. Enter a step in milliseconds: the first layer stays where it is, the next one's keys move later by the step, the next by twice the step, and so on. The order is the Layers panel's, top to bottom; layers with no keys on the timeline are skipped. A negative step runs the other way. Run it again and the offsets add up. If any key would leave the timeline, nothing moves and the message says how long to make it. It is one undo step.
 
 ## Timeline settings
 The Timeline bar shows a short summary (length, loop, speed, autoplay, frame rate). Click the **gear** beside it to change them, and to rename the timeline; Esc or a click outside closes it.
@@ -6768,8 +6783,8 @@ ${params}`;
     id: "question-kit",
     title: "Questions and quizzes",
     group: "Interactivity",
-    summary: "Add multiple choice, true/false, fill in the blank, ordering, matching (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks.",
-    keywords: "question quiz test assessment multiple choice true false fill blank ordering sequence matching match drag drop pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning",
+    summary: "Add multiple choice, true/false, fill in the blank, ordering, matching (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file.",
+    keywords: "question quiz test assessment import gift moodle converter multiple choice true false fill blank ordering sequence matching match drag drop pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning",
     body: `Quizzes without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
 
 ## Add one
@@ -6826,6 +6841,30 @@ Two finished ones to play first: **Matching question** and **Hotspot question** 
 **Hotspot.** Add question, *Hotspot (click the right place)*. The sample picture is drawn with shapes so the question works straight away: put your own image in its place (delete the shapes in the **Picture** layer, add an image, or give the Picture frame an image fill). Each **Area** in the Question section is a name, a tick for right, and a shape (rectangle, ellipse or polygon); **Edit on canvas** selects its layer so you can move, resize or reshape it with the usual tools, and **Show all areas** selects every one, since they are invisible until a learner picks one. Tick more than one area as right and the learner has to mark all of them (the areas become checkboxes, and **Part marks** score the share). Clicking an area picks it with a ring and a tint; after the question finishes the right areas are marked and *Right answer: Roof* is written under the picture, so it is not shown by colour alone. If clicks near an area should count, **Grow areas 8 px** makes every area bigger on each side (and **Shrink** the reverse). Each area can have its own feedback, said when it is the one clicked.
 
 ![A hotspot question over a drawn house: the Roof area is selected and shown with its outline.](help/question-hotspot.png)
+
+## Import questions from a GIFT file
+
+If you already have questions in Moodle, or made them with the GIFT converter from a Word document, you do not have to retype them. Open the **Add question** menu and press **Import questions from a GIFT file**, then pick the file (\`.gift\` or \`.txt\`).
+
+Each question gets an artboard of its own, named after its title if it has one and otherwise "Question 3" and so on, in rows below what is already on the canvas. An empty artboard that is open (a new project's first one) takes the first question. They are ordinary questions from then on: the **Question** section changes anything, and you restyle them like any other. The whole import is one undo. Up to 100 questions come in from one file; the report says how many were left over.
+
+| In the GIFT file | Becomes |
+|---|---|
+| One \`=\` right answer and some \`~\` wrong ones | Multiple choice (one answer) |
+| Several \`=\` answers with \`~\` ones, or \`~%50%\` style weights that are positive for the right ones | Multiple response |
+| \`{T}\`, \`{F}\`, \`{TRUE}\`, \`{FALSE}\` | True or false |
+| Only \`=\` answers (short answer) | Fill in the blank, every \`=\` answer accepted. A \`*\` in an answer matches anything |
+| \`{#3.14:0.01}\`, \`{#1..5}\` (numerical) | Fill in the blank with a margin of error |
+| \`=term -> definition\` lines | Matching (drag and drop) |
+
+The text after a \`#\` on an answer becomes that option's feedback. The text after \`####\` is added to the "Correct" message. On true or false, the two \`#\` parts are the feedback for the wrong choice and the right one. A question written as \`The capital is {=Paris ~Rome}.\` shows a gap (\`_____\`) where the answers were. Backslash escapes (\`\\~\`, \`\\=\`, \`\\#\`, \`\\{\`, \`\\}\`, \`\\:\`, \`\\n\`) work as in Moodle, comment lines starting with \`//\` are ignored, and options stay in the order of the file (turn on **Shuffle** to deal them).
+
+When it finishes, a report lists everything that did not come across, or came across changed, with the line number in the file. Nothing is dropped quietly:
+
+- **Left out**: essay questions (a person marks them), plain text with no answers (GIFT's description), more than one set of braces in a question, a question with no right answer, one that is not valid GIFT, more than 30 choices or 8 matching pairs.
+- **Changed**: part marks (a kit question is right or wrong, or scored by the share of right choices), answers worth less than full marks in a short answer, feedback on individual short answers or pairs, extra wrong matches, HTML formatting and pictures (the text is kept, plain), and maths markup, which shows as written. \`$CATEGORY\` lines are ignored.
+
+Moodle XML files are not read yet.
 
 ## Shuffle
 
@@ -7729,7 +7768,7 @@ After an import, a report lists anything that couldn't be carried over exactly. 
 
 | Export | Gives you |
 |---|---|
-| Single HTML file | One file with the player, the project and every asset. Upload or embed it anywhere; it works offline. |
+| Single HTML file | One file with the player, the project and every asset. Upload or embed it anywhere. Google fonts are copied into the file, so opening it never calls Google (if a font can't be fetched when you export, a message says so and that font loads from Google instead). |
 | Project package (${PACKAGE_EXTENSION}) | The whole project with assets, to re-import or play with the player library |
 | Project JSON | The document only, without asset files |
 | Public interface reference…, TypeScript definitions (.d.ts) | What a page that embeds the project can set, read and hear, as a reference page and typed names. See [Public interface](public-interface). These three exports ask first when the list no longer matches the project |
@@ -7758,7 +7797,7 @@ The files are named after the project (and the artboard, for pictures and Lottie
 Export gives you **files**; Share gives you **links and people**. Nothing under Share downloads anything.
 
 ## Share link
-**Share → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. It is a snapshot: press **Update to the latest version** to publish later changes, or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). The **Link for StudyDesk** is the same link, so it stops too: if learners have results or progress in the project, the confirm lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one. **Copy** copies the link and **Open** opens it in a new tab.
+**Share → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google (a message tells you if a font couldn't be fetched, and that font loads from Google instead). It is a snapshot: press **Update to the latest version** to publish later changes, or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). The **Link for StudyDesk** is the same link, so it stops too: if learners have results or progress in the project, the confirm lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one. **Copy** copies the link and **Open** opens it in a new tab.
 
 ![The Share link dialog.](help/share-link-dialog.png)
 

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Keyframes: copy, paste, snap and stagger** (`lib/key-edit.ts`): Ctrl+C/X/V on selected keys when the timeline last had the pointer (layers otherwise), pasting onto the same tracks, onto the same properties of other selected layers, or onto one selected track of the same kind; dragged keys snap to the playhead and markers within 6 px (Alt off); **Stagger…** offsets selected layers' keys by N ms in Layers order. One undo step each.
+- **Layers: Filter layers** box (names, and with **Text** the words in text layers) and **Select same fill / Select same font** on the layer right-click menus (`lib/layer-find.ts`).
+- **Import questions from a GIFT file** in the Add question menu (`lib/gift.ts`, `lib/gift-import.ts`): one question per artboard, multiple choice/response, true/false, short answer, numerical (as a blank with a tolerance) and matching, with a report of what was skipped or changed. Moodle XML later.
+- **Fonts embedded in single-file exports and share links** (`lib/font-embed.ts`): Google fonts the project uses are written into the page as @font-face data under the id the player checks, so viewers never call Google; a font that can't be fetched falls back to the Google link with a toast. SVG/PNG export shares the code and now fetches each file once.
+
 - **Transfer ownership**: **Make owner** beside a collaborator in Invite to collaborate (owner or power user). The old owner stays on as a collaborator; same id and share token, so embeds keep working; the published library and the old owner's templates saved from it follow. `POST /api/projects/:id/owner`, `ownerChanged {at, from, by}` on the row.
 
 - **Clear results is the owner's**: `DELETE /api/projects/:id/results` takes the owner or a power user only (`projectFor(req, res, {ownerOnly: true})`); collaborators still see results, and the button is greyed out for them with a tooltip (`mayClear` on the results reply). Help says so.
