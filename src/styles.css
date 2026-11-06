@@ -2182,8 +2182,10 @@ button.twisty:hover {
   cursor: pointer;
 }
 .asset-toolbar .seg button.on {
-  background: var(--accent-2);
-  color: #fff;
+  /* the palette's gold with dark text, like the toolbox's selected buttons (blue was hard to read) */
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  font-weight: 600;
 }
 .asset-size {
   flex: 1;
@@ -7071,11 +7073,12 @@ code {
   border-right: none;
 }
 .templates-head .seg button.on {
-  background: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  font-weight: 600;
 }
 .templates-head .seg button.on .tag-n {
-  color: #fff;
+  color: var(--primary-fg);
 }
 .template-card .project-thumb {
   height: calc(var(--card-size, 220px) * 0.62);
@@ -8241,4 +8244,15 @@ code {
 .branded-packs-title {
   margin: 16px 24px 0;
   font-size: 18px;
+}
+
+/* Power user mode, as the suite's other apps show it: a gold pill in the header */
+.power-pill {
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }

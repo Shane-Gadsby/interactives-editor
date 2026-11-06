@@ -1,6 +1,6 @@
 import { track } from './lib/analytics';
 import { VersionInfo } from './components/VersionInfo';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { PACKAGE_EXTENSION } from 'interactives-player';
 import { newProjectWithThemes } from './lib/themes';
 import { whenPaletteReady } from './lib/palette-look';
@@ -21,7 +21,7 @@ import { NewProjectModal } from './components/NewProjectModal';
 
 declare global {
   interface Window {
-    powerUser?: { isToggleKey(e: KeyboardEvent): boolean; canUse(access: unknown): boolean };
+    powerUser?: { isToggleKey(e: KeyboardEvent): boolean; canUse(access: unknown): boolean; follow?(scope: object, onChange: (on: boolean) => void): boolean };
   }
 }
 
@@ -219,10 +219,30 @@ export function Home({ open }: { open: (id: string) => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Inside the toolbox, power user mode is the toolbox's: follow it (and its F9), like the suite's other apps do.
+  // Opened on its own, this page has its own F9 below
+  const following = useRef(false);
+  useEffect(() => {
+    const scope = { powerUserMode: false, $applyAsync() {} };
+    const on = (v: boolean) => {
+      setPower(v);
+      void refresh(v);
+    };
+    if (!window.powerUser?.follow?.(scope, on)) return;
+    following.current = true;
+    // follow() only hears the toolbox on its next change: if it's already on, show everything now
+    try {
+      if ((window.parent as unknown as { m?: { powerUserMode?: boolean } }).m?.powerUserMode) on(true);
+    } catch {
+      /* not the toolbox */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Power user (god mode): the suite's shared key and rule; the server checks again.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!window.powerUser?.isToggleKey(e) || !who?.power) return;
+      if (following.current || !window.powerUser?.isToggleKey(e) || !who?.power) return;
       e.preventDefault();
       const next = !power;
       setPower(next);
@@ -392,6 +412,19 @@ export function Home({ open }: { open: (id: string) => void }) {
         </div>
         <div className="home-actions">
           {(who?.user || me2) && <span className="muted home-user" title="Signed in through the toolbox">{who?.user?.name ?? me2?.name ?? who?.user?.username}</span>}
+          {power && (
+            <>
+              <span className="power-pill" title="Power user mode is on: everyone's projects are showing (F9 turns it off)">
+                Power user mode
+              </span>
+              <a className="btn" href="#/admin" title="Every project in one table, bulk actions and the audit log">
+                Admin
+              </a>
+              <a className="btn" href="#/usage" title="How the editor is used and its errors">
+                Usage
+              </a>
+            </>
+          )}
           <NoticeBell open={open} />
           <button className="icon-btn" title="Preferences (theme, mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)}>
             <Icons.gear width={16} />

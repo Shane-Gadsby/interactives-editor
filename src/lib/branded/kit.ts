@@ -205,7 +205,7 @@ export function brandedPage(ctx: BrandedCtx, title: string, opts: { kind?: PageK
     kids.push(createNode('text', { name: 'Footer text', text: opts.footer ?? '', x: width / 2, y: height - FOOTER + 14, width: width / 2 - SIDE, fontSize: 12, color: L.muted, align: 'right', fontFamily: BRAND_FONT } as Partial<TextNode>));
   } else if (kind === 'section') {
     ab.background = { type: 'solid', color: L.deep };
-    kids.push(chrome(createNode('rect', { name: 'Brand accent', x: SIDE, y: height / 2 + 20, width: 72, height: 6, cornerRadius: 3, fill: { type: 'solid', color: L.accent } })));
+    kids.push(chrome(createNode('rect', { name: 'Brand accent', x: SIDE, y: height / 2 + 20, width: 72, height: 6, cornerRadius: 3, fill: { type: 'solid', color: L.logoMarkOnLight } })));  //gold on the deep purple in every colourway (the accent is purple in Gold)
     kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 60, width: width - SIDE * 2, fontSize: 44, fontWeight: 700, color: L.onDeep, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
     kids.push(logo(ctx, SIDE, height - FOOTER - 8, 96, 'deep'));
   } else {
