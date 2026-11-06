@@ -357,6 +357,8 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//Every id is checked by validID before it gets near here, so these can't climb out of storageDir
 	projectDir = (projectID) => path.join(storageDir, projectID),
 	shareFile = (token) => path.join(storageDir, 'shares', `${token}.html`),
+	//The page an update replaced, kept for one-click revert. Tokens are [\w-] only, so /s/<token> can never reach it
+	sharePrevFile = (token) => path.join(storageDir, 'shares', `${token}.prev.html`),
 	thumbFile = (projectID) => path.join(storageDir, 'thumbs', `${projectID}.jpg`),
 	assetFile = (projectID, assetID) => path.join(storageDir, projectID, assetID),
 
@@ -724,7 +726,10 @@ router.delete('/api/projects/:id', async (req, res) => {
 			await projectsBin.insertOne({...existing, binned: {at: new Date(), by: me ? {username: me.username, name: me.name} : null}})
 		})
 	await moveIfThere(projectDir(id), path.join(binDir(id), 'files'))
-	if (existing.share?.token) await moveIfThere(shareFile(existing.share.token), path.join(binDir(id), 'share.html'))
+	if (existing.share?.token) {
+		await moveIfThere(shareFile(existing.share.token), path.join(binDir(id), 'share.html'))
+		await moveIfThere(sharePrevFile(existing.share.token), path.join(binDir(id), 'share.prev.html'))
+	}
 	await moveIfThere(thumbFile(id), path.join(binDir(id), 'thumb.jpg'))
 	hubEnd(id)
 	await projects.deleteOne({_id: id})
@@ -806,7 +811,10 @@ router.post('/api/bin/:id/restore', async (req, res) => {
 	}
 
 	await moveIfThere(path.join(binDir(id), 'files'), projectDir(id))
-	if (back.share?.token) await moveIfThere(path.join(binDir(id), 'share.html'), shareFile(back.share.token))
+	if (back.share?.token) {
+		await moveIfThere(path.join(binDir(id), 'share.html'), shareFile(back.share.token))
+		await moveIfThere(path.join(binDir(id), 'share.prev.html'), sharePrevFile(back.share.token))
+	}
 	await moveIfThere(path.join(binDir(id), 'thumb.jpg'), thumbFile(id))
 	await projects.insertOne(back)
 	await projectsBin.deleteOne({_id: id})
@@ -1621,7 +1629,37 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
+	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
+	if (doc.share?.token && await moveIfThere(shareFile(token), sharePrevFile(token))) {
+		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null}
+	}
 	await fs.promises.writeFile(shareFile(token), req.body)
+	await projects.updateOne({_id: id}, {$set: {share}})
+	res.json({share})
+})
+
+//Put the previous page back (and keep the one it replaces as the previous, so a revert can itself be undone)
+router.post('/api/projects/:id/share/revert', async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0, docChunks: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+	let token = doc.share?.token
+	if (!token || !doc.share.previous || !fs.existsSync(sharePrevFile(token))) {
+		return res.status(400).json({error: 'There is no previous version of this share link to go back to'})
+	}
+
+	let swap = path.join(storageDir, 'shares', `${token}.swap.html`)
+	await fs.promises.rename(shareFile(token), swap)
+	await fs.promises.rename(sharePrevFile(token), shareFile(token))
+	await fs.promises.rename(swap, sharePrevFile(token))
+
+	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null}, reverted: {at: new Date(), by: whoIs(req)}}
 	await projects.updateOne({_id: id}, {$set: {share}})
 	res.json({share})
 })
@@ -1638,7 +1676,10 @@ router.delete('/api/projects/:id/share', async (req, res) => {
 		return
 	}
 
-	if (doc.share?.token) await fs.promises.rm(shareFile(doc.share.token), {force: true})
+	if (doc.share?.token) {
+		await fs.promises.rm(shareFile(doc.share.token), {force: true})
+		await fs.promises.rm(sharePrevFile(doc.share.token), {force: true})
+	}
 	await projects.updateOne({_id: id}, {$unset: {share: ''}})
 	res.json({ok: true})
 })

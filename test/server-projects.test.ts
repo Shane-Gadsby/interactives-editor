@@ -598,3 +598,26 @@ describe('named and pinned versions', () => {
     expect((await h.call('POST', '/api/projects/prpin00002/revisions', { user: ann, json: { name: '' } })).status).toBe(400);
   });
 });
+
+describe('share link revert', () => {
+  const page = (id: string, body: string) => h.call('PUT', `/api/projects/${id}/share`, { user: ann, body: `<html><body>${body}</body></html>`, type: 'text/plain' });
+  it('keeps the page an update replaced, reverts to it, and can switch back', async () => {
+    await put('prshr00001', project('prshr00001'));
+    const first = (await page('prshr00001', 'one')).json.share;
+    expect(first.previous).toBeUndefined();
+    expect((await h.call('POST', '/api/projects/prshr00001/share/revert', { user: ann })).status).toBe(400);
+    const second = (await page('prshr00001', 'two')).json.share;
+    expect(second.previous).toBeTruthy();
+    expect((await h.call('GET', `/s/${first.token}`, {})).text).toContain('two');
+    //the kept page can't be reached through the link
+    expect((await h.call('GET', `/s/${first.token}.prev`, {})).status).toBe(404);
+    const back = (await h.call('POST', '/api/projects/prshr00001/share/revert', { user: ann })).json.share;
+    expect((await h.call('GET', `/s/${first.token}`, {})).text).toContain('one');
+    expect(back.previous).toBeTruthy();
+    await h.call('POST', '/api/projects/prshr00001/share/revert', { user: ann });
+    expect((await h.call('GET', `/s/${first.token}`, {})).text).toContain('two');
+    //turning the link off takes both pages
+    await h.call('DELETE', '/api/projects/prshr00001/share', { user: ann });
+    expect(fs.existsSync(path.join(h.storage, 'shares', `${first.token}.prev.html`))).toBe(false);
+  });
+});

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Revert a share link**: an update keeps the page it replaced (`storage/shares/<token>.prev.html`, unreachable through `/s/`), and **Revert to previous version** in the Share dialog swaps them (`POST /api/projects/:id/share/revert`), so a revert can be undone the same way. `share.previous {updated, by}`; turning the link off removes both; the bin carries both.
+
 - **AI agent access switch and marked revisions**: `INTERACTIVES_MCP=off` makes `/mcp` answer 503 and keeps `?agent=` clients out of live rooms. Revisions with an agent's edits read "Autosave (edited with <agent> (AI))" and carry `agents`.
 
 - **Video, GIF or frames** in the Export menu (`lib/motion-export.ts`, `lib/gif.ts`, `lib/frame-zip.ts`, `components/MotionExportModal.tsx`): one timeline of the open artboard drawn frame by frame at exact times, to MP4 (H.264) or WebM (VP9) through WebCodecs with `mp4-muxer`/`webm-muxer` (MIT, pinned), an animated GIF (own encoder) or a ZIP of PNGs. No audio yet. Frames are drawn from a data: url, since a blob: url taints the canvas in Chrome.

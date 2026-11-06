@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, prepareNodes, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
-import { addCollaborator, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, saveNamedVersion, updateRevision, publishShare, restoreRevision, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
+import { addCollaborator, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, saveNamedVersion, updateRevision, publishShare, restoreRevision, revertShare, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
 import { download, standaloneHtml, warnInEditor } from '../lib/export';
 import { IconButton } from './ui';
@@ -197,6 +197,22 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
       setBusy(null);
     }
   };
+  const revert = async () => {
+    const prev = share?.previous;
+    if (!prev) return;
+    const when = prev.updated ? new Date(prev.updated).toLocaleString() : 'before the last update';
+    if (!(await confirmDialog({ title: 'Revert share link', message: `Put back the version published ${when}${prev.by?.name ? ` by ${prev.by.name}` : ''}? Everyone using the link (and the Link for StudyDesk) gets it straight away. The version showing now is kept, so you can switch back the same way.`, confirmLabel: 'Revert' }))) return;
+    setBusy('Reverting…');
+    try {
+      setShare(await revertShare(projectId));
+      track('feature', 'share-revert');
+      store().toast('The previous version is back on the share link.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
   const stop = async () => {
     const live = await inUseWarning(projectId, 'unshare');
     if (!(await confirmDialog({ title: 'Turn off share link', message: live ? `Turn the share link off?\n\n${live}` : 'Turn the share link off? Anyone using it will get a "turned off" page.', confirmLabel: 'Turn off', danger: true }))) return;
@@ -295,6 +311,16 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
                 <button className="btn primary" disabled={!!busy} onClick={publish} title="Publish the project as it is now to the same link">
                   {busy ?? 'Update to the latest version'}
                 </button>
+                {share.previous && (
+                  <button
+                    className="btn"
+                    disabled={!!busy}
+                    onClick={() => void revert()}
+                    title={`Put back the version published ${share.previous.updated ? new Date(share.previous.updated).toLocaleString() : 'before'}${share.previous.by?.name ? ` by ${share.previous.by.name}` : ''}. The one showing now is kept, so you can switch back`}
+                  >
+                    Revert to previous version
+                  </button>
+                )}
                 <button className="btn danger" disabled={!!busy} onClick={stop}>
                   Turn off link
                 </button>

@@ -356,7 +356,14 @@ export interface ShareInfo {
   updated: string;
   /** Signed in people who play it from the learner link get a "Remix this" button that copies the project into their own. */
   remix?: boolean;
+  /** Who published the page now showing. */
+  by?: { username: string | null; name: string | null } | null;
+  /** The page an update replaced, kept for one-click revert. */
+  previous?: { updated: string | null; by: { username: string | null; name: string | null } | null } | null;
 }
+
+/** Put the page the last update replaced back on the share link (the current one becomes the previous). */
+export const revertShare = (projectId: string) => call<{ share: ShareInfo }>(`projects/${encodeURIComponent(projectId)}/share/revert`, { method: 'POST' }).then((r) => r.share);
 
 export const getShare = (projectId: string) => call<{ share: ShareInfo | null }>(`projects/${projectId}/share`).then((r) => r.share);
 
