@@ -3,6 +3,8 @@ import { buildStandaloneHtml, PACKAGE_EXTENSION, type Asset, type Project } from
 import { hasScriptLayers } from './draw-templates';
 import { assetBytes, exportPackage } from './db';
 import { extOf, reportError, track } from './analytics';
+import { embeddedFontStyles, inHead } from './font-embed';
+import { store } from '../store/store';
 
 export function download(blob: Blob, filename: string): void {
   // What kind of file and how big, never its name
@@ -34,19 +36,32 @@ export function withoutLinks(project: Project): Project {
   return { ...project, artboards: project.artboards.map(({ source: _source, ...a }) => a) };
 }
 
-export async function standaloneHtml(project: Project, opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; bytesFor?: (asset: Asset) => Promise<Uint8Array | null> } = {}): Promise<string> {
+/**
+ * `embedFonts` is for files that leave the editor (a download, a share link): the Google fonts are fetched now and
+ * written into the page, so it never calls Google when someone opens it. Previews skip it, they're online anyway.
+ * `onWarning` hears about any font that couldn't be fetched.
+ */
+export async function standaloneHtml(
+  project: Project,
+  opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; bytesFor?: (asset: Asset) => Promise<Uint8Array | null>; embedFonts?: boolean; onWarning?: (text: string) => void } = {},
+): Promise<string> {
   const clean = withoutLinks(project);
   const p = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
-  return buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: opts.bytesFor ?? ((a) => assetBytes(project.id, a)), debug: opts.debug, accessibility: opts.accessibility });
+  const html = await buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: opts.bytesFor ?? ((a) => assetBytes(project.id, a)), debug: opts.debug, accessibility: opts.accessibility });
+  // The player skips a Google font whose element id is already in the page, so these go in ahead of its script
+  return opts.embedFonts ? inHead(html, await embeddedFontStyles(p, opts.onWarning)) : html;
 }
+
+/** Says so in the editor when an export couldn't embed a font */
+export const warnInEditor = (text: string) => store().toast(text, 'error');
 
 function hasCodeNodes(p: Project): boolean {
   return p.artboards.some((a) => a.logic.nodes.some((n) => n.kind === 'action.code' || n.kind === 'action.script'));
 }
 
 export async function downloadStandalone(project: Project): Promise<void> {
-  const html = await failsAs('export', 'html', () => standaloneHtml(project));
+  const html = await failsAs('export', 'html', () => standaloneHtml(project, { embedFonts: true, onWarning: warnInEditor }));
   download(new Blob([html], { type: 'text/html' }), `${fileSafe(project.name)}.html`);
 }
 

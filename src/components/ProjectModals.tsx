@@ -5,7 +5,7 @@ import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
 import { addCollaborator, clearResults, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
-import { standaloneHtml } from '../lib/export';
+import { standaloneHtml, warnInEditor } from '../lib/export';
 import { IconButton } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
@@ -143,7 +143,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
     setBusy('Building and uploading…');
     setError(null);
     try {
-      setShare(await publishShare(projectId, await standaloneHtml(store().get().project)));
+      setShare(await publishShare(projectId, await standaloneHtml(store().get().project, { embedFonts: true, onWarning: warnInEditor })));
       track('feature', 'share-publish');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
