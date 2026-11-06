@@ -12,7 +12,7 @@
  * - `libraryUpdates` says what is newer in the library, `describeChange` says what changed in a component.
  * - `updateComponents` brings copies up to a new version. Instances placed in your own artboards, their inputs and
  *   your variables are not part of the copy, so they are kept as they are.
- * - `detachArtboard` makes a copy an ordinary editable artboard.
+ * - `detachArtboard` makes a copy an ordinary editable artboard (not a brand kit's, see `brand.ts`, unless overridden).
  * - styles: `syncLibraryStyles` keeps the library's styles in the project, and `syncNodeStyles` re-applies styles to
  *   the layers that follow them.
  */
@@ -31,6 +31,7 @@ import {
 } from 'interactives-player';
 import { closureOf, hashArtboard, hashOf, type LibrarySnapshot, type SnapshotComponent } from '../../shared/library.mjs';
 import { analyzeUsage } from './dependencies';
+import { brandCopyViolated, kitPalette } from './brand';
 
 export type { LibrarySnapshot, SnapshotComponent };
 
@@ -48,11 +49,13 @@ export interface LibraryInfo {
   components: SnapshotComponent[];
   internals: { id: string; name: string; hash: string }[];
   styles: { colors: ColorStyle[]; texts: TextStyleDef[] };
+  /** Published as a brand kit: what projects take from it is locked (`brand.ts`). */
+  brand?: boolean;
   history: { version: number; created: string; by: string | null; note: string }[];
 }
 
 /** What a full fetch of a library gives: the snapshot also says which version it is. */
-export type LibraryContent = LibrarySnapshot & { version: number };
+export type LibraryContent = LibrarySnapshot & { version: number; brand?: boolean };
 
 // ---------------------------------------------------------------- reading what is linked
 
@@ -76,11 +79,17 @@ function idMapOf(project: Project, libraryId: string): Map<string, string> {
 /**
  * The first edit that touches a library artboard, or null. Position, name and guides are yours to change; the rest of a
  * copy comes from the library. Immer shares everything that did not change, so comparing the parts by reference is enough.
+ * A brand kit's copies are stricter (they can't be deleted either, and only text the kit marked editable may change, see
+ * `brandCopyViolated`) and are the only ones `override` lets through.
  */
-export function lockViolation(before: Project, after: Project): Artboard | null {
+export function lockViolation(before: Project, after: Project, override = false): Artboard | null {
   for (const a of before.artboards) {
     if (!a.library) continue;
     const b = after.artboards.find((x) => x.id === a.id);
+    if (a.library.brand) {
+      if (!override && brandCopyViolated(a, b)) return a;
+      continue;
+    }
     if (!b || b === a) continue;
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
     for (const k of keys) {
@@ -176,6 +185,8 @@ export function applyComponents(draft: Project, libraryId: string, snap: Library
   const componentById = new Map(snap.components.map((c) => [c.id, c]));
   const internalById = new Map(snap.internals.map((c) => [c.id, c]));
   const result: ApplyResult = { ids: {}, added: [] };
+  const use = draft.libraries?.find((l) => l.id === libraryId);
+  const brand = snap.brand === undefined ? !!use?.brand : snap.brand;
   let right = draft.artboards.reduce((m, a) => Math.max(m, a.canvasX + a.width), 0);
 
   for (const id of ids) {
@@ -194,7 +205,7 @@ export function applyComponents(draft: Project, libraryId: string, snap: Library
     });
     const comp = componentById.get(id);
     const hash = comp?.hash ?? internalById.get(id)?.hash ?? hashArtboard(src);
-    copy.library = { libraryId, componentId: id, version: snap.version, hash, ...(comp ? {} : { internal: true }) };
+    copy.library = { libraryId, componentId: id, version: snap.version, hash, ...(comp ? {} : { internal: true }), ...(brand ? { brand: true } : {}) };
     const localId = idMap.get(id)!;
     const at = draft.artboards.findIndex((a) => a.id === localId);
     if (at >= 0) {
@@ -203,6 +214,7 @@ export function applyComponents(draft: Project, libraryId: string, snap: Library
       copy.canvasX = old.canvasX;
       copy.canvasY = old.canvasY;
       if (old.canvasHidden) copy.canvasHidden = true;
+      if (brand) keepEditableText(old, copy);
       draft.artboards[at] = copy;
     } else {
       copy.canvasX = right + 100;
@@ -222,15 +234,43 @@ export function applyComponents(draft: Project, libraryId: string, snap: Library
   return result;
 }
 
-/** Records the library in the project (the Libraries panel lists these) and takes its styles. */
-export function addLibrary(draft: Project, info: Pick<LibraryInfo, 'id' | 'name'>, snap: LibraryContent): void {
+/** A brand kit's text the kit marked editable keeps what the project wrote when the copy is replaced by a newer version. */
+function keepEditableText(old: Artboard, copy: Artboard): void {
+  const was = new Map<string, SceneNode>();
+  walkNodes(old.children, (n) => void was.set(n.id, n));
+  walkNodes(copy.children, (n) => {
+    const prev = was.get(n.id);
+    if (n.type !== 'text' || !n.brandEditable || prev?.type !== 'text') return;
+    n.text = prev.text;
+    if (prev.runs) n.runs = JSON.parse(JSON.stringify(prev.runs));
+    else delete n.runs;
+  });
+}
+
+/** Records the library in the project (the Libraries panel lists these) and takes its styles. A brand kit also leaves its palette for the off-brand check. */
+export function addLibrary(draft: Project, info: Pick<LibraryInfo, 'id' | 'name' | 'brand'>, snap: LibraryContent): void {
   draft.libraries ??= [];
-  const use = draft.libraries.find((l) => l.id === info.id);
+  let use = draft.libraries.find((l) => l.id === info.id);
   if (use) {
     use.name = info.name;
     use.version = snap.version;
-  } else draft.libraries.push({ id: info.id, name: info.name, version: snap.version });
+  } else draft.libraries.push((use = { id: info.id, name: info.name, version: snap.version }));
+  setBrand(draft, info.id, info.brand ?? snap.brand ?? !!use.brand, snap);
   syncLibraryStyles(draft, info.id, snap.styles);
+}
+
+/** Brings the project's idea of whether a library is a brand kit (and its copies' locks) in line with the server's. */
+export function setBrand(draft: Project, libraryId: string, brand: boolean, snap: Pick<LibrarySnapshot, 'styles' | 'fonts'>): void {
+  const use = draft.libraries?.find((l) => l.id === libraryId);
+  if (use) {
+    if (brand) use.brand = kitPalette(snap);
+    else delete use.brand;
+  }
+  for (const a of draft.artboards) {
+    if (a.library?.libraryId !== libraryId) continue;
+    if (brand) a.library.brand = true;
+    else delete a.library.brand;
+  }
 }
 
 /**
@@ -245,7 +285,7 @@ export function updateComponents(draft: Project, libraryId: string, snap: Librar
 }
 
 /** Update every copy that has changed, then take the library's styles and version. */
-export function updateAll(draft: Project, info: Pick<LibraryInfo, 'id' | 'name'>, snap: LibraryContent): string[] {
+export function updateAll(draft: Project, info: Pick<LibraryInfo, 'id' | 'name' | 'brand'>, snap: LibraryContent): string[] {
   const changed = changedComponents(draft, info.id, snap.components).map((c) => c.componentId);
   // styles first: the copies point at this project's ids for them
   addLibrary(draft, info, snap);
@@ -264,17 +304,19 @@ export function pruneInternals(draft: Project): void {
   }
 }
 
-/** Make a copy an ordinary artboard: no link, editable. Whatever it places as instances stays as it is. */
-export function detachArtboard(draft: Project, artboardId: string): boolean {
+/** Make a copy an ordinary artboard: no link, editable. Whatever it places as instances stays as it is. A brand kit's copy only with `override`. */
+export function detachArtboard(draft: Project, artboardId: string, override = false): boolean {
   const ab = draft.artboards.find((a) => a.id === artboardId);
   if (!ab?.library) return false;
+  if (ab.library.brand && !override) return false;
   delete ab.library;
   delete ab.canvasHidden;
   return true;
 }
 
-/** Stop using a library: its copies become ordinary artboards, its styles become your own. */
-export function removeLibrary(draft: Project, libraryId: string): void {
+/** Stop using a library: its copies become ordinary artboards, its styles become your own. A brand kit only with `override`. */
+export function removeLibrary(draft: Project, libraryId: string, override = false): boolean {
+  if (!override && isBrandKit(draft, libraryId)) return false;
   for (const a of draft.artboards) {
     if (a.library?.libraryId !== libraryId) continue;
     delete a.library;
@@ -282,7 +324,11 @@ export function removeLibrary(draft: Project, libraryId: string): void {
   }
   for (const s of [...(draft.styles?.colors ?? []), ...(draft.styles?.texts ?? [])]) if (s.library?.libraryId === libraryId) delete s.library;
   draft.libraries = (draft.libraries ?? []).filter((l) => l.id !== libraryId);
+  return true;
 }
+
+/** Is this library a brand kit as far as the project knows (its use says so, or one of its copies carries the lock)? */
+export const isBrandKit = (p: Project, libraryId: string): boolean => !!p.libraries?.find((l) => l.id === libraryId)?.brand || p.artboards.some((a) => a.library?.libraryId === libraryId && a.library.brand);
 
 /** A new instance layer of a (local) artboard, centred in the host artboard or at a point. */
 export function makeInstance(project: Project, hostId: string, artboardId: string, at?: { x: number; y: number }): InstanceNode | null {
@@ -297,6 +343,50 @@ export function makeInstance(project: Project, hostId: string, artboardId: strin
     x: Math.round(at ? at.x - target.width / 2 : (host.width - target.width) / 2),
     y: Math.round(at ? at.y - target.height / 2 : (host.height - target.height) / 2),
   }) as InstanceNode;
+}
+
+/**
+ * Put a brand kit in the project the way a pre-branded template starts: the kit added, and every component the kit marked with a
+ * place (`Artboard.brandPlace`: header, footer, logo...) placed in the first artboard of your own. The copies stay off the
+ * canvas (the instances draw them). Returns the ids of the instances placed. A kit with nothing marked is only added.
+ */
+export function startFromBrandKit(draft: Project, info: Pick<LibraryInfo, 'id' | 'name' | 'brand'>, snap: LibraryContent, hostId?: string): string[] {
+  addLibrary(draft, info, snap);
+  const wanted = snap.components.filter((c) => snap.artboards.find((a) => a.id === c.id)?.brandPlace);
+  const host = draft.artboards.find((a) => (hostId ? a.id === hostId : !a.library));
+  if (!wanted.length || !host || host.library) return [];
+  const applied = applyComponents(draft, info.id, snap, wanted.map((c) => c.id));
+  for (const id of applied.added) {
+    const ab = draft.artboards.find((a) => a.id === id);
+    if (ab) ab.canvasHidden = true;
+  }
+  const placed: string[] = [];
+  for (const c of wanted) {
+    const localId = applied.ids[c.id];
+    const node = localId ? makeInstance(draft, host.id, localId) : null;
+    if (!node) continue;
+    // Native size, or shrunk (keeping its proportions) to fit the artboard it goes on
+    const fit = Math.min(1, host.width / node.width, host.height / node.height);
+    node.width = Math.round(node.width * fit * 100) / 100;
+    node.height = Math.round(node.height * fit * 100) / 100;
+    const where = snap.artboards.find((a) => a.id === c.id)!.brandPlace!;
+    const right = host.width - node.width;
+    const bottom = host.height - node.height;
+    const centre = Math.round(right / 2);
+    const at: Record<string, [number, number]> = {
+      top: [centre, 0],
+      bottom: [centre, bottom],
+      'top-left': [0, 0],
+      'top-right': [right, 0],
+      'bottom-left': [0, bottom],
+      'bottom-right': [right, bottom],
+      center: [centre, Math.round(bottom / 2)],
+    };
+    [node.x, node.y] = at[where] ?? at.center;
+    host.children.push(node);
+    placed.push(node.id);
+  }
+  return placed;
 }
 
 // ---------------------------------------------------------------- what is newer

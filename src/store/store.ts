@@ -34,6 +34,7 @@ import {
 } from 'interactives-player';
 import { applyRuns, nodePropsToRunStyle } from '../lib/rich-text';
 import { lockViolation, unlinkStyleRef } from '../lib/libraries';
+import { clampBrandInstances, hasBrandArtboards } from '../lib/brand';
 import { addModifier, applyPreset, removeModifier, type TextPresetId } from '../lib/text-modifiers';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths, remapPointTracks, shapeToPaths } from '../lib/path-edit';
@@ -206,6 +207,8 @@ export interface EditorState {
   logicPicked: string[];
   saveState: 'saved' | 'saving' | 'dirty' | 'error';
   saveError: string | null;
+  /** A power user (or brand group member) has switched the brand kit lock off for this session (F9). Nothing is saved with it. */
+  brandOverride: boolean;
   toast: { text: string; kind: 'info' | 'error' } | null;
   /** A list worth reading (import/export notes), shown in a dialog. */
   report: { title: string; lines: string[] } | null;
@@ -284,6 +287,7 @@ export class EditorStore {
       logicPicked: [],
       saveState: 'saved',
       saveError: null,
+      brandOverride: false,
       toast: null,
       report: null,
       live: null,
@@ -318,21 +322,25 @@ export class EditorStore {
   update(recipe: (draft: Draft<Project>) => void, opts: { coalesce?: string; library?: boolean } = {}): void {
     const before = this.state.project;
     // Artboards that came from a library are read-only: a change that touches one (other than moving or renaming it)
-    // is refused. Library operations (insert, update, detach) say so with `library: true`.
+    // is refused. Library operations (insert, update, detach) say so with `library: true`. A brand kit's copies are
+    // stricter still (brand.ts), and the only ones the override lets through
     let edited: Project | null = null;
     if (!opts.library && before.artboards.some((a) => a.library)) {
       edited = produce(before, (d) => {
         recipe(d);
       });
-      const locked = lockViolation(before, edited);
+      const override = this.state.brandOverride;
+      const locked = lockViolation(before, edited, override);
       if (locked) {
         const now = Date.now();
         if (now - this.lastLockToast > 1500) {
           this.lastLockToast = now;
-          this.toast(`“${locked.name}” comes from a library and is read-only. Detach it to edit it here.`, 'error');
+          this.toast(locked.library?.brand ? `“${locked.name}” is part of a brand kit and is locked.` : `“${locked.name}” comes from a library and is read-only. Detach it to edit it here.`, 'error');
         }
         return;
       }
+      // Instances of brand kit artboards keep the kit's proportions and size range
+      if (!override && hasBrandArtboards(edited)) edited = clampBrandInstances(before, edited);
     }
     // Auto-layout frames re-position their children after every change, in the same undo step.
     const next = settleLayout(edited ?? produce(before, (d) => void recipe(d)), true);
@@ -1013,7 +1021,7 @@ export class EditorStore {
   addVariant(id: string, side: VariantSide = 'narrower'): string | null {
     track('feature', 'variant-add', { thing: side });
     const src = getArtboard(this.state.project, id);
-    if (!src) return null;
+    if (!src || this.brandCopyRefused(src)) return null;
     const all = this.state.project.artboards;
     const base = setBase(all, src);
     const members = setMembers(all, src);
@@ -1074,10 +1082,17 @@ export class EditorStore {
     );
   }
 
+  /** A copy of a brand kit artboard would be an unlocked one, which is the detach the kit doesn't allow. */
+  private brandCopyRefused(src: Artboard): boolean {
+    if (!src.library?.brand || this.state.brandOverride) return false;
+    this.toast(`“${src.name}” is part of a brand kit, so it can't be copied. Place an instance of it instead.`, 'error');
+    return true;
+  }
+
   duplicateArtboard(id: string): void {
     track('doc', 'artboard-duplicate');
     const src = getArtboard(this.state.project, id);
-    if (!src) return;
+    if (!src || this.brandCopyRefused(src)) return;
     const copy = this.copyArtboard(src);
     this.update((d) => {
       d.artboards.push(copy);

@@ -67,6 +67,12 @@ export const cleanProject = (project) => {
 	return copy
 }
 
+//The brand kits a project has added, as {id, name}. A template made from it is a pre-branded one, and says so on its card
+export const brandKitsOf = (project) => (Array.isArray(project?.libraries) ? project.libraries : [])
+	.filter((l) => l && l.brand && typeof l.id === 'string')
+	.map((l) => ({id: l.id, name: cleanLine(l.name, 120) || 'Brand kit'}))
+	.slice(0, 5)
+
 //Hash of what a template holds, for "did saving it again change anything". The project's own identity doesn't count
 export const contentHash = (project) => {
 	let {id, name, created, updated, template, ...rest} = project

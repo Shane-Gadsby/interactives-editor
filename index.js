@@ -288,6 +288,10 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//Admins and power users, minus presentation mode. Same rule as everywhere else in the suite
 	isPower = (req) => powerUser.canUse(req.sessionData?.access),
 
+	//Who may publish, mark and withdraw a brand kit: power users, plus anyone in the si-admin group named by INTERACTIVES_BRAND_GROUP
+	//(nobody extra when it isn't set). A brand kit is the one place a library locks what projects take from it
+	canMarkBrand = (req) => library.mayMarkBrand(req.sessionData?.access, isPower(req), process.env.INTERACTIVES_BRAND_GROUP),
+
 	//Your own projects only (or ones you've been invited to collaborate on), unless you're a power user. ownerOnly is
 	//for the things only the owner does: deleting the project, changing who collaborates. Logs instead of refusing
 	//until the box enforces sessions, same as session-check
@@ -454,7 +458,7 @@ router.put('/api/prefs', express.json({limit: '128kb'}), async (req, res) => {
 
 //Who the editor's talking to, for the projects list and the owner badge
 router.get('/api/session', (req, res) => {
-	res.json({user: whoIs(req), power: isPower(req)})
+	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req)})
 })
 
 //The projects list, mine only (owned or invited to). ?all=1 gets everyone's, but only for power users (god mode),
@@ -1669,6 +1673,7 @@ const maxSnapshot = 12 * 1024 * 1024,
 		version: doc.version,
 		updated: doc.updated,
 		note: doc.note || '',
+		brand: !!doc.brand,
 		mine: !!me?.username && doc.owner?.username === me.username,
 		//Only the owner sees who it's shared with
 		shared: !!me?.username && doc.owner?.username === me.username ? doc.shared || {everyone: false, users: []} : undefined,
@@ -1775,8 +1780,18 @@ router.post('/api/projects/:id/library/publish', express.json({limit: '16kb'}), 
 	}
 
 	let existing = await libraries.findOne({_id: id}, {projection: {snapshot: 0}}),
-		me = whoIs(req),
-		now = new Date(),
+		me = whoIs(req)
+
+	//A brand kit is changed by the people who may run one, not by whoever happens to own the project
+	if (existing?.brand && !canMarkBrand(req)) {
+		console.warn(`${appName}: ${enforcing() ? 'rejected' : 'would reject'} ${req.method} ${req.originalUrl.split('?')[0]}: not allowed to publish a brand kit`)
+
+		if (enforcing()) {
+			return res.status(403).json({error: 'This library is a brand kit, and only the people who look after brand kits can publish it'})
+		}
+	}
+
+	let now = new Date(),
 		plan = library.planPublish(existing, snap, {note: req.body.note, by: me?.username || me?.name || null, now})
 
 	if (plan.unchanged) {
@@ -1850,6 +1865,31 @@ router.put('/api/projects/:id/library/share', express.json({limit: '16kb'}), asy
 	res.json({shared})
 })
 
+//Mark the published library as a brand kit, or take that off. Its owner, and only someone who may run brand kits
+//(canMarkBrand). What projects already copied is locked or unlocked the next time they use or update the library
+router.put('/api/projects/:id/library/brand', express.json({limit: '1kb'}), async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	if (!canMarkBrand(req)) {
+		console.warn(`${appName}: ${enforcing() ? 'rejected' : 'would reject'} ${req.method} ${req.originalUrl.split('?')[0]}: not allowed to mark a brand kit`)
+
+		if (enforcing()) {
+			return res.status(403).json({error: 'Only the people who look after brand kits can mark one'})
+		}
+	}
+
+	let brand = req.body?.brand === true,
+		result = await libraries.updateOne({_id: req.params.id}, {$set: {brand}})
+
+	if (!result.matchedCount) {
+		return res.status(409).json({error: 'Publish the library first'})
+	}
+
+	res.json({brand})
+})
+
 //The library's state for its own project: published or not, version, who it's shared with
 router.get('/api/projects/:id/library', async (req, res) => {
 	if (!await projectFor(req, res)) {
@@ -1865,6 +1905,14 @@ router.get('/api/projects/:id/library', async (req, res) => {
 router.delete('/api/projects/:id/library', async (req, res) => {
 	if (!await projectFor(req, res)) {
 		return
+	}
+
+	if ((await libraries.findOne({_id: req.params.id}, {projection: {brand: 1}}))?.brand && !canMarkBrand(req)) {
+		console.warn(`${appName}: ${enforcing() ? 'rejected' : 'would reject'} ${req.method} ${req.originalUrl.split('?')[0]}: not allowed to withdraw a brand kit`)
+
+		if (enforcing()) {
+			return res.status(403).json({error: 'This library is a brand kit, and only the people who look after brand kits can stop publishing it'})
+		}
 	}
 
 	await libraries.deleteOne({_id: req.params.id})
@@ -1895,6 +1943,7 @@ const maxTemplate = 12 * 1024 * 1024,
 		mine: ownTemplate(doc, me),
 		everyone: !!doc.shared?.everyone,
 		checklist: doc.checklist || [],
+		brand: doc.brand || [],
 		artboards: doc.artboards || 0,
 		preview: doc.preview || null,
 		thumb: doc.thumb || null,
@@ -2139,6 +2188,7 @@ router.post('/api/projects/:id/template', express.json({limit: '64kb'}), async (
 			description: template.cleanDescription(body.description),
 			checklist: template.cleanChecklist(body.checklist, safety.newItemID),
 			shared: {everyone: body.everyone === true},
+			brand: template.brandKitsOf(project),
 			updated: now,
 			version: plan.version,
 			hash: plan.hash,

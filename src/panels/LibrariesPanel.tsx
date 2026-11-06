@@ -4,7 +4,8 @@ import { store, useEditor } from '../store/store';
 import { locate } from '../store/doc';
 import { confirmDialog, promptDialog } from '../components/dialogs';
 import { CheckField, PaletteButton, Row, Section, TextField } from '../components/ui';
-import { getOwnLibrary, listLibraries, publishLibrary, shareLibrary, unpublishLibrary } from '../lib/db';
+import { getOwnLibrary, listLibraries, markBrandKit, publishLibrary, session, shareLibrary, unpublishLibrary } from '../lib/db';
+import { offBrand, type OffBrandReport } from '../lib/brand';
 import {
   addColorStyle,
   addTextStyle,
@@ -12,11 +13,12 @@ import {
   applyTextStyle,
   changedComponents,
   deleteStyle,
+  isBrandKit,
   editStyle,
   linkedArtboards,
   type LibraryInfo,
 } from '../lib/libraries';
-import { COMPONENT_DRAG, addLibraryToProject, applyUpdates, detach, dropLibrary, known, reviewUpdates, useComponent, waitSaved, type UpdateReview } from '../lib/library-actions';
+import { COMPONENT_DRAG, addLibraryToProject, applyUpdates, detach, dropLibrary, known, reviewUpdates, startWithKit, syncBrandFlag, useComponent, waitSaved, type UpdateReview } from '../lib/library-actions';
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -40,6 +42,13 @@ export function LibrariesPanel() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+  // A library that became a brand kit (or stopped) since this project took it: lock or unlock its copies
+  useEffect(() => {
+    for (const l of libs ?? []) {
+      const use = project.libraries?.find((u) => u.id === l.id);
+      if (use && !!use.brand !== !!l.brand) void syncBrandFlag(l).catch(() => undefined);
+    }
+  }, [libs, project.libraries]);
 
   const run = async (label: string, fn: () => Promise<void>) => {
     setBusy(label);
@@ -81,18 +90,38 @@ export function LibrariesPanel() {
         {available.map((l) => (
           <div key={l.id} className="lib-row">
             <div className="lib-row-text">
-              <strong>{l.name}</strong>
+              <strong>
+                {l.name} {l.brand && <span className="badge" title="A brand kit: what you take from it is locked, apart from the text it marks as yours to change">Brand kit</span>}
+              </strong>
               <span className="muted">
                 v{l.version} · {l.components.length} component{l.components.length === 1 ? '' : 's'}
                 {l.owner?.name || l.owner?.username ? ` · ${l.owner.name || l.owner.username}` : ''}
               </span>
             </div>
+            {l.brand && (
+              <button
+                className="btn small-btn"
+                disabled={!!busy}
+                title="Add the kit and place its header, footer and logo (whatever the kit marks for new projects) in the artboard you have open"
+                onClick={() =>
+                  void run('Adding the brand kit', async () => {
+                    const open = project.artboards.find((a) => a.id === s.activeArtboardId);
+                    const n = await startWithKit(l, open && !open.library ? open.id : undefined);
+                    store().toast(n ? `Added the brand kit and placed ${n} item${n === 1 ? '' : 's'}` : 'Added the brand kit. It has nothing marked for new projects, so drag its components in');
+                  })
+                }
+              >
+                Add with starter items
+              </button>
+            )}
             <button className="btn small-btn" disabled={!!busy} onClick={() => void run('Adding the library', () => addLibraryToProject(l))}>
               Add
             </button>
           </div>
         ))}
       </Section>
+
+      <BrandCheck project={project} />
 
       <StylesSection project={project} />
     </div>
@@ -122,6 +151,13 @@ function PublishSection({ project, onChanged }: { project: Project; onChanged: (
   useEffect(() => {
     if (isLibrary) void load();
   }, [isLibrary, load]);
+  // Whether this person looks after brand kits (the server decides; it checks again on the request)
+  const [canBrand, setCanBrand] = useState(false);
+  useEffect(() => {
+    session()
+      .then((who) => setCanBrand(!!(who.brand || who.power)))
+      .catch(() => setCanBrand(false));
+  }, []);
 
   if (!isLibrary) {
     return (
@@ -188,13 +224,32 @@ function PublishSection({ project, onChanged }: { project: Project; onChanged: (
       </p>
       <TextField label="Note" value={note} placeholder="What changed (optional)" onChange={setNote} />
       <Row>
-        <button className="btn primary" disabled={busy || !marked} onClick={() => void publish()}>
+        <button className="btn primary" disabled={busy || !marked || (!!own?.brand && !canBrand)} title={own?.brand && !canBrand ? 'This library is a brand kit, so only the people who look after brand kits can publish it' : undefined} onClick={() => void publish()}>
           {own ? 'Publish new version' : 'Publish'}
         </button>
         <button className="btn" onClick={() => store().update((d) => void ((d as Project).settings.library = false))} title="Stops this project being a library. A published version stays until you stop publishing">
           Not a library
         </button>
       </Row>
+      {own && (canBrand || own.brand) && (
+        <CheckField
+          label="This is a brand kit"
+          title="Projects that use this library get its items locked: they can't be edited or detached, apart from text you mark as editable. Colours, text styles and fonts become the kit's palette for the off-brand check. Only the people who look after brand kits can turn this on"
+          value={!!own.brand}
+          onChange={(v) => {
+            if (!canBrand) return;
+            setBusy(true);
+            markBrandKit(project.id, v)
+              .then(async () => {
+                store().toast(v ? 'Marked as a brand kit. Projects pick up the lock the next time they open the Libraries tab' : 'No longer a brand kit');
+                await load();
+                onChanged();
+              })
+              .catch((err) => store().toast(errText(err), 'error'))
+              .finally(() => setBusy(false));
+          }}
+        />
+      )}
       {own && (
         <>
           <CheckField label="Everyone can use it" title="Anyone with a session on this server can add the library" value={everyone} onChange={setEveryone} />
@@ -218,6 +273,56 @@ function PublishSection({ project, onChanged }: { project: Project; onChanged: (
             </div>
           )}
         </>
+      )}
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------- the off-brand check
+
+/** Colours and fonts this project uses that its brand kits don't have. Informational: it lists, it never blocks. */
+function BrandCheck({ project }: { project: Project }) {
+  const kits = (project.libraries ?? []).filter((l) => l.brand);
+  const [report, setReport] = useState<OffBrandReport | null>(null);
+  if (!kits.length) return null;
+  const clean = report && !report.colors.length && !report.fonts.length;
+  return (
+    <Section help="brand-kits" title="Brand check">
+      <p className="hint">Lists the colours and fonts in your own artboards that {kits.map((k) => k.name).join(', ')} {kits.length === 1 ? "doesn't" : "don't"} have. It is only a list: nothing is blocked.</p>
+      <Row>
+        <button className="btn small-btn" onClick={() => setReport(offBrand(project))}>
+          {report ? 'Check again' : 'Check against the brand kit'}
+        </button>
+      </Row>
+      {clean && <p className="hint">Everything you use is in the brand kit.</p>}
+      {report && report.colors.length > 0 && (
+        <div className="brand-check-list">
+          <strong>Colours not in the kit</strong>
+          {report.colors.map((c) => (
+            <div key={c.value} className="style-row">
+              <span className="lib-swatch" style={{ background: c.value }} />
+              <span className="style-name">{c.value}</span>
+              <span className="muted">
+                {c.uses} use{c.uses === 1 ? '' : 's'} · {c.where.join(', ')}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {report && report.fonts.length > 0 && (
+        <div className="brand-check-list">
+          <strong>Fonts not in the kit</strong>
+          {report.fonts.map((f) => (
+            <div key={f.value} className="style-row">
+              <span className="style-name" style={{ fontFamily: f.value }}>
+                {f.value}
+              </span>
+              <span className="muted">
+                {f.uses} use{f.uses === 1 ? '' : 's'} · {f.where.join(', ')}
+              </span>
+            </div>
+          ))}
+        </div>
       )}
     </Section>
   );
@@ -249,6 +354,8 @@ function UsedLibrary({
   const styleChanges = info ? reviewStyleCount(project, info) : 0;
   const pending = updates.length + styleChanges;
   const copies = linkedArtboards(project, id).filter((a) => !a.library!.internal);
+  const brand = isBrandKit(project, id);
+  const override = useEditor((st) => st.brandOverride);
 
   const doReview = () =>
     run('Comparing with the library', async () => {
@@ -269,7 +376,9 @@ function UsedLibrary({
           {open ? '▾' : '▸'}
         </button>
         <div className="lib-row-text">
-          <strong>{name}</strong>
+          <strong>
+            {name} {brand && <span className="badge" title="A brand kit: its items are locked in this project">Brand kit</span>}
+          </strong>
           <span className="muted">
             {info ? `v${info.version}` : 'not available to you'} · {copies.length} in use
           </span>
@@ -385,7 +494,8 @@ function UsedLibrary({
                   <span className="muted">v{a.library!.version}</span>
                   <button
                     className="btn small-btn"
-                    title="Make a copy you can edit. It stops getting updates"
+                    disabled={a.library!.brand && !override}
+                    title={a.library!.brand && !override ? 'Part of a brand kit, so it stays linked and locked' : 'Make a copy you can edit. It stops getting updates'}
                     onClick={async () => {
                       if (await confirmDialog({ title: 'Detach', message: `“${a.name}” becomes a normal artboard you can edit. It will not get library updates any more.`, confirmLabel: 'Detach' })) detach(a.id);
                     }}
@@ -398,6 +508,8 @@ function UsedLibrary({
           )}
           <button
             className="btn small-btn danger"
+            disabled={brand && !override}
+            title={brand && !override ? 'A brand kit stays in the project' : undefined}
             onClick={async () => {
               if (await confirmDialog({ title: 'Stop using this library', message: 'Its artboards in this project become normal artboards you can edit, and its styles become your own.', confirmLabel: 'Stop using', danger: true })) dropLibrary(id);
             }}

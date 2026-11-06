@@ -101,6 +101,11 @@ function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { p
           <input value={name} maxLength={200} autoFocus onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !busy && void go()} />
         </label>
         {description && <p className="muted">{description}</p>}
+        {pick.kind === 'saved' && !!pick.t.brand?.length && (
+          <p className="small muted">
+            This one starts with the brand kit <strong>{pick.t.brand.map((b) => b.name).join(', ')}</strong>. The kit's logos, headers, colours and fonts are already in your project and locked, so they stay on brand. Everything else is yours to change.
+          </p>
+        )}
         {pick.kind === 'example' ? (
           <p className="small muted">The example stays as it is for everyone. You get a copy of it in your own projects to change, break and keep.</p>
         ) : items.length > 0 ? (
@@ -379,6 +384,11 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
                 <span className="badge library-badge" title={`Version ${t.version}. Projects made from it can pull newer versions in`}>
                   v{t.version}
                 </span>
+                {!!t.brand?.length && (
+                  <span className="badge library-badge" title={`Starts with the brand kit ${t.brand.map((b) => b.name).join(', ')}. Its items are locked in your project`}>
+                    Brand kit
+                  </span>
+                )}
               </div>
               {t.description && <div className="muted small template-desc">{t.description}</div>}
               <div className="muted small">

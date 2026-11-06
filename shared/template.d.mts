@@ -15,3 +15,4 @@ export function partsOf(project: unknown): Generator<[string, any]>;
 export function baselineOf(project: unknown): Record<string, string>;
 export function partHash(value: unknown): string;
 export function planSave(existing: { version: number; hash: string; history?: unknown[] } | null, hash: string, ctx: { note?: unknown; by?: string | null; now: Date }): { unchanged: boolean; version: number; hash: string; history?: unknown[] };
+export function brandKitsOf(project: unknown): { id: string; name: string }[];

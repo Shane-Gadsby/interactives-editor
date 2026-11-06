@@ -18,6 +18,8 @@ import {
   makeInstance,
   missingAssets,
   removeLibrary,
+  setBrand,
+  startFromBrandKit,
   updateAll,
   updateComponents,
   type ComponentUpdate,
@@ -46,12 +48,14 @@ export async function dropComponent(libraryId: string, componentId: string, artb
 const cache = new Map<string, LibraryContent>();
 
 export async function fetchContent(info: LibraryInfo): Promise<LibraryContent> {
-  const key = `${info.id}@${info.version}`;
+  const key = `${info.id}@${info.version}${info.brand ? '@brand' : ''}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const { snapshot } = await getLibrary(info.id);
-  cache.set(key, snapshot);
-  return snapshot;
+  // Whether it is a brand kit is the library's setting now, not something the snapshot says
+  const content = { ...snapshot, brand: !!info.brand };
+  cache.set(key, content);
+  return content;
 }
 
 /** Keep a library copy off the editor canvas (the instances that use it still draw). */
@@ -163,12 +167,39 @@ export async function applyUpdates(info: LibraryInfo, componentIds?: string[]): 
 
 export function detach(artboardId: string): void {
   track('feature', 'library-detach');
-  store().update((d) => void detachArtboard(d as Project, artboardId), { library: true });
+  const st = store();
+  const override = st.get().brandOverride;
+  let done = false;
+  st.update((d) => void (done = detachArtboard(d as Project, artboardId, override)), { library: true });
+  if (!done) st.toast('That is part of a brand kit, so it stays linked and locked.', 'error');
 }
 
 export function dropLibrary(libraryId: string): void {
   track('feature', 'library-remove');
-  store().update((d) => removeLibrary(d as Project, libraryId), { library: true });
+  const st = store();
+  const override = st.get().brandOverride;
+  let done = false;
+  st.update((d) => void (done = removeLibrary(d as Project, libraryId, override)), { library: true });
+  if (!done) st.toast('That is a brand kit, so it stays in the project.', 'error');
+}
+
+/** Add a brand kit and place the components it marked for new projects in the active artboard (or the first of your own). One undo step. */
+export async function startWithKit(info: LibraryInfo, hostId?: string): Promise<number> {
+  track('feature', 'brand-kit-start');
+  const st = store();
+  const content = await fetchContent(info);
+  // Everything the starter components use has to be in the project first
+  const wanted = content.components.filter((c) => content.artboards.find((a) => a.id === c.id)?.brandPlace).map((c) => c.id);
+  await bringAssets(info.id, missingAssets(st.get().project, content, wanted));
+  let placed = 0;
+  st.update((d) => void (placed = startFromBrandKit(d as Project, info, content, hostId).length), { library: true });
+  return placed;
+}
+
+/** A library that became a brand kit (or stopped being one) since this project last looked: bring its locks and palette in line. */
+export async function syncBrandFlag(info: LibraryInfo): Promise<void> {
+  const content = await fetchContent(info);
+  store().update((d) => setBrand(d as Project, info.id, !!info.brand, content), { library: true });
 }
 
 /** Wait until the document is saved (or live-synced) so the server's copy is what the person sees. */

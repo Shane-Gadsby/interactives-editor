@@ -96,7 +96,7 @@ describe('projects', () => {
   });
 
   it('asks the server who it is', async () => {
-    expect(await db.session()).toEqual({ user: null, power: false });
+    expect(await db.session()).toEqual({ user: null, power: false, brand: false });
   });
 });
 

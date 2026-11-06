@@ -5074,6 +5074,12 @@ code {
   gap: 4px;
   flex-wrap: wrap;
 }
+.brand-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
 .lib-styles-line {
   display: flex;
   align-items: center;
