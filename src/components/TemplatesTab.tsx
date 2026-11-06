@@ -3,11 +3,13 @@ import { track } from '../lib/analytics';
 import { changeTemplate, createProjectRecord, deleteTemplate, exampleAssetBytes, exampleThumbUrl, getExample, listExamples, listTemplates, setProjectMeta, templateThumbUrl, useExample, useTemplate, type ExampleInfo } from '../lib/db';
 import { standaloneHtml } from '../lib/export';
 import { STARTERS, projectFromStarter, type Starter } from '../lib/template-starters';
+import { BRANDED_STARTERS, projectFromBrandedStarter, type BrandedStarter, type Colourway } from '../lib/branded';
 import { CHECKLIST_FLAG, type TemplateInfo } from '../lib/templates';
 import { noteIfStale } from '../lib/stale-build';
 import { confirmDialog } from './dialogs';
 import { Modal } from './ProjectModals';
 import { ChecklistEditor, type DraftItem } from './ChecklistEditor';
+import { BrandedPacks } from './BrandedPacks';
 import { Icons } from './icons';
 
 type Sub = 'mine' | 'shared' | 'builtin' | 'examples';
@@ -48,7 +50,7 @@ export function StarterPicture({ starter }: { starter: Starter }) {
   return <span className="thumb-board template-blank">{url === undefined ? '' : starter.name}</span>;
 }
 
-export type Pick = { kind: 'saved'; t: TemplateInfo } | { kind: 'builtin'; s: Starter } | { kind: 'example'; e: ExampleInfo };
+export type Pick = { kind: 'saved'; t: TemplateInfo } | { kind: 'builtin'; s: Starter } | { kind: 'branded'; s: BrandedStarter; way: Colourway } | { kind: 'example'; e: ExampleInfo };
 
 /** Makes the project for a pick (a saved template, a built-in starter or an example) and says which, so the checklist opens for the ones that have one. Returns the new project's id. */
 export async function makeFromPick(pick: Pick, o: { name: string; folder: string | null }): Promise<string> {
@@ -58,12 +60,12 @@ export async function makeFromPick(pick: Pick, o: { name: string; folder: string
   } else if (pick.kind === 'example') {
     id = await useExample(pick.e.key, { name: o.name, folder: o.folder });
   } else {
-    const p = projectFromStarter(pick.s, o.name);
+    const p = pick.kind === 'branded' ? projectFromBrandedStarter(pick.s, pick.way, o.name) : projectFromStarter(pick.s, o.name);
     await createProjectRecord(p);
     if (o.folder) await setProjectMeta(p.id, { folder: o.folder }).catch(() => undefined);
     id = p.id;
   }
-  track('feature', 'template-use', { thing: pick.kind === 'saved' ? 'saved' : pick.kind === 'example' ? `example-${pick.e.key}`.slice(0, 40) : pick.s.key });
+  track('feature', 'template-use', { thing: pick.kind === 'saved' ? 'saved' : pick.kind === 'example' ? `example-${pick.e.key}`.slice(0, 40) : pick.kind === 'branded' ? `branded-${pick.s.key}`.slice(0, 40) : pick.s.key });
   if (pick.kind !== 'example') {
     try {
       sessionStorage.setItem(CHECKLIST_FLAG, id);
@@ -77,12 +79,12 @@ export async function makeFromPick(pick: Pick, o: { name: string; folder: string
 /** "Use template": what it expects of you (its checklist), a name, then a new project in the folder you have open. */
 function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { pick: Pick; folder: string | null; folders: string[]; onClose: () => void; onMade: (id: string) => void }) {
   const [folder, setFolder] = useState<string | null>(initialFolder);
-  const title = pick.kind === 'saved' ? pick.t.name : pick.kind === 'builtin' ? pick.s.name : pick.e.title;
-  const description = pick.kind === 'saved' ? pick.t.description : pick.kind === 'builtin' ? pick.s.description : pick.e.description;
+  const title = pick.kind === 'saved' ? pick.t.name : pick.kind === 'example' ? pick.e.title : pick.s.name;
+  const description = pick.kind === 'saved' ? pick.t.description : pick.kind === 'example' ? pick.e.description : pick.s.description;
   const [name, setName] = useState(title);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const items = useMemo(() => (pick.kind === 'saved' ? pick.t.checklist.map((i) => i.text) : pick.kind === 'builtin' ? pick.s.build().checklist.map((i) => i.text) : []), [pick]);
+  const items = useMemo(() => (pick.kind === 'saved' ? pick.t.checklist.map((i) => i.text) : pick.kind === 'builtin' ? pick.s.build().checklist.map((i) => i.text) : pick.kind === 'branded' ? pick.s.build(pick.way).checklist.map((i) => i.text) : []), [pick]);
   const go = async () => {
     setBusy(true);
     setError(null);
@@ -104,6 +106,11 @@ function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { p
         {pick.kind === 'saved' && !!pick.t.brand?.length && (
           <p className="small muted">
             This one starts with the brand kit <strong>{pick.t.brand.map((b) => b.name).join(', ')}</strong>. The kit's logos, headers, colours and fonts are already in your project and locked, so they stay on brand. Everything else is yours to change.
+          </p>
+        )}
+        {pick.kind === 'branded' && (
+          <p className="small muted">
+            This one is in the <strong>{pick.way.name}</strong> colourway. The logo and brand layers are locked and colours come from the project's theme, so it stays on brand. You can switch colourway later in the project settings.
           </p>
         )}
         {pick.kind === 'example' ? (
@@ -283,7 +290,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
             Shared <span className="tag-n">{shared.length}</span>
           </button>
           <button role="tab" aria-selected={shown === 'builtin'} className={shown === 'builtin' ? 'on' : ''} onClick={() => choose('builtin')} title="Starters that come with Interactives, always up to date with the editor">
-            Built-in <span className="tag-n">{STARTERS.length}</span>
+            Built-in <span className="tag-n">{STARTERS.length + BRANDED_STARTERS.length}</span>
           </button>
           <button role="tab" aria-selected={shown === 'examples'} className={shown === 'examples' ? 'on' : ''} onClick={() => choose('examples')} title="Finished projects that come with Interactives, the same for everyone: play one, or make your own copy to change">
             Examples <span className="tag-n">{examples?.length ?? 0}</span>
@@ -292,6 +299,12 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
         <span className="muted small">{folder ? `New projects go in "${folder}".` : 'Use a template to start a project from it.'}</span>
       </div>
       {error && <div className="error-banner">{error}</div>}
+      {shown === 'builtin' && BRANDED_STARTERS.length > 0 && (
+        <>
+          <BrandedPacks onPick={(s, way) => setPick({ kind: 'branded', s, way })} />
+          <h2 className="branded-packs-title">Starters</h2>
+        </>
+      )}
       <div className="project-grid templates-grid" style={{ '--card-size': '260px' } as React.CSSProperties}>
         {(shown === 'examples' ? examples === null : list === null) && <p className="muted">Loading…</p>}
         {shown === 'builtin' &&

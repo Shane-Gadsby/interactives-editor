@@ -14,6 +14,8 @@
 import { produce } from 'immer';
 import { defaultTheme, isContainer, isTokenRef, tokenValue, walk, type Artboard, type InstanceNode, type Paint, type Project, type SceneNode, type TextNode } from 'interactives-player';
 import { toRgba } from './a11y/colour';
+import { BRAND_FONT } from './branded/looks';
+import { isChromeNode } from './branded/lock';
 
 /** How far an instance of a brand kit artboard may be scaled, against the artboard's own size. */
 export const BRAND_SCALE = { min: 0.5, max: 2 } as const;
@@ -199,13 +201,16 @@ function paintColors(p: Paint | null | undefined): unknown[] {
 /**
  * Colours and fonts the project's own artboards use that none of its brand kits have. Artboards that come from a library are
  * left out (they are what they are), and so is anything that is not one plain colour. Null when the project uses no brand kit.
- * Informational only: nothing in the editor stops on it.
+ * Informational only: nothing in the editor stops on it. A project made from a branded starter pack (`brandLook`) is checked too:
+ * there a theme token colour is on brand by definition, plain colours aren't, and the font is Open Sans.
  */
 export function offBrand(project: Project): OffBrandReport | null {
   const kits = brandKits(project);
-  if (!kits.length) return null;
+  const look = project.brandLook;
+  if (!kits.length && !look) return null;
   const okColors = new Set(kits.flatMap((k) => k.brand!.colors));
   const okFonts = new Set(kits.flatMap((k) => k.brand!.fonts.map(familyKey)));
+  if (look) okFonts.add(familyKey(BRAND_FONT));
   const colors = new Map<string, OffBrandItem>();
   const fonts = new Map<string, OffBrandItem>();
   const note = (map: Map<string, OffBrandItem>, key: string, value: string, board: string) => {
@@ -215,6 +220,7 @@ export function offBrand(project: Project): OffBrandReport | null {
     map.set(key, item);
   };
   const colour = (c: unknown, board: string) => {
+    if (look && isTokenRef(c)) return;
     const k = colourKey(c, project);
     if (k && !okColors.has(k)) note(colors, k, k, board);
   };
@@ -227,7 +233,11 @@ export function offBrand(project: Project): OffBrandReport | null {
   for (const ab of project.artboards) {
     if (ab.library) continue;
     for (const c of paintColors(ab.background)) colour(c, ab.name);
+    //the brand's own layers (and the colourway swatches among them) are what the brand is
+    const own = new Set<string>();
+    if (look) walk(ab.children, (n) => void (isChromeNode(n) && walk([n], (x) => void own.add(x.id))));
     walk(ab.children, (n) => {
+      if (own.has(n.id)) return;
       const r = n as unknown as { fill?: Paint | null; fills?: Paint[]; stroke?: { paint: Paint } | null; strokes?: { paint: Paint }[]; shadow?: { color: string } | null; color?: string };
       for (const p of [r.fill, ...(r.fills ?? [])]) for (const c of paintColors(p)) colour(c, ab.name);
       for (const s of [r.stroke, ...(r.strokes ?? [])]) for (const c of paintColors(s?.paint)) colour(c, ab.name);
@@ -244,5 +254,5 @@ export function offBrand(project: Project): OffBrandReport | null {
     });
   }
   const sorted = (m: Map<string, OffBrandItem>) => [...m.values()].sort((a, b) => b.uses - a.uses || a.value.localeCompare(b.value));
-  return { kits: kits.map((k) => k.name), colors: sorted(colors), fonts: sorted(fonts) };
+  return { kits: [...kits.map((k) => k.name), ...(look ? [`${look.name} colourway`] : [])], colors: sorted(colors), fonts: sorted(fonts) };
 }

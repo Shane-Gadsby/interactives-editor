@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { isTokenRef, tokenIdOf, tokenRef, tokenValue, type Project, type ThemeToken } from 'interactives-player';
 import { maybeStore, store } from '../store/store';
+import { isBrandLocked } from '../lib/branded/lock';
 import { ensureThemes, shownColor, shownTheme, tokenById } from '../lib/themes';
 import { Icons } from './icons';
 
@@ -12,6 +13,13 @@ export function useThemeState(): { project: Project; canvasTheme: string | null 
   const get = () => s?.get();
   const st = useSyncExternalStore(s ? s.subscribe : noop, get, get);
   return st ? { project: st.project, canvasTheme: st.canvasTheme } : null;
+}
+
+/** True in a branded starter project whose lock is on: colour pickers offer the theme tokens only. */
+export function useBrandLocked(): boolean {
+  const s = maybeStore();
+  const get = () => (s ? isBrandLocked(s.get().project) && !s.get().brandOverride : false);
+  return useSyncExternalStore(s ? s.subscribe : noop, get, get);
 }
 
 /** A token colour as drawn in the theme being shown, and the token behind it. */

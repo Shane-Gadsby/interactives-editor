@@ -531,7 +531,7 @@ function useBrandOverride() {
       const st = store();
       const on = !st.get().brandOverride;
       st.set({ brandOverride: on });
-      st.toast(on ? 'Brand kit lock off: you can edit and detach brand kit items (F9 to turn it back on)' : 'Brand kit lock on', 'info');
+      st.toast(on ? 'Brand lock off: you can edit and detach brand kit items, and change the logo, colours and fonts of a branded starter project (F9 to turn it back on)' : 'Brand lock on', 'info');
     };
     window.addEventListener('keydown', onKey);
     return () => {
@@ -576,7 +576,7 @@ function Workspace({ home }: { home: () => void }) {
       <TopBar home={home} onPreview={() => (store().set({ previewPlaying: false }), setPreview(true))} />
       <div className="banner-area">
         {conflict && <ConflictBanner />}
-        {s.brandOverride && <div className="power-banner">Power user mode: the brand kit lock is off for this session. Edits to brand kit items are yours to make (F9 to turn it back on).</div>}
+        {s.brandOverride && <div className="power-banner">Power user mode: the brand lock is off for this session. Edits to brand kit items, and to the logo, colours and fonts of a branded starter project, are yours to make (F9 to turn it back on).</div>}
         <LinkBanner />
         <LinkChanges />
       </div>

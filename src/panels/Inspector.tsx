@@ -52,6 +52,7 @@ import {
 } from 'interactives-player';
 import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
+import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
 import { gapUnit, lineGapUnit, paddingOwnerWidth, paddingUnit, patchGap, patchLineGap, patchPadding } from '../lib/layout-units';
 import { Icons } from '../components/icons';
@@ -622,6 +623,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <BlendsSection ab={ab} project={project} />
       <BonesArtboardSection ab={ab} />
       <Section help="project-settings" title="Project">
+        <ColourwayRow project={project} />
         <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
         <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
         <TextField label="Description" value={project.settings.description} multiline onChange={(v) => setProject((p) => (p.settings.description = v), 'project-desc')} />

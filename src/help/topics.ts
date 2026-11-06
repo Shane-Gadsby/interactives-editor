@@ -12,6 +12,19 @@ export interface HelpTopic {
   body: string | (() => string);
 }
 
+/**
+ * What the branded starters topic lists, supplied by the editor (`./branded-help.ts`) so this file stays free of the starters
+ * themselves: the MCP server bundles these topics without the DOM.
+ */
+export interface BrandedHelpSource {
+  colourways: { name: string; description: string }[];
+  sets: { name: string; starters: { name: string; description: string }[] }[];
+}
+let brandedHelp: (() => BrandedHelpSource) | null = null;
+export const provideBrandedHelp = (fn: () => BrandedHelpSource): void => {
+  brandedHelp = fn;
+};
+
 export const GROUPS = ['Getting started', 'Design', 'Web elements', 'Motion', 'Interactivity', 'Data', 'Import and export', 'Working together', 'Reference'];
 
 export const TOPICS: HelpTopic[] = [
@@ -2207,6 +2220,9 @@ In this order:
 ## Taking colours from the page
 Tick **Map tokens from the page's CSS variables** and a token is read from a CSS variable on the page that holds the player before the theme's own value. The **Moodle** preset maps the starter names onto Bootstrap's: \`color/primary\` and \`color/button\` to \`--bs-primary\`, \`color/on-button\` to \`--bs-white\`, \`color/background\` to \`--bs-body-bg\`, \`color/text\` to \`--bs-body-color\`, \`color/muted\` to \`--bs-secondary-color\`, \`color/border\` to \`--bs-border-color\`, and so on. Type your own variable names (comma separated, tried in order) beside a token to map any other. A missing or odd variable just leaves the theme's colour, and only plain colours are accepted. A High contrast theme is never replaced by the page's colours. The player option \`hostVariables: false\` ignores all of this.
 
+## Branded projects
+A project made from a [branded starter pack](branded-starters) carries a theme for each UniSQ colourway (Gold, Purple, Blue, Green, Orange, Red) and High contrast. Its **Project** settings have a **Colourway** row that picks the default theme, and an option to let learners switch. Its layers can only use the project's tokens, so edit a colourway's colours here rather than typing a hex.
+
 ## Not yet
 Tokens are colours only. Fonts, radii and spacing are not tokens. Colours inside script and shader layers, captions settings, and images do not follow themes. A keyframe that animates a colour between two token colours snaps instead of blending.`,
   },
@@ -2935,7 +2951,49 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
 ## Good to know
 - Layer ids stay the same in a copy, so a checklist and updates can find things. Duplicating or pasting layers inside the copy makes new ids as usual.
 - The server keeps a template as a snapshot with its own copy of the files, so deleting or editing the project it came from does not change it.
-- Templates are one level: a copy of a template does not become a template of its own until you save it as one.`,
+- Templates are one level: a copy of a template does not become a template of its own until you save it as one.
+- The **Built-in** tab also has the UniSQ [branded starter packs](branded-starters): ready-made activities in a choice of colourways, with the brand locked.`,
+  },
+  {
+    id: 'branded-starters',
+    title: 'Branded starter packs',
+    group: 'Working together',
+    summary: 'UniSQ-branded ready-made activities in six colourways: what is locked and why, how to switch colourway, and every starter by set.',
+    keywords: 'branded brand starter pack unisq colourway colourways theme logo locked open sans chrome template quiz switch colour gold purple blue green orange red',
+    body: () => {
+      const src = brandedHelp?.();
+      const ways = src ? src.colourways.map((c) => `- **${c.name}**: ${c.description}`).join('\n') : 'Gold, Purple, Blue, Green, Orange and Red, from the UniSQ palette.';
+      const list = src?.sets.length
+        ? src.sets.map((set) => `### ${set.name}\n\n${set.starters.map((s) => `- **${s.name}**: ${s.description}`).join('\n')}`).join('\n\n')
+        : 'The list of starters is in the editor (Templates, Built-in).';
+      return `A **branded starter pack** is a ready-made activity in the UniSQ look: a gradient title page with the logo, white content pages with a footer line, and sections on deep purple. You write the content; the look is already done, and it stays done.
+
+## Using one
+Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace.
+
+## Colourways
+Every branded project carries all of these as [themes](themes), plus **High contrast**, which a viewer who asks for more contrast gets automatically. Every colour in the project is a theme colour, so switching colourway re-colours the whole thing at once.
+
+${ways}
+
+### Switching colourway
+Select nothing (or an artboard) and open **Project** in the inspector. The **Colourway** swatches change the theme the project opens in. It is one undo step, and the canvas and Preview show it straight away.
+
+Tick **Let learners switch colourway** to add a small row of swatches to the top right of the start page. Each one is a button that runs the interaction graph's **Set theme** action, so learners can pick the colour they find easiest to read. The swatches are brand layers: they stay where they are, and unticking the box removes them.
+
+## What is locked, and why
+Branded projects are held to the brand so every activity looks like it came from the same place, whoever writes it.
+
+- **Brand layers** are the logo, the sweeps, the accent bars, the footer line and the web address on the end page. They can't be edited, moved, deleted or detached. You can still delete a whole page, and add your own layers to it.
+- **Colours** have to be theme colours. The colour picker offers the project's **Tokens**; typing a hex colour or picking one from elsewhere is refused with a note that this is a branded project. A new layer you draw or paste gets the nearest theme colour instead of its plain one.
+- **Fonts** are Open Sans.
+
+The accessibility checks, the [themes](themes) panel and everything else work as they do in any project. A power user can turn the lock off for a session with F9 (the brand kit override), which also lifts the brand kit lock, to fix something in the pack itself. Nothing is saved with it.
+
+## The starters
+${list}
+`;
+    },
   },
   {
     id: 'brand-kits',

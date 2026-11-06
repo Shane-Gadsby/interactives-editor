@@ -4,6 +4,7 @@ import { Markdown } from './markdown';
 import { searchHelp, type HelpHit } from './search';
 import { noteHelpSearch, track } from '../lib/analytics';
 import { GROUPS, TOPICS, getTopic, topicBody } from './topics';
+import './branded-help';
 import { Icons } from '../components/icons';
 
 // ---------------------------------------------------------------- opening help from anywhere
