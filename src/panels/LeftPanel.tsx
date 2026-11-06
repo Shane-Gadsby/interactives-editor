@@ -531,7 +531,7 @@ export function Assets() {
   const unused = useMemo(() => new Set(unusedAssetIds(analyzeUsage(s.project))), [s.project]);
   const isUsed = (id: string) => !unused.has(id);
   const upload = async () => {
-    const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
+    const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,.pptx,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
     if (files.length) await insertFiles(files, null, null);
   };
   const removeIds = async (ids: string[]) => {

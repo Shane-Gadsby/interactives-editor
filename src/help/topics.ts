@@ -147,7 +147,7 @@ Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pag
   The search box above each list filters it as you type. Press <kbd>Down</kbd> to move from the search box to the list, the arrow keys to move through it, and <kbd>Enter</kbd> to create the project from the one you picked. <kbd>Esc</kbd> closes the window without making anything. The name starts as something sensible and follows what you pick until you type your own. The folder starts as the one you were looking at, and you can change it.
 - Click a card's picture to open the project. **Help** and the gear (**Preferences**) are at the top right too.
 - The **Templates** tab (next to **Projects**) starts a project from a template, or from one of the finished examples. See [Templates, examples and remix](templates).
-- **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`) or PhotoCraft (\`.pcraft\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
+- **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`), PhotoCraft (\`.pcraft\`) or PowerPoint (\`.pptx\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
 - Each card has three icon buttons: **Duplicate** (a copy of the project and its assets), **Export** a \`${PACKAGE_EXTENSION}\` package (a download of the whole project) and **Delete**. Delete asks first, then moves the project to the [Bin](projects#the-bin), with an **Undo** straight after. If its share or review link is on, or learners have results or progress in it, the question says so, with the courses, how many learners each has and when they were last active.
 - With no projects yet the page shows **Create your first project**, which opens the same **Start a new project** window.
 
@@ -2418,10 +2418,10 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
   // ---------------------------------------------------------------- import/export
   {
     id: 'import',
-    title: 'Importing Lottie, Rive (.riv and .rev), Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and SVG',
+    title: 'Importing Lottie, Rive (.riv and .rev), Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft, PowerPoint and SVG',
     group: 'Import and export',
-    summary: 'Bring in Lottie JSON / dotLottie, Rive .riv and Rive editor .rev files, Photoshop .psd files, Illustrator .ai files, PDFs, AutoCAD DXF (and what to do with DWG), VectorCraft .vectorcraft and PhotoCraft .pcraft files, SVG and project packages.',
-    keywords: 'import vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv rev editor project backup svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update new version source file changes reconnect',
+    summary: 'Bring in Lottie JSON / dotLottie, Rive .riv and Rive editor .rev files, Photoshop .psd files, Illustrator .ai files, PDFs, AutoCAD DXF (and what to do with DWG), VectorCraft .vectorcraft and PhotoCraft .pcraft files, PowerPoint .pptx slides, SVG and project packages.',
+    keywords: 'import powerpoint pptx slides deck presentation slide show vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv rev editor project backup svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update new version source file changes reconnect',
     body: `| File | Becomes | Update from file |
 |---|---|---|
 | Lottie (\`.json\`, \`.lottie\`) | An artboard and a timeline | No |
@@ -2431,11 +2431,12 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Illustrator (\`.ai\`) and PDF | An artboard per page, as vector art | Yes |
 | AutoCAD (\`.dxf\`) | An artboard with a group per CAD layer (\`.dwg\` must be saved as DXF first) | Yes |
 | VectorCraft, PhotoCraft | Artboards of layers | Yes |
+| PowerPoint (\`.pptx\`) | An artboard per slide, with editable text, pictures and shapes | Yes |
 | SVG | A group of editable shapes | No |
 
 New to this? [Tutorial 4](tutorial-import-design) walks through an import step by step.
 
-Lottie, Rive (\`.riv\` or \`.rev\`), Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft and PhotoCraft files: use **+ Import file as artboard** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
+Lottie, Rive (\`.riv\` or \`.rev\`), Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft, PhotoCraft and PowerPoint files: use **+ Import file as artboard** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
 
 ## Lottie (.json, .lottie)
 Shape layers, groups, fills, strokes, gradients (with their exact start and end points, centre and radius, see [exact gradient points](fill-stroke#exact-gradient-points); they are written out the same way), transforms, trim paths and keyframes with easing become layers and a timeline. Text animators with range selectors become [text modifiers](text-modifiers). Expressions, layer masks, track mattes, layer effects, skew and time remapping are not carried over, and the import report lists what was dropped.
@@ -2544,11 +2545,21 @@ A PhotoCraft file is read like a Photoshop file: pixel layers become image layer
 
 Not carried over, and listed in the report: adjustment layers, other layer styles, pattern fills, blend modes outside the list, and mask feather. A file that is a folder rather than a ZIP archive has to be zipped first. If nothing can be rebuilt, the flattened picture saved in the file is imported instead.
 
+## PowerPoint (.pptx)
+Each slide becomes an artboard, the size of the slide, named after the file and the slide number. Older \`.ppt\` files have to be saved as \`.pptx\` in PowerPoint first.
+
+- **Text** becomes text layers: font, size, bold, italic, underline, strike, capitals, colour, letter spacing, alignment, line and paragraph spacing, vertical anchor and the box's padding. Placeholders (titles, body text) take their position and look from the slide's layout and master when the slide doesn't set them. Bullets and numbers are typed in as characters, and a layer has one alignment, so a text box with mixed alignment takes the first paragraph's.
+- **Pictures** become image layers (assets of the project), with any crop kept as a clipped frame and the alt text as the layer's label. Pictures that are only linked, or saved as EMF, WMF or TIFF, are skipped.
+- **Shapes**: rectangles, rounded rectangles, ellipses, triangles, diamonds, regular polygons, stars, lines and freeform paths, with solid, gradient or picture fill, outline (width, dash, cap) and drop shadow. A shape with text becomes a group of the shape and its text. Other preset shapes (arrows, callouts, ...) are drawn as rectangles.
+- **Groups** keep their position, size, rotation and flip. **Backgrounds** (colour, gradient or picture) come from the slide, its layout or its master, and the logos and other decoration the layout and master draw come across as locked layers named *Master: ...* and *Layout: ...*.
+
+Not carried over, and listed in the report with the slides they were on: charts, SmartArt, tables, embedded objects, audio and video (the poster picture is kept), animations, slide transitions, speaker notes, arrowheads, glow and other effects, and vertical text. The result is a starting point to design from rather than a copy of the deck: for the exact look of a slide, save the deck as PDF and import that instead.
+
 ## SVG
 Drop an SVG file on the canvas, paste it, or pick it with the **Image** tool. It becomes a group of editable vector layers: shapes and paths (with their transforms applied), groups, solid and gradient fills, strokes and dashes, and simple text. Masks, filters, patterns and embedded images are listed as not carried over.
 
 ## Updating a design file
-A Photoshop, Illustrator, PDF, AutoCAD (DXF), VectorCraft or PhotoCraft file is copied into the project when you import it, and its artboards remember which file they came from. When the designer saves a new version, bring it in with **Update from file…**:
+A Photoshop, Illustrator, PDF, AutoCAD (DXF), VectorCraft, PhotoCraft or PowerPoint file is copied into the project when you import it, and its artboards remember which file they came from. When the designer saves a new version, bring it in with **Update from file…**:
 - Select one of its artboards: the inspector's **Source file** section says **From Poster.psd (Photoshop, updated 2 h ago)** and has **Update from file…**.
 - Or open the **Assets** panel: **Design files** at the top lists each file with **Update…**.
 

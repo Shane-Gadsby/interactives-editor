@@ -25,9 +25,9 @@ export interface AnimationImport {
   lastModified?: number;
 }
 
-export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft';
+export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,.pptx';
 
-/** Read a Lottie (.json/.lottie), Rive (.riv, or the editor's own .rev), Photoshop (.psd), Illustrator (.ai), PDF, AutoCAD (.dxf/.dwg), VectorCraft (.vectorcraft) or PhotoCraft (.pcraft) file into artboards. */
+/** Read a Lottie (.json/.lottie), Rive (.riv, or the editor's own .rev), Photoshop (.psd), Illustrator (.ai), PDF, AutoCAD (.dxf/.dwg), VectorCraft (.vectorcraft), PhotoCraft (.pcraft) or PowerPoint (.pptx) file into artboards. */
 export async function readAnimationFile(file: File): Promise<AnimationImport> {
   const ext = extOf(file.name);
   const done = span('import', 'read', { thing: ext });
@@ -75,6 +75,10 @@ async function readAnimationFileInner(file: File): Promise<AnimationImport> {
   if (/\.(vectorcraft|drawcraft)$/i.test(file.name) || gzip || (jsonLike && /"format"\s*:\s*"(vectorcraft|drawcraft)"/.test(new TextDecoder().decode(bytes.subarray(0, 256))))) {
     const { importVectorCraft, isVectorCraft } = await import('./vectorcraft-import');
     if (/\.(vectorcraft|drawcraft)$/i.test(file.name) || isVectorCraft(bytes)) return { ...importVectorCraft(bytes, base), source: 'VectorCraft' };
+  }
+  if (/\.pptx$/i.test(file.name) || zip) {
+    const { importPptx, isPptx } = await import('./pptx-import');
+    if (/\.pptx$/i.test(file.name) || isPptx(bytes)) return { ...importPptx(bytes, base), source: 'PowerPoint' };
   }
   if (/\.pcraft$/i.test(file.name) || zip) {
     const { importPhotoCraft, isPhotoCraft } = await import('./photocraft-import');
