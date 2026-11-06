@@ -7958,3 +7958,20 @@ code {
 .layer-row.not-a-hit .layer-name {
   opacity: 0.55;
 }
+.motion-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.motion-progress .bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+.motion-progress .bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}

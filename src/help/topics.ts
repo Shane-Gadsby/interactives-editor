@@ -2573,8 +2573,8 @@ After an import, a report lists anything that couldn't be carried over exactly. 
     id: 'export',
     title: 'Exporting',
     group: 'Import and export',
-    summary: 'Single HTML file, project package, JSON, Lottie, PNG and SVG.',
-    keywords: 'export download html single file package ixp json lottie png svg image publish',
+    summary: 'Single HTML file, project package, JSON, Lottie, PNG, SVG, video, GIF and PNG frames.',
+    keywords: 'export download html single file package ixp json lottie png svg image publish video mp4 webm gif frames sequence zip animation record',
     body: `**Export** in the top bar:
 
 | Export | Gives you |
@@ -2586,10 +2586,32 @@ After an import, a report lists anything that couldn't be carried over exactly. 
 | Lottie JSON (this artboard), dotLottie (this artboard) | The open artboard's shapes and timeline, for Lottie players (no interactivity). A report lists what couldn't be written |
 | PNG image (this artboard), PNG image, 1× | The open artboard as a picture, at 2× or at actual size, at the timeline's playhead |
 | SVG image (this artboard) | The open artboard as an SVG file that scales cleanly. It uses HTML inside the SVG for text and web elements, so it opens in browsers but not in every drawing program |
+| Video, GIF or frames… | One timeline of the open artboard as an MP4 or WebM video, an animated GIF, or a ZIP of PNG pictures, one per frame (below) |
 
 Sharing is on its own button, **Share**, next to Export (below).
 
-The files are named after the project (and the artboard, for pictures and Lottie).
+The files are named after the project (and the artboard, for pictures, Lottie and video).
+
+## Video, GIF and frames
+**Export → Video, GIF or frames…** turns one timeline of the open artboard into moving pictures you can put in a slide deck, an email or a lecture recording. It plays the timeline once through, from the start, and draws every frame at its exact time: the result is smooth however slow or busy your computer is, and it is the same drawing as **PNG image**, so a frame looks just like the canvas with the playhead there.
+
+| Setting | What it does |
+|---|---|
+| Timeline | Which timeline of the open artboard to draw. It starts on the one you have open |
+| Format | **MP4 video (H.264)** and **WebM video (VP9)** play almost everywhere and are small. **Animated GIF** plays anywhere, including in email, but is larger and limited to 256 colours a frame. **PNG frames (ZIP)** is one picture per frame (frame-0001.png and so on) for a video editor |
+| Width | How wide the picture is in pixels; the height follows the artboard's shape. Videos always have even sides, so the width can come out a pixel smaller |
+| Frames per second | Starts at the timeline's own rate (30 if it has none). GIF goes up to 50, the rest up to 60 |
+| Repeat for ever | GIF only. Off, the GIF plays once and stops |
+
+The dialog says how many frames that makes. A bar shows the progress, and **Cancel** stops it with nothing saved. Longer clips and bigger pictures take longer. The limit is 3600 frames.
+
+Things to know:
+- **No audio yet.** Sound on the timeline and narration are not mixed into the file.
+- **Video and embed layers show as empty boxes**, the same as in a PNG, and a message says so when it happens. Script layers do too. Shader layers are drawn.
+- **Video and GIF are drawn on white**, because neither keeps transparency the way you would want. PNG frames keep it.
+- **The open theme is used**, the one in the theme box in the top bar.
+- **Browsers without video encoding** (older ones, and some that block it) hide the MP4 and WebM options and say so. GIF and PNG frames always work. Which video formats appear can also depend on the size: a very large width may not be encodable.
+- Interaction is not part of a clip: it shows the timeline only, with the variables at their starting values.
 
 ![The Export menu.](help/export-menu.png)
 
