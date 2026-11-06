@@ -363,3 +363,34 @@ describe('closing a room', () => {
     }
   }, 15000);
 });
+
+describe('AI agents', () => {
+  it("marks the revision when an agent's edits went into it", async () => {
+    await join('clientId=AG&agent=Claude');
+    //revisions are at least 5 minutes apart, and creating the project just wrote one
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.now() + 6 * 60 * 1000);
+    try {
+      await post([setName('agent was here')], 'AG');
+      await vi.waitFor(() => expect(h.db.revisions.docs.some((r) => r.project === id && /edited with Claude \(AI\)/.test(r.reason))).toBe(true), { timeout: 4000 });
+      expect(h.db.revisions.docs.find((r) => r.project === id && /edited with/.test(r.reason))!.agents).toEqual(['Claude (AI)']);
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 8000);
+
+  it('INTERACTIVES_MCP=off shuts the MCP endpoint and keeps agents out of rooms', async () => {
+    process.env.INTERACTIVES_MCP = 'off';
+    try {
+      const r = await h.call('POST', '/mcp', { user: ann, json: { jsonrpc: '2.0', id: 1, method: 'initialize', params: {} } });
+      expect(r.status).toBe(503);
+      expect(r.json.error.message).toMatch(/turned off/);
+      const s = await h.call('GET', `/api/projects/${id}/live?clientId=AG&agent=Claude`, { user: ann });
+      expect(s.status).toBe(403);
+      //people still join
+      await join('clientId=P1');
+    } finally {
+      delete process.env.INTERACTIVES_MCP;
+    }
+  });
+});

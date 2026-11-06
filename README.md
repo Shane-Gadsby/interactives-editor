@@ -186,6 +186,7 @@ Access works like this:
 | `MONGO_URI` / `mongodb_user` / `mongodb_pass` | dev/dev on 127.0.0.1 | via suite-libs |
 | `INTERACTIVES_STORAGE` | `./storage` | asset files |
 | `SUITE_SESSION_ENFORCE` | unset | `1` to refuse instead of log |
+| `INTERACTIVES_MCP` | on | `off` turns AI agent access off: `/mcp` answers 503 and `?agent=` can't join live rooms (restart to apply) |
 
 ## Analytics: editor usage, published projects, errors
 

@@ -196,7 +196,10 @@ const rooms = new Map(),
 		clearTimeout(room.saveTimer)
 		room.rev++
 		let p = room.doc, first = p.artboards?.[0], str = JSON.stringify(p), rev = room.rev
-		snapshot(room.id, str, rev, null, 'Autosave').catch((err) => console.trace(`${appName}: revision of ${room.id} failed`, err))
+		let agents = room.agentEdits?.size ? [...room.agentEdits] : null
+		snapshot(room.id, str, rev, null, agents ? `Autosave (edited with ${agents.join(', ')})` : 'Autosave', false, agents ? {agents} : {})
+			.then((revID) => revID && agents && agents.forEach((a) => room.agentEdits.delete(a)))
+			.catch((err) => console.trace(`${appName}: revision of ${room.id} failed`, err))
 		try {
 			let {fields} = await storeProjectDoc(room.id, rev, str, room.docChunks, async (fields) => {
 				await projects.updateOne({_id: room.id}, {$set: {
@@ -1131,8 +1134,13 @@ router.get('/api/projects/:id/live', async (req, res) => {
 		//Who they are: the checked session first, then the name the page's own session (fetchActivity) gave it, which
 		//only matters where there's no session to check (local dev). It's just a label on the presence list
 		claimed = typeof req.query.name === 'string' ? req.query.name.replace(/[^\p{L}\p{N} .'-]+/gu, '').slice(0, 60).trim() : '',
-		client = {id: clientId, res, name: agent ? `${agent} (AI)` : me?.name || me?.username || claimed || 'Guest', color: PALETTE[room.nextColor++ % PALETTE.length], presence: {}},
+		client = {id: clientId, res, agent: agent || null, name: agent ? `${agent} (AI)` : me?.name || me?.username || claimed || 'Guest', color: PALETTE[room.nextColor++ % PALETTE.length], presence: {}},
 		since = Number(req.query.since)
+
+	//Agent access switched off for this box: an agent can't join a room either
+	if (agent && mcpOff()) {
+		return res.status(403).json({error: 'AI agent access is turned off on this server'})
+	}
 
 	res.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no'})
 	res.write(':ok\n\n')
@@ -1180,6 +1188,10 @@ router.post('/api/projects/:id/ops', express.json({limit: '25mb'}), async (req, 
 	room.log.push(entry)
 	if (room.log.length > LOG_KEEP) room.log.splice(0, room.log.length - LOG_KEEP)
 	broadcast(room, 'ops', entry, entry.seq)
+
+	//Edits an AI agent made go down in the next revision's reason ("Autosave (edited with Claude (AI))")
+	let sender = [...room.clients].find((c) => c.id === entry.clientId)
+	if (sender?.agent) (room.agentEdits ||= new Set()).add(sender.name)
 
 	scheduleSave(room)
 	maybeCloseRoom(room)
@@ -3497,6 +3509,16 @@ setInterval(async () => {
 		}
 	}
 }, 10 * 60 * 1000).unref()
+
+//IT can switch AI agent access off for a box without a code change: INTERACTIVES_MCP=off (and a restart). The MCP
+//endpoint then answers 503 to everything and agents can't join live rooms
+const mcpOff = () => /^(off|0|false|no)$/i.test(process.env.INTERACTIVES_MCP || '')
+router.use('/mcp', (req, res, next) => {
+	if (!mcpOff()) {
+		return next()
+	}
+	res.status(503).json({jsonrpc: '2.0', id: null, error: {code: -32000, message: 'AI agent access is turned off on this server'}})
+})
 
 router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, res) => {
 	//A browser page on some other site has no business driving this (DNS rebinding and friends). Agents send no Origin

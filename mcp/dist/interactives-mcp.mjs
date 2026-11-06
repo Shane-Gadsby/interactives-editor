@@ -8208,9 +8208,10 @@ ${sid ? `> The \`X-Session-ID\` above is **your** sign-in for this tab. The agen
 
 ## Staying in control
 - Everything the agent does goes through the same live editing as people, so you watch it happen.
-- Your **Undo** only undoes your own changes. To roll back an agent's work, use the [revision history](live-editing#revision-history) (a snapshot is kept every few minutes while the project changes).
+- Your **Undo** only undoes your own changes. To roll back an agent's work, use the [revision history](live-editing#revision-history) (a snapshot is kept every few minutes while the project changes). A snapshot that has an agent's changes in it says so, for example **Autosave (edited with Claude (AI))**, so you can find the version from before it started. **Save a named version…** there first is the surest way back.
 - The agent can only open projects its session can open.
-- An agent that goes quiet for two hours is disconnected and leaves any project it was in. Its client reconnects by itself the next time it is used.`;
+- An agent that goes quiet for two hours is disconnected and leaves any project it was in. Its client reconnects by itself the next time it is used.
+- The people who run the server can switch agent access off altogether. Then connecting says **AI agent access is turned off on this server**, and that is not something you can change from the editor.`;
     }
   },
   // ---------------------------------------------------------------- reference

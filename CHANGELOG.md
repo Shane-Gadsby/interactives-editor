@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **AI agent access switch and marked revisions**: `INTERACTIVES_MCP=off` makes `/mcp` answer 503 and keeps `?agent=` clients out of live rooms. Revisions with an agent's edits read "Autosave (edited with <agent> (AI))" and carry `agents`.
+
 - **Video, GIF or frames** in the Export menu (`lib/motion-export.ts`, `lib/gif.ts`, `lib/frame-zip.ts`, `components/MotionExportModal.tsx`): one timeline of the open artboard drawn frame by frame at exact times, to MP4 (H.264) or WebM (VP9) through WebCodecs with `mp4-muxer`/`webm-muxer` (MIT, pinned), an animated GIF (own encoder) or a ZIP of PNGs. No audio yet. Frames are drawn from a data: url, since a blob: url taints the canvas in Chrome.
 - **Attributions and references** (`panels/CreditsPanel.tsx`, player `attributions.ts`/`credits-ui.ts`): a project list of credits and references linked to assets, "no attribution" marks in Assets, and an optional Credits button and dialog for learners; notes never reach published pages.
 - **PowerPoint (.pptx) import** (`lib/pptx-import.ts`): one artboard per slide with text, pictures, preset and freeform shapes, groups, backgrounds and placeholder inheritance; the import report lists what was skipped.
