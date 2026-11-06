@@ -14,6 +14,7 @@ import { LogicGraph } from '../panels/LogicGraph';
 import { ScriptsPanel, VariablesPanel } from '../panels/ScriptsVariables';
 import { DataPanel } from '../panels/DataPanel';
 import { UsagePanel } from '../panels/UsagePanel';
+import { CreditsPanel } from '../panels/CreditsPanel';
 import { InsightsPanel } from '../panels/InsightsPanel';
 import { InterfacePanel } from '../panels/InterfacePanel';
 import { ThemesPanel } from '../panels/ThemesPanel';
@@ -59,6 +60,7 @@ const PANELS: Record<PanelId, PanelDef> = {
   interface: { label: 'Public interface', icon: 'plug', help: 'public-interface', tip: 'What a page that embeds this project can set, read, send and hear: variables as inputs and outputs, messages, with descriptions. Makes the reference page and TypeScript definitions', tool: true, body: () => <InterfacePanel /> },
   checklist: { label: 'Checklist', icon: 'check', help: 'templates#the-checklist', tip: 'The things to change in a project made from a template: tick them off, click one to find its layer, review before you share', tool: true, body: () => <ChecklistPanel /> },
   themes: { label: 'Themes', icon: 'themes', help: 'themes', tip: 'Colour tokens and the themes that give them values (Light, Dark, High contrast), with a contrast check per theme', tool: true, body: () => <ThemesPanel /> },
+  credits: { label: 'Attributions', icon: 'credits', help: 'attributions', tip: 'Where the pictures, sounds, text and data in this project came from, and what it draws on: credits and references, linked to assets, with an optional Credits button for learners', tool: true, body: () => <CreditsPanel /> },
   usage: { label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each artboard, asset, variable, data source, script and timeline is used, and what is unused', tool: true, body: () => <UsagePanel /> },
 };
 

@@ -1,5 +1,5 @@
 import playerSource from '@player-iife?raw';
-import { buildStandaloneHtml, PACKAGE_EXTENSION, type Asset, type Project } from 'interactives-player';
+import { buildStandaloneHtml, PACKAGE_EXTENSION, withPublishedCredits, type Asset, type Project } from 'interactives-player';
 import { hasScriptLayers } from './draw-templates';
 import { assetBytes, exportPackage } from './db';
 import { extOf, reportError, track } from './analytics';
@@ -45,7 +45,8 @@ export async function standaloneHtml(
   project: Project,
   opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; bytesFor?: (asset: Asset) => Promise<Uint8Array | null>; embedFonts?: boolean; onWarning?: (text: string) => void } = {},
 ): Promise<string> {
-  const clean = withoutLinks(project);
+  //A page for learners carries the attributions only when the Credits button or the exports option asks, and never the author's notes
+  const clean = withPublishedCredits(withoutLinks(project));
   const p = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
   const html = await buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: opts.bytesFor ?? ((a) => assetBytes(project.id, a)), debug: opts.debug, accessibility: opts.accessibility });

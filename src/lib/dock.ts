@@ -26,6 +26,7 @@ export type PanelId =
   | 'interface'
   | 'themes'
   | 'usage'
+  | 'credits'
   | 'checklist';
 
 export type Zone = 'left' | 'right' | 'bottom';
@@ -58,7 +59,7 @@ export interface DockLayout {
 /** Where a tab can be dropped: a docked area or a floating window (at a position in its tabs), or a new window. */
 export type DropTarget = { zone: Zone; index: number } | { float: string; index: number } | { newFloat: { x: number; y: number } };
 
-export const ALL_PANELS: PanelId[] = ['layers', 'assets', 'libraries', 'comments', 'inspector', 'timeline', 'logic', 'scripts', 'variables', 'data', 'a11y', 'insights', 'interface', 'checklist', 'themes', 'usage'];
+export const ALL_PANELS: PanelId[] = ['layers', 'assets', 'libraries', 'comments', 'inspector', 'timeline', 'logic', 'scripts', 'variables', 'data', 'a11y', 'insights', 'interface', 'checklist', 'themes', 'usage', 'credits'];
 
 /** Where each panel lives in the default layout (and goes back to when its floating window is closed). */
 export const HOME: Record<PanelId, Zone> = {
@@ -77,6 +78,7 @@ export const HOME: Record<PanelId, Zone> = {
   interface: 'bottom',
   themes: 'bottom',
   usage: 'bottom',
+  credits: 'bottom',
   checklist: 'bottom',
 };
 
