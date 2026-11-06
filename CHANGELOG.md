@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Video, GIF or frames** in the Export menu (`lib/motion-export.ts`, `lib/gif.ts`, `lib/frame-zip.ts`, `components/MotionExportModal.tsx`): one timeline of the open artboard drawn frame by frame at exact times, to MP4 (H.264) or WebM (VP9) through WebCodecs with `mp4-muxer`/`webm-muxer` (MIT, pinned), an animated GIF (own encoder) or a ZIP of PNGs. No audio yet. Frames are drawn from a data: url, since a blob: url taints the canvas in Chrome.
+- **Attributions and references** (`panels/CreditsPanel.tsx`, player `attributions.ts`/`credits-ui.ts`): a project list of credits and references linked to assets, "no attribution" marks in Assets, and an optional Credits button and dialog for learners; notes never reach published pages.
+- **PowerPoint (.pptx) import** (`lib/pptx-import.ts`): one artboard per slide with text, pictures, preset and freeform shapes, groups, backgrounds and placeholder inheritance; the import report lists what was skipped.
+- **Big pictures**: editing proxies for large images (the canvas shows them), and **Optimise output** in project settings with a Smaller files to Better quality slider (default on, better quality) making optimised copies for single-file exports and share links. Copies are kept beside the asset: `PUT/GET /api/projects/:id/assets/:assetId/variant/:key`, `storage/<project>/_variants/`.
+
 - **Named and pinned versions** in Revision history: **Save a named version…** (a pinned snapshot of what's there now), **Name it/Rename**, **Pin/Unpin**. Pinned revisions are skipped by the 100-revision prune, up to 20 a project, and listed even when older than the newest 100. `POST /api/projects/:id/revisions`, `PATCH /api/projects/:id/revisions/:revId`.
 
 - **Export CSV** in the Results dialog: every learner's record (not just the 200 the dialog lists) with best and last scores, `GET /api/projects/:id/results.csv`, same access as the dialog. Cells that start like a formula get a leading quote; a BOM so Excel reads names as UTF-8 (`resultsCsv` in `shared/learner.mjs`).

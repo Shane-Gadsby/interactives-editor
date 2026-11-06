@@ -439,7 +439,7 @@ export function Layers() {
       </button>
       <button
         className="link-btn add-artboard"
-        title="Import Lottie, Rive, PSD, AI, PDF, VectorCraft or PhotoCraft files as artboards in this project"
+        title="Import Lottie, Rive, PSD, AI, PDF, PowerPoint, VectorCraft or PhotoCraft files as artboards in this project"
         onClick={async () => {
           const files = await pickFiles(ANIMATION_ACCEPT, true);
           if (!files.length) return;
