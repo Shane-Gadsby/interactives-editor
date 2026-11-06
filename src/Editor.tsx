@@ -10,6 +10,7 @@ import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, 
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
 import { copySelection, pasteNodes } from './lib/clipboard';
+import { copySelectedKeys, isKeyClipText, keyContext, keysCopiedLast, pasteKeys, watchKeyContext } from './lib/key-edit';
 import { Canvas } from './canvas/Canvas';
 import { deleteSelectedKeys } from './panels/Timeline';
 import { ReferenceModal } from './panels/InterfacePanel';
@@ -304,11 +305,12 @@ function useShortcuts() {
         return;
       }
       if (mod && k === 'c') {
-        copySelection();
+        if (!(keyContext() && copySelectedKeys())) copySelection();
         return;
       }
       if (mod && k === 'x') {
-        copySelection(true);
+        if (keyContext() && copySelectedKeys(true)) deleteSelectedKeys();
+        else copySelection(true);
         return;
       }
       if (mod && k === 'a') {
@@ -400,11 +402,18 @@ function useShortcuts() {
         return;
       }
       const text = e.clipboardData?.getData('text/plain');
+      // Keys copied from the timeline paste at the playhead; the system clipboard says which was copied last, else this session's memory does
+      if ((isKeyClipText(text) || (!text?.includes('interactives/nodes') && keysCopiedLast())) && pasteKeys(text)) {
+        e.preventDefault();
+        return;
+      }
       if (pasteNodes(text)) e.preventDefault();
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('paste', onPaste);
+    const unwatch = watchKeyContext();
     return () => {
+      unwatch();
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('paste', onPaste);
     };

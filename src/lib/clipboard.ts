@@ -1,6 +1,7 @@
 import { cloneWithNewIds, walk, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { selectionBounds, topmost, locate } from '../store/doc';
+import { noteNodesCopied } from './key-edit';
 
 const MARKER = 'interactives/nodes';
 let memory: SceneNode[] = [];
@@ -12,6 +13,7 @@ export function copySelection(cut = false): void {
   const nodes = ids.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
   if (!nodes.length) return;
   memory = JSON.parse(JSON.stringify(nodes));
+  noteNodesCopied();
   void navigator.clipboard?.writeText(JSON.stringify({ [MARKER]: memory })).catch(() => undefined);
   if (cut) store().deleteSelection();
 }
