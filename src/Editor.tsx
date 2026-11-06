@@ -9,6 +9,7 @@ import { ensureFonts } from './lib/fonts';
 import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, standaloneHtml } from './lib/export';
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
+import { importGiftFile } from './lib/gift-import';
 import { copySelection, pasteNodes } from './lib/clipboard';
 import { copySelectedKeys, isKeyClipText, keyContext, keysCopiedLast, pasteKeys, watchKeyContext } from './lib/key-edit';
 import { Canvas } from './canvas/Canvas';
@@ -877,7 +878,7 @@ function AddQuestion() {
         active={!!at}
         onClick={(e) => {
           const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          setAt(at ? null : { left: r.right + 6, top: Math.max(8, Math.min(r.top, window.innerHeight - 440)) });
+          setAt(at ? null : { left: r.right + 6, top: Math.max(8, Math.min(r.top, window.innerHeight - 520)) });
         }}
       />
       {at && (
@@ -893,6 +894,17 @@ function AddQuestion() {
                 <span className="muted small">{k.hint}</span>
               </button>
             ))}
+            <div className="q-menu-title">Import</div>
+            <button
+              role="menuitem"
+              onClick={() => {
+                setAt(null);
+                void importGiftFile();
+              }}
+            >
+              Import questions from a GIFT file
+              <span className="muted small">One question per artboard, from Moodle or the GIFT converter</span>
+            </button>
           </div>
         </>
       )}
