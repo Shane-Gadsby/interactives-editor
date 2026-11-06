@@ -7897,3 +7897,30 @@ code {
 .logic-canvas .react-flow__nodesselection-rect {
   display: none;
 }
+
+/* The projects page's Bin: its sidebar entry sits apart at the bottom, and the note after a delete offers Undo */
+.folder-item.bin-item {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.bin-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 24px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+.bin-note .icon-btn {
+  margin-left: auto;
+}
+.bin-view .bin-intro {
+  grid-column: 1 / -1;
+  margin: 0 0 8px;
+  max-width: 70ch;
+}
+.bin-view .project-thumb {
+  cursor: default;
+}

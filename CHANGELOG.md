@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Project bin**: Delete moves a project to the Bin for 30 days instead of erasing it. Its row moves to `projects-bin` and its files to `storage/_bin/<id>/`, so it and its share, review and StudyDesk links are offline at once; revisions, comments, learner records and a published library stay for a restore. The projects page shows **Bin** under the folders (with Restore and Delete forever), and an **Undo** right after a delete. A sweep at start and every 6 hours purges anything older than 30 days. Power users see everyone's bin in the all-projects view. Routes `GET /api/bin`, `POST /api/bin/:id/restore`, `DELETE /api/bin/:id`, `GET /api/bin/:id/thumbnail`. A live room's unsaved edits are saved into the binned copy.
+
 - **Projects bigger than one database record**: a document over 12 MB goes into `doc-chunks` as numbered parts (`shared/docstore.mjs`) and the row keeps a pointer, for projects and revisions both. Small ones stay in the row, so nothing existing changes. Parts are keyed by rev (or revision id), written before the row moves and the old set dropped after, so a failed save never damages the saved copy. Whole-project saves go up to 64 MB (was 25).
 - **Saves that fail say why**: `PUT /api/projects/:id` used to answer every database error with 409 "saved somewhere else", so a too-big project looked like an edit conflict. Now 409 is only a real conflict, 413 says the project is too big (and what usually causes it), and 500 gives the reason.
 - **Autosave recovers by itself**: a save the network or server dropped tries again (2 s doubling to a minute, and straight away on `online`), says **Saved again** when it works, and toasts once rather than on every change. `ApiError` (with `status` and `retryable`) in `lib/db.ts`.

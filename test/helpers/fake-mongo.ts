@@ -215,4 +215,5 @@ export class FakeDb {
   ingest = new FakeCollection();
   'user-lookup' = new FakeCollection();
   'doc-chunks' = new FakeCollection();
+  'projects-bin' = new FakeCollection();
 }

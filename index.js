@@ -77,6 +77,7 @@ let port = Number(process.env.PORT) || 3048,
 	commentRows,
 	commentNotices,
 	docChunks,
+	projectsBin,
 
 	//A whole-document save. Documents too big for one mongo record are split (shared/docstore.mjs), so this is
 	//the real ceiling now
@@ -352,6 +353,10 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//people when the library project edits or deletes an asset. Library ids are project ids, so validID covers them too
 	libraryDir = (libraryID) => path.join(storageDir, '_libraries', libraryID),
 
+	//A deleted project's files while it's in the bin: its asset folder as files/, its share page and its thumbnail
+	binDir = (projectID) => path.join(storageDir, '_bin', projectID),
+	binDays = 30,
+
 	//Same for a saved template: its own copy of the files (and its thumbnail, thumb.jpg, a name no asset id can have)
 	templateDir = (templateID) => path.join(storageDir, '_templates', templateID),
 
@@ -626,6 +631,23 @@ router.patch('/api/projects/:id/meta', express.json({limit: '16kb'}), async (req
 	res.json(metaOf({...existing, ...set}))
 })
 
+//Moving a file or folder that may not be there. rename can't cross filesystems (storage/ is a symlink on test and
+//prod, but _bin sits inside it, so it never has to)
+const moveIfThere = async (from, to) => {
+	try {
+		await fs.promises.mkdir(path.dirname(to), {recursive: true})
+		await fs.promises.rename(from, to)
+		return true
+	} catch (err) {
+		if (err.code === 'ENOENT') return false
+		throw err
+	}
+}
+
+//Delete puts a project in the bin for binDays days. Its row moves to projects-bin, so no route that serves a project
+//(the editor, the share and review links, the learner page) finds it any more, and its files move to storage/_bin.
+//Revisions, comments, learner records and a published library stay where they are until it's purged, so a restore
+//gets all of it back. The bin is small and only listed per owner, so it has no index
 router.delete('/api/projects/:id', async (req, res) => {
 	let id = req.params.id
 
@@ -633,7 +655,7 @@ router.delete('/api/projects/:id', async (req, res) => {
 		return res.status(400).json({error: 'Bad project id'})
 	}
 
-	let existing = await projects.findOne({_id: id}, {projection: {doc: 0}})
+	let existing = await projects.findOne({_id: id})
 
 	if (!existing) {
 		return res.json({ok: true})
@@ -644,9 +666,13 @@ router.delete('/api/projects/:id', async (req, res) => {
 	}
 
 	//Drop the live room first: no pending autosave or close timer may write the project (or a revision of it) back
-	//after it is gone
+	//after it is gone. Whatever it had unsaved goes into the row that moves to the bin
 	let room = rooms.get(id)
 	if (room) {
+		if (room.dirty) {
+			await persist(room)
+			existing = await projects.findOne({_id: id}) || existing
+		}
 		room.deleted = true
 		room.dirty = false
 		clearTimeout(room.saveTimer)
@@ -654,20 +680,18 @@ router.delete('/api/projects/:id', async (req, res) => {
 		rooms.delete(id)
 	}
 
-	await removeAssets(id)
-	await revisions.deleteMany({project: id})
-	await store.dropProject(id)
-
-	//The learners' records go with it, and so do the review comments
-	await userData.deleteMany({project: id})
-	await activityData.deleteMany({project: id})
-	await commentRows.deleteMany({project: id})
-	await commentNotices.deleteMany({project: id})
+	let me = whoIs(req)
+	await projectsBin.insertOne({...existing, binned: {at: new Date(), by: me ? {username: me.username, name: me.name} : null}})
+		.catch(async (err) => {
+			//Binned before and restored since, with the old bin row somehow left behind: this copy is the newer one
+			if (err?.code !== 11000) throw err
+			await projectsBin.deleteOne({_id: id})
+			await projectsBin.insertOne({...existing, binned: {at: new Date(), by: me ? {username: me.username, name: me.name} : null}})
+		})
+	await moveIfThere(projectDir(id), path.join(binDir(id), 'files'))
+	if (existing.share?.token) await moveIfThere(shareFile(existing.share.token), path.join(binDir(id), 'share.html'))
+	await moveIfThere(thumbFile(id), path.join(binDir(id), 'thumb.jpg'))
 	hubEnd(id)
-	await fs.promises.rm(thumbFile(id), {force: true})
-	await libraries.deleteOne({_id: id})
-	await fs.promises.rm(libraryDir(id), {recursive: true, force: true})
-	if (existing.share?.token) await fs.promises.rm(shareFile(existing.share.token), {force: true})
 	await projects.deleteOne({_id: id})
 
 	if (room) {
@@ -675,6 +699,104 @@ router.delete('/api/projects/:id', async (req, res) => {
 		for (let c of room.clients) c.res.end()
 	}
 
+	res.json({ok: true, bin: binDays})
+})
+
+//Gone for good: everything delete used to remove at once. From the bin's Delete forever, and the sweep below
+const purgeProject = async (row) => {
+	let id = row._id
+	await fs.promises.rm(binDir(id), {recursive: true, force: true})
+	await revisions.deleteMany({project: id})
+	await store.dropProject(id)
+	await userData.deleteMany({project: id})
+	await activityData.deleteMany({project: id})
+	await commentRows.deleteMany({project: id})
+	await commentNotices.deleteMany({project: id})
+	await libraries.deleteOne({_id: id})
+	await fs.promises.rm(libraryDir(id), {recursive: true, force: true})
+	await projectsBin.deleteOne({_id: id})
+}
+
+//Anything in the bin longer than binDays. At start and every 6 hours; one failure doesn't stop the rest
+const sweepBin = async () => {
+	let old = await projectsBin.find({'binned.at': {$lt: new Date(Date.now() - binDays * 24 * 60 * 60 * 1000)}}, {projection: {_id: 1}}).toArray()
+	for (let row of old) {
+		await purgeProject(row).catch((err) => console.trace(`${appName}: purging ${row._id} from the bin failed`, err))
+	}
+	return old.length
+}
+
+//Your bin (power users with ?all=1: everyone's). Card details only, no documents
+router.get('/api/bin', async (req, res) => {
+	let me = whoIs(req),
+		guests = !['testing', 'production'].includes(process.env.NODE_ENV),
+		filter = req.query.all === '1' && isPower(req) ? {} : me?.username ? {'owner.username': me.username} : guests ? {'owner.username': null} : {_id: null},
+		list = await projectsBin.find(filter, {projection: {doc: 0, docChunks: 0}}).sort({'binned.at': -1}).limit(500).toArray()
+
+	res.json(list.map((d) => ({
+		...metaOf(d),
+		binned: d.binned,
+		purge: new Date(d.binned.at.getTime() + binDays * 24 * 60 * 60 * 1000)
+	})))
+})
+
+//The owner (or a power user) of a binned project, as mayChange would judge it if it were still a project
+const binnedFor = async (req, res) => {
+	let id = req.params.id
+	if (!validID(id)) {
+		res.status(400).json({error: 'Bad project id'})
+		return null
+	}
+	let row = await projectsBin.findOne({_id: id}, {projection: {doc: 0, docChunks: 0}})
+	if (!row) {
+		res.status(404).json({error: 'That project is not in the bin'})
+		return null
+	}
+	return mayChange(req, res, row, {ownerOnly: true}) ? row : null
+}
+
+router.post('/api/bin/:id/restore', async (req, res) => {
+	let row = await binnedFor(req, res)
+	if (!row) {
+		return
+	}
+
+	let id = row._id,
+		full = await projectsBin.findOne({_id: id}),
+		{binned, ...back} = full
+
+	//Ids are random, but a project made with this one since would be overwritten
+	if (await projects.findOne({_id: id}, {projection: {_id: 1}})) {
+		return res.status(409).json({error: 'A project with this id exists again, so this one can\'t come back'})
+	}
+
+	await moveIfThere(path.join(binDir(id), 'files'), projectDir(id))
+	if (back.share?.token) await moveIfThere(path.join(binDir(id), 'share.html'), shareFile(back.share.token))
+	await moveIfThere(path.join(binDir(id), 'thumb.jpg'), thumbFile(id))
+	await projects.insertOne(back)
+	await projectsBin.deleteOne({_id: id})
+	await fs.promises.rm(binDir(id), {recursive: true, force: true})
+
+	res.json({ok: true, id})
+})
+
+router.get('/api/bin/:id/thumbnail', async (req, res) => {
+	let row = await binnedFor(req, res)
+	if (!row) {
+		return
+	}
+	res.set('Cache-Control', 'private, max-age=31536000, immutable')
+	res.sendFile(path.join(binDir(row._id), 'thumb.jpg'), (err) => {
+		if (err && !res.headersSent) res.status(404).end()
+	})
+})
+
+router.delete('/api/bin/:id', async (req, res) => {
+	let row = await binnedFor(req, res)
+	if (!row) {
+		return
+	}
+	await purgeProject(row)
 	res.json({ok: true})
 })
 
@@ -3193,6 +3315,7 @@ client.connect()
 		commentRows = db.collection('comments')
 		commentNotices = db.collection('comment-notices')
 		docChunks = db.collection('doc-chunks')
+		projectsBin = db.collection('projects-bin')
 		userData = analyticsDB.collection('interactives-user-data')
 		activityData = analyticsDB.collection('interactives-activity-user-data')
 		ingest = analyticsDB.collection('ingest')
@@ -3218,6 +3341,11 @@ client.connect()
 		commentLimits.guestToken = new commentsMod.Limiter(60, 60 * 60 * 1000)
 		commentLimits.person = new commentsMod.Limiter(60, 10 * 60 * 1000)
 		cacheHeaders.watchEpoch()
+
+		//The bin, now and every 6 hours
+		let sweep = () => sweepBin().then((n) => n && console.log(`${appName}: purged ${n} project(s) from the bin`)).catch((err) => console.trace(`${appName}: bin sweep failed`, err))
+		sweep()
+		setInterval(sweep, 6 * 60 * 60 * 1000).unref()
 
 		app.listen(port, (err) => {
 			//Express 5 hands a failed bind to this callback instead of throwing

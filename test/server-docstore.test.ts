@@ -132,6 +132,9 @@ describe('a project bigger than one record', () => {
     expect(copy.artboards[0].children[0].text).toHaveLength(9000);
 
     await h.call('DELETE', '/api/projects/prbig004', { user: ann });
+    //in the bin, the parts stay for a restore
+    expect(parts().some((p) => p.project === 'prbig004')).toBe(true);
+    await h.call('DELETE', '/api/bin/prbig004', { user: ann });
     expect(parts().some((p) => p.project === 'prbig004')).toBe(false);
     expect(parts().some((p) => p.project === dup.json.id)).toBe(true);
     expect((await h.call('GET', `/api/projects/${dup.json.id}`, { user: ann })).json.project.name).toBe('Copy');

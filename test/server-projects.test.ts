@@ -36,6 +36,7 @@ beforeEach(() => {
   h.db.revisions.docs = [];
   h.db.prefs.docs = [];
   h.db.libraries.docs = [];
+  h.db['projects-bin'].docs = [];
 });
 
 const put = (id: string, p: unknown, user: User | null = ann, extra: Record<string, unknown> = {}) => h.call('PUT', `/api/projects/${id}`, { user, json: { project: p, rev: 0, ...extra } });
@@ -404,24 +405,82 @@ describe('duplicate', () => {
 });
 
 describe('delete', () => {
-  it('removes the project, its revisions, assets, thumbnail, share page and library', async () => {
-    await put('prdel00001', project('prdel00001', { settings: { library: true } }));
-    await h.call('PUT', '/api/projects/prdel00001/assets/asset00001', { user: ann, body: Buffer.from([1]), type: 'image/png' });
-    await h.call('PUT', '/api/projects/prdel00001/thumbnail', { user: ann, body: Buffer.from([0xff, 0xd8, 1, 2]), type: 'image/jpeg' });
-    const share = (await h.call('PUT', '/api/projects/prdel00001/share', { user: ann, body: '<html></html>', type: 'text/plain' })).json.share;
-    h.db.libraries.docs.push({ _id: 'prdel00001', owner: ann });
-    fs.mkdirSync(path.join(h.storage, '_libraries', 'prdel00001'), { recursive: true });
-    await vi.waitFor(() => expect(h.db.revisions.docs.length).toBeGreaterThan(0));
+  const setUp = async (id: string) => {
+    await put(id, project(id, { settings: { library: true } }));
+    await h.call('PUT', `/api/projects/${id}/assets/asset00001`, { user: ann, body: Buffer.from([1]), type: 'image/png' });
+    await h.call('PUT', `/api/projects/${id}/thumbnail`, { user: ann, body: Buffer.from([0xff, 0xd8, 1, 2]), type: 'image/jpeg' });
+    const share = (await h.call('PUT', `/api/projects/${id}/share`, { user: ann, body: '<html></html>', type: 'text/plain' })).json.share;
+    h.db.libraries.docs.push({ _id: id, owner: ann });
+    fs.mkdirSync(path.join(h.storage, '_libraries', id), { recursive: true });
+    await vi.waitFor(() => expect(h.db.revisions.docs.some((r) => r.project === id)).toBe(true));
+    return share.token as string;
+  };
+  const exists = (...p: string[]) => fs.existsSync(path.join(h.storage, ...p));
 
-    expect((await h.call('DELETE', '/api/projects/prdel00001', { user: ann })).json).toEqual({ ok: true });
+  it('puts the project in the bin: gone from the list and its links, everything kept for a restore', async () => {
+    const token = await setUp('prdel00001');
+    expect((await h.call('DELETE', '/api/projects/prdel00001', { user: ann })).json).toEqual({ ok: true, bin: 30 });
 
-    expect(h.db.projects.docs).toHaveLength(0);
-    expect(h.db.revisions.docs).toHaveLength(0);
+    expect(h.db.projects.docs.some((d) => d._id === 'prdel00001')).toBe(false);
+    expect((await h.call('GET', '/api/projects/prdel00001', { user: ann })).status).toBe(404);
+    expect((await h.call('GET', `/s/${token}`, {})).status).toBe(404);
+    expect(exists('prdel00001')).toBe(false);
+    expect(exists('shares', `${token}.html`)).toBe(false);
+    expect(exists('thumbs', 'prdel00001.jpg')).toBe(false);
+    //kept: the files in the bin, the revisions, the library
+    expect(exists('_bin', 'prdel00001', 'files', 'asset00001')).toBe(true);
+    expect(exists('_bin', 'prdel00001', 'share.html')).toBe(true);
+    expect(exists('_bin', 'prdel00001', 'thumb.jpg')).toBe(true);
+    expect(h.db.revisions.docs.some((r) => r.project === 'prdel00001')).toBe(true);
+    expect(h.db.libraries.docs).toHaveLength(1);
+
+    const bin = (await h.call('GET', '/api/bin', { user: ann })).json;
+    expect(bin.map((b: { id: string }) => b.id)).toEqual(['prdel00001']);
+    expect(new Date(bin[0].purge).getTime() - new Date(bin[0].binned.at).getTime()).toBe(30 * 24 * 60 * 60 * 1000);
+    expect(bin[0].binned.by.username).toBe('ann');
+    //someone else's bin doesn't show it, and they can't restore it
+    expect((await h.call('GET', '/api/bin', { user: bob })).json).toEqual([]);
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('POST', '/api/bin/prdel00001/restore', { user: bob })).status).toBe(403);
+    process.env.SUITE_SESSION_ENFORCE = '';
+  });
+
+  it('restores everything: the project, its files, share link and thumbnail', async () => {
+    const token = await setUp('prdel00002');
+    await h.call('DELETE', '/api/projects/prdel00002', { user: ann });
+    expect((await h.call('POST', '/api/bin/prdel00002/restore', { user: ann })).json).toEqual({ ok: true, id: 'prdel00002' });
+
+    expect((await h.call('GET', '/api/projects/prdel00002', { user: ann })).json.project.id).toBe('prdel00002');
+    expect((await h.call('GET', `/s/${token}`, {})).status).toBe(200);
+    expect(exists('prdel00002', 'asset00001')).toBe(true);
+    expect(exists('thumbs', 'prdel00002.jpg')).toBe(true);
+    expect(exists('_bin', 'prdel00002')).toBe(false);
+    expect(h.db['projects-bin'].docs).toHaveLength(0);
+    expect(h.db.projects.docs.find((d) => d._id === 'prdel00002')!.binned).toBeUndefined();
+    expect((await h.call('POST', '/api/bin/prdel00002/restore', { user: ann })).status).toBe(404);
+  });
+
+  it('Delete forever removes the project, its revisions, assets, thumbnail, share page and library', async () => {
+    await setUp('prdel00003');
+    await h.call('DELETE', '/api/projects/prdel00003', { user: ann });
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('DELETE', '/api/bin/prdel00003', { user: bob })).status).toBe(403);
+    process.env.SUITE_SESSION_ENFORCE = '';
+    expect((await h.call('DELETE', '/api/bin/prdel00003', { user: ann })).json).toEqual({ ok: true });
+
+    expect(h.db['projects-bin'].docs).toHaveLength(0);
+    expect(h.db.revisions.docs.filter((r) => r.project === 'prdel00003')).toHaveLength(0);
     expect(h.db.libraries.docs).toHaveLength(0);
-    expect(fs.existsSync(path.join(h.storage, 'prdel00001'))).toBe(false);
-    expect(fs.existsSync(path.join(h.storage, 'thumbs', 'prdel00001.jpg'))).toBe(false);
-    expect(fs.existsSync(path.join(h.storage, 'shares', `${share.token}.html`))).toBe(false);
-    expect(fs.existsSync(path.join(h.storage, '_libraries', 'prdel00001'))).toBe(false);
+    expect(exists('_bin', 'prdel00003')).toBe(false);
+    expect(exists('_libraries', 'prdel00003')).toBe(false);
+  });
+
+  it('a power user sees and restores anyone\'s bin with all=1', async () => {
+    await setUp('prdel00004');
+    await h.call('DELETE', '/api/projects/prdel00004', { user: ann });
+    expect((await h.call('GET', '/api/bin', { user: pat })).json).toEqual([]);
+    expect((await h.call('GET', '/api/bin?all=1', { user: pat })).json.map((b: { id: string }) => b.id)).toEqual(['prdel00004']);
+    expect((await h.call('POST', '/api/bin/prdel00004/restore', { user: pat })).json.ok).toBe(true);
   });
 
   it('is fine to delete something that is already gone, and refuses bad ids', async () => {

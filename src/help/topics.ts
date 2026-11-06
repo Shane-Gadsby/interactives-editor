@@ -131,7 +131,7 @@ Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pag
     title: 'Projects page',
     group: 'Getting started',
     summary: 'Start a new project (blank, a copy, a built-in template or an example), open, duplicate, import and delete projects, and organise them with folders, tags, search and sort.',
-    keywords: 'home new project start blank chooser copy clone import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter',
+    keywords: 'home new project start blank chooser copy clone import duplicate delete package ixp god mode power user folder folders tag tags search sort organise organize filter bin trash undelete restore recover deleted',
     body: `The projects page lists the projects you own. Each card shows a picture of the project's start artboard, its name, when it last changed, how many artboards it has, its tags and a folder menu.
 
 ![The projects page: the folder list on the left, the search box, sort menu and tag filter along the top, and a card for each project.](help/projects-page.png)
@@ -148,8 +148,19 @@ Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pag
 - Click a card's picture to open the project. **Help** and the gear (**Preferences**) are at the top right too.
 - The **Templates** tab (next to **Projects**) starts a project from a template, or from one of the finished examples. See [Templates, examples and remix](templates).
 - **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`) or PhotoCraft (\`.pcraft\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
-- Each card has three icon buttons: **Duplicate** (a copy of the project and its assets), **Export** a \`${PACKAGE_EXTENSION}\` package (a download of the whole project) and **Delete**. Delete asks first, and can't be undone, so download a package if you might want the project back.
+- Each card has three icon buttons: **Duplicate** (a copy of the project and its assets), **Export** a \`${PACKAGE_EXTENSION}\` package (a download of the whole project) and **Delete**. Delete asks first, then moves the project to the [Bin](projects#the-bin), with an **Undo** straight after.
 - With no projects yet the page shows **Create your first project**, which opens the same **Start a new project** window.
+
+## The bin
+
+A deleted project goes to the **Bin** for 30 days. The **Bin** shows at the bottom of the folder list whenever something is in it.
+
+- While a project is in the Bin, nobody can open it, and its share link, review link and **Link for StudyDesk** stop working.
+- Its pictures and files, revision history, review comments and learner records are all kept, so **Restore** puts it back exactly as it was, links included.
+- Each one says when it was deleted, by whom, and how many days it has left. After 30 days it goes for good, with everything above.
+- **Delete forever** removes it now, for good. Use it when a project has to go (learner data you were asked to remove, say). It asks first.
+- A library published from the project stays available to the projects that use it until the project goes for good.
+- Only the owner can delete, restore or delete forever. Staff with power-user access see everyone's Bin in the power-user view.
 
 ## Search and sort
 
@@ -351,7 +362,7 @@ The people who make the product, as counts and lists of errors. If you are one o
 ## Where you'll see them
 | Dialog | When |
 |---|---|
-| **Delete project**, **Delete folder** | On the projects page: delete a project (which can't be undone) or a folder (its projects are kept) |
+| **Delete project**, **Delete folder** | On the projects page: move a project to the Bin (restorable for 30 days) or delete a folder (its projects are kept) |
 | **New folder**, **Rename folder** | Moving a project to **New folder…**, or renaming with the pencil |
 | **Move to artboard** | You dropped layers over a different artboard. See [Layers](layers-panel#moving-layers-to-another-artboard) |
 | **Delete asset**, **Delete N assets**, **Remove unused assets** | Deleting from the [Assets panel](assets) or the [Usage](usage) tab. They list the files and warn about any still in use |
@@ -2243,7 +2254,7 @@ Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](exp
 ## Save user data and Load user data
 **Remember** keeps a variable's value all the time, on its own. When you'd rather choose the moment, use the two action nodes instead: **Save user data** keeps the variables you tick, as they are right then (say, when the learner presses *Submit*), and **Load user data** puts them back on a later visit. Put the load in **Before activity loads** so the values are in place before anything shows. *Load user data* goes on from **Loaded** when anything came back, and from **Nothing saved** on a first visit, so you can set up a fresh start there.
 
-They go to the same places as remembered progress: on the **Link for StudyDesk**, one record per learner per course, kept by their StudyDesk session; with no session, in an export, or in Preview, in the browser. Each save only changes the variables it names. User data is kept apart from remembered progress and from results, so **Clear results** and **Start over** leave it alone; deleting the project deletes it.
+They go to the same places as remembered progress: on the **Link for StudyDesk**, one record per learner per course, kept by their StudyDesk session; with no session, in an export, or in Preview, in the browser. Each save only changes the variables it names. User data is kept apart from remembered progress and from results, so **Clear results** and **Start over** leave it alone; it goes when the project goes for good (30 days after it's deleted, or straight away with **Delete forever**).
 
 ## See the results
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. It is for the project's owner. **Clear results** deletes every record for the project (handy after testing).

@@ -143,10 +143,22 @@ export async function saveProject(p: Project, opts: { force?: boolean } = {}): P
   revs.set(p.id, r.rev);
 }
 
+/** Moves the project to the bin (kept 30 days; restore it from the projects page's Bin). */
 export async function deleteProject(id: string): Promise<void> {
   await call(`projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
   revs.delete(id);
 }
+
+/** A project in the bin: its card details, when and by whom it was deleted, and when it goes for good. */
+export interface BinnedProject extends ProjectMeta {
+  binned: { at: string; by: { username: string | null; name: string | null } | null };
+  purge: string;
+}
+
+export const listBin = (all = false) => call<BinnedProject[]>(`bin${all ? '?all=1' : ''}`);
+export const restoreFromBin = (id: string) => call<{ ok: boolean; id: string }>(`bin/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+/** Gone for good: the project, its files, revisions, learner records and comments. */
+export const deleteForever = (id: string) => call<{ ok: boolean }>(`bin/${encodeURIComponent(id)}`, { method: 'DELETE' });
 
 export async function putAsset(projectId: string, assetId: string, blob: Blob): Promise<void> {
   await call(`projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`, {

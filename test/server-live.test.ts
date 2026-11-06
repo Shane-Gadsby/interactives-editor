@@ -252,9 +252,9 @@ describe('whole-document changes while people are connected', () => {
     await h.call('DELETE', `/api/projects/${id}`, { user: ann });
     await a.waitFor((e) => e.event === 'deleted');
     await new Promise((res) => setTimeout(res, 1300));
-    //nothing came back from the room's timers
+    //nothing came back from the room's timers, and the edit the room hadn't saved went into the bin with it
     expect(h.db.projects.docs.find((d) => d._id === id)).toBeUndefined();
-    expect(h.db.revisions.docs.filter((r) => r.project === id)).toHaveLength(0);
+    expect(JSON.parse(h.db['projects-bin'].docs.find((d) => d._id === id)!.doc).name).toBe('x');
   }, 8000);
 
   it('a failed save to mongo leaves the room dirty so it is tried again', async () => {

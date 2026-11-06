@@ -201,6 +201,9 @@ describe('user data (Save user data / Load user data)', () => {
     await saveUD(sam, { a: 1 });
     expect((await saveUD(sam, { a: 1 }, 'nosuchtokennosuchtoken1')).status).toBe(404);
     await h.call('DELETE', '/api/projects/prlearn001', { user: ann });
+    //kept while the project is in the bin, gone with it for good
+    expect(kept().length).toBeGreaterThan(0);
+    await h.call('DELETE', '/api/bin/prlearn001', { user: ann });
     expect(kept()).toHaveLength(0);
   });
 });
@@ -279,6 +282,8 @@ describe('results for the owner', () => {
     expect(records()).toHaveLength(0);
     await report(sam, result(5));
     await h.call('DELETE', '/api/projects/prlearn001', { user: ann });
+    expect(records().length).toBeGreaterThan(0);
+    await h.call('DELETE', '/api/bin/prlearn001', { user: ann });
     expect(records()).toHaveLength(0);
   });
 
