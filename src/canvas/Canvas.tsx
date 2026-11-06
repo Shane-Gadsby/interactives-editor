@@ -48,6 +48,7 @@ import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
 import { fontStack } from '../lib/font-catalog';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
+import { selectSameItems } from '../lib/layer-find';
 import { copySelection, pasteNodes } from '../lib/clipboard';
 import { inGhostExtent } from './ghost';
 import { openHelp } from '../help/Help';
@@ -1733,6 +1734,7 @@ export function Canvas() {
         { separator: true },
         { label: one?.visible === false ? 'Show' : 'Hide', onClick: () => s2.setProps(sel.map((n) => n.id), { visible: one?.visible === false }) },
         { label: 'Lock', onClick: () => s2.setProps(sel.map((n) => n.id), { locked: true }) },
+        ...(one ? [{ separator: true } as MenuItem, ...selectSameItems(hab, one)] : []),
         ...(one
           ? [
               {
