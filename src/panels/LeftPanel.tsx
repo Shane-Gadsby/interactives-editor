@@ -13,8 +13,9 @@ import { acceptFor, insertFiles, pickFiles, replaceAssetFile } from '../lib/inse
 import { ANIMATION_ACCEPT, chooseLinking, importAnimationFile, updateFromFile } from '../lib/importers';
 import { KIND_LABEL, linksOf } from '../lib/links';
 import { getArtboard, locate } from '../store/doc';
-import { deleteAsset } from '../lib/db';
+import { assetDuplicates, dedupeAssetFiles, deleteAsset } from '../lib/db';
 import { analyzeUsage, unusedAssetIds } from '../lib/dependencies';
+import { mergeDuplicates, mergePlan } from '../lib/duplicates';
 import { track } from '../lib/analytics';
 import { attributionForAsset, focusEntryNext, forgetAssets } from '../lib/attributions';
 import { unattributedAssets } from 'interactives-player';
@@ -559,6 +560,29 @@ export function Assets() {
     const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,.pptx,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
     if (files.length) await insertFiles(files, null, null);
   };
+  const findDuplicates = async () => {
+    const project = store().get().project;
+    let plan: { keep: string; drop: string[] }[];
+    try {
+      plan = mergePlan(project, (await assetDuplicates(project.id)).groups);
+    } catch (e) {
+      store().toast(e instanceof Error ? e.message : String(e), 'error');
+      return;
+    }
+    if (!plan.length) {
+      store().toast('No duplicate files: every file in this project is different.');
+      return;
+    }
+    const name = (id: string) => project.assets.find((a) => a.id === id)?.name ?? id;
+    const lines = plan.map((p) => `• ${name(p.keep)}: ${p.drop.length} more cop${p.drop.length === 1 ? 'y' : 'ies'} (${p.drop.map(name).join(', ')})`);
+    const n = plan.reduce((t, p) => t + p.drop.length, 0);
+    if (!(await confirmDialog({ title: 'Duplicate files', message: `These were added more than once:\n${lines.join('\n')}\n\nMerge them? Everything that used a copy uses the kept file instead, and the ${n} cop${n === 1 ? 'y goes' : 'ies go'}. Undo puts the references back.`, confirmLabel: `Merge ${n} cop${n === 1 ? 'y' : 'ies'}` }))) return;
+    store().update((d) => void mergeDuplicates(d as Project, plan));
+    track('feature', 'assets-dedupe', { sum: { files: n } });
+    // The copies stay reachable (an Undo points layers back at them) but stop taking space: the server links them to the kept file
+    const r = await dedupeAssetFiles(project.id, plan).catch(() => null);
+    store().toast(`Merged ${n} duplicate file${n === 1 ? '' : 's'}${r?.freed ? `, ${Math.round(r.freed / 1024)} KB freed on the server` : ''}.`);
+  };
   const removeIds = async (ids: string[]) => {
     store().update((d) => {
       d.assets = d.assets.filter((a) => !ids.includes(a.id));
@@ -664,6 +688,11 @@ export function Assets() {
       </button>
       <p className="hint">Images, video, audio, fonts and data files (JSON/CSV/TSV/text, used from the Data tab). Drop files here to add them, or on the canvas to place them.</p>
       <DesignFiles />
+      {assets.length > 1 && (
+        <button className="link-btn small" onClick={() => void findDuplicates()} title="Look for files that were added more than once (the same bytes), and keep one copy">
+          Find duplicate files
+        </button>
+      )}
       {uncredited.size > 0 && (
         <p className="hint asset-credit-note">
           {uncredited.size} file{uncredited.size === 1 ? ' has' : 's have'} no attribution yet.{' '}

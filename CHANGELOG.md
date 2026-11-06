@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **`/interactives/health`** (no session): mongo and storage checks with timings, version, uptime, open rooms; 503 when either fails. The server's `version` now comes from package.json (it said 0.1.0, which is what version-reporting recorded).
+- **Find duplicate files** in Assets: groups of identical files (`GET .../assets/duplicates`, sha256 cached in the sidecar) merged in the document in one undo step (`lib/duplicates.ts`), then each dropped copy becomes a hard link to the kept file on the server (`POST .../assets/dedupe`), so space comes back and Undo still works.
+
 - **Revert a share link**: an update keeps the page it replaced (`storage/shares/<token>.prev.html`, unreachable through `/s/`), and **Revert to previous version** in the Share dialog swaps them (`POST /api/projects/:id/share/revert`), so a revert can be undone the same way. `share.previous {updated, by}`; turning the link off removes both; the bin carries both.
 
 - **AI agent access switch and marked revisions**: `INTERACTIVES_MCP=off` makes `/mcp` answer 503 and keeps `?agent=` clients out of live rooms. Revisions with an agent's edits read "Autosave (edited with <agent> (AI))" and carry `agents`.

@@ -1,6 +1,7 @@
 require('../suite-libs/crash-guard')
 let port = Number(process.env.PORT) || 3048,
-	version = '0.1.0',
+	//What version-reporting and /health say, from package.json so it can't sit at 0.1.0 again
+	version = require('./package.json').version,
 	appName = 'interactives',
 	express = require('express'),
 	fs = require('fs'),
@@ -417,6 +418,30 @@ router.use('/api', (req, res, next) => {
 router.use((req, res, next) => {
 	req.body = req.body || {}
 	next()
+})
+
+//For a load balancer, pm2 or a person checking the box: can it reach mongo and write its storage folder. No session
+//needed and nothing about anyone's projects, just yes/no and counts. 503 when either check fails
+const started = Date.now()
+router.get('/health', cacheHeaders.api, async (req, res) => {
+	let check = async (fn) => {
+		let t = Date.now()
+		try {
+			await Promise.race([fn(), new Promise((_, no) => setTimeout(() => no(new Error('timed out')), 3000).unref())])
+			return {ok: true, ms: Date.now() - t}
+		} catch (err) {
+			return {ok: false, ms: Date.now() - t, error: String(err?.message || err).slice(0, 80)}
+		}
+	}
+	let mongo = await check(() => projects.findOne({_id: '__health'}, {projection: {_id: 1}})),
+		storage = await check(async () => {
+			let probe = path.join(storageDir, `.health-${process.pid}`)
+			await fs.promises.writeFile(probe, 'ok')
+			await fs.promises.rm(probe, {force: true})
+		}),
+		ok = mongo.ok && storage.ok
+
+	res.status(ok ? 200 : 503).json({ok, app: appName, version, uptime: Math.round((Date.now() - started) / 1000), mongo, storage, rooms: rooms.size, mcp: !mcpOff()})
 })
 
 router.use(cacheHeaders.stampGate)
@@ -975,6 +1000,91 @@ router.get('/api/projects/:id/assets', async (req, res) => {
 	}
 
 	res.json(list)
+})
+
+//Files in a project with the same bytes, uploaded twice (the same logo dropped on three artboards, a re-import). Groups
+//of ids, biggest saving first. The hash goes in the sidecar (keyed by size and mtime) so it's worked out once a file
+router.get('/api/projects/:id/assets/duplicates', async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	let dir = projectDir(req.params.id),
+		names = fs.existsSync(dir) ? (await fs.promises.readdir(dir)).filter((n) => n.endsWith('.json')) : [],
+		byHash = new Map()
+
+	for (let name of names) {
+		let id = name.slice(0, -5),
+			file = path.join(dir, id),
+			side = path.join(dir, name)
+		try {
+			let meta = JSON.parse(await fs.promises.readFile(side, 'utf8')),
+				st = await fs.promises.stat(file),
+				key = `${st.size}:${st.mtimeMs}`
+
+			if (meta.sha256?.key !== key) {
+				let hash = crypto.createHash('sha256')
+				for await (let chunk of fs.createReadStream(file)) hash.update(chunk)
+				meta.sha256 = {key, hex: hash.digest('hex')}
+				await fs.promises.writeFile(side, JSON.stringify(meta))
+			}
+			let group = byHash.get(meta.sha256.hex) || {size: st.size, ids: []}
+			group.ids.push(id)
+			byHash.set(meta.sha256.hex, group)
+		}
+		catch (e) {
+			//A file without its sidecar or the other way round: not ours to judge
+		}
+	}
+
+	let groups = [...byHash.values()].filter((g) => g.ids.length > 1).sort((a, b) => b.size * (b.ids.length - 1) - a.size * (a.ids.length - 1))
+	res.json({groups})
+})
+
+//After the editor merged duplicates in the document: each dropped copy becomes a hard link to the kept file, so the
+//disk space comes back but every old id still answers (an Undo in the editor points layers back at them)
+router.post('/api/projects/:id/assets/dedupe', express.json({limit: '64kb'}), async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	let id = req.params.id,
+		plan = Array.isArray(req.body?.plan) ? req.body.plan.slice(0, 500) : [],
+		linked = 0,
+		freed = 0
+
+	const hashOf = async (assetID) => {
+		let hash = crypto.createHash('sha256')
+		for await (let chunk of fs.createReadStream(assetFile(id, assetID))) hash.update(chunk)
+		return hash.digest('hex')
+	}
+
+	for (let p of plan) {
+		if (!validID(p?.keep) || !Array.isArray(p.drop)) continue
+		let keepFile = assetFile(id, p.keep), keepHash
+		try {
+			keepHash = await hashOf(p.keep)
+		} catch {
+			continue
+		}
+		for (let drop of p.drop.filter(validID)) {
+			let file = assetFile(id, drop)
+			try {
+				let [a, b] = await Promise.all([fs.promises.stat(keepFile), fs.promises.stat(file)])
+				//Already one file, or not the same bytes after all: leave it
+				if (a.ino === b.ino || await hashOf(drop) !== keepHash) continue
+				let tmp = `${file}.link`
+				await fs.promises.link(keepFile, tmp)
+				await fs.promises.rename(tmp, file)
+				linked++
+				freed += b.size
+			} catch (err) {
+				//A filesystem without hard links, or the file's gone: nothing to free, nothing broken
+			}
+		}
+	}
+
+	res.json({ok: true, linked, freed})
 })
 
 //Raw bytes in, raw bytes out. The editor never reuses an asset id for different bytes, so a fetched asset can sit

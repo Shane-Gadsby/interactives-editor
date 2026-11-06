@@ -188,6 +188,13 @@ export async function getAsset(projectId: string, assetId: string): Promise<Blob
   }
 }
 
+/** Files in a project with the same bytes, as groups of asset ids. */
+export const assetDuplicates = (projectId: string) => call<{ groups: { size: number; ids: string[] }[] }>(`projects/${encodeURIComponent(projectId)}/assets/duplicates`);
+
+/** After merging duplicates in the document: the server makes each dropped copy a hard link to the kept file. */
+export const dedupeAssetFiles = (projectId: string, plan: { keep: string; drop: string[] }[]) =>
+  call<{ ok: boolean; linked: number; freed: number }>(`projects/${encodeURIComponent(projectId)}/assets/dedupe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan }) });
+
 export async function deleteAsset(projectId: string, assetId: string): Promise<void> {
   await call(`projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`, { method: 'DELETE' });
 }

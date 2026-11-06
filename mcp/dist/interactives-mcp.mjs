@@ -5940,6 +5940,7 @@ Only JPEG, PNG and WebP pictures are touched. SVG, GIF and animated PNG or WebP 
 - Image fills, video and image layers, **Play sound** nodes and fonts pick their file from a dropdown of the project's assets. Most of those dropdowns also offer **+ Add a new image…** (or sound, video or data file), which uploads and selects in one step.
 
 ## Checking and deleting
+- **Find duplicate files** (under Upload files) looks for files that were added more than once, such as the same logo dropped in three times. It lists them and offers to merge: everything that used a copy uses one file instead, and the copies leave the list. Undo puts them back.
 - Click an asset, or its checkbox, to check it. <kbd>Shift</kbd>+click checks a range. The box above the list, **Select all**, checks or unchecks every asset.
 - When anything is checked a red **Delete** button appears with the count. A dialog lists the files and warns if any are used. Deleting an asset that layers still use leaves those layers empty.
 - The bin on one asset deletes just that one (it asks first).
