@@ -2754,7 +2754,9 @@ If the project was saved from another tab, or by someone else without live editi
 
 ![The Invite to collaborate window: a search box for a name, email or username, and the list of people already invited.](help/invite-dialog.png)
 
-Only staff who have used the StudyDesk Toolbox before can be found by name, and students are never listed. Someone who isn't found can still be invited by typing their exact username. Collaborators can edit, comment, export and share it; only the owner can delete the project or change who's invited (a collaborator can take themselves off the list). To let someone look and comment without editing, use **Share for review** instead ([Review comments](comments)).`,
+Only staff who have used the StudyDesk Toolbox before can be found by name, and students are never listed. Someone who isn't found can still be invited by typing their exact username. Collaborators can edit, comment, export and share it; only the owner can delete the project, clear its results or change who's invited (a collaborator can take themselves off the list).
+
+To hand a project to someone else (you're leaving, or it belongs to another unit now), invite them first, then press **Make owner** beside their name. They become the owner and you stay on as a collaborator. The project keeps its id, so its share link, the **Link for StudyDesk** in every course page and a library published from it carry on working. A power user can do this for anyone's project, which is how a project is moved on when its owner has already left. To let someone look and comment without editing, use **Share for review** instead ([Review comments](comments)).`,
   },
 
   {

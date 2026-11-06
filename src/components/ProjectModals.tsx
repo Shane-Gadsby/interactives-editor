@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, prepareNodes, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
-import { addCollaborator, clearResults, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
+import { addCollaborator, clearResults, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
 import { standaloneHtml } from '../lib/export';
 import { IconButton } from './ui';
@@ -509,6 +509,23 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
       setBusy(false);
     }
   };
+  const makeOwner = async (c: { username: string; name: string | null }) => {
+    const who = c.name || c.username;
+    if (!(await confirmDialog({ title: 'Transfer ownership', message: `Make ${who} the owner of this project? They can then delete it, clear its results and change who's invited. You stay on as a collaborator. The share link, the Link for StudyDesk and its library don't change.`, confirmLabel: 'Make owner', danger: true }))) return;
+    setBusy(true);
+    try {
+      const r = await transferOwner(projectId, c.username);
+      setData((d) => (d ? { ...d, owner: r.owner, collaborators: r.collaborators, canManage: false } : d));
+      track('feature', 'transfer-owner');
+      store().toast(`${who} is now the owner.`);
+      // A power user still manages it; ask the server rather than guess
+      getCollaborators(projectId).then(setData, () => undefined);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
   const remove = async (u: string) => {
     if (!(await confirmDialog({ title: 'Remove collaborator', message: `${u} won't be able to open this project any more. Their changes stay.`, confirmLabel: 'Remove', danger: true }))) return;
     try {
@@ -562,6 +579,11 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
             <li key={c.username}>
               <span>{c.name || c.username}</span>
               <span className="muted small">{c.username} · can edit</span>
+              {data.canManage && (
+                <button className="btn small" disabled={busy} title={`Make ${c.name || c.username} the owner. You stay on as a collaborator; the links and StudyDesk embeds don't change`} onClick={() => void makeOwner(c)}>
+                  Make owner
+                </button>
+              )}
               {data.canManage && <IconButton icon={<Icons.trash />} title={`Remove ${c.username}`} onClick={() => void remove(c.username)} />}
             </li>
           ))}

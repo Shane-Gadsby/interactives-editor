@@ -539,3 +539,34 @@ describe('finding people to invite', () => {
     expect((await h.call('GET', '/api/people?q=p', { user: ann })).json.people).toEqual([]);
   });
 });
+
+describe('transferring ownership', () => {
+  it('makes a collaborator the owner and keeps the old owner on as a collaborator', async () => {
+    await put('prown00009', project('prown00009'));
+    h.db.libraries.docs.push({ _id: 'prown00009', owner: { username: 'ann' } });
+    h.db.templates.docs.push({ _id: 'tpl1', source: 'prown00009', owner: { username: 'ann' } }, { _id: 'tpl2', source: 'prown00009', owner: { username: 'zed' } });
+    expect((await h.call('POST', '/api/projects/prown00009/owner', { user: ann, json: { username: 'bob' } })).status).toBe(400);
+    await h.call('POST', '/api/projects/prown00009/collaborators', { user: ann, json: { username: 'bob', name: 'Bob B' } });
+    const r = await h.call('POST', '/api/projects/prown00009/owner', { user: ann, json: { username: 'bob' } });
+    expect(r.json.owner).toMatchObject({ username: 'bob', name: 'Bob B' });
+    expect(r.json.collaborators.map((c: { username: string }) => c.username)).toEqual(['ann']);
+    const row = h.db.projects.docs.find((d) => d._id === 'prown00009')!;
+    expect(row.owner.username).toBe('bob');
+    expect(row.ownerChanged).toMatchObject({ from: 'ann', by: 'ann' });
+    expect(h.db.libraries.docs.find((d) => d._id === 'prown00009')!.owner.username).toBe('bob');
+    //the template ann saved follows; one somebody else saved from it doesn't
+    expect(h.db.templates.docs.find((d) => d._id === 'tpl1')!.owner.username).toBe('bob');
+    expect(h.db.templates.docs.find((d) => d._id === 'tpl2')!.owner.username).toBe('zed');
+    h.db.templates.docs = [];
+  });
+
+  it('is for the owner or a power user, not a collaborator', async () => {
+    await put('prown00010', project('prown00010'));
+    await h.call('POST', '/api/projects/prown00010/collaborators', { user: ann, json: { username: 'bob' } });
+    await h.call('POST', '/api/projects/prown00010/collaborators', { user: ann, json: { username: 'cat' } });
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('POST', '/api/projects/prown00010/owner', { user: bob, json: { username: 'cat' } })).status).toBe(403);
+    expect((await h.call('POST', '/api/projects/prown00010/owner', { user: pat, json: { username: 'cat' } })).json.owner.username).toBe('cat');
+    process.env.SUITE_SESSION_ENFORCE = '';
+  });
+});

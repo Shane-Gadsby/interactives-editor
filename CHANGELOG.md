@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Transfer ownership**: **Make owner** beside a collaborator in Invite to collaborate (owner or power user). The old owner stays on as a collaborator; same id and share token, so embeds keep working; the published library and the old owner's templates saved from it follow. `POST /api/projects/:id/owner`, `ownerChanged {at, from, by}` on the row.
+
 - **Clear results is the owner's**: `DELETE /api/projects/:id/results` takes the owner or a power user only (`projectFor(req, res, {ownerOnly: true})`); collaborators still see results, and the button is greyed out for them with a tooltip (`mayClear` on the results reply). Help says so.
 
 - **Warnings before cutting learners off**: deleting a project and turning its share link off now say, when it applies, that the link (the Link for StudyDesk too) is on and how many learners have results or progress, per course, with when each was last active ("This project is in use right now" for activity in the last 30 days). `GET /api/projects/:id/in-use` (owner or power user) reads `interactives-user-data` only; `lib/in-use.ts` words it.

@@ -1327,6 +1327,50 @@ router.delete('/api/projects/:id/collaborators/:username', async (req, res) => {
 	res.json({collaborators: list})
 })
 
+//Hand a project to one of its collaborators: they become the owner and the old owner stays on as a collaborator, so
+//nobody loses access. Same id, same share token, so every StudyDesk embed keeps working (duplicating, the old
+//workaround for a leaver, broke them all). The library published from it and templates saved from it by the old
+//owner follow. Owner or power user only
+router.post('/api/projects/:id/owner', express.json({limit: '4kb'}), async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0, docChunks: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	if (!mayChange(req, res, doc, {ownerOnly: true})) {
+		return
+	}
+
+	let username = String(req.body?.username ?? '').trim().toLowerCase(),
+		list = Array.isArray(doc.collaborators) ? doc.collaborators : [],
+		next = list.find((c) => c.username === username)
+
+	if (!next) {
+		return res.status(400).json({error: 'Invite them to collaborate first, then make them the owner'})
+	}
+
+	//userID from the suite's user lookup when it knows them (the owner record carries one from a real session)
+	let known = await userLookup.findOne({username}, {projection: {userID: 1}}).catch(() => null),
+		owner = {username, userID: known?.userID ?? null, name: next.name || username},
+		old = doc.owner?.username ? doc.owner : null,
+		collaborators = list.filter((c) => c.username !== username)
+
+	if (old && !collaborators.some((c) => c.username === old.username)) {
+		collaborators.push({username: old.username, name: old.name || null, added: new Date(), by: whoIs(req)?.username ?? null})
+	}
+
+	await projects.updateOne({_id: id}, {$set: {owner, collaborators, ownerChanged: {at: new Date(), from: old?.username || null, by: whoIs(req)?.username ?? null}}})
+	await libraries.updateOne({_id: id}, {$set: {owner}}).catch((err) => console.trace(`${appName}: library owner of ${id} not moved`, err))
+	if (old) await templates.updateMany({source: id, 'owner.username': old.username}, {$set: {owner}}).catch((err) => console.trace(`${appName}: template owners from ${id} not moved`, err))
+
+	let room = rooms.get(id)
+	if (room) room.owner = owner
+
+	res.json({owner, collaborators})
+})
+
 //Share links: the project as one standalone HTML file (built by the editor), at /interactives/s/<token>.
 //Anyone with the link can play it, no session (a link opened in a new tab can't carry one), so it's off until
 //the owner turns it on, the token is unguessable, and turning it off deletes the file
