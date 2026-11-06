@@ -149,6 +149,18 @@ export async function deleteProject(id: string): Promise<void> {
   revs.delete(id);
 }
 
+/** Who is using a project: its links, and learners with records per course (GET projects/:id/in-use). */
+export interface InUse {
+  share: boolean;
+  review: boolean;
+  learners: number;
+  last: string | null;
+  courses: { course: string; learners: number; last: string | null }[];
+  moreCourses: number;
+}
+
+export const projectInUse = (id: string) => call<InUse>(`projects/${encodeURIComponent(id)}/in-use`);
+
 /** A project in the bin: its card details, when and by whom it was deleted, and when it goes for good. */
 export interface BinnedProject extends ProjectMeta {
   binned: { at: string; by: { username: string | null; name: string | null } | null };

@@ -10,6 +10,7 @@ import { IconButton } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
 import { confirmDialog } from './dialogs';
+import { inUseWarning } from '../lib/in-use';
 import { getReview, putReview, reviewUrl, stopReview, type ReviewLink } from '../lib/comments';
 
 export function Modal({ title, help, onClose, children, className }: { title: string; help?: string; onClose: () => void; children: React.ReactNode; className?: string }) {
@@ -151,7 +152,8 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
     }
   };
   const stop = async () => {
-    if (!(await confirmDialog({ title: 'Turn off share link', message: 'Turn the share link off? Anyone using it will get a "turned off" page.', confirmLabel: 'Turn off', danger: true }))) return;
+    const live = await inUseWarning(projectId, 'unshare');
+    if (!(await confirmDialog({ title: 'Turn off share link', message: live ? `Turn the share link off?\n\n${live}` : 'Turn the share link off? Anyone using it will get a "turned off" page.', confirmLabel: 'Turn off', danger: true }))) return;
     setBusy('Turning off…');
     try {
       await stopShare(projectId);

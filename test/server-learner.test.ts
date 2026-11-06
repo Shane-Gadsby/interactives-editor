@@ -291,3 +291,28 @@ describe('results for the owner', () => {
     expect(summarise([])).toMatchObject({ learners: 0, records: 0, completionRate: null, passRate: null, averageBestPercent: null, list: [] });
   });
 });
+
+describe('in use (the warning before delete or turning the link off)', () => {
+  it('says the share link is on and counts learners per course, newest course first', async () => {
+    expect((await h.call('GET', '/api/projects/prlearn001/in-use', { user: ann })).json).toMatchObject({ share: true, review: false, learners: 0, courses: [] });
+    const gap = () => new Promise((r) => setTimeout(r, 5));
+    await report(sam, result(10));
+    await gap();
+    await report(lee, result(12));
+    await gap();
+    await report(lee2, result(5));
+    const u = (await h.call('GET', '/api/projects/prlearn001/in-use', { user: ann })).json;
+    expect(u.learners).toBe(3);
+    expect(u.courses.map((c: { course: string; learners: number }) => [c.course, c.learners])).toEqual([
+      ['PHY2000_2026_S1', 1],
+      ['MAT1000_2026_S1', 2],
+    ]);
+    expect(u.last).toBeTruthy();
+  });
+
+  it('is only for people who may change the project', async () => {
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('GET', '/api/projects/prlearn001/in-use', { user: bob })).status).toBe(403);
+    process.env.SUITE_SESSION_ENFORCE = '';
+  });
+});

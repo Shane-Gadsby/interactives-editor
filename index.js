@@ -863,6 +863,32 @@ const projectFor = async (req, res) => {
 	return mayChange(req, res, doc) ? doc : null
 }
 
+//How live a project is, for the warnings before deleting it or turning its link off: whether the share link (which is
+//also the Link for StudyDesk) and the review link are on, and the learners with records, per course, with when each
+//course last did anything. Reads interactives-user-data only (its index starts with project), not the big ingest
+router.get('/api/projects/:id/in-use', async (req, res) => {
+	let doc = await projectFor(req, res)
+	if (!doc) {
+		return
+	}
+
+	let rows = await userData.find({project: doc._id}, {projection: {courseLabel: 1, course: 1, updated: 1}}).limit(20000).toArray(),
+		byCourse = new Map(),
+		last = null
+
+	for (let r of rows) {
+		let key = r.courseLabel || r.course || 'Outside a course',
+			c = byCourse.get(key) || {course: key, learners: 0, last: null}
+		c.learners++
+		if (r.updated && (!c.last || r.updated > c.last)) c.last = r.updated
+		if (r.updated && (!last || r.updated > last)) last = r.updated
+		byCourse.set(key, c)
+	}
+
+	let courses = [...byCourse.values()].sort((a, b) => (b.last?.getTime?.() || 0) - (a.last?.getTime?.() || 0))
+	res.json({share: !!doc.share?.token, review: !!doc.review?.token, learners: rows.length, last, courses: courses.slice(0, 8), moreCourses: Math.max(0, courses.length - 8)})
+})
+
 router.get('/api/projects/:id/assets', async (req, res) => {
 	if (!await projectFor(req, res)) {
 		return

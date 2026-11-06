@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { PACKAGE_EXTENSION } from 'interactives-player';
 import { newProjectWithThemes } from './lib/themes';
 import { whenPaletteReady } from './lib/palette-look';
+import { inUseWarning } from './lib/in-use';
 import { createProjectRecord, deleteForever, deleteProject, duplicateProject, importPackage, listBin, listProjects, loadProjectRecord, META_MAX_LABEL, META_MAX_TAGS, restoreFromBin, session, setProjectMeta, type BinnedProject, type ProjectMeta, type SessionInfo } from './lib/db';
 import { downloadPackage } from './lib/export';
 import { pickFiles } from './lib/insert';
@@ -709,7 +710,8 @@ export function Home({ open }: { open: (id: string) => void }) {
                 className="icon-btn"
                 title="Delete"
                 onClick={async () => {
-                  if (!(await confirmDialog({ title: 'Delete project', message: `Move “${p.name}” to the Bin? Its share and review links stop working straight away. You can restore it from the Bin for 30 days, then it goes for good.`, confirmLabel: 'Move to Bin', danger: true }))) return;
+                  const live = await inUseWarning(p.id, 'delete');
+                  if (!(await confirmDialog({ title: 'Delete project', message: `Move “${p.name}” to the Bin? You can restore it from the Bin for 30 days, then it goes for good.${live ? `\n\n${live}` : ''}`, confirmLabel: 'Move to Bin', danger: true }))) return;
                   await run(async () => {
                     track('project', 'delete');
                     await deleteProject(p.id);
