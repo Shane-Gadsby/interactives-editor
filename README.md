@@ -229,6 +229,17 @@ Agents connect over the network: `index.js` serves the bundle at **`/interactive
 
 The same bundle still runs over stdio from a checkout (`node mcp/dist/interactives-mcp.mjs`, env `INTERACTIVES_URL`, `INTERACTIVES_SESSION_ID`, `INTERACTIVES_AGENT_NAME`), which the tests and local debugging use. `INTERACTIVES_MCP_NO_STDIO=1` stops the stdio loop; `index.js` sets it before importing the bundle. The live stream takes `?agent=<name>` for the agent's presence.
 
+## Standing rule: keep the docs current
+
+**Any change that adds, removes or changes something a user would encounter updates the help (`src/help`: topics, search keywords, tutorials) in the same change**, including its screenshots and recordings whenever what's on screen or how it behaves changes.
+
+Interactives is part of the StudyDesk Toolbox suite's two documentation sites, both served by si-manager:
+
+- **`/toolbox-docs`**, for all staff, covers what Interactives is and how to get to it.
+- **`/suite-docs`**, for admins only, covers how it's built, deployed and run: its server, storage, analytics and env vars.
+
+A change to any of those updates those pages too. Neither site ever holds a credential.
+
 ## Repo map
 
 | Path | What |

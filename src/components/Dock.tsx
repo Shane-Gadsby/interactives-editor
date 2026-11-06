@@ -490,6 +490,45 @@ export function FloatingTools({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * The docked tool rail's title. Dragging it more than a few pixels lifts the rail out into its own floating window under
+ * the pointer, and the same drag carries on moving it (a floated rail has its own title bar, in FloatingTools).
+ */
+export function ToolsHead() {
+  const l = useDock();
+  if (l.tools.place === 'float') return null;
+  const down = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+    //where in the title it was picked up, so the floated rail stays under the pointer the same way
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const ox = x0 - r.left;
+    const oy = y0 - r.top;
+    let lifted = false;
+    document.body.classList.add('dock-dragging');
+    const move = (ev: PointerEvent) => {
+      if (!lifted && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return;
+      lifted = true;
+      const at = clampWin({ x: ev.clientX - ox, y: ev.clientY - oy, w: 74, h: 200 });
+      setDock((x) => ({ ...x, tools: { ...x.tools, place: 'float', x: at.x, y: at.y } }));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      document.body.classList.remove('dock-dragging');
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="dock-tools-grip docked" title="Drag out to float the tools. Right-click the tools to move them to the other side" onPointerDown={down}>
+      Tools
+    </div>
+  );
+}
+
 /** The tool rail's right-click menu: which side it sits on, or floating. */
 export function toolsMenu(): MenuItem[] {
   const place = getDock().tools.place;

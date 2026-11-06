@@ -2,7 +2,7 @@
 //The real index.js, run against an in-memory fake of the few mongo calls it makes (see helpers/). Covers the project
 //routes: save with revisions, conflicts, who may touch what, the projects page's tags and folder, duplicate, delete,
 //preferences, and the error handling around all of it.
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { startServer, type Harness, type User } from './helpers/server-harness';
@@ -21,7 +21,7 @@ const project = (id: string, extra: Record<string, unknown> = {}) => ({
 });
 
 let h: Harness;
-let warn: ReturnType<typeof vi.spyOn>;
+let warn: MockInstance<typeof console.warn>;
 beforeAll(async () => {
   h = await startServer();
 });
