@@ -99,7 +99,7 @@ export function extOf(name: unknown): string {
 }
 
 /** A server route with the ids and names taken out: `projects/<id>/comments` -> `projects/:id/comments`. */
-export const ROUTE_WORDS = new Set(['api', 'assets', 'audit', 'health', 'duplicates', 'dedupe', 'bin', 'collaborators', 'comments', 'people', 'duplicate', 'insights', 'in-use', 'learn', 'libraries', 'library', 'live', 'messages', 'meta', 'notices', 'ops', 'owner', 'play', 'prefs', 'presence', 'progress', 'projects', 'user-data', 'publish', 'read', 'replies', 'report', 'restore', 'revert', 'results', 'results.csv', 'review', 'revisions', 's', 'session', 'share', 'thumbnail', 'analytics', 'usage', 'templates', 'template', 'use', 'examples', 'remix', 'mcp', 'variant', 'lti13', 'brand']);
+export const ROUTE_WORDS = new Set(['api', 'assets', 'audit', 'health', 'duplicates', 'dedupe', 'bin', 'collaborators', 'comments', 'people', 'duplicate', 'insights', 'in-use', 'learn', 'libraries', 'library', 'live', 'messages', 'meta', 'notices', 'ops', 'owner', 'play', 'prefs', 'presence', 'progress', 'projects', 'user-data', 'publish', 'read', 'replies', 'report', 'restore', 'revert', 'results', 'results.csv', 'review', 'revisions', 's', 'session', 'share', 'thumbnail', 'analytics', 'usage', 'templates', 'template', 'use', 'examples', 'remix', 'mcp', 'variant', 'lti13', 'brand', 'check']);
 export function routePattern(url: string): string {
   let path = url;
   try {

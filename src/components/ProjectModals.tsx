@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, prepareNodes, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
+import { serverMarkedCounts } from '../lib/question-kit';
 import { addCollaborator, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, saveNamedVersion, updateRevision, publishShare, restoreRevision, revertShare, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
 import { download, standaloneHtml, warnInEditor } from '../lib/export';
@@ -182,6 +183,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const [copiedLearner, setCopiedLearner] = useState(false);
   const [resultsOpen, setResultsOpen] = useState(false);
+  const serverMarked = serverMarkedCounts(store().get().project);
   useEffect(() => {
     getShare(projectId).then(setShare, (e) => setError(String(e.message ?? e)));
   }, [projectId]);
@@ -262,6 +264,12 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
                 </a>
               </div>
               <p className="small muted">Last updated {when(share.updated)}.</p>
+              {serverMarked.marked > 0 && (
+                <p className="small muted">
+                  {serverMarked.marked === 1 ? '1 question is' : `${serverMarked.marked} questions are`} marked on the server: both links serve the project without {serverMarked.marked === 1 ? 'its' : 'their'} right answers, and the score the server works out is the one recorded. Learners need the Link for StudyDesk to have an answer checked. Update the link after changing a question. Files you export and the Preview still carry the answers.
+                  {serverMarked.inPage > 0 && ` ${serverMarked.inPage === 1 ? '1 more is' : `${serverMarked.inPage} more are`} set that way but can't be, so ${serverMarked.inPage === 1 ? 'it is' : 'they are'} marked in the page.`}
+                </p>
+              )}
               <div className="learner-link">
                 <strong>Link for StudyDesk</strong>
                 <p className="small muted">Use this one in StudyDesk instead, when you want each learner's score, completion and progress kept, and what they do counted for Insights. Learners signed in to StudyDesk resume where they left off; anyone else plays as with the link above.</p>

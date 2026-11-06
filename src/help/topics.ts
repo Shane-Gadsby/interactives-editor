@@ -1753,6 +1753,25 @@ A CSV works the same way: the header names are the columns, in any case. The que
 
 **Report result** in the Question section adds a *Report result* node after **Check answer**'s *finished* output, sending the question's score (\`q1_score\`) to the project's Results (see the Results settings for the top score, pass mark and completion). With several questions, leave it off and report once yourself, for example a *Report result* node with the score \`q1_score + q2_score\` after the last one.
 
+## Marking on the server
+
+Everything above marks in the learner's browser, so the right answers are in the file the learner downloads and a score is only ever what their browser says. For marks that have to be trustworthy, tick **Mark answers on the server** in the Marking part of the Question section. Both the share link and the **Link for StudyDesk** then serve the project without its answers (press **Update to the latest version** in [Share link](export#share-link) after you change it), and the **Link for StudyDesk** is the one that can check an answer:
+
+- The page that is served has the right answers taken out: which options are right, accepted answers and their patterns and tolerances, the feedback, and the hints. The right order of an ordering question is hidden too. Anyone who looks at the page's code finds none of it.
+- **Check answer** sends the learner's answer to the server, which marks it with the same marking the player uses, and sends back right or wrong, the score and the feedback to show. The tries, hints and score are kept by the server, so a learner who reloads or starts again does not get a fresh set of tries.
+- The server records the result itself. The mark that counts for each question is how it finished the first time. **Try again** after that is practice and does not change the recorded mark. The project's score is the total of those marks out of the questions' total points, it counts as complete when every server-marked question has finished, and it passes at the pass mark set in the Results settings.
+- A **Report result** node, or anything else the browser sends as a result, is ignored for a project with server-marked questions: the server's own record is the only one. Questions that are not set to be marked on the server still do their normal marking in the page, but they add nothing to that record.
+- Checks and hints are limited to 30 a minute for each learner, so an answer can't be found by guessing over and over. A learner who goes over is asked to wait.
+
+What it does not do:
+
+- The answers are only taken out of the two links. **Preview**, an exported HTML file or package, and anyone who opens your project in the editor still have the answers, and mark in the page as usual.
+- Learners need the **Link for StudyDesk** (and to be signed in to StudyDesk) to have an answer checked. On the plain share link with no session, the question says it can only be checked from StudyDesk.
+- **Matching** and questions taken from a **data bank** can't be marked on the server: which term belongs where is part of how the layers are set up, and a bank is data the learner downloads. They stay marked in the page, and the Question section says so.
+- Unlimited tries can still be used to find an answer slowly. Set **Tries** to limit them.
+- A script or a custom node that holds an answer of its own is not touched.
+- Staff who open the project in the editor, or Remix it from the Link for StudyDesk, see the full project with its answers.
+
 ## Accessible by default
 
 The prompt is a heading, the options are a radio group (or checkboxes) with their text as the name and *Right* / *Wrong* / *This was the right answer* as the description once they are marked, every part is reachable with Tab and operated with Enter and Space, and **Check answer**, **Hint** and the ordering moves announce through the live region (see [Accessibility](accessibility)): the feedback, the hint, "Evaporation, position 2 of 4". Right and wrong are shown with words (✓ Right, ✗ Wrong) as well as colour. A matching question's terms are named buttons that screen readers announce as draggable, picked up and dropped with the keyboard, and told where they landed. A hotspot's areas are focusable radio buttons (checkboxes when several are right) named after the area, so the picture can be answered without a mouse; give every area a name, and the picture an accessible description. These need the Accessibility preference on, which is the default.
@@ -2411,7 +2430,7 @@ They go to the same places as remembered progress: on the **Link for StudyDesk**
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. The owner and people invited to collaborate can see it. **Export CSV** downloads every learner's record as a spreadsheet: username, name, course, completed, passed, attempts, best and last score and percentage, and when they were last active (the list in the dialog shows the latest 200). **Clear results** deletes every record for the project (handy after testing); only the owner can use it (collaborators see it greyed out), since it can't be undone.
 
 ## Good to know
-- A result is what the learner's browser says. It is good for tracking progress, not for marks that must be tamper-proof.
+- A result is what the learner's browser says. It is good for tracking progress, not for marks that must be tamper-proof, unless the questions are set to **Mark answers on the server**. Then the server marks them, keeps the tries and writes the result itself, and any result the browser reports is ignored for that project. See [Question kit](question-kit).
 - The project's share link has to be on: results are only kept while it is.
 - **Update to the latest version** in Share link after changing these settings, so the link plays the new version.`,
   },

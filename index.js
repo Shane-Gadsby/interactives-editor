@@ -96,6 +96,8 @@ let ops = null,
 	template = null,
 	safety = null,
 	learner = null,
+	marker = null,
+	markLimiter = null,
 	records = null,
 	commentLib = null,
 	store = null
@@ -1737,6 +1739,50 @@ router.post('/api/projects/:id/owner', express.json({limit: '4kb'}), async (req,
 	res.json({owner, collaborators})
 })
 
+//Questions that are set to be marked on the server (Question > Mark answers on the server). The share page the editor builds holds
+//the whole project as JSON, right answers and all, so before it is kept for learners the answers are taken out of that JSON
+//(the player's own stripProject) and the answer key goes on the project's record instead, where /learn/<token>/check marks
+//against it. Only the page served to learners is changed: what the owner exports from the editor still marks by itself.
+//Returns null when nothing in the page is set that way; throws when something is but the project could not be read, so a page
+//that still has its answers in it is never kept
+const markedIds = (salt) => (frame, real) => crypto.createHmac('sha256', salt).update(`${frame}\0${real}`).digest('base64url').slice(0, 10)
+
+const prepareMarkedShare = (html, oldSalt) => {
+	if (!html.includes('"serverMarked":true')) {
+		return null
+	}
+
+	let open = html.indexOf('id="ix-project">'),
+		start = open + 'id="ix-project">'.length,
+		end = open < 0 ? -1 : html.indexOf('</script>', start)
+
+	if (end < 0) {
+		throw new Error('no project in the page')
+	}
+
+	let project = JSON.parse(html.slice(start, end)),
+		salt = oldSalt || crypto.randomBytes(16).toString('hex'),
+		stripped = marker.stripProject(project, markedIds(salt)),
+		ids = Object.keys(stripped.questions)
+
+	if (!ids.length) {
+		return null
+	}
+
+	if (ids.length > 200) {
+		throw new Error('too many questions marked on the server')
+	}
+
+	//The same escaping the player's page builder uses for JSON inside a script element
+	let json = JSON.stringify(project).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029'),
+		pass = project.settings?.reporting?.passMark
+
+	return {
+		html: html.slice(0, start) + json + html.slice(end),
+		marking: {salt, passMark: typeof pass === 'number' && Number.isFinite(pass) ? pass : null, questions: stripped.questions, skipped: stripped.skipped, updated: new Date()}
+	}
+}
+
 //Share links: the project as one standalone HTML file (built by the editor), at /interactives/s/<token>.
 //Anyone with the link can play it, no session (a link opened in a new tab can't carry one), so it's off until
 //the owner turns it on, the token is unguessable, and turning it off deletes the file
@@ -1770,18 +1816,42 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 		return res.status(400).json({error: 'Not an HTML page'})
 	}
 
+	//Questions set to be marked on the server get their answers taken out of the page that is served, and the answer key kept here
+	let html = req.body,
+		prepared = null
+
+	try {
+		prepared = prepareMarkedShare(html, doc.marking?.salt)
+	}
+	catch (err) {
+		console.trace(`${appName}: could not read the project out of the shared page of ${id}`, err)
+		return res.status(400).json({error: 'The answers could not be taken out of that page, so it was not shared'})
+	}
+
 	let token = doc.share?.token || crypto.randomBytes(18).toString('base64url'),
 		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
 	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
+	let prevKept = false
 	if (doc.share?.token && await moveIfThere(shareFile(token), sharePrevFile(token))) {
 		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null}
+		prevKept = true
 	}
-	await fs.promises.writeFile(shareFile(token), req.body)
-	await projects.updateOne({_id: id}, {$set: {share}})
+	await fs.promises.writeFile(shareFile(token), prepared ? prepared.html : html)
+
+	//The answer key goes with the page it was made for: the new one for this page, the old one kept beside the kept page
+	//so a revert puts both back together
+	let set = {share}, unset = {}
+	if (prepared) set.marking = prepared.marking
+	else unset.marking = ''
+	if (prevKept) {
+		if (doc.marking) set.previousMarking = doc.marking
+		else unset.previousMarking = ''
+	}
+	await projects.updateOne({_id: id}, Object.keys(unset).length ? {$set: set, $unset: unset} : {$set: set})
 	audit(req, doc.share?.token ? 'share-updated' : 'share-on', doc)
-	res.json({share})
+	res.json({share, marking: prepared ? {questions: Object.keys(prepared.marking.questions).length, skipped: prepared.marking.skipped} : null})
 })
 
 //Put the previous page back (and keep the one it replaces as the previous, so a revert can itself be undone)
@@ -1805,8 +1875,14 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	await fs.promises.rename(sharePrevFile(token), shareFile(token))
 	await fs.promises.rename(swap, sharePrevFile(token))
 
-	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null}, reverted: {at: new Date(), by: whoIs(req)}}
-	await projects.updateOne({_id: id}, {$set: {share}})
+	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null}, reverted: {at: new Date(), by: whoIs(req)}},
+		set = {share}, unset = {}
+	//The answer keys swap with their pages
+	if (doc.previousMarking) set.marking = doc.previousMarking
+	else unset.marking = ''
+	if (doc.marking) set.previousMarking = doc.marking
+	else unset.previousMarking = ''
+	await projects.updateOne({_id: id}, Object.keys(unset).length ? {$set: set, $unset: unset} : {$set: set})
 	audit(req, 'share-reverted', doc)
 	res.json({share})
 })
@@ -1828,7 +1904,7 @@ router.delete('/api/projects/:id/share', async (req, res) => {
 		await fs.promises.rm(sharePrevFile(doc.share.token), {force: true})
 		audit(req, 'share-off', doc)
 	}
-	await projects.updateOne({_id: id}, {$unset: {share: ''}})
+	await projects.updateOne({_id: id}, {$unset: {share: '', marking: '', previousMarking: ''}})
 	res.json({ok: true})
 })
 
@@ -3330,6 +3406,12 @@ router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, r
 		return res.json({available: false})
 	}
 
+	//A project with questions marked on the server takes its results from that marking alone. What the browser says about a score
+	//is its own word, so it is dropped (the player still tells the page around it, which is no business of the record)
+	if (markingOf(project)) {
+		return res.json({available: true, ok: true, ignored: true})
+	}
+
 	let result = learner.cleanResult(req.body)
 
 	if (!result) {
@@ -3338,6 +3420,110 @@ router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, r
 
 	await saveRecord({project: project._id, username: who.username, course: who.course}, (existing) => learner.reportUpdate(existing, result, who, new Date()))
 	res.json({available: true, ok: true})
+})
+
+//The answer key of a project's server-marked questions, or null when it has none
+const markingOf = (project) => project.marking?.questions && Object.keys(project.marking.questions).length ? project.marking : null
+
+//Writes a learner's record only if nobody else has since it was read (markRev counts the writes marking has made), so two checks sent
+//at once can't both be counted against the same tries. build gets what is there and returns the fields to set, or null to leave it.
+//False if it kept losing the race
+const markWrite = async (key, build) => {
+	for (let tries = 0; tries < 6; tries++) {
+		let existing = await userData.findOne(key),
+			set = build(existing)
+
+		if (!set) {
+			return true
+		}
+
+		let rev = existing?.markRev ?? null
+
+		try {
+			let r = await userData.updateOne({...key, markRev: rev}, {$set: {...set, markRev: (rev || 0) + 1}, $setOnInsert: {created: new Date()}}, {upsert: !existing})
+
+			if (!existing || r.matchedCount) {
+				return true
+			}
+		}
+		catch (e) {
+			if (e.code !== 11000) {
+				throw e
+			}
+		}
+	}
+
+	return false
+}
+
+//Marking, hints and starting again for a question set to be marked on the server. The learner is whoever the session says; the
+//answer is marked by the player's own marking code against the key kept at share time, the tries, hints and the mark that counts
+//are kept on the learner's record, and the result is worked out from those. Checks and hints are rate limited per learner
+router.post('/learn/:token/check', express.json({limit: '8kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let key = markingOf(project)
+
+	if (!key) {
+		return res.status(404).json({error: 'Nothing in this project is marked on the server'})
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let request = marker.cleanMarkRequest(req.body)
+
+	if (!request) {
+		return res.status(400).json({error: 'That is not a request the marker understands'})
+	}
+
+	if (marker.RATE_LIMITED.includes(request.action)) {
+		let taken = markLimiter.take(`${project._id}:${who.username}`, Date.now())
+
+		if (!taken.ok) {
+			return res.json({available: true, status: 'limited', retryAfter: taken.retryAfter})
+		}
+	}
+
+	let step = null,
+		now = new Date(),
+		kept = await markWrite({project: project._id, username: who.username, course: who.course}, (existing) => {
+			let before = marker.parseStates(existing?.marked)
+
+			step = marker.stepMarking(key, before, request, markedIds(key.salt))
+
+			if (step.error || step.states === before) {
+				return null
+			}
+
+			let set = {...learner.identity(who), marked: JSON.stringify(marker.pruneStates(key, step.states)), updated: now}
+
+			//A question finished for the first time: its mark counts now, so the record's result moves with it
+			if (step.counted) {
+				let result = learner.cleanResult(marker.resultOf(key, step.states))
+
+				set = {...set, ...learner.reportUpdate(existing, result, who, now)}
+			}
+
+			return set
+		})
+
+	if (step.error) {
+		return res.status(400).json({error: step.error})
+	}
+
+	if (!kept) {
+		return res.json({available: true, status: 'busy'})
+	}
+
+	res.json({available: true, ...step.reply})
 })
 
 //User data (Save user data / Load user data nodes), for the learner whose session this is, in the project the share
@@ -3587,6 +3773,12 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 				answer(m, {ok: true, available: !!j.available, data: j.variables || null})
 			}, failed)
 		}
+		else if (m.op === 'mark') {
+			//A question marked on the server: the project sends the answer, the server marks it and says how it went
+			call('POST', 'check', {question: m.question, action: m.action, answer: m.answer}).then(function (j) {
+				answer(m, {ok: true, available: !!j.available, data: j})
+			}, failed)
+		}
 		else if (m.op === 'report') {
 			call('POST', 'report', {result: m.result}).catch(function () {
 			})
@@ -3635,7 +3827,7 @@ router.get('/api/projects/:id/results', async (req, res) => {
 		return
 	}
 
-	let rows = await userData.find({project: doc._id}, {projection: {variables: 0}}).sort({updated: -1}).limit(5000).toArray()
+	let rows = await userData.find({project: doc._id}, {projection: {variables: 0, marked: 0}}).sort({updated: -1}).limit(5000).toArray()
 
 	res.json({...learner.summarise(rows), truncated: rows.length >= 5000, shared: !!doc.share?.token, mayClear: ownsOrPower(req, doc)})
 })
@@ -3690,7 +3882,7 @@ router.get('/api/projects/:id/results.csv', async (req, res) => {
 		return
 	}
 
-	let rows = await userData.find({project: doc._id}, {projection: {variables: 0}}).sort({updated: -1}).limit(20000).toArray(),
+	let rows = await userData.find({project: doc._id}, {projection: {variables: 0, marked: 0}}).sort({updated: -1}).limit(20000).toArray(),
 		name = String(doc.name || 'project').replace(/[^\w .-]+/g, '').trim().slice(0, 60) || 'project'
 
 	res.set('Content-Type', 'text/csv; charset=utf-8')
@@ -3922,15 +4114,17 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/records.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, recordsMod, commentsMod, templateMod, docstoreMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, commentsMod, templateMod, docstoreMod]) => {
 		ops = opsMod
 		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
 		template = templateMod
 		safety = safetyMod
 		learner = learnerMod
+		marker = markerMod
+		markLimiter = markerMod.makeLimiter()
 		records = recordsMod
 		commentLib = commentsMod
 

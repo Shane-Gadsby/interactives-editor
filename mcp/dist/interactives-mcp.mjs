@@ -2431,7 +2431,11 @@ function normaliseQuestion(raw) {
     feedbackOutOfTries: str$1(raw.feedbackOutOfTries),
     reveal: raw.reveal !== false,
     bank,
-    ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {}
+    ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
+    ...raw.serverMarked === true ? { serverMarked: true } : {},
+    ...raw.answersOnServer === true ? { answersOnServer: true } : {},
+    ...raw.multi === true ? { multi: true } : {},
+    ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
   };
 }
 const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
@@ -6945,6 +6949,25 @@ A CSV works the same way: the header names are the columns, in any case. The que
 
 **Report result** in the Question section adds a *Report result* node after **Check answer**'s *finished* output, sending the question's score (\`q1_score\`) to the project's Results (see the Results settings for the top score, pass mark and completion). With several questions, leave it off and report once yourself, for example a *Report result* node with the score \`q1_score + q2_score\` after the last one.
 
+## Marking on the server
+
+Everything above marks in the learner's browser, so the right answers are in the file the learner downloads and a score is only ever what their browser says. For marks that have to be trustworthy, tick **Mark answers on the server** in the Marking part of the Question section. Both the share link and the **Link for StudyDesk** then serve the project without its answers (press **Update to the latest version** in [Share link](export#share-link) after you change it), and the **Link for StudyDesk** is the one that can check an answer:
+
+- The page that is served has the right answers taken out: which options are right, accepted answers and their patterns and tolerances, the feedback, and the hints. The right order of an ordering question is hidden too. Anyone who looks at the page's code finds none of it.
+- **Check answer** sends the learner's answer to the server, which marks it with the same marking the player uses, and sends back right or wrong, the score and the feedback to show. The tries, hints and score are kept by the server, so a learner who reloads or starts again does not get a fresh set of tries.
+- The server records the result itself. The mark that counts for each question is how it finished the first time. **Try again** after that is practice and does not change the recorded mark. The project's score is the total of those marks out of the questions' total points, it counts as complete when every server-marked question has finished, and it passes at the pass mark set in the Results settings.
+- A **Report result** node, or anything else the browser sends as a result, is ignored for a project with server-marked questions: the server's own record is the only one. Questions that are not set to be marked on the server still do their normal marking in the page, but they add nothing to that record.
+- Checks and hints are limited to 30 a minute for each learner, so an answer can't be found by guessing over and over. A learner who goes over is asked to wait.
+
+What it does not do:
+
+- The answers are only taken out of the two links. **Preview**, an exported HTML file or package, and anyone who opens your project in the editor still have the answers, and mark in the page as usual.
+- Learners need the **Link for StudyDesk** (and to be signed in to StudyDesk) to have an answer checked. On the plain share link with no session, the question says it can only be checked from StudyDesk.
+- **Matching** and questions taken from a **data bank** can't be marked on the server: which term belongs where is part of how the layers are set up, and a bank is data the learner downloads. They stay marked in the page, and the Question section says so.
+- Unlimited tries can still be used to find an answer slowly. Set **Tries** to limit them.
+- A script or a custom node that holds an answer of its own is not touched.
+- Staff who open the project in the editor, or Remix it from the Link for StudyDesk, see the full project with its answers.
+
 ## Accessible by default
 
 The prompt is a heading, the options are a radio group (or checkboxes) with their text as the name and *Right* / *Wrong* / *This was the right answer* as the description once they are marked, every part is reachable with Tab and operated with Enter and Space, and **Check answer**, **Hint** and the ordering moves announce through the live region (see [Accessibility](accessibility)): the feedback, the hint, "Evaporation, position 2 of 4". Right and wrong are shown with words (✓ Right, ✗ Wrong) as well as colour. A matching question's terms are named buttons that screen readers announce as draggable, picked up and dropped with the keyboard, and told where they landed. A hotspot's areas are focusable radio buttons (checkboxes when several are right) named after the area, so the picture can be answered without a mouse; give every area a name, and the picture an accessible description. These need the Accessibility preference on, which is the default.
@@ -6983,6 +7006,9 @@ Choice variables show as a dropdown wherever you set them, so you can't type a v
 
 ## Lists
 A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Set variable**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. In scripts assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
+
+## Different values for different courses
+One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
 
 ## Using variables
 - In text: \`Score: {score}\`.
@@ -7153,6 +7179,7 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 | \`ix.onFrame((dt, t) => …)\` | Run every frame |
 | \`ix.pointer\`, \`ix.artboard\` | Pointer \`{x, y, down}\`, artboard \`{name, width, height}\` |
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
+| \`ix.context.firstName\`, \`ix.context.courseCode\`, \`ix.context.isStaff\` | The course and learner, read only ([Course and learner context](course-context)) |
 | \`ix.setCursor('grab')\`, \`ix.log(…)\` | Cursor, logging |
 
 \`.set()\` and \`.animate()\` change the properties in the [Animatable properties](animatable-properties) (position, size, colour, text, visibility, link URL…) and a layer's \`fill\`, \`stroke\`, \`shadow\` and auto layout. Anything else, such as an embed's \`html\`, \`className\`, \`bindings\` or a layer's \`repeat\`, is part of how the project was built: the call throws an error saying so. Links only go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses.
@@ -7471,6 +7498,9 @@ Use a source by its **name** anywhere expressions go: \`{products.length} produc
 
 **Load data** reloads a source (optionally from a different URL); **On data loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
 
+## The built-in context
+The list always starts with **context**, a read-only source that is there without adding anything: the course and the learner (\`{context.firstName}\`, \`context.courseCode\`). Pick it to see its fields, set sample values to design with, and give different courses different starting values. See [Course and learner context](course-context).
+
 ## What may be loaded
 Every data request, from a source, the **Load data** node or \`ix.loadData(name, url)\`, follows the same rules:
 
@@ -7482,6 +7512,59 @@ Every data request, from a source, the **Load data** node or \`ix.loadData(name,
 A refused request loads nothing and writes a warning to the console; in a script, \`ix.loadData\` throws.
 
 > URLs must allow cross-origin requests (CORS) from wherever the interactive is published.`
+  },
+  {
+    id: "course-context",
+    title: "Course and learner context",
+    group: "Data",
+    summary: "The built-in context source (course label, first name, student or staff) and per-course variable values.",
+    keywords: "context course label code term year learner first name display name student staff studydesk per-course values offering rollover duplicate fetchactivity session greeting",
+    body: `Every project has a built-in, read-only data source called **context**. It holds the course the project is in and the person playing, so a project can greet someone by name, show the unit code, or change what it says for staff and students. You do not add it and you cannot edit it; it is always in the **Data** tab's list, first.
+
+## What is in it
+| Field | What it is |
+|---|---|
+| \`context.courseLabel\` | The StudyDesk course label, like \`MAT1000_26S1_ONC\` |
+| \`context.courseCode\` | The label up to its first underscore, like \`MAT1000\` |
+| \`context.courseName\` | The course's title |
+| \`context.offering\` | The label after the code, like \`26S1_ONC\`: one run of the course |
+| \`context.term\`, \`context.year\` | The study period (\`S1\`) and the year (\`2026\`) when the label has them, otherwise empty |
+| \`context.lmsUrl\`, \`context.lmsName\` | The learning management system, as StudyDesk reports it |
+| \`context.firstName\`, \`context.displayName\` | The learner's first name, and the name to greet them by |
+| \`context.signedIn\` | Someone is signed in to StudyDesk |
+| \`context.isStudent\`, \`context.isStaff\` | Signed in as a student, or signed in and not a student |
+
+Term and year are worked out from the label as well as they can be, and are empty when the label does not say.
+
+## Using it
+Use it by name anywhere expressions go, the same as any [data source](data-sources):
+
+- Text: \`Welcome, {context.firstName}\`. A learner with no name sees \`Welcome, \`, so word it to cope.
+- [Bindings](bindings): show a layer only for staff with \`context.isStaff\`, or pick a message with \`context.courseCode == "MAT1000" ? "A" : "B"\`.
+- The interaction graph: anywhere a node takes an expression, such as the **If** condition.
+- Scripts: \`ix.context.firstName\`.
+
+A variable or data source that you name \`context\` hides the built-in one, and the Data tab warns about it.
+
+## Where the values come from
+- **The Link for StudyDesk** fills it in from the signed in StudyDesk session. Use that link, not the plain share link, when you want it.
+- **Preview and the canvas** use made-up **sample values**, which you edit in the Data tab under **context** (first name, course label and so on). The code, term and year follow the sample label. Clear a field to see the project with it blank. Sample values are for designing: they are never in an exported file or a share link.
+- **Anywhere else**, such as a downloaded file or a share link opened outside StudyDesk, nobody is known: the text is empty and the flags are false.
+
+## Per-course values
+One project can serve several courses without being copied. In the **Data** tab, pick **context** and use **Per-course values**: add a row with a course label, then pick the variables that row changes and give each its value for that course.
+
+- The label can use \`*\` for any run of characters and \`?\` for one character, and is not case sensitive: \`MAT1000_*\` is every run of MAT1000, and \`MAT1000_26S1_ONC\` is exactly one. Commas give several: \`MAT1000_*, MAT1001_*\`.
+- Rows apply when the project starts on the Link for StudyDesk page, in order from the top. Every matching row applies, and a later row wins where two set the same variable. A course that matches no row simply gets each variable's own starting value.
+- It changes the starting value only. **Start over** goes back to it. A learner's own remembered progress (variables ticked **Remember**) still wins over it, so leave **Remember** off for a variable you set per course. A value the embedding page sets itself (an input attribute) wins too.
+- Preview uses the sample course, and each row says whether it matches, so you can try each course by changing the sample course label.
+
+Results are already kept per course, so each course's learners start clean without anything here.
+
+After changing per-course values, press **Update to the latest version** in [Share link](export#share-link) so the Link for StudyDesk plays the new version.
+
+## Privacy
+Only the course, the learner's first name and display name, and whether they are a student or staff go to the project. Never a username, email, student number or anything that could look a person up. Nothing from \`context\` is sent to analytics, results or diagnostics by the player or the Link for StudyDesk page. A project that records a name itself (a script saving \`ix.context.firstName\` with **Record**) is doing that on purpose, so don't.`
   },
   {
     id: "repeaters",
@@ -7530,7 +7613,7 @@ Then tick **Remember** on each variable that should keep its value between visit
 ## Where it goes
 The player works with no server: with nothing else around it, **Remember** keeps values in the browser and a reported result goes nowhere (the page around an iframe also receives it as a message).
 
-Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It plays the same project, and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session. The same link also counts what learners do for [Insights](insights). Someone opening it with no session plays as normal and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
+Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It also tells the project which course it is in and the learner's first name, for [Course and learner context](course-context) (never their username or email, and none of it goes into results or Insights). It plays the same project, and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session. The same link also counts what learners do for [Insights](insights). Someone opening it with no session plays as normal and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
 
 ## Save user data and Load user data
 **Remember** keeps a variable's value all the time, on its own. When you'd rather choose the moment, use the two action nodes instead: **Save user data** keeps the variables you tick, as they are right then (say, when the learner presses *Submit*), and **Load user data** puts them back on a later visit. Put the load in **Before activity loads** so the values are in place before anything shows. *Load user data* goes on from **Loaded** when anything came back, and from **Nothing saved** on a first visit, so you can set up a fresh start there.
@@ -7541,7 +7624,7 @@ They go to the same places as remembered progress: on the **Link for StudyDesk**
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. The owner and people invited to collaborate can see it. **Export CSV** downloads every learner's record as a spreadsheet: username, name, course, completed, passed, attempts, best and last score and percentage, and when they were last active (the list in the dialog shows the latest 200). **Clear results** deletes every record for the project (handy after testing); only the owner can use it (collaborators see it greyed out), since it can't be undone.
 
 ## Good to know
-- A result is what the learner's browser says. It is good for tracking progress, not for marks that must be tamper-proof.
+- A result is what the learner's browser says. It is good for tracking progress, not for marks that must be tamper-proof, unless the questions are set to **Mark answers on the server**. Then the server marks them, keeps the tries and writes the result itself, and any result the browser reports is ignored for that project. See [Question kit](question-kit).
 - The project's share link has to be on: results are only kept while it is.
 - **Update to the latest version** in Share link after changing these settings, so the link plays the new version.`
   },
@@ -7970,6 +8053,9 @@ What is kept when you update: the instances you placed in your own artboards, th
 - **Fill**, **Stroke** and **Text** (colours), and **Apply** (text styles) set the selected layers from a style. A layer **follows** the style: edit the style, or update the library it came from, and the layer changes too. Changing that property on the layer yourself stops it following.
 - A library's styles are added to your project when you add the library, kept in step on update, and cannot be edited here.
 
+## Brand kits
+A library can be published as a **brand kit**: the same thing, but what a project takes from it is locked so it stays on brand. See [Brand kits](brand-kits).
+
 ## Limits
 - Components carry artboards (with their timelines and interaction graphs), variables, fonts, data sources and assets. Project **scripts** are not carried; instances do not run scripts of their own anyway.
 - An update replaces a copy's content by layer id. Inputs that name a variable the library renamed or removed are left as they were.
@@ -8029,6 +8115,9 @@ Projects made from a saved template remember which version they came from, and w
 
 Untick anything you do not want, then **Update**. It is one undo step (Ctrl+Z). Built-in starters are generated by the editor, so they have no newer versions to pull.
 
+## Pre-branded templates
+A template made from a project that already has a [brand kit](brand-kits) added, with some of its items placed, is a **pre-branded template**. Its card says **Brand kit**, and projects made from it start with the kit's logos and headers in place and locked, so they stay on brand. Everything else in the project is the author's to change.
+
 ## Examples
 **Examples** are finished projects that ship with Interactives: the tutorial projects (**First animation**, **First interaction**, **Lamp**), layout and drawing demos, web controls, an imported Rive animation, **Bones and IK**, and the **Matching question** and **Hotspot question**. They are the same for everybody and **read only**: nobody can change one. **Play** runs it in a window without touching anything of yours; **Make my copy** puts your own editable copy in your projects (in the folder you choose), where you can change or break it freely.
 
@@ -8039,6 +8128,50 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
 - Layer ids stay the same in a copy, so a checklist and updates can find things. Duplicating or pasting layers inside the copy makes new ids as usual.
 - The server keeps a template as a snapshot with its own copy of the files, so deleting or editing the project it came from does not change it.
 - Templates are one level: a copy of a template does not become a template of its own until you save it as one.`
+  },
+  {
+    id: "brand-kits",
+    title: "Brand kits and pre-branded templates",
+    group: "Working together",
+    summary: "A library marked as a brand kit keeps its logos, headers, colours and fonts on brand: locked in the projects that use it, while everything else stays free.",
+    keywords: "brand kit branding logo header footer locked colours fonts palette off-brand compliance template pre-branded corporate style guide",
+    body: `A **brand kit** is a [library](libraries) that the people who look after your brand have published and marked as one. It carries the brand's colours, text styles, fonts and components (logos, headers, footers). A project can use it like any library, with one difference: **what comes from the kit is locked**. The rest of the project is yours.
+
+## Using a brand kit
+1. In the **Libraries** tab, a kit is badged **Brand kit** under **Available libraries**. Press **Add with starter items** to add it and have its header, footer and logo placed in the artboard you have open (whatever the kit marks for new projects). **Add** adds the kit without placing anything; then drag its components onto the canvas or press **Place**, as with any library.
+2. Colours and text styles from the kit show in **Styles** with the kit's name. Use **Fill**, **Stroke**, **Text** and **Apply** as usual.
+3. When the kit publishes a new version, **Updates available** appears and you review it as for any library.
+
+## What is locked
+Only the items that come from the kit. Your own artboards, layers, colours and fonts are never locked.
+- **Its artboards** (the copies in your project, badged *library* and kept off the canvas) can't be edited, **detached**, deleted or copied, and **Stop using this library** is switched off. You can move and rename the artboard.
+- **Text the kit marks as editable** can be changed. Double-click it, or edit it in the Inspector, and the words are yours; its font, size, colour and position stay the kit's. Your words are kept when the kit updates.
+- **Instances** of a kit item in your own artboards are yours to move, rotate and fade. Their size keeps the item's **proportions**, and can go from half to double its own size; a resize outside that snaps back. Their **Inputs** are yours too.
+- Colours and text styles from the kit can't be edited or deleted, as with any library. A layer of your own that follows one still stops following it if you change that property.
+
+If something is refused, a message on screen says so. A brand kit is a guard rail, not a vault: it stops the easy ways of ending up off brand, and it can't stop you copying a layer's look by eye.
+
+## Off-brand check
+A project that uses a kit has a **Brand check** section in the Libraries tab. **Check against the brand kit** lists the colours and fonts used in your own artboards that the kit doesn't have, how many times, and on which artboards. It is only a list: nothing is blocked or changed, and a colour that is a theme token counts as the colour it holds in the default theme. The kit's colours are its colour styles and the colours of its text styles; its fonts are its text styles' fonts and the fonts it lists.
+
+## Making a brand kit
+1. Make the library as usual: a project with **This project is a library** on, and the logo, header and footer artboards marked **Publish to library**. Add the brand's **colour styles** and **text styles** in the Libraries tab (**Styles**), and the fonts they use to the project.
+2. For text people should be able to change (a course title in a header), select the text layer and tick **Editable in brand kit projects**.
+3. For items a new project should start with, select the artboard and set **Brand kit start** (top, bottom, a corner, or centre). **Add with starter items** places those.
+4. **Publish**, share it (**Everyone can use it**), then tick **This is a brand kit**. The projects that already use the library pick up the lock the next time they open the Libraries tab.
+
+**Who can do this:** only the people who look after brand kits can mark one, and publish a new version of or withdraw one that is marked. The server decides, as it does for the power-user view on the [projects page](projects#who-sees-what): power users, plus anyone in the group the administrators name for brand kits. Anyone else who owns the library project can still edit it, and sees that it is a brand kit, but can't turn that on or off, and the server refuses a new version from them.
+
+## Pre-branded templates
+Add a kit with **Add with starter items**, set up the rest of the project, then **Share > Save as template** ([Templates](templates)). The template remembers the kit: its card says **Brand kit**, and a project made from it has the kit added and its items locked from the start. Updates of the kit reach those projects like any other library update.
+
+## For brand kit managers
+Power users (and the brand group) can switch the lock off while they work, with **F9** (or Ctrl+F8) in the editor. A banner says it is off. They can then edit, copy, delete and detach kit items; the banner goes and the lock is back when they press F9 again or reload. Nothing about it is saved in the project.
+
+## Good to know
+- The lock lives in the editor, as library read-only does. It isn't a server-side check on every save, so treat it as policy support, not security.
+- A kit marked after projects copied it locks those copies the next time they open the Libraries tab. A kit no longer marked unlocks them the same way.
+- Colours and fonts the kit carries are the ones in its styles; theme tokens are not part of a library.`
   },
   {
     id: "live-editing",
