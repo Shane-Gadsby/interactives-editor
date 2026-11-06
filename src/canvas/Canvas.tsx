@@ -1326,7 +1326,7 @@ export function Canvas() {
       >
         {ab.name}
         {project.settings.startArtboardId === ab.id ? '  ▸ start' : ''}
-        {ab.library ? '  ◆ library' : ''}
+        {ab.library ? (ab.library.brand ? '  ◆ brand kit' : '  ◆ library') : ''}
       </text>,
     );
     // Artboards of a responsive set: one pill per member on the label line, to jump between them

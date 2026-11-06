@@ -45,6 +45,8 @@ export interface SessionInfo {
   user: { username: string | null; userID: string | number | null; name: string | null } | null;
   /** Admin or power user (the suite's god mode rule), as the server sees it. */
   power: boolean;
+  /** May publish and mark brand kits (a power user, or in the server's brand group); also the brand lock override in the editor. */
+  brand?: boolean;
 }
 
 /** A request the server answered with an error (status 0: it was never reached). */
@@ -509,6 +511,9 @@ export const publishLibrary = (projectId: string, note: string) =>
 
 export const shareLibrary = (projectId: string, share: { everyone: boolean; users: string[] }) =>
   call<{ shared: { everyone: boolean; users: string[] } }>(`projects/${encodeURIComponent(projectId)}/library/share`, json(share));
+
+/** Mark this project's published library as a brand kit, or take that off (power users and the server's brand group). */
+export const markBrandKit = (projectId: string, brand: boolean) => call<{ brand: boolean }>(`projects/${encodeURIComponent(projectId)}/library/brand`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ brand }) });
 
 export const unpublishLibrary = (projectId: string) => call<{ ok: boolean }>(`projects/${encodeURIComponent(projectId)}/library`, { method: 'DELETE' });
 

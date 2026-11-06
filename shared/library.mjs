@@ -151,6 +151,10 @@ export const mayUseLibrary = (lib, me, enforcing) => {
 	return lib.owner.username === me.username || !!lib.shared?.everyone || (lib.shared?.users || []).includes(me.username)
 }
 
+//Who may publish, mark and withdraw a brand kit: a power user (the suite's rule, decided by the caller), or anybody whose
+//session access list holds the group named in the server's settings. No group set means power users only
+export const mayMarkBrand = (access, power, group) => !!power || (typeof group === 'string' && group.trim() !== '' && Array.isArray(access) && access.includes(group.trim()))
+
 //The mongo filter for the same rule, for the list route
 export const accessFilter = (me, enforcing) => {
 	if (!me?.username) return enforcing ? {_id: null} : {}

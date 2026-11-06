@@ -45,3 +45,4 @@ export interface PublishPlan {
   history?: { version: number; created: Date | string; by: string | null; note: string; components: { id: string; name: string; hash: string }[] }[]
 }
 export function planPublish(existing: { hash?: string; version: number; history?: PublishPlan['history'] } | null | undefined, snap: LibrarySnapshot, opts: { note?: string; by?: string | null; now: Date | string }): PublishPlan
+export function mayMarkBrand(access: unknown, power: boolean, group?: string | null): boolean

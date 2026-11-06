@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, defaultTheme, QUESTION_KINDS, sampleContextFor, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
-import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
+import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
@@ -516,12 +516,38 @@ function useRemoteAssets() {
   }, [projectId, assets]);
 }
 
+//Power users (and the server's brand group) can switch the brand kit lock off for a session, with the suite's F9 / Ctrl+F8. The
+//server says who qualifies; nothing is saved with it, and a reload puts the lock back
+function useBrandOverride() {
+  useEffect(() => {
+    let allowed = false;
+    let live = true;
+    session()
+      .then((who) => void (allowed = live && !!(who.brand || who.power)))
+      .catch(() => undefined);
+    const onKey = (e: KeyboardEvent) => {
+      if (!allowed || !window.powerUser?.isToggleKey(e)) return;
+      e.preventDefault();
+      const st = store();
+      const on = !st.get().brandOverride;
+      st.set({ brandOverride: on });
+      st.toast(on ? 'Brand kit lock off: you can edit and detach brand kit items (F9 to turn it back on)' : 'Brand kit lock on', 'info');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      live = false;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
+}
+
 function Workspace({ home }: { home: () => void }) {
   const conflict = useAutosave();
   useRemoteAssets();
   useThumbnails();
   useShortcuts();
-  const s = useEditor((st) => ({ toast: st.toast, report: st.report }));
+  useBrandOverride();
+  const s = useEditor((st) => ({ toast: st.toast, report: st.report, brandOverride: st.brandOverride }));
   const [widths, setWidth] = usePanelWidths();
   useDockSync();
   const z = useZoneSizes(widths);
@@ -550,6 +576,7 @@ function Workspace({ home }: { home: () => void }) {
       <TopBar home={home} onPreview={() => (store().set({ previewPlaying: false }), setPreview(true))} />
       <div className="banner-area">
         {conflict && <ConflictBanner />}
+        {s.brandOverride && <div className="power-banner">Power user mode: the brand kit lock is off for this session. Edits to brand kit items are yours to make (F9 to turn it back on).</div>}
         <LinkBanner />
         <LinkChanges />
       </div>

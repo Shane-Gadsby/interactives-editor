@@ -27,6 +27,8 @@ export interface TemplateInfo {
   /** Visible to everyone, not only its owner. */
   everyone: boolean;
   checklist: { id: string; text: string; artboardId?: string; nodeId?: string }[];
+  /** The brand kits the template starts with (a pre-branded template), when it has any. */
+  brand?: { id: string; name: string }[];
   artboards: number;
   preview: { width: number; height: number; background: string } | null;
   thumb: number | null;

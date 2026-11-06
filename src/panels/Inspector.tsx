@@ -41,6 +41,7 @@ import {
   type SceneNode,
   type Shadow,
   type TextRun,
+  type BrandPlace,
   type TextStyle,
   paintFx,
   type Constraint,
@@ -468,15 +469,19 @@ function ReplaceAssetButton({ assetId }: { assetId: string }) {
 function LibraryArtboardSection({ ab, project }: { ab: Artboard; project: Project }) {
   const link = ab.library!;
   const name = project.libraries?.find((l) => l.id === link.libraryId)?.name ?? 'a library';
+  const override = useEditor((st) => st.brandOverride);
+  const locked = !!link.brand && !override;
   return (
-    <Section help="libraries" title="Library">
+    <Section help={link.brand ? 'brand-kits' : 'libraries'} title={link.brand ? 'Brand kit' : 'Library'}>
       <p className="hint">
         {link.internal ? 'Used inside a library component. ' : ''}From <strong>{name}</strong>, version {link.version}. It is read-only here: its layers, timelines and interactions come from the library and are replaced when you update it. Instances of it in your own artboards, their inputs and your variables are yours.
+        {link.brand && ' It is part of a brand kit, so it stays linked and locked. You can move it, and change the text the kit marks as editable. Instances of it keep its proportions and can be scaled between half and double its size.'}
       </p>
       <Row>
         <button
           className="btn"
-          title="Make a copy you can edit. It stops getting updates"
+          disabled={locked}
+          title={locked ? 'Part of a brand kit, so it stays linked and locked' : 'Make a copy you can edit. It stops getting updates'}
           onClick={async () => {
             if (await confirmDialog({ title: 'Detach', message: `“${ab.name}” becomes a normal artboard you can edit. It will not get library updates any more.`, confirmLabel: 'Detach' })) detachFromLibrary(ab.id);
           }}
@@ -568,6 +573,24 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             title="Offer this artboard as a component to projects that use this library. Publish from the Libraries tab"
             value={!!ab.publish}
             onChange={(v) => setAb((a) => (v ? (a.publish = true) : delete a.publish))}
+          />
+        )}
+        {project.settings.library && !ab.library && ab.publish && (
+          <SelectField
+            label="Brand kit start"
+            title="If this library is published as a brand kit: place this component in the first artboard of every project that starts from the kit (Add with starter items in the Libraries tab), at this spot"
+            value={ab.brandPlace ?? ''}
+            options={[
+              { value: '', label: 'Not placed' },
+              { value: 'top', label: 'Top, centred' },
+              { value: 'bottom', label: 'Bottom, centred' },
+              { value: 'top-left', label: 'Top left' },
+              { value: 'top-right', label: 'Top right' },
+              { value: 'bottom-left', label: 'Bottom left' },
+              { value: 'bottom-right', label: 'Bottom right' },
+              { value: 'center', label: 'Centre' },
+            ]}
+            onChange={(v) => setAb((a) => (v ? (a.brandPlace = v as BrandPlace) : delete a.brandPlace))}
           />
         )}
         <Row>
@@ -756,6 +779,14 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {sameType && <TypeSection nodes={nodes} project={project} />}
       {!single && <BindSelectionSection nodes={nodes} abId={ab.id} />}
       {single && skinnable(n) && <SkinSection node={n} abId={ab.id} />}
+      {single && n.type === 'text' && project.settings.library && !ab.library && (
+        <CheckField
+          label="Editable in brand kit projects"
+          title="If this library is published as a brand kit: whoever uses the kit can change what this text says (and nothing else about it). Everything else in the kit stays locked"
+          value={!!n.brandEditable}
+          onChange={(v) => set({ brandEditable: v ? true : undefined })}
+        />
+      )}
       {single && n.type === 'text' && <TextModifiersSection node={n} />}
       {sameType && 'fill' in n && <FillSection nodes={nodes} project={project} />}
       {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
