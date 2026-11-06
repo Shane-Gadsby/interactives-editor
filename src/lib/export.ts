@@ -2,6 +2,7 @@ import playerSource from '@player-iife?raw';
 import { buildStandaloneHtml, PACKAGE_EXTENSION, type Asset, type Project } from 'interactives-player';
 import { hasScriptLayers } from './draw-templates';
 import { assetBytes, exportPackage } from './db';
+import { withOptimisedAssets } from './asset-variants';
 import { extOf, reportError, track } from './analytics';
 import { embeddedFontStyles, inHead } from './font-embed';
 import { store } from '../store/store';
@@ -40,13 +41,17 @@ export function withoutLinks(project: Project): Project {
  * `embedFonts` is for files that leave the editor (a download, a share link): the Google fonts are fetched now and
  * written into the page, so it never calls Google when someone opens it. Previews skip it, they're online anyway.
  * `onWarning` hears about any font that couldn't be fetched.
+ * `optimise` is also for files that leave the editor: with the project's Optimise output setting on, big pictures go in as
+ * their optimised copies (the originals stay in the project). Previews and the review page leave it off.
  */
 export async function standaloneHtml(
   project: Project,
-  opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; bytesFor?: (asset: Asset) => Promise<Uint8Array | null>; embedFonts?: boolean; onWarning?: (text: string) => void } = {},
+  opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; bytesFor?: (asset: Asset) => Promise<Uint8Array | null>; embedFonts?: boolean; optimise?: boolean; onWarning?: (text: string) => void } = {},
 ): Promise<string> {
   const clean = withoutLinks(project);
-  const p = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
+  const named = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
+  // The swapped assets carry their bytes as data: urls, which the builder embeds as they are (assetBytes reads them too)
+  const p = opts.optimise && !opts.bytesFor ? await withOptimisedAssets(named) : named;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
   const html = await buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: opts.bytesFor ?? ((a) => assetBytes(project.id, a)), debug: opts.debug, accessibility: opts.accessibility });
   // The player skips a Google font whose element id is already in the page, so these go in ahead of its script
@@ -61,7 +66,7 @@ function hasCodeNodes(p: Project): boolean {
 }
 
 export async function downloadStandalone(project: Project): Promise<void> {
-  const html = await failsAs('export', 'html', () => standaloneHtml(project, { embedFonts: true, onWarning: warnInEditor }));
+  const html = await failsAs('export', 'html', () => standaloneHtml(project, { embedFonts: true, optimise: true, onWarning: warnInEditor }));
   download(new Blob([html], { type: 'text/html' }), `${fileSafe(project.name)}.html`);
 }
 

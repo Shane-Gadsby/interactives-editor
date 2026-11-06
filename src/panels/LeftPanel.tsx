@@ -7,6 +7,8 @@ import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { filterLayers, selectSameItems } from '../lib/layer-find';
 import { confirmDialog } from '../components/dialogs';
 import { assetKind, assetUrls } from '../lib/assets';
+import { getVariantsVersion, onVariantsChange, savingsFor } from '../lib/asset-variants';
+import { optimiseSettings } from '../lib/image-optimise';
 import { acceptFor, insertFiles, pickFiles, replaceAssetFile } from '../lib/insert';
 import { ANIMATION_ACCEPT, chooseLinking, importAnimationFile, updateFromFile } from '../lib/importers';
 import { KIND_LABEL, linksOf } from '../lib/links';
@@ -510,6 +512,15 @@ function DesignFiles() {
   );
 }
 
+/** What an image's lighter copies are doing: the proxy the canvas shows, and what Optimise output saves in a download or share. */
+function CopiesNote({ project, asset, optimising }: { project: Parameters<typeof savingsFor>[0]; asset: Parameters<typeof savingsFor>[1]; optimising: boolean }) {
+  const sv = savingsFor(project, asset);
+  const parts: string[] = [];
+  if (sv.proxy) parts.push(`Editing copy ${kb(sv.proxy)}`);
+  if (optimising && sv.output) parts.push(sv.output === 'same' ? 'Output: already small enough' : `Output ${kb(sv.output.size)}, saves ${kb(sv.output.saved)}`);
+  return parts.length ? <div className="asset-meta" title="The original stays at full size. The canvas shows the editing copy; downloads and share links carry the output copy while Optimise output is on">{parts.join(' · ')}</div> : null;
+}
+
 export function Assets() {
   const s = useEditor((st) => ({ project: st.project, activeArtboardId: st.activeArtboardId }));
   //Thumbnails for files that arrive after the list (someone else's upload, fetched by useRemoteAssets)
@@ -517,6 +528,9 @@ export function Assets() {
     (fn) => assetUrls.subscribe(fn),
     () => assetUrls.version,
   );
+  //The proxy and optimised sizes in the details view arrive as the copies get made
+  useSyncExternalStore(onVariantsChange, getVariantsVersion);
+  const optimising = optimiseSettings(s.project.settings).on;
   const ab = getArtboard(s.project, s.activeArtboardId);
   const center = ab ? { x: ab.width / 2, y: ab.height / 2 } : null;
   const [view, setView] = useState<'grid' | 'list'>(() => (readLocal(ASSET_VIEW_KEY, 'grid') === 'list' ? 'list' : 'grid'));
@@ -728,6 +742,7 @@ export function Assets() {
                     {kind} · {kb(a.size)}
                     {isUsed(a.id) ? '' : ' · unused'}
                   </div>
+                  {kind === 'image' && <CopiesNote project={s.project} asset={a} optimising={optimising} />}
                 </div>
                 {actions}
               </div>

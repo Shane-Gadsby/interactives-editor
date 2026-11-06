@@ -70,6 +70,7 @@ import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
 import { GridAlignFields } from '../components/GridAlignFields';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
+import { OptimiseOutputFields } from './OptimiseOutput';
 import { RecordsSection } from './RecordsSection';
 import { CaptionsSection, VideoCaptions } from './CaptionsSection';
 import { VariantsSection } from './VariantsSection';
@@ -647,6 +648,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           value={!!project.settings.reducedMotion}
           onChange={(v) => setProject((p) => (p.settings.reducedMotion = v))}
         />
+        <OptimiseOutputFields project={project} />
       </Section>
       <CaptionsSection project={project} />
       <ReportingSection project={project} />

@@ -4892,6 +4892,24 @@ code {
   margin: 0;
 }
 
+.optimise-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.optimise-slider input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+.optimise-ends,
+.optimise-now {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .draw-api {
   margin: 6px 0;
   font-size: 11px;

@@ -143,7 +143,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
     setBusy('Building and uploading…');
     setError(null);
     try {
-      setShare(await publishShare(projectId, await standaloneHtml(store().get().project, { embedFonts: true, onWarning: warnInEditor })));
+      setShare(await publishShare(projectId, await standaloneHtml(store().get().project, { embedFonts: true, optimise: true, onWarning: warnInEditor })));
       track('feature', 'share-publish');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

@@ -1,5 +1,10 @@
 import { uid, type Asset } from 'interactives-player';
-import { getAsset, listAssetBlobs, putAsset } from './db';
+import { getAsset, loadAssetsForCanvas, putAsset } from './db';
+import { ensureProxy, rememberListing } from './asset-variants';
+import { proxyKey, rasterMime } from './image-optimise';
+
+/** Pictures lighter than this don't get a canvas proxy made on the way past (one that is big in pixels but light still gets one when it is uploaded). */
+const PROXY_MIN_BYTES = 256 * 1024;
 
 /** Blob URLs for the open project's assets, so the canvas can show them. */
 class AssetUrls {
@@ -9,9 +14,21 @@ class AssetUrls {
 
   async load(projectId: string): Promise<void> {
     this.clear();
-    const blobs = await listAssetBlobs(projectId);
+    const { blobs, proxied, listing } = await loadAssetsForCanvas(projectId, proxyKey());
     for (const [id, blob] of blobs) this.urls.set(id, URL.createObjectURL(blob));
+    rememberListing(projectId, listing);
     this.bump();
+    //Big pictures from before proxies, or uploaded by something that doesn't make them: one at a time, in the background
+    const pending = listing.filter((a) => !proxied.has(a.id) && blobs.has(a.id) && rasterMime(a.mime) && a.size >= PROXY_MIN_BYTES && a.variants?.[proxyKey()] === undefined);
+    void (async () => {
+      for (const a of pending) await this.proxy(projectId, a.id, a.mime, blobs.get(a.id)!);
+    })();
+  }
+
+  /** Make the canvas proxy for a picture this tab has the original of, and show it instead once there is one. */
+  async proxy(projectId: string, id: string, mime: string, original: Blob): Promise<void> {
+    const small = await ensureProxy(projectId, id, mime, original);
+    if (small && this.urls.has(id)) this.register(id, small);
   }
 
   register(id: string, blob: Blob): void {
@@ -37,7 +54,10 @@ class AssetUrls {
       need.map(async (id) => {
         try {
           const blob = await getAsset(projectId, id);
-          if (blob && !this.urls.has(id)) this.register(id, blob);
+          if (blob && !this.urls.has(id)) {
+            this.register(id, blob);
+            if (rasterMime(blob.type) && blob.size >= PROXY_MIN_BYTES) void this.proxy(projectId, id, blob.type, blob);
+          }
         } finally {
           this.fetching.delete(id);
         }
@@ -88,6 +108,8 @@ export async function storeFile(projectId: string, file: File): Promise<Asset> {
   const mime = file.type || guessMime(file.name);
   await putAsset(projectId, id, file);
   assetUrls.register(id, file);
+  //The canvas shows a lighter copy of a big picture from here on, made while the person carries on
+  if (rasterMime(mime) && file.size >= PROXY_MIN_BYTES) void assetUrls.proxy(projectId, id, mime, file);
   return { id, name: file.name, mime, size: file.size };
 }
 
