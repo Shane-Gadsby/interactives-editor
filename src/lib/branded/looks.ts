@@ -68,7 +68,7 @@ export const HIGH_CONTRAST: Colourway = {
   id: 'high-contrast',
   name: 'High contrast',
   description: 'Black and white with gold, for viewers who ask for more contrast.',
-  tokens: { background: '#000000', surface: '#000000', surfaceMuted: '#1e1e1e', text: WHITE, muted: WHITE, border: WHITE, divider: WHITE, primary: GOLD, button: GOLD, onButton: '#000000', onPrimary: '#000000', focus: WHITE, link: '#9fd1ff' },
+  tokens: { background: '#000000', surface: '#000000', surfaceMuted: '#1e1e1e', text: WHITE, muted: WHITE, border: WHITE, divider: WHITE, primary: GOLD, button: GOLD, onButton: '#000000', onPrimary: '#000000', focus: WHITE, link: '#9fd1ff', success: '#8fe388', successSurface: '#000000', error: '#ff9b9b', errorSurface: '#000000', warning: GOLD, warningSurface: '#000000' },
   brand: { gradientStart: '#000000', gradientEnd: '#000000', onGradient: WHITE, deep: '#000000', onDeep: WHITE, accent: GOLD, warm: '#000000', logoMark: GOLD, logoText: WHITE, logoMarkOnLight: GOLD, logoTextOnLight: WHITE },
 };
 

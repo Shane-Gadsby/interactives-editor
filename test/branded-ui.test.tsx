@@ -34,7 +34,10 @@ const flush = () => act(async () => void (await new Promise((r) => setTimeout(r,
 const click = (el: Element | null | undefined) => act(async () => void (el as HTMLElement).click());
 const byText = (sel: string, t: string) => [...document.querySelectorAll<HTMLElement>(sel)].find((e) => e.textContent?.includes(t));
 
+//These tests register their own fake starters: start every one from an empty registry, put the real ones back after
+let realStarters: BrandedStarter[] = [];
 beforeEach(() => {
+  realStarters = BRANDED_STARTERS.splice(0);
   db.createProjectRecord.mockClear();
   sessionStorage.clear();
   localStorage.clear();
@@ -43,6 +46,7 @@ beforeEach(() => {
   root = createRoot(host);
 });
 afterEach(() => {
+  BRANDED_STARTERS.splice(0, BRANDED_STARTERS.length, ...realStarters);
   act(() => root.unmount());
   host.remove();
   document.body.innerHTML = '';

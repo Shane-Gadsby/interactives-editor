@@ -41,6 +41,7 @@ vi.mock('../src/components/dialogs', () => ({ confirmDialog: async () => confirm
 import { TemplatesTab } from '../src/components/TemplatesTab';
 import { ChecklistPanel } from '../src/panels/ChecklistPanel';
 import { SaveTemplateModal } from '../src/components/TemplateModals';
+import { BRANDED_STARTERS, type BrandedStarter } from '../src/lib/branded';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -58,7 +59,10 @@ const typeInto = (el: HTMLInputElement, v: string) =>
     el.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
+//The branded packs have their own tests (branded-ui): these are about the plain built-in starters
+let realStarters: BrandedStarter[] = [];
 beforeEach(() => {
+  realStarters = BRANDED_STARTERS.splice(0);
   for (const k of ['createProjectRecord', 'setProjectMeta', 'useTemplate', 'useExample', 'deleteTemplate', 'saveAsTemplate'] as const) db[k].mockClear();
   opened.length = 0;
   sessionStorage.clear();
@@ -68,6 +72,7 @@ beforeEach(() => {
   root = createRoot(host);
 });
 afterEach(() => {
+  BRANDED_STARTERS.splice(0, BRANDED_STARTERS.length, ...realStarters);
   act(() => root.unmount());
   host.remove();
   document.body.innerHTML = '';
