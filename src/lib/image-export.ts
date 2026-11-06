@@ -208,19 +208,16 @@ export async function downloadArtboardPng(project: Project, ab: Artboard, timeli
  */
 export async function drawArtboardFrame(project: Project, ab: Artboard, timeline: Timeline | null, time: number, ctx: CanvasRenderingContext2D, width: number, height: number, opts: { theme?: string | null; background?: string | null } = {}): Promise<string[]> {
   const { svg, warnings } = await artboardSvg(project, ab, timeline, time, { theme: opts.theme });
-  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-  try {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    ctx.clearRect(0, 0, width, height);
-    if (opts.background) {
-      ctx.fillStyle = opts.background;
-      ctx.fillRect(0, 0, width, height);
-    }
-    ctx.drawImage(img, 0, 0, width, height);
-  } finally {
-    URL.revokeObjectURL(url);
+  // A data: url, as the PNG export uses: Chrome taints the canvas for an SVG with a foreignObject loaded from a blob:
+  // url, and then neither getImageData (GIF) nor VideoFrame (MP4, WebM) will read it
+  const img = new Image();
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await img.decode();
+  ctx.clearRect(0, 0, width, height);
+  if (opts.background) {
+    ctx.fillStyle = opts.background;
+    ctx.fillRect(0, 0, width, height);
   }
+  ctx.drawImage(img, 0, 0, width, height);
   return warnings;
 }

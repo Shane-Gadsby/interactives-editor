@@ -5102,7 +5102,7 @@ There are three ways:
 
 ## 3. Choose: Link or Embed
 
-For Photoshop, Illustrator, PDF, AutoCAD, VectorCraft and PhotoCraft files, a dialog called **Import design file** asks what to do with each file.
+For Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and PowerPoint files, a dialog called **Import design file** asks what to do with each file.
 
 - **Embed** copies the file in once. This is the simplest choice and works in every browser.
 - **Link** keeps a connection to the file on your computer. When you save the file in the design app, the changes come into the artboard, and your own edits stay. Linking needs Chrome or Edge.
@@ -5346,7 +5346,7 @@ Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pag
   The search box above each list filters it as you type. Press <kbd>Down</kbd> to move from the search box to the list, the arrow keys to move through it, and <kbd>Enter</kbd> to create the project from the one you picked. <kbd>Esc</kbd> closes the window without making anything. The name starts as something sensible and follows what you pick until you type your own. The folder starts as the one you were looking at, and you can change it.
 - Click a card's picture to open the project. **Help** and the gear (**Preferences**) are at the top right too.
 - The **Templates** tab (next to **Projects**) starts a project from a template, or from one of the finished examples. See [Templates, examples and remix](templates).
-- **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`) or PhotoCraft (\`.pcraft\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
+- **Import** (also the **import a file** link on the **+** card) opens a \`${PACKAGE_EXTENSION}\` package (a whole project with its assets), a project JSON file, or a design or animation file: Lottie (\`.json\`, \`.lottie\`), Rive (\`.riv\`, \`.rev\`), Photoshop (\`.psd\`), Illustrator (\`.ai\`), PDF, AutoCAD (\`.dxf\`), VectorCraft (\`.vectorcraft\`), PhotoCraft (\`.pcraft\`) or PowerPoint (\`.pptx\`). A package or JSON file comes back as a project of its own, and importing the same file twice gives you two copies. Any other file becomes a **new project**, and for design files the **Import design file** dialog first asks whether to link or embed ([Tutorial 4](tutorial-import-design)).
 - Each card has three icon buttons: **Duplicate** (a copy of the project and its assets), **Export** a \`${PACKAGE_EXTENSION}\` package (a download of the whole project) and **Delete**. Delete asks first, then moves the project to the [Bin](projects#the-bin), with an **Undo** straight after. If its share or review link is on, or learners have results or progress in it, the question says so, with the courses, how many learners each has and when they were last active.
 - With no projects yet the page shows **Create your first project**, which opens the same **Start a new project** window.
 
@@ -5922,8 +5922,18 @@ The **↑** button on an asset (beside the bin) replaces its file with a new ver
 
 ## Looking at them
 - **Thumbnails** shows a picture for each asset. Drag the slider beside it to make the thumbnails bigger or smaller.
-- **Details** is a list with each asset's kind and size, and **unused** if nothing in the project refers to it.
+- **Details** is a list with each asset's kind and size, and **unused** if nothing in the project refers to it. Once you have started an attributions list, it also says **no attribution** beside a file no entry covers yet (the thumbnails carry a small **No attribution** tag instead). For a big picture it also says what its lighter copies are doing: **Editing copy** (what the canvas shows, see below) and **Output** with the size a download or share link carries and how much that saves, or **already small enough** when the picture is left as it is.
 - Hover an asset for its full name and size. Your choice of view and thumbnail size is remembered in this browser.
+
+## Crediting them
+The **©** button on an asset (beside the **↑**) opens the [Attributions](attributions) tab on the entry for that file, making one named after the file if it has none. Fill in who made it, where it came from and the licence there. When some files still have no entry, a line above the list says how many and opens the tab.
+
+## Big pictures
+Every picture stays in the project at its full size. Camera photos are heavy, so two lighter copies are made from them in your browser and kept beside the original on the server:
+- **An editing copy**, for a picture over about 2 MB or 2560 px on the long side. The canvas shows it instead of the original, so a large photo does not slow down editing. It is made a moment after you add the picture (or the first time you open a project that has big ones), and you won't see a difference at normal zoom.
+- **An output copy**, made when you download or share, if [Optimise output](project-settings) is on. See [Exporting](export#optimised-pictures).
+
+Only JPEG, PNG and WebP pictures are touched. SVG, GIF and animated PNG or WebP files are always left exactly as they are, and so is any picture that is already small. Replacing a picture with **↑** makes new copies for the new file. The original is never changed, and turning Optimise output off sends everything at full size again.
 
 ## Using them
 - **Place** puts an image or video on the artboard you have open, in the middle, at 300 by 200. You can then resize it.
@@ -5934,6 +5944,47 @@ The **↑** button on an asset (beside the bin) replaces its file with a new ver
 - When anything is checked a red **Delete** button appears with the count. A dialog lists the files and warns if any are used. Deleting an asset that layers still use leaves those layers empty.
 - The bin on one asset deletes just that one (it asks first).
 - To clear out everything nothing uses, see [Usage](usage#removing-unused-assets).`
+  },
+  {
+    id: "attributions",
+    title: "Attributions and references",
+    group: "Design",
+    summary: "Keep a list of where the pictures, sounds, text and data came from and what the project draws on, link entries to assets, and choose whether learners get a Credits button.",
+    keywords: "attributions references credits citations sources licence license copyright creative commons cc by cc0 public domain permission creator author year bibliography credit button acknowledgements assets no attribution",
+    body: `Most projects use something somebody else made: a photograph, a sound, a passage of text, a data set, a font or a script. Many licences ask for a credit when you do, and a good course also says what it draws on. The **Attributions** tab (bottom panel) is where you keep that list. It is optional: nothing in the project needs it, and a project that never uses it carries nothing extra.
+
+## Adding entries
+Press **Add entry** and fill in what you know. Everything except the kind can stay empty while you gather it.
+
+| Field | What goes in it |
+|---|---|
+| Kind | **Image**, **Audio or video**, **Text**, **Data**, **Software**, **Other**, or **Reference** for a book, article or page the project draws on rather than something it contains |
+| Title | The name of the work, or what it is (*Sunset over the bay*, *Chapter 4*) |
+| Creator | Who made it: a person, a studio, an agency |
+| Year | When it was made or published. Any text works: *2019*, *2019-2021*, *n.d.* |
+| Source link | Where it can be found. A web address becomes a link learners can open in a new tab. Anything else (a page number, a shelf mark) shows as plain text |
+| Licence | The terms, in your own words. **Suggestions** offers the common ones (CC BY 4.0, CC BY-SA 4.0, CC BY-NC 4.0, CC0, Public domain, All rights reserved, Used with permission), and you can type anything else |
+| Notes | For you only: who gave permission, when it expires, where the original is. They never reach learners and are left out of exported and shared pages |
+| Files | The project assets this entry covers. **Link a file…** lists the Assets panel's files |
+
+Under each entry you see the citation as learners will see it, for example: *Jane Smith (2021). Sunset over the bay [Image]. Licence: CC BY 4.0.* followed by the link. With no creator the title leads and the year follows it. An entry with no title, no creator and no link is not shown to learners.
+
+Use the arrows to reorder entries and the bin to delete one. **Copy as text** puts every entry on its own line on the clipboard, ready to paste into a document or a course page.
+
+## Which files have no credit yet
+Link each entry to the files it covers. Once the list has entries, the [Assets](assets) panel marks every file that no entry covers (**no attribution** in the details view, a **No attribution** tag on a thumbnail) and says how many there are. **Add for files without one** in this tab makes one entry for each of them, named after the file, for you to fill in. Deleting a file takes it off the entries that listed it.
+
+## Showing it to learners
+- **Show a Credits button to learners** adds a small **Credits** button in the bottom left corner of the player. It opens a dialog with the list as readable citations, under the heading you choose (the default is *Credits and references*). Links open in a new tab. It works from the keyboard: the dialog takes focus, <kbd>Tab</kbd> stays inside it, <kbd>Esc</kbd> or **Close** shuts it and focus goes back to the button. It also works on a shared link, where the page runs in its sandbox.
+- **Keep the list in exported and shared pages** puts the list (without your notes) into pages you download or share even when there is no button, for anyone who reads the page's data. While the button is on this is always the case, since the button needs the list.
+- With both off, the list is your own record. It stays in the editor, in the project file (**Export** as \`.ixp\` or JSON) and in templates made from the project, notes included, and the pages you export and share carry none of it.
+
+The same two settings are in the **Credits** section of the project settings (see [Project settings](project-settings)). Preview shows the button when it is on.
+
+## Working together
+The list is part of the project, so people editing it live see each other's changes like any other edit, and undo covers it.
+
+Copyright reporting for a course is run at course level, and this tab does not replace it. It is the place to keep the facts while you work.`
   },
   {
     id: "images-media",
@@ -7582,8 +7633,8 @@ Off by default, so embeds that already exist keep working. Turn it on and attrib
     id: "project-settings",
     title: "Project settings",
     group: "Getting started",
-    summary: "Start artboard, fit, page title, fonts, sandbox and reduced motion.",
-    keywords: "settings start artboard fit scale page title background fonts sandbox reduced motion",
+    summary: "Start artboard, fit, page title, fonts, sandbox, reduced motion and Optimise output.",
+    keywords: "settings start artboard fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider",
     body: `![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
 
 Click an empty part of the canvas, or an artboard's name, to see the **Project** settings in the Inspector (below the artboard's own).
@@ -7600,17 +7651,19 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Allowed data hosts | Hosts that data may be loaded from, one per line (\`api.example.com\`, \`*.example.com\`). Empty allows any http(s) host. See [Data sources](data-sources#what-may-be-loaded) |
 | This project is a library | Shares the artboards you publish, with the project's styles and assets, as components for other projects. See [Libraries](libraries) |
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
+| Optimise output | On by default. Downloads and share links carry smaller copies of big pictures; your originals stay at full size. The slider under it runs from **Smaller files** to **Better quality** (it starts at **Better quality**). **Optimise pictures now** makes the copies straight away and tells you what they save. See [Exporting](export#optimised-pictures) |
 | Results and progress | The score, pass mark and when the project counts as complete. See [Results and progress](results) |
+| Credits | Whether learners get a **Credits** button, and whether exported and shared pages carry the attributions list. The entries are in the **Attributions** tab. See [Attributions and references](attributions) |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
 | Fonts | The fonts the project loads. **Add a Google font…** is a search box over every Google font (type, then <kbd>Enter</kbd> or click; the chips narrow it by Sans, Serif, Display, Handwriting or Mono), or upload font files in the **Assets** panel. New projects start with Open Sans. Choosing a font for a text layer adds it here by itself |`
   },
   // ---------------------------------------------------------------- import/export
   {
     id: "import",
-    title: "Importing Lottie, Rive (.riv and .rev), Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and SVG",
+    title: "Importing Lottie, Rive (.riv and .rev), Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft, PowerPoint and SVG",
     group: "Import and export",
-    summary: "Bring in Lottie JSON / dotLottie, Rive .riv and Rive editor .rev files, Photoshop .psd files, Illustrator .ai files, PDFs, AutoCAD DXF (and what to do with DWG), VectorCraft .vectorcraft and PhotoCraft .pcraft files, SVG and project packages.",
-    keywords: "import vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv rev editor project backup svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update new version source file changes reconnect",
+    summary: "Bring in Lottie JSON / dotLottie, Rive .riv and Rive editor .rev files, Photoshop .psd files, Illustrator .ai files, PDFs, AutoCAD DXF (and what to do with DWG), VectorCraft .vectorcraft and PhotoCraft .pcraft files, PowerPoint .pptx slides, SVG and project packages.",
+    keywords: "import powerpoint pptx slides deck presentation slide show vectorcraft drawcraft photocraft pcraft lottie dotlottie rive riv rev editor project backup svg after effects bodymovin convert photoshop psd layers illustrator ai pdf autocad cad dxf dwg drawing plan layers artboards vector link linked embed watch reimport re-import update new version source file changes reconnect",
     body: `| File | Becomes | Update from file |
 |---|---|---|
 | Lottie (\`.json\`, \`.lottie\`) | An artboard and a timeline | No |
@@ -7620,11 +7673,12 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Illustrator (\`.ai\`) and PDF | An artboard per page, as vector art | Yes |
 | AutoCAD (\`.dxf\`) | An artboard with a group per CAD layer (\`.dwg\` must be saved as DXF first) | Yes |
 | VectorCraft, PhotoCraft | Artboards of layers | Yes |
+| PowerPoint (\`.pptx\`) | An artboard per slide, with editable text, pictures and shapes | Yes |
 | SVG | A group of editable shapes | No |
 
 New to this? [Tutorial 4](tutorial-import-design) walks through an import step by step.
 
-Lottie, Rive (\`.riv\` or \`.rev\`), Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft and PhotoCraft files: use **+ Import file as artboard** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
+Lottie, Rive (\`.riv\` or \`.rev\`), Photoshop, Illustrator, PDF, AutoCAD (\`.dxf\`), VectorCraft, PhotoCraft and PowerPoint files: use **+ Import file as artboard** in the Layers panel (adds artboards to this project) or on the projects page (makes a new project). A \`.psd\`, \`.ai\`, \`.pdf\` or \`.dxf\` file dropped on the canvas also becomes new artboards.
 
 ## Lottie (.json, .lottie)
 Shape layers, groups, fills, strokes, gradients (with their exact start and end points, centre and radius, see [exact gradient points](fill-stroke#exact-gradient-points); they are written out the same way), transforms, trim paths and keyframes with easing become layers and a timeline. Text animators with range selectors become [text modifiers](text-modifiers). Expressions, layer masks, track mattes, layer effects, skew and time remapping are not carried over, and the import report lists what was dropped.
@@ -7733,11 +7787,21 @@ A PhotoCraft file is read like a Photoshop file: pixel layers become image layer
 
 Not carried over, and listed in the report: adjustment layers, other layer styles, pattern fills, blend modes outside the list, and mask feather. A file that is a folder rather than a ZIP archive has to be zipped first. If nothing can be rebuilt, the flattened picture saved in the file is imported instead.
 
+## PowerPoint (.pptx)
+Each slide becomes an artboard, the size of the slide, named after the file and the slide number. Older \`.ppt\` files have to be saved as \`.pptx\` in PowerPoint first.
+
+- **Text** becomes text layers: font, size, bold, italic, underline, strike, capitals, colour, letter spacing, alignment, line and paragraph spacing, vertical anchor and the box's padding. Placeholders (titles, body text) take their position and look from the slide's layout and master when the slide doesn't set them. Bullets and numbers are typed in as characters, and a layer has one alignment, so a text box with mixed alignment takes the first paragraph's.
+- **Pictures** become image layers (assets of the project), with any crop kept as a clipped frame and the alt text as the layer's label. Pictures that are only linked, or saved as EMF, WMF or TIFF, are skipped.
+- **Shapes**: rectangles, rounded rectangles, ellipses, triangles, diamonds, regular polygons, stars, lines and freeform paths, with solid, gradient or picture fill, outline (width, dash, cap) and drop shadow. A shape with text becomes a group of the shape and its text. Other preset shapes (arrows, callouts, ...) are drawn as rectangles.
+- **Groups** keep their position, size, rotation and flip. **Backgrounds** (colour, gradient or picture) come from the slide, its layout or its master, and the logos and other decoration the layout and master draw come across as locked layers named *Master: ...* and *Layout: ...*.
+
+Not carried over, and listed in the report with the slides they were on: charts, SmartArt, tables, embedded objects, audio and video (the poster picture is kept), animations, slide transitions, speaker notes, arrowheads, glow and other effects, and vertical text. The result is a starting point to design from rather than a copy of the deck: for the exact look of a slide, save the deck as PDF and import that instead.
+
 ## SVG
 Drop an SVG file on the canvas, paste it, or pick it with the **Image** tool. It becomes a group of editable vector layers: shapes and paths (with their transforms applied), groups, solid and gradient fills, strokes and dashes, and simple text. Masks, filters, patterns and embedded images are listed as not carried over.
 
 ## Updating a design file
-A Photoshop, Illustrator, PDF, AutoCAD (DXF), VectorCraft or PhotoCraft file is copied into the project when you import it, and its artboards remember which file they came from. When the designer saves a new version, bring it in with **Update from file…**:
+A Photoshop, Illustrator, PDF, AutoCAD (DXF), VectorCraft, PhotoCraft or PowerPoint file is copied into the project when you import it, and its artboards remember which file they came from. When the designer saves a new version, bring it in with **Update from file…**:
 - Select one of its artboards: the inspector's **Source file** section says **From Poster.psd (Photoshop, updated 2 h ago)** and has **Update from file…**.
 - Or open the **Assets** panel: **Design files** at the top lists each file with **Update…**.
 
@@ -7762,25 +7826,57 @@ After an import, a report lists anything that couldn't be carried over exactly. 
     id: "export",
     title: "Exporting",
     group: "Import and export",
-    summary: "Single HTML file, project package, JSON, Lottie, PNG and SVG.",
-    keywords: "export download html single file package ixp json lottie png svg image publish",
+    summary: "Single HTML file, project package, JSON, Lottie, PNG, SVG, video, GIF and PNG frames.",
+    keywords: "export download html single file package ixp json lottie png svg image publish video mp4 webm gif frames sequence zip animation record",
     body: `**Export** in the top bar:
 
 | Export | Gives you |
 |---|---|
-| Single HTML file | One file with the player, the project and every asset. Upload or embed it anywhere. Google fonts are copied into the file, so opening it never calls Google (if a font can't be fetched when you export, a message says so and that font loads from Google instead). |
-| Project package (${PACKAGE_EXTENSION}) | The whole project with assets, to re-import or play with the player library |
+| Single HTML file | One file with the player, the project and every asset (big pictures as their [optimised copies](export#optimised-pictures)). Upload or embed it anywhere. Google fonts are copied into the file, so opening it never calls Google (if a font can't be fetched when you export, a message says so and that font loads from Google instead). |
+| Project package (${PACKAGE_EXTENSION}) | The whole project with assets at full size, to re-import or play with the player library |
 | Project JSON | The document only, without asset files |
 | Public interface reference…, TypeScript definitions (.d.ts) | What a page that embeds the project can set, read and hear, as a reference page and typed names. See [Public interface](public-interface). These three exports ask first when the list no longer matches the project |
 | Lottie JSON (this artboard), dotLottie (this artboard) | The open artboard's shapes and timeline, for Lottie players (no interactivity). A report lists what couldn't be written |
 | PNG image (this artboard), PNG image, 1× | The open artboard as a picture, at 2× or at actual size, at the timeline's playhead |
 | SVG image (this artboard) | The open artboard as an SVG file that scales cleanly. It uses HTML inside the SVG for text and web elements, so it opens in browsers but not in every drawing program |
+| Video, GIF or frames… | One timeline of the open artboard as an MP4 or WebM video, an animated GIF, or a ZIP of PNG pictures, one per frame (below) |
 
 Sharing is on its own button, **Share**, next to Export (below).
 
-The files are named after the project (and the artboard, for pictures and Lottie).
+The files are named after the project (and the artboard, for pictures, Lottie and video).
+
+## Video, GIF and frames
+**Export → Video, GIF or frames…** turns one timeline of the open artboard into moving pictures you can put in a slide deck, an email or a lecture recording. It plays the timeline once through, from the start, and draws every frame at its exact time: the result is smooth however slow or busy your computer is, and it is the same drawing as **PNG image**, so a frame looks just like the canvas with the playhead there.
+
+| Setting | What it does |
+|---|---|
+| Timeline | Which timeline of the open artboard to draw. It starts on the one you have open |
+| Format | **MP4 video (H.264)** and **WebM video (VP9)** play almost everywhere and are small. **Animated GIF** plays anywhere, including in email, but is larger and limited to 256 colours a frame. **PNG frames (ZIP)** is one picture per frame (frame-0001.png and so on) for a video editor |
+| Width | How wide the picture is in pixels; the height follows the artboard's shape. Videos always have even sides, so the width can come out a pixel smaller |
+| Frames per second | Starts at the timeline's own rate (30 if it has none). GIF goes up to 50, the rest up to 60 |
+| Repeat for ever | GIF only. Off, the GIF plays once and stops |
+
+The dialog says how many frames that makes. A bar shows the progress, and **Cancel** stops it with nothing saved. Longer clips and bigger pictures take longer. The limit is 3600 frames.
+
+Things to know:
+- **No audio yet.** Sound on the timeline and narration are not mixed into the file.
+- **Video and embed layers show as empty boxes**, the same as in a PNG, and a message says so when it happens. Script layers do too. Shader layers are drawn.
+- **Video and GIF are drawn on white**, because neither keeps transparency the way you would want. PNG frames keep it.
+- **The open theme is used**, the one in the theme box in the top bar.
+- **Browsers without video encoding** (older ones, and some that block it) hide the MP4 and WebM options and say so. GIF and PNG frames always work. Which video formats appear can also depend on the size: a very large width may not be encodable.
+- Interaction is not part of a clip: it shows the timeline only, with the variables at their starting values.
 
 ![The Export menu.](help/export-menu.png)
+
+## Optimised pictures
+A phone photo can be 5 MB or more, and an export or share link carries every picture inside it. With **Optimise output** on in the [Project settings](project-settings) (it is on by default), the **Single HTML file** and the **Share link** carry a smaller copy of each big picture instead, and your originals stay in the project at full size.
+
+- The **slider** under the box goes from **Smaller files** to **Better quality**, in five steps. Each step sets how large a picture may stay (from 1280 px up to 3840 px on the long side) and how hard it is compressed. The default is **Better quality**, the fourth step. Pictures are never made bigger.
+- Pictures without transparency become JPEG, and ones with transparency become WebP, so cut-outs keep their edges. Colour profiles are not carried over, and a photo that relied on one can shift very slightly.
+- SVG, GIF, animated PNG and WebP, and pictures that are already small are left as they are. So is any picture that would not come out clearly smaller.
+- The first export or share after a change works the copies out, which can take a few seconds for a project full of photos. They are kept on the server for each step of the slider, so the next export is quick. **Optimise pictures now** in the Project settings does that work ahead of time and says what it saves, and the [Assets panel](assets#looking-at-them) shows the saving for each picture in its Details view.
+- The **Project package** and **Preview** always use the full-size pictures, and so do the PNG and SVG image exports. A share link made earlier keeps whatever it was made with until you update it.
+- Turn the box off to put every picture in at full size again.
 
 ## Sharing
 **Share** in the top bar (next to Export) has three ways to share a project:
@@ -7800,6 +7896,8 @@ Export gives you **files**; Share gives you **links and people**. Nothing under 
 **Share → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google (a message tells you if a font couldn't be fetched, and that font loads from Google instead). It is a snapshot: press **Update to the latest version** to publish later changes, or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). The **Link for StudyDesk** is the same link, so it stops too: if learners have results or progress in the project, the confirm lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one. **Copy** copies the link and **Open** opens it in a new tab.
 
 ![The Share link dialog.](help/share-link-dialog.png)
+
+A share link carries big pictures as their [optimised copies](export#optimised-pictures) while **Optimise output** is on in the Project settings.
 
 **Link for StudyDesk** plays the same project but keeps each signed-in learner's score, completion and progress. Use it in StudyDesk when you set a score or tick **Remember** on variables, and see [Results and progress](results). **Results…** shows how learners did.
 
