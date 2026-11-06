@@ -5,6 +5,7 @@ import { previewScope } from './data';
 import { editInstanceMount } from '../canvas/instances';
 import { canvasResolver } from './themes';
 import { fontUseIn, neededFonts, type FontNeed } from './font-use';
+import { googleFontCss, toDataUrl } from './font-embed';
 
 /** A small JPEG of the start artboard, for the projects page. */
 export async function projectThumbnail(project: Project, width = 400): Promise<Blob | null> {
@@ -29,13 +30,6 @@ export async function projectThumbnail(project: Project, width = 400): Promise<B
  * Pictures of an artboard: the same renderer the player uses, drawn into an SVG <foreignObject> with every image
  * and font inlined, so the file stands alone. PNG rasterises that SVG.
  */
-
-const toDataUrl = (bytes: Uint8Array, mime: string) =>
-  new Promise<string>((resolve) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.readAsDataURL(new Blob([bytes as BlobPart], { type: mime }));
-  });
 
 // Font CSS per set of fonts a picture needs (Google stylesheets and their files are fetched once)
 const fontCssCache = new Map<string, Promise<string>>();
@@ -103,14 +97,7 @@ async function fontCss(project: Project, needs: FontNeed[]): Promise<string> {
         const bytes = a && (await assetBytes(project.id, a));
         if (bytes) parts.push(`@font-face{font-family:${JSON.stringify(f.family)};src:url("${await toDataUrl(bytes, a!.mime || 'font/woff2')}")}`);
       } else if (f.source === 'google') {
-        const weights = used.join(';');
-        let css = await (await fetch(`https://fonts.googleapis.com/css2?family=${encodeURIComponent(f.family).replace(/%20/g, '+')}:wght@${weights}`)).text();
-        // Inline each font file the stylesheet points at
-        for (const m of [...css.matchAll(/url\((https:[^)]+)\)/g)]) {
-          const bytes = new Uint8Array(await (await fetch(m[1])).arrayBuffer());
-          css = css.replace(m[1], await toDataUrl(bytes, 'font/woff2'));
-        }
-        parts.push(css);
+        parts.push(await googleFontCss(f.family, used));
       }
     } catch {
       /* offline or blocked: the text falls back to a system font */
