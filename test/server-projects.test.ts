@@ -570,3 +570,31 @@ describe('transferring ownership', () => {
     process.env.SUITE_SESSION_ENFORCE = '';
   });
 });
+
+describe('named and pinned versions', () => {
+  it('saves a named version of what is there now, pinned, and keeps it through the prune', async () => {
+    await put('prpin00001', project('prpin00001', { name: 'First' }));
+    const made = await h.call('POST', '/api/projects/prpin00001/revisions', { user: ann, json: { name: '  Sent to the coordinator  ' } });
+    expect(made.json.ok).toBe(true);
+    const row = h.db.revisions.docs.find((r) => r._id === made.json.id)!;
+    expect(row).toMatchObject({ name: 'Sent to the coordinator', pinned: true, reason: 'Named version' });
+    //push 105 unpinned ones in after it: the pinned one survives the next prune, and the list still shows it
+    for (let i = 0; i < 105; i++) h.db.revisions.docs.push({ _id: `zz${String(i).padStart(10, '0')}`, project: 'prpin00001', created: new Date(Date.now() + 1000 + i), rev: 1, reason: 'Autosave', size: 1, doc: '{}' });
+    expect((await h.call('POST', '/api/projects/prpin00001/revisions', { user: ann, json: { name: 'Second' } })).json).toMatchObject({ ok: true });
+    expect(h.db.revisions.docs.some((r) => r._id === made.json.id)).toBe(true);
+    const list = (await h.call('GET', '/api/projects/prpin00001/revisions', { user: ann })).json;
+    expect(list.find((r: { id: string }) => r.id === made.json.id)).toMatchObject({ name: 'Sent to the coordinator', pinned: true });
+    expect(h.db.revisions.docs.filter((r) => r.project === 'prpin00001' && !r.pinned)).toHaveLength(100);
+  });
+
+  it('renames, pins and unpins, and caps pinned versions at 20', async () => {
+    await put('prpin00002', project('prpin00002'));
+    await vi.waitFor(() => expect(h.db.revisions.docs.some((r) => r.project === 'prpin00002')).toBe(true));
+    const first = h.db.revisions.docs.find((r) => r.project === 'prpin00002')!;
+    expect((await h.call('PATCH', `/api/projects/prpin00002/revisions/${first._id}`, { user: ann, json: { name: 'Kick-off', pinned: true } })).json).toEqual({ ok: true, name: 'Kick-off', pinned: true });
+    for (let i = 0; i < 19; i++) h.db.revisions.docs.push({ _id: `pp${String(i).padStart(10, '0')}`, project: 'prpin00002', created: new Date(), pinned: true });
+    expect((await h.call('POST', '/api/projects/prpin00002/revisions', { user: ann, json: { name: 'One too many' } })).status).toBe(400);
+    expect((await h.call('PATCH', `/api/projects/prpin00002/revisions/${first._id}`, { user: ann, json: { pinned: false } })).json.pinned).toBe(false);
+    expect((await h.call('POST', '/api/projects/prpin00002/revisions', { user: ann, json: { name: '' } })).status).toBe(400);
+  });
+});

@@ -2778,6 +2778,8 @@ Very big projects are fine: the server splits anything too big for one database 
 ## Revision history
 The server keeps saved revisions of the project: a snapshot every few minutes while it changes (the newest 100 are kept), and one before every restore. Click the **Revision history** button (the clock) in the top bar. The list on the left shows each version with its date and how long ago it was; click one to see a picture of it and a count of its artboards and variables. **Restore this version** asks **Restore version** in a dialog first. What is there now is saved in the history before the restore, so you can come back to it, and the page reloads with the restored project.
 
+**Named versions.** **Save a named version…** keeps the project as it is right now under a name you choose ("Sent to the coordinator", "Before the redesign"), and pins it. **Name it** (or **Rename**) names any version in the list, and **Pin** keeps one. Pinned versions show a pin and their name in the list, and are never cleared out of the history however old they get; a project keeps up to 20. **Unpin** lets one be cleared like the others, once 100 newer ones have built up.
+
 ![The Revision history dialog.](help/revision-history.png)
 
 ## When two copies disagree

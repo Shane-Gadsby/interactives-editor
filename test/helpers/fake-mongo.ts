@@ -144,6 +144,11 @@ export class FakeCollection {
     return c;
   }
 
+  async countDocuments(filter: Doc = {}) {
+    this.check('countDocuments');
+    return this.docs.filter((d) => matches(d, filter)).length;
+  }
+
   async insertOne(doc: Doc) {
     this.check('insertOne');
     if (this.docs.some((d) => d._id === doc._id)) throw Object.assign(new Error('E11000 duplicate key'), { code: 11000 });

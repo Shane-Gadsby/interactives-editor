@@ -3,13 +3,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, prepareNodes, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
-import { addCollaborator, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
+import { addCollaborator, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, saveNamedVersion, updateRevision, publishShare, restoreRevision, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
 import { download, standaloneHtml, warnInEditor } from '../lib/export';
 import { IconButton } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
-import { confirmDialog } from './dialogs';
+import { confirmDialog, promptDialog } from './dialogs';
 import { inUseWarning } from '../lib/in-use';
 import { getReview, putReview, reviewUrl, stopReview, type ReviewLink } from '../lib/comments';
 
@@ -68,14 +68,46 @@ export function HistoryModal({ onClose }: { onClose: () => void }) {
   const [sel, setSel] = useState<string | null>(null);
   const [preview, setPreview] = useState<Project | null>(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => {
+  const reload = (select?: string) =>
     listRevisions(projectId)
       .then((l) => {
         setList(l);
-        if (l[0]) setSel(l[0].id);
+        setSel((cur) => select ?? cur ?? l[0]?.id ?? null);
       })
       .catch((e) => setError(String(e.message ?? e)));
+  useEffect(() => {
+    void reload();
   }, [projectId]);
+  const saveNamed = async () => {
+    const name = await promptDialog({ title: 'Save a named version', message: 'Keeps the project as it is now under this name, pinned so it is never cleared out of the history.', label: 'Name', placeholder: 'For example: Sent to the coordinator', confirmLabel: 'Save version' });
+    if (!name?.trim()) return;
+    setBusy(true);
+    try {
+      const r = await saveNamedVersion(projectId, name);
+      track('feature', 'revision-named');
+      await reload(r.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const patch = async (p: { name?: string | null; pinned?: boolean }) => {
+    if (!chosen) return;
+    try {
+      await updateRevision(projectId, chosen.id, p);
+      track('feature', p.pinned !== undefined ? 'revision-pin' : 'revision-rename');
+      await reload(chosen.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const rename = async () => {
+    if (!chosen) return;
+    const name = await promptDialog({ title: 'Name this version', label: 'Name', initial: chosen.name ?? '', placeholder: 'Leave empty to remove the name', confirmLabel: 'Save' });
+    if (name === null) return;
+    await patch({ name: name.trim() || null });
+  };
   useEffect(() => {
     setPreview(null);
     if (sel) loadRevision(projectId, sel).then(setPreview, (e) => setError(String(e.message ?? e)));
@@ -102,7 +134,10 @@ export function HistoryModal({ onClose }: { onClose: () => void }) {
           {list?.map((r) => (
             <li key={r.id}>
               <button className={r.id === sel ? 'active' : ''} onClick={() => setSel(r.id)}>
-                <strong>{r.reason}</strong>
+                <strong>
+                  {r.pinned && <Icons.pin width={12} height={12} aria-label="Pinned" />} {r.name ?? r.reason}
+                </strong>
+                {r.name && <span className="small muted">{r.reason}</span>}
                 <span className="small muted">{when(r.created)}</span>
                 {r.by?.name && <span className="small muted">{r.by.name}</span>}
               </button>
@@ -120,6 +155,17 @@ export function HistoryModal({ onClose }: { onClose: () => void }) {
           <div className="row">
             <button className="btn primary" disabled={!chosen || busy} onClick={restore} title="Replace the project with this version (the current one is kept in the history)">
               {busy ? 'Restoring…' : 'Restore this version'}
+            </button>
+            <button className="btn" disabled={!chosen || busy} onClick={() => void rename()} title="Give this version a name, so it's easy to find">
+              {chosen?.name ? 'Rename' : 'Name it'}
+            </button>
+            <button className="btn" disabled={!chosen || busy} onClick={() => void patch({ pinned: !chosen?.pinned })} title={chosen?.pinned ? 'Let this version be cleared out of the history in time, like the others' : 'Keep this version whatever its age (up to 20 a project)'}>
+              {chosen?.pinned ? 'Unpin' : 'Pin'}
+            </button>
+          </div>
+          <div className="row">
+            <button className="btn" disabled={busy} onClick={() => void saveNamed()} title="Keep the project as it is now under a name, pinned">
+              Save a named version…
             </button>
           </div>
         </div>

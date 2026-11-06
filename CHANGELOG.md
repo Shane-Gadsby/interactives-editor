@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Named and pinned versions** in Revision history: **Save a named version…** (a pinned snapshot of what's there now), **Name it/Rename**, **Pin/Unpin**. Pinned revisions are skipped by the 100-revision prune, up to 20 a project, and listed even when older than the newest 100. `POST /api/projects/:id/revisions`, `PATCH /api/projects/:id/revisions/:revId`.
+
 - **Export CSV** in the Results dialog: every learner's record (not just the 200 the dialog lists) with best and last scores, `GET /api/projects/:id/results.csv`, same access as the dialog. Cells that start like a formula get a leading quote; a BOM so Excel reads names as UTF-8 (`resultsCsv` in `shared/learner.mjs`).
 
 - **Keyframes: copy, paste, snap and stagger** (`lib/key-edit.ts`): Ctrl+C/X/V on selected keys when the timeline last had the pointer (layers otherwise), pasting onto the same tracks, onto the same properties of other selected layers, or onto one selected track of the same kind; dragged keys snap to the playhead and markers within 6 px (Alt off); **Stagger…** offsets selected layers' keys by N ms in Layers order. One undo step each.

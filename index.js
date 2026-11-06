@@ -117,7 +117,11 @@ const rooms = new Map(),
 	revisionCap = 100,
 	lastRevision = new Map(),
 
-	snapshot = async (projectID, docString, rev, by, reason, force) => {
+	//Pinned revisions (named versions) are kept whatever their age, up to pinCap a project; the prune skips them
+	pinCap = 20,
+	cleanRevisionName = (v) => typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80) || null : null,
+
+	snapshot = async (projectID, docString, rev, by, reason, force, extra = {}) => {
 		let last = lastRevision.get(projectID)
 
 		if (!force && last === undefined) {
@@ -130,18 +134,19 @@ const rooms = new Map(),
 		lastRevision.set(projectID, Date.now())
 		let revID = revisionID(),
 			fields = await store.put(projectID, `r:${revID}`, docString)
-		await revisions.insertOne({_id: revID, project: projectID, created: new Date(), rev, by: by || null, reason: reason || 'Autosave', size: docString.length, ...fields})
+		await revisions.insertOne({_id: revID, project: projectID, created: new Date(), rev, by: by || null, reason: reason || 'Autosave', size: docString.length, ...extra, ...fields})
 			.catch(async (err) => {
 				await store.drop(fields.docChunks)
 				throw err
 			})
 
 		//Keep the newest revisionCap
-		let old = await revisions.find({project: projectID}, {sort: {created: -1}, skip: revisionCap, projection: {_id: 1, docChunks: 1}}).toArray()
+		let old = await revisions.find({project: projectID, pinned: {$ne: true}}, {sort: {created: -1}, skip: revisionCap, projection: {_id: 1, docChunks: 1}}).toArray()
 		if (old.length) {
 			await revisions.deleteMany({_id: {$in: old.map((r) => r._id)}})
 			for (let r of old) await store.drop(r.docChunks)
 		}
+		return revID
 	},
 
 	//Writes a project's document through the doc store (parts for one too big for its row). write(fields) does the
@@ -1124,8 +1129,71 @@ router.get('/api/projects/:id/revisions', async (req, res) => {
 		return
 	}
 
-	let list = await revisions.find({project: id}, {sort: {created: -1}, projection: {doc: 0}}).limit(revisionCap).toArray()
-	res.json(list.map((r) => ({id: String(r._id), created: r.created, rev: r.rev, by: r.by, reason: r.reason, size: r.size})))
+	//The newest revisionCap, plus any pinned ones older than that
+	let list = await revisions.find({project: id}, {sort: {created: -1}, projection: {doc: 0, docChunks: 0}}).limit(revisionCap).toArray(),
+		have = new Set(list.map((r) => String(r._id))),
+		pinned = await revisions.find({project: id, pinned: true}, {sort: {created: -1}, projection: {doc: 0, docChunks: 0}}).toArray()
+
+	list = [...list, ...pinned.filter((r) => !have.has(String(r._id)))]
+	res.json(list.map((r) => ({id: String(r._id), created: r.created, rev: r.rev, by: r.by, reason: r.reason, size: r.size, name: r.name || null, pinned: !!r.pinned})))
+})
+
+//Save what's there now as a named, pinned version ("Sent to the unit coordinator", "Before the redesign")
+router.post('/api/projects/:id/revisions', express.json({limit: '4kb'}), async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	let name = cleanRevisionName(req.body?.name)
+	if (!name) {
+		return res.status(400).json({error: 'Give the version a name'})
+	}
+	if (await revisions.countDocuments({project: id, pinned: true}) >= pinCap) {
+		return res.status(400).json({error: `A project keeps up to ${pinCap} named versions. Unpin one first`})
+	}
+
+	let room = rooms.get(id)
+	if (room) await persist(room)
+	let current = room ? JSON.stringify(room.doc) : await store.get(doc),
+		revID = await snapshot(id, current, room ? room.rev : doc.rev, whoIs(req), 'Named version', true, {name, pinned: true})
+
+	res.json({ok: true, id: revID})
+})
+
+//Name, rename or pin/unpin a revision. A pinned one is never pruned
+router.patch('/api/projects/:id/revisions/:revID', express.json({limit: '4kb'}), async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0, docChunks: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	let r = validRevision(req.params.revID) && await revisions.findOne({_id: req.params.revID, project: id}, {projection: {pinned: 1}})
+	if (!r) {
+		return res.status(404).json({error: 'No such revision'})
+	}
+
+	let set = {}
+	if ('name' in (req.body || {})) set.name = cleanRevisionName(req.body.name)
+	if (typeof req.body?.pinned === 'boolean') {
+		if (req.body.pinned && !r.pinned && await revisions.countDocuments({project: id, pinned: true}) >= pinCap) {
+			return res.status(400).json({error: `A project keeps up to ${pinCap} named versions. Unpin one first`})
+		}
+		set.pinned = req.body.pinned
+	}
+
+	await revisions.updateOne({_id: r._id}, {$set: set})
+	res.json({ok: true, ...set})
 })
 
 router.get('/api/projects/:id/revisions/:revID', async (req, res) => {

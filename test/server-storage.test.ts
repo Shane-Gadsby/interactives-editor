@@ -258,7 +258,7 @@ describe('revision history', () => {
     h.db.revisions.docs.push({ _id: 'zz000000000a', project: id, created: new Date(Date.now() + 5000), rev: 7, by: { username: 'bob' }, reason: 'Autosave', size: 3, doc: JSON.stringify(project(id, { name: 'old' })) });
     const list = (await h.call('GET', `/api/projects/${id}/revisions`, { user: ann })).json;
     expect(list.map((r: { id: string }) => r.id)[0]).toBe('zz000000000a');
-    expect(list[0]).toEqual({ id: 'zz000000000a', created: expect.any(String), rev: 7, by: { username: 'bob' }, reason: 'Autosave', size: 3 });
+    expect(list[0]).toEqual({ id: 'zz000000000a', created: expect.any(String), rev: 7, by: { username: 'bob' }, reason: 'Autosave', size: 3, name: null, pinned: false });
     const one = await h.call('GET', `/api/projects/${id}/revisions/zz000000000a`, { user: ann });
     expect(one.json.project.name).toBe('old');
     expect(one.json.rev).toBe(7);

@@ -279,7 +279,15 @@ export interface RevisionMeta {
   by: { username: string | null; name: string | null } | null;
   reason: string;
   size: number;
+  /** A name someone gave it ("Sent to the coordinator"). */
+  name?: string | null;
+  /** Pinned: kept whatever its age (up to 20 a project). */
+  pinned?: boolean;
 }
+
+export const saveNamedVersion = (projectId: string, name: string) => call<{ ok: boolean; id: string }>(`projects/${encodeURIComponent(projectId)}/revisions`, postJson({ name }));
+export const updateRevision = (projectId: string, revId: string, patch: { name?: string | null; pinned?: boolean }) =>
+  call<{ ok: boolean }>(`projects/${encodeURIComponent(projectId)}/revisions/${encodeURIComponent(revId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
 
 export const listRevisions = (projectId: string) => call<RevisionMeta[]>(`projects/${projectId}/revisions`);
 
