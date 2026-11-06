@@ -14,6 +14,7 @@ import {
   newQuestion,
   questionVars,
   renamePrefix,
+  serverMarkingProblem,
   uid,
   varName,
   walk,
@@ -64,6 +65,19 @@ export function partsOf(frame: ContainerNode): Record<string, SceneNode[]> {
     if (p) (out[p] ??= []).push(n);
   });
   return out;
+}
+
+/** How many questions are set to be marked on the server, and how many of those can't be (they stay marked in the page). */
+export function serverMarkedCounts(p: Project): { marked: number; inPage: number } {
+  let marked = 0;
+  let inPage = 0;
+  for (const ab of p.artboards)
+    for (const f of questionFrames(ab)) {
+      if (!f.question!.serverMarked) continue;
+      if (serverMarkingProblem(f.question!)) inPage++;
+      else marked++;
+    }
+  return { marked, inPage };
 }
 
 export const questionFrames = (ab: Artboard): FrameNode[] => {

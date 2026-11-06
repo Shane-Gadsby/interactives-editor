@@ -300,10 +300,10 @@ export function SelectField<T extends string>({
   );
 }
 
-export function CheckField({ label, value, onChange, title }: { label: ReactNode; value: boolean; onChange: (v: boolean) => void; title?: string }) {
+export function CheckField({ label, value, onChange, title, disabled }: { label: ReactNode; value: boolean; onChange: (v: boolean) => void; title?: string; disabled?: boolean }) {
   return (
     <label className="field check-field" title={tipFor(label, title)}>
-      <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" checked={value} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}</span>
     </label>
   );

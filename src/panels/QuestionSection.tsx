@@ -10,6 +10,7 @@ import {
   newQuestion,
   questionProblems,
   questionVars,
+  serverMarkingProblem,
   type Artboard,
   type FrameNode,
   type Project,
@@ -62,6 +63,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
   const apply = (patch: Partial<Question>, key?: string) =>
     store().update((d) => setQuestionSettings(d as Project, ab.id, frame.id, patch), { coalesce: key ? `question-${frame.id}-${key}` : undefined });
   const problems = questionProblems(q);
+  const serverProblem = serverMarkingProblem(q);
   const shared = sharedPrefix(project, frame);
   const choice = q.kind === 'single' || q.kind === 'multiple';
   const parts = partsOf(frame);
@@ -325,6 +327,19 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       )}
       {q.kind !== 'truefalse' && q.kind !== 'blank' && q.kind !== 'hotspot' && <CheckField label="Shuffle" title="A different order each time the question starts" value={q.shuffle} onChange={(v) => apply({ shuffle: v })} />}
       <CheckField label="Show the right answer when finished wrong" value={q.reveal} onChange={(v) => apply({ reveal: v })} />
+      <CheckField
+        label="Mark answers on the server"
+        title="On the share link and the Link for StudyDesk, the right answers are kept off the learner's page and the server marks each check and records the score. In the editor's Preview and in files you export, the question marks in the page as usual"
+        value={!!q.serverMarked}
+        disabled={!!serverProblem && !q.serverMarked}
+        onChange={(v) => apply({ serverMarked: v || undefined })}
+      />
+      {q.serverMarked && !serverProblem && (
+        <div className="muted small">
+          Learners get this question without its right answers, patterns, hints or feedback, and the server marks it. Only the share link and the Link for StudyDesk do this (the answers go out when you update the link). Preview and exported files still carry the answers.
+        </div>
+      )}
+      {serverProblem && <div className={q.serverMarked ? 'q-problem' : 'muted small'}>{q.serverMarked ? 'Marked in the page for now. ' : ''}{serverProblem}</div>}
 
       <div className="q-sub">Hints and feedback</div>
       <TextField
