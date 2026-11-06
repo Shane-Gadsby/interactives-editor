@@ -326,3 +326,20 @@ describe('in use (the warning before delete or turning the link off)', () => {
     process.env.SUITE_SESSION_ENFORCE = '';
   });
 });
+
+describe('results as CSV', () => {
+  it('has a row per learner with scores, and quotes cells that could be formulas', async () => {
+    await report(sam, result(10));
+    await report({ ...lee, fullName: '=HYPERLINK("x")' }, result(15));
+    const r = await h.call('GET', '/api/projects/prlearn001/results.csv', { user: ann });
+    expect(r.status).toBe(200);
+    expect(r.headers.get('content-type')).toMatch(/text\/csv/);
+    const lines = r.text.replace(/^﻿/, '').trim().split('\r\n');
+    expect(lines[0]).toBe('username,name,course,completed,passed,attempts,best score,best max,best percent,last score,last max,last percent,completed at,last active');
+    expect(lines).toHaveLength(3);
+    const lee1 = lines.find((l) => l.startsWith('lee,'))!;
+    expect(lee1).toContain(`"'=HYPERLINK(""x"")"`);
+    expect(lee1).toContain('MAT1000_2026_S1,yes');
+    expect(lee1).toContain(',15,20,');
+  });
+});

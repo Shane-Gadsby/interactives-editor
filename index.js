@@ -3190,6 +3190,22 @@ router.get('/api/analytics/usage', async (req, res) => {
 })
 
 //Start the results afresh (a test run that left records behind, or a new intake)
+//Every learner's record as a CSV file (the dialog only lists the latest 200). Same access as the Results dialog
+router.get('/api/projects/:id/results.csv', async (req, res) => {
+	let doc = await projectFor(req, res)
+	if (!doc) {
+		return
+	}
+
+	let rows = await userData.find({project: doc._id}, {projection: {variables: 0}}).sort({updated: -1}).limit(20000).toArray(),
+		name = String(doc.name || 'project').replace(/[^\w .-]+/g, '').trim().slice(0, 60) || 'project'
+
+	res.set('Content-Type', 'text/csv; charset=utf-8')
+	res.set('Content-Disposition', `attachment; filename="${name} results.csv"`)
+	//A BOM so Excel reads the names as UTF-8
+	res.send('\ufeff' + learner.resultsCsv(rows))
+})
+
 //Wiping every learner's record is the owner's call (or a power user's), not a collaborator's
 router.delete('/api/projects/:id/results', async (req, res) => {
 	let doc = await projectFor(req, res, {ownerOnly: true})

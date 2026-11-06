@@ -3,9 +3,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Renderer, prepareNodes, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
-import { addCollaborator, clearResults, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
+import { addCollaborator, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
-import { standaloneHtml, warnInEditor } from '../lib/export';
+import { download, standaloneHtml, warnInEditor } from '../lib/export';
 import { IconButton } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
@@ -451,6 +451,20 @@ export function ResultsModal({ onClose }: { onClose: () => void }) {
             <div className="row">
               <button className="btn" onClick={load}>
                 Refresh
+              </button>
+              <button
+                className="btn"
+                disabled={results.records === 0}
+                title="Download every learner's record as a spreadsheet (CSV): username, name, course, completed, passed, attempts, best and last score, last active"
+                onClick={() => {
+                  track('feature', 'results-csv');
+                  resultsCsv(projectId).then(
+                    (blob) => download(blob, `${store().get().project.name || 'project'} results.csv`),
+                    (e) => setError(e instanceof Error ? e.message : String(e)),
+                  );
+                }}
+              >
+                Export CSV
               </button>
               <button
                 className="btn danger"

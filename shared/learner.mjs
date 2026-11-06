@@ -262,3 +262,21 @@ export const summarise = (rows, limit = 200) => {
 			}))
 	}
 }
+
+//One row per learner for a spreadsheet. A cell starting with = + - @ (or a tab/return) gets a leading quote, so a
+//name or course label can't turn into a formula when it's opened
+const csvCell = (v) => {
+	if (v === null || v === undefined) return ''
+	let s = v instanceof Date ? v.toISOString() : String(v)
+	if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
+	return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+export const RESULTS_CSV_COLUMNS = ['username', 'name', 'course', 'completed', 'passed', 'attempts', 'best score', 'best max', 'best percent', 'last score', 'last max', 'last percent', 'completed at', 'last active']
+
+export const resultsCsv = (rows) => [
+	RESULTS_CSV_COLUMNS,
+	...[...rows]
+		.sort((a, b) => new Date(b.updated || 0) - new Date(a.updated || 0))
+		.map((r) => [r.username, r.name, r.courseLabel || r.course, r.completed ? 'yes' : 'no', r.passed ? 'yes' : 'no', r.attempts || 1, r.bestScore, r.bestMax, r.bestPercent, r.lastScore, r.lastMax, r.lastPercent, r.completedAt, r.updated])
+].map((line) => line.map(csvCell).join(',')).join('\r\n') + '\r\n'

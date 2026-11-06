@@ -380,6 +380,9 @@ export interface Results {
 
 export const getResults = (projectId: string) => call<Results>(`projects/${encodeURIComponent(projectId)}/results`);
 
+/** Every learner's record as a CSV file. */
+export const resultsCsv = (projectId: string) => call<Blob>(`projects/${encodeURIComponent(projectId)}/results.csv`, {}, 'blob');
+
 export const clearResults = (projectId: string) => call<{ ok: boolean; deleted: number }>(`projects/${encodeURIComponent(projectId)}/results`, { method: 'DELETE' });
 
 // ---------------------------------------------------------------- learner insights

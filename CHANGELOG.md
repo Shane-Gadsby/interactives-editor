@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Export CSV** in the Results dialog: every learner's record (not just the 200 the dialog lists) with best and last scores, `GET /api/projects/:id/results.csv`, same access as the dialog. Cells that start like a formula get a leading quote; a BOM so Excel reads names as UTF-8 (`resultsCsv` in `shared/learner.mjs`).
+
 - **Keyframes: copy, paste, snap and stagger** (`lib/key-edit.ts`): Ctrl+C/X/V on selected keys when the timeline last had the pointer (layers otherwise), pasting onto the same tracks, onto the same properties of other selected layers, or onto one selected track of the same kind; dragged keys snap to the playhead and markers within 6 px (Alt off); **Stagger…** offsets selected layers' keys by N ms in Layers order. One undo step each.
 - **Layers: Filter layers** box (names, and with **Text** the words in text layers) and **Select same fill / Select same font** on the layer right-click menus (`lib/layer-find.ts`).
 - **Import questions from a GIFT file** in the Add question menu (`lib/gift.ts`, `lib/gift-import.ts`): one question per artboard, multiple choice/response, true/false, short answer, numerical (as a blank with a tolerance) and matching, with a report of what was skipped or changed. Moodle XML later.
