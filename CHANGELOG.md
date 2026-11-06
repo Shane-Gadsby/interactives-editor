@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Clear results is the owner's**: `DELETE /api/projects/:id/results` takes the owner or a power user only (`projectFor(req, res, {ownerOnly: true})`); collaborators still see results, and the button is greyed out for them with a tooltip (`mayClear` on the results reply). Help says so.
+
 - **Warnings before cutting learners off**: deleting a project and turning its share link off now say, when it applies, that the link (the Link for StudyDesk too) is on and how many learners have results or progress, per course, with when each was last active ("This project is in use right now" for activity in the last 30 days). `GET /api/projects/:id/in-use` (owner or power user) reads `interactives-user-data` only; `lib/in-use.ts` words it.
 
 - **Project bin**: Delete moves a project to the Bin for 30 days instead of erasing it. Its row moves to `projects-bin` and its files to `storage/_bin/<id>/`, so it and its share, review and StudyDesk links are offline at once; revisions, comments, learner records and a published library stay for a restore. The projects page shows **Bin** under the folders (with Restore and Delete forever), and an **Undo** right after a delete. A sweep at start and every 6 hours purges anything older than 30 days. Power users see everyone's bin in the all-projects view. Routes `GET /api/bin`, `POST /api/bin/:id/restore`, `DELETE /api/bin/:id`, `GET /api/bin/:id/thumbnail`. A live room's unsaved edits are saved into the binned copy.

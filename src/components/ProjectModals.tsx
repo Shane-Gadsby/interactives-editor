@@ -452,7 +452,12 @@ export function ResultsModal({ onClose }: { onClose: () => void }) {
               <button className="btn" onClick={load}>
                 Refresh
               </button>
-              <button className="btn danger" disabled={results.records === 0} onClick={clear}>
+              <button
+                className="btn danger"
+                disabled={results.records === 0 || results.mayClear === false}
+                title={results.mayClear === false ? "Only the project's owner can clear its results" : undefined}
+                onClick={clear}
+              >
                 Clear results
               </button>
             </div>

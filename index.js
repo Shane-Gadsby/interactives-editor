@@ -286,16 +286,19 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//Your own projects only (or ones you've been invited to collaborate on), unless you're a power user. ownerOnly is
 	//for the things only the owner does: deleting the project, changing who collaborates. Logs instead of refusing
 	//until the box enforces sessions, same as session-check
+	//The owner, a power user, or anyone at all for a project with no owner (dev). No logging, no reply: for working out
+	//what to offer, mayChange is still the check
+	ownsOrPower = (req, doc) => {
+		let me = whoIs(req)
+		return !doc?.owner?.username || !!(me && (me.username === doc.owner.username || isPower(req)))
+	},
+
 	mayChange = (req, res, doc, {ownerOnly = false} = {}) => {
-		if (!doc?.owner?.username) {
+		if (ownsOrPower(req, doc)) {
 			return true
 		}
 
 		let me = whoIs(req)
-
-		if (me && (me.username === doc.owner.username || isPower(req))) {
-			return true
-		}
 
 		if (!ownerOnly && me?.username && Array.isArray(doc.collaborators) && doc.collaborators.some((c) => c.username === me.username)) {
 			return true
@@ -845,7 +848,7 @@ router.post('/api/projects/:id/duplicate', express.json(), async (req, res) => {
 })
 
 //Asset routes check the project's owner too. One lookup each, it's not a hot path
-const projectFor = async (req, res) => {
+const projectFor = async (req, res, opts) => {
 	let {id, assetId} = req.params
 
 	if (!validID(id) || (assetId !== undefined && !validID(assetId))) {
@@ -860,7 +863,7 @@ const projectFor = async (req, res) => {
 		return null
 	}
 
-	return mayChange(req, res, doc) ? doc : null
+	return mayChange(req, res, doc, opts) ? doc : null
 }
 
 //How live a project is, for the warnings before deleting it or turning its link off: whether the share link (which is
@@ -3097,7 +3100,7 @@ router.get('/api/projects/:id/results', async (req, res) => {
 
 	let rows = await userData.find({project: doc._id}, {projection: {variables: 0}}).sort({updated: -1}).limit(5000).toArray()
 
-	res.json({...learner.summarise(rows), truncated: rows.length >= 5000, shared: !!doc.share?.token})
+	res.json({...learner.summarise(rows), truncated: rows.length >= 5000, shared: !!doc.share?.token, mayClear: ownsOrPower(req, doc)})
 })
 
 //What learners did in the project (the records its learner page sent to the suite's analytics), as counts: artboard
@@ -3143,8 +3146,9 @@ router.get('/api/analytics/usage', async (req, res) => {
 })
 
 //Start the results afresh (a test run that left records behind, or a new intake)
+//Wiping every learner's record is the owner's call (or a power user's), not a collaborator's
 router.delete('/api/projects/:id/results', async (req, res) => {
-	let doc = await projectFor(req, res)
+	let doc = await projectFor(req, res, {ownerOnly: true})
 
 	if (!doc) {
 		return

@@ -370,6 +370,8 @@ export interface Results {
   truncated: boolean;
   /** The project has a share link on (results are only collected through one). */
   shared: boolean;
+  /** Whether this person may clear them: the owner or a power user, never a collaborator. */
+  mayClear?: boolean;
 }
 
 export const getResults = (projectId: string) => call<Results>(`projects/${encodeURIComponent(projectId)}/results`);

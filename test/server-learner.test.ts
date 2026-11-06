@@ -277,6 +277,16 @@ describe('results for the owner', () => {
     expect((await h.call('GET', '/api/projects/prnothere01/results', { user: ann })).status).toBe(404);
   });
 
+  it('lets only the owner (or a power user) clear results, not a collaborator', async () => {
+    expect((await h.call('POST', '/api/projects/prlearn001/collaborators', { user: ann, json: { username: 'bob' } })).status).toBe(200);
+    expect((await h.call('GET', '/api/projects/prlearn001/results', { user: ann })).json.mayClear).toBe(true);
+    expect((await h.call('GET', '/api/projects/prlearn001/results', { user: bob })).json.mayClear).toBe(false);
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('DELETE', '/api/projects/prlearn001/results', { user: bob })).status).toBe(403);
+    expect((await h.call('DELETE', '/api/projects/prlearn001/results', { user: { username: 'pat', power: true } })).status).toBe(200);
+    process.env.SUITE_SESSION_ENFORCE = '';
+  });
+
   it('clears the records on request, and with the project', async () => {
     expect((await h.call('DELETE', '/api/projects/prlearn001/results', { user: ann })).json).toEqual({ ok: true, deleted: 3 });
     expect(records()).toHaveLength(0);
