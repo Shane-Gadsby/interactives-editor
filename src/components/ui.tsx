@@ -4,7 +4,7 @@ import { formatColor, isTokenRef, parseColor, type Project } from 'interactives-
 import { HelpLink } from '../help/Help';
 import { paletteTip, usePalette } from '../lib/palette';
 import { Icons } from './icons';
-import { TokensTab, TokenValues, linked, useThemeState } from './TokenPicker';
+import { TokensTab, TokenValues, linked, useBrandLocked, useThemeState } from './TokenPicker';
 import { FIELD_TIPS } from './tips';
 
 /** An explicit title, or the standard explanation for a field label. */
@@ -314,8 +314,10 @@ export function CheckField({ label, value, onChange, title, disabled }: { label:
  * Renders nothing when the palette stylesheet didn't load, so the picker is just the picker.
  * `onPick` gets a plain colour value; nothing refers back to the stylesheet.
  */
-export function PaletteButton({ value, onPick, tokenTab }: { value: string; onPick: (v: string) => void; tokenTab?: { ts: { project: Project; canvasTheme: string | null }; onToken: (ref: string) => void } }) {
-  const groups = usePalette();
+export function PaletteButton({ value, onPick, tokenTab, tokensOnly = false }: { value: string; onPick: (v: string) => void; tokenTab?: { ts: { project: Project; canvasTheme: string | null }; onToken: (ref: string) => void }; tokensOnly?: boolean }) {
+  // A branded project's picker is its tokens and nothing else
+  const palette = usePalette();
+  const groups = tokensOnly ? [] : palette;
   const [open, setOpen] = useState(false);
   // The picker has two tabs when layers can follow theme tokens: the palette, and the project's tokens
   const [tab, setTab] = useState<'palette' | 'tokens'>(() => (tokenTab && (!groups.length || isTokenRef(value)) ? 'tokens' : 'palette'));
@@ -428,13 +430,16 @@ export function PaletteButton({ value, onPick, tokenTab }: { value: string; onPi
 export function ColorField({ label, value, onChange, onCommit, title, tokens = false }: { label?: ReactNode; value: string; onChange: (v: string) => void; onCommit?: () => void; title?: string; tokens?: boolean }) {
   // With `tokens` the picker has a Tokens tab, and a colour that says `token:<id>` shows as a named chip that follows the theme
   const ts = useThemeState();
-  const link = tokens ? linked(ts, value) : null;
+  // A layer colour in a branded starter project (lock on) takes theme tokens only: no hex box, no native picker, no palette, no detaching
+  const lockOn = useBrandLocked();
+  const locked = lockOn && tokens;
+  const link = tokens || locked ? linked(ts, value) : null;
   const rgba = parseColor(link ? link.shown : value) ?? [0, 0, 0, 1];
   const hex = formatColor([rgba[0], rgba[1], rgba[2], 1]);
   const alpha = Math.round(rgba[3] * 100);
   const [text, setText] = useState(value);
   useEffect(() => setText(value), [value]);
-  const tokenTab = tokens && ts ? { ts, onToken: (ref: string) => (onChange(ref), onCommit?.()) } : undefined;
+  const tokenTab = (tokens || locked) && ts ? { ts, onToken: (ref: string) => (onChange(ref), onCommit?.()) } : undefined;
   if (link) {
     return (
       <div className="field color-field linked">
@@ -446,10 +451,11 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
         <span className="swatch linked" style={{ background: link.shown }} title={link.token ? `Follows ${link.token.name}: changes with the theme` : 'Follows a token that no longer exists'}>
           <Icons.link width={9} height={9} />
         </span>
-        <PaletteButton value={value} onPick={(v) => (onChange(v), onCommit?.())} tokenTab={tokenTab} />
+        <PaletteButton value={value} onPick={(v) => (onChange(v), onCommit?.())} tokenTab={tokenTab} tokensOnly={locked} />
         <span className={`token-chip${link.token ? '' : ' missing'}`} title={link.token ? `Follows the token ${link.token.name}. Edit its colours in the Themes panel` : 'This token was deleted. Detach it to keep the colour'}>
           <span className="token-chip-name">{link.token?.name ?? 'missing token'}</span>
           {link.token && ts && <TokenValues project={ts.project} token={link.token} />}
+          {!locked && (
           <button
             type="button"
             className="token-detach"
@@ -462,7 +468,22 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
           >
             <Icons.close width={9} height={9} />
           </button>
+          )}
         </span>
+      </div>
+    );
+  }
+  if (locked && tokenTab) {
+    return (
+      <div className="field color-field linked">
+        {label !== undefined && (
+          <span className="field-label" title={tipFor(label, title)}>
+            {label}
+          </span>
+        )}
+        <span className="swatch" style={{ background: value }} title="Not a theme colour. Pick one from the Tokens tab" />
+        <PaletteButton value={value} onPick={() => undefined} tokenTab={tokenTab} tokensOnly />
+        <span className="muted small">Theme colours only</span>
       </div>
     );
   }

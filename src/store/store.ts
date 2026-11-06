@@ -35,6 +35,7 @@ import {
 import { applyRuns, nodePropsToRunStyle } from '../lib/rich-text';
 import { lockViolation, unlinkStyleRef } from '../lib/libraries';
 import { clampBrandInstances, hasBrandArtboards } from '../lib/brand';
+import { brandLookViolation, isBrandLocked, snapToBrand } from '../lib/branded/lock';
 import { addModifier, applyPreset, removeModifier, type TextPresetId } from '../lib/text-modifiers';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths, remapPointTracks, shapeToPaths } from '../lib/path-edit';
@@ -317,9 +318,10 @@ export class EditorStore {
 
   /**
    * Change the document. Consecutive changes with the same `coalesce` key
-   * within a second (e.g. a drag) become one undo step.
+   * within a second (e.g. a drag) become one undo step. `library` is for library operations and `brand` for the editor's own
+   * changes to a branded project's chrome (the learner colourway switcher); both skip the lock that guards them.
    */
-  update(recipe: (draft: Draft<Project>) => void, opts: { coalesce?: string; library?: boolean } = {}): void {
+  update(recipe: (draft: Draft<Project>) => void, opts: { coalesce?: string; library?: boolean; brand?: boolean } = {}): void {
     const before = this.state.project;
     // Artboards that came from a library are read-only: a change that touches one (other than moving or renaming it)
     // is refused. Library operations (insert, update, detach) say so with `library: true`. A brand kit's copies are
@@ -341,6 +343,22 @@ export class EditorStore {
       }
       // Instances of brand kit artboards keep the kit's proportions and size range
       if (!override && hasBrandArtboards(edited)) edited = clampBrandInstances(before, edited);
+    }
+    // A project made from a branded starter pack keeps its brand layers, theme colours and font (branded/lock.ts), until the override
+    if (!opts.library && !opts.brand && !this.state.brandOverride && isBrandLocked(before)) {
+      edited ??= produce(before, (d) => {
+        recipe(d);
+      });
+      const why = brandLookViolation(before, edited);
+      if (why) {
+        const now = Date.now();
+        if (now - this.lastLockToast > 1500) {
+          this.lastLockToast = now;
+          this.toast(why, 'error');
+        }
+        return;
+      }
+      edited = snapToBrand(before, edited);
     }
     // Auto-layout frames re-position their children after every change, in the same undo step.
     const next = settleLayout(edited ?? produce(before, (d) => void recipe(d)), true);

@@ -9,7 +9,7 @@
  */
 import type { LookKey } from 'interactives-player';
 
-export type BrandKey = 'gradientStart' | 'gradientEnd' | 'onGradient' | 'deep' | 'onDeep' | 'accent' | 'warm' | 'logoMark' | 'logoText';
+export type BrandKey = 'gradientStart' | 'gradientEnd' | 'onGradient' | 'deep' | 'onDeep' | 'accent' | 'warm' | 'logoMark' | 'logoText' | 'logoMarkOnLight' | 'logoTextOnLight';
 
 export interface Colourway {
   id: string;
@@ -50,7 +50,7 @@ const way = (id: string, name: string, description: string, start: string, end: 
   name,
   description,
   tokens: { primary: button, button, onButton, focus: accent === GOLD ? '#fb9400' : button, onPrimary: onButton },
-  brand: { gradientStart: start, gradientEnd: end, onGradient, deep: PURPLE, onDeep: WHITE, accent, warm: PEACH, logoMark, logoText },
+  brand: { gradientStart: start, gradientEnd: end, onGradient, deep: PURPLE, onDeep: WHITE, accent, warm: PEACH, logoMark, logoText, logoMarkOnLight: GOLD, logoTextOnLight: PURPLE },
 });
 
 /** In the order the picker shows them. The first is the default. */
@@ -69,7 +69,7 @@ export const HIGH_CONTRAST: Colourway = {
   name: 'High contrast',
   description: 'Black and white with gold, for viewers who ask for more contrast.',
   tokens: { background: '#000000', surface: '#000000', surfaceMuted: '#1e1e1e', text: WHITE, muted: WHITE, border: WHITE, divider: WHITE, primary: GOLD, button: GOLD, onButton: '#000000', onPrimary: '#000000', focus: WHITE, link: '#9fd1ff' },
-  brand: { gradientStart: '#000000', gradientEnd: '#000000', onGradient: WHITE, deep: '#000000', onDeep: WHITE, accent: GOLD, warm: '#000000', logoMark: GOLD, logoText: WHITE },
+  brand: { gradientStart: '#000000', gradientEnd: '#000000', onGradient: WHITE, deep: '#000000', onDeep: WHITE, accent: GOLD, warm: '#000000', logoMark: GOLD, logoText: WHITE, logoMarkOnLight: GOLD, logoTextOnLight: WHITE },
 };
 
 export const colourwayById = (id: string): Colourway | undefined => [...COLOURWAYS, HIGH_CONTRAST].find((c) => c.id === id);

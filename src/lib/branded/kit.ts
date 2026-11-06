@@ -9,7 +9,9 @@
  * and a checklist. Layers made by `chrome(...)` (the logo, sweeps, bars, footer line) are the brand: they're locked in
  * branded projects (./lock.ts).
  */
-import { createArtboard, createNode, createProject, uid, type Artboard, type LogicEdge, type LogicNode, type LookKey, type Paint, type Project, type SceneNode, type TemplateChecklistItem, type TextNode, type ThemeDef } from 'interactives-player';
+import { createArtboard, createNode, createProject, uid, type Artboard, type LogicEdge, type LogicNode, type LookKey, type Paint, type PathNode, type Project, type SceneNode, type TemplateChecklistItem, type TextNode, type ThemeDef } from 'interactives-player';
+import logoOnWhite from './assets/unisq-logo-on-white.svg?raw';
+import { importSvg } from '../svg-import';
 import { starterThemes } from '../themes';
 import { BRAND_FONT, COLOURWAYS, CONTENT_TOKENS, HIGH_CONTRAST, type BrandKey, type Colourway } from './looks';
 
@@ -62,6 +64,8 @@ const BRAND_TOKEN_NAMES: Record<BrandKey, string> = {
   warm: 'brand/warm',
   logoMark: 'brand/logo-mark',
   logoText: 'brand/logo-text',
+  logoMarkOnLight: 'brand/logo-mark-on-light',
+  logoTextOnLight: 'brand/logo-text-on-light',
 };
 
 const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
@@ -117,16 +121,67 @@ export function sweeps(ctx: BrandedCtx, ab: Artboard): SceneNode[] {
   return [a, b];
 }
 
+//The logo files come from the university's own PowerPoint templates and this is the university's own tool, so they are used as they are (first party artwork, no third party licence in the way). White is the one with the mark and the words in separate colours, so it is the one we cut up.
+const LOGO_SOURCE = logoOnWhite;
+let logoParts: { nodes: PathNode[]; width: number; height: number } | null = null;
+
+//The files' two colours: the gold mark and the purple words. Anything else in a file counts as words
+const MARK_FILL = '#ffb448';
+
+function logoShapes() {
+  if (logoParts) return logoParts;
+  const svg = importSvg(LOGO_SOURCE);
+  const nodes = svg.nodes.filter((n): n is PathNode => n.type === 'path');
+  //Trim to the artwork itself, the files carry a margin
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const n of nodes) {
+    x0 = Math.min(x0, n.x);
+    y0 = Math.min(y0, n.y);
+    x1 = Math.max(x1, n.x + n.width);
+    y1 = Math.max(y1, n.y + n.height);
+  }
+  logoParts = { nodes: nodes.map((n) => ({ ...n, x: n.x - x0, y: n.y - y0 })), width: x1 - x0, height: y1 - y0 };
+  return logoParts;
+}
+
+//One decimal is plenty at logo sizes and keeps a page that carries the wordmark light
+const round1 = (v: number) => Math.round(v * 10) / 10;
+const scaleHandle = (h: { x: number; y: number } | null | undefined, s: number) => (h && (Math.abs(h.x * s) >= 0.05 || Math.abs(h.y * s) >= 0.05) ? { x: round1(h.x * s), y: round1(h.y * s) } : undefined);
+
 /**
- * The logo, top left on hero pages and bottom left on content pages. A stand-in (a mark and the university's name in the
- * logo colours) until the vector logo from the brand files replaces it in this one function; it is always a group named
- * "UniSQ logo", chrome, `width` wide, coloured by the logo tokens so it follows the colourway.
+ * The UniSQ logo from the brand files, as vector path layers (the mark and the wordmark), top left on hero pages and bottom
+ * left on content pages. A chrome group named "UniSQ logo", `width` wide, painted with tokens: the mark and the words each
+ * have their own (`logoMark`/`logoText` on the gradient and deep pages, the on-light pair on white content pages) so it follows
+ * the colourway (`onContent`: true on white, 'deep' on the purple section pages). Role image with an accessible name.
  */
-export function logo(ctx: BrandedCtx, x: number, y: number, width = 150, onContent = false): SceneNode {
-  const s = width / 150;
-  const mark = createNode('rect', { name: 'Logo mark', x: 0, y: 0, width: 34 * s, height: 40 * s, cornerRadius: 6 * s, fill: { type: 'solid', color: onContent ? ctx.L.accent : ctx.L.logoMark } });
-  const words = createNode('text', { name: 'Logo words', text: 'University of\nSouthern\nQueensland', x: 42 * s, y: 0, width: 108 * s, fontSize: 11 * s, lineHeight: 1.15, fontWeight: 700, color: onContent ? ctx.L.deep : ctx.L.logoText, fontFamily: BRAND_FONT } as Partial<TextNode>);
-  return chrome(createNode('group', { name: 'UniSQ logo', x, y, width, height: 42 * s, children: [mark, words], role: 'image', ariaLabel: 'University of Southern Queensland' } as unknown as Partial<SceneNode>));
+export function logo(ctx: BrandedCtx, x: number, y: number, width = 150, onContent: boolean | 'deep' = false): SceneNode {
+  const parts = logoShapes();
+  const s = width / parts.width;
+  //Gold mark on white or on the deep purple, the words purple on white and white on the purple
+  const mark = onContent ? ctx.L.logoMarkOnLight : ctx.L.logoMark;
+  const words = onContent === 'deep' ? ctx.L.onDeep : onContent ? ctx.L.logoTextOnLight : ctx.L.logoText;
+  const children = parts.nodes.map((n, i) => {
+    const color = n.fill?.type === 'solid' && n.fill.color.toLowerCase() === MARK_FILL ? mark : words;
+    return createNode('path', {
+      name: color === mark ? `Logo mark ${i}` : 'Logo words',
+      x: round1(n.x * s),
+      y: round1(n.y * s),
+      width: Math.max(0.01, round1(n.width * s)),
+      height: Math.max(0.01, round1(n.height * s)),
+      fill: { type: 'solid', color },
+      stroke: null,
+      fillRule: n.fillRule,
+      paths: n.paths.map((sp) => ({
+        closed: sp.closed,
+        points: sp.points.map((p) => {
+          const hin = scaleHandle(p.in, s);
+          const hout = scaleHandle(p.out, s);
+          return { x: round1(p.x * s), y: round1(p.y * s), ...(hin ? { in: hin } : {}), ...(hout ? { out: hout } : {}) };
+        }),
+      })),
+    });
+  });
+  return chrome(createNode('group', { name: 'UniSQ logo', x, y, width, height: round1(parts.height * s), children, role: 'image', ariaLabel: 'University of Southern Queensland' } as unknown as Partial<SceneNode>));
 }
 
 /**
@@ -152,7 +207,7 @@ export function brandedPage(ctx: BrandedCtx, title: string, opts: { kind?: PageK
     ab.background = { type: 'solid', color: L.deep };
     kids.push(chrome(createNode('rect', { name: 'Brand accent', x: SIDE, y: height / 2 + 20, width: 72, height: 6, cornerRadius: 3, fill: { type: 'solid', color: L.accent } })));
     kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 60, width: width - SIDE * 2, fontSize: 44, fontWeight: 700, color: L.onDeep, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
-    kids.push(logo(ctx, SIDE, height - FOOTER - 8, 96, false));
+    kids.push(logo(ctx, SIDE, height - FOOTER - 8, 96, 'deep'));
   } else {
     ab.background = gradient(ctx);
     kids.push(...sweeps(ctx, ab));
