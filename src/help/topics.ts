@@ -1576,8 +1576,8 @@ Everyone should be able to finish the activity, so every drag has two ways that 
     id: 'question-kit',
     title: 'Questions and quizzes',
     group: 'Interactivity',
-    summary: 'Add multiple choice, true/false, fill in the blank, ordering, matching (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks.',
-    keywords: 'question quiz test assessment multiple choice true false fill blank ordering sequence matching match drag drop pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning',
+    summary: 'Add multiple choice, true/false, fill in the blank, ordering, matching (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file.',
+    keywords: 'question quiz test assessment import gift moodle converter multiple choice true false fill blank ordering sequence matching match drag drop pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning',
     body: `Quizzes without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
 
 ## Add one
@@ -1634,6 +1634,30 @@ Two finished ones to play first: **Matching question** and **Hotspot question** 
 **Hotspot.** Add question, *Hotspot (click the right place)*. The sample picture is drawn with shapes so the question works straight away: put your own image in its place (delete the shapes in the **Picture** layer, add an image, or give the Picture frame an image fill). Each **Area** in the Question section is a name, a tick for right, and a shape (rectangle, ellipse or polygon); **Edit on canvas** selects its layer so you can move, resize or reshape it with the usual tools, and **Show all areas** selects every one, since they are invisible until a learner picks one. Tick more than one area as right and the learner has to mark all of them (the areas become checkboxes, and **Part marks** score the share). Clicking an area picks it with a ring and a tint; after the question finishes the right areas are marked and *Right answer: Roof* is written under the picture, so it is not shown by colour alone. If clicks near an area should count, **Grow areas 8 px** makes every area bigger on each side (and **Shrink** the reverse). Each area can have its own feedback, said when it is the one clicked.
 
 ![A hotspot question over a drawn house: the Roof area is selected and shown with its outline.](help/question-hotspot.png)
+
+## Import questions from a GIFT file
+
+If you already have questions in Moodle, or made them with the GIFT converter from a Word document, you do not have to retype them. Open the **Add question** menu and press **Import questions from a GIFT file**, then pick the file (\`.gift\` or \`.txt\`).
+
+Each question gets an artboard of its own, named after its title if it has one and otherwise "Question 3" and so on, in rows below what is already on the canvas. An empty artboard that is open (a new project's first one) takes the first question. They are ordinary questions from then on: the **Question** section changes anything, and you restyle them like any other. The whole import is one undo. Up to 100 questions come in from one file; the report says how many were left over.
+
+| In the GIFT file | Becomes |
+|---|---|
+| One \`=\` right answer and some \`~\` wrong ones | Multiple choice (one answer) |
+| Several \`=\` answers with \`~\` ones, or \`~%50%\` style weights that are positive for the right ones | Multiple response |
+| \`{T}\`, \`{F}\`, \`{TRUE}\`, \`{FALSE}\` | True or false |
+| Only \`=\` answers (short answer) | Fill in the blank, every \`=\` answer accepted. A \`*\` in an answer matches anything |
+| \`{#3.14:0.01}\`, \`{#1..5}\` (numerical) | Fill in the blank with a margin of error |
+| \`=term -> definition\` lines | Matching (drag and drop) |
+
+The text after a \`#\` on an answer becomes that option's feedback. The text after \`####\` is added to the "Correct" message. On true or false, the two \`#\` parts are the feedback for the wrong choice and the right one. A question written as \`The capital is {=Paris ~Rome}.\` shows a gap (\`_____\`) where the answers were. Backslash escapes (\`\\~\`, \`\\=\`, \`\\#\`, \`\\{\`, \`\\}\`, \`\\:\`, \`\\n\`) work as in Moodle, comment lines starting with \`//\` are ignored, and options stay in the order of the file (turn on **Shuffle** to deal them).
+
+When it finishes, a report lists everything that did not come across, or came across changed, with the line number in the file. Nothing is dropped quietly:
+
+- **Left out**: essay questions (a person marks them), plain text with no answers (GIFT's description), more than one set of braces in a question, a question with no right answer, one that is not valid GIFT, more than 30 choices or 8 matching pairs.
+- **Changed**: part marks (a kit question is right or wrong, or scored by the share of right choices), answers worth less than full marks in a short answer, feedback on individual short answers or pairs, extra wrong matches, HTML formatting and pictures (the text is kept, plain), and maths markup, which shows as written. \`$CATEGORY\` lines are ignored.
+
+Moodle XML files are not read yet.
 
 ## Shuffle
 
