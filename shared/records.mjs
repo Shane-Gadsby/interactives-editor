@@ -388,3 +388,39 @@ export const insights = (rows, opts = {}) => {
 		daily: [...days.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([day, who]) => ({day, learners: who.size}))
 	}
 }
+
+//What the learner page tells a project about the course and the person playing, for its built-in `context` data source. It
+//lives here with the other things the learner page writes out into its script, and none of it is a record.
+//
+//Only what a project might greet or branch on goes across: the course (label, title, system) and the learner's first name,
+//the name to greet them by and whether they are a student. No username, email, id or profile link ever leaves the page, so
+//a project, its scripts and anything they record cannot hold them either. None of this goes into analytics or diagnostics.
+
+//This one is written out in the learner page too (contextFrom.toString() goes into its script), so it can't lean on anything
+//outside itself. It takes the suite session's user and activity (fetchActivity) and gives back the context, or null when
+//nobody is signed in
+export function contextFrom(user, activity) {
+	let text = (v, max) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : ''
+
+	if (!user || typeof user !== 'object' || !user.username) {
+		return null
+	}
+
+	let act = activity && typeof activity === 'object' ? activity : {},
+		first = text(user.firstName, 100),
+		full = text(user.fullName, 200),
+		label = text(act.courseLabel, 200)
+
+	return {
+		courseLabel: label,
+		courseCode: text(act.courseCode, 100) || label.split('_')[0],
+		courseName: text(act.courseTitle, 200),
+		lmsUrl: text(act.lmsURL, 200),
+		lmsName: text(act.lmsName, 200),
+		firstName: first,
+		displayName: full || [first, text(user.lastName, 100)].filter(Boolean).join(' '),
+		signedIn: true,
+		isStudent: user.isStudent === true,
+		isStaff: user.isStudent !== true
+	}
+}

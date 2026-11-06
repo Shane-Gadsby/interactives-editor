@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { PACKAGE_EXTENSION, defaultTheme, QUESTION_KINDS, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
+import { PACKAGE_EXTENSION, defaultTheme, QUESTION_KINDS, sampleContextFor, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
 import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
@@ -1106,7 +1106,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     let live = true;
     setBuildError(null);
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility }).then(
+    // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show
+    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility, context: sampleContextFor(project as Project) }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );

@@ -34,6 +34,7 @@ Interactives 0.5 is the first beta. A short tour of what is in it, newest ideas 
 
 **Learners**
 - The **learner page** (`/play/:token`, the Link for StudyDesk) remembers progress, reports score and completion, and passes on what learners do.
+- **Course and learner context**: a built-in, read-only `context` data source (course label, code, name, term, year, the learner's first and display name, signed in / student / staff) in expressions, text, the graph and `ix.context`, with editable sample values in the Data panel for the canvas and Preview, and a **Per-course values** table (course label pattern to variable values) applied at start on the Link for StudyDesk page. The learner page answers the player's `context` postMessage from `fetchActivity` (`contextFrom` in `shared/records.mjs`: never the username, email or id, never sent to analytics). The project fields are `courseValues` and `sampleContext`; the logic is the player's `context.ts`.
 - **Results and progress**, **Insights** (artboards reached, a click heat map on the canvas, steps, answers per question, your own records) and **Learner records** switches.
 
 **Questions and interactivity**

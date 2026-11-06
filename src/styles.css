@@ -3307,6 +3307,40 @@ button.twisty:hover {
 
 /* ---------------------------------------------------------------- data */
 
+.data-context {
+  padding: 8px 14px;
+  overflow-y: auto;
+  min-width: 0;
+}
+.context-block {
+  max-width: 820px;
+  margin-bottom: 18px;
+}
+.context-block h3 {
+  margin: 6px 0;
+  font-size: 13px;
+}
+.context-table td {
+  vertical-align: middle;
+}
+.course-row {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin: 8px 0;
+}
+.course-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.course-row-head > :first-child {
+  flex: 1;
+}
+.badge.ok {
+  color: var(--accent);
+}
+
 
 .data-form {
   padding: 8px 12px;

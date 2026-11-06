@@ -105,6 +105,7 @@ ix.onFrame((dt, t) => {})
 ix.pointer  // {x, y, down}
 ix.artboard // {name, width, height}
 ix.data.products     // data sources
+ix.context.firstName   // the course and learner (read only)
 await ix.loadData('products')
 ix.setCursor('grab')
 ix.log(...)`}</pre>
