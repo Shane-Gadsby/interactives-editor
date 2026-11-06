@@ -3,6 +3,8 @@ import { createNode, isContainer, nodeTypeLabel, type Artboard, type SceneNode }
 import { store, useEditor } from '../store/store';
 import { Icons, type IconName } from '../components/icons';
 import { IconButton } from '../components/ui';
+import { ContextMenu, type MenuItem } from '../components/ContextMenu';
+import { filterLayers, selectSameItems } from '../lib/layer-find';
 import { confirmDialog } from '../components/dialogs';
 import { assetKind, assetUrls } from '../lib/assets';
 import { acceptFor, insertFiles, pickFiles, replaceAssetFile } from '../lib/insert';
@@ -75,6 +77,12 @@ export function Layers() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [drop, setDrop] = useState<DropSlot | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [inText, setInText] = useState(false);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+  // While a search is on the list is the matches and the layers above them, whatever is collapsed, and nothing drags
+  const filtering = query.trim() !== '';
+  const found = useMemo(() => filterLayers(s.project.artboards, query, inText), [s.project.artboards, query, inText]);
 
   const toggle = (id: string) => {
     const next = new Set(collapsed);
@@ -149,12 +157,28 @@ export function Layers() {
         if (isContainer(n) && !collapsed.has(n.id)) add(ab, n.children, depth + 1, n);
       }
     };
+    // A search keeps the hits and the groups they sit in, even inside a collapsed group
+    const addFound = (ab: Artboard, list: SceneNode[], depth: number, parent: SceneNode | null = null) => {
+      for (let i = list.length - 1; i >= 0; i--) {
+        const n = list[i];
+        if (!found.keep.has(n.id)) continue;
+        out.push({ kind: 'node', ab, n, depth, parent });
+        if (isContainer(n)) addFound(ab, n.children, depth + 1, n);
+      }
+    };
     for (const ab of orderedArtboards(s.project.artboards)) {
+      if (filtering) {
+        const below = ab.children.some((n) => found.keep.has(n.id));
+        if (!below && !found.artboards.has(ab.id)) continue;
+        out.push({ kind: 'artboard', ab });
+        addFound(ab, ab.children, 1);
+        continue;
+      }
       out.push({ kind: 'artboard', ab });
       if (!collapsed.has(ab.id)) add(ab, ab.children, 1);
     }
     return out;
-  }, [s.project.artboards, collapsed]);
+  }, [s.project.artboards, collapsed, filtering, found]);
   const activeRows = useMemo(() => {
     const ab = s.project.artboards.find((a) => a.id === s.activeArtboardId);
     return ab ? dropRows(ab, collapsed) : [];
@@ -190,7 +214,7 @@ export function Layers() {
 
   const artboardRow = (ab: Artboard) => {
     const active = ab.id === s.activeArtboardId;
-    const open = !collapsed.has(ab.id);
+    const open = filtering || !collapsed.has(ab.id);
     return (
       <div
         key={`ab-${ab.id}`}
@@ -201,16 +225,20 @@ export function Layers() {
           store().set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? store().get().activeTimelineId : null });
         }}
       >
-        <button
-          className="twisty"
-          title={open ? 'Collapse' : 'Expand'}
-          onClick={(e) => {
-            e.stopPropagation();
-            toggle(ab.id);
-          }}
-        >
-          {open ? <Icons.chevronDown width={12} /> : <Icons.chevronRight width={12} />}
-        </button>
+        {filtering ? (
+          <span className="twisty" />
+        ) : (
+          <button
+            className="twisty"
+            title={open ? 'Collapse' : 'Expand'}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggle(ab.id);
+            }}
+          >
+            {open ? <Icons.chevronDown width={12} /> : <Icons.chevronRight width={12} />}
+          </button>
+        )}
         <Icons.artboard width={14} height={14} />
         <span className="layer-name">{ab.name}</span>
         {s.project.settings.startArtboardId === ab.id && <span className="badge">start</span>}
@@ -260,15 +288,21 @@ export function Layers() {
     const shown = n.visible && !soloHidden;
     const selected = s.selection.includes(n.id) && ab.id === s.activeArtboardId;
     const container = isContainer(n);
-    const open = container && !collapsed.has(n.id);
+    const open = container && (filtering || !collapsed.has(n.id));
     const Icon = Icons[TYPE_ICON[n.type] ?? 'rect'];
     const dropClass = `${drop?.row !== undefined && activeRows[drop.row]?.n.id === n.id && ab.id === s.activeArtboardId ? ' drop-inside' : ''}${dragId === n.id ? ' dragging' : ''}`;
     return (
       <div
         key={n.id}
-        className={`layer-row${selected ? ' selected' : ''}${shown ? '' : ' hidden-layer'}${dropClass}`}
+        className={`layer-row${selected ? ' selected' : ''}${shown ? '' : ' hidden-layer'}${filtering && !found.hits.has(n.id) ? ' not-a-hit' : ''}${dropClass}`}
         style={{ paddingLeft: 8 + depth * 14 }}
-        draggable={renaming !== n.id}
+        draggable={renaming !== n.id && !filtering}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          const st = store().get();
+          if (!(st.activeArtboardId === ab.id && st.selection.includes(n.id))) store().select([n.id], { artboardId: ab.id });
+          setMenu({ x: e.clientX, y: e.clientY, items: [{ heading: n.name }, ...selectSameItems(ab, n)] });
+        }}
         onDragStart={(e) => {
           setDragId(n.id);
           e.dataTransfer.effectAllowed = 'move';
@@ -284,7 +318,7 @@ export function Layers() {
         }}
         onDoubleClick={() => setRenaming(n.id)}
       >
-        {container ? (
+        {container && !filtering ? (
           <button
             className="twisty"
             title={open ? 'Collapse' : 'Expand'}
@@ -357,7 +391,38 @@ export function Layers() {
     );
   };
 
+  const hitCount = found.hits.size + found.artboards.size;
   return (
+    <>
+    <div className="layers-search">
+      <input
+        type="search"
+        value={query}
+        placeholder="Filter layers"
+        aria-label="Filter layers by name"
+        title="Show only the layers whose name has these letters, with the groups they sit in. Esc clears it"
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && query) {
+            e.stopPropagation();
+            setQuery('');
+          }
+        }}
+      />
+      <button
+        className={`layers-search-text${inText ? ' on' : ''}`}
+        aria-pressed={inText}
+        title={inText ? 'Matching names and the words in text layers and buttons. Click to match names only' : 'Also match the words in text layers and buttons'}
+        onClick={() => setInText(!inText)}
+      >
+        Text
+      </button>
+    </div>
+    {filtering && (
+      <div className="layers-search-count" role="status">
+        {hitCount === 0 ? 'No layers match' : `${hitCount} ${hitCount === 1 ? 'match' : 'matches'}`}
+      </div>
+    )}
     <div className="layers" ref={scroller} onDragOver={onListDragOver} onDrop={onListDrop} onDragLeave={onListDragLeave}>
       {drop && drop.gap >= 0 && (
         <div className="drop-line" style={{ top: 4 + (flat.findIndex((r) => r.kind === 'artboard' && r.ab.id === s.activeArtboardId) + 1 + drop.gap) * ROW_H - 1, left: ROW_PAD + drop.depth * INDENT - 4 }} aria-hidden="true" />
@@ -382,6 +447,8 @@ export function Layers() {
         + Import file as artboard
       </button>
     </div>
+    {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
+    </>
   );
 }
 

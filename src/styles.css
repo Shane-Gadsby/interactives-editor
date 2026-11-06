@@ -7924,3 +7924,37 @@ code {
 .bin-view .project-thumb {
   cursor: default;
 }
+
+/* Layers: the filter box over the list, and the rows it keeps only for their place in the tree */
+.layers-search {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px 2px;
+}
+.layers-search input {
+  flex: 1;
+  min-width: 0;
+}
+.layers-search-text {
+  flex: none;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.layers-search-text.on {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--text);
+  border-color: var(--accent);
+}
+.layers-search-count {
+  padding: 2px 10px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.layer-row.not-a-hit .layer-name {
+  opacity: 0.55;
+}

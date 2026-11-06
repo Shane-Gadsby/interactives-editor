@@ -494,6 +494,8 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 - Drag a row to reorder. A line shows where the layer will land, and how far it is indented shows which list it joins. Over the top or bottom third of a row the layer goes before or after it. Over the middle of a group or frame row the group is outlined and the layer goes inside it, at the front.
 - Where a group ends, move the pointer left to drop the layer under the group instead of inside it: the line steps out one level for each step left. The empty space under the last row is the end of the list, so you can always drop at the very bottom without landing in a group that happens to be last. Drop on the artboard's own row to bring the layer to the top level, in front.
 - From the keyboard, select one layer and press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Down</kbd> to step it past a neighbour (and out of its group at the end), <kbd>Alt</kbd>+<kbd>Right</kbd> to put it inside the group just above it and <kbd>Alt</kbd>+<kbd>Left</kbd> to take it out, under that group.
+- Type in **Filter layers** above the list to show only the layers whose name has those letters. The groups and artboards they sit in stay, faded, so you can see where each one is, and a collapsed group doesn't hide a match. Press **Text** beside the box to match the words in text layers, buttons and links as well, rich text included. <kbd>Esc</kbd> clears the box. While a filter is on, the rows can't be dragged.
+- Right-click a layer for **Select same fill** and **Select same font**. They select every unlocked layer on the same artboard with that fill (any of a layer's fills counts, and a text layer's colour counts as a fill) or set in that font (a rich-text run in it counts). Then change them all at once in the Inspector. To change a colour or font across the whole project, use the named colour and text styles in [Libraries](libraries#styles) instead: layers that follow a style change with it.
 - **+ Add artboard** and **+ Import file as artboard** are at the bottom. See [Artboards](artboards) and [Importing](import).
 
 ## Hide and lock
@@ -526,7 +528,7 @@ Select layers and drag them on the canvas. If you let go over a **different artb
 - Interactions in the old artboard that used them will need fixing. The [Usage](usage) tab's **Broken** list shows exactly which.
 
 ## Right-click menus
-- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Add interaction** (**On click…**, **On hover…**) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
+- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**On click…**, **On hover…**) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
 - **An artboard**: **New** (a menu of layers to add where you clicked), **Paste**, **Make start artboard**, **Duplicate artboard**, **Zoom to artboard** and **Delete artboard**.
 - **Empty canvas**: **New artboard here**, **Paste**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`,
   },
