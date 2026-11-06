@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Audit log** (`lti-interactives.audit`, append only, one `audit()` helper): share link on/updated/reverted/off, review link on/off, collaborator added/removed, results cleared, project binned/restored/purged, owner changed; who did it and whether as a power user. `GET /api/audit` (power users; `?project=`, `?event=`).
+
 - **LTI 1.3** (`lti13.js`, `docs/lti-1-3.md`): OIDC login, launch with full id_token checks (RS256 only, no alg:none/HMAC/jku), the tool's JWKS with key rotation, resource-link launches onto a project's learner page with the learner filed as `lti:<platform>:<sub>`, and Deep Linking 2.0 with a picker of the staff member's own shared projects. Platforms and staff links managed by power users through `/api/lti13` or `LTI13_PLATFORMS`. No grade passback yet. Needs `INTERACTIVES_PUBLIC_URL` on test and prod, and three indexes in suite-libs.
 
 - **`/interactives/health`** (no session): mongo and storage checks with timings, version, uptime, open rooms; 503 when either fails. The server's `version` now comes from package.json (it said 0.1.0, which is what version-reporting recorded).

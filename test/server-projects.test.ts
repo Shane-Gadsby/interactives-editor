@@ -621,3 +621,22 @@ describe('share link revert', () => {
     expect(fs.existsSync(path.join(h.storage, 'shares', `${first.token}.prev.html`))).toBe(false);
   });
 });
+
+describe('audit log', () => {
+  it('records governance events, and only power users read it', async () => {
+    h.db.audit.docs = [];
+    await put('praud00001', project('praud00001'));
+    await h.call('PUT', '/api/projects/praud00001/share', { user: ann, body: '<html></html>', type: 'text/plain' });
+    await h.call('POST', '/api/projects/praud00001/collaborators', { user: ann, json: { username: 'bob' } });
+    await h.call('POST', '/api/projects/praud00001/owner', { user: pat, json: { username: 'bob' } });
+    await h.call('DELETE', '/api/projects/praud00001/share', { user: bob });
+    await h.call('DELETE', '/api/projects/praud00001', { user: bob });
+    await vi.waitFor(() => expect(h.db.audit.docs).toHaveLength(5));
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('GET', '/api/audit', { user: ann })).status).toBe(403);
+    process.env.SUITE_SESSION_ENFORCE = '';
+    const log = (await h.call('GET', '/api/audit?project=praud00001', { user: pat })).json;
+    expect(log.map((e: { event: string }) => e.event)).toEqual(['project-binned', 'share-off', 'owner-changed', 'collaborator-added', 'share-on']);
+    expect(log.find((e: { event: string }) => e.event === 'owner-changed')).toMatchObject({ by: { username: 'pat' }, power: true, detail: { from: 'ann', to: 'bob' } });
+  });
+});

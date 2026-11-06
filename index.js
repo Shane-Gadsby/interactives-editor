@@ -79,6 +79,7 @@ let port = Number(process.env.PORT) || 3048,
 	commentNotices,
 	docChunks,
 	projectsBin,
+	auditLog,
 
 	//A whole-document save. Documents too big for one mongo record are split (shared/docstore.mjs), so this is
 	//the real ceiling now
@@ -693,6 +694,15 @@ router.patch('/api/projects/:id/meta', express.json({limit: '16kb'}), async (req
 	res.json(metaOf({...existing, ...set}))
 })
 
+//Governance events, for power users to look back on: who turned a link on or off, changed who's invited, cleared
+//results, deleted or restored a project or handed it on. Append only, one helper, and a failure to write it never
+//fails the action it's about
+const audit = (req, event, project, detail = {}) => {
+	let me = whoIs(req)
+	auditLog.insertOne({_id: revisionID(), at: new Date(), event, project: project?._id ?? project ?? null, projectName: project?.name ?? null, by: me ? {username: me.username, name: me.name} : null, power: isPower(req) && !(me && project?.owner?.username === me.username), detail})
+		.catch((err) => console.trace(`${appName}: audit ${event} not written`, err))
+}
+
 //Moving a file or folder that may not be there. rename can't cross filesystems (storage/ is a symlink on test and
 //prod, but _bin sits inside it, so it never has to)
 const moveIfThere = async (from, to) => {
@@ -758,6 +768,7 @@ router.delete('/api/projects/:id', async (req, res) => {
 	await moveIfThere(thumbFile(id), path.join(binDir(id), 'thumb.jpg'))
 	hubEnd(id)
 	await projects.deleteOne({_id: id})
+	audit(req, 'project-binned', existing)
 
 	if (room) {
 		broadcast(room, 'deleted', {})
@@ -790,6 +801,18 @@ const sweepBin = async () => {
 	}
 	return old.length
 }
+
+//The audit log, power users only: newest first, by project if asked (?project=), at most 500
+router.get('/api/audit', async (req, res) => {
+	if (!isPower(req)) {
+		return res.status(403).json({error: 'Only power users can read the audit log'})
+	}
+	let filter = {}
+	if (typeof req.query.project === 'string' && validID(req.query.project)) filter.project = req.query.project
+	if (typeof req.query.event === 'string' && /^[a-z-]{2,40}$/.test(req.query.event)) filter.event = req.query.event
+	let limit = Math.min(500, Math.max(1, Number(req.query.limit) || 200))
+	res.json(await auditLog.find(filter, {projection: {_id: 0}}).sort({at: -1}).limit(limit).toArray())
+})
 
 //Your bin (power users with ?all=1: everyone's). Card details only, no documents
 router.get('/api/bin', async (req, res) => {
@@ -843,6 +866,7 @@ router.post('/api/bin/:id/restore', async (req, res) => {
 	await moveIfThere(path.join(binDir(id), 'thumb.jpg'), thumbFile(id))
 	await projects.insertOne(back)
 	await projectsBin.deleteOne({_id: id})
+	audit(req, 'project-restored', back)
 	await fs.promises.rm(binDir(id), {recursive: true, force: true})
 
 	res.json({ok: true, id})
@@ -865,6 +889,7 @@ router.delete('/api/bin/:id', async (req, res) => {
 		return
 	}
 	await purgeProject(row)
+	audit(req, 'project-purged', row)
 	res.json({ok: true})
 })
 
@@ -1631,6 +1656,7 @@ router.post('/api/projects/:id/collaborators', express.json({limit: '4kb'}), asy
 	if (!list.some((c) => c.username === username)) {
 		list = [...list, {username, name: name || null, added: new Date(), by: whoIs(req)?.username ?? null}]
 		await projects.updateOne({_id: id}, {$set: {collaborators: list}})
+		audit(req, 'collaborator-added', doc, {username})
 	}
 
 	res.json({collaborators: list})
@@ -1655,6 +1681,7 @@ router.delete('/api/projects/:id/collaborators/:username', async (req, res) => {
 	let list = (Array.isArray(doc.collaborators) ? doc.collaborators : []).filter((c) => c.username !== req.params.username)
 
 	await projects.updateOne({_id: id}, {$set: {collaborators: list}})
+	audit(req, 'collaborator-removed', doc, {username: String(req.params.username).slice(0, 80), left: !!leaving})
 	res.json({collaborators: list})
 })
 
@@ -1698,6 +1725,7 @@ router.post('/api/projects/:id/owner', express.json({limit: '4kb'}), async (req,
 
 	let room = rooms.get(id)
 	if (room) room.owner = owner
+	audit(req, 'owner-changed', doc, {from: old?.username || null, to: username})
 
 	res.json({owner, collaborators})
 })
@@ -1745,6 +1773,7 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 	}
 	await fs.promises.writeFile(shareFile(token), req.body)
 	await projects.updateOne({_id: id}, {$set: {share}})
+	audit(req, doc.share?.token ? 'share-updated' : 'share-on', doc)
 	res.json({share})
 })
 
@@ -1771,6 +1800,7 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 
 	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null}, reverted: {at: new Date(), by: whoIs(req)}}
 	await projects.updateOne({_id: id}, {$set: {share}})
+	audit(req, 'share-reverted', doc)
 	res.json({share})
 })
 
@@ -1789,6 +1819,7 @@ router.delete('/api/projects/:id/share', async (req, res) => {
 	if (doc.share?.token) {
 		await fs.promises.rm(shareFile(doc.share.token), {force: true})
 		await fs.promises.rm(sharePrevFile(doc.share.token), {force: true})
+		audit(req, 'share-off', doc)
 	}
 	await projects.updateOne({_id: id}, {$unset: {share: ''}})
 	res.json({ok: true})
@@ -2890,6 +2921,7 @@ router.put('/api/projects/:id/review', express.json({limit: '1kb'}), async (req,
 	let review = {token: doc.review?.token || crypto.randomBytes(18).toString('base64url'), guests: !!req.body.guests, created: doc.review?.created || new Date(), updated: new Date(), by: whoIs(req)}
 
 	await projects.updateOne({_id: doc._id}, {$set: {review}})
+	audit(req, doc.review?.token ? 'review-updated' : 'review-on', doc, {guests: review.guests})
 	res.json({review})
 })
 
@@ -2902,6 +2934,7 @@ router.delete('/api/projects/:id/review', async (req, res) => {
 	}
 
 	await projects.updateOne({_id: doc._id}, {$unset: {review: ''}})
+	if (doc.review?.token) audit(req, 'review-off', doc)
 
 	if (doc.review?.token) {
 		hubEnd(doc._id, doc.review.token)
@@ -3607,6 +3640,7 @@ router.delete('/api/projects/:id/results', async (req, res) => {
 	}
 
 	let result = await userData.deleteMany({project: doc._id})
+	audit(req, 'results-cleared', doc, {records: result.deletedCount})
 
 	res.json({ok: true, deleted: result.deletedCount})
 })
@@ -3808,6 +3842,7 @@ client.connect()
 		commentNotices = db.collection('comment-notices')
 		docChunks = db.collection('doc-chunks')
 		projectsBin = db.collection('projects-bin')
+		auditLog = db.collection('audit')
 		userData = analyticsDB.collection('interactives-user-data')
 		activityData = analyticsDB.collection('interactives-activity-user-data')
 		ingest = analyticsDB.collection('ingest')
