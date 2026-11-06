@@ -41,8 +41,10 @@ export function docStore(chunks) {
 	return {
 		//The fields to $set on the row for this document. Writes parts first when it's too big for the row
 		async put(project, key, str) {
-			if (byteLength(str) <= INLINE_MAX) {
-				return {doc: str, docChunks: null}
+			//docSize: the size for listings (the admin page) without reading the document back
+			let docSize = byteLength(str)
+			if (docSize <= INLINE_MAX) {
+				return {doc: str, docChunks: null, docSize}
 			}
 			let parts = split(str)
 			//A half-written set from an earlier attempt under the same key would make insertOne trip on its _id
@@ -50,7 +52,7 @@ export function docStore(chunks) {
 			for (let [n, data] of parts.entries()) {
 				await chunks.insertOne({_id: `${key}:${n}`, key, project, n, data})
 			}
-			return {doc: null, docChunks: {key, parts: parts.length, length: str.length}}
+			return {doc: null, docChunks: {key, parts: parts.length, length: str.length}, docSize}
 		},
 
 		//The document string, from the row or from its parts

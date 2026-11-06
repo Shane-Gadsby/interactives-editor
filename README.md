@@ -104,6 +104,7 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | `GET/PUT /api/prefs` | the person's own preferences (`{prefs}`, whitelisted keys: wheel, theme, default font, rulers, tooltips, accessibility, comment notices and so on), kept by username in `prefs` (`guest` with no session) |
 | `GET /api/people?q=` | people to invite, by name, email or username (2 characters or more, at most 8 back): the suite's `lti-analytics.user-lookup`, staff only (students are never listed). 401 for no session once `SUITE_SESSION_ENFORCE=1` |
 | `GET /api/projects` | your projects: the ones you own or were invited to. `?all=1` returns everyone's, honoured only for admins and power users, and only sent by the projects page while power user mode (F9) is on. With no session it lists only projects nobody owns |
+| `GET /api/admin/projects` (power users) | every project for the admin page: owner, sizes (`docSize` recorded on save, files from the sidecars), links, library, learners, open comments; and the bin count |
 | `GET /api/audit` (power users) | governance events newest first, `?project=`, `?event=`, `?limit=` (max 500) |
 | `GET /health` | no session: `{ok, version, uptime, mongo: {ok, ms}, storage: {ok, ms}, rooms, mcp}`, 503 when mongo or storage fails |
 | `GET /api/projects/:id/assets/duplicates`, `POST .../assets/dedupe` | groups of assets with the same bytes (sha256 cached in the sidecar); after the editor merges them in the document, each dropped copy becomes a hard link to the kept file |

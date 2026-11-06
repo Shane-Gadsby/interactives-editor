@@ -411,7 +411,7 @@ export function Home({ open }: { open: (id: string) => void }) {
       </header>
       {power && (
         <div className="power-banner">
-          Power user mode: showing everyone's projects (F9 to turn off). <a href="#/usage">Usage and errors</a>
+          Power user mode: showing everyone's projects (F9 to turn off). <a href="#/usage">Usage and errors</a> · <a href="#/admin">Admin</a>
         </div>
       )}
       {error && <div className="error-banner">{error}</div>}

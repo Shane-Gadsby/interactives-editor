@@ -811,6 +811,54 @@ const sweepBin = async () => {
 	return old.length
 }
 
+//The admin page's table: every project with its owner, size (document plus files), links, library and learners, and
+//what's in the bin. Power users only. Sizes come from the sidecars, so a project's files are one readdir each
+router.get('/api/admin/projects', async (req, res) => {
+	if (!isPower(req)) {
+		return res.status(403).json({error: 'Only power users can see every project'})
+	}
+
+	let list = await projects.find({}, {projection: {doc: 0}}).sort({updated: -1}).limit(5000).toArray(),
+		ids = list.map((d) => d._id),
+		learners = new Map(),
+		openComments = new Map()
+
+	for (let r of await userData.find({project: {$in: ids}}, {projection: {project: 1}}).limit(200000).toArray()) learners.set(r.project, (learners.get(r.project) || 0) + 1)
+	for (let r of await commentRows.find({project: {$in: ids}, root: true, status: 'open'}, {projection: {project: 1}}).toArray()) openComments.set(r.project, (openComments.get(r.project) || 0) + 1)
+
+	const filesOf = async (id) => {
+		let total = 0, count = 0
+		try {
+			for (let name of (await fs.promises.readdir(projectDir(id))).filter((n) => n.endsWith('.json'))) {
+				try {
+					total += JSON.parse(await fs.promises.readFile(path.join(projectDir(id), name), 'utf8')).size || 0
+					count++
+				} catch (e) {
+					//half written
+				}
+			}
+		} catch (e) {
+			//no files
+		}
+		return {total, count}
+	}
+
+	let rows = []
+	for (let d of list) {
+		let files = await filesOf(d._id),
+			//Rows saved before docSize existed have none until their next save
+			docBytes = d.docSize ?? null
+		rows.push({
+			id: d._id, name: d.name, owner: d.owner || null, collaborators: Array.isArray(d.collaborators) ? d.collaborators.length : 0,
+			created: d.created, updated: d.updated, docBytes, fileBytes: files.total, files: files.count,
+			share: !!d.share?.token, shareUpdated: d.share?.updated || null, review: !!d.review?.token, library: !!d.meta?.library, libraryVersion: d.library?.version || 0,
+			learners: learners.get(d._id) || 0, openComments: openComments.get(d._id) || 0, serverMarked: !!d.marking
+		})
+	}
+	let bin = await projectsBin.countDocuments({})
+	res.json({projects: rows, bin, generatedAt: new Date()})
+})
+
 //The audit log, power users only: newest first, by project if asked (?project=), at most 500
 router.get('/api/audit', async (req, res) => {
 	if (!isPower(req)) {

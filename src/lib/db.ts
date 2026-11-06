@@ -163,6 +163,43 @@ export interface InUse {
 
 export const projectInUse = (id: string) => call<InUse>(`projects/${encodeURIComponent(id)}/in-use`);
 
+/** One row of the admin page's table (`GET /api/admin/projects`, power users). */
+export interface AdminProject {
+  id: string;
+  name: string;
+  owner: { username: string | null; name: string | null } | null;
+  collaborators: number;
+  created: string;
+  updated: string;
+  docBytes: number | null;
+  fileBytes: number;
+  files: number;
+  share: boolean;
+  shareUpdated: string | null;
+  review: boolean;
+  library: boolean;
+  libraryVersion: number;
+  learners: number;
+  openComments: number;
+  serverMarked: boolean;
+}
+export const getAdminProjects = () => call<{ projects: AdminProject[]; bin: number; generatedAt: string }>('admin/projects');
+
+/** A governance event (`GET /api/audit`, power users). */
+export interface AuditEvent {
+  at: string;
+  event: string;
+  project: string | null;
+  projectName: string | null;
+  by: { username: string | null; name: string | null } | null;
+  power: boolean;
+  detail: Record<string, unknown>;
+}
+export const getAudit = (q: { project?: string; event?: string; limit?: number } = {}) =>
+  call<AuditEvent[]>(`audit?${new URLSearchParams(Object.entries(q).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)])).toString()}`);
+
+export const stopShareFor = (projectId: string) => call<{ ok: boolean }>(`projects/${encodeURIComponent(projectId)}/share`, { method: 'DELETE' });
+
 /** A project in the bin: its card details, when and by whom it was deleted, and when it goes for good. */
 export interface BinnedProject extends ProjectMeta {
   binned: { at: string; by: { username: string | null; name: string | null } | null };

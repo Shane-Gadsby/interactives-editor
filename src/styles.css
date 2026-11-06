@@ -8162,3 +8162,22 @@ code {
   max-width: 66ch;
   line-height: 1.5;
 }
+
+/* Admin page: the tools row and a table that can be wide */
+.admin-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.admin-tools input[type='search'] {
+  min-width: 220px;
+}
+.admin-table td,
+.admin-table th {
+  vertical-align: top;
+}
+.usage-body:has(.admin-table) {
+  overflow-x: auto;
+}

@@ -59,7 +59,7 @@ describe('splitting', () => {
   it('keeps a small document in the row and a big one in parts, and reads both back', async () => {
     const chunks = new FakeCollection();
     const store = docStore(chunks);
-    expect(await store.put('p1', 'p:p1:1', 'small')).toEqual({ doc: 'small', docChunks: null });
+    expect(await store.put('p1', 'p:p1:1', 'small')).toEqual({ doc: 'small', docChunks: null, docSize: 5 });
     const str = 'x'.repeat(10_000);
     const fields = await store.put('p1', 'p:p1:2', str);
     expect(fields.doc).toBeNull();

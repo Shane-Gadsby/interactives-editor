@@ -640,3 +640,21 @@ describe('audit log', () => {
     expect(log.find((e: { event: string }) => e.event === 'owner-changed')).toMatchObject({ by: { username: 'pat' }, power: true, detail: { from: 'ann', to: 'bob' } });
   });
 });
+
+describe('admin projects table', () => {
+  it('lists every project with size, links, learners and the bin count, for power users only', async () => {
+    await put('pradm00001', project('pradm00001', { name: 'Alpha' }));
+    await h.call('PUT', '/api/projects/pradm00001/assets/asset00001', { user: ann, body: Buffer.alloc(2048), type: 'image/png' });
+    await h.call('PUT', '/api/projects/pradm00001/share', { user: ann, body: '<html></html>', type: 'text/plain' });
+    h.db['interactives-user-data'].docs.push({ _id: 'u1', project: 'pradm00001' }, { _id: 'u2', project: 'pradm00001' });
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('GET', '/api/admin/projects', { user: ann })).status).toBe(403);
+    process.env.SUITE_SESSION_ENFORCE = '';
+    const r = (await h.call('GET', '/api/admin/projects', { user: pat })).json;
+    const row = r.projects.find((p: { id: string }) => p.id === 'pradm00001');
+    expect(row).toMatchObject({ name: 'Alpha', share: true, learners: 2, files: 1, fileBytes: 2048, owner: { username: 'ann' } });
+    expect(row.docBytes).toBeGreaterThan(50);
+    expect(typeof r.bin).toBe('number');
+    h.db['interactives-user-data'].docs = [];
+  });
+});
