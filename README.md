@@ -144,6 +144,8 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | `GET /play/:token` | the learner page for a share link: a small page that frames `/s/:token` in its sandbox and answers the project's progress requests (postMessage) by calling the `/learn` routes below with the session id it was opened with (`?sessionID=` or sessionStorage). Give this link to learners in StudyDesk. Served with its own nonce CSP; can be framed |
 | `GET/PUT /learn/:token/progress`, `POST /learn/:token/report` | a learner's remembered variables, artboard, attempts and reported results (`{result}`), for the project whose share link is on. Identity (username, userID, name) and the course (`activity.courseLabel`) come from the session, never from the request; with no session they answer `{available: false}` and the player keeps progress in the browser. Outside `/api` because that is staff only. Bodies are shape- and size-checked in `shared/learner.mjs` |
 | `GET/PUT /learn/:token/user-data` | the **Save user data** / **Load user data** nodes: `PUT {variables: {name: value}}` merges those variables into the learner's record (only the names given change; 400 for the wrong shape, 413 past 100 variables or 64 KB), `GET ?names=a,b` returns `{variables}` with just the saved ones asked for. Same identity rules as progress (session only, `{available: false}` without one), kept in `lti-analytics.interactives-activity-user-data`. The learner page passes the player's `userdata-save` / `userdata-load` messages on to these |
+| `GET/POST /lti13/login`, `POST /lti13/launch`, `POST /lti13/pick`, `GET /lti13/jwks` | **LTI 1.3 tool** (`lti13.js`, see [docs/lti-1-3.md](docs/lti-1-3.md)): OIDC third party login initiation, the launch (the id_token is checked against the platform's JWKS: RS256, iss, aud/azp, exp/iat/nbf, nonce, deployment, target link; the state is single use and has a `SameSite=None; Secure; Partitioned` cookie), the Deep Linking picker and its signed `LtiDeepLinkingResponse`, and our public keys. A resource link launch redirects to `/play/<token>#lti=<session>`; the learner page then sends the session as `X-LTI-Session` on `/learn` calls, and `learnerOf` files the record under `lti:<platform>:<sub>` and the context (`course` is the context id). The session only works for the project it was launched into. Open to the platforms (no suite session), rate limited per address |
+| `GET /api/lti13`, `PUT/DELETE /api/lti13/platforms/:id`, `PUT/DELETE /api/lti13/links`, `POST /api/lti13/keys/rotate`, `DELETE /api/lti13/keys/:kid` | power users only: the urls to give an LMS admin, the registered platforms (issuer, clientId, deploymentIds, authLoginUrl, jwksUrl, tokenUrl), which platform user is which editor account (for the picker), and our signing keys (public information only comes back). Mongo: `lti-interactives.lti13-platforms`, `-keys`, `-state`, `-sessions`, `-links`; indexes in `suite-libs/indexes.js` |
 | `GET/DELETE /api/projects/:id/results` | owner (or power user): counts, completion and pass rates, average best score and attempts, courses, and the 200 most recently active learners / delete every record for the project |
 | `GET /api/projects/:id/insights` | owner (or power user): what learners did in the project as counts (learners, visits, artboard views, clicks as grid cells and per layer, steps, question checks per option, named records, courses, learners per day). `?days=` is 7, 30 (default), 90, 365 or 0 for all; reads at most 100,000 rows, newest first, and says `truncated` past that. Nobody is listed |
 | `GET /s/:token` | a shared project, **no session** (a link in a new tab can't carry one). Tokens are 24 random base64url chars; off until the owner turns it on. Served with `Content-Security-Policy: sandbox allow-scripts ...` (no `allow-same-origin`), so a shared page can't touch the editor's origin; its `localStorage` is not available |
@@ -189,6 +191,9 @@ Access works like this:
 | `INTERACTIVES_STORAGE` | `./storage` | asset files |
 | `SUITE_SESSION_ENFORCE` | unset | `1` to refuse instead of log |
 | `INTERACTIVES_MCP` | on | `off` turns AI agent access off: `/mcp` answers 503 and `?agent=` can't join live rooms (restart to apply) |
+| `INTERACTIVES_PUBLIC_URL` | derived from the request | the public origin (`https://host`), used for the LTI 1.3 launch and login addresses |
+| `LTI13_PLATFORMS` | unset | optional JSON array of LTI 1.3 platform registrations (same fields as the admin api, plus `id`) |
+| `LTI13_ALLOW_HTTP` | unset | `1` allows http platform urls, for a development LMS only |
 
 ## Analytics: editor usage, published projects, errors
 
@@ -255,6 +260,7 @@ A change to any of those updates those pages too. Neither site ever holds a cred
 | Path | What |
 |---|---|
 | `index.js` | the whole server (Express 5 + MongoDB), see above |
+| `lti13.js` | the LTI 1.3 tool (login, launch, deep linking, JWKS, platform admin), mounted by `index.js`; guide for LMS admins in `docs/lti-1-3.md` |
 | `shared/` | plain ESM used by both the server and the browser: ops, comments, learner records, templates, library snapshots, usage report, safety checks (each has its tests in `test/`) |
 | `src/` | the editor (React + TypeScript + Vite), below |
 | `dist/`, `mcp/dist/` | the committed builds (`npm run build`), served by `index.js` and used by the MCP clients |
