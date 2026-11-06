@@ -2909,7 +2909,15 @@ router.use('/review', (err, req, res, next) => {
 //people playing a project are mostly students. The project comes from the share token, so a project only
 //collects results while its share link is on. No session (dev, or a link opened outside StudyDesk) means nothing
 //is kept here, and the player falls back to the learner's own browser
+//Someone launched from another LMS over LTI 1.3 (lti13.js) has no suite session; their launch session, sent by the learner page
+//in X-LTI-Session, stands in for it, but only for the project they were launched into
+const lti13 = require('./lti13')({express, isPower: (req) => isPower(req), whoIs: (req) => whoIs(req), clientIP: (req) => clientIP(req)})
+
 const learnerOf = (req) => {
+	if (req.ltiLearner) {
+		return req.ltiLearner.token === req.params.token ? lti13.learner(req.ltiLearner) : null
+	}
+
 	let me = whoIs(req)
 
 	if (!me?.username) {
@@ -2971,7 +2979,13 @@ const saveRecord = async (key, build, into = userData) => {
 	}
 }
 
-router.use('/learn', cacheHeaders.api, sessionCheck({tool: 'interactives'}))
+const learnSession = sessionCheck({tool: 'interactives'})
+
+router.use('/learn', cacheHeaders.api, lti13.attachLearner, (req, res, next) => req.ltiLearner ? next() : learnSession(req, res, next))
+
+//LTI 1.3: the platform-facing routes are open (the id_token is their credential), the admin ones are power users under the /api session check
+router.use('/lti13', cacheHeaders.api, lti13.router)
+router.use('/api/lti13', lti13.admin)
 
 //Remix: someone who opened a share link that allows it copies the project into their own projects. Needs a signed in
 //editor user (the new project is theirs), so it sits under the same staff session check as the api. The copy is the project
@@ -3151,6 +3165,19 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	}
 	catch (e) {
 	}
+	//Launched from another LMS over LTI 1.3: the launch hands its session over in the url fragment, which goes into sessionStorage
+	//and off the address bar. It stands in for the StudyDesk session (and there is no StudyDesk account to remix into)
+	var ltiSession = null
+	try {
+		var fromHash = new URLSearchParams(location.hash.slice(1)).get('lti')
+		if (fromHash) {
+			sessionStorage.setItem('ixlti', fromHash)
+			history.replaceState(null, '', location.pathname + location.search)
+		}
+		if (!sessionID || sessionID === 'null') ltiSession = sessionStorage.getItem('ixlti')
+	}
+	catch (e) {
+	}
 	var answer = function (m, reply) {
 		if (m.rid) frame.contentWindow.postMessage(Object.assign({target: 'interactives', type: 'progress', rid: m.rid}, reply), '*')
 	}
@@ -3160,6 +3187,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	var call = function (method, path, body) {
 		var headers = {'Content-Type': 'application/json'}
 		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
+		else if (ltiSession) headers['X-LTI-Session'] = ltiSession
 		var run = function () {
 			return fetch(base + '/learn/' + token + '/' + path, {method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body), keepalive: body !== undefined}).then(function (r) {
 				//Saving and reporting results is this page's own job, so when it fails that is worth knowing (the route and status, nothing else)
@@ -3180,7 +3208,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	//usual user and course fields. The project is whatever this page was made for, whatever the record claims. Nothing
 	//is sent without a signed-in StudyDesk user, and utilities.js drops it in a preview
 	//Remix this: only for someone signed in to StudyDesk (the copy becomes theirs), and only when the owner allowed it
-	var remixOn = ${remix ? 'true' : 'false'}, remixLink = document.getElementById('remix'), remixBusy = false
+	var remixOn = ${remix ? 'true' : 'false'} && !ltiSession, remixLink = document.getElementById('remix'), remixBusy = false
 	var showRemix = function () {
 		if (!remixOn || !remixLink) return
 		remixLink.style.display = 'block'
@@ -3612,6 +3640,9 @@ client.connect()
 		ingest = analyticsDB.collection('ingest')
 		userLookup = analyticsDB.collection('user-lookup')
 		fs.mkdirSync(storageDir, {recursive: true})
+
+		//Mongo indexes for the lti13-* collections are in suite-libs/indexes.js
+		lti13.init(db, projects).catch((err) => console.trace(`${appName}: LTI 1.3 could not start`, err))
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 

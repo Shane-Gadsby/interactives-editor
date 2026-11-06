@@ -221,4 +221,9 @@ export class FakeDb {
   'user-lookup' = new FakeCollection();
   'doc-chunks' = new FakeCollection();
   'projects-bin' = new FakeCollection();
+  'lti13-platforms' = new FakeCollection();
+  'lti13-keys' = new FakeCollection();
+  'lti13-state' = new FakeCollection();
+  'lti13-sessions' = new FakeCollection();
+  'lti13-links' = new FakeCollection();
 }
