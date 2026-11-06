@@ -631,7 +631,7 @@ describe('audit log', () => {
     await h.call('POST', '/api/projects/praud00001/owner', { user: pat, json: { username: 'bob' } });
     await h.call('DELETE', '/api/projects/praud00001/share', { user: bob });
     await h.call('DELETE', '/api/projects/praud00001', { user: bob });
-    await vi.waitFor(() => expect(h.db.audit.docs).toHaveLength(5));
+    await vi.waitFor(() => expect(h.db.audit.docs.filter((d) => d.project === 'praud00001')).toHaveLength(5));
     process.env.SUITE_SESSION_ENFORCE = '1';
     expect((await h.call('GET', '/api/audit', { user: ann })).status).toBe(403);
     process.env.SUITE_SESSION_ENFORCE = '';
