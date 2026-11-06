@@ -5391,7 +5391,7 @@ From left to right:
 
 - **All projects** (the house): back to the projects page.
 - The **project name**. Click to rename.
-- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason).
+- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason). A save that failed because of the network or the server tries again by itself, and says **Saved again** when it gets there.
 - **Live**: the project's live connection, **Live**, **Reconnecting** or **Deleted**. When other people are in the project too, their initials show beside it. See [Live editing and saving](live-editing).
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
@@ -7896,13 +7896,22 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
     title: "Live editing and saving",
     group: "Working together",
     summary: "Several people in one project, autosave, revisions and conflicts.",
-    keywords: "multiplayer collaborate live share presence cursor save autosave conflict undo revision history version restore",
+    keywords: "multiplayer collaborate live share presence cursor save autosave conflict undo revision history version restore save failed too big retry offline",
     body: `Everything saves as you work. A project can be opened by its owner, by people the owner has invited to collaborate (below), and by staff with power-user access (see [Projects page](projects#who-sees-what)); to let anyone else play it, use a [share link](export#share-link). When more than one person opens the same project, the **Live** badge shows, their initials appear in the top bar and their cursors and selections show on the canvas. Changes appear for everyone as they happen.
 
 - **Undo** only undoes your own changes.
 - If two people change the same setting at the same moment, the later change wins.
 - If the connection drops, the badge says *Reconnecting*; your changes are kept and sent when it's back.
 - If the server refuses a batch of changes for good (too large, not allowed), live editing stops with a message and the whole project is saved the normal way instead. A temporary server error is retried, waiting a little longer each time.
+- The server writes the project to its database a second after the last change, and at least every 10 seconds while people keep working. If that write fails, everyone in the project sees **Save failed** with **Not saved yet** and the reason, and a message says so once. Your changes are kept on the server, which keeps trying by itself; when it gets there the label goes back to **Saved** and a message says **Saved again**. Keep the tab open until then.
+
+## When a save fails
+The label next to the project name says **Save failed**; hover it for the reason.
+- **Could not reach the Interactives server**, or **The server could not save this project**: the network or the server had a problem. The editor tries again by itself, waiting a little longer each time (up to a minute), and straight away when your computer is back online. Keep the tab open; nothing you did is lost.
+- **This project is too big to save**: the project is over 64 MB. Large pictures or data pasted straight into layers are the usual cause. Put pictures in the [Assets panel](assets) and point layers at them instead; then the next change saves.
+- The red conflict bar: someone else saved first (below).
+
+Very big projects are fine: the server splits anything too big for one database record into parts and puts them back together when the project opens.
 
 ## Revision history
 The server keeps saved revisions of the project: a snapshot every few minutes while it changes (the newest 100 are kept), and one before every restore. Click the **Revision history** button (the clock) in the top bar. The list on the left shows each version with its date and how long ago it was; click one to see a picture of it and a count of its artboards and variables. **Restore this version** asks **Restore version** in a dialog first. What is there now is saved in the history before the restore, so you can come back to it, and the page reloads with the restored project.
@@ -8138,6 +8147,9 @@ They need to be signed in to StudyDesk, and to reload their projects page. Check
 Both only count learners who are signed in to StudyDesk and opened the **Link for StudyDesk** (not the plain share link) while it was on. After you change score or record settings, press **Update to the latest version**. See [Results and progress](results) and [Insights](insights).
 
 ## Saving and sharing
+**The label says Save failed.**
+Hover it for the reason. A network or server problem is retried by itself until it works, so keep the tab open. **This project is too big to save** means it is over 64 MB, usually because of a large picture pasted into a layer: move it into the Assets panel. See [When a save fails](live-editing#when-a-save-fails).
+
 **A red bar says the project changed in another tab or by someone else.**
 Another copy saved first. **Reload theirs** brings in what is saved, and **Overwrite with mine** keeps your version. Pick carefully: the other one is lost. See [Live editing and saving](live-editing).
 

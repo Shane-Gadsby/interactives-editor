@@ -76,6 +76,11 @@ let port = Number(process.env.PORT) || 3048,
 	ingest,
 	commentRows,
 	commentNotices,
+	docChunks,
+
+	//A whole-document save. Documents too big for one mongo record are split (shared/docstore.mjs), so this is
+	//the real ceiling now
+	saveLimit = '64mb',
 
 	//Revision ids are strings (time first, so they sort), keeps mongodb's ObjectId out of this app's requires
 	revisionID = () => `${Date.now().toString(36)}${crypto.randomBytes(5).toString('hex')}`,
@@ -89,7 +94,8 @@ let ops = null,
 	safety = null,
 	learner = null,
 	records = null,
-	commentLib = null
+	commentLib = null,
+	store = null
 const rooms = new Map(),
 	LOG_KEEP = 2000,
 	PALETTE = ['#e5484d', '#30a46c', '#3e63dd', '#f76b15', '#8e4ec6', '#12a594', '#d6409f', '#ad7f58'],
@@ -121,35 +127,114 @@ const rooms = new Map(),
 		if (!force && Date.now() - last < revisionEvery) return
 
 		lastRevision.set(projectID, Date.now())
-		await revisions.insertOne({_id: revisionID(), project: projectID, created: new Date(), rev, by: by || null, reason: reason || 'Autosave', size: docString.length, doc: docString})
+		let revID = revisionID(),
+			fields = await store.put(projectID, `r:${revID}`, docString)
+		await revisions.insertOne({_id: revID, project: projectID, created: new Date(), rev, by: by || null, reason: reason || 'Autosave', size: docString.length, ...fields})
+			.catch(async (err) => {
+				await store.drop(fields.docChunks)
+				throw err
+			})
 
 		//Keep the newest revisionCap
-		let old = await revisions.find({project: projectID}, {sort: {created: -1}, skip: revisionCap, projection: {_id: 1}}).toArray()
-		if (old.length) await revisions.deleteMany({_id: {$in: old.map((r) => r._id)}})
+		let old = await revisions.find({project: projectID}, {sort: {created: -1}, skip: revisionCap, projection: {_id: 1, docChunks: 1}}).toArray()
+		if (old.length) {
+			await revisions.deleteMany({_id: {$in: old.map((r) => r._id)}})
+			for (let r of old) await store.drop(r.docChunks)
+		}
 	},
 
-	//Writes the room's document back to mongo, bumping rev so plain (non-live) saves still see conflicts
+	//Writes a project's document through the doc store (parts for one too big for its row). write(fields) does the
+	//actual insert or update with those fields in its $set and says whether the row took them. Then the parts the row
+	//no longer points at go: the old set when it moved, the new set when it didn't. Throws what the write threw
+	storeProjectDoc = async (id, rev, str, oldRef, write) => {
+		let fields = await store.put(id, `p:${id}:${rev}`, str),
+			moved = false
+		try {
+			moved = await write(fields)
+		} finally {
+			let stale = moved ? oldRef : fields.docChunks
+			if (stale && stale.key !== (moved ? fields.docChunks?.key : null)) {
+				await store.drop(stale).catch((err) => console.trace(`${appName}: dropping old parts of ${id} failed`, err))
+			}
+		}
+		return {fields, moved}
+	},
+
+	//What a failed save says. Mongo's own record limit is the one people actually hit (a project with big inline data),
+	//and it used to come back as "saved somewhere else"
+	tooBig = (err) => err?.code === 10334 || err?.code === 17419 || /too large|BSONObj size|object to insert too large/i.test(err?.message || ''),
+	saveFailure = (err) => tooBig(err)
+		? {status: 413, error: 'This project is too big to save. Large pictures or data pasted into layers are the usual cause: move them into the Assets panel'}
+		: {status: 500, error: `The server could not save this project (${String(err?.message || err).slice(0, 120)})`},
+
+	//Writes the room's document back to mongo, bumping rev so plain (non-live) saves still see conflicts. A failure
+	//keeps the room dirty, tries again (2 s, 4 s... up to a minute) and tells everyone in the room, since their editors
+	//said "Saved" the moment the server took their ops
+	//One save at a time per room: two overlapping could finish in the wrong order and leave the row on the older copy
 	persist = async (room) => {
+		while (room.persisting) await room.persisting
 		if (!room.dirty || room.deleted) return
+		let done
+		room.persisting = new Promise((r) => (done = r))
+		try {
+			await persistNow(room)
+		} finally {
+			room.persisting = null
+			done()
+		}
+	},
+
+	persistNow = async (room) => {
 		room.dirty = false
+		room.dirtySince = 0
 		clearTimeout(room.saveTimer)
 		room.rev++
-		let p = room.doc, first = p.artboards?.[0]
-		snapshot(room.id, JSON.stringify(p), room.rev, null, 'Autosave').catch((err) => console.trace(`${appName}: revision of ${room.id} failed`, err))
-		await projects.updateOne({_id: room.id}, {$set: {
-			name: String(p.name || 'Untitled project').slice(0, 200),
-			updated: new Date(),
-			doc: JSON.stringify(p),
-			rev: room.rev,
-			meta: {
-				artboards: p.artboards?.length || 0,
-				library: !!p.settings?.library,
-				preview: first ? {width: first.width, height: first.height, background: first.background?.type === 'solid' ? first.background.color : '#ffffff'} : null
+		let p = room.doc, first = p.artboards?.[0], str = JSON.stringify(p), rev = room.rev
+		snapshot(room.id, str, rev, null, 'Autosave').catch((err) => console.trace(`${appName}: revision of ${room.id} failed`, err))
+		try {
+			let {fields} = await storeProjectDoc(room.id, rev, str, room.docChunks, async (fields) => {
+				await projects.updateOne({_id: room.id}, {$set: {
+					name: String(p.name || 'Untitled project').slice(0, 200),
+					updated: new Date(),
+					...fields,
+					rev,
+					meta: {
+						artboards: p.artboards?.length || 0,
+						library: !!p.settings?.library,
+						preview: first ? {width: first.width, height: first.height, background: first.background?.type === 'solid' ? first.background.color : '#ffffff'} : null
+					}
+				}})
+				return true
+			})
+			room.docChunks = fields.docChunks
+			if (room.storeFailed) {
+				room.storeFailed = false
+				room.storeRetry = 0
+				broadcast(room, 'stored', {ok: true})
 			}
-		}}).catch((err) => {
+		} catch (err) {
+			if (room.deleted) return
 			room.dirty = true
+			room.dirtySince ||= Date.now()
 			console.trace(`${appName}: live save of ${room.id} failed`, err)
-		})
+			room.storeFailed = true
+			room.storeError = saveFailure(err).error
+			room.storeRetry = Math.min(60000, (room.storeRetry || 1000) * 2)
+			broadcast(room, 'stored', {ok: false, error: room.storeError})
+			clearTimeout(room.saveTimer)
+			room.saveTimer = setTimeout(() => persist(room), room.storeRetry)
+		}
+	},
+
+	//After an op: save a second after the last one, but never more than liveSaveMax after the first unsaved one, so a
+	//room that never goes quiet still reaches mongo
+	liveSaveMax = 10 * 1000,
+	scheduleSave = (room) => {
+		room.dirty = true
+		room.dirtySince ||= Date.now()
+		if (room.storeFailed) return
+		clearTimeout(room.saveTimer)
+		room.saveTimer = setTimeout(() => persist(room), Math.max(0, Math.min(1000, room.dirtySince + liveSaveMax - Date.now())))
 	},
 
 	openRoom = async (id) => {
@@ -162,7 +247,9 @@ const rooms = new Map(),
 		if (!doc) return null
 		//Someone may have opened it while we waited on mongo
 		if (rooms.has(id)) return rooms.get(id)
-		room = {id, doc: JSON.parse(doc.doc), owner: doc.owner || null, rev: doc.rev || 0, seq: 0, log: [], clients: new Set(), dirty: false, saveTimer: null, closeTimer: null, nextColor: 0}
+		let parsed = await store.parse(doc)
+		if (rooms.has(id)) return rooms.get(id)
+		room = {id, doc: parsed, docChunks: doc.docChunks || null, owner: doc.owner || null, rev: doc.rev || 0, seq: 0, log: [], clients: new Set(), dirty: false, dirtySince: 0, saveTimer: null, closeTimer: null, nextColor: 0}
 		rooms.set(id, room)
 		return room
 	},
@@ -386,12 +473,12 @@ router.get('/api/projects/:id', async (req, res) => {
 
 	//A live room has newer content than mongo until its next save
 	let room = rooms.get(req.params.id)
-	res.json({project: room ? room.doc : JSON.parse(doc.doc), rev: room ? room.rev : doc.rev, owner: doc.owner || null, live: room ? room.seq : null})
+	res.json({project: room ? room.doc : await store.parse(doc), rev: room ? room.rev : doc.rev, owner: doc.owner || null, live: room ? room.seq : null})
 })
 
 //Save. The editor sends the rev it loaded, and a mismatch means someone else saved in between,
 //so it gets a 409 instead of quietly flattening their work. rev 0 (or none) is a brand new project
-router.put('/api/projects/:id', express.json({limit: '25mb'}), async (req, res) => {
+router.put('/api/projects/:id', express.json({limit: saveLimit}), async (req, res) => {
 	let id = req.params.id,
 		project = req.body.project,
 		rev = Number(req.body.rev) || 0
@@ -416,13 +503,12 @@ router.put('/api/projects/:id', express.json({limit: '25mb'}), async (req, res) 
 
 	let firstBoard = project.artboards[0],
 		next = (existing?.rev || 0) + 1,
+		//Stored as a string on purpose. Bindings and logic params use keys like "fill.color", and user
+		//data has no business deciding what mongo sees as a field path
+		docString = JSON.stringify(project),
 		set = {
 			name: String(project.name || 'Untitled project').slice(0, 200),
 			updated: new Date(),
-
-			//Stored as a string on purpose. Bindings and logic params use keys like "fill.color", and user
-			//data has no business deciding what mongo sees as a field path
-			doc: JSON.stringify(project),
 			rev: next,
 			meta: {
 				artboards: project.artboards.length,
@@ -431,24 +517,43 @@ router.put('/api/projects/:id', express.json({limit: '25mb'}), async (req, res) 
 			}
 		}
 
-	//Filter on the rev we checked, so two saves racing each other can't both win
-	let result = await projects.updateOne(
-		existing ? {_id: id, rev: existing.rev} : {_id: id},
-		{$set: set, $setOnInsert: {created: new Date(), owner: whoIs(req)}},
-		{upsert: !existing}
-	).catch((err) => err)
+	//Filter on the rev we checked, so two saves racing each other can't both win. A duplicate key on the insert is
+	//the same race for a brand new project. Anything else is the server failing, and says so
+	let raced = false,
+		stored
+	try {
+		stored = await storeProjectDoc(id, next, docString, existing?.docChunks, async (fields) => {
+			let result = await projects.updateOne(
+				existing ? {_id: id, rev: existing.rev} : {_id: id},
+				{$set: {...set, ...fields}, $setOnInsert: {created: new Date(), owner: whoIs(req)}},
+				{upsert: !existing}
+			).catch((err) => {
+				//A duplicate key on the insert, or mongo's own write conflict (code 112) under contention: both are
+				//another save getting there first
+				if (err?.code === 11000 || err?.code === 112 || /write ?conflict/i.test(err?.message || '')) return {matchedCount: 0, raced: true}
+				throw err
+			})
+			raced = !!result.raced || (existing && result.matchedCount === 0)
+			return !raced
+		})
+	} catch (err) {
+		console.trace(`${appName}: save of ${id} failed`, err)
+		let f = saveFailure(err)
+		return res.status(f.status).json({error: f.error})
+	}
 
-	if (result instanceof Error || (existing && result.matchedCount === 0)) {
+	if (raced) {
 		return res.status(409).json({error: 'This project was saved somewhere else at the same moment'})
 	}
 
-	snapshot(id, set.doc, next, whoIs(req), existing ? 'Autosave' : 'Created').catch((err) => console.trace(`${appName}: revision of ${id} failed`, err))
+	snapshot(id, docString, next, whoIs(req), existing ? 'Autosave' : 'Created').catch((err) => console.trace(`${appName}: revision of ${id} failed`, err))
 
 	//Somebody saved the whole document while a live room is open (a non-live client, an import): the room takes it
 	//and everyone connected reloads
 	let room = rooms.get(id)
 	if (room) {
 		room.doc = project
+		room.docChunks = stored.fields.docChunks
 		room.rev = next
 		room.dirty = false
 		room.log = []
@@ -551,6 +656,7 @@ router.delete('/api/projects/:id', async (req, res) => {
 
 	await removeAssets(id)
 	await revisions.deleteMany({project: id})
+	await store.dropProject(id)
 
 	//The learners' records go with it, and so do the review comments
 	await userData.deleteMany({project: id})
@@ -593,7 +699,7 @@ router.post('/api/projects/:id/duplicate', express.json(), async (req, res) => {
 	}
 
 	let newID = safety.newProjectID(),
-		project = JSON.parse(doc.doc),
+		project = rooms.get(id) ? JSON.parse(JSON.stringify(rooms.get(id).doc)) : await store.parse(doc),
 		now = new Date()
 
 	//A random id colliding is next to impossible, but this is the check that makes it a promise
@@ -609,7 +715,10 @@ router.post('/api/projects/:id/duplicate', express.json(), async (req, res) => {
 		await fs.promises.cp(projectDir(id), projectDir(newID), {recursive: true})
 	}
 
-	await projects.insertOne({_id: newID, name: project.name, created: now, updated: now, doc: JSON.stringify(project), rev: 1, meta: doc.meta, tags: doc.tags || [], folder: doc.folder || null, owner: whoIs(req)})
+	await storeProjectDoc(newID, 1, JSON.stringify(project), null, async (fields) => {
+		await projects.insertOne({_id: newID, name: project.name, created: now, updated: now, ...fields, rev: 1, meta: doc.meta, tags: doc.tags || [], folder: doc.folder || null, owner: whoIs(req)})
+		return true
+	})
 	res.json({ok: true, id: newID})
 })
 
@@ -748,7 +857,7 @@ router.get('/api/projects/:id/live', async (req, res) => {
 		else for (let e of missed) sseSend(res, 'ops', e, e.seq)
 	}
 
-	sseSend(res, 'hello', {seq: room.seq, rev: room.rev, clientId, color: client.color, peers: presenceOf(room)})
+	sseSend(res, 'hello', {seq: room.seq, rev: room.rev, clientId, color: client.color, peers: presenceOf(room), stored: room.storeFailed ? {ok: false, error: room.storeError} : {ok: true}})
 	broadcast(room, 'presence', {clientId, name: client.name, color: client.color, joined: true})
 
 	//Heartbeat under haproxy's 25s server timeout, or the stream gets cut every half minute
@@ -783,9 +892,7 @@ router.post('/api/projects/:id/ops', express.json({limit: '25mb'}), async (req, 
 	if (room.log.length > LOG_KEEP) room.log.splice(0, room.log.length - LOG_KEEP)
 	broadcast(room, 'ops', entry, entry.seq)
 
-	room.dirty = true
-	clearTimeout(room.saveTimer)
-	room.saveTimer = setTimeout(() => persist(room), 1000)
+	scheduleSave(room)
 	maybeCloseRoom(room)
 
 	res.json({ok: true, seq: entry.seq})
@@ -893,7 +1000,7 @@ router.get('/api/projects/:id/revisions/:revID', async (req, res) => {
 		return res.status(404).json({error: 'No such revision'})
 	}
 
-	res.json({project: JSON.parse(r.doc), created: r.created, rev: r.rev})
+	res.json({project: await store.parse(r), created: r.created, rev: r.rev})
 })
 
 router.post('/api/projects/:id/revisions/:revID/restore', async (req, res) => {
@@ -922,19 +1029,25 @@ router.post('/api/projects/:id/revisions/:revID/restore', async (req, res) => {
 	//Whatever's there now goes into history first, so a restore can itself be undone
 	let room = rooms.get(id)
 	if (room) await persist(room)
-	let current = room ? JSON.stringify(room.doc) : doc.doc,
-		currentRev = room ? room.rev : doc.rev
+	let current = room ? JSON.stringify(room.doc) : await store.get(doc),
+		currentRev = room ? room.rev : doc.rev,
+		//The room's save may just have moved the row onto a new set of parts
+		oldRef = room ? room.docChunks : doc.docChunks
 	await snapshot(id, current, currentRev, whoIs(req), 'Before restore', true)
 
-	let project = JSON.parse(r.doc),
+	let project = await store.parse(r),
 		next = currentRev + 1
 
 	//The restored copy keeps this project's id (a revision from before a rename still belongs here)
 	project.id = id
-	await projects.updateOne({_id: id}, {$set: {doc: JSON.stringify(project), rev: next, updated: new Date(), name: String(project.name || 'Untitled project').slice(0, 200)}})
+	let {fields} = await storeProjectDoc(id, next, JSON.stringify(project), oldRef, async (fields) => {
+		await projects.updateOne({_id: id}, {$set: {...fields, rev: next, updated: new Date(), name: String(project.name || 'Untitled project').slice(0, 200)}})
+		return true
+	})
 
 	if (room) {
 		room.doc = project
+		room.docChunks = fields.docChunks
 		room.rev = next
 		room.dirty = false
 		room.log = []
@@ -1251,9 +1364,9 @@ router.post('/api/projects/:id/library/publish', express.json({limit: '16kb'}), 
 	}
 
 	let id = req.params.id,
-		full = await projects.findOne({_id: id}, {projection: {doc: 1}}),
+		full = await projects.findOne({_id: id}, {projection: {doc: 1, docChunks: 1}}),
 		room = rooms.get(id),
-		project = room ? room.doc : JSON.parse(full.doc)
+		project = room ? room.doc : await store.parse(full)
 
 	if (!project.settings?.library) {
 		return res.status(400).json({error: 'Turn on "This project is a library" in the project settings first'})
@@ -1457,26 +1570,30 @@ const maxTemplate = 12 * 1024 * 1024,
 
 		let firstBoard = project.artboards[0]
 
-		await projects.insertOne({
-			_id: newID,
-			name: project.name,
-			created: now,
-			updated: now,
-			doc: JSON.stringify(project),
-			rev: 1,
-			meta: {
-				artboards: project.artboards.length,
-				library: !!project.settings?.library,
-				preview: firstBoard ? {width: firstBoard.width, height: firstBoard.height, background: firstBoard.background?.type === 'solid' ? firstBoard.background.color : '#ffffff'} : null
-			},
-			tags: [],
-			folder: folder || null,
-			thumb,
-			owner: whoIs(req),
-			...extra
+		let docString = JSON.stringify(project)
+		await storeProjectDoc(newID, 1, docString, null, async (fields) => {
+			await projects.insertOne({
+				_id: newID,
+				name: project.name,
+				created: now,
+				updated: now,
+				...fields,
+				rev: 1,
+				meta: {
+					artboards: project.artboards.length,
+					library: !!project.settings?.library,
+					preview: firstBoard ? {width: firstBoard.width, height: firstBoard.height, background: firstBoard.background?.type === 'solid' ? firstBoard.background.color : '#ffffff'} : null
+				},
+				tags: [],
+				folder: folder || null,
+				thumb,
+				owner: whoIs(req),
+				...extra
+			})
+			return true
 		})
 
-		return {id: newID, project, doc: JSON.stringify(project)}
+		return {id: newID, project, doc: docString}
 	}
 
 //Templates I can use: my own, and the ones shared with everyone. No snapshots, those are a request each
@@ -1547,9 +1664,9 @@ router.post('/api/projects/:id/template', express.json({limit: '64kb'}), async (
 
 	let id = req.params.id,
 		body = req.body || {},
-		full = await projects.findOne({_id: id}, {projection: {doc: 1}}),
+		full = await projects.findOne({_id: id}, {projection: {doc: 1, docChunks: 1}}),
 		room = rooms.get(id),
-		project = template.cleanProject(room ? room.doc : JSON.parse(full.doc)),
+		project = template.cleanProject(room ? room.doc : await store.parse(full)),
 		name = template.cleanLine(body.name) || template.cleanLine(project.name) || 'Untitled template',
 		existing = null
 
@@ -2309,7 +2426,7 @@ router.get('/review/:token', async (req, res) => {
 	res.json({
 		id: doc._id,
 		name: doc.name,
-		project: room ? room.doc : JSON.parse(doc.doc),
+		project: room ? room.doc : await store.parse(doc),
 		guests: !!doc.review.guests,
 		me: actor ? {...actor.by, manager: actor.manager} : null,
 		owner: doc.owner ? {username: doc.owner.username, name: doc.owner.name} : null,
@@ -2489,7 +2606,7 @@ router.post('/remix/:token', async (req, res) => {
 	}
 
 	let room = rooms.get(doc._id),
-		project = JSON.parse(JSON.stringify(room ? room.doc : JSON.parse(doc.doc)))
+		project = room ? JSON.parse(JSON.stringify(room.doc)) : await store.parse(doc)
 
 	//A remix starts fresh: it is not tied to a template the original came from, nor to the original's library
 	delete project.template
@@ -2902,7 +3019,17 @@ router.use('/api', (err, req, res, next) => {
 		return next(err)
 	}
 
-	res.status(err.status || 500).json({error: err.type === 'entity.too.large' ? 'That is too big to save' : 'Something went wrong on the server'})
+	if (err.type === 'entity.too.large') {
+		let wholeProject = req.method === 'PUT' && /^\/projects\/[^/]+$/.test(req.path)
+		return res.status(413).json({error: wholeProject ? `This project is too big to save (over ${saveLimit.replace('mb', ' MB')}). Large pictures or data pasted into layers are the usual cause: move them into the Assets panel` : 'That is too big to save'})
+	}
+
+	//A split document whose parts are not all there (shared/docstore.mjs). Say so rather than hand back half a project
+	if (err.name === 'MissingPartsError') {
+		return res.status(500).json({error: err.message})
+	}
+
+	res.status(err.status || 500).json({error: 'Something went wrong on the server'})
 })
 
 //A shared project. Tokens are base64url only, so the path can't climb out of storage/shares
@@ -3065,6 +3192,7 @@ client.connect()
 		templates = db.collection('templates')
 		commentRows = db.collection('comments')
 		commentNotices = db.collection('comment-notices')
+		docChunks = db.collection('doc-chunks')
 		userData = analyticsDB.collection('interactives-user-data')
 		activityData = analyticsDB.collection('interactives-activity-user-data')
 		ingest = analyticsDB.collection('ingest')
@@ -3073,10 +3201,11 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/records.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/records.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, recordsMod, commentsMod, templateMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, recordsMod, commentsMod, templateMod, docstoreMod]) => {
 		ops = opsMod
+		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
 		template = templateMod
 		safety = safetyMod

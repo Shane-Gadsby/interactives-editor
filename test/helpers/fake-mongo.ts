@@ -108,6 +108,14 @@ export class FakeCollection {
   calls: string[] = [];
   /** Make the next call of this method reject (to check the route copes with mongo failing). */
   failNext: Record<string, Error | undefined> = {};
+  /** Mongo's per-record limit (16 MB there), so a test can hit it with a small document. 0: no limit. */
+  maxRecordBytes = 0;
+
+  private checkSize(doc: Doc) {
+    if (this.maxRecordBytes && JSON.stringify(doc).length > this.maxRecordBytes) {
+      throw Object.assign(new Error('object to insert too large'), { code: 10334 });
+    }
+  }
 
   private check(name: string) {
     this.calls.push(name);
@@ -139,6 +147,7 @@ export class FakeCollection {
   async insertOne(doc: Doc) {
     this.check('insertOne');
     if (this.docs.some((d) => d._id === doc._id)) throw Object.assign(new Error('E11000 duplicate key'), { code: 11000 });
+    this.checkSize(doc);
     this.docs.push(clone(doc));
     return { insertedId: doc._id };
   }
@@ -153,6 +162,13 @@ export class FakeCollection {
       for (const [k, v] of Object.entries(filter)) if (!k.startsWith('$') && (v === null || typeof v !== 'object')) doc[k] = v;
       this.docs.push(doc);
       inserted = true;
+    }
+    const next = { ...doc, ...((update.$set ?? {}) as Doc) };
+    try {
+      this.checkSize(next);
+    } catch (err) {
+      if (inserted) this.docs.splice(this.docs.indexOf(doc), 1);
+      throw err;
     }
     for (const [k, v] of Object.entries((update.$set ?? {}) as Doc)) doc[k] = clone(v);
     if (inserted) for (const [k, v] of Object.entries((update.$setOnInsert ?? {}) as Doc)) doc[k] = clone(v);
@@ -198,4 +214,5 @@ export class FakeDb {
   'interactives-activity-user-data' = new FakeCollection();
   ingest = new FakeCollection();
   'user-lookup' = new FakeCollection();
+  'doc-chunks' = new FakeCollection();
 }

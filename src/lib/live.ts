@@ -97,6 +97,8 @@ export class LiveSession {
   private closed = false;
   private retry = 1000;
   private flushRetry = 2000;
+  /** Set while the server can't write the room to its database: the ops reached the room, but they are not stored yet. */
+  private storeError: string | null = null;
   private backingOff = false;
   /** The server's document as of the last op seen (ours and everyone's), kept apart from the one on screen. */
   private shadow: unknown;
@@ -131,8 +133,10 @@ export class LiveSession {
       const peers: Record<string, Peer> = {};
       for (const p of d.peers as Peer[]) if (p.clientId !== this.clientId) peers[p.clientId] = p;
       this.store.set({ live: { status: 'live', color: d.color }, peers });
+      if (d.stored) this.stored(d.stored);
       if (this.queue.length) this.schedule();
     });
+    es.addEventListener('stored', (e) => this.stored(JSON.parse((e as MessageEvent).data)));
     es.addEventListener('ops', (e) => {
       const d = JSON.parse((e as MessageEvent).data) as { seq: number; clientId: string; ops: Op[] };
       if (d.seq <= this.seq) return;
@@ -146,7 +150,10 @@ export class LiveSession {
           if (n <= 0) this.pending.delete(k);
           else this.pending.set(k, n);
         }
-        if (!this.pending.size && !this.queue.length) this.store.set({ saveState: 'saved', saveError: null });
+        if (!this.pending.size && !this.queue.length) {
+          if (this.storeError) this.store.set({ saveState: 'error', saveError: this.storeMessage() });
+          else this.store.set({ saveState: 'saved', saveError: null });
+        }
         return;
       }
       // The server puts these before everything of ours it has not echoed yet (sent, or still queued). Skip what one
@@ -183,6 +190,32 @@ export class LiveSession {
       setTimeout(() => void this.connect(), this.retry);
       this.retry = Math.min(15000, this.retry * 2);
     };
+  }
+
+  /**
+   * Whether the server managed to write the room to its database. The ops reaching the room is what used to show
+   * "Saved", so a database that refused the write looked fine to everyone; the server keeps trying, and says when
+   * it got there.
+   */
+  private stored(d: { ok: boolean; error?: string }): void {
+    if (!d.ok) {
+      const first = !this.storeError;
+      this.storeError = d.error || 'the server could not store it';
+      this.store.set({ saveState: 'error', saveError: this.storeMessage() });
+      if (first) {
+        reportError({ kind: 'live', error: this.storeError, where: 'store-failed' });
+        this.store.toast(`This project isn't being saved: ${this.storeError}. Keep this tab open; the server keeps trying.`, 'error');
+      }
+      return;
+    }
+    if (!this.storeError) return;
+    this.storeError = null;
+    if (!this.busy) this.store.set({ saveState: 'saved', saveError: null });
+    this.store.toast('Saved again');
+  }
+
+  private storeMessage(): string {
+    return `Not saved yet: ${this.storeError}. Your changes are kept on the server and it keeps trying`;
   }
 
   /** Someone replaced the whole document: start again from the server's copy. */

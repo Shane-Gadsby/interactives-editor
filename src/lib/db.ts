@@ -47,6 +47,20 @@ export interface SessionInfo {
   power: boolean;
 }
 
+/** A request the server answered with an error (status 0: it was never reached). */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+  /** Worth sending again as it is: the server or the network had trouble. Any other 4xx fails the same way every time. */
+  get retryable(): boolean {
+    return this.status === 0 || this.status >= 500 || this.status === 408 || this.status === 429;
+  }
+}
+
 export class ConflictError extends Error {
   constructor(
     message: string,
@@ -69,7 +83,7 @@ async function call<T>(path: string, init: RequestInit = {}, as?: 'blob'): Promi
     res = await fetch(API + path, { credentials: 'same-origin', ...init });
   } catch (err) {
     reportError({ kind: 'api', error: err, where: route, detail: { method, status: 0 } });
-    throw new Error('Could not reach the Interactives server');
+    throw new ApiError('Could not reach the Interactives server', 0);
   }
   // Which parts of the server get used (the route with its ids taken out), how long they take, and what it refused or broke on
   if (res.ok) track('api', 'call', { thing: route, ms: Date.now() - started, detail: { method } });
@@ -83,7 +97,7 @@ async function call<T>(path: string, init: RequestInit = {}, as?: 'blob'): Promi
       /* not json */
     }
     if (res.status === 409) throw new ConflictError(body.error ?? 'Conflict', body.rev ?? 0);
-    throw new Error(body.error ?? `Server error ${res.status}`);
+    throw new ApiError(body.error ?? `Server error ${res.status}`, res.status);
   }
   const type = res.headers.get('content-type') ?? '';
   return (as !== 'blob' && type.includes('application/json') ? res.json() : res.blob()) as Promise<T>;

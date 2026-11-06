@@ -186,10 +186,10 @@ describe('saving projects', () => {
     expect(r.json.rev).toBe(1);
   });
 
-  it('refuses a save over 25mb', async () => {
-    const r = await h.call('PUT', '/api/projects/prbig00001', { user: ann, body: JSON.stringify({ project: project('prbig00001', { pad: 'x'.repeat(26 * 1024 * 1024) }), rev: 0 }), type: 'application/json' });
+  it('refuses a save over 64mb, saying what usually causes it', async () => {
+    const r = await h.call('PUT', '/api/projects/prbig00001', { user: ann, body: JSON.stringify({ project: project('prbig00001', { pad: 'x'.repeat(65 * 1024 * 1024) }), rev: 0 }), type: 'application/json' });
     expect(r.status).toBe(413);
-    expect(r.json.error).toBe('That is too big to save');
+    expect(r.json.error).toMatch(/^This project is too big to save \(over 64 MB\)\. Large pictures/);
   });
 });
 

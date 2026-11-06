@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, defaultTheme, QUESTION_KINDS, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
-import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
+import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
@@ -149,6 +149,21 @@ function useAutosave() {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let lastRev = s.revision;
     let saving = false;
+    // A save the network or the server dropped tries again by itself: 2 s, 4 s... up to a minute, and straight away
+    // when the browser says it is back online. A refused one (too big, not allowed) waits for the next change
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryIn = 2000;
+    let retrying = false;
+    let lastRefusal = '';
+    const retryLater = () => {
+      if (retryTimer) clearTimeout(retryTimer);
+      retrying = true;
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        void save();
+      }, retryIn);
+      retryIn = Math.min(60000, retryIn * 2);
+    };
     // The live session closes (parent cleanup) before this one runs, so remember now whether changes travel as ops
     let viaOps = !!liveSession();
     const save = async (force = false) => {
@@ -162,9 +177,23 @@ function useAutosave() {
         await saveProject(s.get().project, { force });
         s.set({ saveState: s.revision === rev ? 'saved' : 'dirty', saveError: null });
         setConflict(false);
+        if (retrying) s.toast('Saved again');
+        retrying = false;
+        retryIn = 2000;
+        lastRefusal = '';
       } catch (err) {
         if (err instanceof ConflictError) setConflict(true);
-        s.set({ saveState: 'error', saveError: err instanceof Error ? err.message : String(err) });
+        const message = err instanceof Error ? err.message : String(err);
+        const again = err instanceof ApiError && err.retryable;
+        s.set({ saveState: 'error', saveError: again ? `${message}. Trying again by itself` : message });
+        if (again) {
+          if (!retrying) s.toast(`Not saved: ${message}. It will keep trying; keep this tab open.`, 'error');
+          retryLater();
+        } else if (!(err instanceof ConflictError) && message !== lastRefusal) {
+          // Once per reason: the next change saves (and fails) again, and saying it on every keystroke helps nobody
+          lastRefusal = message;
+          s.toast(`Not saved: ${message}`, 'error');
+        }
       } finally {
         saving = false;
         if (s.revision !== rev) schedule();
@@ -190,6 +219,14 @@ function useAutosave() {
       }
     };
     window.addEventListener('beforeunload', beforeUnload);
+    const onOnline = () => {
+      if (!retrying) return;
+      if (retryTimer) clearTimeout(retryTimer);
+      retryTimer = null;
+      retryIn = 2000;
+      void save();
+    };
+    window.addEventListener('online', onOnline);
     // A live session the server stopped accepting: take the server's current revision, then save the whole document
     // the usual way (a conflict still shows the conflict bar)
     const onLiveFallback = () => {
@@ -201,6 +238,8 @@ function useAutosave() {
     window.addEventListener(LIVE_FALLBACK_EVENT, onLiveFallback);
     return () => {
       window.removeEventListener(LIVE_FALLBACK_EVENT, onLiveFallback);
+      window.removeEventListener('online', onOnline);
+      if (retryTimer) clearTimeout(retryTimer);
       unsub();
       if (timer) {
         clearTimeout(timer);
