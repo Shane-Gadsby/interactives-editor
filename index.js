@@ -701,9 +701,12 @@ router.patch('/api/projects/:id/meta', express.json({limit: '16kb'}), async (req
 //Governance events, for power users to look back on: who turned a link on or off, changed who's invited, cleared
 //results, deleted or restored a project or handed it on. Append only, one helper, and a failure to write it never
 //fails the action it's about
+//Ids sort in the order things happened, even two in the same millisecond (a counter after the time)
+let auditSeq = 0
 const audit = (req, event, project, detail = {}) => {
-	let me = whoIs(req)
-	auditLog.insertOne({_id: revisionID(), at: new Date(), event, project: project?._id ?? project ?? null, projectName: project?.name ?? null, by: me ? {username: me.username, name: me.name} : null, power: isPower(req) && !(me && project?.owner?.username === me.username), detail})
+	let me = whoIs(req),
+		now = Date.now()
+	auditLog.insertOne({_id: `${now.toString(36)}${String(++auditSeq % 1e8).padStart(8, '0')}${crypto.randomBytes(2).toString('hex')}`, at: new Date(now), event, project: project?._id ?? project ?? null, projectName: project?.name ?? null, by: me ? {username: me.username, name: me.name} : null, power: isPower(req) && !(me && project?.owner?.username === me.username), detail})
 		.catch((err) => console.trace(`${appName}: audit ${event} not written`, err))
 }
 
@@ -815,7 +818,7 @@ router.get('/api/audit', async (req, res) => {
 	if (typeof req.query.project === 'string' && validID(req.query.project)) filter.project = req.query.project
 	if (typeof req.query.event === 'string' && /^[a-z-]{2,40}$/.test(req.query.event)) filter.event = req.query.event
 	let limit = Math.min(500, Math.max(1, Number(req.query.limit) || 200))
-	res.json(await auditLog.find(filter, {projection: {_id: 0}}).sort({at: -1}).limit(limit).toArray())
+	res.json(await auditLog.find(filter, {projection: {_id: 0}}).sort({at: -1, _id: -1}).limit(limit).toArray())
 })
 
 //Your bin (power users with ?all=1: everyone's). Card details only, no documents
