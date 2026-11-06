@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { installSessionHeader, sessionUser } from './session';
 
 /**
  * Per-person editor preferences. The server keeps them per user (GET/PUT api/prefs), so they follow you between
@@ -81,8 +82,12 @@ function save(): void {
   }, 400);
 }
 
+// Changes made before the server's copy arrived, laid back over it when it does
+let early: Partial<Prefs> | null = {};
+
 export function setPrefs(patch: Partial<Prefs>): void {
   current = { ...current, ...patch };
+  if (early) Object.assign(early, patch);
   applyTheme();
   write(keyFor(user), current);
   notify();
@@ -92,8 +97,15 @@ export function setPrefs(patch: Partial<Prefs>): void {
 /** Load this person's preferences from the server (called once at start-up). */
 export async function loadUserPrefs(): Promise<void> {
   try {
+    // App.tsx calls this as it's imported, which is before main.tsx installs the session header. Without the header
+    // and the session the server answers for "guest", and that copy replaced the person's own on every load
+    installSessionHeader();
+    await sessionUser();
     const res = await fetch(API, { credentials: 'same-origin' });
-    if (!res.ok) return;
+    if (!res.ok) {
+      early = null;
+      return;
+    }
     const body = (await res.json()) as { user: string; prefs: Partial<Prefs> };
     user = body.user || 'guest';
     write(LAST_USER, user);
@@ -101,12 +113,15 @@ export async function loadUserPrefs(): Promise<void> {
     // Nothing on the server yet: start from what this browser had (preferences used to be per browser)
     const first = !Object.keys(fromServer).length;
     const local = first ? { ...read('ix-prefs'), ...read(keyFor(user)) } : {};
-    current = { ...DEFAULTS, ...local, ...fromServer };
+    const changed = early ?? {};
+    early = null;
+    current = { ...DEFAULTS, ...local, ...fromServer, ...changed };
     write(keyFor(user), current);
     applyTheme();
     notify();
-    if (first && Object.keys(local).length) save();
+    if ((first && Object.keys(local).length) || Object.keys(changed).length) save();
   } catch {
+    early = null;
     /* offline: keep the cached copy */
   }
 }
