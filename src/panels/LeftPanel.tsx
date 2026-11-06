@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from 'react';
-import { createNode, isContainer, nodeTypeLabel, type Artboard, type SceneNode } from 'interactives-player';
+import { createNode, isContainer, nodeTypeLabel, type Artboard, type Project, type SceneNode } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { Icons, type IconName } from '../components/icons';
 import { IconButton } from '../components/ui';
@@ -14,6 +14,8 @@ import { getArtboard, locate } from '../store/doc';
 import { deleteAsset } from '../lib/db';
 import { analyzeUsage, unusedAssetIds } from '../lib/dependencies';
 import { track } from '../lib/analytics';
+import { attributionForAsset, focusEntryNext, forgetAssets } from '../lib/attributions';
+import { unattributedAssets } from 'interactives-player';
 import { LibrariesPanel } from './LibrariesPanel';
 import { CommentsPanel } from './CommentsPanel';
 import { jumpToThread } from '../lib/comment-jump';
@@ -530,6 +532,15 @@ export function Assets() {
   // The same rule as the Usage tab (layers, paints, fonts, data sources, sounds...), worked out once per document
   const unused = useMemo(() => new Set(unusedAssetIds(analyzeUsage(s.project))), [s.project]);
   const isUsed = (id: string) => !unused.has(id);
+  // Which files no attribution covers yet (only said once the project has any attributions, so nobody is nagged who doesn't use them)
+  const creditsInUse = !!s.project.attributions?.length;
+  const uncredited = useMemo(() => new Set(creditsInUse ? unattributedAssets(s.project) : []), [s.project.assets, s.project.attributions, creditsInUse]);
+  const openCredit = (assetId: string) => {
+    let entry: string | null = null;
+    store().update((d) => void (entry = attributionForAsset(d as Project, assetId)));
+    focusEntryNext(entry);
+    store().set({ bottomTab: 'credits', previewPlaying: false });
+  };
   const upload = async () => {
     const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,.pptx,video/*,audio/*,.woff,.woff2,.ttf,.otf,.json,.csv,.tsv,.txt');
     if (files.length) await insertFiles(files, null, null);
@@ -538,6 +549,7 @@ export function Assets() {
     store().update((d) => {
       d.assets = d.assets.filter((a) => !ids.includes(a.id));
       d.fonts = d.fonts.filter((f) => !f.assetId || !ids.includes(f.assetId));
+      forgetAssets(d as Project, ids);
       // A sound on a timeline with no file behind it plays nothing: take it off the timeline too
       for (const ab of d.artboards) {
         for (const t of ab.timelines) {
@@ -638,6 +650,14 @@ export function Assets() {
       </button>
       <p className="hint">Images, video, audio, fonts and data files (JSON/CSV/TSV/text, used from the Data tab). Drop files here to add them, or on the canvas to place them.</p>
       <DesignFiles />
+      {uncredited.size > 0 && (
+        <p className="hint asset-credit-note">
+          {uncredited.size} file{uncredited.size === 1 ? ' has' : 's have'} no attribution yet.{' '}
+          <button className="link-btn" onClick={() => store().set({ bottomTab: 'credits', previewPlaying: false })} title="Open the Attributions tab">
+            Open Attributions
+          </button>
+        </p>
+      )}
       {assets.length > 0 && (
         <div className="asset-toolbar">
           <div className="seg">
@@ -708,6 +728,11 @@ export function Assets() {
                 </button>
               )}
               <IconButton
+                icon={<Icons.credits width={13} />}
+                title={uncredited.has(a.id) || !creditsInUse ? `Add an attribution for “${a.name}” (who made it, the licence) in the Attributions tab` : `Open the attribution for “${a.name}” in the Attributions tab`}
+                onClick={(e) => (e?.stopPropagation(), openCredit(a.id))}
+              />
+              <IconButton
                 icon={<Icons.upload width={13} />}
                 title={`Replace with a new version of the file. Everything that uses “${a.name}” shows the new one`}
                 onClick={(e) => (e?.stopPropagation(), void replace(a))}
@@ -727,6 +752,7 @@ export function Assets() {
                   <div className="asset-meta">
                     {kind} · {kb(a.size)}
                     {isUsed(a.id) ? '' : ' · unused'}
+                    {uncredited.has(a.id) ? ' · no attribution' : ''}
                   </div>
                 </div>
                 {actions}
@@ -737,6 +763,11 @@ export function Assets() {
               <div className="asset-thumb" style={{ height: Math.round(size * 0.66), ...(kind === 'image' && url ? { backgroundImage: `url("${url}")` } : {}) }}>
                 {kind !== 'image' && <span className="asset-kind">{kind}</span>}
                 {box}
+                {uncredited.has(a.id) && (
+                  <span className="asset-nocredit" title="No attribution yet: who made this, and the licence">
+                    No attribution
+                  </span>
+                )}
               </div>
               <div className="asset-name">{a.name}</div>
               {actions}

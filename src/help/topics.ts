@@ -724,8 +724,11 @@ The **↑** button on an asset (beside the bin) replaces its file with a new ver
 
 ## Looking at them
 - **Thumbnails** shows a picture for each asset. Drag the slider beside it to make the thumbnails bigger or smaller.
-- **Details** is a list with each asset's kind and size, and **unused** if nothing in the project refers to it.
+- **Details** is a list with each asset's kind and size, and **unused** if nothing in the project refers to it. Once you have started an attributions list, it also says **no attribution** beside a file no entry covers yet (the thumbnails carry a small **No attribution** tag instead).
 - Hover an asset for its full name and size. Your choice of view and thumbnail size is remembered in this browser.
+
+## Crediting them
+The **©** button on an asset (beside the **↑**) opens the [Attributions](attributions) tab on the entry for that file, making one named after the file if it has none. Fill in who made it, where it came from and the licence there. When some files still have no entry, a line above the list says how many and opens the tab.
 
 ## Using them
 - **Place** puts an image or video on the artboard you have open, in the middle, at 300 by 200. You can then resize it.
@@ -736,6 +739,47 @@ The **↑** button on an asset (beside the bin) replaces its file with a new ver
 - When anything is checked a red **Delete** button appears with the count. A dialog lists the files and warns if any are used. Deleting an asset that layers still use leaves those layers empty.
 - The bin on one asset deletes just that one (it asks first).
 - To clear out everything nothing uses, see [Usage](usage#removing-unused-assets).`,
+  },
+  {
+    id: 'attributions',
+    title: 'Attributions and references',
+    group: 'Design',
+    summary: 'Keep a list of where the pictures, sounds, text and data came from and what the project draws on, link entries to assets, and choose whether learners get a Credits button.',
+    keywords: 'attributions references credits citations sources licence license copyright creative commons cc by cc0 public domain permission creator author year bibliography credit button acknowledgements assets no attribution',
+    body: `Most projects use something somebody else made: a photograph, a sound, a passage of text, a data set, a font or a script. Many licences ask for a credit when you do, and a good course also says what it draws on. The **Attributions** tab (bottom panel) is where you keep that list. It is optional: nothing in the project needs it, and a project that never uses it carries nothing extra.
+
+## Adding entries
+Press **Add entry** and fill in what you know. Everything except the kind can stay empty while you gather it.
+
+| Field | What goes in it |
+|---|---|
+| Kind | **Image**, **Audio or video**, **Text**, **Data**, **Software**, **Other**, or **Reference** for a book, article or page the project draws on rather than something it contains |
+| Title | The name of the work, or what it is (*Sunset over the bay*, *Chapter 4*) |
+| Creator | Who made it: a person, a studio, an agency |
+| Year | When it was made or published. Any text works: *2019*, *2019-2021*, *n.d.* |
+| Source link | Where it can be found. A web address becomes a link learners can open in a new tab. Anything else (a page number, a shelf mark) shows as plain text |
+| Licence | The terms, in your own words. **Suggestions** offers the common ones (CC BY 4.0, CC BY-SA 4.0, CC BY-NC 4.0, CC0, Public domain, All rights reserved, Used with permission), and you can type anything else |
+| Notes | For you only: who gave permission, when it expires, where the original is. They never reach learners and are left out of exported and shared pages |
+| Files | The project assets this entry covers. **Link a file…** lists the Assets panel's files |
+
+Under each entry you see the citation as learners will see it, for example: *Jane Smith (2021). Sunset over the bay [Image]. Licence: CC BY 4.0.* followed by the link. With no creator the title leads and the year follows it. An entry with no title, no creator and no link is not shown to learners.
+
+Use the arrows to reorder entries and the bin to delete one. **Copy as text** puts every entry on its own line on the clipboard, ready to paste into a document or a course page.
+
+## Which files have no credit yet
+Link each entry to the files it covers. Once the list has entries, the [Assets](assets) panel marks every file that no entry covers (**no attribution** in the details view, a **No attribution** tag on a thumbnail) and says how many there are. **Add for files without one** in this tab makes one entry for each of them, named after the file, for you to fill in. Deleting a file takes it off the entries that listed it.
+
+## Showing it to learners
+- **Show a Credits button to learners** adds a small **Credits** button in the bottom left corner of the player. It opens a dialog with the list as readable citations, under the heading you choose (the default is *Credits and references*). Links open in a new tab. It works from the keyboard: the dialog takes focus, <kbd>Tab</kbd> stays inside it, <kbd>Esc</kbd> or **Close** shuts it and focus goes back to the button. It also works on a shared link, where the page runs in its sandbox.
+- **Keep the list in exported and shared pages** puts the list (without your notes) into pages you download or share even when there is no button, for anyone who reads the page's data. While the button is on this is always the case, since the button needs the list.
+- With both off, the list is your own record. It stays in the editor, in the project file (**Export** as \`.ixp\` or JSON) and in templates made from the project, notes included, and the pages you export and share carry none of it.
+
+The same two settings are in the **Credits** section of the project settings (see [Project settings](project-settings)). Preview shows the button when it is on.
+
+## Working together
+The list is part of the project, so people editing it live see each other's changes like any other edit, and undo covers it.
+
+Copyright reporting for a course is run at course level, and this tab does not replace it. It is the place to keep the facts while you work.`,
   },
   {
     id: 'images-media',
@@ -2411,6 +2455,7 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | This project is a library | Shares the artboards you publish, with the project's styles and assets, as components for other projects. See [Libraries](libraries) |
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
 | Results and progress | The score, pass mark and when the project counts as complete. See [Results and progress](results) |
+| Credits | Whether learners get a **Credits** button, and whether exported and shared pages carry the attributions list. The entries are in the **Attributions** tab. See [Attributions and references](attributions) |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
 | Fonts | The fonts the project loads. **Add a Google font…** is a search box over every Google font (type, then <kbd>Enter</kbd> or click; the chips narrow it by Sans, Serif, Display, Handwriting or Mono), or upload font files in the **Assets** panel. New projects start with Open Sans. Choosing a font for a text layer adds it here by itself |`,
   },

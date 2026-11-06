@@ -71,6 +71,7 @@ import { GridAlignFields } from '../components/GridAlignFields';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
 import { RecordsSection } from './RecordsSection';
+import { CreditsSettingsFields } from './CreditsPanel';
 import { CaptionsSection, VideoCaptions } from './CaptionsSection';
 import { VariantsSection } from './VariantsSection';
 import { StepsSection } from './StepsSection';
@@ -651,6 +652,15 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <CaptionsSection project={project} />
       <ReportingSection project={project} />
       <RecordsSection project={project} />
+      <Section help="attributions" title="Credits" defaultOpen={false}>
+        <CreditsSettingsFields />
+        <p className="hint">The entries themselves are in the Attributions tab. They are your own record unless you turn the button on.</p>
+        <Row>
+          <button className="btn" onClick={() => store().set({ bottomTab: 'credits', previewPlaying: false })} title="Open the Attributions tab">
+            Open Attributions
+          </button>
+        </Row>
+      </Section>
       <Section help="text" title="Fonts">
         {project.fonts.map((f, i) => (
           <Row key={i} className="font-row">
