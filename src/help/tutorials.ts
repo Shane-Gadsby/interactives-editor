@@ -248,7 +248,7 @@ There are three ways:
 
 ## 3. Choose: Link or Embed
 
-For Photoshop, Illustrator, PDF, AutoCAD, VectorCraft and PhotoCraft files, a dialog called **Import design file** asks what to do with each file.
+For Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and PowerPoint files, a dialog called **Import design file** asks what to do with each file.
 
 - **Embed** copies the file in once. This is the simplest choice and works in every browser.
 - **Link** keeps a connection to the file on your computer. When you save the file in the design app, the changes come into the artboard, and your own edits stay. Linking needs Chrome or Edge.

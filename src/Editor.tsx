@@ -963,7 +963,7 @@ export function Toolbar() {
       icon={<Icons.image />}
       title="Image"
       onClick={async () => {
-        const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft');
+        const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,.pptx');
         const ab = store().artboard();
         if (files.length && ab) await insertFiles(files, ab.id, { x: ab.width / 2, y: ab.height / 2 });
       }}
