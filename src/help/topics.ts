@@ -724,11 +724,18 @@ The **↑** button on an asset (beside the bin) replaces its file with a new ver
 
 ## Looking at them
 - **Thumbnails** shows a picture for each asset. Drag the slider beside it to make the thumbnails bigger or smaller.
-- **Details** is a list with each asset's kind and size, and **unused** if nothing in the project refers to it. Once you have started an attributions list, it also says **no attribution** beside a file no entry covers yet (the thumbnails carry a small **No attribution** tag instead).
+- **Details** is a list with each asset's kind and size, and **unused** if nothing in the project refers to it. Once you have started an attributions list, it also says **no attribution** beside a file no entry covers yet (the thumbnails carry a small **No attribution** tag instead). For a big picture it also says what its lighter copies are doing: **Editing copy** (what the canvas shows, see below) and **Output** with the size a download or share link carries and how much that saves, or **already small enough** when the picture is left as it is.
 - Hover an asset for its full name and size. Your choice of view and thumbnail size is remembered in this browser.
 
 ## Crediting them
 The **©** button on an asset (beside the **↑**) opens the [Attributions](attributions) tab on the entry for that file, making one named after the file if it has none. Fill in who made it, where it came from and the licence there. When some files still have no entry, a line above the list says how many and opens the tab.
+
+## Big pictures
+Every picture stays in the project at its full size. Camera photos are heavy, so two lighter copies are made from them in your browser and kept beside the original on the server:
+- **An editing copy**, for a picture over about 2 MB or 2560 px on the long side. The canvas shows it instead of the original, so a large photo does not slow down editing. It is made a moment after you add the picture (or the first time you open a project that has big ones), and you won't see a difference at normal zoom.
+- **An output copy**, made when you download or share, if [Optimise output](project-settings) is on. See [Exporting](export#optimised-pictures).
+
+Only JPEG, PNG and WebP pictures are touched. SVG, GIF and animated PNG or WebP files are always left exactly as they are, and so is any picture that is already small. Replacing a picture with **↑** makes new copies for the new file. The original is never changed, and turning Optimise output off sends everything at full size again.
 
 ## Using them
 - **Place** puts an image or video on the artboard you have open, in the middle, at 300 by 200. You can then resize it.
@@ -2436,8 +2443,8 @@ Off by default, so embeds that already exist keep working. Turn it on and attrib
     id: 'project-settings',
     title: 'Project settings',
     group: 'Getting started',
-    summary: 'Start artboard, fit, page title, fonts, sandbox and reduced motion.',
-    keywords: 'settings start artboard fit scale page title background fonts sandbox reduced motion',
+    summary: 'Start artboard, fit, page title, fonts, sandbox, reduced motion and Optimise output.',
+    keywords: 'settings start artboard fit scale page title background fonts sandbox reduced motion optimise output pictures size quality slider',
     body: `![The Project section of the Inspector, with Allowed data hosts filled in and the library and reduced motion boxes below it.](help/project-settings.png)
 
 Click an empty part of the canvas, or an artboard's name, to see the **Project** settings in the Inspector (below the artboard's own).
@@ -2454,6 +2461,7 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Allowed data hosts | Hosts that data may be loaded from, one per line (\`api.example.com\`, \`*.example.com\`). Empty allows any http(s) host. See [Data sources](data-sources#what-may-be-loaded) |
 | This project is a library | Shares the artboards you publish, with the project's styles and assets, as components for other projects. See [Libraries](libraries) |
 | Respect reduced motion | When the viewer asks for less motion, autoplaying timelines start at their end and transitions are instant |
+| Optimise output | On by default. Downloads and share links carry smaller copies of big pictures; your originals stay at full size. The slider under it runs from **Smaller files** to **Better quality** (it starts at **Better quality**). **Optimise pictures now** makes the copies straight away and tells you what they save. See [Exporting](export#optimised-pictures) |
 | Results and progress | The score, pass mark and when the project counts as complete. See [Results and progress](results) |
 | Credits | Whether learners get a **Credits** button, and whether exported and shared pages carry the attributions list. The entries are in the **Attributions** tab. See [Attributions and references](attributions) |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
@@ -2635,8 +2643,8 @@ After an import, a report lists anything that couldn't be carried over exactly. 
 
 | Export | Gives you |
 |---|---|
-| Single HTML file | One file with the player, the project and every asset. Upload or embed it anywhere. Google fonts are copied into the file, so opening it never calls Google (if a font can't be fetched when you export, a message says so and that font loads from Google instead). |
-| Project package (${PACKAGE_EXTENSION}) | The whole project with assets, to re-import or play with the player library |
+| Single HTML file | One file with the player, the project and every asset (big pictures as their [optimised copies](export#optimised-pictures)). Upload or embed it anywhere. Google fonts are copied into the file, so opening it never calls Google (if a font can't be fetched when you export, a message says so and that font loads from Google instead). |
+| Project package (${PACKAGE_EXTENSION}) | The whole project with assets at full size, to re-import or play with the player library |
 | Project JSON | The document only, without asset files |
 | Public interface reference…, TypeScript definitions (.d.ts) | What a page that embeds the project can set, read and hear, as a reference page and typed names. See [Public interface](public-interface). These three exports ask first when the list no longer matches the project |
 | Lottie JSON (this artboard), dotLottie (this artboard) | The open artboard's shapes and timeline, for Lottie players (no interactivity). A report lists what couldn't be written |
@@ -2671,6 +2679,16 @@ Things to know:
 
 ![The Export menu.](help/export-menu.png)
 
+## Optimised pictures
+A phone photo can be 5 MB or more, and an export or share link carries every picture inside it. With **Optimise output** on in the [Project settings](project-settings) (it is on by default), the **Single HTML file** and the **Share link** carry a smaller copy of each big picture instead, and your originals stay in the project at full size.
+
+- The **slider** under the box goes from **Smaller files** to **Better quality**, in five steps. Each step sets how large a picture may stay (from 1280 px up to 3840 px on the long side) and how hard it is compressed. The default is **Better quality**, the fourth step. Pictures are never made bigger.
+- Pictures without transparency become JPEG, and ones with transparency become WebP, so cut-outs keep their edges. Colour profiles are not carried over, and a photo that relied on one can shift very slightly.
+- SVG, GIF, animated PNG and WebP, and pictures that are already small are left as they are. So is any picture that would not come out clearly smaller.
+- The first export or share after a change works the copies out, which can take a few seconds for a project full of photos. They are kept on the server for each step of the slider, so the next export is quick. **Optimise pictures now** in the Project settings does that work ahead of time and says what it saves, and the [Assets panel](assets#looking-at-them) shows the saving for each picture in its Details view.
+- The **Project package** and **Preview** always use the full-size pictures, and so do the PNG and SVG image exports. A share link made earlier keeps whatever it was made with until you update it.
+- Turn the box off to put every picture in at full size again.
+
 ## Sharing
 **Share** in the top bar (next to Export) has three ways to share a project:
 
@@ -2689,6 +2707,8 @@ Export gives you **files**; Share gives you **links and people**. Nothing under 
 **Share → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google (a message tells you if a font couldn't be fetched, and that font loads from Google instead). It is a snapshot: press **Update to the latest version** to publish later changes, or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). The **Link for StudyDesk** is the same link, so it stops too: if learners have results or progress in the project, the confirm lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one. **Copy** copies the link and **Open** opens it in a new tab.
 
 ![The Share link dialog.](help/share-link-dialog.png)
+
+A share link carries big pictures as their [optimised copies](export#optimised-pictures) while **Optimise output** is on in the Project settings.
 
 **Link for StudyDesk** plays the same project but keeps each signed-in learner's score, completion and progress. Use it in StudyDesk when you set a score or tick **Remember** on variables, and see [Results and progress](results). **Results…** shows how learners did.
 

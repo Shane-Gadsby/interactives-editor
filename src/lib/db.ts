@@ -192,11 +192,61 @@ export async function deleteAsset(projectId: string, assetId: string): Promise<v
   await call(`projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`, { method: 'DELETE' });
 }
 
+/** One row of the server's asset list. `variants` is the sizes of the smaller copies kept beside it, by key (0 means the original is as good). */
+export interface AssetListing {
+  id: string;
+  mime: string;
+  size: number;
+  variants?: Record<string, number>;
+}
+
+export const listAssets = (projectId: string) => call<AssetListing[]>(`projects/${encodeURIComponent(projectId)}/assets`);
+
+const variantPath = (projectId: string, assetId: string, key: string) => `projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}/variant/${encodeURIComponent(key)}`;
+
+/** A smaller copy of an asset (see image-optimise.ts), or null when there is none. */
+export async function getVariant(projectId: string, assetId: string, key: string): Promise<Blob | null> {
+  try {
+    return await call<Blob>(variantPath(projectId, assetId, key), {}, 'blob');
+  } catch {
+    return null;
+  }
+}
+
+/** Keep a smaller copy beside the asset. An empty blob records that the original is already as good. */
+export async function putVariant(projectId: string, assetId: string, key: string, blob: Blob): Promise<void> {
+  await call(variantPath(projectId, assetId, key), { method: 'PUT', headers: { 'Content-Type': blob.type || 'image/webp' }, body: blob });
+}
+
+/**
+ * Every asset's file for the canvas: the proxy where one is stored, the original where not. `listing` is what the
+ * server said, so the caller can see which assets have copies and which big ones don't.
+ */
+export async function loadAssetsForCanvas(projectId: string, proxy: string): Promise<{ blobs: Map<string, Blob>; proxied: Set<string>; listing: AssetListing[] }> {
+  const listing = await listAssets(projectId);
+  const blobs = new Map<string, Blob>();
+  const proxied = new Set<string>();
+  await Promise.all(
+    listing.map(async (a) => {
+      if (a.variants?.[proxy]) {
+        const small = await getVariant(projectId, a.id, proxy);
+        if (small) {
+          blobs.set(a.id, small);
+          proxied.add(a.id);
+          return;
+        }
+      }
+      const b = await getAsset(projectId, a.id);
+      if (b) blobs.set(a.id, b);
+    }),
+  );
+  return { blobs, proxied, listing };
+}
+
 export async function listAssetBlobs(projectId: string): Promise<Map<string, Blob>> {
-  const list = await call<{ id: string }[]>(`projects/${encodeURIComponent(projectId)}/assets`);
   const out = new Map<string, Blob>();
   await Promise.all(
-    list.map(async (a) => {
+    (await listAssets(projectId)).map(async (a) => {
       const b = await getAsset(projectId, a.id);
       if (b) out.set(a.id, b);
     }),

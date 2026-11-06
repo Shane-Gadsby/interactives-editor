@@ -368,10 +368,34 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//Same for a saved template: its own copy of the files (and its thumbnail, thumb.jpg, a name no asset id can have)
 	templateDir = (templateID) => path.join(storageDir, '_templates', templateID),
 
+	//Smaller copies of an image asset (the editor's canvas proxy, the optimised output for a share or export), as
+	//_variants/<assetID>.<key> with a .json sidecar like the asset's. Asset ids can't start with _ or hold a dot, so
+	//nothing here can be mistaken for an asset
+	variantDir = (projectID) => path.join(storageDir, projectID, '_variants'),
+	variantFile = (projectID, assetID, key) => path.join(variantDir(projectID), `${assetID}.${key}`),
+	validVariantKey = (key) => typeof key === 'string' && /^[a-z0-9-]{1,40}$/.test(key),
+	maxVariants = 8,
+
+	removeVariants = async (projectID, assetID) => {
+		let names = []
+
+		try {
+			names = await fs.promises.readdir(variantDir(projectID))
+		}
+		catch (e) {
+			return
+		}
+
+		for (let name of names.filter((n) => n.startsWith(`${assetID}.`))) {
+			await fs.promises.rm(path.join(variantDir(projectID), name), {force: true})
+		}
+	},
+
 	removeAssets = async (projectID, assetID) => {
 		if (assetID) {
 			await fs.promises.rm(assetFile(projectID, assetID), {force: true})
 			await fs.promises.rm(`${assetFile(projectID, assetID)}.json`, {force: true})
+			await removeVariants(projectID, assetID)
 		}
 		else {
 			await fs.promises.rm(projectDir(projectID), {recursive: true, force: true})
@@ -904,12 +928,35 @@ router.get('/api/projects/:id/assets', async (req, res) => {
 
 	let dir = projectDir(req.params.id),
 		names = fs.existsSync(dir) ? await fs.promises.readdir(dir) : [],
+		variants = new Map(),
 		list = []
+
+	//Which smaller copies each asset has, with their sizes (0 is "the original is as good", see the variant route)
+	try {
+		for (let name of (await fs.promises.readdir(variantDir(req.params.id))).filter((n) => n.endsWith('.json'))) {
+			try {
+				let meta = JSON.parse(await fs.promises.readFile(path.join(variantDir(req.params.id), name), 'utf8')),
+					[assetID, key] = name.slice(0, -5).split('.')
+
+				variants.set(assetID, {...variants.get(assetID), [key]: meta.size})
+			}
+			catch (e) {
+				//Half written, skip it
+			}
+		}
+	}
+	catch (e) {
+		//No variants yet
+	}
 
 	for (let name of names.filter((n) => n.endsWith('.json'))) {
 		try {
-			let meta = JSON.parse(await fs.promises.readFile(path.join(dir, name), 'utf8'))
-			list.push({id: name.slice(0, -5), mime: meta.mime, size: meta.size})
+			let meta = JSON.parse(await fs.promises.readFile(path.join(dir, name), 'utf8')),
+				id = name.slice(0, -5),
+				row = {id: id, mime: meta.mime, size: meta.size}
+
+			if (variants.has(id)) row.variants = variants.get(id)
+			list.push(row)
 		}
 		catch (e) {
 			//A half written sidecar, skip it
@@ -939,7 +986,93 @@ router.put('/api/projects/:id/assets/:assetId', express.raw({type: () => true, l
 	await fs.promises.rename(temp, file)
 	await fs.promises.writeFile(`${file}.json`, JSON.stringify({mime: mime, size: bytes.length, created: new Date()}))
 
+	//New bytes under an id that had smaller copies made from the old ones
+	await removeVariants(id, assetId)
+
 	res.json({ok: true, size: bytes.length})
+})
+
+//A smaller copy of an image asset, made in the browser: the canvas proxy (key "edit") or an optimised output (a key
+//that says its size and quality). Same owner check and size limit as the asset. An empty body is a real answer, it
+//means "the original is already as good", so nobody works that out again. At most maxVariants per asset, the oldest
+//goes when there is one too many
+router.put('/api/projects/:id/assets/:assetId/variant/:key', express.raw({type: () => true, limit: maxAsset}), async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	let {id, assetId, key} = req.params,
+		bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0),
+		mime = String(req.get('content-type') || '').split(';')[0].trim().toLowerCase()
+
+	if (!validVariantKey(key)) {
+		return res.status(400).json({error: 'Bad variant key'})
+	}
+
+	if (!/^image\/(jpeg|png|webp)$/.test(mime)) {
+		return res.status(415).json({error: 'A variant is a jpeg, png or webp picture'})
+	}
+
+	if (!fs.existsSync(`${assetFile(id, assetId)}.json`)) {
+		return res.status(404).json({error: 'No such asset'})
+	}
+
+	let file = variantFile(id, assetId, key),
+		temp = `${file}.${process.pid}.${Date.now()}.tmp`
+
+	await fs.promises.mkdir(variantDir(id), {recursive: true})
+
+	let mine = []
+
+	for (let name of await fs.promises.readdir(variantDir(id))) {
+		if (name.startsWith(`${assetId}.`) && name.endsWith('.json') && name !== `${assetId}.${key}.json`) {
+			mine.push({name: name.slice(0, -5), time: (await fs.promises.stat(path.join(variantDir(id), name)).catch(() => ({mtimeMs: 0}))).mtimeMs})
+		}
+	}
+
+	mine.sort((a, b) => a.time - b.time)
+
+	for (let old of mine.slice(0, Math.max(0, mine.length - (maxVariants - 1)))) {
+		await fs.promises.rm(path.join(variantDir(id), old.name), {force: true})
+		await fs.promises.rm(path.join(variantDir(id), `${old.name}.json`), {force: true})
+	}
+
+	await fs.promises.writeFile(temp, bytes)
+	await fs.promises.rename(temp, file)
+	await fs.promises.writeFile(`${file}.json`, JSON.stringify({mime: mime, size: bytes.length, created: new Date()}))
+
+	res.json({ok: true, size: bytes.length})
+})
+
+router.get('/api/projects/:id/assets/:assetId/variant/:key', async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	let {id, assetId, key} = req.params
+
+	if (!validVariantKey(key)) {
+		return res.status(400).json({error: 'Bad variant key'})
+	}
+
+	let file = variantFile(id, assetId, key),
+		meta
+
+	try {
+		meta = JSON.parse(await fs.promises.readFile(`${file}.json`, 'utf8'))
+	}
+	catch (e) {
+		return res.status(404).json({error: 'No such variant'})
+	}
+
+	//Revalidated, a PUT under the same key replaces it
+	res.setHeader('Cache-Control', 'private, no-cache')
+	safety.assetHeaders(res, meta.mime)
+	res.sendFile(file, (err) => {
+		if (err && !res.headersSent) {
+			res.status(404).json({error: 'No such variant'})
+		}
+	})
 })
 
 router.get('/api/projects/:id/assets/:assetId', async (req, res) => {
