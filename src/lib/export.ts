@@ -1,5 +1,5 @@
 import playerSource from '@player-iife?raw';
-import { buildStandaloneHtml, PACKAGE_EXTENSION, withPublishedCredits, type Asset, type Project } from 'interactives-player';
+import { buildStandaloneHtml, PACKAGE_EXTENSION, withPublishedCredits, type Asset, type ContextValues, type Project } from 'interactives-player';
 import { hasScriptLayers } from './draw-templates';
 import { assetBytes, exportPackage } from './db';
 import { withOptimisedAssets } from './asset-variants';
@@ -46,15 +46,18 @@ export function withoutLinks(project: Project): Project {
  */
 export async function standaloneHtml(
   project: Project,
-  opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; bytesFor?: (asset: Asset) => Promise<Uint8Array | null>; embedFonts?: boolean; optimise?: boolean; onWarning?: (text: string) => void } = {},
+  opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; context?: Partial<ContextValues>; bytesFor?: (asset: Asset) => Promise<Uint8Array | null>; embedFonts?: boolean; optimise?: boolean; onWarning?: (text: string) => void } = {},
 ): Promise<string> {
   //A page for learners carries the attributions only when the Credits button or the exports option asks, and never the author's notes
-  const clean = withPublishedCredits(withoutLinks(project));
+  // The author's made-up context values are for designing, so a file for learners does not carry them
+  const { sampleContext: _sample, ...unsampled } = withoutLinks(project);
+  void _sample;
+  const clean = withPublishedCredits(unsampled as Project);
   const named = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
   // The swapped assets carry their bytes as data: urls, which the builder embeds as they are (assetBytes reads them too)
   const p = opts.optimise && !opts.bytesFor ? await withOptimisedAssets(named) : named;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
-  const html = await buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: opts.bytesFor ?? ((a) => assetBytes(project.id, a)), debug: opts.debug, accessibility: opts.accessibility });
+  const html = await buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: opts.bytesFor ?? ((a) => assetBytes(project.id, a)), debug: opts.debug, accessibility: opts.accessibility, context: opts.context });
   // The player skips a Google font whose element id is already in the page, so these go in ahead of its script
   return opts.embedFonts ? inHead(html, await embeddedFontStyles(p, opts.onWarning)) : html;
 }

@@ -9,6 +9,7 @@ import { Icons } from '../components/icons';
 import { SplitColumns } from '../components/SplitColumns';
 import { assetKind } from '../lib/assets';
 import { addAssetOption, withQuickAdd } from '../lib/quick-add';
+import { CONTEXT_ID, ContextPanel } from './ContextPanel';
 
 const KINDS: { value: DataKind; label: string }[] = [
   { value: 'json', label: 'JSON' },
@@ -24,8 +25,10 @@ export function DataPanel() {
     (fn) => dataCache.subscribe(fn),
     () => dataCache.version,
   );
-  const [activeId, setActiveId] = useState<string | null>(s.sources[0]?.id ?? null);
-  const active = s.sources.find((d) => d.id === activeId) ?? s.sources[0];
+  const [activeId, setActiveId] = useState<string | null>(s.sources[0]?.id ?? CONTEXT_ID);
+  // The built-in context is always in the list; it shows when picked, or when no source is
+  const showContext = activeId === CONTEXT_ID;
+  const active = showContext ? undefined : (s.sources.find((d) => d.id === activeId) ?? s.sources[0]);
 
   const setSource = (id: string, patch: Partial<DataSource>, coalesce?: string) =>
     store().update(
@@ -35,7 +38,7 @@ export function DataPanel() {
       },
       { coalesce },
     );
-  const names = () => [...s.sources.map((d) => d.name), ...s.variables.map((v) => v.name)];
+  const names = () => [...s.sources.map((d) => d.name), ...s.variables.map((v) => v.name), 'context'];
   const addUrl = () => {
     const ds: DataSource = { id: uid('ds'), name: uniqueIdentifier(names(), 'data'), kind: 'json', source: 'url', url: '', refresh: 0 };
     store().update((d) => {
@@ -66,6 +69,11 @@ export function DataPanel() {
   return (
     <SplitColumns id="data" columns={[{ width: 220, min: 140, max: 480 }, 'flex']} className="data-panel">
       <div className="script-list">
+        <button className={`list-item${showContext || !active ? ' active' : ''}`} title="The course and the learner, built in and read only" onClick={() => setActiveId(CONTEXT_ID)}>
+          <span className="dot ok" />
+          <span className="mono">context</span>
+          <span className="badge">built in</span>
+        </button>
         {s.sources.map((d) => {
           const st = dataCache.get(d.id);
           return (
@@ -87,6 +95,7 @@ export function DataPanel() {
         <SplitColumns id="data-main" columns={[{ width: 320, min: 220, max: 640 }, 'flex']} className="data-main">
           <div className="data-form">
             <TextField label="Name" mono value={active.name} commitOnBlur onChange={(v) => setSource(active.id, { name: v.trim() || active.name })} />
+            {active.name === 'context' && <div className="error small">This hides the built-in context in expressions; pick another name.</div>}
             {!isIdentifier(active.name) && <div className="error small">Use letters, digits and _ only, so expressions can say {active.name.replace(/\W/g, '_')}.</div>}
             {s.variables.some((v) => v.name === active.name) && <div className="error small">A variable has the same name and wins in expressions; use data.{active.name}.</div>}
             <SelectField<DataKind> label="Format" value={active.kind} options={KINDS} onChange={(v) => setSource(active.id, { kind: v })} />
@@ -155,16 +164,13 @@ export function DataPanel() {
           </div>
         </SplitColumns>
       ) : (
-        <div className="panel-empty">
-          <p>Data sources feed bindings, repeated lists and expressions from JSON, CSV, TSV or text, uploaded as files or fetched from a URL.</p>
-          <div className="row">
-            <button className="btn primary" onClick={addFiles}>
-              + From file
-            </button>
-            <button className="btn" onClick={addUrl}>
-              + From URL
-            </button>
-          </div>
+        <div className="data-context">
+          {!s.sources.length && (
+            <p className="hint">
+              Data sources feed bindings, repeated lists and expressions from JSON, CSV, TSV or text, uploaded as files or fetched from a URL. Add one with + From file or + From URL.
+            </p>
+          )}
+          <ContextPanel />
         </div>
       )}
     </SplitColumns>

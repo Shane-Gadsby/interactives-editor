@@ -1,4 +1,4 @@
-import { artboardScope, dataPolicyFor, enumOptions, fetchDataSource, initialValue, layerScope, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
+import { artboardScope, courseValuesFor, dataPolicyFor, enumOptions, fetchDataSource, initialValue, layerScope, sampleContextFor, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -85,8 +85,12 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
     board.artboard = artboardScope(artboard);
     board.layer = (key: unknown) => layerScope(byKey.get(String(key)));
   }
-  const vars: Record<string, unknown> = { ...board, ...data, data, enums: enumOptions(project.variables) };
-  for (const v of project.variables) vars[v.name] = initialValue(v);
+  // `context` is the project's sample course and learner (Data panel), under data and variables of the same name like the player has it
+  const context = sampleContextFor(project);
+  const vars: Record<string, unknown> = { context, ...board, ...data, data, enums: enumOptions(project.variables) };
+  // The sample course's rows in place of initial values, the way the player starts on the real course
+  const perCourse = courseValuesFor(project.courseValues, context.courseLabel, project.variables);
+  for (const v of project.variables) vars[v.name] = initialValue(perCourse.has(v.id) ? { ...v, initial: perCourse.get(v.id)! } : v);
   // An artboard with steps shows its first step: the dots of a step bar, and the variables the player would keep up to date
   const cfg = artboard?.steps;
   const list = cfg ? stepList(stepsTimeline(artboard!)) : [];

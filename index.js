@@ -3442,6 +3442,13 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	var rowFor = ${records.rowFor.toString()}
 	var cleanDiag = ${records.cleanDiag.toString()}
 	var diagRow = ${records.diagRow.toString()}
+	var contextFrom = ${records.contextFrom.toString()}
+	//The project's built-in context (course, first name, student or staff) is answered from the session once fetchActivity has
+	//one. Never the username, email or id, and it is not sent to analytics. A project that asks before then waits in the queue
+	var contextReady = false, contextData = null, contextAsks = []
+	var answerContext = function (m) {
+		answer(m, {ok: true, available: !!contextData, data: contextData})
+	}
 	var project = ${JSON.stringify(project)}, run = Math.random().toString(36).slice(2) + Date.now().toString(36), queue = [], taken = 0, known = false, timer = null
 	var flushRecords = function () {
 		timer = null
@@ -3481,6 +3488,9 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		window.m.app = 'Interactives'
 		fetchActivity(function (err, data) {
 			settleDiags()
+			contextData = err || !data ? null : contextFrom(data.user, data.activity)
+			contextReady = true
+			while (contextAsks.length) answerContext(contextAsks.shift())
 			if (err || !data || !data.user || !data.user.username) return
 			window.m.user = data.user
 			window.m.activity = data.activity || {}
@@ -3489,6 +3499,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			if (queue.length && !timer) timer = setTimeout(flushRecords, 300)
 		})
 	}
+	else contextReady = true
 	window.addEventListener('message', function (e) {
 		if (e.source !== frame.contentWindow) return
 		var m = e.data
@@ -3498,7 +3509,11 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		var failed = function () {
 			answer(m, {ok: false, available: false})
 		}
-		if (m.op === 'load') {
+		if (m.op === 'context') {
+			if (contextReady) answerContext(m)
+			else contextAsks.push(m)
+		}
+		else if (m.op === 'load') {
 			call('GET', 'progress').then(function (j) {
 				answer(m, {ok: true, available: !!j.available, data: j.progress || null})
 			}, failed)

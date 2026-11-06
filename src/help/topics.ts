@@ -1792,6 +1792,9 @@ Choice variables show as a dropdown wherever you set them, so you can't type a v
 ## Lists
 A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Set variable**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. In scripts assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
 
+## Different values for different courses
+One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
+
 ## Using variables
 - In text: \`Score: {score}\`.
 - In [bindings](bindings): drive any property from a variable.
@@ -1961,6 +1964,7 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 | \`ix.onFrame((dt, t) => …)\` | Run every frame |
 | \`ix.pointer\`, \`ix.artboard\` | Pointer \`{x, y, down}\`, artboard \`{name, width, height}\` |
 | \`ix.data.name\`, \`await ix.loadData(name)\` | Data sources |
+| \`ix.context.firstName\`, \`ix.context.courseCode\`, \`ix.context.isStaff\` | The course and learner, read only ([Course and learner context](course-context)) |
 | \`ix.setCursor('grab')\`, \`ix.log(…)\` | Cursor, logging |
 
 \`.set()\` and \`.animate()\` change the properties in the [Animatable properties](animatable-properties) (position, size, colour, text, visibility, link URL…) and a layer's \`fill\`, \`stroke\`, \`shadow\` and auto layout. Anything else, such as an embed's \`html\`, \`className\`, \`bindings\` or a layer's \`repeat\`, is part of how the project was built: the call throws an error saying so. Links only go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses.
@@ -2281,6 +2285,9 @@ Use a source by its **name** anywhere expressions go: \`{products.length} produc
 
 **Load data** reloads a source (optionally from a different URL); **On data loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
 
+## The built-in context
+The list always starts with **context**, a read-only source that is there without adding anything: the course and the learner (\`{context.firstName}\`, \`context.courseCode\`). Pick it to see its fields, set sample values to design with, and give different courses different starting values. See [Course and learner context](course-context).
+
 ## What may be loaded
 Every data request, from a source, the **Load data** node or \`ix.loadData(name, url)\`, follows the same rules:
 
@@ -2292,6 +2299,59 @@ Every data request, from a source, the **Load data** node or \`ix.loadData(name,
 A refused request loads nothing and writes a warning to the console; in a script, \`ix.loadData\` throws.
 
 > URLs must allow cross-origin requests (CORS) from wherever the interactive is published.`,
+  },
+  {
+    id: 'course-context',
+    title: 'Course and learner context',
+    group: 'Data',
+    summary: 'The built-in context source (course label, first name, student or staff) and per-course variable values.',
+    keywords: 'context course label code term year learner first name display name student staff studydesk per-course values offering rollover duplicate fetchactivity session greeting',
+    body: `Every project has a built-in, read-only data source called **context**. It holds the course the project is in and the person playing, so a project can greet someone by name, show the unit code, or change what it says for staff and students. You do not add it and you cannot edit it; it is always in the **Data** tab's list, first.
+
+## What is in it
+| Field | What it is |
+|---|---|
+| \`context.courseLabel\` | The StudyDesk course label, like \`MAT1000_26S1_ONC\` |
+| \`context.courseCode\` | The label up to its first underscore, like \`MAT1000\` |
+| \`context.courseName\` | The course's title |
+| \`context.offering\` | The label after the code, like \`26S1_ONC\`: one run of the course |
+| \`context.term\`, \`context.year\` | The study period (\`S1\`) and the year (\`2026\`) when the label has them, otherwise empty |
+| \`context.lmsUrl\`, \`context.lmsName\` | The learning management system, as StudyDesk reports it |
+| \`context.firstName\`, \`context.displayName\` | The learner's first name, and the name to greet them by |
+| \`context.signedIn\` | Someone is signed in to StudyDesk |
+| \`context.isStudent\`, \`context.isStaff\` | Signed in as a student, or signed in and not a student |
+
+Term and year are worked out from the label as well as they can be, and are empty when the label does not say.
+
+## Using it
+Use it by name anywhere expressions go, the same as any [data source](data-sources):
+
+- Text: \`Welcome, {context.firstName}\`. A learner with no name sees \`Welcome, \`, so word it to cope.
+- [Bindings](bindings): show a layer only for staff with \`context.isStaff\`, or pick a message with \`context.courseCode == "MAT1000" ? "A" : "B"\`.
+- The interaction graph: anywhere a node takes an expression, such as the **If** condition.
+- Scripts: \`ix.context.firstName\`.
+
+A variable or data source that you name \`context\` hides the built-in one, and the Data tab warns about it.
+
+## Where the values come from
+- **The Link for StudyDesk** fills it in from the signed in StudyDesk session. Use that link, not the plain share link, when you want it.
+- **Preview and the canvas** use made-up **sample values**, which you edit in the Data tab under **context** (first name, course label and so on). The code, term and year follow the sample label. Clear a field to see the project with it blank. Sample values are for designing: they are never in an exported file or a share link.
+- **Anywhere else**, such as a downloaded file or a share link opened outside StudyDesk, nobody is known: the text is empty and the flags are false.
+
+## Per-course values
+One project can serve several courses without being copied. In the **Data** tab, pick **context** and use **Per-course values**: add a row with a course label, then pick the variables that row changes and give each its value for that course.
+
+- The label can use \`*\` for any run of characters and \`?\` for one character, and is not case sensitive: \`MAT1000_*\` is every run of MAT1000, and \`MAT1000_26S1_ONC\` is exactly one. Commas give several: \`MAT1000_*, MAT1001_*\`.
+- Rows apply when the project starts on the Link for StudyDesk page, in order from the top. Every matching row applies, and a later row wins where two set the same variable. A course that matches no row simply gets each variable's own starting value.
+- It changes the starting value only. **Start over** goes back to it. A learner's own remembered progress (variables ticked **Remember**) still wins over it, so leave **Remember** off for a variable you set per course. A value the embedding page sets itself (an input attribute) wins too.
+- Preview uses the sample course, and each row says whether it matches, so you can try each course by changing the sample course label.
+
+Results are already kept per course, so each course's learners start clean without anything here.
+
+After changing per-course values, press **Update to the latest version** in [Share link](export#share-link) so the Link for StudyDesk plays the new version.
+
+## Privacy
+Only the course, the learner's first name and display name, and whether they are a student or staff go to the project. Never a username, email, student number or anything that could look a person up. Nothing from \`context\` is sent to analytics, results or diagnostics by the player or the Link for StudyDesk page. A project that records a name itself (a script saving \`ix.context.firstName\` with **Record**) is doing that on purpose, so don't.`,
   },
   {
     id: 'repeaters',
@@ -2340,7 +2400,7 @@ Then tick **Remember** on each variable that should keep its value between visit
 ## Where it goes
 The player works with no server: with nothing else around it, **Remember** keeps values in the browser and a reported result goes nowhere (the page around an iframe also receives it as a message).
 
-Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It plays the same project, and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session. The same link also counts what learners do for [Insights](insights). Someone opening it with no session plays as normal and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
+Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](export#share-link) rather than the share link. It also tells the project which course it is in and the learner's first name, for [Course and learner context](course-context) (never their username or email, and none of it goes into results or Insights). It plays the same project, and keeps one record per learner per course in the Toolbox's own database: completion, score, pass or fail, attempts and the remembered variables. Learners are identified by their StudyDesk session. The same link also counts what learners do for [Insights](insights). Someone opening it with no session plays as normal and their progress stays in their own browser. Nothing is sent to the LMS gradebook yet.
 
 ## Save user data and Load user data
 **Remember** keeps a variable's value all the time, on its own. When you'd rather choose the moment, use the two action nodes instead: **Save user data** keeps the variables you tick, as they are right then (say, when the learner presses *Submit*), and **Load user data** puts them back on a later visit. Put the load in **Before activity loads** so the values are in place before anything shows. *Load user data* goes on from **Loaded** when anything came back, and from **Nothing saved** on a first visit, so you can set up a fresh start there.
