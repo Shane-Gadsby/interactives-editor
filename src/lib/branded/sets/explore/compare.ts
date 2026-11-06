@@ -12,7 +12,7 @@ export const beforeAndAfter: BrandedStarter = {
   set: 'explore',
   name: 'Before and after',
   description: 'Two pictures stacked with a divider handle you drag, or move with the left and right arrow keys, to reveal one over the other. Labelled "Before" and "After", with buttons to jump to either side for people who cannot drag.',
-  tags: ['Compare', 'Pictures', 'Drag', 'Keyboard friendly'],
+  tags: ['compare', 'pictures', 'drag', 'keyboard friendly'],
   build(colourway) {
     const ctx = brandedProject(colourway, 'Before and after');
     const { L } = ctx;

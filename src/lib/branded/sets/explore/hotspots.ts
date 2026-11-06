@@ -18,7 +18,7 @@ export const imageHotspots: BrandedStarter = {
   set: 'explore',
   name: 'Image hotspots',
   description: 'A large picture with five numbered points. Selecting one (or pressing Enter on it) opens a panel with a heading, text and an optional picture, with a Close button and Esc. Points you have opened show a ring, and a count says how many you have explored.',
-  tags: ['Picture', 'Reveal', 'Keyboard friendly', 'Hotspots'],
+  tags: ['picture', 'reveal', 'keyboard friendly', 'hotspots'],
   build(colourway) {
     const ctx = brandedProject(colourway, 'Image hotspots');
     const { L } = ctx;

@@ -47,7 +47,7 @@ export const flipAndDialogCards: BrandedStarter = {
   set: 'explore',
   name: 'Flip and dialog cards',
   description: 'Six cards in a grid that flip on a click or Enter (a term on the front, its meaning on the back), plus a dialog-card page that steps through the same cards one at a time with Turn, Previous, Next and a progress line. Write the cards once, in the "cards" list variable.',
-  tags: ['Cards', 'Terms', 'Keyboard friendly', 'Self-check'],
+  tags: ['cards', 'terms', 'keyboard friendly', 'self-check'],
   build(colourway) {
     const ctx = brandedProject(colourway, 'Flip and dialog cards');
     const { L } = ctx;

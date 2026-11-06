@@ -278,7 +278,7 @@ describe('playing the assessment starters', () => {
       expect(text()).toContain(statements[1].text);
       await click(idOf(result, 'Try again button'));
       expect(player.getVariable('tally')).toBe(0);
-      expect(text()).toContain('True or false: academic integrity');
+      expect(text()).toContain('Academic integrity: true or false?');
     });
   });
 

@@ -20,7 +20,7 @@ export const imageSlider: BrandedStarter = {
   set: 'explore',
   name: 'Image slider',
   description: 'A carousel of five slides, each a picture and a caption, with Previous and Next buttons, a dot for every slide, left and right arrow keys, and optional autoplay that waits for people who ask for less motion and stops when someone steps through by hand.',
-  tags: ['Carousel', 'Pictures', 'Keyboard friendly', 'Autoplay'],
+  tags: ['carousel', 'pictures', 'keyboard friendly', 'autoplay'],
   build(colourway) {
     const ctx = brandedProject(colourway, 'Image slider');
     const { L } = ctx;

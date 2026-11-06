@@ -30,7 +30,7 @@ export function buildTrueFalse(colourway: Colourway) {
   variable(project, 'messageMid', 'string', 'A good start. Look again at the statements below.');
   variable(project, 'messageLow', 'string', 'Have another look at the explanations, then try again.');
 
-  const { page: hero, start } = heroPage(ctx, 'True or false: academic integrity', `Eight statements, one at a time. Say whether each is true or false and see why straight away.`, 'Start');
+  const { page: hero, start } = heroPage(ctx, 'Academic integrity: true or false?', `Eight statements, one at a time. Say whether each is true or false and see why straight away.`, 'Start');
   const play = brandedPage(ctx, 'True or false', { footer: 'Statement {index + 1} of {statements.length}' });
   const result = brandedPage(ctx, 'Your result', { footer: 'True or false: academic integrity' });
 

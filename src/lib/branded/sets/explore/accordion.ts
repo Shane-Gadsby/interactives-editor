@@ -18,7 +18,7 @@ export const accordion: BrandedStarter = {
   set: 'explore',
   name: 'Accordion',
   description: 'Five sections, each a header button that opens or closes its panel while the sections below move up or down. One section is open at a time, or set the "allowMany" variable to let several stay open. Headers are real buttons that say whether they are expanded.',
-  tags: ['Reveal', 'Auto layout', 'Keyboard friendly', 'Text'],
+  tags: ['reveal', 'auto layout', 'keyboard friendly', 'text'],
   build(colourway) {
     const ctx = brandedProject(colourway, 'Accordion');
     const { L } = ctx;
