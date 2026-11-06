@@ -15,6 +15,7 @@ import { copySelectedKeys, isKeyClipText, keyContext, keysCopiedLast, pasteKeys,
 import { Canvas } from './canvas/Canvas';
 import { deleteSelectedKeys } from './panels/Timeline';
 import { ReferenceModal } from './panels/InterfacePanel';
+import { MotionExportModal } from './components/MotionExportModal';
 import { exportProblems, typeDefinitions } from 'interactives-player';
 import { confirmDialog } from './components/dialogs';
 import { Icons, type IconName } from './components/icons';
@@ -627,6 +628,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   const [inviteOpen, setInviteOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
+  const [motionOpen, setMotionOpen] = useState(false);
   const exportDefinitions = () => {
     const project = st.get().project;
     download(new Blob([typeDefinitions(project)], { type: 'text/plain' }), `${fileSafe(project.name)}.d.ts`);
@@ -732,6 +734,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
       {templateOpen && <SaveTemplateModal onClose={() => setTemplateOpen(false)} />}
       {referenceOpen && <ReferenceModal onClose={() => setReferenceOpen(false)} />}
+      {motionOpen && <MotionExportModal onClose={() => setMotionOpen(false)} />}
       {reviewOpen && <ShareForReviewModal onClose={() => setReviewOpen(false)} />}
       {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
       <button className="btn primary" onClick={onPreview} title="Play the project exactly as the exported file will">
@@ -782,6 +785,10 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
             <button onClick={() => run(() => exportPicture('svg', 1))}>
               SVG image (this artboard)
               <span className="muted small">Scales cleanly; opens in browsers</span>
+            </button>
+            <button onClick={() => run(() => setMotionOpen(true))}>
+              Video, GIF or frames…
+              <span className="muted small">A timeline of this artboard as MP4, WebM, GIF or PNG pictures</span>
             </button>
           </div>
         )}

@@ -201,3 +201,26 @@ export async function downloadArtboardPng(project: Project, ab: Artboard, timeli
   download(blob, `${fileSafe(ab.name)}${scale !== 1 ? `@${scale}x` : ''}.png`);
   return warnings;
 }
+
+/**
+ * One frame of an artboard at `time`, drawn into `ctx` at `width` x `height` (the same drawing as the PNG export, so a frame
+ * is exactly the picture you'd get with the playhead there). `background` fills first; null leaves the canvas transparent.
+ */
+export async function drawArtboardFrame(project: Project, ab: Artboard, timeline: Timeline | null, time: number, ctx: CanvasRenderingContext2D, width: number, height: number, opts: { theme?: string | null; background?: string | null } = {}): Promise<string[]> {
+  const { svg, warnings } = await artboardSvg(project, ab, timeline, time, { theme: opts.theme });
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    ctx.clearRect(0, 0, width, height);
+    if (opts.background) {
+      ctx.fillStyle = opts.background;
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.drawImage(img, 0, 0, width, height);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+  return warnings;
+}
