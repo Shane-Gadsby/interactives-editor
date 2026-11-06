@@ -400,7 +400,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | Key | Does |
 |---|---|
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> (<kbd>Ctrl</kbd>+<kbd>Y</kbd>) | Undo / redo |
-| <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd> | Copy / cut / paste (pasting image files inserts them) |
+| <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd> | Copy / cut / paste (pasting image files inserts them). After clicking in the timeline they copy and paste the selected keys, see [Copy, snap and stagger keys](timelines#copy-snap-and-stagger-keys) |
 | <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate |
 | <kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> | Group / ungroup |
 | <kbd>Ctrl</kbd>+<kbd>A</kbd> | Select all on the artboard |
@@ -1112,7 +1112,7 @@ The **Open URL** action does the same from an interaction.
     title: 'Timelines and keyframes',
     group: 'Motion',
     summary: 'Animate properties with keyframes, record mode, looping and playback.',
-    keywords: 'animation animate keyframe key record playhead loop ping pong autoplay speed duration track',
+    keywords: 'animation animate keyframe key record playhead loop ping pong autoplay speed duration track copy paste snap stagger offset',
     body: `Each artboard can have any number of timelines. A timeline has **tracks**; each track animates one property of one layer through **keyframes**.
 
 ## Adding keyframes
@@ -1121,7 +1121,20 @@ The **Open URL** action does the same from an interaction.
 - Once a property has keys on the open timeline, changing it in the inspector or on the canvas changes its key at the playhead (or adds one there), with or without Record, since the value you see is the timeline's. To change a layer's own value, the one it has before the timeline plays, switch to **Design view (no timeline)**.
 - On a timeline set to **Whole frames**, a key goes on the start of the frame the playhead is in.
 - Or select a layer, choose a property in the dropdown at the top left of the Timeline and press **+ Key**.
-- Drag keys to retime them (<kbd>Shift</kbd> snaps to 100 ms), <kbd>Shift</kbd>-click to select several, <kbd>Delete</kbd> to remove. The diamond on a layer's own row moves all of that layer's keys at that time.
+- Drag keys to retime them, <kbd>Shift</kbd>-click to select several, <kbd>Delete</kbd> to remove. The diamond on a layer's own row moves all of that layer's keys at that time. See [Copy, snap and stagger keys](timelines#copy-snap-and-stagger-keys) for the rest.
+
+## Copy, snap and stagger keys
+**Copy and paste.** Select keys (on one track or several, with <kbd>Shift</kbd>-click or by pressing a layer's own diamond), press <kbd>Ctrl</kbd>+<kbd>C</kbd>, move the playhead and press <kbd>Ctrl</kbd>+<kbd>V</kbd>. The first copied key lands on the playhead and the others keep their spacing, values and easing. <kbd>Ctrl</kbd>+<kbd>X</kbd> copies and removes them. The pasted keys end up selected, and one <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes the whole paste back. Where they go:
+- By default back onto the tracks they came from.
+- Select a different layer on the canvas (when the keys came from one layer) and they go onto the same properties of that layer, with a new track where it has none. Properties that only mean something on the layer they came from (draw order, solo child, shape points, shader uniforms) are left out, and the message says so.
+- Select the keys of one other track (when you copied from one track) and they go onto that track. The two properties must hold the same kind of value (a number onto a number, a colour onto a colour); otherwise nothing is pasted.
+- A pasted key replaces any key already at that time on the track. Keys that would land past the end of the timeline are left out.
+
+Pressing <kbd>Ctrl</kbd>+<kbd>C</kbd> copies keys while your last click was in the timeline, and layers otherwise.
+
+**Snapping.** While you drag keys they pull onto the playhead (where it was when you grabbed the key) and onto markers when they come within a few pixels, and the keys you are dragging keep their spacing. Away from both they follow the 10 ms grid (100 ms with <kbd>Shift</kbd>). Hold <kbd>Alt</kbd> to drag without the pull.
+
+**Stagger.** Select two or more layers that have keys on the timeline and press **Stagger…** in the Timeline bar. Enter a step in milliseconds: the first layer stays where it is, the next one's keys move later by the step, the next by twice the step, and so on. The order is the Layers panel's, top to bottom; layers with no keys on the timeline are skipped. A negative step runs the other way. Run it again and the offsets add up. If any key would leave the timeline, nothing moves and the message says how long to make it. It is one undo step.
 
 ## Timeline settings
 The Timeline bar shows a short summary (length, loop, speed, autoplay, frame rate). Click the **gear** beside it to change them, and to rename the timeline; Esc or a click outside closes it.

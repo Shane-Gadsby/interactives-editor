@@ -18,6 +18,10 @@ import { assetKind, assetUrls } from '../lib/assets';
 import { ensureCaptionTrack, addCue } from '../lib/captions-edit';
 import { MediaEditor, MediaLabels, MediaLanes, TranscriptDialog, addSoundToTimeline, exportCaptions, importCaptionsInto, type MediaCtx, type MediaSel } from './TimelineMedia';
 import { promptDialog } from '../components/dialogs';
+import { magnetNudge, staggerSelected } from '../lib/key-edit';
+
+/** How close (in screen pixels) a dragged key has to get to the playhead or a marker to snap onto it. */
+const MAGNET_PX = 6;
 
 const LABEL_W = 220;
 
@@ -352,7 +356,10 @@ export function TimelinePanel() {
   /** Press on one key, or on a layer's summary diamond (all of its keys at that time): select, then drag them. */
   const keysDown = (e: React.PointerEvent, refs: string[], t: number) => {
     e.stopPropagation();
-    let sel = store().get().selectedKeys;
+    // Where the playhead was before this press moved it: dragged keys snap to it, and to the markers (Alt turns that off)
+    const live = store().get();
+    const snapPoints = [live.playhead, ...(getArtboard(live.project, live.activeArtboardId)?.timelines.find((x) => x.id === live.activeTimelineId)?.markers ?? []).map((m) => m.time)];
+    let sel = live.selectedKeys;
     const allIn = refs.every((r) => sel.includes(r));
     if (e.shiftKey) sel = allIn ? sel.filter((x) => !refs.includes(x)) : [...new Set([...sel, ...refs])];
     else if (!allIn) sel = refs;
@@ -369,11 +376,13 @@ export function TimelinePanel() {
     for (const tr of tl.tracks) for (const k of tr.keys) if (sel.includes(`${tr.id}:${k.id}`)) starts.set(k.id, k.t);
     const move = (ev: PointerEvent) => {
       const dt = (ev.clientX - startX) / pxPerMs;
+      // Close to the playhead or a marker, the whole drag shifts onto it (so the keys keep their spacing); otherwise the grid
+      const nudge = ev.altKey ? null : magnetNudge([...starts.values()], dt, snapPoints, MAGNET_PX / pxPerMs);
       setTl((d) => {
         for (const tr of d.tracks) {
           for (const k of tr.keys) {
             const t0 = starts.get(k.id);
-            if (t0 !== undefined) k.t = Math.max(0, Math.min(d.duration, snap(t0 + dt, ev)));
+            if (t0 !== undefined) k.t = Math.max(0, Math.min(d.duration, nudge === null ? snap(t0 + dt, ev) : Math.round(t0 + dt + nudge)));
           }
           tr.keys.sort((a, b) => a.t - b.t);
         }
@@ -388,6 +397,18 @@ export function TimelinePanel() {
     el.addEventListener('pointerup', up);
   };
 
+  // How many of the selected layers have keys on this timeline (Stagger needs two)
+  const staggerable = s.selection.filter((id) => byNode.has(id)).length;
+  const stagger = async () => {
+    const v = await promptDialog({
+      title: 'Stagger',
+      label: 'Offset between layers (ms)',
+      initial: '100',
+      confirmLabel: 'Stagger',
+      validate: (x) => (x.trim() !== '' && Number.isFinite(Number(x)) && Number(x) !== 0 ? null : 'Enter a number of milliseconds, other than 0'),
+    });
+    if (v !== null) staggerSelected(Math.round(Number(v)));
+  };
   const selectedKey = s.selectedKeys.length === 1 ? findKey(tl, s.selectedKeys[0]) : null;
   const selectedTween = (() => {
     if (!tween) return null;
@@ -459,6 +480,9 @@ export function TimelinePanel() {
         </TimelineSettings>
         <button className="btn" title="Add a marker at the playhead. An On timeline marker node runs when playback passes it" onClick={() => addMarker()}>
           + Marker
+        </button>
+        <button className="btn" disabled={staggerable < 2} title={staggerable < 2 ? 'Stagger: select two or more layers that have keys on this timeline, then set how many ms each one starts after the one before' : 'Stagger the selected layers: each one’s keys move later by the step you give, in the Layers panel’s order (the first stays put). A negative step runs the other way'} onClick={stagger}>
+          Stagger…
         </button>
         <button
           className={`btn${isSteps ? ' active' : ''}`}
