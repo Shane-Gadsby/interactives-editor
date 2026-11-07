@@ -195,6 +195,21 @@ code,
   margin: 6px 0;
   line-height: 1.35;
 }
+.consent-preview {
+  border: 1px dashed var(--border, #888);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 8px 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.consent-preview p {
+  margin: 4px 0;
+}
+.consent-preview ul {
+  margin: 4px 0;
+  padding-left: 1.2em;
+}
 .hint code {
   background: var(--panel-2);
   padding: 0 3px;

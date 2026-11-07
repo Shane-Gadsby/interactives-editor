@@ -3,7 +3,7 @@
  * found, per artboard. It reports "checks found", never "compliant": some things it can't see (a photo behind text, what a
  * script does), and those come back as `review` findings so a person looks instead of assuming.
  */
-import { coveredMs, defaultTheme, hasTokens, isContainer, isTokenRef, makeColorResolver, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
+import { coveredMs, declaresSensors, defaultTheme, sensorsUsed, usesLine, hasTokens, isContainer, isTokenRef, makeColorResolver, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
 import { backdropAt, buildPaintList, samplePoints, textExtent, type ArtboardPaint, type ImageColours, type Target, type TextMeasure } from './backdrop';
 import { contrastRatio, luminance, over, requiredRatio, suggestColour, toRgba, withTokens, type RGB } from './colour';
 import { FLASH_PROPS, maxFlashesPerSecond, trackSignal } from './flash';
@@ -95,6 +95,13 @@ export const CHECKS: CheckInfo[] = [
     how: 'For narration on a timeline: add captions in the timeline\'s Captions row (paste the transcript, or import a WebVTT or SRT file); the player shows them and offers the transcript. For a video layer: import its captions in the layer\'s settings, or check the file has them and mark this reviewed.',
   },
   {
+    id: 'sensors',
+    title: 'Needs a microphone or camera to finish',
+    wcag: '2.1.1 Keyboard, A; 1.3.3 Sensory Characteristics, A; 2.5.1 Pointer Gestures, A',
+    why: 'Learners who are deaf or have no voice, are in a shared room, have no device or have it blocked by their browser or their course site, or simply do not want to be recorded, cannot use a microphone or camera. If the only way to finish goes through one, the activity locks them out.',
+    how: 'Add a button (or a text box and a Check button) that leads to the same finish without it, such as "Type your answer instead", and show it when microphone or camera is not ready (read them with an If or a binding: unavailable, denied, ready, off). Learners can choose "Do not use my microphone or camera" once and every project then reads off. If there truly cannot be an equal way (an assessment of speaking), say why in Project > Microphone and camera > No equal way to finish: the learner is told, and this check settles.',
+  },
+  {
     id: 'title',
     title: 'Page title',
     wcag: '2.4.2 Page Titled, A',
@@ -115,6 +122,7 @@ export const NOT_CHECKED = [
   'Contrast over photos that are not loaded, over video, shaders and blend modes, and anything a binding or timeline changes while it runs.',
   'Focus order and visible focus: the Tab order follows the layer order and the browser default.',
   'Content that only appears after something is done (hidden layers are checked as they would look when shown).',
+  'Whether the other way to finish a microphone or camera activity is as good as the first. The checker only finds that there is one, by a click, key or typed change that reaches a finish without going through the sensor.',
 ];
 
 // ---------------------------------------------------------------------------
@@ -237,6 +245,70 @@ function interactionsOf(ab: Artboard): Interactions {
     }
   }
   return { pointer, keys, pausable };
+}
+
+// ---------------------------------------------------------------------------
+// Sensors: a way to finish that does not need the microphone or camera
+
+/** Nodes that use a sensor, and the ports they leave by when it did NOT work (the way a project carries on without it). */
+const SENSOR_NODES: Record<string, string[]> = {
+  'action.recordStart': ['failed'],
+  'action.recordStop': ['failed'],
+  'action.recordPlay': ['none'],
+  'action.cameraPreview': ['failed'],
+  'action.photo': ['none'],
+};
+/** Events a learner makes by hand: a click or tap, a key, a typed or chosen value changing a variable. */
+const HAND_EVENTS = new Set(['event.pointer', 'event.key', 'event.variable']);
+
+export interface SensorRoutes {
+  /** Places the project can finish or move on (Report result as complete, Go to artboard, Steps, Check answer, the completion variable). */
+  finishes: number;
+  /** Of those, how many a click, key or typed change reaches without going through a working microphone or camera. */
+  free: number;
+}
+
+/**
+ * Where the finishes are and which of them do not need a sensor. A route starts at an event a person makes by hand and follows the
+ * graph, but never leaves a sensor node by the port that means it worked: past a Start recording only its "could not start" port counts,
+ * since that is how a project carries on when the sensor is not there. Structure only: whether the other way is as good is a person's call.
+ */
+export function sensorRoutes(project: Project): SensorRoutes {
+  const done = project.settings.reporting?.completionVariable;
+  const finishNode = (n: LogicNode) => {
+    if (n.kind === 'action.reportResult') return String(n.params.completed ?? 'complete') !== 'progress';
+    if (n.kind === 'action.artboard' || n.kind === 'action.steps' || n.kind === 'action.questionCheck') return true;
+    if (n.kind === 'action.setVariable') return !!done && (n.params.variable === done || project.variables.some((v) => v.id === done && v.name === n.params.variable));
+    return false;
+  };
+  let finishes = 0;
+  let free = 0;
+  for (const ab of project.artboards) {
+    const byId = new Map(ab.logic.nodes.map((n) => [n.id, n]));
+    const all = ab.logic.nodes.filter(finishNode).length;
+    finishes += all;
+    const reached = new Set<string>();
+    for (const start of ab.logic.nodes) {
+      if (!HAND_EVENTS.has(start.kind)) continue;
+      const seen = new Set<string>([start.id]);
+      const queue = [start.id];
+      while (queue.length) {
+        const id = queue.shift()!;
+        const node = byId.get(id);
+        const only = node ? SENSOR_NODES[node.kind] : undefined;
+        for (const e of ab.logic.edges) {
+          if (e.from !== id || seen.has(e.to)) continue;
+          if (only && !only.includes(e.fromPort)) continue;
+          seen.add(e.to);
+          queue.push(e.to);
+          const next = byId.get(e.to);
+          if (next && finishNode(next)) reached.add(next.id);
+        }
+      }
+    }
+    free += reached.size;
+  }
+  return { finishes, free };
 }
 
 // ---------------------------------------------------------------------------
@@ -562,6 +634,36 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
 
   if (!project.settings.title?.trim()) {
     add(null, null, 'title', 'warning', 'The project has no title', 'The title is empty. It is what a screen reader reads first and what the browser tab shows.', { key: 'title', fix: { label: `Use "${project.name}" as the title`, target: { scope: 'project' }, set: { 'settings.title': project.name } } });
+  }
+
+  // ---- Sensors: a project that uses a microphone or camera needs a way to finish without one
+  const sensors = project.settings.sensors;
+  if (declaresSensors(sensors)) {
+    const routes = sensorRoutes(project);
+    const what = sensorsUsed(sensors).map((k) => (k === 'photos' ? 'the photo picker' : `the ${k}`)).join(' and ');
+    if (routes.finishes > 0 && routes.free === 0) {
+      if (sensors?.noAlternative) {
+        add(null, null, 'sensors', 'review', 'No equal way to finish (you said why)', `${usesLine(sensors)} You said there is no equal way to finish: "${sensors.noAlternative}". Learners are told this before they are asked. Check that someone who cannot use ${what} is not left without help (a clear message, and a way to ask for another arrangement).`, { key: 'sensors' });
+      } else {
+        add(
+          null,
+          null,
+          'sensors',
+          'issue',
+          'Needs a microphone or camera to finish',
+          `${usesLine(sensors)} Every way to finish (${routes.finishes} in all) goes through ${what}. Nothing a click, a key or typing alone reaches gets there, so a learner who cannot or would rather not use it is stuck. Add a button or a typed answer that finishes without it, shown when microphone or camera is not "ready". If there cannot be an equal way, say why.`,
+          {
+            key: 'sensors',
+            fix: {
+              label: 'There is no equal way to finish: say why',
+              target: { scope: 'project' },
+              set: {},
+              input: { key: 'settings.sensors.noAlternative', label: 'Why there is no other way', placeholder: 'This task assesses speaking, so it needs a voice', value: '' },
+            },
+          },
+        );
+      }
+    }
   }
 
   const order = new Map(project.artboards.map((a, i) => [a.id, i]));

@@ -2558,6 +2558,54 @@ Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **
 - **Update to the latest version** in Share link after changing record settings or adding Record nodes, so the link plays the new version.`,
   },
   {
+    id: 'sensors',
+    title: 'Microphone, camera and photos',
+    group: 'Interactivity',
+    summary: 'Record a voice, show the camera, take or choose a photo: declare it in Project settings, build the plain version, and know what learners are asked and what the page needs.',
+    keywords: 'microphone mic camera webcam photo picture record recording voice audio video capture sensor consent permission privacy iframe allow download level speaking opt out do not use my microphone or camera accessibility alternative preview denied blocked device',
+    body: `A project can listen through the learner's **microphone**, show their **camera**, or take or choose a **photo**. It never touches a device itself. The page it plays in does, behind one plain consent screen and a recording bar the project cannot hide, and tells the project only what it needs.
+
+## Turn it on
+In the Project section (click an empty part of the canvas) open **Microphone and camera** and tick what the project uses. Nothing undeclared works. Add one sentence for **What it is used for** ("record your answer to the speaking question"), and a **Longest recording** if the default (120 seconds of sound, 60 of video) is too long. The box under it shows exactly what learners are asked, made from your choices.
+
+**Update to the latest version** in [Share link](export#share-link) after changing these: the page reads what you declared when the link was last updated, not what the project says now.
+
+## What learners see
+- **One consent screen** the first time something is used in a visit. It names what is used, what for, that recordings stay in the page on the device and are not saved on a server, and what they can do instead. Its buttons are **Continue**, **Not now** and **Do not use my microphone or camera**.
+- **A recording bar** at the top centre of the page, over the project (leave a little room there), whenever a device is live, with the level, a timer and a **Stop** that always works. Recording starts only after a real tap, stops by itself at the length limit, and the device is let go the moment it ends.
+- **Plain messages** when it cannot work: the browser said no, there is no device, another app is using it, or the course page does not allow it.
+- **Do not use my microphone or camera** is remembered in the learner's browser. Every project then reads \`off\` and shows its plain version. Only the learner can turn it back on, from the button that stays at the bottom left. Browsers keep this per course site, so it holds for that site until they clear their data.
+
+## Build the plain version first
+Learners who cannot, or would rather not, use a microphone or camera must be able to finish. Read the state in a condition, a binding or a text layer:
+- \`microphone\` and \`camera\` are \`unavailable\` (cannot, here), \`denied\` (they or their browser said no), \`ready\` or \`off\` (they chose not to use them).
+- \`photos\` is the same for the photo picker.
+- \`mediaMessage\` is the plain sentence to show when something is not ready.
+- \`micLevel\` (0 to 1) and \`recording\` (true while recording), \`recordingSeconds\`, and \`recordings.<name>.state\` (\`empty\`, \`recording\`, \`ready\`, \`playing\`), \`.seconds\` and \`.hasRecording\` for each recording, for meters, timers and buttons.
+
+The Accessibility tab has a check for this: a project that uses a sensor needs a click, key or typed way to reach the same finish (Report result, Go to artboard, Steps, Check answer or the completion variable) that does not go through the sensor. The check passes when a button or typed answer finishes without it, including carrying on from a node's **Could not start** output. If there truly cannot be an equal way (an assessment of speaking, say), say why in **No equal way to finish**: learners are told, and the check becomes a note for you to review. The check finds that there is another way, not that it is a good one.
+
+## Nodes
+All are in the Interactions palette, and described there.
+- **Start recording** (a name for the recording, sound or video, a longest time) continues from **Recording** or **Could not start**. A project can keep several recordings, each under its own name.
+- **Stop recording**, **Discard recording**, **Play recording** (sound plays through the project's own sound, so the viewer's sound button applies; video plays in the layer you choose) and **Download recording** (offers a file, after a tap: it is the only way a recording leaves memory).
+- **Camera preview** shows the camera live in a layer's place. The page draws it over the project, so the project never sees the camera's pixels.
+- **Take or choose a photo** puts a picture, scaled to at most 1600 px on the long side, into an image asset. Every image layer that uses the asset shows it. From the device's photo picker (with the front or back camera if the device offers it) or a still from the live preview.
+- **Download a file** saves text you build (a report, a CSV) after a tap.
+- **Offer: do not use my microphone or camera** asks the learner, in the page's own screen, whether to stop using them for good. Put it on a "Use the keyboard instead" button. Only the learner decides.
+- **On microphone or camera** fires when a recording starts, a recording is ready (\`event.reason\` is \`stopped\`, \`limit\` or \`device-lost\`: the learner can press Stop on the bar too), something could not start (\`event.problem\` and \`event.message\`), the state changed, a video finished playing, or a photo arrived.
+
+## Try it
+**Preview** has a pretend microphone and camera, because the real ones need the page the project is shared in. It makes a made-up level and a short tone, and a sample picture. The **Microphone and camera** menu above the preview makes it fail the ways a real one does (denied, no device, blocked by the course page, the learner chose not to use them), so you can build and check the plain version. A small "Simulated" note shows while it records. Try the real devices from the **Link for StudyDesk** on the page you will use.
+
+## Where it works, and what it needs
+- Play it from the **Link for StudyDesk** (\`/interactives/play/<token>\`). The plain share link (\`/s/<token>\`) cannot use a microphone or camera: its sandbox has no origin, and the browser refuses any device to such a page, so every node there goes down its **Could not start** output.
+- The StudyDesk page that holds the link's iframe needs **allow="microphone; camera"** on that iframe, or the browser refuses the page too. Without it learners are told, in plain words, that the course page does not allow it. Tell whoever builds the page. Another learning system that launches the project over LTI 1.3 decides its own iframe attributes and may not allow it at all.
+- It needs a secure page (https) and a recent Chrome, Edge, Firefox or Safari. The Moodle App and in-app browsers may not allow a microphone in an embedded page: test there before relying on it.
+- Recordings are kept in memory, in the page, so they are gone when the learner leaves or reloads. Say so, and offer **Download recording**. Nothing is uploaded or stored on a server, and the Insights records never carry audio, video, photos or what was said. The project's own code can use a recording it plays, so do not put code you do not trust in a project that uses a microphone.
+- For anything marked, use the Moodle assignment's own recording or upload: this does not submit a recording anywhere.`,
+  },
+  {
     id: 'public-interface',
     title: 'Public interface: inputs and outputs for developers',
     group: 'Import and export',
@@ -2880,6 +2928,8 @@ A share link carries big pictures as their [optimised copies](export#optimised-p
 **Link for StudyDesk** plays the same project but keeps each signed-in learner's score, completion and progress. Use it in StudyDesk when you set a score or tick **Remember** on variables, and see [Results and progress](results). **Results…** shows how learners did.
 
 That link opens the **learner page**: a small page around your project that knows who the learner is from their StudyDesk session. It gives the project the learner's saved progress, keeps their results, and, when **Learner records** is on, passes on the activity that [Insights](insights) counts. Put this link in your StudyDesk page, not the plain one. A learner who isn't signed in just plays it, and their progress stays in their own browser. **Allow remix**, under the link, adds a **Remix this** button for signed-in staff who open it, which copies the project into their own projects: see [Templates, examples and remix](templates#allow-remix-on-a-share-link).
+
+A project that uses a microphone, camera or photos (see [Microphone, camera and photos](sensors)) only works through the **Link for StudyDesk**, and the iframe that holds that link on the StudyDesk page needs \`allow="microphone; camera"\`. Update the link after changing what the project declares.
 
 For a walk-through, see [Tutorial 5](tutorial-publish).`,
   },

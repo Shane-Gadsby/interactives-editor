@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { PACKAGE_EXTENSION, defaultTheme, QUESTION_KINDS, sampleContextFor, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
+import { PACKAGE_EXTENSION, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
 import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
@@ -1115,6 +1115,9 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const [theme, setTheme] = useState('auto');
   const [viewer, setViewer] = useState<'device' | 'dark' | 'contrast' | 'dark-contrast'>('device');
   const [host, setHost] = useState<'none' | 'moodle'>('none');
+  // The pretend microphone and camera: what they do in the running preview (a real one cannot be had in a sandboxed preview)
+  const [mediaSim, setMediaSim] = useState<FakeBehaviour>('works');
+  const simulateMedia = (b: FakeBehaviour) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'simulateMedia', behaviour: b }, '*');
   const applyTheme = (t = theme, v = viewer, h = host) => {
     const w = frame.current?.contentWindow;
     if (!w || !themes?.list.length) return;
@@ -1228,6 +1231,20 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               )}
             </>
           ) : null}
+          {declaresSensors((project as Project).settings.sensors) && (
+            <select
+              value={mediaSim}
+              title="The preview has a pretend microphone and camera, since the real ones need the page the project is shared in. Make it fail the ways a real one does to build and try the plain version. Try the real devices from the share link in StudyDesk"
+              aria-label="Microphone and camera in the preview"
+              onChange={(e) => (setMediaSim(e.target.value as FakeBehaviour), simulateMedia(e.target.value as FakeBehaviour))}
+            >
+              {FAKE_BEHAVIOURS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  Microphone and camera: {o.label}
+                </option>
+              ))}
+            </select>
+          )}
           {hasDrag && (
             <button
               className={`btn${hitAreas ? ' active' : ''}`}
@@ -1319,7 +1336,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             </aside>
           )}
           <div className="preview-stage" ref={stageBox}>
-          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (hitAreas && showHitAreas(true), applyTheme())} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (hitAreas && showHitAreas(true), applyTheme(), mediaSim !== 'works' && simulateMedia(mediaSim))} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
           </div>
         </div>
         {accessibility && screenReader && (

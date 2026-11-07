@@ -1,4 +1,4 @@
-import { artboardScope, courseValuesFor, dataPolicyFor, enumOptions, fetchDataSource, initialValue, layerScope, sampleContextFor, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
+import { artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, sampleContextFor, sensorsUsed, slotNamesOf, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -87,7 +87,10 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
   }
   // `context` is the project's sample course and learner (Data panel), under data and variables of the same name like the player has it
   const context = sampleContextFor(project);
-  const vars: Record<string, unknown> = { context, ...board, ...data, data, enums: enumOptions(project.variables) };
+  // The microphone and camera as a project that declares them starts: ready, with no recordings (the player keeps these current when it runs)
+  const used = new Set(sensorsUsed(project.settings.sensors));
+  const sensors = { ...NO_SENSORS, microphone: used.has('microphone') ? 'ready' : 'unavailable', camera: used.has('camera') ? 'ready' : 'unavailable', photos: used.has('photos') ? 'ready' : 'unavailable', recordings: emptySlots(slotNamesOf(project)) };
+  const vars: Record<string, unknown> = { context, ...sensors, ...board, ...data, data, enums: enumOptions(project.variables) };
   // The sample course's rows in place of initial values, the way the player starts on the real course
   const perCourse = courseValuesFor(project.courseValues, context.courseLabel, project.variables);
   for (const v of project.variables) vars[v.name] = initialValue(perCourse.has(v.id) ? { ...v, initial: perCourse.get(v.id)! } : v);
