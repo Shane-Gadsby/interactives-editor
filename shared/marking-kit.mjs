@@ -1,4 +1,4 @@
-/*! built from the player's marking sources e57baec4b17a4e7fabc0 */
+/*! built from the player's marking sources 632e2e9fe851bad518d2 */
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
 const MAX_WORK = 65536;
@@ -976,6 +976,231 @@ function linearExec(re, s) {
   if (use) re.lastIndex = caps[1];
   return result(prog, s, caps);
 }
+const WORDS = {
+  aluminium: "aluminum",
+  programme: "program",
+  sulphur: "sulfur",
+  sulphate: "sulfate",
+  sulphide: "sulfide",
+  sulphuric: "sulfuric",
+  plough: "plow",
+  draught: "draft",
+  mould: "mold",
+  moult: "molt",
+  smoulder: "smolder",
+  moustache: "mustache",
+  pyjama: "pajama",
+  pyjamas: "pajamas",
+  grey: "gray",
+  tyre: "tire",
+  kerb: "curb",
+  cheque: "check",
+  storey: "story",
+  storeys: "stories",
+  gaol: "jail",
+  gaoler: "jailer",
+  ageing: "aging",
+  judgement: "judgment",
+  acknowledgement: "acknowledgment",
+  abridgement: "abridgment",
+  cosy: "cozy",
+  cosier: "cozier",
+  cosily: "cozily",
+  doughnut: "donut",
+  doughnuts: "donuts",
+  sceptic: "skeptic",
+  sceptics: "skeptics",
+  sceptical: "skeptical",
+  scepticism: "skepticism",
+  enquire: "inquire",
+  enquires: "inquires",
+  enquired: "inquired",
+  enquiring: "inquiring",
+  enquiry: "inquiry",
+  enquiries: "inquiries",
+  artefact: "artifact",
+  artefacts: "artifacts",
+  axe: "ax",
+  axes: "axes",
+  chilli: "chili",
+  chillies: "chilies",
+  waggon: "wagon",
+  yoghurt: "yogurt",
+  aeroplane: "airplane",
+  orientated: "oriented",
+  speciality: "specialty",
+  specialities: "specialties",
+  tranquillity: "tranquility",
+  tranquillise: "tranquilize",
+  tranquillised: "tranquilized",
+  practise: "practice",
+  practised: "practiced",
+  practises: "practices",
+  practising: "practicing",
+  licence: "license",
+  licences: "licenses",
+  defence: "defense",
+  defences: "defenses",
+  offence: "offense",
+  offences: "offenses",
+  pretence: "pretense",
+  pretences: "pretenses",
+  catalogue: "catalog",
+  catalogues: "catalogs",
+  analogue: "analog",
+  dialogue: "dialog",
+  dialogues: "dialogs",
+  instalment: "installment",
+  instalments: "installments",
+  fulfil: "fulfill",
+  fulfils: "fulfills",
+  fulfilment: "fulfillment",
+  enrol: "enroll",
+  enrols: "enrolls",
+  enrolment: "enrollment",
+  skilful: "skillful",
+  skilfully: "skillfully",
+  wilful: "willful",
+  wilfully: "willfully",
+  appal: "appall",
+  appals: "appalls",
+  distil: "distill",
+  instil: "instill",
+  enthral: "enthrall",
+  jewellery: "jewelry",
+  woollen: "woolen",
+  chequered: "checkered",
+  mediaeval: "medieval",
+  behove: "behoove",
+  // -re words and the endings they take
+  centre: "center",
+  centres: "centers",
+  centred: "centered",
+  centring: "centering",
+  epicentre: "epicenter",
+  metre: "meter",
+  metres: "meters",
+  litre: "liter",
+  litres: "liters",
+  theatre: "theater",
+  theatres: "theaters",
+  fibre: "fiber",
+  fibres: "fibers",
+  calibre: "caliber",
+  spectre: "specter",
+  sombre: "somber",
+  lustre: "luster",
+  meagre: "meager",
+  sceptre: "scepter",
+  mitre: "miter",
+  sepulchre: "sepulcher",
+  saltpetre: "saltpeter",
+  manoeuvre: "maneuver",
+  manoeuvres: "maneuvers",
+  manoeuvred: "maneuvered",
+  manoeuvring: "maneuvering",
+  // ae and oe
+  encyclopaedia: "encyclopedia",
+  paediatric: "pediatric",
+  paediatrician: "pediatrician",
+  anaesthetic: "anesthetic",
+  anaesthesia: "anesthesia",
+  anaemia: "anemia",
+  anaemic: "anemic",
+  diarrhoea: "diarrhea",
+  foetus: "fetus",
+  foetal: "fetal",
+  oestrogen: "estrogen",
+  oesophagus: "esophagus",
+  haemoglobin: "hemoglobin",
+  haemorrhage: "hemorrhage",
+  haemophilia: "hemophilia",
+  leukaemia: "leukemia",
+  orthopaedic: "orthopedic",
+  gynaecology: "gynecology",
+  gynaecologist: "gynecologist",
+  archaeology: "archeology",
+  archaeologist: "archeologist",
+  faeces: "feces",
+  palaeontology: "paleontology",
+  palaeolithic: "paleolithic",
+  oedema: "edema",
+  coeliac: "celiac",
+  homoeopathy: "homeopathy",
+  caesarean: "cesarean",
+  aeon: "eon",
+  aeons: "eons",
+  aesthetic: "esthetic",
+  aesthetics: "esthetics",
+  // grey takes endings too
+  greys: "grays",
+  greyed: "grayed",
+  greying: "graying",
+  greyish: "grayish",
+  greyer: "grayer",
+  greyest: "grayest",
+  // -ogue and the like that only some words take
+  prologue: "prolog",
+  monologue: "monolog"
+};
+const OUR_WORDS = new Set(
+  "honour favour colour labour neighbour behaviour harbour humour rumour flavour savour vapour odour armour clamour glamour rigour vigour valour splendour tumour parlour saviour endeavour candour ardour arbour fervour rancour demeanour succour".split(" ")
+);
+const OUR_ENDINGS = "s|ed|ing|ful|fully|ly|less|ite|ites|ist|ists|able|ably|y|ier|iest|er|ers|al|ally|ary|some|ish|ism|hood|hoods";
+const ISE_VERBS = new Set(
+  "apologise authorise baptise capitalise categorise centralise characterise civilise colonise criticise customise democratise digitise emphasise energise equalise evangelise familiarise fertilise finalise generalise globalise harmonise hospitalise hypnotise idealise immunise individualise industrialise initialise internalise itemise legalise legitimise liberalise localise magnetise marginalise maximise memorise mesmerise minimise mobilise modernise moisturise monopolise motorise nationalise naturalise neutralise normalise optimise organise oxidise patronise penalise personalise pasteurise philosophise plagiarise polarise popularise prioritise privatise publicise pulverise randomise rationalise realise recognise regularise revolutionise romanticise scrutinise sensitise socialise specialise stabilise standardise sterilise stigmatise subsidise summarise symbolise sympathise synchronise synthesise systematise tantalise terrorise theorise traumatise unionise urbanise utilise vaporise victimise visualise vocalise westernise canonise galvanise jeopardise deodorise formalise fraternise ostracise revitalise sanitise sexualise".split(" ")
+);
+const ISE_ENDINGS = "e|es|ed|ing|ation|ations|er|ers";
+const YSE_VERBS = /* @__PURE__ */ new Set(["analyse", "paralyse", "catalyse", "breathalyse", "electrolyse", "hydrolyse"]);
+const LL_VERBS = new Set(
+  "travel cancel label model level fuel signal total equal channel counsel quarrel marvel panel tunnel jewel shovel snorkel grovel rival pedal parallel dial duel libel initial".split(" ")
+);
+const LL_ENDINGS = "ed|ing|er|ers|or|ors|ous|ist|ists";
+const matchCase = (original, made) => {
+  if (original.length > 1 && original === original.toUpperCase()) return made.toUpperCase();
+  if (original[0] !== original[0].toLowerCase()) return made[0].toUpperCase() + made.slice(1);
+  return made;
+};
+function usWord(w) {
+  const direct = WORDS[w];
+  if (direct !== void 0 && direct !== w) return direct;
+  let m = new RegExp(`^(.*our)(${OUR_ENDINGS})?$`).exec(w);
+  if (m && OUR_WORDS.has(m[1])) return `${m[1].slice(0, -3)}or${m[2] ?? ""}`;
+  m = new RegExp(`^(.+)is(${ISE_ENDINGS})$`).exec(w);
+  if (m && ISE_VERBS.has(`${m[1]}ise`)) return `${m[1]}iz${m[2]}`;
+  m = /^(.+)ys(e|es|ed|ing|er|ers)$/.exec(w);
+  if (m && YSE_VERBS.has(`${m[1]}yse`)) return `${m[1]}yz${m[2]}`;
+  m = new RegExp(`^(.+)l(${LL_ENDINGS})$`).exec(w);
+  if (m && LL_VERBS.has(m[1])) return `${m[1]}${m[2]}`;
+  if (/.metres?$/.test(w)) return w.replace(/metre(s?)$/, "meter$1");
+  if (/.litres?$/.test(w)) return w.replace(/litre(s?)$/, "liter$1");
+  return null;
+}
+const SEPARATORS = /([\s\-‐-―]+)/;
+function americanForm(answer) {
+  let changed = false;
+  const parts = answer.normalize("NFC").split(SEPARATORS).map((part) => {
+    if (!part || SEPARATORS.test(part)) return part;
+    const tail = /(['’]s)$/i.exec(part);
+    const bare = tail ? part.slice(0, -tail[1].length) : part;
+    const word = bare.toLowerCase();
+    if (!/^[a-z]+$/.test(word)) return part;
+    const us = usWord(word);
+    if (us === null || us === word) return part;
+    changed = true;
+    return matchCase(bare, us) + (tail ? tail[1] : "");
+  });
+  return changed ? parts.join("") : null;
+}
+function americanForms(answers) {
+  const out = [];
+  for (const a of answers) {
+    if (/^\/.+\/[a-z]*$/.test(a.trim())) continue;
+    const us = americanForm(a);
+    if (us !== null && !out.includes(us) && !answers.includes(us)) out.push(us);
+  }
+  return out;
+}
 const QUESTION_KINDS = [
   { value: "single", label: "Multiple choice (one answer)", hint: "Pick the one right option" },
   { value: "multiple", label: "Multiple response (several answers)", hint: "Tick every right option" },
@@ -1077,6 +1302,8 @@ function normaliseQuestion(raw) {
     label: str(b.label),
     answers: (Array.isArray(b.answers) ? b.answers : []).filter((a) => typeof a === "string").slice(0, 40),
     ...b.caseSensitive === true ? { caseSensitive: true } : {},
+    ...b.spelling === true ? { spelling: true } : {},
+    ...b.spelling === true && b.usSpelling === true ? { usSpelling: true } : {},
     ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {}
   }));
   const pairs = list(raw.pairs, MAX_PAIRS).map((pr, i) => ({ id: str(pr.id) || `p${i + 1}`, term: str(pr.term), match: str(pr.match) }));
@@ -1103,6 +1330,7 @@ function normaliseQuestion(raw) {
     bank,
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
+    ...isObj(raw.retake) ? { retake: { limit: Math.round(num(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
     ...raw.multi === true ? { multi: true } : {},
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
@@ -1148,7 +1376,31 @@ const asNumber = (s) => {
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 };
+function tidySpelling(s, caseSensitive = false) {
+  const t = s.normalize("NFC").replace(/[\u2018\u2019\u201B\u02BC\u0060\u00B4]/g, "'").replace(/[\u2010-\u2015\u2212]/g, "-").replace(/\s+/g, " ").trim();
+  return caseSensitive ? t : t.toLowerCase();
+}
+function spellingMatches(typed, blank) {
+  const cs = !!blank.caseSensitive;
+  const got = tidySpelling(typed, cs);
+  if (!got) return false;
+  const accepted = blank.answers.filter((a) => a.trim());
+  const all = blank.usSpelling ? [...accepted, ...americanForms(accepted)] : accepted;
+  for (const a of all) {
+    const pat = /^\/(.+)\/([a-z]*)$/.exec(a.trim());
+    if (pat) {
+      try {
+        if (linearExec(safeRegExp(pat[1], pat[2]), typed.trim())) return true;
+      } catch {
+      }
+      continue;
+    }
+    if (tidySpelling(a, cs) === got) return true;
+  }
+  return false;
+}
 function blankMatches(typed, blank) {
+  if (blank.spelling) return spellingMatches(typed, blank);
   const cs = !!blank.caseSensitive;
   const got = tidyAnswer(typed, cs);
   if (!got) return false;
@@ -1351,6 +1603,7 @@ function cleanMarkRequest(body) {
   const question = shortText(b.question, 100);
   if (!question) return null;
   const req = { action: b.action, question };
+  if (b.action === "reset" && b.retake === true) req.retake = true;
   if (b.action === "check") {
     const a = b.answer;
     if (!a || typeof a !== "object" || Array.isArray(a)) return null;
@@ -1374,26 +1627,53 @@ function cleanMarkRequest(body) {
   }
   return req;
 }
-const freshState = (round = 1, counted = null) => ({ round, attempts: 0, hints: 0, locked: false, correct: false, score: 0, last: null, counted });
+const freshState = (round = 1, counted = null, scores) => ({ round, attempts: 0, hints: 0, locked: false, correct: false, score: 0, last: null, counted, ...scores ? { scores } : {} });
 const round2 = (n) => Math.round(n * 100) / 100;
+function retakeResult(key, states, ids) {
+  const policy = key.questions[ids[0]].retake.keep;
+  const rounds = Math.max(0, ...ids.map((id) => states[id]?.scores?.length ?? 0));
+  const totals = [];
+  for (let r = 0; r < rounds; r++) {
+    if (ids.every((id) => typeof states[id]?.scores?.[r] === "number")) totals.push(ids.reduce((sum, id) => sum + states[id].scores[r], 0));
+    else break;
+  }
+  if (!totals.length) {
+    return { score: ids.reduce((sum, id) => sum + (states[id]?.scores?.[0] ?? 0), 0), done: false };
+  }
+  return { score: policy === "latest" ? totals[totals.length - 1] : Math.max(...totals), done: true };
+}
 function resultOf(key, states) {
   let score = 0;
   let max = 0;
   let done = 0;
   const ids = Object.keys(key.questions);
+  const retake = ids.filter((id) => key.questions[id].retake);
   for (const id of ids) {
     max += key.questions[id].points;
+    if (key.questions[id].retake) continue;
     const c = states[id]?.counted;
     if (c) {
       score += c.score;
       done++;
     }
   }
+  if (retake.length) {
+    const r = retakeResult(key, states, retake);
+    score += r.score;
+    if (r.done) done += retake.length;
+  }
   score = round2(score);
   const percent = max > 0 ? round2(Math.min(100, Math.max(0, score / max * 100))) : 0;
   return { completed: ids.length > 0 && done === ids.length, score, max: round2(max), passed: key.passMark !== null && Number.isFinite(key.passMark) ? percent >= key.passMark : null };
 }
-const viewOf = (q, st) => ({
+const roundsAllowed = (q) => q.retake && q.retake.limit >= 0 ? 1 + q.retake.limit : Infinity;
+function retakeView(q, st, key, states) {
+  const allowed = roundsAllowed(q);
+  const kept = key && states ? resultOf(key, states) : null;
+  return { round: st.round, retakesLeft: allowed === Infinity ? -1 : Math.max(0, allowed - st.round), kept: kept?.score ?? 0, keptMax: kept?.max ?? 0 };
+}
+const viewOf = (q, st, key, states) => ({
+  ...q.retake ? retakeView(q, st, key, states) : {},
   attempts: st.attempts,
   triesLeft: q.attempts > 0 ? Math.max(0, q.attempts - st.attempts) : -1,
   hintsUsed: st.hints,
@@ -1433,24 +1713,56 @@ function stepMarking(key, states, req, idFor) {
   if (!q) return { error: "That question is not marked on the server" };
   const st = states[req.question] ?? freshState();
   const put = (next2) => ({ ...states, [req.question]: next2 });
+  const view = (s, all = states) => viewOf(q, s, key, all);
   if (req.action === "reset") {
+    if (q.retake) return retakeStep(key, states, req, q, st, idFor);
     const next2 = st.locked ? freshState(st.round + 1, st.counted) : st;
-    return { reply: { status: "ok", state: viewOf(q, next2) }, states: next2 === st ? states : put(next2) };
+    return { reply: { status: "ok", state: view(next2) }, states: next2 === st ? states : put(next2) };
   }
   if (req.action === "hint") {
-    if (st.locked || st.hints >= q.hints.length) return { reply: { status: "ok", hint: "", state: viewOf(q, st) }, states };
+    if (st.locked || st.hints >= q.hints.length) return { reply: { status: "ok", hint: "", state: view(st) }, states };
     const next2 = { ...st, hints: st.hints + 1 };
-    return { reply: { status: "ok", hint: q.hints[st.hints], state: viewOf(q, next2) }, states: put(next2) };
+    return { reply: { status: "ok", hint: q.hints[st.hints], state: view(next2) }, states: put(next2) };
   }
-  if (st.locked && st.last) return { reply: { status: "ok", marking: markingForPage(q, req.question, st.last, idFor), replay: true, state: viewOf(q, st) }, states };
+  if (st.locked && st.last) return { reply: { status: "ok", marking: markingForPage(q, req.question, st.last, idFor), replay: true, state: view(st) }, states };
   const answer = req.answer ? realAnswer(q, req.question, req.answer, idFor) : null;
   if (!answer) return { error: "That answer does not fit the question" };
   const nothing = nothingToCheck(q, answer);
-  if (nothing) return { reply: { status: "empty", say: nothing, state: viewOf(q, st) }, states };
-  const m = markAnswer(q, answer, { attempts: st.attempts, hintsUsed: st.hints });
+  if (nothing) return { reply: { status: "empty", say: nothing, state: view(st) }, states };
+  let m = markAnswer(q, answer, { attempts: st.attempts, hintsUsed: st.hints });
+  if (q.retake && m.locked && st.round < roundsAllowed(q)) m = { ...m, reveal: false, answers: void 0 };
   const first = m.locked && !st.counted;
-  const next = { ...st, attempts: m.attempts, correct: m.correct, score: m.score, locked: m.locked, last: m.locked ? m : null, counted: first ? { score: m.score, points: q.points } : st.counted };
-  return { reply: { status: "ok", marking: markingForPage(q, req.question, m, idFor), state: viewOf(q, next) }, states: put(next), ...first ? { counted: true } : {} };
+  const scores = q.retake && m.locked ? withScore(st.scores, st.round, m.score) : st.scores;
+  const next = { ...st, attempts: m.attempts, correct: m.correct, score: m.score, locked: m.locked, last: m.locked ? m : null, counted: first ? { score: m.score, points: q.points } : st.counted, ...scores ? { scores } : {} };
+  const after = put(next);
+  const counted = q.retake ? m.locked && JSON.stringify(resultOf(key, after)) !== JSON.stringify(resultOf(key, states)) : first;
+  return { reply: { status: "ok", marking: markingForPage(q, req.question, m, idFor), state: view(next, after) }, states: after, ...counted ? { counted: true } : {} };
+}
+function withScore(scores, round, score) {
+  const out = (scores ?? []).slice();
+  while (out.length < round - 1) out.push(0);
+  out[round - 1] = score;
+  return out;
+}
+function retakeStep(key, states, req, q, st, idFor) {
+  const set = Object.keys(key.questions).filter((id) => key.questions[id].retake);
+  const stand = (s, all) => ({
+    status: "ok",
+    state: viewOf(q, s, key, all),
+    ...s.locked && s.last ? { marking: markingForPage(q, req.question, s.last, idFor) } : {}
+  });
+  if (!req.retake) return { reply: stand(st, states), states };
+  const finished = set.every((id) => states[id]?.locked === true);
+  const round = Math.max(...set.map((id) => states[id]?.round ?? 1));
+  if (!finished || round >= roundsAllowed(q)) {
+    return { reply: { ...stand(st, states), say: !finished ? "Finish this round first." : "There are no more goes." }, states };
+  }
+  const next = { ...states };
+  for (const id of set) {
+    const was = states[id] ?? freshState();
+    next[id] = freshState(round + 1, was.counted, was.scores);
+  }
+  return { reply: { status: "ok", state: viewOf(q, next[req.question], key, next) }, states: next };
 }
 function parseStates(raw) {
   try {

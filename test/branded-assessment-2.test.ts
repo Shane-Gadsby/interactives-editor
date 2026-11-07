@@ -15,7 +15,7 @@ const flush = (ms = 8) => new Promise((r) => setTimeout(r, ms));
 
 describe('the second batch of assessment starters', () => {
   it('is listed after the first four, with names and descriptions for the help', () => {
-    expect(STARTERS.map((s) => s.key).slice(4)).toEqual(KEYS);
+    expect(STARTERS.map((s) => s.key).slice(4, 4 + KEYS.length)).toEqual(KEYS);
     for (const k of KEYS) {
       const s = starter(k);
       expect(s.set).toBe('assessment');

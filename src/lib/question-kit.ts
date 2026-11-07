@@ -208,6 +208,7 @@ function blankRow(q: Question, i: number, variableId: string): SceneNode {
         questionPart: 'blankInput',
         placeholder: 'Your answer',
         ariaLabel: q.blanks[i]?.label || 'Answer',
+        ...(q.blanks[i]?.spelling ? { noAssist: true } : {}),
         variableId,
         width: 280,
         height: 44,
@@ -524,7 +525,8 @@ function hotspotBody(q: Question): SceneNode {
 
 /** The default look of the Try again / Next question button for this question. */
 export const resetLabel = (q: Question): string => (q.bank ? RESET_LABELS.next : RESET_LABELS.again);
-const resetVisible = (q: Question): string => (q.bank ? varName(q, 'locked') : `${varName(q, 'locked')} && !${varName(q, 'correct')}`);
+//A question that is retaken with the whole set has no Try again of its own: a Retake button elsewhere starts the next round for all of them
+const resetVisible = (q: Question): string => (q.retake ? 'false' : q.bank ? varName(q, 'locked') : `${varName(q, 'locked')} && !${varName(q, 'correct')}`);
 
 function bodyFor(q: Question, style: Style, blankVars: string[]): SceneNode {
   if (style === 'blank') return blanksBody(q, blankVars);
@@ -590,7 +592,7 @@ function ensureVariables(d: Project, q: Question): Variable[] {
     if (!v) {
       v = { id: uid('v'), name, type: def.type, initial: def.initial };
       d.variables.push(v);
-    } else if (['prompt', 'items', 'triesLeft', 'hintsLeft'].includes(def.suffix)) v.initial = def.initial;
+    } else if (['prompt', 'items', 'triesLeft', 'hintsLeft', 'retakesLeft'].includes(def.suffix)) v.initial = def.initial;
     out.push(v);
   }
   return out;
@@ -762,7 +764,11 @@ function syncBlankRows(frame: FrameNode, q: Question, variables: Variable[]): vo
   }
   rows.forEach((r, i) => {
     walk([r], (n) => {
-      if (n.type === 'input') n.variableId = varIds[i];
+      if (n.type === 'input') {
+        n.variableId = varIds[i];
+        //A word to spell gets no red underline, no autocorrect and no capital letter put on it by the browser
+        if (q.blanks[i]?.spelling) n.noAssist = true;
+      }
     });
   });
 }
@@ -936,7 +942,7 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
   //The reset button's wording and when it shows depend on there being a bank. Only the default wording follows.
   const reset = partsOf(frame).reset?.[0];
   if (reset && reset.type === 'button') {
-    if (!before || Boolean(before.bank) !== Boolean(q.bank)) {
+    if (!before || Boolean(before.bank) !== Boolean(q.bank) || Boolean(before.retake) !== Boolean(q.retake)) {
       const other = before?.bank ? RESET_LABELS.next : RESET_LABELS.again;
       if (reset.label === other || !before) reset.label = resetLabel(q);
       reset.bindings = { ...(reset.bindings ?? {}), visible: resetVisible(q) };

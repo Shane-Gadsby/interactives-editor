@@ -1115,7 +1115,7 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
     body: `Web elements are real HTML controls, so they work with keyboards, screen readers and forms.
 
 - **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react.
-- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed.
+- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test.
 - **Link**: text that opens a URL.
 - **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
 - **Video**: a video file or URL.
@@ -1703,7 +1703,7 @@ Two finished ones to play first: **Matching question** and **Hotspot question** 
 
 **True or false.** Write the statement as the prompt and set **Statement is** to True or False. Edit the two labels for other wording ("Agree" and "Disagree").
 
-**Fill in the blank.** The accepted answers go one per line: \`Paris\`, \`city of light\`. Case and extra spaces are ignored unless you tick **Match case**. A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses. A line written \`/colou?r/i\` is a pattern. **Add blank** adds another input in the look of the last one.
+**Fill in the blank.** The accepted answers go one per line: \`Paris\`, \`city of light\`. Case and extra spaces are ignored unless you tick **Match case**. A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses. A line written \`/colou?r/i\` is a pattern. **Add blank** adds another input in the look of the last one. Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
 
 **Put in order.** List the items in the **right** order; the learner sees them shuffled (the first deal is never already right). Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
 
@@ -1772,9 +1772,10 @@ Everything above marks in the learner's browser, so the right answers are in the
 
 - The page that is served has the right answers taken out: which options are right, accepted answers and their patterns and tolerances, the feedback, and the hints. The right order of an ordering question is hidden too. Anyone who looks at the page's code finds none of it.
 - **Check answer** sends the learner's answer to the server, which marks it with the same marking the player uses, and sends back right or wrong, the score and the feedback to show. The tries, hints and score are kept by the server, so a learner who reloads or starts again does not get a fresh set of tries.
-- The server records the result itself. The mark that counts for each question is how it finished the first time. **Try again** after that is practice and does not change the recorded mark. The project's score is the total of those marks out of the questions' total points, it counts as complete when every server-marked question has finished, and it passes at the pass mark set in the Results settings.
+- The server records the result itself. The mark that counts for each question is how it finished the first time (unless the set has **Retakes**, below). **Try again** after that is practice and does not change the recorded mark. The project's score is the total of those marks out of the questions' total points, it counts as complete when every server-marked question has finished, and it passes at the pass mark set in the Results settings.
 - A **Report result** node, or anything else the browser sends as a result, is ignored for a project with server-marked questions: the server's own record is the only one. Questions that are not set to be marked on the server still do their normal marking in the page, but they add nothing to that record.
 - Checks and hints are limited to 30 a minute for each learner, so an answer can't be found by guessing over and over. A learner who goes over is asked to wait.
+- A learner who came in from an LMS over LTI 1.3 has their score sent to the LMS gradebook by the server when the whole set is finished, and again if their kept score changes. See [Spelling tests](question-kit#spelling-tests) for how.
 
 What it does not do:
 
@@ -1784,6 +1785,24 @@ What it does not do:
 - Unlimited tries can still be used to find an answer slowly. Set **Tries** to limit them.
 - A script or a custom node that holds an answer of its own is not touched.
 - Staff who open the project in the editor, or Remix it from the Link for StudyDesk, see the full project with its answers.
+
+## Spelling tests
+
+A spelling test plays a word and the learner types it. Build one with one **Fill in the blank** question for each word, one to a page the way the **Spelling test** starter does, and for each:
+
+1. Tick **Mark answers on the server** and **Spelling: letters must match exactly** on its blank.
+2. List every accepted spelling, one per line (\`judgement\` and \`judgment\`). Tick **Also accept American spellings** to accept the American form of each as well: the editor shows the forms it adds, so nothing is accepted that you can't see. It knows the common differences (colour/color, organise/organize, centre/center, travelled/traveled, paediatric/pediatric and a few dozen words that just differ) and leaves a word alone when it is not sure, so add anything else as its own line.
+3. Add a **Play sound** node on a button for the word's audio, and write nothing of the word anywhere else (not in a layer name, a label or the prompt).
+
+**What counts as right.** Every letter, in order. Case is ignored unless **Match case** is on, and spaces round the word are ignored. A curly apostrophe typed on a phone counts as a plain one, but a missing apostrophe or hyphen is wrong, and accents have to be there (cafe is not café). Numbers are not compared as numbers. The box has the browser's own spellcheck, autocorrect and automatic capitals switched off (**No browser help** in the input's settings), so it neither underlines nor fixes the word.
+
+**Keeping the word out of the page.** The page learners get has no accepted spellings in it, because the question is marked on the server. The word is in the audio, so the audio is the only place it is. In a project with spelling questions, **Update to the latest version** on the share link also renames every audio asset to a plain name (\`colour.mp3\` becomes \`audio-1.mp3\`) and cuts the title and comment tags out of mp3 and wav files. Other kinds of audio keep their tags, and the share says so: use mp3 or wav. Speech made on the learner's own device (the browser reading text aloud) is not an option for a graded test: it would need the word as text in the page. Record the words, or make them with any speech tool and upload the files.
+
+What this does not protect against: a learner who writes down what they hear (that is the test), who runs the audio through speech recognition, or who has your project open in the editor. **Preview** and any file you export still carry the answers.
+
+**Tries and retakes.** **Tries** is how many goes at one word (1 for a test). **Retakes** (in the Marking part, set the same on every word) lets the learner go through the whole test again: a round is every word finished once, the server keeps each round, and the score that counts is the **Best round** or the **Latest round**. Choose a set number of retakes, or unlimited. A **Reset question** node with **Retake** on (the starter's **Retake** button) starts the next round for every word at once, and only when the round is finished and a retake is left, so opening a page again never uses one up. Until the last retake the right spelling is not shown after a wrong word, so a learner can't read the answers off one round to use in the next. The question's \`round\`, \`retakesLeft\`, \`kept\` and \`keptMax\` variables say where the learner is and what is on record, for a results page to show.
+
+**Grading in the LMS.** Add the project to a course with the LMS's **Select content** picker (or an external tool link) and, when the LMS has a grade for that link, the server sends the score to it. It sends the kept score with the test's total points once every word is finished in a round, and again only when the kept score changes. It needs the LMS to be registered for LTI 1.3 with grade passback allowed, and the link has to be set up for grades in the course. A learner signed in another way gets everything but the grade. If the LMS refuses a score, the server tries again a moment later and with the learner's next click, and the record shows what was sent.
 
 ## Accessible by default
 

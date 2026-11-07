@@ -9,6 +9,7 @@ import { buildImageChoice } from './assessment/image-choice';
 import { buildSingleChoiceSet } from './assessment/single-choice-set';
 import { buildSummary } from './assessment/summary';
 import { buildEssay } from './assessment/essay';
+import { buildSpellingTest } from './assessment/spelling-test';
 
 export const STARTERS: BrandedStarter[] = [
   {
@@ -90,5 +91,13 @@ export const STARTERS: BrandedStarter[] = [
     description: 'A writing prompt with a large answer box and a live word count. Submit gives automatic feedback from keywords the author sets (key ideas found and missing, optional extras, and whether the length is within a minimum and maximum), and a model answer can be revealed. It is a formative self-check for the learner, not marking: it matches words, it cannot judge meaning.',
     tags: ['essay', 'writing', 'keywords', 'word count', 'self-check'],
     build: buildEssay,
+  },
+  {
+    key: 'assessment/spelling-test',
+    set: 'assessment',
+    name: 'Spelling test',
+    description: 'Six words, one to a page. The learner plays the recording of a word and types it: every letter has to match, with the American spelling accepted as well, and the browser\'s own spellcheck is off in the box. The server marks the words and keeps the score, so the page has no answers in it; the test can be retaken a set number of times with the best round kept, and a result page shows this go and what is on record. Played from the Link for StudyDesk or an LTI 1.3 link, the score goes to the course gradebook. The author records the words and types the accepted spellings.',
+    tags: ['spelling', 'dictation', 'audio', 'server marked', 'retakes', 'grade'],
+    build: buildSpellingTest,
   },
 ];

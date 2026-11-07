@@ -6,6 +6,7 @@ import {
   MAX_OPTIONS,
   MAX_PAIRS,
   QUESTION_KINDS,
+  americanForms,
   isMultiple,
   newQuestion,
   questionProblems,
@@ -209,8 +210,12 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
                 <IconButton icon={<span aria-hidden="true">×</span>} title="Remove this blank" disabled={q.blanks.length <= 1} onClick={() => apply({ blanks: q.blanks.filter((_, j) => j !== i) })} />
               </Row>
               <TextField
-                label="Accepted answers"
-                title="One per line. Case and extra spaces are ignored. A number is compared as a number. /pattern/i is a pattern"
+                label={b.spelling ? 'Accepted spellings' : 'Accepted answers'}
+                title={
+                  b.spelling
+                    ? 'One per line. Every letter has to match. Put alternative spellings (judgement, judgment) on their own lines. Case and spaces round the word are ignored unless you tick Match case'
+                    : 'One per line. Case and extra spaces are ignored. A number is compared as a number. /pattern/i is a pattern'
+                }
                 value={b.answers.join('\n')}
                 multiline
                 rows={2}
@@ -218,8 +223,29 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
               />
               <Row>
                 <CheckField label="Match case" value={!!b.caseSensitive} onChange={(v) => setBlank(i, { caseSensitive: v || undefined })} />
-                <NumberField label="± Tolerance" title="How far off a number answer may be" value={b.tolerance ?? 0} min={0} step={0.1} onChange={(v) => setBlank(i, { tolerance: v > 0 ? v : undefined }, `blank-tol-${i}`)} />
+                {!b.spelling && <NumberField label="± Tolerance" title="How far off a number answer may be" value={b.tolerance ?? 0} min={0} step={0.1} onChange={(v) => setBlank(i, { tolerance: v > 0 ? v : undefined }, `blank-tol-${i}`)} />}
               </Row>
+              <CheckField
+                label="Spelling: letters must match exactly"
+                title="For a word to spell. No numbers, tolerance or guessing: every letter has to be there. A curly apostrophe typed on a phone counts as a plain one, and the browser's own spellcheck and autocorrect are switched off in the box"
+                value={!!b.spelling}
+                onChange={(v) => setBlank(i, { spelling: v || undefined, usSpelling: v ? b.usSpelling : undefined, tolerance: v ? undefined : b.tolerance })}
+              />
+              {b.spelling && (
+                <>
+                  <CheckField
+                    label="Also accept American spellings"
+                    title="Accepts the American spelling of each accepted spelling as well (colour, color; organise, organize). It knows the common differences, listed below, and leaves a word alone when it is not sure. Add anything else as its own line"
+                    value={!!b.usSpelling}
+                    onChange={(v) => setBlank(i, { usSpelling: v || undefined })}
+                  />
+                  {b.usSpelling && (
+                    <div className="muted small">
+                      {americanForms(b.answers).length ? `American forms accepted too: ${americanForms(b.answers).join(', ')}.` : 'No American form of these spellings differs, so nothing is added.'}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ))}
           <button className="btn" disabled={q.blanks.length >= MAX_BLANKS} onClick={() => apply({ blanks: [...q.blanks, { id: nextId(q.blanks, 'b'), label: `Answer ${q.blanks.length + 1}`, answers: [''] }] })}>
@@ -339,6 +365,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
           Learners get this question without its right answers, patterns, hints or feedback, and the server marks it. Only the share link and the Link for StudyDesk do this (the answers go out when you update the link). Preview and exported files still carry the answers.
         </div>
       )}
+      {q.serverMarked && !serverProblem && <Retakes q={q} apply={apply} />}
       {serverProblem && <div className={q.serverMarked ? 'q-problem' : 'muted small'}>{q.serverMarked ? 'Marked in the page for now. ' : ''}{serverProblem}</div>}
 
       <div className="q-sub">Hints and feedback</div>
@@ -406,6 +433,49 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         ))}
       </div>
     </Section>
+  );
+}
+
+/**
+ * Goes at the whole set, for questions marked on the server. Questions that have it are one test: the learner finishes all of
+ * them, that is a round, and the score that counts is the best round or the latest. Set it the same on every question of the test.
+ */
+function Retakes({ q, apply }: { q: Question; apply: (patch: Partial<Question>, key?: string) => void }) {
+  const mode = !q.retake ? 'off' : q.retake.limit < 0 ? 'unlimited' : 'limited';
+  const set = (m: 'off' | 'limited' | 'unlimited') =>
+    apply({ retake: m === 'off' ? undefined : { limit: m === 'unlimited' ? -1 : Math.max(1, q.retake && q.retake.limit > 0 ? q.retake.limit : 1), keep: q.retake?.keep ?? 'best' } });
+  return (
+    <>
+      <SelectField<'off' | 'limited' | 'unlimited'>
+        label="Retakes"
+        title="Whether the learner can go through the whole set of questions again after finishing it. Off: the first go is the mark that counts, and Try again is practice. Otherwise the server keeps every round, a Reset question node with Retake on starts the next one, and the right answers stay hidden until the last go"
+        value={mode}
+        options={[
+          { value: 'off', label: 'Off (first go counts, then practice)' },
+          { value: 'limited', label: 'A set number of retakes' },
+          { value: 'unlimited', label: 'Unlimited retakes' },
+        ]}
+        onChange={set}
+      />
+      {q.retake && q.retake.limit >= 0 && (
+        <NumberField label="Retakes allowed" title="Goes at the whole set after the first. 1 means two goes in all" value={q.retake.limit} min={1} max={100} step={1} onChange={(v) => apply({ retake: { ...q.retake!, limit: Math.max(1, Math.round(v)) } }, 'retake-limit')} />
+      )}
+      {q.retake && (
+        <>
+          <SelectField<'best' | 'latest'>
+            label="Score kept"
+            title="Which round's score is the mark: the best one, or the most recent (which can be lower than an earlier go)"
+            value={q.retake.keep}
+            options={[
+              { value: 'best', label: 'Best round' },
+              { value: 'latest', label: 'Latest round' },
+            ]}
+            onChange={(v) => apply({ retake: { ...q.retake!, keep: v } })}
+          />
+          <div className="muted small">Set this the same on every question of the test. A round is every one of them finished once. Add a Reset question node with Retake on (for example on a Retake button) to start the next round; Try again on a single question is hidden.</div>
+        </>
+      )}
+    </>
   );
 }
 

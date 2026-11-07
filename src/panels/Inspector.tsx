@@ -1316,6 +1316,9 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             </Row>
           )}
           {n.inputType === 'select' && <TextField label="Options" value={n.options ?? ''} multiline placeholder="One per line" onChange={(v) => set({ options: v })} />}
+          {(n.inputType === 'text' || n.inputType === 'textarea' || n.inputType === 'email') && (
+            <CheckField label="No browser help" title="Turns off the spellcheck underline, autocorrect, automatic capitals and autofill in this box. For a spelling test, so the browser does not mark or fix the word" value={!!n.noAssist} onChange={(v) => set({ noAssist: v || undefined })} />
+          )}
           {radius}
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           {!project.variables.length && <p className="hint">Create a variable in the Variables tab to bind this input to.</p>}

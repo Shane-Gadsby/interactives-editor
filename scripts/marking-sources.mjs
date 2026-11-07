@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url))
 
-export const markingSources = ['../mcp/marking.ts', ...['question', 'server-marking', 'regex-safe', 'regex-methods', 'regex-linear'].map((f) => `../../interactives-player/src/${f}.ts`)]
+export const markingSources = ['../mcp/marking.ts', ...['question', 'server-marking', 'regex-safe', 'regex-methods', 'regex-linear', 'us-spelling'].map((f) => `../../interactives-player/src/${f}.ts`)]
 
 export const sourcesHash = () => {
 	let hash = createHash('sha256')

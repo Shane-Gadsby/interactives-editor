@@ -9,7 +9,9 @@
 //	/lti13/jwks     our public keys
 //	/api/lti13      power users only: platforms, who is linked to which editor account, our keys
 //
-//Not in here yet: Assignment and Grade Services (grade passback). The registration already keeps a tokenUrl for it.
+//Grade passback (Assignment and Grade Services, scores only) is `grade.send` below: index.js calls it when a project marked on the
+//server finishes. It posts to the line item the launch named, so a launch without one (the platform has no grade set up for the
+//link) sends nothing.
 //
 //Crypto is node's own (RS256 only), no jose or jsonwebtoken. An LTI platform has to offer RS256 and nothing else is
 //accepted, so the whole JWT surface is the small verify/sign pair below, with the alg pinned and no alg:none, no HMAC
@@ -19,6 +21,8 @@ const crypto = require('crypto'),
 
 const CLAIM = 'https://purl.imsglobal.org/spec/lti/claim/',
 	DL = 'https://purl.imsglobal.org/spec/lti-dl/claim/',
+	AGS = 'https://purl.imsglobal.org/spec/lti-ags/claim/endpoint',
+	SCOPE_SCORE = 'https://purl.imsglobal.org/spec/lti-ags/scope/score',
 	STATE_TTL = 10 * 60 * 1000,
 	SESSION_TTL = 8 * 60 * 60 * 1000,
 	PICK_TTL = 30 * 60 * 1000,
@@ -288,8 +292,15 @@ module.exports = (deps) => {
 			let ctx = payload[`${CLAIM}context`] || {},
 				name = text(payload.name, 200) || [text(payload.given_name, 100), text(payload.family_name, 100)].filter(Boolean).join(' ')
 
+			//The grade service the launch offered: only the line item for this link, and only when it can take scores
+			let endpoint = payload[AGS] || {},
+				scopes = (Array.isArray(endpoint.scope) ? endpoint.scope : []).filter((x) => isString(x, 300)).slice(0, 10),
+				lineitem = httpsURL(endpoint.lineitem, allowHttp)
+
 			return {
 				platform: platform._id,
+				sub: text(payload.sub, 255),
+				ags: lineitem && scopes.includes(SCOPE_SCORE) ? {lineitem, scope: scopes} : null,
 				username: `lti:${platform._id}:${text(payload.sub, 255)}`,
 				name: name || null,
 				roles: (Array.isArray(payload[`${CLAIM}roles`]) ? payload[`${CLAIM}roles`] : []).filter((r) => isString(r, 300)).slice(0, 20),
@@ -337,6 +348,95 @@ module.exports = (deps) => {
 
 			return typeof token === 'string' && TOKEN_RE.test(token) ? token : null
 		}
+
+	//Assignment and Grade Services. A token for the platform is asked for with our own signed assertion (client credentials) and kept
+	//until it is nearly out; the score is posted to the line item's scores. Never throws: a failure comes back as {ok: false, why}
+	let tokens = new Map(),
+		doFetch = (...args) => (deps.fetch || globalThis.fetch)(...args),
+
+		accessToken = async (platform, scope) => {
+			let k = `${platform._id}|${scope}`,
+				c = tokens.get(k)
+
+			if (c && c.exp > Date.now() + 30000) {
+				return c.token
+			}
+
+			let url = httpsURL(platform.tokenUrl, allowHttp)
+
+			if (!url) {
+				throw new LtiError(500, 'The platform registration has no usable token url')
+			}
+
+			let {kid, key} = await signingKey(),
+				now = nowSeconds(),
+				assertion = signJwt({iss: platform.clientId, sub: platform.clientId, aud: url, iat: now, exp: now + 300, jti: crypto.randomBytes(16).toString('hex')}, kid, key),
+				r = await doFetch(url, {
+					method: 'POST',
+					headers: {'content-type': 'application/x-www-form-urlencoded', accept: 'application/json'},
+					body: new URLSearchParams({grant_type: 'client_credentials', client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer', client_assertion: assertion, scope}).toString(),
+					signal: AbortSignal.timeout(8000)
+				}),
+				body = r.ok ? JSON.parse((await r.text()).slice(0, 20000)) : null
+
+			if (!r.ok || !body || !isString(body.access_token, 8000)) {
+				throw new LtiError(502, `The platform did not give a token (status ${r.status})`)
+			}
+
+			let ttl = typeof body.expires_in === 'number' && body.expires_in > 0 ? Math.min(body.expires_in, 3600) : 300
+
+			tokens.set(k, {token: body.access_token, exp: Date.now() + ttl * 1000})
+			return body.access_token
+		},
+
+		scoresURL = (lineitem) => {
+			let u = new URL(lineitem)
+
+			u.pathname = `${u.pathname.replace(/\/+$/, '')}/scores`
+			return u.toString()
+		}
+
+	const grade = {
+		//lti is what a launch gave (learner().lti): {platform, sub, lineitem, scope}. The score is sent as it is with its maximum, the
+		//platform scales it to the line item's own maximum
+		send: async (lti, score, max) => {
+			try {
+				if (!lti?.lineitem || !lti.sub || !Number.isFinite(score) || !Number.isFinite(max) || max <= 0) {
+					return {ok: false, why: 'There is nothing to send the grade to'}
+				}
+
+				let platform = await platformByID(lti.platform)
+
+				if (!platform) throw new LtiError(404, 'The platform is not registered any more')
+				if (!platform.tokenUrl) throw new LtiError(409, 'The platform has no token url registered, so grades cannot be sent')
+				if (!(lti.scope || []).includes(SCOPE_SCORE)) throw new LtiError(403, 'The platform did not offer to take scores for this link')
+
+				let lineitem = httpsURL(lti.lineitem, allowHttp)
+
+				if (!lineitem) throw new LtiError(400, 'The line item is not an https address')
+
+				let token = await accessToken(platform, SCOPE_SCORE),
+					r = await doFetch(scoresURL(lineitem), {
+						method: 'POST',
+						headers: {authorization: `Bearer ${token}`, 'content-type': 'application/vnd.ims.lis.v1.score+json', accept: 'application/json'},
+						body: JSON.stringify({userId: lti.sub, scoreGiven: Math.min(max, Math.max(0, score)), scoreMaximum: max, activityProgress: 'Completed', gradingProgress: 'FullyGraded', timestamp: new Date().toISOString()}),
+						signal: AbortSignal.timeout(8000)
+					})
+
+				if (r.status === 401) {
+					tokens.delete(`${platform._id}|${SCOPE_SCORE}`)
+				}
+
+				if (!r.ok) throw new LtiError(502, `The platform refused the score (status ${r.status})`)
+
+				return {ok: true}
+			}
+			catch (e) {
+				console.warn(`interactives lti13 grade not sent: ${e.message}`)
+				return {ok: false, why: e instanceof LtiError ? e.message : 'The platform could not be reached'}
+			}
+		}
+	}
 
 	const router = new express.Router(),
 		urlencoded = express.urlencoded({extended: false, limit: '100kb'}),
@@ -528,7 +628,7 @@ module.exports = (deps) => {
 			if (!platform) throw new LtiError(401, 'The platform is not registered any more')
 
 			//Only the person's own projects that have a share link on, checked again here since the form is just a form
-			let found = wanted.length ? await projects.find({'owner.username': session.username, 'share.token': {$in: wanted}}, {projection: {name: 1, 'share.token': 1}}).toArray() : []
+			let found = wanted.length ? await projects.find({'owner.username': session.username, 'share.token': {$in: wanted}}, {projection: {name: 1, 'share.token': 1, 'marking.salt': 1}}).toArray() : []
 
 			if (!found.length) throw new LtiError(400, 'Pick at least one of your shared projects')
 
@@ -545,7 +645,14 @@ module.exports = (deps) => {
 					[`${CLAIM}message_type`]: 'LtiDeepLinkingResponse',
 					[`${CLAIM}version`]: '1.3.0',
 					[`${CLAIM}deployment_id`]: session.deployment,
-					[`${DL}content_items`]: found.map((d) => ({type: 'ltiResourceLink', title: text(d.name, 200) || 'Interactive', url: `${launchURL}?t=${d.share.token}`, custom: {ix_project: d.share.token}}))
+					[`${DL}content_items`]: found.map((d) => ({
+					type: 'ltiResourceLink',
+					title: text(d.name, 200) || 'Interactive',
+					url: `${launchURL}?t=${d.share.token}`,
+					custom: {ix_project: d.share.token},
+					//A project the server marks is graded, so the course gets a grade item for it (out of 100: the score is sent with its own maximum and scaled)
+					...(d.marking?.salt ? {lineItem: {scoreMaximum: 100, label: text(d.name, 200) || 'Interactive', resourceId: d.share.token}} : {})
+				}))
 				}
 
 			if (session.data !== undefined) {
@@ -632,6 +739,12 @@ ${!linked
 
 			await col.platforms.updateOne({_id: id}, {$set: {...row, updated: new Date(), by: deps.whoIs(req)?.username || null}, $setOnInsert: {created: new Date()}}, {upsert: true})
 			jwksCache.delete(row.jwksUrl)
+
+			//A changed registration (client id, token url) makes any grade token we hold for it worth nothing
+			for (let k of [...tokens.keys()]) {
+				if (k.startsWith(`${id}|`)) tokens.delete(k)
+			}
+
 			res.json({ok: true, platform: {_id: id, ...row}})
 		}
 		catch (e) {
@@ -644,6 +757,11 @@ ${!linked
 		if (envPlatforms.some((p) => p._id === req.params.id)) return res.status(409).json({error: 'That platform comes from the environment'})
 
 		await col.platforms.deleteOne({_id: String(req.params.id)})
+
+		for (let k of [...tokens.keys()]) {
+			if (k.startsWith(`${req.params.id}|`)) tokens.delete(k)
+		}
+
 		res.json({ok: true})
 	})
 
@@ -686,6 +804,7 @@ ${!linked
 	return {
 		router,
 		admin,
+		grade,
 
 		//Collections: db is the editor's own database, projects its project collection. Mongo indexes live in suite-libs/indexes.js
 		init: async (db, projectsCollection) => {
@@ -718,7 +837,7 @@ ${!linked
 		},
 
 		//The shape index.js's learnerOf hands the records, for a launched learner
-		learner: (l) => ({username: l.username, userID: null, name: l.name || l.username, course: l.course, courseLabel: l.courseLabel, courseCode: l.courseCode, lmsURL: l.lmsURL}),
+		learner: (l) => ({username: l.username, userID: null, name: l.name || l.username, course: l.course, courseLabel: l.courseLabel, courseCode: l.courseCode, lmsURL: l.lmsURL, lti: l.ags ? {platform: l.platform, sub: l.sub, lineitem: l.ags.lineitem, scope: l.ags.scope} : null}),
 
 		//Exposed so the tests can say what a token is without going through the routes
 		jwt: {parse: parseJwt, sign: signJwt, jwkToKey}
@@ -727,3 +846,5 @@ ${!linked
 
 module.exports.CLAIM = CLAIM
 module.exports.DL = DL
+module.exports.AGS = AGS
+module.exports.SCOPE_SCORE = SCOPE_SCORE
