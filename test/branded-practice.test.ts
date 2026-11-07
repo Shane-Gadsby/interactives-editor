@@ -44,7 +44,7 @@ describe('practice starters', () => {
   };
 
   it('has the starters, keyed practice/', () => {
-    expect(STARTERS.map((s) => s.key)).toEqual(['practice/difficult-conversation', 'practice/timed-talk-rehearsal', 'practice/keep-the-beat', 'practice/shadow-the-model']);
+    expect(STARTERS.map((s) => s.key)).toEqual(['practice/difficult-conversation', 'practice/timed-talk-rehearsal', 'practice/keep-the-beat', 'practice/sign-practice', 'practice/shadow-the-model']);
   });
 
   for (const starter of STARTERS) {
@@ -120,11 +120,12 @@ describe('practice starters', () => {
           spy.mockRestore();
           expect(errors).toEqual([]);
         }
-      });
+        //Sign practice has a portrait copy of every page, so it visits more than the others
+      }, 30000);
 
-      //Keep the beat records nothing. Shadow the model declares the microphone and is tested on its own below. The two rehearsals ship with recording OFF:
+      //Keep the beat records nothing, Sign practice uses the camera and is tested on its own. Shadow the model declares the microphone and is tested on its own below. The two rehearsals ship with recording OFF:
       //the record layers are there but only show while the microphone is ready, which it never is in a project that declares nothing
-      it.skipIf(['practice/keep-the-beat', 'practice/shadow-the-model'].includes(starter.key))('has an optional recording step that is off as shipped, and a checklist item that says how to switch it on', () => {
+      it.skipIf(['practice/keep-the-beat', 'practice/shadow-the-model', 'practice/sign-practice'].includes(starter.key))('has an optional recording step that is off as shipped, and a checklist item that says how to switch it on', () => {
         const { project, checklist } = starter.build(COLOURWAYS[0]);
         expect(checklist.some((c) => /OPTIONAL RECORDING/.test(c.text) && /Microphone and camera/.test(c.text) && /dropped/.test(c.text))).toBe(true);
         expect(project.settings.sensors).toBeUndefined();

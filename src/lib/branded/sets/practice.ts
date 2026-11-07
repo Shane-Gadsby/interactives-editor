@@ -4,5 +4,6 @@ import { difficultConversation } from './practice/difficult-conversation';
 import { timedTalk } from './practice/timed-talk';
 import { keepTheBeat } from './practice/keep-the-beat';
 import { shadowTheModel } from './practice/shadow-the-model';
+import { signPractice } from './practice/sign-practice';
 
-export const STARTERS: BrandedStarter[] = [difficultConversation, timedTalk, keepTheBeat, shadowTheModel];
+export const STARTERS: BrandedStarter[] = [difficultConversation, timedTalk, keepTheBeat, signPractice, shadowTheModel];
