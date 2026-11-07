@@ -2991,7 +2991,7 @@ After an import, a report lists anything that couldn't be carried over exactly. 
     title: 'Exporting',
     group: 'Import and export',
     summary: 'Single HTML file, project package, JSON, Lottie, PNG, SVG, video, GIF and PNG frames.',
-    keywords: 'export download html single file package ixp json lottie png svg image publish video mp4 webm gif frames sequence zip animation record',
+    keywords: 'embed code iframe staffdesk open site export download html single file package ixp json lottie png svg image publish video mp4 webm gif frames sequence zip animation record',
     body: `**Export** in the top bar:
 
 | Export | Gives you |
@@ -3067,7 +3067,20 @@ A share link carries big pictures as their [optimised copies](export#optimised-p
 
 That link opens the **learner page**: a small page around your project that knows who the learner is from their StudyDesk session. It gives the project the learner's saved progress, keeps their results, and, when **Learner records** is on, passes on the activity that [Insights](insights) counts. Put this link in your StudyDesk page, not the plain one. A learner who isn't signed in just plays it, and their progress stays in their own browser. **Allow remix**, under the link, adds a **Remix this** button for signed-in staff who open it, which copies the project into their own projects: see [Templates, examples and remix](templates#allow-remix-on-a-share-link).
 
-A project that uses a microphone, camera or photos (see [Microphone, camera and photos](sensors)) only works through the **Link for StudyDesk**, and the iframe that holds that link on the StudyDesk page needs \`allow="microphone; camera"\`. Update the link after changing what the project declares.
+A project that uses a microphone, camera or photos (see [Microphone, camera and photos](sensors)) only works through the **Link for StudyDesk**, and the iframe that holds that link on the StudyDesk page needs \`allow="microphone; camera"\`. The **Embed code** below writes that for you. Update the link after changing what the project declares.
+
+### Embed code
+Under the Link for StudyDesk, **Embed code** is the link already wrapped in the iframe the Toolbox writes for its own items, ready to paste. Press **Copy embed code**, then in StudyDesk, StaffDesk or the open site edit the page, open the editor's **Source code** view (the \`<>\` button), paste where it should go and save. The page treats it like any other Toolbox item.
+
+It is one code for all three sites. Each of them has the same Toolbox script and the same host for the link, so nothing in it changes between them. The host comes from the address you are using the editor on, so code copied from the test editor points at the test host: copy it again from the editor on the site the page is for.
+
+What the code carries:
+- **A title** made from the project name (for example \`Interactive: Fractions lab\`), which is what a screen reader calls the frame.
+- **The shape of the project**: the start artboard's width and height as an aspect ratio, so the frame is the right height before anything loads. The page then asks StudyDesk to set the real height, and keeps asking as the project resizes, the same way the Toolbox's own items do. A project with [responsive artboards](responsive) changes shape with its width, and the frame follows.
+- **\`allow="autoplay; fullscreen"\`**, so video, sound and the fullscreen button work. When the project declares the microphone or camera, \`microphone\` and \`camera\` are added; photos are a file picker and need nothing. The list follows what the project declared when the link was last updated, so press **Update to the latest version** first if you have just changed it, then copy the code again.
+- **An id** (\`data-cdt-id\`) that StudyDesk uses to tell this item from the others on the page.
+
+Updating or turning off the share link changes what the embed shows without touching the page it is in, since the code only holds the link.
 
 For a walk-through, see [Tutorial 5](tutorial-publish).`,
   },
@@ -3078,7 +3091,9 @@ For a walk-through, see [Tutorial 5](tutorial-publish).`,
     summary: 'Put an interactive on a page, size it, and talk to it from JavaScript.',
     keywords: 'embed iframe player api web component script host postmessage height resize toolbox',
     body: `## The simplest way
-Upload the **Single HTML file** and show it in an iframe. Inside the StudyDesk Toolbox the player reports its height to the page so the iframe fits (the suite's \`setILARSize\` or a \`{width: null, height, cacheID}\` message).
+For StudyDesk, StaffDesk and the open site, use the **Embed code** in [Share link](export#embed-code): one iframe to paste into the page's Source code view, sized and labelled like any other Toolbox item.
+
+Anywhere else, upload the **Single HTML file** and show it in an iframe. Inside the StudyDesk Toolbox the player reports its height to the page so the iframe fits (the suite's \`setILARSize\` or a \`{width: null, height, cacheID}\` message).
 
 ## The web component
 \`\`\`

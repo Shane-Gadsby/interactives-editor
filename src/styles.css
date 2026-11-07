@@ -4336,6 +4336,19 @@ kbd {
 .learner-link p {
   margin: 0;
 }
+.embed-text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: 12px/1.4 ui-monospace, monospace;
+  resize: vertical;
+  user-select: text;
+  -webkit-user-select: text;
+}
 .results-modal {
   width: min(760px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);
