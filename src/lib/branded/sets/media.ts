@@ -4,5 +4,6 @@ import { observeAndTag } from './media/observe-and-tag';
 import { listeningLab } from './media/listening-lab';
 import { liteLesson } from './media/lite-lesson';
 import { describedVideo } from './media/described-video';
+import { photoNotebook } from './media/photo-notebook';
 
-export const STARTERS: BrandedStarter[] = [observeAndTag, listeningLab, describedVideo, liteLesson];
+export const STARTERS: BrandedStarter[] = [observeAndTag, listeningLab, describedVideo, liteLesson, photoNotebook];
