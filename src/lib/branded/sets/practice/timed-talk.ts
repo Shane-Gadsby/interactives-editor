@@ -1,0 +1,319 @@
+//Timed talk rehearsal: the learner draws a random card from an author-written bank (a viva question, an interview question, a topic to explain to a
+//friend), gets a preparation countdown, then a speaking timer. When it ends they tap a delivery tally while thinking back (fillers, long pauses, a clear
+//opening, a clear close), compare with the card's model answer and tick the points they made, and a summary page shows every attempt. The attempts are
+//a remembered variable, so they survive a reload. The timers can be switched off (a variable, and a button for the learner) or lengthened (two
+//variables): an accessibility adjustment, since a strict clock raises anxiety for some learners. No microphone: they talk to a friend, a voice memo or the room.
+//The tally is the learner's own reflection and is never presented as measurement; nothing detects fillers or pace.
+//
+//RECORDING SLOTS (task 276, the media bridge, is not built yet): there are two hidden layers named "... slot (media bridge)". "Recording slot" is on the
+//talk stage, where record and stop go; "Replay slot" is on the tally stage, where the learner plays their recording back while they tally. Both stay hidden
+//and empty until the bridge exists, so nothing records and learners never see an empty box.
+import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
+import { brandedPage, brandedProject, button, byName, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import type { Colourway } from '../../looks';
+import { Graph, addVar, announce, bind, go, heroPage, set, spreadPages } from '../games/common';
+
+//The bank. type is the label on the card, q the question, model a short model answer and points what a good answer makes (up to four)
+const CARDS = [
+  {
+    type: 'Viva question',
+    q: 'Explain the main limitation of your approach and what you would do differently.',
+    model: 'A limitation of my approach is that it relied on a small sample, so I cannot say the result would hold for other groups. With more time I would collect a second sample, check whether the pattern repeats, and report that comparison alongside the first result.',
+    points: ['Names one real limitation clearly', 'Says why it matters for the conclusion', 'Says what you would change', 'Stays calm and does not over-apologise'],
+  },
+  {
+    type: 'Viva question',
+    q: 'Why did you choose this method over the alternatives?',
+    model: 'I chose it because it answers the question directly and I could carry it out properly in the time. I looked at two other methods. One needed data I could not get and the other would have answered a slightly different question.',
+    points: ['Links the choice to the question', 'Mentions at least one alternative', 'Gives a fair reason for rejecting it', 'Does not claim it was the only way'],
+  },
+  {
+    type: 'Interview question',
+    q: 'Tell us about a time you worked in a team and something went wrong.',
+    model: 'In a group project our plan fell behind when two of us misread the deadline. I called a short meeting, we split the remaining work by strength, and agreed one checkpoint. We finished a day early and I now write down dates in the group chat.',
+    points: ['Sets the scene in one or two sentences', 'Says what you personally did', 'Gives the result', 'Ends with what you learned'],
+  },
+  {
+    type: 'Interview question',
+    q: 'Why are you interested in this role, and what would you bring to it?',
+    model: 'The role matches what I enjoyed most in my studies, which was explaining ideas to other people. I bring reliable teamwork, clear writing, and a habit of checking my work. I would also like to keep learning from the people already doing it well.',
+    points: ['Links the role to your own interests', 'Names two or three strengths', 'Gives a short example', 'Finishes with a clear close'],
+  },
+  {
+    type: 'Explain it to a friend',
+    q: 'Pick one idea from this course and explain it to a friend who has never studied it.',
+    model: 'An idea from this course is the difference between a source and the claim it makes. A source is where something comes from, and a claim is what someone says it shows. So I always ask: does the source actually back up what is being claimed?',
+    points: ['Starts with the idea in one plain sentence', 'Uses an everyday example', 'Avoids jargon, or explains it', 'Checks the friend would understand'],
+  },
+  {
+    type: 'One-minute talk',
+    q: 'Describe a study habit that works for you, and why.',
+    model: 'A habit that works for me is a short review each evening. I write three lines on what I learned that day. It takes five minutes, it shows me what I did not understand, and it means revision before an exam is a reminder, not a first look.',
+    points: ['Names the habit clearly', 'Says how it works in practice', 'Gives a reason it helps', 'Closes with one sentence of summary'],
+  },
+];
+
+const RIGHT_X = 456;
+const CLOCK = (v: string) => `Math.floor(${v} / 60) + ":" + pad(${v} % 60, 2)`;
+//Only look at a card while one is on show: before the first draw there is none
+const ON_SHOW = 'current >= 0 && stage != "draw"';
+
+function build(colourway: Colourway) {
+  const ctx = brandedProject(colourway, 'Timed talk rehearsal');
+  const { project, L } = ctx;
+  const stage = addVar(project, 'stage', 'string', 'draw');
+  const timersOn = addVar(project, 'timersOn', 'boolean', true);
+  addVar(project, 'prepSeconds', 'number', 30);
+  addVar(project, 'talkSeconds', 'number', 60);
+  const left = addVar(project, 'left', 'number', 0);
+  addVar(project, 'cards', 'list', CARDS);
+  const current = addVar(project, 'current', 'number', -1);
+  const seen = addVar(project, 'seen', 'list', []);
+  const pool = addVar(project, 'pool', 'list', []);
+  const fillers = addVar(project, 'fillers', 'number', 0);
+  const pauses = addVar(project, 'pauses', 'number', 0);
+  const opening = addVar(project, 'clearOpening', 'boolean', false);
+  const closing = addVar(project, 'clearClose', 'boolean', false);
+  const covered = addVar(project, 'covered', 'list', []);
+  //Remembered: kept across visits (the learner's record inside StudyDesk, the browser's own storage otherwise)
+  const attempts = addVar(project, 'attempts', 'list', []);
+  attempts.persist = true;
+
+  const hero = heroPage(ctx, 'Rehearse a talk against the clock', 'Draw a card, get a moment to prepare, then talk out loud. Tally how it went and compare with a model answer. No microphone is used.');
+  const rehearse = brandedPage(ctx, 'Draw, prepare, talk', { footer: 'Rehearsal, not assessed' });
+  const summary = brandedPage(ctx, 'Your attempts', { footer: 'Your own tally, remembered for you' });
+  const checklist: TemplateChecklistItem[] = [];
+
+  const hg = new Graph(hero.page);
+  hg.run(hg.click(hero.start, 'Begin'), go(rehearse));
+  checklist.push(item('Write the title and the line under it on the first page. Keep it clear that this is practice and not assessed', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page));
+
+  const box = contentBox(rehearse);
+  const rx = box.x + RIGHT_X;
+  const rw = box.width - RIGHT_X;
+
+  //The card: always on the left, face down until one is drawn
+  const face = card(ctx, 'Card', box.x, box.y, 424, box.height);
+  const cardType = text(ctx, 'Card type', `{${ON_SHOW} ? cards[current].type : "Your card"}`, box.x + 28, box.y + 28, 368, { fontSize: 14, fontWeight: 700, color: L.muted });
+  const cardQ = text(ctx, 'Card question', `{${ON_SHOW} ? cards[current].q : "Draw a card to begin."}`, box.x + 28, box.y + 64, 368, { fontSize: 28, fontWeight: 700, lineHeight: 1.3, autoSize: 'none', height: 280 });
+  const cardCount = text(ctx, 'Card count', '{cards.length} cards in the bank. {seen.length} drawn so far.', box.x + 28, box.y + box.height - 44, 368, { fontSize: 14, color: L.muted });
+  rehearse.children.push(face, cardType, cardQ, cardCount);
+
+  //A small circular helper: a stage is a frame whose visibility follows the stage variable
+  const stageFrame = (name: string, when: string, children: SceneNode[]) => {
+    const f = createNode('frame', { name, x: rx, y: box.y, width: rw, height: box.height, fill: null, stroke: null, clip: false, children }) as FrameNode;
+    return bind(f, { visible: when });
+  };
+
+  //Stage: draw
+  const drawHead = heading(ctx, 'Draw heading', 'Draw a card', 0, 0, rw, { fontSize: 24 });
+  const drawHelp = text(ctx, 'Draw help', 'Draw a random card, get time to prepare, then talk out loud: to a friend, into the voice memo on your phone, or to the room. Nothing is recorded here.', 0, 44, rw, { fontSize: 17, lineHeight: 1.4 });
+  const draw = button(ctx, 'Draw a card', 'Draw a card', 0, 158, 240, true);
+  const timerSwitch = bind(button(ctx, 'Timer switch', 'Timers: on', 0, 218, 240, false), { label: 'timersOn ? "Timers: on" : "Timers: off"' });
+  timerSwitch.ariaLabel = 'Switch the countdowns on or off';
+  const timerHelp = text(ctx, 'Timer help', '{timersOn ? "Preparation " + prepSeconds + " seconds, then " + talkSeconds + " seconds to talk. " : "No countdowns: take as long as you need. "}Switch the timers off if a clock makes it harder.', 0, 280, rw, { fontSize: 15, color: L.muted, lineHeight: 1.4 });
+  const toSummary = bind(button(ctx, 'See my summary', 'See my summary', 0, 408, 240, false), { visible: 'attempts.length > 0' });
+  const drawStage = stageFrame('Draw stage', 'stage == "draw"', [drawHead, drawHelp, draw, timerSwitch, timerHelp, toSummary]);
+
+  //Stages: prepare and talk share a shape: a clock, a bar, a line of help and one button
+  const countdown = (name: string, when: string, title: string, total: string, help: string, label: string, extra: SceneNode[] = []) => {
+    const h = heading(ctx, `${name} heading`, title, 0, 0, rw, { fontSize: 24 });
+    const clock = text(ctx, `${name} clock`, `{timersOn ? ${CLOCK('left')} : "No timer"}`, 0, 44, rw, { fontSize: 72, fontWeight: 700 });
+    const track = bind(createNode('rect', { name: `${name} track`, x: 0, y: 150, width: rw, height: 10, cornerRadius: 5, fill: solid(L.surfaceMuted), stroke: null, decorative: true }), { visible: 'timersOn' });
+    const bar = bind(createNode('rect', { name: `${name} bar`, x: 0, y: 150, width: rw, height: 10, cornerRadius: 5, fill: solid(L.button), stroke: null, decorative: true }), { visible: 'timersOn', width: `Math.max(1, ${rw} * Math.max(0, left) / Math.max(1, ${total}))` });
+    const t = text(ctx, `${name} help`, help, 0, 180, rw, { fontSize: 17, lineHeight: 1.4 });
+    const b = button(ctx, `${name} button`, label, 0, 408, 300, true);
+    return { frame: stageFrame(`${name} stage`, when, [h, clock, track, bar, t, b, ...extra]), button: b, clock };
+  };
+  const prep = countdown('Prepare', 'stage == "prep"', 'Get ready', 'prepSeconds', 'Jot down two or three points, or say your opening line in your head. Start talking when you are ready, or when the clock runs out.', 'I\'m ready, start the talk');
+  //The recording slot (media bridge, later): record and stop go here on the talk stage
+  const recSlot = createNode('frame', { name: 'Recording slot (media bridge)', visible: false, x: 0, y: 330, width: rw, height: 56, cornerRadius: 12, fill: solid(L.surface), stroke: null, clip: false, ariaLabel: 'Recording slot, not used yet' } as Partial<SceneNode>);
+  const talk = countdown('Talk', 'stage == "talk"', 'Talk now', 'talkSeconds', 'Talk out loud now: to a friend, into a voice memo on your phone, or to the room. Keep going until the clock stops, or press the button when you are done.', 'I\'ve finished', [recSlot]);
+
+  //Stage: the delivery tally
+  const tallyHead = heading(ctx, 'Tally heading', 'Delivery tally', 0, 0, rw, { fontSize: 24 });
+  const tallyHelp = text(ctx, 'Tally help', 'Think back, or play your voice memo. Tap what you noticed. It is your own reflection, not a measurement.', 0, 38, rw, { fontSize: 15, color: L.muted, lineHeight: 1.4 });
+  const counter = (name: string, label: string, v: typeof fillers, y: number) => {
+    const row = card(ctx, `${name} row`, 0, y, rw, 48);
+    const l = text(ctx, `${name} label`, label, 16, y + 13, 250, { fontSize: 17, fontWeight: 600 });
+    const minus = button(ctx, `${name} fewer`, '−', rw - 170, y + 4, 40, false);
+    minus.ariaLabel = `One fewer: ${label}`;
+    const n = text(ctx, `${name} count`, `{${v.name}}`, rw - 124, y + 8, 56, { fontSize: 24, fontWeight: 700, align: 'center' });
+    const plus = button(ctx, `${name} more`, '+', rw - 52, y + 4, 40, true);
+    plus.ariaLabel = `One more: ${label}`;
+    return { nodes: [row, l, minus, n, plus] as SceneNode[], minus, plus, v };
+  };
+  const fill = counter('Fillers', 'Filler words (um, like)', fillers, 92);
+  const paus = counter('Pauses', 'Long pauses', pauses, 148);
+  const flag = (name: string, label: string, v: typeof opening, y: number) => {
+    const bg = createNode('frame', { name, x: 0, y, width: rw, height: 48, cornerRadius: 16, fill: solid(L.surface), stroke: null, clip: false, role: 'checkbox', focusable: true, cursor: 'pointer', ariaLabel: label }) as FrameNode;
+    const box22 = createNode('rect', { name: `${name} box`, x: 14, y: 13, width: 22, height: 22, cornerRadius: 6, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true });
+    bind(box22, { 'fill.color': `${v.name} ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `${v.name} ? "${L.button}" : "${L.border}"` });
+    const mark = bind(text(ctx, `${name} mark`, '✓', 18, 12, 18, { fontSize: 16, fontWeight: 700, color: L.onButton, decorative: true }), { visible: v.name });
+    const l = text(ctx, `${name} label`, label, 50, 13, rw - 64, { fontSize: 17, fontWeight: 600, decorative: true });
+    bg.children = [box22, mark, l];
+    bind(bg, { ariaChecked: v.name });
+    return bg;
+  };
+  const openRow = flag('Clear opening', 'Clear opening: I said what I would talk about', opening, 212);
+  const closeRow = flag('Clear close', 'Clear close: I finished on a clear final sentence', closing, 268);
+  //The replay slot (media bridge, later): the learner's recording plays here while they tally
+  const replaySlot = createNode('frame', { name: 'Replay slot (media bridge)', visible: false, x: 0, y: 332, width: rw, height: 56, cornerRadius: 12, fill: solid(L.surface), stroke: null, clip: false, ariaLabel: 'Replay slot, not used yet' } as Partial<SceneNode>);
+  const toModel = button(ctx, 'To the model answer', 'Compare with the model answer', 0, 408, 330, true);
+  const tallyStage = stageFrame('Tally stage', 'stage == "tally"', [tallyHead, tallyHelp, ...fill.nodes, ...paus.nodes, openRow, closeRow, replaySlot, toModel]);
+
+  //Stage: the model answer and the points
+  const modelHead = heading(ctx, 'Model heading', 'A model answer', 0, 0, rw, { fontSize: 20 });
+  const modelCard = card(ctx, 'Model panel', 0, 28, rw, 150);
+  const model = text(ctx, 'Model answer', `{${ON_SHOW} ? cards[current].model : ""}`, 16, 40, rw - 32, { fontSize: 15, lineHeight: 1.35, autoSize: 'none', height: 130 });
+  const pointsHead = heading(ctx, 'Points heading', 'Points a good answer makes. Tick the ones you made.', 0, 188, rw, { fontSize: 17 });
+  const tick = createNode('rect', { name: 'Tick box', x: 6, y: 6, width: 22, height: 22, cornerRadius: 6, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true });
+  bind(tick, { 'fill.color': `covered.includes(index) ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `covered.includes(index) ? "${L.button}" : "${L.border}"` });
+  const tickMark = bind(text(ctx, 'Tick mark', '✓', 10, 5, 18, { fontSize: 16, fontWeight: 700, color: L.onButton, decorative: true }), { visible: 'covered.includes(index)' });
+  const pointText = text(ctx, 'Point', '{item}', 40, 6, rw - 52, { fontSize: 16, decorative: true });
+  const pointRow = createNode('frame', { name: 'Point row', x: 0, y: 0, width: rw, height: 34, cornerRadius: 8, fill: solid(L.background), stroke: null, clip: false, role: 'checkbox', focusable: true, cursor: 'pointer', children: [tick, tickMark, pointText] }) as FrameNode;
+  bind(pointRow, { ariaChecked: 'covered.includes(index)', ariaLabel: 'item', 'fill.color': `covered.includes(index) ? "${L.surface}" : "${L.background}"` });
+  const points = createNode('frame', { name: 'Points', x: 0, y: 214, width: rw, height: 152, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Points a good answer makes', repeat: { items: `${ON_SHOW} ? cards[current].points : []`, layout: 'grid', gap: 4, columns: 1 }, children: [pointRow] }) as FrameNode;
+  const madeCount = text(ctx, 'Points made', `Points made: {covered.length} of {${ON_SHOW} ? cards[current].points.length : 0}`, 0, 374, rw, { fontSize: 15, color: L.muted });
+  const saveNext = button(ctx, 'Save and next card', 'Save, then next card', 0, 408, (rw - 10) / 2, true);
+  const saveSummary = button(ctx, 'Save and see summary', 'Save, see my summary', (rw - 10) / 2 + 10, 408, (rw - 10) / 2, false);
+  const compareStage = stageFrame('Compare stage', 'stage == "compare"', [modelHead, modelCard, model, pointsHead, points, madeCount, saveNext, saveSummary]);
+
+  rehearse.children.push(drawStage, prep.frame, talk.frame, tallyStage, compareStage);
+
+  //The wiring
+  const g = new Graph(rehearse);
+  g.run(g.start('A fresh start each time the page opens'), set(stage, '"draw"'), set(left, '0'));
+
+  //Draw: a random card from the bank, never one already drawn until the whole bank has been, then into preparation
+  const onDraw = g.click(draw, 'Draw a random card');
+  g.run(
+    onDraw,
+    set(seen, 'cards.every((c, i) => seen.includes(i)) ? [] : seen'),
+    set(pool, 'cards.map((c, i) => i).filter(i => !seen.includes(i) && (cards.length < 2 || i != current))'),
+    set(current, 'pool[Math.floor(Math.random() * pool.length)]'),
+    ['action.setVariable', { variable: seen.id, op: 'push', value: 'current' }],
+    set(fillers, '0'),
+    set(pauses, '0'),
+    set(opening, 'false'),
+    set(closing, 'false'),
+    ['action.setVariable', { variable: covered.id, op: 'clear' }],
+    set(left, 'timersOn ? prepSeconds : 0'),
+    set(stage, '"prep"'),
+    announce('"Your card: " + cards[current].q + (timersOn ? " You have " + prepSeconds + " seconds to prepare." : " Take as long as you need to prepare.")'),
+  );
+  g.run(g.click(timerSwitch, 'Timers on or off'), set(timersOn, '!timersOn'), announce('timersOn ? "Timers on." : "Timers off. Take as long as you need."'));
+  g.run(g.click(toSummary, 'See the summary'), go(summary));
+
+  //The clock: once a second, only while preparing or talking with timers on. Running out moves on by itself; the buttons move on early
+  const onTick = g.add('event.timer', { ms: 1000, repeat: true }, null, 'out', { note: 'Clock' });
+  const running = g.add('logic.if', { condition: 'timersOn && (stage == "prep" || stage == "talk")' }, onTick);
+  const dec = g.add('action.setVariable', { variable: left.id, op: 'set', value: 'left - 1' }, running, 'true');
+  const out = g.add('logic.if', { condition: 'left <= 0' }, dec);
+  const inPrep = g.add('logic.if', { condition: 'stage == "prep"' }, out, 'true');
+  g.runFrom(inPrep, 'true', set(left, 'talkSeconds'), set(stage, '"talk"'), announce('"Time to talk. " + talkSeconds + " seconds."'));
+  g.runFrom(inPrep, 'false', set(stage, '"tally"'), announce('"Time is up. Tally how it went."'));
+  g.gap(60);
+
+  g.run(g.click(prep.button, 'Ready early'), set(left, 'talkSeconds'), set(stage, '"talk"'), announce('timersOn ? "Time to talk. " + talkSeconds + " seconds." : "Talk now. Press I have finished when you are done."'));
+  g.run(g.click(talk.button, 'Finished early'), set(stage, '"tally"'), announce('"Tally how it went."'));
+
+  //The tally counters and flags
+  const bump = (btn: SceneNode, v: typeof fillers, delta: 1 | -1, what: string) =>
+    g.run(g.click(btn, `${what}${delta > 0 ? ' more' : ' fewer'}`), set(v, delta > 0 ? `${v.name} + 1` : `Math.max(0, ${v.name} - 1)`));
+  bump(fill.plus, fillers, 1, 'Filler words');
+  bump(fill.minus, fillers, -1, 'Filler words');
+  bump(paus.plus, pauses, 1, 'Long pauses');
+  bump(paus.minus, pauses, -1, 'Long pauses');
+  g.run(g.click(openRow, 'Clear opening'), set(opening, '!clearOpening'));
+  g.run(g.click(closeRow, 'Clear close'), set(closing, '!clearClose'));
+  g.run(g.click(toModel, 'To the model answer'), set(stage, '"compare"'), announce('"Model answer and points shown. Tick the points you made."'));
+
+  //The points
+  const onPoint = g.click(pointRow, 'Tick or untick a point');
+  const has = g.add('logic.if', { condition: 'covered.includes(event.index)' }, onPoint);
+  g.add('action.setVariable', { variable: covered.id, op: 'remove', value: 'covered.indexOf(event.index)' }, has, 'true');
+  g.add('action.setVariable', { variable: covered.id, op: 'push', value: 'event.index' }, has, 'false', { dy: 70 });
+  g.gap(80);
+
+  //Saving an attempt: one row in the remembered list. The page then goes back to draw, or to the summary
+  const save = ['action.setVariable', { variable: attempts.id, op: 'set', value: '[...attempts, {n: attempts.length + 1, type: cards[current].type, q: cards[current].q, fillers: fillers, pauses: pauses, opening: clearOpening, close: clearClose, made: covered.length, of: cards[current].points.length}]' }] as [string, Record<string, unknown>];
+  g.run(g.click(saveNext, 'Save this attempt and go on'), save, set(stage, '"draw"'), announce('"Attempt " + attempts.length + " saved. Draw another card when you are ready."'));
+  g.run(g.click(saveSummary, 'Save this attempt and see the summary'), save, set(stage, '"draw"'), go(summary));
+
+  checklist.push(
+    item('Write your bank of cards: Project > Variables > "cards". Each card has a type (the label on it), q (the question or topic), model (a short model answer) and points (up to four things a good answer makes). The six samples cover a viva, an interview and a short talk. Delete or replace them', cardQ, rehearse),
+    item('Set the timers: Project > Variables > "timersOn" (false switches the countdowns off for everyone), "prepSeconds" (30) and "talkSeconds" (60). Longer times are an accessibility adjustment, so offer them. Learners also get a Timers on or off button on the first stage', timerSwitch, rehearse),
+    item('Check the tally wording on the tally stage: filler words, long pauses, clear opening, clear close. Change the labels to suit your task (for example, "Used a technical term correctly"). It is the learner\'s own reflection, so do not describe it as a measurement', fill.nodes[0], rehearse),
+    item('Tell learners where to talk: the help text on the draw, prepare and talk stages. They talk to a friend, a voice memo on their phone or the room, since no microphone is used', drawHelp, rehearse),
+    item('Check the summary page: the attempts are the remembered variable "attempts", so they are still there on the next visit (inside StudyDesk they go with the learner\'s record, otherwise they stay in that browser). "Clear my history" empties them', byName(summary, 'Attempts'), summary),
+    item('RECORDING SLOTS, for later: the hidden "Recording slot (media bridge)" layer on the talk stage and "Replay slot (media bridge)" on the tally stage are where record, stop and play my recording go once the media bridge exists. Leave them hidden. Nothing is recorded until then', recSlot, rehearse),
+    item('Keep it rehearsal, not assessment: nothing is scored or sent, and a graded viva belongs in a live conversation or a Moodle recorded answer instead. Say so on the first page if you use this for an assessed task', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page),
+  );
+
+  //The summary: the numbers across attempts, then the last six
+  const sb = contentBox(summary);
+  const empty = text(ctx, 'Empty note', '{attempts.length == 0 ? "No attempts yet. Draw a card and give it a go." : ""}', sb.x, sb.y, sb.width, { fontSize: 18, color: L.muted });
+  const tileW = (sb.width - 48) / 4;
+  const tile = (i: number, name: string, value: string, label: string) => {
+    const c = card(ctx, `${name} tile`, sb.x + i * (tileW + 16), sb.y + 32, tileW, 96);
+    const v = text(ctx, name, `{${value}}`, sb.x + i * (tileW + 16) + 16, sb.y + 44, tileW - 32, { fontSize: 28, fontWeight: 700 });
+    const l = text(ctx, `${name} label`, label, sb.x + i * (tileW + 16) + 16, sb.y + 92, tileW - 32, { fontSize: 14, color: L.muted });
+    summary.children.push(c, v, l);
+  };
+  const tileList: [string, string, string][] = [
+    ['Attempts', 'attempts.length', 'Attempts so far'],
+    ['Fillers', 'attempts.length > 1 ? attempts[0].fillers + " to " + attempts[attempts.length - 1].fillers : attempts.length == 1 ? attempts[0].fillers : "-"', 'Filler words, first to latest'],
+    ['Openings', 'attempts.filter(a => a.opening).length + " of " + attempts.length', 'Clear openings'],
+    ['Closes', 'attempts.filter(a => a.close).length + " of " + attempts.length', 'Clear closes'],
+  ];
+  summary.children.push(empty);
+  tileList.forEach(([n, v, l], i) => tile(i, n, v, l));
+
+  //The table: a header and the last six attempts (a repeater over the end of the list)
+  const COLS: [string, number, number][] = [['No.', 12, 50], ['Card', 70, 300], ['Fillers', 390, 80], ['Pauses', 480, 80], ['Opening', 570, 100], ['Close', 680, 100], ['Points', 790, 130]];
+  const headY = sb.y + 140;
+  COLS.forEach(([label, x, w]) => summary.children.push(text(ctx, `Header ${label}`, label, sb.x + x, headY, w, { fontSize: 14, fontWeight: 700, color: L.muted })));
+  const cell = (label: string, value: string, x: number, w: number) => text(ctx, `Cell ${label}`, `{${value}}`, x, 9, w, { fontSize: 15, autoSize: 'none', height: 22, overflow: 'ellipsis' });
+  const rowFrame = createNode('frame', {
+    name: 'Attempt row',
+    x: 0,
+    y: 0,
+    width: sb.width,
+    height: 38,
+    cornerRadius: 10,
+    fill: solid(L.surface),
+    stroke: null,
+    clip: false,
+    children: [
+      cell('No.', 'item.n', 12, 50),
+      cell('Card', 'item.q', 70, 300),
+      cell('Fillers', 'item.fillers', 390, 80),
+      cell('Pauses', 'item.pauses', 480, 80),
+      cell('Opening', 'item.opening ? "Yes" : "No"', 570, 100),
+      cell('Close', 'item.close ? "Yes" : "No"', 680, 100),
+      cell('Points', 'item.made + " of " + item.of', 790, 130),
+    ],
+  }) as FrameNode;
+  bind(rowFrame, { ariaLabel: '"Attempt " + item.n + ": " + item.fillers + " filler words, " + item.pauses + " long pauses, opening " + (item.opening ? "clear" : "not clear") + ", close " + (item.close ? "clear" : "not clear") + ", " + item.made + " of " + item.of + " points"' });
+  rowFrame.role = 'region';
+  const rows = createNode('frame', { name: 'Attempts', x: sb.x, y: headY + 26, width: sb.width, height: 248, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your last six attempts', repeat: { items: 'attempts.slice(-6)', layout: 'grid', gap: 4, columns: 1 }, children: [rowFrame] }) as FrameNode;
+  const another = button(ctx, 'Draw another card', 'Draw another card', sb.x, sb.y + sb.height - 46, 240, true);
+  const clear = bind(button(ctx, 'Clear my history', 'Clear my history', sb.x + 256, sb.y + sb.height - 46, 220, false), { visible: 'attempts.length > 0' });
+  summary.children.push(rows, another, clear);
+  const sg = new Graph(summary);
+  sg.run(sg.click(another, 'Draw another card'), go(rehearse));
+  sg.run(sg.click(clear, 'Clear my history'), set(attempts, '[]'), set(seen, '[]'), announce('"History cleared."'));
+
+  spreadPages(project);
+  return { project, checklist };
+}
+
+export const timedTalk: BrandedStarter = {
+  key: 'practice/timed-talk-rehearsal',
+  set: 'practice',
+  name: 'Timed talk rehearsal',
+  description: 'Practise a viva answer, an interview answer or a one-minute talk with no microphone. The learner draws a random card from your bank, gets a preparation countdown and a speaking timer (switch the timers off or lengthen them), tallies their own delivery (fillers, long pauses, a clear opening and close), compares with a model answer and points checklist, and sees a summary across attempts that is remembered. Rehearsal only, nothing is scored.',
+  tags: ['speaking', 'viva', 'interview', 'timer', 'rehearsal'],
+  build,
+};
