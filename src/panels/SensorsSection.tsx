@@ -32,7 +32,13 @@ export function SensorsSection({ project }: { project: Project }) {
   return (
     <Section help="sensors" title="Microphone and camera" defaultOpen={used}>
       <p className="hint">Tick what this project uses. The page it plays in only lets it ask for these, and builds the screen that asks the learner from your choices. Update the share link after changing them.</p>
-      <CheckField label="Microphone" title="Record sound, play it back, and read the level (Start recording, Play recording, micLevel)" value={!!s.microphone} onChange={(v) => set({ microphone: v })} />
+      <CheckField label="Microphone" title="Record sound, play it back, and read the level (Start recording, Play recording, micLevel)" value={!!s.microphone} onChange={(v) => set(v ? { microphone: true } : { microphone: false, listen: false, listenOnly: false })} />
+      {s.microphone && (
+        <>
+          <CheckField label="Live listening" title="Let the microphone drive numbers while it listens: micLevel and micBands (Listen live). Nothing is recorded by it" value={!!s.listen || !!s.listenOnly} onChange={(v) => set(v ? { listen: true } : { listen: false, listenOnly: false })} />
+          {(s.listen || s.listenOnly) && <CheckField label="Only ever listen, never record" title="This project never records with the microphone: the page refuses every Start recording, and the learner is told it only listens" value={!!s.listenOnly} onChange={(v) => set({ listenOnly: v })} />}
+        </>
+      )}
       <CheckField label="Camera" title="Show a live preview in a layer's place, take a still from it, or record video (Camera preview, Start recording)" value={!!s.camera} onChange={(v) => set({ camera: v })} />
       <CheckField label="Photos" title="Let the learner choose a photo, or take one with their device's camera app (Take or choose a photo)" value={!!s.photos} onChange={(v) => set({ photos: v })} />
       {used && (
@@ -45,7 +51,7 @@ export function SensorsSection({ project }: { project: Project }) {
             commitOnBlur
             onChange={(v) => set({ purpose: v }, 'sensors-purpose')}
           />
-          {(s.microphone || s.camera) && (
+          {((s.microphone && !s.listenOnly) || s.camera) && (
             <NumberField
               label="Longest recording (seconds)"
               title="A recording stops by itself after this long. 0 uses the default: 120 seconds for sound and 60 for video. Never more than 600 for sound and 180 for video"

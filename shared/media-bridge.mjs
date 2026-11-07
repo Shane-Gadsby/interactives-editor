@@ -1,8 +1,13 @@
-/*! built from the player's media sources 1a4f1759c55abaef2fad */
+/*! built from the player's media sources 48bccdc9ac0c4a016d4a */
 const MEDIA_SOURCE = "interactives-media";
 const MEDIA_TARGET = "interactives";
-const MEDIA_VERSION = 1;
-const MEDIA_OPS = ["hello", "start", "stop", "take", "discard", "download", "preview", "snapshot", "pick", "save", "optout"];
+const MEDIA_VERSION = 2;
+const MEDIA_MIN_VERSION = 1;
+const LISTEN_SINCE = 2;
+const MEDIA_OPS = ["hello", "start", "stop", "take", "discard", "download", "preview", "snapshot", "pick", "save", "optout", "listen"];
+const BAND_COUNT = 8;
+const LISTEN_PER_SECOND = 25;
+const BAND_EDGES = Array.from({ length: BAND_COUNT + 1 }, (_, i) => Math.round(80 * Math.pow(8e3 / 80, i / BAND_COUNT)));
 const MAX_SLOTS = 8;
 const MAX_TOTAL_BYTES = 120 * 1024 * 1024;
 const MAX_RECORDING_BYTES = 60 * 1024 * 1024;
@@ -39,10 +44,11 @@ function cleanEdge(v) {
 function cleanRequest(raw, nonce) {
   if (!raw || typeof raw !== "object") return null;
   const m = raw;
-  if (m.source !== MEDIA_SOURCE || m.v !== MEDIA_VERSION) return null;
+  if (m.source !== MEDIA_SOURCE || typeof m.v !== "number" || m.v < MEDIA_MIN_VERSION || m.v > MEDIA_VERSION) return null;
   if (typeof m.nonce !== "string" || !nonce || m.nonce !== nonce) return null;
   if (typeof m.rid !== "string" || m.rid.length === 0 || m.rid.length > 64) return null;
   if (typeof m.op !== "string" || !MEDIA_OPS.includes(m.op)) return null;
+  if (m.op === "listen" && m.v < LISTEN_SINCE) return null;
   return { rid: m.rid, op: m.op, args: m };
 }
 function cleanStart(a) {
@@ -50,6 +56,9 @@ function cleanStart(a) {
 }
 function cleanPreview(a) {
   return { on: a.on === true, rect: cleanRect(a.rect), mirror: a.mirror !== false, facing: a.facing === "environment" ? "environment" : "user", ...typeof a.play === "string" ? { play: cleanSlot(a.play) } : {} };
+}
+function cleanListen(a) {
+  return { on: a.on === true };
 }
 function cleanPick(a) {
   return { capture: a.capture === "user" || a.capture === "environment" ? a.capture : "", maxEdge: cleanEdge(a.maxEdge) };
@@ -83,11 +92,30 @@ function problemFromError(err, policy) {
   if (name === "TypeError") return "unsupported";
   return "failed";
 }
+const LISTEN_AUDIO = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+function bandsFromSpectrum(data, sampleRate, fftSize) {
+  const hz = sampleRate / fftSize;
+  const out = new Array(BAND_COUNT).fill(0);
+  for (let b = 0; b < BAND_COUNT; b++) {
+    const lo = Math.max(1, Math.floor(BAND_EDGES[b] / hz));
+    const hi = Math.min(data.length - 1, Math.max(lo, Math.ceil(BAND_EDGES[b + 1] / hz) - 1));
+    let top = 0;
+    for (let i = lo; i <= hi; i++) if (data[i] > top) top = data[i];
+    out[b] = Math.round(top / 255 * 100) / 100;
+  }
+  return out;
+}
+function levelFromSamples(buf) {
+  let sum = 0;
+  for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+  return Math.min(1, Math.sqrt(sum / Math.max(1, buf.length)) * 4);
+}
 class MediaEngine {
   constructor(env, events = {}) {
     this.env = env;
     this.events = events;
     this.capture = null;
+    this.listen_ = null;
     this.camera = null;
     this.cameraWanted = false;
     this.recs = /* @__PURE__ */ new Map();
@@ -151,6 +179,7 @@ class MediaEngine {
     if (!this.recs.has(slot) && this.recs.size >= MAX_SLOTS || this.total() >= MAX_TOTAL_BYTES) return { ok: false, problem: "too-big" };
     if (!this.env.Recorder) return { ok: false, problem: "unsupported" };
     const wantsMic = !o.video || o.audio;
+    if (wantsMic) this.stopListening("released");
     let stream;
     if (o.video) {
       if (this.camera && !wantsMic) stream = this.camera;
@@ -272,6 +301,78 @@ class MediaEngine {
     } catch {
     }
   }
+  get listening() {
+    return !!this.listen_;
+  }
+  /**
+   * Listen live: open the microphone with no recorder, and about `LISTEN_PER_SECOND` times a second hand `onSound` the level and the
+   * bands. Nothing is kept: the samples are measured and dropped. Already listening is fine (it stays as it is).
+   */
+  async listen() {
+    if (this.listen_) return { ok: true };
+    if (this.capture && (!this.capture.video || this.capture.stream.getAudioTracks().length)) return { ok: false, problem: "already-recording" };
+    const AC = this.env.AudioContext;
+    if (!AC) return { ok: false, problem: "unsupported" };
+    const got = await this.stream({ audio: LISTEN_AUDIO }, "microphone");
+    if (!got.ok) return got;
+    if (this.listen_) {
+      for (const t of got.stream.getTracks()) t.stop();
+      return { ok: true };
+    }
+    const stream = got.stream;
+    let ctx;
+    let analyser;
+    try {
+      ctx = new AC();
+      const src = ctx.createMediaStreamSource(stream);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.5;
+      src.connect(analyser);
+      void ctx.resume?.();
+    } catch {
+      for (const t of stream.getTracks()) t.stop();
+      return { ok: false, problem: "failed" };
+    }
+    const wave = new Float32Array(analyser.fftSize);
+    const spectrum = new Uint8Array(analyser.frequencyBinCount ?? analyser.fftSize / 2);
+    const rate = ctx.sampleRate ?? 48e3;
+    let shown = 0;
+    let last = "";
+    const timer = setInterval(() => {
+      analyser.getFloatTimeDomainData(wave);
+      const raw = levelFromSamples(wave);
+      shown = raw > shown ? raw : shown * 0.8 + raw * 0.2;
+      const level = Math.round(shown * 100) / 100;
+      let bands;
+      if (analyser.getByteFrequencyData) {
+        analyser.getByteFrequencyData(spectrum);
+        bands = bandsFromSpectrum(spectrum, rate, analyser.fftSize);
+      } else bands = new Array(BAND_COUNT).fill(0);
+      const key = `${level}|${bands.join(",")}`;
+      if (key === last) return;
+      last = key;
+      this.events.onSound?.(level, bands);
+    }, Math.round(1e3 / LISTEN_PER_SECOND));
+    this.listen_ = { stream, ctx, timer };
+    for (const t of stream.getTracks()) t.onended = () => this.stopListening("device-lost");
+    this.events.onListening?.(true, "started");
+    return { ok: true };
+  }
+  /** Let go of the microphone and say so. Safe to call when not listening. */
+  stopListening(reason = "stopped") {
+    const l = this.listen_;
+    if (!l) return;
+    this.listen_ = null;
+    clearInterval(l.timer);
+    for (const t of l.stream.getTracks()) {
+      t.onended = null;
+      t.stop();
+    }
+    void l.ctx.close();
+    this.events.onSound?.(0, new Array(BAND_COUNT).fill(0));
+    this.events.onListening?.(false, reason);
+  }
   /** Stop the recording in a slot and hand it over. A slot that is not recording gives what it holds, if anything. */
   async stop(slot) {
     const c = this.capture;
@@ -340,6 +441,7 @@ class MediaEngine {
   /** Let go of everything: the recording in progress (kept nowhere), the camera, the devices. Recordings already made stay in memory. */
   releaseAll() {
     this.cameraWanted = false;
+    this.stopListening("released");
     if (this.capture) void this.capture.finish("released");
     this.closeCamera();
   }
@@ -406,6 +508,8 @@ function cleanSensors(raw) {
   const out = {};
   if (r.microphone === true) out.microphone = true;
   if (r.camera === true) out.camera = true;
+  if (out.microphone && (r.listen === true || r.listenOnly === true)) out.listen = true;
+  if (out.microphone && r.listenOnly === true) out.listenOnly = true;
   if (r.photos === true) out.photos = true;
   const purpose = oneLine(r.purpose, PURPOSE_MAX);
   if (purpose) out.purpose = purpose;
@@ -437,9 +541,13 @@ const NEVER_LABEL = "Do not use my microphone or camera";
 function consentText(s) {
   const d = s ?? {};
   const lines = [];
-  if (d.microphone) lines.push("The microphone records only while the recording bar is showing at the top of the page. You can stop it at any time.");
+  if (d.microphone && !d.listenOnly) lines.push("The microphone records only while the recording bar is showing at the top of the page. You can stop it at any time.");
+  if (d.microphone && d.listen) {
+    const how = 'only while the "Listening" bar is showing at the top of the page, to move things on the screen with how loud the sound is and how low or high. Nothing is recorded or saved from it, and you can stop it at any time.';
+    lines.push(`${d.listenOnly ? "The microphone listens live" : "The microphone can also listen live"}, ${how}`);
+  }
   if (d.camera) lines.push("The camera shows you a preview, and records only while the recording bar is showing. You can stop it at any time.");
-  if (d.microphone || d.camera) lines.push("Recordings are kept in this page, on your device. They are not saved on a server, and they are gone when you close or reload the page unless you download them.");
+  if (d.microphone && !d.listenOnly || d.camera) lines.push("Recordings are kept in this page, on your device. They are not saved on a server, and they are gone when you close or reload the page unless you download them.");
   if (d.photos) lines.push("A photo you choose or take is shown in this activity. It is not uploaded or saved on a server.");
   const why = d.noAlternative ? oneLine(d.noAlternative, REASON_MAX) : "";
   const alternative = why ? `There is no other way to do this part. ${why.replace(/[.!?]*$/, ".")} If you cannot or would rather not, you can skip it.` : `You do not have to use ${d.microphone || d.camera ? "them" : "it"}. Choose "${NEVER_LABEL}" and every activity will offer another way to finish.`;
@@ -714,6 +822,35 @@ class MediaUi {
     };
     stop.focus({ preventScroll: true });
   }
+  /** The bar for live listening: the same place and the same Stop as a recording, with no timer, and words that say nothing is being recorded. */
+  showListening(o) {
+    this.hideBar();
+    const root = this.mount();
+    const bar = this.el("div", "ixm-bar");
+    bar.setAttribute("role", "region");
+    bar.setAttribute("aria-label", "Listening");
+    const dot = this.el("span", "ixm-dot");
+    dot.setAttribute("aria-hidden", "true");
+    const label = this.el("span", "", "Listening to the microphone, nothing is recorded");
+    const meter = this.el("span", "ixm-meter");
+    meter.setAttribute("aria-hidden", "true");
+    const fill = this.el("i");
+    meter.appendChild(fill);
+    const stop = this.el("button", "ixm-btn", "Stop");
+    stop.type = "button";
+    stop.setAttribute("aria-label", "Stop listening");
+    stop.addEventListener("click", () => o.onStop());
+    bar.append(dot, label, meter, stop);
+    root.appendChild(bar);
+    this.announce("Listening to the microphone has started. Nothing is recorded. Use the Stop button at the top of the page to finish.");
+    this.bar = {
+      update: (_seconds, level) => {
+        fill.style.transform = `scaleX(${Math.max(0, Math.min(1, level))})`;
+      },
+      close: () => bar.remove()
+    };
+    stop.focus({ preventScroll: true });
+  }
   updateBar(seconds, level) {
     this.bar?.update(seconds, level);
   }
@@ -906,6 +1043,18 @@ class TrustedMedia {
         this.ui.updateBar(this.seconds, l);
         opts.emit({ event: "level", level: l });
       },
+      onSound: (level, bands) => {
+        this.level = level;
+        this.ui.updateBar(0, level);
+        opts.emit({ event: "sound", level, bands });
+      },
+      onListening: (on, reason) => {
+        if (on) return;
+        this.ui.hideBar();
+        if (this.disposed) return;
+        if (reason !== "released") this.ui.announce(reason === "device-lost" ? "Listening stopped: the microphone went away" : "Listening stopped");
+        opts.emit({ event: "listening", on: false, reason });
+      },
       onTick: (slot, s) => {
         this.seconds = s;
         this.ui.updateBar(s, this.level);
@@ -1047,6 +1196,8 @@ class TrustedMedia {
           return { ok: true };
         case "download":
           return await this.download(args);
+        case "listen":
+          return await this.listen(args);
         case "preview":
           return await this.preview(args);
         case "snapshot":
@@ -1070,7 +1221,8 @@ class TrustedMedia {
   async start(args) {
     const a = cleanStart(args);
     const kind = a.video ? "camera" : "microphone";
-    if (a.video && a.audio && this.declared("microphone") === false) a.audio = false;
+    if (a.video && a.audio && (this.declared("microphone") === false || this.declaration?.listenOnly)) a.audio = false;
+    if (!a.video && this.declaration?.listenOnly) return this.fail("microphone", "not-declared");
     const no = await this.authorise(kind);
     if (no) return this.fail(kind, no);
     const max = recordingCap(this.declaration, a.video);
@@ -1081,6 +1233,23 @@ class TrustedMedia {
     this.seconds = 0;
     this.ui.showBar({ what: a.video ? a.audio ? "camera and microphone" : "camera" : "microphone", max: r.maxSeconds, onStop: () => void this.engine.stopActive() });
     return { ok: true, maxSeconds: r.maxSeconds, state: this.state() };
+  }
+  /** Live listening: the microphone with no recorder, numbers only, a "Listening" bar with a Stop that always works. */
+  async listen(args) {
+    const a = cleanListen(args);
+    if (!a.on) {
+      this.engine.stopListening("stopped");
+      return { ok: true, listening: false, state: this.state() };
+    }
+    if (!this.declaration?.listen) return this.fail("microphone", "not-declared");
+    if (this.engine.listening) return { ok: true, listening: true, state: this.state() };
+    const no = await this.authorise("microphone");
+    if (no) return this.fail("microphone", no);
+    const r = await this.engine.listen();
+    if (!r.ok) return this.fail("microphone", r.problem);
+    this.setProblem("microphone", null);
+    this.ui.showListening({ onStop: () => this.engine.stopListening("stopped") });
+    return { ok: true, listening: true, state: this.state() };
   }
   async bytes(rec) {
     return rec.kind === "audio" ? rec.blob.arrayBuffer() : void 0;
