@@ -15,7 +15,7 @@ import { importSvg } from '../svg-import';
 import { starterThemes } from '../themes';
 import { BRAND_FONT, COLOURWAYS, CONTENT_TOKENS, HIGH_CONTRAST, type BrandKey, type Colourway } from './looks';
 
-export type StarterSet = 'assessment' | 'explore' | 'drag' | 'story' | 'games' | 'writing';
+export type StarterSet = 'assessment' | 'explore' | 'drag' | 'story' | 'games' | 'writing' | 'practice' | 'media';
 
 export const SET_NAMES: Record<StarterSet, string> = {
   assessment: 'Quizzes and questions',
@@ -24,6 +24,8 @@ export const SET_NAMES: Record<StarterSet, string> = {
   story: 'Stories and presentations',
   games: 'Games and puzzles',
   writing: 'Writing and reflection',
+  practice: 'Speaking and practice',
+  media: 'Listen, watch and capture',
 };
 
 export interface BrandedStarter {
