@@ -28,3 +28,21 @@ export function projectFromBrandedStarter(s: BrandedStarter, colourway: Colourwa
   project.template = { builtin: `branded:${s.key}`, name: s.name, version: 1, checklist: checklist as TemplateChecklistItem[] };
   return project;
 }
+
+/**
+ * The files a starter carries inside its project (placeholder sounds, as `data:` addresses). Takes them out of the project's
+ * asset records, which then hold no bytes (the editor keeps those with the project, not in the document), and returns each
+ * as a Blob by asset id for the caller to upload once the project exists.
+ */
+export function takeInlineAssets(project: Project): Map<string, Blob> {
+  const files = new Map<string, Blob>();
+  for (const a of project.assets) {
+    const m = a.src && /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(a.src);
+    if (!m) continue;
+    const bin = m[2] ? atob(m[3]) : decodeURIComponent(m[3]);
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    files.set(a.id, new Blob([bytes], { type: m[1] || a.mime }));
+    delete a.src;
+  }
+  return files;
+}
