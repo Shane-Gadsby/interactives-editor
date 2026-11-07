@@ -1,3 +1,4 @@
+import { answerPreviewProgress, forgetPreviewLearner, previewLearnerHas } from './lib/preview-learner';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
@@ -1121,6 +1122,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const [host, setHost] = useState<'none' | 'moodle'>('none');
   // The pretend microphone and camera: what they do in the running preview (a real one cannot be had in a sandboxed preview)
   const [mediaSim, setMediaSim] = useState<FakeBehaviour>('works');
+  const [keptData, setKeptData] = useState(() => previewLearnerHas((project as Project).id));
   const simulateMedia = (b: FakeBehaviour) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'simulateMedia', behaviour: b }, '*');
   const applyTheme = (t = theme, v = viewer, h = host) => {
     const w = frame.current?.contentWindow;
@@ -1163,6 +1165,13 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
         if (e.data.trace) setTraces((l) => [...l.slice(-199), { ...e.data.trace, at: performance.now() - t0.current }]);
         if (e.data.scripterror) setScriptErrors((l) => [...l.slice(-49), e.data.scripterror]);
         if (e.data.announce) setSaid((l) => [...l.slice(-2), e.data.announce]);
+        return;
+      }
+      //Save user data and remembered progress: kept here per project, like the learner page keeps them in StudyDesk
+      const kept = answerPreviewProgress(e.data);
+      if (kept) {
+        if (e.data.rid) frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'progress', rid: e.data.rid, ...kept }, '*');
+        if (e.data.op === 'userdata-save' || e.data.op === 'save') setKeptData(true);
         return;
       }
       if (e.data?.source !== 'interactives') return;
@@ -1235,6 +1244,16 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               )}
             </>
           ) : null}
+          {keptData && (
+            <button
+              type="button"
+              className="btn"
+              title="Preview keeps what Save user data and remembered progress save, for this project in this browser, so reopening Preview is like a learner coming back. Forget it to start as a new learner"
+              onClick={() => (forgetPreviewLearner((project as Project).id), setKeptData(false), setNonce((n) => n + 1))}
+            >
+              Forget saved data
+            </button>
+          )}
           {declaresSensors((project as Project).settings.sensors) && (
             <select
               value={mediaSim}
