@@ -25,6 +25,8 @@ import {
 import { store } from '../store/store';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
+import { syncPractice } from '../lib/voice';
+import { VoiceSection } from './VoiceSection';
 import { growAreas, makeIndependent, partOf, partsOf, setAreaShape, setQuestionSettings, shapeOfArea, sharedPrefix, type AreaShape } from '../lib/question-kit';
 
 const PART_LABELS: [string, string][] = [
@@ -63,7 +65,14 @@ const nextId = (list: { id: string }[], prefix: string): string => {
 export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: Artboard; project: Project }) {
   const q = frame.question!;
   const apply = (patch: Partial<Question>, key?: string) =>
-    store().update((d) => setQuestionSettings(d as Project, ab.id, frame.id, patch), { coalesce: key ? `question-${frame.id}-${key}` : undefined });
+    store().update(
+      (d) => {
+        setQuestionSettings(d as Project, ab.id, frame.id, patch);
+        //Practice mode has the word in a Read aloud node, which follows the word when it is edited
+        syncPractice(d as Project, ab.id, frame.id);
+      },
+      { coalesce: key ? `question-${frame.id}-${key}` : undefined },
+    );
   const problems = questionProblems(q);
   const serverProblem = serverMarkingProblem(q);
   const shared = sharedPrefix(project, frame);
@@ -254,6 +263,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
           </button>
         </div>
       )}
+      {q.kind === 'blank' && q.blanks.some((b) => b.spelling) && <VoiceSection frame={frame} ab={ab} project={project} />}
 
       {q.kind === 'matching' && (
         <div className="q-list" role="group" aria-label="Pairs">

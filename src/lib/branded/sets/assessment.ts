@@ -105,8 +105,8 @@ export const STARTERS: BrandedStarter[] = [
     key: 'assessment/spelling-test',
     set: 'assessment',
     name: 'Spelling test',
-    description: 'Six words, one to a page. The learner plays the recording of a word and types it: every letter has to match, with the American spelling accepted as well, and the browser\'s own spellcheck is off in the box. The server marks the words and keeps the score, so the page has no answers in it; the test can be retaken a set number of times with the best round kept, and a result page shows this go and what is on record. Played from the Link for StudyDesk or an LTI 1.3 link, the score goes to the course gradebook. The author records the words and types the accepted spellings.',
-    tags: ['spelling', 'dictation', 'audio', 'server marked', 'retakes', 'grade'],
+    description: 'Six words, one to a page. The learner plays the spoken word and types it: every letter has to match, with the American spelling accepted as well, and the browser\'s own spellcheck is off in the box. The server marks the words and keeps the score, so the page has no answers in it; the test can be retaken a set number of times with the best round kept, and a result page shows this go and what is on record. Played from the Link for StudyDesk or an LTI 1.3 link, the score goes to the course gradebook. The author types the accepted spellings and presses one button to have a voice speak every word (or records them), and the page only ever holds the sound.',
+    tags: ['spelling', 'dictation', 'audio', 'voice', 'server marked', 'retakes', 'grade'],
     build: buildSpellingTest,
   },
 ];
