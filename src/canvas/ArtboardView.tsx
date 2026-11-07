@@ -331,7 +331,10 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       const r = renderer.current;
       if (cancelled || !r || keyRef.current !== key) return;
       try {
-        const { snapshotFromDom } = await import('../lib/image-export');
+        const { snapshotFromDom, videosReady } = await import('../lib/image-export');
+        //A video still loading its first frame would go into the still as a dark box, and stay that way
+        await videosReady(r.root);
+        if (cancelled || keyRef.current !== key) return;
         const url = await snapshotFromDom(store().get().project, artboard, r.root, assetUrls.resolve);
         if (cancelled || keyRef.current !== key) {
           URL.revokeObjectURL(url);

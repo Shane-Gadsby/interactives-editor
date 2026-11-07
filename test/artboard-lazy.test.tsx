@@ -10,7 +10,7 @@ import { EditorStore, setCurrentStore } from '../src/store/store';
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const snapshot = vi.fn(async () => 'blob:still');
-vi.mock('../src/lib/image-export', () => ({ snapshotFromDom: (...a: unknown[]) => (snapshot as (...x: unknown[]) => Promise<string>)(...a) }));
+vi.mock('../src/lib/image-export', () => ({ videosReady: () => Promise.resolve(), snapshotFromDom: (...a: unknown[]) => (snapshot as (...x: unknown[]) => Promise<string>)(...a) }));
 
 let root: Root;
 let host: HTMLElement;

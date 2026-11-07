@@ -68,10 +68,14 @@ export async function snapshotFromDom(project: Project, ab: Artboard, root: HTML
   return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
 }
 
-/** Canvas pixels don't survive serialising: a copy of the tree where each canvas (script layers) is the picture it shows. */
+/**
+ * Canvas pixels and video frames don't survive serialising: a copy of the tree where each canvas (script layers) and each
+ * video is the picture it shows. A video left as itself draws as an empty player with its controls in the still.
+ */
 function withCanvasesAsImages(root: HTMLElement): HTMLElement {
   const live = root.querySelectorAll('canvas');
-  if (!live.length) return root;
+  const vids = root.querySelectorAll('video');
+  if (!live.length && !vids.length) return root;
   const copy = root.cloneNode(true) as HTMLElement;
   const copies = copy.querySelectorAll('canvas');
   live.forEach((c, i) => {
@@ -85,7 +89,46 @@ function withCanvasesAsImages(root: HTMLElement): HTMLElement {
       /* a canvas the browser won't read: it is left out of the picture */
     }
   });
+  const vidCopies = copy.querySelectorAll('video');
+  vids.forEach((v, i) => vidCopies[i].replaceWith(videoFrame(v)));
   return copy;
+}
+
+/** Wait (up to a few seconds) for every video under `root` to have a frame to show. */
+export function videosReady(root: HTMLElement, ms = 3000): Promise<void> {
+  const waiting = [...root.querySelectorAll('video')].filter((v) => v.readyState < 2 && (v.currentSrc || v.src));
+  if (!waiting.length) return Promise.resolve();
+  return Promise.race([
+    Promise.all(waiting.map((v) => new Promise<void>((done) => {
+      v.addEventListener('loadeddata', () => done(), { once: true });
+      v.addEventListener('error', () => done(), { once: true });
+    }))).then(() => undefined),
+    new Promise<void>((done) => setTimeout(done, ms)),
+  ]);
+}
+
+/** The frame a video is showing, as an image laid out like the video (a plain dark box when it has no frame yet or won't be read). */
+function videoFrame(v: HTMLVideoElement): HTMLElement {
+  if (v.readyState >= 2 && v.videoWidth && v.videoHeight) {
+    try {
+      const c = document.createElement('canvas');
+      c.width = v.videoWidth;
+      c.height = v.videoHeight;
+      c.getContext('2d')!.drawImage(v, 0, 0);
+      const img = document.createElement('img');
+      img.src = c.toDataURL('image/jpeg', 0.85);
+      img.className = v.className;
+      img.style.cssText = v.style.cssText;
+      return img;
+    } catch {
+      /* a video from another site taints the canvas: the dark box below */
+    }
+  }
+  const box = document.createElement('div');
+  box.className = v.className;
+  box.style.cssText = v.style.cssText;
+  box.style.background = '#000';
+  return box;
 }
 
 async function fontCss(project: Project, needs: FontNeed[]): Promise<string> {

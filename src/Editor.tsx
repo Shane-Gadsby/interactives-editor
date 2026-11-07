@@ -277,6 +277,14 @@ const TOOL_KEYS: Record<string, Tool> = {
 
 function useShortcuts() {
   useEffect(() => {
+    //Ctrl+S saves the project from anywhere in the editor, a text box, the code editor and the graph included (panels that
+    //keep their keys to themselves too, hence the capture phase), and never lets the browser save the page's html instead
+    const onSave = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== 's') return;
+      e.preventDefault();
+      void (window as unknown as { __ixForceSave?: () => Promise<void> }).__ixForceSave?.();
+    };
+    window.addEventListener('keydown', onSave, true);
     const onKey = (e: KeyboardEvent) => {
       const t = e.target instanceof HTMLElement ? e.target : null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || t.closest('.cm-editor') || t.closest('.react-flow'))) return;
@@ -319,11 +327,6 @@ function useShortcuts() {
         e.preventDefault();
         const ab = s.artboard();
         if (ab) s.select(ab.children.filter((n) => !n.locked).map((n) => n.id));
-        return;
-      }
-      if (mod && k === 's') {
-        e.preventDefault();
-        void (window as unknown as { __ixForceSave?: () => Promise<void> }).__ixForceSave?.();
         return;
       }
       if (mod && (k === '0' || k === '1')) {
@@ -416,6 +419,7 @@ function useShortcuts() {
     const unwatch = watchKeyContext();
     return () => {
       unwatch();
+      window.removeEventListener('keydown', onSave, true);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('paste', onPaste);
     };
