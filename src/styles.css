@@ -8532,3 +8532,8 @@ code {
   opacity: 0.45;
   pointer-events: none;
 }
+
+/* The selection of the text being edited, drawn while the focus is in the toolbar (the browser stops drawing it then) */
+::highlight(tt-sel) {
+  background-color: rgba(60, 130, 246, 0.35);
+}

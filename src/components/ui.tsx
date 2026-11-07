@@ -362,6 +362,12 @@ export function PaletteButton({ value, onPick, tokenTab, tokensOnly = false }: {
     };
   }, [open]);
   if (!groups.length && !tokenTab) return null;
+  // Closing after a pick: a keyboard pick had the focus inside the box, which is about to go, so it goes back to the button
+  const done = () => {
+    const had = !!pop.current?.contains(document.activeElement);
+    setOpen(false);
+    if (had) btn.current?.focus();
+  };
   const current = parseColor(value);
   const same = (v: string) => {
     const c = parseColor(v);
@@ -395,7 +401,7 @@ export function PaletteButton({ value, onPick, tokenTab, tokensOnly = false }: {
                 value={value}
                 onPick={(ref) => {
                   tokenTab.onToken(ref);
-                  setOpen(false);
+                  done();
                 }}
               />
             )}
@@ -415,7 +421,7 @@ export function PaletteButton({ value, onPick, tokenTab, tokensOnly = false }: {
                       onFocus={() => setHover(`${c.label}  ${c.value}`)}
                       onClick={() => {
                         onPick(c.value);
-                        setOpen(false);
+                        done();
                       }}
                     />
                   ))}
