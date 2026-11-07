@@ -388,3 +388,130 @@ describe('playing a generated question', () => {
     expect(player.getVariable('q1_correct')).toBe(true);
   });
 });
+
+describe('read aloud and number keys on the kit', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="stage" style="width:800px;height:900px"></div>';
+    vi.stubGlobal('requestAnimationFrame', () => 0);
+    vi.stubGlobal('cancelAnimationFrame', () => undefined);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+  const play = (p: Project) => new Player(document.getElementById('stage')!, JSON.parse(JSON.stringify(p)), { loadData: false });
+  const press = async (key: string) => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    await flush();
+  };
+
+  it('Listen button: added beside Check, wired to read the question, and removed again', () => {
+    const { p, frame, set } = make('single');
+    expect(part(frame(), 'listen')).toBeUndefined();
+    set({ listen: true });
+    const listen = part(frame(), 'listen')!;
+    expect(listen.type).toBe('button');
+    expect(listen.bindings?.visible).toBe('voiceAvailable');
+    const ab = p().artboards[0];
+    const click = ab.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.target === listen.id)!;
+    const edge = ab.logic.edges.find((e) => e.from === click.id)!;
+    const act = ab.logic.nodes.find((n) => n.id === edge.to)!;
+    expect(act.kind).toBe('action.speak');
+    expect(act.params).toMatchObject({ op: 'auto', question: frame().id });
+    //turning it on twice, or changing something else, does not add another
+    set({ prompt: 'Changed?' });
+    expect(partsOf(frame()).listen).toHaveLength(1);
+    set({ listen: false });
+    expect(part(frame(), 'listen')).toBeUndefined();
+    expect(p().artboards[0].logic.nodes.some((n) => n.kind === 'action.speak')).toBe(false);
+  });
+
+  it('Number keys: one On key wire to Choose option, a hint line, and gone when switched off', () => {
+    const { p, frame, set } = make('single');
+    set({ numberKeys: true });
+    const ab = p().artboards[0];
+    const key = ab.logic.nodes.filter((n) => n.kind === 'event.key');
+    expect(key).toHaveLength(1);
+    expect(key[0].params.key).toBe('');
+    const choose = ab.logic.nodes.find((n) => n.id === ab.logic.edges.find((e) => e.from === key[0].id)!.to)!;
+    expect(choose.kind).toBe('action.questionChoose');
+    expect(choose.params.option).toBe('Number(event.key) - 1');
+    expect(part(frame(), 'keysHint')).toBeTruthy();
+    set({ numberKeys: true, prompt: 'Again?' });
+    expect(ab.logic.nodes.filter((n) => n.kind === 'event.key')).toHaveLength(1);
+    expect(partsOf(frame()).keysHint).toHaveLength(1);
+    set({ numberKeys: false });
+    expect(p().artboards[0].logic.nodes.some((n) => n.kind === 'event.key')).toBe(false);
+    expect(part(frame(), 'keysHint')).toBeUndefined();
+  });
+
+  it('Number keys: not offered for a fill in the blank', () => {
+    const { p, frame, set } = make('blank');
+    set({ numberKeys: true });
+    expect(p().artboards[0].logic.nodes.some((n) => n.kind === 'event.key')).toBe(false);
+    expect(part(frame(), 'keysHint')).toBeUndefined();
+  });
+
+  it('Number keys choose the option in that place when played, and other keys do nothing', async () => {
+    const { p, set } = make('single');
+    set({ numberKeys: true });
+    const player = play(p());
+    await flush();
+    const picked = () => (player.getVariable('q1_items') as { selected: boolean }[]).map((i) => i.selected);
+    await press('3');
+    expect(picked()).toEqual([false, false, true, false]);
+    await press('1');
+    expect(picked()).toEqual([true, false, false, false]);
+    for (const k of ['0', '9', 'a', 'Enter', ' ', 'Tab']) await press(k);
+    expect(picked()).toEqual([true, false, false, false]);
+    player.destroy();
+  });
+
+  it('Number keys toggle on a multiple choice, and stop once the question is locked', async () => {
+    const { p, set, frame } = make('multiple');
+    set({ numberKeys: true });
+    const player = play(p());
+    await flush();
+    const picked = () => (player.getVariable('q1_items') as { selected: boolean }[]).map((i) => i.selected);
+    await press('1');
+    await press('2');
+    await press('1');
+    expect(picked()).toEqual([false, true, false, false]);
+    player.setVariable('q1_locked', true);
+    await press('3');
+    expect(picked()).toEqual([false, true, false, false]);
+    expect(frame().question!.numberKeys).toBe(true);
+    player.destroy();
+  });
+
+  it('Listen says the question and its numbered options, then the feedback and explanation once checked', async () => {
+    const spoken: string[] = [];
+    vi.stubGlobal('SpeechSynthesisUtterance', class { voice: unknown = null; lang = ''; rate = 1; volume = 1; onend: (() => void) | null = null; onerror: (() => void) | null = null; constructor(public text: string) {} });
+    vi.stubGlobal('speechSynthesis', {
+      getVoices: () => [{ name: 'L', lang: 'en-GB', localService: true }],
+      speak: (u: { text: string; onend: (() => void) | null }) => {
+        spoken.push(u.text);
+        u.onend?.();
+      },
+      cancel: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    });
+    const { p, frame, set } = make('single');
+    set({ listen: true, explain: 'Because it is the sensible choice.', prompt: 'Pick one', spoken: 'Please pick one' });
+    const player = play(p());
+    await flush();
+    const click = async (id: string) => {
+      document.querySelector<HTMLElement>(`[data-ix-id="${id}"]`)!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flush();
+    };
+    const listen = part(frame(), 'listen')!.id;
+    expect(document.querySelector(`[data-ix-id="${listen}"]`)).toBeTruthy();
+    await click(listen);
+    expect(spoken[0]).toMatch(/^Please pick one 1\. /);
+    expect(spoken[0]).toMatch(/ 4\. /);
+    await click(`${part(frame(), 'option')!.id}~0`);
+    await click(part(frame(), 'check')!.id);
+    await click(listen);
+    expect(spoken[spoken.length - 1]).toMatch(/Because it is the sensible choice\.$/);
+    player.destroy();
+  });
+});

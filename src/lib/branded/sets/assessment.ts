@@ -9,6 +9,7 @@ import { buildImageChoice } from './assessment/image-choice';
 import { buildSingleChoiceSet } from './assessment/single-choice-set';
 import { buildSummary } from './assessment/summary';
 import { buildEssay } from './assessment/essay';
+import { buildAudioFirstQuiz } from './assessment/audio-first';
 
 export const STARTERS: BrandedStarter[] = [
   {
@@ -90,5 +91,13 @@ export const STARTERS: BrandedStarter[] = [
     description: 'A writing prompt with a large answer box and a live word count. Submit gives automatic feedback from keywords the author sets (key ideas found and missing, optional extras, and whether the length is within a minimum and maximum), and a model answer can be revealed. It is a formative self-check for the learner, not marking: it matches words, it cannot judge meaning.',
     tags: ['essay', 'writing', 'keywords', 'word count', 'self-check'],
     build: buildEssay,
+  },
+  {
+    key: 'assessment/audio-first-quiz',
+    set: 'assessment',
+    name: 'Audio-first quiz',
+    description: 'A quiz that can be run by ear. With a voice on the learner\'s device it reads each question and its options; 1 to 4 (or a tap) answers, R repeats, S slows, H gives a hint and Space pauses. It speaks Correct or Not quite with a spoken explanation, moves on by hand unless a pace is set, and the score page speaks the score and offers the missed questions again. Spoken prompts can be turned off, and with no voice it is an ordinary keyboard quiz.',
+    tags: ['quiz', 'audio', 'read aloud', 'keyboard', 'number keys', 'accessibility'],
+    build: buildAudioFirstQuiz,
   },
 ];

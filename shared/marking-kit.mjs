@@ -1,4 +1,4 @@
-/*! built from the player's marking sources e57baec4b17a4e7fabc0 */
+/*! built from the player's marking sources 78cf08e8ec874f643081 */
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
 const MAX_WORK = 65536;
@@ -1101,6 +1101,10 @@ function normaliseQuestion(raw) {
     feedbackOutOfTries: str(raw.feedbackOutOfTries),
     reveal: raw.reveal !== false,
     bank,
+    ...typeof raw.spoken === "string" && raw.spoken.trim() ? { spoken: raw.spoken.slice(0, 2e3) } : {},
+    ...typeof raw.explain === "string" && raw.explain.trim() ? { explain: raw.explain.slice(0, 2e3) } : {},
+    ...raw.numberKeys === true ? { numberKeys: true } : {},
+    ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
@@ -1316,6 +1320,7 @@ function stripQuestion(q, frameId, idFor) {
     answersOnServer: true
   };
   if (!q.hints.length) delete out.hintTotal;
+  delete out.explain;
   if (q.kind === "hotspot") out.multi = isMultiple(q);
   return out;
 }
