@@ -4,6 +4,7 @@ import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueIdentifier, uniqueName } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
+import { ExprField } from '../components/ExprField';
 import { CodeEditor } from '../components/CodeEditor';
 import { Icons } from '../components/icons';
 import { SplitColumns } from '../components/SplitColumns';
@@ -239,9 +240,8 @@ export function VariablesPanel() {
                     />
                   </div>
                 )}
-                <TextField
+                <ExprField
                   value={v.formula ?? ''}
-                  mono
                   commitOnBlur
                   title="Optional. A formula that works this variable out from the ones above it each time the project starts, instead of using the value above, for example crossword(words, 10) or wordSearch(words, 12). The value above is what it falls back to if the formula fails. The preview on the canvas follows it too."
                   placeholder="Or work it out: e.g. crossword(words, 10)"

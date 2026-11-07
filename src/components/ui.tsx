@@ -14,7 +14,7 @@ export function tipFor(label: ReactNode, title?: string): string | undefined {
 }
 
 /** A field label that never breaks after a hyphen ("V-align" would wrap to "V-" and "align" in a tight row). */
-const unbroken = (label: ReactNode): ReactNode => (typeof label === 'string' ? label.replace(/-/g, '\u2011') : label);
+export const unbroken = (label: ReactNode): ReactNode => (typeof label === 'string' ? label.replace(/-/g, '\u2011') : label);
 
 /** Number input whose label can be dragged left/right to scrub the value. */
 export function NumberField({

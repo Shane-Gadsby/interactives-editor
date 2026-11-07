@@ -24,6 +24,7 @@ import {
 } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
+import { ExprField } from '../components/ExprField';
 import { growAreas, makeIndependent, partOf, partsOf, setAreaShape, setQuestionSettings, shapeOfArea, sharedPrefix, type AreaShape } from '../lib/question-kit';
 
 const PART_LABELS: [string, string][] = [
@@ -530,12 +531,11 @@ function QuestionBank({ q, project, apply }: { q: Question; project: Project; ap
       />
       {on && open && (
         <>
-          <TextField
+          <ExprField
             label="Rows"
             title="An expression giving the rows: the name of a data source, or part of one such as quiz.questions"
             value={q.bank!.items}
             commitOnBlur
-            mono
             placeholder="quiz"
             onChange={(v) => apply({ bank: { ...q.bank!, items: v.trim() } })}
           />

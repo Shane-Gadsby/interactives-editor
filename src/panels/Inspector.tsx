@@ -54,6 +54,10 @@ import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
+import { ExprField } from '../components/ExprField';
+
+/** What a joystick's X and Y expressions see on top of the project's. */
+const POINTER_LOCALS = ['pointer'];
 import { gapUnit, lineGapUnit, paddingOwnerWidth, paddingUnit, patchGap, patchLineGap, patchPadding } from '../lib/layout-units';
 import { Icons } from '../components/icons';
 import { assetKind } from '../lib/assets';
@@ -1194,7 +1198,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'text':
       return (
         <Section help="text" title="Text">
-          {nodes.length === 1 && <TextField label="Text" value={n.text} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
+          {nodes.length === 1 && <ExprField label="Text" template mono={false} value={n.text} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
           <SelectField
             label="Sizing"
             value={n.autoSize}
@@ -1287,7 +1291,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'button':
       return (
         <Section help="web-elements" title="Button">
-          {nodes.length === 1 && <TextField label="Label" value={n.label} onChange={(v) => set({ label: v }, `label-${n.id}`)} />}
+          {nodes.length === 1 && <ExprField label="Label" template mono={false} value={n.label} onChange={(v) => set({ label: v }, `label-${n.id}`)} />}
           {radius}
           <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
@@ -1546,8 +1550,10 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
   return (
     <>
     <Section help="links-cursors#link" title="Link" defaultOpen={!!link}>
-      <TextField
+      <ExprField
         label="Link"
+        template
+        mono={false}
         value={link?.url ?? ''}
         placeholder="https://… (makes the whole layer a link)"
         commitOnBlur
@@ -1646,7 +1652,7 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
       />
       {rep && (
         <>
-          <TextField label="Items" mono value={rep.items} commitOnBlur placeholder="products" onChange={(v) => update({ items: v })} />
+          <ExprField label="Items" value={rep.items} commitOnBlur placeholder="products" onChange={(v) => update({ items: v })} />
           <Row>
             <SelectField
               label="Layout"
@@ -2168,9 +2174,9 @@ function JoysticksSection({ ab }: { ab: Artboard }) {
             <IconButton icon={<Icons.trash />} title="Remove joystick" onClick={() => update((js) => void js.splice(i, 1))} />
           </Row>
           <SelectField label="X timeline" title="Timeline positioned by the X value" value={j.xTimeline ?? ''} options={tls} onChange={(v) => update((js) => void (js[i].xTimeline = v || null))} />
-          <TextField label="X value" mono title="Expression from 0 to 1. pointer {x, y}, artboard {width, height} and every variable are in scope" value={j.x} commitOnBlur onChange={(v) => update((js) => void (js[i].x = v))} />
+          <ExprField label="X value" locals={POINTER_LOCALS} title="Expression from 0 to 1. pointer {x, y}, artboard {width, height} and every variable are in scope" value={j.x} commitOnBlur onChange={(v) => update((js) => void (js[i].x = v))} />
           <SelectField label="Y timeline" title="Optional second timeline, positioned by the Y value" value={j.yTimeline ?? ''} options={tls} onChange={(v) => update((js) => void (js[i].yTimeline = v || null))} />
-          {j.yTimeline && <TextField label="Y value" mono title="Expression from 0 to 1" value={j.y ?? ''} commitOnBlur onChange={(v) => update((js) => void (js[i].y = v))} />}
+          {j.yTimeline && <ExprField label="Y value" locals={POINTER_LOCALS} title="Expression from 0 to 1" value={j.y ?? ''} commitOnBlur onChange={(v) => update((js) => void (js[i].y = v))} />}
           <SelectField
             label="Handle"
             title="A layer the pointer drags around. Where its origin sits inside the area below is handle.x and handle.y (0 to 1) in the expressions"
