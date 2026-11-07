@@ -10,7 +10,7 @@
 - **Describe what you see**: description tracks beside captions (timeline and video layers) read in the gaps by a local voice with the sound turned down, a learner Descriptions switch, and a Transcript with descriptions that always works.
 - **Download size** per artboard in the Inspector, `downloadSize()`/`fileSize()` and connection hints in expressions; unopened artboards load nothing (documented, now tested).
 - Puzzle layouts from a **formula** variable: change the Crossword's or Word search's `words` and the grid follows. **On key** can fire while typing (Enter checks in the Arithmetic quiz and fill-in-the-blank questions), and keys the project handles no longer scroll the course page.
-- New starters: Listening lab, Described video, Lite lesson (video, audio only or text only); a Speaking and practice set with Difficult conversation rehearsal, Timed talk rehearsal (viva, interview, one-minute talk; recording comes with the media bridge) and Keep the beat; Audio-first quiz and Spelling test in Quizzes and questions.
+- New starters: Listening lab, Described video, Lite lesson (video, audio only or text only), Shadow the model (listen, record yourself, compare; the two rehearsals gain an optional record-and-replay step); a Speaking and practice set with Difficult conversation rehearsal, Timed talk rehearsal (viva, interview, one-minute talk; recording comes with the media bridge) and Keep the beat; Audio-first quiz and Spelling test in Quizzes and questions.
 - New branded set Listen, watch and capture, starting with Observe and tag a performance: tag moments in a recording by category (buttons or keys 1 to 6), then compare against the expert's tags on one timeline, agreement within a window.
 
 ## Unreleased
