@@ -239,6 +239,14 @@ export function VariablesPanel() {
                     />
                   </div>
                 )}
+                <TextField
+                  value={v.formula ?? ''}
+                  mono
+                  commitOnBlur
+                  title="Optional. A formula that works this variable out from the ones above it each time the project starts, instead of using the value above, for example crossword(words, 10) or wordSearch(words, 12). The value above is what it falls back to if the formula fails. The preview on the canvas follows it too."
+                  placeholder="Or work it out: e.g. crossword(words, 10)"
+                  onChange={(x) => setVar(v.id, { formula: x.trim() ? x : undefined }, `var-formula-${v.id}`)}
+                />
               </td>
               <td>
                 <CheckField label="" value={!!v.persist} onChange={(x) => setVar(v.id, { persist: x })} />

@@ -130,8 +130,13 @@ function build(colourway: Colourway) {
   g.runFrom(ticking, 'true', ['action.setVariable', { variable: seconds.id, op: 'add', value: '1' }]);
 
   //Answering: typed (Check) or picked (an option); both end up in "given" and mark the same way
+  //The Check button and Enter in the box both ask for the check
   const onCheck = g.click(check, 'Check the typed answer');
-  const canCheck = g.add('logic.if', { condition: '!answered && typed.trim() != ""' }, onCheck);
+  g.run(onCheck, emit('check'));
+  const onEnter = g.enterIn(input, 'Enter in the answer box checks it');
+  g.run(onEnter, emit('check'));
+  const onAsked = g.message('check', 'Check the typed answer');
+  const canCheck = g.add('logic.if', { condition: '!answered && typed.trim() != ""' }, onAsked);
   g.runFrom(canCheck, 'true', set(given, 'typed.trim()'), emit('mark'));
   const needs = g.add('logic.if', { condition: '!answered' }, canCheck, 'false', { dy: 110 });
   g.runFrom(needs, 'true', set(feedback, '"Type your answer first."'), announce('feedback'));
@@ -166,7 +171,7 @@ function build(colourway: Colourway) {
     item('Choose the kind of sums: Project > Variables > "operation" is + (add), - (subtract), × (multiply), ÷ (divide) or mixed (add, subtract and multiply together)', sum, page),
     item('Set the range: "lowest" and "highest" are the smallest and largest numbers a sum uses (2 and 12 by default). Division sums use them for the answer, so 12 means answers up to 12', sum, page),
     item('Set how many sums: "howMany" (10 by default). The question counter and the progress bar follow it', where, page),
-    item('Choose how learners answer: "mode" is type (a box and a Check button) or choose (four options to pick from)', input, page),
+    item('Choose how learners answer: "mode" is type (a box and a Check button) or choose (four options to pick from). In the box, Enter checks the answer too: the On key (Enter) node in the Interactions tab has "Also while typing in a text box" ticked, which is what lets a key press in a box run a flow', input, page),
     item('Turn the clock off by setting "showTimer" to false', tally, page),
     item('Change the feedback ("Correct!", "Not quite...") and the message on the finished page: the Mark the answer flow in the Interactions tab, and the Result text on the Finished page', verdict, page),
   );

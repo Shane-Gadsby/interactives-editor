@@ -1,4 +1,4 @@
-import { artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, sampleContextFor, sensorsUsed, slotNamesOf, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
+import { artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -93,7 +93,11 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
   const vars: Record<string, unknown> = { context, ...sensors, ...board, ...data, data, enums: enumOptions(project.variables) };
   // The sample course's rows in place of initial values, the way the player starts on the real course
   const perCourse = courseValuesFor(project.courseValues, context.courseLabel, project.variables);
-  for (const v of project.variables) vars[v.name] = initialValue(perCourse.has(v.id) ? { ...v, initial: perCourse.get(v.id)! } : v);
+  // A variable with a formula is worked out from the ones above it (the crossword's layout from its word list), as the player does at the start
+  const start: Record<string, unknown> = {};
+  for (const v of project.variables) {
+    start[v.name] = vars[v.name] = perCourse.has(v.id) ? initialValue({ ...v, initial: perCourse.get(v.id)! }) : startingValue(v, start);
+  }
   // An artboard with steps shows its first step: the dots of a step bar, and the variables the player would keep up to date
   const cfg = artboard?.steps;
   const list = cfg ? stepList(stepsTimeline(artboard!)) : [];

@@ -2,8 +2,9 @@
 import { uid, type Artboard, type LogicNode, type Project, type SceneNode, type Variable, type VariableType } from 'interactives-player';
 import { brandedPage, button, edge, gnode, stroke, type BrandedCtx } from '../../kit';
 
-export function addVar(project: Project, name: string, type: VariableType, initial: number | string | boolean | unknown[]): Variable {
-  const v: Variable = { id: uid('v'), name, type, initial: Array.isArray(initial) ? JSON.stringify(initial) : initial };
+/** A variable. With a `formula` it is worked out from the variables added before it (and `initial` is only what it falls back to). */
+export function addVar(project: Project, name: string, type: VariableType, initial: number | string | boolean | unknown[], formula?: string): Variable {
+  const v: Variable = { id: uid('v'), name, type, initial: Array.isArray(initial) ? JSON.stringify(initial) : initial, ...(formula ? { formula } : {}) };
   project.variables.push(v);
   return v;
 }
@@ -50,6 +51,11 @@ export class Graph {
   /** A key, only while `target` (or something in it) has the keyboard focus. Leave `key` empty for any key. */
   key(key: string, target?: SceneNode, note?: string): LogicNode {
     return this.add('event.key', { key, type: 'keydown', ...(target ? { target: target.id } : {}) }, null, 'out', { note });
+  }
+
+  /** Enter pressed inside a text box (`target`), which a key event ignores unless it is told it may hear typing. */
+  enterIn(target: SceneNode, note?: string): LogicNode {
+    return this.add('event.key', { key: 'Enter', type: 'keydown', typing: true, target: target.id }, null, 'out', { note });
   }
 
   start(note?: string): LogicNode {

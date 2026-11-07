@@ -645,6 +645,8 @@ function wantedSlots(d: Project, frame: FrameNode, q: Question): Slot[] {
     click('moveDown', 'action.questionMove', { item: 'event.index', direction: 'down' });
   }
   click('check', 'action.questionCheck');
+  //Fill-in-the-blank questions: Enter in a box checks the answer too (the key node says it may hear typing, and only fires inside this question)
+  if (style === 'blank') out.push({ eventSlot: 'enterCheck:event', actionSlot: 'enterCheck:action', event: { kind: 'event.key', params: { key: 'Enter', type: 'keydown', typing: true, target: frame.id } }, action: { kind: 'action.questionCheck', params: { question: frame.id } } });
   click('hint', 'action.questionHint');
   click('reset', 'action.questionReset', { next: true });
   //Read aloud: the Listen button says the question, and the feedback once it has been checked
@@ -680,7 +682,7 @@ function ensureGraph(d: Project, ab: Artboard, frame: FrameNode, q: Question): v
       logic.nodes.push(ac);
     }
     //Repoint what the kit owns (the layer or question the node is about) and leave the rest as the person set it
-    const own = w.event.kind === 'event.pointer' ? ['target'] : w.event.kind === 'event.dataLoaded' ? ['source'] : [];
+    const own = w.event.kind === 'event.pointer' || (w.event.kind === 'event.key' && w.event.params.target) ? ['target'] : w.event.kind === 'event.dataLoaded' ? ['source'] : [];
     for (const k of own) ev.params[k] = w.event.params[k];
     ac.params.question = frame.id;
     if (w.option !== undefined) ac.params.option = w.option;

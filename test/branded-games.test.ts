@@ -1184,4 +1184,113 @@ describe('games starters', () => {
       player.destroy();
     });
   });
+
+  //Layouts that follow the word list, Enter in the answer box, and keys the page does not also get
+  describe('rough edges: layouts from the word list, Enter in a box, keys kept from the page', () => {
+    const startGame = async (key: string, home: string, vars: Record<string, unknown> = {}) => {
+      const p = projectFromBrandedStarter(get(key), COLOURWAYS[0]);
+      for (const [k, v] of Object.entries(vars)) p.variables.find((x) => x.name === k)!.initial = JSON.stringify(v);
+      const player = play(p);
+      await settle(player, 100);
+      await click(layer(p, home, 'Start').id);
+      await settle(player);
+      return { p, player };
+    };
+    const press = (target: HTMLElement, k: string, init: KeyboardEventInit = {}) => {
+      const e = new KeyboardEvent('keydown', { key: k, code: k === ' ' ? 'Space' : k, bubbles: true, cancelable: true, ...init });
+      target.dispatchEvent(e);
+      return e;
+    };
+
+    it('the crossword lays itself out from the words list, with no grid positions to edit', async () => {
+      const words = [
+        { answer: 'cat', clue: 'A pet' },
+        { answer: 'tab', clue: 'A browser page' },
+        { answer: 'bat', clue: 'A flying mammal' },
+        { answer: 'toolongforthegrid', clue: 'Dropped' },
+      ];
+      const { p, player } = await startGame('games/crossword', 'Study words crossword', { words });
+      const entries = player.getVariable('entries') as { answer: string; clue: string; row: number; col: number; down: boolean }[];
+      expect(entries.map((e) => e.answer).sort()).toEqual(['BAT', 'CAT', 'TAB']);
+      expect(entries.find((e) => e.answer === 'CAT')!.clue).toBe('A pet');
+      //the grid, numbers and clue lists follow
+      const cells = player.getVariable('cells') as { ch: string; num: number }[];
+      expect(cells.filter((c) => c.ch).length).toBeLessThan(9);
+      expect(cells.filter((c) => c.num > 0).length).toBeGreaterThan(0);
+      const clues = [...(player.getVariable('acrossClues') as unknown[]), ...(player.getVariable('downClues') as unknown[])];
+      expect(clues).toHaveLength(3);
+      //and the entries variable is a formula, not typed positions
+      expect(p.variables.find((v) => v.name === 'entries')!.formula).toBe('crossword(words, 10)');
+      player.destroy();
+    });
+
+    it('the crossword preview in the editor (its starting values) already follows the words', () => {
+      const p = projectFromBrandedStarter(get('games/crossword'), COLOURWAYS[0]);
+      const rows = (p.variables.find((v) => v.name === 'entries')!.initial as string);
+      expect(JSON.parse(rows).length).toBeGreaterThanOrEqual(8);
+      for (const name of ['letters', 'starts', 'cells', 'acrossClues', 'downClues']) expect(p.variables.find((v) => v.name === name)!.formula, name).toBeTruthy();
+    });
+
+    it('the word search hides whatever is in the words list', async () => {
+      const words = ['ALPHA', 'BRAVO', 'DELTA'];
+      const { player } = await startGame('games/word-search', 'Word search', { words });
+      const rows = player.getVariable('rows') as string[];
+      expect(rows).toHaveLength(12);
+      for (const w of words) expect(findWord(rows, w), w).not.toBeNull();
+      for (const w of SEARCH_WORDS) expect(findWord(rows, w)).toBeNull();
+      player.destroy();
+    });
+
+    it('Enter in the arithmetic quiz answer box checks the answer, once, and not before there is one', async () => {
+      const { p, player } = await startGame('games/arithmetic-quiz', 'Quick sums', { mode: 'type' });
+      const id = layer(p, 'Work it out', 'Answer').id;
+      const input = (el(id)?.matches('input') ? el(id) : el(id)?.querySelector('input')) as HTMLInputElement;
+      const sums = player.getVariable('sums') as { ans: number }[];
+      const enter = async () => {
+        input.focus();
+        const e = press(input, 'Enter');
+        await settle(player, 60);
+        return e;
+      };
+      await enter();
+      expect(textOf(layer(p, 'Work it out', 'Feedback').id)).toBe('Type your answer first.');
+      expect(player.getVariable('answered')).toBe(false);
+      input.value = String(sums[0].ans);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await settle(player, 50);
+      await enter();
+      expect(player.getVariable('answered')).toBe(true);
+      expect(player.getVariable('score')).toBe(1);
+      await enter();
+      expect(player.getVariable('score')).toBe(1);
+      //other keys typed in the box still do nothing to the quiz
+      input.value = '';
+      const e = press(input, 'a');
+      expect(e.defaultPrevented).toBe(false);
+      player.destroy();
+    });
+
+    it('the crossword grid keeps arrows, Space and letters from the page, but not Tab or shortcuts', async () => {
+      const { p, player } = await startGame('games/crossword', 'Study words crossword');
+      const grid = el(layer(p, 'Crossword', 'Grid').id);
+      grid.focus();
+      for (const k of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'a']) expect(press(grid, k).defaultPrevented, k).toBe(true);
+      expect(press(grid, 'Tab').defaultPrevented).toBe(false);
+      expect(press(grid, 'r', { ctrlKey: true }).defaultPrevented).toBe(false);
+      await settle(player, 50);
+      //away from the grid the page scrolls as normal
+      expect(press(document.body, 'ArrowDown').defaultPrevented).toBe(false);
+      player.destroy();
+    });
+
+    it('the word search grid keeps its arrows and Space from the page too', async () => {
+      const { p, player } = await startGame('games/word-search', 'Word search');
+      const grid = el(layer(p, 'Find the words', 'Grid').id);
+      grid.focus();
+      for (const k of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' ']) expect(press(grid, k).defaultPrevented, k).toBe(true);
+      expect(press(grid, 'Tab').defaultPrevented).toBe(false);
+      expect(press(document.body, 'ArrowDown').defaultPrevented).toBe(false);
+      player.destroy();
+    });
+  });
 });

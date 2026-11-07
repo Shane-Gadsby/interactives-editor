@@ -1,5 +1,5 @@
-//Word search: a 12 by 12 letter grid with eight hidden words, picked by dragging across them or by choosing the first and last letter (click or keyboard).
-import { createNode, type TemplateChecklistItem } from 'interactives-player';
+//Word search: a 12 by 12 letter grid, made from the word list each time it plays (and in the editor preview), with eight hidden words, picked by dragging across them or by choosing the first and last letter (click or keyboard).
+import { createNode, makeWordSearch, type TemplateChecklistItem } from 'interactives-player';
 import { brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, darkButton, emit, go, heroPage, set, spreadPages } from './common';
@@ -12,53 +12,13 @@ const GY = 122;
 
 export const WORDS = ['PLANNER', 'LIBRARY', 'REVISE', 'SUMMARY', 'ESSAY', 'QUOTE', 'SOURCE', 'NOTES'];
 
-// ------------------------------------------------------------------ the grid (made when the starter is built)
+// ------------------------------------------------------------------ the grid (the player makes it, from the words)
 
 //Right, down, down-right, up-right, left, up, down-left, up-left
 export const DIRECTIONS: [number, number][] = [[0, 1], [1, 0], [1, 1], [-1, 1], [0, -1], [-1, 0], [1, -1], [-1, -1]];
 
-function prng(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/**
- * Hides the words in a size by size grid, one in each of the eight directions in turn (so some run backwards and upwards), where they
- * fit, and fills the gaps with letters. The same words always make the same grid. Returns one string per row.
- */
-export function makeGrid(words: string[], size = SIZE, seed = 7): string[] {
-  const rand = prng(seed);
-  const grid: string[] = Array(size * size).fill('');
-  const clean = words.map((w) => w.toUpperCase().replace(/[^A-Z]/g, '')).filter((w) => w.length >= 2 && w.length <= size);
-  //Longest first, they are the hardest to fit
-  const order = clean.map((w, i) => ({ w, i })).sort((a, b) => b.w.length - a.w.length);
-  for (const { w, i } of order) {
-    for (let tries = 0; tries < 400; tries++) {
-      const [dr, dc] = DIRECTIONS[(i + Math.floor(tries / 100)) % DIRECTIONS.length];
-      const r0 = Math.floor(rand() * size);
-      const c0 = Math.floor(rand() * size);
-      const r1 = r0 + dr * (w.length - 1);
-      const c1 = c0 + dc * (w.length - 1);
-      if (r1 < 0 || c1 < 0 || r1 >= size || c1 >= size) continue;
-      const fits = Array.from(w).every((ch, k) => {
-        const at = grid[(r0 + dr * k) * size + c0 + dc * k];
-        return at === '' || at === ch;
-      });
-      if (!fits) continue;
-      Array.from(w).forEach((ch, k) => (grid[(r0 + dr * k) * size + c0 + dc * k] = ch));
-      break;
-    }
-  }
-  //Common letters turn up more often, like a printed puzzle
-  const pool = 'EEEEEAAAAIIIOOOUUNNNRRRSSSTTTLLCCDDMMPPHHBGFWYKV';
-  for (let i = 0; i < grid.length; i++) if (!grid[i]) grid[i] = pool[Math.floor(rand() * pool.length)];
-  return Array.from({ length: size }, (_, r) => grid.slice(r * size, (r + 1) * size).join(''));
-}
+/** The same grid the `wordSearch(words, size)` formula makes in the player, kept here so the starter has a fallback to start from and the tests can read it. Returns one string per row. */
+export const makeGrid = (words: string[], size = SIZE, seed = 7): string[] => makeWordSearch(words, size, seed);
 
 /** Where a word is in the grid, in any of the eight directions: its first square's row and column, and the direction. */
 export function findWord(rows: string[], word: string): { row: number; col: number; dr: number; dc: number } | null {
@@ -90,7 +50,8 @@ function build(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'Word search');
   const { project, L } = ctx;
   addVar(project, 'words', 'list', WORDS);
-  addVar(project, 'rows', 'list', makeGrid(WORDS));
+  //"rows" is worked out from "words" by a formula, so changing the words re-hides them (in the canvas preview too). The typed value is only the fallback
+  addVar(project, 'rows', 'list', makeGrid(WORDS), `wordSearch(words, ${SIZE})`);
   const found = addVar(project, 'found', 'list', []);
   const foundCells = addVar(project, 'foundCells', 'list', []);
   const start = addVar(project, 'start', 'number', -1);
@@ -106,7 +67,7 @@ function build(colourway: Colourway) {
   const running = addVar(project, 'running', 'boolean', false);
   addVar(project, 'showTimer', 'boolean', true);
 
-  const hero = heroPage(ctx, 'Word search', 'Find the eight study words hidden in the grid. Drag across a word, or pick its first and last letter.');
+  const hero = heroPage(ctx, 'Word search', 'Find the study words hidden in the grid. Drag across a word, or pick its first and last letter.');
   const page = brandedPage(ctx, 'Find the words', { footer: '{found.length} of {words.length} found' });
   const done = brandedPage(ctx, 'You found them all', { kind: 'end', name: 'Finished' });
   const checklist: TemplateChecklistItem[] = [];
@@ -188,7 +149,7 @@ function build(colourway: Colourway) {
   const onReset = g.message('reset', 'Clear the board and the clock');
   g.run(onReset, set(found, '[]'), set(foundCells, '[]'), set(start, '-1'), set(end, '-1'), set(line, '[]'), set(dragging, 'false'), set(cursor, '-1'), set(seconds, '0'), set(running, 'true'), set(message, '"Drag across a word, or click its first and last letter."'));
   const onAgain = g.click(again, 'Start again');
-  g.run(onAgain, emit('reset'), announce('"Board cleared. Find the eight words."'));
+  g.run(onAgain, emit('reset'), announce('"Board cleared. Find the " + words.length + " words."'));
   const onTick = g.add('event.timer', { ms: 1000, repeat: true }, null, 'out', { note: 'Clock' });
   const ticking = g.add('logic.if', { condition: 'running' }, onTick);
   g.runFrom(ticking, 'true', ['action.setVariable', { variable: seconds.id, op: 'add', value: '1' }]);
@@ -259,9 +220,10 @@ function build(colourway: Colourway) {
   g.run(onEscape, set(start, '-1'), set(end, '-1'), set(line, '[]'), set(message, '"Selection cleared."'), announce('message'));
 
   checklist.push(
-    item('Write your own eight words: Project > Variables > "words", one word in capitals with no spaces in each row of the list. They show in the "Words to find" list and are what a selection is checked against', wordList, page),
-    item(`Make a grid to match: Project > Variables > "rows" holds the ${SIZE} rows of ${SIZE} letters. Put each word in yourself, across, down, on a diagonal or backwards, and fill the other squares with any letters. Nothing else needs changing: the check reads the letters straight off the grid, so a word works wherever it is`, grid, page),
-    item('The grid is 12 by 12. To make it bigger or smaller, the layout and the pointer maths in the Interactions tab (the cell size, 36, and the grid\'s position) have to change with it, so keep 12 rows of 12 unless you are prepared to rebuild those', grid, page),
+    item('Write your own words: Project > Variables > "words", one word in each row of the list (letters only, spaces and dashes are dropped). That is all you do: the grid is made from the list, in the canvas preview and every time the puzzle plays, with the words hidden across, down, on diagonals and backwards. The same words always make the same grid', wordList, page),
+    item(`A word longer than ${SIZE} letters is left out of the grid. The "Words to find" list has room for eight, so keep to about eight words, or make the list taller. The finish check and the counts follow the list's length`, wordList, page),
+    item('You do not edit the grid letters. "rows" (Variables) is a formula, wordSearch(words, 12), that hides the words and fills the gaps. To hide the words yourself, clear the formula on "rows" and write its 12 rows of 12 letters by hand: the check reads the letters straight off the grid, so a word works wherever it is', grid, page),
+    item('The grid is 12 by 12. To make it bigger or smaller, the formula\'s size, the layout and the pointer maths in the Interactions tab (the cell size, 36, and the grid\'s position) have to change with it, so keep 12 rows of 12 unless you are prepared to rebuild those', grid, page),
     item('Turn the clock off by setting the "showTimer" variable to false (Variables tab). Nothing else uses it, and Find the words still works the same', counts, page),
     item('Reword the instructions under the heading and the messages players see (found, not a word, selection cleared): the "message" settings in the Interactions tab', how, page),
     item('Change what the finished page says and add your own picture or next step', done.children.find((n) => n.name === 'Result'), done),
