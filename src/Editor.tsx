@@ -1092,6 +1092,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const t0 = useRef(performance.now());
   const [showVars, setShowVars] = useState(true);
   const [nonce, setNonce] = useState(0);
+  //Which frame has loaded: a new one stays see-through until its page is in, so the empty frame's white never shows
+  const [frameShown, setFrameShown] = useState(-1);
   const frame = useRef<HTMLIFrameElement>(null);
   // Responsive sets: the width of the page the preview runs in (null: all the room there is), and how much room that is
   const sets = responsiveSets(project as Project);
@@ -1304,7 +1306,9 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           <IconButton icon={<Icons.close />} title="Close (Esc)" onClick={onClose} />
         </header>
         {sets.length > 0 && <PreviewWidth sets={sets} width={pageWidth} max={room} current={dbg?.variant ? dbg.artboard : undefined} onChange={setPageWidth} />}
-        <div className="preview-body">
+        {/* The project's own page colour from the first frame: while it builds, while the frame loads and while the player waits,
+            so opening Preview never flashes black, then white, then the page */}
+        <div className="preview-body" style={{ background: /^(#|rgb|hsl)/.test((project as Project).settings.pageBackground ?? '') ? (project as Project).settings.pageBackground : undefined }}>
           {showVars && vars && (
             <aside className="preview-vars">
               {dbg && (
@@ -1360,7 +1364,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             </aside>
           )}
           <div className="preview-stage" ref={stageBox}>
-          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (hitAreas && showHitAreas(true), applyTheme(), mediaSim !== 'works' && simulateMedia(mediaSim))} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={{ ...(pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : {}), opacity: frameShown === nonce ? 1 : 0 }} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (setFrameShown(nonce), hitAreas && showHitAreas(true), applyTheme(), mediaSim !== 'works' && simulateMedia(mediaSim))} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
           </div>
         </div>
         {accessibility && screenReader && (

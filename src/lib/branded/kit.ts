@@ -62,7 +62,7 @@ export const CHROME_TAG = 'brand-chrome';
 export const isChrome = (n: SceneNode): boolean => (n as { tags?: string[] }).tags?.includes(CHROME_TAG) ?? false;
 export const chrome = <T extends SceneNode>(n: T): T => Object.assign(n, { locked: true, tags: [...((n as { tags?: string[] }).tags ?? []), CHROME_TAG] });
 
-const BRAND_TOKEN_NAMES: Record<BrandKey, string> = {
+export const BRAND_TOKEN_NAMES: Record<BrandKey, string> = {
   gradientStart: 'brand/gradient-start',
   gradientEnd: 'brand/gradient-end',
   onGradient: 'brand/on-gradient',
@@ -76,7 +76,7 @@ const BRAND_TOKEN_NAMES: Record<BrandKey, string> = {
   logoTextOnLight: 'brand/logo-text-on-light',
 };
 
-const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+export const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
 /**
  * A new branded project: one theme per colourway plus High contrast, every starter token and the brand tokens valued for

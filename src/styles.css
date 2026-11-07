@@ -3397,7 +3397,7 @@ button.twisty:hover {
 .preview-body {
   flex: 1;
   min-height: 0;
-  background: #000;
+  background: #111;
 }
 .preview-body iframe {
   width: 100%;
@@ -8606,4 +8606,9 @@ code {
 /* The selection of the text being edited, drawn while the focus is in the toolbar (the browser stops drawing it then) */
 ::highlight(tt-sel) {
   background-color: rgba(60, 130, 246, 0.35);
+}
+.themes-way-pick {
+  max-width: 150px;
+  height: 24px;
+  font-size: 12px;
 }

@@ -4,6 +4,7 @@ import { store, useEditor } from '../store/store';
 import { CheckField, ColorField, IconButton, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
 import { confirmDialog, promptDialog } from '../components/dialogs';
+import { ALL_COLOURWAYS, addColourwayTheme } from '../lib/branded/colourway';
 import { addTheme, addToken, checkThemePairs, convertStylesToTokens, ensureThemes, removeTheme, removeToken, setTokenValue, starterUpgrade, themeCounts, upgradeStarterTokens, type PairResult } from '../lib/themes';
 
 /** The Themes tab: tokens down the side, themes across, a colour in each cell. */
@@ -28,6 +29,23 @@ export function ThemesPanel() {
           <button className="btn primary" title="Add Light, Dark and High contrast themes with starter tokens in the toolbox look: greys, gold buttons with black text, outlines, the focus ring and the right, wrong and missed colours" onClick={() => edit((d) => void ensureThemes(d))}>
             <Icons.plus width={13} /> Add Light, Dark and High contrast
           </button>
+          <select
+            className="themes-way-pick"
+            value=""
+            aria-label="Or start from a colourway"
+            title="Start with the Light, Dark and High contrast themes plus one of the UniSQ colourways"
+            onChange={(e) => {
+              const way = ALL_COLOURWAYS.find((w) => w.id === e.target.value);
+              if (way) edit((d) => void addColourwayTheme(d, way));
+            }}
+          >
+            <option value="">Or start from a colourway…</option>
+            {ALL_COLOURWAYS.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </select>
           {styleCount > 0 && (
             <button className="btn" title="Make a token from each colour style, and point the layers that follow a style at it" onClick={() => edit((d) => void convertStylesToTokens(d))}>
               Convert {styleCount} colour {styleCount === 1 ? 'style' : 'styles'} to tokens
@@ -69,6 +87,25 @@ export function ThemesPanel() {
           options={themes.list.map((t) => ({ value: t.id, label: t.name }))}
           onChange={(v) => store().set({ canvasTheme: v })}
         />
+<select
+          className="themes-way-pick"
+          value=""
+          aria-label="Add a colourway as a theme"
+          title="Add one of the UniSQ colourways (the branded starter packs' themes) as a theme: the starter tokens get its colours, and its brand tokens (gradient, accent, logo colours) are added for layers to follow"
+          onChange={(e) => {
+            const way = ALL_COLOURWAYS.find((w) => w.id === e.target.value);
+            if (!way) return;
+            edit((d) => void addColourwayTheme(d, way));
+            store().toast(`${way.name} added as a theme. Layers linked to tokens follow it; plain colours stay as they are.`);
+          }}
+        >
+          <option value="">+ Colourway…</option>
+          {ALL_COLOURWAYS.map((w) => (
+            <option key={w.id} value={w.id} disabled={!!themes?.list.some((t) => t.id === `theme-${w.id}`)}>
+              {w.name}: {w.description}
+            </option>
+          ))}
+        </select>
         <button className="btn small-btn" onClick={newTheme} title="Add a theme: a new column of colours, copied from the default theme">
           <Icons.plus width={12} /> Theme
         </button>

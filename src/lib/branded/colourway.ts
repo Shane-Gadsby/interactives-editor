@@ -4,8 +4,10 @@
  * section) drives both; they are plain document changes, so each is one undo step.
  */
 import { createNode, tokenByName, uid, walk, type Artboard, type LogicEdge, type LogicNode, type Project, type SceneNode, type ThemeDef } from 'interactives-player';
-import { chrome } from './kit';
-import { COLOURWAYS, type Colourway } from './looks';
+import { BRAND_TOKEN_NAMES, chrome, kebab } from './kit';
+import { COLOURWAYS, CONTENT_TOKENS, HIGH_CONTRAST, type BrandKey, type Colourway } from './looks';
+import { ensureThemes } from '../themes';
+import type { LookKey } from 'interactives-player';
 
 export const SWITCHER_NAME = 'Colourway switcher';
 const SWITCHER_NOTE = 'Colourway switcher';
@@ -105,3 +107,39 @@ export function addLearnerSwitcher(draft: Project): boolean {
   start.logic.edges.push(...edges);
   return true;
 }
+
+/**
+ * Add one of the branded colourways (Gold, Purple, Blue, Green, Orange, Red, High contrast) to any project as a theme, from
+ * the Themes tab. The starter tokens get the colourway's values (the content colours and its buttons and accents), and the
+ * brand tokens (gradient, deep, accent, logo...) are added when the project lacks them, so a layer linked to any of them
+ * follows it. False when the project already has it.
+ */
+export function addColourwayTheme(draft: Project, way: Colourway): boolean {
+  const t = ensureThemes(draft);
+  const id = `theme-${way.id}`;
+  if (t.list.some((x) => x.id === id)) return false;
+  const hc = way === HIGH_CONTRAST;
+  const base = t.list.find((x) => x.id === t.default) ?? t.list[0];
+  const taken = new Set(t.list.map((x) => x.name.toLowerCase()));
+  t.list.push({ id, name: taken.has(way.name.toLowerCase()) ? `${way.name} (UniSQ)` : way.name, mode: hc ? 'dark' : 'light', ...(hc ? { highContrast: true } : {}) });
+  const keys = (Object.keys(CONTENT_TOKENS) as LookKey[]).concat(['primary', 'onPrimary', 'button', 'onButton', 'focus']);
+  for (const tk of t.tokens) {
+    const key = keys.find((k) => tk.name === `color/${kebab(k)}`);
+    const v = key && (way.tokens[key] ?? (hc ? undefined : CONTENT_TOKENS[key]));
+    tk.values[id] = v || (base ? tk.values[base.id] : undefined) || Object.values(tk.values)[0] || '#808080';
+  }
+  for (const [key, name] of Object.entries(BRAND_TOKEN_NAMES) as [BrandKey, string][]) {
+    let tk = tokenByName(t, name);
+    if (!tk) {
+      tk = { id: uid('tk'), name, values: {}, palette: {} };
+      //themes that were there before get this colourway's value, so the token is never empty in any of them
+      for (const th of t.list) tk.values[th.id] = way.brand[key];
+      t.tokens.push(tk);
+    }
+    tk.values[id] = way.brand[key];
+  }
+  return true;
+}
+
+/** Every colourway, High contrast last, for the Themes tab's picker. */
+export const ALL_COLOURWAYS: Colourway[] = [...COLOURWAYS, HIGH_CONTRAST];
