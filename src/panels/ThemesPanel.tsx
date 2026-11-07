@@ -3,6 +3,8 @@ import { defaultTheme, tokenValue, type ProjectThemes, type ThemeDef, type Theme
 import { store, useEditor } from '../store/store';
 import { CheckField, ColorField, IconButton, SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
+import { ThemeFixedHint } from '../components/ThemeFixedHint';
+import { linkColoursCommand } from '../lib/link-colours-action';
 import { confirmDialog, promptDialog } from '../components/dialogs';
 import { ALL_COLOURWAYS, addColourwayTheme } from '../lib/branded/colourway';
 import { addTheme, addToken, checkThemePairs, convertStylesToTokens, ensureThemes, removeTheme, removeToken, setTokenValue, starterUpgrade, themeCounts, upgradeStarterTokens, type PairResult } from '../lib/themes';
@@ -134,10 +136,16 @@ export function ThemesPanel() {
           </button>
         )}
         <div className="spacer" />
+        {counts.raw > 0 && (
+          <button className="btn small-btn" onClick={() => void linkColoursCommand()} title="Turn each plain colour that is the same as a token's colour in the default theme into that token, so it changes with the theme. It says what it will do first, lists the colours that match nothing, and is one undo">
+            Link colours to tokens
+          </button>
+        )}
         <span className="themes-raw" title="Fills, strokes and text colours that are plain colours. They look the same in every theme. Imported files bring theirs in as plain colours, on purpose">
           {counts.raw} {counts.raw === 1 ? 'colour' : 'colours'} not following a theme
         </span>
       </div>
+      <ThemeFixedHint />
       <div className="themes-body">
         <table className="themes-table">
           <thead>
