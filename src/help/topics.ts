@@ -2334,6 +2334,8 @@ The **Broken** group lists references that point at something that has been dele
 
 A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. A **new project** starts with the three themes and the starter tokens already in it, the artboard on the Light background, and every layer you add follows the tokens, so it looks right in Dark and High contrast without you picking anything. Projects made before this, and imported ones, have none until you add them in the Themes tab, and behave exactly as before.
 
+
+**While it loads.** When a project has to wait before its first page shows (remembered progress or saved data coming from StudyDesk, a **Before activity loads** flow, the first page's fonts), a spinner appears after a quarter of a second, in the project's own colours: the **color/primary** token (or **color/button**) for the ring and **color/background** behind it, from the theme the viewer gets. A viewer who asks for less motion sees it pulse instead of spin. A quick start never shows it.
 ## The Themes panel
 Open the **Themes** tab (bottom panel). A new project already has the starter themes. For one without (an older or imported project), **Add Light, Dark and High contrast** makes the three themes and the starter tokens, in the same look as the StudyDesk toolbox: its greys, and its gold for buttons with black, bolder text.
 - **color/background**, **color/surface** and **color/surface-muted** are the page, a card and a hover or quiet grey. **color/text** and **color/muted** are the copy on them.
