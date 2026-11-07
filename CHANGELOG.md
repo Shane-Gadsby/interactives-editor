@@ -2,6 +2,8 @@
 
 ## Unreleased: Symposium 3
 
+- **Embed code** in Share link: an iframe in the same shape as the toolbox's own items (title, `data-cdt-id`, `allowfullscreen`, full width at the start artboard's aspect, `microphone; camera` when the project uses them), one code for StudyDesk, StaffDesk and the open site; the learner page passes the project's height up so the iframe resizes like other ILARs.
+- **Preview keeps Save user data and remembered progress** between runs (Forget saved data starts again); **Ctrl+S** saves from anywhere in the editor; videos show their frame in artboard stills; the text toolbar keeps keyboard focus; a dragged layer bound **In** says to use **⇄ Both** to save where it was left.
 - **Polish**: a theme-linked colour shows as a compact one-line chip (each theme's value in its tooltip); label columns line up in the Layer, corner radius, question and project sections; long labels stack over their box; browser-drawn selects and text boxes match the rest; text on gold rows is the palette's dark grey.
 - **Spelling test voice**: with Spelling on, a question's **Voice for the word** makes the word's audio with a synthesised voice on the server while you edit (eight British voices, speed, preview, "Say it like" respelling, an optional sentence, one word or all of them), saved as ordinary audio so the shared page still has no word in it. The voice model (132 MB, Apache-2.0) downloads once on the first **Set up the voice**. A labelled **practice mode** has the learner's own device say the word instead, and turns off server marking because the word is then in the page.
 - Canvas: **Ctrl/Cmd+click** adds a layer to the selection (or takes it out), like Shift.
