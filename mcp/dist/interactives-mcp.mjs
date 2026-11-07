@@ -2736,6 +2736,19 @@ function opts(texts, right) {
 const isObj$2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const str$1 = (v, d = "") => typeof v === "string" ? v : d;
 const num = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
+function cleanVoice(raw) {
+  if (!isObj$2(raw)) return void 0;
+  const out = {};
+  if (str$1(raw.voice)) out.voice = str$1(raw.voice).slice(0, 40);
+  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num(raw.speed, 1, 0.5, 1.5);
+  if (str$1(raw.say).trim()) out.say = str$1(raw.say).slice(0, 200);
+  if (str$1(raw.sentence).trim()) out.sentence = str$1(raw.sentence).slice(0, 300);
+  if (raw.twice === true) out.twice = true;
+  if (str$1(raw.node)) out.node = str$1(raw.node).slice(0, 100);
+  if (str$1(raw.asset)) out.asset = str$1(raw.asset).slice(0, 100);
+  if (raw.device === true) out.device = true;
+  return Object.keys(out).length ? out : void 0;
+}
 function normaliseQuestion(raw) {
   if (!isObj$2(raw)) return null;
   const kind = QUESTION_KINDS.some((k) => k.value === raw.kind) ? raw.kind : null;
@@ -2787,6 +2800,7 @@ function normaliseQuestion(raw) {
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
     ...isObj$2(raw.retake) ? { retake: { limit: Math.round(num(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
+    ...cleanVoice(raw.voice) ? { voice: cleanVoice(raw.voice) } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
     ...raw.multi === true ? { multi: true } : {},
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
@@ -6185,7 +6199,7 @@ Double-click a text layer to edit it. Select some of the text, then:
 | Hold <kbd>Alt</kbd> while drawing or resizing | Work from the centre |
 | Hold <kbd>Ctrl</kbd> while dragging | Move without snapping |
 | <kbd>Alt</kbd>-click a path point | Switch it between curve and corner |
-| <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Select the deepest layer inside groups |
+| <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Add it to the selection, or take it out (it picks the deepest layer inside groups, so you can gather layers from different groups) |
 | Double-click a group | Select inside it |
 
 While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kbd> resizes from the centre. In number fields, drag the label to scrub (<kbd>Shift</kbd> ×10, <kbd>Alt</kbd> ×0.1), use arrow keys to step, or type sums like \`100/2\`.`
@@ -7615,11 +7629,22 @@ A spelling test plays a word and the learner types it. Build one with one **Fill
 
 1. Tick **Mark answers on the server** and **Spelling: letters must match exactly** on its blank.
 2. List every accepted spelling, one per line (\`judgement\` and \`judgment\`). Tick **Also accept American spellings** to accept the American form of each as well: the editor shows the forms it adds, so nothing is accepted that you can't see. It knows the common differences (colour/color, organise/organize, centre/center, travelled/traveled, paediatric/pediatric and a few dozen words that just differ) and leaves a word alone when it is not sure, so add anything else as its own line.
-3. Add a **Play sound** node on a button for the word's audio, and write nothing of the word anywhere else (not in a layer name, a label or the prompt).
+3. Give the word its audio (see **The spoken word** below): a **Play sound** node on a button plays it. Write nothing of the word anywhere else (not in a layer name, a label or the prompt).
+
+**The spoken word.** With **Spelling** ticked, the question has a **Voice for the word** section. Press **Make the audio with a voice** and the server turns the first accepted spelling into speech and saves it as an ordinary sound in the project's Assets, picked in that word's **Play sound** node (a page with no Play sound node gets a **Play the word** button with one). **Make the audio for all words** does every word with the same voice and speed. The speech is made here, while you are editing, so the learner's page only ever has the sound.
+
+- **Voice** and **Speed**: eight British voices (there is no Australian voice yet). A little under normal speed, the default, is clear for a spelling test.
+- **Preview** plays it without saving anything, so you can hear a word before it goes in.
+- **Say it like**: when the voice says a word wrongly, or does not know it, type the word as it sounds in ordinary English words (\`cull er\` for colour). It is only used to make the audio and is never in the page. A word the voice does not know says so and nothing is made until you give it a **Say it like**.
+- **Sentence** is said after the word, as a teacher would (\`The colour of the sky is blue.\`), and **Say the word again at the end** gives word, sentence, word. Both are only in the audio.
+- The first time anyone uses it, the server has to download the voice once (about 130 MB), and the section offers **Set up the voice**. If the server has no speech engine it says so, and you can still record the words yourself, upload the files and pick them in the **Play sound** node.
+- Make a word again after you change it, and the new audio replaces the old. Listen to every word before you share: a voice can say an unusual word wrongly, and **Say it like** fixes that.
+
+**Practice mode.** Tick **Practice mode** and the learner's own device reads the word aloud instead (the **Play sound** node becomes a **Read aloud** node holding the word). The device voice has to be given the word, so **the word is in the page, where anyone can read it in their browser's developer tools**. Use it for practice, never a graded test. The question is then marked in the page and sends no grade, **Mark answers on the server** is turned off, and the share link does not hide the word. The voice is whatever the learner's device has, and with none for the language nothing is said. Turning it off puts the audio back but does not turn server marking back on: do that yourself.
 
 **What counts as right.** Every letter, in order. Case is ignored unless **Match case** is on, and spaces round the word are ignored. A curly apostrophe typed on a phone counts as a plain one, but a missing apostrophe or hyphen is wrong, and accents have to be there (cafe is not café). Numbers are not compared as numbers. The box has the browser's own spellcheck, autocorrect and automatic capitals switched off (**No browser help** in the input's settings), so it neither underlines nor fixes the word.
 
-**Keeping the word out of the page.** The page learners get has no accepted spellings in it, because the question is marked on the server. The word is in the audio, so the audio is the only place it is. In a project with spelling questions, **Update to the latest version** on the share link also renames every audio asset to a plain name (\`colour.mp3\` becomes \`audio-1.mp3\`) and cuts the title and comment tags out of mp3 and wav files. Other kinds of audio keep their tags, and the share says so: use mp3 or wav. Speech made on the learner's own device (the browser reading text aloud) is not an option for a graded test: it would need the word as text in the page. Record the words, or make them with any speech tool and upload the files.
+**Keeping the word out of the page.** The page learners get has no accepted spellings in it, because the question is marked on the server. The word is in the audio, so the audio is the only place it is. In a project with spelling questions, **Update to the latest version** on the share link also renames every audio asset to a plain name (\`colour.mp3\` becomes \`audio-1.mp3\`) and cuts the title and comment tags out of mp3 and wav files. Other kinds of audio keep their tags, and the share says so: use mp3 or wav. Speech made on the learner's own device (the browser reading text aloud) is not an option for a graded test: it would need the word as text in the page, which is why **Practice mode** is only for practice. Make the words with the **Voice for the word** section, or record them and upload the files. Audio the voice makes is a plain wav with no tags.
 
 What this does not protect against: a learner who writes down what they hear (that is the test), who runs the audio through speech recognition, or who has your project open in the editor. **Preview** and any file you export still carry the answers.
 

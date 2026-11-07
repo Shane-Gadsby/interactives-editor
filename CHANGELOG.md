@@ -2,6 +2,8 @@
 
 ## Unreleased: Symposium 3
 
+- **Spelling test voice**: with Spelling on, a question's **Voice for the word** makes the word's audio with a synthesised voice on the server while you edit (eight British voices, speed, preview, "Say it like" respelling, an optional sentence, one word or all of them), saved as ordinary audio so the shared page still has no word in it. The voice model (132 MB, Apache-2.0) downloads once on the first **Set up the voice**. A labelled **practice mode** has the learner's own device say the word instead, and turns off server marking because the word is then in the page.
+- Canvas: **Ctrl/Cmd+click** adds a layer to the selection (or takes it out), like Shift.
 - **Fit text to box** on text layers, buttons and links: the font is the largest size between Smallest and Largest (either can be 'any') at which the text fits the box, re-fitted when the text, box, font or bound values change, the same on the canvas and the played page.
 - **Expression suggestions as you type** in every expression field (bindings, graph nodes, variable formulas, `{...}` in text): variables with their current values, `context` and its fields, data sources, layer names inside `layer("`, `self.` and other members, built-in names and helper functions with their signatures. Arrows, Enter or Tab, Escape.
 - **Starters open laid out** in order in a tidy grid (responsive variants beside their page), and **Tidy up artboards** (Layers panel, canvas right-click) does the same for any project in one undo step.
