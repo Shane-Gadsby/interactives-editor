@@ -461,6 +461,12 @@ router.use('/api', cacheHeaders.api, sessionCheck({staff: true, tool: 'interacti
 const voice = require('./voice')({express, storageDir})
 router.use('/api/voice', voice.router)
 
+//Google Fonts, kept here: the css and files are fetched from Google once and served from storage/_fonts after that, so nobody's browser
+//calls Google for a font (fonts-proxy.js says how it is held in check). INTERACTIVES_FONTS_PROXY=off turns it off
+const fontsProxy = require('./fonts-proxy')({express, storageDir})
+router.use('/fonts', fontsProxy.router)
+fontsProxy.prewarm()
+
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
 const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean'},

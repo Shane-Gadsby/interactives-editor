@@ -181,12 +181,17 @@ export function previewFonts(families: string[], skip: Iterable<string> = []): v
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.dataset.fontPreview = family;
-    link.href = previewUrl(family);
+    // From this server's font route, Google's own if it is down
+    link.href = localPreviewUrl(family);
+    link.addEventListener('error', () => { if (!link.href.includes('fonts.googleapis.com')) link.href = previewUrl(family); });
     document.head.appendChild(link);
   }
 }
 
 export const previewUrl = (family: string): string => `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family).replace(/%20/g, '+')}&text=${encodeURIComponent(family)}&display=swap`;
+
+/** The same preview from this server's font route (it keeps the answer, so Google is asked about a family once, ever). */
+export const localPreviewUrl = (family: string): string => `${new URL('fonts', document.baseURI).href}/css2?family=${encodeURIComponent(family).replace(/%20/g, '+')}&text=${encodeURIComponent(family)}`;
 
 /** Whether the picker already asked for this family's preview */
 export const wasPreviewed = (family: string): boolean => previewed.has(family.toLowerCase());

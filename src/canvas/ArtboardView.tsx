@@ -11,6 +11,7 @@ import { assetUrls } from '../lib/assets';
 import { store } from '../store/store';
 import { usePrefs } from '../lib/prefs';
 import { ghostLayers, outsideClipPath, setGhostExtent } from './ghost';
+import { fontsReadyFor, fontsReadyNow } from '../lib/fonts';
 import { cachedStill, isCachedUrl, saveStill, stillHash } from '../lib/still-cache';
 
 interface Props {
@@ -154,7 +155,9 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
 
   // What the artboard looks like, as one image, while you work elsewhere (see the stills below). One saved from the last session
   // is here from the first render, so the artboard is never an empty background that fills in later.
-  const key = `${snapKey(artboard)}|${depsKey}|${assetVersion}|${dataVersion}|${snapKey(project.variables)}|${snapKey(project.fonts)}|${themeSig}`;
+  // Bumped when a still had to be made before its fonts had loaded: the next font load makes it again
+  const [fontTick, setFontTick] = useState(0);
+  const key = `${snapKey(artboard)}|${depsKey}|${assetVersion}|${dataVersion}|${snapKey(project.variables)}|${snapKey(project.fonts)}|${themeSig}|${fontTick}`;
   const [snap, setSnap] = useState<Snap | null>(() => {
     const url = active ? null : cachedStill(project.id, artboard.id, stillHash(project, artboard, shownTheme(project, canvasTheme)?.id ?? null));
     return url ? { url, key } : null;
@@ -334,6 +337,13 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
         const { snapshotFromDom, videosReady } = await import('../lib/image-export');
         //A video still loading its first frame would go into the still as a dark box, and stay that way
         await videosReady(r.root);
+        // Text in a fallback face would go into the still and stay that way: wait for the artboard's fonts (and the drawing that follows them)
+        const wasReady = fontsReadyNow(store().get().project, [artboard]);
+        const fontsOk = await fontsReadyFor(store().get().project, [artboard]);
+        if (!fontsOk) {
+          // Gave up waiting: the picture is shown, but not kept for the next session, and it is made again when a font does arrive
+          document.fonts?.addEventListener?.('loadingdone', () => !cancelled && setFontTick((n) => n + 1), { once: true });
+        } else if (!wasReady) await new Promise<void>((r2) => requestAnimationFrame(() => requestAnimationFrame(() => r2())));
         if (cancelled || keyRef.current !== key) return;
         const url = await snapshotFromDom(store().get().project, artboard, r.root, assetUrls.resolve);
         if (cancelled || keyRef.current !== key) {
@@ -341,8 +351,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
           return;
         }
         setSnap({ url, key });
-        // For the next session (the key just confirmed this is the artboard as it is now)
-        saveStill(store().get().project.id, artboard.id, stillHash(store().get().project, artboard, shownTheme(project, canvasTheme)?.id ?? null), url);
+        // For the next session (the key just confirmed this is the artboard as it is now), unless it was drawn before its fonts arrived
+        if (fontsOk) saveStill(store().get().project.id, artboard.id, stillHash(store().get().project, artboard, shownTheme(project, canvasTheme)?.id ?? null), url);
       } catch (err) {
         console.warn('[interactives] artboard still failed', mine, err);
       }

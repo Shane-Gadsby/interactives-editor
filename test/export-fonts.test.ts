@@ -46,7 +46,8 @@ describe('fonts in single-file exports and shares', () => {
     // Both weights share one file, which is fetched once and used by both rules
     expect(asked.filter((u) => u.includes('gstatic'))).toHaveLength(1);
     expect(html.match(/data:font\/woff2/g)).toHaveLength(2);
-    expect(html).not.toContain('fonts.gstatic.com');
+    // The page itself (the player's own source, which can name Google, is in a script element)
+    expect(html.replace(/<script[\s\S]*?<\/script>/g, '')).not.toContain('fonts.gstatic.com');
   });
 
   it('puts the style in the head, ahead of the player, under the id the player checks', async () => {

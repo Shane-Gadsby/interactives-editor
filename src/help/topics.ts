@@ -2778,7 +2778,7 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Results and progress | The score, pass mark and when the project counts as complete. See [Results and progress](results) |
 | Credits | Whether learners get a **Credits** button, and whether exported and shared pages carry the attributions list. The entries are in the **Attributions** tab. See [Attributions and references](attributions) |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
-| Fonts | The fonts the project loads. **Add a Google font…** is a search box over every Google font (type, then <kbd>Enter</kbd> or click; the chips narrow it by Sans, Serif, Display, Handwriting or Mono), or upload font files in the **Assets** panel. New projects start with Open Sans. Choosing a font for a text layer adds it here by itself |`,
+| Fonts | The fonts the project loads. **Add a Google font…** is a search box over every Google font (type, then <kbd>Enter</kbd> or click; the chips narrow it by Sans, Serif, Display, Handwriting or Mono), or upload font files in the **Assets** panel. New projects start with Open Sans. Choosing a font for a text layer adds it here by itself. Fonts come from this server (it keeps a copy of each Google font the first time it is used), and a lesson waits a moment for its fonts before it shows, so text never appears in one font and then changes |`,
   },
 
   {

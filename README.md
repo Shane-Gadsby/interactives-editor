@@ -109,6 +109,7 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 | `GET /api/admin/projects` (power users) | every project for the admin page: owner, sizes (`docSize` recorded on save, files from the sidecars), links, library, learners, open comments; and the bin count |
 | `GET /api/audit` (power users) | governance events newest first, `?project=`, `?event=`, `?limit=` (max 500) |
 | `GET /api/voice`, `POST /api/voice/install`, `POST /api/voice/speak` | the Spelling test's synthesised voice (`voice.js`), staff only. `GET` says `{state: ready \| missing \| installing \| failed \| unsupported, voices, defaultVoice, model}`; `install` starts the one-off model download (see [Voice](#the-spelling-test-voice)); `speak` takes `{parts: [text, ...], voice, speed}` (up to 4 parts of 300 characters, spoken in order with a pause between) and answers a plain wav, or `422 {code: 'unknown-word', word}` when the voice has no pronunciation for a word, `503 {code}` when it is not set up |
+| `GET /fonts/css2`, `GET /fonts/file/<hash>.woff2` | the Google Fonts cache (`fonts-proxy.js`), public like the share pages. `css2?family=Open+Sans:wght@400;700` (or `family=<name>&text=<name>` for the picker's name previews) answers the stylesheet Google would, with every font file rewritten to `file/<hash>.woff2` here and Google's own url kept as the second source; the file route fetches a file from `fonts.gstatic.com` the first time anyone asks and keeps it. See [Fonts](#fonts-the-google-fonts-cache) |
 | `GET /health` | no session: `{ok, version, uptime, mongo: {ok, ms}, storage: {ok, ms}, rooms, mcp}`, 503 when mongo or storage fails |
 | `GET /api/projects/:id/assets/duplicates`, `POST .../assets/dedupe` | groups of assets with the same bytes (sha256 cached in the sidecar); after the editor merges them in the document, each dropped copy becomes a hard link to the kept file |
 | `GET/PUT/DELETE /api/projects/:id` | load / save (`{project, rev}`, a stale `rev` gets a 409) / move to the bin |
@@ -198,6 +199,8 @@ Access works like this:
 | `PORT` | 3048 | |
 | `MONGO_URI` / `mongodb_user` / `mongodb_pass` | dev/dev on 127.0.0.1 | via suite-libs |
 | `INTERACTIVES_STORAGE` | `./storage` | asset files |
+| `INTERACTIVES_FONTS_PROXY` | on | `off` (or `0`/`false`/`no`) turns the Google Fonts cache off: `/fonts/*` answers 404 and the editor and players use Google's own stylesheets |
+| `INTERACTIVES_FONTS_DIR` | `<storage>/_fonts` | where the cache keeps the css and the font files |
 | `INTERACTIVES_VOICE_DIR` | unset | a folder holding the voice model's files (see [Voice](#the-spelling-test-voice)), for a box that cannot download it. Set, the server never downloads |
 | `INTERACTIVES_VOICE_URL` | the sherpa-onnx release on github | where the voice model archive is downloaded from, for a mirror. It is checked against a pinned sha256 either way |
 | `INTERACTIVES_BRAND_GROUP` | unset | an si-admin group whose members may publish and mark brand kits, as well as power users |
@@ -206,6 +209,16 @@ Access works like this:
 | `INTERACTIVES_PUBLIC_URL` | derived from the request | the public origin (`https://host`), used for the LTI 1.3 launch and login addresses |
 | `LTI13_PLATFORMS` | unset | optional JSON array of LTI 1.3 platform registrations (same fields as the admin api, plus `id`) |
 | `LTI13_ALLOW_HTTP` | unset | `1` allows http platform urls, for a development LMS only |
+
+## Fonts (the Google fonts cache)
+
+Browsers never call Google for a font. `fonts-proxy.js` (mounted at `/interactives/fonts`) fetches a family's stylesheet from Google the first time anyone asks (with a current browser's user agent, so it is woff2), rewrites every font file in it to `file/<sha1 of Google's url>.woff2` on this server and keeps both under `storage/_fonts/{css,files}` (not in git; `INTERACTIVES_FONTS_DIR` moves it). A font file is fetched the first time a browser asks for it (a family's css names a file per script, so nobody downloads the Cyrillic one for English), and everything after that comes off disk: the css `Cache-Control: public, max-age=3600` (the media tier, since Google can change a family), the files `public, max-age=31536000, immutable` (the name is a hash of the versioned Google url). Open Sans, the font of every branded starter, is fetched at start-up (`PREWARM` at the top of the file).
+
+It is not an open proxy. Only families in `src/data/google-fonts.json`, weights as `100` to `900` (at most nine), `text=` only when it is the family's own name (the picker's previews), a file only if its url appeared in a stylesheet this server fetched itself and only from `fonts.gstatic.com`, 400 KB per stylesheet and 2 MB per file, at most 4000 stylesheets and 8000 files kept, and 150 cache misses a minute per address (400 in all). Anything over answers 429 or 503; a cache hit never counts.
+
+A failure is soft everywhere. Google down or refusing answers 502 (remembered for five minutes); the stylesheet keeps Google's own url as a second `src` for every file; and the editor and the player retry a stylesheet that errors from Google's own address, so text still renders. The player takes a `fontsBase` option (the full url of this route) and builds its `<link>` from it; with none it uses Google as before. The editor sets it on previews and on the Single HTML file / share pages only when fonts are not embedded (embedded files carry their fonts and call nothing). The Fonts section of `/suite-docs` should say: where the cache lives, that deleting `storage/_fonts` is safe (it refills), that `INTERACTIVES_FONTS_PROXY=off` switches it off, that the box needs outbound https to `fonts.googleapis.com` and `fonts.gstatic.com` only for the first request of each family, and that learners' browsers never contact Google.
+
+The player also holds its first view back (up to 1.5 s) until the fonts that first artboard uses have loaded, so text is never shown in a fallback face and then jumps, and it loads the other artboards' fonts in the background. The editor canvas does the same on opening (and never makes or keeps an artboard picture before the fonts it uses have loaded).
 
 ## The Spelling test voice
 

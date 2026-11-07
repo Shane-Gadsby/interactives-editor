@@ -60,6 +60,7 @@ import { Rulers } from './Rulers';
 import { Icons } from '../components/icons';
 import { freehandToPath } from './freehand';
 import { ArtboardView, holdView, whenViewDrawn } from './ArtboardView';
+import { fontsReadyFor, fontsReadyNow } from '../lib/fonts';
 import { hasCachedStill, stillHash } from '../lib/still-cache';
 import { lookDefaults, lookFor, shownTheme } from '../lib/themes';
 import { viewPlan } from './viewPlan';
@@ -1926,13 +1927,15 @@ export function Canvas() {
   // them back (invisible, but drawn in fuller frames) until the ones in view are done, then fade them in together. Once, at open,
   // and never for longer than OPENING_MAX. (Whether they are in view isn't known yet: the workspace fits the zoom after this first
   // render. A project of a few artboards isn't worth it.)
-  const [opening, setOpening] = useState(() => onCanvas.length > 3);
+  // Also held (briefly) when the artboard being opened draws with a web font that hasn't loaded: the text would first show in a fallback face and jump.
+  const openingFirst = onCanvas.find((ab) => ab.id === s.activeArtboardId) ?? onCanvas[0];
+  const [opening, setOpening] = useState(() => onCanvas.length > 3 || (!!openingFirst && !fontsReadyNow(project, [openingFirst])));
   const [allSaved] = useState(() => onCanvas.every((ab) => ab.id === s.activeArtboardId || hasCachedStill(project.id, ab.id, stillHash(project, ab, shownTheme(project, s.canvasTheme)?.id ?? null))));
   useEffect(() => {
     if (!opening) return;
     let off = false;
     holdView(true);
-    void whenViewDrawn(allSaved ? OPENING_MAX_SAVED : OPENING_MAX).then(() => {
+    void Promise.all([whenViewDrawn(allSaved ? OPENING_MAX_SAVED : OPENING_MAX), openingFirst ? fontsReadyFor(project, [openingFirst]) : null]).then(() => {
       if (off) return;
       holdView(false);
       setOpening(false);
