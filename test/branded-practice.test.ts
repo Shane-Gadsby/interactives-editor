@@ -43,7 +43,7 @@ describe('practice starters', () => {
   };
 
   it('has the starters, keyed practice/', () => {
-    expect(STARTERS.map((s) => s.key)).toEqual(['practice/difficult-conversation']);
+    expect(STARTERS.map((s) => s.key)).toEqual(['practice/difficult-conversation', 'practice/timed-talk-rehearsal']);
   });
 
   for (const starter of STARTERS) {
@@ -125,7 +125,7 @@ describe('practice starters', () => {
         const { project, checklist } = starter.build(COLOURWAYS[0]);
         expect(checklist.some((c) => /recording/i.test(c.text) && /media bridge/i.test(c.text))).toBe(true);
         const slots: SceneNode[] = [];
-        for (const ab of project.artboards) walk(ab.children, (n) => /Recording slot \(media bridge\)/.test(n.name) && slots.push(n));
+        for (const ab of project.artboards) walk(ab.children, (n) => /slot \(media bridge\)/.test(n.name) && slots.push(n));
         expect(slots.length).toBeGreaterThan(0);
         //hidden, so learners never see an empty box, and nothing records
         for (const s of slots) expect(s.visible).toBe(false);
@@ -297,6 +297,271 @@ describe('practice starters', () => {
       await settle(player);
       expect(player.artboard.name).toBe('Ending');
       expect(textOf(layer(p, 'Ending', 'Result').id)).toContain('Still tense');
+      player.destroy();
+    });
+  });
+
+  describe('timed talk rehearsal', () => {
+    const KEY = 'practice/timed-talk-rehearsal';
+    const R = 'Draw, prepare, talk';
+    const SUM = 'Your attempts';
+    const project = () => projectFromBrandedStarter(get(KEY), COLOURWAYS[0]);
+    const open = async (p: Project, page = R) => {
+      const player = play(p);
+      await settle(player, 100);
+      player.goTo(page);
+      await settle(player, 100);
+      return player;
+    };
+    const shown = (p: Project, page: string, name: string) => getComputedStyle(el(layer(p, page, name).id)).display !== 'none';
+    const draw = async (p: Project, player: Player) => {
+      await click(layer(p, R, 'Draw a card').id);
+      await settle(player, 50);
+    };
+
+    it('is framed as rehearsal with no microphone, and offers a bank, timers, a tally and a summary', () => {
+      const p = project();
+      const all = JSON.stringify(p.artboards);
+      expect(all).toMatch(/not assessed/i);
+      expect(all).toMatch(/No microphone is used/);
+      expect(p.variables.map((v) => v.name)).toEqual(expect.arrayContaining(['cards', 'timersOn', 'prepSeconds', 'talkSeconds', 'attempts']));
+      expect(p.variables.find((v) => v.name === 'attempts')!.persist).toBe(true);
+      const cards = JSON.parse(p.variables.find((v) => v.name === 'cards')!.initial as string);
+      expect(cards.length).toBeGreaterThanOrEqual(5);
+      for (const c of cards) {
+        expect(c.q.length).toBeGreaterThan(10);
+        expect(c.model.length).toBeGreaterThan(40);
+        expect(c.points.length).toBeLessThanOrEqual(4);
+      }
+      expect(new Set(cards.map((c: { type: string }) => c.type)).size).toBeGreaterThanOrEqual(3);
+      expect(p.settings.reporting).toBeUndefined();
+    });
+
+    it('opens face down on the draw stage; drawing a card shows it and starts the preparation countdown', async () => {
+      const p = project();
+      const player = await open(p);
+      expect(player.getVariable('stage')).toBe('draw');
+      expect(textOf(layer(p, R, 'Card question').id)).toBe('Draw a card to begin.');
+      expect(shown(p, R, 'Prepare stage')).toBe(false);
+      await draw(p, player);
+      const cards = player.getVariable('cards') as { q: string }[];
+      const cur = player.getVariable('current') as number;
+      expect(cur).toBeGreaterThanOrEqual(0);
+      expect(textOf(layer(p, R, 'Card question').id)).toBe(cards[cur].q);
+      expect(player.getVariable('stage')).toBe('prep');
+      expect(player.getVariable('left')).toBe(30);
+      expect(textOf(layer(p, R, 'Prepare clock').id)).toBe('0:30');
+      expect(shown(p, R, 'Prepare stage')).toBe(true);
+      expect(shown(p, R, 'Draw stage')).toBe(false);
+      player.destroy();
+    });
+
+    it('draws at random and never repeats a card until the whole bank has been drawn', async () => {
+      const p = project();
+      const player = await open(p);
+      const n = (player.getVariable('cards') as unknown[]).length;
+      const order: number[] = [];
+      for (let i = 0; i < n; i++) {
+        player.setVariable('stage', 'draw');
+        await settle(player, 50);
+        await draw(p, player);
+        order.push(player.getVariable('current') as number);
+      }
+      expect(new Set(order).size).toBe(n);
+      //the next draw starts a fresh round and does not repeat the card just drawn
+      player.setVariable('stage', 'draw');
+      await settle(player, 50);
+      await draw(p, player);
+      expect(player.getVariable('seen')).toHaveLength(1);
+      expect(player.getVariable('current')).not.toBe(order[n - 1]);
+      player.destroy();
+    });
+
+    it('with Math.random fixed the draw picks that card', async () => {
+      const p = project();
+      const player = await open(p);
+      const spy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
+      await draw(p, player);
+      spy.mockRestore();
+      expect(player.getVariable('current')).toBe((player.getVariable('cards') as unknown[]).length - 1);
+      player.destroy();
+    });
+
+    it('the preparation clock runs out into the talk, and the talk clock runs out into the tally', async () => {
+      const p = project();
+      const player = await open(p);
+      await draw(p, player);
+      player.setVariable('left', 1);
+      await flush(1150);
+      await settle(player, 50);
+      expect(player.getVariable('stage')).toBe('talk');
+      expect(player.getVariable('left')).toBe(60);
+      expect(shown(p, R, 'Talk stage')).toBe(true);
+      expect(textOf(layer(p, R, 'Talk clock').id)).toMatch(/^(1:00|0:5\d)$/);
+      player.setVariable('left', 1);
+      await flush(1150);
+      await settle(player, 50);
+      expect(player.getVariable('stage')).toBe('tally');
+      expect(shown(p, R, 'Tally stage')).toBe(true);
+      player.destroy();
+    });
+
+    it('the buttons move on early, and lengthened timers (the variables) are used', async () => {
+      const p = project();
+      const player = await open(p);
+      player.setVariable('prepSeconds', 90);
+      player.setVariable('talkSeconds', 150);
+      await draw(p, player);
+      expect(textOf(layer(p, R, 'Prepare clock').id)).toBe('1:30');
+      await click(layer(p, R, 'Prepare button').id);
+      await settle(player, 50);
+      expect(player.getVariable('stage')).toBe('talk');
+      expect(textOf(layer(p, R, 'Talk clock').id)).toBe('2:30');
+      await click(layer(p, R, 'Talk button').id);
+      await settle(player, 50);
+      expect(player.getVariable('stage')).toBe('tally');
+      player.destroy();
+    });
+
+    it('with the timers off nothing counts down, the clock is hidden and the buttons still work', async () => {
+      const p = project();
+      const player = await open(p);
+      //the learner's own switch
+      await click(layer(p, R, 'Timer switch').id);
+      await settle(player, 50);
+      expect(player.getVariable('timersOn')).toBe(false);
+      expect(textOf(layer(p, R, 'Timer switch').id)).toContain('Timers: off');
+      await draw(p, player);
+      expect(player.getVariable('left')).toBe(0);
+      expect(textOf(layer(p, R, 'Prepare clock').id)).toBe('No timer');
+      expect(shown(p, R, 'Prepare track')).toBe(false);
+      await flush(1150);
+      await settle(player, 50);
+      expect(player.getVariable('stage')).toBe('prep');
+      await click(layer(p, R, 'Prepare button').id);
+      await settle(player, 50);
+      expect(player.getVariable('stage')).toBe('talk');
+      await flush(1150);
+      expect(player.getVariable('stage')).toBe('talk');
+      player.destroy();
+    });
+
+    it('the timers can be switched off by the author as the starting value', async () => {
+      const p = project();
+      p.variables.find((v) => v.name === 'timersOn')!.initial = false;
+      const player = await open(p);
+      expect(textOf(layer(p, R, 'Timer switch').id)).toContain('Timers: off');
+      player.destroy();
+    });
+
+    it('the tally counts fillers and pauses (never below zero) and toggles the opening and close', async () => {
+      const p = project();
+      const player = await open(p);
+      await draw(p, player);
+      player.setVariable('stage', 'tally');
+      await settle(player, 50);
+      await click(layer(p, R, 'Fillers more').id);
+      await click(layer(p, R, 'Fillers more').id);
+      await click(layer(p, R, 'Fillers fewer').id);
+      await click(layer(p, R, 'Pauses fewer').id);
+      await click(layer(p, R, 'Pauses more').id);
+      expect(player.getVariable('fillers')).toBe(1);
+      expect(player.getVariable('pauses')).toBe(1);
+      await settle(player, 50);
+      expect(textOf(layer(p, R, 'Fillers count').id)).toBe('1');
+      await click(layer(p, R, 'Clear opening').id);
+      expect(player.getVariable('clearOpening')).toBe(true);
+      await settle(player, 50);
+      expect(el(layer(p, R, 'Clear opening').id).getAttribute('aria-checked')).toBe('true');
+      await click(layer(p, R, 'Clear close').id);
+      expect(player.getVariable('clearClose')).toBe(true);
+      await click(layer(p, R, 'Clear close').id);
+      expect(player.getVariable('clearClose')).toBe(false);
+      await click(layer(p, R, 'Clear opening').id);
+      expect(player.getVariable('clearOpening')).toBe(false);
+      await click(layer(p, R, 'Clear opening').id);
+      await click(layer(p, R, 'To the model answer').id);
+      await settle(player, 50);
+      expect(player.getVariable('stage')).toBe('compare');
+      expect(textOf(layer(p, R, 'Model answer').id)).toBe((player.getVariable('cards') as { model: string }[])[player.getVariable('current') as number].model);
+      player.destroy();
+    });
+
+    const attempt = async (p: Project, player: Player, fill: number, tickPoints: number[]) => {
+      await draw(p, player);
+      player.setVariable('stage', 'tally');
+      await settle(player, 50);
+      for (let i = 0; i < fill; i++) await click(layer(p, R, 'Fillers more').id);
+      await settle(player, 50);
+      await click(layer(p, R, 'Clear opening').id);
+      await click(layer(p, R, 'To the model answer').id);
+      await settle(player, 50);
+      for (const i of tickPoints) await click(`${layer(p, R, 'Point row').id}~${i}`);
+    };
+
+    it('ticks the model answer points, and saving keeps the attempt in the list', async () => {
+      const p = project();
+      const player = await open(p);
+      await attempt(p, player, 3, [0, 2]);
+      expect(player.getVariable('covered')).toEqual([0, 2]);
+      await settle(player, 50);
+      expect(textOf(layer(p, R, 'Points made').id)).toBe('Points made: 2 of 4');
+      expect(document.querySelectorAll(`[data-ix-id^="${layer(p, R, 'Point row').id}~"]`)).toHaveLength(4);
+      await click(layer(p, R, 'Save and next card').id);
+      await settle(player, 50);
+      const list = player.getVariable('attempts') as Record<string, unknown>[];
+      expect(list).toHaveLength(1);
+      expect(list[0]).toMatchObject({ n: 1, fillers: 3, pauses: 0, opening: true, close: false, made: 2, of: 4 });
+      expect(player.getVariable('stage')).toBe('draw');
+      expect(player.artboard.name).toBe(R);
+      player.destroy();
+    });
+
+    it('the summary shows the numbers across attempts and the last rows, and Clear my history empties them', async () => {
+      const p = project();
+      const player = await open(p);
+      await attempt(p, player, 5, [0]);
+      await click(layer(p, R, 'Save and next card').id);
+      await settle(player, 50);
+      await attempt(p, player, 2, [0, 1, 2]);
+      await click(layer(p, R, 'Save and see summary').id);
+      await settle(player);
+      expect(player.artboard.name).toBe(SUM);
+      expect(textOf(layer(p, SUM, 'Attempts').id)).toBe('2');
+      expect(textOf(layer(p, SUM, 'Fillers').id)).toBe('5 to 2');
+      expect(textOf(layer(p, SUM, 'Openings').id)).toBe('2 of 2');
+      expect(textOf(layer(p, SUM, 'Closes').id)).toBe('0 of 2');
+      expect(document.querySelectorAll(`[data-ix-id^="${layer(p, SUM, 'Attempt row').id}~"]`)).toHaveLength(2);
+      expect(textOf(`${layer(p, SUM, 'Cell Fillers').id}~1`)).toBe('2');
+      expect(textOf(`${layer(p, SUM, 'Cell Points').id}~0`)).toBe('1 of 4');
+      await click(layer(p, SUM, 'Clear my history').id);
+      await settle(player, 50);
+      expect(player.getVariable('attempts')).toEqual([]);
+      expect(textOf(layer(p, SUM, 'Empty note').id)).toContain('No attempts yet');
+      await click(layer(p, SUM, 'Draw another card').id);
+      await settle(player);
+      expect(player.artboard.name).toBe(R);
+      expect(player.getVariable('stage')).toBe('draw');
+      player.destroy();
+    });
+
+    it('only the last six attempts are listed, and the attempts are remembered across a reload', async () => {
+      const p = project();
+      let player = await open(p);
+      const many = Array.from({ length: 8 }, (_, i) => ({ n: i + 1, type: 'Viva question', q: `Q${i}`, fillers: 8 - i, pauses: 1, opening: i > 3, close: false, made: 2, of: 4 }));
+      player.setVariable('attempts', many);
+      await settle(player, 100);
+      player.goTo(SUM);
+      await settle(player, 100);
+      expect(document.querySelectorAll(`[data-ix-id^="${layer(p, SUM, 'Attempt row').id}~"]`)).toHaveLength(6);
+      expect(textOf(`${layer(p, SUM, 'Cell No.').id}~0`)).toBe('3');
+      expect(textOf(layer(p, SUM, 'Fillers').id)).toBe('8 to 1');
+      player.flushProgress();
+      player.destroy();
+      document.body.innerHTML = '<div id="stage" style="width:1024px;height:640px"></div>';
+      player = play(p);
+      await settle(player, 100);
+      expect(player.getVariable('attempts')).toHaveLength(8);
       player.destroy();
     });
   });

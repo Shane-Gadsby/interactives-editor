@@ -112,9 +112,9 @@ function build(colourway: Colourway) {
 
     //Stage 2: the expert reply, the framework to tick, and how it landed
     const expHead = heading(ctx, 'Expert heading', 'An expert might say', 0, 0, rw, { fontSize: 20 });
-    const expCard = card(ctx, 'Expert panel', 0, 28, rw, 100);
-    const expert = text(ctx, 'Expert reply', cfg.expert, 16, 40, rw - 32, { fontSize: 16, lineHeight: 1.35, autoSize: 'none', height: 80 });
-    const frameHead = heading(ctx, 'Framework heading', 'What a good reply includes. Tick what you covered.', 0, 138, rw, { fontSize: 17 });
+    const expCard = card(ctx, 'Expert panel', 0, 28, rw, 108);
+    const expert = text(ctx, 'Expert reply', cfg.expert, 16, 38, rw - 32, { fontSize: 15, lineHeight: 1.35, autoSize: 'none', height: 92 });
+    const frameHead = heading(ctx, 'Framework heading', 'What a good reply includes. Tick what you covered.', 0, 146, rw, { fontSize: 17 });
     const tick = createNode('rect', { name: 'Tick box', x: 6, y: 6, width: 22, height: 22, cornerRadius: 6, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true });
     bind(tick, { 'fill.color': `ticked.includes(index) ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `ticked.includes(index) ? "${L.button}" : "${L.border}"` });
     const mark = text(ctx, 'Tick mark', '✓', 10, 5, 18, { fontSize: 16, fontWeight: 700, color: L.onButton, decorative: true });
@@ -122,12 +122,12 @@ function build(colourway: Colourway) {
     const rowText = text(ctx, 'Framework point', '{item}', 40, 6, rw - 52, { fontSize: 16, decorative: true });
     const row = createNode('frame', { name: 'Framework row', x: 0, y: 0, width: rw, height: 34, cornerRadius: 8, fill: solid(L.background), stroke: null, clip: false, role: 'checkbox', focusable: true, cursor: 'pointer', children: [tick, mark, rowText] }) as FrameNode;
     bind(row, { ariaChecked: 'ticked.includes(index)', ariaLabel: 'item', 'fill.color': `ticked.includes(index) ? "${L.surface}" : "${L.background}"` });
-    const rows = createNode('frame', { name: 'Framework', x: 0, y: 164, width: rw, height: 186, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'What a good reply includes', repeat: { items: 'framework', layout: 'grid', gap: 4, columns: 1 }, children: [row] }) as FrameNode;
-    const status = text(ctx, 'Ticked count', 'You ticked {ticked.length} of {framework.length}. Now say how it landed.', 0, 362, rw - 196, { fontSize: 15, color: L.muted });
-    const retry = button(ctx, 'Try this scene again', 'Try again', rw - 180, 356, 180, false);
+    const rows = createNode('frame', { name: 'Framework', x: 0, y: 172, width: rw, height: 186, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'What a good reply includes', repeat: { items: 'framework', layout: 'grid', gap: 4, columns: 1 }, children: [row] }) as FrameNode;
+    const status = text(ctx, 'Ticked count', 'You ticked {ticked.length} of {framework.length}. Now say how it landed.', 0, 370, rw - 196, { fontSize: 15, color: L.muted });
+    const retry = button(ctx, 'Try this scene again', 'Try again', rw - 180, 362, 180, false);
     retry.ariaLabel = 'Try this scene again with a different reply';
-    const calmBtn = button(ctx, 'It calms them', 'It calms them down', 0, 408, (rw - 10) / 2, true);
-    const tenseBtn = button(ctx, 'It makes it tenser', 'It makes it tenser', (rw - 10) / 2 + 10, 408, (rw - 10) / 2, false);
+    const calmBtn = button(ctx, 'It calms them', 'It calms them down', 0, 412, (rw - 10) / 2, true);
+    const tenseBtn = button(ctx, 'It makes it tenser', 'It makes it tenser', (rw - 10) / 2 + 10, 412, (rw - 10) / 2, false);
     const reviewStage = createNode('frame', { name: 'Review stage', x: rx, y: box.y, width: rw, height: box.height, fill: null, stroke: null, clip: false, children: [expHead, expCard, expert, frameHead, rows, status, retry, calmBtn, tenseBtn] }) as FrameNode;
     bind(reviewStage, { visible: 'stage == "review"' });
 
