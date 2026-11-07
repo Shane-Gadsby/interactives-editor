@@ -2,7 +2,8 @@ import { Fragment, useState } from 'react';
 import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { findArtboardOf, isIdentifier } from '../store/doc';
 import { previewScope } from '../lib/data';
-import { IconButton, Section, TextField } from '../components/ui';
+import { IconButton, Section } from '../components/ui';
+import { ExprField, ExprLocals } from '../components/ExprField';
 import { Icons } from '../components/icons';
 import { SearchPicker, type PickerOption } from '../components/SearchPicker';
 import { ConvertersEditor } from '../components/Converters';
@@ -117,6 +118,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
           Nothing is bound yet. A binding ties a property to a variable: in (visible ← lives &gt; 0, the text ← score), out (a dragged layer's x → boxX, a video's position → videoTime) or both ways.
         </p>
       )}
+      <ExprLocals.Provider value={{ self: node }}>
       {entries.map(([p, expr], i) => (
         <Fragment key={p}>
           {i > 0 && <hr className="item-sep" />}
@@ -145,6 +147,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
           />
         </Fragment>
       ))}
+      </ExprLocals.Provider>
       {entries.length > 0 && <hr className="item-sep" />}
       {addPicker(false)}
       {project.variables.some((v) => !isIdentifier(v.name)) && <p className="hint">Some variable names are not valid identifiers and can't be used in formulas.</p>}
@@ -234,7 +237,7 @@ function BindingItem({
           </button>
         </div>
         {formula ? (
-          <TextField value={expr} mono commitOnBlur placeholder="e.g. lives > 0" title="A formula of variables; its result sets the property" onChange={onExpr} />
+          <ExprField value={expr} commitOnBlur placeholder="e.g. lives > 0" title="A formula of variables; its result sets the property" onChange={onExpr} />
         ) : (
           <SearchPicker
             value={expr.trim()}

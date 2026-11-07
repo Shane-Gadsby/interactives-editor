@@ -41,6 +41,10 @@ import { openHelp } from '../help/Help';
 import { slug } from '../help/markdown';
 import { getArtboard } from '../store/doc';
 import { CheckField, NumberField, SelectField, TextField } from '../components/ui';
+import { ExprField } from '../components/ExprField';
+
+/** Names an expression in a graph node sees on top of the project's. */
+const GRAPH_LOCALS = ['event', 'ix'];
 import { CodeEditor } from '../components/CodeEditor';
 import { SplitColumns } from '../components/SplitColumns';
 
@@ -944,13 +948,13 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
                 options={[...opts.map((o) => ({ value: JSON.stringify(o), label: o })), { value: '__expr', label: 'Expression…' }]}
                 onChange={(x) => set(p.key, x === '__expr' ? '' : x)}
               />
-              {!quoted.includes(cur) && <TextField label="Expr" value={cur} mono commitOnBlur placeholder={`e.g. ${JSON.stringify(opts[0] ?? '')}`} onChange={(x) => set(p.key, x)} />}
+              {!quoted.includes(cur) && <ExprField label="Expr" value={cur} locals={GRAPH_LOCALS} commitOnBlur placeholder={`e.g. ${JSON.stringify(opts[0] ?? '')}`} onChange={(x) => set(p.key, x)} />}
             </div>
           );
         }
         return (
           <div key={p.key}>
-            <TextField label={p.label} value={String(v ?? '')} mono commitOnBlur placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
+            <ExprField label={p.label} value={String(v ?? '')} locals={GRAPH_LOCALS} commitOnBlur placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
             <div className="hint">{p.help ?? 'JavaScript expression; variables by name, plus event.'}</div>
           </div>
         );
