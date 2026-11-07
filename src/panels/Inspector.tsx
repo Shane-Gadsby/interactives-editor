@@ -42,7 +42,10 @@ import {
   type Shadow,
   type TextRun,
   type BrandPlace,
+  type TextFit,
   type TextStyle,
+  textAutoSize,
+  textFitOf,
   paintFx,
   type Constraint,
   type ConstraintType,
@@ -1023,6 +1026,39 @@ function RunsEditor({ node: n }: { node: Extract<SceneNode, { type: 'text' }> })
   );
 }
 
+/** Auto text size: the tickbox, and the smallest and largest sizes it may pick (blank is any). Text layers, button labels and links. */
+export function FitTextFields({ nodes }: { nodes: (SceneNode & { fitText?: TextFit | null })[] }) {
+  const n = nodes[0];
+  const ids = nodes.map((x) => x.id);
+  const set = useSetter(ids);
+  const fit = textFitOf(n);
+  const shown = (v?: number | null) => (typeof v === 'number' && v > 0 ? String(v) : '');
+  //Blank, "any" or anything that is not a positive number is "any": the key is left out
+  const limit = (k: 'min' | 'max', v: string) => {
+    const num = Number(v.trim());
+    const next: TextFit = { ...fit };
+    if (v.trim() !== '' && Number.isFinite(num) && num > 0) next[k] = Math.round(num * 100) / 100;
+    else delete next[k];
+    set({ fitText: next });
+  };
+  //Fitting needs a box that stays put, so a text layer goes to Fixed sizing (buttons and links have no Sizing)
+  return (
+    <>
+      <CheckField
+        label="Fit text to box"
+        value={!!fit}
+        onChange={(v) => set(v ? { fitText: {}, ...(nodes.every((x) => x.type === 'text') ? { autoSize: 'none' } : {}) } : { fitText: null })}
+      />
+      {fit && (
+        <Row>
+          <TextField label="Smallest" value={shown(fit.min)} placeholder="any" commitOnBlur onChange={(v) => limit('min', v)} />
+          <TextField label="Largest" value={shown(fit.max)} placeholder="any" commitOnBlur onChange={(v) => limit('max', v)} />
+        </Row>
+      )}
+    </>
+  );
+}
+
 function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[]; project: Project }) {
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
@@ -1045,7 +1081,13 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
     <>
       <FontField label="Font" value={n.fontFamily} mixed={mixedFont} project={project.fonts} onPick={pickFont} />
       <Row>
-        <Num node={n} ids={ids} prop="fontSize" label="Size" min={1} />
+        {textFitOf(n as { fitText?: TextFit | null }) ? (
+          <div className="fit-off" title="The size is chosen for you while Fit text to box is on" {...({ inert: '' } as object)}>
+            <Num node={n} ids={ids} prop="fontSize" label="Size" min={1} />
+          </div>
+        ) : (
+          <Num node={n} ids={ids} prop="fontSize" label="Size" min={1} />
+        )}
         <SelectField
           label="Weight"
           value={String(n.fontWeight)}
@@ -1197,7 +1239,9 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           {nodes.length === 1 && <TextField label="Text" value={n.text} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
           <SelectField
             label="Sizing"
-            value={n.autoSize}
+            title={textFitOf(n) ? 'Fixed while Fit text to box is on: the text is sized to the box, not the box to the text' : undefined}
+            disabled={!!textFitOf(n)}
+            value={textAutoSize(n)}
             options={[
               { value: 'width', label: 'Auto width' },
               { value: 'height', label: 'Auto height' },
@@ -1205,8 +1249,9 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             ]}
             onChange={(v) => set({ autoSize: v })}
           />
+          <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
           <Row>
-            {n.autoSize === 'none' && (
+            {textAutoSize(n) === 'none' && (
               <SelectField<'visible' | 'hidden' | 'ellipsis'>
                 label="Overflow"
                 title="What happens to lines that don't fit the box: shown anyway, clipped at the box, or cut with an ellipsis"
@@ -1290,6 +1335,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           {nodes.length === 1 && <TextField label="Label" value={n.label} onChange={(v) => set({ label: v }, `label-${n.id}`)} />}
           {radius}
           <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
+          <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           <p className="hint">Add a click interaction to make it do something.</p>
         </Section>
@@ -1336,6 +1382,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           {nodes.length === 1 && <TextField label="Text" value={n.text} onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
           <TextField label="URL" value={n.href} onChange={(v) => set({ href: v })} />
           <CheckField label="Open in new tab" value={n.newTab} onChange={(v) => set({ newTab: v })} />
+          <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
         </Section>
       );

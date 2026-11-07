@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { recordDrawnGeometry } from '../store/doc';
 import { flushSync } from 'react-dom';
-import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
 import { canvasResolver, shownTheme } from '../lib/themes';
@@ -273,7 +273,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     // document. Their text is measured when the artboard becomes the active one.
     if (live)
       walk(artboard.children, (n, parent) => {
-        if (n.type !== 'text' || n.autoSize === 'none') return;
+        if (n.type !== 'text' || textAutoSize(n) === 'none') return;
         // Measuring forces a layout: only layers whose text, styling or width changed since they were last measured
         if (!r.textNeedsMeasure(n.id)) return;
         const el = r.element(n.id);
