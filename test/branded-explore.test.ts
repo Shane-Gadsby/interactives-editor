@@ -24,8 +24,8 @@ describe('explore starters', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('has the five starters, keyed explore/...', () => {
-    expect(STARTERS.map((s) => s.key)).toEqual(['explore/image-hotspots', 'explore/accordion', 'explore/flip-and-dialog-cards', 'explore/image-slider', 'explore/before-and-after']);
+  it('has the first five starters, keyed explore/... (more follow, see branded-explore-2)', () => {
+    expect(STARTERS.slice(0, 5).map((s) => s.key)).toEqual(['explore/image-hotspots', 'explore/accordion', 'explore/flip-and-dialog-cards', 'explore/image-slider', 'explore/before-and-after']);
   });
 
   for (const s of STARTERS) {
