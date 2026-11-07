@@ -465,7 +465,7 @@ Double-click a text layer to edit it. Select some of the text, then:
 | Hold <kbd>Alt</kbd> while drawing or resizing | Work from the centre |
 | Hold <kbd>Ctrl</kbd> while dragging | Move without snapping |
 | <kbd>Alt</kbd>-click a path point | Switch it between curve and corner |
-| <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Select the deepest layer inside groups |
+| <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Add it to the selection, or take it out (it picks the deepest layer inside groups, so you can gather layers from different groups) |
 | Double-click a group | Select inside it |
 
 While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kbd> resizes from the centre. In number fields, drag the label to scrub (<kbd>Shift</kbd> ×10, <kbd>Alt</kbd> ×0.1), use arrow keys to step, or type sums like \`100/2\`.`,

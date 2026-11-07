@@ -1465,7 +1465,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onChange={(v) => set({ fitContents: v ? undefined : false })}
           />
           {(n as GroupNode).fitContents !== false && (n.rotation || n.scaleX !== 1 || n.scaleY !== 1) ? <p className="hint">This group is rotated or scaled, so its box stays as it is (refitting it would move its pivot).</p> : null}
-          <p className="hint">Double-click to select inside. Ctrl/⌘-click selects deep layers directly.</p>
+          <p className="hint">Double-click to select inside. Ctrl/⌘-click adds a layer inside to the selection.</p>
         </Section>
       );
     default:

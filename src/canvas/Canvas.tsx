@@ -72,6 +72,9 @@ import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
 import { rangeLabel } from '../lib/variants-edit';
 import { boneEndAt, boneFromDrag, boneGlyphs } from '../lib/rig';
 
+/** Shift, Ctrl or Cmd held on a click: add to the selection (or take out of it) instead of replacing it. Ctrl and Cmd still pick the deepest layer too. */
+const adds = (e: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => e.shiftKey || e.ctrlKey || e.metaKey;
+
 type Pt = { x: number; y: number };
 
 type Drag =
@@ -498,7 +501,8 @@ export function Canvas() {
           setBoneDraft({ abId: ab.id, a: glyph.tip, b: glyph.tip });
           return;
         }
-        const sel = e.shiftKey ? (st.selection.includes(a) ? st.selection.filter((x) => x !== a) : [...st.selection, a]) : st.selection.includes(a) && st.selection.length > 1 ? st.selection : [a];
+        //Shift, Ctrl or Cmd adds to the selection (or takes this one out of it)
+        const sel = adds(e) ? (st.selection.includes(a) ? st.selection.filter((x) => x !== a) : [...st.selection, a]) : st.selection.includes(a) && st.selection.length > 1 ? st.selection : [a];
         store().set({ selection: sel, artboardSelected: false, editingPathId: null });
         if (loc.node.locked) return;
         if (b === 'base') {
@@ -591,15 +595,15 @@ export function Canvas() {
       }
       if (hit) {
         let sel = store().get().selection;
-        if (e.shiftKey) sel = sel.includes(hit.id) ? sel.filter((x) => x !== hit.id) : [...sel, hit.id];
+        if (adds(e)) sel = sel.includes(hit.id) ? sel.filter((x) => x !== hit.id) : [...sel, hit.id];
         else if (!sel.includes(hit.id)) sel = [hit.id];
         store().set({ selection: sel, artboardSelected: false });
         if (sel.includes(hit.id)) startMove(hitAb, p, e.altKey);
         return;
       }
       // Empty part of an artboard: marquee.
-      store().set({ selection: e.shiftKey ? st.selection : [], artboardSelected: false, focusId: e.shiftKey ? st.focusId : null });
-      drag.current = { kind: 'marquee', abId: hitAb.id, start: p, additive: e.shiftKey ? st.selection : [] };
+      store().set({ selection: adds(e) ? st.selection : [], artboardSelected: false, focusId: adds(e) ? st.focusId : null });
+      drag.current = { kind: 'marquee', abId: hitAb.id, start: p, additive: adds(e) ? st.selection : [] };
       setBox({ abId: hitAb.id, rect: { x: p.x, y: p.y, width: 0, height: 0 } });
       return;
     }
