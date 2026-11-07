@@ -1,4 +1,4 @@
-import { cuesFromTranscript, parseCaptions, sortedCues, trackSpan, uid, type AudioRole, type AudioTrack, type CaptionCue, type CaptionTrack, type Project, type Timeline, type TimingMode } from 'interactives-player';
+import { cuesFromTranscript, overlappingSpeech, parseCaptions, sortedCues, trackSpan, uid, type AudioRole, type AudioTrack, type CaptionCue, type CaptionTrack, type Project, type Timeline, type TimingMode } from 'interactives-player';
 import { uniqueIdentifier } from '../store/doc';
 
 /**
@@ -37,6 +37,45 @@ export function ensureCaptionTrack(tl: Timeline, lang?: string): CaptionTrack {
   const track: CaptionTrack = { id: uid('ct'), name: lang ? lang : list.length ? `Captions ${list.length + 1}` : 'Captions', ...(lang ? { lang } : {}), cues: [] };
   list.push(track);
   return track;
+}
+
+/** The timeline's description track in a language (what is on screen, read aloud and listed in the transcript), made when there is none. */
+export function ensureDescriptionTrack(tl: Timeline, lang?: string): CaptionTrack {
+  const list = (tl.descriptions ??= []);
+  const found = lang ? list.find((t) => (t.lang ?? '').toLowerCase() === lang.toLowerCase()) : list[0];
+  if (found) return found;
+  const track: CaptionTrack = { id: uid('dt'), name: lang ? `Descriptions (${lang})` : list.length ? `Descriptions ${list.length + 1}` : 'Descriptions', ...(lang ? { lang } : {}), cues: [] };
+  list.push(track);
+  return track;
+}
+
+/** Which list a track id is in: the caption tracks, the description tracks, or neither. Ids are unique across both. */
+export function trackKind(tl: Pick<Timeline, 'captions' | 'descriptions'>, id: string): 'captions' | 'descriptions' | null {
+  if (tl.captions?.some((t) => t.id === id)) return 'captions';
+  if (tl.descriptions?.some((t) => t.id === id)) return 'descriptions';
+  return null;
+}
+
+/** A caption or description track by id (the timeline may be an immer draft). */
+export function findTrack(tl: Pick<Timeline, 'captions' | 'descriptions'>, id: string): CaptionTrack | undefined {
+  return tl.captions?.find((t) => t.id === id) ?? tl.descriptions?.find((t) => t.id === id);
+}
+
+/** Take a description track out of the timeline, and the list with it when it was the last. */
+export function removeTrack(tl: Pick<Timeline, 'captions' | 'descriptions'>, id: string): void {
+  if (tl.captions?.some((t) => t.id === id)) {
+    tl.captions = tl.captions.filter((t) => t.id !== id);
+    if (!tl.captions.length) delete tl.captions;
+  }
+  if (tl.descriptions?.some((t) => t.id === id)) {
+    tl.descriptions = tl.descriptions.filter((t) => t.id !== id);
+    if (!tl.descriptions.length) delete tl.descriptions;
+  }
+}
+
+/** Captions that run while this description does: the voice would talk over them, so a description belongs in the gap. */
+export function descriptionClashes(tl: Pick<Timeline, 'captions'>, cue: Pick<CaptionCue, 'start' | 'end'>): CaptionCue[] {
+  return (tl.captions ?? []).flatMap((t) => overlappingSpeech(cue, t.cues));
 }
 
 /** Keep a track's cues in time order (the player does not need it, the lanes and exports read better). */
@@ -164,10 +203,10 @@ export function importCaptionFile(track: CaptionTrack, text: string, append: boo
   return { made: parsed.cues.length, warnings: parsed.warnings };
 }
 
-/** A name for an exported file: the project, the timeline and the language. */
-export function captionFileName(project: Pick<Project, 'name'>, tl: Pick<Timeline, 'name'>, track: Pick<CaptionTrack, 'lang'>, ext: 'vtt' | 'srt'): string {
+/** A name for an exported file: the project, the timeline, the language, and "descriptions" for a description track. */
+export function captionFileName(project: Pick<Project, 'name'>, tl: Pick<Timeline, 'name'>, track: Pick<CaptionTrack, 'lang'>, ext: 'vtt' | 'srt', kind: 'captions' | 'descriptions' = 'captions'): string {
   const safe = (s: string) => s.replace(/[^\w.\- ]+/g, '').trim().replace(/\s+/g, '-');
-  return [safe(project.name) || 'project', safe(tl.name), safe(track.lang ?? '')].filter(Boolean).join('-') + `.${ext}`;
+  return [safe(project.name) || 'project', safe(tl.name), safe(track.lang ?? ''), kind === 'descriptions' ? 'descriptions' : ''].filter(Boolean).join('-') + `.${ext}`;
 }
 
 /** The caption text variable a caption layer reads, made when the project has none. Returns its id and name. */

@@ -3,5 +3,6 @@ import type { BrandedStarter } from '../kit';
 import { observeAndTag } from './media/observe-and-tag';
 import { listeningLab } from './media/listening-lab';
 import { liteLesson } from './media/lite-lesson';
+import { describedVideo } from './media/described-video';
 
-export const STARTERS: BrandedStarter[] = [observeAndTag, listeningLab, liteLesson];
+export const STARTERS: BrandedStarter[] = [observeAndTag, listeningLab, describedVideo, liteLesson];

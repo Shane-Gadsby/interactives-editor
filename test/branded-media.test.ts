@@ -46,7 +46,7 @@ describe('media starters', () => {
   };
 
   it('has the starters, keyed media/', () => {
-    expect(STARTERS.map((s) => s.key)).toEqual(expect.arrayContaining(['media/observe-and-tag', 'media/listening-lab', 'media/lite-lesson']));
+    expect(STARTERS.map((s) => s.key)).toEqual(expect.arrayContaining(['media/observe-and-tag', 'media/listening-lab', 'media/lite-lesson', 'media/described-video']));
   });
 
   for (const starter of STARTERS) {

@@ -5,7 +5,7 @@ import { store } from '../store/store';
 import { assetKind, assetUrls } from '../lib/assets';
 import { pickFiles } from '../lib/insert';
 import { download } from '../lib/export';
-import { addAudioTrack, addCue, captionFileName, ensureCaptionTrack, importCaptionFile, mergeWithNext, orderCues, pasteTranscript, shiftCues, splitCue, type PasteTiming } from '../lib/captions-edit';
+import { addAudioTrack, addCue, captionFileName, descriptionClashes, ensureCaptionTrack, findTrack, importCaptionFile, mergeWithNext, orderCues, pasteTranscript, removeTrack, shiftCues, splitCue, trackKind, type PasteTiming } from '../lib/captions-edit';
 import { audioDuration, barsFor, loadWaveform, type Waveform } from '../lib/waveform';
 import { alertDialog, confirmDialog } from '../components/dialogs';
 import { CheckField, NumberField, SelectField, TextField } from '../components/ui';
@@ -84,10 +84,11 @@ function WaveCanvas({ w, from, to, width, height }: { w: Waveform; from: number;
 // ---------------------------------------------------------------------------
 // Labels (the left column)
 
-export function MediaLabels({ ctx, assetsFor, onAddSound, onCaptionAction }: { ctx: MediaCtx; assetsFor: { id: string; name: string }[]; onAddSound: (assetId: string) => void; onCaptionAction: (a: string) => void }) {
+export function MediaLabels({ ctx, assetsFor, onAddSound, onCaptionAction, onDescriptionAction }: { ctx: MediaCtx; assetsFor: { id: string; name: string }[]; onAddSound: (assetId: string) => void; onCaptionAction: (a: string) => void; onDescriptionAction: (a: string) => void }) {
   const { tl, sel, setSel, setTl } = ctx;
   const audio = tl.audio ?? [];
   const caps = tl.captions ?? [];
+  const descs = tl.descriptions ?? [];
   return (
     <div className="media-labels">
       <div className="track-node media-head">
@@ -187,6 +188,39 @@ export function MediaLabels({ ctx, assetsFor, onAddSound, onCaptionAction }: { c
           </span>
         </div>
       ))}
+      <div className="track-node media-head">
+        <span>Descriptions</span>
+        <select
+          className="media-add"
+          value=""
+          title="Say what is on screen for people who cannot see it: short sentences in the gaps, read by the viewer's own voice. Not a recorded described version"
+          aria-label="Descriptions actions"
+          onChange={(e) => {
+            if (e.target.value) onDescriptionAction(e.target.value);
+            e.target.value = '';
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <option value="">Descriptions…</option>
+          <option value="cue">New description at the playhead</option>
+          <option value="import">Import WebVTT or SRT…</option>
+          <option value="vtt" disabled={!descs.some((c) => c.cues.length)}>
+            Export WebVTT
+          </option>
+          <option value="srt" disabled={!descs.some((c) => c.cues.length)}>
+            Export SRT
+          </option>
+          <option value="track">Add a language…</option>
+        </select>
+      </div>
+      {descs.map((c) => (
+        <div key={c.id} className={`track-label media-label caption-label description-label${sel && 'track' in sel && sel.track === c.id && sel.kind !== 'audio' && sel.kind !== 'vkey' ? ' selected' : ''}`} style={{ height: CAPTION_ROW }} onClick={() => setSel({ kind: 'captions', track: c.id })}>
+          <span className="media-name" title={`${c.name}${c.lang ? ` (${c.lang})` : ''}: ${c.cues.length} description${c.cues.length === 1 ? '' : 's'}`}>
+            {c.name}
+            <small>{c.lang || 'no language'}</small>
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -205,6 +239,10 @@ export function MediaLanes({ ctx }: { ctx: MediaCtx }) {
       <div className="lane node-lane media-head" onPointerDown={ctx.scrub} />
       {(tl.captions ?? []).map((c) => (
         <CaptionLane key={c.id} ctx={ctx} track={c} />
+      ))}
+      <div className="lane node-lane media-head" onPointerDown={ctx.scrub} />
+      {(tl.descriptions ?? []).map((c) => (
+        <CaptionLane key={c.id} ctx={ctx} track={c} kind="descriptions" />
       ))}
     </div>
   );
@@ -355,8 +393,10 @@ function AudioLane({ ctx, track }: { ctx: MediaCtx; track: AudioTrack }) {
   );
 }
 
-function CaptionLane({ ctx, track }: { ctx: MediaCtx; track: CaptionTrack }) {
-  const { pxPerMs, sel, setSel, setTl, playhead } = ctx;
+/** A lane of cues: a caption track, or (`kind` descriptions) a description track, which shares everything but the words around it. */
+function CaptionLane({ ctx, track, kind = 'captions' }: { ctx: MediaCtx; track: CaptionTrack; kind?: 'captions' | 'descriptions' }) {
+  const { pxPerMs, sel, setSel, setTl, playhead, tl } = ctx;
+  const described = kind === 'descriptions';
   const drag = (e: React.PointerEvent, cue: CaptionCue, mode: 'move' | 'start' | 'end') => {
     e.stopPropagation();
     setSel({ kind: 'cue', track: track.id, cue: cue.id });
@@ -372,7 +412,7 @@ function CaptionLane({ ctx, track }: { ctx: MediaCtx; track: CaptionTrack }) {
     const move = (ev: PointerEvent) => {
       const dt = (ev.clientX - startX) / pxPerMs;
       setTl((d) => {
-        const c = d.captions?.find((x) => x.id === track.id)?.cues.find((x) => x.id === cue.id);
+        const c = findTrack(d, track.id)?.cues.find((x) => x.id === cue.id);
         if (!c) return;
         if (mode === 'move') {
           const len = e0 - s0;
@@ -386,7 +426,7 @@ function CaptionLane({ ctx, track }: { ctx: MediaCtx; track: CaptionTrack }) {
       el.removeEventListener('pointermove', move);
       el.removeEventListener('pointerup', up);
       setTl((d) => {
-        const t = d.captions?.find((x) => x.id === track.id);
+        const t = findTrack(d, track.id);
         if (t) orderCues(t);
       });
       store().commit();
@@ -396,7 +436,7 @@ function CaptionLane({ ctx, track }: { ctx: MediaCtx; track: CaptionTrack }) {
   };
   return (
     <div
-      className="lane caption-lane"
+      className={`lane caption-lane${described ? ' description-lane' : ''}`}
       style={{ height: CAPTION_ROW }}
       onPointerDown={ctx.scrub}
       onDoubleClick={(e) => {
@@ -404,8 +444,8 @@ function CaptionLane({ ctx, track }: { ctx: MediaCtx; track: CaptionTrack }) {
         const at = Math.round(ctx.timeAt(e.clientX));
         let id = '';
         setTl((d) => {
-          const t = d.captions?.find((x) => x.id === track.id);
-          if (t) id = addCue(t, at).id;
+          const t = findTrack(d, track.id);
+          if (t) id = addCue(t, at, described ? 3000 : 2500, described ? 'New description' : 'New caption').id;
         });
         if (id) setSel({ kind: 'cue', track: track.id, cue: id });
       }}
@@ -413,9 +453,9 @@ function CaptionLane({ ctx, track }: { ctx: MediaCtx; track: CaptionTrack }) {
       {track.cues.map((c) => (
         <div
           key={c.id}
-          className={`cue${sel?.kind === 'cue' && sel.cue === c.id ? ' selected' : ''}${playhead >= c.start && playhead < c.end ? ' live' : ''}`}
+          className={`cue${described ? ' desc' : ''}${described && descriptionClashes(tl, c).length ? ' clash' : ''}${sel?.kind === 'cue' && sel.cue === c.id ? ' selected' : ''}${playhead >= c.start && playhead < c.end ? ' live' : ''}`}
           style={{ left: X(pxPerMs, c.start), width: Math.max(8, (c.end - c.start) * pxPerMs), top: 3, height: CAPTION_ROW - 6 }}
-          title={`${clockLabel(c.start)} to ${clockLabel(c.end)}${c.speaker ? `, ${c.speaker}` : ''}: ${c.text}. Drag to move it, drag an edge to retime it`}
+          title={`${clockLabel(c.start)} to ${clockLabel(c.end)}${c.speaker ? `, ${c.speaker}` : ''}: ${c.text}.${described && descriptionClashes(tl, c).length ? ' It overlaps a caption, so the voice would talk over the speech.' : ''} Drag to move it, drag an edge to retime it`}
           onPointerDown={(e) => drag(e, c, 'move')}
         >
           <span className="cue-edge start" onPointerDown={(e) => drag(e, c, 'start')} />
@@ -423,7 +463,7 @@ function CaptionLane({ ctx, track }: { ctx: MediaCtx; track: CaptionTrack }) {
           <span className="cue-edge end" onPointerDown={(e) => drag(e, c, 'end')} />
         </div>
       ))}
-      {!track.cues.length && <span className="lane-hint">Double-click here to add a caption, or paste a transcript from the Captions menu</span>}
+      {!track.cues.length && <span className="lane-hint">{described ? 'Double-click here to add a description of what is on screen, in a gap between the speech' : 'Double-click here to add a caption, or paste a transcript from the Captions menu'}</span>}
     </div>
   );
 }
@@ -525,11 +565,13 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
       </div>
     );
   }
-  const track = tl.captions?.find((c) => c.id === sel.track);
+  const track = findTrack(tl, sel.track);
   if (!track) return null;
+  const described = trackKind(tl, track.id) === 'descriptions';
+  const noun = described ? 'description' : 'caption';
   const setTrack = (fn: (t: CaptionTrack) => void, coalesce?: string) =>
     setTl((d) => {
-      const t = d.captions?.find((x) => x.id === track.id);
+      const t = findTrack(d, track.id);
       if (t) fn(t);
     }, coalesce);
   if (sel.kind === 'cue') {
@@ -543,24 +585,33 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
     return (
       <div className="key-editor media-editor">
         <div className="field-label block">
-          Caption {clockLabel(cue.start)} to {clockLabel(cue.end)}
+          {described ? 'Description' : 'Caption'} {clockLabel(cue.start)} to {clockLabel(cue.end)}
         </div>
-        <TextField label="Text" title="What shows on screen. A line break makes a second line" value={cue.text} multiline rows={3} commitOnBlur onChange={(v) => setCue((c) => void (c.text = v))} />
-        <TextField label="Speaker" title="Shown before the words (Dr Lee: ...) and in the transcript. Leave empty for one voice" value={cue.speaker ?? ''} commitOnBlur onChange={(v) => setCue((c) => void (c.speaker = v.trim() || undefined))} />
+        <TextField
+          label="Text"
+          title={described ? 'What is on screen, in a sentence a voice can read. It is not drawn: it is read aloud when descriptions are on, and listed in the transcript' : 'What shows on screen. A line break makes a second line'}
+          value={cue.text}
+          multiline
+          rows={3}
+          commitOnBlur
+          onChange={(v) => setCue((c) => void (c.text = v))}
+        />
+        {!described && <TextField label="Speaker" title="Shown before the words (Dr Lee: ...) and in the transcript. Leave empty for one voice" value={cue.speaker ?? ''} commitOnBlur onChange={(v) => setCue((c) => void (c.speaker = v.trim() || undefined))} />}
+        {described && descriptionClashes(tl, cue).length > 0 && <p className="hint warn">This overlaps a caption, so the voice would talk over the speech. Move it into a gap, or shorten it.</p>}
         <NumberField label="Start" value={cue.start} min={0} step={10} suffix="ms" onChange={(v) => setCue((c) => void (c.start = Math.max(0, Math.min(c.end - 100, Math.round(v)))), `cue-start-${cue.id}`)} />
         <NumberField label="End" value={cue.end} min={0} step={10} suffix="ms" onChange={(v) => setCue((c) => void (c.end = Math.max(c.start + 100, Math.round(v))), `cue-end-${cue.id}`)} />
         <div className="row wrap">
-          <button className="btn small-btn" title="Make the caption start at the playhead" onClick={() => setCue((c) => void (c.start = Math.max(0, Math.min(c.end - 100, Math.round(playhead)))))}>
+          <button className="btn small-btn" title={`Make the ${noun} start at the playhead`} onClick={() => setCue((c) => void (c.start = Math.max(0, Math.min(c.end - 100, Math.round(playhead)))))}>
             Start = playhead
           </button>
-          <button className="btn small-btn" title="Make the caption end at the playhead" onClick={() => setCue((c) => void (c.end = Math.max(c.start + 100, Math.round(playhead))))}>
+          <button className="btn small-btn" title={`Make the ${noun} end at the playhead`} onClick={() => setCue((c) => void (c.end = Math.max(c.start + 100, Math.round(playhead))))}>
             End = playhead
           </button>
         </div>
         <div className="row wrap">
           <button
             className="btn small-btn"
-            title="Cut this caption in two at the playhead, sharing the words out by time"
+            title={`Cut this ${noun} in two at the playhead, sharing the words out by time`}
             disabled={!(playhead > cue.start + 50 && playhead < cue.end - 50)}
             onClick={() => {
               let nid: string | null = null;
@@ -572,7 +623,7 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
           </button>
           <button
             className="btn small-btn"
-            title="Join this caption and the next one"
+            title={`Join this ${noun} and the next one`}
             disabled={[...track.cues].sort((a, b) => a.start - b.start).findIndex((c) => c.id === cue.id) >= track.cues.length - 1}
             onClick={() => setTrack((t) => void mergeWithNext(t, cue.id))}
           >
@@ -595,16 +646,26 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
   const voices = typeof speechSynthesis !== 'undefined' ? localVoices(speechSynthesis.getVoices()) : [];
   return (
     <div className="key-editor media-editor">
-      <div className="field-label block">Caption track: {track.name}</div>
+      <div className="field-label block">
+        {described ? 'Description' : 'Caption'} track: {track.name}
+      </div>
       <TextField label="Name" value={track.name} commitOnBlur onChange={(v) => setTrack((t) => void (t.name = v || t.name))} />
       <TextField label="Language" title="A language tag such as en, fr or pt-BR. With more than one language the viewer gets a language menu" value={track.lang ?? ''} placeholder="en" commitOnBlur onChange={(v) => setTrack((t) => void (t.lang = v.trim() || undefined))} />
       <p className="hint">
-        {track.cues.length} caption{track.cues.length === 1 ? '' : 's'}.
+        {track.cues.length} {noun}
+        {track.cues.length === 1 ? '' : 's'}.
       </p>
+      {described && (
+        <p className="hint">
+          When the viewer has descriptions on, a voice on their device reads each one as the timeline reaches it and the sound is turned down while it speaks. Keep them in gaps between speech, one clear sentence each. They are also listed in the transcript, which works with no voice. This is a cheaper aid, not a recorded described version.
+        </p>
+      )}
       <div className="row wrap">
-        <button className="btn small-btn" title="Paste a transcript and turn it into timed captions" onClick={onPaste}>
-          Paste a transcript…
-        </button>
+        {!described && (
+          <button className="btn small-btn" title="Paste a transcript and turn it into timed captions" onClick={onPaste}>
+            Paste a transcript…
+          </button>
+        )}
         <button
           className="btn small-btn"
           title="Move every caption later (or earlier with a minus) by the amount you give"
@@ -616,27 +677,24 @@ export function MediaEditor({ ctx, onPaste }: { ctx: MediaCtx; onPaste: () => vo
           Shift all…
         </button>
       </div>
-      <CheckField
+      {!described && <CheckField
         label="Read aloud (draft voice)"
         title="The player reads each caption aloud with a voice installed on the viewer's device. A stand-in until the real recording is in. Voices that need the internet are never used"
         value={!!track.speak}
         onChange={(v) => setTrack((t) => void (t.speak = v ? true : undefined))}
-      />
-      {track.speak && (
+      />}
+      {(track.speak || described) && (
         <p className="hint">
-          {voices.length ? `${voices.length} voice${voices.length === 1 ? '' : 's'} on this device can read it (none of them send anything anywhere).` : 'No voice that runs on this device was found, so nothing will be read. Viewers with one will hear it. Voices that need the internet are never used.'}
+          {voices.length ? `${voices.length} voice${voices.length === 1 ? '' : 's'} on this device can read ${described ? 'them' : 'it'} (none of them send anything anywhere).` : `No voice that runs on this device was found, so nothing will be read. Viewers with one will hear ${described ? 'them' : 'it'}. Voices that need the internet are never used.`}
         </p>
       )}
       <div className="row wrap">
         <button
           className="btn small-btn"
-          title="Delete this caption track and all its captions"
+          title={`Delete this ${noun} track and all its ${noun}s`}
           onClick={async () => {
-            if (!(await confirmDialog({ title: 'Delete caption track', message: `Delete "${track.name}" and its ${track.cues.length} captions?`, confirmLabel: 'Delete', danger: true }))) return;
-            setTl((d) => {
-              d.captions = d.captions?.filter((c) => c.id !== track.id);
-              if (!d.captions?.length) delete d.captions;
-            });
+            if (!(await confirmDialog({ title: `Delete ${noun} track`, message: `Delete "${track.name}" and its ${track.cues.length} ${noun}s?`, confirmLabel: 'Delete', danger: true }))) return;
+            setTl((d) => removeTrack(d, track.id));
             setSel(null);
           }}
         >
@@ -666,7 +724,7 @@ export function TranscriptDialog({ tl, track, onClose, onDone }: { tl: TL; track
   const apply = () => {
     const box: { result: ReturnType<typeof pasteTranscript> } = { result: { error: 'Nothing happened.' } };
     store().updateTimeline((d) => {
-      const t = (d as TL).captions?.find((c) => c.id === track.id);
+      const t = findTrack(d as TL, track.id);
       if (t) box.result = pasteTranscript(d as TL, t, text, { timing, by, append });
     });
     const result = box.result;
@@ -750,7 +808,7 @@ export async function addSoundToTimeline(assetId: string, playhead: number): Pro
 
 export function exportCaptions(project: Project, tl: TL, track: CaptionTrack, kind: 'vtt' | 'srt'): void {
   const body = kind === 'vtt' ? cuesToVtt(track.cues) : cuesToSrt(track.cues);
-  download(new Blob([body], { type: kind === 'vtt' ? 'text/vtt' : 'application/x-subrip' }), captionFileName(project, tl, track, kind));
+  download(new Blob([body], { type: kind === 'vtt' ? 'text/vtt' : 'application/x-subrip' }), captionFileName(project, tl, track, kind, trackKind(tl, track.id) ?? 'captions'));
 }
 
 /** Read a WebVTT or SRT file into a caption track (after asking whether to replace what is there). */
@@ -765,17 +823,19 @@ export async function importCaptionsInto(trackId: string): Promise<string | null
     return null;
   }
   let append = false;
-  const track = store().get().project.artboards.flatMap((a) => a.timelines).flatMap((t) => t.captions ?? []).find((c) => c.id === trackId);
+  const found = store().get().project.artboards.flatMap((a) => a.timelines).find((t) => findTrack(t, trackId));
+  const track = found ? findTrack(found, trackId) : undefined;
+  const noun = found && trackKind(found, trackId) === 'descriptions' ? 'description' : 'caption';
   if (track?.cues.length) {
-    const replace = await confirmDialog({ title: 'Import captions', message: `This track already has ${track.cues.length} captions. Replace them with the ${check.cues.length} in ${files[0].name}?`, confirmLabel: 'Replace them', cancelLabel: 'Add to them' });
+    const replace = await confirmDialog({ title: `Import ${noun}s`, message: `This track already has ${track.cues.length} ${noun}s. Replace them with the ${check.cues.length} in ${files[0].name}?`, confirmLabel: 'Replace them', cancelLabel: 'Add to them' });
     append = !replace;
   }
   let out = { made: 0, warnings: [] as string[] };
   store().updateTimeline((d) => {
-    const t = (d as TL).captions?.find((c) => c.id === trackId);
+    const t = findTrack(d as TL, trackId);
     if (t) out = importCaptionFile(t, text, append);
   });
-  return `${out.made} caption${out.made === 1 ? '' : 's'} imported from ${files[0].name}.${out.warnings.length ? ` ${out.warnings.join(' ')}` : ''}`;
+  return `${out.made} ${noun}${out.made === 1 ? '' : 's'} imported from ${files[0].name}.${out.warnings.length ? ` ${out.warnings.join(' ')}` : ''}`;
 }
 
 export { ensureCaptionTrack, addCue };

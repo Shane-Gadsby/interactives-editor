@@ -77,7 +77,7 @@ import { WeightSection } from './WeightSection';
 import { RecordsSection } from './RecordsSection';
 import { SensorsSection } from './SensorsSection';
 import { CreditsSettingsFields } from './CreditsPanel';
-import { CaptionsSection, VideoCaptions } from './CaptionsSection';
+import { CaptionsSection, VideoCaptions, VideoDescriptions } from './CaptionsSection';
 import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
 import { StepsSection } from './StepsSection';
@@ -1393,6 +1393,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           {radius}
           <p className="hint">To use where the video is, whether it's playing or how long it is, add a <strong>Data binding</strong> below (Playback position, Playing, Playback speed, Length) and pick which way it goes.</p>
           <VideoCaptions node={n} set={(patch) => set(patch)} />
+          <VideoDescriptions node={n} set={(patch) => set(patch)} />
         </Section>
       );
     case 'instance':
