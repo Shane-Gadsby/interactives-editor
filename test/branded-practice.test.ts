@@ -43,7 +43,7 @@ describe('practice starters', () => {
   };
 
   it('has the starters, keyed practice/', () => {
-    expect(STARTERS.map((s) => s.key)).toEqual(['practice/difficult-conversation', 'practice/timed-talk-rehearsal', 'practice/keep-the-beat']);
+    expect(STARTERS.map((s) => s.key)).toEqual(['practice/difficult-conversation', 'practice/timed-talk-rehearsal', 'practice/keep-the-beat', 'practice/sign-practice']);
   });
 
   for (const starter of STARTERS) {
@@ -119,10 +119,11 @@ describe('practice starters', () => {
           spy.mockRestore();
           expect(errors).toEqual([]);
         }
-      });
+        //Sign practice has a portrait copy of every page, so it visits more than the others
+      }, 30000);
 
-      //Keep the beat records nothing, so only the rehearsals carry a slot
-      it.skipIf(starter.key === 'practice/keep-the-beat')('has a checklist item that marks the recording slot for the media bridge', () => {
+      //Keep the beat records nothing, and Sign practice uses the real bridge nodes, so only the older rehearsals carry a slot
+      it.skipIf(starter.key === 'practice/keep-the-beat' || starter.key === 'practice/sign-practice')('has a checklist item that marks the recording slot for the media bridge', () => {
         const { project, checklist } = starter.build(COLOURWAYS[0]);
         expect(checklist.some((c) => /recording/i.test(c.text) && /media bridge/i.test(c.text))).toBe(true);
         const slots: SceneNode[] = [];

@@ -3,5 +3,6 @@ import type { BrandedStarter } from '../kit';
 import { difficultConversation } from './practice/difficult-conversation';
 import { timedTalk } from './practice/timed-talk';
 import { keepTheBeat } from './practice/keep-the-beat';
+import { signPractice } from './practice/sign-practice';
 
-export const STARTERS: BrandedStarter[] = [difficultConversation, timedTalk, keepTheBeat];
+export const STARTERS: BrandedStarter[] = [difficultConversation, timedTalk, keepTheBeat, signPractice];
