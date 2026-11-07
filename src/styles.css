@@ -366,12 +366,19 @@ code,
   font-size: 11px;
   margin-left: -2px;
 }
+/* Native sliders, ticks and radios take the palette gold, like every other chosen state */
+input[type='range'],
+input[type='checkbox'],
+input[type='radio'],
+progress {
+  accent-color: var(--primary-bg);
+}
 .check-field {
   flex: none;
   cursor: pointer;
 }
 .check-field input {
-  accent-color: var(--accent);
+  accent-color: var(--primary-bg);
 }
 .color-field .swatch {
   position: relative;
