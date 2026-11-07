@@ -99,6 +99,7 @@ let ops = null,
 	marker = null,
 	markLimiter = null,
 	records = null,
+	media = null,
 	commentLib = null,
 	store = null
 const rooms = new Map(),
@@ -1831,6 +1832,32 @@ const prepareMarkedShare = (html, oldSalt) => {
 	}
 }
 
+//What the project says it uses of the learner's device (Project > Microphone and camera), read out of the page being shared the same way and
+//kept on the share record. The learner page builds its consent screen and its limits from this copy, so what a project asks for over
+//postMessage is held to what the owner declared when they shared it, never to what the project says now. Null when it declares nothing
+const declaredSensors = (html) => {
+	if (!html.includes('"sensors":')) {
+		return null
+	}
+
+	let open = html.indexOf('id="ix-project">'),
+		start = open + 'id="ix-project">'.length,
+		end = open < 0 ? -1 : html.indexOf('</script>', start)
+
+	if (end < 0) {
+		return null
+	}
+
+	try {
+		let sensors = media.cleanSensors(JSON.parse(html.slice(start, end)).settings?.sensors)
+
+		return sensors && media.declaresSensors(sensors) ? sensors : null
+	}
+	catch (err) {
+		return null
+	}
+}
+
 //Share links: the project as one standalone HTML file (built by the editor), at /interactives/s/<token>.
 //Anyone with the link can play it, no session (a link opened in a new tab can't carry one), so it's off until
 //the owner turns it on, the token is unguessable, and turning it off deletes the file
@@ -1877,13 +1904,14 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 	}
 
 	let token = doc.share?.token || crypto.randomBytes(18).toString('base64url'),
-		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix}
+		sensors = declaredSensors(html),
+		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(sensors ? {sensors} : {})}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
 	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
 	let prevKept = false
 	if (doc.share?.token && await moveIfThere(shareFile(token), sharePrevFile(token))) {
-		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null}
+		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {})}
 		prevKept = true
 	}
 	await fs.promises.writeFile(shareFile(token), prepared ? prepared.html : html)
@@ -1923,8 +1951,16 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	await fs.promises.rename(sharePrevFile(token), shareFile(token))
 	await fs.promises.rename(swap, sharePrevFile(token))
 
-	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null}, reverted: {at: new Date(), by: whoIs(req)}},
+	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
 		set = {share}, unset = {}
+
+	//The page that came back has the sensors it was shared with
+	if (doc.share.previous.sensors) {
+		share.sensors = doc.share.previous.sensors
+	}
+	else {
+		delete share.sensors
+	}
 	//The answer keys swap with their pages
 	if (doc.previousMarking) set.marking = doc.previousMarking
 	else unset.marking = ''
@@ -3627,7 +3663,14 @@ router.put('/learn/:token/user-data', express.json({limit: '100kb'}), async (req
 //the routes above with the session id, so the sandboxed project never sees a session itself. Embed this in
 //StudyDesk instead of /s/<token> to collect results. The session id comes from the url or sessionStorage the way
 //utilities.js finds it, but is added here directly so the page has nothing to load from the suite's host root
-const learnerPage = (token, base, nonce, project, remix) => `<!doctype html>
+//JSON that is safe inside a script element, free text and all
+const scriptJson = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
+
+//A project that declared sensors (microphone, camera, photos) has the trusted media bridge in this page: it owns the devices, and the project
+//asks it by postMessage. Only what was declared when the link was shared is allowed. The frame's address carries a nonce the bridge expects
+//on every request (#ixm=<nonce>), since the frame's own origin is opaque and a window is not proof enough: a frame that navigated away
+//keeps the window but loses the address. Without a declaration none of it is in the page
+const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce) => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -3636,7 +3679,7 @@ const learnerPage = (token, base, nonce, project, remix) => `<!doctype html>
 <style>html,body{margin:0;height:100%;background:#111}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
 </head>
 <body>
-<iframe id="project" src="${base}/s/${token}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
+<iframe id="project" src="${base}/s/${token}${sensors ? `#ixm=${mediaNonce}` : ''}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
 ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into your own projects, to change as you like">Remix this</a>' : ''}
 <script src="/utilities.js"></script>
 <script nonce="${nonce}">
@@ -3837,9 +3880,18 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	})
 })()
 </script>
+${sensors ? `<script type="module" nonce="${nonce}">
+import {startBridge} from ${JSON.stringify(`${base}/media-bridge.mjs`)}
+startBridge({frame: document.getElementById('project'), nonce: ${JSON.stringify(mediaNonce)}, declaration: ${scriptJson(sensors)}})
+</script>` : ''}
 </body>
 </html>
 `
+
+//The trusted media bridge the learner page loads (a module, from this host, so script-src 'self' lets it in). Revalidated, never stale
+router.get('/media-bridge.mjs', cacheHeaders.document, (req, res) => {
+	res.type('text/javascript').sendFile(path.join(__dirname, 'shared', 'media-bridge.mjs'), {headers: {'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff'}})
+})
 
 router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	let token = req.params.token
@@ -3849,7 +3901,7 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	}
 
 	//The project the link is for, so the records its learners make are filed under it
-	let project = await projects.findOne({'share.token': token}, {projection: {_id: 1, 'share.remix': 1}})
+	let project = await projects.findOne({'share.token': token}, {projection: {_id: 1, 'share.remix': 1, 'share.sensors': 1}})
 
 	if (!project) {
 		return res.status(404).send('This share link has been turned off, or never existed')
@@ -3858,12 +3910,13 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	let nonce = crypto.randomBytes(16).toString('base64')
 
 	//Its own script, the suite's utilities.js from this host (script-src 'self') and its own api and the suite's
-	//analytics (connect-src 'self'), and the project in its sandbox as the one frame. It can be framed by StudyDesk
-	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'`)
+	//analytics (connect-src 'self'), and the project in its sandbox as the one frame. It can be framed by StudyDesk.
+	//media-src blob: is the one thing added for the media bridge: a recorded video plays from memory in the page
+	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'; media-src blob:; base-uri 'none'; form-action 'none'`)
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('Referrer-Policy', 'no-referrer')
 	res.setHeader('X-Robots-Tag', 'noindex')
-	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id, !!project.share?.remix))
+	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id, !!project.share?.remix, project.share?.sensors || null, crypto.randomBytes(16).toString('hex')))
 })
 
 //What the project's learners have done, for its owner (this is under /api, which is staff). Counts and averages
@@ -4162,9 +4215,9 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, commentsMod, templateMod, docstoreMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod]) => {
 		ops = opsMod
 		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
@@ -4174,6 +4227,7 @@ client.connect()
 		marker = markerMod
 		markLimiter = markerMod.makeLimiter()
 		records = recordsMod
+		media = mediaMod
 		commentLib = commentsMod
 
 		//Sliding windows for review comments: a guest's address, a guest through one link, and anyone signed in

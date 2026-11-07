@@ -74,6 +74,7 @@ import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
 import { OptimiseOutputFields } from './OptimiseOutput';
 import { RecordsSection } from './RecordsSection';
+import { SensorsSection } from './SensorsSection';
 import { CreditsSettingsFields } from './CreditsPanel';
 import { CaptionsSection, VideoCaptions } from './CaptionsSection';
 import { VariantsSection } from './VariantsSection';
@@ -679,6 +680,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <CaptionsSection project={project} />
       <ReportingSection project={project} />
       <RecordsSection project={project} />
+      <SensorsSection project={project} />
       <Section help="attributions" title="Credits" defaultOpen={false}>
         <CreditsSettingsFields />
         <p className="hint">The entries themselves are in the Attributions tab. They are your own record unless you turn the button on.</p>
