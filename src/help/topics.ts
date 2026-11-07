@@ -1540,7 +1540,8 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
 ## Good to know
 - Maths, drug names, abbreviations and mixed-language text read badly: use **Say it like**.
 - A screen reader user already has a reader, and two voices at once is worse than one. The Listen button is a plain button they can skip, and it is not the route to offer them.
-- The first words must start from a click or tap, so put a Read aloud node behind a button or key, not a timer.`,
+- The first words must start from a click or tap, so put a Read aloud node behind a button or key, not a timer.
+- The **Audio-first quiz** starter (Templates, Built-in, Quizzes and questions) is a whole quiz built on this: it reads each question and its options, the keys 1 to 4 answer, R repeats, S slows, H gives a hint and Space pauses, and the score page speaks the score and offers the missed questions again. With no voice it is an ordinary keyboard quiz.`,
   },
   {
     id: 'interactions',
