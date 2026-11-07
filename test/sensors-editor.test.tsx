@@ -71,6 +71,37 @@ describe('declaring sensors in the Project section', () => {
     expect((s.get().project as Project).settings.sensors).toBeUndefined();
   });
 
+  it('offers live listening under the microphone, and only listening can be chosen so nothing can record', () => {
+    const p = createProject('x');
+    mount(p);
+    open();
+    expect(box('Live listening')).toBeUndefined();
+    click(box('Microphone'));
+    rerender();
+    expect(box('Only ever listen')).toBeUndefined();
+    click(box('Live listening'));
+    rerender();
+    expect((s.get().project as Project).settings.sensors).toEqual({ microphone: true, listen: true });
+    expect(host.textContent).toContain('can also listen live');
+    click(box('Only ever listen'));
+    rerender();
+    expect((s.get().project as Project).settings.sensors).toMatchObject({ microphone: true, listen: true, listenOnly: true });
+    expect(host.textContent).toContain('The microphone listens live');
+    expect(host.textContent).not.toContain('Recordings are kept');
+    expect(host.textContent).not.toContain('Longest recording');
+    //unticking the microphone takes the listening with it
+    click(box('Microphone'));
+    rerender();
+    expect((s.get().project as Project).settings.sensors).toBeUndefined();
+  });
+
+  it('a project that listens reads as not listening, level 0 and eight zeros on the canvas', () => {
+    const p = createProject('x');
+    p.settings.sensors = { microphone: true, listen: true };
+    const scope = previewScope(p) as Record<string, unknown>;
+    expect(evaluate('[listening, micLevel, micBands.length, micBands[7]]', { vars: scope } as never)).toEqual([false, 0, 8, 0]);
+  });
+
   it('shows the reason for no equal way in the consent screen', () => {
     const p = createProject('x');
     p.settings.sensors = { microphone: true, noAlternative: 'This part assesses speaking' };

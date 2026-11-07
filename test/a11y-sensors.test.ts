@@ -49,6 +49,13 @@ describe('the sensors check', () => {
     expect(f.detail).not.toContain('—');
   });
 
+  it('counts Listen live as a sensor node, and only its Could not start output as a way on', () => {
+    const through = project([click('c', 'go'), ['on', 'action.listen'], ['done', 'action.reportResult']], [['c', 'on'], ['on', 'done']], { microphone: true, listen: true });
+    expect(found(through)[0]).toMatchObject({ severity: 'issue', title: 'Needs a microphone or camera to finish' });
+    const around = project([click('c', 'go'), ['on', 'action.listen'], ['done', 'action.reportResult']], [['c', 'on'], ['on', 'done', 'failed']], { microphone: true, listen: true });
+    expect(found(around)).toEqual([]);
+  });
+
   it('names what is used', () => {
     const p = project([click('c', 'go'), ['rec', 'action.cameraPreview'], ['done', 'action.artboard', { artboard: 'x' }]], [['c', 'rec'], ['rec', 'done']], { camera: true, photos: true });
     expect(found(p)[0].detail).toContain('through the camera and the photo picker');

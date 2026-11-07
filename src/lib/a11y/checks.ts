@@ -252,6 +252,7 @@ function interactionsOf(ab: Artboard): Interactions {
 
 /** Nodes that use a sensor, and the ports they leave by when it did NOT work (the way a project carries on without it). */
 const SENSOR_NODES: Record<string, string[]> = {
+  'action.listen': ['failed'],
   'action.recordStart': ['failed'],
   'action.recordStop': ['failed'],
   'action.recordPlay': ['none'],
