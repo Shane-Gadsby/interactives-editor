@@ -195,6 +195,7 @@ export function analyzeUsage(project: Project): UsageReport {
   for (const f of project.fonts) {
     if (f.assetId) useId('asset', f.assetId, { type: 'font', id: f.family, name: f.family }, 'font file');
   }
+  for (const v of project.variables) if (v.formula) useExpr(v.formula, { type: 'project', id: v.id, name: `Variable ${v.name}` }, 'formula');
   for (const d of project.dataSources) {
     const by: UsageSource = { type: 'data', id: d.id, name: d.name };
     if (d.source === 'asset' && d.assetId) useId('asset', d.assetId, by, 'data file');

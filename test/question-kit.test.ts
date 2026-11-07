@@ -446,8 +446,23 @@ describe('read aloud and number keys on the kit', () => {
   it('Number keys: not offered for a fill in the blank', () => {
     const { p, frame, set } = make('blank');
     set({ numberKeys: true });
-    expect(p().artboards[0].logic.nodes.some((n) => n.kind === 'event.key')).toBe(false);
+    expect(p().artboards[0].logic.nodes.some((n) => n.kind === 'event.key' && n.params.key === '')).toBe(false);
     expect(part(frame(), 'keysHint')).toBeUndefined();
+  });
+
+  it('Enter in a fill in the blank checks the answer: an On key wire that hears typing, only inside the question', () => {
+    const { p, frame, set } = make('blank');
+    set({ prompt: 'Again?' });
+    const ab = p().artboards[0];
+    const key = ab.logic.nodes.filter((n) => n.kind === 'event.key');
+    expect(key).toHaveLength(1);
+    expect(key[0].params).toMatchObject({ key: 'Enter', typing: true, target: frame().id });
+    const to = ab.logic.nodes.find((n) => n.id === ab.logic.edges.find((e) => e.from === key[0].id)!.to)!;
+    expect(to.kind).toBe('action.questionCheck');
+    //other kinds of question have no such node
+    const other = make('single');
+    other.set({ prompt: 'Again?' });
+    expect(other.p().artboards[0].logic.nodes.some((n) => n.kind === 'event.key')).toBe(false);
   });
 
   it('Number keys choose the option in that place when played, and other keys do nothing', async () => {

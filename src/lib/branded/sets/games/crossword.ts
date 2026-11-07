@@ -1,5 +1,5 @@
-//Crossword: a 10 by 10 grid laid out from a word list when the starter is built, cells typed into from the keyboard, clues you can click, Check and Reveal.
-import { createNode, type TemplateChecklistItem } from 'interactives-player';
+//Crossword: a 10 by 10 grid laid out from a list of words and clues each time it plays (and in the editor preview), cells typed into from the keyboard, clues you can click, Check and Reveal.
+import { createNode, layoutCrossword as layout, type TemplateChecklistItem } from 'interactives-player';
 import { brandedPage, brandedProject, button, card, contentBox, item, solid, stroke, text, heading, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, emit, focus, go, heroPage, lit, set, spreadPages } from './common';
@@ -32,106 +32,10 @@ export const WORDS: CrossWord[] = [
   { answer: 'DRAFT', clue: 'An early version of your writing' },
 ];
 
-// ------------------------------------------------------------------ the layout (runs when the starter is built)
+// ------------------------------------------------------------------ the layout (the player works it out, from the words)
 
-type Cell = { ch: string; across: boolean; down: boolean };
-
-function fits(grid: Map<number, Cell>, size: number, w: string, r: number, c: number, down: boolean): number {
-  const dr = down ? 1 : 0;
-  const dc = down ? 0 : 1;
-  if (r < 0 || c < 0 || r + dr * (w.length - 1) >= size || c + dc * (w.length - 1) >= size) return -1;
-  const at = (rr: number, cc: number) => (rr < 0 || cc < 0 || rr >= size || cc >= size ? undefined : grid.get(rr * size + cc));
-  //The squares just before and after the word must be empty, or it would read as a longer word
-  if (at(r - dr, c - dc) || at(r + dr * w.length, c + dc * w.length)) return -1;
-  let crossings = 0;
-  for (let k = 0; k < w.length; k++) {
-    const rr = r + dr * k;
-    const cc = c + dc * k;
-    const here = at(rr, cc);
-    if (here) {
-      //A crossing: same letter, and not already part of a word going the same way
-      if (here.ch !== w[k] || (down ? here.down : here.across)) return -1;
-      crossings++;
-    } else if (at(rr + dc, cc + dr) || at(rr - dc, cc - dr)) {
-      //Letters of a new word may not sit beside another word's letters
-      return -1;
-    }
-  }
-  return crossings;
-}
-
-function attempt(order: CrossWord[], size: number): Placed[] {
-  const grid = new Map<number, Cell>();
-  const placed: Placed[] = [];
-  const put = (w: CrossWord, r: number, c: number, down: boolean) => {
-    for (let k = 0; k < w.answer.length; k++) {
-      const i = (r + (down ? k : 0)) * size + c + (down ? 0 : k);
-      const cell = grid.get(i) ?? { ch: w.answer[k], across: false, down: false };
-      if (down) cell.down = true;
-      else cell.across = true;
-      grid.set(i, cell);
-    }
-    placed.push({ ...w, row: r, col: c, down });
-  };
-  const first = order[0];
-  put(first, Math.floor(size / 2), Math.floor((size - first.answer.length) / 2), false);
-  let left = order.slice(1);
-  for (let pass = 0; pass < 3 && left.length; pass++) {
-    const stillLeft: CrossWord[] = [];
-    for (const w of left) {
-      let best: { r: number; c: number; down: boolean; score: number } | null = null;
-      for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
-          for (const down of [false, true]) {
-            const n = fits(grid, size, w.answer, r, c, down);
-            if (n < 1) continue;
-            //More crossings is better, then nearer the middle
-            const score = n * 100 - (Math.abs(r - size / 2) + Math.abs(c - size / 2));
-            if (!best || score > best.score) best = { r, c, down, score };
-          }
-        }
-      }
-      if (best) put(w, best.r, best.c, best.down);
-      else stillLeft.push(w);
-    }
-    left = stillLeft;
-  }
-  return placed;
-}
-
-/**
- * Lays words out as a crossword: the first word across the middle, each of the others crossing what is already there. Tries each
- * word as the first one and keeps the layout that fits the most words (then the most crossings). Words that cannot be fitted are left out.
- */
-export function layoutCrossword(words: CrossWord[], size = SIZE): Placed[] {
-  const clean = words.map((w) => ({ ...w, answer: w.answer.toUpperCase().replace(/[^A-Z]/g, '') })).filter((w) => w.answer.length >= 2 && w.answer.length <= size);
-  //A fixed sequence of "random" orders, so the same list always makes the same puzzle
-  let seed = 20240607;
-  const rand = () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  const longestFirst = [...clean].sort((a, b) => b.answer.length - a.answer.length);
-  const orders: CrossWord[][] = clean.map((w) => [w, ...longestFirst.filter((x) => x !== w)]);
-  for (let i = 0; i < 400; i++) orders.push(clean.map((w) => ({ w, r: rand() })).sort((a, b) => a.r - b.r).map((o) => o.w));
-  let best: Placed[] = [];
-  let bestScore = -1;
-  for (const order of orders) {
-    const p = attempt(order, size);
-    //The letters shared between words: how tightly it crosses
-    const squares = new Set<number>();
-    for (const w of p) for (let k = 0; k < w.answer.length; k++) squares.add((w.row + (w.down ? k : 0)) * size + w.col + (w.down ? 0 : k));
-    const score = p.length * 1000 + (p.reduce((n, w) => n + w.answer.length, 0) - squares.size);
-    if (score > bestScore) {
-      best = p;
-      bestScore = score;
-    }
-  }
-  //Reading order, so the numbers run the way they do on paper
-  return best.sort((a, b) => a.row * size + a.col - (b.row * size + b.col) || Number(a.down) - Number(b.down));
-}
+/** The same layout the `crossword(words, size)` formula runs in the player, kept here so the starter has a fallback to start from and the tests can read it. */
+export const layoutCrossword = (words: CrossWord[], size = SIZE): Placed[] => layout(words, size) as Placed[];
 
 // ------------------------------------------------------------------ expressions the page runs on
 
@@ -151,13 +55,14 @@ const LAND_ON = (step: number, room: string) => `Array.from({length: ${room}}, (
 function build(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'Crossword');
   const { project, L } = ctx;
-  const placed = layoutCrossword(WORDS);
-  addVar(project, 'entries', 'list', placed);
-  const letters = addVar(project, 'letters', 'list', []);
-  const starts = addVar(project, 'starts', 'list', []);
-  const cells = addVar(project, 'cells', 'list', []);
-  const across = addVar(project, 'acrossClues', 'list', []);
-  const down = addVar(project, 'downClues', 'list', []);
+  //The author's list is just words and clues. "entries" is worked out from it by a formula (the player lays the words out), and so is everything built from the entries, so the canvas preview and the play both follow the list. The typed value of "entries" is only the fallback
+  addVar(project, 'words', 'list', WORDS);
+  addVar(project, 'entries', 'list', layoutCrossword(WORDS), `crossword(words, ${SIZE})`);
+  const letters = addVar(project, 'letters', 'list', [], LETTERS);
+  const starts = addVar(project, 'starts', 'list', [], STARTS);
+  const cells = addVar(project, 'cells', 'list', [], CELLS);
+  const across = addVar(project, 'acrossClues', 'list', [], clueList(false));
+  const down = addVar(project, 'downClues', 'list', [], clueList(true));
   const sel = addVar(project, 'sel', 'number', -1);
   const dir = addVar(project, 'dir', 'string', 'across');
   const aw = addVar(project, 'aw', 'number', -1);
@@ -275,7 +180,7 @@ function build(colourway: Colourway) {
 
   //Setting the puzzle up
   const g = new Graph(play);
-  const onStart = g.start('Lay out the puzzle from the entries list');
+  const onStart = g.start('Clear the puzzle (the entries come from the words list)');
   g.run(
     onStart,
     set(letters, LETTERS),
@@ -383,9 +288,9 @@ function build(colourway: Colourway) {
   g.run(onClear, set(cells, 'cells.map(c => ({...c, t: "", s: ""}))'), set(done, 'false'), set(status, '""'), announce('"Grid cleared"'));
 
   checklist.push(
-    item('Write your own words and clues: Project > Variables > "entries". Each row is {answer, clue, row, col, down}: the answer in capitals with no spaces, its clue, the row and column of its first letter (0 is the top left) and whether it runs down. The grid, the numbers and both clue lists follow it', grid, play),
-    item(`The grid is ${SIZE} by ${SIZE}, so every word must fit inside it. Across words and down words may cross only on a shared letter, and two words must not run side by side touching`, grid, play),
-    item('The layout was worked out when this starter was built, from a list of ten words (eight of them fitted the grid and made the puzzle). To lay out a whole new list in one go, have the starter rebuilt with your words (the WORDS list at the top of sets/games/crossword.ts feeds the layout, which crosses the words and leaves out any that will not fit). For a few changes, edit the rows in "entries" by hand', grid, play),
+    item('Write your own words and clues: Project > Variables > "words". Each row is {"answer": "PARAPHRASE", "clue": "Put someone else\'s idea into your own words"}, the answer in letters only (capitals or not, spaces and dashes are dropped). That is all you do: the grid, the numbers and both clue lists are laid out from it, in the canvas preview and every time the puzzle plays', grid, play),
+    item(`The grid is ${SIZE} by ${SIZE}, so an answer longer than ${SIZE} letters is left out, and so is a word that cannot cross the others. Try the list in the canvas preview and read the clue lists: a longer list than about ten may not all fit, and a word that is left out just needs another word with a shared letter`, grid, play),
+    item('You do not edit the grid positions. "entries" (Variables) is a formula, crossword(words, 10), that works the layout out from "words" (the same words always make the same puzzle). To lay one word by hand, clear the formula on "entries" and write its rows yourself: {answer, clue, row, col, down} with row and column counting from 0 at the top left', grid, play),
     item('Check the clue lists after a change: they hold about six clues each before they run into the clue box, and the number of each clue comes from where its word starts', acrossList, play),
     item('Restyle one Square (the letter, the number, the corners): every square is the same layer, repeated. The highlight colours come from the bindings on the Square layer', square, play),
     item('Change the completion message ("Crossword complete. Well done!"): the Crossword finished flow in the Interactions tab', message, play),
