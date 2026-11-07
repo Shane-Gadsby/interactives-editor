@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { track } from '../lib/analytics';
-import { changeTemplate, createProjectRecord, deleteTemplate, exampleAssetBytes, exampleThumbUrl, getExample, listExamples, listTemplates, setProjectMeta, templateThumbUrl, useExample, useTemplate, type ExampleInfo } from '../lib/db';
+import { changeTemplate, createProjectRecord, deleteTemplate, putAsset, exampleAssetBytes, exampleThumbUrl, getExample, listExamples, listTemplates, setProjectMeta, templateThumbUrl, useExample, useTemplate, type ExampleInfo } from '../lib/db';
 import { standaloneHtml } from '../lib/export';
 import { STARTERS, projectFromStarter, type Starter } from '../lib/template-starters';
-import { BRANDED_STARTERS, projectFromBrandedStarter, type BrandedStarter, type Colourway } from '../lib/branded';
+import { BRANDED_STARTERS, projectFromBrandedStarter, takeInlineAssets, type BrandedStarter, type Colourway } from '../lib/branded';
 import { CHECKLIST_FLAG, type TemplateInfo } from '../lib/templates';
 import { noteIfStale } from '../lib/stale-build';
 import { confirmDialog } from './dialogs';
@@ -61,7 +61,10 @@ export async function makeFromPick(pick: Pick, o: { name: string; folder: string
     id = await useExample(pick.e.key, { name: o.name, folder: o.folder });
   } else {
     const p = pick.kind === 'branded' ? projectFromBrandedStarter(pick.s, pick.way, o.name) : projectFromStarter(pick.s, o.name);
+    //A starter's placeholder sounds ride in the project as data addresses: they go up as files once the project exists
+    const files = pick.kind === 'branded' ? takeInlineAssets(p) : new Map<string, Blob>();
     await createProjectRecord(p);
+    for (const [assetId, blob] of files) await putAsset(p.id, assetId, blob);
     if (o.folder) await setProjectMeta(p.id, { folder: o.folder }).catch(() => undefined);
     id = p.id;
   }

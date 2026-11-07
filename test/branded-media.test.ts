@@ -46,7 +46,7 @@ describe('media starters', () => {
   };
 
   it('has the starters, keyed media/', () => {
-    expect(STARTERS.map((s) => s.key)).toEqual(['media/observe-and-tag']);
+    expect(STARTERS.map((s) => s.key)).toEqual(['media/observe-and-tag', 'media/listening-lab']);
   });
 
   for (const starter of STARTERS) {
