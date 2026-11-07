@@ -24,4 +24,11 @@ describe('replacing an asset file (swapAssetId)', () => {
     // untouched branches stay the same objects (immer only copies what changed)
     expect(out.fonts).toBe(doc.fonts);
   });
+
+  it('follows the id into a list variable\'s JSON text (a card\'s sound), and leaves other text alone', () => {
+    const doc = { variables: [{ name: 'cards', initial: JSON.stringify([{ phrase: 'Where is the library?', sound: 'as1' }]) }, { name: 'note', initial: 'as1 in plain text' }] };
+    const out = produce(doc, (d) => void swapAssetId(d, 'as1', 'as9'));
+    expect(JSON.parse(out.variables[0].initial)[0]).toEqual({ phrase: 'Where is the library?', sound: 'as9' });
+    expect(out.variables[1].initial).toBe('as1 in plain text');
+  });
 });

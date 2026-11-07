@@ -1,7 +1,8 @@
 //The practice set of branded starters (speaking and rehearsal): each builds in every colourway, normalises, paints only with tokens,
 //plays under jsdom without throwing, and its main interaction works.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Player, normalizeProject, walk, type Artboard, type Project, type SceneNode } from 'interactives-player';
+import { FakeMediaHost, Player, normalizeProject, walk, type Artboard, type FakeBehaviour, type Project, type SceneNode } from 'interactives-player';
+import { checkAccessibility, sensorRoutes } from '../src/lib/a11y/checks';
 import { STARTERS } from '../src/lib/branded/sets/practice';
 import { projectFromBrandedStarter } from '../src/lib/branded';
 import { COLOURWAYS } from '../src/lib/branded/looks';
@@ -43,7 +44,7 @@ describe('practice starters', () => {
   };
 
   it('has the starters, keyed practice/', () => {
-    expect(STARTERS.map((s) => s.key)).toEqual(['practice/difficult-conversation', 'practice/timed-talk-rehearsal', 'practice/keep-the-beat']);
+    expect(STARTERS.map((s) => s.key)).toEqual(['practice/difficult-conversation', 'practice/timed-talk-rehearsal', 'practice/keep-the-beat', 'practice/shadow-the-model']);
   });
 
   for (const starter of STARTERS) {
@@ -121,16 +122,22 @@ describe('practice starters', () => {
         }
       });
 
-      //Keep the beat records nothing, so only the rehearsals carry a slot
-      it.skipIf(starter.key === 'practice/keep-the-beat')('has a checklist item that marks the recording slot for the media bridge', () => {
+      //Keep the beat records nothing. Shadow the model declares the microphone and is tested on its own below. The two rehearsals ship with recording OFF:
+      //the record layers are there but only show while the microphone is ready, which it never is in a project that declares nothing
+      it.skipIf(['practice/keep-the-beat', 'practice/shadow-the-model'].includes(starter.key))('has an optional recording step that is off as shipped, and a checklist item that says how to switch it on', () => {
         const { project, checklist } = starter.build(COLOURWAYS[0]);
-        expect(checklist.some((c) => /recording/i.test(c.text) && /media bridge/i.test(c.text))).toBe(true);
-        const slots: SceneNode[] = [];
-        for (const ab of project.artboards) walk(ab.children, (n) => /slot \(media bridge\)/.test(n.name) && slots.push(n));
-        expect(slots.length).toBeGreaterThan(0);
-        //hidden, so learners never see an empty box, and nothing records
-        for (const s of slots) expect(s.visible).toBe(false);
-        expect(JSON.stringify(project)).not.toMatch(/getUserMedia|MediaRecorder|action\.record"/);
+        expect(checklist.some((c) => /OPTIONAL RECORDING/.test(c.text) && /Microphone and camera/.test(c.text) && /dropped/.test(c.text))).toBe(true);
+        expect(project.settings.sensors).toBeUndefined();
+        const steps: SceneNode[] = [];
+        for (const ab of project.artboards) walk(ab.children, (n) => /^(Recording|Replay) step$/.test(n.name) && steps.push(n));
+        expect(steps.length).toBeGreaterThan(0);
+        //each shows only while the microphone is ready, so learners with it off, denied or missing see the rehearsal as it always was
+        for (const s of steps) expect(s.bindings?.visible).toContain('microphone == "ready"');
+        const nodes = project.artboards.flatMap((ab) => ab.logic.nodes.map((n) => n.kind));
+        expect(nodes).toEqual(expect.arrayContaining(['action.recordStart', 'action.recordStop', 'action.recordPlay']));
+        expect(JSON.stringify(project)).not.toMatch(/getUserMedia|MediaRecorder/);
+        //and the page says nothing is recorded, until it is switched on
+        expect(JSON.stringify(project.artboards)).toMatch(/Nothing is recorded|No microphone is used/);
       });
     });
   }
@@ -153,7 +160,7 @@ describe('practice starters', () => {
       const p = project();
       const all = JSON.stringify(p.artboards);
       expect(all).toMatch(/not assessed/i);
-      expect(all).toMatch(/Nothing here was marked, recorded or sent/);
+      expect(all).toMatch(/Nothing here was marked, saved or sent/);
       expect(byName(board(p, FIRST), 'Their line')).toBeTruthy();
       expect(byName(board(p, FIRST), 'Transcript label')).toBeTruthy();
       expect(byName(board(p, FIRST), 'Reply box')).toBeTruthy();
@@ -564,6 +571,405 @@ describe('practice starters', () => {
       await settle(player, 100);
       expect(player.getVariable('attempts')).toHaveLength(8);
       player.destroy();
+    });
+  });
+
+  //The microphone, played against the pretend host. Audio is a recording <audio> element that fires its metadata and end events, so a clip "plays".
+  describe('recording (the media bridge), against the pretend host', () => {
+    interface Heard {
+      src: string;
+      playbackRate: number;
+      preservesPitch: boolean;
+      volume: number;
+      paused: boolean;
+    }
+    let heard: Heard[] = [];
+    class FakeAudio {
+      volume = 1;
+      muted = false;
+      loop = false;
+      playbackRate = 1;
+      preservesPitch = false;
+      paused = false;
+      duration = 0.05;
+      private ends: (() => void)[] = [];
+      constructor(public src: string) {
+        heard.push(this as unknown as Heard);
+      }
+      play() {
+        setTimeout(() => this.ends.forEach((f) => f()), 30);
+        return Promise.resolve();
+      }
+      pause() {
+        this.paused = true;
+      }
+      addEventListener(ev: string, f: () => void) {
+        if (ev === 'ended') this.ends.push(f);
+        if (ev === 'loadedmetadata') setTimeout(f, 0);
+      }
+    }
+    beforeEach(() => {
+      heard = [];
+      vi.stubGlobal('Audio', FakeAudio);
+      URL.createObjectURL = vi.fn((b: Blob) => `blob:take-${b.size}`);
+      URL.revokeObjectURL = vi.fn();
+    });
+
+    const withHost = (p: Project, behaviour: FakeBehaviour = 'works') => {
+      const host = new FakeMediaHost({ declaration: p.settings.sensors, behaviour });
+      const player = new Player(stage(), JSON.parse(JSON.stringify(p)), { loadData: false, media: host });
+      return { host, player };
+    };
+    const shown = (p: Project, page: string, name: string) => getComputedStyle(el(layer(p, page, name).id)).display !== 'none';
+    const off = (id: string) => !!el(id).querySelector<HTMLButtonElement>('button')?.disabled;
+    const tick = async (player: Player, ms = 100) => {
+      await settle(player, ms);
+    };
+    const clickOn = async (player: Player, p: Project, page: string, name: string, ms = 100) => {
+      await click(layer(p, page, name).id);
+      await tick(player, ms);
+    };
+
+    describe('shadow the model', () => {
+      const P = 'Listen, say it, compare';
+      const project = () => projectFromBrandedStarter(get('practice/shadow-the-model'), COLOURWAYS[0]);
+      const open = async (p: Project, behaviour: FakeBehaviour = 'works') => {
+        const r = withHost(p, behaviour);
+        await tick(r.player);
+        r.player.goTo(P);
+        await tick(r.player);
+        return r;
+      };
+
+      it('declares the microphone with a purpose and a cap, and passes the sensors rule because the plain version finishes without it', () => {
+        const p = project();
+        expect(p.settings.sensors).toMatchObject({ microphone: true, maxSeconds: 30 });
+        expect(p.settings.sensors!.purpose!.length).toBeLessThanOrEqual(140);
+        expect(p.settings.sensors!.camera).toBeFalsy();
+        const routes = sensorRoutes(p);
+        expect(routes.finishes).toBeGreaterThan(0);
+        expect(routes.free).toBeGreaterThan(0);
+        expect(checkAccessibility(p).findings.filter((f) => f.check === 'sensors')).toEqual([]);
+        //it says plainly that a recording is lost, on the card and on the first page
+        const all = JSON.stringify(p.artboards);
+        expect(all).toMatch(/gone when you reload/);
+        expect(all).toMatch(/dropped when you go to the next card, and it is gone if you reload/);
+      });
+
+      it('keeps the cards one list, each with its own model clip as an asset, and plays the right one through Play sound with a slow speed', async () => {
+        const p = project();
+        const cards = JSON.parse(p.variables.find((v) => v.name === 'cards')!.initial as string) as { phrase: string; sound: string; checks: string[] }[];
+        expect(cards.length).toBe(4);
+        for (const c of cards) {
+          expect(p.assets.some((a) => a.id === c.sound && /\(replace\)\.wav$/.test(a.name))).toBe(true);
+          expect(c.checks.length).toBeLessThanOrEqual(4);
+        }
+        expect(new Set(cards.map((c) => c.sound)).size).toBe(4);
+        const { player } = await open(p);
+        await clickOn(player, p, P, 'Play model');
+        await clickOn(player, p, P, 'Slow switch');
+        expect(textOf(layer(p, P, 'Slow switch').id)).toContain('Slow: on');
+        await clickOn(player, p, P, 'Play model');
+        const first = heard.filter((h) => !h.src.startsWith('blob:take'));
+        expect(first.length).toBeGreaterThanOrEqual(2);
+        expect(first[0].src).toBe(first[1].src);
+        expect(first[0].playbackRate).toBe(1);
+        expect(first[first.length - 1].playbackRate).toBeCloseTo(0.7);
+        expect(first[first.length - 1].preservesPitch).toBe(true);
+        player.setVariable('current', 2);
+        await tick(player, 50);
+        await clickOn(player, p, P, 'Play model');
+        const third = heard.filter((h) => !h.src.startsWith('blob:take')).pop()!;
+        expect(third.src).not.toBe(first[0].src);
+        player.destroy();
+      });
+
+      it('with the microphone ready shows Record and not the plain version, and records, stops and plays a take back', async () => {
+        const p = project();
+        const { host, player } = await open(p);
+        expect(player.getVariable('stage')).toBe('listen');
+        expect(shown(p, P, 'Record')).toBe(true);
+        expect(shown(p, P, 'Plain version')).toBe(false);
+        expect(shown(p, P, 'Play mine')).toBe(false);
+        expect(textOf(layer(p, P, 'Record status').id)).toBe('Not recorded yet.');
+        await clickOn(player, p, P, 'Record');
+        const start = host.calls.find((c) => c.op === 'start')!;
+        expect(start.args).toMatchObject({ slot: 'take', video: false, audio: true });
+        expect(textOf(layer(p, P, 'Record').id)).toBe('Stop recording');
+        expect(textOf(layer(p, P, 'Record status').id)).toContain('Recording');
+        //the model and the take never play over the microphone
+        expect(off(layer(p, P, 'Play model').id)).toBe(true);
+        await clickOn(player, p, P, 'Record');
+        expect(textOf(layer(p, P, 'Record').id)).toBe('Record again');
+        expect(textOf(layer(p, P, 'Record status').id)).toContain('It stays on this device');
+        expect(shown(p, P, 'Play mine')).toBe(true);
+        await clickOn(player, p, P, 'Play mine');
+        await vi.waitFor(() => expect(heard.some((h) => h.src.startsWith('blob:take'))).toBe(true));
+        player.destroy();
+      });
+
+      it('plays the model then the take back to back, and Stop in between cancels the second half', async () => {
+        const p = project();
+        const { player } = await open(p);
+        await clickOn(player, p, P, 'Record');
+        await clickOn(player, p, P, 'Record');
+        await clickOn(player, p, P, 'Check myself');
+        expect(player.getVariable('stage')).toBe('check');
+        heard = [];
+        await clickOn(player, p, P, 'Model then mine', 20);
+        await vi.waitFor(() => expect(heard.map((h) => (h.src.startsWith('blob:take') ? 'mine' : 'model'))).toEqual(['model', 'mine']), { timeout: 3000 });
+        await vi.waitFor(() => expect(player.getVariable('busy')).toBe(false));
+        //Stop while the model is still going: the take is not played after it
+        heard = [];
+        await clickOn(player, p, P, 'Model then mine', 0);
+        await clickOn(player, p, P, 'Stop', 0);
+        expect(player.getVariable('busy')).toBe(false);
+        await flush(400);
+        expect(heard.some((h) => h.src.startsWith('blob:take'))).toBe(false);
+        player.destroy();
+      });
+
+      it.each<FakeBehaviour>(['denied', 'off', 'no-device', 'blocked'])('with the microphone %s it is the plain version: listen, say it aloud, self-check, rate, and on to the results', async (b) => {
+        const p = project();
+        const { host, player } = await open(p, b);
+        expect(shown(p, P, 'Record')).toBe(false);
+        expect(shown(p, P, 'Play mine')).toBe(false);
+        expect(shown(p, P, 'Plain version')).toBe(true);
+        expect(textOf(layer(p, P, 'Plain version').id)).toContain('say the phrase out loud');
+        expect(textOf(layer(p, P, 'Where recordings go').id)).toContain('Nothing is recorded here');
+        await clickOn(player, p, P, 'Play model');
+        expect(heard.length).toBeGreaterThan(0);
+        await clickOn(player, p, P, 'Check myself');
+        expect(shown(p, P, 'Model then mine')).toBe(false);
+        expect(shown(p, P, 'Plain compare')).toBe(true);
+        await click(`${layer(p, P, 'Check row').id}~0`);
+        await click(`${layer(p, P, 'Check row').id}~2`);
+        await click(layer(p, P, 'Rating Getting there').id);
+        await tick(player, 50);
+        expect(player.getVariable('checked')).toEqual([0, 2]);
+        expect(player.getVariable('rating')).toBe(1);
+        expect(el(layer(p, P, 'Rating Getting there').id).getAttribute('aria-checked')).toBe('true');
+        await clickOn(player, p, P, 'Next card');
+        expect(player.getVariable('current')).toBe(1);
+        expect(player.getVariable('stage')).toBe('listen');
+        expect(player.getVariable('checked')).toEqual([]);
+        expect(player.getVariable('rating')).toBe(-1);
+        expect(host.calls.filter((c) => c.op === 'start')).toEqual([]);
+        for (let i = 1; i < 4; i++) {
+          await clickOn(player, p, P, 'Check myself');
+          await clickOn(player, p, P, i === 3 ? 'See my results' : 'Next card', 200);
+        }
+        expect(player.artboard.name).toBe('Your results');
+        const rows = player.getVariable('results') as { n: number; rating: number; made: number; of: number; took: boolean }[];
+        expect(rows).toHaveLength(4);
+        expect(rows[0]).toMatchObject({ n: 1, rating: 1, made: 2, of: 3, took: false });
+        expect(rows[1]).toMatchObject({ rating: -1, made: 0 });
+        expect(textOf(layer(p, 'Your results', 'Cards done').id)).toBe('4 of 4');
+        expect(textOf(`${layer(p, 'Your results', 'Cell How it went').id}~0`)).toBe('Getting there');
+        expect(textOf(`${layer(p, 'Your results', 'Cell How it went').id}~1`)).toBe('Not rated');
+        expect(textOf(`${layer(p, 'Your results', 'Cell Self-check').id}~0`)).toBe('2 of 3 ticked');
+        await clickOn(player, p, 'Your results', 'Start again', 200);
+        expect(player.artboard.name).toBe('Shadow the model');
+        expect(player.getVariable('results')).toEqual([]);
+        player.destroy();
+      });
+
+      it('a start that is refused mid-way (the learner says no) falls back to the plain version without losing the card', async () => {
+        const p = project();
+        const { host, player } = await open(p);
+        host.simulate('denied');
+        await tick(player, 100);
+        expect(shown(p, P, 'Record')).toBe(false);
+        expect(shown(p, P, 'Plain version')).toBe(true);
+        expect(textOf(layer(p, P, 'Plain version').id)).toContain('Your browser is not letting this page');
+        expect(player.getVariable('current')).toBe(0);
+        player.destroy();
+      });
+
+      it('drops the take when the learner goes to the next card, and keeps it across Back to the card', async () => {
+        const p = project();
+        const { player } = await open(p);
+        await clickOn(player, p, P, 'Record');
+        await clickOn(player, p, P, 'Record');
+        await clickOn(player, p, P, 'Check myself');
+        await clickOn(player, p, P, 'Back to the card');
+        expect(shown(p, P, 'Play mine')).toBe(true);
+        await clickOn(player, p, P, 'Check myself');
+        await clickOn(player, p, P, 'Next card', 200);
+        expect(player.getVariable('current')).toBe(1);
+        await clickOn(player, p, P, 'Check myself', 50);
+        expect(off(layer(p, P, 'Play mine again').id)).toBe(true);
+        expect((player.getVariable('results') as { took: boolean }[])[0].took).toBe(true);
+        player.destroy();
+      });
+
+      it('with the microphone unticked by the author (nothing declared) it is the plain version too, and runs no recording node', async () => {
+        const p = project();
+        delete p.settings.sensors;
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const player = play(p);
+        await settle(player, 100);
+        player.goTo(P);
+        await settle(player, 100);
+        expect(shown(p, P, 'Record')).toBe(false);
+        expect(shown(p, P, 'Plain version')).toBe(true);
+        await click(layer(p, P, 'Stop').id);
+        await click(layer(p, P, 'Check myself').id);
+        await settle(player, 50);
+        expect(player.getVariable('stage')).toBe('check');
+        expect(warn).not.toHaveBeenCalled();
+        warn.mockRestore();
+        player.destroy();
+      });
+    });
+
+    describe('the rehearsals with recording switched on', () => {
+      const R = 'Draw, prepare, talk';
+      const talk = () => {
+        const p = projectFromBrandedStarter(get('practice/timed-talk-rehearsal'), COLOURWAYS[0]);
+        p.settings.sensors = { microphone: true, purpose: 'record your talk so you can play it back', maxSeconds: 90 };
+        return p;
+      };
+
+      it('timed talk: record on the talk stage, the clock leaving the stage ends the take, play it on the tally, and the next card drops it', async () => {
+        const p = talk();
+        expect(checkAccessibility(p).findings.filter((f) => f.check === 'sensors')).toEqual([]);
+        const { host, player } = withHost(p);
+        await tick(player);
+        expect(textOf(layer(p, 'Rehearse a talk against the clock', 'Subtitle').id)).toContain('You can also record yourself');
+        player.goTo(R);
+        await tick(player);
+        expect(textOf(layer(p, R, 'Draw help').id)).toContain('The recording stays on this device');
+        await clickOn(player, p, R, 'Draw a card');
+        await clickOn(player, p, R, 'Prepare button');
+        expect(player.getVariable('stage')).toBe('talk');
+        expect(shown(p, R, 'Recording step')).toBe(true);
+        await clickOn(player, p, R, 'Record this talk');
+        expect(host.calls.some((c) => c.op === 'start' && c.args.slot === 'talk')).toBe(true);
+        expect(textOf(layer(p, R, 'Record this talk').id)).toBe('Stop recording');
+        //"I've finished" with the recording still going ends it
+        await clickOn(player, p, R, 'Talk button', 200);
+        expect(player.getVariable('stage')).toBe('tally');
+        expect(host.calls.some((c) => c.op === 'stop')).toBe(true);
+        expect(shown(p, R, 'Replay step')).toBe(true);
+        expect(textOf(layer(p, R, 'Tally help').id)).toContain('Play your recording');
+        await clickOn(player, p, R, 'Play my talk');
+        await vi.waitFor(() => expect(heard.some((h) => h.src.startsWith('blob:take'))).toBe(true));
+        await click(layer(p, R, 'To the model answer').id);
+        await settle(player, 50);
+        await click(layer(p, R, 'Save and next card').id);
+        await settle(player, 100);
+        expect(player.getVariable('stage')).toBe('draw');
+        player.setVariable('stage', 'tally');
+        await settle(player, 50);
+        expect(shown(p, R, 'Replay step')).toBe(false);
+        player.destroy();
+      });
+
+      it('timed talk: the clock running out stops a recording that is still going', async () => {
+        const p = talk();
+        const { host, player } = withHost(p);
+        await tick(player);
+        player.goTo(R);
+        await tick(player);
+        await clickOn(player, p, R, 'Draw a card');
+        await clickOn(player, p, R, 'Prepare button');
+        await clickOn(player, p, R, 'Record this talk');
+        player.setVariable('left', 1);
+        await flush(1200);
+        await settle(player, 150);
+        expect(player.getVariable('stage')).toBe('tally');
+        expect(host.calls.some((c) => c.op === 'stop')).toBe(true);
+        expect(shown(p, R, 'Replay step')).toBe(true);
+        player.destroy();
+      });
+
+      it('timed talk: with the microphone denied the rehearsal is exactly as before and the record step stays away', async () => {
+        const p = talk();
+        const { host, player } = withHost(p, 'denied');
+        await tick(player);
+        player.goTo(R);
+        await tick(player);
+        expect(textOf(layer(p, R, 'Draw help').id)).toContain('Nothing is recorded here');
+        await clickOn(player, p, R, 'Draw a card');
+        await clickOn(player, p, R, 'Prepare button');
+        expect(shown(p, R, 'Recording step')).toBe(false);
+        await clickOn(player, p, R, 'Talk button');
+        expect(player.getVariable('stage')).toBe('tally');
+        expect(shown(p, R, 'Replay step')).toBe(false);
+        expect(host.calls.filter((c) => c.op !== 'hello')).toEqual([]);
+        player.destroy();
+      });
+
+      const F = 'Alex asks for more time';
+      const convo = () => {
+        const p = projectFromBrandedStarter(get('practice/difficult-conversation'), COLOURWAYS[0]);
+        p.settings.sensors = { microphone: true, purpose: 'record your reply so you can play it back', maxSeconds: 90 };
+        return p;
+      };
+
+      it('difficult conversation: record the reply, play it in review beside the expert reply, and a retry drops it', async () => {
+        const p = convo();
+        expect(checkAccessibility(p).findings.filter((f) => f.check === 'sensors')).toEqual([]);
+        const { host, player } = withHost(p);
+        await tick(player);
+        player.goTo(F);
+        await tick(player);
+        expect(shown(p, F, 'Recording step')).toBe(true);
+        expect(shown(p, F, 'Play mine')).toBe(false);
+        expect(textOf(layer(p, F, 'Reply help').id)).toContain('You can record yourself and play it back');
+        await clickOn(player, p, F, 'Record my reply');
+        await clickOn(player, p, F, 'Record my reply');
+        expect(host.calls.find((c) => c.op === 'start')!.args).toMatchObject({ slot: 'reply' });
+        expect(shown(p, F, 'Play mine')).toBe(true);
+        await clickOn(player, p, F, 'Play mine');
+        await vi.waitFor(() => expect(heard.some((h) => h.src.startsWith('blob:take'))).toBe(true));
+        expect(shown(p, F, 'Play my recording')).toBe(false);
+        await clickOn(player, p, F, 'Compare with the expert');
+        expect(player.getVariable('stage')).toBe('review');
+        expect(shown(p, F, 'Play my recording')).toBe(true);
+        heard = [];
+        await clickOn(player, p, F, 'Play my recording');
+        await vi.waitFor(() => expect(heard.some((h) => h.src.startsWith('blob:take'))).toBe(true));
+        await clickOn(player, p, F, 'Try this scene again', 150);
+        expect(player.getVariable('stage')).toBe('reply');
+        expect(shown(p, F, 'Play mine')).toBe(false);
+        expect(shown(p, F, 'Play my recording')).toBe(false);
+        player.destroy();
+      });
+
+      it('difficult conversation: the next scene opens without the last scene\'s take, and the ending says a recording stayed on the device', async () => {
+        const p = convo();
+        const { player } = withHost(p);
+        await tick(player);
+        player.goTo(F);
+        await tick(player);
+        await clickOn(player, p, F, 'Record my reply');
+        await clickOn(player, p, F, 'Record my reply');
+        await clickOn(player, p, F, 'Compare with the expert');
+        await clickOn(player, p, F, 'It calms them', 200);
+        expect(player.artboard.name).toBe('Alex, a little calmer');
+        expect(shown(p, 'Alex, a little calmer', 'Play mine')).toBe(false);
+        expect(textOf(layer(p, 'Alex, a little calmer', 'Record status').id)).toBe('Optional. Not recorded.');
+        player.goTo('Ending');
+        await tick(player);
+        expect(textOf(layer(p, 'Ending', 'Rehearsal note').id)).toContain('Any recording you made stayed on this device and is gone');
+        player.destroy();
+      });
+
+      it('difficult conversation: with nothing declared the ending says only that nothing was saved, and the step never shows', async () => {
+        const p = projectFromBrandedStarter(get('practice/difficult-conversation'), COLOURWAYS[0]);
+        const player = play(p);
+        await settle(player, 100);
+        player.goTo(F);
+        await settle(player, 100);
+        expect(shown(p, F, 'Recording step')).toBe(false);
+        expect(textOf(layer(p, F, 'Reply help').id)).toContain('Nothing is recorded.');
+        player.goTo('Ending');
+        await settle(player, 100);
+        expect(textOf(layer(p, 'Ending', 'Rehearsal note').id)).toBe('This was rehearsal. Nothing here was marked, saved or sent to anyone.');
+        player.destroy();
+      });
     });
   });
 });

@@ -2,16 +2,20 @@
 //friend), gets a preparation countdown, then a speaking timer. When it ends they tap a delivery tally while thinking back (fillers, long pauses, a clear
 //opening, a clear close), compare with the card's model answer and tick the points they made, and a summary page shows every attempt. The attempts are
 //a remembered variable, so they survive a reload. The timers can be switched off (a variable, and a button for the learner) or lengthened (two
-//variables): an accessibility adjustment, since a strict clock raises anxiety for some learners. No microphone: they talk to a friend, a voice memo or the room.
+//variables): an accessibility adjustment, since a strict clock raises anxiety for some learners. By default no microphone: they talk to a friend, a voice memo or the room.
 //The tally is the learner's own reflection and is never presented as measurement; nothing detects fillers or pace.
 //
-//RECORDING SLOTS (task 276, the media bridge, is not built yet): there are two hidden layers named "... slot (media bridge)". "Recording slot" is on the
-//talk stage, where record and stop go; "Replay slot" is on the tally stage, where the learner plays their recording back while they tally. Both stay hidden
-//and empty until the bridge exists, so nothing records and learners never see an empty box.
+//OPTIONAL RECORDING (the media bridge): the starter does not declare the microphone, so as shipped it records nothing and the two record layers never show.
+//An author ticks Microphone in Project > Microphone and camera and they appear: "Recording step" on the talk stage (Record, then Stop recording) and
+//"Replay step" on the tally stage (play it back while tallying). Both show only while the microphone is ready, so a learner who says no, has no device or
+//chooses "Do not use my microphone or camera" gets the rehearsal exactly as before. It is off by default because a rehearsal is private and low stakes, the
+//first start asks the learner for the microphone on a consent screen, and a course page that does not allow the microphone would otherwise show a step
+//that cannot work. The take ("talk") is ended when the talk stage is left, kept for the tally and the model answer, and dropped on the next card.
 import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { brandedPage, brandedProject, button, byName, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, go, heroPage, set, spreadPages } from '../games/common';
+import { MIC_READY, dropTakeWhen, rec, recordStatus, stopTakeWhen, wirePlay, wireRecord } from './recording';
 
 //The bank. type is the label on the card, q the question, model a short model answer and points what a good answer makes (up to four)
 const CARDS = [
@@ -79,7 +83,7 @@ function build(colourway: Colourway) {
   const attempts = addVar(project, 'attempts', 'list', []);
   attempts.persist = true;
 
-  const hero = heroPage(ctx, 'Rehearse a talk against the clock', 'Draw a card, get a moment to prepare, then talk out loud. Tally how it went and compare with a model answer. No microphone is used.');
+  const hero = heroPage(ctx, 'Rehearse a talk against the clock', `Draw a card, get a moment to prepare, then talk out loud. Tally how it went and compare with a model answer. {${MIC_READY} ? "You can also record yourself and play it back. The recording stays on this device." : "No microphone is used."}`);
   const rehearse = brandedPage(ctx, 'Draw, prepare, talk', { footer: 'Rehearsal, not assessed' });
   const summary = brandedPage(ctx, 'Your attempts', { footer: 'Your own tally, remembered for you' });
   const checklist: TemplateChecklistItem[] = [];
@@ -107,7 +111,7 @@ function build(colourway: Colourway) {
 
   //Stage: draw
   const drawHead = heading(ctx, 'Draw heading', 'Draw a card', 0, 0, rw, { fontSize: 24 });
-  const drawHelp = text(ctx, 'Draw help', 'Draw a random card, get time to prepare, then talk out loud: to a friend, into the voice memo on your phone, or to the room. Nothing is recorded here.', 0, 44, rw, { fontSize: 17, lineHeight: 1.4 });
+  const drawHelp = text(ctx, 'Draw help', `Draw a random card, get time to prepare, then talk out loud: to a friend, into the voice memo on your phone, or to the room.{${MIC_READY} ? " You can also record yourself while you talk and play it back. The recording stays on this device and is dropped when you save and go on." : " Nothing is recorded here."}`, 0, 44, rw, { fontSize: 17, lineHeight: 1.4 });
   const draw = button(ctx, 'Draw a card', 'Draw a card', 0, 158, 240, true);
   const timerSwitch = bind(button(ctx, 'Timer switch', 'Timers: on', 0, 218, 240, false), { label: 'timersOn ? "Timers: on" : "Timers: off"' });
   timerSwitch.ariaLabel = 'Switch the countdowns on or off';
@@ -126,13 +130,16 @@ function build(colourway: Colourway) {
     return { frame: stageFrame(`${name} stage`, when, [h, clock, track, bar, t, b, ...extra]), button: b, clock };
   };
   const prep = countdown('Prepare', 'stage == "prep"', 'Get ready', 'prepSeconds', 'Jot down two or three points, or say your opening line in your head. Start talking when you are ready, or when the clock runs out.', 'I\'m ready, start the talk');
-  //The recording slot (media bridge, later): record and stop go here on the talk stage
-  const recSlot = createNode('frame', { name: 'Recording slot (media bridge)', visible: false, x: 0, y: 330, width: rw, height: 56, cornerRadius: 12, fill: solid(L.surface), stroke: null, clip: false, ariaLabel: 'Recording slot, not used yet' } as Partial<SceneNode>);
-  const talk = countdown('Talk', 'stage == "talk"', 'Talk now', 'talkSeconds', 'Talk out loud now: to a friend, into a voice memo on your phone, or to the room. Keep going until the clock stops, or press the button when you are done.', 'I\'ve finished', [recSlot]);
+  //The recording step: optional, there only while the microphone is ready (the author ticks it in Project > Microphone and camera). Record, then Stop recording
+  const record = bind(button(ctx, 'Record this talk', 'Record this talk', 0, 0, 230, false), { label: `${rec('talk').recording} ? "Stop recording" : ${rec('talk').has} ? "Record again" : "Record this talk"` });
+  record.ariaDescription = 'Records your voice while you talk. Asks you first, the first time. The recording stays on this device.';
+  const recStatus = text(ctx, 'Record status', `{${recordStatus('talk', 'Optional. Not recorded.')}}`, 244, 2, rw - 244, { fontSize: 14, lineHeight: 1.3, color: L.muted, autoSize: 'none', height: 48 });
+  const recStep = bind(createNode('frame', { name: 'Recording step', x: 0, y: 340, width: rw, height: 52, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Record this talk', children: [record, recStatus] }) as FrameNode, { visible: MIC_READY });
+  const talk = countdown('Talk', 'stage == "talk"', 'Talk now', 'talkSeconds', 'Talk out loud now: to a friend, into a voice memo on your phone, or to the room. Keep going until the clock stops, or press the button when you are done.', 'I\'ve finished', [recStep]);
 
   //Stage: the delivery tally
   const tallyHead = heading(ctx, 'Tally heading', 'Delivery tally', 0, 0, rw, { fontSize: 24 });
-  const tallyHelp = text(ctx, 'Tally help', 'Think back, or play your voice memo. Tap what you noticed. It is your own reflection, not a measurement.', 0, 38, rw, { fontSize: 15, color: L.muted, lineHeight: 1.4 });
+  const tallyHelp = text(ctx, 'Tally help', `{${rec('talk').has} ? "Play your recording while you tap what you noticed." : "Think back, or play your voice memo."} Tap what you noticed. It is your own reflection, not a measurement.`, 0, 38, rw, { fontSize: 15, color: L.muted, lineHeight: 1.4 });
   const counter = (name: string, label: string, v: typeof fillers, y: number) => {
     const row = card(ctx, `${name} row`, 0, y, rw, 48);
     const l = text(ctx, `${name} label`, label, 16, y + 13, 250, { fontSize: 17, fontWeight: 600 });
@@ -157,8 +164,13 @@ function build(colourway: Colourway) {
   };
   const openRow = flag('Clear opening', 'Clear opening: I said what I would talk about', opening, 212);
   const closeRow = flag('Clear close', 'Clear close: I finished on a clear final sentence', closing, 268);
-  //The replay slot (media bridge, later): the learner's recording plays here while they tally
-  const replaySlot = createNode('frame', { name: 'Replay slot (media bridge)', visible: false, x: 0, y: 332, width: rw, height: 56, cornerRadius: 12, fill: solid(L.surface), stroke: null, clip: false, ariaLabel: 'Replay slot, not used yet' } as Partial<SceneNode>);
+  //The replay step: the learner's recording plays here while they tally, only when there is one
+  const playTalk = button(ctx, 'Play my talk', 'Play my talk', 0, 0, 170, false);
+  playTalk.ariaLabel = 'Play my recording';
+  const stopTalk = button(ctx, 'Stop playing', 'Stop', 180, 0, 100, false);
+  stopTalk.ariaLabel = 'Stop playing my recording';
+  const replayNote = text(ctx, 'Replay note', 'Stays on this device. Dropped when you save and go on.', 292, 2, rw - 292, { fontSize: 13, lineHeight: 1.3, color: L.muted, autoSize: 'none', height: 44 });
+  const replaySlot = bind(createNode('frame', { name: 'Replay step', x: 0, y: 336, width: rw, height: 48, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Play my recording', children: [playTalk, stopTalk, replayNote] }) as FrameNode, { visible: `${MIC_READY} && ${rec('talk').has}` });
   const toModel = button(ctx, 'To the model answer', 'Compare with the model answer', 0, 408, 330, true);
   const tallyStage = stageFrame('Tally stage', 'stage == "tally"', [tallyHead, tallyHelp, ...fill.nodes, ...paus.nodes, openRow, closeRow, replaySlot, toModel]);
 
@@ -218,6 +230,15 @@ function build(colourway: Colourway) {
   g.run(g.click(prep.button, 'Ready early'), set(left, 'talkSeconds'), set(stage, '"talk"'), announce('timersOn ? "Time to talk. " + talkSeconds + " seconds." : "Talk now. Press I have finished when you are done."'));
   g.run(g.click(talk.button, 'Finished early'), set(stage, '"tally"'), announce('"Tally how it went."'));
 
+  //The optional recording: one button records and stops, the take ends when the talk stage is left (the clock ran out, or Finished early), plays back on
+  //the tally stage, and is dropped on the next card
+  wireRecord(g, record, 'talk', 'Record this talk, or stop');
+  stopTakeWhen(g, stage, 'talk', 'stage != "talk"', 'End the take when the talk stage is left');
+  wirePlay(g, playTalk, 'talk', 'Play my talk');
+  g.run(g.click(stopTalk, 'Stop playing my talk'), ['action.recordPlay', { op: 'stop', slot: 'talk' }]);
+  dropTakeWhen(g, stage, 'talk', '(stage == "draw" || stage == "prep")', 'Drop the take on the next card');
+  g.gap(40);
+
   //The tally counters and flags
   const bump = (btn: SceneNode, v: typeof fillers, delta: 1 | -1, what: string) =>
     g.run(g.click(btn, `${what}${delta > 0 ? ' more' : ' fewer'}`), set(v, delta > 0 ? `${v.name} + 1` : `Math.max(0, ${v.name} - 1)`));
@@ -245,9 +266,9 @@ function build(colourway: Colourway) {
     item('Write your bank of cards: Project > Variables > "cards". Each card has a type (the label on it), q (the question or topic), model (a short model answer) and points (up to four things a good answer makes). The six samples cover a viva, an interview and a short talk. Delete or replace them', cardQ, rehearse),
     item('Set the timers: Project > Variables > "timersOn" (false switches the countdowns off for everyone), "prepSeconds" (30) and "talkSeconds" (60). Longer times are an accessibility adjustment, so offer them. Learners also get a Timers on or off button on the first stage', timerSwitch, rehearse),
     item('Check the tally wording on the tally stage: filler words, long pauses, clear opening, clear close. Change the labels to suit your task (for example, "Used a technical term correctly"). It is the learner\'s own reflection, so do not describe it as a measurement', fill.nodes[0], rehearse),
-    item('Tell learners where to talk: the help text on the draw, prepare and talk stages. They talk to a friend, a voice memo on their phone or the room, since no microphone is used', drawHelp, rehearse),
+    item('Tell learners where to talk: the help text on the draw, prepare and talk stages. They talk to a friend, a voice memo on their phone or the room. With recording switched on (see the item for it) the draw stage says they can record themselves too', drawHelp, rehearse),
     item('Check the summary page: the attempts are the remembered variable "attempts", so they are still there on the next visit (inside StudyDesk they go with the learner\'s record, otherwise they stay in that browser). "Clear my history" empties them', byName(summary, 'Attempts'), summary),
-    item('RECORDING SLOTS, for later: the hidden "Recording slot (media bridge)" layer on the talk stage and "Replay slot (media bridge)" on the tally stage are where record, stop and play my recording go once the media bridge exists. Leave them hidden. Nothing is recorded until then', recSlot, rehearse),
+    item('OPTIONAL RECORDING: it is off as shipped, so nothing is recorded and the record and replay layers never show. To offer it, tick Microphone in Project > Microphone and camera and write the one-sentence purpose that fills in "It is used to ...". Then "Record this talk" appears on the talk stage and "Play my talk" on the tally stage, for learners whose microphone works. Anyone who says no, has no microphone or chooses "Do not use my microphone or camera" rehearses exactly as before. The recording stays in the learner\'s browser, is dropped when they save and go on, and is never sent', recStep, rehearse),
     item('Keep it rehearsal, not assessment: nothing is scored or sent, and a graded viva belongs in a live conversation or a Moodle recorded answer instead. Say so on the first page if you use this for an assessed task', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page),
   );
 

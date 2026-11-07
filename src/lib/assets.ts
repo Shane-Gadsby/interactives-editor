@@ -161,12 +161,14 @@ export function videoSize(url: string): Promise<{ width: number; height: number 
 
 /**
  * Point every reference to one asset id at another, anywhere in a document (asset ids are random and unique, so a
- * string equal to one is a reference to it). Used to replace an asset's file under a new id: see replaceAssetFile.
+ * string equal to one is a reference to it, and so is one inside a list variable's JSON text). Used to replace an asset's file under a new id: see replaceAssetFile.
  */
 export function swapAssetId<T>(doc: T, oldId: string, newId: string): T {
   // Only the matching strings are written, so an immer draft only copies the branches that really change
   const walk = (v: unknown): unknown => {
     if (v === oldId) return newId;
+    //A list variable keeps its rows as JSON text, so a card's sound id sits inside a string: ids are random, so a plain swap inside text that is JSON is safe
+    if (typeof v === 'string' && v.length > oldId.length && (v[0] === '[' || v[0] === '{') && v.includes(oldId)) return v.split(oldId).join(newId);
     if (v && typeof v === 'object') {
       const o = v as Record<string, unknown>;
       for (const k of Object.keys(o)) {
