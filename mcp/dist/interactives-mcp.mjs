@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { AsyncLocalStorage } from "node:async_hooks";
 const OUT = [{ id: "out", label: "" }];
+const SPEAK_SAYS = ["text", "question", "feedback", "auto", "page"];
 const CONTINUE = [
   {
     key: "continue",
@@ -580,12 +581,17 @@ const CATALOG = [
     kind: "action.sound",
     label: "Play sound",
     category: "action",
-    description: "Play an audio asset.",
+    description: "Play an audio asset, once or on a loop, at a volume and a speed. The sound can be picked here or worked out by an expression (a list item's sound, say).",
     outputs: OUT,
     hasInput: true,
     params: [
       { key: "asset", label: "Sound", type: "asset" },
-      { key: "volume", label: "Volume (0-1)", type: "number", default: 1 },
+      { key: "source", label: "Sound from expression", type: "expr", default: "", placeholder: "item.sound", help: "Optional, and it wins over the sound picked above. It gives a sound's id or name from Assets (a list item's sound field, for instance), or the address of a sound file. Nothing plays if it comes out empty." },
+      { key: "volume", label: "Volume (0-1)", type: "expr", default: "1", help: "A number from 0 (silent) to 1 (full), or an expression such as a variable" },
+      { key: "speed", label: "Speed", type: "expr", default: "1", help: "1 is as recorded, 0.5 is half speed, 2 is double. From 0.25 to 4. A number or an expression such as a variable." },
+      { key: "keepPitch", label: "Keep the pitch when the speed changes", type: "boolean", default: true, help: "On, a slowed sound stays at its own pitch (where the browser allows it); off, slower is lower and faster is higher" },
+      { key: "loop", label: "Loop", type: "expr", default: "false", help: "true to play round and round until a Stop sound node, or until the page changes. Or an expression, such as a variable. A looping sound never finishes, so the next node runs straight away." },
+      { key: "solo", label: "Stop other sounds first", type: "boolean", default: false, help: "Stop every other sound played by Play sound before this one starts (for comparing two clips, so only one is heard at a time)" },
       ...CONTINUE
     ]
   },
@@ -618,6 +624,18 @@ const CATALOG = [
       },
       { key: "seconds", label: "Seconds", type: "expr", default: "0", showIf: { key: "op", values: ["seek", "skip"] }, help: "An expression: 12, or -5 to skip back five seconds, or tags[0]" },
       { key: "rate", label: "Speed", type: "expr", default: "1", showIf: { key: "op", values: ["setRate"] }, help: "1 is normal, 0.5 is half speed, 2 is double. Between 0.0625 and 16" }
+    ]
+  },
+  {
+    kind: "action.stopSound",
+    label: "Stop sound",
+    category: "action",
+    description: "Stop sounds that Play sound started: all of them, or just one. The way to end a looping sound. Timeline audio is not affected.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "asset", label: "Only this sound", type: "asset", help: "Leave empty to stop every sound Play sound has going" },
+      { key: "source", label: "Or the sound from an expression", type: "expr", default: "", placeholder: "item.sound", help: "Optional, and it wins over the sound picked above. The same kind of answer Play sound takes." }
     ]
   },
   {
@@ -726,6 +744,41 @@ const CATALOG = [
     ]
   },
   {
+    kind: "action.speak",
+    label: "Read aloud",
+    category: "action",
+    description: `Say something with a voice installed on the learner's own device: a text expression, a question with its options, or the feedback after a check. Nothing is recorded or sent anywhere, and with no local voice for the language nothing is said (bind to voiceAvailable to hide what depends on it). It never starts by itself, so put it behind a click or key: iOS only lets the first words start from a tap. The learner's speed choice (0.75 to 1.5, remembered) applies on top of Speed here. A layer's "Say it like" text is what the voice says for that layer. Also: stop, pause, resume, slower, faster, repeat.`,
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "text", label: "Say a text expression" },
+          { value: "question", label: "Say a question and its options" },
+          { value: "feedback", label: "Say the feedback after a check" },
+          { value: "auto", label: "Say the feedback once checked, else the question" },
+          { value: "page", label: "Say all the text on this artboard" },
+          { value: "stop", label: "Stop" },
+          { value: "pause", label: "Pause" },
+          { value: "resume", label: "Carry on" },
+          { value: "toggle", label: "Pause or carry on" },
+          { value: "repeat", label: "Say the last thing again" },
+          { value: "slower", label: "Slower (the learner's speed, one step)" },
+          { value: "faster", label: "Faster (the learner's speed, one step)" }
+        ],
+        default: "text"
+      },
+      { key: "text", label: "Text", type: "expr", default: '"Hello"', help: 'An expression, e.g. "Question " + (index + 1) + ". " + questions[index].prompt', showIf: { key: "op", values: ["text"] } },
+      { key: "question", label: "Question", type: "node", help: "The question frame (made with Add question)", showIf: { key: "op", values: ["question", "feedback", "auto"] } },
+      { key: "lang", label: "Language", type: "text", placeholder: "e.g. en, fr-CA. Empty: the project's", help: "Only a voice on the device for this language is used. Words in another language read with the wrong sounds, so none is used then", showIf: { key: "op", values: SPEAK_SAYS } },
+      { key: "rate", label: "Speed", type: "number", default: 1, help: "A multiplier for this reading, 1 is normal. The learner's own speed choice is applied on top", showIf: { key: "op", values: SPEAK_SAYS } },
+      { key: "wait", label: "Continue when it finishes", type: "boolean", default: false, help: "Hold the next node until the words have been said (or stopped, or there is no voice)", showIf: { key: "op", values: SPEAK_SAYS } }
+    ]
+  },
+  {
     kind: "action.questionCheck",
     label: "Check answer",
     category: "action",
@@ -747,7 +800,8 @@ const CATALOG = [
     hasInput: true,
     params: [
       { key: "question", label: "Question", type: "node", help: "The question frame" },
-      { key: "next", label: "Next from the bank", type: "boolean", default: true, help: "With a question bank: draw the next row. Off keeps the row showing and only clears the answer." }
+      { key: "next", label: "Next from the bank", type: "boolean", default: true, help: "With a question bank: draw the next row. Off keeps the row showing and only clears the answer." },
+      { key: "retake", label: "Retake", type: "boolean", default: false, help: "For questions that have Retakes (a test marked on the server): start the next go at the whole set, once every question is finished and a go is left. Without it a finished question only comes back showing how it finished." }
     ]
   },
   {
@@ -1169,6 +1223,7 @@ const ANIMATABLE_PROPS = [
   { prop: "assetId", label: "Image / video asset", kind: "string" },
   { prop: "disabled", label: "Button disabled", kind: "boolean" },
   { prop: "ariaLabel", label: "Text alternative", kind: "string" },
+  { prop: "sayAs", label: "Say it like", kind: "string" },
   { prop: "ariaDescription", label: "Accessible description", kind: "string" },
   { prop: "ariaChecked", label: "Checked (checkbox role)", kind: "boolean" },
   { prop: "ariaExpanded", label: "Expanded (button role)", kind: "boolean" },
@@ -2339,6 +2394,15 @@ function linearSplit(re, s, limit) {
   out.push(s.slice(p));
   return out;
 }
+new Set(
+  "honour favour colour labour neighbour behaviour harbour humour rumour flavour savour vapour odour armour clamour glamour rigour vigour valour splendour tumour parlour saviour endeavour candour ardour arbour fervour rancour demeanour succour".split(" ")
+);
+new Set(
+  "apologise authorise baptise capitalise categorise centralise characterise civilise colonise criticise customise democratise digitise emphasise energise equalise evangelise familiarise fertilise finalise generalise globalise harmonise hospitalise hypnotise idealise immunise individualise industrialise initialise internalise itemise legalise legitimise liberalise localise magnetise marginalise maximise memorise mesmerise minimise mobilise modernise moisturise monopolise motorise nationalise naturalise neutralise normalise optimise organise oxidise patronise penalise personalise pasteurise philosophise plagiarise polarise popularise prioritise privatise publicise pulverise randomise rationalise realise recognise regularise revolutionise romanticise scrutinise sensitise socialise specialise stabilise standardise sterilise stigmatise subsidise summarise symbolise sympathise synchronise synthesise systematise tantalise terrorise theorise traumatise unionise urbanise utilise vaporise victimise visualise vocalise westernise canonise galvanise jeopardise deodorise formalise fraternise ostracise revitalise sanitise sexualise".split(" ")
+);
+new Set(
+  "travel cancel label model level fuel signal total equal channel counsel quarrel marvel panel tunnel jewel shovel snorkel grovel rival pedal parallel dial duel libel initial".split(" ")
+);
 const QUESTION_KINDS = [
   { value: "single", label: "Multiple choice (one answer)", hint: "Pick the one right option" },
   { value: "multiple", label: "Multiple response (several answers)", hint: "Tick every right option" },
@@ -2439,6 +2503,8 @@ function normaliseQuestion(raw) {
     label: str$1(b.label),
     answers: (Array.isArray(b.answers) ? b.answers : []).filter((a) => typeof a === "string").slice(0, 40),
     ...b.caseSensitive === true ? { caseSensitive: true } : {},
+    ...b.spelling === true ? { spelling: true } : {},
+    ...b.spelling === true && b.usSpelling === true ? { usSpelling: true } : {},
     ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {}
   }));
   const pairs = list(raw.pairs, MAX_PAIRS).map((pr, i) => ({ id: str$1(pr.id) || `p${i + 1}`, term: str$1(pr.term), match: str$1(pr.match) }));
@@ -2463,8 +2529,13 @@ function normaliseQuestion(raw) {
     feedbackOutOfTries: str$1(raw.feedbackOutOfTries),
     reveal: raw.reveal !== false,
     bank,
+    ...typeof raw.spoken === "string" && raw.spoken.trim() ? { spoken: raw.spoken.slice(0, 2e3) } : {},
+    ...typeof raw.explain === "string" && raw.explain.trim() ? { explain: raw.explain.slice(0, 2e3) } : {},
+    ...raw.numberKeys === true ? { numberKeys: true } : {},
+    ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
+    ...isObj$2(raw.retake) ? { retake: { limit: Math.round(num(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
     ...raw.multi === true ? { multi: true } : {},
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
@@ -2642,10 +2713,10 @@ function sanitizeNode(raw, seen) {
   if ("maxWidth" in n && !isNum(n.maxWidth)) delete n.maxWidth;
   if ("paragraphSpacing" in n && !isNum(n.paragraphSpacing)) delete n.paragraphSpacing;
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
-  for (const k of ["mask", "locked"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  for (const k of ["mask", "locked", "noAssist"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
   if ("maskMode" in n && !["alpha", "inverted", "luminance", "invertedLuminance"].includes(n.maskMode)) delete n.maskMode;
   for (const k of ["blur", "fontWeight"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
-  for (const k of ["blendMode", "cursor", "ariaLabel", "ariaDescription", "className"]) if (k in n && !isStr(n[k])) delete n[k];
+  for (const k of ["blendMode", "cursor", "ariaLabel", "ariaDescription", "sayAs", "className"]) if (k in n && !isStr(n[k])) delete n[k];
   if ("role" in n && !["button", "checkbox", "radio", "radiogroup", "heading", "image", "region"].includes(n.role)) delete n.role;
   for (const k of ["decorative", "focusable", "ariaChecked", "ariaExpanded"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
   for (const k of ["headingLevel", "tabOrder"]) if (k in n && !isNum(n[k])) delete n[k];
@@ -6342,7 +6413,7 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
     body: `Web elements are real HTML controls, so they work with keyboards, screen readers and forms.
 
 - **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react.
-- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed.
+- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test.
 - **Link**: text that opens a URL.
 - **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
 - **Video**: a video file or URL.
@@ -6362,6 +6433,7 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - **Role**: what the layer is to a screen reader. *Button* and *Checkbox* make it a tab stop that Enter and Space click. *Heading* (with a level 1 to 6), *Image* and *Region* describe structure. *Decorative* hides the layer from screen readers and keyboards completely (backgrounds, flourishes).
 - **Text alternative**: the name a screen reader says. For a picture, describe what it shows; for a clickable shape, say what it does ("Next question"). It can be bound or animated like other properties.
 - **Description**: a longer explanation read after the name.
+- **Say it like**: what [read aloud](read-aloud) says for the layer instead of its text, for an abbreviation, a formula or a name a voice gets wrong. It is not shown and screen readers ignore it.
 - **Tab stop**: *Automatic* (a layer is reachable when it has an *On pointer → Click*, an *On focus*, or a button or checkbox role), *Always*, or *Never*. The line underneath says what you get.
 - A **Checkbox** role needs its state told: bind **Checked (checkbox role)** in Data bindings to the variable that holds it (see [Bindings](bindings)).
 - Buttons, inputs and links show only the text alternative and description. They already have the right role and keyboard behaviour.
@@ -6702,6 +6774,9 @@ Pick a frame under **Scroll to scrub** and scrolling it moves the timeline: the 
 - **Role.** **Narration** (the default) is speech and needs captions. **Music** and **Sound effect** do not. Muting a clip (the **M** button) keeps it in step but silent.
 - **It follows the timeline.** The sound plays when the timeline plays forwards inside the clip. It is silent when the timeline is paused, reversed or outside the clip, and it follows the timeline's speed (between a quarter and four times). When a timeline blends in, its sound comes in with it. A timeline that never started stays silent.
 - **Speed and pitch.** At another speed a clip keeps its pitch (it is time-stretched, like a browser's own audio player does it), so a voice at 1.25x sounds quicker, not higher. Untick **Keep pitch at other speeds** in the clip's settings for the record-player effect instead: faster is higher, slower is lower.
+- **Play sound, with options.** The **Play sound** node has a **Volume** (0 to 1), a **Speed** (0.25 to 4, 1 is as recorded) and a **Loop**. Each one takes a plain value or an expression, so a variable can drive them (a speed slider, a "looping" toggle). **Keep the pitch when the speed changes** is on by default, so a slowed clip stays at its own pitch where the browser allows it. **Stop other sounds first** is for comparing two clips: only one is heard at a time. Leave all of these alone and the node plays the sound once at full volume, as it always did.
+- **Which sound.** Pick it in **Sound**, or fill **Sound from expression** to work it out while the project runs: a list item's sound field (an asset's name or id), say, so one button and one node can play any clip in a repeater. When the expression is filled it wins, and an empty answer plays nothing.
+- **Stopping a loop.** A looping sound plays until a **Stop sound** node ends it (all of them, or just one sound), or until the viewer leaves the page, pauses the project or the tab goes to the background. A loop never finishes, so the next node runs straight away. **Stop sound** also cuts a sound that is still playing once. It does not touch timeline audio, which follows its timeline.
 - **Media keys don't touch it.** Sound plays through the browser's Web Audio, not an audio player of its own, so the keyboard's play/pause key, headphone buttons and the system's media controls don't stop it behind the project's back. Only the project (its timelines and **Play sound**) decides what sounds.
 - **When the browser says no.** Browsers will not start sound until the viewer has clicked, tapped or pressed a key. Then the player shows **Sound is waiting. Press to start it**, and any click or key press on the page starts it too. That includes a **Play sound** that runs before anyone has clicked (from **On start** or a timer): it waits and plays at that first press. If several are waiting, only the latest plays, so a run of hover sounds doesn't all go off at once. Put a **Start** button in front of an autoplaying narration if the first seconds matter.
 
@@ -6728,6 +6803,43 @@ A [Steps](steps) timeline can carry sound and captions too: Next plays the narra
 - Sound and captions belong to a timeline, so they stop with the artboard. An artboard shown inside another (an instance) brings its own.
 - Exported files and share links carry the audio inside them, so a long recording makes a larger file.
 - The timeline length is not changed by captions; adding a sound makes the timeline at least as long as the sound.`
+  },
+  {
+    id: "read-aloud",
+    title: "Read it to me",
+    group: "Interactivity",
+    summary: "Let learners hear any text, question or feedback with a voice on their own device: a Listen button, a Read aloud node, a project setting and a speed choice.",
+    keywords: "read aloud listen speak speech voice text to speech tts narrator dyslexia low vision say it like pronunciation speed rate 0.75 1.25 1.5 voiceAvailable ix.speech accessibility",
+    body: `**Read it to me** lets a learner hear what is on the page. The words are spoken by a voice already installed on **their own device**: nothing is recorded, saved as a file or sent anywhere, and nothing needs permission. It helps learners with dyslexia, low vision, a second language or a tired pair of eyes, and it is never the only way to get at something (images still need a text alternative).
+
+## Three ways to use it
+- **Project setting.** In Project settings open **Read aloud** and tick **Offer read-aloud**. Every artboard gets one **Listen** button, a pause and a speed choice in the same corner. It reads the text layers that show, in layer order. Set **Language** (such as *en* or *fr-CA*) so only a voice for that language is used.
+- **A Listen button layer.** Press **Add a Listen button to this artboard** in the same section. It is an ordinary button with two nodes behind it (one reads the artboard, one stops it), and a line that shows when the device has no voice. Restyle and move it as you like.
+- **The Read aloud node.** In the Interactions tab, **Read aloud** says a text expression, a question and its options, the feedback after a check, or the whole artboard. The same node can **stop**, **pause**, **carry on**, say the **last thing again**, and make the learner's speed **slower** or **faster**. **Continue when it finishes** holds the next node until the words are said.
+
+## What the learner gets
+**Listen** starts it, the same button pauses and carries on, and a speed menu offers 0.75, 1, 1.25 and 1.5. The speed is remembered in their browser with their caption and sound choices. Reading never starts by itself: iOS only lets the first words start from a tap, and a voice starting uninvited clashes with a screen reader. Speech stops when the learner moves to another artboard.
+
+## With no voice
+Only voices that run on the device are used (a browser's network voices are skipped), and only for the right language. When there is none, the Listen button is left out and a short line says why. In your own graph, bind a layer's **Visible** to **voiceAvailable** to hide anything that needs it, and always keep the text readable on its own. Test on the devices your learners use: some Linux and managed computers have no voice.
+
+## Words a voice gets wrong
+Select a layer and fill **Say it like** in the Accessibility section: the voice says that instead of the layer's text. Write the sounds ("pie one", "the Ma-too-eye people"), spell out a formula, or leave out a decoration. A group with **Say it like** is read as a whole, not twice. For a question, **Say the prompt like** and **Spoken explanation** do the same (see [Questions](question-kit)).
+
+## Expression names
+- **voiceAvailable**: true when a voice on this device can read the project's language.
+- **speaking**: true while a voice is reading.
+- **readRate**: the learner's speed.
+A variable with the same name wins.
+
+## Scripts
+A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it was said to the end), **stop**, **pause**, **resume**, **repeat**, and read **available**, **speaking**, **paused**, **rate**, with **setRate**. It works in sandboxed scripts too.
+
+## Good to know
+- Maths, drug names, abbreviations and mixed-language text read badly: use **Say it like**.
+- A screen reader user already has a reader, and two voices at once is worse than one. The Listen button is a plain button they can skip, and it is not the route to offer them.
+- The first words must start from a click or tap, so put a Read aloud node behind a button or key, not a timer.
+- The **Audio-first quiz** starter (Templates, Built-in, Quizzes and questions) is a whole quiz built on this: it reads each question and its options, the keys 1 to 4 answer, R repeats, S slows, H gives a hint and Space pauses, and the score page speaks the score and offers the missed questions again. With no voice it is an ordinary keyboard quiz.`
   },
   {
     id: "interactions",
@@ -6910,6 +7022,12 @@ Every layer is yours: recolour it, change the font, move things around, swap a r
 
 The behaviour is a handful of nodes in the **Interactions** tab, in rows of an event and what it runs: *On start* then **Reset question**; a click on the option then **Choose option**; a click on Check answer then **Check answer**; and so on. Add your own nodes after them. **Check answer** has three outputs: *right*, *wrong*, and *finished* (once the question is locked, because it is right or out of tries), so "when it is right, play the confetti timeline" is one wire.
 
+## Listening and number keys
+Three settings in the Question section's **Listening and keys** group:
+- **Listen button** adds a Listen button beside Check. It reads the question and its numbered options aloud, and once the answer has been checked it reads the feedback and the spoken explanation instead. It uses a voice installed on the learner's own device, never starts by itself, and hides itself when the device has no voice. See [Read it to me](read-aloud).
+- **Say the prompt like** and **Spoken explanation** are text only a voice says. The first replaces the prompt when it is read (the options still follow it); the second is said after the feedback. For a data bank, the columns *spoken* and *explain* do the same per row.
+- **Number keys 1 to 9 choose** lets the learner press 1 to 9 to choose the option in that place (several choices toggle; other keys do nothing). A small line under the options says so. Choosing still needs **Check answer**. It listens on the whole page, so use it on one question at a time. It is offered for single choice, multiple choice and true or false.
+
 ## Variables
 
 Each question keeps its state in variables named from its **Name prefix** (\`q1\` by default): \`q1_answered\`, \`q1_correct\`, \`q1_attempts\`, \`q1_triesLeft\`, \`q1_score\`, \`q1_locked\`, \`q1_feedback\`, \`q1_hint\`, \`q1_hintsUsed\`, \`q1_hintsLeft\`, \`q1_prompt\` and \`q1_items\` (what is shown, with \`selected\` and \`state\` per row). Use them anywhere: \`q1_score + q2_score\`, a progress bar bound to \`q1_attempts\`, a Next button shown when \`q1_correct\`. Renaming the prefix renames the variables and everything that reads them.
@@ -6926,7 +7044,7 @@ Two finished ones to play first: **Matching question** and **Hotspot question** 
 
 **True or false.** Write the statement as the prompt and set **Statement is** to True or False. Edit the two labels for other wording ("Agree" and "Disagree").
 
-**Fill in the blank.** The accepted answers go one per line: \`Paris\`, \`city of light\`. Case and extra spaces are ignored unless you tick **Match case**. A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses. A line written \`/colou?r/i\` is a pattern. **Add blank** adds another input in the look of the last one.
+**Fill in the blank.** The accepted answers go one per line: \`Paris\`, \`city of light\`. Case and extra spaces are ignored unless you tick **Match case**. A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses. A line written \`/colou?r/i\` is a pattern. **Add blank** adds another input in the look of the last one. Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
 
 **Put in order.** List the items in the **right** order; the learner sees them shuffled (the first deal is never already right). Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
 
@@ -6995,9 +7113,10 @@ Everything above marks in the learner's browser, so the right answers are in the
 
 - The page that is served has the right answers taken out: which options are right, accepted answers and their patterns and tolerances, the feedback, and the hints. The right order of an ordering question is hidden too. Anyone who looks at the page's code finds none of it.
 - **Check answer** sends the learner's answer to the server, which marks it with the same marking the player uses, and sends back right or wrong, the score and the feedback to show. The tries, hints and score are kept by the server, so a learner who reloads or starts again does not get a fresh set of tries.
-- The server records the result itself. The mark that counts for each question is how it finished the first time. **Try again** after that is practice and does not change the recorded mark. The project's score is the total of those marks out of the questions' total points, it counts as complete when every server-marked question has finished, and it passes at the pass mark set in the Results settings.
+- The server records the result itself. The mark that counts for each question is how it finished the first time (unless the set has **Retakes**, below). **Try again** after that is practice and does not change the recorded mark. The project's score is the total of those marks out of the questions' total points, it counts as complete when every server-marked question has finished, and it passes at the pass mark set in the Results settings.
 - A **Report result** node, or anything else the browser sends as a result, is ignored for a project with server-marked questions: the server's own record is the only one. Questions that are not set to be marked on the server still do their normal marking in the page, but they add nothing to that record.
 - Checks and hints are limited to 30 a minute for each learner, so an answer can't be found by guessing over and over. A learner who goes over is asked to wait.
+- A learner who came in from an LMS over LTI 1.3 has their score sent to the LMS gradebook by the server when the whole set is finished, and again if their kept score changes. See [Spelling tests](question-kit#spelling-tests) for how.
 
 What it does not do:
 
@@ -7007,6 +7126,24 @@ What it does not do:
 - Unlimited tries can still be used to find an answer slowly. Set **Tries** to limit them.
 - A script or a custom node that holds an answer of its own is not touched.
 - Staff who open the project in the editor, or Remix it from the Link for StudyDesk, see the full project with its answers.
+
+## Spelling tests
+
+A spelling test plays a word and the learner types it. Build one with one **Fill in the blank** question for each word, one to a page the way the **Spelling test** starter does, and for each:
+
+1. Tick **Mark answers on the server** and **Spelling: letters must match exactly** on its blank.
+2. List every accepted spelling, one per line (\`judgement\` and \`judgment\`). Tick **Also accept American spellings** to accept the American form of each as well: the editor shows the forms it adds, so nothing is accepted that you can't see. It knows the common differences (colour/color, organise/organize, centre/center, travelled/traveled, paediatric/pediatric and a few dozen words that just differ) and leaves a word alone when it is not sure, so add anything else as its own line.
+3. Add a **Play sound** node on a button for the word's audio, and write nothing of the word anywhere else (not in a layer name, a label or the prompt).
+
+**What counts as right.** Every letter, in order. Case is ignored unless **Match case** is on, and spaces round the word are ignored. A curly apostrophe typed on a phone counts as a plain one, but a missing apostrophe or hyphen is wrong, and accents have to be there (cafe is not café). Numbers are not compared as numbers. The box has the browser's own spellcheck, autocorrect and automatic capitals switched off (**No browser help** in the input's settings), so it neither underlines nor fixes the word.
+
+**Keeping the word out of the page.** The page learners get has no accepted spellings in it, because the question is marked on the server. The word is in the audio, so the audio is the only place it is. In a project with spelling questions, **Update to the latest version** on the share link also renames every audio asset to a plain name (\`colour.mp3\` becomes \`audio-1.mp3\`) and cuts the title and comment tags out of mp3 and wav files. Other kinds of audio keep their tags, and the share says so: use mp3 or wav. Speech made on the learner's own device (the browser reading text aloud) is not an option for a graded test: it would need the word as text in the page. Record the words, or make them with any speech tool and upload the files.
+
+What this does not protect against: a learner who writes down what they hear (that is the test), who runs the audio through speech recognition, or who has your project open in the editor. **Preview** and any file you export still carry the answers.
+
+**Tries and retakes.** **Tries** is how many goes at one word (1 for a test). **Retakes** (in the Marking part, set the same on every word) lets the learner go through the whole test again: a round is every word finished once, the server keeps each round, and the score that counts is the **Best round** or the **Latest round**. Choose a set number of retakes, or unlimited. A **Reset question** node with **Retake** on (the starter's **Retake** button) starts the next round for every word at once, and only when the round is finished and a retake is left, so opening a page again never uses one up. Until the last retake the right spelling is not shown after a wrong word, so a learner can't read the answers off one round to use in the next. The question's \`round\`, \`retakesLeft\`, \`kept\` and \`keptMax\` variables say where the learner is and what is on record, for a results page to show.
+
+**Grading in the LMS.** Add the project to a course with the LMS's **Select content** picker (or an external tool link) and, when the LMS has a grade for that link, the server sends the score to it. It sends the kept score with the test's total points once every word is finished in a round, and again only when the kept score changes. It needs the LMS to be registered for LTI 1.3 with grade passback allowed, and the link has to be set up for grades in the course. A learner signed in another way gets everything but the grade. If the LMS refuses a score, the server tries again a moment later and with the learner's next click, and the record shows what was sent.
 
 ## Accessible by default
 
@@ -8185,7 +8322,7 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
       return `A **branded starter pack** is a ready-made activity in the UniSQ look: a gradient title page with the logo, white content pages with a footer line, and sections on deep purple. You write the content; the look is already done, and it stays done.
 
 ## Using one
-Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace.
+Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace. A starter with sound (the **Listening lab**) comes with short placeholder tones in the project's **Assets**, named "(replace)": use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it. **Keep the beat** has no metronome timer to drift: a 16 ms clock reads \`Date.now()\` against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. Its drills, tempos and how close a tap has to be are the **presets** variable (Variables tab).
 
 ## Colourways
 Every branded project carries all of these as [themes](themes), plus **High contrast**, which a viewer who asks for more contrast gets automatically. Every colour in the project is a theme colour, so switching colourway re-colours the whole thing at once.
