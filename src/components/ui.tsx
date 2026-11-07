@@ -4,7 +4,7 @@ import { formatColor, isTokenRef, parseColor, type Project } from 'interactives-
 import { HelpLink } from '../help/Help';
 import { paletteTip, usePalette } from '../lib/palette';
 import { Icons } from './icons';
-import { TokensTab, TokenValues, linked, useBrandLocked, useThemeState } from './TokenPicker';
+import { TokensTab, tokenSummary, linked, useBrandLocked, useThemeState } from './TokenPicker';
 import { FIELD_TIPS } from './tips';
 
 /** An explicit title, or the standard explanation for a field label. */
@@ -264,8 +264,10 @@ export function TextField({
       if (!multiline && e.key === 'Enter') (e.target as HTMLInputElement).blur();
     },
   };
+  // A long label would squeeze its own box to nothing at the inspector's width, so it goes above it, like a text area's
+  const stacked = multiline || (typeof label === 'string' && label.length > 14);
   return (
-    <label className={`field text-field${multiline ? ' multiline' : ''}`} title={tipFor(label, title)}>
+    <label className={`field text-field${stacked ? ' multiline' : ''}`} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
     </label>
@@ -452,9 +454,8 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
           <Icons.link width={9} height={9} />
         </span>
         <PaletteButton value={value} onPick={(v) => (onChange(v), onCommit?.())} tokenTab={tokenTab} tokensOnly={locked} />
-        <span className={`token-chip${link.token ? '' : ' missing'}`} title={link.token ? `Follows the token ${link.token.name}. Edit its colours in the Themes panel` : 'This token was deleted. Detach it to keep the colour'}>
+        <span className={`token-chip${link.token ? '' : ' missing'}`} title={link.token ? `Follows the token ${link.token.name}${ts ? ` (${tokenSummary(ts.project, link.token)})` : ''}. Edit its colours in the Themes panel` : 'This token was deleted. Detach it to keep the colour'}>
           <span className="token-chip-name">{link.token?.name ?? 'missing token'}</span>
-          {link.token && ts && <TokenValues project={ts.project} token={link.token} />}
           {!locked && (
           <button
             type="button"

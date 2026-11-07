@@ -172,6 +172,24 @@ textarea {
   font: inherit;
   color: inherit;
 }
+/* Ticks and sliders that are on or chosen take the gold, like every other chosen state (the browser's own blue never shows) */
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  accent-color: var(--primary-bg);
+}
+/* A bare select or text box (one no component rule has styled) looks like the .field ones instead of the browser's own.
+   :where() keeps it at zero specificity, so every rule below still wins */
+:where(select:not([multiple]):not([size]), input:not([type]), input[type='text'], input[type='search'], input[type='number'], input[type='url'], input[type='email'], input[type='password'], textarea) {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+:where(select:not([multiple]):not([size]):focus, input:focus, textarea:focus) {
+  border-color: var(--accent);
+  outline: none;
+}
 code,
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -322,6 +340,21 @@ code,
   white-space: nowrap;
   flex: none;
 }
+/* The one-letter labels (X, Y, W, Sx, Ox, a) share a width, so a column of them lines up */
+.inspector .number-field > .field-label {
+  width: 18px;
+}
+/* A run of rows whose labels differ in length: give them one width so the boxes line up (labels-54, labels-66) */
+.inspector .labels-54 .field-label {
+  flex: none;
+  width: 54px;
+  white-space: nowrap;
+}
+.inspector .labels-66 .field-label {
+  flex: none;
+  width: 66px;
+  white-space: nowrap;
+}
 .field-label.block {
   display: block;
   margin: 8px 0 4px;
@@ -371,7 +404,7 @@ code,
   cursor: pointer;
 }
 .check-field input {
-  accent-color: var(--accent);
+  accent-color: var(--primary-bg);
 }
 .color-field .swatch {
   position: relative;
@@ -735,7 +768,8 @@ code,
   color: var(--primary-fg);
 }
 .search-pop-list li.on .search-picker-hint {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--primary-fg);
+  opacity: 0.75;
 }
 .search-pop-list li.current:not(.on) {
   font-weight: 600;
@@ -746,7 +780,7 @@ code,
   color: var(--accent);
 }
 .search-pop-list li.action.on {
-  color: #fff;
+  color: var(--primary-fg);
 }
 .search-pop-list li.empty {
   cursor: default;
@@ -2248,8 +2282,8 @@ button.twisty:hover {
 }
 .asset-card.checked,
 .asset-row.checked {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, var(--panel-2));
+  border-color: var(--primary-bg);
+  background: color-mix(in srgb, var(--primary-bg) 16%, var(--panel-2));
 }
 .asset-card .asset-check {
   position: absolute;
@@ -2345,6 +2379,9 @@ button.twisty:hover {
 }
 .stop-row .number-field {
   max-width: 80px;
+}
+.stop-row > .color-field {
+  flex: 1 1 0;
 }
 .font-row .font-name {
   flex: 1;
@@ -2927,9 +2964,9 @@ button.twisty:hover {
   background: var(--panel-2);
 }
 .usage-cat.active {
-  color: var(--text);
-  background: var(--panel-2);
-  border-color: var(--line-2);
+  color: var(--primary-fg);
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
 }
 .badge.usage-flag {
   background: var(--warn);
@@ -3031,6 +3068,7 @@ button.twisty:hover {
 }
 .a11y-chip.on {
   color: var(--text);
+  border-color: var(--primary-bg);
   background: var(--panel-2);
 }
 .a11y-chip::before,
@@ -3096,7 +3134,7 @@ button.twisty:hover {
 }
 .a11y-row.active {
   background: var(--panel-2);
-  box-shadow: inset 2px 0 0 var(--accent);
+  box-shadow: inset 3px 0 0 var(--primary-bg);
 }
 .a11y-row.done {
   opacity: 0.6;
@@ -3169,7 +3207,12 @@ button.twisty:hover {
   background: var(--panel-2);
 }
 .list-item.active {
-  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.list-item.active .muted {
+  color: var(--primary-fg);
+  opacity: 0.75;
 }
 .script-main {
   display: flex;
@@ -3221,6 +3264,23 @@ button.twisty:hover {
 .var-table td {
   padding: 3px 6px;
   vertical-align: top;
+}
+/* Remember and delete sit level with the first box of their row, in columns of their own width */
+.var-table th:nth-child(4),
+.var-table td:nth-child(4) {
+  width: 84px;
+  text-align: center;
+}
+.var-table th:nth-child(5),
+.var-table td:nth-child(5) {
+  width: 36px;
+}
+.var-table td:nth-child(4) .check-field,
+.var-table td:nth-child(5) .icon-btn {
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ---------------------------------------------------------------- modal, toast */
@@ -3868,7 +3928,8 @@ kbd {
   color: var(--primary-fg);
 }
 .quick-help li.active .muted {
-  color: #dfe5ff;
+  color: var(--primary-fg);
+  opacity: 0.75;
 }
 .quick-help-foot {
   padding: 6px 12px;
@@ -4213,7 +4274,8 @@ kbd {
   color: var(--primary-fg);
 }
 .revision-list button.active .muted {
-  color: #dfe5ff;
+  color: var(--primary-fg);
+  opacity: 0.75;
 }
 .revision-preview {
   flex: 1;
@@ -4951,6 +5013,7 @@ code {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  align-items: stretch;
 }
 .optimise-slider input[type='range'] {
   width: 100%;
@@ -5738,9 +5801,12 @@ code {
 }
 .track-node.media-head {
   cursor: default;
+  justify-content: space-between;
+  gap: 8px;
 }
 .media-add {
-  max-width: 128px;
+  width: 108px;
+  max-width: 108px;
   font-size: 11px;
   background: var(--bg);
   color: var(--text, inherit);
@@ -6136,12 +6202,15 @@ code {
   color: var(--muted);
   cursor: pointer;
 }
-.linked-pair {
+.linked-pair,
+.aligned-pair {
   flex-wrap: nowrap !important;
   align-items: center;
 }
 .linked-pair > .keyed,
-.linked-pair > .field {
+.linked-pair > .field,
+.aligned-pair > .keyed,
+.aligned-pair > .field {
   flex: 1;
   min-width: 0;
 }
@@ -6149,16 +6218,22 @@ code {
   flex: none;
   width: 20px;
 }
+.link-gap {
+  visibility: hidden;
+  pointer-events: none;
+}
 .link-toggle.on {
-  color: var(--accent);
+  color: var(--primary-fg);
+  background: var(--primary-bg);
 }
 .lock-toggle:hover {
   background: var(--panel-2);
   color: var(--text);
 }
 .lock-toggle.on {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--primary-fg);
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
 }
 
 /* Preview's Events list: the Auto-scroll tickbox in its header */
@@ -6586,6 +6661,9 @@ code {
   flex: 1;
   min-width: 0;
 }
+.cm-filter-row select:last-child {
+  flex: 1.5;
+}
 .cm-list {
   list-style: none;
   margin: 0;
@@ -6610,7 +6688,7 @@ code {
 }
 .cm-row.on {
   background: var(--panel-2);
-  box-shadow: inset 3px 0 0 var(--accent);
+  box-shadow: inset 3px 0 0 var(--primary-bg);
 }
 .cm-row.resolved .cm-row-text {
   color: var(--muted);
@@ -7471,41 +7549,40 @@ code {
 }
 .token-chip {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   flex: 1;
   min-width: 0;
-  position: relative;
-  padding: 2px 20px 2px 8px;
-  border: 1px solid var(--accent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  height: 26px;
+  padding: 0 3px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
   font-size: 12px;
-  line-height: 1.25;
+  line-height: 1;
+  cursor: default;
 }
 .token-chip.missing {
   border-color: var(--danger);
   background: color-mix(in srgb, var(--danger) 14%, transparent);
 }
 .token-chip-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.token-chip .token-values {
-  gap: 0 6px;
-}
 .token-detach {
-  position: absolute;
-  right: 3px;
-  top: 3px;
-  width: 16px;
-  height: 16px;
+  flex: none;
+  width: 18px;
+  height: 18px;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 50%;
+  border-radius: 4px;
   background: none;
   color: var(--muted);
   cursor: pointer;
@@ -7563,7 +7640,7 @@ code {
   border-bottom: 1px solid var(--line);
 }
 .themes-table .tk-theme.shown {
-  box-shadow: inset 0 2px 0 var(--accent);
+  box-shadow: inset 0 2px 0 var(--primary-bg);
 }
 .themes-table .tk-name {
   min-width: 150px;
@@ -7750,7 +7827,8 @@ code {
   font-size: 10px;
 }
 .font-opt.on .font-opt-tag {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--primary-fg);
+  opacity: 0.75;
 }
 .font-empty {
   padding: 10px;
@@ -8069,9 +8147,9 @@ code {
   cursor: pointer;
 }
 .layers-search-text.on {
-  background: color-mix(in srgb, var(--accent) 25%, transparent);
-  color: var(--text);
-  border-color: var(--accent);
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  border-color: var(--primary-bg);
 }
 .layers-search-count {
   padding: 2px 10px 0;

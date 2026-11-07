@@ -628,8 +628,10 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <WeightSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">
         <ColourwayRow project={project} />
-        <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
-        <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
+        <div className="labels-66">
+          <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
+          <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
+        </div>
         <TextField label="Description" value={project.settings.description} multiline onChange={(v) => setProject((p) => (p.settings.description = v), 'project-desc')} />
         <SelectField<FitMode>
           label="Fit"
@@ -736,8 +738,9 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {/* the layer's type heads its own section further down (Path, Text, ...), so this one is just "Layer" */}
       <Section help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
         {single && <TextField label="Name" value={n.name} onChange={(v) => set({ name: v }, `name-${n.id}`)} />}
-        <Row>
+        <Row className="aligned-pair">
           <Num node={n} ids={ids} prop="x" label="X" />
+          <span className="link-toggle link-gap" aria-hidden="true" />
           <Num node={n} ids={ids} prop="y" label="Y" />
         </Row>
         {sameType && n.type === 'bone' ? (
@@ -748,16 +751,18 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         ) : (
           <>
             <LinkedPair node={n} ids={ids} a="width" b="height" labelA="W" labelB="H" lockKey="lockRatio" min={0} />
-            <Row>
+            <Row className="aligned-pair">
               <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
+              <span className="link-toggle link-gap" aria-hidden="true" />
               <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
             </Row>
           </>
         )}
         <LinkedPair node={n} ids={ids} a="scaleX" b="scaleY" labelA="Sx" labelB="Sy" lockKey="lockScale" step={0.05} />
         {!(sameType && n.type === 'bone') && (
-          <Row>
+          <Row className="aligned-pair">
             <NumberField label="Ox" title="Transform origin X (0-1)" value={n.originX} step={0.05} min={0} max={1} onChange={(v) => set({ originX: v })} />
+            <span className="link-toggle link-gap" aria-hidden="true" />
             <NumberField label="Oy" title="Transform origin Y (0-1)" value={n.originY} step={0.05} min={0} max={1} onChange={(v) => set({ originY: v })} />
           </Row>
         )}

@@ -2326,7 +2326,7 @@ Dark and High contrast are the same names with values made for them. Then:
 - The count at the top says how many plain colours are **not following a theme**.
 
 ## Using a token
-In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a named chip replaces the hex box with the token's value in each theme underneath. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
+In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a one-line named chip replaces the hex box. Hover the chip to read the token's value in each theme. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
 
 ## New layers, questions and starters
 A new button is gold with black, bolder text, an input has a grey outline, a shape is a neutral grey, text is the toolbox black. In a project that has the starter tokens, new layers, the [question kit](question-kit) and the step bar follow those tokens instead, so a new layer looks right in Dark and High contrast without you picking anything. In a project with no tokens they get the same colours as plain ones. The built-in [starters](templates) come with the themes and use the tokens.
