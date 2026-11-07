@@ -2,6 +2,8 @@
 
 ## Unreleased: Symposium 3
 
+- **Several artboards at once**: Ctrl/Cmd+click or Shift+click artboard names (canvas) or rows (Layers) to choose several; move, align, distribute, tidy, duplicate or delete them together; **Group artboards** into named, foldable groups (a dashed frame with a gold name on the canvas), with context menu items on the canvas and in Layers. The canvas right-click menu's items now respond to clicks (they didn't).
+- **Ctrl/Cmd+click in the interaction graph** adds a node to the selection or takes it out (it never reached the graph before).
 - **Embed code** in Share link: an iframe in the same shape as the toolbox's own items (title, `data-cdt-id`, `allowfullscreen`, full width at the start artboard's aspect, `microphone; camera` when the project uses them), one code for StudyDesk, StaffDesk and the open site; the learner page passes the project's height up so the iframe resizes like other ILARs.
 - **Preview keeps Save user data and remembered progress** between runs (Forget saved data starts again); **Ctrl+S** saves from anywhere in the editor; videos show their frame in artboard stills; the text toolbar keeps keyboard focus; a dragged layer bound **In** says to use **⇄ Both** to save where it was left.
 - **Polish**: a theme-linked colour shows as a compact one-line chip (each theme's value in its tooltip); label columns line up in the Layer, corner radius, question and project sections; long labels stack over their box; browser-drawn selects and text boxes match the rest; text on gold rows is the palette's dark grey.
