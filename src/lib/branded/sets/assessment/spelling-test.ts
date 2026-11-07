@@ -6,6 +6,7 @@ import { after, announce, bind, brandQuestionFrame, click, go, graph, heroPage, 
 
 //Words with an American spelling to accept and a few without. The words only live in each question's accepted spellings: nothing
 //else in the project says them, so the share link (which takes those out and marks on the server) has none of them in the page.
+//The audio comes from the Voice section of each question (a synthesised voice, made while authoring, saved as a sound asset).
 const WORDS: { accept: string[] }[] = [{ accept: ['colour'] }, { accept: ['organise'] }, { accept: ['neighbour'] }, { accept: ['centre'] }, { accept: ['necessary'] }, { accept: ['separate'] }];
 const OUT_OF = WORDS.length;
 
@@ -79,9 +80,11 @@ export function buildSpellingTest(colourway: Colourway) {
     g.run(toNext, go(i === OUT_OF - 1 ? result : pages[i + 1]));
     const toBack = click(g, backButton, 'Navigation');
     g.run(toBack, go(i === 0 ? hero : pages[i - 1]));
-    //The word: Play sound with no sound picked yet, for the author to point at the recording
+    //The word: Play sound with no sound picked yet. The question's Voice section fills it (Make the audio with a voice), or the author picks a recording
     const toPlay = click(g, plays[i], 'Say the word');
-    g.run(toPlay, ['action.sound', { asset: '', volume: 1 }]);
+    const sound = g.run(toPlay, ['action.sound', { asset: '', volume: 1 }]);
+    const q = frames[i].question!;
+    frames[i].question = { ...q, voice: { voice: 'bf_emma', speed: 0.9, twice: true, node: sound.id } };
 
     //Add this word's score to this go's total once it is finished
     const check = page.logic.nodes.find((x) => x.kit?.slot === 'check:action') as LogicNode;
@@ -157,13 +160,15 @@ export function buildSpellingTest(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the test title and the line under it on the first page', hero.children.find((c) => c.name === 'Page title'), hero),
-    ...frames.map((f, i) => item(`Word ${i + 1}: in the Question section, type the accepted spellings of the word, one per line, then record the word, upload it in the Assets panel, and pick it in the Play sound node of the Play the word button (Interactions tab). The word must be nowhere else: not in a layer name, the prompt or a label`, f, pages[i])),
-    item('Use mp3 or wav files for the words. The share link renames them and cuts out their title and comment tags; other kinds of audio keep their tags, and the share tells you', plays[0], pages[0]),
+    ...frames.map((f, i) => item(`Word ${i + 1}: in the Question section, type the accepted spellings of the word, one per line. Then, under Voice for the word, press Make the audio with a voice: it speaks the word and puts the sound in the Play sound node of the Play the word button (Interactions tab). Or record it yourself, upload it in the Assets panel and pick it in that node. The word must be nowhere else: not in a layer name, the prompt or a label`, f, pages[i])),
+    item('Make all six at once: under Voice for the word, choose the voice and speed, then Make the audio for all words. Preview a few first. When a word comes out wrong, type how it sounds in Say it like (cull er for colour), which is only used to make the audio and never reaches the page, and make that word again. The server makes the speech once, here: the learner\'s page only has the sound. Listen to every word before you share', frames[0], pages[0]),
+    item('Audio made with the voice is a plain wav with no tags, and the share link renames it. For files you upload yourself, use mp3 or wav: the share link cuts out their title and comment tags, but other kinds of audio keep theirs, and the share tells you', plays[0], pages[0]),
     item('American spellings: each word has Also accept American spellings on. The Question section lists the forms it adds, so check them. Turn it off for a test of British or Australian spelling only, or add any form it does not know as its own line', frames[0], pages[0]),
     item('Retakes and score kept: in the Marking part of each word\'s Question section (set them the same on every word). The starter allows 2 retakes and keeps the best round. Choose Unlimited, or Off, and Latest round if the last go should be the mark', frames[0], pages[0]),
     item('To add a word: duplicate a word page and, in its Question section, give it a prefix of its own (q7) and make it independent. Then fix its footer, the Back and Next buttons of the pages either side, the Set variable node that adds its score, a result tile, and change the "outOf" variable and Project > Results and progress > Top score', undefined, pages[1]),
     item('Reword the pass and fail messages (passMessage and failMessage in the Variables tab), and change the pass mark: the passPercent variable and Project > Results and progress > Pass mark (keep them the same)', message, result),
     item('Share it: Share > Update to the latest version takes the accepted spellings out of the page, and the server marks. Preview and exported files still have them. Use the Link for StudyDesk, or add the project to a course over LTI 1.3 with a grade, to have the score recorded and sent to the gradebook', undefined, result),
+    item('A practice version, not a graded test: tick Practice mode under Voice for the word and the learner\'s own device voice reads the word. That puts the word in the page, where anyone can read it, so the question is marked in the page and sends no grade. Do not use it for an assessed test', undefined, hero),
     item('Plan for learners who cannot hear the words: a transcript would give the answers away, so arrange an alternative assessment the way your course normally does', undefined, hero),
   ];
   return { project: ctx.project, checklist };

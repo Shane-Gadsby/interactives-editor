@@ -457,6 +457,10 @@ router.use(cacheHeaders.stampGate)
 //Every api route: never cached, staff session wanted (log only until SUITE_SESSION_ENFORCE=1)
 router.use('/api', cacheHeaders.api, sessionCheck({staff: true, tool: 'interactives'}))
 
+//The Spelling test's synthesised voice: the word in, a wav out, for the author to save as a sound asset (voice.js)
+const voice = require('./voice')({express, storageDir})
+router.use('/api/voice', voice.router)
+
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
 const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean'},

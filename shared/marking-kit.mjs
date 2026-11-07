@@ -1,4 +1,4 @@
-/*! built from the player's marking sources 68a0ebc5cf0d3016f2d4 */
+/*! built from the player's marking sources 0e03a7172dd048bda7d2 */
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
 const MAX_WORK = 65536;
@@ -1284,6 +1284,19 @@ function opts(texts, right) {
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const str = (v, d = "") => typeof v === "string" ? v : d;
 const num = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
+function cleanVoice(raw) {
+  if (!isObj(raw)) return void 0;
+  const out = {};
+  if (str(raw.voice)) out.voice = str(raw.voice).slice(0, 40);
+  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num(raw.speed, 1, 0.5, 1.5);
+  if (str(raw.say).trim()) out.say = str(raw.say).slice(0, 200);
+  if (str(raw.sentence).trim()) out.sentence = str(raw.sentence).slice(0, 300);
+  if (raw.twice === true) out.twice = true;
+  if (str(raw.node)) out.node = str(raw.node).slice(0, 100);
+  if (str(raw.asset)) out.asset = str(raw.asset).slice(0, 100);
+  if (raw.device === true) out.device = true;
+  return Object.keys(out).length ? out : void 0;
+}
 function normaliseQuestion(raw) {
   if (!isObj(raw)) return null;
   const kind = QUESTION_KINDS.some((k) => k.value === raw.kind) ? raw.kind : null;
@@ -1335,6 +1348,7 @@ function normaliseQuestion(raw) {
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
     ...isObj(raw.retake) ? { retake: { limit: Math.round(num(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
+    ...cleanVoice(raw.voice) ? { voice: cleanVoice(raw.voice) } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
     ...raw.multi === true ? { multi: true } : {},
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
@@ -1550,6 +1564,7 @@ function markAnswer(q, a, prior) {
 function serverMarkingProblem(q) {
   if (q.kind === "matching") return "Matching questions are marked in the page: which term belongs in which slot is part of how the layers are set up, so it cannot be taken out of what the learner downloads.";
   if (q.bank) return "Questions drawn from a data bank are marked in the page: the bank is data the learner downloads with the project.";
+  if (q.voice?.device) return "The learner's own device voice reads this word, so the word is in the page and it cannot be kept secret: it is marked in the page, for practice, and sends no grade. Make the audio with the editor's voice instead to mark it on the server.";
   return null;
 }
 function stripQuestion(q, frameId, idFor) {
@@ -1573,6 +1588,7 @@ function stripQuestion(q, frameId, idFor) {
   };
   if (!q.hints.length) delete out.hintTotal;
   delete out.explain;
+  delete out.voice;
   if (q.kind === "hotspot") out.multi = isMultiple(q);
   return out;
 }
