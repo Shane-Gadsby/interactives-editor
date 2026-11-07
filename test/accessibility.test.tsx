@@ -53,9 +53,9 @@ describe('accessibility preference', () => {
   it('defaults to on, and Preview is built with the player option only when it is off', async () => {
     expect(prefs().accessibility).toBe(true);
     const p = createProject('T');
-    expect(await standaloneHtml(p, { debug: true })).not.toContain("project, { accessibility: false }");
-    expect(await standaloneHtml(p, { debug: true, accessibility: true })).not.toContain("project, { accessibility: false }");
-    expect(await standaloneHtml(p, { debug: true, accessibility: false })).toContain("project, { accessibility: false }");
+    expect(await standaloneHtml(p, { debug: true })).not.toContain("project, { accessibility: false,");
+    expect(await standaloneHtml(p, { debug: true, accessibility: true })).not.toContain("project, { accessibility: false,");
+    expect(await standaloneHtml(p, { debug: true, accessibility: false })).toContain("project, { accessibility: false,");
   });
 });
 
