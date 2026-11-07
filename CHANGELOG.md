@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Fonts served from our own server**: Google fonts are fetched once by the editor server and kept under `storage/_fonts` (Open Sans ready at start), so the editor, Preview, share pages and the StudyDesk learner page never contact Google; `INTERACTIVES_FONTS_PROXY=off` turns it off. **No font pop-in**: the player waits up to 1.5 s for the first page's fonts before showing, the canvas waits for an artboard's fonts, and artboard pictures are never made with a fallback font. **Fit artboard to selection** in the canvas right-click menu.
 - **Several artboards at once**: Ctrl/Cmd+click or Shift+click artboard names (canvas) or rows (Layers) to choose several; move, align, distribute, tidy, duplicate or delete them together; **Group artboards** into named, foldable groups (a dashed frame with a gold name on the canvas), with context menu items on the canvas and in Layers. The canvas right-click menu's items now respond to clicks (they didn't).
 - **Ctrl/Cmd+click in the interaction graph** adds a node to the selection or takes it out (it never reached the graph before).
 - **Embed code** in Share link: an iframe in the same shape as the toolbox's own items (title, `data-cdt-id`, `allowfullscreen`, full width at the start artboard's aspect, `microphone; camera` when the project uses them), one code for StudyDesk, StaffDesk and the open site; the learner page passes the project's height up so the iframe resizes like other ILARs.
