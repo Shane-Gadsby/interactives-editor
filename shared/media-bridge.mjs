@@ -1,4 +1,4 @@
-/*! built from the player's media sources 1a4f1759c55abaef2fad */
+/*! built from the player's media sources f06b3a0f3b15a15b2094 */
 const MEDIA_SOURCE = "interactives-media";
 const MEDIA_TARGET = "interactives";
 const MEDIA_VERSION = 1;
@@ -7,6 +7,7 @@ const MAX_SLOTS = 8;
 const MAX_TOTAL_BYTES = 120 * 1024 * 1024;
 const MAX_RECORDING_BYTES = 60 * 1024 * 1024;
 const MAX_SAVE_BYTES = 2 * 1024 * 1024;
+const MAX_SAVE_HTML_BYTES = 16 * 1024 * 1024;
 const IMAGE_EDGE = 1600;
 const IMAGE_EDGE_MIN = 64;
 const IMAGE_EDGE_MAX = 4096;
@@ -21,12 +22,17 @@ function cleanFileName(name, fallback, ext) {
   n = n.replace(/\.[A-Za-z0-9]{1,5}$/, "").slice(0, 80).trim();
   return `${n || fallback}.${ext}`;
 }
-const SAVE_TYPES = { "text/plain": "txt", "text/csv": "csv", "application/json": "json", "text/markdown": "md" };
+const SAVE_TYPES = { "text/plain": "txt", "text/csv": "csv", "application/json": "json", "text/markdown": "md", "text/html": "html" };
 function cleanSave(raw) {
   const mime = typeof raw.mime === "string" && SAVE_TYPES[raw.mime] ? raw.mime : "text/plain";
   const text = typeof raw.text === "string" ? raw.text : "";
-  if (!text || text.length > MAX_SAVE_BYTES) return null;
-  return { name: cleanFileName(raw.name, "report", SAVE_TYPES[mime]), mime, text };
+  if (!text || text.length > (mime === "text/html" ? MAX_SAVE_HTML_BYTES : MAX_SAVE_BYTES)) return null;
+  return { name: cleanFileName(raw.name, "report", SAVE_TYPES[mime]), mime, text: mime === "text/html" ? lockHtml(text) : text };
+}
+const HTML_POLICY = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">`;
+function lockHtml(html) {
+  const body = html.replace(/^\s*<!doctype[^>]*>/i, "");
+  return `<!doctype html><meta charset="utf-8">${HTML_POLICY}${body}`;
 }
 function cleanRect(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
