@@ -1,6 +1,6 @@
 import { answerPreviewProgress, forgetPreviewLearner, previewLearnerHas } from './lib/preview-learner';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { PACKAGE_EXTENSION, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
+import { PACKAGE_EXTENSION, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
 import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
@@ -1379,7 +1379,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             </aside>
           )}
           <div className="preview-stage" ref={stageBox}>
-          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={{ ...(pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : {}), opacity: frameShown === nonce ? 1 : 0 }} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (setFrameShown(nonce), hitAreas && showHitAreas(true), applyTheme(), mediaSim !== 'works' && simulateMedia(mediaSim))} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
+          {html && frameShown !== nonce && <BuildingSpinner project={project as Project} overlay />}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={{ ...(pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : {}), opacity: frameShown === nonce ? 1 : 0 }} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (setFrameShown(nonce), hitAreas && showHitAreas(true), applyTheme(), mediaSim !== 'works' && simulateMedia(mediaSim))} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <BuildingSpinner project={project as Project} />}
           </div>
         </div>
         {accessibility && screenReader && (
@@ -1468,6 +1469,32 @@ function ReportModal({ title, lines }: { title: string; lines: string[] }) {
           </ul>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * While Preview builds its page there is no player yet to show its own spinner, so this stands in for it: the same ring, in
+ * the project's colours for the theme this device would get (its primary or button token on its background token), with the
+ * toolbox gold on the page colour when the project has no themes.
+ */
+function BuildingSpinner({ project, overlay }: { project: Project; overlay?: boolean }) {
+  const t = project.themes;
+  const theme = t?.list.length ? pickTheme(t, readViewerPrefs()) : null;
+  const colour = (...names: string[]) => {
+    if (!t || !theme) return undefined;
+    for (const n of names) {
+      const tok = tokenByName(t, n);
+      const v = tok && tokenValue(t, tok, theme.id);
+      if (v && !v.startsWith('token:')) return v;
+    }
+    return undefined;
+  };
+  const arc = colour('color/primary', 'color/button') ?? '#ffb448';
+  const backdrop = colour('color/background');
+  return (
+    <div className={`preview-building${overlay ? ' overlay' : ''}`} style={backdrop ? { background: backdrop } : undefined} role="status" aria-label="Building the preview">
+      <div className="preview-building-ring" style={{ borderColor: `color-mix(in srgb, ${arc} 25%, transparent)`, borderTopColor: arc }} />
     </div>
   );
 }
