@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Branded packs round 2** (now 39 starters): Find the hotspot, Find multiple hotspots, Image choice, Single choice set, Summary, Essay self-check; Drag the words, Image pairing, Image sequence, Information wall, Collage, Chart; the Interactive book; a **Writing and reflection** set (Questionnaire, Study plan workbook, Reflection journal, saved as learner data so learners can come back); a **Games and puzzles** set (Crossword, Word search, Arithmetic quiz, Guess the answer, Personality quiz, Game map).
+
 - **Branded starter packs** on the Templates page (Built-in): 17 UniSQ-branded starters in four sets (quizzes and questions; explore and reveal; drag, sort and timelines; stories and presentations), in the look of the UniSQ PowerPoint templates (gradient title pages with sweeps, white content pages, deep purple section pages, the logo as vector layers) in Open Sans. Every branded project carries the colourways (Gold, Purple, Blue, Green, Orange, Red from the palette gradients, plus High contrast) as themes: pick one to start, switch live in project settings, and optionally let learners switch. Brand layers are locked, colours are the theme's tokens and fonts Open Sans (F9 lifts it for power users). `src/lib/branded/`, `Project.brandLook`, help topic `branded-starters`.
 - Selected segment buttons (Templates tabs, Thumbnails/Details) are the palette gold with dark text, not blue. A **Power user mode** pill with Admin and Usage buttons shows in the projects page header, and the page follows the toolbox's power user mode when it is inside it.
 
