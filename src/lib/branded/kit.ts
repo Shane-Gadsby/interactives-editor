@@ -217,7 +217,9 @@ export function brandedPage(ctx: BrandedCtx, title: string, opts: { kind?: PageK
     kids.push(...sweeps(ctx, ab));
     kids.push(logo(ctx, SIDE, TOP - 8, 150));
     if (kind === 'hero') {
-      kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height * 0.42, width: width * 0.7, fontSize: 48, fontWeight: 700, color: L.onGradient, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
+      //A title that wraps takes its second line upwards, so it never lands on the subtitle (about 0.52 of the size per character in Open Sans bold)
+      const lines = Math.max(1, Math.ceil((title.length * 48 * 0.52) / (width * 0.7)));
+      kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height * 0.42 - (lines - 1) * 58, width: width * 0.7, fontSize: 48, fontWeight: 700, color: L.onGradient, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
       if (opts.subtitle !== undefined) kids.push(createNode('text', { name: 'Subtitle', text: opts.subtitle, x: SIDE, y: height * 0.42 + 72, width: width * 0.6, fontSize: 20, color: L.onGradient, fontFamily: BRAND_FONT } as Partial<TextNode>));
     } else {
       kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 30, width: width - SIDE * 2, fontSize: 40, fontWeight: 700, color: L.onGradient, align: 'center', role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));

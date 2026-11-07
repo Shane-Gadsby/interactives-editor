@@ -191,10 +191,10 @@ function build(colourway: Colourway) {
   const BH = 46;
   const row1 = photoY + frameH + 12;
   const row2 = row1 + BH + 8;
-  const takeBtn = button(ctx, 'Take or choose a photo', 'Take or choose a photo', b.x, row1, 188, true);
+  const takeBtn = button(ctx, 'Take or choose a photo', 'Take or choose a photo', b.x, row1, 228, true);
   bind(takeBtn, { label: `${statusIs('photo')} ? "Retake photo" : "Take or choose a photo"`, disabled: 'photos != "ready"', opacity: 'photos != "ready" ? 0.5 : 1' });
   takeBtn.ariaLabel = 'Take or choose a photo for this prompt';
-  const exampleBtn = button(ctx, 'Use the example picture', 'Use the example', b.x + 200, row1, 180, false);
+  const exampleBtn = button(ctx, 'Use the example picture', 'Use the example', b.x + 240, row1, 180, false);
   exampleBtn.ariaLabel = 'Use the example picture instead of a photo';
   const deleteBtn = button(ctx, 'Delete photo', 'Delete photo', b.x, row2, 150, false);
   bind(deleteBtn, { disabled: `!${statusIs('photo')}`, opacity: `${statusIs('photo')} ? 1 : 0.5` });

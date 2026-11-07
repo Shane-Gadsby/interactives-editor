@@ -62,7 +62,7 @@ function build(colourway: Colourway) {
   const video = brandedPage(ctx, 'The lesson: video', { name: VIDEO, footer: 'Video version' });
   const audio = brandedPage(ctx, 'The lesson: audio only', { name: AUDIO, footer: 'Audio only version' });
   const plain = brandedPage(ctx, 'The lesson: text only', { name: TEXT, footer: 'Text only version' });
-  const done = endPage(ctx, 'Lesson complete', 'You finished the lesson using the {version == "video" ? "video" : version == "audio" ? "audio only" : "text only"} version.', 'Choose a version again');
+  const done = endPage(ctx, 'Lesson complete', 'You finished the lesson using the {version == "video" ? "video" : version == "audio" ? "audio only" : "text only"} version.', 'Choose again');
   done.page.name = 'Done';
   const checklist: TemplateChecklistItem[] = [];
   const pages: Record<string, Artboard> = { video, audio, text: plain };
