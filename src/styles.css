@@ -8449,3 +8449,12 @@ code {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Font size while Fit text to box is on: shown, but the player picks it */
+.fit-off {
+  display: flex;
+  flex: 1;
+  min-width: min-content;
+  opacity: 0.45;
+  pointer-events: none;
+}

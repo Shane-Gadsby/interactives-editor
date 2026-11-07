@@ -278,18 +278,20 @@ export function SelectField<T extends string>({
   options,
   onChange,
   title,
+  disabled,
 }: {
   label?: ReactNode;
   value: T;
   options: { value: T; label: string }[] | readonly T[];
   onChange: (v: T) => void;
   title?: string;
+  disabled?: boolean;
 }) {
   const opts = (options as (T | { value: T; label: string })[]).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
   return (
     <label className="field select-field" title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
-      <select value={value} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
+      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
         {opts.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
