@@ -97,9 +97,39 @@ export function tidyColumns(sizes: { width: number; height: number }[]): number 
   return best;
 }
 
+/** Room a group's frame takes around its artboards: at the sides and bottom, and above (for the artboards' own name labels and the group's title). */
+export const TIDY_GROUP_PAD = 40;
+export const TIDY_GROUP_TOP = 76;
+
+/** A run of cells laid out in its own grid: its size, and a function that puts them at an origin. */
+function gridOf(cells: TidyCell[]) {
+  const sizes = cells.map(cellSize);
+  const cols = tidyColumns(sizes);
+  const rows = Math.ceil(cells.length / cols);
+  const colW = Array.from({ length: cols }, (_, c) => Math.max(0, ...sizes.filter((_, i) => i % cols === c).map((s) => s.width)));
+  const rowH = Array.from({ length: rows }, (_, r) => Math.max(0, ...sizes.slice(r * cols, r * cols + cols).map((s) => s.height)));
+  const width = colW.reduce((a, b) => a + b, 0) + TIDY_GAP_X * Math.max(0, cols - 1);
+  const height = rowH.reduce((a, b) => a + b, 0) + TIDY_GAP_Y * Math.max(0, rows - 1);
+  const place = (ox: number, oy: number, out: Map<string, { x: number; y: number }>) => {
+    cells.forEach((cell, i) => {
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      let x = ox + colW.slice(0, c).reduce((a, b) => a + b, 0) + TIDY_GAP_X * c;
+      const y = oy + rowH.slice(0, r).reduce((a, b) => a + b, 0) + TIDY_GAP_Y * r;
+      for (const b of cell.boards) {
+        out.set(b.id, { x: Math.round(x), y: Math.round(y) });
+        x += b.width + TIDY_GAP_VARIANT;
+      }
+    });
+  };
+  return { width, height, place };
+}
+
 /**
  * Where every on-canvas artboard goes. The grid's top left is `origin` (default: where the artboards' top left corner is now,
- * so a tidy keeps them where the author was looking).
+ * so a tidy keeps them where the author was looking). The artboards of an artboard group stay together: each group is laid
+ * out as a block of its own (with room around it for its frame) and the blocks go in the grid like any other cell, at the
+ * place of the group's first artboard in the list.
  */
 export function tidyPositions(p: Project, origin?: { x: number; y: number }): Map<string, { x: number; y: number }> {
   const out = new Map<string, { x: number; y: number }>();
@@ -108,28 +138,51 @@ export function tidyPositions(p: Project, origin?: { x: number; y: number }): Ma
   const all = cells.flatMap((c) => c.boards);
   const ox = origin?.x ?? Math.min(...all.map((a) => a.canvasX));
   const oy = origin?.y ?? Math.min(...all.map((a) => a.canvasY));
-  const sizes = cells.map(cellSize);
-  const cols = tidyColumns(sizes);
-  const rows = Math.ceil(cells.length / cols);
-  const colW = Array.from({ length: cols }, (_, c) => Math.max(...sizes.filter((_, i) => i % cols === c).map((s) => s.width)));
-  const rowH = Array.from({ length: rows }, (_, r) => Math.max(...sizes.slice(r * cols, r * cols + cols).map((s) => s.height)));
-  cells.forEach((cell, i) => {
-    const c = i % cols;
-    const r = Math.floor(i / cols);
-    let x = ox + colW.slice(0, c).reduce((a, b) => a + b, 0) + TIDY_GAP_X * c;
-    const y = oy + rowH.slice(0, r).reduce((a, b) => a + b, 0) + TIDY_GAP_Y * r;
-    for (const b of cell.boards) {
-      out.set(b.id, { x: Math.round(x), y: Math.round(y) });
-      x += b.width + TIDY_GAP_VARIANT;
-    }
+  const known = new Set((p.artboardGroups ?? []).map((g) => g.id));
+  type Unit = { cells: TidyCell[]; grouped: boolean };
+  const units: Unit[] = [];
+  const byGroup = new Map<string, Unit>();
+  for (const cell of cells) {
+    const g = cell.boards[0].group;
+    if (g && known.has(g)) {
+      let u = byGroup.get(g);
+      if (!u) {
+        u = { cells: [], grouped: true };
+        byGroup.set(g, u);
+        units.push(u);
+      }
+      u.cells.push(cell);
+    } else units.push({ cells: [cell], grouped: false });
+  }
+  const grids = units.map((u) => {
+    const g = gridOf(u.cells);
+    return u.grouped ? { width: g.width + 2 * TIDY_GROUP_PAD, height: g.height + TIDY_GROUP_TOP + TIDY_GROUP_PAD, inside: g, dx: TIDY_GROUP_PAD, dy: TIDY_GROUP_TOP } : { width: g.width, height: g.height, inside: g, dx: 0, dy: 0 };
   });
+  //the units are the cells of an outer grid of the same kind
+  const unitBoards = grids.map((g, i) => ({ id: `u${i}`, width: g.width, height: g.height }) as unknown as Artboard);
+  const at = new Map<string, { x: number; y: number }>();
+  gridOf(unitBoards.map((b) => ({ boards: [b] }))).place(ox, oy, at);
+  grids.forEach((g, i) => g.inside.place(at.get(`u${i}`)!.x + g.dx, at.get(`u${i}`)!.y + g.dy, out));
+  //a group's frame takes room at the top left of its block, so keep the artboards' own top left corner where it was (a second
+  //tidy then changes nothing instead of creeping down and right)
+  if (!origin && units.some((u) => u.grouped)) {
+    const sx = ox - Math.min(...[...out.values()].map((v) => v.x));
+    const sy = oy - Math.min(...[...out.values()].map((v) => v.y));
+    for (const v of out.values()) {
+      v.x += sx;
+      v.y += sy;
+    }
+  }
   return out;
 }
 
-/** Puts the artboards of a project (or an immer draft of one) where `tidyPositions` says. Returns true when anything moved. */
-export function applyTidy(p: Project, origin?: { x: number; y: number }): boolean {
+/**
+ * Puts the artboards of a project (or an immer draft of one) where `tidyPositions` says. Returns true when anything moved.
+ * With `only`, just those artboards are laid out, among themselves, where their top left corner is now.
+ */
+export function applyTidy(p: Project, origin?: { x: number; y: number }, only?: ReadonlySet<string>): boolean {
   let moved = false;
-  const pos = tidyPositions(p, origin);
+  const pos = tidyPositions(only ? { ...p, artboards: p.artboards.filter((a) => only.has(a.id)) } : p, origin);
   for (const a of p.artboards) {
     const at = pos.get(a.id);
     if (!at || (a.canvasX === at.x && a.canvasY === at.y)) continue;

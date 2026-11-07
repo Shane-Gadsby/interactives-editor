@@ -37,6 +37,7 @@ import { lockViolation, unlinkStyleRef } from '../lib/libraries';
 import { clampBrandInstances, hasBrandArtboards } from '../lib/brand';
 import { brandLookViolation, isBrandLocked, lockBrandChrome, snapToBrand } from '../lib/branded/lock';
 import { applyTidy } from '../lib/artboard-tidy';
+import { alignBoards, distributeBoards, freshGroupName, leaveGroups, makeGroup, pickedArtboardIds, pruneGroups, removeGroup, withSets, type AlignMode } from '../lib/artboard-groups';
 import { addModifier, applyPreset, removeModifier, type TextPresetId } from '../lib/text-modifiers';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths, remapPointTracks, shapeToPaths } from '../lib/path-edit';
@@ -172,6 +173,12 @@ export interface EditorState {
   selection: string[];
   /** The active artboard itself is selected (its frame, not its layers). */
   artboardSelected: boolean;
+  /**
+   * Every artboard that is selected when more than one is (Ctrl+click or Shift+click on a name on the canvas or a row in the
+   * Layers panel). Only counts while `artboardSelected` is on and `activeArtboardId` is in it; `pickedArtboardIds` has the rule.
+   * Anything else that picks an artboard or a layer sets this back to empty (see `set`).
+   */
+  artboardPicked: string[];
   /** Container the user double-clicked into: clicks select its children. */
   focusId: string | null;
   tool: Tool;
@@ -266,6 +273,7 @@ export class EditorStore {
       activeArtboardId: project.settings.startArtboardId ?? first?.id ?? '',
       selection: [],
       artboardSelected: false,
+      artboardPicked: [],
       focusId: null,
       tool: 'select',
       zoom: 1,
@@ -310,7 +318,10 @@ export class EditorStore {
 
   /** UI state change (not undoable). */
   set(partial: Partial<EditorState> | ((s: EditorState) => Partial<EditorState>)): void {
-    const p = typeof partial === 'function' ? partial(this.state) : partial;
+    let p = typeof partial === 'function' ? partial(this.state) : partial;
+    // Choosing an artboard (or going back to layers) on its own means just that one: a multi-selection only survives a change
+    // that carries its own list
+    if (('activeArtboardId' in p || 'artboardSelected' in p) && !('artboardPicked' in p) && this.state.artboardPicked.length) p = { ...p, artboardPicked: [] };
     this.state = { ...this.state, ...p };
     this.emit();
     //Asking for a panel shows it even when it's the one already asked for (it may be docked out of sight since)
@@ -508,7 +519,9 @@ export class EditorStore {
     const inGraph = (id: string) => !!ab && (ab.logic.nodes.some((n) => n.id === id) || !!ab.logic.groups?.some((g) => g.id === id));
     const logicSelection = s.logicSelection && inGraph(s.logicSelection) ? s.logicSelection : null;
     const logicPicked = s.logicPicked.every(inGraph) ? s.logicPicked : s.logicPicked.filter(inGraph);
+    const artboardPicked = s.artboardPicked.every((id) => !!getArtboard(s.project, id)) ? s.artboardPicked : s.artboardPicked.filter((id) => !!getArtboard(s.project, id));
     if (
+      artboardPicked !== s.artboardPicked ||
       activeArtboardId !== s.activeArtboardId ||
       selection.length !== s.selection.length ||
       activeTimelineId !== s.activeTimelineId ||
@@ -517,7 +530,7 @@ export class EditorStore {
       logicSelection !== s.logicSelection ||
       logicPicked !== s.logicPicked
     ) {
-      this.state = { ...s, activeArtboardId, selection, activeTimelineId, focusId, editingPathId, logicSelection, logicPicked };
+      this.state = { ...s, activeArtboardId, selection, activeTimelineId, focusId, editingPathId, logicSelection, logicPicked, artboardPicked };
     }
   }
 
@@ -656,7 +669,7 @@ export class EditorStore {
     const ab = this.artboard();
     if (!ab) return;
     if (this.state.artboardSelected) {
-      this.deleteArtboard(ab.id);
+      this.deleteArtboards(this.pickedArtboards());
       return;
     }
     const ids = new Set(this.state.selection);
@@ -685,6 +698,11 @@ export class EditorStore {
   }
 
   duplicateSelection(offset = 10): void {
+    // With artboards selected (not layers), Ctrl+D duplicates the artboards
+    if (this.state.artboardSelected) {
+      this.duplicateArtboards(this.pickedArtboards());
+      return;
+    }
     track('doc', 'duplicate');
     const ab = this.artboard();
     if (!ab) return;
@@ -990,18 +1008,113 @@ export class EditorStore {
   // ---------------------------------------------------------------- artboards
 
   /**
-   * Tidy up artboards: lay them out in a grid in the Artboards list order (lib/artboard-tidy.ts). One undo step, and since it
-   * goes through update() it reaches live rooms like any edit. Returns how many artboards moved.
+   * Tidy up artboards: lay them out in a grid in the Artboards list order (lib/artboard-tidy.ts), each artboard group together
+   * as a block of its own. With `ids`, only those (and the rest of their responsive sets) are laid out, among themselves, where
+   * their top left corner is now. One undo step, and since it goes through update() it reaches live rooms like any edit.
+   * Returns how many artboards moved.
    */
-  tidyArtboards(): number {
+  tidyArtboards(ids?: string[]): number {
     track('feature', 'artboards-tidy');
     let moved = 0;
+    const only = ids ? new Set(withSets(this.state.project, ids)) : undefined;
     this.update((d) => {
       const before = d.artboards.map((a) => `${a.canvasX},${a.canvasY}`);
-      applyTidy(d as Project);
+      applyTidy(d as Project, undefined, only);
       moved = d.artboards.filter((a, i) => `${a.canvasX},${a.canvasY}` !== before[i]).length;
     });
     return moved;
+  }
+
+  // ---------------------------------------------------------------- artboard selection and groups
+
+  /** The selected artboards (see `pickedArtboardIds`). */
+  pickedArtboards(): string[] {
+    return pickedArtboardIds(this.state);
+  }
+
+  /**
+   * Select artboards: these, with `main` (the last one by default) the active one the inspector shows. Layers and the timeline
+   * are left (a layer selection and an artboard selection don't mix); the timeline stays when the active artboard does.
+   */
+  pickArtboards(ids: string[], main?: string): void {
+    const list = ids.filter((id) => !!getArtboard(this.state.project, id));
+    const active = main && list.includes(main) ? main : (list[list.length - 1] ?? this.state.activeArtboardId);
+    this.set({
+      activeArtboardId: active,
+      artboardSelected: list.length > 0,
+      artboardPicked: list.length > 1 ? list : [],
+      selection: [],
+      focusId: null,
+      activeTimelineId: active === this.state.activeArtboardId ? this.state.activeTimelineId : null,
+    });
+  }
+
+  /** Ctrl+click on an artboard: add it to the selected ones, or take it out when it is one already. */
+  toggleArtboardPick(id: string): void {
+    const now = this.pickedArtboards();
+    if (!now.includes(id)) this.pickArtboards([...now, id], id);
+    else {
+      const rest = now.filter((x) => x !== id);
+      this.pickArtboards(rest, rest.includes(this.state.activeArtboardId) ? this.state.activeArtboardId : rest[rest.length - 1]);
+    }
+  }
+
+  /** The artboards in a group (all of them selected). */
+  pickGroup(gid: string, add = false): void {
+    const ids = this.state.project.artboards.filter((a) => a.group === gid).map((a) => a.id);
+    if (!ids.length) return;
+    this.pickArtboards(add ? [...new Set([...this.pickedArtboards(), ...ids])] : ids, ids[0]);
+  }
+
+  /**
+   * Put these artboards (and the rest of their responsive sets) in a new group, and select them. They leave any group they were
+   * in. Returns the group's id, or null when there is nothing to group.
+   */
+  groupArtboards(ids: string[], name?: string): string | null {
+    const all = withSets(this.state.project, ids);
+    if (!all.length) return null;
+    track('feature', 'artboards-group');
+    let gid: string | null = null;
+    this.update((d) => {
+      gid = makeGroup(d as Project, all, name);
+    });
+    if (gid) this.pickArtboards(all);
+    return gid;
+  }
+
+  /** Break a group up: its artboards stay where they are and stay selected. */
+  ungroupArtboards(gid: string): void {
+    track('feature', 'artboards-ungroup');
+    this.update((d) => removeGroup(d as Project, gid));
+  }
+
+  /** Take artboards out of their groups. */
+  leaveArtboardGroups(ids: string[]): void {
+    this.update((d) => leaveGroups(d as Project, ids));
+  }
+
+  renameArtboardGroup(gid: string, name: string): void {
+    const clean = name.trim().slice(0, 200);
+    if (!clean) return;
+    this.update(
+      (d) => {
+        const g = d.artboardGroups?.find((x) => x.id === gid);
+        if (g) g.name = clean;
+      },
+      { coalesce: `abgroup-name-${gid}` },
+    );
+  }
+
+  /** Line artboards up on an edge or centre (one undo step). */
+  alignArtboards(ids: string[], mode: AlignMode): void {
+    track('feature', 'artboards-align', { thing: mode });
+    this.update((d) => alignBoards(d as Project, ids, mode));
+  }
+
+  /** Space artboards evenly across or down their span (one undo step). */
+  distributeArtboards(ids: string[], axis: 'x' | 'y'): void {
+    track('feature', 'artboards-distribute', { thing: axis });
+    this.update((d) => distributeBoards(d as Project, ids, axis));
   }
 
   addArtboard(partial: Partial<Artboard> = {}): string {
@@ -1025,24 +1138,34 @@ export class EditorStore {
   }
 
   deleteArtboard(id: string): void {
-    track('doc', 'artboard-delete');
-    if (this.state.project.artboards.length <= 1) {
+    this.deleteArtboards([id]);
+  }
+
+  /** Delete several artboards in one undo step (a project always keeps at least one). A group left with none is taken away too. */
+  deleteArtboards(ids: string[]): void {
+    const gone = new Set(ids.filter((id) => !!getArtboard(this.state.project, id)));
+    if (!gone.size) return;
+    track('doc', 'artboard-delete', { sum: { artboards: gone.size } });
+    if (this.state.project.artboards.length - gone.size < 1) {
       this.toast('A project needs at least one artboard', 'error');
       return;
     }
     this.update((d) => {
-      // The base of a responsive set goes: its narrowest variant becomes the base of the rest
-      const gone = d.artboards.find((a) => a.id === id);
-      const heirs = d.artboards.filter((a) => a.variantOf === id);
-      if (gone && heirs.length) {
-        const heir = setMembers(d.artboards as Artboard[], gone as Artboard).find((a) => a.id !== id)!;
-        delete heir.variantOf;
-        for (const a of heirs) if (a !== heir) a.variantOf = heir.id;
-        if (d.settings.startArtboardId === id) d.settings.startArtboardId = heir.id;
-        if (d.settings.reporting?.completionArtboard === id) d.settings.reporting.completionArtboard = heir.id;
+      for (const id of gone) {
+        // The base of a responsive set goes: its narrowest variant becomes the base of the rest
+        const dead = d.artboards.find((a) => a.id === id);
+        const heirs = d.artboards.filter((a) => a.variantOf === id);
+        if (dead && heirs.length) {
+          const heir = setMembers(d.artboards as Artboard[], dead as Artboard).find((a) => a.id !== id)!;
+          delete heir.variantOf;
+          for (const a of heirs) if (a !== heir) a.variantOf = heir.id;
+          if (d.settings.startArtboardId === id) d.settings.startArtboardId = heir.id;
+          if (d.settings.reporting?.completionArtboard === id) d.settings.reporting.completionArtboard = heir.id;
+        }
+        d.artboards = d.artboards.filter((a) => a.id !== id);
+        if (d.settings.startArtboardId === id) d.settings.startArtboardId = d.artboards[0].id;
       }
-      d.artboards = d.artboards.filter((a) => a.id !== id);
-      if (d.settings.startArtboardId === id) d.settings.startArtboardId = d.artboards[0].id;
+      pruneGroups(d as Project);
     });
     this.set({ artboardSelected: false, selection: [] });
   }
@@ -1124,14 +1247,49 @@ export class EditorStore {
   }
 
   duplicateArtboard(id: string): void {
-    track('doc', 'artboard-duplicate');
-    const src = getArtboard(this.state.project, id);
-    if (!src || this.brandCopyRefused(src)) return;
-    const copy = this.copyArtboard(src);
+    this.duplicateArtboards([id]);
+  }
+
+  /**
+   * Duplicate several artboards in one undo step. The copies keep their layout among themselves and sit to the right of the
+   * originals; they are selected afterwards. A copy joins the group of its original, except when a whole group is duplicated:
+   * then the copies are a new group of their own ("Quiz copy").
+   */
+  duplicateArtboards(ids: string[]): void {
+    const p = this.state.project;
+    const srcs = p.artboards.filter((a) => ids.includes(a.id));
+    if (!srcs.length || srcs.some((a) => this.brandCopyRefused(a))) return;
+    track('doc', 'artboard-duplicate', { sum: { artboards: srcs.length } });
+    const copies = srcs.map((a) => ({ src: a, copy: this.copyArtboard(a) }));
+    if (srcs.length > 1) {
+      //keep the layout: slide the whole set along to clear the originals (one copy sits next to its original as before)
+      const left = Math.min(...srcs.map((a) => a.canvasX));
+      const right = Math.max(...srcs.map((a) => a.canvasX + a.width));
+      for (const c of copies) {
+        c.copy.canvasX = c.src.canvasX + (right - left) + 100;
+        c.copy.canvasY = c.src.canvasY;
+      }
+      //names stay unique across the copies too
+      const taken = new Set(p.artboards.map((a) => a.name));
+      for (const c of copies) {
+        c.copy.name = uniqueName([...taken], c.src.name);
+        taken.add(c.copy.name);
+      }
+    }
+    //a group copied whole becomes a group of copies
+    const wholeGroups = (p.artboardGroups ?? []).filter((g) => p.artboards.filter((a) => a.group === g.id).every((a) => ids.includes(a.id)) && srcs.some((a) => a.group === g.id));
+    const fresh = new Map(wholeGroups.map((g) => [g.id, { id: uid('abg'), name: freshGroupName(p, `${g.name} copy`) }]));
     this.update((d) => {
-      d.artboards.push(copy);
+      for (const { copy } of copies) {
+        const g = copy.group ? fresh.get(copy.group) : undefined;
+        if (g) {
+          if (!d.artboardGroups?.some((x) => x.id === g.id)) (d.artboardGroups ??= []).push({ ...g });
+          copy.group = g.id;
+        }
+        d.artboards.push(copy);
+      }
     });
-    this.set({ activeArtboardId: copy.id, selection: [], artboardSelected: true });
+    this.pickArtboards(copies.map((c) => c.copy.id));
   }
 
   /** A copy of an artboard with new ids all through (layers, timelines, joysticks, blends and the interactions that point at them), next to it on the canvas. Not added to the project. */

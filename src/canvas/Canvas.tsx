@@ -45,6 +45,8 @@ import { comments } from '../lib/comments';
 import { drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
 import { isBrandHeld } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
+import { groupFrame, groupMembers, pickedArtboardIds } from '../lib/artboard-groups';
+import { artboardMenuItems } from '../lib/artboard-commands';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
@@ -84,7 +86,7 @@ type Drag =
   | { kind: 'gradPt'; id: string; prefix: string; part: 'from' | 'to' | 'center' | 'radius'; node0: SceneNode; parentM: Matrix }
   | { kind: 'resizeMulti'; handle: Handle; bounds0: Rect; items: { id: string; node0: SceneNode; off: Pt }[] }
   | { kind: 'rotate'; center: Pt; angle0: number; items: { id: string; r0: number }[] }
-  | { kind: 'moveAb'; id: string; x0: number; y0: number; start: Pt }
+  | { kind: 'moveAb'; start: Pt; items: { id: string; x0: number; y0: number }[]; moved: boolean; collapse?: string }
   | { kind: 'resizeAb'; handle: Handle; id: string; ab0: Artboard }
   | { kind: 'create'; tool: Tool; abId: string | null; start: Pt; parentId: string | null }
   | { kind: 'marquee'; abId: string | null; start: Pt; additive: string[] }
@@ -131,6 +133,7 @@ export function Canvas() {
     activeArtboardId: st.activeArtboardId,
     selection: st.selection,
     artboardSelected: st.artboardSelected,
+    artboardPicked: st.artboardPicked,
     tool: st.tool,
     zoom: st.zoom,
     panX: st.panX,
@@ -392,6 +395,8 @@ export function Canvas() {
     if (store().get().tool === 'comment' && e.button === 0 && !spaceDown.current) return;
     const st = store().get();
     const target = e.target as HTMLElement;
+    // A press on the right-click menu (it sits inside the canvas) is the menu's: capturing the pointer here would send the click to the canvas instead of the item
+    if (target.closest?.('.ctx-menu')) return;
     const handle = (target.closest('[data-handle]') as HTMLElement | null)?.dataset.handle;
     const w = toWorld(e.clientX, e.clientY);
     try {
@@ -415,10 +420,30 @@ export function Canvas() {
         store().set({ activeArtboardId: a, artboardSelected: true, selection: [], focusId: null, activeTimelineId: a === st.activeArtboardId ? st.activeTimelineId : null });
         return;
       }
-      if (kind === 'ab') {
-        const target = getArtboard(st.project, a)!;
-        store().set({ activeArtboardId: a, artboardSelected: true, selection: [], focusId: null, activeTimelineId: a === st.activeArtboardId ? st.activeTimelineId : null });
-        drag.current = { kind: 'moveAb', id: a, x0: target.canvasX, y0: target.canvasY, start: w };
+      if (kind === 'ab' || kind === 'abgroup') {
+        // A name on the canvas: click picks the artboard, Ctrl/Cmd+click adds it or takes it out, Shift+click adds it; a group's
+        // title picks all its artboards. Dragging moves every selected artboard together
+        const s2 = store();
+        const adds = e.ctrlKey || e.metaKey;
+        let collapse: string | undefined;
+        if (kind === 'abgroup') s2.pickGroup(a, adds || e.shiftKey);
+        else if (adds) s2.toggleArtboardPick(a);
+        else if (e.shiftKey) {
+          const now = pickedArtboardIds(st);
+          if (!now.includes(a)) s2.pickArtboards([...now, a], a);
+        } else {
+          const now = pickedArtboardIds(st);
+          if (now.length > 1 && now.includes(a)) {
+            // pressing on one of several selected keeps them for the drag, and picks just this one if it turns out to be a click
+            s2.pickArtboards(now, a);
+            collapse = a;
+          } else s2.pickArtboards([a]);
+        }
+        const now = pickedArtboardIds(s2.get());
+        // taken out of the selection with Ctrl+click: nothing to drag
+        if (kind === 'ab' && !now.includes(a)) return;
+        const items = now.map((id) => getArtboard(s2.get().project, id)).filter(Boolean).map((x) => ({ id: x!.id, x0: x!.canvasX, y0: x!.canvasY }));
+        drag.current = { kind: 'moveAb', start: w, items, moved: false, collapse };
         return;
       }
       if (kind === 'abresize' && ab) {
@@ -788,14 +813,17 @@ export function Canvas() {
         break;
       }
       case 'moveAb': {
-        const nx = round(d.x0 + w.x - d.start.x);
-        const ny = round(d.y0 + w.y - d.start.y);
+        const dx = round(w.x - d.start.x);
+        const dy = round(w.y - d.start.y);
+        if (dx || dy) d.moved = true;
+        const at = new Map(d.items.map((it) => [it.id, it]));
         store().update(
           (dr) => {
-            const a = dr.artboards.find((x) => x.id === d.id);
-            if (a) {
-              a.canvasX = nx;
-              a.canvasY = ny;
+            for (const a of dr.artboards) {
+              const it = at.get(a.id);
+              if (!it) continue;
+              a.canvasX = round(it.x0 + dx);
+              a.canvasY = round(it.y0 + dy);
             }
           },
           { coalesce: 'moveAb' },
@@ -947,6 +975,8 @@ export function Canvas() {
     const d = drag.current;
     drag.current = null;
     setDragCursorNow(null);
+    // a click (not a drag) on one of several selected artboards' names picks just that one
+    if (d?.kind === 'moveAb' && !d.moved && d.collapse) store().pickArtboards([d.collapse]);
     if (d?.kind === 'bend' && !store().get().recording) {
       // the curve can reach past the layer's box: settle the box around the points (not for keyed shapes, whose keys hold the points as they are)
       const st = store().get();
@@ -1319,20 +1349,50 @@ export function Canvas() {
     }
   }
 
+  // Artboard groups: a dashed frame round their artboards with the group's name on a chip above its top left corner. The frame lets the pointer through; the
+  // name is the handle (click picks the group's artboards, drag moves them together)
+  const pickedNow = pickedArtboardIds(s);
+  for (const g of project.artboardGroups ?? []) {
+    const fr = groupFrame(project, g.id);
+    if (!fr) continue;
+    const members = groupMembers(project, g.id);
+    const all = members.every((m) => pickedNow.includes(m.id));
+    const x = fr.x * zoom;
+    const y = fr.y * zoom;
+    const title = `${g.name}  ·  ${members.length}`;
+    const tw = Math.round(title.length * 7 + 20);
+    overlay.push(
+      <g key={`abg-${g.id}`} className={`ab-group${all ? ' picked' : ''}`}>
+        <rect className="ab-group-frame" x={x} y={y} width={fr.width * zoom} height={fr.height * zoom} rx={10} />
+        <rect data-handle={`abgroup:${g.id}`} className="ab-group-chip" x={x} y={y - 28} width={tw} height={24} rx={6}>
+          <title>{`${g.name}: a group of ${members.length} artboards. Click to select them all, drag to move them together, right-click for more`}</title>
+        </rect>
+        <text className="ab-group-title" x={x + 10} y={y - 11.5} pointerEvents="none">
+          {title}
+        </text>
+      </g>,
+    );
+  }
+
   for (const ab of onCanvas) {
     const tl = oscreen(ab, { x: 0, y: 0 });
     const isActive = ab.id === s.activeArtboardId;
+    const isPicked = pickedNow.includes(ab.id);
+    const labelText = `${ab.name}${project.settings.startArtboardId === ab.id ? '  ▸ start' : ''}${ab.library ? (ab.library.brand ? '  ◆ brand kit' : '  ◆ library') : ''}`;
+    // a chosen artboard's name sits on a gold chip (the outline round it stays blue)
+    if (isPicked)
+      overlay.push(
+        <rect key={`labelbg-${ab.id}`} data-handle={`ab:${ab.id}`} className="ab-label-chip" x={tl.x - 4} y={tl.y - 24} width={Math.round(labelText.length * 6.3 + 10)} height={19} rx={5} />,
+      );
     overlay.push(
       <text
         key={`label-${ab.id}`}
         data-handle={`ab:${ab.id}`}
-        className={`ab-label${isActive ? ' active' : ''}`}
+        className={`ab-label${isActive ? ' active' : ''}${isPicked ? ' picked' : ''}`}
         x={tl.x}
         y={tl.y - 8}
       >
-        {ab.name}
-        {project.settings.startArtboardId === ab.id ? '  ▸ start' : ''}
-        {ab.library ? (ab.library.brand ? '  ◆ brand kit' : '  ◆ library') : ''}
+        {labelText}
       </text>,
     );
     // Artboards of a responsive set: one pill per member on the label line, to jump between them
@@ -1379,15 +1439,29 @@ export function Canvas() {
       const bw = active.width * zoom;
       const bh = active.height * zoom;
       overlay.push(<rect key="ab-sel" className="sel-outline" x={a.x} y={a.y} width={bw} height={bh} />);
-      for (const h of HANDLES) {
+      // the other selected artboards get the same outline (and no handles: they are moved, grouped and tidied together)
+      for (const id of pickedNow) {
+        const other = id === active.id ? null : getArtboard(project, id);
+        if (!other || other.canvasHidden) continue;
+        const o = toS(other, { x: 0, y: 0 });
+        overlay.push(<rect key={`ab-sel-${id}`} className="sel-outline" x={o.x} y={o.y} width={other.width * zoom} height={other.height * zoom} />);
+      }
+      if (pickedNow.length > 1) {
+        overlay.push(
+          <text key="ab-size" className="size-label" x={a.x + bw / 2} y={a.y + bh + 18}>
+            {pickedNow.length} artboards selected
+          </text>,
+        );
+      } else for (const h of HANDLES) {
         const [fx, fy] = HANDLE_POS[h];
         overlay.push(<rect key={`abh-${h}`} data-handle={`abresize:${h}`} className={`handle h-${h}`} x={a.x + fx * bw - 4} y={a.y + fy * bh - 4} width={8} height={8} />);
       }
-      overlay.push(
-        <text key="ab-size" className="size-label" x={a.x + bw / 2} y={a.y + bh + 18}>
-          {Math.round(active.width)} × {Math.round(active.height)}
-        </text>,
-      );
+      if (pickedNow.length < 2)
+        overlay.push(
+          <text key="ab-size" className="size-label" x={a.x + bw / 2} y={a.y + bh + 18}>
+            {Math.round(active.width)} × {Math.round(active.height)}
+          </text>,
+        );
     }
 
     // Bones: octahedral glyphs, a joint at each base and a handle on each tip. Click or drag the body to select and turn,
@@ -1704,6 +1778,19 @@ export function Canvas() {
       },
     };
     let items: MenuItem[];
+    // The name of an artboard, or of a group, on the canvas: the artboard menu for what is selected (picking it first when it isn't)
+    const [hk, ha] = ((e.target as Element).closest?.('[data-handle]')?.getAttribute('data-handle') ?? '').split(':');
+    if ((hk === 'ab' && getArtboard(st.project, ha)) || (hk === 'abgroup' && st.project.artboardGroups?.some((g) => g.id === ha))) {
+      if (hk === 'abgroup') {
+        if (!groupMembers(st.project, ha).every((m) => pickedArtboardIds(st).includes(m.id))) s2.pickGroup(ha);
+        items = artboardMenuItems(groupMembers(st.project, ha).map((m) => m.id), ha);
+      } else {
+        if (!pickedArtboardIds(st).includes(ha)) s2.pickArtboards([ha]);
+        items = artboardMenuItems(pickedArtboardIds(s2.get()));
+      }
+      setMenu({ x: e.clientX, y: e.clientY, items });
+      return;
+    }
     const hit = hab ? pickFromHit(hitTest(hab, local(hab, w).x, local(hab, w).y), e.ctrlKey || e.metaKey) : null;
     if (hab && hit) {
       // A layer: select it (keeping a multi-selection it belongs to), then act on the selection
@@ -1757,19 +1844,22 @@ export function Canvas() {
         newHere(hab),
       ];
     } else if (hab) {
-      // An artboard's empty area
-      s2.set({ activeArtboardId: hab.id, artboardSelected: true, selection: [] });
+      // An artboard's empty area: the artboard (or the artboards, when this one is among several selected)
+      if (!pickedArtboardIds(st).includes(hab.id)) s2.pickArtboards([hab.id]);
+      const ids = pickedArtboardIds(s2.get());
       items = [
-        { heading: hab.name },
+        { heading: ids.length > 1 ? `${ids.length} artboards` : hab.name },
         newHere(hab),
         paste,
         { separator: true },
-        { label: 'Make start artboard', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) },
-        { label: 'Duplicate artboard', onClick: () => s2.duplicateArtboard(hab.id) },
-        { label: 'Zoom to artboard', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) },
-        { label: 'Tidy up artboards', disabled: st.project.artboards.filter((a) => !a.canvasHidden).length < 2, onClick: tidyArtboardsCommand },
-        { separator: true },
-        { label: 'Delete artboard', danger: true, onClick: () => s2.deleteArtboard(hab.id) },
+        ...(ids.length === 1
+          ? [
+              { label: 'Make start artboard', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) } as MenuItem,
+              { label: 'Zoom to artboard', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) } as MenuItem,
+              { separator: true } as MenuItem,
+            ]
+          : []),
+        ...artboardMenuItems(ids).slice(1),
       ];
     } else {
       items = [

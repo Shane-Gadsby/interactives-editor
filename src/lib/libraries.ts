@@ -77,7 +77,7 @@ function idMapOf(project: Project, libraryId: string): Map<string, string> {
 }
 
 /**
- * The first edit that touches a library artboard, or null. Position, name and guides are yours to change; the rest of a
+ * The first edit that touches a library artboard, or null. Position, name, group and guides are yours to change; the rest of a
  * copy comes from the library. Immer shares everything that did not change, so comparing the parts by reference is enough.
  * A brand kit's copies are stricter (they can't be deleted either, and only text the kit marked editable may change, see
  * `brandCopyViolated`) and are the only ones `override` lets through.
@@ -93,7 +93,7 @@ export function lockViolation(before: Project, after: Project, override = false)
     if (!b || b === a) continue;
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
     for (const k of keys) {
-      if (k === 'canvasX' || k === 'canvasY' || k === 'canvasHidden' || k === 'name' || k === 'guides') continue;
+      if (k === 'canvasX' || k === 'canvasY' || k === 'canvasHidden' || k === 'name' || k === 'guides' || k === 'group') continue;
       if ((a as unknown as Record<string, unknown>)[k] !== (b as unknown as Record<string, unknown>)[k]) return a;
     }
   }

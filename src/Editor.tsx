@@ -15,6 +15,7 @@ import { copySelection, pasteNodes } from './lib/clipboard';
 import { copySelectedKeys, isKeyClipText, keyContext, keysCopiedLast, pasteKeys, watchKeyContext } from './lib/key-edit';
 import { Canvas } from './canvas/Canvas';
 import { deleteSelectedKeys } from './panels/Timeline';
+import { deleteSelectionCommand } from './lib/artboard-commands';
 import { ReferenceModal } from './panels/InterfacePanel';
 import { MotionExportModal } from './components/MotionExportModal';
 import { exportProblems, typeDefinitions } from 'interactives-player';
@@ -352,7 +353,7 @@ function useShortcuts() {
       }
       if (k === 'delete' || k === 'backspace') {
         e.preventDefault();
-        if (!deleteSelectedKeys()) s.deleteSelection();
+        if (!deleteSelectedKeys()) deleteSelectionCommand();
         return;
       }
       if (k === 'escape') {
