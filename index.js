@@ -1793,6 +1793,8 @@ router.post('/api/projects/:id/owner', express.json({limit: '4kb'}), async (req,
 //against it. Only the page served to learners is changed: what the owner exports from the editor still marks by itself.
 //Returns null when nothing in the page is set that way; throws when something is but the project could not be read, so a page
 //that still has its answers in it is never kept
+const audioClean = require('./shared/audio-clean.cjs')
+
 const markedIds = (salt) => (frame, real) => crypto.createHmac('sha256', salt).update(`${frame}\0${real}`).digest('base64url').slice(0, 10)
 
 const prepareMarkedShare = (html, oldSalt) => {
@@ -1821,13 +1823,17 @@ const prepareMarkedShare = (html, oldSalt) => {
 		throw new Error('too many questions marked on the server')
 	}
 
+	//Spelling questions play a spoken word: what the audio files are called and the tags inside them are as readable as the page
+	let audioNotes = Object.values(stripped.questions).some((q) => q.blanks.some((b) => b.spelling)) ? audioClean.cleanAudioAssets(project) : []
+
 	//The same escaping the player's page builder uses for JSON inside a script element
 	let json = JSON.stringify(project).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029'),
 		pass = project.settings?.reporting?.passMark
 
 	return {
 		html: html.slice(0, start) + json + html.slice(end),
-		marking: {salt, passMark: typeof pass === 'number' && Number.isFinite(pass) ? pass : null, questions: stripped.questions, skipped: stripped.skipped, updated: new Date()}
+		marking: {salt, passMark: typeof pass === 'number' && Number.isFinite(pass) ? pass : null, questions: stripped.questions, skipped: stripped.skipped, updated: new Date()},
+		audioNotes
 	}
 }
 
@@ -1899,7 +1905,7 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 	}
 	await projects.updateOne({_id: id}, Object.keys(unset).length ? {$set: set, $unset: unset} : {$set: set})
 	audit(req, doc.share?.token ? 'share-updated' : 'share-on', doc)
-	res.json({share, marking: prepared ? {questions: Object.keys(prepared.marking.questions).length, skipped: prepared.marking.skipped} : null})
+	res.json({share, marking: prepared ? {questions: Object.keys(prepared.marking.questions).length, skipped: prepared.marking.skipped, ...(prepared.audioNotes.length ? {audioNotes: prepared.audioNotes} : {})} : null})
 })
 
 //Put the previous page back (and keep the one it replaces as the previous, so a revert can itself be undone)
@@ -3504,6 +3510,40 @@ const markWrite = async (key, build) => {
 	return false
 }
 
+//Grade passback. A learner who came in over LTI 1.3 with a line item (lti13.learner gives who.lti) has the result of a project marked
+//on the server sent to their gradebook once every question is finished, and again whenever the result on record changes. What was
+//sent and whether it got there is kept on their record (grade), so nothing is sent twice and a failure is tried again: a few seconds
+//later, and with the learner's next request. It is the server's own marking that is sent, never what the page says.
+const gradeRetryMs = Number(process.env.IX_GRADE_RETRY_MS ?? 30000)
+
+const passGradeBack = async (project, key, who, retry = true) => {
+	if (!who.lti) {
+		return
+	}
+
+	let id = {project: project._id, username: who.username, course: who.course},
+		record = await userData.findOne(id),
+		result = record ? marker.resultOf(key, marker.pruneStates(key, marker.parseStates(record.marked))) : null
+
+	if (!result?.completed) {
+		return
+	}
+
+	let sent = record.grade
+
+	if (sent && sent.score === result.score && sent.max === result.max && (sent.ok || (retry && Date.now() - new Date(sent.at).getTime() < 20000))) {
+		return
+	}
+
+	let r = await lti13.grade.send(who.lti, result.score, result.max)
+
+	await userData.updateOne(id, {$set: {grade: {score: result.score, max: result.max, ok: r.ok, ...(r.ok ? {} : {why: r.why}), at: new Date()}}})
+
+	if (!r.ok && retry && gradeRetryMs > 0) {
+		setTimeout(() => passGradeBack(project, key, who, false).catch((e) => console.trace(`${appName}: grade passback retry`, e)), gradeRetryMs).unref()
+	}
+}
+
 //Marking, hints and starting again for a question set to be marked on the server. The learner is whoever the session says; the
 //answer is marked by the player's own marking code against the key kept at share time, the tries, hints and the mark that counts
 //are kept on the learner's record, and the result is worked out from those. Checks and hints are rate limited per learner
@@ -3572,6 +3612,10 @@ router.post('/learn/:token/check', express.json({limit: '8kb'}), async (req, res
 	}
 
 	res.json({available: true, ...step.reply})
+
+	if (who.lti) {
+		passGradeBack(project, key, who).catch((e) => console.trace(`${appName}: grade passback`, e))
+	}
 })
 
 //User data (Save user data / Load user data nodes), for the learner whose session this is, in the project the share

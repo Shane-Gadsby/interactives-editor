@@ -20,7 +20,7 @@ Replace `https://tools.example.edu` with the address the editor is served from. 
 | Supports Deep Linking | Yes, with content type "LTI resource link" |
 | Privacy | Send the learner's name (it is shown in the project's results). Email is not used |
 
-Message types: `LtiResourceLinkRequest` and `LtiDeepLinkingRequest`. Assignment and Grade Services (grade passback) is not offered yet.
+Message types: `LtiResourceLinkRequest` and `LtiDeepLinkingRequest`. Assignment and Grade Services (grade passback, scores only) is used for projects that mark answers on the server, see [Grades](#grades) below. For it, turn on Assignment and Grade Services for the tool (the score scope) and set the link up for grades in the course.
 
 The LMS then gives you values for our side. Send these to an Interactives power user:
 
@@ -29,7 +29,7 @@ The LMS then gives you values for our side. Send these to an Interactives power 
 - **Deployment ID(s)**
 - **OIDC authorization (auth login) URL**
 - **Public keyset (JWKS) URL** of the platform
-- **Access token URL** (kept for grade passback later; not used yet)
+- **Access token URL** (needed for grade passback: the tool asks for a token here)
 
 ## What a power user does on our side
 
@@ -79,6 +79,16 @@ The tool makes an RSA signing key the first time it starts and publishes the pub
 
 The server needs five Mongo collections in `lti-interactives` (`lti13-platforms`, `lti13-keys`, `lti13-state`, `lti13-sessions`, `lti13-links`) and the indexes in `suite-libs/indexes.js` for them: the logins and launch sessions expire on their own.
 
+## Grades
+
+A project with questions set to **Mark answers on the server** (a spelling test, a quiz whose marks matter) sends its score to the LMS gradebook. Nothing else does: a result the learner's browser reports is never sent, because the browser's word is not good enough for a grade.
+
+- **When.** Once every server-marked question is finished, the server sends the score on record with the project's total points (`scoreGiven` and `scoreMaximum`), `activityProgress: Completed`, `gradingProgress: FullyGraded`. It sends again only when the score on record changes: a better retake, or the latest round when the test keeps that one. The LMS scales the score to the grade item's own maximum.
+- **Where.** To the line item the launch named (`lineitem` in the AGS endpoint claim), at `<line item>/scores`. A launch without a line item (the course has no grade set up for that link) sends nothing, and the learner's record says nothing was sent. The tool never creates grade items itself; the picker asks the course for one when it adds a project that marks on the server (the content item carries `lineItem` with a maximum of 100).
+- **How it authenticates.** Client credentials with a signed assertion: the tool signs a short JWT (iss and sub the client ID, aud the platform's access token URL) with its own key, the same key published at `/lti13/jwks`, and asks the platform's token URL for a token with the score scope only. The token is kept until it is nearly out and dropped when the platform is edited.
+- **If it fails.** The refusal is written on the learner's record (`grade`: the score, whether it was sent, why not, when). The server tries again about 30 seconds later (`IX_GRADE_RETRY_MS`, 0 turns that off) and on the learner's next click in the activity, no more often than every 20 seconds. A learner who finishes and never comes back after a failure is not retried: check the record, or have the learner open the activity again.
+- **Not sent** for learners who signed in through StudyDesk's own login (the suite session), only for LTI 1.3 launches.
+
 ## What learners and staff see
 
 - **Learners.** Opening an Interactives link in the course shows the project straight away. Progress and results are saved under their name from the LMS and that course. Staff Insights and Results show them like any other learner. There is no sign-in step, and nothing to remember.
@@ -95,6 +105,6 @@ The server needs five Mongo collections in `lti-interactives` (`lti13-platforms`
 
 ## Not done yet
 
-- Assignment and Grade Services (sending the learner's best score back to the LMS gradebook). The registration already keeps the token URL for it.
+- Grades are scores only. No line item management, names and roles, or a page of failed grades to resend.
 - A page in the editor for registering platforms and linking staff, and a way for staff to link themselves.
 - Dynamic registration.

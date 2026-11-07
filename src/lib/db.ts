@@ -442,8 +442,12 @@ export const removeCollaborator = (projectId: string, username: string) =>
 export const transferOwner = (projectId: string, username: string) =>
   call<{ owner: { username: string; name: string | null }; collaborators: Collaborator[] }>(`projects/${encodeURIComponent(projectId)}/owner`, postJson({ username }));
 
-export const publishShare = (projectId: string, html: string) =>
-  call<{ share: ShareInfo }>(`projects/${projectId}/share`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html }).then((r) => r.share);
+/** `onAudioNotes` hears about audio in a spelling test whose tags the server could not clean (see shared/audio-clean.cjs). */
+export const publishShare = (projectId: string, html: string, onAudioNotes?: (notes: string[]) => void) =>
+  call<{ share: ShareInfo; marking?: { audioNotes?: string[] } | null }>(`projects/${projectId}/share`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html }).then((r) => {
+    if (r.marking?.audioNotes?.length) onAudioNotes?.(r.marking.audioNotes);
+    return r.share;
+  });
 
 /** Turn "Allow remix" on or off for an existing share link. */
 export const setShareRemix = (projectId: string, remix: boolean) =>

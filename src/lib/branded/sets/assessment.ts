@@ -10,6 +10,7 @@ import { buildSingleChoiceSet } from './assessment/single-choice-set';
 import { buildSummary } from './assessment/summary';
 import { buildEssay } from './assessment/essay';
 import { buildAudioFirstQuiz } from './assessment/audio-first';
+import { buildSpellingTest } from './assessment/spelling-test';
 
 export const STARTERS: BrandedStarter[] = [
   {
@@ -99,5 +100,13 @@ export const STARTERS: BrandedStarter[] = [
     description: 'A quiz that can be run by ear. With a voice on the learner\'s device it reads each question and its options; 1 to 4 (or a tap) answers, R repeats, S slows, H gives a hint and Space pauses. It speaks Correct or Not quite with a spoken explanation, moves on by hand unless a pace is set, and the score page speaks the score and offers the missed questions again. Spoken prompts can be turned off, and with no voice it is an ordinary keyboard quiz.',
     tags: ['quiz', 'audio', 'read aloud', 'keyboard', 'number keys', 'accessibility'],
     build: buildAudioFirstQuiz,
+  },
+  {
+    key: 'assessment/spelling-test',
+    set: 'assessment',
+    name: 'Spelling test',
+    description: 'Six words, one to a page. The learner plays the recording of a word and types it: every letter has to match, with the American spelling accepted as well, and the browser\'s own spellcheck is off in the box. The server marks the words and keeps the score, so the page has no answers in it; the test can be retaken a set number of times with the best round kept, and a result page shows this go and what is on record. Played from the Link for StudyDesk or an LTI 1.3 link, the score goes to the course gradebook. The author records the words and types the accepted spellings.',
+    tags: ['spelling', 'dictation', 'audio', 'server marked', 'retakes', 'grade'],
+    build: buildSpellingTest,
   },
 ];
