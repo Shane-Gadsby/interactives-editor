@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased: Symposium 3
+
+- Video layers: playback speed (Speed setting, a `media.rate` binding, learner Slower/Faster buttons that keep the pitch) and frame step (buttons and the , . keys), and a Control video node (play, pause, seek, skip, step a frame, set speed).
+- New branded set Listen, watch and capture, starting with Observe and tag a performance: tag moments in a recording by category (buttons or keys 1 to 6), then compare against the expert's tags on one timeline, agreement within a window.
+
 ## Unreleased
 
 - **Branded packs round 2** (now 39 starters): Find the hotspot, Find multiple hotspots, Image choice, Single choice set, Summary, Essay self-check; Drag the words, Image pairing, Image sequence, Information wall, Collage, Chart; the Interactive book; a **Writing and reflection** set (Questionnaire, Study plan workbook, Reflection journal, saved as learner data so learners can come back); a **Games and puzzles** set (Crossword, Word search, Arithmetic quiz, Guess the answer, Personality quiz, Game map).
