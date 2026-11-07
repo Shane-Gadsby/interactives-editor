@@ -237,8 +237,9 @@ code,
   background: var(--btn-hover-bg);
 }
 .timeline-bar .btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+  background: var(--primary-bg);
 }
 .btn:disabled {
   opacity: 0.5;
@@ -287,8 +288,8 @@ code,
   background: var(--btn-hover-bg);
 }
 .icon-btn.active {
-  background: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .icon-btn:disabled {
   opacity: 0.35;
@@ -730,8 +731,8 @@ code,
   cursor: pointer;
 }
 .search-pop-list li.on {
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .search-pop-list li.on .search-picker-hint {
   color: rgba(255, 255, 255, 0.8);
@@ -954,9 +955,9 @@ hr.item-sep {
   border-color: var(--accent);
 }
 .tag-chip.active {
-  background: var(--accent-2);
-  border-color: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .tag-chip.static {
   cursor: default;
@@ -1029,8 +1030,8 @@ hr.item-sep {
 }
 .folder-item.active,
 .folder-row.active .folder-item {
-  background: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .folder-name {
   flex: 1;
@@ -1914,8 +1915,8 @@ div.text-editor {
   background: var(--btn-hover-bg);
 }
 .tt-btn.on {
-  background: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 /* some of the selection has it: a dashed ring instead of the solid fill */
 .tt-btn.mixed {
@@ -3653,8 +3654,8 @@ button.twisty:hover {
   background: var(--panel-2);
 }
 .help-nav a.active {
-  background: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .help-body {
   flex: 1;
@@ -3863,7 +3864,8 @@ kbd {
   cursor: pointer;
 }
 .quick-help li.active {
-  background: var(--accent-2);
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .quick-help li.active .muted {
   color: #dfe5ff;
@@ -4207,7 +4209,8 @@ kbd {
   background: var(--panel-2);
 }
 .revision-list button.active {
-  background: var(--accent-2);
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .revision-list button.active .muted {
   color: #dfe5ff;
@@ -4375,8 +4378,9 @@ kbd {
   border-bottom: 1px solid var(--line);
 }
 .preview-modal .btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+  background: var(--primary-bg);
 }
 .new-card {
   border-style: dashed;
@@ -4893,8 +4897,8 @@ code {
   border-left: 1px solid var(--line-2);
 }
 .seg-btn.on {
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .seg-btn:disabled {
   opacity: 0.4;
@@ -5384,7 +5388,8 @@ code {
   background: var(--line-2);
 }
 .li-cell.on {
-  background: var(--accent-2);
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .li-cell.on .li-dot {
   width: 8px;
@@ -6932,7 +6937,7 @@ code {
 }
 .usage-tabs button.active {
   color: var(--text);
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--primary-bg);
 }
 .usage-table {
   width: 100%;
@@ -7048,8 +7053,8 @@ code {
   color: var(--text);
 }
 .unit-toggle.on {
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 
 .version-info {
@@ -7083,7 +7088,7 @@ code {
 }
 .home-tabs button.on {
   color: var(--text);
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--primary-bg);
 }
 .templates-tab {
   padding-bottom: 24px;
@@ -7377,7 +7382,7 @@ code {
 }
 .picker-tabs button.active {
   color: var(--text);
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--primary-bg);
 }
 .token-list {
   display: flex;
@@ -7403,7 +7408,7 @@ code {
   background: var(--line);
 }
 .token-row.on {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .token-row .token-swatch {
   grid-area: sw;
@@ -7699,9 +7704,9 @@ code {
   border-color: var(--btn-hover-border);
 }
 .font-cats button.on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .font-list {
   position: relative;
@@ -7722,8 +7727,8 @@ code {
   cursor: pointer;
 }
 .font-opt.on {
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .font-opt.current:not(.on) {
   background: var(--panel);
@@ -7794,7 +7799,7 @@ code {
 }
 .np-tab.on {
   background: var(--panel-2);
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .np-tab:focus-visible,
 .np-opt:focus-visible {
@@ -7857,8 +7862,8 @@ code {
   border-color: var(--line-2);
 }
 .np-opt.on {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--primary-bg);
+  box-shadow: 0 0 0 1px var(--primary-bg);
 }
 .np-options.as-rows .np-opt {
   flex-direction: row;
