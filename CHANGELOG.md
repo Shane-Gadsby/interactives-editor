@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Themes that change nothing say why**: switching theme on a project whose colours are all fixed shows "Nothing here follows the theme" with **Link colours to tokens**, which links every colour that matches a token (by role when two share a value) in one undo step and lists the rest. **+ Colourway** in the Themes tab adds any UniSQ colourway as a theme. A themed **loading spinner** while a project waits to show, and Preview opens without flashing.
 - **Fonts served from our own server**: Google fonts are fetched once by the editor server and kept under `storage/_fonts` (Open Sans ready at start), so the editor, Preview, share pages and the StudyDesk learner page never contact Google; `INTERACTIVES_FONTS_PROXY=off` turns it off. **No font pop-in**: the player waits up to 1.5 s for the first page's fonts before showing, the canvas waits for an artboard's fonts, and artboard pictures are never made with a fallback font. **Fit artboard to selection** in the canvas right-click menu.
 - **Several artboards at once**: Ctrl/Cmd+click or Shift+click artboard names (canvas) or rows (Layers) to choose several; move, align, distribute, tidy, duplicate or delete them together; **Group artboards** into named, foldable groups (a dashed frame with a gold name on the canvas), with context menu items on the canvas and in Layers. The canvas right-click menu's items now respond to clicks (they didn't).
 - **Ctrl/Cmd+click in the interaction graph** adds a node to the selection or takes it out (it never reached the graph before).
