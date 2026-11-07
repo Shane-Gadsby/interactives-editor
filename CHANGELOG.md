@@ -6,7 +6,7 @@
 - **Play sound** takes volume, speed (pitch kept), loop and 'stop other sounds first', and its sound can come from an expression; a new **Stop sound** node ends loops. Sounds follow the viewer's mute.
 - **Read it to me**: a Read aloud node (text, the question, its feedback, the page; pause, repeat, slower, faster), `ix.speech`, a Listen button with a remembered speed (Project settings > Read aloud offers it on every artboard), "Say it like" for words the voice gets wrong, and a Listen button, spoken explanation and number keys 1 to 9 on kit questions. Local voices only; nothing is recorded or sent.
 - **Spelling tests**: blanks that match letter for letter, with American forms accepted on a switch; retakes (limited or unlimited, best or latest round kept) marked on the server; the browser's spellcheck off in the box; audio file names and tags cleaned when shared so the words aren't in the page; and **grades sent to the LMS over LTI 1.3** (Assignment and Grade Services) when the activity is finished.
-- New starters: Listening lab and (Speaking and practice set) Keep the beat; Audio-first quiz and Spelling test in Quizzes and questions.
+- New starters: Listening lab; a Speaking and practice set with Difficult conversation rehearsal, Timed talk rehearsal (viva, interview, one-minute talk; recording comes with the media bridge) and Keep the beat; Audio-first quiz and Spelling test in Quizzes and questions.
 - New branded set Listen, watch and capture, starting with Observe and tag a performance: tag moments in a recording by category (buttons or keys 1 to 6), then compare against the expert's tags on one timeline, agreement within a window.
 
 ## Unreleased
