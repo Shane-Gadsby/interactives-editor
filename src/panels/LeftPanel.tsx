@@ -25,6 +25,8 @@ import { jumpToThread } from '../lib/comment-jump';
 import { useComments } from '../lib/comments';
 import { countsOf } from '../../shared/comments.mjs';
 import { orderedArtboards, rangeLabel } from '../lib/variants-edit';
+import { brandHeldIds } from '../lib/branded/lock';
+import { tidyArtboardsCommand } from '../lib/tidy-command';
 import { INDENT, ROW_H, ROW_PAD, depthAtX, dropRows, slotAt, type DropSlot } from '../lib/layer-drop';
 
 export function LeftPanel() {
@@ -77,7 +79,9 @@ const TYPE_ICON: Record<string, IconName> = {
 
 
 export function Layers() {
-  const s = useEditor((st) => ({ project: st.project, activeArtboardId: st.activeArtboardId, selection: st.selection, artboardSelected: st.artboardSelected }));
+  const s = useEditor((st) => ({ project: st.project, activeArtboardId: st.activeArtboardId, selection: st.selection, artboardSelected: st.artboardSelected, brandOverride: st.brandOverride }));
+  //Brand layers (and what is inside them) of a branded project: shown with a lock, can't be picked here or on the canvas
+  const held = useMemo(() => brandHeldIds(s.project, s.brandOverride), [s.project, s.brandOverride]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [drop, setDrop] = useState<DropSlot | null>(null);
@@ -295,15 +299,18 @@ export function Layers() {
     const container = isContainer(n);
     const open = container && (filtering || !collapsed.has(n.id));
     const Icon = Icons[TYPE_ICON[n.type] ?? 'rect'];
+    const brand = held.has(n.id);
     const dropClass = `${drop?.row !== undefined && activeRows[drop.row]?.n.id === n.id && ab.id === s.activeArtboardId ? ' drop-inside' : ''}${dragId === n.id ? ' dragging' : ''}`;
     return (
       <div
         key={n.id}
-        className={`layer-row${selected ? ' selected' : ''}${shown ? '' : ' hidden-layer'}${filtering && !found.hits.has(n.id) ? ' not-a-hit' : ''}${dropClass}`}
+        className={`layer-row${selected ? ' selected' : ''}${brand ? ' brand-held' : ''}${shown ? '' : ' hidden-layer'}${filtering && !found.hits.has(n.id) ? ' not-a-hit' : ''}${dropClass}`}
         style={{ paddingLeft: 8 + depth * 14 }}
-        draggable={renaming !== n.id && !filtering}
+        draggable={renaming !== n.id && !filtering && !brand}
+        title={brand ? 'Part of the UniSQ brand: locked, so it can’t be selected or changed' : undefined}
         onContextMenu={(e) => {
           e.preventDefault();
+          if (brand) return;
           const st = store().get();
           if (!(st.activeArtboardId === ab.id && st.selection.includes(n.id))) store().select([n.id], { artboardId: ab.id });
           setMenu({ x: e.clientX, y: e.clientY, items: [{ heading: n.name }, ...selectSameItems(ab, n)] });
@@ -315,13 +322,15 @@ export function Layers() {
         }}
         onDragEnd={endDrag}
         onClick={(e) => {
+          //a brand layer is not selectable (it can be looked at here, not picked)
+          if (brand) return;
           const st = store().get();
           let sel = ab.id === st.activeArtboardId ? st.selection : [];
           if (e.shiftKey || e.metaKey || e.ctrlKey) sel = sel.includes(n.id) ? sel.filter((x) => x !== n.id) : [...sel, n.id];
           else sel = [n.id];
           store().set({ activeArtboardId: ab.id, selection: sel, artboardSelected: false, activeTimelineId: ab.id === st.activeArtboardId ? st.activeTimelineId : null });
         }}
-        onDoubleClick={() => setRenaming(n.id)}
+        onDoubleClick={() => !brand && setRenaming(n.id)}
       >
         {container && !filtering ? (
           <button
@@ -367,19 +376,21 @@ export function Layers() {
         )}
         <span className="layer-actions">
           <button
-            title={n.locked ? 'Unlock' : 'Lock'}
-            className={n.locked ? 'on' : ''}
+            title={brand ? 'Part of the UniSQ brand: locked' : n.locked ? 'Unlock' : 'Lock'}
+            className={n.locked || brand ? 'on' : ''}
+            disabled={brand}
             onClick={(e) => {
               e.stopPropagation();
               store().select([n.id], { artboardId: ab.id });
               store().setProps([n.id], { locked: !n.locked });
             }}
           >
-            {n.locked ? <Icons.lock width={13} /> : <Icons.unlock width={13} />}
+            {n.locked || brand ? <Icons.lock width={13} /> : <Icons.unlock width={13} />}
           </button>
           <button
             title={soloHidden ? `Hidden by Solo on ${parent!.name}: show this one instead` : n.visible ? 'Hide' : 'Show'}
             className={!shown ? 'on' : ''}
+            disabled={brand}
             onClick={(e) => {
               e.stopPropagation();
               store().set({ activeArtboardId: ab.id });
@@ -437,6 +448,14 @@ export function Layers() {
       <div style={{ height: (flat.length - last) * ROW_H }} />
       <button className="link-btn add-artboard" onClick={() => store().addArtboard()}>
         + Add artboard
+      </button>
+      <button
+        className="link-btn add-artboard"
+        title="Lay the artboards out in a tidy grid on the canvas, in the order of this list, with even gaps. A responsive variant stays beside its main artboard. One undo step"
+        disabled={s.project.artboards.filter((a) => !a.canvasHidden).length < 2}
+        onClick={tidyArtboardsCommand}
+      >
+        Tidy up artboards
       </button>
       <button
         className="link-btn add-artboard"

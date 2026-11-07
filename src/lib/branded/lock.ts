@@ -24,6 +24,47 @@ export const isChromeNode = (n: SceneNode): boolean => (n as { tags?: string[] }
 /** A project that was made from a branded pack and is still held to its look. */
 export const isBrandLocked = (p: Pick<Project, 'brandLook'> | null | undefined): boolean => !!p?.brandLook && p.brandLook.strict !== false;
 
+/**
+ * Is this layer held by the brand lock right now: tagged chrome, in a project that is held to its look, and the F9 override off.
+ * The Layers panel uses it to show the lock without letting the layer be picked. (The canvas needs nothing more: chrome also
+ * carries the ordinary `locked` flag, which the canvas already skips.)
+ */
+export const isBrandHeld = (project: Pick<Project, 'brandLook'> | null | undefined, n: SceneNode, override = false): boolean => !override && isBrandLocked(project) && isChromeNode(n);
+
+/** The ids of every brand layer in a branded project and of everything inside one (a group's children), for the Layers panel. Empty with the override on. */
+export function brandHeldIds(p: Project, override = false): Set<string> {
+  const out = new Set<string>();
+  if (override || !isBrandLocked(p)) return out;
+  const down = (list: SceneNode[], inside: boolean) => {
+    for (const n of list) {
+      const held = inside || isChromeNode(n);
+      if (held) out.add(n.id);
+      down((n as { children?: SceneNode[] }).children ?? [], held);
+    }
+  };
+  for (const ab of p.artboards) down(ab.children, false);
+  return out;
+}
+
+/**
+ * A branded project with its chrome layers marked `locked`, for projects made before chrome carried the ordinary lock. Returns
+ * the project itself when every chrome layer already is, so the common case costs one walk and no copy.
+ */
+export function lockBrandChrome(p: Project): Project {
+  if (!isBrandLocked(p)) return p;
+  const open = (list: SceneNode[]): boolean => list.some((n) => (isChromeNode(n) && !n.locked) || open((n as { children?: SceneNode[] }).children ?? []));
+  if (!p.artboards.some((ab) => open(ab.children))) return p;
+  return produce(p, (d) => {
+    const down = (list: SceneNode[]) => {
+      for (const n of list) {
+        if (isChromeNode(n)) n.locked = true;
+        down((n as { children?: SceneNode[] }).children ?? []);
+      }
+    };
+    for (const ab of d.artboards as Artboard[]) down(ab.children);
+  });
+}
+
 type Rec = Record<string, unknown>;
 
 //What the colour scan doesn't walk into: layer lists, point lists and the like

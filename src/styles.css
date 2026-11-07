@@ -2084,6 +2084,19 @@ div.text-editor {
 .layer-row.hidden-layer .layer-name {
   opacity: 0.45;
 }
+/* Brand layers of a branded project: on the list for reference, locked, not pickable */
+.layer-row.brand-held {
+  cursor: default;
+}
+.layer-row.brand-held:hover {
+  background: none;
+}
+.layer-row.brand-held .layer-name {
+  opacity: 0.7;
+}
+.layer-actions button:disabled {
+  cursor: default;
+}
 /* Dragging a layer: a line at the gap it will land in (indented to the depth it will join), and an outline on the group when it goes inside */
 .layers {
   position: relative;

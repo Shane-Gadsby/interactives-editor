@@ -43,6 +43,8 @@ import { CommentLayer } from './CommentLayer';
 import { anchorAt } from '../lib/comment-anchor';
 import { comments } from '../lib/comments';
 import { drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
+import { isBrandHeld } from '../lib/branded/lock';
+import { tidyArtboardsCommand } from '../lib/tidy-command';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
@@ -1761,6 +1763,7 @@ export function Canvas() {
         { label: 'Make start artboard', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) },
         { label: 'Duplicate artboard', onClick: () => s2.duplicateArtboard(hab.id) },
         { label: 'Zoom to artboard', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) },
+        { label: 'Tidy up artboards', disabled: st.project.artboards.filter((a) => !a.canvasHidden).length < 2, onClick: tidyArtboardsCommand },
         { separator: true },
         { label: 'Delete artboard', danger: true, onClick: () => s2.deleteArtboard(hab.id) },
       ];
@@ -1769,6 +1772,7 @@ export function Canvas() {
         { label: 'New artboard here', onClick: () => s2.addArtboard({ canvasX: round(w.x), canvasY: round(w.y) }) },
         paste,
         { separator: true },
+        { label: 'Tidy up artboards', disabled: st.project.artboards.filter((a) => !a.canvasHidden).length < 2, onClick: tidyArtboardsCommand },
         { label: 'Zoom to fit everything', hint: 'Shift+1', onClick: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })) },
         { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: 'Shift+R', onClick: () => setPrefs({ rulers: !prefs().rulers }) },
         { label: 'Help', hint: 'F1', onClick: () => openHelp('canvas') },
@@ -1902,6 +1906,8 @@ export function Canvas() {
           const b = lab && selectionBounds(lab, [lockedHover.id]);
           const n = lab && locate(lab, lockedHover.id)?.node;
           if (!lab || !b || !n || (!n.locked && n.visible)) return null;
+          //a brand layer has no quick unlock: it is part of the brand, only the F9 override lifts it (from the Layers panel)
+          if (isBrandHeld(project, n, store().get().brandOverride)) return null;
           const at = screen(lab, { x: b.x + b.width, y: b.y });
           const keep = {
             onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),

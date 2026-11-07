@@ -483,6 +483,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 - Make a new one with the **Artboard** tool (<kbd>A</kbd>), the **+ Add artboard** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New artboard here**.
 - Click an artboard's name above it on the canvas, or its row in the **Layers** panel, to select it. Drag the name to move the artboard around the canvas, and drag its corners to resize it.
 - With an artboard selected, the Inspector shows **Name**, **W** and **H** (and **Size presets…** such as Desktop, Tablet or Phone), **Background**, **Clip content to artboard** (the parts of layers outside it still show faintly on the canvas, see [Preferences](preferences)), **Make start artboard**, **Duplicate artboard** and **Delete artboard**. Then come its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**.
+- **Tidy up artboards** (at the bottom of the **Layers** panel, and in the right-click menu on the canvas) lays all the artboards out in a neat grid, in the order of the Artboards list, with even gaps and room for each name. The start artboard goes first if it isn't already, a responsive variant stays beside its main artboard, and an artboard that only exists to be used inside others (a component) goes last. Artboards you have hidden from the canvas stay where they are. It is one undo step (<kbd>Ctrl</kbd>+<kbd>Z</kbd>), and the group stays where it was on the canvas. To change the order, drag the artboards in the **Layers** panel, then tidy up again.
 - The **start artboard** is the one the player shows first. It has a **start** badge in the Layers panel. Use **Make start artboard** (also in the right-click menu) to change it.
 - Drag layers and let go over another artboard and you're asked whether to move them there. See [Moving layers to another artboard](layers-panel#moving-layers-to-another-artboard).
 - To show a different arrangement of an artboard on narrow or wide pages, add a variant: see [Responsive artboards](responsive).
@@ -510,7 +511,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 - From the keyboard, select one layer and press <kbd>Alt</kbd>+<kbd>Up</kbd> or <kbd>Down</kbd> to step it past a neighbour (and out of its group at the end), <kbd>Alt</kbd>+<kbd>Right</kbd> to put it inside the group just above it and <kbd>Alt</kbd>+<kbd>Left</kbd> to take it out, under that group.
 - Type in **Filter layers** above the list to show only the layers whose name has those letters. The groups and artboards they sit in stay, faded, so you can see where each one is, and a collapsed group doesn't hide a match. Press **Text** beside the box to match the words in text layers, buttons and links as well, rich text included. <kbd>Esc</kbd> clears the box. While a filter is on, the rows can't be dragged.
 - Right-click a layer for **Select same fill** and **Select same font**. They select every unlocked layer on the same artboard with that fill (any of a layer's fills counts, and a text layer's colour counts as a fill) or set in that font (a rich-text run in it counts). Then change them all at once in the Inspector. To change a colour or font across the whole project, use the named colour and text styles in [Libraries](libraries#styles) instead: layers that follow a style change with it.
-- **+ Add artboard** and **+ Import file as artboard** are at the bottom. See [Artboards](artboards) and [Importing](import).
+- **+ Add artboard** and **+ Import file as artboard** are at the bottom, with **Tidy up artboards**, which puts the artboards in a tidy grid in list order. See [Artboards](artboards) and [Importing](import).
 
 ## Hide and lock
 Hover a row and two small buttons appear at its right: a padlock (**Lock** / **Unlock**) and an eye (**Hide** / **Show**). They stay visible for any layer that is locked or hidden. The **Visible** and **Locked** ticks in the Inspector do the same.
@@ -518,6 +519,7 @@ Hover a row and two small buttons appear at its right: a padlock (**Lock** / **U
 - **Hidden** layers are not drawn by the player or in Preview. In the editor they show as a faint **ghost** on the canvas, so you can still see where they are and pick them. Their names are faded in the Layers panel. Hide a mask layer and its clipping stops.
 - **Outside a clipping artboard**: when an artboard has **Clip content to artboard** on, the part of a layer that hangs past its edge is also drawn as a faint, diagonally striped ghost on the canvas, and clicking it selects the layer. Preview and exports still cut it off. You can switch this off in [Preferences](preferences).
 - **Locked** layers can't be selected or moved by clicking on the canvas, so a backdrop never gets in your way. You can still select one in the Layers panel and edit it in the Inspector.
+- The **brand layers** of a [branded project](branded-starters) (the logo, the sweeps, the footer line) are locked harder. They are skipped by clicking, dragging, the selection box and Select all, and in the Layers panel they show a padlock you can't turn off and can't be selected there either, so there is nothing on them to change by accident.
 - A layer that is hidden only because its parent is a [Solo group](groups-frames#solo-groups) and it isn't the active child looks the same. Its eye says **Hidden by Solo on …: show this one instead**, and pressing it makes it the active child.
 
 ### Quick badges on the canvas
@@ -3189,7 +3191,7 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
 - Layer ids stay the same in a copy, so a checklist and updates can find things. Duplicating or pasting layers inside the copy makes new ids as usual.
 - The server keeps a template as a snapshot with its own copy of the files, so deleting or editing the project it came from does not change it.
 - Templates are one level: a copy of a template does not become a template of its own until you save it as one.
-- The **Built-in** tab also has the UniSQ [branded starter packs](branded-starters): ready-made activities in a choice of colourways, with the brand locked.`,
+- The **Built-in** tab also has the UniSQ [branded starter packs](branded-starters): ready-made activities in a choice of colourways, with the brand locked. Every built-in starter opens with its artboards laid out in order in a tidy grid (and you can do the same to any project with **Tidy up artboards**, see [Artboards](artboards)).`,
   },
   {
     id: 'branded-starters',
@@ -3221,11 +3223,11 @@ Tick **Let learners switch colourway** to add a small row of swatches to the top
 ## What is locked, and why
 Branded projects are held to the brand so every activity looks like it came from the same place, whoever writes it.
 
-- **Brand layers** are the logo, the sweeps, the accent bars, the footer line and the web address on the end page. They can't be edited, moved, deleted or detached. You can still delete a whole page, and add your own layers to it.
+- **Brand layers** are the logo, the sweeps, the accent bars, the footer line and the web address on the end page. They are locked: clicking on the canvas goes straight through them to whatever is behind, the selection box and Select all skip them, and in the **Layers** panel they carry a padlock and can't be selected. They can't be edited, moved, deleted or detached either. You can still delete a whole page, and add your own layers to it.
 - **Colours** have to be theme colours. The colour picker offers the project's **Tokens**; typing a hex colour or picking one from elsewhere is refused with a note that this is a branded project. A new layer you draw or paste gets the nearest theme colour instead of its plain one.
 - **Fonts** are Open Sans.
 
-The accessibility checks, the [themes](themes) panel and everything else work as they do in any project. A power user can turn the lock off for a session with F9 (the brand kit override), which also lifts the brand kit lock, to fix something in the pack itself. Nothing is saved with it.
+The accessibility checks, the [themes](themes) panel and everything else work as they do in any project. A power user can turn the lock off for a session with F9 (the brand kit override), which also lifts the brand kit lock, to fix something in the pack itself. With it on, brand layers show in the Layers panel like any layer: select one there, and press its padlock to unlock it for clicking on the canvas. Nothing is saved with it.
 
 ## The starters
 ${list}

@@ -35,7 +35,8 @@ import {
 import { applyRuns, nodePropsToRunStyle } from '../lib/rich-text';
 import { lockViolation, unlinkStyleRef } from '../lib/libraries';
 import { clampBrandInstances, hasBrandArtboards } from '../lib/brand';
-import { brandLookViolation, isBrandLocked, snapToBrand } from '../lib/branded/lock';
+import { brandLookViolation, isBrandLocked, lockBrandChrome, snapToBrand } from '../lib/branded/lock';
+import { applyTidy } from '../lib/artboard-tidy';
 import { addModifier, applyPreset, removeModifier, type TextPresetId } from '../lib/text-modifiers';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths, remapPointTracks, shapeToPaths } from '../lib/path-edit';
@@ -255,7 +256,7 @@ export class EditorStore {
   constructor(project: Project) {
     // Lay out auto-layout frames once on open, so the first edit (and its undo) starts from settled positions.
     // (an unchanged produce still freezes the document, so a stray in-place edit throws instead of corrupting history)
-    this.state = EditorStore.initial(settleLayout(produce(project, () => undefined)));
+    this.state = EditorStore.initial(settleLayout(lockBrandChrome(produce(project, () => undefined))));
   }
 
   static initial(project: Project): EditorState {
@@ -987,6 +988,21 @@ export class EditorStore {
   }
 
   // ---------------------------------------------------------------- artboards
+
+  /**
+   * Tidy up artboards: lay them out in a grid in the Artboards list order (lib/artboard-tidy.ts). One undo step, and since it
+   * goes through update() it reaches live rooms like any edit. Returns how many artboards moved.
+   */
+  tidyArtboards(): number {
+    track('feature', 'artboards-tidy');
+    let moved = 0;
+    this.update((d) => {
+      const before = d.artboards.map((a) => `${a.canvasX},${a.canvasY}`);
+      applyTidy(d as Project);
+      moved = d.artboards.filter((a, i) => `${a.canvasX},${a.canvasY}` !== before[i]).length;
+    });
+    return moved;
+  }
 
   addArtboard(partial: Partial<Artboard> = {}): string {
     track('doc', 'artboard-add');

@@ -7,6 +7,7 @@ import { createArtboard, createNode, createProject, uid, type Artboard, type Log
 import { addQuestion } from './question-kit';
 import { addStepsExample } from './steps';
 import { lookFor, starterThemes } from './themes';
+import { applyTidy } from './artboard-tidy';
 
 //The starters use the starter theme tokens: base() gives each project the Light, Dark and High contrast themes and picks these up.
 let L = lookFor(undefined);
@@ -397,6 +398,7 @@ export const starterByKey = (key: string): Starter | undefined => STARTERS.find(
 export function projectFromStarter(s: Starter, name?: string): Project {
   const { project, checklist } = s.build();
   project.name = name || s.name;
+  applyTidy(project, { x: 0, y: 0 });
   project.template = { builtin: s.key, name: s.name, version: 1, checklist };
   return project;
 }

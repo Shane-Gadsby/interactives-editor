@@ -53,10 +53,14 @@ const SIDE = 48;
 const TOP = 40;
 const FOOTER = 44;
 
-/** Marks a layer as part of the brand (logo, sweeps, bars, footer line): locked in branded projects. */
+/**
+ * Marks a layer as part of the brand (logo, sweeps, bars, footer line): locked in branded projects. It is tagged, and it also
+ * carries the ordinary layer lock (`locked`), which is what keeps it off the canvas picking, the marquee, select all and drags.
+ * The tag is what the brand lock (./lock.ts) holds it by, so unlocking one layer by hand is refused outside the F9 override.
+ */
 export const CHROME_TAG = 'brand-chrome';
 export const isChrome = (n: SceneNode): boolean => (n as { tags?: string[] }).tags?.includes(CHROME_TAG) ?? false;
-export const chrome = <T extends SceneNode>(n: T): T => Object.assign(n, { tags: [...((n as { tags?: string[] }).tags ?? []), CHROME_TAG] });
+export const chrome = <T extends SceneNode>(n: T): T => Object.assign(n, { locked: true, tags: [...((n as { tags?: string[] }).tags ?? []), CHROME_TAG] });
 
 const BRAND_TOKEN_NAMES: Record<BrandKey, string> = {
   gradientStart: 'brand/gradient-start',
