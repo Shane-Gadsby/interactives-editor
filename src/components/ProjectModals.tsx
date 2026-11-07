@@ -4,6 +4,7 @@ import { Renderer, prepareNodes, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
 import { serverMarkedCounts } from '../lib/question-kit';
+import { embedAspect, embedCode } from '../lib/embed';
 import { addCollaborator, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, saveNamedVersion, updateRevision, publishShare, restoreRevision, revertShare, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
 import { download, standaloneHtml, warnInEditor } from '../lib/export';
@@ -182,6 +183,9 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedLearner, setCopiedLearner] = useState(false);
+  const [copiedEmbed, setCopiedEmbed] = useState(false);
+  // Stamped on the embed code the way the Toolbox stamps Date.now() on an item: one per time the dialog is open
+  const [embedId] = useState(() => Date.now());
   const [resultsOpen, setResultsOpen] = useState(false);
   const serverMarked = serverMarkedCounts(store().get().project);
   useEffect(() => {
@@ -230,6 +234,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
     }
   };
   const url = share ? shareUrl(share.token) : '';
+  const embed = share ? embedCode({ url: learnerUrl(share.token), title: store().get().project.name, sensors: share.sensors, aspect: embedAspect(store().get().project), cdtID: embedId }) : '';
   return (
     <>
       <Modal title="Share link" help="export#share-link" onClose={() => !resultsOpen && onClose()} className="share-modal">
@@ -288,6 +293,28 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
                   </button>
                   <button className="btn" onClick={() => setResultsOpen(true)} title="Who has played, how they did">
                     Results…
+                  </button>
+                </div>
+              </div>
+              <div className="learner-link embed-code">
+                <strong>Embed code</strong>
+                <p className="small muted">
+                  Paste this into the Source code view of a StudyDesk, StaffDesk or open site page, the way you would any other Toolbox item. It is the Link for StudyDesk in an iframe, sized to the project's shape and
+                  resized by the page as the project resizes{share.sensors?.microphone || share.sensors?.camera ? `, and it is allowed to use the ${[share.sensors.microphone && 'microphone', share.sensors.camera && 'camera'].filter(Boolean).join(' and ')} the project asked for` : ''}. The same code works in all three.
+                </p>
+                <textarea className="embed-text" readOnly rows={4} value={embed} aria-label="Embed code" onFocus={(e) => e.target.select()} />
+                <div className="row">
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(embed).then(() => {
+                        setCopiedEmbed(true);
+                        setTimeout(() => setCopiedEmbed(false), 1500);
+                        track('feature', 'share-embed-copy');
+                      });
+                    }}
+                  >
+                    {copiedEmbed ? 'Copied' : 'Copy embed code'}
                   </button>
                 </div>
               </div>

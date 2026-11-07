@@ -402,6 +402,8 @@ export interface ShareInfo {
   updated: string;
   /** Signed in people who play it from the learner link get a "Remix this" button that copies the project into their own. */
   remix?: boolean;
+  /** What the project declared it uses of the learner's device when this page was published (the learner page only allows these). */
+  sensors?: { microphone?: boolean; camera?: boolean; photos?: boolean } | null;
   /** Who published the page now showing. */
   by?: { username: string | null; name: string | null } | null;
   /** The page an update replaced, kept for one-click revert. */

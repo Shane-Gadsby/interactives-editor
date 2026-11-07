@@ -216,6 +216,26 @@ describe('the learner page', () => {
     expect(r.text).toContain("'user-data?names='");
   });
 
+  it('hands the player\'s height on to the page around it (setILARSize), so an embed in StudyDesk tracks the project', async () => {
+    const r = await h.call('GET', `/play/${token}`);
+    expect(r.text).toContain('<script src="/utilities.js"></script>');
+    expect(r.text).toContain("typeof m.height === 'number'");
+    expect(r.text).toContain('setILARSize(null, Math.ceil(m.height)');
+    //Only what the project frame said, and only when there is a page around this one to tell
+    expect(r.text).toContain('e.source !== frame.contentWindow');
+    expect(r.text).toContain('window.parent !== window');
+  });
+
+  it('can be framed by StudyDesk: no frame-ancestors, no X-Frame-Options, and the project frame still gets fullscreen and autoplay', async () => {
+    const r = await h.call('GET', `/play/${token}`);
+    expect(r.headers.get('x-frame-options')).toBeNull();
+    expect(r.headers.get('content-security-policy')).not.toContain('frame-ancestors');
+    expect(r.text).toContain('allow="fullscreen; autoplay"');
+    //A bare query string, like the one the embed code adds, changes nothing
+    const q = await h.call('GET', `/play/${token}?title=Hello&cdtID=1790000000000`);
+    expect(q.status).toBe(200);
+  });
+
   it('frames the share link in its sandbox, with a nonce script and a locked-down policy', async () => {
     const r = await h.call('GET', `/play/${token}`);
     expect(r.status).toBe(200);

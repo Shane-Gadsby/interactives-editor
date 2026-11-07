@@ -3757,7 +3757,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	}
 	//One request at a time, so a save and a report that leave together can't both try to make the learner's first record
 	var chain = Promise.resolve()
-	var diagQueue = [], diagTaken = 0, diagSettled = false, diagTimer = null
+	var diagQueue = [], diagTaken = 0, diagSettled = false, diagTimer = null, lastHeight = 0
 	var call = function (method, path, body) {
 		var headers = {'Content-Type': 'application/json'}
 		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
@@ -3883,6 +3883,16 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		var m = e.data
 		if (m && m.source === 'interactives-record') return takeRecord(m.record)
 		if (m && m.source === 'interactives-diag') return takeDiag(m.diag)
+		//The player's height for its width, handed on to the page around this one the way every toolbox app does (setILARSize), so
+		//the embed code's iframe in StudyDesk tracks the project. The player's own message goes to the top window, where si-manager
+		//can't tell which iframe it came from, since it came out of two frames down. Only a sane number is passed on
+		if (m && typeof m.height === 'number' && isFinite(m.height) && m.height > 0 && m.height <= 20000 && typeof m.cacheID === 'string') {
+			if (window.parent !== window && typeof setILARSize === 'function' && m.height !== lastHeight) {
+				lastHeight = m.height
+				setILARSize(null, Math.ceil(m.height), m.cacheID.slice(0, 200))
+			}
+			return
+		}
 		if (!m || m.source !== 'interactives-progress') return
 		var failed = function () {
 			answer(m, {ok: false, available: false})
