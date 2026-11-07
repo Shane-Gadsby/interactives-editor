@@ -742,7 +742,7 @@ progress {
   color: var(--primary-fg);
 }
 .search-pop-list li.on .search-picker-hint {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--primary-fg);
 }
 .search-pop-list li.current:not(.on) {
   font-weight: 600;
@@ -3888,7 +3888,7 @@ kbd {
   color: var(--primary-fg);
 }
 .quick-help li.active .muted {
-  color: #dfe5ff;
+  color: var(--primary-fg);
 }
 .quick-help-foot {
   padding: 6px 12px;
@@ -4233,7 +4233,7 @@ kbd {
   color: var(--primary-fg);
 }
 .revision-list button.active .muted {
-  color: #dfe5ff;
+  color: var(--primary-fg);
 }
 .revision-preview {
   flex: 1;
@@ -5414,7 +5414,7 @@ code {
 .li-cell.on .li-dot {
   width: 8px;
   height: 8px;
-  background: #fff;
+  background: var(--primary-fg);
 }
 .li-insets {
   display: grid;
@@ -7770,7 +7770,7 @@ code {
   font-size: 10px;
 }
 .font-opt.on .font-opt-tag {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--primary-fg);
 }
 .font-empty {
   padding: 10px;
