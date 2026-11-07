@@ -15,13 +15,15 @@ import { importSvg } from '../svg-import';
 import { starterThemes } from '../themes';
 import { BRAND_FONT, COLOURWAYS, CONTENT_TOKENS, HIGH_CONTRAST, type BrandKey, type Colourway } from './looks';
 
-export type StarterSet = 'assessment' | 'explore' | 'drag' | 'story';
+export type StarterSet = 'assessment' | 'explore' | 'drag' | 'story' | 'games' | 'writing';
 
 export const SET_NAMES: Record<StarterSet, string> = {
   assessment: 'Quizzes and questions',
   explore: 'Explore and reveal',
   drag: 'Drag, sort and timelines',
   story: 'Stories and presentations',
+  games: 'Games and puzzles',
+  writing: 'Writing and reflection',
 };
 
 export interface BrandedStarter {

@@ -6,14 +6,16 @@ import { STARTERS as assessment } from './sets/assessment';
 import { STARTERS as explore } from './sets/explore';
 import { STARTERS as drag } from './sets/drag';
 import { STARTERS as story } from './sets/story';
+import { STARTERS as games } from './sets/games';
+import { STARTERS as writing } from './sets/writing';
 import type { BrandedStarter, StarterSet } from './kit';
 import { COLOURWAYS, type Colourway } from './looks';
 
 export { COLOURWAYS, HIGH_CONTRAST, colourwayById, type Colourway } from './looks';
 export { SET_NAMES, type BrandedStarter, type StarterSet } from './kit';
 
-export const BRANDED_STARTERS: BrandedStarter[] = [...assessment, ...explore, ...drag, ...story];
-export const SETS: StarterSet[] = ['assessment', 'explore', 'drag', 'story'];
+export const BRANDED_STARTERS: BrandedStarter[] = [...assessment, ...explore, ...drag, ...story, ...games, ...writing];
+export const SETS: StarterSet[] = ['assessment', 'explore', 'drag', 'story', 'games', 'writing'];
 
 export const brandedStarterByKey = (key: string): BrandedStarter | undefined => BRANDED_STARTERS.find((s) => s.key === key);
 
