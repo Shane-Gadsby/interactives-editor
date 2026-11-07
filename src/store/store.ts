@@ -728,6 +728,43 @@ export class EditorStore {
     this.select(newIds);
   }
 
+  /**
+   * Resize the artboard to the bounds of the selected layers, keeping everything where it is on the canvas: the artboard moves
+   * to the selection's corner, its top-level layers (and their x/y keyframes) shift by the same amount the other way. Only for
+   * a selection on one artboard (a layer selection always is; with several artboards picked it does nothing).
+   */
+  fitArtboardToSelection(): boolean {
+    const ab = this.artboard();
+    if (!ab || !this.state.selection.length || pickedArtboardIds(this.state).length > 1) return false;
+    const b = selectionBounds(ab, topmost(ab, this.state.selection));
+    if (!b || b.width < 1 || b.height < 1) return false;
+    const x0 = Math.floor(b.x);
+    const y0 = Math.floor(b.y);
+    const w = Math.ceil(b.x + b.width) - x0;
+    const h = Math.ceil(b.y + b.height) - y0;
+    if (!x0 && !y0 && w === ab.width && h === ab.height) return false;
+    track('doc', 'fit-artboard');
+    this.update((d) => {
+      const dab = getArtboard(d as Project, ab.id)!;
+      const top = new Set(dab.children.map((n) => n.id));
+      for (const n of dab.children) {
+        n.x -= x0;
+        n.y -= y0;
+      }
+      for (const tl of dab.timelines)
+        for (const tr of tl.tracks) {
+          if (!top.has(tr.nodeId) || (tr.prop !== 'x' && tr.prop !== 'y')) continue;
+          const by = tr.prop === 'x' ? x0 : y0;
+          for (const k of tr.keys) if (typeof k.value === 'number') k.value -= by;
+        }
+      dab.canvasX += x0;
+      dab.canvasY += y0;
+      dab.width = w;
+      dab.height = h;
+    });
+    return true;
+  }
+
   groupSelection(): void {
     track('doc', 'group');
     const ab = this.artboard();

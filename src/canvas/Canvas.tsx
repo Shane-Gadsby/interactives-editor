@@ -1815,6 +1815,8 @@ export function Canvas() {
           ],
         },
         { label: 'Group', hint: 'Ctrl+G', onClick: () => s2.groupSelection() },
+        //Selections are on one artboard; with several artboards picked it isn't offered
+        ...(pickedArtboardIds(s2.get()).length > 1 ? [] : [{ label: 'Fit artboard to selection', title: 'Resize the artboard to just these layers, keeping them where they are', onClick: () => s2.fitArtboardToSelection() } as MenuItem]),
         ...(one && (one.type === 'group' || one.type === 'frame') ? [{ label: 'Ungroup', hint: 'Ctrl+Shift+G', onClick: () => s2.ungroupSelection() } as MenuItem] : []),
         ...(sel.length > 1
           ? [
