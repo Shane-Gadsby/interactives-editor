@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNoProgressHost } from '../lib/preview-learner';
 import { track } from '../lib/analytics';
 import { changeTemplate, createProjectRecord, deleteTemplate, putAsset, exampleAssetBytes, exampleThumbUrl, getExample, listExamples, listTemplates, setProjectMeta, templateThumbUrl, useExample, useTemplate, type ExampleInfo } from '../lib/db';
 import { standaloneHtml } from '../lib/export';
@@ -163,6 +164,7 @@ function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { p
 
 /** Plays an example the way a share link would (the single-file build in a sandbox), without opening anything of yours. */
 function PlayModal({ e, onClose, onCopy }: { e: ExampleInfo; onClose: () => void; onCopy: () => void }) {
+  const progressHost = useNoProgressHost();
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -178,7 +180,7 @@ function PlayModal({ e, onClose, onCopy }: { e: ExampleInfo; onClose: () => void
   return (
     <Modal title={`Example: ${e.title}`} help="templates#examples" onClose={onClose} className="preview-modal example-play">
       <div className="preview-body">
-        {html ? <iframe title={e.title} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : error ? <div className="center-msg">Could not play it: {error}</div> : <div className="center-msg muted">Building…</div>}
+        {html ? <iframe ref={progressHost} title={e.title} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : error ? <div className="center-msg">Could not play it: {error}</div> : <div className="center-msg muted">Building…</div>}
       </div>
       <div className="row example-bar">
         <span className="muted small">{e.description}</span>

@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from 'react';
 /**
  * Preview's pretend learner record. The previewed project runs in a sandboxed frame with no storage of its own, so its Save user
  * data and remembered progress used to last one run: the player asked the page around it, nobody answered, and the browser
@@ -85,4 +86,22 @@ export function forgetPreviewLearner(project: string): void {
   } catch {
     /* nothing kept */
   }
+}
+
+/**
+ * For the other places a project plays inside the editor (Review, the Templates tab's examples): they keep nothing, and
+ * saying so straight away saves the player its wait for an answer before it starts. Put the returned ref on the iframe.
+ */
+export function useNoProgressHost(): (el: HTMLIFrameElement | null) => void {
+  const frame = useRef<HTMLIFrameElement | null>(null);
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      const d = e.data as Ask | null;
+      if (!d || d.source !== 'interactives-progress' || !d.rid || e.source !== frame.current?.contentWindow) return;
+      frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'progress', rid: d.rid, ok: true, available: false }, '*');
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+  return useCallback((el: HTMLIFrameElement | null) => void (frame.current = el), []);
 }
