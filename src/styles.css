@@ -8256,3 +8256,62 @@ code {
   font-size: 0.78rem;
   white-space: nowrap;
 }
+
+/* Download size (artboard inspector) */
+.weight-files,
+.weight-list {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+}
+.weight-files li,
+.weight-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+  font-size: 12px;
+}
+.weight-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weight-list li.current .weight-pick,
+.weight-list li.current .weight-size {
+  color: var(--text);
+  font-weight: 600;
+}
+.weight-pick {
+  flex: 0 1 40%;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weight-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+.weight-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.weight-size {
+  flex: 0 0 auto;
+  min-width: 52px;
+  text-align: right;
+  color: var(--muted);
+}
