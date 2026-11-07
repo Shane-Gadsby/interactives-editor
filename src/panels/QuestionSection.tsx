@@ -351,14 +351,16 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       )}
 
       <div className="q-sub">Marking</div>
-      <Row>
-        <NumberField label="Points" title="Points a right answer is worth" value={q.points} min={0} step={0.5} onChange={(v) => apply({ points: v }, 'points')} />
-        <NumberField label="Tries" title="How many times the answer can be checked before it locks. 0 is no limit" value={q.attempts} min={0} step={1} onChange={(v) => apply({ attempts: Math.round(v) }, 'attempts')} />
-      </Row>
-      <Row>
-        <NumberField label="Retry −%" title="Points taken off for each check after the first, as a percentage" value={Math.round(q.attemptPenalty * 100)} min={0} max={100} onChange={(v) => apply({ attemptPenalty: Math.min(1, Math.max(0, v / 100)) }, 'attemptPenalty')} />
-        <NumberField label="Hint −%" title="Points taken off for each hint shown, as a percentage" value={Math.round(q.hintPenalty * 100)} min={0} max={100} onChange={(v) => apply({ hintPenalty: Math.min(1, Math.max(0, v / 100)) }, 'hintPenalty')} />
-      </Row>
+      <div className="labels-54">
+        <Row>
+          <NumberField label="Points" title="Points a right answer is worth" value={q.points} min={0} step={0.5} onChange={(v) => apply({ points: v }, 'points')} />
+          <NumberField label="Tries" title="How many times the answer can be checked before it locks. 0 is no limit" value={q.attempts} min={0} step={1} onChange={(v) => apply({ attempts: Math.round(v) }, 'attempts')} />
+        </Row>
+        <Row>
+          <NumberField label="Retry −%" title="Points taken off for each check after the first, as a percentage" value={Math.round(q.attemptPenalty * 100)} min={0} max={100} onChange={(v) => apply({ attemptPenalty: Math.min(1, Math.max(0, v / 100)) }, 'attemptPenalty')} />
+          <NumberField label="Hint −%" title="Points taken off for each hint shown, as a percentage" value={Math.round(q.hintPenalty * 100)} min={0} max={100} onChange={(v) => apply({ hintPenalty: Math.min(1, Math.max(0, v / 100)) }, 'hintPenalty')} />
+        </Row>
+      </div>
       {(q.kind === 'multiple' || q.kind === 'ordering' || q.kind === 'blank' || q.kind === 'matching' || isMultiple(q)) && (
         <CheckField label="Part marks" title="Give a share of the points for the parts that are right" value={q.partial} onChange={(v) => apply({ partial: v })} />
       )}
@@ -389,10 +391,12 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         placeholder="Optional"
         onChange={(v) => apply({ hints: v.split('\n').slice(0, MAX_HINTS) }, 'hints')}
       />
-      <TextField label="Right" title="Said when the answer is right" value={q.feedbackCorrect} onChange={(v) => apply({ feedbackCorrect: v }, 'fb-ok')} />
-      <TextField label="Wrong" title="Said when the answer is wrong" value={q.feedbackIncorrect} onChange={(v) => apply({ feedbackIncorrect: v }, 'fb-no')} />
-      <TextField label="Partly right" title="Said instead of Wrong when part marks are on and some of it is right" value={q.feedbackPartial} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackPartial: v }, 'fb-part')} />
-      <TextField label="Out of tries" title="Said when the last try is used up without a right answer" value={q.feedbackOutOfTries} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackOutOfTries: v }, 'fb-out')} />
+      <div className="labels-66">
+        <TextField label="Right" title="Said when the answer is right" value={q.feedbackCorrect} onChange={(v) => apply({ feedbackCorrect: v }, 'fb-ok')} />
+        <TextField label="Wrong" title="Said when the answer is wrong" value={q.feedbackIncorrect} onChange={(v) => apply({ feedbackIncorrect: v }, 'fb-no')} />
+        <TextField label="Partly right" title="Said instead of Wrong when part marks are on and some of it is right" value={q.feedbackPartial} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackPartial: v }, 'fb-part')} />
+        <TextField label="Out of tries" title="Said when the last try is used up without a right answer" value={q.feedbackOutOfTries} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackOutOfTries: v }, 'fb-out')} />
+      </div>
 
       <div className="q-sub">Listening and keys</div>
       <CheckField

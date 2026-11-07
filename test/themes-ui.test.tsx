@@ -58,7 +58,9 @@ describe('the colour picker and theme tokens', () => {
     expect(value).toBe(`token:${primary.id}`);
     // linked: a named chip with each theme's value, a ring on the swatch, no hex box
     expect(host.querySelector('.token-chip-name')!.textContent).toBe('color/primary');
-    expect(host.querySelector('.token-chip')!.textContent).toContain('High contrast');
+    // each theme's value is in the chip's tooltip, not drawn inside it (a single-line chip, level with the % box and the delete button)
+    expect(host.querySelector('.token-chip')!.getAttribute('title')).toContain('High contrast');
+    expect(host.querySelector('.token-chip .token-values')).toBeNull();
     expect(host.querySelector('.swatch.linked')).not.toBeNull();
     expect(host.querySelector('input.color-text')).toBeNull();
     expect(host.querySelector<HTMLElement>('.swatch.linked')!.style.background).toMatch(/255, 180, 72|#ffb448/i);

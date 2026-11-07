@@ -28,6 +28,13 @@ export function linked(ts: { project: Project; canvasTheme: string | null } | nu
   return { token: tokenById(ts.project.themes, tokenIdOf(value)), shown: shownColor(ts.project, ts.canvasTheme, value) };
 }
 
+/** Each theme's value of a token as one line of text (Gold #f5b800, Purple #7a4ca0, ...), for a tooltip. */
+export function tokenSummary(project: Project, token: ThemeToken): string {
+  const t = project.themes;
+  if (!t) return '';
+  return t.list.map((th) => `${th.name} ${tokenValue(t, token, th.id) ?? 'transparent'}`).join(', ');
+}
+
 /** Each theme's value of a token, as small swatches with the theme's name. */
 export function TokenValues({ project, token }: { project: Project; token: ThemeToken }) {
   const t = project.themes!;
