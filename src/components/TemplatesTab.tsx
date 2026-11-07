@@ -105,34 +105,37 @@ function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { p
           <span>Name of your new project</span>
           <input value={name} maxLength={200} autoFocus onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !busy && void go()} />
         </label>
-        {description && <p className="muted">{description}</p>}
-        {pick.kind === 'saved' && !!pick.t.brand?.length && (
-          <p className="small muted">
-            This one starts with the brand kit <strong>{pick.t.brand.map((b) => b.name).join(', ')}</strong>. The kit's logos, headers, colours and fonts are already in your project and locked, so they stay on brand. Everything else is yours to change.
-          </p>
-        )}
-        {pick.kind === 'branded' && (
-          <p className="small muted">
-            This one is in the <strong>{pick.way.name}</strong> colourway. The logo and brand layers are locked and colours come from the project's theme, so it stays on brand. You can switch colourway later in the project settings.
-          </p>
-        )}
-        {pick.kind === 'example' ? (
-          <p className="small muted">The example stays as it is for everyone. You get a copy of it in your own projects to change, break and keep.</p>
-        ) : items.length > 0 ? (
-          <>
-            <strong>Things to change</strong>
-            <p className="small muted">This template has hard-coded content in it. A checklist opens with your new project to walk you through replacing it.</p>
-            <ul className="use-items">
-              {items.map((t, i) => (
-                <li key={i}>
-                  <Icons.check width={12} height={12} /> {t}
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="small muted">The author did not list anything to change. Look through it before you share it: the words and pictures in it are the author's.</p>
-        )}
+        {/* The long part scrolls; the name, folder and buttons stay put like a header and footer */}
+        <div className="use-scroll" role="region" aria-label="About this template" tabIndex={0}>
+          {description && <p className="muted">{description}</p>}
+          {pick.kind === 'saved' && !!pick.t.brand?.length && (
+            <p className="small muted">
+              This one starts with the brand kit <strong>{pick.t.brand.map((b) => b.name).join(', ')}</strong>. The kit's logos, headers, colours and fonts are already in your project and locked, so they stay on brand. Everything else is yours to change.
+            </p>
+          )}
+          {pick.kind === 'branded' && (
+            <p className="small muted">
+              This one is in the <strong>{pick.way.name}</strong> colourway. The logo and brand layers are locked and colours come from the project's theme, so it stays on brand. You can switch colourway later in the project settings.
+            </p>
+          )}
+          {pick.kind === 'example' ? (
+            <p className="small muted">The example stays as it is for everyone. You get a copy of it in your own projects to change, break and keep.</p>
+          ) : items.length > 0 ? (
+            <>
+              <strong>Things to change</strong>
+              <p className="small muted">This template has hard-coded content in it. A checklist opens with your new project to walk you through replacing it.</p>
+              <ul className="use-items">
+                {items.map((t, i) => (
+                  <li key={i}>
+                    <Icons.check width={12} height={12} /> {t}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="small muted">The author did not list anything to change. Look through it before you share it: the words and pictures in it are the author's.</p>
+          )}
+        </div>
         <label className="field">
           <span>Folder</span>
           <select value={folder ?? ''} onChange={(e) => setFolder(e.target.value || null)}>

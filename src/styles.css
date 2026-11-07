@@ -7181,6 +7181,28 @@ code {
 .remix-row {
   margin: 12px 0;
 }
+.use-template {
+  max-height: min(760px, calc(100vh - 120px));
+  min-height: 0;
+}
+.use-template .use-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 -16px;
+  padding: 2px 16px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.use-template .use-scroll > * {
+  flex: none;
+}
+.use-template .use-scroll p {
+  margin: 0;
+}
 .use-items {
   list-style: none;
   margin: 4px 0 8px;
