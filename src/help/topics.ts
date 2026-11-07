@@ -2329,7 +2329,7 @@ The **Broken** group lists references that point at something that has been dele
     title: 'Themes and colour tokens',
     group: 'Design',
     summary: 'Name a colour once, give it a value for Light, Dark and High contrast, and let layers follow it.',
-    keywords: 'theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast',
+    keywords: 'link colours to tokens fixed plain colours switch does nothing theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast',
     body: `![The Themes tab: the starter tokens down the side with their Light, Dark and High contrast colours, and the contrast check.](help/themes-panel.png)
 
 A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. A **new project** starts with the three themes and the starter tokens already in it, the artboard on the Light background, and every layer you add follows the tokens, so it looks right in Dark and High contrast without you picking anything. Projects made before this, and imported ones, have none until you add them in the Themes tab, and behave exactly as before.
@@ -2352,10 +2352,17 @@ Dark and High contrast are the same names with values made for them. Then:
 - **Showing** (and the theme box in the top bar) picks the theme the canvas draws while you edit. It is not saved with the project. Pictures, SVG and PNG exports, and Lottie, write the colours of the theme being shown.
 - **Convert colour styles to tokens** makes a token from every colour style, with its colour in every theme to start with. Layers that follow a style keep following it, now through the token. Styles from a library convert too, and a library update keeps the link.
 - **Update starter colours** shows on a project made before this look that still has the old starter tokens. It gives the tokens you never edited the new values and adds the ones the project lacks. Layers that follow those tokens change with them; plain colours and tokens you edited do not. Nothing changes until you press it.
-- The count at the top says how many plain colours are **not following a theme**.
+- The count at the top says how many plain colours are **not following a theme**, with a **Link colours to tokens** button beside it (see below).
 
 ## Using a token
 In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a one-line named chip replaces the hex box. Hover the chip to read the token's value in each theme. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
+
+## When switching the theme changes nothing
+A theme can only change a colour that follows a token. A project built with plain colours (an imported file, or one made before the themes were added) has nothing to change, so the Light, Dark and High contrast switches, on the canvas, in Preview and in the Themes tab, all look the same. When that is the case you see a line, **Nothing here follows the theme: these colours are fixed**, with a **Link colours to tokens** button.
+
+**Link colours to tokens** (also in the Themes tab, and in the right-click menu of an artboard, where it covers just the selected artboards) goes through artboard backgrounds, layer fills, strokes, text and rich text colours, button, input and link colours, shadows and gradient stops. A plain colour that is exactly the colour of a token in the default theme (same alpha, \`#fff\` and \`#ffffff\` are alike) becomes that token. Before anything changes it says what it will do, like "Link 7 colours: 3 backgrounds, 2 fills, 2 text", and lists the colours that match no token. Those stay as they are: link them by hand from the picker's Tokens tab, or add a token with that colour and run it again. Undo (Ctrl+Z) takes the whole thing back in one step.
+
+When two tokens have the same colour (the button and the primary, say) the layer's job decides: artboard backgrounds prefer \`color/background\` then \`color/surface\`, text prefers \`color/text\`, button fills \`color/button\`, button text \`color/on-button\`, strokes \`color/border\`. Anything else takes the first of them in the Themes tab. Layers that follow a colour style are left to the style (use **Convert colour styles to tokens**), library artboards are read-only, and the brand layers of a branded starter are skipped unless the power user override is on. Colours written inside a binding expression are not touched.
 
 ## New layers, questions and starters
 A new button is gold with black, bolder text, an input has a grey outline, a shape is a neutral grey, text is the toolbox black. In a project that has the starter tokens, new layers, the [question kit](question-kit) and the step bar follow those tokens instead, so a new layer looks right in Dark and High contrast without you picking anything. In a project with no tokens they get the same colours as plain ones. The built-in [starters](templates) come with the themes and use the tokens.

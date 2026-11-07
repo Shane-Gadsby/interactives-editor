@@ -16,6 +16,7 @@ import { copySelectedKeys, isKeyClipText, keyContext, keysCopiedLast, pasteKeys,
 import { Canvas } from './canvas/Canvas';
 import { deleteSelectedKeys } from './panels/Timeline';
 import { deleteSelectionCommand } from './lib/artboard-commands';
+import { ThemeFixedHint } from './components/ThemeFixedHint';
 import { ReferenceModal } from './panels/InterfacePanel';
 import { MotionExportModal } from './components/MotionExportModal';
 import { exportProblems, typeDefinitions } from 'interactives-player';
@@ -635,18 +636,31 @@ function ThemeSwitch() {
   const shown = useEditor((s) => s.canvasTheme);
   const themes = project.themes;
   if (!themes?.list.length) return null;
+  const [hint, setHint] = useState(false);
   const current = themes.list.find((t) => t.id === shown) ?? defaultTheme(themes);
   return (
-    <label className="theme-switch" title="The theme the canvas shows while you edit. Layers with theme colours change, plain colours don't. Exports and pictures use it too. It is not saved with the project">
-      <Icons.themes width={14} />
-      <select value={current.id} onChange={(e) => store().set({ canvasTheme: e.target.value })} onKeyDown={(e) => e.stopPropagation()} aria-label="Theme shown on the canvas">
-        {themes.list.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <span className="theme-switch-wrap">
+      <label className="theme-switch" title="The theme the canvas shows while you edit. Layers with theme colours change, plain colours don't. Exports and pictures use it too. It is not saved with the project">
+        <Icons.themes width={14} />
+        <select
+          value={current.id}
+          onChange={(e) => (store().set({ canvasTheme: e.target.value }), setHint(true))}
+          onKeyDown={(e) => e.stopPropagation()}
+          aria-label="Theme shown on the canvas"
+        >
+          {themes.list.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {hint && (
+        <div className="theme-fixed-pop">
+          <ThemeFixedHint onCanvas onClose={() => setHint(false)} />
+        </div>
+      )}
+    </span>
   );
 }
 
@@ -1216,6 +1230,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           </button>
           {themes?.list.length ? (
             <>
+              <ThemeFixedHint />
               <select
                 value={theme}
                 title="The theme the preview shows. Follow the viewer picks one from the colour scheme and contrast settings, the way the finished interactive does"
