@@ -73,6 +73,7 @@ import { GridAlignFields } from '../components/GridAlignFields';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
 import { OptimiseOutputFields } from './OptimiseOutput';
+import { WeightSection } from './WeightSection';
 import { RecordsSection } from './RecordsSection';
 import { SensorsSection } from './SensorsSection';
 import { CreditsSettingsFields } from './CreditsPanel';
@@ -624,6 +625,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <JoysticksSection ab={ab} />
       <BlendsSection ab={ab} project={project} />
       <BonesArtboardSection ab={ab} />
+      <WeightSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">
         <ColourwayRow project={project} />
         <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />

@@ -488,6 +488,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 - To show a different arrangement of an artboard on narrow or wide pages, add a variant: see [Responsive artboards](responsive).
 - Move between artboards at runtime with the **Go to artboard** action (with a transition) or \`ix.goTo('Name', 'fade')\`.
 - An artboard can also be placed inside another as an [instance](instances), like a reusable component. The **Use in** menu in the Inspector does it in one step.
+- To see what an artboard asks a learner to download, open **Download size** in its Inspector. See [Download size and lite versions](download-size).
 - To bring a design file in as an artboard, see [Importing](import).`,
   },
   {
@@ -2689,6 +2690,51 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Fonts | The fonts the project loads. **Add a Google font…** is a search box over every Google font (type, then <kbd>Enter</kbd> or click; the chips narrow it by Sans, Serif, Display, Handwriting or Mono), or upload font files in the **Assets** panel. New projects start with Open Sans. Choosing a font for a text layer adds it here by itself |`,
   },
 
+  {
+    id: 'download-size',
+    title: 'Download size and lite versions',
+    group: 'Interactivity',
+    summary: 'What each artboard asks a learner to download, how to show it to them, and how to offer a lesson as video, audio only and text only.',
+    keywords: 'download size weight bandwidth lite low data saver metered mobile slow connection audio only text only version video size megabytes mb file size lazy loading transcript saveData lowBandwidth downloadSize fileSize',
+    body: `Many learners study on mobile data or a shared connection. This page is about showing them what a lesson costs before they commit, and about offering a lighter way to take it.
+
+## Seeing what an artboard weighs
+Select an artboard and open **Download size** in the Inspector. The heading says what this artboard needs in total. Open it to see its heaviest files, and a bar for every artboard in the project so you can compare the versions of a lesson.
+
+- Sizes are the ones the project already stores for each file. While [Optimise output](project-settings) is on and the lighter copy of a picture has been made, its size is used.
+- A file counts once however many layers use it. An artboard shown inside another as an [instance](instances) counts what that artboard needs. A file that another artboard only links to with **Go to artboard** belongs to that artboard.
+- Fonts and data files load for every artboard, so they are listed apart and left out of each artboard's number.
+
+## What the player loads, and when
+The player draws one artboard at a time, and an artboard the learner has not opened asks for nothing: no pictures, no video, no sound. When they get to it, it loads everything it has. Every timeline's sound is fetched on arrival, started or not, so the first play does not wait.
+
+- **Hidden layers still load.** A layer with Visible off is not drawn, but a video in it still starts loading (it may be carrying the sound for an audio version), and an instance layer still loads its artboard. To keep a version's files off the wire, put the version on its own artboard and go to it. Do not hide layers.
+- Fonts and data sources are the project's, so they load at the start whichever artboard shows.
+- **A single HTML file, a share link and the Link for StudyDesk carry every file inside the page.** All the versions arrive in the first download, so the choice saves memory and playing, not the download. Only a copy whose files are hosted separately loads just the chosen version. The lesson tells the learner which case they are in, with the \`assetsEmbedded\` name below.
+
+## Showing a size to learners
+These names work in any expression, text template or binding. A variable with the same name wins.
+- **downloadSize("Video lesson")**: the bytes of the files that artboard needs. Give several names to add up what a version needs (each file once). With no name it means the artboard that is showing.
+- **fileSize(bytes)**: a size as people say it, such as "340 KB" or "12 MB".
+- **saveData**: true when the browser says the learner has turned on Data Saver.
+- **connectionType**: \`4g\`, \`3g\`, \`2g\` or \`slow-2g\`, or empty. Only some browsers say; Safari and Firefox say nothing.
+- **lowBandwidth**: true when Data Saver is on, or the connection is 3g or slower.
+- **assetsEmbedded**: true when the files travel inside the page, as in a share link.
+
+For example, a text layer can read \`{fileSize(downloadSize("Video lesson"))}\`. The hints are only hints: use them to mark a card, never to choose for the learner.
+
+## The Lite lesson starter
+Under **Listen, watch and capture** in the branded starter packs, **Lite lesson** is a lesson in three weights. The learner picks **Video**, **Audio only** or **Text only**, each card showing what that version weighs. The choice is saved with **Save user data** and a returning learner goes straight to it, with **Change version** on every page to come back. On a slow connection or with Data Saver on, the lighter card is marked **Suggested for your connection**; nothing is chosen for them.
+
+All three versions show one transcript, kept in the **transcript** variable, so they cannot drift apart, and all three finish on the same **Done** page, which is the project's completion point, so the result is recorded the same whichever version was used. Text only loads no video and no sound. Audio only loads no video.
+
+What the starter cannot do for you is make the three versions. The soundtrack must make sense with no picture: "as you can see here" fails for someone who is only listening. Keep the transcript and the key images in step with the video when you change it.
+
+## Good to know
+- Test the lighter versions on a throttled connection in your browser's developer tools before you tell anyone they are light.
+- If you rename a version's artboard, change its name in the size line on the Choose page.`,
+  },
+
   // ---------------------------------------------------------------- import/export
   {
     id: 'import',
@@ -2864,7 +2910,7 @@ After an import, a report lists anything that couldn't be carried over exactly. 
 
 | Export | Gives you |
 |---|---|
-| Single HTML file | One file with the player, the project and every asset (big pictures as their [optimised copies](export#optimised-pictures)). Upload or embed it anywhere. Google fonts are copied into the file, so opening it never calls Google (if a font can't be fetched when you export, a message says so and that font loads from Google instead). |
+| Single HTML file | One file with the player, the project and every asset (big pictures as their [optimised copies](export#optimised-pictures)). Every file is inside it, so a lesson offered in lighter versions still sends all of them in the first download: see [Download size](download-size#what-the-player-loads-and-when). Upload or embed it anywhere. Google fonts are copied into the file, so opening it never calls Google (if a font can't be fetched when you export, a message says so and that font loads from Google instead). |
 | Project package (${PACKAGE_EXTENSION}) | The whole project with assets at full size, to re-import or play with the player library |
 | Project JSON | The document only, without asset files |
 | Public interface reference…, TypeScript definitions (.d.ts) | What a page that embeds the project can set, read and hear, as a reference page and typed names. See [Public interface](public-interface). These three exports ask first when the list no longer matches the project |
