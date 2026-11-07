@@ -356,6 +356,40 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       <TextField label="Partly right" title="Said instead of Wrong when part marks are on and some of it is right" value={q.feedbackPartial} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackPartial: v }, 'fb-part')} />
       <TextField label="Out of tries" title="Said when the last try is used up without a right answer" value={q.feedbackOutOfTries} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackOutOfTries: v }, 'fb-out')} />
 
+      <div className="q-sub">Listening and keys</div>
+      <CheckField
+        label="Listen button"
+        title="Adds a Listen button beside Check. It reads the question and its options aloud, and the feedback once the answer has been checked, with a voice on the learner's own device. It hides itself when the device has no voice, and never starts by itself"
+        value={!!q.listen}
+        onChange={(v) => apply({ listen: v || undefined })}
+      />
+      <TextField
+        label="Say the prompt like"
+        title="What a voice says for the prompt instead of its text, for a formula, an abbreviation or a long scenario that reads badly aloud. The options are still read after it"
+        value={q.spoken ?? ''}
+        multiline
+        rows={2}
+        placeholder="Optional. Empty: the prompt"
+        onChange={(v) => apply({ spoken: v || undefined }, 'spoken')}
+      />
+      <TextField
+        label="Spoken explanation"
+        title="Said after the feedback when the learner presses Listen once the answer has been checked: why the answer is what it is."
+        value={q.explain ?? ''}
+        multiline
+        rows={2}
+        placeholder="Optional. e.g. Because a whale breathes air"
+        onChange={(v) => apply({ explain: v || undefined }, 'explain')}
+      />
+      {(q.kind === 'single' || q.kind === 'multiple' || q.kind === 'truefalse') && (
+        <CheckField
+          label="Number keys 1 to 9 choose"
+          title="Pressing 1 to 9 chooses the option in that place (several choices toggle). It works anywhere on the page, so use it on one question at a time. Choosing still needs Check answer"
+          value={!!q.numberKeys}
+          onChange={(v) => apply({ numberKeys: v || undefined })}
+        />
+      )}
+
       <SelectField<'' | 'progress' | 'complete'>
         label="Report result"
         title="When the question finishes, send its score to the project's Results (a Report result node after Check answer). Set the top score and pass mark in Project > Results and progress"

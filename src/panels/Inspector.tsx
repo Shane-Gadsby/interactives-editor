@@ -76,6 +76,7 @@ import { OptimiseOutputFields } from './OptimiseOutput';
 import { RecordsSection } from './RecordsSection';
 import { CreditsSettingsFields } from './CreditsPanel';
 import { CaptionsSection, VideoCaptions } from './CaptionsSection';
+import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
 import { StepsSection } from './StepsSection';
 import { blendExample } from '../lib/blend-example';
@@ -677,6 +678,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <OptimiseOutputFields project={project} />
       </Section>
       <CaptionsSection project={project} />
+      <ReadAloudSection project={project} />
       <ReportingSection project={project} />
       <RecordsSection project={project} />
       <Section help="attributions" title="Credits" defaultOpen={false}>

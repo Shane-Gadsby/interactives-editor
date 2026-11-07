@@ -49,7 +49,7 @@ export function AccessibilitySection({ nodes, ab }: { nodes: SceneNode[]; ab: Ar
   const role = roleOf(n);
   const stop = single && isTabStop(n, cx);
   const tab: TabChoice = n.focusable === true ? 'yes' : n.focusable === false ? 'no' : 'auto';
-  const open = !!(n.role || n.decorative || n.ariaDescription || n.ariaLabel || n.focusable !== undefined || (single && stop));
+  const open = !!(n.role || n.decorative || n.ariaDescription || n.ariaLabel || n.sayAs || n.focusable !== undefined || (single && stop));
   const nameHint = n.type === 'image' || n.type === 'video' || n.type === 'draw' || n.type === 'shader' ? 'Describe what it shows' : 'What it is or does, e.g. "Next question"';
   return (
     <Section help="accessibility" title="Accessibility" defaultOpen={open}>
@@ -87,6 +87,18 @@ export function AccessibilitySection({ nodes, ab }: { nodes: SceneNode[]; ab: Ar
           rows={2}
           commitOnBlur
           onChange={(v) => set({ ariaDescription: v || undefined })}
+        />
+      )}
+      {role !== 'decorative' && single && (
+        <TextField
+          label="Say it like"
+          title="Read aloud (the Listen button and the Read aloud node) says this for the layer instead of its text. For an abbreviation, a formula, a name or a mixed-language phrase a voice gets wrong. Empty: the layer's own text is read"
+          value={n.sayAs ?? ''}
+          placeholder="Optional: how a voice should say it"
+          multiline
+          rows={2}
+          commitOnBlur
+          onChange={(v) => set({ sayAs: v || undefined })}
         />
       )}
       {role === 'heading' && (

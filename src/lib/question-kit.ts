@@ -616,6 +616,9 @@ export function bankSource(p: Project, expr: string | undefined): string | null 
   return name && p.dataSources.some((s) => s.name === name) ? name : null;
 }
 
+/** The Choose option node's expression for the number keys: the key pressed, as a place in the list (from 0). */
+export const KEY_OPTION = 'Number(event.key) - 1';
+
 function wantedSlots(d: Project, frame: FrameNode, q: Question): Slot[] {
   const parts = partsOf(frame);
   const id = (part: string) => parts[part]?.[0]?.id;
@@ -642,6 +645,12 @@ function wantedSlots(d: Project, frame: FrameNode, q: Question): Slot[] {
   click('check', 'action.questionCheck');
   click('hint', 'action.questionHint');
   click('reset', 'action.questionReset', { next: true });
+  //Read aloud: the Listen button says the question, and the feedback once it has been checked
+  if (q.listen) click('listen', 'action.speak', { op: 'auto', question: frame.id });
+  //Number keys 1 to 9 choose the option in that place (a key that is not a number lands outside the list and does nothing)
+  if (q.numberKeys && (style === 'radio' || style === 'check')) {
+    out.push({ eventSlot: 'numberKeys:event', actionSlot: 'numberKeys:action', event: { kind: 'event.key', params: { key: '', type: 'keydown' } }, action: { kind: 'action.questionChoose', params: { question: frame.id, option: KEY_OPTION } } });
+  }
   return out;
 }
 
@@ -673,6 +682,7 @@ function ensureGraph(d: Project, ab: Artboard, frame: FrameNode, q: Question): v
     for (const k of own) ev.params[k] = w.event.params[k];
     ac.params.question = frame.id;
     if (w.option !== undefined) ac.params.option = w.option;
+    else if (w.actionSlot === 'numberKeys:action') ac.params.option = KEY_OPTION;
     keep.add(ev.id);
     keep.add(ac.id);
     const evId = ev.id;
@@ -942,7 +952,54 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
       reset.bindings = { ...(reset.bindings ?? {}), visible: resetVisible(q) };
     }
   }
+  syncListen(ab, frame as FrameNode, q);
+  syncKeysHint(frame as FrameNode, q);
   ensureGraph(d, ab, frame as FrameNode, q);
+}
+
+/** The Listen button in the buttons row: there when the question offers read aloud, gone when it does not. It hides itself when the device has no voice. */
+function syncListen(ab: Artboard, frame: FrameNode, q: Question): void {
+  const row = partsOf(frame).buttons?.[0];
+  if (!row || !isContainer(row)) return;
+  const has = row.children.find((c) => c.questionPart === 'listen');
+  if (q.listen && !has) {
+    const at = Math.min(row.children.length, Math.max(0, row.children.findIndex((c) => c.questionPart === 'hint') + 1));
+    const b = button(uniqueName(nodeNames(ab), 'Listen'), 'listen', 'Listen', false, { visible: 'voiceAvailable' });
+    b.ariaLabel = 'Listen to the question';
+    row.children.splice(at, 0, b);
+  } else if (!q.listen && has) row.children = row.children.filter((c) => c !== has);
+}
+
+/** "Press 1 to 4 to choose": a small line under the options while the number keys are on. */
+function syncKeysHint(frame: FrameNode, q: Question): void {
+  const parts = partsOf(frame);
+  const has = parts.keysHint?.[0];
+  const want = !!q.numberKeys && (bodyStyle(q.kind) === 'radio' || bodyStyle(q.kind) === 'check');
+  if (want && !has) {
+    const body = parts.options?.[0];
+    const at = body ? frame.children.findIndex((c) => c === body) : -1;
+    const line = text('Number keys hint', 'keysHint', `Press 1 to {${varName(q, 'items')}.length} to choose`, { fontSize: 14, color: L.muted });
+    frame.children.splice(at >= 0 ? at + 1 : 2, 0, line);
+  } else if (!want && has) {
+    const loc = locateIn(frame, has.id);
+    if (loc) loc.siblings.splice(loc.index, 1);
+  }
+}
+
+/** Where a layer sits inside a frame: its list of siblings and its place in it. */
+function locateIn(frame: ContainerNode, id: string): { siblings: SceneNode[]; index: number } | null {
+  const look = (list: SceneNode[]): { siblings: SceneNode[]; index: number } | null => {
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].id === id) return { siblings: list, index: i };
+      const c = list[i];
+      if (isContainer(c)) {
+        const hit = look(c.children);
+        if (hit) return hit;
+      }
+    }
+    return null;
+  };
+  return look(frame.children);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
