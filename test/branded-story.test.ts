@@ -39,8 +39,8 @@ describe('branded story starters', () => {
     }
   };
 
-  it('has the four starters, keyed under story/', () => {
-    expect(STORY.map((s) => s.key)).toEqual(['story/branching-scenario', 'story/course-presentation', 'story/memory-game', 'story/video-questions']);
+  it('has the five starters, keyed under story/', () => {
+    expect(STORY.map((s) => s.key)).toEqual(['story/branching-scenario', 'story/course-presentation', 'story/memory-game', 'story/video-questions', 'story/interactive-book']);
   });
 
   for (const starter of STORY) {
