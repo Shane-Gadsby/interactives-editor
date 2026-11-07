@@ -1375,8 +1375,14 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             <CheckField label="Controls" value={n.controls} onChange={(v) => set({ controls: v })} />
           </Row>
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
+          <NumberField label="Speed" title="How fast it plays: 1 is normal, 0.5 half speed, 2 double. The pitch stays where it was. To set it from a variable or a node, use a Playback speed binding or the Control video node" value={n.playbackRate ?? 1} step={0.25} min={0.0625} max={16} suffix="x" onChange={(v) => set({ playbackRate: v > 0 ? v : undefined }, `rate-${n.id}`)} onCommit={() => store().commit()} />
+          <Row>
+            <CheckField label="Speed buttons" title="Show Slower, Faster and a speed readout over the video for the viewer. Keys: < and > when the video or the buttons have focus" value={!!n.speedControl} onChange={(v) => set({ speedControl: v || undefined })} />
+            <CheckField label="Frame step" title="Show Back and Forward one frame buttons over the video for the viewer (it pauses first). Keys: , and . when the video or the buttons have focus" value={!!n.frameStepControl} onChange={(v) => set({ frameStepControl: v || undefined })} />
+          </Row>
+          {n.frameStepControl && <NumberField label="Frames per second" title="What one frame is. Most video is 24, 25 or 30; 30 if you leave it" value={n.frameRate ?? 30} step={1} min={1} max={240} onChange={(v) => set({ frameRate: v > 0 ? v : undefined }, `fps-${n.id}`)} onCommit={() => store().commit()} />}
           {radius}
-          <p className="hint">To use where the video is, whether it's playing or how long it is, add a <strong>Data binding</strong> below (Playback position, Playing, Length) and pick which way it goes.</p>
+          <p className="hint">To use where the video is, whether it's playing or how long it is, add a <strong>Data binding</strong> below (Playback position, Playing, Playback speed, Length) and pick which way it goes.</p>
           <VideoCaptions node={n} set={(patch) => set(patch)} />
         </Section>
       );

@@ -821,8 +821,13 @@ Turn on **9-slice** and set the four insets (in image pixels). The corners keep 
 ## Video
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
 
+### Speed and frame step
+**Speed** sets how fast the video plays: 1 is normal, 0.5 is half speed, 2 is double. The pitch stays where it was, so slowed speech still sounds like the speaker. Tick **Speed buttons** to put Slower, a speed readout (press it to go back to normal) and Faster over the video for the viewer, and **Frame step** for Back and Forward one frame (the video pauses first). Set **Frames per second** to the video's own rate (most are 24, 25 or 30) so a step is one real frame. Everything is a real button, so Tab and Enter or Space work, and with focus on the video or the buttons, <kbd>,</kbd> and <kbd>.</kbd> step a frame and <kbd>&lt;</kbd> and <kbd>&gt;</kbd> change the speed.
+
+To drive it from the project, use a **Playback speed** [data binding](bindings) (it goes both ways, so a variable shows the speed the viewer chose and can set it too), or the **Control video** [node](interaction-nodes): play, pause, play or pause, go to a time, skip forward or back, step a frame, set the speed, or move to the next speed up or down. In an expression, \`layer("Clip").rate\` is the speed it is playing at right now.
+
 ## Video playback in variables
-Add a [data binding](bindings) on the video layer: **Playback position (s)**, **Playing**, **Length (s)** or **Ended**, and pick which way it goes. **Out** keeps a variable up to date with the video (show the time in text, \`{videoTime} s\`, or bind a progress bar's width to \`videoTime / videoLength\`). **Both** lets the variable drive the video too: set the position variable from a slider, a **Set variable** node or a script and the video jumps there; set **Playing** to false and it pauses. **In** drives it from a formula: to scrub the video with a dragged knob, bind the knob's **X** out to \`knobX\`, **Length (s)** out to \`videoLength\`, and **Playback position (s)** in to \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, videoLength, true)\`. For the position as a percentage, use \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, 100, true)\` (in a text layer, or another binding). Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`,
+Add a [data binding](bindings) on the video layer: **Playback position (s)**, **Playing**, **Playback speed**, **Length (s)** or **Ended**, and pick which way it goes. **Out** keeps a variable up to date with the video (show the time in text, \`{videoTime} s\`, or bind a progress bar's width to \`videoTime / videoLength\`). **Both** lets the variable drive the video too: set the position variable from a slider, a **Set variable** node or a script and the video jumps there; set **Playing** to false and it pauses. **In** drives it from a formula: to scrub the video with a dragged knob, bind the knob's **X** out to \`knobX\`, **Length (s)** out to \`videoLength\`, and **Playback position (s)** in to \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, videoLength, true)\`. For the position as a percentage, use \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, 100, true)\` (in a text layer, or another binding). Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`,
   },
   {
     id: 'groups-frames',
@@ -1518,7 +1523,7 @@ A [Steps](steps) timeline can carry sound and captions too: Next plays the narra
 ![The Interactions section of a layer whose opacity is 50%: the note says it can't be clicked while playing until it is fully showing, and the Clickable while see-through tick overrides that.](help/see-through-toggle.png)
 
 - **Events** (green) start a flow: a click, a key, a timer, a variable changing, a timeline ending, a message from the host page, scrolling, data loading, the artboard starting, or the activity loading.
-- **Actions** (blue) do something and continue: **Control timeline**, **Play blend**, **Wait for blend-in**, **Wait for time in timeline**, **Set variable**, **Set property**, **Animate property**, **Show / hide**, **Go to artboard**, **Open URL**, **Play sound**, **Run script**, **Send message**, **Wait** and more.
+- **Actions** (blue) do something and continue: **Control timeline**, **Play blend**, **Wait for blend-in**, **Wait for time in timeline**, **Set variable**, **Set property**, **Animate property**, **Show / hide**, **Go to artboard**, **Open URL**, **Play sound**, **Control video**, **Run script**, **Send message**, **Wait** and more.
 - **Logic** (purple) chooses where to go: **If** (a **true** and a **false** output), **Toggle** (alternates between **a** and **b**), **Once**, **Sequence** (runs **1**, then **2**, then **3**) and **Random** (continues down one of up to six outputs, picked at random; *Weights* is a list that sets each output's chance, [1, 3] making the second three times as likely, and *Only if* is a list of conditions, so an output whose condition is false is never picked).
 
 ![The Interactions tab: the node palette, the graph and the settings of the selected node.](help/interactions-panel.png)
@@ -1876,7 +1881,7 @@ These work in every expression:
 | \`enums.name\` | The options of a choice variable |
 | \`instanceInput(layer, name)\` | The current value of a variable inside an [instance](instances) layer (by name or id) |
 | \`artboard.width\`, \`artboard.height\` | The artboard's size (and \`artboard.name\`), in the same units as a layer's X and Y, whatever size the player is shown at |
-| \`self\` | In a [binding](bindings) (and its converters): the layer it's on. \`self.width\`, \`self.opacity\`, \`self.text\`, any plain setting it has, and for a video \`self.time\`, \`self.duration\`, \`self.playing\` and \`self.ended\` |
+| \`self\` | In a [binding](bindings) (and its converters): the layer it's on. \`self.width\`, \`self.opacity\`, \`self.text\`, any plain setting it has, and for a video \`self.time\`, \`self.duration\`, \`self.playing\`, \`self.ended\` and \`self.rate\` |
 | \`layer(name)\` | The same for any layer, by name or id: \`layer('Knob').width\`. X and Y are inside its parent, as in the Inspector |
 
 ## What you can write
