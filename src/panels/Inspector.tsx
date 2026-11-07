@@ -104,6 +104,8 @@ import { FontField, FontPicker, type FontPick } from '../components/FontPicker';
 import { ensureGoogleFont, firstFamily } from '../lib/font-catalog';
 import { CornerRadii } from './CornerRadii';
 import { hasCornerRadii } from '../lib/corner-radii';
+import { pickedArtboardIds } from '../lib/artboard-groups';
+import { ArtboardsSelection } from './ArtboardsSelection';
 
 
 export function Inspector() {
@@ -111,6 +113,7 @@ export function Inspector() {
     project: st.project,
     selection: st.selection,
     artboardSelected: st.artboardSelected,
+    artboardPicked: st.artboardPicked,
     activeArtboardId: st.activeArtboardId,
     timelineShown: st.timelineShown,
     activeTimelineId: st.activeTimelineId,
@@ -120,10 +123,14 @@ export function Inspector() {
   const ab = getArtboard(s.project, s.activeArtboardId);
   if (!ab) return <aside className="inspector" />;
   const nodes = s.selection.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
+  const pickedAbs = pickedArtboardIds(s);
   return (
     <aside className="inspector">
       {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
-      {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />}
+      {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : (
+        // several artboards selected: what applies to all of them, instead of the active one's own settings
+        pickedAbs.length > 1 ? <ArtboardsSelection ids={pickedAbs} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />
+      )}
     </aside>
   );
 }

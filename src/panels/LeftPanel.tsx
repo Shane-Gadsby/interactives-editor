@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from 'react';
-import { createNode, isContainer, nodeTypeLabel, type Artboard, type Project, type SceneNode } from 'interactives-player';
+import { createNode, isContainer, nodeTypeLabel, type Artboard, type ArtboardGroup, type Project, type SceneNode } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { Icons, type IconName } from '../components/icons';
 import { IconButton } from '../components/ui';
@@ -24,7 +24,9 @@ import { CommentsPanel } from './CommentsPanel';
 import { jumpToThread } from '../lib/comment-jump';
 import { useComments } from '../lib/comments';
 import { countsOf } from '../../shared/comments.mjs';
-import { orderedArtboards, rangeLabel } from '../lib/variants-edit';
+import { rangeLabel } from '../lib/variants-edit';
+import { artboardEntries, groupOf, pickedArtboardIds } from '../lib/artboard-groups';
+import { artboardMenuItems, renameGroupCommand, tidyTheseCommand } from '../lib/artboard-commands';
 import { brandHeldIds } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
 import { INDENT, ROW_H, ROW_PAD, depthAtX, dropRows, slotAt, type DropSlot } from '../lib/layer-drop';
@@ -79,10 +81,14 @@ const TYPE_ICON: Record<string, IconName> = {
 
 
 export function Layers() {
-  const s = useEditor((st) => ({ project: st.project, activeArtboardId: st.activeArtboardId, selection: st.selection, artboardSelected: st.artboardSelected, brandOverride: st.brandOverride }));
+  const s = useEditor((st) => ({ project: st.project, activeArtboardId: st.activeArtboardId, selection: st.selection, artboardSelected: st.artboardSelected, artboardPicked: st.artboardPicked, brandOverride: st.brandOverride }));
+  //The selected artboards (more than one when Ctrl+click or Shift+click picked several)
+  const pickedAbs = useMemo(() => pickedArtboardIds(s), [s.artboardSelected, s.activeArtboardId, s.artboardPicked]);
   //Brand layers (and what is inside them) of a branded project: shown with a lock, can't be picked here or on the canvas
   const held = useMemo(() => brandHeldIds(s.project, s.brandOverride), [s.project, s.brandOverride]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  //Artboard groups that are folded away (this panel only: the document doesn't remember it)
+  const [foldedGroups, setFoldedGroups] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [drop, setDrop] = useState<DropSlot | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -123,6 +129,7 @@ export function Layers() {
     }
     if (i < 0) return null;
     const hit = flat[i];
+    if (hit.kind === 'group') return null;
     // Over a different artboard: only the row straight after the active artboard's last layer is the end of it
     const end = base + 1 + activeRows.length;
     if (hit.kind === 'artboard' && hit.ab.id !== ab.id) {
@@ -158,7 +165,7 @@ export function Layers() {
 
   // Only the rows in view are drawn: big imports have thousands of layers
   const flat = useMemo(() => {
-    const out: ({ kind: 'artboard'; ab: Artboard } | { kind: 'node'; ab: Artboard; n: SceneNode; depth: number; parent: SceneNode | null })[] = [];
+    const out: ({ kind: 'group'; group: ArtboardGroup; boards: Artboard[] } | { kind: 'artboard'; ab: Artboard } | { kind: 'node'; ab: Artboard; n: SceneNode; depth: number; parent: SceneNode | null })[] = [];
     const add = (ab: Artboard, list: SceneNode[], depth: number, parent: SceneNode | null = null) => {
       for (let i = list.length - 1; i >= 0; i--) {
         const n = list[i];
@@ -175,19 +182,28 @@ export function Layers() {
         if (isContainer(n)) addFound(ab, n.children, depth + 1, n);
       }
     };
-    for (const ab of orderedArtboards(s.project.artboards)) {
+    const board = (ab: Artboard) => {
       if (filtering) {
         const below = ab.children.some((n) => found.keep.has(n.id));
-        if (!below && !found.artboards.has(ab.id)) continue;
+        if (!below && !found.artboards.has(ab.id)) return;
         out.push({ kind: 'artboard', ab });
         addFound(ab, ab.children, 1);
-        continue;
+        return;
       }
       out.push({ kind: 'artboard', ab });
       if (!collapsed.has(ab.id)) add(ab, ab.children, 1);
+    };
+    for (const e of artboardEntries(s.project)) {
+      if (e.kind === 'board') board(e.ab);
+      else if (filtering) e.boards.forEach(board);
+      else {
+        // a group is a line of its own above its artboards, and folding it hides them
+        out.push({ kind: 'group', group: e.group, boards: e.boards });
+        if (!foldedGroups.has(e.group.id)) e.boards.forEach(board);
+      }
     }
     return out;
-  }, [s.project.artboards, collapsed, filtering, found]);
+  }, [s.project.artboards, s.project.artboardGroups, collapsed, foldedGroups, filtering, found]);
   const activeRows = useMemo(() => {
     const ab = s.project.artboards.find((a) => a.id === s.activeArtboardId);
     return ab ? dropRows(ab, collapsed) : [];
@@ -221,18 +237,93 @@ export function Layers() {
   const first = Math.max(0, Math.floor(view.top / ROW_H) - 10);
   const last = Math.min(flat.length, Math.ceil((view.top + view.height) / ROW_H) + 10);
 
+  /** The artboard rows as listed, in order: what Shift+click ranges over. */
+  const boardRows = () => flat.filter((r): r is { kind: 'artboard'; ab: Artboard } => r.kind === 'artboard').map((r) => r.ab.id);
+  const pickBoard = (ab: Artboard, e: { ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }) => {
+    const st = store();
+    // Picking a library copy that was kept off the canvas brings it onto the canvas, so what is selected is there to see
+    if (ab.canvasHidden) setOnCanvas(ab.id, true);
+    if (e.ctrlKey || e.metaKey) {
+      st.toggleArtboardPick(ab.id);
+      return;
+    }
+    if (e.shiftKey && st.get().artboardSelected) {
+      //from the active artboard to this one, through the rows as listed
+      const rows = boardRows();
+      const a = rows.indexOf(st.get().activeArtboardId);
+      const b = rows.indexOf(ab.id);
+      if (a >= 0 && b >= 0) {
+        const [lo, hi] = a < b ? [a, b] : [b, a];
+        st.pickArtboards(rows.slice(lo, hi + 1), ab.id);
+        return;
+      }
+    }
+    const active = ab.id === st.get().activeArtboardId;
+    st.set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? st.get().activeTimelineId : null });
+  };
+  const boardMenu = (e: React.MouseEvent, ab: Artboard) => {
+    e.preventDefault();
+    const st = store();
+    // right-clicking one of several selected acts on all of them; anything else picks it first
+    if (!pickedArtboardIds(st.get()).includes(ab.id)) st.pickArtboards([ab.id]);
+    const ids = pickedArtboardIds(st.get());
+    const items = artboardMenuItems(ids);
+    if (ids.length === 1) items.splice(items.findIndex((it) => 'separator' in it) + 1, 0, { label: 'Make start artboard', disabled: s.project.settings.startArtboardId === ab.id, onClick: () => st.update((d) => void (d.settings.startArtboardId = ab.id)) });
+    setMenu({ x: e.clientX, y: e.clientY, items });
+  };
+  const groupRow = (group: ArtboardGroup, boards: Artboard[]) => {
+    const open = !foldedGroups.has(group.id);
+    const all = boards.length > 0 && boards.every((b) => pickedAbs.includes(b.id));
+    const fold = () => {
+      const next = new Set(foldedGroups);
+      if (open) next.add(group.id);
+      else next.delete(group.id);
+      setFoldedGroups(next);
+    };
+    return (
+      <div
+        key={`abg-${group.id}`}
+        className={`artboard-row group-row${all ? ' selected' : ''}`}
+        data-group={group.id}
+        onClick={(e) => store().pickGroup(group.id, e.ctrlKey || e.metaKey)}
+        onDoubleClick={() => void renameGroupCommand(group.id)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          if (!all) store().pickGroup(group.id);
+          setMenu({ x: e.clientX, y: e.clientY, items: artboardMenuItems(boards.map((b) => b.id), group.id) });
+        }}
+      >
+        <button
+          className="twisty"
+          title={open ? 'Fold the group' : 'Unfold the group'}
+          aria-label={open ? 'Fold the group' : 'Unfold the group'}
+          onClick={(e) => {
+            e.stopPropagation();
+            fold();
+          }}
+        >
+          {open ? <Icons.chevronDown width={12} /> : <Icons.chevronRight width={12} />}
+        </button>
+        <Icons.folder width={14} height={14} />
+        <span className="layer-name" title="Click to select every artboard in the group. Double-click to rename it">
+          {group.name}
+        </span>
+        <span className="badge" title={`${boards.length} ${boards.length === 1 ? 'artboard' : 'artboards'} in this group`}>
+          {boards.length}
+        </span>
+      </div>
+    );
+  };
   const artboardRow = (ab: Artboard) => {
     const active = ab.id === s.activeArtboardId;
     const open = filtering || !collapsed.has(ab.id);
+    const grouped = !filtering && !!groupOf(s.project, ab);
     return (
       <div
         key={`ab-${ab.id}`}
-        className={`artboard-row${active && s.artboardSelected ? ' selected' : ''}${active ? ' active' : ''}${ab.variantOf ? ' variant' : ''}`}
-        onClick={() => {
-          // Picking a library copy that was kept off the canvas brings it onto the canvas, so what is selected is there to see
-          if (ab.canvasHidden) setOnCanvas(ab.id, true);
-          store().set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: active ? store().get().activeTimelineId : null });
-        }}
+        className={`artboard-row${pickedAbs.includes(ab.id) ? ' selected' : ''}${active ? ' active' : ''}${ab.variantOf ? ' variant' : ''}${grouped ? ' in-group' : ''}`}
+        onClick={(e) => pickBoard(ab, e)}
+        onContextMenu={(e) => boardMenu(e, ab)}
       >
         {filtering ? (
           <span className="twisty" />
@@ -444,18 +535,18 @@ export function Layers() {
         <div className="drop-line" style={{ top: 4 + (flat.findIndex((r) => r.kind === 'artboard' && r.ab.id === s.activeArtboardId) + 1 + drop.gap) * ROW_H - 1, left: ROW_PAD + drop.depth * INDENT - 4 }} aria-hidden="true" />
       )}
       <div style={{ height: first * ROW_H }} />
-      {flat.slice(first, last).map((r) => (r.kind === 'artboard' ? artboardRow(r.ab) : row(r.ab, r.n, r.depth, r.parent)))}
+      {flat.slice(first, last).map((r) => (r.kind === 'group' ? groupRow(r.group, r.boards) : r.kind === 'artboard' ? artboardRow(r.ab) : row(r.ab, r.n, r.depth, r.parent)))}
       <div style={{ height: (flat.length - last) * ROW_H }} />
       <button className="link-btn add-artboard" onClick={() => store().addArtboard()}>
         + Add artboard
       </button>
       <button
         className="link-btn add-artboard"
-        title="Lay the artboards out in a tidy grid on the canvas, in the order of this list, with even gaps. A responsive variant stays beside its main artboard. One undo step"
+        title={pickedAbs.length > 1 ? 'Lay the selected artboards out in a tidy grid among themselves. One undo step' : 'Lay the artboards out in a tidy grid on the canvas, in the order of this list, with even gaps. A responsive variant stays beside its main artboard, and an artboard group stays together. One undo step'}
         disabled={s.project.artboards.filter((a) => !a.canvasHidden).length < 2}
-        onClick={tidyArtboardsCommand}
+        onClick={() => (pickedAbs.length > 1 ? tidyTheseCommand(pickedAbs) : tidyArtboardsCommand())}
       >
-        Tidy up artboards
+        {pickedAbs.length > 1 ? `Tidy up ${pickedAbs.length} selected artboards` : 'Tidy up artboards'}
       </button>
       <button
         className="link-btn add-artboard"

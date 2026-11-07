@@ -277,9 +277,41 @@ export function LogicGraph() {
       const cy = n.y + z.height / 2;
       return cx >= g.x && cx <= g.x + g.width && cy >= g.y && cy <= g.y + g.height;
     });
+  //Ctrl/Cmd+click is handled here from the pointer events' own modifier flags. React Flow only knows the key is down from
+  //a window keydown, and the graph keeps its keys to itself (stopPropagation on the canvas), so with a node focused
+  //(which a click does) it never heard Control at all and every Ctrl+click came through as a plain click
+  const press = useRef<{ id: string; x: number; y: number; was: boolean; mod: boolean } | null>(null);
+  const pointerDown = (e: React.PointerEvent) => {
+    press.current = null;
+    const id = e.button === 0 ? (e.target as HTMLElement).closest<HTMLElement>('.react-flow__node')?.dataset.id : undefined;
+    if (!id) return;
+    const mod = e.ctrlKey || e.metaKey;
+    const now = chosenNow();
+    const was = now.includes(id);
+    press.current = { id, x: e.clientX, y: e.clientY, was, mod };
+    //Adding happens on the press, so a drag from here carries the others along; taking one out waits for the click
+    if (mod && !was) select([...now, id], id);
+  };
+  const pointerUp = () => {
+    //React Flow's own click handling comes right after this, still to be ignored
+    setTimeout(() => (press.current = null), 0);
+  };
+  const onNodeClick = (e: React.MouseEvent, node: Node) => {
+    const p = press.current;
+    if (!p || p.id !== node.id || !p.was) return;
+    if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 4) return;
+    const now = chosenNow();
+    if (p.mod) {
+      const rest = now.filter((id) => id !== node.id);
+      select(rest, rest[rest.length - 1] ?? null);
+    } else if (now.length > 1) {
+      //A plain click on one of several chosen (not a drag) picks just that one, same as any file list
+      select([node.id], node.id);
+    }
+  };
   const onNodesChange = (changes: NodeChange<Node<IxNodeData>>[]) => {
-    // Selection: a click, Ctrl+click or a marquee all arrive as select changes, often several at once
-    const selects = changes.filter((c) => c.type === 'select');
+    // Selection: a click or a marquee arrives as select changes, often several at once (a Ctrl+click is dealt with above)
+    const selects = press.current?.mod ? [] : changes.filter((c) => c.type === 'select');
     if (selects.length) {
       const next = new Set(chosenNow());
       for (const c of selects) c.selected ? next.add(c.id) : next.delete(c.id);
@@ -758,6 +790,8 @@ export function LogicGraph() {
           if (kind && rf.current) add(kind, rf.current.screenToFlowPosition({ x: e.clientX, y: e.clientY }));
         }}
         tabIndex={-1}
+        onPointerDownCapture={pointerDown}
+        onPointerUpCapture={pointerUp}
         onKeyDown={(e) => {
           e.stopPropagation();
           const t = e.target as HTMLElement;
@@ -802,6 +836,7 @@ export function LogicGraph() {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
+          onNodeClick={onNodeClick}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onConnectEnd={onConnectEnd}
@@ -823,7 +858,7 @@ export function LogicGraph() {
           panOnDrag={[1]}
           panActivationKeyCode="Space"
           selectionKeyCode="Shift"
-          multiSelectionKeyCode={['Control', 'Meta']}
+          multiSelectionKeyCode={null}
           // A selected group stays behind its nodes (React Flow would raise it over them, and they couldn't be clicked)
           elevateNodesOnSelect={false}
           colorMode={theme === 'auto' ? 'system' : theme}
