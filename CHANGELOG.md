@@ -2,6 +2,10 @@
 
 ## Unreleased: Symposium 3
 
+- **Expression suggestions as you type** in every expression field (bindings, graph nodes, variable formulas, `{...}` in text): variables with their current values, `context` and its fields, data sources, layer names inside `layer("`, `self.` and other members, built-in names and helper functions with their signatures. Arrows, Enter or Tab, Escape.
+- **Starters open laid out** in order in a tidy grid (responsive variants beside their page), and **Tidy up artboards** (Layers panel, canvas right-click) does the same for any project in one undo step.
+- **Brand-locked layers are really locked**: not selectable or draggable on the canvas or in the Layers panel (F9 still lifts it), and projects made before this are locked when they open.
+- Chosen states, sliders, ticks and radios use the palette gold everywhere; the Use template dialog keeps its name and buttons in view and scrolls the rest.
 - Video layers: playback speed (Speed setting, a `media.rate` binding, learner Slower/Faster buttons that keep the pitch) and frame step (buttons and the , . keys), and a Control video node (play, pause, seek, skip, step a frame, set speed).
 - **Play sound** takes volume, speed (pitch kept), loop and 'stop other sounds first', and its sound can come from an expression; a new **Stop sound** node ends loops. Sounds follow the viewer's mute.
 - **Read it to me**: a Read aloud node (text, the question, its feedback, the page; pause, repeat, slower, faster), `ix.speech`, a Listen button with a remembered speed (Project settings > Read aloud offers it on every artboard), "Say it like" for words the voice gets wrong, and a Listen button, spoken explanation and number keys 1 to 9 on kit questions. Local voices only; nothing is recorded or sent.
