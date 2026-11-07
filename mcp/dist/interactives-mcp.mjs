@@ -331,7 +331,8 @@ const CATALOG = [
           { value: "failed", label: "Something could not start" },
           { value: "state", label: "Microphone or camera state changed" },
           { value: "played", label: "A video recording finished playing" },
-          { value: "photo", label: "A photo arrived" }
+          { value: "photo", label: "A photo arrived" },
+          { value: "listening", label: "Live listening started or stopped" }
         ],
         default: "ready"
       },
@@ -692,6 +693,30 @@ const CATALOG = [
     ]
   },
   {
+    kind: "action.listen",
+    label: "Listen live",
+    category: "action",
+    description: "Turns live listening on or off. While it is on, the microphone drives numbers you can use anywhere: `micLevel` (how loud, 0 to 1) and `micBands` (a list of 8 numbers from low to high sound, 0 to 1 each, about 25 times a second), and `listening` is true. Nothing is recorded or kept, and only those numbers reach the project. The page around the project asks the learner first (the one consent screen, made from Project > Microphone and camera, which needs Live listening ticked), starts only after a real tap, and shows a Listening bar with a Stop button the project cannot hide. Continues from Listening when it has started (or stopped), or from Could not start (not allowed, no device, the learner said no, or nowhere to ask: see `mediaMessage`). Read the numbers in bindings and text, and give a way to play without the microphone.",
+    outputs: [
+      { id: "out", label: "Listening" },
+      { id: "failed", label: "Could not start" }
+    ],
+    hasInput: true,
+    params: [
+      {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "start", label: "Start listening" },
+          { value: "stop", label: "Stop listening" }
+        ],
+        default: "start"
+      },
+      { key: "stopOnLeave", label: "Stop when the learner leaves this page", type: "boolean", default: true, help: "On by default, so the microphone is not left open behind another page. Untick it to listen across several pages (the learner can still press Stop on the Listening bar).", showIf: { key: "op", values: ["start"] } }
+    ]
+  },
+  {
     kind: "action.recordStop",
     label: "Stop recording",
     category: "action",
@@ -799,9 +824,21 @@ const CATALOG = [
     hasInput: true,
     params: [
       {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "take", label: "Take or choose a photo" },
+          { value: "remove", label: "Throw the photo away" }
+        ],
+        default: "take",
+        help: "Throwing it away puts the asset's own picture back and forgets the photo."
+      },
+      {
         key: "source",
         label: "From",
         type: "select",
+        showIf: { key: "op", values: ["take"] },
         options: [
           { value: "pick", label: "Photo picker" },
           { value: "pick-environment", label: "Photo picker, back camera" },
@@ -810,20 +847,21 @@ const CATALOG = [
         ],
         default: "pick"
       },
-      { key: "asset", label: "Put it in", type: "asset", help: "An image asset in the project (any picture will do as the placeholder). Layers showing it change to the photo." },
-      { key: "maxEdge", label: "Longest side (px)", type: "number", default: 1600 }
+      { key: "asset", label: "Put it in", type: "asset", help: "An image asset in the project (any picture will do as the placeholder). Layers showing it change to the photo.", showIf: { key: "op", values: ["take"] } },
+      { key: "assetExpr", label: "Or the asset from an expression", type: "expr", default: "", placeholder: "prompts[index].photo", help: "Optional, and it wins over the asset picked above. It gives an asset's id or name (a list item's photo field, for instance), so one node can fill a different asset for each item." },
+      { key: "maxEdge", label: "Longest side (px)", type: "number", default: 1600, showIf: { key: "op", values: ["take"] } }
     ]
   },
   {
     kind: "action.saveFile",
     label: "Download a file",
     category: "action",
-    description: "Offers the learner a text file to save (a report of what they did, a CSV, notes). Built here and handed to the page around the project, which saves it after a tap. Text only, up to 2 MB.",
+    description: "Offers the learner a text file to save (a report of what they did, a CSV, notes). Built here and handed to the page around the project, which saves it after a tap. Text only, up to 2 MB (a web page with pictures in it, 16 MB).",
     outputs: OUT,
     hasInput: true,
     params: [
       { key: "name", label: "File name", type: "expr", default: '"report"', help: "Without the extension" },
-      { key: "text", label: "Contents", type: "expr", default: '"Score: " + score' },
+      { key: "text", label: "Contents", type: "expr", default: '"Score: " + score', help: "For a web page (.html), write [[image:id]] where a picture goes, with an asset's id or name (a photo the learner took, say), and it is replaced by the picture itself so the file carries its images. Use html(text) around anything the learner typed." },
       {
         key: "mime",
         label: "Type",
@@ -832,7 +870,8 @@ const CATALOG = [
           { value: "text/plain", label: "Text (.txt)" },
           { value: "text/csv", label: "CSV (.csv)" },
           { value: "application/json", label: "JSON (.json)" },
-          { value: "text/markdown", label: "Markdown (.md)" }
+          { value: "text/markdown", label: "Markdown (.md)" },
+          { value: "text/html", label: "Web page (.html)" }
         ],
         default: "text/plain"
       }
@@ -5240,6 +5279,8 @@ const FORMULA_HELPERS = {
     if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(n < 10 * 1024 * 1024 ? 1 : 0)} MB`;
     return `${(n / 1024 / 1024 / 1024).toFixed(1)} GB`;
   },
+  /** Text made safe to put inside a web page's markup or an attribute (a learner's caption in a downloaded report). */
+  html: (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"),
   pad: (n, width) => {
     guardLen(width);
     return String(n).padStart(width, "0");
@@ -7665,6 +7706,7 @@ These work in every expression:
 | \`clamp(v, min, max)\` | A number held between two limits |
 | \`lookup(v, {a: 1, b: 2}, fallback)\` | The value stored under a key |
 | \`pad(n, width)\` | Zero padding: \`pad(7, 3)\` is \`007\` |
+| \`html(text)\` | Text made safe to put in a web page (a downloaded report): \`<\`, \`>\`, \`&\` and quotes are replaced |
 | \`crossword(words, size)\` | A crossword laid out from a list of \`{answer, clue}\` rows (or plain words), inside a \`size\` by \`size\` grid. Each row comes back with \`row\`, \`col\` (its first letter, from 0 at the top left) and \`down\` added, in reading order. Words that are too long, or that cannot cross the others, are left out. The same words always make the same puzzle. Best used as a variable's [formula](variables) |
 | \`wordSearch(words, size, seed)\` | A \`size\` by \`size\` letter grid hiding the words (across, down, diagonal and backwards), one string per row. The same words and seed always make the same grid |
 | \`enums.name\` | The options of a choice variable |
@@ -8283,7 +8325,7 @@ Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **
     title: "Microphone, camera and photos",
     group: "Interactivity",
     summary: "Record a voice, show the camera, take or choose a photo: declare it in Project settings, build the plain version, and know what learners are asked and what the page needs.",
-    keywords: "microphone mic camera webcam photo picture record recording voice audio video capture sensor consent permission privacy iframe allow download level speaking opt out do not use my microphone or camera accessibility alternative preview denied blocked device",
+    keywords: "microphone mic camera listen live loudness meter level bands frequency bars sound lab noise micLevel micBands simulator slider webcam photo picture notebook bingo fieldwork report html download record recording voice audio video capture sensor consent permission privacy iframe allow download level speaking opt out do not use my microphone or camera accessibility alternative preview denied blocked device",
     body: `A project can listen through the learner's **microphone**, show their **camera**, or take or choose a **photo**. It never touches a device itself. The page it plays in does, behind one plain consent screen and a recording bar the project cannot hide, and tells the project only what it needs.
 
 ## Turn it on
@@ -8302,28 +8344,38 @@ Learners who cannot, or would rather not, use a microphone or camera must be abl
 - \`microphone\` and \`camera\` are \`unavailable\` (cannot, here), \`denied\` (they or their browser said no), \`ready\` or \`off\` (they chose not to use them).
 - \`photos\` is the same for the photo picker.
 - \`mediaMessage\` is the plain sentence to show when something is not ready.
-- \`micLevel\` (0 to 1) and \`recording\` (true while recording), \`recordingSeconds\`, and \`recordings.<name>.state\` (\`empty\`, \`recording\`, \`ready\`, \`playing\`), \`.seconds\` and \`.hasRecording\` for each recording, for meters, timers and buttons.
+- \`micLevel\` (0 to 1, how loud) and \`micBands\` (a list of 8 numbers, 0 to 1 each, from low to high sound) while the project is listening live, and \`listening\` (true while it is). \`recording\` is true while recording, and \`micLevel\` follows a recording too.
+- \`recording\` \`recordingSeconds\`, and \`recordings.<name>.state\` (\`empty\`, \`recording\`, \`ready\`, \`playing\`), \`.seconds\` and \`.hasRecording\` for each recording, for meters, timers and buttons.
 
-The Accessibility tab has a check for this: a project that uses a sensor needs a click, key or typed way to reach the same finish (Report result, Go to artboard, Steps, Check answer or the completion variable) that does not go through the sensor. The check passes when a button or typed answer finishes without it, including carrying on from a node's **Could not start** output. If there truly cannot be an equal way (an assessment of speaking, say), say why in **No equal way to finish**: learners are told, and the check becomes a note for you to review. The check finds that there is another way, not that it is a good one.
+The Accessibility tab has a check for this (Listen live counts as a sensor node, and its **Could not start** output as the way on): a project that uses a sensor needs a click, key or typed way to reach the same finish (Report result, Go to artboard, Steps, Check answer or the completion variable) that does not go through the sensor. The check passes when a button or typed answer finishes without it, including carrying on from a node's **Could not start** output. If there truly cannot be an equal way (an assessment of speaking, say), say why in **No equal way to finish**: learners are told, and the check becomes a note for you to review. The check finds that there is another way, not that it is a good one. The **Sign practice with self-review** starter is an example: the learner can do the whole walk, and reach the summary, without ever turning the camera on.
+
+## Listen live: the microphone as a number
+Tick **Live listening** under Microphone (and **Only ever listen, never record** if that is all the project does: the page then refuses every Start recording, and the consent screen says so). A **Listen live** node turns it on and off. While it is on the microphone drives numbers you can bind anywhere: \`micLevel\` (how loud) and \`micBands\` (8 bands, log-spaced from about 80 Hz to 8 kHz: \`micBands[0]\` is a low hum, \`micBands[7]\` the highest whistle overtones), about 25 times a second. Bar heights, circle sizes, colours and shaders can read them like any variable. For example, a bar's height binding \`200 * micBands[3]\`.
+- **Nothing is recorded.** The page measures the sound and throws it away; only those numbers reach the project, and a **Listening** bar says so at the top of the page, with a **Stop** that always works. Learners are asked first, on the same consent screen, and only after a tap.
+- **It stops** when the learner presses Stop, the device goes away, a new page of the project opens (unless you untick **Stop when the learner leaves this page** on the node) or they leave. \`listening\` then reads false and the numbers go back to 0. **On microphone or camera** with *Live listening started or stopped* fires each time (\`event.reason\` is \`started\`, \`stopped\`, \`device-lost\` or \`released\`).
+- **It is a rough guide.** Phones and many laptops tidy the sound themselves (automatic gain, noise removal), so the numbers say louder or quieter and higher or lower, not decibels or exact pitch. The page asks the browser not to, and some ignore it. Do not use it for a safety measurement, and word anything about noise levels as a guide. There is no pitch tracking: the bands show where the sound is, not which note.
+- **Give a way to play without it.** The loudness and frequency starters add a slider that makes the same numbers (\`simLevel\`, \`simPitch\`): show it when \`!listening\`, and bind the display to \`listening ? micLevel : simLevel\`. It also works in Preview, where a pretend microphone makes a swelling level and a moving bump of bands.
+- Listening and recording share the one microphone: starting a recording ends live listening, and Listen live cannot start while a recording runs.
 
 ## Nodes
 All are in the Interactions palette, and described there.
+- **Listen live** (start or stop, stop when the learner leaves this page) continues from **Listening** or **Could not start**.
 - **Start recording** (a name for the recording, sound or video, a longest time) continues from **Recording** or **Could not start**. A project can keep several recordings, each under its own name.
 - **Stop recording**, **Discard recording**, **Play recording** (sound plays through the project's own sound, so the viewer's sound button applies; video plays in the layer you choose) and **Download recording** (offers a file, after a tap: it is the only way a recording leaves memory).
 - **Camera preview** shows the camera live in a layer's place. The page draws it over the project, so the project never sees the camera's pixels.
-- **Take or choose a photo** puts a picture, scaled to at most 1600 px on the long side, into an image asset. Every image layer that uses the asset shows it. From the device's photo picker (with the front or back camera if the device offers it) or a still from the live preview.
-- **Download a file** saves text you build (a report, a CSV) after a tap.
+- **Take or choose a photo** puts a picture, scaled to at most 1600 px on the long side, into an image asset. Every image layer that uses the asset shows it. From the device's photo picker (with the front or back camera if the device offers it) or a still from the live preview. To fill a different asset for each item of a list, give **Or the asset from an expression** an asset's id or name (such as \`prompts[current].photo\`); it wins over the asset picked. Set **Do** to **Throw the photo away** to put the asset's own picture back and forget the photo.
+- **Download a file** saves text you build (a report, a CSV) after a tap. With the type **Web page (.html)** it can carry pictures: write \`[[image:id]]\` where one goes, with the id or name of an asset (a photo the learner took, or one of your own pictures), and the learner's page swaps it for the picture itself, so the file is one page with its images inside and works offline. Put \`html(text)\` around anything the learner typed so it cannot break the page. A web page can be up to 16 MB (other files 2 MB), and every one is saved with a rule that stops it running script or loading anything when it is opened, so it is a report and nothing more. If a picture cannot be found the mark is left empty, so give each image a good \`alt\`. The **Photo prompts notebook** starter builds its whole report this way, for upload to a Moodle assignment.
 - **Offer: do not use my microphone or camera** asks the learner, in the page's own screen, whether to stop using them for good. Put it on a "Use the keyboard instead" button. Only the learner decides.
-- **On microphone or camera** fires when a recording starts, a recording is ready (\`event.reason\` is \`stopped\`, \`limit\` or \`device-lost\`: the learner can press Stop on the bar too), something could not start (\`event.problem\` and \`event.message\`), the state changed, a video finished playing, or a photo arrived.
+- **On microphone or camera** fires when a recording starts, a recording is ready (\`event.reason\` is \`stopped\`, \`limit\` or \`device-lost\`: the learner can press Stop on the bar too), something could not start (\`event.problem\` and \`event.message\`), the state changed, a video finished playing, a photo arrived, or live listening started or stopped.
 
 ## Try it
-**Preview** has a pretend microphone and camera, because the real ones need the page the project is shared in. It makes a made-up level and a short tone, and a sample picture. The **Microphone and camera** menu above the preview makes it fail the ways a real one does (denied, no device, blocked by the course page, the learner chose not to use them), so you can build and check the plain version. A small "Simulated" note shows while it records. Try the real devices from the **Link for StudyDesk** on the page you will use.
+**Preview** has a pretend microphone and camera, because the real ones need the page the project is shared in. It makes a made-up level and short tone for a recording, a swelling level and moving bands for live listening, and a sample picture. The **Microphone and camera** menu above the preview makes it fail the ways a real one does (denied, no device, blocked by the course page, the learner chose not to use them), so you can build and check the plain version. A small "Simulated" note shows while it records. Try the real devices from the **Link for StudyDesk** on the page you will use.
 
 ## Where it works, and what it needs
 - Play it from the **Link for StudyDesk** (\`/interactives/play/<token>\`). The plain share link (\`/s/<token>\`) cannot use a microphone or camera: its sandbox has no origin, and the browser refuses any device to such a page, so every node there goes down its **Could not start** output.
 - The StudyDesk page that holds the link's iframe needs **allow="microphone; camera"** on that iframe, or the browser refuses the page too. Without it learners are told, in plain words, that the course page does not allow it. Tell whoever builds the page. Another learning system that launches the project over LTI 1.3 decides its own iframe attributes and may not allow it at all.
 - It needs a secure page (https) and a recent Chrome, Edge, Firefox or Safari. The Moodle App and in-app browsers may not allow a microphone in an embedded page: test there before relying on it.
-- Recordings are kept in memory, in the page, so they are gone when the learner leaves or reloads. Say so, and offer **Download recording**. Nothing is uploaded or stored on a server, and the Insights records never carry audio, video, photos or what was said. The project's own code can use a recording it plays, so do not put code you do not trust in a project that uses a microphone.
+- Recordings and photos are kept in memory, in the page, so they are gone when the learner leaves or reloads. Say so ("download before you leave"), and offer **Download recording** or a downloaded report. Nothing is uploaded or stored on a server, and the Insights records never carry audio, video, photos or what was said. The project's own code can use a recording it plays, so do not put code you do not trust in a project that uses a microphone.
 - For anything marked, use the Moodle assignment's own recording or upload: this does not submit a recording anywhere.`
   },
   {
@@ -8850,7 +8902,7 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
       return `A **branded starter pack** is a ready-made activity in the UniSQ look: a gradient title page with the logo, white content pages with a footer line, and sections on deep purple. You write the content; the look is already done, and it stays done.
 
 ## Using one
-Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace. A starter with sound (the **Listening lab**) comes with short placeholder tones in the project's **Assets**, named "(replace)": use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it. **Keep the beat** has no metronome timer to drift: a 16 ms clock reads \`Date.now()\` against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. Its drills, tempos and how close a tap has to be are the **presets** variable (Variables tab).
+Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace. A starter with sound (the **Listening lab**) comes with short placeholder tones in the project's **Assets**, named "(replace)": use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it. **Keep the beat** has no metronome timer to drift: a 16 ms clock reads \`Date.now()\` against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. Its drills, tempos and how close a tap has to be are the **presets** variable (Variables tab). **Sign practice with self-review** keeps every model clip on one page, **Model clips** (one Video layer per sign, so you choose each clip once), and every other page shows it. Its Watch and choose half needs no camera, and its camera half records a short video take that stays on the learner's device. Each page has a phone version that stacks the model above the camera (see [Responsive artboards](responsive)), with the same layer names, so a change to wording or layout on one is made on the other too. It says plainly that it supports practice and is not feedback from a Deaf teacher, so keep that in; you also need the signer's consent and the rights to each clip. The **Live sound lab** uses the microphone as a number and records nothing: a loudness meter with a target band (steady volume, or a noise check worded as a rough guide) and eight frequency bars. Its project is set to listen only, the learner is asked once and sees a Listening bar with Stop, and a slider on each scene makes the same numbers when there is no microphone (see [Microphone, camera and photos](sensors)). Try the real microphone from the Link for StudyDesk, not Preview. Its target band, noise line and band names are variables. The **Photo prompts notebook** has a privacy pledge, about six prompts (each a photo slot, caption, tag and "why this one" box, with retake, delete and skip with a reason), a list or bingo board view (the **bingo** variable) and a hand-in page that downloads one web page with the photos inside it. Photos are only held in the page, so it tells learners to download before leaving. The **prompts** variable holds the prompts; each has a photo and example field naming two image assets, and the example is the way through for a learner with no camera. **Shadow the model** (Speaking and practice) is a few phrase cards: each plays a model clip (with a **Slow** switch that keeps the pitch), the learner records themselves, plays their take or the model then their take back to back, ticks your self-check and rates themselves. It declares the microphone, so open **Project > Microphone and camera** to see the purpose and the 30 second cap, and untick Microphone for a listen-and-repeat version. A learner who says no, has no microphone or chooses "Do not use my microphone or camera" gets the plain version (listen, say it aloud, self-check), so nobody is shut out. The recording stays in their browser, is dropped when they go to the next card and is gone on a reload, and the page says so. Each card is a row of the **cards** variable (phrase, note, sound, checks); the sound is the clip's asset, so replacing a placeholder with the arrow in **Assets** keeps the card pointing at it, and for a new row you type the clip's name in **sound**. The **Difficult conversation** and **Timed talk** rehearsals ship with an optional recording step that is switched off: tick Microphone in the same place and *Record my reply* or *Record this talk* and the play-back buttons appear, only for learners whose microphone works.
 
 ## Colourways
 Every branded project carries all of these as [themes](themes), plus **High contrast**, which a viewer who asks for more contrast gets automatically. Every colour in the project is a theme colour, so switching colourway re-colours the whole thing at once.
