@@ -128,6 +128,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
             kind={animatableProp(p, node)?.kind ?? props.find((x) => x.prop === p)?.kind}
             readOnly={!!props.find((x) => x.prop === p)?.readOnly}
             mode={modes[p] ?? 'in'}
+            dragged={!!node.draggable && node.draggable.enabled !== false && (p === 'x' || p === 'y')}
             onMode={(m) => {
               // out and both name a variable: a formula can't be written into
               const keepExpr = m === 'in' || project.variables.some((v) => v.name === expr.trim());
@@ -161,6 +162,7 @@ function BindingItem({
   kind,
   readOnly,
   mode,
+  dragged,
   onMode,
   expr,
   list,
@@ -175,6 +177,8 @@ function BindingItem({
   kind?: string;
   readOnly: boolean;
   mode: BindingMode;
+  /** X or Y of a layer the learner can drag: an In binding then never hears about the drag */
+  dragged?: boolean;
   onMode: (m: BindingMode) => void;
   expr: string;
   list: Converter[];
@@ -220,6 +224,15 @@ function BindingItem({
           </button>
         ))}
       </div>
+      {dragged && mode === 'in' && variables.some((v) => v.name === expr.trim()) && (
+        <p className="hint">
+          This layer can be dragged, but with <b>← In</b> a drag doesn't change <code>{expr.trim()}</code>, so saving or remembering it keeps the old value. Choose{' '}
+          <button type="button" className="link-btn" onClick={() => onMode('both')}>
+            ⇄ Both
+          </button>{' '}
+          to keep {label} and <code>{expr.trim()}</code> equal.
+        </p>
+      )}
       {mode !== 'in' ? (
         <SyncedSource label={label} prop={prop} kind={kind} mode={mode} expr={expr} variables={variables} varOptions={varOptions} onExpr={onExpr} />
       ) : (
