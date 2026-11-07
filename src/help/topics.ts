@@ -1496,12 +1496,13 @@ Pick a frame under **Scroll to scrub** and scrolling it moves the timeline: the 
 - **Each caption** has its words, an optional **speaker** (shown as "Dr Lee: …"), and a start and end. **Split at playhead** and **Merge with next** reshape them.
 - **Languages.** Add a track per language. With more than one the viewer gets a language menu; the transcript follows.
 - **Video layers** take captions too: select the layer and use **Captions** in its settings. They show through the video's own caption display and follow the viewer's CC button.
+- **Describing the picture.** Captions say what is heard. For what is only in the picture, see [Describe what you see](describe-what-you-see).
 
 ## What viewers see
 Captions are on to start (unless you turn **Captions on to start** off in Project settings) and the viewer's choices (on or off, size, language, sound) are remembered in their browser. The **Captions and narration** section of the Project settings sets the look: the caption box's position, size, colours and font, or **A text layer of my own** (the player fills a text variable, and **Add a caption layer** makes the layer), and whether the buttons show. If you hide them, the **Captions and sound** [node](interaction-nodes) does the same jobs from your own buttons.
 
 ## Transcript and screen readers
-The transcript is a labelled region of buttons, one per caption, with its time, the speaker and the words; the one showing is marked current. It is the way for a screen reader user to read what is said, so the caption box itself is hidden from screen readers (they would otherwise talk over the narration). Escape closes the transcript and returns focus to its button. Every viewer button works from the keyboard.
+The transcript is a labelled region of buttons, one per caption, with its time, the speaker and the words; the one showing is marked current. It is the way for a screen reader user to read what is said, so the caption box itself is hidden from screen readers (they would otherwise talk over the narration). Escape closes the transcript and returns focus to its button. Every viewer button works from the keyboard. When the timeline or a video layer has [descriptions](describe-what-you-see), the transcript lists them among the captions and is called **Transcript with descriptions**.
 
 ## Draft voice
 Tick **Read aloud (draft voice)** on a caption track and the player reads each caption aloud with a voice installed on the viewer's computer, as a stand-in until the real recording is made. It uses only voices that run on the device: a voice that sends the words to an internet service is never used, and a device with no suitable voice says nothing. Browsers cannot save speech as a file, so this cannot make a recording for you; record the narration and add it as sound.
@@ -1513,6 +1514,58 @@ A [Steps](steps) timeline can carry sound and captions too: Next plays the narra
 - Sound and captions belong to a timeline, so they stop with the artboard. An artboard shown inside another (an instance) brings its own.
 - Exported files and share links carry the audio inside them, so a long recording makes a larger file.
 - The timeline length is not changed by captions; adding a sound makes the timeline at least as long as the sound.`,
+  },
+  {
+    id: 'describe-what-you-see',
+    title: 'Describe what you see',
+    group: 'Motion',
+    summary: 'Add short descriptions of what is on screen to a timeline or a video, read by the viewer\'s own voice in the gaps, and listed with the captions in one transcript.',
+    keywords: 'audio description described video describe picture blind low vision screen reader transcript with descriptions wcag 1.2.5 ducking voice narration accessibility visual',
+    body: `Captions say what is **heard**. Many videos and animations also carry information only in the **picture**: a graph that rises, a diagram that builds, a gesture, text on a slide. People who cannot see it miss that part. A **description track** is short timed sentences saying what is on screen when it matters.
+
+**This is a cheaper aid, not a recorded described version.** The words are read by a voice already on the viewer's device, so it sounds like a screen reader, not a person. Where a course is formally required to have an audio described version, record one and use this as well, or instead mark the accessibility finding reviewed. The transcript with descriptions below always works, with or without a voice.
+
+## How it works for the viewer
+- The description cues are never drawn. When the viewer has **Descriptions** on, a voice on their device reads each one as the timeline (or the video) reaches it, in the gap where you put it, and the sound is **turned down** while it speaks, then back up.
+- The **Descriptions** button sits with the caption buttons. It only shows when a voice on the device can read one, and it starts **off** unless you tick **Descriptions on to start** in Project settings (Captions and narration). The viewer's own choice is remembered in their browser.
+- Pausing, jumping to another point or turning descriptions off stops the voice. A description is read once as the media reaches it; jump back and it is read again.
+- If a description is still being read when the next one comes up, it is not cut off: the next waits (a few at most).
+- Only voices that run on the device are used. A voice that sends the words to an internet service is never used, and nothing is recorded.
+- The viewer's sound button also mutes the voice, and the read-aloud speed they chose applies.
+
+## Worked example: describe a lecture clip
+1. Caption the clip first (see [Narration, captions and transcript](captions)) so you can see where the speech is and where it is not.
+2. On a **timeline**: in the **Descriptions** row choose **New description at the playhead**, then type one sentence in **Text**. For a **video layer**: select it and use **Add one** under **Descriptions (what is on screen)** in its settings, then set **From**, **To** and the text.
+3. Put each one in a **gap** between speech. A description that overlaps a caption is drawn with a dashed amber edge in the lane (and flagged in the layer's settings) because the voice would talk over the speaker.
+4. Press **Preview**, turn **Descriptions** on and play it. Listen on a phone too: a synthetic voice over the speaker is the thing to check.
+5. Open the **Transcript with descriptions** and read it start to finish. If it makes sense without the picture, the descriptions are doing their job.
+
+## Describing well
+- Say what a person who could see would **need** to follow, not everything. Do not repeat what the narration already says.
+- Present tense, plain words: "A line graph appears. Hours of study are on the side and weeks along the bottom. The line climbs steadily."
+- Read out text that appears on screen and matters (a title, a formula, a label).
+- Name people the way the speech does. Do not add opinions ("a beautiful chart").
+- Fit the gap: about two or three words a second, so ten words need roughly four seconds. The voice speeds up a little to fit and never above a clear pace.
+- Describe a diagram once, in the order you would explain it. For a long or dense one, also put the full description in the page's text.
+
+## Timelines and video layers
+- **Timelines.** The **Descriptions** row sits under **Captions**. It works like captions: lanes of cues you drag and retime, one track per language, **Import WebVTT or SRT…**, **Export WebVTT**, **Export SRT** and **Add a language…**. The viewer's caption language picks the descriptions in that language when there is one.
+- **Video layers.** In the layer's settings, **Descriptions (what is on screen)**: add, retime, import or export a WebVTT file made for this video, and set the **Language** (it picks the voice). Times are seconds from the start of the video. The video is turned down while a description is read, and put back to the level the viewer had.
+- A second cue track is a second thing to keep in step. When you replace a video or re-time a timeline, check the descriptions again.
+
+## Transcript with descriptions
+With descriptions on the page the viewer's **Transcript** button opens **Transcript with descriptions**: the captions and the descriptions in one list in time order (a description comes first when it starts with the words), each line a button that jumps there. Each description line says **Description** in its text, so a screen reader or a braille display tells it apart, and a tick box hides the descriptions to read just what was said. It works when there is no voice, and it is ordinary page text, so it can be searched. A video layer with descriptions gets its own group in the transcript with its captions and descriptions together.
+
+## Your own buttons
+If you hide the viewer buttons in Project settings, the **Captions and sound** [node](interaction-nodes) has **Descriptions: flip**, **on** and **off**.
+
+## Not done yet
+Reading **while the video waits** (it pauses itself for a description that does not fit a gap) is not built. For now keep descriptions short enough to fit the gaps, or leave a longer pause in the video.
+
+## Good to know
+- The [accessibility check](accessibility-checker) asks you to look at a video without captions and points here for the pictures (WCAG 1.2.5). It cannot tell whether a description is accurate.
+- Exported files and share links carry the descriptions inside them.
+- The **Described video** starter in the Templates tab has a video layer with the track wired up and a one-page checklist on describing well.`,
   },
   {
     id: 'read-aloud',
@@ -2333,7 +2386,7 @@ Click a finding to **select the layer** (and open its artboard). The right side 
 | **No way to pause moving content** | An autoplaying timeline that loops or runs over 5 seconds, with no *Control timeline* node set to pause, stop or toggle it. |
 | **Video starts by itself** | Autoplay video with sound or without controls. Also a timeline that plays sound on its own when the viewer buttons are hidden and nothing mutes or pauses it. |
 | **Flashing** | A timeline that makes a large layer (a tenth of the artboard or more) go bright and dark more than three times in a second. |
-| **Video and narration need captions** | Narration on a timeline with no captions is an issue, and captions that cover under half of it a warning (music and effects are left alone; see [Narration, captions and transcript](captions)). A video layer with imported captions passes; one without is listed to look at, since a program cannot tell if the file has them. |
+| **Video and narration need captions** | Narration on a timeline with no captions is an issue, and captions that cover under half of it a warning (music and effects are left alone; see [Narration, captions and transcript](captions)). A video layer with imported captions passes; one without is listed to look at, since a program cannot tell if the file has them, and it points you at [Describe what you see](describe-what-you-see) for the pictures (WCAG 1.2.5). Descriptions that run while a caption is showing, so the voice would talk over the speech, are a warning. |
 | **Page title** | The project has no title. |
 
 ### How contrast is worked out
@@ -2366,7 +2419,7 @@ For a finding you have looked at and accepted ("it is decoration", "the captions
 
 - Whether text is right: reading order, headings, plain language, the page language.
 - Anything a script or code node does, and embedded HTML or pages.
-- Whether a video has captions or audio description.
+- Whether a video has captions or audio description in the file itself, or whether a description says what is really on screen. It only sees the captions and descriptions you added here.
 - Colour as the only way to tell things apart, and text that is part of a picture.
 - Flashing that does not come from a timeline.
 - Tab order and focus rings. Layer order sets the Tab order.

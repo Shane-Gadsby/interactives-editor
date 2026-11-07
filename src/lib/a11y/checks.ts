@@ -3,7 +3,7 @@
  * found, per artboard. It reports "checks found", never "compliant": some things it can't see (a photo behind text, what a
  * script does), and those come back as `review` findings so a person looks instead of assuming.
  */
-import { coveredMs, defaultTheme, hasTokens, isContainer, isTokenRef, makeColorResolver, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
+import { coveredMs, defaultTheme, hasTokens, isContainer, isTokenRef, makeColorResolver, overlappingSpeech, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
 import { backdropAt, buildPaintList, samplePoints, textExtent, type ArtboardPaint, type ImageColours, type Target, type TextMeasure } from './backdrop';
 import { contrastRatio, luminance, over, requiredRatio, suggestColour, toRgba, withTokens, type RGB } from './colour';
 import { FLASH_PROPS, maxFlashesPerSecond, trackSignal } from './flash';
@@ -92,7 +92,7 @@ export const CHECKS: CheckInfo[] = [
     title: 'Video and narration need captions',
     wcag: '1.2.1 Audio-only and Video-only (Prerecorded), A; 1.2.2 Captions (Prerecorded), A; 1.2.5 Audio Description, AA',
     why: 'Deaf and hard of hearing people need captions for the speech and sounds in a video or a narration, and blind people need the pictures described. A checker cannot hear a file, but it can see that a narration on a timeline has no captions, or only some.',
-    how: 'For narration on a timeline: add captions in the timeline\'s Captions row (paste the transcript, or import a WebVTT or SRT file); the player shows them and offers the transcript. For a video layer: import its captions in the layer\'s settings, or check the file has them and mark this reviewed.',
+    how: 'For narration on a timeline: add captions in the timeline\'s Captions row (paste the transcript, or import a WebVTT or SRT file); the player shows them and offers the transcript. For a video layer: import its captions in the layer\'s settings, or check the file has them and mark this reviewed. For the pictures (1.2.5): add descriptions of what is on screen to the timeline\'s Descriptions row, or to a video layer\'s Descriptions settings. A voice on the viewer\'s device reads them in the gaps while the sound is turned down, and the transcript lists them with the captions. That is a cheaper aid, not a recorded described version: where a course must have one, record it and mark this reviewed.',
   },
   {
     id: 'title',
@@ -109,7 +109,7 @@ const INFO = new Map(CHECKS.map((c) => [c.id, c]));
 export const NOT_CHECKED = [
   'Whether text is right: reading order, heading structure, plain language, or the language of the page.',
   'Anything a script does (script and code nodes, embedded HTML and pages): keyboard handling, focus, flashing, announcements.',
-  'Whether a video has captions or audio description. Whether captions say what is actually spoken, or are timed to it (only that narration on a timeline has some, and how much of it they cover).',
+  'Whether a video has captions or audio description in the file itself (it only sees the captions and descriptions added here), or whether a description says what is really on screen. Whether captions say what is actually spoken, or are timed to it (only that narration on a timeline has some, and how much of it they cover).',
   'Colour as the only way to tell things apart, and text that is part of a picture.',
   'Flashing from anything but timelines (timers, scripts, video, shader layers).',
   'Contrast over photos that are not loaded, over video, shaders and blend modes, and anything a binding or timeline changes while it runs.',
@@ -486,8 +486,8 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
             add(ab, n, 'autoplay-media', loud ? 'issue' : 'warning', 'Video starts by itself', `${n.name} plays as soon as it is shown${loud ? ', with sound' : ''}${still ? `${loud ? ' and' : ','} has no controls to pause it` : ''}.${hiddenNote}`, { fix: layerFix(ab, n, loud && still ? 'Mute it and show controls' : loud ? 'Mute it' : 'Show controls', set) });
           }
         }
-        // Captions imported for the layer are there to see; the pictures may still need describing
-        if (!(n as { captions?: unknown[] }).captions?.length) add(ab, n, 'captions', 'review', 'Check this video has captions', `${n.name} is a video. A checker cannot tell whether it has captions or an audio description. Import its captions in the layer's settings, or mark this reviewed when the file has them.`);
+        // Captions imported for the layer are there to see; descriptions written for it (1.2.5) too, a described version in the file only a person knows about
+        if (!(n as { captions?: unknown[] }).captions?.length) add(ab, n, 'captions', 'review', 'Check this video has captions', `${n.name} is a video. A checker cannot tell whether it has captions or an audio description. Import its captions in the layer's settings, or mark this reviewed when the file has them. For the pictures (1.2.5), add descriptions in the same place: a voice on the viewer's device reads them while the video is turned down, and the transcript lists them. That is a cheaper aid, not a recorded described version.`);
       }
 
       // ---- Text: contrast and size
@@ -504,6 +504,11 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
       if ((t.loop !== 'once' || t.duration > 5000) && !inter.pausable.has(t.id)) {
         add(ab, null, 'pause', 'warning', 'No way to pause moving content', `"${t.name}" starts by itself and ${t.loop === 'once' ? `runs for ${Math.round(t.duration / 100) / 10} seconds` : 'loops'}. Nothing on this artboard pauses or stops it.`, { key: t.id });
       }
+    }
+    // ---- Descriptions that sit over speech would be read on top of it
+    for (const t of ab.timelines) {
+      const clashing = (t.descriptions ?? []).flatMap((d) => d.cues).filter((c) => (t.captions ?? []).some((cap) => overlappingSpeech(c, cap.cues).length));
+      if (clashing.length) add(ab, null, 'captions', 'warning', 'Descriptions overlap the captions', `"${t.name}": ${clashing.length} ${clashing.length === 1 ? 'description runs' : 'descriptions run'} while a caption is showing, so the voice would talk over the speech. Move ${clashing.length === 1 ? 'it' : 'them'} into a gap in the Descriptions row.`, { key: `describe-clash:${t.id}` });
     }
     // ---- Narration: sound that carries words needs captions; sound that starts itself needs a way to stop it
     const soundNodes = ab.logic.nodes.some((ln) => ln.kind === 'action.captions' && String(ln.params.op ?? '').startsWith('sound'));

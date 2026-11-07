@@ -15,7 +15,7 @@ import { addMarkerInteraction, markerEvents, nextMarkerName, nudgeMarker, rename
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import type { Project } from 'interactives-player';
 import { assetKind, assetUrls } from '../lib/assets';
-import { ensureCaptionTrack, addCue } from '../lib/captions-edit';
+import { ensureCaptionTrack, ensureDescriptionTrack, findTrack, addCue } from '../lib/captions-edit';
 import { MediaEditor, MediaLabels, MediaLanes, TranscriptDialog, addSoundToTimeline, exportCaptions, importCaptionsInto, type MediaCtx, type MediaSel } from './TimelineMedia';
 import { promptDialog } from '../components/dialogs';
 import { magnetNudge, staggerSelected } from '../lib/key-edit';
@@ -228,6 +228,41 @@ export function TimelinePanel() {
     let id = sel && tl.captions?.some((c) => c.id === sel) ? sel : tl.captions?.[0]?.id ?? '';
     if (!id) (usage('feature', 'captions-track-add'), store().updateTimeline((d) => void (id = ensureCaptionTrack(d as TL).id)));
     return id;
+  };
+  /** The description track to work on: the selected one when it is one, else the first (made when there is none). */
+  const descriptionTrackId = (): string => {
+    const sel = media && media.kind !== 'audio' && media.kind !== 'vkey' ? media.track : null;
+    let id = sel && tl.descriptions?.some((c) => c.id === sel) ? sel : tl.descriptions?.[0]?.id ?? '';
+    if (!id) (usage('feature', 'descriptions-track-add'), store().updateTimeline((d) => void (id = ensureDescriptionTrack(d as TL).id)));
+    return id;
+  };
+  const descriptionAction = async (action: string) => {
+    if (action === 'cue') {
+      const id = descriptionTrackId();
+      let cue = '';
+      setTl((d) => {
+        const t = findTrack(d, id);
+        if (t) cue = addCue(t, s.playhead, 3000, 'New description').id;
+      });
+      usage('feature', 'descriptions-cue-add');
+      setMedia({ kind: 'cue', track: id, cue });
+    } else if (action === 'import') {
+      const id = descriptionTrackId();
+      setMedia({ kind: 'captions', track: id });
+      const msg = await importCaptionsInto(id);
+      if (msg) store().toast(msg);
+    } else if (action === 'vtt' || action === 'srt') {
+      const id = descriptionTrackId();
+      const track = findTrack(tl, id);
+      if (track) exportCaptions(s.project, tl, track, action);
+    } else if (action === 'track') {
+      const lang = await promptDialog({ title: 'Add a description language', label: 'Language tag (en, fr, pt-BR ...)', initial: '', placeholder: 'fr', confirmLabel: 'Add' });
+      if (lang === null) return;
+      let id = '';
+      usage('feature', 'descriptions-track-add', { thing: 'language' });
+      setTl((d) => void (id = ensureDescriptionTrack(d, lang.trim() || undefined).id));
+      setMedia({ kind: 'captions', track: id });
+    }
   };
   const captionAction = async (action: string) => {
     if (action === 'cue') {
@@ -526,6 +561,7 @@ export function TimelinePanel() {
               if (made) setMedia({ kind: 'audio', track: made });
             }}
             onCaptionAction={captionAction}
+            onDescriptionAction={descriptionAction}
           />
           <TrackLabels byNode={byNode} nodeIndex={nodeIndex} pointsOpen={pointsOpen} setPointsOpen={setPointsOpen} setTl={setTl} />
         </div>
