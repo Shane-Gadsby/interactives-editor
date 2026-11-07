@@ -99,7 +99,7 @@ const CATALOG = [
     kind: "event.key",
     label: "On key",
     category: "event",
-    description: "When a keyboard key is pressed or released. Leave the key empty for any key. Modifiers that are ticked must be held. Pick a layer to react only while that layer (or one inside it) has keyboard focus. event.key, event.code and event.shift / ctrl / alt / meta say what was pressed.",
+    description: 'When a keyboard key is pressed or released. Leave the key empty for any key. Modifiers that are ticked must be held. Pick a layer to react only while that layer (or one inside it) has keyboard focus. Keys typed into a text box are ignored unless "Also while typing" is ticked. A key that runs a flow does not also scroll the page, unless "Let the browser act too" is ticked. event.key, event.code and event.shift / ctrl / alt / meta say what was pressed.',
     outputs: OUT,
     hasInput: false,
     params: [
@@ -109,6 +109,8 @@ const CATALOG = [
       { key: "alt", label: "Alt held", type: "boolean", default: false },
       { key: "meta", label: "Meta held", type: "boolean", default: false },
       { key: "repeat", label: "Fire again while held", type: "boolean", default: false, help: "Key down repeats while the key is held" },
+      { key: "typing", label: "Also while typing in a text box", type: "boolean", default: false, help: "Normally keys typed into a text box or text area are left alone, so typing never sets things off. Tick this (with the key Enter and the box picked below) to run the flow when Enter is pressed in the box, like submitting a form" },
+      { key: "allowDefault", label: "Let the browser act too", type: "boolean", default: false, help: "Normally when this node runs for an arrow key, Space, Page Up/Down, Home, End, Enter, Backspace or a letter, and it names a key or a layer, the browser is told not to also use it (so the page does not scroll under a game). Tick this to let the key do its usual thing as well" },
       { key: "target", label: "Only while this layer has focus", type: "node", help: "Pick a layer to react to the key only while that layer, or a layer inside it, has keyboard focus (the layer becomes focusable). Leave empty to react wherever the focus is" },
       {
         key: "type",
@@ -310,6 +312,31 @@ const CATALOG = [
     outputs: OUT,
     hasInput: false,
     params: [{ key: "target", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty to fire for every draggable layer" }]
+  },
+  {
+    kind: "event.media",
+    label: "On microphone or camera",
+    category: "event",
+    description: "Something happened with a recording, the camera or a photo: a recording started, a recording is ready (the learner pressed Stop, a length limit was reached, or the device went away; `event.reason` says which), a recording could not start (`event.problem` and `event.message` say why, in plain words), the microphone or camera state changed (including the learner choosing not to use them), a video recording finished playing, or a photo arrived. Needs the microphone, camera or photos ticked in Project > Microphone and camera.",
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      {
+        key: "when",
+        label: "When",
+        type: "select",
+        options: [
+          { value: "ready", label: "A recording is ready" },
+          { value: "started", label: "A recording started" },
+          { value: "failed", label: "Something could not start" },
+          { value: "state", label: "Microphone or camera state changed" },
+          { value: "played", label: "A video recording finished playing" },
+          { value: "photo", label: "A photo arrived" }
+        ],
+        default: "ready"
+      },
+      { key: "slot", label: "Recording name", type: "text", default: "", placeholder: "any", help: "Only for this recording. Leave empty for any." }
+    ]
   },
   {
     kind: "event.dataLoaded",
@@ -639,6 +666,188 @@ const CATALOG = [
     ]
   },
   {
+    kind: "action.recordStart",
+    label: "Start recording",
+    category: "action",
+    description: "Records from the learner's microphone or camera into a named recording. The page around the project asks the learner first (one plain consent screen made from Project > Microphone and camera), starts only after a real tap, and shows a recording bar with the level, a timer and a Stop button that the project cannot hide. It stops at the length limit. Continues from Recording when it has started, or from Could not start (not allowed, no device, the learner said no, or nowhere to ask: see `mediaMessage`). Recordings stay in memory and are gone when the page is left.",
+    outputs: [
+      { id: "out", label: "Recording" },
+      { id: "failed", label: "Could not start" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "slot", label: "Recording name", type: "text", default: "recording", help: "A name for this recording. A project can keep several, each under its own name (up to 8)." },
+      {
+        key: "source",
+        label: "Record",
+        type: "select",
+        options: [
+          { value: "microphone", label: "Sound from the microphone" },
+          { value: "camera-mic", label: "Video with sound" },
+          { value: "camera", label: "Video, no sound" }
+        ],
+        default: "microphone"
+      },
+      { key: "maxSeconds", label: "Longest (seconds)", type: "number", default: 0, help: "Stop by itself after this long. 0 uses the limit in Project > Microphone and camera." }
+    ]
+  },
+  {
+    kind: "action.recordStop",
+    label: "Stop recording",
+    category: "action",
+    description: "Stops the recording and continues from Recorded once it is ready to play. The learner can also press Stop on the recording bar, which fires On microphone or camera (A recording is ready) instead. Continues from Nothing to stop when that name was not recording and holds nothing.",
+    outputs: [
+      { id: "out", label: "Recorded" },
+      { id: "failed", label: "Nothing to stop" }
+    ],
+    hasInput: true,
+    params: [{ key: "slot", label: "Recording name", type: "text", default: "recording", help: "A name for this recording. A project can keep several, each under its own name (up to 8)." }]
+  },
+  {
+    kind: "action.recordPlay",
+    label: "Play recording",
+    category: "action",
+    description: "Plays a finished recording back. A sound recording plays through the project's own sound, so the viewer's sound button and volume apply. A video recording plays in the layer chosen below, from the page around the project. Continues from Nothing recorded when that name holds no recording yet.",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "Nothing recorded" }
+    ],
+    hasInput: true,
+    params: [
+      {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "play", label: "Play" },
+          { value: "stop", label: "Stop playing" }
+        ],
+        default: "play"
+      },
+      { key: "slot", label: "Recording name", type: "text", default: "recording", help: "A name for this recording. A project can keep several, each under its own name (up to 8)." },
+      { key: "volume", label: "Volume (0-1)", type: "number", default: 1, showIf: { key: "op", values: ["play"] } },
+      { key: "target", label: "Show video in", type: "node", help: "For a video recording: the layer whose place the video plays in. Not needed for sound.", showIf: { key: "op", values: ["play"] } },
+      ...CONTINUE.map((c2) => ({ ...c2, showIf: { key: "op", values: ["play"] } }))
+    ]
+  },
+  {
+    kind: "action.recordDiscard",
+    label: "Discard recording",
+    category: "action",
+    description: "Throws a recording away (so the learner can record again). Stops it first if it is playing or still recording.",
+    outputs: OUT,
+    hasInput: true,
+    params: [{ key: "slot", label: "Recording name", type: "text", default: "recording", help: "A name for this recording. A project can keep several, each under its own name (up to 8)." }]
+  },
+  {
+    kind: "action.recordDownload",
+    label: "Download recording",
+    category: "action",
+    description: "Offers the learner a file of the recording to save on their device. The page around the project does it, after a tap. It is the only way a recording leaves memory.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "slot", label: "Recording name", type: "text", default: "recording", help: "A name for this recording. A project can keep several, each under its own name (up to 8)." },
+      { key: "name", label: "File name", type: "expr", default: '"my-recording"', help: 'Without the extension, which comes from the recording. An expression, e.g. "answer-" + question' }
+    ]
+  },
+  {
+    kind: "action.cameraPreview",
+    label: "Camera preview",
+    category: "action",
+    description: "Shows the learner's camera live in the place of a layer, or takes it down. The page around the project draws the picture, over the project, so the project never sees the camera's pixels (use Take or choose a photo for a still). Asks the learner first, like Start recording. Continues from Could not start when it is not allowed or there is no camera.",
+    outputs: [
+      { id: "out", label: "On" },
+      { id: "failed", label: "Could not start" }
+    ],
+    hasInput: true,
+    params: [
+      {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "on", label: "Show" },
+          { value: "off", label: "Hide" }
+        ],
+        default: "on"
+      },
+      { key: "target", label: "Show in", type: "node", help: "The layer whose place the camera picture takes. It follows the layer if the layer moves.", showIf: { key: "op", values: ["on"] } },
+      { key: "mirror", label: "Mirror (like a mirror)", type: "boolean", default: true, showIf: { key: "op", values: ["on"] } },
+      {
+        key: "facing",
+        label: "Which camera",
+        type: "select",
+        options: [
+          { value: "user", label: "Front (facing the learner)" },
+          { value: "environment", label: "Back" }
+        ],
+        default: "user",
+        showIf: { key: "op", values: ["on"] }
+      }
+    ]
+  },
+  {
+    kind: "action.photo",
+    label: "Take or choose a photo",
+    category: "action",
+    description: "Gets a picture and puts it in an image asset, so every image layer that uses that asset shows it. From the device's photo picker (choose a file, or take one with the camera, depending on the device), or a still of the live camera preview. The picture is scaled down so its longer side is at most the size below. Nothing is uploaded. Continues from No photo when the learner backs out or it is not allowed.",
+    outputs: [
+      { id: "out", label: "Got a photo" },
+      { id: "none", label: "No photo" }
+    ],
+    hasInput: true,
+    params: [
+      {
+        key: "source",
+        label: "From",
+        type: "select",
+        options: [
+          { value: "pick", label: "Photo picker" },
+          { value: "pick-environment", label: "Photo picker, back camera" },
+          { value: "pick-user", label: "Photo picker, front camera" },
+          { value: "live", label: "The live camera preview" }
+        ],
+        default: "pick"
+      },
+      { key: "asset", label: "Put it in", type: "asset", help: "An image asset in the project (any picture will do as the placeholder). Layers showing it change to the photo." },
+      { key: "maxEdge", label: "Longest side (px)", type: "number", default: 1600 }
+    ]
+  },
+  {
+    kind: "action.saveFile",
+    label: "Download a file",
+    category: "action",
+    description: "Offers the learner a text file to save (a report of what they did, a CSV, notes). Built here and handed to the page around the project, which saves it after a tap. Text only, up to 2 MB.",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      { key: "name", label: "File name", type: "expr", default: '"report"', help: "Without the extension" },
+      { key: "text", label: "Contents", type: "expr", default: '"Score: " + score' },
+      {
+        key: "mime",
+        label: "Type",
+        type: "select",
+        options: [
+          { value: "text/plain", label: "Text (.txt)" },
+          { value: "text/csv", label: "CSV (.csv)" },
+          { value: "application/json", label: "JSON (.json)" },
+          { value: "text/markdown", label: "Markdown (.md)" }
+        ],
+        default: "text/plain"
+      }
+    ]
+  },
+  {
+    kind: "action.sensorsOff",
+    label: "Offer: do not use my microphone or camera",
+    category: "action",
+    description: 'Asks the learner, in a screen of the page around the project, whether to stop using their microphone and camera from now on. If they say yes it is remembered in their browser, every activity then shows its plain version (`microphone` and `camera` read off), and the project cannot undo it. Only the learner decides. Put it on a button such as "Use the keyboard instead".',
+    outputs: OUT,
+    hasInput: true,
+    params: []
+  },
+  {
     kind: "action.script",
     label: "Run script",
     category: "action",
@@ -696,7 +905,7 @@ const CATALOG = [
     kind: "action.captions",
     label: "Captions and sound",
     category: "action",
-    description: "Change what the viewer has chosen for captions, the transcript panel and sound: turn captions on or off, make them larger or smaller, open the transcript, mute or unmute. For your own buttons when the built-in ones are hidden in Project settings. The choices are remembered in the viewer's browser.",
+    description: "Change what the viewer has chosen for captions, descriptions of what is on screen, the transcript panel and sound: turn captions or descriptions on or off, make them larger or smaller, open the transcript, mute or unmute. For your own buttons when the built-in ones are hidden in Project settings. The choices are remembered in the viewer's browser.",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -708,6 +917,9 @@ const CATALOG = [
           { value: "captionsToggle", label: "Captions: flip" },
           { value: "captionsOn", label: "Captions: on" },
           { value: "captionsOff", label: "Captions: off" },
+          { value: "descriptionsToggle", label: "Descriptions: flip" },
+          { value: "descriptionsOn", label: "Descriptions: on" },
+          { value: "descriptionsOff", label: "Descriptions: off" },
           { value: "larger", label: "Captions: larger text" },
           { value: "smaller", label: "Captions: smaller text" },
           { value: "transcriptToggle", label: "Transcript: flip" },
@@ -1493,13 +1705,13 @@ function property(name, negated) {
   let f2 = propCache.get(key);
   if (!f2) {
     const re = new RegExp(`^\\${negated ? "P" : "p"}{${name}}$`, "u");
-    const memo = /* @__PURE__ */ new Map();
+    const memo2 = /* @__PURE__ */ new Map();
     f2 = (cp) => {
-      let v = memo.get(cp);
+      let v = memo2.get(cp);
       if (v === void 0) {
         v = re.test(String.fromCodePoint(cp));
-        if (memo.size > 4e3) memo.clear();
-        memo.set(cp, v);
+        if (memo2.size > 4e3) memo2.clear();
+        memo2.set(cp, v);
       }
       return v;
     };
@@ -2588,7 +2800,7 @@ function percentSides(v) {
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const arr = (v, keep) => Array.isArray(v) ? v.filter(keep) : [];
 const objs = (v) => arr(v, isObj);
-function fits(value, def) {
+function fits$1(value, def) {
   if (def === null) return value === null || isObj(value) || isStr(value) || isNum(value);
   if (Array.isArray(def)) return Array.isArray(value);
   switch (typeof def) {
@@ -2669,7 +2881,7 @@ function sanitizeNode(raw, seen) {
   const n = { ...raw };
   for (const [k, d] of Object.entries(def)) {
     if (k === "id" || k === "type") continue;
-    if (!(k in n) || !fits(n[k], d)) n[k] = structuredClone(d);
+    if (!(k in n) || !fits$1(n[k], d)) n[k] = structuredClone(d);
   }
   if (!isStr(n.name)) n.name = String(raw.type);
   if (raw.type === "draw") n.pixelRatio = isNum(raw.pixelRatio) && raw.pixelRatio > 0 ? Math.min(4, raw.pixelRatio) : "auto";
@@ -2768,6 +2980,12 @@ function sanitizeNode(raw, seen) {
       else delete n.captions;
     }
     if ("captionLang" in n && !isStr(n.captionLang)) delete n.captionLang;
+    if ("descriptions" in n) {
+      const cues = cleanCues(n.descriptions);
+      if (cues.length) n.descriptions = cues;
+      else delete n.descriptions;
+    }
+    if ("descriptionLang" in n && !isStr(n.descriptionLang)) delete n.descriptionLang;
     if ("playbackRate" in n && !(isNum(n.playbackRate) && n.playbackRate > 0)) delete n.playbackRate;
     if ("frameRate" in n && !(isNum(n.frameRate) && n.frameRate > 0)) delete n.frameRate;
     for (const k of ["speedControl", "frameStepControl"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
@@ -2792,7 +3010,7 @@ function sanitizeNode(raw, seen) {
     if (n.layout !== void 0 && n.layout !== null && !isObj(n.layout)) n.layout = null;
     if (isObj(n.layout)) {
       const L = { ...LAYOUT_DEFAULTS, ...n.layout };
-      for (const [k, d] of Object.entries(LAYOUT_DEFAULTS)) if (!fits(L[k], d)) L[k] = structuredClone(d);
+      for (const [k, d] of Object.entries(LAYOUT_DEFAULTS)) if (!fits$1(L[k], d)) L[k] = structuredClone(d);
       const pad = isObj(L.padding) ? L.padding : {};
       L.padding = Object.fromEntries(["top", "right", "bottom", "left"].map((k) => [k, isNum(pad[k]) ? pad[k] : 0]));
       if ("crossGap" in L && !isNum(L.crossGap)) delete L.crossGap;
@@ -3700,6 +3918,152 @@ function normalizeRuns(runs) {
 function runsPatch(runs) {
   const norm = normalizeRuns(runs);
   return { text: runsText(norm), runs: isPlainRuns(norm) ? void 0 : norm };
+}
+const MAX_SIZE = 30;
+const memo = /* @__PURE__ */ new Map();
+function remembered(key, make) {
+  let hit = memo.get(key);
+  if (hit === void 0) {
+    hit = JSON.stringify(make());
+    if (memo.size >= 8) memo.delete(memo.keys().next().value);
+    memo.set(key, hit);
+  }
+  return JSON.parse(hit);
+}
+const MAX_WORDS = 80;
+function fits(grid, size, w, r2, c2, down) {
+  const dr = down ? 1 : 0;
+  const dc = down ? 0 : 1;
+  if (r2 < 0 || c2 < 0 || r2 + dr * (w.length - 1) >= size || c2 + dc * (w.length - 1) >= size) return -1;
+  const at = (rr, cc) => rr < 0 || cc < 0 || rr >= size || cc >= size ? void 0 : grid.get(rr * size + cc);
+  if (at(r2 - dr, c2 - dc) || at(r2 + dr * w.length, c2 + dc * w.length)) return -1;
+  let crossings = 0;
+  for (let k = 0; k < w.length; k++) {
+    const rr = r2 + dr * k;
+    const cc = c2 + dc * k;
+    const here = at(rr, cc);
+    if (here) {
+      if (here.ch !== w[k] || (down ? here.down : here.across)) return -1;
+      crossings++;
+    } else if (at(rr + dc, cc + dr) || at(rr - dc, cc - dr)) {
+      return -1;
+    }
+  }
+  return crossings;
+}
+function attempt(order, size) {
+  const grid = /* @__PURE__ */ new Map();
+  const placed = [];
+  const put = (w, r2, c2, down) => {
+    for (let k = 0; k < w.answer.length; k++) {
+      const i = (r2 + (down ? k : 0)) * size + c2 + (down ? 0 : k);
+      const cell = grid.get(i) ?? { ch: w.answer[k], across: false, down: false };
+      if (down) cell.down = true;
+      else cell.across = true;
+      grid.set(i, cell);
+    }
+    placed.push({ ...w, row: r2, col: c2, down });
+  };
+  const first = order[0];
+  put(first, Math.floor(size / 2), Math.floor((size - first.answer.length) / 2), false);
+  let left = order.slice(1);
+  for (let pass = 0; pass < 3 && left.length; pass++) {
+    const stillLeft = [];
+    for (const w of left) {
+      let best = null;
+      for (let r2 = 0; r2 < size; r2++) {
+        for (let c2 = 0; c2 < size; c2++) {
+          for (const down of [false, true]) {
+            const n = fits(grid, size, w.answer, r2, c2, down);
+            if (n < 1) continue;
+            const score = n * 100 - (Math.abs(r2 - size / 2) + Math.abs(c2 - size / 2));
+            if (!best || score > best.score) best = { r: r2, c: c2, down, score };
+          }
+        }
+      }
+      if (best) put(w, best.r, best.c, best.down);
+      else stillLeft.push(w);
+    }
+    left = stillLeft;
+  }
+  return placed;
+}
+function prng(seed) {
+  let s = seed | 0;
+  return () => {
+    s = s + 1831565813 | 0;
+    let t2 = Math.imul(s ^ s >>> 15, 1 | s);
+    t2 = t2 + Math.imul(t2 ^ t2 >>> 7, 61 | t2) ^ t2;
+    return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296;
+  };
+}
+function cleanWords(words, size) {
+  if (!Array.isArray(words)) return [];
+  const out = [];
+  for (const w of words.slice(0, MAX_WORDS)) {
+    const row = typeof w === "string" ? { answer: w, clue: "" } : w && typeof w === "object" && typeof w.answer === "string" ? { ...w } : null;
+    if (!row) continue;
+    row.answer = row.answer.toUpperCase().replace(/[^A-Z]/g, "");
+    if (row.answer.length >= 2 && row.answer.length <= size) out.push(row);
+  }
+  return out;
+}
+function layoutCrossword(words, size = 10, tries = 400) {
+  size = Math.max(3, Math.min(MAX_SIZE, Math.round(Number(size)) || 10));
+  return remembered("c" + size + ":" + tries + ":" + JSON.stringify(words), () => layOut(words, size, tries));
+}
+function layOut(words, size, tries) {
+  const clean = cleanWords(words, size);
+  if (!clean.length) return [];
+  const rand = prng(20240607);
+  const longestFirst = [...clean].sort((a, b) => b.answer.length - a.answer.length);
+  const orders = clean.map((w) => [w, ...longestFirst.filter((x) => x !== w)]);
+  for (let i = 0; i < tries; i++) orders.push(clean.map((w) => ({ w, r: rand() })).sort((a, b) => a.r - b.r).map((o) => o.w));
+  let best = [];
+  let bestScore = -1;
+  for (const order of orders) {
+    const p = attempt(order, size);
+    const squares = /* @__PURE__ */ new Set();
+    for (const w of p) for (let k = 0; k < w.answer.length; k++) squares.add((w.row + (w.down ? k : 0)) * size + w.col + (w.down ? 0 : k));
+    const score = p.length * 1e3 + (p.reduce((n, w) => n + w.answer.length, 0) - squares.size);
+    if (score > bestScore) {
+      best = p;
+      bestScore = score;
+    }
+  }
+  return best.sort((a, b) => a.row * size + a.col - (b.row * size + b.col) || Number(a.down) - Number(b.down));
+}
+const DIRECTIONS = [[0, 1], [1, 0], [1, 1], [-1, 1], [0, -1], [-1, 0], [1, -1], [-1, -1]];
+function makeWordSearch(words, size = 12, seed = 7) {
+  size = Math.max(3, Math.min(MAX_SIZE, Math.round(Number(size)) || 12));
+  return remembered("w" + size + ":" + seed + ":" + JSON.stringify(words), () => hide(words, size, seed));
+}
+function hide(words, size, seed) {
+  const rand = prng(seed);
+  const grid = Array(size * size).fill("");
+  const text = (Array.isArray(words) ? words : []).slice(0, MAX_WORDS).map((w) => typeof w === "string" ? w : w && typeof w === "object" ? String(w.answer ?? w.word ?? "") : "");
+  const clean = text.map((w) => w.toUpperCase().replace(/[^A-Z]/g, "")).filter((w) => w.length >= 2 && w.length <= size);
+  const order = clean.map((w, i) => ({ w, i })).sort((a, b) => b.w.length - a.w.length);
+  for (const { w, i } of order) {
+    for (let tries = 0; tries < 400; tries++) {
+      const [dr, dc] = DIRECTIONS[(i + Math.floor(tries / 100)) % DIRECTIONS.length];
+      const r0 = Math.floor(rand() * size);
+      const c0 = Math.floor(rand() * size);
+      const r1 = r0 + dr * (w.length - 1);
+      const c1 = c0 + dc * (w.length - 1);
+      if (r1 < 0 || c1 < 0 || r1 >= size || c1 >= size) continue;
+      const ok = Array.from(w).every((ch, k) => {
+        const at = grid[(r0 + dr * k) * size + c0 + dc * k];
+        return at === "" || at === ch;
+      });
+      if (!ok) continue;
+      Array.from(w).forEach((ch, k) => grid[(r0 + dr * k) * size + c0 + dc * k] = ch);
+      break;
+    }
+  }
+  const pool = "EEEEEAAAAIIIOOOUUNNNRRRSSSTTTLLCCDDMMPPHHBGFWYKV";
+  for (let i = 0; i < grid.length; i++) if (!grid[i]) grid[i] = pool[Math.floor(rand() * pool.length)];
+  return Array.from({ length: size }, (_, r2) => grid.slice(r2 * size, (r2 + 1) * size).join(""));
 }
 class ExprError extends Error {
 }
@@ -4868,10 +5232,20 @@ const FORMULA_HELPERS = {
     const key = String(v);
     return map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : fallback;
   },
+  /** A size in bytes as people say it: "340 KB", "12.4 MB" (binary units, as the editor's asset list shows). */
+  fileSize(bytes) {
+    const n = Math.max(0, Number(bytes) || 0);
+    if (n < 1024) return `${Math.round(n)} B`;
+    if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
+    if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(n < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+    return `${(n / 1024 / 1024 / 1024).toFixed(1)} GB`;
+  },
   pad: (n, width) => {
     guardLen(width);
     return String(n).padStart(width, "0");
-  }
+  },
+  crossword: (words, size = 10) => layoutCrossword(words, size),
+  wordSearch: (words, size = 12, seed = 7) => makeWordSearch(words, size, seed)
 };
 const cache = /* @__PURE__ */ new Map();
 function compile(src) {
@@ -5783,6 +6157,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 - To show a different arrangement of an artboard on narrow or wide pages, add a variant: see [Responsive artboards](responsive).
 - Move between artboards at runtime with the **Go to artboard** action (with a transition) or \`ix.goTo('Name', 'fade')\`.
 - An artboard can also be placed inside another as an [instance](instances), like a reusable component. The **Use in** menu in the Inspector does it in one step.
+- To see what an artboard asks a learner to download, open **Download size** in its Inspector. See [Download size and lite versions](download-size).
 - To bring a design file in as an artboard, see [Importing](import).`
   },
   {
@@ -6413,7 +6788,7 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
     body: `Web elements are real HTML controls, so they work with keyboards, screen readers and forms.
 
 - **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react.
-- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test.
+- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test. To do something when Enter is pressed in a text box, use an **On key** node set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions)).
 - **Link**: text that opens a URL.
 - **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
 - **Video**: a video file or URL.
@@ -6443,6 +6818,7 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - **Enter** clicks the focused layer, **Space** clicks it when released, the same way a real button does. It runs the layer's *On pointer → Click* nodes exactly like a mouse click, with the pointer position at the layer's centre.
 - Only the layer itself is activated. A button or input inside a clickable frame does its own thing, so nothing runs twice.
 - An Enter or Space that clicked a layer, or that was pressed on a button or link, does not also run an *On key* node for the same key, so a game's "press Space" and a button's click can't both fire from one press.
+- A key an *On key* node handled does not also scroll the page, so a crossword or word search can use the arrows and Space without the course page moving behind it. Pick the grid in the node's **Only while this layer has focus** and the arrows (and, with an any-key node, Space and typing) belong to the activity only while the grid has focus; everywhere else the page scrolls as normal. Tab is never taken, so keyboard users can always leave. See [Interactions](interactions).
 - Only *On pointer → Click* can be done from a keyboard. Hover, press, release and the older drag events can't, so give those layers a click alternative. Layers made [draggable](drag-and-drop) get a keyboard way (Space, arrows, Space) of their own.
 
 ## Tab order
@@ -6786,12 +7162,13 @@ Pick a frame under **Scroll to scrub** and scrolling it moves the timeline: the 
 - **Each caption** has its words, an optional **speaker** (shown as "Dr Lee: …"), and a start and end. **Split at playhead** and **Merge with next** reshape them.
 - **Languages.** Add a track per language. With more than one the viewer gets a language menu; the transcript follows.
 - **Video layers** take captions too: select the layer and use **Captions** in its settings. They show through the video's own caption display and follow the viewer's CC button.
+- **Describing the picture.** Captions say what is heard. For what is only in the picture, see [Describe what you see](describe-what-you-see).
 
 ## What viewers see
 Captions are on to start (unless you turn **Captions on to start** off in Project settings) and the viewer's choices (on or off, size, language, sound) are remembered in their browser. The **Captions and narration** section of the Project settings sets the look: the caption box's position, size, colours and font, or **A text layer of my own** (the player fills a text variable, and **Add a caption layer** makes the layer), and whether the buttons show. If you hide them, the **Captions and sound** [node](interaction-nodes) does the same jobs from your own buttons.
 
 ## Transcript and screen readers
-The transcript is a labelled region of buttons, one per caption, with its time, the speaker and the words; the one showing is marked current. It is the way for a screen reader user to read what is said, so the caption box itself is hidden from screen readers (they would otherwise talk over the narration). Escape closes the transcript and returns focus to its button. Every viewer button works from the keyboard.
+The transcript is a labelled region of buttons, one per caption, with its time, the speaker and the words; the one showing is marked current. It is the way for a screen reader user to read what is said, so the caption box itself is hidden from screen readers (they would otherwise talk over the narration). Escape closes the transcript and returns focus to its button. Every viewer button works from the keyboard. When the timeline or a video layer has [descriptions](describe-what-you-see), the transcript lists them among the captions and is called **Transcript with descriptions**.
 
 ## Draft voice
 Tick **Read aloud (draft voice)** on a caption track and the player reads each caption aloud with a voice installed on the viewer's computer, as a stand-in until the real recording is made. It uses only voices that run on the device: a voice that sends the words to an internet service is never used, and a device with no suitable voice says nothing. Browsers cannot save speech as a file, so this cannot make a recording for you; record the narration and add it as sound.
@@ -6803,6 +7180,58 @@ A [Steps](steps) timeline can carry sound and captions too: Next plays the narra
 - Sound and captions belong to a timeline, so they stop with the artboard. An artboard shown inside another (an instance) brings its own.
 - Exported files and share links carry the audio inside them, so a long recording makes a larger file.
 - The timeline length is not changed by captions; adding a sound makes the timeline at least as long as the sound.`
+  },
+  {
+    id: "describe-what-you-see",
+    title: "Describe what you see",
+    group: "Motion",
+    summary: "Add short descriptions of what is on screen to a timeline or a video, read by the viewer's own voice in the gaps, and listed with the captions in one transcript.",
+    keywords: "audio description described video describe picture blind low vision screen reader transcript with descriptions wcag 1.2.5 ducking voice narration accessibility visual",
+    body: `Captions say what is **heard**. Many videos and animations also carry information only in the **picture**: a graph that rises, a diagram that builds, a gesture, text on a slide. People who cannot see it miss that part. A **description track** is short timed sentences saying what is on screen when it matters.
+
+**This is a cheaper aid, not a recorded described version.** The words are read by a voice already on the viewer's device, so it sounds like a screen reader, not a person. Where a course is formally required to have an audio described version, record one and use this as well, or instead mark the accessibility finding reviewed. The transcript with descriptions below always works, with or without a voice.
+
+## How it works for the viewer
+- The description cues are never drawn. When the viewer has **Descriptions** on, a voice on their device reads each one as the timeline (or the video) reaches it, in the gap where you put it, and the sound is **turned down** while it speaks, then back up.
+- The **Descriptions** button sits with the caption buttons. It only shows when a voice on the device can read one, and it starts **off** unless you tick **Descriptions on to start** in Project settings (Captions and narration). The viewer's own choice is remembered in their browser.
+- Pausing, jumping to another point or turning descriptions off stops the voice. A description is read once as the media reaches it; jump back and it is read again.
+- If a description is still being read when the next one comes up, it is not cut off: the next waits (a few at most).
+- Only voices that run on the device are used. A voice that sends the words to an internet service is never used, and nothing is recorded.
+- The viewer's sound button also mutes the voice, and the read-aloud speed they chose applies.
+
+## Worked example: describe a lecture clip
+1. Caption the clip first (see [Narration, captions and transcript](captions)) so you can see where the speech is and where it is not.
+2. On a **timeline**: in the **Descriptions** row choose **New description at the playhead**, then type one sentence in **Text**. For a **video layer**: select it and use **Add one** under **Descriptions (what is on screen)** in its settings, then set **From**, **To** and the text.
+3. Put each one in a **gap** between speech. A description that overlaps a caption is drawn with a dashed amber edge in the lane (and flagged in the layer's settings) because the voice would talk over the speaker.
+4. Press **Preview**, turn **Descriptions** on and play it. Listen on a phone too: a synthetic voice over the speaker is the thing to check.
+5. Open the **Transcript with descriptions** and read it start to finish. If it makes sense without the picture, the descriptions are doing their job.
+
+## Describing well
+- Say what a person who could see would **need** to follow, not everything. Do not repeat what the narration already says.
+- Present tense, plain words: "A line graph appears. Hours of study are on the side and weeks along the bottom. The line climbs steadily."
+- Read out text that appears on screen and matters (a title, a formula, a label).
+- Name people the way the speech does. Do not add opinions ("a beautiful chart").
+- Fit the gap: about two or three words a second, so ten words need roughly four seconds. The voice speeds up a little to fit and never above a clear pace.
+- Describe a diagram once, in the order you would explain it. For a long or dense one, also put the full description in the page's text.
+
+## Timelines and video layers
+- **Timelines.** The **Descriptions** row sits under **Captions**. It works like captions: lanes of cues you drag and retime, one track per language, **Import WebVTT or SRT…**, **Export WebVTT**, **Export SRT** and **Add a language…**. The viewer's caption language picks the descriptions in that language when there is one.
+- **Video layers.** In the layer's settings, **Descriptions (what is on screen)**: add, retime, import or export a WebVTT file made for this video, and set the **Language** (it picks the voice). Times are seconds from the start of the video. The video is turned down while a description is read, and put back to the level the viewer had.
+- A second cue track is a second thing to keep in step. When you replace a video or re-time a timeline, check the descriptions again.
+
+## Transcript with descriptions
+With descriptions on the page the viewer's **Transcript** button opens **Transcript with descriptions**: the captions and the descriptions in one list in time order (a description comes first when it starts with the words), each line a button that jumps there. Each description line says **Description** in its text, so a screen reader or a braille display tells it apart, and a tick box hides the descriptions to read just what was said. It works when there is no voice, and it is ordinary page text, so it can be searched. A video layer with descriptions gets its own group in the transcript with its captions and descriptions together.
+
+## Your own buttons
+If you hide the viewer buttons in Project settings, the **Captions and sound** [node](interaction-nodes) has **Descriptions: flip**, **on** and **off**.
+
+## Not done yet
+Reading **while the video waits** (it pauses itself for a description that does not fit a gap) is not built. For now keep descriptions short enough to fit the gaps, or leave a longer pause in the video.
+
+## Good to know
+- The [accessibility check](accessibility-checker) asks you to look at a video without captions and points here for the pictures (WCAG 1.2.5). It cannot tell whether a description is accurate.
+- Exported files and share links carry the descriptions inside them.
+- The **Described video** starter in the Templates tab has a video layer with the track wired up and a one-page checklist on describing well.`
   },
   {
     id: "read-aloud",
@@ -6861,7 +7290,7 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
 
 **On pointer** reacts to a click, double click, press, release, hover start and end, the pointer **moving over** a layer, and **dragging** it: *Drag starts* (once the pointer has moved a few pixels with the button held), *Dragging* (on every move after that, even outside the layer) and *Drag ends*. Moves and drags give \`event.x\` and \`event.y\` (artboard coordinates) and \`event.stepX\`, \`event.stepY\` (movement since the last event); drags also give \`event.dx\` and \`event.dy\` (movement since the press), so *Set property* with \`x\` and an expression like \`start + event.dx\` moves a layer with the pointer.
 
-**On key** reacts to a key going down or up anywhere on the page (the page itself, not only the artboard). Leave **Key** empty for any key, or write a name such as \`ArrowLeft\`, \`Enter\`, \`a\` or \`Space\`. Tick **Shift held**, **Ctrl held**, **Alt held** or **Meta held** to ask for a chord; they must all be down. A key held down fires once, unless **Fire again while held** is ticked. \`event.key\`, \`event.code\` and \`event.shift\`, \`event.ctrl\`, \`event.alt\`, \`event.meta\` say what was pressed. Pick a layer in **Only while this layer has focus** to hear the key only while that layer, or a layer inside it, has keyboard focus (the layer becomes a tab stop, and you can use the [Focus layer node](interaction-nodes) to move the focus there); leave it empty to react wherever the focus is.
+**On key** reacts to a key going down or up anywhere on the page (the page itself, not only the artboard). Leave **Key** empty for any key, or write a name such as \`ArrowLeft\`, \`Enter\`, \`a\` or \`Space\`. Tick **Shift held**, **Ctrl held**, **Alt held** or **Meta held** to ask for a chord; they must all be down. A key held down fires once, unless **Fire again while held** is ticked. \`event.key\`, \`event.code\` and \`event.shift\`, \`event.ctrl\`, \`event.alt\`, \`event.meta\` say what was pressed. Pick a layer in **Only while this layer has focus** to hear the key only while that layer, or a layer inside it, has keyboard focus (the layer becomes a tab stop, and you can use the [Focus layer node](interaction-nodes) to move the focus there); leave it empty to react wherever the focus is. Keys typed into a text box or text area are left alone, so typing never sets a flow off. To run something when the learner presses **Enter in a box** (an answer box that checks, a search that runs), set **Key** to \`Enter\`, pick the box (or the frame around it) in **Only while this layer has focus**, and tick **Also while typing in a text box**. A key that runs a flow is not also used by the browser: an arrow key, <kbd>Space</kbd>, Page Up and Down, Home, End, Enter, Backspace or a letter that an *On key* node handled does not also scroll the page, so a game or a grid can use them. Tab, Escape, the function keys and anything held with Ctrl, Alt or Meta are never taken, and an *On key* with no key and no layer picked (it hears everything) takes nothing. Tick **Let the browser act too** on a node that should leave the key to the page as well.
 
 **Before activity loads** and **On activity load** run once each time the activity is opened, unlike **On start**, which runs every time an artboard is shown. *Before activity loads* runs first, before anything is on screen, and the activity waits for everything it sets off to finish (up to 10 seconds) before it shows: the place for a **Load user data** or a **Set variable** that the first frame should already have. *On activity load* runs once the activity is showing, just before the first *On start*. Both fire on the artboard the activity opens on, so put them in that artboard's graph. **Start over** doesn't run them again.
 
@@ -7184,6 +7613,9 @@ Choice variables show as a dropdown wherever you set them, so you can't type a v
 ## Lists
 A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Set variable**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. In scripts assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
 
+## Worked out from a formula
+Instead of typing a starting value, give a variable a **formula** (the line under its value in the Variables tab): an [expression](expressions) over the variables above it in the list. The player works it out each time the project starts (and after **Start over**), and the canvas preview works it out too, so what you see while editing follows the variables it depends on. The typed value is only what it falls back to if the formula fails. It is still an ordinary variable once it plays, so Set variable can change it. The branded Crossword and Word search starters use this: you edit a plain list of words (and clues) and the grid is laid out from it, with \`crossword(words, 10)\` and \`wordSearch(words, 12)\` (see [Expressions](expressions)). Clear the formula to type or lay the value out yourself.
+
 ## Different values for different courses
 One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
 
@@ -7233,6 +7665,8 @@ These work in every expression:
 | \`clamp(v, min, max)\` | A number held between two limits |
 | \`lookup(v, {a: 1, b: 2}, fallback)\` | The value stored under a key |
 | \`pad(n, width)\` | Zero padding: \`pad(7, 3)\` is \`007\` |
+| \`crossword(words, size)\` | A crossword laid out from a list of \`{answer, clue}\` rows (or plain words), inside a \`size\` by \`size\` grid. Each row comes back with \`row\`, \`col\` (its first letter, from 0 at the top left) and \`down\` added, in reading order. Words that are too long, or that cannot cross the others, are left out. The same words always make the same puzzle. Best used as a variable's [formula](variables) |
+| \`wordSearch(words, size, seed)\` | A \`size\` by \`size\` letter grid hiding the words (across, down, diagonal and backwards), one string per row. The same words and seed always make the same grid |
 | \`enums.name\` | The options of a choice variable |
 | \`instanceInput(layer, name)\` | The current value of a variable inside an [instance](instances) layer (by name or id) |
 | \`artboard.width\`, \`artboard.height\` | The artboard's size (and \`artboard.name\`), in the same units as a layer's X and Y, whatever size the player is shown at |
@@ -7620,7 +8054,7 @@ Click a finding to **select the layer** (and open its artboard). The right side 
 | **No way to pause moving content** | An autoplaying timeline that loops or runs over 5 seconds, with no *Control timeline* node set to pause, stop or toggle it. |
 | **Video starts by itself** | Autoplay video with sound or without controls. Also a timeline that plays sound on its own when the viewer buttons are hidden and nothing mutes or pauses it. |
 | **Flashing** | A timeline that makes a large layer (a tenth of the artboard or more) go bright and dark more than three times in a second. |
-| **Video and narration need captions** | Narration on a timeline with no captions is an issue, and captions that cover under half of it a warning (music and effects are left alone; see [Narration, captions and transcript](captions)). A video layer with imported captions passes; one without is listed to look at, since a program cannot tell if the file has them. |
+| **Video and narration need captions** | Narration on a timeline with no captions is an issue, and captions that cover under half of it a warning (music and effects are left alone; see [Narration, captions and transcript](captions)). A video layer with imported captions passes; one without is listed to look at, since a program cannot tell if the file has them, and it points you at [Describe what you see](describe-what-you-see) for the pictures (WCAG 1.2.5). Descriptions that run while a caption is showing, so the voice would talk over the speech, are a warning. |
 | **Page title** | The project has no title. |
 
 ### How contrast is worked out
@@ -7653,7 +8087,7 @@ For a finding you have looked at and accepted ("it is decoration", "the captions
 
 - Whether text is right: reading order, headings, plain language, the page language.
 - Anything a script or code node does, and embedded HTML or pages.
-- Whether a video has captions or audio description.
+- Whether a video has captions or audio description in the file itself, or whether a description says what is really on screen. It only sees the captions and descriptions you added here.
 - Colour as the only way to tell things apart, and text that is part of a picture.
 - Flashing that does not come from a timeline.
 - Tab order and focus rings. Layer order sets the Tab order.
@@ -7845,6 +8279,54 @@ Add a **Record** action node (Interactions tab) anywhere in a flow: give it a **
 - **Update to the latest version** in Share link after changing record settings or adding Record nodes, so the link plays the new version.`
   },
   {
+    id: "sensors",
+    title: "Microphone, camera and photos",
+    group: "Interactivity",
+    summary: "Record a voice, show the camera, take or choose a photo: declare it in Project settings, build the plain version, and know what learners are asked and what the page needs.",
+    keywords: "microphone mic camera webcam photo picture record recording voice audio video capture sensor consent permission privacy iframe allow download level speaking opt out do not use my microphone or camera accessibility alternative preview denied blocked device",
+    body: `A project can listen through the learner's **microphone**, show their **camera**, or take or choose a **photo**. It never touches a device itself. The page it plays in does, behind one plain consent screen and a recording bar the project cannot hide, and tells the project only what it needs.
+
+## Turn it on
+In the Project section (click an empty part of the canvas) open **Microphone and camera** and tick what the project uses. Nothing undeclared works. Add one sentence for **What it is used for** ("record your answer to the speaking question"), and a **Longest recording** if the default (120 seconds of sound, 60 of video) is too long. The box under it shows exactly what learners are asked, made from your choices.
+
+**Update to the latest version** in [Share link](export#share-link) after changing these: the page reads what you declared when the link was last updated, not what the project says now.
+
+## What learners see
+- **One consent screen** the first time something is used in a visit. It names what is used, what for, that recordings stay in the page on the device and are not saved on a server, and what they can do instead. Its buttons are **Continue**, **Not now** and **Do not use my microphone or camera**.
+- **A recording bar** at the top centre of the page, over the project (leave a little room there), whenever a device is live, with the level, a timer and a **Stop** that always works. Recording starts only after a real tap, stops by itself at the length limit, and the device is let go the moment it ends.
+- **Plain messages** when it cannot work: the browser said no, there is no device, another app is using it, or the course page does not allow it.
+- **Do not use my microphone or camera** is remembered in the learner's browser. Every project then reads \`off\` and shows its plain version. Only the learner can turn it back on, from the button that stays at the bottom left. Browsers keep this per course site, so it holds for that site until they clear their data.
+
+## Build the plain version first
+Learners who cannot, or would rather not, use a microphone or camera must be able to finish. Read the state in a condition, a binding or a text layer:
+- \`microphone\` and \`camera\` are \`unavailable\` (cannot, here), \`denied\` (they or their browser said no), \`ready\` or \`off\` (they chose not to use them).
+- \`photos\` is the same for the photo picker.
+- \`mediaMessage\` is the plain sentence to show when something is not ready.
+- \`micLevel\` (0 to 1) and \`recording\` (true while recording), \`recordingSeconds\`, and \`recordings.<name>.state\` (\`empty\`, \`recording\`, \`ready\`, \`playing\`), \`.seconds\` and \`.hasRecording\` for each recording, for meters, timers and buttons.
+
+The Accessibility tab has a check for this: a project that uses a sensor needs a click, key or typed way to reach the same finish (Report result, Go to artboard, Steps, Check answer or the completion variable) that does not go through the sensor. The check passes when a button or typed answer finishes without it, including carrying on from a node's **Could not start** output. If there truly cannot be an equal way (an assessment of speaking, say), say why in **No equal way to finish**: learners are told, and the check becomes a note for you to review. The check finds that there is another way, not that it is a good one.
+
+## Nodes
+All are in the Interactions palette, and described there.
+- **Start recording** (a name for the recording, sound or video, a longest time) continues from **Recording** or **Could not start**. A project can keep several recordings, each under its own name.
+- **Stop recording**, **Discard recording**, **Play recording** (sound plays through the project's own sound, so the viewer's sound button applies; video plays in the layer you choose) and **Download recording** (offers a file, after a tap: it is the only way a recording leaves memory).
+- **Camera preview** shows the camera live in a layer's place. The page draws it over the project, so the project never sees the camera's pixels.
+- **Take or choose a photo** puts a picture, scaled to at most 1600 px on the long side, into an image asset. Every image layer that uses the asset shows it. From the device's photo picker (with the front or back camera if the device offers it) or a still from the live preview.
+- **Download a file** saves text you build (a report, a CSV) after a tap.
+- **Offer: do not use my microphone or camera** asks the learner, in the page's own screen, whether to stop using them for good. Put it on a "Use the keyboard instead" button. Only the learner decides.
+- **On microphone or camera** fires when a recording starts, a recording is ready (\`event.reason\` is \`stopped\`, \`limit\` or \`device-lost\`: the learner can press Stop on the bar too), something could not start (\`event.problem\` and \`event.message\`), the state changed, a video finished playing, or a photo arrived.
+
+## Try it
+**Preview** has a pretend microphone and camera, because the real ones need the page the project is shared in. It makes a made-up level and a short tone, and a sample picture. The **Microphone and camera** menu above the preview makes it fail the ways a real one does (denied, no device, blocked by the course page, the learner chose not to use them), so you can build and check the plain version. A small "Simulated" note shows while it records. Try the real devices from the **Link for StudyDesk** on the page you will use.
+
+## Where it works, and what it needs
+- Play it from the **Link for StudyDesk** (\`/interactives/play/<token>\`). The plain share link (\`/s/<token>\`) cannot use a microphone or camera: its sandbox has no origin, and the browser refuses any device to such a page, so every node there goes down its **Could not start** output.
+- The StudyDesk page that holds the link's iframe needs **allow="microphone; camera"** on that iframe, or the browser refuses the page too. Without it learners are told, in plain words, that the course page does not allow it. Tell whoever builds the page. Another learning system that launches the project over LTI 1.3 decides its own iframe attributes and may not allow it at all.
+- It needs a secure page (https) and a recent Chrome, Edge, Firefox or Safari. The Moodle App and in-app browsers may not allow a microphone in an embedded page: test there before relying on it.
+- Recordings are kept in memory, in the page, so they are gone when the learner leaves or reloads. Say so, and offer **Download recording**. Nothing is uploaded or stored on a server, and the Insights records never carry audio, video, photos or what was said. The project's own code can use a recording it plays, so do not put code you do not trust in a project that uses a microphone.
+- For anything marked, use the Moodle assignment's own recording or upload: this does not submit a recording anywhere.`
+  },
+  {
     id: "public-interface",
     title: "Public interface: inputs and outputs for developers",
     group: "Import and export",
@@ -7920,6 +8402,50 @@ Click an empty part of the canvas, or an artboard's name, to see the **Project**
 | Credits | Whether learners get a **Credits** button, and whether exported and shared pages carry the attributions list. The entries are in the **Attributions** tab. See [Attributions and references](attributions) |
 | Start artboard | Shown first in the player: set with **Make start artboard** on an artboard |
 | Fonts | The fonts the project loads. **Add a Google font…** is a search box over every Google font (type, then <kbd>Enter</kbd> or click; the chips narrow it by Sans, Serif, Display, Handwriting or Mono), or upload font files in the **Assets** panel. New projects start with Open Sans. Choosing a font for a text layer adds it here by itself |`
+  },
+  {
+    id: "download-size",
+    title: "Download size and lite versions",
+    group: "Interactivity",
+    summary: "What each artboard asks a learner to download, how to show it to them, and how to offer a lesson as video, audio only and text only.",
+    keywords: "download size weight bandwidth lite low data saver metered mobile slow connection audio only text only version video size megabytes mb file size lazy loading transcript saveData lowBandwidth downloadSize fileSize",
+    body: `Many learners study on mobile data or a shared connection. This page is about showing them what a lesson costs before they commit, and about offering a lighter way to take it.
+
+## Seeing what an artboard weighs
+Select an artboard and open **Download size** in the Inspector. The heading says what this artboard needs in total. Open it to see its heaviest files, and a bar for every artboard in the project so you can compare the versions of a lesson.
+
+- Sizes are the ones the project already stores for each file. While [Optimise output](project-settings) is on and the lighter copy of a picture has been made, its size is used.
+- A file counts once however many layers use it. An artboard shown inside another as an [instance](instances) counts what that artboard needs. A file that another artboard only links to with **Go to artboard** belongs to that artboard.
+- Fonts and data files load for every artboard, so they are listed apart and left out of each artboard's number.
+
+## What the player loads, and when
+The player draws one artboard at a time, and an artboard the learner has not opened asks for nothing: no pictures, no video, no sound. When they get to it, it loads everything it has. Every timeline's sound is fetched on arrival, started or not, so the first play does not wait.
+
+- **Hidden layers still load.** A layer with Visible off is not drawn, but a video in it still starts loading (it may be carrying the sound for an audio version), and an instance layer still loads its artboard. To keep a version's files off the wire, put the version on its own artboard and go to it. Do not hide layers.
+- Fonts and data sources are the project's, so they load at the start whichever artboard shows.
+- **A single HTML file, a share link and the Link for StudyDesk carry every file inside the page.** All the versions arrive in the first download, so the choice saves memory and playing, not the download. Only a copy whose files are hosted separately loads just the chosen version. The lesson tells the learner which case they are in, with the \`assetsEmbedded\` name below.
+
+## Showing a size to learners
+These names work in any expression, text template or binding. A variable with the same name wins.
+- **downloadSize("Video lesson")**: the bytes of the files that artboard needs. Give several names to add up what a version needs (each file once). With no name it means the artboard that is showing.
+- **fileSize(bytes)**: a size as people say it, such as "340 KB" or "12 MB".
+- **saveData**: true when the browser says the learner has turned on Data Saver.
+- **connectionType**: \`4g\`, \`3g\`, \`2g\` or \`slow-2g\`, or empty. Only some browsers say; Safari and Firefox say nothing.
+- **lowBandwidth**: true when Data Saver is on, or the connection is 3g or slower.
+- **assetsEmbedded**: true when the files travel inside the page, as in a share link.
+
+For example, a text layer can read \`{fileSize(downloadSize("Video lesson"))}\`. The hints are only hints: use them to mark a card, never to choose for the learner.
+
+## The Lite lesson starter
+Under **Listen, watch and capture** in the branded starter packs, **Lite lesson** is a lesson in three weights. The learner picks **Video**, **Audio only** or **Text only**, each card showing what that version weighs. The choice is saved with **Save user data** and a returning learner goes straight to it, with **Change version** on every page to come back. On a slow connection or with Data Saver on, the lighter card is marked **Suggested for your connection**; nothing is chosen for them.
+
+All three versions show one transcript, kept in the **transcript** variable, so they cannot drift apart, and all three finish on the same **Done** page, which is the project's completion point, so the result is recorded the same whichever version was used. Text only loads no video and no sound. Audio only loads no video.
+
+What the starter cannot do for you is make the three versions. The soundtrack must make sense with no picture: "as you can see here" fails for someone who is only listening. Keep the transcript and the key images in step with the video when you change it.
+
+## Good to know
+- Test the lighter versions on a throttled connection in your browser's developer tools before you tell anyone they are light.
+- If you rename a version's artboard, change its name in the size line on the Choose page.`
   },
   // ---------------------------------------------------------------- import/export
   {
@@ -8096,7 +8622,7 @@ After an import, a report lists anything that couldn't be carried over exactly. 
 
 | Export | Gives you |
 |---|---|
-| Single HTML file | One file with the player, the project and every asset (big pictures as their [optimised copies](export#optimised-pictures)). Upload or embed it anywhere. Google fonts are copied into the file, so opening it never calls Google (if a font can't be fetched when you export, a message says so and that font loads from Google instead). |
+| Single HTML file | One file with the player, the project and every asset (big pictures as their [optimised copies](export#optimised-pictures)). Every file is inside it, so a lesson offered in lighter versions still sends all of them in the first download: see [Download size](download-size#what-the-player-loads-and-when). Upload or embed it anywhere. Google fonts are copied into the file, so opening it never calls Google (if a font can't be fetched when you export, a message says so and that font loads from Google instead). |
 | Project package (${PACKAGE_EXTENSION}) | The whole project with assets at full size, to re-import or play with the player library |
 | Project JSON | The document only, without asset files |
 | Public interface reference…, TypeScript definitions (.d.ts) | What a page that embeds the project can set, read and hear, as a reference page and typed names. See [Public interface](public-interface). These three exports ask first when the list no longer matches the project |
@@ -8166,6 +8692,8 @@ A share link carries big pictures as their [optimised copies](export#optimised-p
 **Link for StudyDesk** plays the same project but keeps each signed-in learner's score, completion and progress. Use it in StudyDesk when you set a score or tick **Remember** on variables, and see [Results and progress](results). **Results…** shows how learners did.
 
 That link opens the **learner page**: a small page around your project that knows who the learner is from their StudyDesk session. It gives the project the learner's saved progress, keeps their results, and, when **Learner records** is on, passes on the activity that [Insights](insights) counts. Put this link in your StudyDesk page, not the plain one. A learner who isn't signed in just plays it, and their progress stays in their own browser. **Allow remix**, under the link, adds a **Remix this** button for signed-in staff who open it, which copies the project into their own projects: see [Templates, examples and remix](templates#allow-remix-on-a-share-link).
+
+A project that uses a microphone, camera or photos (see [Microphone, camera and photos](sensors)) only works through the **Link for StudyDesk**, and the iframe that holds that link on the StudyDesk page needs \`allow="microphone; camera"\`. Update the link after changing what the project declares.
 
 For a walk-through, see [Tutorial 5](tutorial-publish).`
   },
