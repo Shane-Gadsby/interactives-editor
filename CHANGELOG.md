@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Fit text to box** on text layers, buttons and links: the font is the largest size between Smallest and Largest (either can be 'any') at which the text fits the box, re-fitted when the text, box, font or bound values change, the same on the canvas and the played page.
 - **Expression suggestions as you type** in every expression field (bindings, graph nodes, variable formulas, `{...}` in text): variables with their current values, `context` and its fields, data sources, layer names inside `layer("`, `self.` and other members, built-in names and helper functions with their signatures. Arrows, Enter or Tab, Escape.
 - **Starters open laid out** in order in a tidy grid (responsive variants beside their page), and **Tidy up artboards** (Layers panel, canvas right-click) does the same for any project in one undo step.
 - **Brand-locked layers are really locked**: not selectable or draggable on the canvas or in the Layers panel (F9 still lifts it), and projects made before this are locked when they open.
