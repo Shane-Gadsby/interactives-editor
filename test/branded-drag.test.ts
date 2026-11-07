@@ -57,8 +57,8 @@ const play = (project: Project, at?: Artboard) => {
 };
 
 describe('the drag set', () => {
-  it('has the four starters, keyed drag/...', () => {
-    expect(DRAG.map((s) => s.key)).toEqual(['drag/label-the-diagram', 'drag/sort-into-groups', 'drag/put-in-order', 'drag/interactive-timeline']);
+  it('has the first four starters, keyed drag/... (more follow, see branded-drag-2)', () => {
+    expect(DRAG.slice(0, 4).map((s) => s.key)).toEqual(['drag/label-the-diagram', 'drag/sort-into-groups', 'drag/put-in-order', 'drag/interactive-timeline']);
     for (const s of DRAG) {
       expect(s.description.length).toBeGreaterThan(40);
       expect(s.description).not.toMatch(/—/);
