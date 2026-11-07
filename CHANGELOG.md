@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Polish**: a theme-linked colour shows as a compact one-line chip (each theme's value in its tooltip); label columns line up in the Layer, corner radius, question and project sections; long labels stack over their box; browser-drawn selects and text boxes match the rest; text on gold rows is the palette's dark grey.
 - **Spelling test voice**: with Spelling on, a question's **Voice for the word** makes the word's audio with a synthesised voice on the server while you edit (eight British voices, speed, preview, "Say it like" respelling, an optional sentence, one word or all of them), saved as ordinary audio so the shared page still has no word in it. The voice model (132 MB, Apache-2.0) downloads once on the first **Set up the voice**. A labelled **practice mode** has the learner's own device say the word instead, and turns off server marking because the word is then in the page.
 - Canvas: **Ctrl/Cmd+click** adds a layer to the selection (or takes it out), like Shift.
 - **Fit text to box** on text layers, buttons and links: the font is the largest size between Smallest and Largest (either can be 'any') at which the text fits the box, re-fitted when the text, box, font or bound values change, the same on the canvas and the played page.
