@@ -1979,7 +1979,7 @@ function TextEditor({ ab, id, zoom, panX, panY, bounds }: { ab: Artboard; id: st
 }
 
 /** In-place editor for text layers: a contenteditable with one span per run, so ranges can be styled (the floating toolbar, Ctrl/Cmd+B, I, U, K, Shift+X; or the inspector). */
-function RichTextEditor({ node: n, ab, zoom, panX, panY, bounds }: { node: Extract<SceneNode, { type: 'text' }>; ab: Artboard; zoom: number; panX: number; panY: number; bounds: { width: number; height: number } }) {
+export function RichTextEditor({ node: n, ab, zoom, panX, panY, bounds }: { node: Extract<SceneNode, { type: 'text' }>; ab: Artboard; zoom: number; panX: number; panY: number; bounds: { width: number; height: number } }) {
   const id = n.id;
   const ref = useRef<HTMLDivElement>(null);
   const painted = useRef<TextRun[]>([]);
@@ -2015,7 +2015,8 @@ function RichTextEditor({ node: n, ab, zoom, panX, panY, bounds }: { node: Extra
     if (!el || sigOf(n) === ownSig.current) return;
     paint();
     const sel = store().get().textSelection;
-    if (sel && sel.id === id && (document.activeElement === el || document.activeElement?.closest('.text-toolbar, .palette-pop'))) setSelectionOffsets(el, sel.start, sel.end);
+    //only when the text has the focus: with it in the toolbar, setting the selection would pull the focus back into the text (the toolbar draws the remembered selection itself)
+    if (sel && sel.id === id && document.activeElement === el) setSelectionOffsets(el, sel.start, sel.end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [n.text, n.runs, zoom]);
   useEffect(() => {
