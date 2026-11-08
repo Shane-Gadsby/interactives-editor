@@ -99,15 +99,23 @@ describe('sign practice', { timeout: 30000 }, () => {
     }
   });
 
-  it('keeps the model clips on one artboard, one Video layer per sign, and every page shows it as an instance', () => {
+  it('keeps the model clip on one artboard as one Video layer whose asset follows the sign in view, and every page shows it as an instance', () => {
     const p = project();
     const clips = board(p, 'Model clips');
     const videos = clips.children.filter((n) => n.type === 'video') as VideoNode[];
-    expect(videos).toHaveLength(5);
+    expect(videos).toHaveLength(1);
     for (const v of videos) {
       expect(v.speedControl && v.frameStepControl).toBe(true);
       expect(v.muted).toBe(true);
+      expect(v.bindings?.assetId).toBe('signs[current].clip');
+      expect(v.emptyText).toMatch(/No model clip/);
     }
+    //each sign names its own clip, an asset of the project
+    const signs = JSON.parse(String(p.variables.find((x) => x.name === 'signs')!.initial)) as { clip: string }[];
+    expect(signs).toHaveLength(5);
+    for (const sgn of signs) expect(p.assets.some((a) => a.id === sgn.clip)).toBe(true);
+    //no hand-made placeholder frames
+    expect(clips.children.some((n) => n.type === 'frame')).toBe(false);
     for (const name of ['Watch and choose', 'Try the sign', 'Review your take']) {
       for (const page of [name, `${name} (portrait)`]) {
         const inst = layer(p, page, 'Model clip') as unknown as { type: string; artboardId: string };
@@ -152,20 +160,45 @@ describe('sign practice', { timeout: 30000 }, () => {
   describe('Watch and choose, the half that needs no camera', () => {
     const W = 'Watch and choose';
 
-    it('shows the placeholder for the sign in view and the clip layer for it only', async () => {
+    it('shows one video for the sign in view, and its clip changes with the sign (the position and playing go back to the start)', async () => {
       const p = project();
       const player = await open(p, W);
       const inst = el(layer(p, W, 'Model clip').id);
-      const videos = [...inst.querySelectorAll('video')];
-      expect(videos).toHaveLength(5);
+      const videos = [...inst.querySelectorAll('video')] as HTMLVideoElement[];
+      expect(videos).toHaveLength(1);
       expect(textOf(layer(p, W, 'Sign counter').id)).toBe('Sign 1 of 5');
+      const signs = player.getVariable('signs') as { clip: string }[];
+      const clipOf = (i: number) => p.assets.find((a) => a.id === signs[i].clip)!;
+      const first = videos[0].getAttribute('src');
+      expect(first).toBeTruthy();
+      //play a little, then answer and go on: the same video now has the next sign's file, and starts from the top
+      player.setVariable('clipTime', 4);
+      player.setVariable('clipPlaying', true);
+      await settle(player, 50);
+      await click(`${layer(p, W, 'Choice').id}~0`);
+      await click(layer(p, W, 'Next').id, 300);
+      await settle(player, 100);
+      expect(player.getVariable('current')).toBe(1);
+      expect(inst.querySelectorAll('video')).toHaveLength(1);
+      expect(videos[0].getAttribute('src')).not.toBe(first);
+      expect(player.getVariable('clipTime')).toBe(0);
+      expect(player.getVariable('clipPlaying')).toBe(false);
+      expect(clipOf(1).id).not.toBe(clipOf(0).id);
       player.destroy();
+    });
+
+    it('works the three choices out live from the sign in view, so no step sets them', () => {
+      const p = project();
+      const choices = p.variables.find((x) => x.name === 'choices')!;
+      expect(choices.live).toBe(true);
+      for (const ab of p.artboards) for (const n of ab.logic.nodes) if (n.kind === 'action.setVariable') expect((n.params as { variable: string }).variable).not.toBe(choices.id);
     });
 
     it('half speed, normal speed and loop drive the video layers inside the instance', async () => {
       const p = project();
       const player = await open(p, W);
       const videos = [...el(layer(p, W, 'Model clip').id).querySelectorAll('video')] as HTMLVideoElement[];
+      expect(videos).toHaveLength(1);
       await click(layer(p, W, 'Half speed').id);
       await settle(player, 50);
       expect(player.getVariable('clipRate')).toBe(0.5);
