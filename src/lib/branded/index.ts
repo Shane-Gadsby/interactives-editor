@@ -1,3 +1,4 @@
+import { migrateInputVariables } from 'interactives-player';
 /**
  * Every branded starter, in the order the Templates tab shows them: by set, then as each set file lists them.
  */
@@ -29,6 +30,8 @@ export function projectFromBrandedStarter(s: BrandedStarter, colourway: Colourwa
   const { project, checklist } = s.build(colourway);
   project.name = name || s.name;
   //graphs laid out the way the Interactions tab's Tidy up does it, whatever order the starter built them in
+  //an input's old Variable setting becomes a two-way binding now, not on the next load
+  migrateInputVariables(project);
   finishGraphs(project);
   //auto layout frames laid out in the document, as the editor does after an edit
   settleLayout(project);

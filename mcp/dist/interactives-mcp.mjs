@@ -4234,7 +4234,6 @@ const FACTORIES = {
     stroke: { paint: { type: "solid", color: LIGHT_LOOK.border }, width: 1 },
     inputType: "text",
     placeholder: "Type here",
-    variableId: null,
     value: "",
     cornerRadius: 6,
     width: 220,
@@ -6595,14 +6594,16 @@ Settings for the selection. The search box at the top finds a property by name o
 **Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility**, **Insights**, **Public interface**, **Themes** and **Usage**. A project made from a template also has a **Checklist** tab. Click a tab to open it, click the open one again to fold the bottom panel down to its tabs, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker), [Insights](insights), [Public interface](public-interface), [Themes](themes), [Usage](usage) and [Templates](templates#use-a-template).
 
 ## Arranging the panels
-Every panel can go anywhere: the left, right or bottom area, or a window of its own floating over the canvas. Drag a panel by its tab.
+Every panel can go anywhere: the left, right, bottom or top area, or a window of its own floating over the canvas. Drag a panel by its tab.
 - Onto another area's tabs: it docks there, in the gap you drop it in (a line shows where). Drag along its own tabs to change their order.
-- Onto the canvas: it opens in its own window there (an outline shows where). While you drag, **Dock left**, **Dock right** and **Dock at the bottom** strips appear on the canvas's edges, so an area can be docked into even when nothing is in it yet.
+- Onto the canvas: it opens in its own window there (an outline shows where). While you drag, **Dock left**, **Dock right**, **Dock at the bottom** and **Dock at the top** strips appear on the canvas's edges, so an area can be docked into even when nothing is in it yet.
 - Onto a floating window's tabs: it joins that window.
 
 A floating window moves by its title bar and resizes from its bottom-right corner. Its **×** closes it and sends its panels back to where they started. An area nothing is docked in takes no room.
 
-Right-click a tab (or press Shift+F10 on it) for **Dock on the left / right / at the bottom**, **Float in its own window**, **Help for this panel** and **Reset panel layout** (everything back where it started). The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title), and drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right** and **Dock at the bottom** strips show, labelled for the tools, and the one you are over lights up. Along the bottom it becomes a strip across the page with its groups side by side, above the bottom panels. It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is. Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom** or **Floating**. Saved workspaces remember where the tool bar was. The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
+The **top** area sits under the header and above the canvas and its rulers, across the page, and takes no height until a panel is docked in it (so nothing looks different until you use it). Drag its bottom edge (or focus the edge and use the arrow keys) to resize it, double-click the edge to reset its height, click the open tab or the arrow at the end of its tabs to fold it down to its tabs, and click a tab to open it again. Its height and whether it is folded are kept with the layout, so saved workspaces carry them too. Old layouts and workspaces open the same as before, with an empty top area. The canvas gets whatever room is left, and the rulers stay on the canvas.
+
+Right-click a tab (or press Shift+F10 on it) for **Dock on the left / right / at the bottom / at the top**, **Float in its own window**, **Help for this panel** and **Reset panel layout** (everything back where it started). The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title), and drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right**, **Dock at the bottom** and **Dock at the top** strips show, labelled for the tools, and the one you are over lights up. Along the bottom or the top it becomes a strip across the page with its groups side by side (at the top it sits under the header, over the top panels). It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is. Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom**, **Dock at the top** or **Floating**. Saved workspaces remember where the tool bar was. The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
 **Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. The **Debug** panel (on by default) shows:
@@ -6653,7 +6654,7 @@ Open **Preferences** from the gear in the top bar (or on the projects page). The
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette (the same colours as the rest of the Toolbox): its greys, its blue for selection and focus, and UniSQ gold on primary buttons, the open tab and the line under the top bar. In Light, the palette's grey for secondary text is a little under the usual contrast guideline (4.4:1 on panels, 4.1:1 on the background, against 4.5:1); it is left as the palette has it so the editor matches the Toolbox.
 - **Workspace** (in the editor only): switch every panel's place in one go. **Standard** is where everything starts; **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
 - **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. It is Open Sans unless you change it. Click the box and type to search every Google font (the chips narrow it by Sans, Serif, Display, Handwriting or Mono), then pick one with <kbd>Enter</kbd> or a click; <kbd>Esc</kbd> closes the list. A name that isn't on the list can be used as typed. It applies to projects and text you make from now on, not to ones that exist.
-- **Canvas**: **Show rulers** (rulers and guides on the canvas, also <kbd>Shift</kbd>+<kbd>R</kbd>), **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>), **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), **Grid size** (1 to 512 px, with presets under it) and **Stronger line every** (cells, 1 to 32). See [The grid and snapping](grid). These follow you with your account like the rest.
+- **Canvas**: **Show rulers** (rulers and guides on the canvas, also <kbd>Shift</kbd>+<kbd>R</kbd>), **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>), **Snapping** and a switch for each target (**Snap to grid** is <kbd>Ctrl</kbd>+<kbd>'</kbd>; the others are artboard, layers, guides, spacing, pixels and points), **Snap distance**, **Grid size** (1 to 512 px, with presets under it) and **Stronger line every** (cells, 1 to 32). See [The grid and snapping](grid). These follow you with your account like the rest.
 - **Show layers outside clipped artboards**: on by default. When an artboard has **Clip content to artboard** on, the parts of layers that hang outside it are drawn faintly, in diagonal stripes, beside it on the canvas, so you can still see them and click them to select. It is only how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
 - **Show tooltips**: explanations when you hover buttons and fields.
 - **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
@@ -6777,7 +6778,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>Ctrl</kbd>+<kbd>1</kbd> | 100% |
 | <kbd>Shift</kbd>+<kbd>R</kbd> | Show or hide rulers |
 | <kbd>Shift</kbd>+<kbd>G</kbd> | Show or hide the grid |
-| <kbd>Ctrl</kbd>+<kbd>'</kbd> | Turn Snap to grid on or off |
+| <kbd>Ctrl</kbd>+<kbd>'</kbd> | Turn the Grid snap target on or off (it switches snapping on too, if it was off) |
 
 ## Help
 | Key | Does |
@@ -6809,9 +6810,10 @@ Double-click a text layer to edit it. Select some of the text, then:
 | Do this | To |
 |---|---|
 | Hold <kbd>Alt</kbd> while drawing or resizing | Work from the centre |
-| Hold <kbd>Ctrl</kbd> while dragging | Move, resize or draw without snapping (to the grid or to other layers) |
-| Right-click the grid or snap button on the tool bar | Pick the grid size and how often a stronger line shows |
-| Drag the **Tools** title over an edge of the canvas | Dock the tool bar there (left, right or a strip along the bottom) |
+| Hold <kbd>Ctrl</kbd> while dragging | Move, resize or draw without snapping to anything (grid, artboard, layers, guides, spacing, points) |
+| Click the Snap button on the tool bar | Open the snapping menu: the switch and a tick for each target |
+| Right-click the grid or snap button on the tool bar, or an empty part of the canvas | Snapping choices, the grid size and how often a stronger line shows |
+| Drag the **Tools** title over an edge of the canvas | Dock the tool bar there (left, right or a strip along the bottom or the top) |
 | <kbd>Alt</kbd>-click a path point | Switch it between curve and corner |
 | <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Add it to the selection, or take it out (it picks the deepest layer inside groups, so you can gather layers from different groups) |
 | Double-click a group | Select inside it |
@@ -7337,7 +7339,7 @@ Turn on **Animate changes** in the frame's Auto layout section and, while the pr
 With several layers selected, the bar at the top of the inspector aligns their edges or centres, and distributes three or more evenly. With one layer selected it aligns to the parent.
 
 ## Snapping
-Layers snap to other layers' edges and centres while you drag; guide lines show what snapped. Hold <kbd>Ctrl</kbd> to drag without snapping. Turn on **Snap to grid** to land on a grid as well, see [The grid and snapping](grid). Rulers (<kbd>Shift</kbd>+<kbd>R</kbd>) show positions, and dragging from a ruler makes a guide that layers snap to. Drag a guide back onto the ruler to remove it.
+Things snap while you drag. The **Snap** button on the tool bar opens the choices: **Grid**, **Artboard** (edges and centre), **Layers** (other layers' edges and centres), **Guides**, **Spacing** (equal gaps), **Pixels** and **Points**, and a **Snapping** switch for all of them. Lines in a colour for each kind show what snapped and a chip in the corner names it. Hold <kbd>Ctrl</kbd> to drag without snapping. See [The grid and snapping](grid). Rulers (<kbd>Shift</kbd>+<kbd>R</kbd>) show positions: drag **down** out of the top ruler for a horizontal guide and **right** out of the left ruler for a vertical one, and layers snap to it. Drag a guide back onto the ruler it came from to remove it.
 
 ## Order
 <kbd>]</kbd> and <kbd>[</kbd> move a layer up and down; add <kbd>Ctrl</kbd> to go to the top or bottom. Or drag in the Layers panel.
@@ -7349,15 +7351,31 @@ Select two or more shapes and press **Union**, **Subtract**, **Intersect** or **
     id: "grid",
     title: "The grid and snapping",
     group: "Design",
-    summary: "Show grid, Snap to grid, grid size and stronger lines, a grid of one artboard's own, and what snaps.",
-    keywords: "grid snap snapping size subdivisions cells pixels nudge align magnet guides override",
+    summary: "The Snap menu (grid, artboard, layers, guides, spacing, pixels, points), the grid and its size, a grid of one artboard's own, and what snaps.",
+    keywords: "grid snap snapping size subdivisions cells pixels nudge align magnet guides override targets artboard layers spacing equal gaps points anchors distance menu master switch rulers",
     body: `The grid is a set of lines measured from each artboard's top left corner. **Show grid** draws it on the canvas, and **Snap to grid** makes things land on it. They are separate: snapping works whether or not the grid is showing.
 
-## Turning it on
-- The **Show grid** and **Snap to grid** buttons on the tool bar (beside Comment). Each is gold while it is on.
-- <kbd>Shift</kbd>+<kbd>G</kbd> shows or hides the grid, <kbd>Ctrl</kbd>+<kbd>'</kbd> turns snapping on or off.
-- Right-click an empty part of the canvas for **Show grid**, **Snap to grid** and **Grid size**, or open **Preferences**, which has a **Canvas** block with the same settings.
-- While snapping is on a gold chip in the corner of the canvas says so with the size; click it to change the size.
+## The Snap menu
+The **Snap** button on the tool bar (the magnet) opens a menu that stays open while you tick several things. The same choices are in the canvas right-click menu (under **Snapping**) and in **Preferences**. They are yours, kept with your account.
+- **Snapping** is the master switch. Switch it off and nothing snaps, but your ticks are kept for when you switch it back on. Ticking a target while it is off switches it on.
+- **Grid**: land on the grid lines (this is Snap to grid: <kbd>Ctrl</kbd>+<kbd>'</kbd> ticks and unticks it). Off to begin with.
+- **Artboard**: the artboard's edges and centre. Moving an artboard on the canvas, it goes to the other artboards' edges and centres.
+- **Layers**: the edges and centres of other layers. By default it means the layers beside the one you drag (the same parent); tick **Layers: all, not just siblings** to reach every layer on the artboard.
+- **Guides**: guides made from the rulers.
+- **Spacing**: equal gaps. Drag a layer beside two that have a gap between them and it snaps to the same gap (or centres between them), and the distances show as orange measures. Moving layers only.
+- **Pixels**: whole-pixel positions and sizes. Untick it to let a layer sit between pixels.
+- **Points**: the anchor points of paths and the joints of bones. The pen, and dragging a path point, snap to them: a ring shows the one it caught. Off to begin with.
+- **Snap distance**: how close (2 to 24 screen pixels, 6 to begin with) something has to be. It is in screen pixels, so zooming in makes it finer.
+
+Artboard, Layers, Guides and Pixels are on to begin with, which is how snapping behaved before the menu. Show grid, Spacing and Points are off.
+
+## What snapped
+The nearest target inside the snap distance wins. A line in the target's colour runs across the artboard, and a chip in the corner says "Snapped to Layers" (or Artboard, Guides, Spacing, Points, Grid). The grid always has a line within half a cell, so it only takes over when nothing else is as close; if a layer's edge is as close as the grid line, the layer wins. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) while dragging to skip every target for that drag.
+
+## The grid
+- The **Show grid** button on the tool bar (beside Snap) draws it; <kbd>Shift</kbd>+<kbd>G</kbd> shows or hides it. Snapping to the grid works whether or not it is showing.
+- Right-click an empty part of the canvas for **Show grid**, **Snapping** and **Grid size**, or open **Preferences**, which has a **Canvas** block with the same settings.
+- While **Grid** is ticked a gold chip in the corner of the canvas says so with the size; click it to change the size or open the snapping choices.
 
 ## Size and stronger lines
 **Grid size** is the width of one cell in pixels: pick 1, 2, 4, 5, 8, 10, 12, 16, 20, 24, 32, 48, 50 or 64, or choose **Custom…** for anything from 1 to 512. **Stronger line every** draws every Nth line heavier (4 by default; 1 draws them all alike). They are yours, kept with your account, and the size shows in the chip while snapping is on.
@@ -7366,12 +7384,12 @@ Select two or more shapes and press **Union**, **Subtract**, **Intersect** or **
 A 1920 wide slide and a 375 wide phone page want different grids. Right-click an artboard (its empty area) and open **Grid for this artboard** to give it its own size and stronger line, or **My default** to go back to yours. It is saved in the project, so people editing with you see it, and it is never exported.
 
 ## What snaps
-Moving layers, resizing them, drawing new shapes (and artboards), placing pen points, and the arrow keys. A moved or resized layer's edges (a rotated layer's outer bounds) land on a grid line. **Smart guides still work**: if another layer's edge or centre or a ruler guide is as close as the grid line, or closer, that wins and shows its guide line. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) while dragging to skip all snapping.
+Moving layers, resizing them, drawing new shapes (and artboards), moving artboards, placing pen points, dragging a path's points, and the arrow keys. A moved or resized layer's edges (a rotated layer's outer bounds) land on a grid line. The other targets work with it: if another layer's edge or centre or a ruler guide is as close as the grid line, or closer, that wins and shows its line. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) while dragging to skip all snapping.
 
 The arrow keys step to the next grid line in that direction (a layer that is off the grid goes to its nearest line first). <kbd>Shift</kbd> + arrow goes a stronger line at a time, or ten cells when stronger lines are off. <kbd>Ctrl</kbd> + arrow nudges by 1 px or 10 px as usual.
 
 ## What it doesn't do
-The grid is never in **Preview**, in exports, in share links or in pictures of the artboard: it is only on the editor's canvas. Moving a layer's individual path points with the node editor is not snapped.`
+The grid is never in **Preview**, in exports, in share links or in pictures of the artboard: it is only on the editor's canvas. Spacing only measures when moving layers (not resizing or drawing), and the arrow keys only use the grid and whole pixels.`
   },
   {
     id: "media-catalogue",
@@ -7584,7 +7602,7 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
     body: `Web elements are real HTML controls, so they work with keyboards, screen readers and forms.
 
 - **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react. Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)). **Disabled** (also bindable, for a Next button that waits for an answer) greys it out and takes it out of the Tab sequence, and a disabled button or input looks dimmed by itself: **Disabled look** sets how opaque it is (0.5 by default, 1 for no dimming). A layer whose Opacity is bound keeps doing its own dimming.
-- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test. **Block paste and drop** refuses pasted or dragged text, so the answer has to be typed. To do something when Enter is pressed in a text box, use an **On key** node set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions)).
+- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). **Bind to a variable…** (under *Value*) ties the box to a variable with an ordinary [data binding](bindings) on its **Value**, set to **⇄ Both**: typing writes the variable and the variable fills the box. Change the way, or the variable, under **Data bindings**; choose **Out →** to only write the variable and keep the box's own value. (Older projects that had a *Variable* setting on an input are changed to this when they open.) **On variable change** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test. **Block paste and drop** refuses pasted or dragged text, so the answer has to be typed. To do something when Enter is pressed in a text box, use an **On key** node set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions)).
 - **Link**: text that opens a URL. **Fit text to box** works here too.
 - **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
 - **Video**: a video file or URL.
@@ -8541,7 +8559,7 @@ One project can start with different values in different courses (a due date, a 
 - In text: \`Score: {score}\`.
 - In [bindings](bindings): drive any property from a variable.
 - In interactions: **Set variable** (set, add, toggle, list changes, reset), **Reset variables**, **On variable change**.
-- On inputs: bind a text field, checkbox or slider to a variable.
+- On inputs: bind a text field, checkbox or slider's **Value** to a variable, usually **⇄ Both** (see [Bindings](bindings)).
 - In scripts: \`ix.vars.score += 1\`.
 - From the host page: \`player.setVariable('score', 10)\`.
 
@@ -8670,6 +8688,7 @@ Each binding has **← In**, **Out →** and **⇄ Both** at the top.
 - **In** (the usual): the variable or formula sets the property, as above. The formula can read the layer it's on as \`self\`: \`self.width / 2\` for a height, \`self.time / self.duration\` on a video for how far through it is. \`self\` is the layer before its own bindings apply, so a binding never reads its own result. On the editing canvas a video has no time or length yet. On a video's **Playback position** and **Playing** it seeks, plays or pauses the video whenever the formula's value changes, and leaves the video alone while it doesn't, so it still plays on by itself.
 - **Out**: the property's value is written into a variable whenever it changes, and nothing sets the property from it. Use it to *read* something: a draggable layer's **X** as it is dragged, a video's **Playback position**, a timeline-animated **Opacity**. Read-only attributes (a video's **Length**, **Ended**) can only go out.
 - **Both**: the property and the variable are kept equal. At the start the property takes the variable's value; after that, change either one and the other follows. A slider bound to the same variable as a video's **Playback position** both shows the position and scrubs the video; setting a video's **Playing** to false pauses it.
+- An **Input field**'s **Value** is the common case for Both: typing writes the variable and the variable fills the box (the **Bind to a variable…** button in the Input section adds exactly this). Out leaves the box showing its own text.
 - A **draggable** layer with its X or Y bound **In** never tells the variable it moved, so a Save user data or a remembered variable keeps the old value. Bind it **⇄ Both** to save where the learner left it; the Bindings section says so and has a button for it.
 
 Out and Both name a variable (no formula, no converters), and the grey line says what will happen in words.
