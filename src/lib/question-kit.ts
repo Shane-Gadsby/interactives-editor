@@ -192,7 +192,7 @@ function optionsBody(q: Question, style: Style): SceneNode {
   });
 }
 
-function blankRow(q: Question, i: number, variableId: string): SceneNode {
+function blankRow(q: Question, i: number, blankVar: string): SceneNode {
   const items = varName(q, 'items');
   const at = `${items}[${i}]`;
   return createNode('frame', {
@@ -211,17 +211,17 @@ function blankRow(q: Question, i: number, variableId: string): SceneNode {
         ariaLabel: q.blanks[i]?.label || 'Answer',
         ...(q.blanks[i]?.spelling && q.guard?.spellcheck !== false ? { noAssist: true } : {}),
         ...(q.blanks[i]?.spelling && q.guard && q.guard.paste !== false ? { noPaste: true } : {}),
-        variableId,
         width: 280,
         height: 44,
-        bindings: { 'stroke.paint.color': `${at}?.state == "correct" ? "${L.success}" : ${at}?.state == "wrong" ? "${L.error}" : "${L.border}"`, ariaLabel: `${at}?.label || "Answer"` },
+        bindingModes: { value: 'both' },
+        bindings: { value: blankVar, 'stroke.paint.color': `${at}?.state == "correct" ? "${L.success}" : ${at}?.state == "wrong" ? "${L.error}" : "${L.border}"`, ariaLabel: `${at}?.label || "Answer"` },
       }),
       text('Blank answer', 'blankAnswer', `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L.warning, bindings: { visible: `!!${at}?.answer` } }),
     ],
   });
 }
 
-function blanksBody(q: Question, variableIds: string[]): SceneNode {
+function blanksBody(q: Question, blankVars: string[]): SceneNode {
   return createNode('frame', {
     name: 'Blanks',
     questionPart: 'blanks',
@@ -229,7 +229,7 @@ function blanksBody(q: Question, variableIds: string[]): SceneNode {
     stroke: null,
     clip: false,
     layout: column(14),
-    children: q.blanks.map((_, i) => blankRow(q, i, variableIds[i])),
+    children: q.blanks.map((_, i) => blankRow(q, i, blankVars[i])),
   });
 }
 
@@ -1082,18 +1082,23 @@ function renameEverywhere(d: Project, from: string, to: string, only?: FrameNode
 }
 
 /** Add or remove blank rows so there is one per blank in the settings; new rows copy the last one's look. */
-function syncBlankRows(frame: FrameNode, q: Question, variables: Variable[]): void {
+//A blank's box is tied to its answer variable the way any input is, a Both binding on its value
+function bindBlank(n: SceneNode, name: string): void {
+  n.bindings = { ...n.bindings, value: name };
+  n.bindingModes = { ...n.bindingModes, value: 'both' };
+}
+function syncBlankRows(frame: FrameNode, q: Question): void {
   const container = partsOf(frame).blanks?.[0] as FrameNode | undefined;
   if (!container) return;
   const rows = container.children.filter((c) => partOf(c) === 'blankRow');
-  const varIds = q.blanks.map((_, i) => variables.find((v) => v.name === varName(q, `blank${i + 1}`))!.id);
+  const blankNames = q.blanks.map((_, i) => varName(q, `blank${i + 1}`));
   while (rows.length > q.blanks.length) {
     const gone = rows.pop()!;
     container.children = container.children.filter((c) => c.id !== gone.id);
   }
   while (rows.length < q.blanks.length) {
     const i = rows.length;
-    const made = blankRow(q, i, varIds[i]);
+    const made = blankRow(q, i, blankNames[i]);
     const last = rows[rows.length - 1];
     if (last) {
       //Copy the previous row's look, with this row's own ids and index
@@ -1107,7 +1112,7 @@ function syncBlankRows(frame: FrameNode, q: Question, variables: Variable[]): vo
       walk([copy], (n) => {
         if (n.bindings) for (const k of Object.keys(n.bindings)) n.bindings[k] = n.bindings[k].replace(old, `[${i}]`);
         if (n.type === 'text') n.text = n.text.replace(old, `[${i}]`);
-        if (n.type === 'input') n.variableId = varIds[i];
+        if (n.type === 'input') bindBlank(n, blankNames[i]);
       });
       copy.name = `Blank ${i + 1}`;
       container.children.push(copy);
@@ -1120,7 +1125,7 @@ function syncBlankRows(frame: FrameNode, q: Question, variables: Variable[]): vo
   rows.forEach((r, i) => {
     walk([r], (n) => {
       if (n.type === 'input') {
-        n.variableId = varIds[i];
+        bindBlank(n, blankNames[i]);
         //A word to spell gets no red underline, no autocorrect and no capital letter put on it by the browser, and (with a guard) no paste
         const spell = !!q.blanks[i]?.spelling;
         if (spell && q.guard?.spellcheck !== false) n.noAssist = true;
@@ -1293,14 +1298,14 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
       }
     }
   }
-  const variables = ensureVariables(d, q);
+  ensureVariables(d, q);
   const style = bodyStyle(q.kind, q.answerBy);
   const parts = partsOf(frame);
   const bodyNow = parts.dragBlanks?.[0] ? 'dragblank' : parts.blanks?.[0] ? 'blank' : parts.matching?.[0] ? 'match' : parts.categorise?.[0] ? 'categorise' : parts.hotspots?.[0] ? 'spot' : (parts.options?.[0]?.questionPart ?? '').split(':')[1];
   if (bodyNow !== style) {
     //A different kind of answer needs a different answer area
     const old = parts.dragBlanks?.[0] ?? parts.blanks?.[0] ?? parts.matching?.[0] ?? parts.categorise?.[0] ?? parts.hotspots?.[0] ?? parts.options?.[0];
-    const blankVars = q.blanks.map((_, i) => variables.find((v) => v.name === varName(q, `blank${i + 1}`))?.id ?? '');
+    const blankVars = q.blanks.map((_, i) => varName(q, `blank${i + 1}`));
     const body = bodyFor(q, style, blankVars);
     const names = nodeNames(ab);
     body.name = uniqueName(names, body.name);
@@ -1308,7 +1313,7 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
       const at = locate(ab, old.id);
       if (at) at.siblings.splice(at.index, 1, body);
     } else (frame as FrameNode).children.splice(1, 0, body);
-  } else if (style === 'blank') syncBlankRows(frame, q, variables);
+  } else if (style === 'blank') syncBlankRows(frame, q);
   else if (style === 'dragblank') syncDragBlanks(frame as FrameNode, q, ab);
   else if (style === 'match') syncPairs(frame as FrameNode, q, ab);
   else if (style === 'categorise') syncCategories(frame as FrameNode, q, ab);
@@ -1381,8 +1386,8 @@ export function addQuestion(d: Project, abId: string, kind: QuestionKind, opts: 
   if (!ab) return null;
   L = lookFor(d.themes);
   const q = newQuestion(kind, freePrefix(d));
-  const variables = ensureVariables(d, q);
-  const blankVars = q.blanks.map((_, i) => variables.find((v) => v.name === varName(q, `blank${i + 1}`))!.id);
+  ensureVariables(d, q);
+  const blankVars = q.blanks.map((_, i) => varName(q, `blank${i + 1}`));
   const at = opts.at ?? { x: Math.max(0, (ab.width - 640) / 2), y: 40 };
   const frame = frameFor(q, blankVars, at);
   const names = nodeNames(ab);

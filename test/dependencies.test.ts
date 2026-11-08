@@ -75,7 +75,7 @@ describe('analyzeUsage', () => {
       createNode('rect', { name: 'R', bindings: { x: 'score * 2' } }),
       createNode('text', { name: 'T', text: 'Hello {label} and {{shadowed}}' }),
       createNode('group', { name: 'G', repeat: { items: 'items.filter(i => i)', layout: 'vertical', gap: 0, columns: 1 }, children: [] }),
-      createNode('input', { name: 'In', variableId: 'v_bound' }),
+      createNode('input', { name: 'In', bindings: { value: 'bound' }, bindingModes: { value: 'both' } }),
       createNode('instance', { name: 'Inst', artboardId: p.artboards[3].id, inputs: { inst: 1 } }),
       createNode('rect', { name: 'S', bindings: { x: 'foo.inStr + "inStr"' } }),
     );
@@ -88,7 +88,7 @@ describe('analyzeUsage', () => {
     expect(how(v('items'))).toEqual(['repeater items']);
     expect(v('mx').usedBy[0].by.type).toBe('joystick');
     expect(v('cond').usedBy[0].by).toMatchObject({ type: 'logic', name: 'If' });
-    expect(how(v('bound'))).toEqual(['input bound to variable']);
+    expect(how(v('bound'))).toEqual(['binding on value']);
     expect(how(v('inst'))).toEqual(['instance input']);
     expect(v('shadowed').unused).toBe(true); // escaped braces are literal text
     expect(v('inStr').unused).toBe(true); // a property name and a string, not a variable
@@ -156,7 +156,7 @@ describe('analyzeUsage', () => {
 
   it('reports references to things that no longer exist', () => {
     const { p, home } = base();
-    home.children.push(createNode('image', { name: 'Gone', assetId: 'nope' }), createNode('input', { name: 'In', variableId: 'nov' }));
+    home.children.push(createNode('image', { name: 'Gone', assetId: 'nope' }), createNode('input', { name: 'In', bindings: { value: 'nov' }, bindingModes: { value: 'both' } }));
     home.logic.nodes.push(logic('event.pointer', { target: 'nolayer', type: 'click' }), logic('action.artboard', { artboard: 'Nowhere' }));
     const r = analyzeUsage(p);
     expect(r.missing.map((m) => [m.what, m.ref]).sort()).toEqual([

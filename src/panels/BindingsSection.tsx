@@ -67,6 +67,12 @@ export function bindableProps(node: SceneNode, project: Project): { prop: string
     if (kind) out.push({ prop: k, label: humanize(k), kind });
   }
   for (const m of MEDIA_ATTRIBUTES) if (m.types.includes(node.type)) out.push(m);
+  //an input's value is text in the document, but a checkbox holds true/false and a number or slider a number: a new variable for it is made that type
+  if (node.type === 'input') {
+    const at = out.findIndex((p) => p.prop === 'value');
+    const kind = node.inputType === 'checkbox' ? 'boolean' : node.inputType === 'number' || node.inputType === 'range' ? 'number' : 'string';
+    if (at >= 0) out[at] = { ...out[at], kind };
+  }
   return out;
 }
 

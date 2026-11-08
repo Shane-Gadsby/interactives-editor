@@ -104,11 +104,17 @@ export function setRestrict(p: Project, on: boolean): void {
 /** Variables the project's own flows and controls work with: set by a Set variable node, watched by On variable change, or bound to an input layer. */
 function boundaryVariableIds(p: Project): Set<string> {
   const ids = new Set<string>();
+  const byName = new Map(p.variables.map((v) => [v.name, v]));
   const walk = (children: unknown) => {
     for (const c of Array.isArray(children) ? children : []) {
       if (!c || typeof c !== 'object') continue;
-      const n = c as { variableId?: unknown; children?: unknown };
+      const n = c as { type?: unknown; variableId?: unknown; bindings?: Record<string, string>; bindingModes?: Record<string, string>; children?: unknown };
       if (typeof n.variableId === 'string') ids.add(n.variableId);
+      //an input whose value goes out or both ways to a variable
+      const name = n.type === 'input' ? n.bindings?.value?.trim() : '';
+      const mode = n.bindingModes?.value;
+      const v = name && (mode === 'both' || mode === 'out') ? byName.get(name) : undefined;
+      if (v) ids.add(v.id);
       walk(n.children);
     }
   };

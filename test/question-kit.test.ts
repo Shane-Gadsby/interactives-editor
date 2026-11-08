@@ -147,10 +147,11 @@ describe('question settings', () => {
       (part(f, 'blankInput') as { cornerRadius: number }).cornerRadius = 19;
     });
     set({ blanks: [...frame().question!.blanks, { id: 'b2', label: 'Second', answers: ['x'] }, { id: 'b3', label: 'Third', answers: ['y'] }] });
-    const inputs = partsOf(frame()).blankInput as unknown as { cornerRadius: number; variableId: string }[];
+    const inputs = partsOf(frame()).blankInput as unknown as { cornerRadius: number; bindings: Record<string, string>; bindingModes: Record<string, string> }[];
     expect(inputs).toHaveLength(3);
     expect(inputs.map((i) => i.cornerRadius)).toEqual([19, 19, 19]);
-    expect(new Set(inputs.map((i) => i.variableId)).size).toBe(3);
+    expect(new Set(inputs.map((i) => i.bindings.value)).size).toBe(3);
+    expect(inputs.every((i) => i.bindingModes.value === 'both')).toBe(true);
     expect(val('q1_items')).toHaveLength(3);
     set({ blanks: frame().question!.blanks.slice(0, 1) });
     expect(partsOf(frame()).blankInput).toHaveLength(1);

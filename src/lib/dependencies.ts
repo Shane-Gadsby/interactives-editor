@@ -260,7 +260,9 @@ export function analyzeUsage(project: Project): UsageReport {
         if (n.type === 'chart' && n.data.trim()) useExpr(n.data, by, 'chart data');
         if (n.type === 'chart') for (const t of [n.prefix, n.suffix]) if (t) for (const e of templateSlots(t)) useExpr(e, by, 'chart prefix or suffix');
         if (n.type === 'progress' && n.valueText) for (const e of templateSlots(n.valueText)) useExpr(e, by, 'spoken value template');
-        if (n.type === 'input') useId('variable', n.variableId, by, 'input bound to variable');
+        //the binding itself counts as the use; an input's out and both-ways value has to name a variable that is there
+        const tied = n.type === 'input' && (n.bindingModes?.value === 'out' || n.bindingModes?.value === 'both') ? n.bindings?.value?.trim() : '';
+        if (tied && !varByName.has(tied)) missing.push({ by, what: 'variable', ref: tied, how: 'input bound to variable' });
         if (n.type === 'instance') {
           useId('artboard', n.artboardId, by, 'instance of artboard');
           for (const name of Object.keys(n.inputs ?? {})) {

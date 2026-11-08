@@ -58,7 +58,7 @@ import {
   shownAmount,
 } from 'interactives-player';
 import { keyTime, store, useEditor, valueAt } from '../store/store';
-import { getArtboard, locate } from '../store/doc';
+import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
@@ -72,7 +72,8 @@ import { acceptFor, pickFiles, replaceAssetFile } from '../lib/insert';
 import { updateFromFile } from '../lib/importers';
 import { pointTracks } from '../lib/path-edit';
 import { formatTracks, parseTracks } from '../lib/grid-tracks';
-import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
+import { addAssetOption, createVariable, withQuickAdd } from '../lib/quick-add';
+import { SearchPicker, type PickerOption } from '../components/SearchPicker';
 import { CodeEditor } from '../components/CodeEditor';
 import { AccessibilitySection, TabOrderSection } from './AccessibilitySections';
 import { DialogSection, KeyNavSection } from './FrameA11ySections';
@@ -1208,11 +1209,65 @@ function ShapeKeys({ node }: { node: SceneNode }) {
   );
 }
 
+/**
+ * An input's value. Its variable is the ordinary data binding on `value`: this row is a shortcut that adds it in ⇄ Both
+ * (typing writes the variable, the variable fills the box), and the Data bindings section below edits it from there.
+ * Out keeps the box's own value, so the text field stays for it; In and Both take the value from the variable.
+ */
+function InputValue({ nodes, project, set }: { nodes: SceneNode[]; project: Project; set: (patch: Record<string, unknown>, coalesce?: string) => void }) {
+  const n = nodes[0] as Extract<SceneNode, { type: 'input' }>;
+  const single = nodes.length === 1;
+  const expr = single ? n.bindings?.value : undefined;
+  const mode = n.bindingModes?.value ?? 'in';
+  const filled = expr !== undefined && mode !== 'out';
+  const kind = n.inputType === 'checkbox' ? 'boolean' : n.inputType === 'number' || n.inputType === 'range' ? 'number' : 'string';
+  const bindTo = (name: string) => set({ bindings: { ...n.bindings, value: name }, bindingModes: { ...n.bindingModes, value: 'both' } }, `bind-${n.id}`);
+  const unbind = () => {
+    const { value: _b, ...bindings } = n.bindings ?? {};
+    const { value: _m, ...modes } = n.bindingModes ?? {};
+    const { value: _c, ...converters } = n.converters ?? {};
+    set({ bindings: Object.keys(bindings).length ? bindings : undefined, bindingModes: Object.keys(modes).length ? modes : undefined, converters: Object.keys(converters).length ? converters : undefined }, `bind-${n.id}`);
+  };
+  const options: PickerOption[] = project.variables.filter((v) => isIdentifier(v.name)).map((v) => ({ value: v.name, label: v.name, hint: v.type }));
+  const label = mode === 'both' ? '⇄ Both' : mode === 'out' ? 'Out →' : '← In';
+  return (
+    <>
+      {!filled && <TextField label="Value" value={n.value} onChange={(v) => set({ value: v })} />}
+      {single && expr === undefined && (
+        <PropRow k="Bind value" label="Variable" tip="Tie the box to a variable: typing writes it and it fills the box (a ⇄ Both data binding on Value, editable under Data bindings)" words={['bind', 'variable', 'data', 'two-way', 'both']}>
+          <SearchPicker
+            value=""
+            options={options}
+            onChange={bindTo}
+            buttonLabel="Bind to a variable…"
+            className="add-binding"
+            title="Tie the box to a variable: typing writes it and it fills the box (a ⇄ Both data binding on Value)"
+            searchPlaceholder="Search variables"
+            actions={[{ label: '+ New variable…', onSelect: () => void createVariable(kind, n.name.replace(/\W+/g, '') || 'value').then((id) => {
+              const v = id && store().get().project.variables.find((x) => x.id === id);
+              if (v) bindTo(v.name);
+            }) }]}
+          />
+        </PropRow>
+      )}
+      {single && expr !== undefined && (
+        <PropRow k="Value binding" label="Variable" words={['bind', 'variable', 'data', 'two-way', 'both']}>
+          <p className="hint" style={{ margin: 0 }}>
+            Value is bound <strong>{label}</strong> {expr.trim() ? <code>{expr.trim()}</code> : 'to nothing yet'}: change it under Data bindings.{' '}
+            <button type="button" className="link-btn" onClick={unbind}>
+              Unbind
+            </button>
+          </p>
+        </PropRow>
+      )}
+    </>
+  );
+}
+
 function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
   const set = useSetter(ids);
-  const varOptions = [{ value: '', label: 'Not bound' }, ...project.variables.map((v) => ({ value: v.id, label: `${v.name} (${v.type})` }))];
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
   const videos = project.assets.filter((a) => assetKind(a.mime, a.name) === 'video');
   const sounds = project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio');
@@ -1409,17 +1464,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             options={['text', 'number', 'email', 'password', 'textarea', 'checkbox', 'range', 'select']}
             onChange={(v) => set({ inputType: v })}
           />
-          <SelectField
-            label="Variable"
-            value={n.variableId ?? ''}
-            options={[...varOptions, addVariableOption()]}
-            onChange={withQuickAdd((v) => set({ variableId: v || null }), {
-              variableType: n.inputType === 'checkbox' ? 'boolean' : n.inputType === 'number' || n.inputType === 'range' ? 'number' : 'string',
-              variableName: n.name.replace(/\W+/g, '') || 'value',
-            })}
-          />
           {n.inputType !== 'checkbox' && n.inputType !== 'range' && n.inputType !== 'select' && <TextField label="Placeholder" value={n.placeholder} onChange={(v) => set({ placeholder: v })} />}
-          {!n.variableId && <TextField label="Value" value={n.value} onChange={(v) => set({ value: v })} />}
+          <InputValue nodes={nodes} project={project} set={set} />
           {(n.inputType === 'number' || n.inputType === 'range') && (
             <Row>
               <NumberField label="Min" value={n.min ?? 0} onChange={(v) => set({ min: v })} />
