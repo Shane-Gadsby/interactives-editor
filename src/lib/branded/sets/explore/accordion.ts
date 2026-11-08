@@ -1,6 +1,6 @@
 /** Accordion: one section repeated over a list, each a header button that opens its panel and pushes the rest down (the repeater is an auto layout column, so the copies reflow). */
 import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, byName, contentBox, item, solid, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, byName, contentBox, item, solid, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import { addVar, click, graph, graphNote } from '../../graph-kit';
 import { heroButtons } from './helpers';
 
@@ -116,10 +116,10 @@ export const accordion: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),
-      item('Write each section: the "sections" list variable (Variables panel) has a title and a text for each. The sections below move to make room', body, page),
-      item('To let several sections stay open at once, set the variable "allowMany" to true (Variables panel)', undefined, page),
-      item('Choose which sections start open: the "open" list variable holds their places, from 0 (the first is [0])', undefined, page),
-      item('To add a section, add an entry to "sections" (a title and a text). The repeater makes the layers, and the header flow already covers it', section, page),
+      todo('Write each section\'s title and text', 'Write each section: the "sections" list variable (Variables panel) has a title and a text for each. The sections below move to make room', body, page),
+      todo('Let several sections stay open at once', 'To let several sections stay open at once, set the variable "allowMany" to true (Variables panel)', undefined, page),
+      todo('Choose which sections start open', 'Choose which sections start open: the "open" list variable holds their places, from 0 (the first is [0])', undefined, page),
+      todo('To add a section, add its title and text to the list', 'To add a section, add an entry to "sections" (a title and a text). The repeater makes the layers, and the header flow already covers it', section, page),
       item('Change the footer line', byName(page, 'Footer text'), page),
     ];
     return { project: ctx.project, checklist };

@@ -1,6 +1,6 @@
 //Arithmetic quiz: ten sums made fresh every play (the operation and the range are variables), answered by typing or by picking from four options, with a score, an optional clock and Play again.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { BRAND_FONT } from '../../looks';
 import { lookDefaults } from '../../../themes';
@@ -101,7 +101,7 @@ function build(colourway: Colourway) {
   const bar = progressBar(ctx, 'Progress bar', sideX, box.y + 44, sideW, { value: 'q + (answered ? 1 : 0)', max: 'Math.max(1, sums.length)', label: 'Quiz progress', valueText: '{value} of {max} answered' });
   const tally = text(ctx, 'Tally', 'Score: {score}{showTimer ? "     Time: " + clock(seconds) : ""}', sideX, box.y + 72, sideW, { fontSize: 19, fontWeight: 700 });
   const verdict = bind(text(ctx, 'Feedback', '{feedback}', sideX, box.y + 126, sideW, { fontSize: 22, fontWeight: 700, lineHeight: 1.3, autoSize: 'none', height: 110 }), { color: `answered ? (correct ? "${L.success}" : "${L.error}") : "${L.text}"` });
-  const next = bind(button(ctx, 'Next', 'Next question', sideX, box.y + box.height - 46, 220, true), { disabled: '!answered', label: 'q + 1 >= sums.length ? "See results" : "Next question"' });
+  const next = bind(button(ctx, 'Next', 'Next question', sideX, barY(box), 220, true), { disabled: '!answered', label: 'q + 1 >= sums.length ? "See results" : "Next question"' });
   page.children.push(panel, askText, sum, input, check, options, where, bar, tally, verdict, next);
 
   //Making the sums, each time the page opens (the clock counts up from the same moment)
@@ -142,12 +142,12 @@ function build(colourway: Colourway) {
   graphNote(page, { anchor: onNext, colour: 'sky', text: '**Next only works once answered.** After the last question the clock is paused (not reset), so the finished page can still show how long the set took.' });
 
   checklist.push(
-    item('Choose the kind of sums: Project > Variables > "operation" is + (add), - (subtract), × (multiply), ÷ (divide) or mixed (add, subtract and multiply together)', sum, page),
-    item('Set the range: "lowest" and "highest" are the smallest and largest numbers a sum uses (2 and 12 by default). Division sums use them for the answer, so 12 means answers up to 12', sum, page),
-    item('Set how many sums: "howMany" (10 by default). The question counter and the progress bar follow it', where, page),
-    item('Choose how learners answer: "mode" is type (a box and a Check button) or choose (four options to pick from, a grid the arrow keys move around). In the box, Enter checks the answer too: the On key (Enter) node in the Interactions tab has "Also while typing in a text box" ticked, which is what lets a key press in a box run a flow', input, page),
-    item('Turn the clock off by setting "showTimer" to false', tally, page),
-    item('Change the feedback ("Correct!", "Not quite...") and the message on the finished page: the "feedback" variable in the Variables tab, and the Result text on the Finished page', verdict, page),
+    todo('Choose the kind of sums', 'Choose the kind of sums: Project > Variables > "operation" is + (add), - (subtract), × (multiply), ÷ (divide) or mixed (add, subtract and multiply together)', sum, page),
+    todo('Set the range of numbers', 'Set the range: "lowest" and "highest" are the smallest and largest numbers a sum uses (2 and 12 by default). Division sums use them for the answer, so 12 means answers up to 12', sum, page),
+    todo('Set how many sums there are', 'Set how many sums: "howMany" (10 by default). The question counter and the progress bar follow it', where, page),
+    todo('Choose how learners answer: type or choose', 'Choose how learners answer: "mode" is type (a box and a Check button) or choose (four options to pick from, a grid the arrow keys move around). In the box, Enter checks the answer too: the On key (Enter) node in the Interactions tab has "Also while typing in a text box" ticked, which is what lets a key press in a box run a flow', input, page),
+    todo('Turn the clock off if you want', 'Turn the clock off by setting "showTimer" to false', tally, page),
+    todo('Change the feedback and the finished message', 'Change the feedback ("Correct!", "Not quite...") and the message on the finished page: the "feedback" variable in the Variables tab, and the Result text on the Finished page', verdict, page),
   );
 
   //Finished

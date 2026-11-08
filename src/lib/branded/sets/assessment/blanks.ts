@@ -1,6 +1,6 @@
 import { defaultAutoLayout, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partsOf, setQuestionSettings, syncQuestion } from '../../../question-kit';
-import { brandedPage, brandedProject, button, contentBox, item, text, type LayoutState } from '../../kit';
+import { brandedPage, brandedProject, button, contentBox, item, text, todo, type LayoutState } from '\.\./\.\./kit';
 import { type Colourway } from '../../looks';
 import { after, bind, brandQuestionFrame, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, setVar } from './shared';
 import { questionExtras } from '../../parts';
@@ -113,11 +113,11 @@ export function buildBlanks(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', hero.children.find((c) => c.name === 'Page title'), hero),
-    item('Write your own passage: each blank\'s text before it is its label in the Question section, and the text after it is the "Sentence n end" layer (Layers panel)', frame, page),
-    item('Set the accepted answers for each blank: the Question section lists them one to a line, so evaporation and evaporating can both be accepted. Capital letters and spaces round the answer are ignored, and a line written /colou?r/i is a pattern', frame, page),
-    item('Add a blank: press Add blank in the Question section (it takes the look of the last one), then add its "Sentence n end" text and a Set variable for it in the Show answers flow (Interactions tab)', frame, page),
-    item('Remove a blank: take it out of the Question section, and its Set variable out of the Show answers flow', inputs[N - 1], page),
-    item('Reword the instruction line (the question\'s prompt) and the feedback messages for all right, some right and none right: Question section', frame, page),
+    todo('Write your own passage with its blanks', 'Write your own passage: each blank\'s text before it is its label in the Question section, and the text after it is the "Sentence n end" layer (Layers panel)', frame, page),
+    todo('Set the accepted answers for each blank', 'Set the accepted answers for each blank: the Question section lists them one to a line, so evaporation and evaporating can both be accepted. Capital letters and spaces round the answer are ignored, and a line written /colou?r/i is a pattern', frame, page),
+    todo('To add a blank, use Add blank on the question', 'Add a blank: press Add blank in the Question section (it takes the look of the last one), then add its "Sentence n end" text and a Set variable for it in the Show answers flow (Interactions tab)', frame, page),
+    todo('To remove a blank, take it out of the question', 'Remove a blank: take it out of the Question section, and its Set variable out of the Show answers flow', inputs[N - 1], page),
+    todo('Reword the instruction and the feedback messages', 'Reword the instruction line (the question\'s prompt) and the feedback messages for all right, some right and none right: Question section', frame, page),
   ];
   return { project, checklist };
 }

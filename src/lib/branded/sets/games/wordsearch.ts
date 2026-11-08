@@ -1,6 +1,6 @@
 //Word search: a 12 by 12 letter grid, made from the word list each time it plays (and in the editor preview), with eight hidden words, picked by dragging across them or by choosing the first and last letter (click or keyboard).
 import { createNode, makeWordSearch, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { keyNavList } from '../../parts';
 import { Graph, addVar, announce, bind, darkButton, emit, go, goNext, graphNote, heroPage, set } from './common';
@@ -128,7 +128,7 @@ function build(colourway: Colourway) {
   });
   const counts = text(ctx, 'Counts', 'Found {found.length} of {words.length}{showTimer ? "     Time " + clock(seconds) : ""}', colX, box.y + 232, colW, { fontSize: 18, fontWeight: 700 });
   const say = bind(text(ctx, 'Message', '{message}', colX, box.y + 268, colW, { fontSize: 17, lineHeight: 1.3, autoSize: 'none', height: 70 }), { color: `found.length >= words.length || message.startsWith("Found") ? "${L.success}" : "${L.text}"` });
-  const again = button(ctx, 'Start again', 'Start again', colX, box.y + box.height - 46, 170, false);
+  const again = button(ctx, 'Start again', 'Start again', colX, barY(box), 170, false);
   page.children.push(panel, grid, head, how, wordList, counts, say, again);
 
   //Setting up and starting again: one Reset variables puts the board back, and the clock counts up from now
@@ -182,13 +182,13 @@ function build(colourway: Colourway) {
   g.run(onEscape, set(start, '-1'), set(end, '-1'), set(message, '"Selection cleared."'), announce('message'));
 
   checklist.push(
-    item('Write your own words: Project > Variables > "words", one word in each row of the list (letters only, spaces and dashes are dropped). That is all you do: the grid is made from the list, in the canvas preview and every time the puzzle plays, with the words hidden across, down, on diagonals and backwards. The same words always make the same grid', wordList, page),
-    item(`A word longer than ${SIZE} letters is left out of the grid. The "Words to find" list has room for eight, so keep to about eight words, or make the list taller. The finish check and the counts follow the list's length`, wordList, page),
-    item('You do not edit the grid letters. "rows" (Variables) is a formula, wordSearch(words, 12), that hides the words and fills the gaps. To hide the words yourself, clear the formula on "rows" and write its 12 rows of 12 letters by hand: the check reads the letters straight off the grid, so a word works wherever it is', grid, page),
-    item('The grid is 12 by 12. To make it bigger or smaller, change the formula\'s size, the repeater\'s columns and the 12 in the line and hit formulas together, so keep 12 rows of 12 unless you are prepared to change those', grid, page),
-    item('Turn the clock off by setting the "showTimer" variable to false (Variables tab). Nothing else uses it, and Find the words still works the same', counts, page),
-    item('Reword the instructions under the heading and the messages players see (found, not a word, selection cleared): the "message" settings in the Interactions tab', how, page),
-    item('Change what the finished page says and add your own picture or next step', done.children.find((n) => n.name === 'Result'), done),
+    todo('Write your own words for the grid', 'Write your own words: Project > Variables > "words", one word in each row of the list (letters only, spaces and dashes are dropped). That is all you do: the grid is made from the list, in the canvas preview and every time the puzzle plays, with the words hidden across, down, on diagonals and backwards. The same words always make the same grid', wordList, page),
+    todo('Keep to about eight words', `A word longer than ${SIZE} letters is left out of the grid. The "Words to find" list has room for eight, so keep to about eight words, or make the list taller. The finish check and the counts follow the list's length`, wordList, page),
+    todo('Leave the grid letters alone', 'You do not edit the grid letters. "rows" (Variables) is a formula, wordSearch(words, 12), that hides the words and fills the gaps. To hide the words yourself, clear the formula on "rows" and write its 12 rows of 12 letters by hand: the check reads the letters straight off the grid, so a word works wherever it is', grid, page),
+    todo('Leave the grid at 12 by 12 unless you must change it', 'The grid is 12 by 12. To make it bigger or smaller, change the formula\'s size, the repeater\'s columns and the 12 in the line and hit formulas together, so keep 12 rows of 12 unless you are prepared to change those', grid, page),
+    todo('Turn the clock off if you want', 'Turn the clock off by setting the "showTimer" variable to false (Variables tab). Nothing else uses it, and Find the words still works the same', counts, page),
+    todo('Reword the instructions and player messages', 'Reword the instructions under the heading and the messages players see (found, not a word, selection cleared): the "message" settings in the Interactions tab', how, page),
+    todo('Change what the finished page says', 'Change what the finished page says and add your own picture or next step', done.children.find((n) => n.name === 'Result'), done),
   );
 
   //Finished

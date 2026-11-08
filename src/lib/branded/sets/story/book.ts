@@ -1,10 +1,10 @@
 //Interactive book: a cover, a contents page, three chapters of two or three pages (text, a picture, and a check your understanding question at the end of each chapter), a progress bar per chapter, a Contents button on every page and a summary of chapters completed and questions right.
 import { createNode, type Artboard, type FrameNode, type LogicNode, type Question, type QuestionKind, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, setQuestionSettings, syncQuestion } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, contentBox, item, picture, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, picture, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { after, announce, bind, brandQuestionFrame, click, go, graph, graphNote, panel } from '../assessment/shared';
-import { progressBar, extrasChecklist, questionExtras } from '../../parts';
+import { extrasChecklist, extrasShort, progressBar, questionExtras } from '\.\./\.\./parts';
 import { addVar, groupPages } from './common';
 
 const TITLE = 'A short guide to academic integrity';
@@ -212,7 +212,7 @@ function build(colourway: Colourway) {
     g.run(onOpen, ['action.artboard', { to: 'expression', expr: 'chapters[event.index].first', transition: 'fade', duration: 250 }]);
     graphNote(contents, { anchor: onOpen, colour: 'sky', text: '**One flow serves every chapter card.** `event.index` is the card, and Go to page reads that chapter\'s `first` page name from `chapters`. [ ] When you rename or move a chapter\'s first page, update `first` there.' });
     g.run(click(g, finish, 'Summary'), go(summary));
-    checklist.push(item('Rename the chapters and rewrite what each card says: Project > Variables > "chapters" (name, blurb, the number of pages, and the name of its first page). The cards, the strip on each page and the summary all read it', name, contents));
+    checklist.push(todo('Rename the chapters and rewrite their cards', 'Rename the chapters and rewrite what each card says: Project > Variables > "chapters" (name, blurb, the number of pages, and the name of its first page). The cards, the strip on each page and the summary all read it', name, contents));
   }
 
   //The chapter pages
@@ -250,12 +250,12 @@ function build(colourway: Colourway) {
         //When the question is finished keep its first result: the chapter's entry in "results" (the book's score is live, from that list)
         check = page.logic.nodes.find((x) => x.kit?.slot === 'check:action')!;
         after(page, check, 'action.setVariable', { variable: results.id, op: 'setItem', index: String(c), value: `results[${c}] < 0 ? ${prefix}_score : results[${c}]` }, 'finished');
-        checklist.push(item(`Chapter ${n} question: write your own question and answers (Question section in the inspector). Its result is kept in the chapter's entry of the "results" variable by the Set variable node after Check answer`, frame, page));
+        checklist.push(todo(`Chapter ${n} question: write the question and answers`, `Chapter ${n} question: write your own question and answers (Question section in the inspector). Its result is kept in the chapter's entry of the "results" variable by the Set variable node after Check answer`, frame, page));
       } else {
         const body = text(ctx, 'Page text', (def.paragraphs ?? []).join('\n'), box.x, BODY_Y, 470, { fontSize: 20, lineHeight: 1.45, paragraphSpacing: 18 });
         const pic = picture(ctx, 'Picture', box.x + 510, BODY_Y, box.width - 510, 300);
         page.children.push(body, pic);
-        checklist.push(item(`Chapter ${n}, page ${i + 1}: write your own text, and swap the picture for yours`, body, page));
+        checklist.push(todo(`Chapter ${n}, page ${i + 1}: write your text and swap the picture`, `Chapter ${n}, page ${i + 1}: write your own text, and swap the picture for yours`, body, page));
       }
 
       //Previous, "page n of m" and Next along the bottom: the buttons follow the chapter's own page order, and the left and right arrow keys work on pages that have no question to answer
@@ -316,14 +316,14 @@ function build(colourway: Colourway) {
     g.run(onSummary, announce(`"You have completed " + chaptersDone + " of " + progress.length + " chapters and got " + Math.round(score * 10) / 10 + " of ${OUT_OF} questions right."`));
     graphNote(summary, { anchor: onSummary, colour: 'sky', text: '**The summary reads itself out** from the same live `chaptersDone` and `score` the screen shows. `reached` and `results` are remembered between visits, so a returning reader starts where they left off.' });
     graphNote(summary, { anchor: onAgain, colour: 'sky', text: '**Start over clears that memory too**: variables reset, progress is forgotten and the cover shows. Nothing after that node runs. [ ] Remove the button if readers should keep their progress.' });
-    checklist.push(item('Check the summary: it reads the chapters, reached and results variables (Variables tab) and the verdict wording in the Score message', right, summary));
+    checklist.push(todo('Check the summary page reads right', 'Check the summary: it reads the chapters, reached and results variables (Variables tab) and the verdict wording in the Score message', right, summary));
   }
 
   checklist.unshift(item('Write the book title and the line under it on the cover', cover.children.find((n) => n.name === 'Subtitle'), cover));
   checklist.push(
-    item('To add a page to a chapter: duplicate one of its pages inside its artboard group. Next, Previous and "Page n of m" follow the group, so nothing is rewired. Change "size" for the chapter in the "chapters" variable (the progress bars read it)', undefined, chapterPages[0][1]),
-    item('Progress is remembered: the reached and results variables are ticked Remember (Variables tab), and Project > Results and progress > Resume on the same artboard is on, so a returning reader opens where they stopped. On the Link for StudyDesk it is kept under their StudyDesk session', undefined, contents),
-    item('The score is reported to StudyDesk (Project > Results and progress): the live "score" variable out of ' + OUT_OF + ', complete on reaching the summary page. Change the top score if you add or remove questions', undefined, summary),
+    todo('To add a page to a chapter, copy one of its pages', 'To add a page to a chapter: duplicate one of its pages inside its artboard group. Next, Previous and "Page n of m" follow the group, so nothing is rewired. Change "size" for the chapter in the "chapters" variable (the progress bars read it)', undefined, chapterPages[0][1]),
+    todo('Check that progress is remembered', 'Progress is remembered: the reached and results variables are ticked Remember (Variables tab), and Project > Results and progress > Resume on the same artboard is on, so a returning reader opens where they stopped. On the Link for StudyDesk it is kept under their StudyDesk session', undefined, contents),
+    todo('Check the score is reported to StudyDesk', 'The score is reported to StudyDesk (Project > Results and progress): the live "score" variable out of ' + OUT_OF + ', complete on reaching the summary page. Change the top score if you add or remove questions', undefined, summary),
   );
 
   //Notes for whoever edits the template, beside the pages
@@ -334,7 +334,7 @@ function build(colourway: Colourway) {
   addNote(chapterPages[0][2], { ...below(chapterPages[0][2], 0, 440), text: '**Question result** A set-item node after Check answer keeps the first result in this chapter\'s slot of `results`. The score on the summary is a live variable that adds the slots up.', colour: 'sky' });
 
   project.settings.reporting = { scoreVariable: score.id, maxScore: OUT_OF, completion: 'artboard', completionArtboard: summary.id, resumeArtboard: true };
-  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
+  checklist.push(todo(extrasShort({ hint: true, tryAgain: true }), extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }
 

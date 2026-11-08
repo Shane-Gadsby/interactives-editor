@@ -1,5 +1,5 @@
 import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, byName, contentBox, item, solid, text, type LayoutState } from '../../kit';
+import { brandedPage, brandedProject, button, byName, contentBox, item, solid, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { fill, stack } from '../../parts';
 import { bankQuestion, bind, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, variable } from './shared';
@@ -137,12 +137,12 @@ export function buildSummary(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-    item('Write your own steps: the "steps" variable (Variables tab) is a list. Each step has a heading, a prompt that is the question shown ("Which statement is true?" for them all), options (three or four statements, one of them true), correct (the number of the true one, counting from 1) and line (the sentence that goes into the summary). Keep those five names in each entry', frame, play),
-    item(`Add or remove steps in that list: the footer, the "Step n of ${N}" heading and the score all follow its length`, undefined, play),
-    item('Reword the messages: the right and wrong pick messages are the question\'s Right and Wrong feedback (Question section of the inspector), and messageHigh, messageMid and messageLow on the last page (Variables tab)', byName(result, 'Result message'), result),
-    item('Check the summary panel on the right: the sentences are listed in the order the steps were done, so the steps should be in the order the finished summary reads', byName(play, 'Summary panel'), play),
-    item('Change the points: a step scores when the first pick was right. Set Retry on the question to something under 100% to give part marks for a second go', frame, play),
-    item('Try it with the keyboard: Tab to a statement and press Enter', undefined, play),
+    todo('Write your own steps and their options', 'Write your own steps: the "steps" variable (Variables tab) is a list. Each step has a heading, a prompt that is the question shown ("Which statement is true?" for them all), options (three or four statements, one of them true), correct (the number of the true one, counting from 1) and line (the sentence that goes into the summary). Keep those five names in each entry', frame, play),
+    todo('Add or remove steps as you need', `Add or remove steps in that list: the footer, the "Step n of ${N}" heading and the score all follow its length`, undefined, play),
+    todo('Reword the right, wrong and result messages', 'Reword the messages: the right and wrong pick messages are the question\'s Right and Wrong feedback (Question section of the inspector), and messageHigh, messageMid and messageLow on the last page (Variables tab)', byName(result, 'Result message'), result),
+    todo('Put the steps in the order the summary reads', 'Check the summary panel on the right: the sentences are listed in the order the steps were done, so the steps should be in the order the finished summary reads', byName(play, 'Summary panel'), play),
+    todo('Change the points or allow part marks', 'Change the points: a step scores when the first pick was right. Set Retry on the question to something under 100% to give part marks for a second go', frame, play),
+    todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to a statement and press Enter', undefined, play),
   ];
   return { project, checklist };
 }

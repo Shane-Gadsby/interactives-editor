@@ -11,6 +11,8 @@ import {hashOf} from './library.mjs'
 export const MAX_CHECKLIST = 40
 export const MAX_TEXT = 200
 export const MAX_DESCRIPTION = 1000
+//The longer how and why under an item
+export const MAX_DETAIL = 1500
 
 //A plain single line: control characters out, spaces collapsed, capped. Empty comes back as ''
 export const cleanLine = (value, max = MAX_TEXT) => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : ''
@@ -32,6 +34,9 @@ export const cleanChecklist = (list, makeId) => {
 
 		let item = {id: typeof raw.id === 'string' && ID.test(raw.id) && !out.some((i) => i.id === raw.id) ? raw.id : makeId(), text}
 
+		let detail = cleanLine(raw?.detail, MAX_DETAIL)
+
+		if (detail) item.detail = detail
 		if (typeof raw.artboardId === 'string' && ID.test(raw.artboardId)) item.artboardId = raw.artboardId
 		if (typeof raw.nodeId === 'string' && ID.test(raw.nodeId)) item.nodeId = raw.nodeId
 

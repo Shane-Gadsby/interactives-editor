@@ -5,11 +5,11 @@
  */
 import { walk, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partsOf, setQuestionSettings } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, picture, text, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, picture, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
 import { boxText, clickOf, dressQuestion, endPage, goNextOn, graphNote, heroPage, kitNode, retray } from './shared';
-import { extrasChecklist, questionExtras } from '../../parts';
+import { extrasChecklist, extrasShort, questionExtras } from '\.\./\.\./parts';
 
 const LABELS = ['Evaporation', 'Condensation', 'Precipitation', 'Collection', 'Transpiration', 'Runoff'];
 //A label that fits no spot, mixed in on purpose
@@ -126,13 +126,13 @@ export function labelTheDiagram(colourway: Colourway) {
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the Start page', byName(hero, 'Page title'), hero),
     item('Change the page title and the footer text', byName(page, 'Page title'), page),
-    item('Replace the grey picture with your own diagram (add an image in its place, then delete the grey box)', pic, page),
-    item('Move each numbered Spot onto its part of the diagram (move its "Spot n area" layer), and write what it is in its Name read out (Drop zone section)', parts.matchZone[0], page),
-    item('Type your own labels in the Question section: each pair is a label and the spot it belongs on. Pair 1 belongs on Spot 1, pair 2 on Spot 2 and so on. Add wrong labels under Extras', frame, page),
-    item('Set the tries, the points (the results say "of 6") and the feedback messages', frame, page),
+    todo('Replace the grey picture with your own diagram', 'Replace the grey picture with your own diagram (add an image in its place, then delete the grey box)', pic, page),
+    todo('Move each numbered spot onto its part and name it', 'Move each numbered Spot onto its part of the diagram (move its "Spot n area" layer), and write what it is in its Name read out (Drop zone section)', parts.matchZone[0], page),
+    todo('Type your own labels and the spot each belongs on', 'Type your own labels in the Question section: each pair is a label and the spot it belongs on. Pair 1 belongs on Spot 1, pair 2 on Spot 2 and so on. Add wrong labels under Extras', frame, page),
+    todo('Set the tries, points and feedback messages', 'Set the tries, the points (the results say "of 6") and the feedback messages', frame, page),
     item('Change the results page text', results.result, results.page),
-    item('Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
+    todo('Pick a colourway (the brand parts are locked)', 'Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
   ];
-  checklist.push(item(extrasChecklist({ tryAgain: true })));
+  checklist.push(todo(extrasShort({ tryAgain: true }), extrasChecklist({ tryAgain: true })));
   return { project, checklist };
 }

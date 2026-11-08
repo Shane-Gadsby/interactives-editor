@@ -1,6 +1,6 @@
 /** Image hotspots: a picture with numbered points; each opens a dialog with a heading, text and an optional picture. */
 import { createNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, overlay, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, overlay, picture, solid, stroke, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import { addVar, announce, bind, click, goNext, graph, graphNote, set } from '../../graph-kit';
 import { dialogPanel, progressBar, stack } from '../../parts';
 import { heroButtons } from './helpers';
@@ -115,13 +115,13 @@ export const imageHotspots: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the one-line introduction on the first page', byName(hero, 'Page title'), hero),
-      item('Replace the grey picture with your own (select it and swap the image, or place an image over it)', pic, page),
-      item('Drag each numbered point to the right place on your picture, and rename it so a screen reader says where it is (Text alternative)', hots[0], page),
-      item('Write what each point says: the "spots" list variable (Variables panel) has a title and text for each, in the same order as the points in the Points frame', undefined, page),
-      item('Add a picture to the dialog, or delete the grey one if the points need none', dpic, page),
-      item('To add a point: duplicate a point inside the Points frame, change its number and ring rule, add a false to the "seen" list and an entry to "spots". No flow to copy', points, page),
+      todo('Replace the grey picture with your own', 'Replace the grey picture with your own (select it and swap the image, or place an image over it)', pic, page),
+      todo('Drag each point to the right place and describe it', 'Drag each numbered point to the right place on your picture, and rename it so a screen reader says where it is (Text alternative)', hots[0], page),
+      todo('Write what each point says', 'Write what each point says: the "spots" list variable (Variables panel) has a title and text for each, in the same order as the points in the Points frame', undefined, page),
+      todo('Add a picture to the dialog or delete the grey one', 'Add a picture to the dialog, or delete the grey one if the points need none', dpic, page),
+      todo('To add a point, copy a point and add its text', 'To add a point: duplicate a point inside the Points frame, change its number and ring rule, add a false to the "seen" list and an entry to "spots". No flow to copy', points, page),
       item('Change the footer line and the text on the last page', byName(page, 'Footer text'), page),
-      item('Try it with the keyboard: Tab to a point, Enter to open it, Esc to close it', undefined, page),
+      todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to a point, Enter to open it, Esc to close it', undefined, page),
     ];
     return { project, checklist };
   },

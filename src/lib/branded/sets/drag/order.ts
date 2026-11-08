@@ -1,11 +1,11 @@
 /** Put in order: six steps of a process to arrange, made with the question kit's ordering question (up and down buttons, so the keyboard works). */
 import { walk, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partOf, setQuestionSettings } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
 import { clickOf, dressQuestion, endPage, goNextOn, graphNote, heroPage, kitNode } from './shared';
-import { extrasChecklist, questionExtras } from '../../parts';
+import { extrasChecklist, extrasShort, questionExtras } from '\.\./\.\./parts';
 
 /** After a wrong check: the longest feedback, with the steps marked, so the card at its tallest is checked against the footer. */
 export const ORDER_LAYOUT_STATES: LayoutState[] = [
@@ -85,12 +85,12 @@ export function putInOrder(colourway: Colourway) {
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the Start page', byName(hero, 'Page title'), hero),
     item('Change the page title and the footer text', byName(page, 'Page title'), page),
-    item('Write your own question and list the steps in their RIGHT order (Question section in the inspector). The learner sees them shuffled', frame, page),
-    item('Change the hint, the number of tries and how many points it is worth (the results page says "of 6")', frame, page),
-    item('Rewrite the feedback messages for right, partly right, wrong and out of tries', frame, page),
+    todo('Write your question and the steps in the right order', 'Write your own question and list the steps in their RIGHT order (Question section in the inspector). The learner sees them shuffled', frame, page),
+    todo('Change the hint, tries and points', 'Change the hint, the number of tries and how many points it is worth (the results page says "of 6")', frame, page),
+    todo('Reword the four feedback messages', 'Rewrite the feedback messages for right, partly right, wrong and out of tries', frame, page),
     item('Change the results page text', results.result, results.page),
-    item('Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
+    todo('Pick a colourway (the brand parts are locked)', 'Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
   ];
-  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
+  checklist.push(todo(extrasShort({ hint: true, tryAgain: true }), extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }

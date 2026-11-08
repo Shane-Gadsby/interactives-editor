@@ -2,10 +2,10 @@
 //The questions are cues on the video (each one pauses it as it is reached), the chapters are the video's own, and the video is held paused while a question is open.
 import { createNode, uid, type ContainerNode, type LogicNode, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
 import { addQuestion, setQuestionSettings } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, darkButton, go, goNext, graphNote, set } from './common';
-import { extrasChecklist, questionExtras } from '../../parts';
+import { extrasChecklist, extrasShort, questionExtras } from '\.\./\.\./parts';
 
 const QUESTIONS = [
   { at: 20, prompt: 'What is the first thing worth reading in an academic article?', options: ['The abstract', 'The reference list', 'The last paragraph'], hint: 'It is a short summary at the start.' },
@@ -68,7 +68,7 @@ function build(colourway: Colourway) {
   //Behind the questions, so a short one never lets the video show underneath it
   const cover = createNode('rect', { name: 'Question cover', x: box.x, y: box.y, width: VIDEO_W, height: VIDEO_H, cornerRadius: 12, fill: solid(L.surface), stroke: null, decorative: true, bindings: { visible: 'popup > 0' } });
   watch.children.push(video, cover);
-  checklist.push(item('Choose your video: select the Video layer and pick a file in the inspector. Until you do, the video says so itself (its empty text)', video, watch));
+  checklist.push(todo('Choose your video file', 'Choose your video: select the Video layer and pick a file in the inspector. Until you do, the video says so itself (its empty text)', video, watch));
 
   //The pop-up questions, over the video, shown one at a time by the "popup" variable
   const frames: ContainerNode[] = [];
@@ -97,7 +97,7 @@ function build(colourway: Colourway) {
   });
   //Live: how many questions are finished, from the question kit's own locked flags
   addVar(project, 'answered', 'number', 0, { formula: `[${frames.map((f) => `${(f as unknown as { question: { prefix: string } }).question.prefix}_locked`).join(', ')}].filter(x => x).length`, live: true });
-  checklist.push(item('Write your own three questions (select a question, then the Question section in the inspector), and set the second each one appears at: select the Video layer and change its Cues (each cue is a question, in order, and is ticked to pause the video)', frames[0], watch));
+  checklist.push(todo('Write your three questions and when they appear', 'Write your own three questions (select a question, then the Question section in the inspector), and set the second each one appears at: select the Video layer and change its Cues (each cue is a question, in order, and is ticked to pause the video)', frames[0], watch));
 
   //Beside the video: the chapters (the video's own list) and a status
   const chapHead = heading(ctx, 'Chapters heading', 'Chapters', box.x + 640, box.y, 288, { fontSize: 22 });
@@ -140,7 +140,7 @@ function build(colourway: Colourway) {
   const hint = text(ctx, 'Hint', 'Press play. The video stops for each question and carries on when you press Continue.', box.x + 640, box.y + 332, 288, { fontSize: 14, color: L.muted, lineHeight: 1.4 });
   const toSummary = button(ctx, 'Go to summary', 'Go to the summary', box.x + 640, box.y + 400, 288, false);
   watch.children.push(chapHead, chapters, status, hint, toSummary);
-  checklist.push(item('Rename the chapters and set where each one starts: select the Video layer and change its Chapters (title and time). The list here, the video\'s own controls and the highlight all read them', chapters, watch));
+  checklist.push(todo('Rename the chapters and set where each starts', 'Rename the chapters and set where each one starts: select the Video layer and change its Chapters (title and time). The list here, the video\'s own controls and the highlight all read them', chapters, watch));
 
   //The wiring
   const g = new Graph(watch);
@@ -193,7 +193,7 @@ function build(colourway: Colourway) {
   addNote(watch, { ...below(watch, 456, 440), text: '**Chapters** are the video\'s own, so the list here and the controls in the browser share them. One flow seeks to `chapters[event.index].time`.', colour: 'sky' });
   addNote(hero, { ...below(hero, 0, 440), text: '[ ] **Before you share it** pick your video, then set each cue\'s time to where its question belongs, and write the three questions to match.', colour: 'gold' });
 
-  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
+  checklist.push(todo(extrasShort({ hint: true, tryAgain: true }), extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist: checklist as TemplateChecklistItem[] };
 }
 

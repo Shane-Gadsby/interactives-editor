@@ -1,6 +1,6 @@
 //Branching scenario: a study situation, three choices, consequences that offer more choices, and three endings picked by the score.
 import { createNode, type Artboard, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, heading, item, picture, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, heading, item, picture, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, bind, darkButton, goNext, set } from './common';
 
@@ -71,7 +71,7 @@ function build(colourway: Colourway) {
     { label: 'Quietly write Sam\'s section yourself', points: 0, path: 'Wrote it yourself', to: alone.name },
     { label: 'Email the lecturer and ask them to step in', points: 2, path: 'Emailed the lecturer', to: lecturer.name },
   ]);
-  checklist.push(item('Write your own situation and the first set of choices: each page sets its choices (label, points, path wording and the page it goes to) in the On start flow in the Interactions tab', c1, situation));
+  checklist.push(todo('Write your situation and the first choices', 'Write your own situation and the first set of choices: each page sets its choices (label, points, path wording and the page it goes to) in the On start flow in the Interactions tab', c1, situation));
 
   const c2 = scene(asked, 'Sam answers within the hour. They have been unwell and fell behind, and have not started the analysis. They say they can finish most of it by Thursday morning, but they are worried about the quality.', 'How do you respond?', [
     { label: 'Agree a checkpoint: a draft to the group by Wednesday night', points: 3, path: 'Set a checkpoint', to: 'ending' },
@@ -90,9 +90,9 @@ function build(colourway: Colourway) {
     { label: 'Wait for the lecturer to contact Sam', points: 0, path: 'Waited', to: 'ending' },
   ]);
   checklist.push(
-    item('Write what happens after each choice, and the choices that follow. A choice goes to the page named in its "to" (keep it the same as the page\'s name in the page list), or "ending" for whichever ending the score earns', c2, asked),
-    item('Check the points: the best route should score the most. The "score", "path", "ending" and "rating" variables are live, worked out from the choices taken, and the three endings read them (the maximum is ' + MAX_SCORE + ')', c3, alone),
-    item('Rewrite the lecturer pages and the statement page, or delete them and point the choices that lead to them somewhere else', c5, lecturer),
+    todo('Write what happens after each choice', 'Write what happens after each choice, and the choices that follow. A choice goes to the page named in its "to" (keep it the same as the page\'s name in the page list), or "ending" for whichever ending the score earns', c2, asked),
+    todo('Check the points: the best route scores most', 'Check the points: the best route should score the most. The "score", "path", "ending" and "rating" variables are live, worked out from the choices taken, and the three endings read them (the maximum is ' + MAX_SCORE + ')', c3, alone),
+    todo('Rewrite or delete the lecturer pages', 'Rewrite the lecturer pages and the statement page, or delete them and point the choices that lead to them somewhere else', c5, lecturer),
   );
 
   //Endings
@@ -109,7 +109,7 @@ function build(colourway: Colourway) {
   const e1 = ending(strong, 'You raised it early, kept everyone talking and the work stayed fair. This is what the unit\'s group work guide hopes for.');
   ending(mixed, 'The assignment got done, but some of it was harder than it needed to be. Talking sooner would have saved time and stress.');
   ending(learning, 'It did not go the way you wanted. Staying quiet or waiting made the problem bigger. Try again and take a different path.');
-  checklist.push(item('Write what each of the three endings says about how it went', e1, strong));
+  checklist.push(todo('Write what each of the three endings says', 'Write what each of the three endings says about how it went', e1, strong));
 
   //Notes for whoever edits the template, below the pages
   const below = (p: Artboard, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });

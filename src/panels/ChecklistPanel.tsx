@@ -97,9 +97,17 @@ export function ChecklistPanel() {
             return (
               <li key={item.id} className={item.done ? 'done' : ''}>
                 <input type="checkbox" checked={!!item.done} aria-label={`Done: ${item.text}`} onChange={(e) => store().update((d) => setItemDone(d, item.id, e.target.checked))} />
-                <button className="link-btn checklist-text" disabled={!item.nodeId && !item.artboardId} onClick={() => select(item.id)} title={item.nodeId ? 'Select the layer this is about' : item.artboardId ? 'Go to the artboard this is about' : 'A general item'}>
-                  {item.text}
-                </button>
+                <div className="checklist-body">
+                  <button className="link-btn checklist-text" disabled={!item.nodeId && !item.artboardId} onClick={() => select(item.id)} title={item.nodeId ? 'Select the layer this is about' : item.artboardId ? 'Go to the artboard this is about' : 'A general item'}>
+                    {item.text}
+                  </button>
+                  {item.detail && (
+                    <details className="checklist-detail">
+                      <summary>Why and how</summary>
+                      <p>{item.detail}</p>
+                    </details>
+                  )}
+                </div>
                 {label && (
                   <span className={`badge${st === 'missing' ? ' usage-flag bad' : ''}`} title={label[1]}>
                     {label[0]}

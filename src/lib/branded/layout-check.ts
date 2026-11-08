@@ -14,7 +14,8 @@
  * Text height and width are estimated from Open Sans's advance widths (there is no layout engine under test), good to a few
  * percent, so a hair of overlap is forgiven. A layer that overlaps others on purpose (a panel over its own text, a scrim) is
  * marked with `overlay(...)` from kit.ts and skipped with everything inside it. Only what shows at the start is checked, so a
- * panel that opens later is not (build the page's states into a test when one matters).
+ * panel that opens later is not (build the page's states into a test when one matters). A layer that fades in is read at its settled
+ * look (`settledLook`), not at the opacity 0 it starts from.
  */
 import { REPEAT_SEP, artboardScope, isContainer, pageInfo, prepareNodes, relayoutTree, startingValue, evaluate, textAutoSize, withMaster, type Artboard, type CopySizes, type ExprScope, type Project, type SceneNode, type TextNode } from 'interactives-player';
 import { LOGO_CLEAR, OVERLAY_TAG, type LayoutState } from './kit';
@@ -212,6 +213,47 @@ function textSize(n: TextNode, scope: ExprScope): { width: number; height: numbe
 }
 
 /**
+ * A layer that fades in (opacity 0 until its Words in timeline, or an Animate property, brings it up) is judged at its settled
+ * look, not at the 0 it starts from: it is what a learner reads and presses once the page has played in, so skipping it hid real
+ * failures (the word cloud's words). A timeline's last key is the settled value for opacity; the page's own autoplay timelines also
+ * settle a layer's position and size. A layer at opacity 0 that nothing ever raises is hidden for good and stays skipped.
+ */
+function settledLook(page: Artboard, nodes: SceneNode[]): void {
+  const settled = new Map<string, Record<string, number>>();
+  const set = (id: string, prop: string, v: number) => {
+    const had = settled.get(id) ?? {};
+    //the highest opacity anything brings a layer up to
+    had[prop] = prop === 'opacity' && prop in had ? Math.max(had[prop], v) : v;
+    settled.set(id, had);
+  };
+  for (const tl of page.timelines ?? []) {
+    for (const tr of tl.tracks) {
+      const last = [...tr.keys].sort((a, b) => a.t - b.t).pop();
+      if (!last || typeof last.value !== 'number') continue;
+      if (tr.prop === 'opacity' || (tl.autoplay && (tr.prop === 'x' || tr.prop === 'y' || tr.prop === 'width' || tr.prop === 'height'))) set(tr.nodeId, tr.prop, last.value);
+    }
+  }
+  for (const l of page.logic.nodes) {
+    if (l.kind !== 'action.animate' || l.params.prop !== 'opacity' || typeof l.params.target !== 'string') continue;
+    const to = Number(l.params.to);
+    if (Number.isFinite(to) && !l.params.relative) set(l.params.target as string, 'opacity', to);
+  }
+  if (!settled.size) return;
+  const visit = (list: SceneNode[]) => {
+    for (const n of list) {
+      const own = settled.get(n.id.split(REPEAT_SEP)[0]);
+      if (own) {
+        //only a layer that is at 0 now is brought up: one a binding already dims stays as it is
+        if ('opacity' in own && n.opacity === 0) n.opacity = own.opacity;
+        for (const k of ['x', 'y', 'width', 'height'] as const) if (k in own) (n as unknown as Record<string, number>)[k] = own[k];
+      }
+      if (isContainer(n)) visit(n.children);
+    }
+  };
+  visit(nodes);
+}
+
+/**
  * The page as the player draws it at the start: bindings and repeaters applied, the master's layers around it, and auto layout run
  * with every auto sized text at the size its words take (the player's `measureCopies` does that on screen for repeated copies and
  * the renderer for the rest; here the size is estimated). Returns a tree that is the checker's own, never the project's layers.
@@ -239,6 +281,7 @@ function drawn(project: Project, page: Artboard, scope: ExprScope): SceneNode[] 
     nodes = prepareNodes(source, scope, { measured: sizes });
   }
   const mine = structuredClone(nodes) as SceneNode[];
+  settledLook(page, mine);
   //text takes the height of its words at the width the layout then gives it, which changes what the layout gives: round until it stops
   for (let pass = 0; pass < 12; pass++) {
     let changed = false;

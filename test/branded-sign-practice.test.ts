@@ -151,7 +151,7 @@ describe('sign practice', { timeout: 30000 }, () => {
 
   it('has a checklist for signer consent, rights, the clips, the signs and the self-review list', () => {
     const { checklist } = starter.build(COLOURWAYS[0]);
-    const text = checklist.map((c) => c.text).join('\n');
+    const text = checklist.map((c) => `${c.text} ${c.detail ?? ''}`).join('\n');
     expect(checklist.length).toBeGreaterThanOrEqual(10);
     for (const word of [/consent/i, /licence/i, /Model clips/, /"signs"/, /"selfReview"/, /camera/i, /portrait/i, /no-camera|without the camera/i]) expect(text).toMatch(word);
     expect(text).not.toMatch(/—/);

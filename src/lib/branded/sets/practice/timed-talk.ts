@@ -14,7 +14,7 @@
 //first start asks the learner for the microphone on a consent screen, and a course page that does not allow the microphone would otherwise show a step
 //that cannot work. The take ("talk") is ended when the talk stage is left, kept for the tally and the model answer, and dropped on the next card.
 import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, byName, card, contentBox, heading, solid, stroke, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { join } from '../../graph-kit';
 import { progressBar } from '../../parts';
@@ -95,7 +95,7 @@ function build(colourway: Colourway) {
 
   const hg = new Graph(hero.page);
   hg.run(hg.click(hero.start, 'Begin'), goNext());
-  checklist.push(item('Write the title and the line under it on the first page. Keep it clear that this is practice and not assessed', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page));
+  checklist.push(todo('Write the title and say it is practice, not assessed', 'Write the title and the line under it on the first page. Keep it clear that this is practice and not assessed', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page));
 
   const box = contentBox(rehearse);
   const rx = box.x + RIGHT_X;
@@ -258,13 +258,13 @@ function build(colourway: Colourway) {
   graphNote(rehearse, { anchor: labelled(rehearse, /^Save this attempt and go on$/), colour: 'sky', text: '**Both save buttons share one Set variable**, which adds a row to `attempts`. That list is remembered (it survives a reload) and is all the summary page reads.' });
 
   checklist.push(
-    item('Write your bank of cards: Project > Variables > "cards". Each card has a type (the label on it), q (the question or topic), model (a short model answer) and points (up to four things a good answer makes). The six samples cover a viva, an interview and a short talk. Delete or replace them', cardQ, rehearse),
-    item('Set the timers: Project > Variables > "timersOn" (false switches the countdowns off for everyone), "prepSeconds" (30) and "talkSeconds" (60). Longer times are an accessibility adjustment, so offer them. Learners also get a Timers on or off button on the first stage', timerSwitch, rehearse),
-    item('Check the tally wording on the tally stage: filler words, long pauses, clear opening, clear close. Change the labels to suit your task (for example, "Used a technical term correctly"). It is the learner\'s own reflection, so do not describe it as a measurement', fill.nodes[0], rehearse),
-    item('Tell learners where to talk: the help text on the draw, prepare and talk stages. They talk to a friend, a voice memo on their phone or the room. With recording switched on (see the item for it) the draw stage says they can record themselves too', drawHelp, rehearse),
-    item('Check the summary page: the attempts are the remembered variable "attempts", so they are still there on the next visit (inside StudyDesk they go with the learner\'s record, otherwise they stay in that browser). "Clear my history" empties them', byName(summary, 'Attempts'), summary),
-    item('OPTIONAL RECORDING: it is off as shipped, so nothing is recorded and the record and replay layers never show. To offer it, tick Microphone in Project > Microphone and camera and write the one-sentence purpose that fills in "It is used to ...". Then "Record this talk" appears on the talk stage and "Play my talk" on the tally stage, for learners whose microphone works. Anyone who says no, has no microphone or chooses "Do not use my microphone or camera" rehearses exactly as before. The recording stays in the learner\'s browser, is dropped when they save and go on, and is never sent', recStep, rehearse),
-    item('Keep it rehearsal, not assessment: nothing is scored or sent, and a graded viva belongs in a live conversation or a Moodle recorded answer instead. Say so on the first page if you use this for an assessed task', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page),
+    todo('Write your bank of cards', 'Write your bank of cards: Project > Variables > "cards". Each card has a type (the label on it), q (the question or topic), model (a short model answer) and points (up to four things a good answer makes). The six samples cover a viva, an interview and a short talk. Delete or replace them', cardQ, rehearse),
+    todo('Set the timers', 'Set the timers: Project > Variables > "timersOn" (false switches the countdowns off for everyone), "prepSeconds" (30) and "talkSeconds" (60). Longer times are an accessibility adjustment, so offer them. Learners also get a Timers on or off button on the first stage', timerSwitch, rehearse),
+    todo('Check the tally wording and change it to suit', 'Check the tally wording on the tally stage: filler words, long pauses, clear opening, clear close. Change the labels to suit your task (for example, "Used a technical term correctly"). It is the learner\'s own reflection, so do not describe it as a measurement', fill.nodes[0], rehearse),
+    todo('Tell learners where to talk', 'Tell learners where to talk: the help text on the draw, prepare and talk stages. They talk to a friend, a voice memo on their phone or the room. With recording switched on (see the item for it) the draw stage says they can record themselves too', drawHelp, rehearse),
+    todo('Check the summary page and its attempts', 'Check the summary page: the attempts are the remembered variable "attempts", so they are still there on the next visit (inside StudyDesk they go with the learner\'s record, otherwise they stay in that browser). "Clear my history" empties them', byName(summary, 'Attempts'), summary),
+    todo('Decide whether to offer recording (it is off)', 'OPTIONAL RECORDING: it is off as shipped, so nothing is recorded and the record and replay layers never show. To offer it, tick Microphone in Project > Microphone and camera and write the one-sentence purpose that fills in "It is used to ...". Then "Record this talk" appears on the talk stage and "Play my talk" on the tally stage, for learners whose microphone works. Anyone who says no, has no microphone or chooses "Do not use my microphone or camera" rehearses exactly as before. The recording stays in the learner\'s browser, is dropped when they save and go on, and is never sent', recStep, rehearse),
+    todo('Keep it rehearsal, not assessment', 'Keep it rehearsal, not assessment: nothing is scored or sent, and a graded viva belongs in a live conversation or a Moodle recorded answer instead. Say so on the first page if you use this for an assessed task', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page),
   );
 
   //The summary: the numbers across attempts, then the last six
@@ -314,8 +314,8 @@ function build(colourway: Colourway) {
   bind(rowFrame, { ariaLabel: '"Attempt " + item.n + ": " + item.fillers + " filler words, " + item.pauses + " long pauses, opening " + (item.opening ? "clear" : "not clear") + ", close " + (item.close ? "clear" : "not clear") + ", " + item.made + " of " + item.of + " points"' });
   rowFrame.role = 'region';
   const rows = createNode('frame', { name: 'Attempts', x: sb.x, y: headY + 26, width: sb.width, height: 248, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your last six attempts', repeat: { items: 'attempts.slice(-6)', layout: 'grid', gap: 4, columns: 1 }, children: [rowFrame] }) as FrameNode;
-  const another = button(ctx, 'Draw another card', 'Draw another card', sb.x, sb.y + sb.height - 46, 240, true);
-  const clear = bind(button(ctx, 'Clear my history', 'Clear my history', sb.x + 256, sb.y + sb.height - 46, 220, false), { visible: 'attempts.length > 0' });
+  const another = button(ctx, 'Draw another card', 'Draw another card', sb.x, barY(sb), 240, true);
+  const clear = bind(button(ctx, 'Clear my history', 'Clear my history', sb.x + 256, barY(sb), 220, false), { visible: 'attempts.length > 0' });
   summary.children.push(rows, another, clear);
   const sg = new Graph(summary);
   sg.run(sg.click(another, 'Draw another card'), goPrevious());

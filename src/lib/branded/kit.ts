@@ -314,6 +314,17 @@ export function contentBox(page: Artboard): { x: number; y: number; width: numbe
   return { x: SIDE, y: TOP + 74, width: page.width - SIDE * 2, height: page.height - TOP - 74 - FOOTER - 16 };
 }
 
+/** How tall the buttons in a page's bottom bar are (the kit's own button height). */
+export const NAV_HEIGHT = 46;
+
+/**
+ * The top of the bottom bar every starter puts its Back and Next buttons on: the last row of the content box, a little clear of the
+ * footer and the logo. Back goes at the left edge of the box, Next (the primary one) at the right, and a page counter between them.
+ * 524 on a 1024 by 640 page. `barY(box)` is the same for a box that is not the page's own content box.
+ */
+export const barY = (box: { y: number; height: number }): number => box.y + box.height - NAV_HEIGHT - 10;
+export const navBarY = (page: Artboard): number => barY(contentBox(page));
+
 // ------------------------------------------------------------------ small builders, all colours from the colourway
 
 export const solid = (color: string) => ({ type: 'solid' as const, color });
@@ -358,6 +369,13 @@ export const edge = (a: LogicNode, b: LogicNode, fromPort = 'out'): LogicEdge =>
 export const chain = (...nodes: LogicNode[]): LogicEdge[] => nodes.slice(1).map((n, i) => edge(nodes[i], n));
 
 export const item = (text: string, node?: SceneNode, artboard?: Artboard): TemplateChecklistItem => ({ id: uid('ck'), text, ...(node ? { nodeId: node.id } : {}), ...(artboard ? { artboardId: artboard.id } : {}), done: false });
+
+/**
+ * A checklist item the way the starters write them: `text` is one short, plain action (about a dozen words, no layer, tab or variable
+ * names), and `detail` is the how and why in as many words as it takes, shown in a fold under it. test/starter-checklist.test.ts holds
+ * every starter to that.
+ */
+export const todo = (text: string, detail: string, node?: SceneNode, artboard?: Artboard): TemplateChecklistItem => ({ ...item(text, node, artboard), detail });
 
 export const byName = (ab: Artboard, name: string): SceneNode | undefined => {
   const look = (list: SceneNode[]): SceneNode | undefined => {
