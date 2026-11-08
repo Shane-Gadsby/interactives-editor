@@ -54,11 +54,13 @@ describe('the grid menus', () => {
     expect(labelOf(items[0])).toBe('Show grid');
     click(items[0]);
     expect(prefs().showGrid).toBe(true);
-    click(items[1]);
+    //snapping is one submenu, and Grid is one of its ticks (the same switch as Ctrl+')
+    expect(labelOf(items[1])).toBe('Snapping');
+    click(sub(items[1]).find((i) => /Grid$/.test(labelOf(i)))!);
     expect(prefs().snapGrid).toBe(true);
     items = gridMenu();
     expect(labelOf(items[0])).toBe('Hide grid');
-    expect(labelOf(items[1])).toBe('Snap to grid: on');
+    expect(labelOf(sub(items[1]).find((i) => /Grid$/.test(labelOf(i)))!)).toBe('✓ Grid');
     const size = find(items, /^Grid size/);
     expect(labelOf(size)).toBe('Grid size (8 px (every 4))');
     click(sub(size).find((i) => labelOf(i).includes('24 px'))!);

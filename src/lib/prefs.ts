@@ -15,8 +15,26 @@ export interface Prefs {
   rulers: boolean;
   /** The grid drawn on the canvas (Shift+G). It never shows in Preview or exports. */
   showGrid: boolean;
-  /** Moves, resizes, new shapes, pen points and arrow-key nudges land on the grid (Ctrl+'). Ctrl while dragging turns it off. */
+  /** Snapping at all (the master switch; the choices below are kept while it is off). Ctrl while dragging turns snapping off for that drag. */
+  snapOn: boolean;
+  /** Snap target Grid: moves, resizes, new shapes, pen points and arrow-key nudges land on the grid (Ctrl+'). */
   snapGrid: boolean;
+  /** Snap target Artboard: the artboard's edges and centre (and, moving an artboard, the other artboards'). */
+  snapArtboard: boolean;
+  /** Snap target Layers: edges and centres of other layers. */
+  snapLayers: boolean;
+  /** Layers reach every layer on the artboard, not only the ones in the same parent as what is dragged. */
+  snapLayersAll: boolean;
+  /** Snap target Guides: ruler guides. */
+  snapGuides: boolean;
+  /** Snap target Spacing: equal gaps between neighbouring layers, drawn with the distance. */
+  snapSpacing: boolean;
+  /** Snap target Pixels: whole-pixel positions and sizes. */
+  snapPixels: boolean;
+  /** Snap target Points: path anchor points and bone joints. */
+  snapPoints: boolean;
+  /** How close (screen pixels) something has to be to snap. */
+  snapDistance: number;
   /** Grid cell size in artboard pixels. An artboard can override it (`artboard.grid`). */
   gridSize: number;
   /** A stronger line every this many cells. */
@@ -43,7 +61,7 @@ export interface Prefs {
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapGrid: false, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true };
+const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 

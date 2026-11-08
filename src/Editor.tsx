@@ -36,7 +36,9 @@ import { SaveTemplateModal } from './components/TemplateModals';
 import { CHECKLIST_FLAG, hasChecklist } from './lib/templates';
 import { prefs, setPrefs, usePrefs } from './lib/prefs';
 import { useDock } from './lib/dock';
-import { gridFor, gridLabel, nudgeDelta, shiftSteps } from './lib/grid';
+import { gridFor, nudgeDelta, shiftSteps } from './lib/grid';
+import { snapAny, snapSettings, toggleSnap } from './lib/snapping';
+import { SnapMenu } from './components/SnapMenu';
 import { gridMenu } from './components/grid-menu';
 import { MediaCatalogueModal } from './components/MediaCatalogueModal';
 import { LinkManager, setLinkManager } from './lib/links';
@@ -359,7 +361,7 @@ function useShortcuts() {
       }
       if (mod && !e.shiftKey && !e.altKey && e.key === "'") {
         e.preventDefault();
-        setPrefs({ snapGrid: !prefs().snapGrid });
+        toggleSnap('grid');
         return;
       }
       if (e.shiftKey && (e.code === 'Digit1' || e.code === 'Digit2')) {
@@ -399,7 +401,7 @@ function useShortcuts() {
         let dx = k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0;
         let dy = k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0;
         // With the grid on a nudge goes to the next grid line (Shift: a major step), by the selection's edge. Ctrl turns it off
-        const ab = prefs().snapGrid && !mod ? s.artboard() : null;
+        const ab = snapSettings().grid && !mod ? s.artboard() : null;
         const sb = ab && selectionBounds(ab, st.selection);
         if (ab && sb) {
           const g = gridFor(ab, prefs());
@@ -1054,6 +1056,7 @@ export function Toolbar() {
   const horizontal = useDock().tools.place === 'bottom';
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [gridMenuAt, setGridMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const [snapMenuAt, setSnapMenuAt] = useState<{ x: number; y: number } | null>(null);
   const gridContext = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1092,6 +1095,7 @@ export function Toolbar() {
       {menu && <ContextMenu x={menu.x} y={menu.y} items={toolsMenu()} onClose={() => setMenu(null)} />}
       {catalogueOpen && <MediaCatalogueModal onClose={() => setCatalogueOpen(false)} />}
       {gridMenuAt && <ContextMenu x={gridMenuAt.x} y={gridMenuAt.y} items={gridMenu()} onClose={() => setGridMenuAt(null)} />}
+      {snapMenuAt && <SnapMenu x={snapMenuAt.x} y={snapMenuAt.y} onClose={() => setSnapMenuAt(null)} />}
       <ToolsHead />
       <div className="tool-grid">
         {btn('select')}
@@ -1134,10 +1138,15 @@ export function Toolbar() {
         />
         <IconButton
           icon={<Icons.magnet />}
-          title={`Snap to grid is ${snapPrefs.snapGrid ? 'on' : 'off'} (Ctrl+'; ${gridLabel(gridFor(null, snapPrefs))}). Right-click for the grid size. Hold Ctrl while dragging to skip it`}
-          active={snapPrefs.snapGrid}
-          pressed={snapPrefs.snapGrid}
-          onClick={() => setPrefs({ snapGrid: !snapPrefs.snapGrid })}
+          title={`Snapping is ${snapPrefs.snapOn ? (snapAny(snapSettings(snapPrefs)) ? 'on' : 'on, with nothing ticked') : 'off'}: click for the targets (grid, artboard, layers, guides, spacing, pixels, points). Hold Ctrl while dragging to skip it, Ctrl+' toggles the grid`}
+          active={snapPrefs.snapOn && snapAny(snapSettings(snapPrefs))}
+          pressed={snapPrefs.snapOn}
+          popup="menu"
+          expanded={!!snapMenuAt}
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            setSnapMenuAt(snapMenuAt ? null : horizontal ? { x: r.left, y: Math.max(8, r.top - 330) } : { x: r.right + 6, y: Math.max(8, r.top - 300) });
+          }}
           onContextMenu={gridContext}
         />
         {catalogue}

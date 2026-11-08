@@ -610,9 +610,9 @@ export function Section({
   );
 }
 
-export function IconButton({ icon, title, onClick, active, disabled, className, pressed, onContextMenu }: { icon: ReactNode; title: string; onClick?: (e: React.MouseEvent) => void; active?: boolean; disabled?: boolean; className?: string; pressed?: boolean; onContextMenu?: (e: React.MouseEvent) => void }) {
+export function IconButton({ icon, title, onClick, active, disabled, className, pressed, onContextMenu, popup, expanded }: { icon: ReactNode; title: string; onClick?: (e: React.MouseEvent) => void; active?: boolean; disabled?: boolean; className?: string; pressed?: boolean; onContextMenu?: (e: React.MouseEvent) => void; popup?: 'menu'; expanded?: boolean }) {
   return (
-    <button type="button" className={`icon-btn${active ? ' active' : ''}${className ? ' ' + className : ''}`} title={title} aria-label={title} aria-pressed={pressed} onClick={onClick} onContextMenu={onContextMenu} disabled={disabled}>
+    <button type="button" className={`icon-btn${active ? ' active' : ''}${className ? ' ' + className : ''}`} title={title} aria-label={title} aria-pressed={pressed} aria-haspopup={popup} aria-expanded={popup ? !!expanded : undefined} onClick={onClick} onContextMenu={onContextMenu} disabled={disabled}>
       {icon}
     </button>
   );

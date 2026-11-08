@@ -54,7 +54,8 @@ import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
 import { artboardGridMenu, gridMenu } from '../components/grid-menu';
-import { gridFor, gridLabel, gridLook, snapAxis, snapPoint, type GridSpec } from '../lib/grid';
+import { gridFor, gridLabel, gridLook } from '../lib/grid';
+import { SNAP_LABEL, buildTargets, pixelRound, snapAny, snapArtboardBox, snapFor, snapMoveBox, snapPointer, type Gap, type SnapSet, type SnapSettings, type Target } from '../lib/snapping';
 import { fontStack } from '../lib/font-catalog';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { selectSameItems } from '../lib/layer-find';
@@ -126,7 +127,6 @@ const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
 /** Tools that start a new layer where you press, so the selection's resize and rotate handles stay out of the way. */
 const CREATION_TOOLS = new Set<Tool>(['artboard', 'line', 'pen', 'pencil', 'image', ...(Object.keys(CREATE_TYPES) as Tool[])]);
 
-const SNAP_PX = 6;
 /** Where world (0, 0) sits in the scrollable pan space; pan is measured from here. */
 const PAN_ORIGIN = 4_000_000;
 // The longest a big project's first fill is held back (see `opening`)
@@ -202,7 +202,20 @@ export function Canvas() {
     boneDraftRef.current = b;
     setBoneDraftState(b);
   };
-  const [guides, setGuides] = useState<{ abId: string; x: number[]; y: number[] } | null>(null);
+  //What snapped, to draw: lines by kind, and gaps for Spacing (artboard space, or canvas space when abId is null)
+  const [guides, setGuides] = useState<{ abId: string | null; x: Target[]; y: Target[]; gaps: Gap[] } | null>(null);
+  const showSnap = (abId: string | null, x: Target[], y: Target[], gaps: Gap[] = []) => setGuides(x.length || y.length || gaps.length ? { abId, x, y, gaps } : null);
+  //The candidate lines of a drag, worked out once per drag (the layers being dragged are the only ones that change)
+  const snapCache = useRef<{ key: string; proj: unknown; set: SnapSet } | null>(null);
+  const snapSetFor = (ab: Artboard, sn: SnapSettings, exclude: string[], parent?: () => string | null): SnapSet => {
+    const key = [ab.id, exclude.join(','), sn.on, sn.artboard, sn.layers, sn.layersAll, sn.guides, sn.spacing, sn.points].join('|');
+    const proj = store().get().project;
+    const c = snapCache.current;
+    if (c && c.key === key && (drag.current || c.proj === proj)) return c.set;
+    const set = buildTargets(ab, sn, new Set(exclude), parent?.() ?? null);
+    snapCache.current = { key, proj, set };
+    return set;
+  };
   const [pen, setPen] = useState<{ abId: string; points: PathPoint[]; cursor: Pt | null } | null>(null);
   const [selPoint, setSelPoint] = useState<{ si: number; pi: number } | null>(null);
   const penRef = useRef(pen);
@@ -243,17 +256,36 @@ export function Canvas() {
     return ab && active && ab.id === active.id ? active : ab;
   };
   const local = (ab: Artboard, w: Pt): Pt => ({ x: w.x - ab.canvasX, y: w.y - ab.canvasY });
-  /** Same, for a point on the bare canvas (the Artboard tool): the person's own grid. */
-  const gridPoint = (w: Pt, e: { ctrlKey: boolean; metaKey: boolean }): Pt => {
-    const g = gridSnapFor(null, e);
-    return g ? snapPoint(w, g) : w;
+  /** A point on the bare canvas (the Artboard tool, resizing an artboard): the person's own grid, and the other artboards' edges. */
+  const gridPoint = (w: Pt, e: { ctrlKey: boolean; metaKey: boolean }, exclude: string[] = []): Pt => {
+    const sn = snapFor(e);
+    if (!sn.on || (!sn.grid && !sn.artboard)) return w;
+    const set: SnapSet = { xs: [], ys: [], rects: [], points: [] };
+    if (sn.artboard)
+      for (const a of onCanvas) {
+        if (exclude.includes(a.id)) continue;
+        for (const [at, k] of [[a.canvasX, 'x'], [a.canvasX + a.width / 2, 'x'], [a.canvasX + a.width, 'x'], [a.canvasY, 'y'], [a.canvasY + a.height / 2, 'y'], [a.canvasY + a.height, 'y']] as const) (k === 'x' ? set.xs : set.ys).push({ at, kind: 'artboard' });
+      }
+    const r = snapPointer(set, sn, w, zoom, sn.grid ? gridFor(null, prefs()).size : null);
+    showSnap(null, r.x, r.y);
+    return r.p;
   };
-  /** A canvas point put on the artboard's grid, when grid snapping is on for this event (else as it was). */
-  const gridWorld = (ab: Artboard, w: Pt, e: { ctrlKey: boolean; metaKey: boolean }): Pt => {
-    const g = gridSnapFor(ab, e);
-    if (!g) return w;
-    const p = snapPoint(local(ab, w), g);
-    return { x: ab.canvasX + p.x, y: ab.canvasY + p.y };
+  /**
+   * A canvas point put on whatever the snapping choices say for this artboard (grid, artboard edges, layers, guides, and
+   * with `points` path points and bone joints), when Ctrl is not held. \`exclude\` is what is being dragged, which cannot
+   * snap to itself. Shows what snapped.
+   */
+  const snapWorld = (ab: Artboard, w: Pt, e: { ctrlKey: boolean; metaKey: boolean }, exclude: string[] = [], points = false): Pt => {
+    const sn = snapFor(e);
+    const use = points ? sn : { ...sn, points: false };
+    if (!snapAny(use)) {
+      setGuides(null);
+      return w;
+    }
+    const set = snapSetFor(ab, use, exclude, () => (exclude[0] ? locate(ab, exclude[0])?.parent?.id ?? null : null));
+    const r = snapPointer(set, use, local(ab, w), zoom, use.grid ? gridFor(ab, prefs()).size : null);
+    showSnap(ab.id, r.x, r.y);
+    return { x: ab.canvasX + r.p.x, y: ab.canvasY + r.p.y };
   };
   /**
    * The layer under the pointer. The artboard under the pointer goes first; then layers hanging outside their
@@ -404,6 +436,7 @@ export function Canvas() {
 
   const onPointerDown = (e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
+    snapCache.current = null;
     pointerDown(e);
     // The pointer is captured for the drag, so the canvas has to show what it is doing. A handle says it itself (its own cursor)
     const d = drag.current;
@@ -580,7 +613,7 @@ export function Canvas() {
     if (tool === 'pen') {
       const pab = penRef.current ? getArtboard(st.project, penRef.current.abId) : hitAb ?? ab;
       if (!pab) return;
-      const p = local(pab, gridWorld(pab, w, e));
+      const p = local(pab, snapWorld(pab, w, e, [], true));
       const pts = penRef.current?.points ?? [];
       setPen({ abId: pab.id, points: [...pts, { x: p.x, y: p.y }], cursor: p });
       if (!penRef.current) store().set({ activeArtboardId: pab.id, selection: [] });
@@ -634,7 +667,7 @@ export function Canvas() {
       // Draw into the frame under the pointer, if any.
       const path = hitTest(cab, p.x, p.y);
       const frame = [...path].reverse().find((n) => n.type === 'frame');
-      const gp = local(cab, gridWorld(cab, w, e));
+      const gp = local(cab, snapWorld(cab, w, e));
       drag.current = { kind: 'create', tool, abId: cab.id, start: gp, parentId: tool === 'frame' ? null : frame?.id ?? null };
       setBox({ abId: cab.id, rect: { x: gp.x, y: gp.y, width: 0, height: 0 } });
       if (cab.id !== st.activeArtboardId) store().set({ activeArtboardId: cab.id, selection: [], activeTimelineId: null });
@@ -735,7 +768,7 @@ export function Canvas() {
       }
       if (st.tool === 'pen' && penRef.current) {
         const pab = getArtboard(st.project, penRef.current.abId);
-        if (pab) setPen({ ...penRef.current, cursor: local(pab, gridWorld(pab, w, e)) });
+        if (pab) setPen({ ...penRef.current, cursor: local(pab, snapWorld(pab, w, e, [], true)) });
       }
       return;
     }
@@ -765,14 +798,17 @@ export function Canvas() {
           if (Math.abs(dx) > Math.abs(dy)) dy = 0;
           else dx = 0;
         }
-        const snap = e.ctrlKey || e.metaKey ? { dx: 0, dy: 0, guides: { x: [], y: [] } } : snapMove(mab, d.bounds0, dx, dy, d.items.map((i) => i.id), zoom, gridSnapFor(mab, e));
+        const sn = snapFor(e);
+        const ids = d.items.map((i) => i.id);
+        const snap = snapMoveBox(snapSetFor(mab, sn, ids, () => locate(mab, ids[0])?.parent?.id ?? null), sn, d.bounds0, dx, dy, zoom, sn.grid ? gridFor(mab, prefs()).size : null);
         dx += snap.dx;
         dy += snap.dy;
-        setGuides(snap.guides.x.length || snap.guides.y.length ? { abId: mab.id, ...snap.guides } : null);
+        showSnap(mab.id, snap.x, snap.y, snap.gaps);
+        const px = pixelRound(sn);
         const changes = new Map<string, Record<string, unknown>>();
         for (const it of d.items) {
           const q = apply(it.inv, dx, dy);
-          changes.set(it.id, { x: round(it.x0 + q.x), y: round(it.y0 + q.y) });
+          changes.set(it.id, { x: px(it.x0 + q.x), y: px(it.y0 + q.y) });
         }
         store().setEach(changes, 'move');
         // Letting go over another artboard offers to move the layers there: say so while it's possible
@@ -782,14 +818,15 @@ export function Canvas() {
       }
       case 'resize': {
         if (!ab) break;
-        const gw = gridWorld(ab, w, e);
+        const gw = snapWorld(ab, w, e, [d.id]);
         const pp = apply(invert(d.parentM), gw.x - ab.canvasX, gw.y - ab.canvasY);
         const lp = apply(invert(nodeMatrix(d.node0)), pp.x, pp.y);
         // Shift keeps the ratio, and a layer whose W and H are linked keeps it unless Shift is held
         const keep = d.node0.lockRatio ? !e.shiftKey : e.shiftKey;
         const nb = resizeBox(d.node0.width, d.node0.height, d.handle, lp.x, lp.y, keep, e.altKey);
         const placed = placeBox(d.node0, nb.l, nb.t, nb.w, nb.h);
-        const props: Record<string, unknown> = { x: round(placed.x), y: round(placed.y), width: round(nb.w), height: round(nb.h) };
+        const px = pixelRound(snapFor(e));
+        const props: Record<string, unknown> = { x: px(placed.x), y: px(placed.y), width: px(nb.w), height: px(nb.h) };
         if (d.node0.type === 'path') props.paths = scalePaths(d.node0.paths, nb.w / Math.max(1, d.node0.width), nb.h / Math.max(1, d.node0.height));
         if (d.node0.type === 'text' && d.node0.autoSize !== 'none') {
           const [, hy] = HANDLE_POS[d.handle];
@@ -813,22 +850,23 @@ export function Canvas() {
       case 'resizeMulti': {
         if (!ab) break;
         const b0 = d.bounds0;
-        const p = local(ab, gridWorld(ab, w, e));
+        const p = local(ab, snapWorld(ab, w, e, d.items.map((it) => it.id)));
         // all of them linked: the selection keeps its ratio unless Shift is held
         const linked = d.items.length > 0 && d.items.every((it) => it.node0.lockRatio);
         const nb = resizeBox(b0.width, b0.height, d.handle, p.x - b0.x, p.y - b0.y, linked ? !e.shiftKey : e.shiftKey, e.altKey);
         const sx = nb.w / Math.max(1, b0.width);
         const sy = nb.h / Math.max(1, b0.height);
+        const px = pixelRound(snapFor(e));
         const changes = new Map<string, Record<string, unknown>>();
         for (const it of d.items) {
           const n0 = it.node0;
           const ax = it.off.x + n0.x;
           const ay = it.off.y + n0.y;
           const props: Record<string, unknown> = {
-            x: round(b0.x + nb.l + (ax - b0.x) * sx - it.off.x),
-            y: round(b0.y + nb.t + (ay - b0.y) * sy - it.off.y),
-            width: round(n0.width * sx),
-            height: round(n0.height * sy),
+            x: px(b0.x + nb.l + (ax - b0.x) * sx - it.off.x),
+            y: px(b0.y + nb.t + (ay - b0.y) * sy - it.off.y),
+            width: px(n0.width * sx),
+            height: px(n0.height * sy),
           };
           if (n0.type === 'path') props.paths = scalePaths(n0.paths, sx, sy);
           changes.set(it.id, props);
@@ -852,8 +890,24 @@ export function Canvas() {
         break;
       }
       case 'moveAb': {
-        const dx = round(w.x - d.start.x);
-        const dy = round(w.y - d.start.y);
+        let dx = w.x - d.start.x;
+        let dy = w.y - d.start.y;
+        const sn = snapFor(e);
+        if (sn.on && (sn.grid || sn.artboard)) {
+          //the moved artboards go as one box against the ones that stay
+          const moved = d.items.map((it) => ({ it, a: getArtboard(st.project, it.id) })).filter((m) => m.a);
+          const x0 = Math.min(...moved.map((m) => m.it.x0));
+          const y0 = Math.min(...moved.map((m) => m.it.y0));
+          const box = { x: x0, y: y0, width: Math.max(...moved.map((m) => m.it.x0 + m.a!.width)) - x0, height: Math.max(...moved.map((m) => m.it.y0 + m.a!.height)) - y0 };
+          const others = onCanvas.filter((a) => !d.items.some((it) => it.id === a.id)).map((a) => ({ x: a.canvasX, y: a.canvasY, width: a.width, height: a.height }));
+          const r = snapArtboardBox(others, sn, box, dx, dy, zoom, sn.grid ? gridFor(null, prefs()).size : null);
+          dx += r.dx;
+          dy += r.dy;
+          showSnap(null, r.x, r.y);
+        } else setGuides(null);
+        const px = pixelRound(sn);
+        dx = px(dx);
+        dy = px(dy);
         if (dx || dy) d.moved = true;
         const at = new Map(d.items.map((it) => [it.id, it]));
         store().update(
@@ -861,8 +915,8 @@ export function Canvas() {
             for (const a of dr.artboards) {
               const it = at.get(a.id);
               if (!it) continue;
-              a.canvasX = round(it.x0 + dx);
-              a.canvasY = round(it.y0 + dy);
+              a.canvasX = px(it.x0 + dx);
+              a.canvasY = px(it.y0 + dy);
             }
           },
           { coalesce: 'moveAb' },
@@ -871,7 +925,7 @@ export function Canvas() {
       }
       case 'resizeAb': {
         const a0 = d.ab0;
-        const gw = gridPoint(w, e);
+        const gw = gridPoint(w, e, [d.id]);
         const nb = resizeBox(a0.width, a0.height, d.handle, gw.x - a0.canvasX, gw.y - a0.canvasY, e.shiftKey, e.altKey);
         store().update(
           (dr) => {
@@ -895,7 +949,7 @@ export function Canvas() {
       }
       case 'create': {
         const cab = d.abId ? getArtboard(st.project, d.abId) : null;
-        const p = cab ? local(cab, gridWorld(cab, w, e)) : gridPoint(w, e);
+        const p = cab ? local(cab, snapWorld(cab, w, e)) : gridPoint(w, e);
         let x2 = p.x;
         let y2 = p.y;
         if (e.shiftKey && d.tool !== 'line') {
@@ -930,7 +984,7 @@ export function Canvas() {
         if (!pn) break;
         const pab = getArtboard(st.project, pn.abId);
         if (!pab) break;
-        const p = local(pab, gridWorld(pab, w, e));
+        const p = local(pab, snapWorld(pab, w, e, [], true));
         const pts = pn.points.slice();
         const pt = pts[d.index];
         if (!pt) break;
@@ -941,7 +995,7 @@ export function Canvas() {
       }
       case 'pathPoint': {
         if (!ab) break;
-        const lp = toNodeLocal(d.node0, d.parentM, local(ab, w));
+        const lp = toNodeLocal(d.node0, d.parentM, local(ab, snapWorld(ab, w, e, [d.node0.id], true)));
         const sp = toNodeLocal(d.node0, d.parentM, d.start);
         const paths = structuredClone(d.node0.paths);
         const pt = paths[d.si]?.points[d.pi];
@@ -1746,18 +1800,38 @@ export function Canvas() {
     );
   }
 
-  // Snap guides
+  // Snap guides: a line for each thing that took the drag, in its kind's colour, equal gaps with their distance, and a ring on a point
   if (guides) {
-    const gab = getArtboard(project, guides.abId);
-    if (gab) {
-      for (const x of guides.x) {
-        const a = oscreen(gab, { x, y: -10000 });
-        overlay.push(<line key={`gx-${x}`} className="guide" x1={a.x} x2={a.x} y1={-100000} y2={100000} />);
+    const gab = guides.abId ? getArtboard(project, guides.abId) : null;
+    if (gab || guides.abId === null) {
+      const at = gab ?? null;
+      for (const t of guides.x) {
+        const a = oscreen(at, { x: t.at, y: -10000 });
+        overlay.push(<line key={`gx-${t.kind}-${t.at}`} className={`guide guide-${t.kind}`} x1={a.x} x2={a.x} y1={-100000} y2={100000} />);
       }
-      for (const y of guides.y) {
-        const a = oscreen(gab, { x: -10000, y });
-        overlay.push(<line key={`gy-${y}`} className="guide" x1={-100000} x2={100000} y1={a.y} y2={a.y} />);
+      for (const t of guides.y) {
+        const a = oscreen(at, { x: -10000, y: t.at });
+        overlay.push(<line key={`gy-${t.kind}-${t.at}`} className={`guide guide-${t.kind}`} x1={-100000} x2={100000} y1={a.y} y2={a.y} />);
       }
+      const pt = guides.x.find((t) => t.kind === 'points') && guides.y.find((t) => t.kind === 'points');
+      if (pt) {
+        const c = oscreen(at, { x: guides.x[0].at, y: guides.y[0].at });
+        overlay.push(<circle key="snap-point" className="guide-point" cx={c.x} cy={c.y} r={7} />);
+      }
+      guides.gaps.forEach((g, i) => {
+        const a = g.axis === 'x' ? oscreen(at, { x: g.from, y: g.at }) : oscreen(at, { x: g.at, y: g.from });
+        const b = g.axis === 'x' ? oscreen(at, { x: g.to, y: g.at }) : oscreen(at, { x: g.at, y: g.to });
+        overlay.push(
+          <g key={`gap-${i}`} className="guide-gap">
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+            <line x1={g.axis === 'x' ? a.x : a.x - 4} x2={g.axis === 'x' ? a.x : a.x + 4} y1={g.axis === 'x' ? a.y - 4 : a.y} y2={g.axis === 'x' ? a.y + 4 : a.y} />
+            <line x1={g.axis === 'x' ? b.x : b.x - 4} x2={g.axis === 'x' ? b.x : b.x + 4} y1={g.axis === 'x' ? b.y - 4 : b.y} y2={g.axis === 'x' ? b.y + 4 : b.y} />
+            <text className="guide-gap-label" x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 6} textAnchor="middle">
+              {g.label}
+            </text>
+          </g>,
+        );
+      });
     }
   }
 
@@ -2138,11 +2212,11 @@ export function Canvas() {
             </div>
           );
         })()}
-      {userPrefs.snapGrid && active && (
+      {userPrefs.snapOn && userPrefs.snapGrid && active && (
         <button
           type="button"
           className="canvas-status"
-          title="Snap to grid is on. Click to change the grid size (Ctrl while dragging skips it, Ctrl+' turns it off)"
+          title="Snap to grid is on. Click for the snapping choices and the grid size (Ctrl while dragging skips snapping, Ctrl+' turns the grid off)"
           onClick={(e) => {
             const r = e.currentTarget.getBoundingClientRect();
             setMenu({ x: r.left, y: r.top - 8, items: gridMenu() });
@@ -2150,6 +2224,11 @@ export function Canvas() {
         >
           <Icons.grid width={13} /> Snap {gridLabel(gridFor(active, userPrefs))}
         </button>
+      )}
+      {guides && (guides.x.length > 0 || guides.y.length > 0 || guides.gaps.length > 0) && (
+        <div className="snap-now" role="status" aria-live="off">
+          Snapped to {[...new Set([...guides.x, ...guides.y].map((t) => t.kind).concat(guides.gaps.length ? ['spacing' as const] : []))].map((k) => SNAP_LABEL[k]).join(', ')}
+        </div>
       )}
       <CommentLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} />
       <NotesLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} passive={s.tool === 'hand' || spaceHeld} />
@@ -2366,33 +2445,6 @@ function toNodeLocal(n: SceneNode, parentM: Matrix, p: Pt): Pt {
 function isTyping(e: KeyboardEvent): boolean {
   const t = e.target instanceof HTMLElement ? e.target : null;
   return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || !!t.closest?.('.cm-editor'));
-}
-
-/** Snap a moved selection's edges/centre to the artboard and to other top-level layers, or (when on) its edges to the grid, whichever is closer. */
-function snapMove(ab: Artboard, b: Rect, dx: number, dy: number, moving: string[], zoom: number, grid: GridSpec | null): { dx: number; dy: number; guides: { x: number[]; y: number[] } } {
-  const th = SNAP_PX / zoom;
-  const xs = [0, ab.width / 2, ab.width, ...(ab.guides?.x ?? [])];
-  const ys = [0, ab.height / 2, ab.height, ...(ab.guides?.y ?? [])];
-  const set = new Set(moving);
-  for (const n of ab.children) {
-    if (set.has(n.id) || !n.visible) continue;
-    const nb = selectionBounds(ab, [n.id]);
-    if (!nb) continue;
-    xs.push(nb.x, nb.x + nb.width / 2, nb.x + nb.width);
-    ys.push(nb.y, nb.y + nb.height / 2, nb.y + nb.height);
-  }
-  const cx = [b.x + dx, b.x + dx + b.width / 2, b.x + dx + b.width];
-  const cy = [b.y + dy, b.y + dy + b.height / 2, b.y + dy + b.height];
-  //the grid only looks at the outer edges, the centre has no business being on a line
-  const sx = snapAxis(cx, xs, th, grid?.size ?? null, [cx[0], cx[2]]);
-  const sy = snapAxis(cy, ys, th, grid?.size ?? null, [cy[0], cy[2]]);
-  return { dx: sx.d, dy: sy.d, guides: { x: sx.at === null ? [] : [sx.at], y: sy.at === null ? [] : [sy.at] } };
-}
-
-/** The grid this pointer event snaps to on an artboard: null when grid snapping is off or Ctrl/Cmd is held. */
-function gridSnapFor(ab: { grid?: Partial<GridSpec> } | null | undefined, e: { ctrlKey: boolean; metaKey: boolean }): GridSpec | null {
-  const p = prefs();
-  return p.snapGrid && !e.ctrlKey && !e.metaKey ? gridFor(ab, p) : null;
 }
 
 /** What a shape will look like while it is being drawn, in screen pixels (the defaults the new layer gets). */

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { VersionInfo } from './VersionInfo';
-import { DEFAULT_FONT, setPrefs, usePrefs } from '../lib/prefs';
+import { DEFAULT_FONT, setPrefs, usePrefs, type Prefs } from '../lib/prefs';
+import { SNAP_DISTANCE_RANGE, SNAP_ITEMS } from '../lib/snapping';
 import { FontField } from './FontPicker';
 import { IconButton, SelectField, CheckField, NumberField } from './ui';
 import { cleanGrid, GRID_PRESETS, GRID_SIZE_RANGE, GRID_SUBDIV_RANGE } from '../lib/grid';
@@ -62,7 +63,12 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
             <div className="field-label block">Canvas</div>
             <CheckField label="Show rulers" title="Rulers along the canvas edges; drag from them to make guides (Shift+R)" value={p.rulers} onChange={(v) => setPrefs({ rulers: v })} />
             <CheckField label="Show grid" title="Draws the grid on the artboards. Only the canvas shows it: Preview and exports never do (Shift+G)" value={p.showGrid} onChange={(v) => setPrefs({ showGrid: v })} />
-            <CheckField label="Snap to grid" title="Moves, resizes, new shapes, pen points and arrow-key nudges land on the grid, whether or not it is showing. Hold Ctrl while dragging to skip it (Ctrl+')" value={p.snapGrid} onChange={(v) => setPrefs({ snapGrid: v })} />
+            <CheckField label="Snapping" title="Every snap target on or off together; the ticks below are kept while it is off. Hold Ctrl while dragging to skip snapping for that drag (the Snap button on the tool bar has the same choices)" value={p.snapOn} onChange={(v) => setPrefs({ snapOn: v })} />
+            {SNAP_ITEMS.map((i) => (
+              <CheckField key={i.kind} label={`Snap to ${i.label.toLowerCase()}`} title={i.tip} value={!!p[i.pref]} disabled={!p.snapOn} onChange={(v) => setPrefs({ [i.pref]: v } as Partial<Prefs>)} />
+            ))}
+            <CheckField label="Layers: all, not just siblings" title="Layers snap to every layer on the artboard, not only the ones beside the layer you drag" value={p.snapLayersAll} disabled={!p.snapOn || !p.snapLayers} onChange={(v) => setPrefs({ snapLayersAll: v })} />
+            <NumberField label="Snap distance" title="How close (screen pixels) an edge has to come to a target to snap to it" value={p.snapDistance} min={SNAP_DISTANCE_RANGE.min} max={SNAP_DISTANCE_RANGE.max} suffix="px" onChange={(v) => setPrefs({ snapDistance: Math.min(SNAP_DISTANCE_RANGE.max, Math.max(SNAP_DISTANCE_RANGE.min, Math.round(v))) })} />
             <NumberField
               label="Grid size"
               title="The width and height of one grid cell in pixels, measured from the artboard's top left corner. An artboard can have its own (right-click the artboard)"

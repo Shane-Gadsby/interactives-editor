@@ -3,6 +3,7 @@ import { promptDialog } from './dialogs';
 import { prefs, setPrefs } from '../lib/prefs';
 import { cleanGrid, GRID_PRESETS, GRID_SIZE_RANGE, gridFor, gridLabel, type GridSpec } from '../lib/grid';
 import { store } from '../store/store';
+import { SNAP_DISTANCES, SNAP_ITEMS, toggleSnap } from '../lib/snapping';
 import type { Artboard } from 'interactives-player';
 
 const SUBDIVISIONS = [1, 2, 4, 5, 8, 10];
@@ -38,13 +39,26 @@ const setDefault = (g: Partial<GridSpec>) => {
   setPrefs({ gridSize: next.size, gridSubdivisions: next.subdivisions });
 };
 
-/** Show grid, Snap to grid and the default grid size, for a right-click menu. */
+/** The snapping choices as menu items (the canvas menu; the tool bar's own dropdown is `SnapMenu`). */
+export function snapItems(): MenuItem[] {
+  const p = prefs();
+  return [
+    { label: tick(p.snapOn, 'Snapping'), title: 'Every snap target on or off together; your ticks are kept. Hold Ctrl while dragging to skip snapping', onClick: () => toggleSnap('on') },
+    { separator: true },
+    ...SNAP_ITEMS.map((i) => ({ label: tick(!!p[i.pref], i.label), hint: i.kind === 'grid' ? "Ctrl+'" : undefined, title: i.tip, onClick: () => toggleSnap(i.kind) })),
+    { separator: true },
+    { label: tick(p.snapLayersAll, 'Layers: all, not just siblings'), title: 'Layers snap to every layer on the artboard, not only the ones beside the layer you drag', onClick: () => toggleSnap('layersAll') },
+    { label: `Snap distance (${p.snapDistance} px)`, items: SNAP_DISTANCES.map((n) => ({ label: tick(p.snapDistance === n, `${n} px`), onClick: () => setPrefs({ snapDistance: n }) })) },
+  ];
+}
+
+/** Show grid, the snapping choices and the default grid size, for a right-click menu. */
 export function gridMenu(): MenuItem[] {
   const p = prefs();
   const g = gridFor(null, p);
   return [
     { label: p.showGrid ? 'Hide grid' : 'Show grid', hint: 'Shift+G', onClick: () => setPrefs({ showGrid: !p.showGrid }) },
-    { label: p.snapGrid ? 'Snap to grid: on' : 'Snap to grid: off', hint: "Ctrl+'", title: 'Moves, resizes, new shapes, pen points and arrow-key nudges land on the grid. Hold Ctrl while dragging to skip it', onClick: () => setPrefs({ snapGrid: !p.snapGrid }) },
+    { label: p.snapOn ? 'Snapping' : 'Snapping: off', items: snapItems() },
     { label: `Grid size (${gridLabel(g)})`, items: [...sizeItems(g, setDefault), { separator: true }, { heading: 'Stronger line' }, ...subdivisionItems(g, setDefault)] },
   ];
 }

@@ -4,6 +4,7 @@
  */
 export const FIELD_TIPS: Record<string, string> = {
   'Show notes on the canvas': 'Draw the sticky notes authors leave on the canvas. Players, Preview and exports never show them either way',
+  'Snap distance': 'How close (screen pixels) an edge has to come to a snap target to snap to it. Zooming in makes it finer',
   'Grid size': 'Width and height of one grid cell in pixels, measured from the artboard\'s top left corner',
   'Stronger line every': 'Draw every Nth grid line heavier (1 draws them all alike)',
   X: 'Distance from the left edge of the parent (drag the label to scrub, type sums like 100/2)',

@@ -1945,6 +1945,53 @@ body.col-resizing * {
   stroke: #ff4f8b;
   stroke-width: 1;
 }
+/* One colour for each kind of snap, so the line says what took the drag (the chip in the corner says it in words) */
+.guide.guide-artboard {
+  stroke: #1fb6a6;
+}
+.guide.guide-guides {
+  stroke: #ff4fa3;
+  stroke-dasharray: 5 3;
+}
+.guide.guide-points {
+  stroke: #4cc35d;
+}
+.guide.guide-grid {
+  stroke: #8f9bb0;
+  opacity: 0.7;
+}
+.guide-point {
+  fill: none;
+  stroke: #4cc35d;
+  stroke-width: 1.6;
+}
+.guide-gap line {
+  stroke: #ff9f1c;
+  stroke-width: 1.2;
+}
+.guide-gap-label {
+  fill: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: #c26a00;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+.snap-now {
+  position: absolute;
+  left: 12px;
+  bottom: 40px;
+  z-index: 8;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2, var(--panel));
+  color: var(--text);
+  pointer-events: none;
+}
 .path-point {
   fill: #fff;
   stroke: var(--accent);
@@ -9209,4 +9256,32 @@ code {
 .inspector.ps-on .section:not(.ps-hit) .section-body > :not([data-prop]):not(:has([data-prop]:not(.ps-hide))),
 .inspector.ps-on > :not(.section):not(.prop-search):not(.recording-banner):not(:has(.section)) {
   display: none;
+}
+
+.snap-menu {
+  min-width: 232px;
+}
+.snap-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.snap-tick {
+  width: 14px;
+  text-align: center;
+  font-weight: 700;
+}
+.snap-item.on .snap-tick {
+  color: var(--primary-bg);
+}
+.snap-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.snap-field select {
+  font: inherit;
 }
