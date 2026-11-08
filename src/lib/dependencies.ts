@@ -11,7 +11,7 @@
  * anything found only inside a script or code snippet is marked `loose`: it might be a false hit, but a miss
  * is unlikely.
  */
-import { CATALOG_BY_KIND, converterExpressions, isContainer, type Artboard, type DataSource, type Id, type Paint, type Project, type SceneNode, type Timeline, type Variable } from 'interactives-player';
+import { CATALOG_BY_KIND, converterExpressions, isContainer, liveWriters, planLive, type Artboard, type DataSource, type Id, type Paint, type Project, type SceneNode, type Timeline, type Variable } from 'interactives-player';
 
 export type EntityKind = 'artboard' | 'asset' | 'variable' | 'data' | 'script' | 'timeline' | 'layer';
 
@@ -54,6 +54,8 @@ export interface MissingRef {
   what: EntityKind;
   ref: string;
   how: string;
+  /** Set when it is not a missing thing but another problem, said in words after the name ("writes x, a live variable..."). */
+  problem?: string;
 }
 
 export interface UsageReport {
@@ -369,6 +371,14 @@ export function analyzeUsage(project: Project): UsageReport {
     for (const a of unusedAssets) {
       if (raw.includes(a.id)) use('asset', a.id, projectSrc, 'mentioned in the document', true);
     }
+  }
+
+  // Live variables: nodes that try to write one, and ones that read each other in a circle
+  for (const w of liveWriters(project)) {
+    missing.push({ by: { type: 'logic', artboardId: w.artboardId, artboardName: w.artboardName, id: w.nodeId, name: w.label }, what: 'variable', ref: w.variable.name, how: w.label, problem: `writes ${w.variable.name}, a live variable that is worked out from its formula, so it does nothing` });
+  }
+  for (const v of planLive(project).cyclic) {
+    missing.push({ by: { type: 'project', id: v.id, name: `Variable ${v.name}` }, what: 'variable', ref: v.name, how: 'live formula', problem: `${v.name} reads itself, or live variables that read it, so it stays at its starting value` });
   }
 
   const list = (kind: EntityKind) => [...items.values()].filter((i) => i.kind === kind);

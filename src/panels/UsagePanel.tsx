@@ -181,7 +181,13 @@ export function UsagePanel() {
                 {l.where && <span className="muted"> in {l.where}</span>}
                 <span className="muted">
                   {' '}
-                  points at a missing {KIND_LABEL[m.what]} ({m.how}): <code>{m.ref}</code>
+                  {m.problem ? (
+                    m.problem
+                  ) : (
+                    <>
+                      points at a missing {KIND_LABEL[m.what]} ({m.how}): <code>{m.ref}</code>
+                    </>
+                  )}
                 </span>
               </button>
             );

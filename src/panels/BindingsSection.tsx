@@ -23,7 +23,7 @@ const show = (v: unknown): string => {
   return String(v);
 };
 
-const CONVERTER_NAME: Record<string, string> = { format: 'Number to text', round: 'Round', invert: 'Invert', range: 'Remap', map: 'Look up', toNumber: 'To number', toText: 'To text', toBoolean: 'To true/false', expr: 'Formula' };
+const CONVERTER_NAME: Record<string, string> = { format: 'Number to text', round: 'Round', invert: 'Invert', range: 'Remap', map: 'Look up', toNumber: 'To number', toText: 'To text', toBoolean: 'To true/false', duration: 'Seconds to m:ss', expr: 'Formula' };
 
 /**
  * What the binding does with the starting values: the variable's value, what each converter turns it into, and what the
