@@ -6,6 +6,7 @@ import { button, solid, stroke, text, type BrandedCtx } from '../../kit';
 import { bind, click, go, graph, heroPage, setVar } from '../assessment/shared';
 
 export { bind, click, go, graph, setVar, variable } from '../assessment/shared';
+export { addVar, goNext, goPrevious } from '../../graph-kit';
 
 /** The save and load nodes of the learner's user data: kept on the Link for StudyDesk under the signed in person, in the browser anywhere else. */
 export const saveData = (vars: Variable[]): [string, Record<string, unknown>] => ['action.saveUserData', { variables: vars.map((v) => v.id) }];

@@ -32,7 +32,8 @@ describe('branded writing starters and the interactive book', () => {
     await flush();
   };
   const press = async (key: string) => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    //a browser's key event has a code as well as a key (layer shortcuts match on it)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key, code: key, bubbles: true, cancelable: true }));
     await flush();
   };
   const settle = async (player: Player, ms = 400) => {
@@ -114,6 +115,13 @@ describe('branded writing starters and the interactive book', () => {
               expect(n.ariaLabel, `${ab.name}: ${n.name}`).toBeTruthy();
             }
             if (n.type === 'frame' && (n.role === 'radio' || n.role === 'button') && !(n as { questionPart?: string }).questionPart) {
+              //a repeated layer's copies are in a key-navigation list: one of them is the tab stop and the arrow keys reach the rest
+              const copies = [...document.querySelectorAll<HTMLElement>(`[data-ix-id^="${n.id}~"]`)];
+              if (copies.length) {
+                expect(copies.filter((c) => c.tabIndex >= 0).length, `${ab.name}: ${n.name}`).toBeGreaterThanOrEqual(1);
+                for (const c of copies) expect(c.getAttribute('aria-label'), `${ab.name}: ${n.name}`).toBeTruthy();
+                return;
+              }
               expect(el(n.id).tabIndex, `${ab.name}: ${n.name}`).toBeGreaterThanOrEqual(0);
               expect(el(n.id).getAttribute('aria-label'), `${ab.name}: ${n.name}`).toBeTruthy();
             }
@@ -133,6 +141,9 @@ describe('branded writing starters and the interactive book', () => {
       return player;
     };
     const survey = (p: Project, name: string) => layer(p, 'Survey', name);
+    //the rating buttons and the choices are copies of one layer: the nth button is the copy at n - 1
+    const rate = (p: Project, n: number) => `${survey(p, 'Rating').id}~${n - 1}`;
+    const choice = (p: Project, n: number) => `${survey(p, 'Choice').id}~${n - 1}`;
 
     it('has a hero, one survey page with the three kinds of question, and a thank-you', () => {
       const p = project();
@@ -140,8 +151,9 @@ describe('branded writing starters and the interactive book', () => {
       expect(survey(p, 'Rating scale')).toBeTruthy();
       expect(survey(p, 'Place choices')).toBeTruthy();
       expect(survey(p, 'Comment box').type).toBe('input');
-      expect((survey(p, 'Rating scale') as { role?: string }).role).toBe('radiogroup');
-      expect(['Rating 1', 'Rating 2', 'Rating 3', 'Rating 4', 'Rating 5'].every((n) => (survey(p, n) as { role?: string }).role === 'radio')).toBe(true);
+      //the scale and the choices are radio groups made from one copy each
+      expect((survey(p, 'Rating') as { role?: string }).role).toBe('radio');
+      expect((survey(p, 'Choice') as { role?: string }).role).toBe('radio');
     });
 
     it('Submit stays off until the rating and the choice are answered, and the text is optional', async () => {
@@ -154,9 +166,9 @@ describe('branded writing starters and the interactive book', () => {
       const off = () => (submit.querySelector('button') ?? submit).hasAttribute('disabled') || submit.getAttribute('aria-disabled') === 'true';
       expect(off()).toBe(true);
       expect(textOf(survey(p, 'Survey status').id)).toContain('Questions 1 and 2 need an answer');
-      await click(survey(p, 'Rating 4').id);
+      await click(rate(p, 4));
       expect(off()).toBe(true);
-      await click(survey(p, 'Choice 3').id);
+      await click(choice(p, 3));
       await settle(player, 100);
       expect(off()).toBe(false);
       expect(player.getVariable('rating')).toBe(4);
@@ -170,18 +182,18 @@ describe('branded writing starters and the interactive book', () => {
       const player = await open(p);
       player.goTo('Survey');
       await settle(player, 100);
-      await click(survey(p, 'Rating 2').id);
+      await click(rate(p, 2));
       await settle(player, 100);
-      const checked = (name: string) => el(survey(p, name).id).getAttribute('aria-checked');
-      expect(['Rating 1', 'Rating 2', 'Rating 3', 'Rating 4', 'Rating 5'].map(checked)).toEqual(['false', 'true', 'false', 'false', 'false']);
+      const checked = (id: string) => el(id).getAttribute('aria-checked');
+      expect([1, 2, 3, 4, 5].map((n) => checked(rate(p, n)))).toEqual(['false', 'true', 'false', 'false', 'false']);
       expect(textOf(survey(p, 'Rating chosen').id)).toBe('You chose 2 out of 5.');
-      await click(survey(p, 'Rating 5').id);
-      await click(survey(p, 'Choice 1').id);
-      await click(survey(p, 'Choice 2').id);
+      await click(rate(p, 5));
+      await click(choice(p, 1));
+      await click(choice(p, 2));
       await settle(player, 100);
-      expect(['Choice 1', 'Choice 2', 'Choice 3', 'Choice 4'].map(checked)).toEqual(['false', 'true', 'false', 'false']);
+      expect([1, 2, 3, 4].map((n) => checked(choice(p, n)))).toEqual(['false', 'true', 'false', 'false']);
       expect(player.getVariable('place')).toBe('At the library or on campus');
-      expect(checked('Rating 5')).toBe('true');
+      expect(checked(rate(p, 5))).toBe('true');
       player.destroy();
     });
 
@@ -192,8 +204,8 @@ describe('branded writing starters and the interactive book', () => {
       player.on('record', (r) => records.push(r as never));
       player.goTo('Survey');
       await settle(player, 100);
-      await click(survey(p, 'Rating 4').id);
-      await click(survey(p, 'Choice 3').id);
+      await click(rate(p, 4));
+      await click(choice(p, 3));
       await type(survey(p, 'Comment box').id, 'A quiet room with a good chair.');
       expect(player.getVariable('comment')).toBe('A quiet room with a good chair.');
       await settle(player, 100);
@@ -240,14 +252,14 @@ describe('branded writing starters and the interactive book', () => {
       expect(shown(layer(p, 'Study experience survey', 'Continue button').id)).toBe(false);
       first.goTo('Survey');
       await settle(first, 100);
-      await click(survey(p, 'Rating 5').id);
-      await click(survey(p, 'Choice 1').id);
+      await click(rate(p, 5));
+      await click(choice(p, 1));
       await type(survey(p, 'Comment box').id, 'More daylight.');
       await click(survey(p, 'Submit button').id);
       await settle(first);
       first.destroy();
 
-      //A new visit with the same learner: the Before activity loads node brings the answers back before the first frame
+      //A new visit with the same learner: the variables ticked as user data come back before the first frame
       const second = await open(p);
       await settle(second, 100);
       expect(second.getVariable('rating')).toBe(5);
@@ -283,16 +295,14 @@ describe('branded writing starters and the interactive book', () => {
       const a = await open(p, { progress: store });
       a.goTo('Survey');
       await settle(a, 100);
-      await click(survey(p, 'Rating 3').id);
-      await click(survey(p, 'Choice 4').id);
-      await settle(a, 100);
-      //A choice is kept as soon as it is made
-      expect(saved).toMatchObject({ rating: 3, place: 'It changes a lot' });
+      await click(rate(p, 3));
+      await click(choice(p, 4));
       await type(survey(p, 'Comment box').id, 'Less noise.');
-      await click(survey(p, 'Save for later button').id);
+      //Everything is kept a moment after it changes, with nothing to press
+      await new Promise((r) => setTimeout(r, 900));
+      expect(saved).toMatchObject({ rating: 3, place: 'It changes a lot', comment: 'Less noise.' });
       await settle(a, 100);
-      expect(saved.comment).toBe('Less noise.');
-      expect(textOf(survey(p, 'Survey status').id)).toContain('Saved');
+      expect(textOf(survey(p, 'Survey status').id)).toContain('saved as you go');
       a.destroy();
       expect(localStorage.length).toBeLessThan(3);
       const b = await open(p, { progress: store });
@@ -300,7 +310,7 @@ describe('branded writing starters and the interactive book', () => {
       expect(shown(layer(p, 'Study experience survey', 'Continue button').id)).toBe(true);
       await click(layer(p, 'Study experience survey', 'Continue button').id);
       await settle(b);
-      //Saved for later is not submitted: the survey with their answers in, not the thank-you
+      //Not submitted: the survey with their answers in, not the thank-you
       expect(b.artboard.name).toBe('Survey');
       b.destroy();
     });
@@ -620,7 +630,9 @@ describe('branded writing starters and the interactive book', () => {
       await click(part(frame, 'check').id);
       await settle(player, 100);
     };
-    const bar = (p: Project, page: string) => parseFloat(el(layer(p, page, 'Chapter progress').id).style.width);
+    //the Progress layer's bar is a percentage of the 200 px track: this gives it back in pixels
+    const bar = (p: Project, page: string) => (parseFloat((el(layer(p, page, 'Chapter progress').id).querySelector('.ix-bar') as HTMLElement).style.width) * 200) / 100;
+    const results = (player: Player) => player.getVariable('results') as number[];
 
     it('has a cover, contents, chapters of three, three and two pages, and a summary', () => {
       const p = project();
@@ -735,8 +747,8 @@ describe('branded writing starters and the interactive book', () => {
       const player = await open(p);
       player.goTo('Contents');
       await settle(player, 100);
-      const cards = board(p, 'Contents').children.filter((c) => c.name.endsWith(' card')) as unknown as { children: SceneNode[] }[];
-      const read = (n: number, what: string) => textOf(cards[n].children.find((c) => c.name === what)!.id);
+      //one card layer repeated for each chapter: the nth card's layers are the copies at n
+      const read = (n: number, what: string) => textOf(`${layer(p, 'Contents', what).id}~${n}`);
       expect(read(0, 'Chapter status')).toBe('Not started  ·  0 of 3');
       expect(read(0, 'Open chapter button')).toContain('Open chapter 1');
       expect(textOf(layer(p, 'Contents', 'Chapters completed').id)).toBe('0 of 3 chapters completed');
@@ -753,7 +765,7 @@ describe('branded writing starters and the interactive book', () => {
       expect(read(0, 'Open chapter button')).toContain('Open chapter 1');
       expect(read(1, 'Chapter status')).toBe('Not started  ·  0 of 3');
       expect(textOf(layer(p, 'Contents', 'Chapters completed').id)).toBe('1 of 3 chapters completed');
-      await click(cards[2].children.find((c) => c.name === 'Open chapter button')!.id);
+      await click(`${layer(p, 'Contents', 'Open chapter button').id}~2`);
       await settle(player);
       expect(player.artboard.name).toBe(PAGES[8]);
       player.destroy();
@@ -765,7 +777,7 @@ describe('branded writing starters and the interactive book', () => {
       const pre = questionOf(p, PAGES[4]).question.prefix;
       await answer(p, player, PAGES[4], false);
       expect(player.getVariable(`${pre}_correct`)).toBe(false);
-      expect(player.getVariable('s1')).toBe(-1);
+      expect(results(player)[0]).toBe(-1);
       //a second try, right
       const frame = questionOf(p, PAGES[4]);
       const items = player.getVariable(`${pre}_items`) as { text: string }[];
@@ -775,7 +787,7 @@ describe('branded writing starters and the interactive book', () => {
       await click(part(frame, 'check').id);
       await settle(player, 100);
       expect(player.getVariable(`${pre}_correct`)).toBe(true);
-      const first = player.getVariable('s1') as number;
+      const first = results(player)[0];
       expect(first).toBeGreaterThan(0);
       expect(first).toBeLessThanOrEqual(1);
       expect(player.getVariable('score')).toBe(first);
@@ -792,7 +804,7 @@ describe('branded writing starters and the interactive book', () => {
       await settle(player, 100);
       expect(textOf(layer(p, 'Your summary', 'Chapters count').id)).toBe('0 of 3');
       expect(textOf(layer(p, 'Your summary', 'Score').id)).toBe('0 of 3');
-      expect(textOf(layer(p, 'Your summary', 'Chapter 1 question').id)).toBe('Chapter 1: not answered');
+      expect(textOf(`${layer(p, 'Your summary', 'Chapter question').id}~0`)).toBe('Chapter 1: not answered');
       await answer(p, player, PAGES[4], true);
       await answer(p, player, PAGES[7], true);
       await answer(p, player, PAGES[9], true);
@@ -805,16 +817,16 @@ describe('branded writing starters and the interactive book', () => {
       await settle(player, 100);
       expect(textOf(layer(p, 'Your summary', 'Chapters count').id)).toBe('3 of 3');
       expect(textOf(layer(p, 'Your summary', 'Score').id)).toBe('3 of 3');
-      expect(textOf(layer(p, 'Your summary', 'Chapter 2 question').id)).toBe('Chapter 2: right');
-      expect(textOf(layer(p, 'Your summary', 'Chapter 3 line').id)).toBe('✓  Chapter 3: Getting help');
+      expect(textOf(`${layer(p, 'Your summary', 'Chapter question').id}~1`)).toBe('Chapter 2: right');
+      expect(textOf(`${layer(p, 'Your summary', 'Chapter line').id}~2`)).toBe('✓  Chapter 3: Getting help');
       expect(textOf(layer(p, 'Your summary', 'Score message').id)).toBe('Every question right. Well done.');
       expect(player.result().score).toBe(3);
       await click(layer(p, 'Your summary', 'Start again button').id);
       await settle(player);
       expect(player.artboard.name).toBe('Cover');
       expect(player.getVariable('score')).toBe(0);
-      expect(player.getVariable('c1')).toBe(0);
-      expect(player.getVariable('s1')).toBe(-1);
+      expect(player.getVariable('reached')).toEqual([0, 0, 0]);
+      expect(results(player)).toEqual([-1, -1, -1]);
       player.destroy();
     });
 
@@ -823,10 +835,10 @@ describe('branded writing starters and the interactive book', () => {
       const player = await open(p);
       await answer(p, player, PAGES[4], true);
       await answer(p, player, PAGES[7], true);
-      player.setVariable('s3', 0);
+      player.setVariable('results', [...results(player).slice(0, 2), 0]);
       player.goTo('Your summary');
       await settle(player, 100);
-      expect(textOf(layer(p, 'Your summary', 'Chapter 3 question').id)).toBe('Chapter 3: not right');
+      expect(textOf(`${layer(p, 'Your summary', 'Chapter question').id}~2`)).toBe('Chapter 3: not right');
       expect(textOf(layer(p, 'Your summary', 'Score message').id)).toContain('Most of them right');
       player.destroy();
     });
@@ -843,8 +855,8 @@ describe('branded writing starters and the interactive book', () => {
       const b = await open(p);
       await settle(b, 100);
       expect(b.artboard.name).toBe(PAGES[3]);
-      expect(b.getVariable('c1')).toBe(2);
-      expect(b.getVariable('s1')).toBe(-1);
+      expect((b.getVariable('reached') as number[])[0]).toBe(2);
+      expect((b.getVariable('results') as number[])[0]).toBe(-1);
       b.destroy();
     });
 

@@ -1,8 +1,9 @@
-//Memory game: twelve face-down cards in a repeater (one card layer, one click handler), dealt in a new order every play.
+//Memory game: twelve face-down cards in a repeater (one card layer, one click handler), dealt in a new order every play. The cards are a key-navigation grid and what is face up, matched and busy is worked out from the cards themselves.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { keyNavList } from '../../parts';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, darkButton, go, set, spreadPages } from './common';
+import { Graph, addVar, darkButton, go, goNext, set } from './common';
 
 const PAIRS = [
   { term: 'Plagiarism', match: 'Presenting someone else\'s work as your own' },
@@ -23,9 +24,10 @@ function build(colourway: Colourway) {
   addVar(project, 'pairs', 'list', PAIRS);
   const cards = addVar(project, 'cards', 'list', []);
   const moves = addVar(project, 'moves', 'number', 0);
-  const matched = addVar(project, 'matched', 'number', 0);
-  const first = addVar(project, 'first', 'number', -1);
-  const busy = addVar(project, 'busy', 'boolean', false);
+  //Live, worked out from the cards: the two that are face up, pairs found, and whether a turn is still being looked at (two up, so clicks wait)
+  addVar(project, 'ups', 'list', [], { formula: 'cards.map((c, i) => c.state == "up" ? i : -1).filter(i => i >= 0)', live: true });
+  addVar(project, 'matched', 'number', 0, { formula: 'cards.filter(c => c.state == "matched").length / 2', live: true });
+  addVar(project, 'busy', 'boolean', false, { formula: 'ups.length >= 2', live: true });
 
   const hero = brandedPage(ctx, 'Match the terms', { kind: 'hero', subtitle: 'Turn over two cards at a time and pair each term with what it means.' });
   const play = brandedPage(ctx, 'Find the matching pairs', { footer: 'Memory game' });
@@ -36,7 +38,7 @@ function build(colourway: Colourway) {
   const start = darkButton(ctx, 'Start', 'Start', 48, 450, 180);
   hero.children.push(start);
   const hg = new Graph(hero);
-  hg.run(hg.click(start, 'Begin'), go(play));
+  hg.run(hg.click(start, 'Begin'), goNext());
   checklist.push(item('Write the title and the line under it on the first page', hero.children.find((n) => n.name === 'Subtitle'), hero));
 
   //The board
@@ -67,50 +69,35 @@ function build(colourway: Colourway) {
     },
     children: [back, face],
   });
-  const grid = createNode('frame', {
-    name: 'Cards',
-    x: box.x,
-    y: gridTop,
-    width: CARD_W * 4 + GAP * 3,
-    height: CARD_H * 3 + GAP * 2,
-    fill: null,
-    stroke: null,
-    clip: false,
-    role: 'region',
-    ariaLabel: 'Cards',
-    repeat: { items: 'cards', layout: 'grid', gap: GAP, columns: 4 },
-    children: [card],
-  });
+  //The cards are one Tab stop and the arrow keys move around them
+  const grid = keyNavList('Cards', box.x, gridTop, CARD_W * 4 + GAP * 3, CARD_H * 3 + GAP * 2, { items: 'cards', row: card, mode: 'grid', columns: 4, gap: GAP, ariaLabel: 'Cards' });
   play.children.push(status, found, again, grid);
 
   //Dealing: both halves of every pair, shuffled
-  const deal = 'pairs.length > 0 ? [...pairs.map((p, i) => ({text: p.term, pair: i, state: "down"})), ...pairs.map((p, i) => ({text: p.match, pair: i, state: "down"}))].map(t => ({t, r: Math.random()})).sort((a, b) => a.r - b.r).map(o => o.t) : []';
+  const deal = 'pairs.length > 0 ? shuffle([...pairs.map((p, i) => ({text: p.term, pair: i, state: "down"})), ...pairs.map((p, i) => ({text: p.match, pair: i, state: "down"}))]) : []';
   const g = new Graph(play);
   const onStart = g.add('event.start', {}, null, 'out', { note: 'New game' });
   g.add('action.emit', { name: 'deal' }, onStart);
   const onAgain = g.click(again, 'New game');
   g.add('action.emit', { name: 'deal' }, onAgain);
   const onDeal = g.add('event.message', { name: 'deal' }, null, 'out', { note: 'Shuffle and deal: edit the shuffle here' });
-  g.run(onDeal, set(cards, deal), set(moves, '0'), set(matched, '0'), set(first, '-1'), set(busy, 'false'), ['action.announce', { text: '"Cards dealt. 12 cards, face down."' }]);
+  g.run(onDeal, set(cards, deal), ['action.resetVariables', { variables: [moves.id] }], ['action.announce', { text: '"Cards dealt. " + cards.length + " cards, face down."' }]);
 
-  //One click handler for every card: event.index says which one
-  const pick = g.click(card, 'Turn a card');
-  const free = g.add('logic.if', { condition: '!busy && cards[event.index].state == "down"' }, pick);
-  const up = g.add('action.setVariable', { variable: cards.id, op: 'set', value: 'cards.map((c, j) => j == event.index ? {...c, state: "up"} : c)' }, free, 'true');
-  const isFirst = g.add('logic.if', { condition: 'first < 0' }, up);
-  g.runFrom(isFirst, 'true', set(first, 'event.index'), ['action.announce', { text: '"Card " + (event.index + 1) + ": " + cards[event.index].text' }]);
-  const lock = g.add('action.setVariable', { variable: busy.id, op: 'set', value: 'true' }, isFirst, 'false', { dy: 110 });
-  const count = g.add('action.setVariable', { variable: moves.id, op: 'add', value: '1' }, lock);
-  const same = g.add('logic.if', { condition: 'cards[first].pair == cards[event.index].pair' }, count);
+  //One click handler for every card: event.index says which one. A card that is face down turns up (a set item on it), and the second one up is a move
+  const pick = g.add('event.pointer', { target: card.id, type: 'click', onlyIf: '!busy && cards[event.index].state == "down"' }, null, 'out', { note: 'Turn a card' });
+  const up = g.add('action.setVariable', { variable: cards.id, op: 'setItem', index: '', field: 'state', value: '"up"' }, pick);
+  const second = g.add('logic.if', { condition: 'ups.length == 2' }, up);
+  g.runFrom(second, 'false', ['action.announce', { text: '"Card " + (event.index + 1) + ": " + cards[event.index].text' }]);
+  const count = g.add('action.setVariable', { variable: moves.id, op: 'add', value: '1' }, second, 'true');
+  const same = g.add('logic.if', { condition: 'cards[ups[0]].pair == cards[ups[1]].pair' }, count);
   //A match: both stay up
-  const keep = g.add('action.setVariable', { variable: cards.id, op: 'set', value: 'cards.map((c, j) => j == first || j == event.index ? {...c, state: "matched"} : c)' }, same, 'true');
+  const keep = g.add('action.setVariable', { variable: cards.id, op: 'set', value: 'cards.map(c => c.state == "up" ? {...c, state: "matched"} : c)' }, same, 'true');
   const sayYes = g.add('action.announce', { text: '"Card " + (event.index + 1) + ": " + cards[event.index].text + ". Matched."' }, keep);
-  const more = g.run(sayYes, ['action.setVariable', { variable: matched.id, op: 'add', value: '1' }], set(first, '-1'), set(busy, 'false'));
-  const over = g.add('logic.if', { condition: 'matched >= pairs.length' }, more);
-  g.runFrom(over, 'true', ['action.delay', { ms: 700 }], go(done));
-  //No match: a moment to look, then both flip back
+  const over = g.add('logic.if', { condition: 'matched >= pairs.length' }, sayYes);
+  g.runFrom(over, 'true', ['action.delay', { ms: 700 }], goNext());
+  //No match: a moment to look (clicks wait, because two are still up), then both flip back
   const sayNo = g.add('action.announce', { text: '"Card " + (event.index + 1) + ": " + cards[event.index].text + ". Not a match."' }, same, 'false', { dy: 220 });
-  g.run(sayNo, ['action.delay', { ms: 1000 }], ['action.setVariable', { variable: cards.id, op: 'set', value: 'cards.map(c => c.state == "up" ? {...c, state: "down"} : c)' }], set(first, '-1'), set(busy, 'false'));
+  g.run(sayNo, ['action.delay', { ms: 1000 }], ['action.setVariable', { variable: cards.id, op: 'set', value: 'cards.map(c => c.state == "up" ? {...c, state: "down"} : c)' }]);
 
   checklist.push(
     item('Write your own six pairs: Project > Variables > "pairs", a list of terms and what each one matches (the cards, the count and the finished check all follow it)', grid, play),
@@ -127,7 +114,12 @@ function build(colourway: Colourway) {
   dg.run(dg.click(replay, 'Play again'), go(play));
   checklist.push(item('Change the finished message and its three ratings (they read the number of moves)', note, done));
 
-  spreadPages(project);
+  //Notes for whoever edits the template, below the pages
+  const below = (p: typeof play, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });
+  addNote(play, { ...below(play, 0, 440), text: '**Live variables** `ups`, `matched` and `busy` are worked out from the cards, so a click only turns one card up. Nothing keeps a count or a lock by hand, and a new deal clears them by itself.', colour: 'sky' });
+  addNote(play, { ...below(play, 456, 440), text: '**Shuffle** The deal uses `shuffle(list)`. The cards are a key-navigation grid: one Tab stop, arrow keys between cards, Enter turns one.', colour: 'sky' });
+  addNote(play, { ...below(play, 912, 440), text: '[ ] Put your own pairs in the `pairs` variable (term and what it matches). Six pairs fill the grid of twelve.', colour: 'gold' });
+
   return { project, checklist };
 }
 

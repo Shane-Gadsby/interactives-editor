@@ -1,10 +1,11 @@
 //Interactive book: a cover, a contents page, three chapters of two or three pages (text, a picture, and a check your understanding question at the end of each chapter), a progress bar per chapter, a Contents button on every page and a summary of chapters completed and questions right.
-import { createNode, uid, type Artboard, type FrameNode, type Question, type QuestionKind, type SceneNode, type TemplateChecklistItem, type Variable } from 'interactives-player';
+import { createNode, type Artboard, type FrameNode, type Question, type QuestionKind, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, setQuestionSettings, syncQuestion } from '../../../question-kit';
-import { brandedPage, brandedProject, button, contentBox, item, picture, solid, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, picture, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { after, announce, bind, brandQuestionFrame, click, go, graph, panel, setVar } from '../assessment/shared';
-import { spreadPages } from './common';
+import { after, announce, bind, brandQuestionFrame, click, go, graph, panel } from '../assessment/shared';
+import { progressBar } from '../../parts';
+import { addVar, groupPages } from './common';
 
 const TITLE = 'A short guide to academic integrity';
 const BODY_Y = 140;
@@ -140,34 +141,31 @@ const CHAPTERS: Chapter[] = [
 ];
 
 const OUT_OF = CHAPTERS.length;
+const pageName = (c: number, i: number) => `${c + 1}.${i + 1} ${CHAPTERS[c].pages[i].title}`;
 
 function build(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'Interactive book');
   const { project, L } = ctx;
   const checklist: TemplateChecklistItem[] = [];
 
-  //Per chapter: pages reached (c), and the question's score (s, -1 until it is answered). Remembered, so a returning reader keeps their place and progress
-  const remember = (name: string, initial: number): Variable => {
-    const v: Variable = { id: uid('v'), name, type: 'number', initial, persist: true };
-    project.variables.push(v);
-    return v;
-  };
-  const reached = CHAPTERS.map((_, i) => remember(`c${i + 1}`, 0));
-  const result = CHAPTERS.map((_, i) => remember(`s${i + 1}`, -1));
-  const score = remember('score', 0);
-  const scoreExpr = result.map((v) => `Math.max(0, ${v.name})`).join(' + ');
-
-  //How far through chapter n: the pages read before the last one, plus one more once its question is answered
-  const size = (n: number) => CHAPTERS[n].pages.length;
-  const done = (n: number) => `(Math.min(c${n + 1}, ${size(n) - 1}) + (s${n + 1} >= 0 ? 1 : 0))`;
-  const complete = (n: number) => `(${done(n)} == ${size(n)})`;
-  const chaptersDone = CHAPTERS.map((_, n) => `(${complete(n)} ? 1 : 0)`).join(' + ');
+  //The chapters as data: the contents cards, the summary and the strip on every page read this list ("first" is the name of the chapter's first page, which Open chapter goes to)
+  addVar(project, 'chapters', 'list', CHAPTERS.map((ch, c) => ({ name: ch.name, blurb: ch.blurb, size: ch.pages.length, first: pageName(c, 0) })));
+  //What the reader has done, one entry per chapter: pages reached, and the question's score (-1 until it is answered). Remembered, so a returning reader keeps their place and progress
+  addVar(project, 'reached', 'list', CHAPTERS.map(() => 0), { persist: true });
+  addVar(project, 'results', 'list', CHAPTERS.map(() => -1), { persist: true });
+  //Live: how far through each chapter (the pages read before the last one, plus one more once its question is answered), how many are complete, and the score reported to StudyDesk
+  addVar(project, 'progress', 'list', [], { formula: 'chapters.map((c, i) => ({name: c.name, size: c.size, done: Math.min(reached[i], c.size - 1) + (results[i] >= 0 ? 1 : 0)}))', live: true });
+  addVar(project, 'chaptersDone', 'number', 0, { formula: 'progress.filter(c => c.done == c.size).length', live: true });
+  const score = addVar(project, 'score', 'number', 0, { formula: 'results.reduce((a, r) => a + Math.max(0, r), 0)', live: true });
+  const results = project.variables.find((v) => v.name === 'results')!;
+  const reached = project.variables.find((v) => v.name === 'reached')!;
 
   const cover = brandedPage(ctx, TITLE, { kind: 'hero', name: 'Cover', subtitle: `An interactive book in ${OUT_OF} chapters. Read at your own pace, answer a question at the end of each chapter, and come back any time: it remembers where you were.` });
   const contents = brandedPage(ctx, 'Contents', { footer: TITLE });
-  const chapterPages: Artboard[][] = CHAPTERS.map((ch, c) => ch.pages.map((p, i) => brandedPage(ctx, p.title, { name: `${c + 1}.${i + 1} ${p.title}`, footer: TITLE })));
+  const chapterPages: Artboard[][] = CHAPTERS.map((ch, c) => ch.pages.map((p, i) => brandedPage(ctx, p.title, { name: pageName(c, i), footer: TITLE })));
   const summary = brandedPage(ctx, 'Your summary', { footer: TITLE });
-  const order = chapterPages.flat();
+  //Each chapter is an artboard group, so Next and Previous stay in the chapter and pageNumber and pageCount count its own pages
+  CHAPTERS.forEach((ch, c) => groupPages(project, `Chapter ${c + 1}: ${ch.name}`, chapterPages[c]));
 
   //Cover
   {
@@ -175,7 +173,7 @@ function build(colourway: Colourway) {
     const menu = button(ctx, 'Contents button', 'Contents', 264, cover.height * 0.42 + 190, 160, false);
     cover.children.push(begin, menu);
     const g = graph(cover);
-    g.run(click(g, begin, 'Start reading'), go(order[0]));
+    g.run(click(g, begin, 'Start reading'), go(chapterPages[0][0]));
     g.run(click(g, menu, 'Contents'), go(contents));
   }
 
@@ -193,37 +191,26 @@ function build(colourway: Colourway) {
     return b;
   };
 
-  //A bar that fills with a fraction expression (0 to 1)
-  const bar = (name: string, x: number, y: number, width: number, fraction: string, height = 10) => {
-    const track = createNode('rect', { name: `${name} track`, x, y, width, height, cornerRadius: height / 2, fill: solid(L.surfaceMuted), stroke: null, decorative: true });
-    const fill = bind(createNode('rect', { name, x, y, width: 0, height, cornerRadius: height / 2, fill: solid(L.button), stroke: null, decorative: true }), { width: `${width} * ${fraction}` });
-    return [track, fill];
-  };
-
-  //Contents: a card per chapter with its progress and a button to open it
+  //Contents: one card for each chapter (a repeater over the chapters list) with its progress and a button to open it
   {
     const box = contentBox(contents);
     const w = (box.width - 2 * 20) / 3;
-    const heads: SceneNode[] = [];
-    CHAPTERS.forEach((ch, n) => {
-      const label = text(ctx, 'Chapter number', `CHAPTER ${n + 1}`, 22, 20, w - 44, { fontSize: 13, fontWeight: 700, color: L.muted });
-      const name = text(ctx, 'Chapter name', ch.name, 22, 44, w - 44, { fontSize: 22, fontWeight: 700, lineHeight: 1.25, role: 'heading', headingLevel: 2 });
-      const blurb = text(ctx, 'Chapter blurb', ch.blurb, 22, 110, w - 44, { fontSize: 16, lineHeight: 1.4, color: L.muted });
-      const status = text(ctx, 'Chapter status', `{${complete(n)} ? "Completed" : ${done(n)} > 0 ? "In progress" : "Not started"}  ·  {${done(n)}} of ${size(n)}`, 22, 214, w - 44, { fontSize: 15, fontWeight: 600 });
-      const [track, fill] = bar('Chapter progress', 22, 246, w - 44, `${done(n)} / ${size(n)}`);
-      const open = bind(button(ctx, 'Open chapter button', `Open chapter ${n + 1}`, 22, 276, w - 44), { label: `${done(n)} > 0 && !${complete(n)} ? "Continue chapter ${n + 1}" : "Open chapter ${n + 1}"` });
-      const card = panel(ctx, `Chapter ${n + 1} card`, box.x + n * (w + 20), box.y, w, 348, [label, name, blurb, status, track, fill, open], { role: 'region', ariaLabel: `Chapter ${n + 1}: ${ch.name}` });
-      contents.children.push(card);
-      heads.push(name);
-      const g = graph(contents);
-      g.run(click(g, open, `Chapter ${n + 1}`), go(chapterPages[n][0]));
-    });
-    const tally = text(ctx, 'Chapters completed', `{${chaptersDone}} of ${OUT_OF} chapters completed`, box.x, 512, 500, { fontSize: 17, fontWeight: 600 });
+    const label = text(ctx, 'Chapter number', 'CHAPTER {index + 1}', 22, 20, w - 44, { fontSize: 13, fontWeight: 700, color: L.muted });
+    const name = text(ctx, 'Chapter name', '{item.name}', 22, 44, w - 44, { fontSize: 22, fontWeight: 700, lineHeight: 1.25, role: 'heading', headingLevel: 2 });
+    const blurb = text(ctx, 'Chapter blurb', '{chapters[index].blurb}', 22, 110, w - 44, { fontSize: 16, lineHeight: 1.4, color: L.muted });
+    const status = text(ctx, 'Chapter status', '{item.done == item.size ? "Completed" : item.done > 0 ? "In progress" : "Not started"}  ·  {item.done} of {item.size}', 22, 214, w - 44, { fontSize: 15, fontWeight: 600 });
+    const bar = progressBar(ctx, 'Chapter progress', 22, 246, w - 44, { value: 'item.done', max: 'item.size', label: 'Chapter progress', valueText: '{value} of {max}' });
+    const open = bind(button(ctx, 'Open chapter button', 'Open chapter', 22, 276, w - 44), { label: 'item.done > 0 && item.done < item.size ? "Continue chapter " + (index + 1) : "Open chapter " + (index + 1)' });
+    const card = bind(panel(ctx, 'Chapter card', 0, 0, w, 348, [label, name, blurb, status, bar, open], { role: 'region' }), { ariaLabel: '"Chapter " + (index + 1) + ": " + item.name' });
+    const cards = createNode('frame', { name: 'Chapter cards', x: box.x, y: box.y, width: box.width, height: 348, fill: null, stroke: null, clip: false, repeat: { items: 'progress', layout: 'grid', gap: 20, columns: 3 }, children: [card] } as never);
+    const tally = text(ctx, 'Chapters completed', '{chaptersDone} of {progress.length} chapters completed', box.x, 512, 500, { fontSize: 17, fontWeight: 600 });
     const finish = button(ctx, 'Summary button', 'See my summary', 976 - 220, NAV_Y - 12, 220, false);
-    contents.children.push(tally, finish);
+    contents.children.push(cards, tally, finish);
     const g = graph(contents);
+    //One flow for every chapter's button: event.index is the card, and the chapters list says which page it opens
+    g.run(click(g, open, 'Open the chapter'), ['action.artboard', { to: 'expression', expr: 'chapters[event.index].first', transition: 'fade', duration: 250 }]);
     g.run(click(g, finish, 'Summary'), go(summary));
-    checklist.push(item('Rename the chapters and rewrite what each card says (the chapter names are repeated on each chapter\'s pages, in the footer and on the summary page)', heads[0], contents));
+    checklist.push(item('Rename the chapters and rewrite what each card says: Project > Variables > "chapters" (name, blurb, the number of pages, and the name of its first page). The cards, the strip on each page and the summary all read it', name, contents));
   }
 
   //The chapter pages
@@ -231,18 +218,17 @@ function build(colourway: Colourway) {
     ch.pages.forEach((def, i) => {
       const page = chapterPages[c][i];
       const n = c + 1;
-      const globalIndex = order.indexOf(page);
       const box = contentBox(page);
       const g0 = graph(page);
 
-      //Reading a page counts it towards the chapter (never takes progress back)
-      g0.run(g0.event('event.start', {}, 'Count this page'), setVar(reached[c], `Math.max(c${n}, ${i + 1})`));
+      //Reading a page counts it towards the chapter (never takes progress back): pageNumber is the page within the chapter
+      g0.run(g0.event('event.start', {}, 'Count this page'), ['action.setVariable', { variable: reached.id, op: 'setItem', index: String(c), value: `Math.max(reached[${c}], pageNumber)` }]);
 
       //The chapter strip: its name and a bar of how far through it you are
-      const strip = text(ctx, 'Chapter strip', `Chapter ${n}: ${ch.name}`, 48, 102, 600, { fontSize: 14, fontWeight: 600, color: L.muted });
-      const [track, fill] = bar('Chapter progress', 700, 108, 200, `${done(c)} / ${size(c)}`);
-      const amount = text(ctx, 'Chapter progress text', `{${done(c)}} of ${size(c)}`, 912, 102, 64, { fontSize: 14, fontWeight: 600, color: L.muted, align: 'right' });
-      page.children.push(strip, track, fill, amount);
+      const strip = text(ctx, 'Chapter strip', `Chapter ${n}: ${ch.name}`, 48, 102, 600, { fontSize: 14, fontWeight: 600, color: L.muted, bindings: { text: `"Chapter ${n}: " + chapters[${c}].name` } } as never);
+      const bar = progressBar(ctx, 'Chapter progress', 700, 108, 200, { value: `progress[${c}].done`, max: `chapters[${c}].size`, label: 'Chapter progress', valueText: '{value} of {max}', height: 10 });
+      const amount = text(ctx, 'Chapter progress text', `{progress[${c}].done} of {chapters[${c}].size}`, 912, 102, 64, { fontSize: 14, fontWeight: 600, color: L.muted, align: 'right' });
+      page.children.push(strip, bar, amount);
       menuButton(page);
 
       //Body: text and a picture, or a question with a note and a picture beside it
@@ -257,11 +243,10 @@ function build(colourway: Colourway) {
         syncQuestion(project, page.id, id);
         brandQuestionFrame(ctx, frame);
         const prefix = frame.question!.prefix;
-        //When the question is finished keep its first result, and the score across the book is the sum of the chapters' results
+        //When the question is finished keep its first result: the chapter's entry in "results" (the book's score is live, from that list)
         const check = page.logic.nodes.find((x) => x.kit?.slot === 'check:action')!;
-        const keep = after(page, check, 'action.setVariable', { variable: result[c].id, op: 'set', value: `s${n} < 0 ? ${prefix}_score : s${n}` }, 'finished');
-        after(page, keep, 'action.setVariable', { variable: score.id, op: 'set', value: scoreExpr });
-        checklist.push(item(`Chapter ${n} question: write your own question and answers (Question section in the inspector). Its result is kept in the "s${n}" variable by the Set variable node after Check answer`, frame, page));
+        after(page, check, 'action.setVariable', { variable: results.id, op: 'setItem', index: String(c), value: `results[${c}] < 0 ? ${prefix}_score : results[${c}]` }, 'finished');
+        checklist.push(item(`Chapter ${n} question: write your own question and answers (Question section in the inspector). Its result is kept in the chapter's entry of the "results" variable by the Set variable node after Check answer`, frame, page));
       } else {
         const body = text(ctx, 'Page text', (def.paragraphs ?? []).join('\n'), box.x, BODY_Y, 470, { fontSize: 20, lineHeight: 1.45, paragraphSpacing: 18 });
         const pic = picture(ctx, 'Picture', box.x + 510, BODY_Y, box.width - 510, 300);
@@ -269,22 +254,24 @@ function build(colourway: Colourway) {
         checklist.push(item(`Chapter ${n}, page ${i + 1}: write your own text, and swap the picture for yours`, body, page));
       }
 
-      //Previous, "page n of m" and Next along the bottom, and the arrow keys on pages that have no question to answer
-      const prevTo = globalIndex === 0 ? contents : order[globalIndex - 1];
-      const nextTo = globalIndex === order.length - 1 ? summary : order[globalIndex + 1];
+      //Previous, "page n of m" and Next along the bottom: the buttons follow the chapter's own page order, and the left and right arrow keys work on pages that have no question to answer
       const lastOfChapter = i === ch.pages.length - 1;
-      const prev = button(ctx, 'Previous button', globalIndex === 0 ? 'Contents' : 'Previous', box.x, NAV_Y, 150, false);
-      const count = text(ctx, 'Page count', `Page ${i + 1} of ${ch.pages.length}`, 300, NAV_Y + 11, 424, { fontSize: 15, color: L.muted, align: 'center' });
+      const firstOfBook = c === 0 && i === 0;
+      const prev = button(ctx, 'Previous button', firstOfBook ? 'Contents' : 'Previous', box.x, NAV_Y, 150, false);
+      const count = text(ctx, 'Page count', 'Page {pageNumber} of {pageCount}', 300, NAV_Y + 11, 424, { fontSize: 15, color: L.muted, align: 'center' });
       const nextLabel = !lastOfChapter ? 'Next' : c === CHAPTERS.length - 1 ? 'Finish' : 'Next chapter';
       const next = button(ctx, 'Next button', nextLabel, 976 - 170, NAV_Y, 170);
+      if (!def.question) {
+        prev.shortcut = 'Left';
+        next.shortcut = 'Right';
+      }
       page.children.push(prev, count, next);
       const g = graph(page);
-      g.run(click(g, prev, 'Previous'), go(prevTo));
-      g.run(click(g, next, 'Next'), go(nextTo));
-      if (!def.question) {
-        g.run(g.event('event.key', { key: 'ArrowLeft', type: 'keydown' }, 'Arrow keys'), go(prevTo));
-        g.run(g.event('event.key', { key: 'ArrowRight', type: 'keydown' }, 'Arrow keys'), go(nextTo));
-      }
+      //Next and Previous stop at the ends of the chapter: the No artboard output goes on to the next chapter (or the summary), and back to the chapter before (or the contents from the first page of the book)
+      const goNext = g.run(click(g, next, 'Next'), ['action.artboard', { to: 'next', transition: 'fade', duration: 250 }]);
+      g.then(goNext, 'action.artboard', { artboard: (c === CHAPTERS.length - 1 ? summary : chapterPages[c + 1][0]).id, transition: 'fade', duration: 250 }, 'none');
+      const goPrev = g.run(click(g, prev, 'Previous'), ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
+      g.then(goPrev, 'action.artboard', { artboard: (c === 0 ? contents : chapterPages[c - 1][CHAPTERS[c - 1].pages.length - 1]).id, transition: 'fade', duration: 250 }, 'none');
     });
   });
 
@@ -292,20 +279,23 @@ function build(colourway: Colourway) {
   {
     const box = contentBox(summary);
     menuButton(summary);
-    const chapterLine = (n: number) => `{${complete(n)} ? "✓" : "○"}  Chapter ${n + 1}: ${CHAPTERS[n].name}`;
+    const lineName = text(ctx, 'Chapter line', '{item.done == item.size ? "✓" : "○"}  Chapter {index + 1}: {item.name}', 0, 0, 384, { fontSize: 17 });
+    const lines = createNode('frame', { name: 'Chapter lines', x: 28, y: 160, width: 384, height: CHAPTERS.length * 36, fill: null, stroke: null, clip: false, repeat: { items: 'progress', layout: 'vertical', gap: 10, columns: 1 }, children: [lineName] } as never);
     const left = panel(ctx, 'Chapters card', box.x, box.y, 440, 360, [
       text(ctx, 'Chapters label', 'Chapters completed', 28, 24, 384, { fontSize: 18, fontWeight: 700, color: L.muted, role: 'heading', headingLevel: 2 }),
-      text(ctx, 'Chapters count', `{${chaptersDone}} of ${OUT_OF}`, 28, 58, 384, { fontSize: 64, fontWeight: 700, lineHeight: 1.1 }),
-      ...CHAPTERS.map((_, n) => text(ctx, `Chapter ${n + 1} line`, chapterLine(n), 28, 160 + n * 36, 384, { fontSize: 17 })),
+      text(ctx, 'Chapters count', '{chaptersDone} of {progress.length}', 28, 58, 384, { fontSize: 64, fontWeight: 700, lineHeight: 1.1 }),
+      lines,
       text(ctx, 'Chapters note', 'A chapter is complete when you have read its pages and answered its question.', 28, 280, 384, { fontSize: 15, color: L.muted, lineHeight: 1.4 }),
     ], { role: 'region', ariaLabel: 'Chapters completed' });
-    const total = `(${scoreExpr})`;
-    const verdict = `${total} >= ${OUT_OF} ? "Every question right. Well done." : ${total} >= ${OUT_OF - 1} ? "Most of them right. Have another look at the one you missed." : "Have another look at the chapters, then try the questions again."`;
+    const verdict = `score >= ${OUT_OF} ? "Every question right. Well done." : score >= ${OUT_OF - 1} ? "Most of them right. Have another look at the one you missed." : "Have another look at the chapters, then try the questions again."`;
+    const rw = box.width - 464 - 56;
+    const qLine = text(ctx, 'Chapter question', 'Chapter {item.n}: {item.r < 0 ? "not answered" : item.r >= 1 ? "right" : item.r > 0 ? "part right" : "not right"}', 0, 0, rw, { fontSize: 17 });
+    const qLines = createNode('frame', { name: 'Question lines', x: 28, y: 160, width: rw, height: CHAPTERS.length * 36, fill: null, stroke: null, clip: false, repeat: { items: 'results.map((r, i) => ({n: i + 1, r}))', layout: 'vertical', gap: 10, columns: 1 }, children: [qLine] } as never);
     const right = panel(ctx, 'Score card', box.x + 464, box.y, box.width - 464, 360, [
-      text(ctx, 'Score label', 'Check your understanding', 28, 24, box.width - 464 - 56, { fontSize: 18, fontWeight: 700, color: L.muted, role: 'heading', headingLevel: 2 }),
-      text(ctx, 'Score', `{Math.round(${total} * 10) / 10} of ${OUT_OF}`, 28, 58, box.width - 464 - 56, { fontSize: 64, fontWeight: 700, lineHeight: 1.1 }),
-      ...CHAPTERS.map((_, n) => text(ctx, `Chapter ${n + 1} question`, `Chapter ${n + 1}: {s${n + 1} < 0 ? "not answered" : s${n + 1} >= 1 ? "right" : s${n + 1} > 0 ? "part right" : "not right"}`, 28, 160 + n * 36, box.width - 464 - 56, { fontSize: 17 })),
-      text(ctx, 'Score message', `{${verdict}}`, 28, 280, box.width - 464 - 56, { fontSize: 17, fontWeight: 600, lineHeight: 1.4 }),
+      text(ctx, 'Score label', 'Check your understanding', 28, 24, rw, { fontSize: 18, fontWeight: 700, color: L.muted, role: 'heading', headingLevel: 2 }),
+      text(ctx, 'Score', `{Math.round(score * 10) / 10} of ${OUT_OF}`, 28, 58, rw, { fontSize: 64, fontWeight: 700, lineHeight: 1.1 }),
+      qLines,
+      text(ctx, 'Score message', `{${verdict}}`, 28, 280, rw, { fontSize: 17, fontWeight: 600, lineHeight: 1.4 }),
     ], { role: 'region', ariaLabel: 'Questions right' });
     const back = button(ctx, 'Back to contents button', 'Back to contents', box.x, NAV_Y, 200, false);
     const again = button(ctx, 'Start again button', 'Start again', 976 - 170, NAV_Y, 170);
@@ -313,19 +303,25 @@ function build(colourway: Colourway) {
     const g = graph(summary);
     g.run(click(g, back, 'Contents'), go(contents));
     g.run(click(g, again, 'Start again'), ['action.startOver', {}]);
-    g.run(g.event('event.start', {}, 'Summary'), announce(`"You have completed " + (${chaptersDone}) + " of ${OUT_OF} chapters and got " + Math.round(${total} * 10) / 10 + " of ${OUT_OF} questions right."`));
-    checklist.push(item('Check the summary: it reads the c, s and score variables (Variables tab) and the verdict wording in the Score message', right, summary));
+    g.run(g.event('event.start', {}, 'Summary'), announce(`"You have completed " + chaptersDone + " of " + progress.length + " chapters and got " + Math.round(score * 10) / 10 + " of ${OUT_OF} questions right."`));
+    checklist.push(item('Check the summary: it reads the chapters, reached and results variables (Variables tab) and the verdict wording in the Score message', right, summary));
   }
 
   checklist.unshift(item('Write the book title and the line under it on the cover', cover.children.find((n) => n.name === 'Subtitle'), cover));
   checklist.push(
-    item('To add a page to a chapter: duplicate one of its pages, then rewire Previous and Next on it and on the pages either side, change its footer and "Page n of m" text, and change the chapter size in the "Count this page" Set variable node and in the progress bar and text bindings (the number after the divide sign)', undefined, chapterPages[0][1]),
-    item('Progress is remembered: the c1, c2, c3, s1, s2, s3 and score variables are ticked Remember (Variables tab), and Project > Results and progress > Resume on the same artboard is on, so a returning reader opens where they stopped. On the Link for StudyDesk it is kept under their StudyDesk session', undefined, contents),
-    item('The score is reported to StudyDesk (Project > Results and progress): the "score" variable out of ' + OUT_OF + ', complete on reaching the summary page. Change the top score if you add or remove questions', undefined, summary),
+    item('To add a page to a chapter: duplicate one of its pages inside its artboard group. Next, Previous and "Page n of m" follow the group, so nothing is rewired. Change "size" for the chapter in the "chapters" variable (the progress bars read it)', undefined, chapterPages[0][1]),
+    item('Progress is remembered: the reached and results variables are ticked Remember (Variables tab), and Project > Results and progress > Resume on the same artboard is on, so a returning reader opens where they stopped. On the Link for StudyDesk it is kept under their StudyDesk session', undefined, contents),
+    item('The score is reported to StudyDesk (Project > Results and progress): the live "score" variable out of ' + OUT_OF + ', complete on reaching the summary page. Change the top score if you add or remove questions', undefined, summary),
   );
 
+  //Notes for whoever edits the template, beside the pages
+  const below = (p: Artboard, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });
+  addNote(contents, { ...below(contents, 0, 440), text: '**One card, three chapters.** The cards are a repeater over `progress`, a live list worked out from `chapters`, `reached` and `results`. One button flow opens the right chapter by name (`chapters[event.index].first`).', colour: 'sky' });
+  addNote(contents, { ...below(contents, 456, 440), text: '[ ] Edit the `chapters` variable, not the cards. Keep each `first` the same as the name of that chapter\'s first page in the page list.', colour: 'gold' });
+  addNote(chapterPages[0][0], { ...below(chapterPages[0][0], 0, 440), text: '**Artboard groups** Each chapter is a group, so Next and Previous stay in it and **Page {pageNumber} of {pageCount}** counts its pages. The end of a chapter takes the No artboard output on to the next one.', colour: 'sky' });
+  addNote(chapterPages[0][2], { ...below(chapterPages[0][2], 0, 440), text: '**Question result** A set-item node after Check answer keeps the first result in this chapter\'s slot of `results`. The score on the summary is a live variable that adds the slots up.', colour: 'sky' });
+
   project.settings.reporting = { scoreVariable: score.id, maxScore: OUT_OF, completion: 'artboard', completionArtboard: summary.id, resumeArtboard: true };
-  spreadPages(project);
   return { project, checklist };
 }
 
