@@ -4,11 +4,11 @@
  */
 import { defaultAutoLayout, type FrameNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partsOf, setQuestionSettings } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
 import { clickOf, dressQuestion, endPage, goNextOn, graphNote, heroPage, kitNode } from './shared';
-import { extrasChecklist, questionExtras } from '../../parts';
+import { extrasChecklist, extrasShort, questionExtras } from '\.\./\.\./parts';
 
 //The pictures: what each should show, then the partner it goes with (a word and a line)
 const PAIRS: { shows: string; term: string; line: string }[] = [
@@ -136,13 +136,13 @@ export function imagePairing(colourway: Colourway) {
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the Start page', byName(hero, 'Page title'), hero),
     item('Change the page title and the footer text', byName(page, 'Page title'), page),
-    item('Replace each grey picture with your own (put an image in the picture\'s frame, then delete the hint text), and make its Text alternative say what the picture shows', parts.matchTerm[0], page),
-    item('Write each card: the pairs in the Question section give the card\'s word and what its picture shows. The line under the word is a text layer in the card (Layers panel). To pair a picture with a picture, put a second grey picture in the card in place of the text', parts.matchRow[0], page),
-    item('Add or remove pairs, and the wrong picture (Extras), in the Question section. The layers follow. Keep two cards to a row; three rows fit above the footer', frame, page),
-    item('Set the tries, the points (the results say "of 6") and the feedback messages', frame, page),
+    todo('Replace each grey picture and describe it', 'Replace each grey picture with your own (put an image in the picture\'s frame, then delete the hint text), and make its Text alternative say what the picture shows', parts.matchTerm[0], page),
+    todo('Write each card and what its picture shows', 'Write each card: the pairs in the Question section give the card\'s word and what its picture shows. The line under the word is a text layer in the card (Layers panel). To pair a picture with a picture, put a second grey picture in the card in place of the text', parts.matchRow[0], page),
+    todo('Add or remove pairs and the wrong picture', 'Add or remove pairs, and the wrong picture (Extras), in the Question section. The layers follow. Keep two cards to a row; three rows fit above the footer', frame, page),
+    todo('Set the tries, points and feedback messages', 'Set the tries, the points (the results say "of 6") and the feedback messages', frame, page),
     item('Change the results page text', results.result, results.page),
-    item('Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
+    todo('Pick a colourway (the brand parts are locked)', 'Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
   ];
-  checklist.push(item(extrasChecklist({ tryAgain: true })));
+  checklist.push(todo(extrasShort({ tryAgain: true }), extrasChecklist({ tryAgain: true })));
   return { project, checklist };
 }

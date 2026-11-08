@@ -5,11 +5,11 @@
  */
 import { defaultAutoLayout, type FrameNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partsOf, setQuestionSettings } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
 import { clickOf, dressQuestion, endPage, goNextOn, graphNote, heroPage, kitNode, lit } from './shared';
-import { extrasChecklist, questionExtras } from '../../parts';
+import { extrasChecklist, extrasShort, questionExtras } from '\.\./\.\./parts';
 
 //The passage, one sentence a row. A number is a gap (its index in ANSWERS), a string is the text around it
 const SENTENCES: (string | number)[][] = [
@@ -148,13 +148,13 @@ export function dragTheWords(colourway: Colourway) {
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the Start page', byName(hero, 'Page title'), hero),
     item('Change the page title and the footer text', byName(page, 'Page title'), page),
-    item('Write your own passage: edit the text before and after each gap (the text layers inside each "Sentence" row, Layers panel)', parts.blankRow[0], page),
-    item('Set the right word for each gap in the Question section (each blank\'s accepted answer; the first one is the word that goes in the bank). Add wrong words under Extras', frame, page),
-    item('Set the tries, the points (the results page says "of 6") and the feedback messages in the Question section', frame, page),
+    todo('Write your own passage', 'Write your own passage: edit the text before and after each gap (the text layers inside each "Sentence" row, Layers panel)', parts.blankRow[0], page),
+    todo('Set the right word for each gap and add wrong words', 'Set the right word for each gap in the Question section (each blank\'s accepted answer; the first one is the word that goes in the bank). Add wrong words under Extras', frame, page),
+    todo('Set the tries, points and feedback messages', 'Set the tries, the points (the results page says "of 6") and the feedback messages in the Question section', frame, page),
     item('Change the results page text', results.result, results.page),
-    item('Try it with the keyboard: Tab to a word, Space, arrow keys, Space, then Check answer', undefined, page),
-    item('Pick the colourway on the Themes tab. The brand parts are locked; the passage, words and gaps are yours', undefined, page),
+    todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to a word, Space, arrow keys, Space, then Check answer', undefined, page),
+    todo('Pick a colourway (the brand parts are locked)', 'Pick the colourway on the Themes tab. The brand parts are locked; the passage, words and gaps are yours', undefined, page),
   ];
-  checklist.push(item(extrasChecklist({ tryAgain: true })));
+  checklist.push(todo(extrasShort({ tryAgain: true }), extrasChecklist({ tryAgain: true })));
   return { project, checklist };
 }

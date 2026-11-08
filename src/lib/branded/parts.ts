@@ -228,6 +228,12 @@ export function pillButton(ctx: BrandedCtx, name: string, label: string, x: numb
   return b;
 }
 
+/** The short checklist item for the switches `questionExtras` made: one action, with `extrasChecklist` as its detail. */
+export function extrasShort(o: { hint?: boolean; tryAgain?: boolean }): string {
+  if (o.hint && o.tryAgain) return 'Choose whether questions offer a Hint and Try again';
+  return o.hint ? 'Choose whether questions offer a Hint' : 'Choose whether wrong answers can be retried';
+}
+
 /**
  * The checklist line for the switches `questionExtras` made, worded for what the starter has (`hint`: it has a Hint switch, `tryAgain`: a
  * Try again one) and what they start as.

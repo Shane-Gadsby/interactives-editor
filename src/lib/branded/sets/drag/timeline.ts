@@ -3,7 +3,7 @@
  * events are one list; the markers are one layer repeated over it and one click flow serves every dot (event.childIndex).
  */
 import { createNode, uid, type FrameNode, type Keyframe, type SceneNode, type TemplateChecklistItem, type Timeline, type Track } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, stroke, text } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, stroke, text, todo } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { addVar, announce, bind, click, graph, graphNote, setVar } from '../../graph-kit';
 import { goNextOn, heroPage, lit, resetVars } from './shared';
@@ -174,12 +174,12 @@ export function interactiveTimeline(colourway: Colourway) {
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the Start page', byName(hero, 'Page title'), hero),
     item('Change the page title and the footer text', byName(page, 'Page title'), page),
-    item('Write your events: the "events" list variable (Variables tab) has a date, a short caption, a heading and the text for each, in order. The markers, the detail card and the counter all follow it', markers, page),
-    item('To give an event a picture, upload the image and put its asset id in that entry\'s "image" (the grey box shows until you do), and say what it shows in the picture\'s Text alternative', pic, page),
-    item('Keep to about seven events so the captions fit under the line. For more, make the markers narrower (Event marker width) and check them in the Preview', marker, page),
-    item('Retime the intro on the "Intro" timeline (Timeline tab). Viewers who ask for less motion see the finished line at once', undefined, page),
-    item('Try it with the keyboard: Tab to a dot, Enter to open it, then the left and right arrow keys', dot, page),
-    item('Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
+    todo('Write your events: date, caption, heading and text', 'Write your events: the "events" list variable (Variables tab) has a date, a short caption, a heading and the text for each, in order. The markers, the detail card and the counter all follow it', markers, page),
+    todo('Give an event a picture if you want one', 'To give an event a picture, upload the image and put its asset id in that entry\'s "image" (the grey box shows until you do), and say what it shows in the picture\'s Text alternative', pic, page),
+    todo('Keep to about seven events so the captions fit', 'Keep to about seven events so the captions fit under the line. For more, make the markers narrower (Event marker width) and check them in the Preview', marker, page),
+    todo('Retime the intro line', 'Retime the intro on the "Intro" timeline (Timeline tab). Viewers who ask for less motion see the finished line at once', undefined, page),
+    todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to a dot, Enter to open it, then the left and right arrow keys', dot, page),
+    todo('Pick a colourway (the brand parts are locked)', 'Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
   ];
   return { project, checklist };
 }

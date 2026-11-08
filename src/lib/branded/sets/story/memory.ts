@@ -1,7 +1,7 @@
 //Memory game: twelve face-down cards in a repeater (one card layer, one click handler), dealt in a new order every play. The cards are a key-navigation grid and what is face up, matched and busy is worked out from the cards themselves.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { keyNavList } from '../../parts';
-import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, darkButton, go, goNext, graphNote, set } from './common';
 
@@ -103,9 +103,9 @@ function build(colourway: Colourway) {
   g.run(sayNo, ['action.delay', { ms: 1000 }], ['action.setVariable', { variable: cards.id, op: 'set', value: 'cards.map(c => c.state == "up" ? {...c, state: "down"} : c)' }]);
 
   checklist.push(
-    item('Write your own six pairs: Project > Variables > "pairs", a list of terms and what each one matches (the cards, the count and the finished check all follow it)', grid, play),
-    item('Restyle the card (back and face) once: every card is the same layer, repeated', card, play),
-    item('Change how long unmatched cards stay face up: the Wait node at the end of the Interactions row for "Turn a card"', again, play),
+    todo('Write your own six pairs', 'Write your own six pairs: Project > Variables > "pairs", a list of terms and what each one matches (the cards, the count and the finished check all follow it)', grid, play),
+    todo('Restyle the card once for every card', 'Restyle the card (back and face) once: every card is the same layer, repeated', card, play),
+    todo('Change how long unmatched cards stay face up', 'Change how long unmatched cards stay face up: the Wait node at the end of the Interactions row for "Turn a card"', again, play),
   );
 
   //Finished
@@ -115,7 +115,7 @@ function build(colourway: Colourway) {
   done.children.push(well, note, replay);
   const dg = new Graph(done);
   dg.run(dg.click(replay, 'Play again'), go(play));
-  checklist.push(item('Change the finished message and its three ratings (they read the number of moves)', note, done));
+  checklist.push(todo('Change the finished message and its ratings', 'Change the finished message and its three ratings (they read the number of moves)', note, done));
 
   //Notes for whoever edits the template, below the pages
   const below = (p: typeof play, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });

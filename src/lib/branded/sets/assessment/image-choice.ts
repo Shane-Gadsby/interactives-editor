@@ -1,5 +1,5 @@
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, type LayoutState } from '../../kit';
+import { brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { fill, keyNavList, stack } from '../../parts';
 import { bind, click, goNext, graph, graphNote, heroPage, noteBelow, variable } from './shared';
@@ -107,13 +107,13 @@ export function buildImageChoice(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-    item('Write your question: the "prompt" variable (Variables tab)', prompt, page),
-    item('Give each choice its picture: put the image asset\'s id in that row\'s "image" in the "options" variable. The grey "Picture n" placeholder shows until there is one', pic, page),
-    item(`Write the label, the picture's description for a screen reader (alt) and whether it is right for each choice: the "options" variable (Variables tab) is a list of ${N}. Keep the names label, alt, correct and image in each entry`, card, page),
-    item('Choose one answer or several: the "multiple" variable (Variables tab). Turn it off for one right answer, and set the card\'s Role to Radio in the inspector to match', card, page),
-    item('Reword the three feedback messages: feedbackCorrect, feedbackPartial and feedbackWrong (Variables tab)', byName(page, 'Feedback'), page),
-    item('Use more or fewer pictures: add or remove rows in "options". The cards follow it, in rows of three', undefined, page),
-    item('Try it with the keyboard: Tab to the pictures, the arrow keys to move between them, Space to select, then Check', undefined, page),
+    todo('Write your question', 'Write your question: the "prompt" variable (Variables tab)', prompt, page),
+    todo('Give each choice its picture', 'Give each choice its picture: put the image asset\'s id in that row\'s "image" in the "options" variable. The grey "Picture n" placeholder shows until there is one', pic, page),
+    todo('Write each choice\'s label and say which are right', `Write the label, the picture's description for a screen reader (alt) and whether it is right for each choice: the "options" variable (Variables tab) is a list of ${N}. Keep the names label, alt, correct and image in each entry`, card, page),
+    todo('Choose one right answer or several', 'Choose one answer or several: the "multiple" variable (Variables tab). Turn it off for one right answer, and set the card\'s Role to Radio in the inspector to match', card, page),
+    todo('Reword the three feedback messages', 'Reword the three feedback messages: feedbackCorrect, feedbackPartial and feedbackWrong (Variables tab)', byName(page, 'Feedback'), page),
+    todo('Use more or fewer pictures as you need', 'Use more or fewer pictures: add or remove rows in "options". The cards follow it, in rows of three', undefined, page),
+    todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to the pictures, the arrow keys to move between them, Space to select, then Check', undefined, page),
   ];
   return { project, checklist };
 }

@@ -370,6 +370,13 @@ export const chain = (...nodes: LogicNode[]): LogicEdge[] => nodes.slice(1).map(
 
 export const item = (text: string, node?: SceneNode, artboard?: Artboard): TemplateChecklistItem => ({ id: uid('ck'), text, ...(node ? { nodeId: node.id } : {}), ...(artboard ? { artboardId: artboard.id } : {}), done: false });
 
+/**
+ * A checklist item the way the starters write them: `text` is one short, plain action (about a dozen words, no layer, tab or variable
+ * names), and `detail` is the how and why in as many words as it takes, shown in a fold under it. test/starter-checklist.test.ts holds
+ * every starter to that.
+ */
+export const todo = (text: string, detail: string, node?: SceneNode, artboard?: Artboard): TemplateChecklistItem => ({ ...item(text, node, artboard), detail });
+
 export const byName = (ab: Artboard, name: string): SceneNode | undefined => {
   const look = (list: SceneNode[]): SceneNode | undefined => {
     for (const n of list) {

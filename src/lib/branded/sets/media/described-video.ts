@@ -3,7 +3,7 @@
 //the video is turned down; the Transcript lists the captions and the descriptions together in one reading order, which works with no voice. A last
 //page is the author's checklist on describing well, to delete before publishing. A cheaper aid, never a recorded described version.
 import { createNode, uid, type CaptionCue, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
-import { addNote, barY, brandedPage, brandedProject, button, contentBox, heading, item, solid, text, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, contentBox, heading, item, solid, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { fill, stack } from '../../parts';
 import { Graph, goNext, goPrevious, heroPage } from './shared';
@@ -62,9 +62,9 @@ function build(colourway: Colourway) {
     descriptions: SEEN,
   } as Partial<VideoNode>);
   watch.children.push(video);
-  checklist.push(item('Choose your video: select the Video layer and pick a file in the inspector. Until you do, the layer says no video has been chosen', video, watch));
-  checklist.push(item('Replace the sample captions: Video layer > Captions > Import… (a WebVTT or SRT file made for your video). They say what is heard', video, watch));
-  checklist.push(item('Write your own descriptions: Video layer > Descriptions. One short sentence each, in the gap between speech, saying what is only in the picture. Set the Language so the right voice reads them. Delete the three samples', video, watch));
+  checklist.push(todo('Choose your video file', 'Choose your video: select the Video layer and pick a file in the inspector. Until you do, the layer says no video has been chosen', video, watch));
+  checklist.push(todo('Replace the sample captions with your own', 'Replace the sample captions: Video layer > Captions > Import… (a WebVTT or SRT file made for your video). They say what is heard', video, watch));
+  checklist.push(todo('Write your own audio descriptions', 'Write your own descriptions: Video layer > Descriptions. One short sentence each, in the gap between speech, saying what is only in the picture. Set the Language so the right voice reads them. Delete the three samples', video, watch));
 
   //Beside the video: what the learner can do, in one column so a line that wraps pushes the rest down
   const how = heading(ctx, 'How to listen', 'Hear what is on screen', 0, 0, 288, { fontSize: 22 });
@@ -73,8 +73,8 @@ function build(colourway: Colourway) {
   const help = text(ctx, 'About the voice', 'The Descriptions button only shows when your device has a voice that can read them. Nothing you hear is recorded or sent anywhere.', 0, 0, 288, { fontSize: 14, color: L.muted, lineHeight: 1.4 });
   const toNotes = button(ctx, 'Author checklist', 'Author checklist', 0, 0, 288, false);
   watch.children.push(stack('Side column', box.x + 640, box.y, 288, { gap: 12, children: [how, hear, read, help, toNotes] }));
-  checklist.push(item('Decide whether descriptions start on: Project settings > Captions and narration > "Descriptions on to start". It starts off, because most viewers do not need it; each viewer\'s own choice is remembered', hear, watch));
-  checklist.push(item('Test it: turn Descriptions on, play on a phone with and without headphones (the voice over the speaker is what to check), then open the Transcript and read it start to finish. Run the accessibility check', toNotes, watch));
+  checklist.push(todo('Decide whether descriptions start on', 'Decide whether descriptions start on: Project settings > Captions and narration > "Descriptions on to start". It starts off, because most viewers do not need it; each viewer\'s own choice is remembered', hear, watch));
+  checklist.push(todo('Test it: descriptions on, on a phone, then the transcript', 'Test it: turn Descriptions on, play on a phone with and without headphones (the voice over the speaker is what to check), then open the Transcript and read it start to finish. Run the accessibility check', toNotes, watch));
 
   const wg = new Graph(watch);
   wg.run(wg.click(toNotes, 'To the checklist'), goNext());
@@ -115,8 +115,8 @@ function build(colourway: Colourway) {
   const reminder = text(ctx, 'Delete reminder', 'Delete this page, and the Author checklist button on the video page, before you publish.', 0, 0, nbox.width - 244, { fontSize: 15, color: L.muted });
   const endRow = stack('Back row', nbox.x, barY(nbox), nbox.width, { direction: 'row', gap: 24, align: 'center', children: [back, fill(reminder)] });
   notes.children.push(columns, endRow);
-  checklist.push(item('Read the Describing well page, then delete it and the Author checklist button before you publish', list, notes));
-  checklist.push(item('Need a formally recorded described version? Record it: these descriptions do not replace one', limitsText, notes));
+  checklist.push(todo('Read the Describing well page, then delete it', 'Read the Describing well page, then delete it and the Author checklist button before you publish', list, notes));
+  checklist.push(todo('Record a formal described version if you need one', 'Need a formally recorded described version? Record it: these descriptions do not replace one', limitsText, notes));
 
   const ng = new Graph(notes);
   ng.run(ng.click(back, 'Back'), goPrevious());

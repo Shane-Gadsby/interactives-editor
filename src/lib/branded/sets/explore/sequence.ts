@@ -4,7 +4,7 @@
  */
 import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, navBarY, picture, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, navBarY, picture, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import { BRAND_FONT } from '../../looks';
 import { addVar, announce, bind, click, focus, graph, graphNote, set } from '../../graph-kit';
 import { stack } from '../../parts';
@@ -134,12 +134,12 @@ export const imageSequence: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),
-      item('Replace each grey picture with your own, and give it a text alternative that says what it shows. The pictures are in the Image 1 to Image 6 frames inside the Images group, which shows one at a time', pics[0], page),
-      item('Write each stage\'s title and caption in the "stages" list variable (Variables panel), in order', caption, page),
-      item('Rename the stage names under the slider to match (and their Text alternative)', names[0], page),
-      item('To change the number of stages: duplicate an Image frame (name it with the next number) and a stage name, add an entry to "stages", and space the names along the slider. "total" and the slider\'s top follow the list by themselves', images, page),
+      todo('Replace each grey picture with your own', 'Replace each grey picture with your own, and give it a text alternative that says what it shows. The pictures are in the Image 1 to Image 6 frames inside the Images group, which shows one at a time', pics[0], page),
+      todo('Write each stage\'s title and caption', 'Write each stage\'s title and caption in the "stages" list variable (Variables panel), in order', caption, page),
+      todo('Rename the stage names under the slider', 'Rename the stage names under the slider to match (and their Text alternative)', names[0], page),
+      todo('To change the number of stages, copy a picture and a name', 'To change the number of stages: duplicate an Image frame (name it with the next number) and a stage name, add an entry to "stages", and space the names along the slider. "total" and the slider\'s top follow the list by themselves', images, page),
       item('Change the footer line', byName(page, 'Footer text'), page),
-      item('Try it with the keyboard: Tab to the slider, then the arrow keys, Home and End', slider, page),
+      todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to the slider, then the arrow keys, Home and End', slider, page),
     ];
     return { project, checklist };
   },

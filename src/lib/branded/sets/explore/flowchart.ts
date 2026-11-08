@@ -9,9 +9,9 @@ import { createNode, walk, type FrameNode, type PathNode, type SceneNode, type T
 import { flowChart, flowLinks } from 'interactives-player';
 import { addQuestion, partsOf, setQuestionSettings } from '../../../question-kit';
 import { BRAND_FONT } from '../../looks';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, todo, type BrandedCtx, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import { addVar, announce, bind, click, goPrevious, graph, graphNote, set, toggleVar } from '../../graph-kit';
-import { extrasChecklist, fill, questionExtras, stack } from '../../parts';
+import { extrasChecklist, extrasShort, fill, questionExtras, stack } from '\.\./\.\./parts';
 import { boxText, dressQuestion, endPage, goNextOn, retray } from '../drag/shared';
 import { kitNode } from '../assessment/shared';
 import { heroButtons } from './helpers';
@@ -402,16 +402,16 @@ export const flowchartStarter: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-      item('Write the flowchart you want learners to follow: the "steps" variable (Variables panel) has an id, a kind (start, process, decision, io or end), a label and a detail for each step', step, walkPage),
-      item('Join the steps: the "links" variable has a from, a to (step ids) and an answer label for each arrow. A decision has one link for each answer. A link back to an earlier step draws a loop', arrow, walkPage),
-      item('Set where the walk begins: the "current" and "path" variables hold the id of the first step (the one of kind start)', undefined, walkPage),
-      item('Keep the chart to about six rows and two steps across. A bigger one shrinks its gaps and then its shapes to fit', byName(walkPage, 'Flowchart'), walkPage),
+      todo('Write the steps of the flowchart to follow', 'Write the flowchart you want learners to follow: the "steps" variable (Variables panel) has an id, a kind (start, process, decision, io or end), a label and a detail for each step', step, walkPage),
+      todo('Join the steps with arrows and answers', 'Join the steps: the "links" variable has a from, a to (step ids) and an answer label for each arrow. A decision has one link for each answer. A link back to an earlier step draws a loop', arrow, walkPage),
+      todo('Set where the walk starts', 'Set where the walk begins: the "current" and "path" variables hold the id of the first step (the one of kind start)', undefined, walkPage),
+      todo('Keep the chart to about six rows', 'Keep the chart to about six rows and two steps across. A bigger one shrinks its gaps and then its shapes to fit', byName(walkPage, 'Flowchart'), walkPage),
       item('Change the page title and the footer text on the Follow page', byName(walkPage, 'Page title'), walkPage),
-      item('Complete the flowchart: move the shapes and blanks on the chart to match your own, and type your steps in the Question section (blank 1 takes the first pair). Add wrong steps under Extras', frame, donePage),
-      item('Set the tries, the points (the results say "of 3") and the feedback messages', frame, donePage),
-      item('Check the text version: press Show as a list on the Follow page and read it as a learner using a screen reader would', byName(walkPage, 'View button'), walkPage),
+      todo('Set up the complete-the-flowchart page', 'Complete the flowchart: move the shapes and blanks on the chart to match your own, and type your steps in the Question section (blank 1 takes the first pair). Add wrong steps under Extras', frame, donePage),
+      todo('Set the tries, points and feedback messages', 'Set the tries, the points (the results say "of 3") and the feedback messages', frame, donePage),
+      todo('Check the text version of the chart', 'Check the text version: press Show as a list on the Follow page and read it as a learner using a screen reader would', byName(walkPage, 'View button'), walkPage),
       item('Change the results page text', results.result, results.page),
-      item(extrasChecklist({ tryAgain: true })),
+      todo(extrasShort({ tryAgain: true }), extrasChecklist({ tryAgain: true })),
     ];
     return { project, checklist };
   },

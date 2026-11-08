@@ -7,7 +7,7 @@
  */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, gnode, heading, item, solid, text, type BrandedCtx, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, gnode, heading, item, solid, text, todo, type BrandedCtx, type BrandedStarter } from '\.\./\.\./kit';
 import { BRAND_FONT } from '../../looks';
 import { Flow, addVar, announce, bind, click, focus, graph, graphNote, goNext, goPrevious, set, type ActionStep } from '../../graph-kit';
 import { fill, keyNavList, stack } from '../../parts';
@@ -256,14 +256,14 @@ export const chart: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),
-      item('Put your own numbers in the "rows" list variable (Variables panel): a label and a value for each item. The bar chart, the pie, the table and the guess page all follow it, and redraw as soon as it changes', barChart, page),
-      item('The two data buttons set "rows" from the "datasets" list (a name and its rows each). Change that list, or delete the buttons if you have one data set (a script, a data source or an Interactions node can set "rows" too)', dataButtons, page),
-      item('Change the unit ("unit" variable, hours): every chart\'s Suffix reads it as {unit}, so it is the one place to change. Then the chart title and the table headings', subtitle, page),
-      item('The charts take any number of items. Pie slice colours come from the colourway through six tokens (Colours in the Chart section); the table has a row for each item and grows with the list, so mind the room under it', pieChart, page),
-      item('On the guess page, set the top of the scale: the "guessMax" variable (the slider and the chart both follow it), to a bit more than your biggest value', slider, guessPage),
-      item('Rewrite the question and the answer message (the Question text, and the live "verdict" variable in the Variables panel)', prompt, guessPage),
+      todo('Put your own numbers in the chart data', 'Put your own numbers in the "rows" list variable (Variables panel): a label and a value for each item. The bar chart, the pie, the table and the guess page all follow it, and redraw as soon as it changes', barChart, page),
+      todo('Change or delete the two data buttons', 'The two data buttons set "rows" from the "datasets" list (a name and its rows each). Change that list, or delete the buttons if you have one data set (a script, a data source or an Interactions node can set "rows" too)', dataButtons, page),
+      todo('Change the unit the charts show', 'Change the unit ("unit" variable, hours): every chart\'s Suffix reads it as {unit}, so it is the one place to change. Then the chart title and the table headings', subtitle, page),
+      todo('Check the table has room for your items', 'The charts take any number of items. Pie slice colours come from the colourway through six tokens (Colours in the Chart section); the table has a row for each item and grows with the list, so mind the room under it', pieChart, page),
+      todo('On the guess page, set the top of the scale', 'On the guess page, set the top of the scale: the "guessMax" variable (the slider and the chart both follow it), to a bit more than your biggest value', slider, guessPage),
+      todo('Rewrite the guess question and answer message', 'Rewrite the question and the answer message (the Question text, and the live "verdict" variable in the Variables panel)', prompt, guessPage),
       item('Change the footer lines on both pages', byName(page, 'Footer text'), page),
-      item('Try it with the keyboard: Tab to a chart, arrow between bars or slices to hear each value, press Enter to keep one in the line below, and Tab to the slider on the guess page', barChart, page),
+      todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to a chart, arrow between bars or slices to hear each value, press Enter to keep one in the line below, and Tab to the slider on the guess page', barChart, page),
     ];
     return { project: ctx.project, checklist };
   },

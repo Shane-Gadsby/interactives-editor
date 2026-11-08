@@ -1,8 +1,8 @@
 import { createNode, defaultAutoLayout, type FrameNode, type LogicNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partsOf, setQuestionSettings, syncQuestion } from '../../../question-kit';
-import { brandedPage, brandedProject, button, byName, contentBox, edge, item, text, type LayoutState } from '../../kit';
+import { brandedPage, brandedProject, button, byName, contentBox, edge, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
-import { extrasChecklist, questionExtras, stack } from '../../parts';
+import { extrasChecklist, extrasShort, questionExtras, stack } from '\.\./\.\./parts';
 import { after, bind, brandQuestionFrame, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, scorePage, variable } from './shared';
 
 
@@ -245,18 +245,18 @@ export function buildAudioFirstQuiz(colourway: Colourway) {
   noteBelow(result, { text: '**Live variables** `rowExplain`, `rightPlace` and `rightText` read the row showing, and `message` is banded from the score. [ ] Reword the three messages in the Variables tab.', colour: 'gold' });
 
   const checklist: TemplateChecklistItem[] = [
-    item('Change the title and the line under it on the first page, and the note about the keys under the Start button', hero.children.find((c) => c.name === 'Page title'), hero),
-    item('Write your own questions: the "questions" variable (Variables tab) is a list, one entry per question. Each has a prompt, the options (two to four; a true or false question has two), correct (the place of the right option, counting from 1), explain (said and shown after the answer) and an optional hint', frame, play),
-    item('Add "spoken" to a question when a voice reads it badly (a formula, an abbreviation, a long scenario): it is said instead of the prompt, and the options are still read after it', frame, play),
-    item('Add or remove questions in that list: the "Question n of N" footer, the score and the review all follow its length', undefined, play),
-    item('Say the options the way you want them heard, and keep each one short: a voice reads all of them before the learner can answer', partsOf(frame).options[0], play),
-    item('Set the language of the spoken prompts in Project settings, Read aloud (it is English here). A voice for another language is never used, so translating the questions means changing it too', undefined, play),
-    item('Decide how the quiz moves on: by hand is the default. The "pace" variable is 0 (by hand), 4 or 8 (seconds after the answer has been spoken); the Pace button on the question page cycles it for the learner', paceBtn, play),
-    item('Reword the three result messages: the messageHigh, messageMid and messageLow variables', byName(result, 'Result message'), result),
-    item('Try it with a voice installed and with none (turn it off in your computer\'s settings or use another browser). With no voice the spoken buttons hide and it is an ordinary keyboard quiz with the same feedback announced', undefined, play),
-    item('Do not offer it as the route for a screen reader user: they already have a reader, and two voices at once is worse. "Spoken prompts" turns the voice off, and the feedback is then announced to the reader instead', spoken, play),
-    item('Change the colours for the whole piece with the Themes tab: the colourways are already set up', undefined, play),
+    todo('Change the title and the lines under it', 'Change the title and the line under it on the first page, and the note about the keys under the Start button', hero.children.find((c) => c.name === 'Page title'), hero),
+    todo('Write your own questions and their options', 'Write your own questions: the "questions" variable (Variables tab) is a list, one entry per question. Each has a prompt, the options (two to four; a true or false question has two), correct (the place of the right option, counting from 1), explain (said and shown after the answer) and an optional hint', frame, play),
+    todo('Add a spoken version for questions a voice reads badly', 'Add "spoken" to a question when a voice reads it badly (a formula, an abbreviation, a long scenario): it is said instead of the prompt, and the options are still read after it', frame, play),
+    todo('Add or remove questions as you need', 'Add or remove questions in that list: the "Question n of N" footer, the score and the review all follow its length', undefined, play),
+    todo('Keep each option short: a voice reads them all', 'Say the options the way you want them heard, and keep each one short: a voice reads all of them before the learner can answer', partsOf(frame).options[0], play),
+    todo('Set the language of the spoken prompts', 'Set the language of the spoken prompts in Project settings, Read aloud (it is English here). A voice for another language is never used, so translating the questions means changing it too', undefined, play),
+    todo('Choose how the quiz moves on after an answer', 'Decide how the quiz moves on: by hand is the default. The "pace" variable is 0 (by hand), 4 or 8 (seconds after the answer has been spoken); the Pace button on the question page cycles it for the learner', paceBtn, play),
+    todo('Reword the three result messages', 'Reword the three result messages: the messageHigh, messageMid and messageLow variables', byName(result, 'Result message'), result),
+    todo('Try it with a voice installed and with none', 'Try it with a voice installed and with none (turn it off in your computer\'s settings or use another browser). With no voice the spoken buttons hide and it is an ordinary keyboard quiz with the same feedback announced', undefined, play),
+    todo('Do not rely on it for screen reader users', 'Do not offer it as the route for a screen reader user: they already have a reader, and two voices at once is worse. "Spoken prompts" turns the voice off, and the feedback is then announced to the reader instead', spoken, play),
+    todo('Pick a colourway for the whole piece', 'Change the colours for the whole piece with the Themes tab: the colourways are already set up', undefined, play),
   ];
-  checklist.push(item(extrasChecklist({ hint: true })));
+  checklist.push(todo(extrasShort({ hint: true }), extrasChecklist({ hint: true })));
   return { project, checklist };
 }

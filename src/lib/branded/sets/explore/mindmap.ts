@@ -7,7 +7,7 @@
 import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem, type Variable } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
 import { BRAND_FONT } from '../../looks';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, overlay, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, overlay, solid, stroke, text, todo, type BrandedCtx, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import { addVar, announce, bind, click, graph, graphNote, set, toggleVar, type ActionStep } from '../../graph-kit';
 import { dialogPanel, fill, openDialog, stack } from '../../parts';
 import { heroButtons } from './helpers';
@@ -440,14 +440,14 @@ export const mindMapStarter: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-      item('Write your own mind map: the "ideas" variable (Variables panel) is a list with an id, a parent (the id of the idea it hangs from, empty for the one in the middle), a label and a detail for each', layers.idea, explore),
-      item('Keep the map to about ten ideas on a side and three levels deep. Larger maps shrink their boxes to fit, and a branch can start folded: put its id in the "folded" variable', layers.ideas, explore),
+      todo('Write your own mind map ideas', 'Write your own mind map: the "ideas" variable (Variables panel) is a list with an id, a parent (the id of the idea it hangs from, empty for the one in the middle), a label and a detail for each', layers.idea, explore),
+      todo('Keep the map to about ten ideas on a side', 'Keep the map to about ten ideas on a side and three levels deep. Larger maps shrink their boxes to fit, and a branch can start folded: put its id in the "folded" variable', layers.ideas, explore),
       item('Change the page title and the footer line on the Explore page', byName(explore, 'Page title'), explore),
-      item('Decide whether the learner\'s map is kept for next time: the "keepMap" variable is true (kept) or false (only until they leave). The line beside the map and the Save button follow it', byName(build, 'Keep status'), build),
-      item('Write what the learner should do on the Build page in the line under the map, and pick the starting idea in the "mine" variable', byName(build, 'Build hint'), build),
-      item('Try Save, a download, Start a new map and Open a saved map on the Build page: open the file from "Download a copy to open later", copy it and paste it into Open a saved map', byName(build, 'Open map button'), build),
-      item('Check the text version: switch to the outline on the Explore page and read it as a learner using a screen reader would. It lists every idea and its detail, so check the details say enough', byName(explore, 'View button'), explore),
-      item('Try it with the keyboard: Tab to the map, arrow between ideas, Enter to open one, plus and minus to fold', undefined, explore),
+      todo('Decide whether the learner\'s map is kept', 'Decide whether the learner\'s map is kept for next time: the "keepMap" variable is true (kept) or false (only until they leave). The line beside the map and the Save button follow it', byName(build, 'Keep status'), build),
+      todo('Say what the learner should do on the Build page', 'Write what the learner should do on the Build page in the line under the map, and pick the starting idea in the "mine" variable', byName(build, 'Build hint'), build),
+      todo('Try Save, downloads, a new map and Open a saved map', 'Try Save, a download, Start a new map and Open a saved map on the Build page: open the file from "Download a copy to open later", copy it and paste it into Open a saved map', byName(build, 'Open map button'), build),
+      todo('Check the text version of the map', 'Check the text version: switch to the outline on the Explore page and read it as a learner using a screen reader would. It lists every idea and its detail, so check the details say enough', byName(explore, 'View button'), explore),
+      todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to the map, arrow between ideas, Enter to open one, plus and minus to fold', undefined, explore),
     ];
     return { project, checklist };
   },

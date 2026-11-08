@@ -3,7 +3,7 @@
 //beats are exact and only the click can jitter (by up to a frame). The drill cards and the beat markers are repeaters, and the tempo readout is live variables.
 //Taps are scored from Date.now() the moment they arrive, against the nearest beat, inside a tolerance window (ms, set per drill in the "presets" variable).
 import { createNode, type FrameNode, type LogicNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { join } from '../../graph-kit';
 import { fill, stack } from '../../parts';
@@ -123,8 +123,8 @@ function build(colourway: Colourway) {
     //One flow for every card: the number and the tempo are all that is set, the lead-in and the window follow the drill (live)
     g.run(click(g, choose, 'Choose a drill'), setVar(v.preset, 'event.index'), setVar(v.bpm, 'presets[event.index].bpm'), setVar(v.phase, '"idle"'), goNext());
     checklist.push(
-      item('Rename, retune or reword the drills: the "presets" variable (Variables tab) is a list with, for each drill, name, bpm (the starting tempo), min and max (what the + and - buttons allow), lead (beats played before the learner takes over), tol (how many milliseconds either side of a beat still counts) and note. Each entry is a card with its own Choose button, up to three across', chooseButton, pick),
-      item('The compression pace drill must stay worded as rhythm practice only: check its note still says so, and keep its tempo range to 100 to 120 beats a minute', drills, pick),
+      todo('Rename, retune or reword the drills', 'Rename, retune or reword the drills: the "presets" variable (Variables tab) is a list with, for each drill, name, bpm (the starting tempo), min and max (what the + and - buttons allow), lead (beats played before the learner takes over), tol (how many milliseconds either side of a beat still counts) and note. Each entry is a card with its own Choose button, up to three across', chooseButton, pick),
+      todo('Keep the compression pace drill as rhythm practice only', 'The compression pace drill must stay worded as rhythm practice only: check its note still says so, and keep its tempo range to 100 to 120 beats a minute', drills, pick),
     );
   }
 
@@ -323,7 +323,7 @@ function build(colourway: Colourway) {
     g.run(click(g, other, 'Pick another drill'), setVar(v.phase, '"idle"'), go(pick));
     g.run(g.event('event.start', {}, 'Results page'), announce('"Accuracy " + accuracy + " percent, best streak " + best + ". " + driftText'));
     graphNote(results, { anchor: labelled(results, /^Results page$/), colour: 'sky', text: '**The results page reads itself aloud** from the live `accuracy`, `best` and `driftText`, the same ones the screen shows. Try again and Pick another drill both put `phase` back to idle first, so the beat clock stays off.' });
-    checklist.push(item('Change the goal: the "goal" variable (Variables tab) is the accuracy in percent that counts as reaching it', acc, results));
+    checklist.push(todo('Change the accuracy goal', 'Change the goal: the "goal" variable (Variables tab) is the accuracy in percent that counts as reaching it', acc, results));
   }
 
   //Notes for whoever edits the template, below each page
@@ -334,13 +334,13 @@ function build(colourway: Colourway) {
   addNote(results, { ...below(results, 0, 440), text: '[ ] Set the `goal` percentage. Scores are for comparing a learner\'s own tries, never a measurement, and the compression drill stays worded as rhythm practice only.', colour: 'orange' });
 
   checklist.push(
-    item('Swap the two placeholder clicks for your own (Assets panel, the arrow beside each "(replace)" sound), or change the Play sound nodes on the beat clock in the Interactions tab. The accent is the first of every four beats', byName(drill, 'Start button'), drill),
-    item('Tuning: the beat window is each drill\'s tol (milliseconds either side of the beat that still count) in the "presets" variable. Phone screens add their own delay, so try it on a real phone and widen it if good taps are being missed', byName(drill, 'Beat markers'), drill),
-    item(`To change the number of beats you keep going (${KEEP}): change the "keep" variable. The markers are a repeater over "marks", which is worked out from it, so they follow (the row is laid out for ${KEEP} across)`, byName(drill, 'Beat markers'), drill),
-    item('Speak to the beat: the drill\'s script in "presets" needs one word for every beat you keep going (' + KEEP + '). Each word shows as its beat comes', byName(drill, 'Word to say'), drill),
-    item('Reword the note on each drill and on the results page. Keep the compression pace worded as rhythm practice only', byName(drill, 'Drill note'), drill),
-    item('Try it with the keyboard: press Space to tap, and Tab to the buttons. The beat is shown as well as heard (a flash and the markers), and the flash only changes colour for anyone who has asked for less motion', byName(drill, 'Tap pad'), drill),
-    item('Pick the colourway on the Themes tab. The brand parts are locked', undefined, drill),
+    todo('Swap the placeholder clicks for your own sounds', 'Swap the two placeholder clicks for your own (Assets panel, the arrow beside each "(replace)" sound), or change the Play sound nodes on the beat clock in the Interactions tab. The accent is the first of every four beats', byName(drill, 'Start button'), drill),
+    todo('Tune the beat window and try it on a real phone', 'Tuning: the beat window is each drill\'s tol (milliseconds either side of the beat that still count) in the "presets" variable. Phone screens add their own delay, so try it on a real phone and widen it if good taps are being missed', byName(drill, 'Beat markers'), drill),
+    todo('Change how many beats you keep going', `To change the number of beats you keep going (${KEEP}): change the "keep" variable. The markers are a repeater over "marks", which is worked out from it, so they follow (the row is laid out for ${KEEP} across)`, byName(drill, 'Beat markers'), drill),
+    todo('Write one word for every beat you keep going', 'Speak to the beat: the drill\'s script in "presets" needs one word for every beat you keep going (' + KEEP + '). Each word shows as its beat comes', byName(drill, 'Word to say'), drill),
+    todo('Reword the note on each drill and the results page', 'Reword the note on each drill and on the results page. Keep the compression pace worded as rhythm practice only', byName(drill, 'Drill note'), drill),
+    todo('Try it with the keyboard only', 'Try it with the keyboard: press Space to tap, and Tab to the buttons. The beat is shown as well as heard (a flash and the markers), and the flash only changes colour for anyone who has asked for less motion', byName(drill, 'Tap pad'), drill),
+    todo('Pick a colourway (the brand parts are locked)', 'Pick the colourway on the Themes tab. The brand parts are locked', undefined, drill),
   );
   return { project, checklist };
 }

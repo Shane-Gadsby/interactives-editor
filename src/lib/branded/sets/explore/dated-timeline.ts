@@ -8,9 +8,9 @@
  */
 import { createNode, walk, type Artboard, type FrameNode, type SceneNode, type TemplateChecklistItem, type Variable } from 'interactives-player';
 import { addQuestion, partOf, setQuestionSettings } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, navBarY, overlay, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, navBarY, overlay, solid, stroke, text, todo, type BrandedCtx, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import { addVar, announce, bind, click, goNext, graph, graphNote, set, setVar, toggleVar } from '../../graph-kit';
-import { dialogPanel, extrasChecklist, questionExtras, stack } from '../../parts';
+import { dialogPanel, extrasChecklist, extrasShort, questionExtras, stack } from '\.\./\.\./parts';
 import { clickOf, dressQuestion, endPage, kitNode } from '../drag/shared';
 import { heroButtons } from './helpers';
 
@@ -566,17 +566,17 @@ export const datedTimeline: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-      item('Write your events: the "events" list variable (Variables tab). Each has a date (1969, 1969-07 or 1969-07-20), a title, a detail for its dialog, an optional end date to make it a range, an optional "image" (an asset id) and a "priority" (higher gets a label first). Any order: they are placed by date', land.dots, lp),
-      item('Write your eras: the "eras" variable has a name and a from and to date each. They shade the background behind the events. Leave it empty for none', land.bands, lp),
-      item('To give an event a picture, upload the image and put its asset id in that event\'s "image", and say what it shows in the event\'s detail. With no image the dialog has none', land.pic, lp),
-      item('Choose the marker line: "markerDate" is a date, "today", or empty for none, and "markerLabel" is what it is called', land.stage, lp),
-      item('Check the scale: zoom runs from the whole span down to months, and "stepZoom" is how far Step through zooms in. A date that cannot be read is skipped, so check every event shows in the list view', land.stage, lp),
-      item('The portrait page is a phone variant of the timeline (a responsive set shown under 560 px wide) with the same layer names. Wording and layout changes are made on both. Check it in the Preview with a narrow window', port.stage, port.page),
-      item('Change the ordering activity: the steps in the Question section, in their right order, and the points, hint and feedback. Delete the page to end after the timeline: the "Try the activity" buttons hide themselves', frame, activity),
-      item('Try it with the keyboard: Tab to the events, the arrow keys to move along them, Enter to open one, Esc to close it; Page Up and Page Down pan, plus and minus zoom', land.dots, lp),
-      item('Change the footer lines and pick the colourway on the Themes tab', byName(lp, 'Footer text'), lp),
+      todo('Write your events with dates and details', 'Write your events: the "events" list variable (Variables tab). Each has a date (1969, 1969-07 or 1969-07-20), a title, a detail for its dialog, an optional end date to make it a range, an optional "image" (an asset id) and a "priority" (higher gets a label first). Any order: they are placed by date', land.dots, lp),
+      todo('Write your eras if you want shaded periods', 'Write your eras: the "eras" variable has a name and a from and to date each. They shade the background behind the events. Leave it empty for none', land.bands, lp),
+      todo('Give an event a picture if you want one', 'To give an event a picture, upload the image and put its asset id in that event\'s "image", and say what it shows in the event\'s detail. With no image the dialog has none', land.pic, lp),
+      todo('Choose the marker line', 'Choose the marker line: "markerDate" is a date, "today", or empty for none, and "markerLabel" is what it is called', land.stage, lp),
+      todo('Check the scale and every event in the list view', 'Check the scale: zoom runs from the whole span down to months, and "stepZoom" is how far Step through zooms in. A date that cannot be read is skipped, so check every event shows in the list view', land.stage, lp),
+      todo('Check the portrait page too', 'The portrait page is a phone variant of the timeline (a responsive set shown under 560 px wide) with the same layer names. Wording and layout changes are made on both. Check it in the Preview with a narrow window', port.stage, port.page),
+      todo('Set up the ordering activity', 'Change the ordering activity: the steps in the Question section, in their right order, and the points, hint and feedback. Delete the page to end after the timeline: the "Try the activity" buttons hide themselves', frame, activity),
+      todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to the events, the arrow keys to move along them, Enter to open one, Esc to close it; Page Up and Page Down pan, plus and minus zoom', land.dots, lp),
+      todo('Change the footer lines and pick a colourway', 'Change the footer lines and pick the colourway on the Themes tab', byName(lp, 'Footer text'), lp),
     ];
-    checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
+    checklist.push(todo(extrasShort({ hint: true, tryAgain: true }), extrasChecklist({ hint: true, tryAgain: true })));
     return { project, checklist };
   },
 };

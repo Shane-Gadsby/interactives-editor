@@ -1,6 +1,6 @@
 //Guided writing workbook: a goals page, three steps with a prompt and a text box each, a progress list on every page, and an export page that puts everything on one page to copy or download. The writing is learner user data, kept as it is written.
 import { createNode, type Artboard, type FrameNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { groupPages } from '../story/common';
 import { addVar, bind, click, empty, goNext, goPrevious, graph, graphNote, reportExpr, setVar, textBox, writingHero } from './shared';
@@ -140,7 +140,7 @@ function build(colourway: Colourway) {
     if (i === 0) g.then(goBack, 'action.artboard', { artboard: hero.id, transition: 'fade', duration: 250 }, 'none');
     g.then(click(g, next, 'Next'), ...goNext());
     graphNote(page, { anchor: onBack, colour: 'sky', text: i === 0 ? '**Back from the first part has no page before it in the group**, so its **No artboard** output goes to the start page instead. Writing is kept as it is typed, so leaving loses nothing.' : '**Back and Next follow the page order** of the group, so a new part needs no wiring. What is written is kept as it is typed (`userData`), so leaving a page loses nothing.' });
-    checklist.push(item(i === 0 ? 'Write your own goals prompt, and the placeholder in its text box' : `Step ${i}: write your own prompt, the placeholder in the text box and the page title`, guide, page));
+    checklist.push(todo(i === 0 ? 'Write your goals prompt and placeholder' : `Step ${i}: write your prompt and page title`, i === 0 ? 'Write your own goals prompt, and the placeholder in its text box' : `Step ${i}: write your own prompt, the placeholder in the text box and the page title`, guide, page));
   });
 
   //Export: everything the learner wrote, on one page, in a box they can copy from or download
@@ -162,16 +162,16 @@ function build(colourway: Colourway) {
     graphNote(exportPage, { anchor: onSave, colour: 'sky', text: '**Download saves report as plain text.** [ ] Change the file name `my-study-plan` in the node.' });
     g.run(onSave, ['action.saveFile', { name: '"my-study-plan"', text: 'report', mime: 'text/plain' }]);
     checklist.push(
-      item('Change the export: the Set variable node after "Put it all together" (Interactions tab) lists each part with its heading, so reword the headings there, and the title line at the top', field, exportPage),
-      item('Change the file name the learner gets in the Download a file node on the export page (it saves the whole text as a .txt)', save, exportPage),
+      todo('Change the export headings and title line', 'Change the export: the Set variable node after "Put it all together" (Interactions tab) lists each part with its heading, so reword the headings there, and the title line at the top', field, exportPage),
+      todo('Change the file name of the download', 'Change the file name the learner gets in the Download a file node on the export page (it saves the whole text as a .txt)', save, exportPage),
     );
   }
 
   checklist.unshift(item('Write the title and the line under it on the first page', hero.children.find((n) => n.name === 'Subtitle'), hero));
   checklist.push(
-    item('The progress list on every page is one row layer repeated over the live "parts" variable (Variables tab): if you rename a step, change its label and its page name there, and rename the page to match. A row goes to the page it names', undefined, pages[1]),
-    item('Writing is kept as it is written: the four text variables and "exported" are ticked Save as user data (Variables tab), so there is no Save or Load node to maintain. To add a step, duplicate a step page into the Workbook group, add a text variable for it ticked Save as user data, and add its row to "parts" and "resumeAt"', undefined, hero),
-    item('Check where it is saved: on the Link for StudyDesk each learner\'s writing is kept under their StudyDesk session, anywhere else it stays in their browser (Share)', undefined, hero),
+    todo('If you rename a step, rename its page to match', 'The progress list on every page is one row layer repeated over the live "parts" variable (Variables tab): if you rename a step, change its label and its page name there, and rename the page to match. A row goes to the page it names', undefined, pages[1]),
+    todo('To add a step, copy a step page', 'Writing is kept as it is written: the four text variables and "exported" are ticked Save as user data (Variables tab), so there is no Save or Load node to maintain. To add a step, duplicate a step page into the Workbook group, add a text variable for it ticked Save as user data, and add its row to "parts" and "resumeAt"', undefined, hero),
+    todo('Check where the writing is saved', 'Check where it is saved: on the Link for StudyDesk each learner\'s writing is kept under their StudyDesk session, anywhere else it stays in their browser (Share)', undefined, hero),
   );
 
   project.settings.reporting = { completion: 'artboard', completionArtboard: exportPage.id };

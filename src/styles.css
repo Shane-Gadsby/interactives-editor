@@ -7948,6 +7948,32 @@ code {
   color: var(--muted);
   text-decoration: line-through;
 }
+.checklist li {
+  align-items: flex-start;
+}
+.checklist li > input[type='checkbox'] {
+  margin-top: 5px;
+}
+.checklist-body {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.checklist-detail {
+  margin: 0 0 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.checklist-detail summary {
+  cursor: pointer;
+  width: fit-content;
+  padding: 1px 0;
+}
+.checklist-detail p {
+  margin: 2px 0 4px;
+  max-width: 70ch;
+  line-height: 1.45;
+  color: var(--text);
+}
 .checklist-text {
   text-align: left;
   color: var(--text);

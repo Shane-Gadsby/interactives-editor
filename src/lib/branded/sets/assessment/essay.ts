@@ -1,7 +1,7 @@
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
 import { BRAND_FONT } from '../../looks';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, stroke, text, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, stroke, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { announce, bind, click, graph, graphNote, goNext, goPrevious, heroPage, setVar, variable } from './shared';
 import { fill, progressBar, stack } from '../../parts';
@@ -139,13 +139,13 @@ export function buildEssay(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-    item('Write your prompt: the "prompt" variable (Variables tab)', prompt, write),
-    item('List the key ideas a good answer must have: the "required" variable (Variables tab) is a list of words or word stems, one per idea. A stem like "evaporat" matches evaporate, evaporation and evaporating. Matching ignores capital letters, and it looks for the text anywhere in the answer', input, write),
-    item('List the extras that would make an answer stronger but are not needed: the "optional" variable (same format)', input, write),
-    item('Set the length: the "minWords" and "maxWords" variables (Variables tab)', byName(write, 'Aim'), write),
-    item('Write your model answer: the "modelAnswer" variable (Variables tab). A long one scrolls inside its box', byName(feedbackPage, 'Model answer panel'), feedbackPage),
-    item('Check what the learner is told: this is automatic feedback from keywords, so it cannot judge meaning. Say so to your learners, and keep the "not marked" wording on both pages', byName(write, 'How it works'), write),
-    item('Try it with the keyboard: Tab into the answer box, type, Tab to Submit and press Enter', undefined, write),
+    todo('Write your prompt', 'Write your prompt: the "prompt" variable (Variables tab)', prompt, write),
+    todo('List the key ideas a good answer needs', 'List the key ideas a good answer must have: the "required" variable (Variables tab) is a list of words or word stems, one per idea. A stem like "evaporat" matches evaporate, evaporation and evaporating. Matching ignores capital letters, and it looks for the text anywhere in the answer', input, write),
+    todo('List the extras that make an answer stronger', 'List the extras that would make an answer stronger but are not needed: the "optional" variable (same format)', input, write),
+    todo('Set the length range for the answer', 'Set the length: the "minWords" and "maxWords" variables (Variables tab)', byName(write, 'Aim'), write),
+    todo('Write your model answer', 'Write your model answer: the "modelAnswer" variable (Variables tab). A long one scrolls inside its box', byName(feedbackPage, 'Model answer panel'), feedbackPage),
+    todo('Tell learners the feedback is automatic, from keywords', 'Check what the learner is told: this is automatic feedback from keywords, so it cannot judge meaning. Say so to your learners, and keep the "not marked" wording on both pages', byName(write, 'How it works'), write),
+    todo('Try it with the keyboard only', 'Try it with the keyboard: Tab into the answer box, type, Tab to Submit and press Enter', undefined, write),
   ];
   return { project, checklist };
 }

@@ -1,6 +1,6 @@
 //Game map: a map page with five stage markers that unlock in order, a small activity page behind each, ticks for the ones done, and a reward page at the end.
 import { createNode, type Artboard, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, barY, brandedPage, brandedProject, button, contentBox, item, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, contentBox, item, picture, solid, stroke, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, darkButton, focus, go, goNext, graphNote, groupPages, heroPage, lit, set } from './common';
 
@@ -138,12 +138,12 @@ function build(colourway: Colourway) {
   mg.run(onMapStart, ['action.resetVariables', { variables: [message.id] }], announce('done + " of " + stages.length + " stages complete"'));
 
   checklist.push(
-    item('Swap the grey picture on the map for your own artwork, then drag the markers onto it. The path behind them is a plain line you can redraw or delete', mapPic, map),
-    item('Rename the stages: Project > Variables > "stages". The map labels and the stage headings follow it (the page names in the page list are separate)', markers[0], map),
-    item('Write each stage\'s activity: open the stage pages and change the prompt, the options, and the feedback line. Each stage is its own page, so a stage can be a different kind of task', stagePages[0].children.find((n) => n.name === 'Prompt'), stagePages[0]),
-    item('Say which option is right on each stage page: the first step of its On start flow in the Interactions tab sets "answer" (0 is the first option, 1 the second). "right" is a live variable that follows from it', stagePages[0].children.find((n) => n.name === 'Option 1'), stagePages[0]),
-    item('Stages unlock in order by the "done" count. To open them in any order, change the Only if on the open marker flow and the locked one (they read done and event.childIndex)', markers[1], map),
-    item('Change the reward: the picture, the words and what happens next', reward.children.find((n) => n.name === 'Reward text'), reward),
+    todo('Swap the grey map picture for your own artwork', 'Swap the grey picture on the map for your own artwork, then drag the markers onto it. The path behind them is a plain line you can redraw or delete', mapPic, map),
+    todo('Rename the stages', 'Rename the stages: Project > Variables > "stages". The map labels and the stage headings follow it (the page names in the page list are separate)', markers[0], map),
+    todo('Write each stage\'s activity', 'Write each stage\'s activity: open the stage pages and change the prompt, the options, and the feedback line. Each stage is its own page, so a stage can be a different kind of task', stagePages[0].children.find((n) => n.name === 'Prompt'), stagePages[0]),
+    todo('Say which option is right on each stage', 'Say which option is right on each stage page: the first step of its On start flow in the Interactions tab sets "answer" (0 is the first option, 1 the second). "right" is a live variable that follows from it', stagePages[0].children.find((n) => n.name === 'Option 1'), stagePages[0]),
+    todo('Change the order the stages unlock in', 'Stages unlock in order by the "done" count. To open them in any order, change the Only if on the open marker flow and the locked one (they read done and event.childIndex)', markers[1], map),
+    todo('Change the reward', 'Change the reward: the picture, the words and what happens next', reward.children.find((n) => n.name === 'Reward text'), reward),
   );
 
   //The five stage pages: a prompt, the options, feedback, then Complete the stage

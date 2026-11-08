@@ -1,6 +1,6 @@
 /** Image slider: a carousel of five slides written once in a list, each a picture and a caption, with Previous/Next, dots, arrow keys and optional autoplay. */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, navBarY, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, navBarY, picture, solid, stroke, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import { addVar, announce, bind, click, graph, graphNote, set, toggleVar } from '../../graph-kit';
 import { heroButtons } from './helpers';
 
@@ -125,11 +125,11 @@ export const imageSlider: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),
-      item('Write each slide: the "slides" list variable (Variables panel) has a heading, a caption, an image and a text alternative for each. The slide and the dots follow it', caption, page),
-      item('Give a slide its picture: upload the image and put its asset id in that entry\'s "image" (the grey box shows until you do), and say what it shows in "alt"', pic, page),
-      item('To start with the slides playing, set the variable "playing" to true (Variables panel). Autoplay waits for people who ask their device for less motion, and any Previous, Next or dot stops it', undefined, page),
-      item('Change the time between slides: the "On timer" node in the Interactions tab (5000 ms)', undefined, page),
-      item('To add a slide, add an entry to "slides". The dots follow; for more than about eight, check they still fit between Previous and Play', slidesFrame, page),
+      todo('Write each slide: heading, caption, picture and description', 'Write each slide: the "slides" list variable (Variables panel) has a heading, a caption, an image and a text alternative for each. The slide and the dots follow it', caption, page),
+      todo('Give a slide its picture', 'Give a slide its picture: upload the image and put its asset id in that entry\'s "image" (the grey box shows until you do), and say what it shows in "alt"', pic, page),
+      todo('Choose whether the slides start playing', 'To start with the slides playing, set the variable "playing" to true (Variables panel). Autoplay waits for people who ask their device for less motion, and any Previous, Next or dot stops it', undefined, page),
+      todo('Change the time between slides', 'Change the time between slides: the "On timer" node in the Interactions tab (5000 ms)', undefined, page),
+      todo('To add a slide, add it to the list', 'To add a slide, add an entry to "slides". The dots follow; for more than about eight, check they still fit between Previous and Play', slidesFrame, page),
       item('Change the footer line', byName(page, 'Footer text'), page),
     ];
     return { project: ctx.project, checklist };

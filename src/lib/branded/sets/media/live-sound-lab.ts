@@ -8,7 +8,7 @@
 //No pitch tracking: the bars show where the sound is, not which note it is.
 import { createNode, type FrameNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { addNote, barY, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, byName, contentBox, heading, solid, stroke, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import { BRAND_FONT } from '../../looks';
 import { Graph, addVar, announce, bind, go, goNext, goPrevious, graphNote, heroPage, resetVars, set, toggleVar } from './shared';
 
@@ -64,7 +64,7 @@ function build(colourway: Parameters<BrandedStarter['build']>[0]) {
 
   const hg = new Graph(hero.page);
   hg.run(hg.click(hero.start, 'Begin'), goNext());
-  checklist.push(item('Write the title and the line under it on the first page. Keep the sentence that says nothing is recorded: it is true, and it is the reason a learner can say yes', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page));
+  checklist.push(todo('Write the title and keep the nothing-is-recorded sentence', 'Write the title and the line under it on the first page. Keep the sentence that says nothing is recorded: it is true, and it is the reason a learner can say yes', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page));
 
   const box = contentBox(meter);
   const rx = box.x + W + 32;
@@ -193,11 +193,11 @@ function build(colourway: Parameters<BrandedStarter['build']>[0]) {
   g1.gap(60);
 
   checklist.push(
-    item('Set the target band: Project > Variables > "steadyLo" and "steadyHi" (0 to 1, the part of the meter to aim for) and "noiseLine" (where "loud" starts in the noise check). The sample is a comfortable speaking volume. Move the band to suit your task', byName(meter, 'Target band'), meter),
-    item('Check the words around the noise check. It says "rough guide" because phones and laptops adjust the volume themselves (automatic gain), so the bar is not decibels. Do not use it as a safety measurement. For a real workplace noise check, point to a sound level meter and your own policy', guide, meter),
-    item('Check the microphone setting: Project > Microphone and camera has Live listening ticked and "Only ever listen, never record", with a sentence for what it is used for. The learners\' consent screen is made from those. Update the Link for StudyDesk after any change, and make sure the StudyDesk page\'s iframe has allow="microphone; camera"', mic1.listen, meter),
-    item('Keep the slider. It makes the same numbers as the microphone (simLevel and simPitch), so the scenes work for a learner who cannot or would rather not use a microphone, and for a quiet room. If you remove it, add another way for them to finish', levelSlider, meter),
-    item('Learners press Start listening on each scene: the microphone is let go when they leave a page. To keep it on across the scenes, untick "Stop when the learner leaves this page" on the Listen live nodes (Interactions tab). The Listening bar at the top of the page always has a Stop', mic1.listen, meter),
+    todo('Set the target band for the meter', 'Set the target band: Project > Variables > "steadyLo" and "steadyHi" (0 to 1, the part of the meter to aim for) and "noiseLine" (where "loud" starts in the noise check). The sample is a comfortable speaking volume. Move the band to suit your task', byName(meter, 'Target band'), meter),
+    todo('Check the words around the noise check', 'Check the words around the noise check. It says "rough guide" because phones and laptops adjust the volume themselves (automatic gain), so the bar is not decibels. Do not use it as a safety measurement. For a real workplace noise check, point to a sound level meter and your own policy', guide, meter),
+    todo('Check the microphone setting', 'Check the microphone setting: Project > Microphone and camera has Live listening ticked and "Only ever listen, never record", with a sentence for what it is used for. The learners\' consent screen is made from those. Update the Link for StudyDesk after any change, and make sure the StudyDesk page\'s iframe has allow="microphone; camera"', mic1.listen, meter),
+    todo('Keep the slider for learners who cannot use a microphone', 'Keep the slider. It makes the same numbers as the microphone (simLevel and simPitch), so the scenes work for a learner who cannot or would rather not use a microphone, and for a quiet room. If you remove it, add another way for them to finish', levelSlider, meter),
+    todo('Decide whether the microphone stays on across scenes', 'Learners press Start listening on each scene: the microphone is let go when they leave a page. To keep it on across the scenes, untick "Stop when the learner leaves this page" on the Listen live nodes (Interactions tab). The Listening bar at the top of the page always has a Stop', mic1.listen, meter),
   );
 
   // ------------------------------------------------------------------ scene 2: the frequency bars
@@ -262,9 +262,9 @@ function build(colourway: Parameters<BrandedStarter['build']>[0]) {
   g2.run(g2.click(again, 'Start again'), resetVars(shown), go(hero.page));
 
   checklist.push(
-    item('Check the eight band names in Project > Variables > "bandLabels": the label is the band in hertz and "what" is a rough guide to what lives there. The page\'s microphone reports eight log-spaced bands from 80 Hz to 8 kHz, so keep eight. It shows where the sound is, not which note, and there is no pitch tracking', byName(bars, 'Bars'), bars),
-    item('Rewrite the challenge to suit your lesson (a physics question about frequency, a singing exercise, a speech sound to try) and its answer: the text on the right, which flips with the Show button', ask, bars),
-    item('Check the slider route on this page: the loudness and pitch sliders make the same numbers as the microphone, so the bars move with no microphone. Try the real microphone from the Link for StudyDesk, not Preview, where a pretend microphone makes a moving bump of bands', pitchSlider, bars),
+    todo('Check the eight band names', 'Check the eight band names in Project > Variables > "bandLabels": the label is the band in hertz and "what" is a rough guide to what lives there. The page\'s microphone reports eight log-spaced bands from 80 Hz to 8 kHz, so keep eight. It shows where the sound is, not which note, and there is no pitch tracking', byName(bars, 'Bars'), bars),
+    todo('Rewrite the challenge to suit your lesson', 'Rewrite the challenge to suit your lesson (a physics question about frequency, a singing exercise, a speech sound to try) and its answer: the text on the right, which flips with the Show button', ask, bars),
+    todo('Check the slider route works without a microphone', 'Check the slider route on this page: the loudness and pitch sliders make the same numbers as the microphone, so the bars move with no microphone. Try the real microphone from the Link for StudyDesk, not Preview, where a pretend microphone makes a moving bump of bands', pitchSlider, bars),
   );
 
   //Notes for whoever edits the template, below each page

@@ -7,7 +7,7 @@
  * a picture in once, not once for each layout.
  */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, picture, solid, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, picture, solid, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import { addVar, announce, bind, graph, set } from '../../graph-kit';
 import { keyNavList, stack } from '../../parts';
 import { heroButtons } from './helpers';
@@ -123,11 +123,11 @@ export const collage: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),
-      item('Choose your layout: set the "layout" variable (Variables panel) to 1 Grid, 2 Banner, 3 Feature or 4 Columns, and set "showButtons" to false to hide the buttons (or delete them). The pictures move up into the room the buttons had', area, page),
-      item('Put each picture in the "items" list variable: upload the image and put its asset id in that entry\'s "image" (the grey box shows until you do). Every layout shows the same six pictures', area, page),
-      item('Write the six captions once, in the "items" list variable. Keep them short, about 20 characters, so they fit the small pictures', area, page),
-      item('To use fewer pictures, remove the last entries from "items" and the last rectangles from each row of "layouts"; to move or resize a picture in a layout, change its rectangle (x, y, width, height) in "layouts"', area, page),
-      item('To change the look of the caption bars, restyle them in the Collage cell (they use the Deep colour of the colourway)', cell, page),
+      todo('Choose your layout and the buttons', 'Choose your layout: set the "layout" variable (Variables panel) to 1 Grid, 2 Banner, 3 Feature or 4 Columns, and set "showButtons" to false to hide the buttons (or delete them). The pictures move up into the room the buttons had', area, page),
+      todo('Add your pictures, one to each entry', 'Put each picture in the "items" list variable: upload the image and put its asset id in that entry\'s "image" (the grey box shows until you do). Every layout shows the same six pictures', area, page),
+      todo('Write the six captions, kept short', 'Write the six captions once, in the "items" list variable. Keep them short, about 20 characters, so they fit the small pictures', area, page),
+      todo('To use fewer pictures, trim the list and the layouts', 'To use fewer pictures, remove the last entries from "items" and the last rectangles from each row of "layouts"; to move or resize a picture in a layout, change its rectangle (x, y, width, height) in "layouts"', area, page),
+      todo('Restyle the caption bars if you like', 'To change the look of the caption bars, restyle them in the Collage cell (they use the Deep colour of the colourway)', cell, page),
       item('Change the page title and the footer line', byName(page, 'Page title'), page),
     ];
     return { project, checklist };

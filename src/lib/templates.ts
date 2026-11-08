@@ -27,7 +27,7 @@ export interface TemplateInfo {
   mine: boolean;
   /** Visible to everyone, not only its owner. */
   everyone: boolean;
-  checklist: { id: string; text: string; artboardId?: string; nodeId?: string }[];
+  checklist: { id: string; text: string; detail?: string; artboardId?: string; nodeId?: string }[];
   /** The brand kits the template starts with (a pre-branded template), when it has any. */
   brand?: { id: string; name: string }[];
   artboards: number;

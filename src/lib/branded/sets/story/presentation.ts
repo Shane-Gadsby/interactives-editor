@@ -1,10 +1,10 @@
 //Course presentation: eight slides like the PowerPoint template, with a slide bar (Back, Next, slide n of N, arrow keys) done with page navigation.
 import type { Artboard, SceneNode, TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, setQuestionSettings } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, picture, text, type BrandedCtx, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, picture, text, todo, type BrandedCtx, type BrandedStarter } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { Graph, goNext, goPrevious, graphNote } from './common';
-import { extrasChecklist, questionExtras } from '../../parts';
+import { extrasChecklist, extrasShort, questionExtras } from '\.\./\.\./parts';
 
 type Tone = 'light' | 'gradient' | 'deep';
 
@@ -80,11 +80,11 @@ function build(colourway: Colourway) {
     const panel = card(ctx, 'Acknowledgement panel', box.x, box.y, box.width, 300);
     const words = text(ctx, 'Acknowledgement text', 'We acknowledge the Traditional Custodians of the lands on which we live, learn and work, and we pay our respects to Elders past, present and emerging.\n\nEdit this slide to the wording your campus uses and name the Traditional Custodians of the land you are on.', box.x + 36, box.y + 36, box.width - 72, { fontSize: 22, lineHeight: 1.5 });
     ack.children.push(panel, words);
-    checklist.push(item('Replace the Acknowledgement of Country with the wording and Country names that apply to where you teach', words, ack));
+    checklist.push(todo('Replace the Acknowledgement of Country with your own', 'Replace the Acknowledgement of Country with the wording and Country names that apply to where you teach', words, ack));
   }
 
   //3 Section slide
-  checklist.push(item('Rename the section slide, and add more section slides between topics by duplicating a slide', section.children.find((n) => n.name === 'Page title'), section));
+  checklist.push(todo('Rename the section slide and add others between topics', 'Rename the section slide, and add more section slides between topics by duplicating a slide', section.children.find((n) => n.name === 'Page title'), section));
 
   //4 and 5 Content slides: text and a picture
   const contentSlide = (page: Artboard, lines: string[]) => {
@@ -98,7 +98,7 @@ function build(colourway: Colourway) {
   const b = contentSlide(slideB, ['Block out study time in your calendar.', 'Start with the task that is due first.', 'Leave a gap each week for catching up.']);
   checklist.push(
     item('Write your own points on each content slide', a.body, slideA),
-    item('Replace the grey picture boxes with your own pictures (a picture layer, or a fill on the box)', a.pic, slideA),
+    todo('Replace the grey picture boxes with your own', 'Replace the grey picture boxes with your own pictures (a picture layer, or a fill on the box)', a.pic, slideA),
     item('Change the picture on the second content slide too', b.pic, slideB),
   );
 
@@ -123,7 +123,7 @@ function build(colourway: Colourway) {
     const tipHead = heading(ctx, 'Tip heading', 'Take your time', box.x + 712, box.y + 20, box.width - 736, { fontSize: 20 });
     const tipText = text(ctx, 'Tip text', 'Use the hint if you are stuck. You can try again, and then move on with Next.', box.x + 712, box.y + 60, box.width - 736, { fontSize: 16, lineHeight: 1.4, color: L.muted });
     quiz.children.push(tip, tipHead, tipText);
-    checklist.push(item('Write your own question and answers in the Question section of the inspector, or change its type (multiple choice, true or false, matching...)', questionLayer, quiz));
+    checklist.push(todo('Write your own question and answers', 'Write your own question and answers in the Question section of the inspector, or change its type (multiple choice, true or false, matching...)', questionLayer, quiz));
   }
 
   //7 Summary
@@ -146,7 +146,7 @@ function build(colourway: Colourway) {
   //The kit wired the question, so this slide's graph is its flows plus the slide bar
   const kitStart = quiz.logic.nodes.find((n) => n.kit);
   if (kitStart) graphNote(quiz, { anchor: kitStart, colour: 'sky', text: '**The question kit made every flow here**: choose, check, hint and Try again, and the extras ticked in its settings. Edit the question in the inspector\'s Question section, not in this graph.' });
-  checklist.push(item('To add a slide, duplicate one from the middle of the deck and drag it into place in the page list. Back, Next and "Slide n of N" follow the page order, so nothing needs rewiring. Only the first and last slides are different: Start on the first and Start again on the last', title.children.find((n) => n.name === 'Next'), title));
+  checklist.push(todo('To add a slide, copy one and drag it into place', 'To add a slide, duplicate one from the middle of the deck and drag it into place in the page list. Back, Next and "Slide n of N" follow the page order, so nothing needs rewiring. Only the first and last slides are different: Start on the first and Start again on the last', title.children.find((n) => n.name === 'Next'), title));
 
   //Notes for whoever edits the template, below the slides
   const below = (p: Artboard, x: number, w: number) => ({ x, y: p.height + 14, w, h: 84 });
@@ -154,7 +154,7 @@ function build(colourway: Colourway) {
   addNote(slideA, { ...below(slideA, 456, 440), text: '[ ] Write your own points, and swap the grey picture box for yours.', colour: 'gold' });
   addNote(quiz, { ...below(quiz, 0, 440), text: '**Question kit** The question is the kit\'s own frame, so its prompt, options, hint and feedback are all in the Question section of the inspector. Next is always there, so a learner can move on.', colour: 'sky' });
 
-  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
+  checklist.push(todo(extrasShort({ hint: true, tryAgain: true }), extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }
 

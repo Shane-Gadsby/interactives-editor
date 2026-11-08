@@ -1,6 +1,6 @@
 //Crossword: a 10 by 10 grid laid out from a list of words and clues each time it plays (and in the editor preview), cells typed into from the keyboard, clues you can click, Check and Reveal.
 import { createNode, layoutCrossword as layout, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, barY, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, focus, goNext, graphNote, heroPage, lit, set } from './common';
 
@@ -257,12 +257,12 @@ function build(colourway: Colourway) {
   g.run(onClear, set(notice, '""'), set(cells, 'cells.map(c => ({...c, t: "", s: ""}))'), announce('"Grid cleared"'));
 
   checklist.push(
-    item('Write your own words and clues: Project > Variables > "words". Each row is {"answer": "PARAPHRASE", "clue": "Put someone else\'s idea into your own words"}, the answer in letters only (capitals or not, spaces and dashes are dropped). That is all you do: the grid, the numbers and both clue lists are laid out from it, in the canvas preview and every time the puzzle plays', grid, play),
-    item(`The grid is ${SIZE} by ${SIZE}, so an answer longer than ${SIZE} letters is left out, and so is a word that cannot cross the others. Try the list in the canvas preview and read the clue lists: a longer list than about ten may not all fit, and a word that is left out just needs another word with a shared letter`, grid, play),
-    item('You do not edit the grid positions. "entries" (Variables) is a formula, crossword(words, 10), that works the layout out from "words" (the same words always make the same puzzle). To lay one word by hand, clear the formula on "entries" and write its rows yourself: {answer, clue, row, col, down} with row and column counting from 0 at the top left', grid, play),
-    item('Check the clue lists after a change: they hold about six clues each before they run into the clue box, and the number of each clue comes from where its word starts', acrossList, play),
-    item('Restyle one Square (the letter, the number, the corners): every square is the same layer, repeated. The highlight colours come from the bindings on the Square layer', square, play),
-    item('Change the completion message ("Crossword complete. Well done!"): the Crossword finished flow in the Interactions tab', message, play),
+    todo('Write your own words and clues', 'Write your own words and clues: Project > Variables > "words". Each row is {"answer": "PARAPHRASE", "clue": "Put someone else\'s idea into your own words"}, the answer in letters only (capitals or not, spaces and dashes are dropped). That is all you do: the grid, the numbers and both clue lists are laid out from it, in the canvas preview and every time the puzzle plays', grid, play),
+    todo('Check the grid fits your words', `The grid is ${SIZE} by ${SIZE}, so an answer longer than ${SIZE} letters is left out, and so is a word that cannot cross the others. Try the list in the canvas preview and read the clue lists: a longer list than about ten may not all fit, and a word that is left out just needs another word with a shared letter`, grid, play),
+    todo('Leave the grid positions alone', 'You do not edit the grid positions. "entries" (Variables) is a formula, crossword(words, 10), that works the layout out from "words" (the same words always make the same puzzle). To lay one word by hand, clear the formula on "entries" and write its rows yourself: {answer, clue, row, col, down} with row and column counting from 0 at the top left', grid, play),
+    todo('Check the clue lists after a change', 'Check the clue lists after a change: they hold about six clues each before they run into the clue box, and the number of each clue comes from where its word starts', acrossList, play),
+    todo('Restyle one square for every square', 'Restyle one Square (the letter, the number, the corners): every square is the same layer, repeated. The highlight colours come from the bindings on the Square layer', square, play),
+    todo('Change the completion message', 'Change the completion message ("Crossword complete. Well done!"): the Crossword finished flow in the Interactions tab', message, play),
   );
 
   //Notes for whoever edits the template, below the page

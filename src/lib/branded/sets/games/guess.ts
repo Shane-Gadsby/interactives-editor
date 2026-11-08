@@ -1,6 +1,6 @@
 //Guess the answer: a picture and a question on a card, the learner thinks, then turns the card to see the answer, across a set of five.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, item, scrimOver, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, item, picture, scrimOver, solid, stroke, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { stack } from '../../parts';
 import { Graph, addVar, announce, bind, darkButton, emit, focus, go, goNext, graphNote, heroPage, set } from './common';
@@ -121,13 +121,13 @@ function build(colourway: Colourway) {
   graphNote(page, { anchor: onRate, colour: 'sky', text: '**One flow serves both buttons.** *Only when a child is hit* is on, so `event.childIndex` is 0 for I knew it (counts one in `knew`) and 1 for Still learning. The last card goes to the next page instead of dealing another.' });
 
   checklist.push(
-    item('Write your own five cards: Project > Variables > "cards", a question (q), its answer (a) and a line of why (note) for each. The card, the counter and the finished page follow the list', deck, page),
-    item('Swap the grey picture on the question face for your own, and the one on the answer face (they are separate layers so the answer can show something different)', byName(page, 'Question picture'), page),
-    item('For a different picture on each card, put one picture per card on top and set each one\'s visibility binding to the card it belongs to, for example card == 2 for the third card', byName(page, 'Question picture'), page),
-    item('Add or remove cards by adding or removing rows in "cards": "Card 3 of 5" and the last-card check follow the length of the list', progress, page),
-    item('Change the two rating buttons, or what they count: the "knew" variable adds one for I knew it, and the finished page shows it', knewIt, page),
-    item('Change how fast the card turns: the two Animate property nodes in the Turn the card over flow (Interactions tab), 160 ms each', deck, page),
-    item('Add a third rating ("Nearly"): duplicate a button in the Rating buttons row. One flow serves every button in the row, so you only change what event.childIndex does there', rating, page),
+    todo('Write your five cards: question, answer and why', 'Write your own five cards: Project > Variables > "cards", a question (q), its answer (a) and a line of why (note) for each. The card, the counter and the finished page follow the list', deck, page),
+    todo('Swap the grey pictures for your own', 'Swap the grey picture on the question face for your own, and the one on the answer face (they are separate layers so the answer can show something different)', byName(page, 'Question picture'), page),
+    todo('Give each card its own picture if you want', 'For a different picture on each card, put one picture per card on top and set each one\'s visibility binding to the card it belongs to, for example card == 2 for the third card', byName(page, 'Question picture'), page),
+    todo('Add or remove cards by changing the list', 'Add or remove cards by adding or removing rows in "cards": "Card 3 of 5" and the last-card check follow the length of the list', progress, page),
+    todo('Change the two rating buttons or what they count', 'Change the two rating buttons, or what they count: the "knew" variable adds one for I knew it, and the finished page shows it', knewIt, page),
+    todo('Change how fast the card turns', 'Change how fast the card turns: the two Animate property nodes in the Turn the card over flow (Interactions tab), 160 ms each', deck, page),
+    todo('Add a third rating if you want one', 'Add a third rating ("Nearly"): duplicate a button in the Rating buttons row. One flow serves every button in the row, so you only change what event.childIndex does there', rating, page),
     item('Reword the finished page and its three ratings', done.children.find((n) => n.name === 'Result note'), done),
   );
 

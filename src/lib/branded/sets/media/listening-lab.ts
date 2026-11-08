@@ -3,7 +3,7 @@
 //switches on two variables). The one button per clip is Play and Stop in one: its label reads soundPlaying() and a press stops the clip when it is going.
 //The sounds are placeholder tones the author swaps; each clip also has a written description, the way in for anyone who cannot or would rather not listen.
 import { createNode, type Artboard, type FrameNode, type SceneNode, type TemplateChecklistItem, type Variable } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, navBarY, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, navBarY, picture, solid, stroke, text, todo, type BrandedCtx, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { keyNavList, stack } from '../../parts';
 import { addVar, announce, bind, boxText, click, endPage, goNext, graph, graphNote, heroPage, resetVars, setVar, toggleVar } from './shared';
@@ -209,7 +209,7 @@ function build(colourway: Colourway) {
     g.run(click(g, noSound, 'Without sound'), setVar(v.showText, 'true'), goNext());
     graphNote(check, { anchor: labelled(check, /^Without sound$/), colour: 'sky', text: '**"I can\'t use sound" only turns showText on** and carries on, so every round that follows can be done from the written descriptions.' });
   }
-  checklist.push(item('Check the sound check wording suits your learners, and swap the test tone for your own if you like (the Play sound node on the test button)', tips, check));
+  checklist.push(todo('Check the sound check wording and test tone', 'Check the sound check wording suits your learners, and swap the test tone for your own if you like (the Play sound node on the test button)', tips, check));
 
   //Round 1: identify the sound
   {
@@ -327,14 +327,14 @@ function build(colourway: Colourway) {
   }
 
   checklist.push(
-    item('Swap each placeholder sound for your own clip: open the Assets panel and use the arrow beside each "(replace)" sound. The Play sound nodes on the Play buttons follow the new file', byName(identify, 'Sound 1 play button'), identify),
-    item('Write your three questions: the "rounds" variable (Variables tab) is a list with, for each round, q (the question), options (up to three answers), answer (the number of the right one, counting from 0) and why (shown after the answer). Round 1 is Identify the sound, round 2 is Compare A and B, round 3 is What changed', byName(identify, 'Question'), identify),
-    item('Write a description for every clip (the grey "Description:" line on its card or under its chip). It is the way in for learners who cannot or would rather not listen, so say what the sound is like without giving the answer away', byName(identify, 'Sound 1 description'), identify),
-    item('Replace the grey waveform pictures with a waveform or spectrogram image, and write its alt text. Delete them if you do not want one', byName(identify, 'Sound 1 waveform'), identify),
-    item('Round 3: rename the two groups (the box name, its heading and its Name read out) and give every sound the group it belongs to: its Tags (Draggable section) must match the Takes tags of its group', firstZone, sort),
-    item('To add a sound to the sorting round: duplicate a chip, its Play button and its description, then add a Play sound node for the new button and fix the "of 4" in the count and the Next button (it shows when "sorted" reaches 4)', firstChip, sort),
-    item('Try the Loop, Slow and Descriptions buttons: Loop and Slow are the Loop and Speed settings of every Play sound node (Interactions tab), and "Stop other sounds first" is on so two clips never play over each other', byName(identify, 'Loop switch'), identify),
-    item('Change the results text, and pick the colourway on the Themes tab. The brand parts are locked', results.result, results.page),
+    todo('Swap each placeholder sound for your own clip', 'Swap each placeholder sound for your own clip: open the Assets panel and use the arrow beside each "(replace)" sound. The Play sound nodes on the Play buttons follow the new file', byName(identify, 'Sound 1 play button'), identify),
+    todo('Write your three questions', 'Write your three questions: the "rounds" variable (Variables tab) is a list with, for each round, q (the question), options (up to three answers), answer (the number of the right one, counting from 0) and why (shown after the answer). Round 1 is Identify the sound, round 2 is Compare A and B, round 3 is What changed', byName(identify, 'Question'), identify),
+    todo('Write a description for every clip', 'Write a description for every clip (the grey "Description:" line on its card or under its chip). It is the way in for learners who cannot or would rather not listen, so say what the sound is like without giving the answer away', byName(identify, 'Sound 1 description'), identify),
+    todo('Replace the grey waveform pictures or delete them', 'Replace the grey waveform pictures with a waveform or spectrogram image, and write its alt text. Delete them if you do not want one', byName(identify, 'Sound 1 waveform'), identify),
+    todo('Round 3: rename the two groups and tag every sound', 'Round 3: rename the two groups (the box name, its heading and its Name read out) and give every sound the group it belongs to: its Tags (Draggable section) must match the Takes tags of its group', firstZone, sort),
+    todo('To add a sound to the sorting round, copy a chip', 'To add a sound to the sorting round: duplicate a chip, its Play button and its description, then add a Play sound node for the new button and fix the "of 4" in the count and the Next button (it shows when "sorted" reaches 4)', firstChip, sort),
+    todo('Try the Loop, Slow and Descriptions buttons', 'Try the Loop, Slow and Descriptions buttons: Loop and Slow are the Loop and Speed settings of every Play sound node (Interactions tab), and "Stop other sounds first" is on so two clips never play over each other', byName(identify, 'Loop switch'), identify),
+    todo('Change the results text and pick a colourway', 'Change the results text, and pick the colourway on the Themes tab. The brand parts are locked', results.result, results.page),
   );
 
   //Notes for whoever edits the template, below each page
