@@ -42,6 +42,7 @@ import { paintRuns, readRuns, selectionOffsets, setSelectionOffsets } from '../l
 import { store, useEditor, type Tool } from '../store/store';
 import { CommentLayer } from './CommentLayer';
 import { NotesLayer } from './NotesLayer';
+import { HitPulse } from './HitPulse';
 import { addNote, leaveNote, noteScale } from '../lib/notes';
 import { NOTE_DEFAULT_H, NOTE_DEFAULT_W } from 'interactives-player';
 import { anchorAt } from '../lib/comment-anchor';
@@ -2355,6 +2356,7 @@ export function Canvas() {
       )}
       <CommentLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} />
       <NotesLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} passive={s.tool === 'hand' || spaceHeld} />
+      <HitPulse project={project} zoom={zoom} panX={panX} panY={panY} />
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} bounds={{ width: vp.current?.clientWidth ?? 2000, height: vp.current?.clientHeight ?? 1200 }} />}
