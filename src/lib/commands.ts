@@ -84,12 +84,13 @@ export const PANEL_NAMES: Record<PanelId, { label: string; words: string }> = {
   insights: { label: 'Insights', words: 'analytics learners results' },
   interface: { label: 'Public interface', words: 'embed api' },
   checklist: { label: 'Checklist', words: 'template things to change' },
+  content: { label: 'Fill in', words: 'fill in this starter form content words questions template' },
   themes: { label: 'Themes', words: 'colours tokens' },
   usage: { label: 'Usage', words: 'unused broken references' },
   credits: { label: 'Attributions', words: 'credits sources' },
 };
 
-const BOTTOM_TABS: PanelId[] = ['timeline', 'logic', 'scripts', 'variables', 'data', 'usage', 'a11y', 'insights', 'interface', 'checklist', 'themes', 'credits'];
+const BOTTOM_TABS: PanelId[] = ['timeline', 'logic', 'scripts', 'variables', 'data', 'usage', 'a11y', 'insights', 'interface', 'checklist', 'content', 'themes', 'credits'];
 
 /** Put the view on a page: it becomes the open one and the canvas pans and zooms to it. */
 export function goToPage(id: string): void {
