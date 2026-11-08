@@ -507,6 +507,45 @@ export const resultsCsv = (projectId: string) => call<Blob>(`projects/${encodeUR
 
 export const clearResults = (projectId: string) => call<{ ok: boolean; deleted: number }>(`projects/${encodeURIComponent(projectId)}/results`, { method: 'DELETE' });
 
+// ---------------------------------------------------------------- shared responses (the class's answers, for the owner to moderate)
+
+/** One answer in a course, with how many people gave it and why it may not be showing. */
+export interface SharedAnswerRow {
+  text: string;
+  count: number;
+  /** The owner hid it from the class. */
+  hidden: boolean;
+  /** It holds a word on the blocklist. */
+  blocked: boolean;
+  /** The class sees it right now (not hidden, not blocked, enough people gave it). */
+  shown: boolean;
+}
+
+export interface SharedCourse {
+  /** The course label, empty for people with no course. */
+  course: string;
+  people: number;
+  answers: SharedAnswerRow[];
+}
+
+export interface SharedSourceInfo {
+  /** The data source's id. */
+  source: string;
+  name: string;
+  declared: { who: 'me' | 'class'; byVariable: boolean; minCount: number; perPerson: number; maxLength: number; blocked: string[] };
+  courses: SharedCourse[];
+}
+
+/** What the class has answered, per shared data source and course, as of the last time the project was shared (GET projects/:id/shared). Owner or power user. */
+export const getSharedResponses = (projectId: string) => call<{ sources: SharedSourceInfo[] }>(`projects/${encodeURIComponent(projectId)}/shared`);
+
+/** Hide an answer from the class, or show it again. */
+export const hideSharedAnswer = (projectId: string, source: string, course: string, text: string, hidden: boolean) => call<{ ok: boolean; hidden: boolean }>(`projects/${encodeURIComponent(projectId)}/shared/${encodeURIComponent(source)}/hidden`, json({ course, text, hidden }));
+
+/** Take one answer out of everyone's lists in a course, or (no text) every answer in it. */
+export const removeSharedAnswers = (projectId: string, source: string, course: string, text?: string) =>
+  call<{ ok: boolean; people: number }>(`projects/${encodeURIComponent(projectId)}/shared/${encodeURIComponent(source)}/answers`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ course, ...(text ? { text } : {}) }) });
+
 // ---------------------------------------------------------------- learner insights
 
 /** What learners did in a project, as counts (`GET /api/projects/:id/insights`). Nobody is named: totals and numbers of different learners. */

@@ -1,4 +1,4 @@
-import { artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
+import { sampleValue, artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -14,7 +14,7 @@ class DataCache {
   private policy: DataPolicy = {};
 
   private sig(ds: DataSource): string {
-    return JSON.stringify([ds.kind, ds.source, ds.assetId, ds.url, this.policy.allow]);
+    return JSON.stringify([ds.kind, ds.source, ds.assetId, ds.url, this.policy.allow, ds.source === 'shared' ? ds.shared : null]);
   }
 
   /** Make sure every source is loaded (or loading) for its current definition. */
@@ -30,6 +30,12 @@ class DataCache {
     const sig = this.sig(ds);
     this.values.set(ds.id, { ...(this.values.get(ds.id) ?? {}), sig, loading: true });
     this.bump();
+    // Shared responses have no server here: the canvas shows the author's sample answers, as if a class had given them
+    if (ds.source === 'shared') {
+      this.values.set(ds.id, { sig, value: sampleValue(ds.shared), loading: false });
+      this.bump();
+      return;
+    }
     try {
       const value = await fetchDataSource(ds, assetUrls.resolve, undefined, this.policy);
       this.values.set(ds.id, { sig, value, loading: false });
