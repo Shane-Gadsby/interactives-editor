@@ -1,5 +1,23 @@
 #!/usr/bin/env node
 import { AsyncLocalStorage } from "node:async_hooks";
+const PAGE_TRANSITIONS = [
+  { value: "none", label: "Instant" },
+  { value: "fade", label: "Fade" },
+  { value: "slideLeft", label: "Slide left" },
+  { value: "slideRight", label: "Slide right" },
+  { value: "slideUp", label: "Slide up" },
+  { value: "wipeLeft", label: "Wipe left" },
+  { value: "wipeRight", label: "Wipe right" },
+  { value: "wipeUp", label: "Wipe up" },
+  { value: "wipeDown", label: "Wipe down" },
+  { value: "iris", label: "Iris (a circle opens)" },
+  { value: "zoom", label: "Zoom in" },
+  { value: "pushLeft", label: "Push left" },
+  { value: "pushRight", label: "Push right" },
+  { value: "pushUp", label: "Push up" },
+  { value: "pushDown", label: "Push down" }
+];
+const ORIGIN_TRANSITIONS = ["iris", "zoom"];
 const OUT = [{ id: "out", label: "" }];
 const SPEAK_SAYS = ["text", "question", "feedback", "auto", "page"];
 const CONTINUE = [
@@ -573,6 +591,34 @@ const SPECS = [
     ]
   },
   {
+    kind: "action.moveView",
+    label: "Move view",
+    category: "action",
+    summary: "Pans and zooms the page to frame a layer, or back out to the whole page.",
+    details: "Everything on the page moves together, so clicks and drags still land on the right layer. The page master's layers (a logo, a footer, a score bar) stay where they are. The layer is framed as large as fits, with the space around it you set, never zoomed in past the limit. Choose the whole page to come back. Changing page starts the new page on its whole view, and a learner who asked for less motion gets there at once. Use it for a map the learner travels across, or to read a comic panel by panel. An embedded page keeps a view of its own.",
+    group: "Navigation",
+    outputs: OUT,
+    hasInput: true,
+    params: [
+      {
+        key: "to",
+        label: "Move to",
+        type: "select",
+        options: [
+          { value: "layer", label: "A layer" },
+          { value: "page", label: "The whole page" }
+        ],
+        default: "layer"
+      },
+      { key: "target", label: "Layer", type: "node", showIf: { key: "to", values: ["layer"] }, help: "The layer to frame" },
+      { key: "padding", label: "Space around it (px)", type: "number", default: 40, showIf: { key: "to", values: ["layer"] }, help: "Page pixels left clear around the layer" },
+      { key: "maxZoom", label: "Zoom in no more than (times)", type: "number", default: 4, showIf: { key: "to", values: ["layer"] }, help: "Stops a small layer filling the page. 0 means no limit" },
+      { key: "duration", label: "Duration (ms)", type: "number", default: 600, help: "0 moves at once" },
+      { key: "ease", label: "Easing", type: "easing", default: "easeInOut" },
+      ...CONTINUE
+    ]
+  },
+  {
     kind: "action.visibility",
     label: "Show / hide",
     category: "action",
@@ -627,15 +673,25 @@ const SPECS = [
         key: "transition",
         label: "Transition",
         type: "select",
-        options: [
-          { value: "none", label: "Instant" },
-          { value: "fade", label: "Fade" },
-          { value: "slideLeft", label: "Slide left" },
-          { value: "slideRight", label: "Slide right" },
-          { value: "slideUp", label: "Slide up" }
-        ],
-        default: "fade"
+        options: PAGE_TRANSITIONS,
+        default: "fade",
+        help: "Wipe and push have a direction. Iris opens a circle and Zoom goes into the page, both from the place below. Reduced motion makes every one instant"
       },
+      {
+        key: "from",
+        label: "Opens from",
+        type: "select",
+        options: [
+          { value: "clicked", label: "The clicked layer" },
+          { value: "centre", label: "The middle of the page" },
+          { value: "point", label: "A point on the page" }
+        ],
+        default: "clicked",
+        showIf: { key: "transition", values: ORIGIN_TRANSITIONS },
+        help: "Where the circle opens or the zoom goes. With nothing clicked (a timer, a message) it uses the middle"
+      },
+      { key: "x", label: "Across (%)", type: "number", default: 50, showIf: { key: "from", values: ["point"] } },
+      { key: "y", label: "Down (%)", type: "number", default: 50, showIf: { key: "from", values: ["point"] } },
       { key: "duration", label: "Duration (ms)", type: "number", default: 300 }
     ]
   },
@@ -3621,6 +3677,8 @@ function sanitizeNode(raw, seen) {
     for (const k of ["min", "max", "step"]) if (k in n && !isNum(n[k])) delete n[k];
   }
   if ("cursorImage" in n && n.cursorImage !== null && !isStr(n.cursorImage)) delete n.cursorImage;
+  if ("depth" in n && !isNum(n.depth)) delete n.depth;
+  else if (typeof n.depth === "number") n.depth = Math.max(-100, Math.min(100, n.depth));
   if ("cursorHotspot" in n && !(isObj$1(n.cursorHotspot) && isNum(n.cursorHotspot.x) && isNum(n.cursorHotspot.y))) delete n.cursorHotspot;
   if ("disabled" in n && typeof n.disabled !== "boolean") delete n.disabled;
   if ("disabledOpacity" in n && !isNum(n.disabledOpacity)) delete n.disabledOpacity;
@@ -9623,6 +9681,7 @@ const PLAIN_NODE = {
   "action.animate": "Animate a layer's setting",
   "action.visibility": "Show or hide a layer",
   "action.artboard": "Go to a page",
+  "action.moveView": "Move the view to a layer",
   "action.url": "Open a web address",
   "action.cursor": "Change the mouse pointer",
   "action.saveUserData": "Save progress",
@@ -10634,8 +10693,8 @@ Boolean operations (union, subtract, intersect, exclude) turn several shapes int
     id: "fill-stroke",
     title: "Fill, stroke and effects",
     group: "Design",
-    summary: "Solid, gradient and image fills; several fills and strokes per shape; strokes, dashes and trim; feather and drop shadows; shadow, blur and blend modes.",
-    keywords: "colour color palette swatch preset toolbox brand gradient linear radial image fill stroke border dash cap join align inside outside shadow blur blend opacity trim path layers several multiple feather glow drop shadow eye hide reorder",
+    summary: "Solid, gradient and image fills; several fills and strokes per shape; strokes, dashes and trim; feather and drop shadows; shadow, blur and blend modes; parallax depth.",
+    keywords: "parallax depth tilt layered postcard pointer shift colour color palette swatch preset toolbox brand gradient linear radial image fill stroke border dash cap join align inside outside shadow blur blend opacity trim path layers several multiple feather glow drop shadow eye hide reorder",
     body: `## Fill
 Choose the type from the dropdown at the top of a fill: **None** (removes it), **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. Colours accept hex, \`rgb()\`, \`hsl()\` and names; the number box beside a colour is its opacity.
 
@@ -10690,6 +10749,16 @@ Two related settings are in the **Layer** section at the top of the Inspector, w
 - **Scale W** and **Scale H** are the layer's scale as percents of its drawn size (100% is as drawn, -100% flips it). The chain between them keeps the shape. The file keeps them as 1 = 100% (\`scaleX\`, \`scaleY\`, called Sx and Sy in older notes).
 - **Pivot** is the point the layer turns and scales around. Pick one of the nine dots, or type a percent across and down for anywhere between. The file keeps it as \`originX\` and \`originY\` (0 to 1, called Ox and Oy in older notes).
 - **Blend** is how the layer mixes with what is under it: *Normal*, *Dissolve*, *Darken*, *Multiply*, *Colour burn*, *Lighten*, *Screen*, *Colour dodge*, *Add (linear dodge)*, *Overlay*, *Soft light*, *Hard light*, *Difference*, *Exclusion*, *Hue*, *Saturation*, *Colour* or *Luminosity*. **Dissolve** draws each pixel either solid or not at all, with the layer's opacity as the odds: at 40% opacity, 40% of the pixels show at full strength, scattered, instead of everything fading. Animate the opacity for a speckled fade in or out. A single fill or stroke (in the paint list) can use every mode except Dissolve.
+
+## Depth (parallax)
+The **Depth** section gives a layer a depth, so it shifts as the viewer moves the pointer across the page, or tilts their phone, for a layered-postcard look. Pick **Small**, **Medium** or **Large**, or type your own **Amount** as a percent. A nearer layer (a bigger amount) moves further than a far one, so a background might be Small and the foreground Large. A negative amount moves the other way, with the pointer. Everything inside a frame or group goes with it.
+
+- **How far:** 100% is the project's **Depth range** (40 px unless you change it in the Project settings). A layer at 50% moves half that.
+- **Only when playing:** the canvas stays still while you edit, and the shift shows in Preview and the exported player. Clicks and hovers land where the layer is drawn.
+- **Reduced motion:** nothing moves for a viewer whose device asks for less motion, whatever the project settings say.
+- **Tilt:** turn on **Tilt moves depth layers** in the Project settings (off by default). On an iPhone or iPad the viewer's first tap asks permission for the motion sensor, never before; if they say no, or the device has no sensor, the layers follow the pointer only.
+- **Draggable layers** hold still, so they don't slide about under a finger, and a connector joining two moving layers does not follow the shift.
+- The file keeps it as \`depth\` on the layer (-100 to 100) and \`parallax: {range, tilt}\` in the project settings.
 
 Most of these can be animated: look for the diamond next to a field. See [Animatable properties](animatable-properties).`
   },
@@ -11405,7 +11474,7 @@ In the **Link** section, give any layer a **URL** and it becomes a real link. **
 The **Open a web address** action does the same from an interaction.
 
 ## Go to a page
-The **Go to page** section links a layer to another page. Choose the page from the list, or drag the round **Go to page** handle that sits on the selected layer on the canvas onto the page you want: the page lights up as you pass over it, and letting go makes the link. Choosing **No page** (or dragging it onto the empty canvas) takes the link away. There is nothing special behind it: the editor writes a **When clicked or hovered** event on the layer and a **Go to a page** node after it, which you can see and change in **Interactions**, and the list follows if you edit them there. A click that has an **Only if**, or one that does something else first, is left as you built it (the link is added after the existing click). Faint arrows between the pages on the canvas show every route the project can take, from these links and from Next and Previous steps; switch them off from the canvas's right-click menu. They are only in the editor.
+The **Go to page** section links a layer to another page. Choose the page from the list, or drag the round **Go to page** handle that sits on the selected layer on the canvas onto the page you want: the page lights up as you pass over it, and letting go makes the link. Choosing **No page** (or dragging it onto the empty canvas) takes the link away. There is nothing special behind it: the editor writes a **When clicked or hovered** event on the layer and a **Go to a page** node after it, which you can see and change in **Interactions**, and the list follows if you edit them there. A click that has an **Only if**, or one that does something else first, is left as you built it (the link is added after the existing click). Faint arrows between the pages on the canvas show every route the project can take, from these links and from Next and Previous steps; switch them off from the canvas's right-click menu. They are only in the editor. **How the page changes** picks the look: a fade, a slide, a wipe in any of four directions, a push, an **iris** (a circle that opens, from the clicked layer by default) or a **zoom** into the clicked layer. A learner whose device asks for less motion always gets an instant change.
 
 ## Cursor
 **Cursor on hover** sets the cursor shown while the pointer is over the layer and its children, the way CSS \`:hover { cursor: pointer }\` works. *Automatic* gives links and layers with a click, press or release interaction a pointer. Choose the cursor shown over the layer (pointer, grab, crosshair, text, not-allowed, …) or **Custom image** with a hotspot (the point of the image that clicks). Change it at runtime with **Change the mouse pointer** or \`ix.setCursor('grab')\`.`
@@ -11426,9 +11495,46 @@ The **Go to page** section links a layer to another page. Choose the page from t
 
 It all goes along the bottom of the page, in a bottom bar. Back is hidden on the first page and Next on the last, and the number and bar follow the order of your pages (see **Go to a page** in [Interactions](interactions)), so adding, removing or moving a page needs no rewiring. The colours come from your project's colours, so they follow the theme and a branded project's look, and on a branded page the bar sits inside the content box, clear of the logo and footer.
 
-Nothing is hidden: you get ordinary buttons, text, a progress bar and the clicks and **Go to a page** nodes in **Interactions**, all of which you can restyle, move or rewire. They are tagged, so adding navigation again with another style swaps the old one for the new (and **Remove** takes it away). A page that already has its own Next or Back button is left alone, and the message says which. Page dots are drawn for the number of pages there are now: press **Add** again after adding or removing pages to refresh them.
+Nothing is hidden: you get ordinary buttons, text, a progress bar and the clicks and **Go to a page** nodes in **Interactions**, all of which you can restyle, move or rewire. They are tagged, so adding navigation again with another style swaps the old one for the new (and **Remove** takes it away). A page that already has its own Next or Back button is left alone, and the message says which. Page dots are drawn for the number of pages there are now: press **Add** again after adding or removing pages to refresh them. **How the page changes**, above the buttons, is the look Back and Next use (a fade unless you choose another); it is written into the **Go to a page** nodes, where you can change it afterwards.
 
 Buttons go on the page itself. A [page master](page-master) can hold the logo and the footer but not buttons, so the master is not where this goes.`
+  },
+  {
+    id: "moving-the-view",
+    title: "Moving the view",
+    group: "Interactivity",
+    summary: "Pan and zoom a page to frame one of its layers: travel across a map, or read a comic panel by panel. Then go back to the whole page.",
+    keywords: "move view pan zoom camera frame layer map hub travel comic panel panels reading focus on scroll zoom in zoom out whole page reset move the view to a layer",
+    body: `A page does not have to show everything at once. **Move the view to a layer** (the **Move view** node) pans and zooms the page's layers so one layer fills the screen, then another, and so on. Use it for a map the learner travels across, or to read a comic one panel at a time.
+
+## Quick start
+
+1. Draw the whole thing on one page: the map with a layer for each place, or the comic page with a layer around each panel. Give the layers names you will recognise.
+2. Select a button (or any layer) and press **+ When clicked…** in its **Interactions** section. Choose **Move the view to a layer…** and pick the layer to travel to.
+3. Add a second one on a button that brings the learner back: **Show the whole page again**.
+
+## The settings
+
+- **Move to**: **A layer**, or **The whole page**, which puts everything back as it was drawn.
+- **Layer**: the layer to frame. It is framed as large as fits, in the middle of the page.
+- **Space around it (px)**: clear space left around the layer, in page pixels. 40 by default.
+- **Zoom in no more than (times)**: stops a small layer, such as a pin, filling the whole screen. 4 by default, and 0 means no limit.
+- **Duration** and **Easing**: how long the trip takes and how it speeds up and slows down. A duration of 0 moves at once.
+- **Continue**: the next node runs when the move finishes, part-way through, or straight away.
+
+## What stays put, and what moves
+
+- Everything on the page moves together, so buttons, drags and clicks still land on the right layer, and the learner can still tab to them. A layer you cannot see on screen can still be reached with the keyboard, so keep what must be reachable in view, or move the view when the learner arrives at it.
+- The layers of the [page master](page-master) stay where they are, so a logo, a footer or a score bar that belongs to every page does not slide away. A master cannot hold buttons, so a button that takes the learner back (Back to the map) goes on the page, inside the area being framed, or in each framed area.
+- It frames the layer where it is now. If the layer moves later (a timeline, a drag), move the view again.
+- The view is in page pixels, so resizing the player, or a phone turned on its side, keeps the same layer in frame. If the page changes to a narrow or wide version of itself, the same-named layer is framed on the new one.
+- **Changing page starts the new page on its whole view.** The view does not follow a learner from page to page.
+- An [embedded page](instances) has a view of its own: Move view on the outer page frames the embedded page as one layer.
+- If the learner has asked for less motion (and the project's Reduced motion setting is on), the view jumps to the end instead of travelling.
+
+## In a script
+
+\`await ix.moveView('Panel 2', { padding: 40, maxZoom: 4, duration: 600, ease: 'easeInOut' })\` travels there and finishes when it arrives. \`await ix.resetView({ duration: 400 })\` goes back to the whole page. See [Scripts](scripts).`
   },
   // ---------------------------------------------------------------- motion
   {
@@ -11931,7 +12037,7 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
 
 **Countdown / clock** keeps time for you. Pick a number variable, then **Start** it counting **down** from a number of seconds, or **up** (to a limit, or without end when the limit is 0). It writes the variable about four times a second, as whole seconds by default, so a text layer showing \`{left}\` is a countdown. **Pause** holds it, **Resume** carries on, **Reset** puts the variable back and stops it. When a countdown reaches 0 (or a clock its limit) the **Time up** output continues. Leaving the artboard holds the clock still where it was; a new **Start** or **Resume** takes it up again. There is one clock for each variable.
 
-**Go to a page** goes to the artboard you pick, or to **Next artboard** or **Previous artboard**, or **Back** to where the learner came from (their own path, however they got there), or to the artboard an **expression** names (a name or an id). Next and previous follow the artboards in the project's order, in the artboard's [group](artboards) when it is in one (an artboard in no group counts every page), leaving out the narrow and wide versions of a [responsive set](responsive) and a library component's own copy. Duplicating or reordering a page keeps the links right, with no neighbours to rewire. When there is nowhere to go (the last page, the first, nothing to go back to, a name that matches nothing) the flow continues from the **No artboard** output, so a Next button can do something else on the last page. In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` how many pages there are, for a footer like \`Page {pageNumber} of {pageCount}\`; \`artboard.index\` (from 0), \`artboard.count\` and \`artboard.group\` say the same. **Go to step** is the other kind of Next: it moves through the steps of one artboard.
+**Go to a page** goes to the artboard you pick, or to **Next artboard** or **Previous artboard**, or **Back** to where the learner came from (their own path, however they got there), or to the artboard an **expression** names (a name or an id). Next and previous follow the artboards in the project's order, in the artboard's [group](artboards) when it is in one (an artboard in no group counts every page), leaving out the narrow and wide versions of a [responsive set](responsive) and a library component's own copy. Duplicating or reordering a page keeps the links right, with no neighbours to rewire. When there is nowhere to go (the last page, the first, nothing to go back to, a name that matches nothing) the flow continues from the **No artboard** output, so a Next button can do something else on the last page. In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` how many pages there are, for a footer like \`Page {pageNumber} of {pageCount}\`; \`artboard.index\` (from 0), \`artboard.count\` and \`artboard.group\` say the same. **Go to step** is the other kind of Next: it moves through the steps of one artboard. Its **Transition** is one of: instant, fade, slide left, right or up, wipe left, right, up or down (the new page is uncovered from that edge), push left, right, up or down (the new page shoves the old one off, which dims), **iris** (a circle opens over the old page) and **zoom** (the old page grows round a point as it fades, the new one grows in). Iris and zoom start from **Opens from**: the layer that was clicked (the middle of the page when nothing was clicked, say from a timer), the middle of the page, or a point you give as percentages. Scripts use the same names: \`ix.goTo('Page 2', 'iris', 400, 'Door')\` opens from the layer named Door, and a point is \`{ x: 25, y: 50, percent: true }\`. Reduced motion makes every one instant.
 
 Drag from an output port to the next node's input to connect them. Actions that take time (**Play or stop an animation**, **Animate a layer's setting**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away. Let go on empty space instead and a menu offers only the nodes that fit (actions and logic when you drag from an output, anything with an output when you drag backwards from an input); the one you pick is added where you let go and connected for you, and one <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes the node and its connection back together (clicking a node only selects it, which is not an undo step). Press <kbd>Escape</kbd> or click away to cancel.
 
@@ -11979,7 +12085,7 @@ A **group** is a labelled frame around nodes that belong together ("Score", "Int
 The quick way to make a layer do something, with no graph to draw. Select a layer and, in the Inspector's **Interactions** section, press **+ When clicked…** (or **+ When hovered…**), or right-click it and choose **Add interaction**, then **When clicked…**.
 
 A short list asks what should happen:
-- **Go to the next page**, **Go to the previous page**, **Go to a page…** (you pick which).
+- **Go to the next page**, **Go to the previous page**, **Go to a page…** (you pick which). Each of the page ones also asks **How the page changes** (a fade unless you choose).
 - **Show a layer**, **Hide a layer**, **Show or hide a layer**: this layer or another. Showing a layer other than this one also sets it to start hidden, so there is something to show.
 - **Play an animation** (a timeline of this page) and **Play a sound**.
 - **Add 1 to a counter** and **Switch something on or off**: pick a number or an on/off variable you already have, or name a new one in plain words and it is made for you.
@@ -12690,6 +12796,7 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 | \`ix.node('Name')\` | A layer by name or id: \`.get(prop)\`, \`.set(prop, v)\`, \`.show()\`, \`.hide()\`, \`.toggle()\`, \`await .animate(prop, v, {duration, ease})\` |
 | \`ix.timeline('Name')\` | \`.play()\`, \`.pause()\`, \`.stop()\`, \`.restart()\`, \`.reverse()\`, \`.seek(ms)\` |
 | \`ix.goTo('Artboard', 'fade')\` | Go to another artboard |
+| \`await ix.moveView('Layer', {padding, maxZoom, duration, ease})\` / \`ix.resetView({duration, ease})\` | Pan and zoom the page to frame a layer / back to the whole page (see [Moving the view](moving-the-view)) |
 | \`ix.emit(name, data)\` / \`ix.on(name, fn)\` | Send messages to the host page / react to them |
 | \`ix.announce(text, 'polite' | 'assertive')\` | Say something to screen readers (see [Accessibility](accessibility)) |
 | \`ix.soundPlaying(name?)\` / \`ix.soundsPlaying()\` | Is a Play sound sound going (any, or one asset by name or id), and the names of the ones going |
@@ -14958,7 +15065,7 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n") + "\nOn a progress layer only: " + layerOwnProps(createNode("progress")).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join("; ") + "\nOn a connector layer only: " + layerOwnProps(createNode("connector")).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join("; ");
   if (topic === "layers") {
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "progress", "chart", "connector", "bone"];
-    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, ariaExpanded, ariaPressed (a toggle button: true/false), ariaCurrent (true, or page|step|location|date|time: the current tab, page or step), decorative (hide from assistive tech), focusable (tab stop override), tabOrder, shortcut (a key that clicks the layer, e.g. "r", "1", "Ctrl+Enter"), className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it). Buttons and inputs take disabled (bindable) and disabledOpacity (0-1, default 0.5, how dimmed they look while disabled). A frame can be a dialog: dialog {modal (default true), scrim (a solid paint over the artboard behind it), closeOnEscape (default true), closeOnOutsideClick, initialFocus (layer id), returnFocus (default true), openVariable (variable id: the frame shows while it is on, Escape turns it off)}. A frame or group can carry keyNav {mode: list|grid|radio, orientation: vertical|horizontal|both, columns (grid on a container; a grid repeater uses its own), wrap, indexVariable (variable id, number from 0; setting it moves focus too when it is inside), countHidden (hidden copies keep their numbers and are stepped over)}: one item is the Tab stop and the arrows, Home and End move between a repeater\'s copies or a container\'s children; radio mode also selects (clicks) the item it lands on.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, depth (parallax, percent -100 to 100: while playing the layer shifts against the pointer, more the nearer it is; 0 is still; settings.parallax on the project {range px for depth 100, default 40; tilt true to follow a phone tilt too} sets how far), link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, ariaExpanded, ariaPressed (a toggle button: true/false), ariaCurrent (true, or page|step|location|date|time: the current tab, page or step), decorative (hide from assistive tech), focusable (tab stop override), tabOrder, shortcut (a key that clicks the layer, e.g. "r", "1", "Ctrl+Enter"), className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it). Buttons and inputs take disabled (bindable) and disabledOpacity (0-1, default 0.5, how dimmed they look while disabled). A frame can be a dialog: dialog {modal (default true), scrim (a solid paint over the artboard behind it), closeOnEscape (default true), closeOnOutsideClick, initialFocus (layer id), returnFocus (default true), openVariable (variable id: the frame shows while it is on, Escape turns it off)}. A frame or group can carry keyNav {mode: list|grid|radio, orientation: vertical|horizontal|both, columns (grid on a container; a grid repeater uses its own), wrap, indexVariable (variable id, number from 0; setting it moves focus too when it is inside), countHidden (hidden copies keep their numbers and are stepped over)}: one item is the Tab stop and the arrows, Home and End move between a repeater\'s copies or a container\'s children; radio mode also selects (clicks) the item it lands on.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
 Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nProgress bars (type "progress"): a track with a bar filling it. Fields: value, max (both take bindings; value is animatable, so a timeline track or Animate property can fill it), fill/stroke (the track, any paints), barFill (the bar\'s paint), cornerRadius, orientation (horizontal | vertical), reverse (grow from the right or the top), semantics (progressbar | meter | none: the role and aria-valuenow/min/max/valuetext it carries; bars made for a screen reader need ariaLabel), valueText (a text template: {value}, {max}, {percent} and variables). Colours may be theme token references.\nPictures (type "image"): assetId, fit (cover | contain | fill) and an optional crop {x, y, zoom} that moves and zooms the picture inside its frame without touching the file: zoom is 1 to 20 (2 shows the middle quarter), x and y are fractions of the frame\'s width and height the picture is moved by (0.1 is a tenth to the right), and the frame clips the rest. Leave crop off for the picture as fit draws it. A new picture wants an ariaLabel saying what it shows (or decorative: true).\nCharts (type "chart"): a column | bar | line | pie | donut chart drawn from data, an expression for a list: numbers, objects (label from labelKey, number from valueKey; blank guesses), [label, value] pairs, or one object. Fields: kind, data, labelKey, valueKey, colors (tokens or colours handed out in turn; varyColors for one each on bar, column and line), color (labels and axes), fontFamily, fontSize, min/max (fixed axis ends, null fits the data), gridlines, axisLabels, valueLabels, legend, hole (donut, 0.1-0.95), animate, table (a hidden data table for screen readers), decimals, prefix, suffix ({variable} slots work in both). An object item with hidden: true (or the field hiddenKey names) is a placeholder: a dashed empty mark with a ?, read out as hidden, kept out of the auto axis unless it also has a number. Clicks, presses, hovers and focus on a mark give event.index (the item\'s position) to On pointer and On focus nodes. Give it an ariaLabel.\nConnectors (type "connector"): a line or arrow joining two layers that follows them, so you never position it. Fields: from and to, each {layer: layerId | {repeat: templateLayerId, index: "expression"} | "" for a loose point, side?: auto|top|right|bottom|left, offset?: px along the side, x?/y? for a loose point (in the connector\'s parent)}; route: straight | elbow | curved; stroke (the line: {paint, width, dash?, ...}, paints may be tokens); startCap/endCap: none | arrow | dot; capSize (0 = from the stroke width); gap (px short of each layer); cornerRadius (elbow corners and the label chip); label (text, {variable} slots work), labelAt (0-1 along the line), color (label text), fill (label background), fontFamily, fontSize, fontWeight. x, y, width, height and rotation are ignored (the box is worked out from the route; leave them 0). It is hidden while either layer is hidden or missing. To connect repeated layers: the repeater\'s template (its first child) has an id, copy i is id~i; put the connector in a repeater of its own over a list of links and use from.layer {repeat: templateId, index: "item.from"}. Decorative (hidden from screen readers) unless ariaLabel is set, so give the page a text alternative (a nested list) for what it shows. Stroke trimEnd animates a draw-in.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t22) => `- ${t22}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t22)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
