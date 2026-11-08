@@ -1496,6 +1496,8 @@ Put **Wait for time in timeline** after a condition to leave "no sooner than" a 
     keywords: 'animate animation preset fade in slide in pop pulse shake fade out entrance appear intro attention wiggle bounce click page opens delay reduced motion',
     body: `Select a layer and open **Animate** in the Properties panel (or right-click the layer and choose **Animate**). Pick a preset and the layer is animated.
 
+![The Animate section of the Properties panel: the six preset buttons, When, Slide in from, Delay and Length.](help/animation-presets.png)
+
 ## The presets
 - **Fade in**: starts clear and fades up to how the layer is now.
 - **Slide in**: glides in from the left, right, top or bottom while it fades up. It travels a fifth of the page (never less than 60 or more than 400 pixels).
@@ -2315,6 +2317,8 @@ The question frame holds its settings in \`question\`, and each part layer carri
     keywords: 'command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share',
     body: `Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
 
+![The command palette searching for timeline: the Open Timeline command, then matching help pages.](help/command-palette.png)
+
 Each row shows its **shortcut** if it has one, or the kind of command it is. A command that cannot run just now (nothing selected, nothing to undo) is greyed and says why. A switch shows **On** or **Off**, and running it flips it. Press <kbd>F1</kbd> inside it to search the help instead. Matching help pages are listed under the commands, labelled **Help**, and <kbd>Enter</kbd> on one opens it.
 
 ## What it can do
@@ -2335,12 +2339,43 @@ It only does what the menus and buttons already do, with the same results and th
 While you are **typing in a text layer** <kbd>Ctrl</kbd>+<kbd>K</kbd> adds a link, as in any editor. On the projects page, where there is no palette, it searches the help. While Preview is open it searches the help in a new window.`,
   },
   {
+    id: 'before-you-share',
+    title: 'Before you share',
+    group: 'Import and export',
+    summary: 'One list of what is most likely wrong, shown when you press Share or Export, with a way to go and look at each and to fix some.',
+    keywords: 'before share check publish export dead button does nothing unreachable page template sample text placeholder alt text description contrast broken link unused file size heavy checklist this is fine share anyway',
+    body: `When you press **Share → Share…**, or **Export → Single HTML file** or **Project package**, and there is something likely to be wrong, a short list opens first: **3 things to look at**. If there is nothing, you go straight through. The Share dialog also carries a line at the top saying the same (**Show me** opens the list).
+
+![The Before you share list: a button that does nothing, template items still to do, sample words, a picture with no description.](help/before-you-share.png)
+
+## What it looks for
+- **Buttons that do nothing when clicked.** A button layer with no click, press or hover on it (or on what holds it), that is not switched off. **Choose what it does** opens the [behaviour chooser](interactions#behaviours-when-this-is-clicked) on it.
+- **Pages nothing leads to.** Pages no button or link can reach from the start page, following **Go to artboard** (and Next and Previous). It stays quiet if a graph picks pages by expression, since that could lead anywhere, and pages another page draws as an [instance](instances) or as a master do not count.
+- **Things from the template still to do.** The [checklist](templates#use-a-template): items not ticked, ticked but the layer is still the template's, or pointing at a layer that is gone. **Open the checklist** opens it.
+- **Sample words.** Text, button and link words that still say "Text" or "Button", "Lorem ipsum", "Your title here", "Replace this", "[Your name]", "TBC" and the like. **Go there** puts the cursor in the text.
+- **Pictures and videos with no description.** Type the description in the list and press **Add it**. See [Accessibility checker](accessibility-checker).
+- **Text that is hard to read.** The checker's colour contrast problems. **Fix them for me** applies the safe fixes in one step (undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>).
+- **Links and references that lead nowhere.** A link layer with no address, or things the [Usage](usage) panel finds pointing at something that is gone.
+- **Files that add up to a lot**, over 25 MB, with the biggest named, and **files nothing uses**. **Remove the files nothing uses…** asks first, like the Usage panel. See [Download size](download-size).
+
+Layers that are locked (the brand's logo and footer) are left out: they are not yours to change.
+
+## Going there, fixing, and "This is fine"
+**Go there** closes the list, takes you to the page, selects the layer and (for words) lets you type. Press Share again when you are ready. Each row has **This is fine** for the ones that are meant to be like that (a decorative button, a picture that is only decoration): it leaves it off the list from then on. The mark is kept in this browser for the project, like the accessibility checker's **reviewed** marks (and a picture's mark is the same one the checker uses), and **Forget what I marked as fine** at the bottom puts them all back.
+
+**Share anyway** (or **Export anyway**) carries on regardless: the list only ever advises.
+
+The same checks are available piece by piece: the [Accessibility](accessibility-checker) and [Usage](usage) tabs, the template checklist's review, and the [Download size](download-size) readout.`,
+  },
+  {
     id: 'paste-questions',
     title: 'Paste questions from Word or Excel',
     group: 'Interactivity',
     summary: 'Paste a list or table of questions from Word or a spreadsheet, or open a filled in template, see a preview, and add them as kit questions.',
     keywords: 'paste questions import word docx excel xlsx spreadsheet csv table template list quiz bank bulk multiple choice true false blank matching',
     body: `If your questions are already in Word or a spreadsheet, you do not have to retype them. Open the **Add question** menu and choose **Paste questions from Word or Excel**, then paste them in (or press **Open a file** to read a filled in template). A preview shows the questions it understood and the lines it did not, and nothing is added until you press **Add**. Each question gets an artboard of its own and is an ordinary [kit question](question-kit) from then on. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type "paste questions" to open it from the command palette.
+
+![The Paste questions dialog: lines pasted on the left, what it understood and what it did not on the right.](help/paste-questions.png)
 
 ## Templates to fill in
 Each template has a worked example of every kind of question it reads: multiple choice, multiple answer, true/false, fill in the blank and matching.
@@ -3720,7 +3755,7 @@ A phone photo can be 5 MB or more, and an export or share link carries every pic
 
 | Share | Gives you |
 |---|---|
-| Share link… | A link that plays the project in the browser (below), and a second one, the **Link for StudyDesk**, that keeps learners' results |
+| Share… | Opens with **Where will people use it?**: in a StudyDesk page (keeping learners' results or not), in the StudyDesk gradebook, anyone with a link, or as a file. It shows the one thing to copy for that, and the link settings are under **More ways to share** (below) |
 | Invite to collaborate… | People who can open and edit the project with you, live, found by name, email or username (see [Collaborating](live-editing#inviting-people)) |
 | Save as template… | A copy other people (or you) start new projects from, with a checklist of what to change (see [Templates](templates#save-as-template)) |
 | Share for review… | A link where reviewers look at the project and leave comments, without editing it (see [Review comments](comments)) |
@@ -3729,10 +3764,25 @@ A phone photo can be 5 MB or more, and an export or share link carries every pic
 
 Export gives you **files**; Share gives you **links and people**. Nothing under Share downloads anything.
 
-## Share link
-**Share → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google (a message tells you if a font couldn't be fetched, and that font loads from Google instead). It is a snapshot: press **Update to the latest version** to publish later changes (the page it replaces is kept: if the update was a mistake, **Revert to previous version** puts it back for everyone at once, and pressing it again switches back), or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). The **Link for StudyDesk** is the same link, so it stops too: if learners have results or progress in the project, the confirm lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one. **Copy** copies the link and **Open** opens it in a new tab.
+## Where will people use it?
+**Share → Share…** asks one question first, **Where will people use it?**, and shows the one thing to copy for the answer, with two lines on what to do with it. Your choice is remembered for the project.
 
-![The Share link dialog.](help/share-link-dialog.png)
+| You choose | You copy | Notes |
+|---|---|---|
+| **In a StudyDesk page, and keep learners' results** | The [embed code](export#embed-code) (the Link for StudyDesk in an iframe) | Paste it in the page's **Source code** view. A project that uses the microphone, camera or photos needs this one, and the code already allows them |
+| **In a StudyDesk page, no results needed** | The same iframe, around the plain share link | Nothing is kept for learners. Not offered for a project that uses the microphone, camera or photos, and it says so |
+| **In the StudyDesk gradebook, with a mark** | The project's name, to pick in **Select content** | Needs questions set to **Mark answers on the server**, and says when none are |
+| **Anyone with a link** | The share link | **Open** tries it in a new tab |
+| **As a file to download** | Nothing to copy: buttons download the single HTML file or a project package | Does not keep results |
+
+Until the link exists the dialog offers **Create the link**, and once it does, **Update to the latest version** sits under the thing to copy. Everything else the dialog used to show (both links, the embed code, **Results…**, **Allow remix**, **Revert to previous version**, **Turn off link**) is under **More ways to share, and the settings of the link**, described below. The links themselves have not changed.
+
+At the top of the dialog a line says whether there is anything to look at first: see [Before you share](before-you-share).
+
+## Share link
+**Share → Share…**, under **More ways to share**, publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google (a message tells you if a font couldn't be fetched, and that font loads from Google instead). It is a snapshot: press **Update to the latest version** to publish later changes (the page it replaces is kept: if the update was a mistake, **Revert to previous version** puts it back for everyone at once, and pressing it again switches back), or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). The **Link for StudyDesk** is the same link, so it stops too: if learners have results or progress in the project, the confirm lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one. **Copy** copies the link and **Open** opens it in a new tab.
+
+![The Share dialog: Where will people use it? with the embed code to copy, and More ways to share folded underneath.](help/share-where.png)
 
 A share link carries big pictures as their [optimised copies](export#optimised-pictures) while **Optimise output** is on in the Project settings.
 

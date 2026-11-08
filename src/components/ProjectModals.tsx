@@ -9,6 +9,8 @@ import { addCollaborator, clearResults, resultsCsv, transferOwner, findPeople, g
 import { assetUrls } from '../lib/assets';
 import { download, standaloneHtml, warnInEditor } from '../lib/export';
 import { IconButton } from './ui';
+import { BeforeShareLine, BeforeYouShareModal } from './BeforeShare';
+import { ShareWhere } from './ShareWhere';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
 import { confirmDialog, promptDialog } from './dialogs';
@@ -187,6 +189,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
   // Stamped on the embed code the way the Toolbox stamps Date.now() on an item: one per time the dialog is open
   const [embedId] = useState(() => Date.now());
   const [resultsOpen, setResultsOpen] = useState(false);
+  const [checkOpen, setCheckOpen] = useState(false);
   const serverMarked = serverMarkedCounts(store().get().project);
   useEffect(() => {
     getShare(projectId).then(setShare, (e) => setError(String(e.message ?? e)));
@@ -237,8 +240,12 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
   const embed = share ? embedCode({ url: learnerUrl(share.token), title: store().get().project.name, sensors: share.sensors, aspect: embedAspect(store().get().project), cdtID: embedId }) : '';
   return (
     <>
-      <Modal title="Share link" help="export#share-link" onClose={() => !resultsOpen && onClose()} className="share-modal">
+      <Modal title="Share" help="export#share-link" onClose={() => !resultsOpen && !checkOpen && onClose()} className="share-modal">
         <div className="share-body">
+          <BeforeShareLine onOpen={() => setCheckOpen(true)} />
+          <ShareWhere projectId={projectId} share={share} busy={busy} publish={publish} embedId={embedId} marked={serverMarked.marked} />
+          <details className="share-more">
+            <summary>More ways to share, and the settings of the link</summary>
           {share === undefined && !error && <p className="muted">Checking…</p>}
           {share === null && (
             <>
@@ -362,10 +369,12 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
               </div>
             </>
           )}
+          </details>
           {error && <p className="error">{error}</p>}
         </div>
       </Modal>
       {resultsOpen && <ResultsModal onClose={() => setResultsOpen(false)} />}
+      {checkOpen && <BeforeYouShareModal what="share" onClose={() => setCheckOpen(false)} />}
     </>
   );
 }

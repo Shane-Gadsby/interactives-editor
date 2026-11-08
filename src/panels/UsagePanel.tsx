@@ -99,7 +99,7 @@ function itemSource(i: UsageItem): UsageSource | null {
 }
 
 /** Remove assets nothing uses, after asking. Same clean-up as the assets panel's remove button. */
-async function removeUnusedAssets(report: UsageReport, projectId: string) {
+export async function removeUnusedAssets(report: UsageReport, projectId: string) {
   const ids = unusedAssetIds(report);
   if (!ids.length) return;
   const names = report.assets.filter((a) => a.unused).map((a) => a.name);

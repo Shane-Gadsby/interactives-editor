@@ -10576,3 +10576,187 @@ button.flow-text:focus-visible {
   cursor: default;
   padding: 12px;
 }
+
+/* Before you share */
+.before-share-modal {
+  width: min(680px, calc(100vw - 32px));
+}
+.before-share-modal .share-body {
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+}
+.share-groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.share-group {
+  border: 1px solid var(--line-2);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius);
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.share-group p {
+  margin: 0;
+}
+.share-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.share-items {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.share-item-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.share-item-name {
+  flex: 1 1 200px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.share-describe {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.share-describe input {
+  flex: 1;
+  min-width: 0;
+}
+.share-group-actions,
+.share-gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.btn.quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.btn.quiet:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--btn-hover-border);
+}
+.share-check-line {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+}
+.share-check-line.ok {
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  color: var(--ok-text);
+}
+.share-check-line.warn {
+  background: var(--banner-warn-bg);
+  color: var(--banner-warn-fg);
+}
+
+/* Share: where will people use it */
+.share-where h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.share-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.share-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.share-choice input {
+  margin-top: 3px;
+}
+.share-choice.on {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.share-choice.on .muted {
+  color: var(--primary-fg);
+}
+.share-choice:focus-within {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+.share-thing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+.share-thing p {
+  margin: 0;
+}
+.share-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.share-copy {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+.share-copy input,
+.share-copy textarea {
+  flex: 1;
+  min-width: 0;
+}
+.share-warn {
+  background: var(--banner-warn-bg);
+  color: var(--banner-warn-fg);
+  padding: 6px 10px;
+  border-radius: var(--radius);
+}
+.share-more {
+  margin-top: 4px;
+}
+.share-more > summary {
+  cursor: pointer;
+  padding: 6px 0;
+  font-weight: 600;
+}
+.share-more[open] > summary {
+  margin-bottom: 8px;
+}
+.share-more > :not(summary) {
+  margin-bottom: 10px;
+}
+.share-choice .block {
+  display: block;
+}
+.share-check-line .link-btn {
+  color: inherit;
+  text-decoration: underline;
+}

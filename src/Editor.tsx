@@ -13,6 +13,8 @@ import { addQuestion } from './lib/question-kit';
 import { importGiftFile } from './lib/gift-import';
 import { TOOL_KEYS } from './lib/tool-keys';
 import { CommandPalette } from './components/CommandPalette';
+import { BeforeYouShareModal } from './components/BeforeShare';
+import { checkBeforeShare } from './lib/before-share';
 import { openPalette } from './lib/command-palette';
 import { APP_ACTION_EVENT, type AppAction } from './lib/app-actions';
 import { PasteQuestionsModal } from './components/PasteQuestionsModal';
@@ -708,6 +710,9 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   const [templateOpen, setTemplateOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
   const [motionOpen, setMotionOpen] = useState(false);
+  //Share and the exports that hand the project to others first show what is likely wrong (Before you share), when there is anything
+  const [gate, setGate] = useState<{ what: 'share' | 'export'; go: () => void } | null>(null);
+  const gated = (what: 'share' | 'export', go: () => void) => (checkBeforeShare(st.get().project).length ? setGate({ what, go }) : go());
   const exportDefinitions = () => {
     const project = st.get().project;
     download(new Blob([typeDefinitions(project)], { type: 'text/plain' }), `${fileSafe(project.name)}.d.ts`);
@@ -758,10 +763,14 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   //What the command palette (and anything else) asks the top bar to do, by name: the same calls the buttons make
   const doAction = useRef<(a: AppAction) => void>(() => undefined);
   doAction.current = (a) => {
-    const file = a === 'export-html' ? checked(() => downloadStandalone(st.get().project)) : a === 'export-package' ? checked(() => downloadPackage(st.get().project)) : a === 'export-json' ? checked(() => downloadJson(st.get().project)) : a === 'export-png' ? () => exportPicture('png', 2) : a === 'export-svg' ? () => exportPicture('svg', 1) : a === 'export-lottie' ? () => exportActiveAsLottie('json') : null;
+    const html = checked(() => downloadStandalone(st.get().project));
+    const pack = checked(() => downloadPackage(st.get().project));
+    if (a === 'export-html') return gated('export', () => void run(html));
+    if (a === 'export-package') return gated('export', () => void run(pack));
+    const file = a === 'export-html-now' ? html : a === 'export-package-now' ? pack : a === 'export-json' ? checked(() => downloadJson(st.get().project)) : a === 'export-png' ? () => exportPicture('png', 2) : a === 'export-svg' ? () => exportPicture('svg', 1) : a === 'export-lottie' ? () => exportActiveAsLottie('json') : null;
     if (file) return void run(file);
     if (a === 'preview') onPreview();
-    else if (a === 'share') setShareOpen(true);
+    else if (a === 'share') gated('share', () => setShareOpen(true));
     else if (a === 'invite') setInviteOpen(true);
     else if (a === 'template') setTemplateOpen(true);
     else if (a === 'history') setHistoryOpen(true);
@@ -830,6 +839,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       <IconButton icon={<Icons.help />} title={helpTitle} onClick={openHeaderHelp} />
       {prefsOpen && <PrefsModal workspace onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
+      {gate && <BeforeYouShareModal what={gate.what} onGo={gate.go} onClose={() => setGate(null)} />}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
       {templateOpen && <SaveTemplateModal onClose={() => setTemplateOpen(false)} />}
       {referenceOpen && <ReferenceModal onClose={() => setReferenceOpen(false)} />}
@@ -845,11 +855,11 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         </button>
         {menu && (
           <div className="menu" onMouseLeave={() => setMenu(false)}>
-            <button onClick={() => run(checked(() => downloadStandalone(st.get().project)))}>
+            <button onClick={() => (setMenu(false), gated('export', () => void run(checked(() => downloadStandalone(st.get().project)))))}>
               Single HTML file
               <span className="muted small">Player, project and assets in one file</span>
             </button>
-            <button onClick={() => run(checked(() => downloadPackage(st.get().project)))}>
+            <button onClick={() => (setMenu(false), gated('export', () => void run(checked(() => downloadPackage(st.get().project)))))}>
               Project package ({PACKAGE_EXTENSION})
               <span className="muted small">Whole project, re-importable</span>
             </button>
@@ -898,9 +908,9 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         </button>
         {shareMenu && (
           <div className="menu" onMouseLeave={() => setShareMenu(false)}>
-            <button onClick={() => (setShareMenu(false), setShareOpen(true))}>
-              Share link…
-              <span className="muted small">A link that plays the project in the browser, and the Link for StudyDesk that keeps learners' results</span>
+            <button onClick={() => (setShareMenu(false), gated('share', () => setShareOpen(true)))}>
+              Share…
+              <span className="muted small">Choose where people will use it (a StudyDesk page, the gradebook, a link, a file) and copy the one thing it needs</span>
             </button>
             <button onClick={() => (setShareMenu(false), setInviteOpen(true))}>
               Invite to collaborate…

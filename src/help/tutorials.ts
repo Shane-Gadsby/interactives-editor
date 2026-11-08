@@ -328,17 +328,17 @@ Full details, including what each format does and doesn't carry over, are in [Im
 
 A share link needs no uploading. Anyone with the link can play the project in their browser. They can't edit it.
 
-1. Choose **Share → Share link…** (the **Share** button is next to **Export**).
-2. Press **Create share link**. A link appears.
+1. Choose **Share → Share…** (the **Share** button is next to **Export**). If something looks unfinished (a button that does nothing, sample words, a picture with no description) a short [Before you share](before-you-share) list comes first.
+2. Under **Where will people use it?** choose **Anyone with a link**, and press **Create the link**. The link appears.
 3. Press **Copy** and send it, or **Open** to try it.
 4. The link is a snapshot. When you've changed the project, open the dialog again and press **Update to the latest version**.
-5. To stop sharing, press **Turn off link** and confirm. The link then shows a "turned off" page.
+5. To stop sharing, open **More ways to share**, press **Turn off link** and confirm. The link then shows a "turned off" page.
 
-Under it is the **Link for StudyDesk**. Use that one inside StudyDesk when you want each learner's score and progress kept, or when you want to see [Insights](insights). Tick **Allow remix** if you are happy for staff to copy the project into their own projects.
+To use it inside StudyDesk, choose **In a StudyDesk page, and keep learners' results** instead and copy the code it shows into the page's Source code view: each learner's score and progress are kept, and you can see [Insights](insights). Under **More ways to share**, tick **Allow remix** if you are happy for staff to copy the project into their own projects.
 
 ![The Share menu: Share link, Invite to collaborate, Save as template and Share for review.](help/share-menu.png)
 
-![The Share link dialog: the link with Copy and Open, then Update to the latest version and Turn off link.](help/share-link-dialog.png)
+![The Share dialog: Where will people use it?, the thing to copy, and More ways to share folded underneath.](help/share-where.png)
 
 ## 5. Put it on a page
 
