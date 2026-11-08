@@ -224,7 +224,7 @@ describe('page navigation in the editor and in the player', () => {
     const root = createRoot(host);
     const show = () => act(() => root.render(<PageNavSection ids={['p1']} project={store.get().project} />));
     show();
-    //open by default while the project has pages and none has navigation yet
+    //open by default when the project has more than one page (and it stays open after adding)
     expect(host.querySelector('.section-title')!.getAttribute('aria-expanded')).toBe('true');
     const radios = [...host.querySelectorAll<HTMLElement>('[role="radio"]')];
     expect(radios.map((r) => r.querySelector('strong')!.textContent)).toEqual(NAV_STYLES.map((s) => s.label));
@@ -233,6 +233,7 @@ describe('page navigation in the editor and in the player', () => {
     expect(radios[2].getAttribute('aria-checked')).toBe('true');
     act(() => [...host.querySelectorAll('button')].find((b) => b.textContent === 'Add to all 4 pages')!.click());
     expect(names(store.get().project.artboards[0])).toContain('Page dot 1');
+    expect(host.querySelector('.section-title')!.getAttribute('aria-expanded')).toBe('true');
     expect(host.querySelector('[role="status"]')!.textContent).toMatch(/Added to 3 pages\. Left alone: Page 2 \(it already has its own Next or Back button\)/);
     act(() => root.unmount());
     host.remove();

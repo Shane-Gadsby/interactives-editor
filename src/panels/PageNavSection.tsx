@@ -34,7 +34,7 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 	if (!everyone.length) return null;
 	const own = project.artboards.filter((a) => targets.includes(a.id) && hasOwnNavigation(a)).length;
 	return (
-		<Section help="page-navigation" title="Page navigation" defaultOpen={everyone.length > 1 && !hasNav(project, everyone)}>
+		<Section help="page-navigation" title="Page navigation" defaultOpen={everyone.length > 1}>
 			<p className="hint">Back, Next and the page number along the bottom of the page, wired to the order of your pages, in one click. It is ordinary layers and Interactions you can change afterwards.</p>
 			<div role="radiogroup" aria-label="Navigation style" className="nav-styles">
 				{NAV_STYLES.map((s) => (

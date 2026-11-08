@@ -12,7 +12,7 @@ import { selectionBounds } from '../store/doc';
 import { store } from '../store/store';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { Icons } from '../components/icons';
-import { linkedPage, linkToPage, pageRoutes, pagesToLinkTo } from '../lib/page-link';
+import { linkedPage, linkToPage, pageRoutes, pagesToLinkTo, type PageRoute } from '../lib/page-link';
 import { useShowRoutes } from '../lib/page-routes-pref';
 
 interface Box {
@@ -53,6 +53,17 @@ export function arrowPath(a: Box, b: Box, gap = 8): { d: string; mid: { x: numbe
 	return { d: `M${s.x.toFixed(1)} ${s.y.toFixed(1)} Q${c.x.toFixed(1)} ${c.y.toFixed(1)} ${e.x.toFixed(1)} ${e.y.toFixed(1)}`, mid: { x: (s.x + 2 * c.x + e.x) / 4, y: (s.y + 2 * c.y + e.y) / 4 } };
 }
 
+/** Next from one page and Previous back from the next are one line with a head at each end, not two arrows on top of each other. */
+export function mergeRoutes(routes: PageRoute[]): (PageRoute & { both?: boolean })[] {
+	const out: (PageRoute & { both?: boolean })[] = [];
+	for (const r of routes) {
+		const twin = r.order ? out.find((o) => o.order && !o.both && o.from === r.to && o.to === r.from) : undefined;
+		if (twin) twin.both = true;
+		else out.push({ ...r });
+	}
+	return out;
+}
+
 export function PageLinkLayer({ project, zoom, panX, panY, active, selection, tool, hidden }: { project: Project; zoom: number; panX: number; panY: number; active: Artboard | undefined; selection: string[]; tool: string; hidden?: boolean }) {
 	const box = useRef<HTMLDivElement>(null);
 	const routesOn = useShowRoutes();
@@ -61,7 +72,7 @@ export function PageLinkLayer({ project, zoom, panX, panY, active, selection, to
 	const live = useRef<{ over: string | null } | null>(null);
 
 	const onCanvas = useMemo(() => project.artboards.filter((a) => !a.canvasHidden), [project.artboards]);
-	const routes = useMemo(() => (routesOn && onCanvas.length > 1 ? pageRoutes(project) : []), [routesOn, onCanvas.length, project]);
+	const routes = useMemo(() => (routesOn && onCanvas.length > 1 ? mergeRoutes(pageRoutes(project)) : []), [routesOn, onCanvas.length, project]);
 	const screen = (a: Artboard): Box => ({ x: panX + a.canvasX * zoom, y: panY + a.canvasY * zoom, w: a.width * zoom, h: a.height * zoom });
 	const byId = (id: string) => onCanvas.find((a) => a.id === id);
 
@@ -179,7 +190,7 @@ export function PageLinkLayer({ project, zoom, panX, panY, active, selection, to
 						if (!a || !b) return null;
 						const p = arrowPath(screen(a), screen(b));
 						return (
-							<path key={`${r.from}>${r.to}`} d={p.d} className={`route${r.order ? ' order' : ''}`} markerEnd="url(#route-head)" data-from={r.from} data-to={r.to}>
+							<path key={`${r.from}>${r.to}`} d={p.d} className={`route${r.order ? ' order' : ''}`} markerEnd="url(#route-head)" markerStart={r.both ? 'url(#route-head)' : undefined} data-from={r.from} data-to={r.to}>
 								<title>{`${a.name} to ${b.name}${r.via.length ? ` (${r.via.join(', ')})` : ''}`}</title>
 							</path>
 						);
@@ -190,7 +201,7 @@ export function PageLinkLayer({ project, zoom, panX, panY, active, selection, to
 				<ul className="sr-only" aria-label="Page routes">
 					{routes.map((r) => (
 						<li key={`${r.from}>${r.to}`}>
-							{byId(r.from)?.name} goes to {byId(r.to)?.name}
+							{byId(r.from)?.name} {r.both ? 'and' : 'goes to'} {byId(r.to)?.name}{r.both ? ' lead to each other' : ''}
 							{r.via.length ? ` from ${r.via.join(', ')}` : ''}
 						</li>
 					))}

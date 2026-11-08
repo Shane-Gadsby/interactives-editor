@@ -673,9 +673,9 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           <IconButton icon={<Icons.trash />} title="Delete artboard" onClick={() => store().deleteArtboard(ab.id)} />
         </Row>
       </Section>
+      <PageNavSection ids={[ab.id]} project={project} />
       <VariantsSection ab={ab} project={project} />
       <MasterSection ab={ab} project={project} />
-      <PageNavSection ids={[ab.id]} project={project} />
       <TabOrderSection ab={ab} />
       <StepsSection ab={ab} project={project} />
       <JoysticksSection ab={ab} />

@@ -9910,3 +9910,10 @@ body.page-link-dragging * {
   gap: 6px;
   margin: 6px 0;
 }
+.modal-backdrop.preview-backdrop.peek .preview-modal header {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.modal-backdrop.preview-backdrop.peek .preview-size {
+  white-space: nowrap;
+}

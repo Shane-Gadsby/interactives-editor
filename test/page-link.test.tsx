@@ -5,7 +5,7 @@ import { createArtboard, createNode, createProject, type Artboard, type Project 
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { appendStep, writeClickFlow } from '../src/lib/click-flow';
 import { linkedPage, linkToPage, pageLinksOf, pageRoutes, pagesToLinkTo } from '../src/lib/page-link';
-import { arrowPath, edgePoint, PageLinkLayer } from '../src/canvas/PageLinkLayer';
+import { arrowPath, edgePoint, mergeRoutes, PageLinkLayer } from '../src/canvas/PageLinkLayer';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -113,6 +113,16 @@ describe('routes between pages', () => {
     writeClickFlow(A(p), 'btn', [{ kind: 'action.artboard', params: { to: 'back' } }]);
     writeClickFlow(A(p), 'btn', [{ kind: 'action.artboard', params: { to: 'picked', artboard: 'a' } }]);
     expect(pageRoutes(p)).toEqual([]);
+  });
+
+  it('draws Next one way and Previous back as one line with two heads, but keeps chosen pages apart', () => {
+    const merged = mergeRoutes([
+      { from: 'a', to: 'b', via: ['Next'], order: true },
+      { from: 'b', to: 'a', via: ['Back'], order: true },
+      { from: 'a', to: 'c', via: [], order: false },
+      { from: 'c', to: 'a', via: [], order: false },
+    ]);
+    expect(merged.map((r) => `${r.from}>${r.to}${r.both ? '<>' : ''}`)).toEqual(['a>b<>', 'a>c', 'c>a']);
   });
 
   it('puts the arrow between the edges of the two boxes, bowing the other way for the way back', () => {

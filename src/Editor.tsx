@@ -1351,7 +1351,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             <option value="start">From the start artboard</option>
             <option value="current">From this artboard</option>
           </select>
-          <span className="muted small">{ab ? `${ab.width} × ${ab.height}` : ''} · runs exactly like the exported file</span>
+          <span className="muted small preview-size">{ab ? `${ab.width} × ${ab.height}` : ''}{peek ? '' : ' · runs exactly like the exported file'}</span>
           <button
             className={`btn${accessibility ? ' active' : ''}`}
             onClick={() => setPrefs({ accessibility: !accessibility })}
