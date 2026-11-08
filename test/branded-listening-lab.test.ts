@@ -10,6 +10,7 @@ import { renderNotes, wavBytes } from '../src/lib/branded/sets/media/sounds';
 const MEDIA = BRANDED_STARTERS.filter((s) => s.key === 'media/listening-lab');
 const flush = () => new Promise((r) => setTimeout(r, 0));
 const elOf = (id: string) => document.querySelector<HTMLElement>(`[data-ix-id="${id}"]`);
+const textOf = (id: string) => must(id).textContent;
 const must = (id: string) => {
   const el = elOf(id);
   if (!el) throw new Error(`no layer ${id}`);
@@ -168,7 +169,9 @@ describe('Listening lab', () => {
     const board = (name: string) => project.artboards.find((a) => a.name === name)!;
     const player = play(project);
     const id = (page: string, name: string) => byName(board(page), name)!.id;
-    return { project, board, player, id };
+    //an answer is a copy of one repeated button
+    const answer = (page: string, n: number) => `${id(page, 'Answer')}~${n - 1}`;
+    return { project, board, player, id, answer };
   };
 
   it('keeps everything inside the content box of its page, clear of the footer', () => {
@@ -213,17 +216,27 @@ describe('Listening lab', () => {
     await click(id('Identify the sound', 'Sound 1 play button'));
     expect(heard).toHaveLength(1);
     expect(heard[0]).toMatchObject({ loop: false, playbackRate: 1 });
+    //one button is Play and Stop: while the clip goes it says Stop and a press ends it
+    expect(textOf(id('Identify the sound', 'Sound 1 play button'))).toBe('Stop');
+    await click(id('Identify the sound', 'Sound 1 play button'));
+    expect(heard[0].paused).toBe(true);
+    expect(textOf(id('Identify the sound', 'Sound 1 play button'))).toBe('Play');
+    //the switches are native pressed buttons on two variables
+    const pressed = (name: string) => must(id('Identify the sound', name)).querySelector('[aria-pressed]')?.getAttribute('aria-pressed') ?? must(id('Identify the sound', name)).getAttribute('aria-pressed');
+    expect(pressed('Loop switch')).toBe('false');
     await click(id('Identify the sound', 'Loop switch'));
     await click(id('Identify the sound', 'Slow switch'));
-    expect(document.body.textContent).toContain('Loop: on');
-    expect(document.body.textContent).toContain('Slow: on');
+    expect(pressed('Loop switch')).toBe('true');
+    expect(pressed('Slow switch')).toBe('true');
     await click(id('Identify the sound', 'Sound 1 play button'));
     expect(heard).toHaveLength(2);
     expect(heard[1]).toMatchObject({ loop: true, playbackRate: 0.6, preservesPitch: true });
-    //playing it again replaces it: only one sound at a time
     expect(heard[1].paused).toBe(false);
-    await click(id('Identify the sound', 'Sound 1 stop button'));
+    //Stop ends a loop
+    expect(textOf(id('Identify the sound', 'Sound 1 play button'))).toBe('Stop');
+    await click(id('Identify the sound', 'Sound 1 play button'));
     expect(heard[1].paused).toBe(true);
+    expect(textOf(id('Identify the sound', 'Sound 1 play button'))).toBe('Play');
     //a loop does not outlive its page
     await click(id('Identify the sound', 'Sound 1 play button'));
     expect(heard[2].loop).toBe(true);
@@ -247,24 +260,24 @@ describe('Listening lab', () => {
   });
 
   it('a round marks the answer, scores it once and moves on with Next', async () => {
-    const { player, id } = setup();
+    const { player, id, answer } = setup();
     player.goTo('Identify the sound');
     await flush();
     expect(document.body.textContent).toContain('What is making this sound?');
     //a wrong answer first: it is locked in, nothing more counts
-    await click(id('Identify the sound', 'Answer 2'));
+    await click(answer('Identify the sound', 2));
     expect(player.getVariable('score')).toBe(0);
     expect(player.getVariable('locked')).toBe(true);
     expect(document.body.textContent).toContain('Not quite.');
     expect(document.body.textContent).toContain('✓  A doorbell');
-    await click(id('Identify the sound', 'Answer 1'));
+    await click(answer('Identify the sound', 1));
     expect(player.getVariable('score')).toBe(0);
     await click(id('Identify the sound', 'Next button'));
     await flush();
     expect(player.artboard.name).toBe('Compare A and B');
     //the next round starts fresh
     expect(player.getVariable('locked')).toBe(false);
-    await click(id('Compare A and B', 'Answer 2'));
+    await click(answer('Compare A and B', 2));
     expect(player.getVariable('score')).toBe(1);
     expect(document.body.textContent).toContain('Correct.');
     player.destroy?.();
@@ -304,10 +317,10 @@ describe('Listening lab', () => {
   });
 
   it('the last round goes to the results, which add it up, and Try again starts over', async () => {
-    const { player, id } = setup();
+    const { player, id, answer } = setup();
     player.goTo('What changed?');
     await flush();
-    await click(id('What changed?', 'Answer 1'));
+    await click(answer('What changed?', 1));
     expect(player.getVariable('score')).toBe(1);
     expect(byName(player.artboard, 'Next button') ?? true).toBeTruthy();
     expect(document.body.textContent).toContain('See results');
@@ -320,5 +333,23 @@ describe('Listening lab', () => {
     expect(player.artboard.name).toBe('Start');
     expect(player.getVariable('score')).toBe(0);
     player.destroy?.();
+  });
+
+  it('is built on the native pieces: one answer flow per round, one button for Play and Stop, a live sorted count, next pages', () => {
+    const { project } = setup();
+    const pages = project.artboards.filter((a) => !a.isMaster);
+    for (const name of ['Identify the sound', 'Compare A and B', 'What changed?']) {
+      const ab = project.artboards.find((a) => a.name === name)!;
+      const answerEvents = ab.logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.target === byName(ab, 'Answer')!.id);
+      expect(answerEvents).toHaveLength(1);
+      expect(answerEvents[0].params.onlyIf).toBe('!locked');
+      expect(byName(ab, 'Answers')!.keyNav).toBeTruthy();
+    }
+    for (const ab of pages) walk(ab.children, (n) => expect(n.name).not.toMatch(/stop button$/));
+    const sorted = project.variables.find((v) => v.name === 'sorted')!;
+    expect(sorted.live).toBe(true);
+    //Start, Next and Continue follow the page order, so none names a page
+    const named = pages.flatMap((a) => a.logic.nodes.filter((n) => n.kind === 'action.artboard' && n.params.artboard));
+    expect(named).toHaveLength(0);
   });
 });

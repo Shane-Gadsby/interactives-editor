@@ -9,9 +9,9 @@ export { Graph, addVar, announce, bind, click, darkButton, go, goNext, goPreviou
 export type { ActionStep } from '../../graph-kit';
 
 /** The hero page every starter opens with: title, one line and a Start button (wired by the caller). */
-export function heroPage(ctx: BrandedCtx, title: string, subtitle: string, label = 'Start') {
+export function heroPage(ctx: BrandedCtx, title: string, subtitle: string, label = 'Start', name = 'Start') {
   const page = brandedPage(ctx, title, { kind: 'hero', subtitle });
-  const start = darkButton(ctx, 'Start', label, 48, page.height * 0.42 + 190, 200);
+  const start = darkButton(ctx, name, label, 48, page.height * 0.42 + 190, 200);
   page.children.push(start);
   return { page, start };
 }
