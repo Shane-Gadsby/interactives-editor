@@ -159,6 +159,40 @@ const subtract = (a: string[], b: string[]): string[] => {
   });
 };
 
+/** The names of the chrome layers on an artboard (at any depth). */
+function chromeNames(ab: Artboard): string[] {
+  const out: string[] = [];
+  const down = (list: SceneNode[]) => {
+    for (const n of list) {
+      if (isChromeNode(n)) out.push(n.name);
+      down((n as { children?: SceneNode[] }).children ?? []);
+    }
+  };
+  down(ab.children);
+  return out;
+}
+
+/**
+ * Page masters (`master.ts`) carry the chrome now: the master's own layers are held by the layer rules above, and this holds the
+ * links around them. A page keeps its master, can't leave the master's chrome layers off by name, a master that has chrome can't be
+ * deleted while a page still uses it, and which of its layers go over the page is not for changing.
+ */
+function masterViolation(before: Map<string, Artboard>, after: Map<string, Artboard>): string | null {
+  for (const [id, was] of before) {
+    const now = after.get(id);
+    if (now && was.master) {
+      const m = before.get(was.master);
+      const chrome = m ? chromeNames(m) : [];
+      if (chrome.length && now.master !== was.master) return `“${now.name}” gets its brand layers from “${m!.name}” and keeps them in a branded project.`;
+      const hid = (now.masterHide ?? []).filter((x) => !(was.masterHide ?? []).includes(x) && chrome.includes(x))[0];
+      if (hid) return `“${hid}” is part of the UniSQ brand and can't be left off a page in a branded project.`;
+    }
+    if (now && chromeNames(was).length && JSON.stringify(was.masterOver ?? []) !== JSON.stringify(now.masterOver ?? [])) return `“${was.name}” holds the brand layers, so what is drawn over the pages is locked in a branded project.`;
+    if (!now && chromeNames(was).length && [...before.values()].some((a) => a.master === id && after.has(a.id))) return `“${was.name}” holds the brand layers of pages that are still in the project, so it is locked in a branded project.`;
+  }
+  return null;
+}
+
 /**
  * Says what in the change from `before` to `after` a branded project refuses, as a sentence for a toast, or null when it is
  * fine. Compares by reference first (immer shares what didn't change) and by content only for the layers that were rebuilt, so it is cheap on a big project.
@@ -178,6 +212,8 @@ export function brandLookViolation(before: Project, after: Project): string | nu
     //(some edits rebuild a group's object without changing it, so same by content counts)
     if (now.parent !== e.parent || (now.node !== e.node && JSON.stringify(now.node) !== JSON.stringify(e.node))) return `“${e.node.name}” is part of the UniSQ brand and is locked in a branded project.`;
   }
+  const masterBad = masterViolation(b.boards, a.boards);
+  if (masterBad) return masterBad;
   const check = (was: unknown, now: unknown, label: string): string | null => {
     if (was === now) return null;
     const had = offences(was);

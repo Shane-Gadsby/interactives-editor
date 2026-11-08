@@ -89,6 +89,7 @@ import { CaptionsSection, VideoCaptions, VideoDescriptions } from './CaptionsSec
 import { VideoCues } from './VideoCuesSection';
 import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
+import { MasterSection } from './MasterSection';
 import { StepsSection } from './StepsSection';
 import { blendExample } from '../lib/blend-example';
 import { BindingsSection as BindingsSectionView } from './BindingsSection';
@@ -636,6 +637,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         </Row>
       </Section>
       <VariantsSection ab={ab} project={project} />
+      <MasterSection ab={ab} project={project} />
       <TabOrderSection ab={ab} />
       <StepsSection ab={ab} project={project} />
       <JoysticksSection ab={ab} />

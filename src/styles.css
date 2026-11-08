@@ -6178,6 +6178,32 @@ code {
 .variant-name .badge {
   margin-left: 6px;
 }
+
+/* page masters: listed with a gold badge in the artboards list, and the Page master section's own lists */
+.artboard-row .badge.master-badge {
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  font-weight: 600;
+}
+.artboard-row.selected .badge.master-badge {
+  background: transparent;
+  color: var(--primary-fg);
+}
+.master-list {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.master-list .field {
+  margin: 0;
+}
+.master-list .master-count {
+  color: var(--muted);
+  font-size: 11px;
+}
 .variant-report {
   margin-top: 8px;
 }

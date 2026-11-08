@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { recordDrawnGeometry } from '../store/doc';
 import { flushSync } from 'react-dom';
-import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, isMasterId, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
+import { withMasterCached } from '../lib/page-master';
 import { canvasResolver, shownTheme } from '../lib/themes';
 import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
 import { createEditorShader, type EditorShader } from '../lib/shader-edit';
@@ -210,7 +211,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     if (!r || !started) return;
     r.setColorResolver(resolver);
     const last = lastDraw.current;
-    const sampled: SceneNode[] = timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children;
+    // The page master's layers go around the page's own (the same copies until the master changes, so a drag redraws only the page)
+    const sampled: SceneNode[] = withMasterCached(project.artboards, artboard, timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children);
     let drawn = false;
     // What got drawn (bindings, repeaters and layout applied), which the ghost layers are picked from
     let shown: SceneNode[] = sampled;
@@ -241,7 +243,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       lastDraw.current = { renderer: r, resolver, artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };
     }
     // Layers past the edge of an artboard that clips: a faint copy of just those, outside the artboard only
-    const ghost = ghostOutside && artboard.clip ? ghostLayers(shown, artboard.width, artboard.height) : null;
+    const ghost = ghostOutside && artboard.clip ? ghostLayers(shown.filter((n) => !isMasterId(n.id)), artboard.width, artboard.height) : null;
     setGhostExtent(artboard.id, ghost?.extent ?? null);
     if (ghost && ghostEl.current) {
       if (!ghostR.current) {

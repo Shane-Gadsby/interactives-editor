@@ -81,6 +81,15 @@ export function artboardMenuItems(ids: string[], gid?: string): MenuItem[] {
     disabled: tidyAll ? p.artboards.filter((a) => !a.canvasHidden).length < 2 : target.length < 2,
     onClick: () => (tidyAll ? tidyArtboardsCommand() : tidyTheseCommand(target)),
   });
+  if (!gid && boards.length === 1 && !boards[0].library) {
+    const ab = boards[0];
+    if (ab.master) items.push({ label: 'Edit master', title: 'Select the page master this page draws, to change the layers every page shares', onClick: () => s.editMasterOf(ab.id) });
+    else if (!ab.isMaster) items.push({ label: 'Make this a master', title: 'A page master holds the layers every page shares (logo, accent bar, footer). Pages that use it draw its layers under their own', onClick: () => s.markAsMaster(ab.id, true) });
+    else {
+      items.push({ label: 'Use as master for…', title: 'Choose the pages that draw this artboard as their master (in its Page master section)', onClick: () => s.set({ activeArtboardId: ab.id, artboardSelected: true, selection: [], activeTimelineId: null }) });
+      if (!p.artboards.some((x) => x.master === ab.id)) items.push({ label: 'Not a page master', onClick: () => s.markAsMaster(ab.id, false) });
+    }
+  }
   items.push({ label: 'Link colours to tokens…', title: 'Turn the plain colours on these artboards that are the same as a token\'s colour into that token, so they change with the theme', onClick: () => void linkColoursCommand(target) });
   items.push({ label: 'Duplicate', onClick: () => s.duplicateArtboards(target) });
   items.push({ label: gid ? 'Delete artboards in group' : boards.length > 1 ? 'Delete artboards' : 'Delete artboard', hint: gid ? undefined : 'Del', danger: true, onClick: () => void deleteArtboardsCommand(target) });

@@ -297,6 +297,7 @@ export function pruneInternals(draft: Project): void {
   for (;;) {
     const used = new Set<string>();
     for (const a of draft.artboards) walkNodes(a.children, (n) => void (n.type === 'instance' && used.add((n as InstanceNode).artboardId)));
+    for (const a of draft.artboards) if (a.master) used.add(a.master);
     const dead = draft.artboards.filter((a) => a.library?.internal && !used.has(a.id));
     if (!dead.length) return;
     draft.artboards = draft.artboards.filter((a) => !dead.includes(a));

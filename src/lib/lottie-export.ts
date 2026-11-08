@@ -19,6 +19,7 @@ import {
   polygonPoints,
   roundedBoxPoints,
   starPoints,
+  withMaster,
   type Artboard,
   type Easing,
   type Paint,
@@ -327,7 +328,8 @@ export function exportLottie(project: Project, artboard: Artboard, opts: { timel
     }
     if (isContainer(n)) for (const c of n.children) add(c, ind, n.name);
   };
-  for (const n of artboard.children) add(n, undefined, 'Layer');
+  // The page master's layers are drawn into the animation (flattened: a Lottie has no second artboard)
+  for (const n of withMaster(project.artboards, artboard)) add(n, undefined, 'Layer');
   // Lottie draws the first layer on top: ours were collected back to front, depth first.
   layers.reverse();
   const bg = artboard.background?.type === 'solid' ? artboard.background.color : null;

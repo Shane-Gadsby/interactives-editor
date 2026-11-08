@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent } from 'react';
-import { createNode, isContainer, nodeTypeLabel, type Artboard, type ArtboardGroup, type Project, type SceneNode } from 'interactives-player';
+import { createNode, isContainer, isMasterArtboard, masterOf, nodeTypeLabel, pagesOfMaster, type Artboard, type ArtboardGroup, type Project, type SceneNode } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { Icons, type IconName } from '../components/icons';
 import { IconButton } from '../components/ui';
@@ -345,6 +345,16 @@ export function Layers() {
         {rangeLabel(s.project.artboards, ab) && (
           <span className="badge" title={`${ab.variantOf ? 'A variant' : 'The base'} of a responsive set: shown when the page is ${rangeLabel(s.project.artboards, ab)} wide`}>
             {rangeLabel(s.project.artboards, ab)}
+          </span>
+        )}
+        {isMasterArtboard(s.project.artboards, ab) && (
+          <span className="badge master-badge" title={`A page master: its layers are drawn on ${pagesOfMaster(s.project.artboards, ab).length || 'no'} page${pagesOfMaster(s.project.artboards, ab).length === 1 ? '' : 's'}, under (and some over) their own`}>
+            master · {pagesOfMaster(s.project.artboards, ab).length}
+          </span>
+        )}
+        {masterOf(s.project.artboards, ab) && (
+          <span className="badge" title={`Draws the page master “${masterOf(s.project.artboards, ab)!.name}”. Right-click and choose Edit master to change it`}>
+            on {masterOf(s.project.artboards, ab)!.name}
           </span>
         )}
         {ab.library && (

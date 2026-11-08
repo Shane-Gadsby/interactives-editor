@@ -43,7 +43,7 @@ export const cleanArtboard = (ab) => {
 	return copy
 }
 
-//Artboards an artboard places as instances, at any depth of its layers
+//Artboards an artboard places as instances, at any depth of its layers, and the page master it draws
 export const instanceTargets = (ab) => {
 	let found = new Set(),
 		walk = (list) => {
@@ -54,6 +54,8 @@ export const instanceTargets = (ab) => {
 		}
 
 	walk(ab.children)
+
+	if (ab.master) found.add(ab.master)
 
 	return [...found]
 }
