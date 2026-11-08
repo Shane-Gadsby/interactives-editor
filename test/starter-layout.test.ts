@@ -3,16 +3,15 @@
  * in every colourway, runs each page the way the player draws it, and fails on a button over words, anything in the logo's clear
  * space, or words off the page or into the brand's own layers.
  *
- * REPORT MODE: until the template sweep has fixed what it finds, this test lists the violations (set it to a file with
- * STARTER_LAYOUT_REPORT=/path/to/report.md) and passes. Set STARTER_LAYOUT_STRICT=1 to make them fail it. The sweep ends by
- * flipping STRICT below to true.
+ * STRICT: the template sweep left every starter clean, so any strict violation fails the test. STARTER_LAYOUT_REPORT=/path/to/report.md
+ * also writes the full list; STARTER_LAYOUT_STRICT=0 turns it back into a report only, for working through a batch of changes.
  */
 import { writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { BRANDED_STARTERS, COLOURWAYS, HIGH_CONTRAST, SET_NAMES, projectFromBrandedStarter, type BrandedStarter } from '../src/lib/branded';
 import { STRICT_KINDS, checkProjectLayout, type LayoutViolation } from '../src/lib/branded/layout-check';
 
-const STRICT = process.env.STARTER_LAYOUT_STRICT === '1' || false;
+const STRICT = process.env.STARTER_LAYOUT_STRICT !== '0';
 const WAYS = [...COLOURWAYS, HIGH_CONTRAST];
 
 interface Found {
