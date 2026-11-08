@@ -5,6 +5,7 @@
  */
 import { CATALOG, type NodeDef } from 'interactives-player';
 import { rankEntries, suggest, type PropEntry } from './prop-search';
+import { nodeAka, nodeLabel, pw, technicalWording } from './plain-words';
 
 /** Other names for a node, by kind: what someone would type who doesn't know what it is called here. */
 export const NODE_SYNONYMS: Record<string, string[]> = {
@@ -92,14 +93,18 @@ export const NODE_SYNONYMS: Record<string, string[]> = {
 };
 
 /** What the scorer reads for a node: its label, other names, topic and summary. */
-export function nodeEntry(d: Pick<NodeDef, 'kind' | 'label' | 'summary' | 'group'>): PropEntry {
-  return { key: d.kind, label: d.label, tip: d.summary, section: d.group, extra: NODE_SYNONYMS[d.kind], plain: true };
+export function nodeEntry(d: Pick<NodeDef, 'kind' | 'label' | 'summary' | 'group'>, technical = technicalWording()): PropEntry {
+  // the name on screen is the label, and the other one (the technical name, or the plain one with Technical wording on) is a name it is found by too
+  const aka = nodeAka(d, technical);
+  return { key: d.kind, label: nodeLabel(d, technical), tip: pw(d.summary, technical), section: d.group, extra: [...(aka ? [aka] : []), ...(NODE_SYNONYMS[d.kind] ?? [])], plain: true };
 }
 
 const entries = new Map<string, PropEntry>();
 const entryOf = (d: NodeDef): PropEntry => {
-  let e = entries.get(d.kind);
-  if (!e) entries.set(d.kind, (e = nodeEntry(d)));
+  const technical = technicalWording();
+  const key = `${d.kind}|${technical}`;
+  let e = entries.get(key);
+  if (!e) entries.set(key, (e = nodeEntry(d, technical)));
   return e;
 };
 

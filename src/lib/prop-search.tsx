@@ -1,6 +1,7 @@
 import { createContext, useContext, useId, useLayoutEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { scoreWord, wordsOf } from '../help/search';
 import { FIELD_TIPS } from '../components/tips';
+import { queryVariants } from './plain-words';
 
 /**
  * Search in the properties panel. Every row in it (a field, or a block wrapped in PropRow) carries a `data-prop` key and is
@@ -183,6 +184,14 @@ function prepare(e: PropEntry): Prepared {
  * section's title (half) or the tip (a third). Typos and letters-in-order only count against labels and synonyms.
  */
 export function scoreEntry(query: string, entry: PropEntry): number {
+  // "artboard" finds what is worded "page" and the other way round
+  // (the other wording counts for less, so it finds what is only worded that way without crowding what the query says)
+  const [as, other] = queryVariants(query);
+  const direct = scoreOne(as, entry);
+  return other ? Math.max(direct, scoreOne(other, entry) * 0.6) : direct;
+}
+
+function scoreOne(query: string, entry: PropEntry): number {
   const qw = wordsOf(query);
   if (!qw.length) return 0;
   const p = prepare(entry);

@@ -67,6 +67,7 @@ import { nodeMenuItems } from '../lib/node-menu';
 import { GraphPalette } from './GraphPalette';
 import { stepArtboard, stepKey } from './ArtboardPicker';
 import { GraphNoteForm, GraphNoteNode, resizing as noteResizing, type GraphNoteData } from './GraphNoteNode';
+import { labelOfKind, nodeAka, nodeHeading, nodeLabel, nodeTip, plainParam, pw, optionLabel, useTechnicalWording } from '../lib/plain-words';
 import { addGraphNote, anchorOrigin, graphNotePlace, patchGraphNote, removeGraphNotes, attachGraphNote } from '../lib/graph-notes';
 
 type IxNodeData = { logic: LogicNode; summary: string };
@@ -74,6 +75,7 @@ type IxNodeData = { logic: LogicNode; summary: string };
 const CAT_COLOR: Record<string, string> = { event: 'var(--event)', action: 'var(--action)', logic: 'var(--logic)' };
 
 function IxNode({ data, selected }: NodeProps<Node<IxNodeData>>) {
+  const technical = useTechnicalWording();
   const def = CATALOG_BY_KIND[data.logic.kind];
   if (!def) return <div className="ix-graph-node unknown">Unknown node {data.logic.kind}</div>;
   return (
@@ -81,13 +83,13 @@ function IxNode({ data, selected }: NodeProps<Node<IxNodeData>>) {
       {def.hasInput && <Handle type="target" position={Position.Left} id="in" />}
       <div className="gn-head">
         <span className="gn-cat">{def.category}</span>
-        {def.label}
+        <span title={nodeTip(def, technical)}>{nodeLabel(def, technical)}</span>
       </div>
-      <div className="gn-body">{data.summary || <span className="muted">{def.summary}</span>}</div>
+      <div className="gn-body">{data.summary || <span className="muted">{pw(def.summary, technical)}</span>}</div>
       <div className="gn-outs">
         {def.outputs.map((o, i) => (
           <div key={o.id} className="gn-out" style={{ top: 34 + i * 18 }}>
-            {o.label && <span>{o.label}</span>}
+            {o.label && <span>{pw(o.label, technical)}</span>}
             <Handle type="source" position={Position.Right} id={o.id} style={{ top: 'auto', position: 'relative', transform: 'none', right: -8 }} />
           </div>
         ))}
@@ -199,7 +201,7 @@ export function summarize(n: LogicNode, ab: Artboard, project: Project): string 
     else if (p.type === 'script') text = project.scripts.find((x) => x.id === v)?.name ?? '(missing script)';
     else if (p.type === 'data') text = project.dataSources.find((x) => x.id === v)?.name ?? '(missing data)';
     else if (p.type === 'asset') text = project.assets.find((x) => x.id === v)?.name ?? '(missing sound)';
-    else if (p.type === 'select') text = p.options?.find((o) => o.value === v)?.label ?? text;
+    else if (p.type === 'select') text = pw(p.options?.find((o) => o.value === v) ? optionLabel(n.kind, p.key, p.options.find((o) => o.value === v)!) : text);
     else if (p.type === 'boolean') text = v ? p.label : '';
     else if (p.type === 'text' && n.kind === 'action.code') text = text.split('\n')[0].slice(0, 40);
     if (text) parts.push(text);
@@ -273,7 +275,7 @@ export function LogicGraph() {
                 width: note.w,
                 height: note.h,
                 zIndex: 2,
-                data: { note, detached: at.detached, hostName: host ? (CATALOG_BY_KIND[host.kind]?.label ?? host.kind) : group ? `Group: ${group.label || 'Group'}` : null } satisfies GraphNoteData,
+                data: { note, detached: at.detached, hostName: host ? labelOfKind(host.kind) : group ? `Group: ${group.label || 'Group'}` : null } satisfies GraphNoteData,
                 selected: chosen.includes(note.id),
               } as unknown as Node<IxNodeData>;
             })
@@ -751,7 +753,7 @@ export function LogicGraph() {
     if (!chosenNow().includes(id)) select([id]);
     const many = targetIds(id);
     if (many.length > 1) return selectionMenu(e, many);
-    const names = new Map(ab.logic.nodes.map((x) => [x.id, CATALOG_BY_KIND[x.kind]?.label ?? x.kind]));
+    const names = new Map(ab.logic.nodes.map((x) => [x.id, labelOfKind(x.kind)]));
     const outs = def.outputs;
     const ins = ab.logic.edges.filter((x) => x.to === id);
     const outEdges = ab.logic.edges.filter((x) => x.from === id);
@@ -770,7 +772,7 @@ export function LogicGraph() {
         : [{ label: 'No other nodes to connect to', onClick: () => undefined, disabled: true }];
     const perPort = (make: (port: string) => MenuItem[]): MenuItem[] =>
       outs.length === 1 ? make(outs[0].id) : outs.map((o) => ({ label: `From “${o.label || o.id}”`, items: make(o.id) }));
-    const items: MenuItem[] = [{ heading: def.label }];
+    const items: MenuItem[] = [{ heading: nodeLabel(def) }];
     if (outs.length) {
       items.push({ label: 'Connect to new node', items: perPort(toNew) });
       items.push({ label: 'Connect to existing node', items: perPort(toExisting) });
@@ -792,7 +794,7 @@ export function LogicGraph() {
       { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate([id]) },
       { label: 'Put in a new group', hint: 'Ctrl+G', title: 'Draw a labelled frame around this node; drag other nodes into it', onClick: () => groupAround([id]) },
       { label: 'Add note to this node', title: 'A sticky note that moves with this node. Players never see it', onClick: () => void addNoteAt({ x: n.x, y: n.y - 130 }, id) },
-      { label: 'Help for this node', onClick: () => openHelp('interaction-nodes', slug(def.label)) },
+      { label: 'Help for this node', onClick: () => openHelp('interaction-nodes', slug(nodeHeading(def))) },
       { separator: true },
       { label: 'Delete', hint: 'Del', danger: true, onClick: () => removeNodes([id]) },
     );
@@ -1025,7 +1027,7 @@ export function LogicGraph() {
 }
 
 /** The names an event node hands to the flow after it, in short: the first few, and a link to the rest in the node reference. */
-function NodeGives({ def }: { def: { label: string; gives?: string[] } }) {
+function NodeGives({ def }: { def: { kind: string; label: string; gives?: string[] } }) {
   const all = def.gives ?? [];
   const shown = all.slice(0, 4);
   const more = all.length - shown.length;
@@ -1039,7 +1041,7 @@ function NodeGives({ def }: { def: { label: string; gives?: string[] } }) {
         </span>
       ))}
       {more > 0 && (
-        <button type="button" className="link-btn" onClick={() => openHelp('interaction-nodes', slug(def.label))} aria-label={`${more} more names ${def.label} gives, in the node reference`}>
+        <button type="button" className="link-btn" onClick={() => openHelp('interaction-nodes', slug(nodeHeading(def)))} aria-label={`${more} more names ${nodeLabel(def)} gives, in the node reference`}>
           and {more} more →
         </button>
       )}
@@ -1048,6 +1050,7 @@ function NodeGives({ def }: { def: { label: string; gives?: string[] } }) {
 }
 
 function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; ab: Artboard; project: Project; onChange: (p: Record<string, unknown>) => void; onNote: (n: string) => void }) {
+  const technical = useTechnicalWording();
   const def = CATALOG_BY_KIND[node.kind];
   if (!def) return null;
   const params = { ...defaultParams(node.kind), ...node.params };
@@ -1060,7 +1063,8 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
     }
   };
   rec(ab.children, 0);
-  const field = (p: ParamDef) => {
+  const field = (p0: ParamDef) => {
+    const p = plainParam(node.kind, p0, technical);
     if (p.showIf && !p.showIf.values.includes(params[p.showIf.key])) return null;
     const v = params[p.key];
     const pick = (options: { value: string; label: string }[], empty: string, extra: { value: string; label: string }[] = [], quick: Parameters<typeof withQuickAdd>[1] = {}) => (
@@ -1123,7 +1127,7 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
         );
       }
       case 'artboard':
-        return pick(artboardChoices(project, v), 'Choose artboard…');
+        return pick(artboardChoices(project, v), 'Choose page…');
       case 'script':
         return pick(project.scripts.map((x) => ({ value: x.id, label: x.name })), project.scripts.length ? 'Choose script…' : 'No scripts yet');
       case 'asset':
@@ -1188,14 +1192,14 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
   };
   return (
     <div className="param-form">
-      <div className="param-title">{def.label}</div>
+      <div className="param-title" title={nodeAka(def) ?? undefined}>{nodeLabel(def)}</div>
       <p className="hint node-summary">
         {def.summary}
         {def.details && (
           <>
             {' '}
-            <button type="button" className="link-btn" onClick={() => openHelp('interaction-nodes', slug(def.label))} aria-label={`More about ${def.label}, in the node reference`}>
-              More about {def.label} →
+            <button type="button" className="link-btn" onClick={() => openHelp('interaction-nodes', slug(nodeHeading(def)))} aria-label={`More about ${nodeLabel(def)}, in the node reference`}>
+              More about {nodeLabel(def)} →
             </button>
           </>
         )}

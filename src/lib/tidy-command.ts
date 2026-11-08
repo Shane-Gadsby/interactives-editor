@@ -5,7 +5,7 @@ export function tidyArtboardsCommand(): void {
   const s = store();
   const mark = s.historyMark();
   const moved = s.tidyArtboards();
-  if (moved) s.toastUndo(`Tidied ${moved} ${moved === 1 ? 'artboard' : 'artboards'} into a grid, in the order of the Artboards list.`, mark);
-  else s.toast('The artboards are already tidy.', 'info');
+  if (moved) s.toastUndo(`Tidied ${moved} ${moved === 1 ? 'page' : 'pages'} into a grid, in the order of the Pages list.`, mark);
+  else s.toast('The pages are already tidy.', 'info');
   if (moved) requestAnimationFrame(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })));
 }

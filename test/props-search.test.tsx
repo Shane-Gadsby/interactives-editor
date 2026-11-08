@@ -306,7 +306,7 @@ describe('searching the properties panel', () => {
     act(() => x.s.pickArtboards([x.ids.ab, x.ids.second], x.ids.ab));
     await settle();
     await type('align');
-    expect(shown()).toContain('align-artboards');
+    expect(shown()).toContain('align-pages');
   });
   it('sorts the best section first', async () => {
     const x = scene();

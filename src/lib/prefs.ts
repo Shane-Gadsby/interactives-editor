@@ -58,6 +58,8 @@ export interface Prefs {
   showNotes: boolean;
   /** Ask "What is this a picture of?" on a picture or video as it is added (lib/alt-prompt.ts). On by default; never blocks, and skipping is remembered per project. */
   askPictureDescription: boolean;
+  /** Show the technical names (On pointer, Set variable, ...) instead of the plain wording for the interaction nodes and their choices. Off by default. */
+  technicalWording: boolean;
   /** Inspector sections the person folded or opened, by section key, only where that differs from the section's own default (lib/section-fold.ts). */
   sectionFolds?: Record<string, boolean>;
   /** Panel arrangements saved under a name (lib/workspaces.ts checks each one before using it). */
@@ -65,7 +67,7 @@ export interface Prefs {
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true };
+const DEFAULTS: Prefs = { technicalWording: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 

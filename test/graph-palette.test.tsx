@@ -1,4 +1,5 @@
 //The Interactions panel's palette: folds that are remembered, search with chips, and the artboard picker that follows the store.
+import { nodeLabel, nodeTip } from '../src/lib/plain-words';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -62,8 +63,8 @@ describe('palette filter', () => {
     expect(drag.groups.map((g) => g.category).sort()).toEqual(['action', 'event']);
     const dragEvents = filterPalette({ query: '', categories: ['event'], topics: ['Dragging'] });
     expect(dragEvents.groups.length).toBe(1);
-    const wait = filterPalette({ query: 'wait', categories: ['event'], topics: [] });
-    expect(wait.count).toBeLessThan(filterPalette({ query: 'wait', categories: [], topics: [] }).count + 1);
+    const wait = filterPalette({ query: 'timer', categories: ['event'], topics: [] });
+    expect(wait.count).toBeLessThan(filterPalette({ query: 'timer', categories: [], topics: [] }).count + 1);
     expect(filterPalette({ query: 'sound', categories: ['event'], topics: [] }).groups.every((g) => g.category === 'event')).toBe(true);
   });
   it('keeps only the hits, best first', () => {
@@ -81,7 +82,7 @@ describe('the Add and connect menu', () => {
     const items = nodeMenuItems(() => undefined);
     const leaves = items.flatMap((i) => ('items' in i ? i.items : []));
     expect(leaves.length).toBe(CATALOG.length);
-    for (const l of leaves) if ('onClick' in l) expect(l.title).toBe(CATALOG.find((d) => d.label === l.label && d.summary === l.title)?.summary);
+    for (const l of leaves) if ('onClick' in l) expect(l.title).toBe(nodeTip(CATALOG.find((d) => nodeLabel(d) === l.label)!));
     expect(rankNodes('goto')[0].kind).toBe('action.artboard');
   });
 });
@@ -182,10 +183,10 @@ describe('the panel', () => {
     expect(head.tagName).toBe('BUTTON');
     expect(head.getAttribute('aria-expanded')).toBe('true');
     expect(head.textContent).toContain('· 4');
-    expect(items()).toContain('On pointer');
+    expect(items()).toContain('When clicked or hovered');
     act(() => head.click());
     expect(fold('Pointer and keys').getAttribute('aria-expanded')).toBe('false');
-    expect(items()).not.toContain('On pointer');
+    expect(items()).not.toContain('When clicked or hovered');
     expect(fold('Pointer and keys').textContent).toContain('· 4');
     expect(loadFolds()[groupKey('event', 'Pointer and keys')]).toBe(false);
     expect(fold('Pointer and keys').getAttribute('aria-controls')).toBeTruthy();
@@ -202,12 +203,12 @@ describe('the panel', () => {
   it('a search opens every group with a hit, then puts the folds back when it is cleared', async () => {
     await mount();
     act(() => fold('Pointer and keys').click());
-    expect(items()).not.toContain('On pointer');
+    expect(items()).not.toContain('When clicked or hovered');
     type(q<HTMLInputElement>('.palette-search-input'), 'click');
-    expect(items()).toContain('On pointer');
+    expect(items()).toContain('When clicked or hovered');
     expect(host!.querySelector('.palette-status')!.textContent).toMatch(/\d+ nodes?/);
     type(q<HTMLInputElement>('.palette-search-input'), '');
-    expect(items()).not.toContain('On pointer');
+    expect(items()).not.toContain('When clicked or hovered');
     expect(fold('Pointer and keys').getAttribute('aria-expanded')).toBe('false');
   });
 
@@ -225,7 +226,7 @@ describe('the panel', () => {
     type(box, 'artbaord zzz');
     expect(host!.querySelector('.palette-status')!.textContent).toContain('No node called');
     type(box, 'artbaord');
-    expect(items()).toEqual(['Go to artboard']);
+    expect(items()).toEqual(['Go to a page']);
   });
 
   it('/ and Ctrl+F focus the search from the graph, and an artboard key steps through the artboards', async () => {
@@ -293,7 +294,7 @@ describe('the panel', () => {
     );
     act(() => s.set({ logicSelection: 'k' }));
     expect(q('.node-summary').textContent).toContain('Runs when a key is pressed or released.');
-    expect(q('.node-summary .link-btn').textContent).toContain('More about On key');
+    expect(q('.node-summary .link-btn').textContent).toContain('More about When a key is pressed');
     expect(q('.node-gives').textContent).toContain('event.key');
     expect(q('.node-gives').textContent).toContain('and 5 more');
     expect(host!.querySelector('.param-form')!.textContent).not.toContain('Keys typed into a text box');

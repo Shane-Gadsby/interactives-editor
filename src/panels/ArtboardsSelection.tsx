@@ -15,12 +15,12 @@ export function ArtboardsSelection({ ids, project }: { ids: string[]; project: P
     return <IconButton key={title} icon={<I width={16} />} title={title} onClick={fn} disabled={disabled} />;
   };
   return (
-    <Section title={`${ids.length} artboards`} id="artboards-selection" help="artboards">
+    <Section title={`${ids.length} pages`} id="artboards-selection" help="artboards">
       <p className="hint" title={names.join(', ')}>
         {names.slice(0, 4).join(', ')}
         {names.length > 4 ? ` and ${names.length - 4} more` : ''}. Drag any of their names on the canvas to move them all.
       </p>
-      <PropRow k="Align artboards" words={['align', 'distribute', 'left', 'right', 'centre', 'center', 'top', 'bottom']}>
+      <PropRow k="Align pages" words={['align', 'distribute', 'left', 'right', 'centre', 'center', 'top', 'bottom']}>
       <div className="align-bar">
         {b('alignLeft', 'Align left edges', () => st.alignArtboards(ids, 'left'))}
         {b('alignHCenter', 'Align horizontal centres', () => st.alignArtboards(ids, 'center'))}
@@ -32,20 +32,20 @@ export function ArtboardsSelection({ ids, project }: { ids: string[]; project: P
         {b('distV', 'Distribute vertically (3 or more)', () => st.distributeArtboards(ids, 'y'), ids.length < 3)}
       </div>
       </PropRow>
-      <Row k="Group artboards" words={['ungroup', 'folder', 'collect']}>
-        <button className="btn" title="Put these artboards in a named group: listed together in the Layers panel and framed on the canvas" onClick={() => void groupArtboardsCommand(ids)}>
+      <Row k="Group pages" words={['ungroup', 'folder', 'collect']}>
+        <button className="btn" title="Put these pages in a named group: listed together in the Layers panel and framed on the canvas" onClick={() => void groupArtboardsCommand(ids)}>
           Group artboards…
         </button>
-        <button className="btn" disabled={!inAGroup} title="Take these artboards out of their group" onClick={() => st.leaveArtboardGroups(ids)}>
+        <button className="btn" disabled={!inAGroup} title="Take these pages out of their group" onClick={() => st.leaveArtboardGroups(ids)}>
           Ungroup
         </button>
       </Row>
-      <Row k="Tidy up artboards" words={['grid', 'arrange', 'duplicate', 'delete', 'copy']}>
-        <button className="btn" title="Lay these artboards out in a grid among themselves" onClick={() => tidyTheseCommand(ids)}>
+      <Row k="Tidy up pages" words={['grid', 'arrange', 'duplicate', 'delete', 'copy']}>
+        <button className="btn" title="Lay these pages out in a grid among themselves" onClick={() => tidyTheseCommand(ids)}>
           Tidy up
         </button>
-        <IconButton icon={<Icons.copy />} title="Duplicate these artboards" onClick={() => st.duplicateArtboards(ids)} />
-        <IconButton icon={<Icons.trash />} title="Delete these artboards (asks first)" onClick={() => void deleteArtboardsCommand(ids)} />
+        <IconButton icon={<Icons.copy />} title="Duplicate these pages" onClick={() => st.duplicateArtboards(ids)} />
+        <IconButton icon={<Icons.trash />} title="Delete these pages (asks first)" onClick={() => void deleteArtboardsCommand(ids)} />
       </Row>
     </Section>
   );

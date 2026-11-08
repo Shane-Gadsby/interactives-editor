@@ -1,6 +1,7 @@
 import { CATALOG_BY_KIND, type NodeType } from 'interactives-player';
 import type { Tool } from '../store/store';
 import { slug } from './markdown';
+import { nodeHeading, nodeLabel } from '../lib/plain-words';
 
 /**
  * What the Help button opens: one table from "what is highlighted" to a help topic and anchor. test/help-context.test.ts
@@ -91,7 +92,7 @@ export const PROP_HELP: Record<string, HelpTarget> = {
 export const TIMELINE_KEY_HELP: HelpTarget = { to: 'timelines#adding-keyframes', label: 'Keyframes' };
 export const TIMELINE_HELP: HelpTarget = { to: 'timelines', label: 'Timeline' };
 export const GRAPH_GROUP_HELP: HelpTarget = { to: 'interactions#groups', label: 'Interaction group' };
-export const ARTBOARD_HELP: HelpTarget = { to: 'artboards', label: 'Artboard' };
+export const ARTBOARD_HELP: HelpTarget = { to: 'artboards', label: 'Page' };
 export const MASTER_HELP: HelpTarget = { to: 'page-master', label: 'Page master' };
 export const MANY_LAYERS_HELP: HelpTarget = { to: 'layers-panel', label: 'Selected layers' };
 export const GENERAL_HELP: HelpTarget = { to: 'welcome', label: 'Help' };
@@ -99,7 +100,7 @@ export const GENERAL_HELP: HelpTarget = { to: 'welcome', label: 'Help' };
 /** The help for an interaction node kind: its entry in the generated node reference. Null for a kind the catalog doesn't know. */
 export function nodeHelp(kind: string): HelpTarget | null {
   const def = CATALOG_BY_KIND[kind];
-  return def ? { to: `interaction-nodes#${slug(def.label)}`, label: `${def.label} node` } : null;
+  return def ? { to: `interaction-nodes#${slug(nodeHeading(def))}`, label: `${nodeLabel(def)} node` } : null;
 }
 
 /** Everything the button can look at, gathered by the editor from the selection, the panels and the focus. */

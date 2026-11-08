@@ -1255,7 +1255,7 @@ export class EditorStore {
     const ab = createArtboard({
       name: uniqueName(
         p.artboards.map((a) => a.name),
-        'Artboard',
+        'Page',
       ),
       canvasX: p.artboards.length ? right + 100 : 0,
       canvasY: 0,
@@ -1278,7 +1278,7 @@ export class EditorStore {
     if (!gone.size) return;
     track('doc', 'artboard-delete', { sum: { artboards: gone.size } });
     if (this.state.project.artboards.length - gone.size < 1) {
-      this.toast('A project needs at least one artboard', 'error');
+      this.toast('A project needs at least one page', 'error');
       return;
     }
     const mark = this.historyMark();

@@ -73,7 +73,7 @@ describe('node search', () => {
 
   it('suggests the nearest name when nothing matches', () => {
     expect(kinds('artbaord zzz')).toEqual([]);
-    expect(suggestNode('artbaord')).toBe('Go to artboard');
+    expect(suggestNode('artbaord')).toBe('Go to a page');
     expect(suggestNode('qqqqqq')).toBeNull();
   });
 });

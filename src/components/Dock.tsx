@@ -50,24 +50,24 @@ function CommentsBody() {
 }
 
 const PANELS: Record<PanelId, PanelDef> = {
-  layers: { label: 'Layers', help: 'layers-panel', tip: 'The artboards and the layers on them', body: () => <Layers /> },
+  layers: { label: 'Layers', help: 'layers-panel', tip: 'The pages and the layers on them', body: () => <Layers /> },
   assets: { label: 'Assets', help: 'assets', tip: 'Every file in the project: pictures, video, sound, fonts, data and design files', body: () => <Assets /> },
   icons: { label: 'Icons', help: 'icons', tip: 'The Toolbox\'s own icons (tick, bell, speech bubble, arrows and more), added as vector layers in a theme colour', body: () => <IconsPanel /> },
   libraries: { label: 'Libraries', help: 'libraries', tip: 'Share components and styles between projects', body: () => <LibrariesPanel /> },
   comments: { label: 'Comments', help: 'comments', tip: 'Review comments: notes pinned on the canvas by you and by reviewers, with replies, resolve and assignees', body: () => <CommentsBody /> },
-  inspector: { label: 'Properties', help: 'properties-panel', tip: 'The settings of the selected layers, or of the artboard and project', body: () => <Inspector /> },
+  inspector: { label: 'Properties', help: 'properties-panel', tip: 'The settings of the selected layers, or of the page and project', body: () => <Inspector /> },
   timeline: { label: 'Timeline', icon: 'timeline', help: 'timelines', tip: 'Animate properties with keyframes', tool: true, body: () => <TimelinePanel /> },
   logic: { label: 'Interactions', icon: 'logic', help: 'interactions', tip: 'Events, actions and logic as a node graph', tool: true, body: () => <LogicGraph /> },
   scripts: { label: 'Scripts', icon: 'code', help: 'scripts', tip: 'JavaScript with the ix API', tool: true, body: () => <ScriptsPanel /> },
   variables: { label: 'Variables', icon: 'variable', help: 'variables', tip: 'Named values shared by the whole project', tool: true, body: () => <VariablesPanel /> },
   data: { label: 'Data', icon: 'table', help: 'data-sources', tip: 'JSON, CSV, TSV or text from files or URLs', tool: true, body: () => <DataPanel /> },
   a11y: { label: 'Accessibility', icon: 'a11y', help: 'accessibility-checker', tip: 'Check accessibility: contrast, small text, keyboard access, names and descriptions, autoplay and flashing, with what each means and a report for sign-off', tool: true, body: () => <AccessibilityPanel /> },
-  insights: { label: 'Insights', icon: 'insights', help: 'insights', tip: 'What learners did: artboards reached, where they clicked, steps, answers to questions and your own records, as counts', tool: true, body: () => <InsightsPanel /> },
+  insights: { label: 'Insights', icon: 'insights', help: 'insights', tip: 'What learners did: pages reached, where they clicked, steps, answers to questions and your own records, as counts', tool: true, body: () => <InsightsPanel /> },
   interface: { label: 'Public interface', icon: 'plug', help: 'public-interface', tip: 'What a page that embeds this project can set, read, send and hear: variables as inputs and outputs, messages, with descriptions. Makes the reference page and TypeScript definitions', tool: true, body: () => <InterfacePanel /> },
   checklist: { label: 'Checklist', icon: 'check', help: 'templates#use-a-template', tip: 'The things to change in a project made from a template: tick them off, click one to find its layer, review before you share', tool: true, body: () => <ChecklistPanel /> },
   themes: { label: 'Themes', icon: 'themes', help: 'themes', tip: 'Colour tokens and the themes that give them values (Light, Dark, High contrast), with a contrast check per theme', tool: true, body: () => <ThemesPanel /> },
   credits: { label: 'Attributions', icon: 'credits', help: 'attributions', tip: 'Where the pictures, sounds, text and data in this project came from, and what it draws on: credits and references, linked to assets, with an optional Credits button for learners', tool: true, body: () => <CreditsPanel /> },
-  usage: { label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each artboard, asset, variable, data source, script and timeline is used, and what is unused', tool: true, body: () => <UsagePanel /> },
+  usage: { label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each page, asset, variable, data source, script and timeline is used, and what is unused', tool: true, body: () => <UsagePanel /> },
 };
 
 /** The help topic (with an optional #anchor) a panel's help opens. */

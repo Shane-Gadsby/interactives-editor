@@ -94,22 +94,22 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 ## 3. Add the event
 
 1. With the button selected, scroll the Inspector to its **Interactions** section and press **+ On click**.
-2. The bottom panel switches to the **Interactions** tab and an **On pointer** node appears. Its settings on the right say **Layer: Slide button** and **Event: Click / tap**. That reads as "when Slide button is clicked".
+2. The bottom panel switches to the **Interactions** tab and a **When clicked or hovered** node appears. Its settings on the right say **Layer: Slide button** and **Event: Click / tap**. That reads as "when Slide button is clicked".
 
-> A shortcut for later: right-click a layer, choose **Add interaction**, then **On click…**. It adds an **On pointer** node and a **Control timeline** node, already joined.
+> A shortcut for later: right-click a layer, choose **Add interaction**, then **On click…**. It adds a **When clicked or hovered** node and a **Play or stop an animation** node, already joined.
 
 ## 4. Add the action by dragging
 
-1. Find the small dot on the right edge of the **On pointer** node. That is its output.
+1. Find the small dot on the right edge of the **When clicked or hovered** node. That is its output.
 2. Drag from the dot into empty space and let go.
-3. A menu called **ADD AND CONNECT** opens. It lists only the nodes that make sense there. Choose **Action**, then **Control timeline**.
+3. A menu called **ADD AND CONNECT** opens. It lists only the nodes that make sense there. Choose **Action**, then **Play or stop an animation**.
 4. The new node appears where you let go, already connected.
 
 ![Dragging a connection into empty space: let go, pick a node, and it is added and joined for you.](help/drag-to-connect.mp4)
 
 ## 5. Choose what it does
 
-1. Click the **Control timeline** node. Its settings show on the right.
+1. Click the **Play or stop an animation** node. Its settings show on the right.
 2. Set **Timeline** to **Timeline** (the one you made), and **Do** to **Play**.
 3. Leave **Continue** on **When it finishes**. That setting decides when the *next* node would run. It matters once you chain more actions after this one.
 
@@ -119,12 +119,12 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 
 1. Press **Preview**.
 2. Click **Slide the box**. The box slides.
-3. Want it to start from the left every time you click? Set **Do** to **Restart** on the **Control timeline** node instead of **Play**.
+3. Want it to start from the left every time you click? Set **Do** to **Restart** on the **Play or stop an animation** node instead of **Play**.
 
 ## Go further
 
-- **Toggle.** Add a **Toggle** node after the event. Join its **a** output to **Control timeline: Play** and its **b** output to **Control timeline: Play in reverse**. Each click now alternates.
-- **Hover.** Use **+ On hover** in the Inspector for a hover effect. Choose **Show / hide** or **Animate property** actions.
+- **Toggle.** Add an **Alternate between two paths** node after the event. Join its **a** output to **Control timeline: Play** and its **b** output to **Control timeline: Play in reverse**. Each click now alternates.
+- **Hover.** Use **+ On hover** in the Inspector for a hover effect. Choose **Show or hide a layer** or **Animate a layer's setting** actions.
 - **Wait.** A **Wait** node pauses a flow for some milliseconds before the next node.
 - **Log.** A **Log** node writes to your browser's console, which is handy when you're not sure a flow ran. The Preview's event list also shows every event as it fires.
 
@@ -183,9 +183,9 @@ That says: if \`lit\` is true the colour is yellow, otherwise it is grey. The fi
 ## 4. Add the interaction
 
 1. Select the **Switch** button. In its **Interactions** section press **+ On click**.
-2. Drag from the **On pointer** node's output dot into empty space. Choose **Action**, then **Set variable**.
+2. Drag from the **When clicked or hovered** node's output dot into empty space. Choose **Action**, then **Change a value or counter**.
 3. In the settings, set **Variable** to **lit** and **Do** to **Toggle (boolean)**.
-4. Drag from the new node's output into empty space again. Choose **Action**, then **Set variable**.
+4. Drag from the new node's output into empty space again. Choose **Action**, then **Change a value or counter**.
 5. Set **Variable** to **taps**, **Do** to **Add**, and **Value** to \`1\`.
 
 You now have: click → flip \`lit\` → add 1 to \`taps\`.
@@ -202,13 +202,13 @@ You now have: click → flip \`lit\` → add 1 to \`taps\`.
 
 - Make a variable called \`mode\` with **Type** **Choice** and the options \`off, on, broken\`. A choice shows as a dropdown wherever you set it.
 - Bind the bulb's fill through a **Look up** converter (use **+ Convert…** under the binding): it lists every option for you to give a colour.
-- Use an **If** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **If** has a **true** and a **false** output.
+- Use a **Check a condition** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **Check a condition** has a **true** and a **false** output.
 - Tick **Remember** (under **Options**) on a variable in the Variables tab to remember its value in the visitor's browser between visits.
 
 ## What you learned
 
 - **Variables** hold state. They are shared by every artboard.
-- **Set variable** changes them. **On variable change** reacts to a change.
+- **Change a value or counter** changes them. **When a value changes** reacts to a change.
 - **Bindings** and \`{braces}\` in text show the state.
 
 **Next:** [Tutorial 4: Importing a design file](tutorial-import-design). More: [Variables](variables), [Bindings](bindings) and [Expressions](expressions).`,
@@ -308,7 +308,7 @@ Full details, including what each format does and doesn't carry over, are in [Im
 
 1. Click an empty part of the canvas, or the artboard's name, so nothing is selected. The Inspector shows **Artboard** and **Project**.
 2. Under **Project**, set **Page title** (the title of the browser tab), **Fit** (how the artboard scales to its space) and **Page background** (the colour around the artboard).
-3. Under **Artboard**, make sure the artboard people should see first is the start artboard. The button says **Start artboard** (greyed out) when it already is. If not, press **Make start artboard**.
+3. Under **Artboard**, make sure the artboard people should see first is the start artboard. The button says **Start artboard** (greyed out) when it already is. If not, press **Make start page**.
 
 ![The Project section of the Inspector: name, page title, description, fit, page background, sandbox and reduced motion.](help/project-settings.png)
 

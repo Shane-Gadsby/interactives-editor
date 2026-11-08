@@ -1237,8 +1237,8 @@ export function Canvas() {
         const ids = d.items.map((i) => i.id);
         const what = ids.length === 1 ? `“${src && locate(src, ids[0])?.node.name}”` : `${ids.length} layers`;
         void confirmDialog({
-          title: 'Move to artboard',
-          message: `Move ${what} to the artboard “${target.name}”?\n\nIts keys in this artboard's timelines are removed, and interactions here that use it will need fixing.`,
+          title: 'Move to page',
+          message: `Move ${what} to the page “${target.name}”?\n\nIts keys in this page's timelines are removed, and interactions here that use it will need fixing.`,
           confirmLabel: 'Move',
         }).then((ok) => ok && store().moveToArtboard(ids, target.id));
       }
@@ -2111,7 +2111,7 @@ export function Canvas() {
         },
         { label: 'Group', hint: 'Ctrl+G', onClick: () => s2.groupSelection() },
         //Selections are on one artboard; with several artboards picked it isn't offered
-        ...(pickedArtboardIds(s2.get()).length > 1 ? [] : [{ label: 'Fit artboard to selection', title: 'Resize the artboard to just these layers, keeping them where they are', onClick: () => s2.fitArtboardToSelection() } as MenuItem]),
+        ...(pickedArtboardIds(s2.get()).length > 1 ? [] : [{ label: 'Fit page to selection', title: 'Resize the page to just these layers, keeping them where they are', onClick: () => s2.fitArtboardToSelection() } as MenuItem]),
         ...(one && (one.type === 'group' || one.type === 'frame') ? [{ label: 'Ungroup', hint: 'Ctrl+Shift+G', onClick: () => s2.ungroupSelection() } as MenuItem] : []),
         ...(sel.length > 1
           ? [
@@ -2146,14 +2146,14 @@ export function Canvas() {
       if (!pickedArtboardIds(st).includes(hab.id)) s2.pickArtboards([hab.id]);
       const ids = pickedArtboardIds(s2.get());
       items = [
-        { heading: ids.length > 1 ? `${ids.length} artboards` : hab.name },
+        { heading: ids.length > 1 ? `${ids.length} pages` : hab.name },
         newHere(hab),
         paste,
         { separator: true },
         ...(ids.length === 1
           ? [
-              { label: 'Make start artboard', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) } as MenuItem,
-              { label: 'Zoom to artboard', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) } as MenuItem,
+              { label: 'Make start page', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) } as MenuItem,
+              { label: 'Zoom to page', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) } as MenuItem,
               artboardGridMenu(hab),
               { separator: true } as MenuItem,
             ]
@@ -2162,10 +2162,10 @@ export function Canvas() {
       ];
     } else {
       items = [
-        { label: 'New artboard here', onClick: () => s2.addArtboard({ canvasX: round(w.x), canvasY: round(w.y) }) },
+        { label: 'New page here', onClick: () => s2.addArtboard({ canvasX: round(w.x), canvasY: round(w.y) }) },
         paste,
         { separator: true },
-        { label: 'Tidy up artboards', disabled: st.project.artboards.filter((a) => !a.canvasHidden).length < 2, onClick: tidyArtboardsCommand },
+        { label: 'Tidy up pages', disabled: st.project.artboards.filter((a) => !a.canvasHidden).length < 2, onClick: tidyArtboardsCommand },
         { label: 'Zoom to fit everything', hint: 'Shift+1', onClick: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })) },
         { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: 'Shift+R', onClick: () => setPrefs({ rulers: !prefs().rulers }) },
         ...gridMenu(),

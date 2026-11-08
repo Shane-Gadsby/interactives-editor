@@ -470,7 +470,7 @@ fontsProxy.prewarm()
 
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
-const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean'},
+const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean'},
 	cleanPrefs = (p) => {
 		let out = {}
 		for (let [k, rule] of Object.entries(PREF_KEYS)) {

@@ -82,8 +82,8 @@ export function ArtboardPicker() {
         ref={btn}
         type="button"
         className={`ab-picker-btn${open ? ' open' : ''}`}
-        aria-label={`Artboard: ${current?.label ?? 'none'}`}
-        title="Which artboard's interactions to show. Alt+Up and Alt+Down step to the one before or after"
+        aria-label={`Page: ${current?.label ?? 'none'}`}
+        title="Which page's interactions to show. Alt+Up and Alt+Down step to the one before or after"
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
@@ -95,14 +95,14 @@ export function ArtboardPicker() {
           }
         }}
       >
-        <span className="ab-picker-name">{current?.name ?? 'No artboard'}</span>
+        <span className="ab-picker-name">{current?.name ?? 'No page'}</span>
         {current && <span className="ab-picker-count">{current.count}</span>}
         <Icons.chevronDown />
       </button>
       {open &&
         createPortal(
           <div ref={pop} className="search-pop ab-picker-pop" style={{ left: pos?.left ?? -9999, top: pos?.top ?? -9999, width: pos?.width }} onKeyDown={keys}>
-            {searchable && <input autoFocus className="search-pop-input" placeholder="Find an artboard…" aria-label="Find an artboard" value={q} onChange={(e) => setQ(e.target.value)} />}
+            {searchable && <input autoFocus className="search-pop-input" placeholder="Find a page…" aria-label="Find a page" value={q} onChange={(e) => setQ(e.target.value)} />}
             <div className="ab-picker-list" role="listbox" aria-label="Artboards" tabIndex={searchable ? -1 : 0} ref={(el) => (!searchable && el && document.activeElement !== el && !el.contains(document.activeElement) ? el.focus() : undefined)}>
               {shown.map((s) => (
                 <div key={s.heading ?? 'all'} role="group" aria-label={s.heading ?? 'Artboards'}>

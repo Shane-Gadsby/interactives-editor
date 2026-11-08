@@ -26,7 +26,7 @@ describe('summary on the face of a node', () => {
 
   it('Go to artboard says what it follows, and "computed" when an expression picks the target', async () => {
     const sum = await summaries();
-    expect(sum(node('a', 'action.artboard', { to: 'next', transition: 'fade', duration: 300 }))).toBe('Next artboard · Fade · 300');
+    expect(sum(node('a', 'action.artboard', { to: 'next', transition: 'fade', duration: 300 }))).toBe('Next page · Fade · 300');
     expect(sum(node('a', 'action.artboard', { to: 'back', transition: 'none', duration: 300 }))).toBe('Back (where the learner came from) · Instant · 300');
     expect(sum(node('a', 'action.artboard', { to: 'expression', expr: 'nextPage', transition: 'fade', duration: 300 }))).toBe('computed · Fade · 300');
   });
@@ -93,17 +93,17 @@ describe('settings form', () => {
 
   it('Go to artboard shows the artboard picker for a chosen one and the expression box for a computed one', async () => {
     await open(node('a', 'action.artboard', { to: 'picked', artboard: 'res' }));
-    expect(labels().join('|')).toContain('Artboard');
-    expect(labels().join('|')).not.toContain('Artboard name or id');
+    expect(labels().join('|')).toContain('Page');
+    expect(labels().join('|')).not.toContain('Page name or id');
     act(() => root!.unmount());
     host!.remove();
     await open(node('b', 'action.artboard', { to: 'expression', expr: '"Results"' }));
-    expect(labels().join('|')).toContain('Artboard name or id');
+    expect(labels().join('|')).toContain('Page name or id');
   });
 
   it('the node on the graph carries the No artboard output and the Only if on its face', async () => {
     await open(node('a', 'action.artboard', { to: 'next' }));
-    expect(host!.querySelector('.gn-out')?.parentElement?.textContent).toContain('No artboard');
-    expect(host!.querySelector('.gn-body')?.textContent).toContain('Next artboard');
+    expect(host!.querySelector('.gn-out')?.parentElement?.textContent).toContain('No page');
+    expect(host!.querySelector('.gn-body')?.textContent).toContain('Next page');
   });
 });

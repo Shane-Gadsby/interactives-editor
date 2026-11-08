@@ -907,7 +907,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
 const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'select', icon: 'select', label: 'Select', key: 'V' },
   { tool: 'hand', icon: 'hand', label: 'Hand', key: 'H / Space' },
-  { tool: 'artboard', icon: 'artboard', label: 'Artboard', key: 'A' },
+  { tool: 'artboard', icon: 'artboard', label: 'Page', key: 'A' },
   { tool: 'frame', icon: 'frame', label: 'Frame', key: 'F' },
   { tool: 'rect', icon: 'rect', label: 'Rectangle', key: 'R' },
   { tool: 'ellipse', icon: 'ellipse', label: 'Ellipse', key: 'O' },
