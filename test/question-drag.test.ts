@@ -200,23 +200,29 @@ describe('playing the drag questions', () => {
     expect(player.getVariable('q1_feedback')).toContain('3 of 4 in the right group.');
     for (const c of frame().question!.cards!) expect(live(player, byPart('catCard', c.id)[0].id).draggable?.enabled).toBe(false);
   });
-  it('categorise: all right, nothing placed asks for a drop and costs no try, and Try again puts the chips back', async () => {
+  it('categorise: nothing placed asks for a drop and costs no try; Try again puts the chips back and frees them', async () => {
     const { p, byPart, set, frame } = make('categorise');
-    set({ attempts: 2 });
+    set({ attempts: 1, shuffle: false });
     const player = play(p());
     await flush();
     await click(byPart('check')[0].id);
     expect(player.getVariable('q1_feedback')).toBe('Drag at least one item into a group first.');
     expect(player.getVariable('q1_attempts')).toBe(0);
     const d = drag(player);
-    for (const c of frame().question!.cards!) d.put(byPart('catCard', c.id)[0].id, byPart('catZone', c.group)[0].id, true);
+    const home = frame().question!.cards!.map((c) => [live(player, byPart('catCard', c.id)[0].id).x, live(player, byPart('catCard', c.id)[0].id).y]);
+    d.put(byPart('catCard', 'c1')[0].id, byPart('catZone', 'g2')[0].id, true);
     await click(byPart('check')[0].id);
-    expect(player.getVariable('q1_correct')).toBe(true);
-    expect(player.getVariable('q1_score')).toBe(1);
+    expect(player.getVariable('q1_locked')).toBe(true);
+    expect(live(player, byPart('catCard', 'c1')[0].id).draggable?.enabled).toBe(false);
     await click(byPart('reset')[0].id);
-    //a right answer is finished, so Try again is not offered; the reset node still clears it
-    const reset = p().artboards[0].logic.nodes.find((n) => n.kind === 'action.questionReset')!;
-    expect(reset).toBeTruthy();
+    expect(player.getVariable('q1_locked')).toBe(false);
+    expect(player.getVariable('q1_attempts')).toBe(0);
+    expect(d.zoneIdOf(byPart('catCard', 'c1')[0].id)).toBeNull();
+    expect(live(player, byPart('catCard', 'c1')[0].id).draggable?.enabled).toBe(true);
+    //the chips glide back
+    await new Promise((r) => setTimeout(r, 500));
+    const now = frame().question!.cards!.map((c) => [live(player, byPart('catCard', c.id)[0].id).x, live(player, byPart('catCard', c.id)[0].id).y]);
+    expect(now).toEqual(home);
   });
   it('categorise: a wrong item says its own feedback', async () => {
     const { p, byPart, set, frame } = make('categorise');
