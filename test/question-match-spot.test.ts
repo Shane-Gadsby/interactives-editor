@@ -163,7 +163,7 @@ describe('matching question: settings keep the layers in line', () => {
 });
 
 describe('hotspot question: what is built', () => {
-  it('is a picture with an area layer per option, each focusable, named and wired to its own option', () => {
+  it('is a picture with an area layer per option, each focusable and named, and one flow that picks the option by the area hit', () => {
     const { frame, byPart, p } = make('hotspot');
     expect(byPart('picture')).toHaveLength(1);
     const areas = byPart('spot');
@@ -174,10 +174,14 @@ describe('hotspot question: what is built', () => {
       expect(a.role).toBe('radio');
     }
     expect(byPart('spots')[0].role).toBe('radiogroup');
+    //one click flow on the Areas group, not one for each area
     const choose = p().artboards[0].logic.nodes.filter((n) => n.kind === 'action.questionChoose');
-    expect(choose.map((n) => n.params.option).sort()).toEqual(['0', '1', '2', '3']);
-    const clicks = p().artboards[0].logic.nodes.filter((n) => n.kind === 'event.pointer');
-    expect(clicks.map((n) => String(n.params.target)).filter((t) => ids(areas).includes(t)).sort()).toEqual(ids(areas).sort());
+    expect(choose.map((n) => n.params.option)).toEqual(['event.childIndex']);
+    const group = byPart('spotAreas')[0];
+    const clicks = p().artboards[0].logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.target === group.id);
+    expect(clicks).toHaveLength(1);
+    expect(clicks[0].params.childrenOnly).toBe(true);
+    expect(group.type === 'frame' && group.children.map((c) => c.id)).toEqual(ids(areas));
     expect(frame().question!.options.filter((o) => o.correct).map((o) => o.text)).toEqual(['Roof']);
   });
   it('has nothing for the accessibility checker to report', () => {
@@ -213,12 +217,12 @@ describe('hotspot question: settings keep the layers in line', () => {
     expect(byPart('spot', 'o5')[0].ariaLabel).toBe('Window');
     expect(val('q1_items')).toHaveLength(5);
     expect(byPart('spot')[1]).toMatchObject({ x: 333, y: 44 });
-    expect(p().artboards[0].logic.nodes.filter((n) => n.kind === 'action.questionChoose')).toHaveLength(5);
+    //a new area adds no flow: the one click flow reads the child's place
+    expect(p().artboards[0].logic.nodes.filter((n) => n.kind === 'action.questionChoose')).toHaveLength(1);
     set({ options: frame().question!.options.filter((o) => o.id !== 'o2') });
     expect(byPart('spot').map((a) => a.ariaLabel)).toEqual(['Roof', 'Tree', 'Door', 'Window']);
-    const choose = p().artboards[0].logic.nodes.filter((n) => n.kind === 'action.questionChoose');
-    expect(choose.map((n) => n.params.option).sort()).toEqual(['0', '1', '2', '3']);
-    //the click wires point at the areas that are left
+    expect(p().artboards[0].logic.nodes.filter((n) => n.kind === 'action.questionChoose')).toHaveLength(1);
+    //the click flow points at a layer that is still there
     const here = new Set<string>();
     walk(p().artboards[0].children, (n) => void here.add(n.id));
     for (const n of p().artboards[0].logic.nodes.filter((x) => x.kind === 'event.pointer')) expect(here.has(String(n.params.target))).toBe(true);
@@ -244,7 +248,8 @@ describe('hotspot question: settings keep the layers in line', () => {
     const poly = byPart('spot', 'o3')[0];
     expect(poly.type).toBe('path');
     expect(poly.type === 'path' && poly.paths[0].points.length).toBe(5);
-    expect(p().artboards[0].logic.nodes.some((n) => n.kind === 'event.pointer' && n.params.target === tree.id)).toBe(true);
+    //the area keeps its place in the Areas group, which the one click flow reads
+    expect(partsOf(questionFrames(p().artboards[0])[0]).spotAreas[0] && (partsOf(questionFrames(p().artboards[0])[0]).spotAreas[0] as { children: { id: string }[] }).children.map((c) => c.id)).toContain(tree.id);
   });
   it('Grow areas makes every area bigger by the same margin on each side, polygon points too', () => {
     const { s, abId, id, byPart } = make('hotspot');

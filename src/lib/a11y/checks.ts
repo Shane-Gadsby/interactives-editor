@@ -197,7 +197,7 @@ const KIND_OF: Record<string, PointerKind> = {
 
 interface Interactions {
   /** Layer id -> what kinds of pointer event it listens for, and what each runs. */
-  pointer: Map<string, { kinds: Set<PointerKind>; runs: Map<PointerKind, Set<string>> }>;
+  pointer: Map<string, { kinds: Set<PointerKind>; runs: Map<PointerKind, Set<string>>; /** Every event on it is "only when a child is hit": the layer itself is not what is pressed. */ children: boolean }>;
   /** What each On key event runs. */
   keys: Set<string>[];
   /** Timelines that something can pause or stop. */
@@ -233,7 +233,8 @@ function interactionsOf(ab: Artboard): Interactions {
       const kind = KIND_OF[String(ln.params.type ?? 'click')];
       if (!target || !kind) continue;
       let e = pointer.get(target);
-      if (!e) pointer.set(target, (e = { kinds: new Set(), runs: new Map() }));
+      if (!e) pointer.set(target, (e = { kinds: new Set(), runs: new Map(), children: true }));
+      if (ln.params.childrenOnly !== true) e.children = false;
       e.kinds.add(kind);
       const set = e.runs.get(kind) ?? new Set<string>();
       for (const a of reach(ab, ln.id)) set.add(a);
@@ -493,7 +494,10 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
       const target = paint.targets.get(n.id);
       const sem = semanticsOf(n);
       const native = n.type === 'button' || n.type === 'input' || n.type === 'link' || !!n.link;
-      const ptr = inter.pointer.get(n.id);
+      //A flow on a group that runs only when one of its own layers is hit is pressed through those layers: when one of them is a button, a radio and so on, that is what the keyboard and a screen reader meet
+      const rawPtr = inter.pointer.get(n.id);
+      const viaChildren = !!rawPtr?.children && isContainer(n) && n.children.some((c) => { const cs = semanticsOf(c); return cs.focusable && OPERABLE_ROLES.has(cs.role); });
+      const ptr = viaChildren ? undefined : rawPtr;
       const interactive = native || !!ptr || !!(n.draggable && n.draggable.enabled !== false);
       const hiddenNote = target && target.hidden.length ? ' It is hidden until something shows it, and was checked as it will look then.' : '';
 

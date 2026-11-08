@@ -827,7 +827,8 @@ function hotspotBody(q: Question): SceneNode {
         clip: false,
         role: isMultiple(q) ? 'region' : 'radiogroup',
         bindings: { ariaLabel: prompt },
-        children: [samplePicture(), ...areas],
+        //The areas sit in one group: a single On pointer on it (only when a child is hit) feeds Choose option the child's place, so an area added later needs no flow of its own
+        children: [samplePicture(), createNode('frame', { name: 'Areas', questionPart: 'spotAreas', width: AREA_W, height: AREA_H, fill: null, stroke: null, clip: false, children: areas })],
       }),
       text('Picks', 'spotPicks', `Selected: {${items}.filter(i => i.selected).map(i => i.text + (i.state == "correct" ? " (right)" : i.state == "wrong" ? " (wrong)" : "")).join(", ")}`, {
         fontSize: 14,
@@ -964,7 +965,12 @@ function wantedSlots(d: Project, frame: FrameNode, q: Question): Slot[] {
       if (target) out.push({ eventSlot: `drop:${g.id}:event`, actionSlot: `drop:${g.id}:action`, event: { kind: 'event.drop', params: { target, result: 'accepted' } }, action: { kind: 'action.questionDrop', params: { question: frame.id } } });
     }
   }
-  if (style === 'spot') {
+  if (style === 'spot' && parts.spotAreas?.[0]) {
+    //One flow for every area: the click lands on a child of the Areas group, whose place in it is the option
+    const target = id('spotAreas');
+    if (target) out.push({ eventSlot: 'spots:event', actionSlot: 'spots:action', event: { kind: 'event.pointer', params: { target, type: 'click', childrenOnly: true } }, action: { kind: 'action.questionChoose', params: { question: frame.id, option: 'event.childIndex' } } });
+  } else if (style === 'spot') {
+    //A question made before the Areas group: one wire for each area
     q.options.forEach((o, i) => {
       const target = partWithId(frame, 'spot', o.id)?.id;
       if (target) out.push({ eventSlot: `spot:${o.id}:event`, actionSlot: `spot:${o.id}:action`, option: String(i), event: { kind: 'event.pointer', params: { target, type: 'click' } }, action: { kind: 'action.questionChoose', params: { question: frame.id, option: String(i) } } });
@@ -1019,6 +1025,7 @@ function ensureGraph(d: Project, ab: Artboard, frame: FrameNode, q: Question): v
     if (w.actionSlot === 'start:action') ac.params.keepAnswer = !!q.keep;
     if (w.option !== undefined) ac.params.option = w.option;
     else if (w.actionSlot === 'numberKeys:action') ac.params.option = KEY_OPTION;
+    else if (w.actionSlot === 'spots:action') ac.params.option = 'event.childIndex';
     keep.add(ev.id);
     keep.add(ac.id);
     const evId = ev.id;
@@ -1196,24 +1203,31 @@ function syncPairs(frame: FrameNode, q: Question, ab: Artboard): void {
 function syncAreas(frame: FrameNode, q: Question, ab: Artboard): void {
   const spots = partsOf(frame).spots?.[0] as FrameNode | undefined;
   if (!spots) return;
+  //The areas are in their own group (one flow serves them all, by their place in it); a question from before that keeps them in the picture area
+  const holder = (partsOf(frame).spotAreas?.[0] as FrameNode | undefined) ?? spots;
   const idOf = (n: SceneNode) => /^spot:(.+)$/.exec(n.questionPart ?? '')?.[1];
   const ids = new Set(q.options.map((o) => o.id));
-  spots.children = spots.children.filter((c) => !idOf(c) || ids.has(idOf(c)!));
+  holder.children = holder.children.filter((c) => !idOf(c) || ids.has(idOf(c)!));
   const names = nodeNames(ab);
   const several = isMultiple(q);
   let fresh = 0;
   q.options.forEach((o, i) => {
-    let area = spots.children.find((c) => idOf(c) === o.id);
+    let area = holder.children.find((c) => idOf(c) === o.id);
     if (!area) {
-      area = spotArea(q, o, i, 'rect', defaultBox(spots.children.filter((c) => idOf(c)).length + fresh++));
+      area = spotArea(q, o, i, 'rect', defaultBox(holder.children.filter((c) => idOf(c)).length + fresh++));
       area.name = uniqueName(names, area.name);
-      spots.children.push(area);
+      holder.children.push(area);
     }
     reindex(area, q, i);
     area.role = several ? 'checkbox' : 'radio';
     area.ariaLabel = o.text;
     if (area.name.startsWith('Area: ')) area.name = `Area: ${o.text || i + 1}`;
   });
+  //In the options' order, which is what the flow's child place means
+  if (holder !== spots) {
+    const rank = new Map(q.options.map((o, i) => [o.id, i]));
+    holder.children.sort((x, y) => (rank.get(idOf(x) ?? '') ?? 0) - (rank.get(idOf(y) ?? '') ?? 0));
+  }
   spots.role = several ? 'region' : 'radiogroup';
 }
 
