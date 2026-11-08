@@ -256,12 +256,13 @@ export function brandedPage(ctx: BrandedCtx, title: string, opts: { kind?: PageK
   const kids: SceneNode[] = [];
   if (kind === 'content') {
     ab.background = { type: 'solid', color: L.background };
-    kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: TOP, width: width - SIDE * 2, fontSize: 30, fontWeight: 600, color: L.text, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
+    //A title that is too long for one line shrinks to fit (down to 18) instead of wrapping onto the accent bar and the content
+    kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: TOP, width: width - SIDE * 2, height: 46, autoSize: 'none', fitText: { min: 18, max: 30 }, fontSize: 30, fontWeight: 600, color: L.text, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
     //The footer line sits level with the middle of the logo
     kids.push(createNode('text', { name: 'Footer text', text: opts.footer ?? '', x: width / 2, y: round1(height - LOGO_BOTTOM - logoHeight(80) / 2 - 8), width: width / 2 - SIDE, fontSize: 12, color: L.muted, align: 'right', fontFamily: BRAND_FONT } as Partial<TextNode>));
   } else if (kind === 'section') {
     ab.background = { type: 'solid', color: L.deep };
-    kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 60, width: width - SIDE * 2, fontSize: 44, fontWeight: 700, color: L.onDeep, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
+    kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 60, width: width - SIDE * 2, height: 76, autoSize: 'none', fitText: { min: 24, max: 44 }, fontSize: 44, fontWeight: 700, color: L.onDeep, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
   } else {
     ab.background = gradient(ctx);
     if (kind === 'hero') {
@@ -270,7 +271,7 @@ export function brandedPage(ctx: BrandedCtx, title: string, opts: { kind?: PageK
       kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height * 0.42 - (lines - 1) * 58, width: width * 0.7, fontSize: 48, fontWeight: 700, color: L.onGradient, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
       if (opts.subtitle !== undefined) kids.push(createNode('text', { name: 'Subtitle', text: opts.subtitle, x: SIDE, y: height * 0.42 + 72, width: width * 0.6, fontSize: 20, color: L.onGradient, fontFamily: BRAND_FONT } as Partial<TextNode>));
     } else {
-      kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 30, width: width - SIDE * 2, fontSize: 40, fontWeight: 700, color: L.onGradient, align: 'center', role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
+      kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 30, width: width - SIDE * 2, height: 52, autoSize: 'none', fitText: { min: 20, max: 40 }, fontSize: 40, fontWeight: 700, color: L.onGradient, align: 'center', role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
     }
   }
   ab.master = masterFor(ctx, kind, width, height).id;
