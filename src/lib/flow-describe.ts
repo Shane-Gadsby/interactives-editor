@@ -1,5 +1,6 @@
 import { ANIMATABLE_PROPS, CATALOG_BY_KIND, defaultParams, walk, type Artboard, type LogicEdge, type LogicNode, type Project } from 'interactives-player';
 import { conditionWords } from './condition';
+import { nodeLabel, optionLabel, pw } from './plain-words';
 
 /**
  * The flow description: what an interaction graph does, as plain sentences. One model for the three things that need it: the
@@ -333,9 +334,11 @@ function fallback(n: LogicNode, c: Names, event = false): string {
       case 'asset':
         text = c.asset(v);
         break;
-      case 'select':
-        text = d.options?.find((o) => o.value === v)?.label ?? String(v);
+      case 'select': {
+        const o = d.options?.find((x) => x.value === v);
+        text = o ? pw(optionLabel(n.kind, d.key, o)) : String(v);
         break;
+      }
       case 'expr':
         text = val(v);
         break;
@@ -351,7 +354,8 @@ function fallback(n: LogicNode, c: Names, event = false): string {
     if (text) parts.push(text);
     if (parts.length >= 3) break;
   }
-  const name = event ? def.label : lowerFirst(def.label);
+  const label = nodeLabel(def);
+  const name = event ? label : lowerFirst(label);
   return parts.length ? `${name} (${parts.join(', ')})` : name;
 }
 

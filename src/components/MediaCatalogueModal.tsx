@@ -5,6 +5,7 @@ import { store } from '../store/store';
 import { assetUrls, imageSize } from '../lib/assets';
 import { catalogueUrl, parseCatalogueMessage, type CataloguePick } from '../lib/media-catalogue';
 import { track } from '../lib/analytics';
+import { askAboutPictures } from '../lib/alt-prompt';
 import { IconButton } from './ui';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
@@ -28,6 +29,8 @@ export async function addCataloguePhoto(pick: CataloguePick): Promise<void> {
   const h = Math.round(size.height * scale);
   const node = createNode('image', { name: pick.name, assetId: asset.id, x: Math.round(ab.width / 2 - w / 2), y: Math.round(ab.height / 2 - h / 2), width: w, height: h });
   st.addNodes([node], { artboardId: ab.id });
+  // the catalogue's own description of the photo, when it has one, is the hint
+  askAboutPictures(st.get().project.id, [{ node, hint: pick.alt || undefined }]);
   track('import', 'ok', { thing: 'media-catalogue', detail: { as: 'link' } });
 }
 

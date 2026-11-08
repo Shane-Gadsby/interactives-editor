@@ -21,7 +21,7 @@ const CATS: { id: Cat; label: string; tip: string }[] = [
 const KIND_LABEL: Record<string, string> = { artboard: 'artboard', asset: 'asset', variable: 'variable', data: 'data source', script: 'script', timeline: 'timeline', layer: 'layer' };
 
 /** Short text for who is using something. */
-function sourceLabel(s: UsageSource, multi: boolean): { kind: string; name: string; where: string } {
+export function sourceLabel(s: UsageSource, multi: boolean): { kind: string; name: string; where: string } {
   const where = 'artboardName' in s && multi ? s.artboardName : '';
   switch (s.type) {
     case 'layer':
@@ -48,7 +48,7 @@ function sourceLabel(s: UsageSource, multi: boolean): { kind: string; name: stri
 }
 
 /** Jump to where a source lives: select the layer or artboard, or open the tab that edits it. */
-function go(s: UsageSource): boolean {
+export function go(s: UsageSource): boolean {
   const st = store();
   switch (s.type) {
     case 'layer':

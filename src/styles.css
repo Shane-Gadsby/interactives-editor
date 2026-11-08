@@ -3831,22 +3831,79 @@ button.twisty:hover {
   padding: 3px 6px;
   vertical-align: top;
 }
-/* Remember and delete sit level with the first box of their row, in columns of their own width */
+/* delete sits level with the first box of its row, in a column of its own width */
 .var-table th:nth-child(4),
 .var-table td:nth-child(4) {
-  width: 84px;
-  text-align: center;
-}
-.var-table th:nth-child(5),
-.var-table td:nth-child(5) {
   width: 36px;
 }
-.var-table td:nth-child(4) .check-field,
-.var-table td:nth-child(5) .icon-btn {
+.var-table td:nth-child(4) .icon-btn {
   height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+.var-used {
+  margin-top: 2px;
+}
+.var-used .link-btn {
+  font-size: 12px;
+}
+.var-places {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+}
+.var-options {
+  margin-top: 6px;
+}
+.var-options summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.var-options .hint {
+  margin: 0 0 4px 22px;
+}
+.var-add {
+  display: block;
+}
+.var-add-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px;
+  max-width: 900px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+}
+.var-add-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.var-add-item span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.var-add-item:hover,
+.var-add-item:focus-visible {
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.var-add-item:hover span,
+.var-add-item:focus-visible span {
+  color: inherit;
 }
 
 /* ---------------------------------------------------------------- modal, toast */
@@ -10444,6 +10501,251 @@ button.flow-text:focus-visible {
   padding: 0;
   list-style: none;
 }
+/* ---------------------------------------------------------------- pivot (a 3x3 picker and two percents) */
+.prop-row.pivot-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.pivot-row .li-picker-field {
+  flex: none;
+}
+.pivot-nums {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------- a message with an Undo or Redo button */
+.toast.with-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(640px, calc(100vw - 32px));
+}
+.toast-action {
+  flex: none;
+  padding: 3px 12px;
+  border: 1px solid var(--primary-bg);
+  border-radius: 5px;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toast-action:disabled {
+  background: transparent;
+  border-color: var(--line-2);
+  color: var(--muted);
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------- "What is this a picture of?" on a layer just added */
+.alt-prompt {
+  margin: 8px 10px;
+  padding: 10px;
+  border: 1px solid var(--primary-bg);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+.alt-prompt-q {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.alt-prompt .hint {
+  margin: 0 0 6px;
+}
+.alt-prompt-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.alt-prompt-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.alt-prompt-actions button {
+  padding: 3px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.alt-prompt-actions button:hover {
+  background: var(--panel);
+}
+.alt-prompt-actions .alt-prompt-save {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+  font-weight: 600;
+}
+.alt-prompt-actions .alt-prompt-save:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------- crop mode on the canvas */
+.crop-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  cursor: grab;
+  outline: none;
+}
+.crop-layer:active {
+  cursor: grabbing;
+}
+.crop-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.crop-frame polygon {
+  fill: none;
+  stroke: var(--primary-bg);
+  stroke-width: 2;
+}
+.crop-frame rect {
+  fill: var(--primary-bg);
+  stroke: var(--primary-fg);
+  stroke-width: 1;
+  pointer-events: all;
+  cursor: nwse-resize;
+}
+.crop-layer:focus-visible .crop-frame polygon {
+  stroke-dasharray: 6 3;
+}
+.crop-bar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
+  cursor: default;
+  white-space: nowrap;
+}
+.crop-bar button {
+  padding: 2px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.crop-bar button:hover:not(:disabled) {
+  background: var(--panel);
+}
+.crop-bar button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.crop-bar .crop-done {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+  font-weight: 600;
+}
+.crop-zoom {
+  min-width: 3.2em;
+  text-align: right;
+  color: var(--muted);
+}
+.crop-buttons {
+  display: flex;
+  gap: 6px;
+}
+.crop-buttons button {
+  padding: 3px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.crop-buttons button:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+.crop-buttons button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------- the Icons tab */
+.icons-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+}
+.icons-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.icons-search {
+  width: 100%;
+  box-sizing: border-box;
+}
+.icons-colours {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.icons-dot {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.icons-dot.on {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 2px;
+}
+.icons-theme {
+  padding: 2px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.icons-theme.on {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.icons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 .gs-job {
   display: inline-flex;
   align-items: center;
@@ -10759,4 +11061,35 @@ button.flow-text:focus-visible {
 .share-check-line .link-btn {
   color: inherit;
   text-decoration: underline;
+.icons-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  text-align: center;
+  cursor: pointer;
+}
+.icons-item:hover,
+.icons-item:focus-visible {
+  border-color: var(--primary-bg);
+}
+
+/* the icons are drawn for a light page (a near-black glyph), so they are shown on one */
+.icons-preview {
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+  background: #ffffff;
+}
+.var-table th:nth-child(2),
+.var-table td:nth-child(2) {
+  width: 210px;
 }

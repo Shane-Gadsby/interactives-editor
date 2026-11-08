@@ -71,6 +71,7 @@ const NEW_LAYERS: { type: NodeType; label: string; words: string }[] = [
 export const PANEL_NAMES: Record<PanelId, { label: string; words: string }> = {
   layers: { label: 'Layers', words: 'pages artboards list' },
   assets: { label: 'Assets', words: 'files pictures images sounds media' },
+  icons: { label: 'Icons', words: 'toolbox symbols tick bell arrows vector' },
   libraries: { label: 'Libraries', words: 'components styles share' },
   comments: { label: 'Comments', words: 'review feedback notes' },
   inspector: { label: 'Properties', words: 'inspector settings' },

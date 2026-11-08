@@ -85,12 +85,14 @@ export function DialogSection({ node, ab, project }: { node: FrameNode; ab: Artb
             <Row>
               <ColorField tokens label="Colour" value={scrim.color} onChange={(c) => update({ scrim: { ...scrim, color: c } })} onCommit={() => store().commit()} />
               <NumberField
-                label="α"
-                title="How strong the scrim is (0 to 1)"
+                label="Opacity"
+                title="How strong the scrim is, as a percent"
                 value={scrim.opacity ?? 1}
-                step={0.05}
+                scale={100}
+                suffix="%"
+                step={5}
                 min={0}
-                max={1}
+                max={100}
                 onChange={(v) => update({ scrim: { ...scrim, opacity: Math.min(1, Math.max(0, v)) } })}
               />
             </Row>

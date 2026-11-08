@@ -77,7 +77,7 @@ export function FirstRun({ folder, onBlank, onMade, onBrowse }: { folder: string
           })}
           <button type="button" className="fr-goal fr-blank" disabled={busy} onClick={() => void blank()}>
             <strong>Start from nothing</strong>
-            <span>One empty artboard to draw on.</span>
+            <span>One empty page to draw on.</span>
           </button>
         </div>
         {error && (

@@ -67,7 +67,11 @@ export function applyGift(d: Project, parse: GiftParse, activeId?: string | null
 }
 
 //importers.ts has the same one, but it drags the exporter (and the built player) in, which a unit test of this file does not want
-const showReport = (title: string, lines: string[]) => (lines.length ? store().set({ report: { title, lines } }) : store().toast(title));
+const showReport = (title: string, lines: string[], mark?: number) => {
+  const s = store();
+  if (mark !== undefined) lines.length ? s.setReportUndo(title, lines, mark) : s.toastUndo(title, mark);
+  else lines.length ? s.set({ report: { title, lines } }) : s.toast(title);
+};
 
 /**
  * Put a parse into the open project (on artboards, as kit questions) and say what happened. Shared by the GIFT file command and
@@ -82,6 +86,7 @@ export function addParsed(parse: GiftParse, source: string, thing: string): numb
     return 0;
   }
   let applied: GiftApplied = { artboardIds: [], left: [] };
+  const mark = s.historyMark();
   s.update((d) => void (applied = applyGift(d as Project, parse, s.get().activeArtboardId)));
   track('feature', 'question-import', { thing });
   if (applied.left.length) lines.push(`Only the first ${MAX_IMPORT} questions were added. ${applied.left.length} more were not. Add the rest separately.`);
@@ -90,7 +95,7 @@ export function addParsed(parse: GiftParse, source: string, thing: string): numb
     s.set({ activeArtboardId: first, artboardSelected: true, selection: [] });
   }
   const n = applied.artboardIds.length;
-  showReport(`Imported ${n} question${n === 1 ? '' : 's'} from ${source}${parse.skipped.length ? `, ${parse.skipped.length} left out` : ''}`, lines);
+  showReport(`Imported ${n} question${n === 1 ? '' : 's'} from ${source}${parse.skipped.length ? `, ${parse.skipped.length} left out` : ''}`, lines, mark);
   return n;
 }
 

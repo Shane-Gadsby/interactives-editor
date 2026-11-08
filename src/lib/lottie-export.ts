@@ -312,6 +312,7 @@ export function exportLottie(project: Project, artboard: Artboard, opts: { timel
         ctx.assets.push({ id, w: Math.round(n.width), h: Math.round(n.height), u: '', p: `data:${ctx.mimeFor(n.assetId!)};base64,${btoa(bin)}`, e: 1 });
         layer = { ty: 2, refId: id };
         if (n.fit !== 'fill') ctx.warnings.add(`Image "${n.name}" is stretched to its box in Lottie`);
+        if (n.crop && (n.crop.zoom !== 1 || n.crop.x !== 0 || n.crop.y !== 0)) ctx.warnings.add(`Image "${n.name}" is cropped in the player; Lottie has no clipped picture, so it shows the whole picture in the box`);
       } else ctx.warnings.add(`Image "${n.name}" has no file and was skipped`);
     } else if (isContainer(n)) layer = { ty: 3 };
     else if (n.type === 'connector') ctx.warnings.add(`Connectors ("${n.name}") follow other layers at runtime and are left out of Lottie`);

@@ -49,7 +49,7 @@ describe('adding a node to the interaction graph', () => {
   it('takes the node back in one undo from the graph, and keeps focus in the graph after a menu pick', async () => {
     const s = await mount();
     const canvas = host!.querySelector('.logic-canvas') as HTMLElement;
-    pick('On start');
+    pick('When the page is shown');
     expect(s.artboard()!.logic.nodes).toHaveLength(1);
     await act(async () => void (await new Promise((r) => setTimeout(r, 5))));
     expect(document.activeElement).toBe(canvas);
@@ -62,7 +62,7 @@ describe('adding a node to the interaction graph', () => {
     const field = document.createElement('input');
     document.body.appendChild(field);
     //The menu's search box has focus while it's open, so the person reaches their field after the pick, before the graph takes focus back
-    pick('On start');
+    pick('When the page is shown');
     field.focus();
     expect(s.artboard()!.logic.nodes).toHaveLength(1);
     await act(async () => void (await new Promise((r) => setTimeout(r, 5))));
@@ -93,7 +93,7 @@ describe('adding a node to the interaction graph', () => {
   it('copies and pastes the selected node with the keyboard, without touching the artboard', async () => {
     const s = await mount();
     const canvas = host!.querySelector('.logic-canvas') as HTMLElement;
-    pick('On start');
+    pick('When the page is shown');
     await act(async () => void (await new Promise((r) => setTimeout(r, 5))));
     act(() => void canvas.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'c', ctrlKey: true })));
     const paste = new Event('paste', { bubbles: true, cancelable: true }) as Event & { clipboardData: { getData: () => string } };
@@ -114,7 +114,7 @@ describe('adding a node to the interaction graph', () => {
 
   /** A group from the pane menu, with the On start node inside it, selected and ready for Delete. */
   async function groupWithNode(s: EditorStore) {
-    pick('On start');
+    pick('When the page is shown');
     await act(async () => void (await new Promise((r) => setTimeout(r, 5))));
     const pane = host!.querySelector('.react-flow__pane') as HTMLElement;
     act(() => void pane.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 })));

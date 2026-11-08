@@ -105,12 +105,12 @@ describe('Usage checker', () => {
     const report = analyzeUsage(p);
     const bad = report.missing.filter((m) => m.problem);
     expect(bad.map((m) => [m.by.type, m.ref, m.how]).sort()).toEqual([
-      ['logic', 'b', 'Reset variables'],
-      ['logic', 'b', 'Set variable'],
+      ['logic', 'b', 'Change a value or counter'],
+      ['logic', 'b', 'Put values back to the start'],
       ['project', 'p', 'live formula'],
     ]);
     //Reset variables counts as a use of the variables it lists
-    expect(report.variables.find((v) => v.id === 'va')!.usedBy.map((u) => u.how)).toContain('Reset variables');
+    expect(report.variables.find((v) => v.id === 'va')!.usedBy.map((u) => u.how)).toContain('Put values back to the start');
   });
 });
 

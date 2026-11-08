@@ -271,7 +271,7 @@ describe('searching the properties panel', () => {
     act(() => {
       input.focus();
       const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      set.call(input, '0.5');
+      set.call(input, '50');
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       input.blur();
@@ -295,8 +295,9 @@ describe('searching the properties panel', () => {
     x.s.set({ activeArtboardId: x.ids.ab, selection: [], artboardSelected: true });
     render();
     await type('page title');
-    expect(shown()).toEqual(['page-title']);
-    expect(sections()).toEqual(['Project']);
+    // the Page section's own Name row (a page's title) comes up with it now that the section says Page
+    expect(shown()).toEqual(expect.arrayContaining(['page-title']));
+    expect(sections()).toContain('Project');
     await type('preset');
     expect(shown()).toContain('preset');
     act(() => x.s.select([x.ids.rect, x.ids.ellipse]));
@@ -306,7 +307,7 @@ describe('searching the properties panel', () => {
     act(() => x.s.pickArtboards([x.ids.ab, x.ids.second], x.ids.ab));
     await settle();
     await type('align');
-    expect(shown()).toContain('align-artboards');
+    expect(shown()).toContain('align-pages');
   });
   it('sorts the best section first', async () => {
     const x = scene();

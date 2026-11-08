@@ -3,6 +3,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
+import { ToastView } from './components/ToastView';
+import { canCrop } from './lib/crop';
 import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
@@ -374,7 +376,8 @@ function useShortcuts() {
         return;
       }
       if (k === 'escape') {
-        if (st.editingTextId) s.set({ editingTextId: null });
+        if (st.croppingId) s.set({ croppingId: null });
+        else if (st.editingTextId) s.set({ editingTextId: null });
         else if (st.focusId) s.set({ selection: [st.focusId], focusId: null }); else if (st.selection.length || st.artboardSelected) s.set({ selection: [], artboardSelected: false });
         else s.set({ tool: 'select' });
         return;
@@ -384,6 +387,7 @@ function useShortcuts() {
         if (n?.type === 'group' || n?.type === 'frame') s.set({ focusId: n.id, selection: n.children.map((c) => c.id).slice(-1) });
         else if (n?.type === 'path') s.set({ editingPathId: n.id });
         else if (n?.type === 'text' || n?.type === 'button' || n?.type === 'link') s.set({ editingTextId: n.id });
+        else if (n?.type === 'image' && canCrop(n)) s.set({ croppingId: n.id });
         return;
       }
       if (e.altKey && !mod && k.startsWith('arrow') && st.selection.length === 1) {
@@ -640,8 +644,8 @@ function Workspace({ home }: { home: () => void }) {
       <DockDragLayer />
       {preview && <PreviewModal onClose={() => setPreview(false)} />}
       <CommandPalette />
-      {s.toast && <div className={`toast ${s.toast.kind}`}>{s.toast.text}</div>}
-      {s.report && <ReportModal title={s.report.title} lines={s.report.lines} />}
+      {s.toast && <ToastView toast={s.toast} />}
+      {s.report && <ReportModal title={s.report.title} lines={s.report.lines} undo={!!s.report.undo} />}
     </div>
   );
 }
@@ -934,7 +938,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
 const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'select', icon: 'select', label: 'Select', key: 'V' },
   { tool: 'hand', icon: 'hand', label: 'Hand', key: 'H / Space' },
-  { tool: 'artboard', icon: 'artboard', label: 'Artboard', key: 'A' },
+  { tool: 'artboard', icon: 'artboard', label: 'Page', key: 'A' },
   { tool: 'frame', icon: 'frame', label: 'Frame', key: 'F' },
   { tool: 'rect', icon: 'rect', label: 'Rectangle', key: 'R' },
   { tool: 'ellipse', icon: 'ellipse', label: 'Ellipse', key: 'O' },
@@ -1654,7 +1658,7 @@ const SIMULATED_MOODLE: Record<string, string> = {
   '--bs-secondary-color': '#495057',
 };
 
-function ReportModal({ title, lines }: { title: string; lines: string[] }) {
+function ReportModal({ title, lines, undo }: { title: string; lines: string[]; undo?: boolean }) {
   const close = () => store().set({ report: null });
   // Like the other dialogs, Escape closes it
   useEffect(() => {
@@ -1668,6 +1672,11 @@ function ReportModal({ title, lines }: { title: string; lines: string[] }) {
         <header>
           <strong>{title}</strong>
           <div className="spacer" />
+          {undo && (
+            <button type="button" className="toast-action" title="Take the whole thing back, as one undo step (Ctrl+Z does the same)" onClick={() => store().undoReport()}>
+              Undo
+            </button>
+          )}
           <IconButton icon={<Icons.close />} title="Close" onClick={close} />
         </header>
         <div className="report-body">

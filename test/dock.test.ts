@@ -6,7 +6,7 @@ const everywhere = (l: ReturnType<typeof defaultLayout>) => [...Object.values(l.
 describe('dock layout', () => {
   it('starts with layers on the left, properties on the right and the tool panels at the bottom, each panel once', () => {
     const l = defaultLayout();
-    expect(l.zones.left.tabs).toEqual(['layers', 'assets', 'libraries', 'comments']);
+    expect(l.zones.left.tabs).toEqual(['layers', 'assets', 'icons', 'libraries', 'comments']);
     expect(l.zones.right.tabs).toEqual(['inspector']);
     expect(l.zones.bottom.tabs[0]).toBe('timeline');
     expect(everywhere(l).sort()).toEqual([...ALL_PANELS].sort());
@@ -26,8 +26,8 @@ describe('dock layout', () => {
 
   it('reorders within an area, counting the index without the moved tab', () => {
     let l = defaultLayout();
-    l = movePanel(l, 'layers', { zone: 'left', index: 3 });
-    expect(l.zones.left.tabs).toEqual(['assets', 'libraries', 'layers', 'comments']);
+    l = movePanel(l, 'layers', { zone: 'left', index: 4 });
+    expect(l.zones.left.tabs).toEqual(['assets', 'icons', 'libraries', 'layers', 'comments']);
   });
 
   it('floats a panel in a new window, docks another into it, and closing it sends both home', () => {

@@ -87,6 +87,10 @@ import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
 import { ChildOrder } from '../components/ChildOrder';
 import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
 import { GridAlignFields } from '../components/GridAlignFields';
+import { PivotFields } from '../components/PivotFields';
+import { AltPromptCard } from './AltPromptCard';
+import { CropFields } from '../components/CropFields';
+import { canCrop } from '../lib/crop';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
 import { OptimiseOutputFields } from './OptimiseOutput';
@@ -213,13 +217,13 @@ export function KeyButton({ node, prop, ids }: { node: SceneNode; prop: string; 
   );
 }
 
-export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string }) {
+export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title, scale }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string; scale?: number }) {
   const shown = useShown(node);
   const set = useSetter(ids);
   const v = Number(shown(prop) ?? fallback);
   return (
     <div className="keyed">
-      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
+      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} scale={scale} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
       <KeyButton node={node} prop={prop} ids={ids} />
     </div>
   );
@@ -230,7 +234,7 @@ export function Num({ node, ids, prop, label, step, min, max, suffix, fallback =
  * ratio they had, for each selected layer. The chain is saved on the layer (`lockKey`), and the canvas's resize handles
  * keep the ratio of a layer with lockRatio on as well.
  */
-export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min }: { node: SceneNode; ids: string[]; a: string; b: string; labelA: string; labelB: string; lockKey: 'lockRatio' | 'lockScale'; step?: number; min?: number }) {
+export function LinkedPair({ node, ids, a, b, labelA, labelB, titleA, titleB, lockKey, step, min, scale, suffix }: { node: SceneNode; ids: string[]; a: string; b: string; labelA: string; labelB: string; titleA?: string; titleB?: string; lockKey: 'lockRatio' | 'lockScale'; step?: number; min?: number; scale?: number; suffix?: string }) {
   const shown = useShown(node);
   const locked = !!node[lockKey];
   const set = useSetter(ids);
@@ -249,11 +253,11 @@ export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min
     }
     store().setEach(changes, `insp-${a}${b}-${ids.join(',')}`);
   };
-  const what = lockKey === 'lockRatio' ? 'width and height' : 'horizontal and vertical scale';
+  const what = lockKey === 'lockRatio' ? 'width and height' : 'width and height scale';
   return (
     <Row className="linked-pair">
       <div className="keyed">
-        <NumberField label={labelA} value={Number(shown(a) ?? 0)} step={step} min={min} onChange={(x) => change(a, b, x)} onCommit={() => store().commit()} />
+        <NumberField label={labelA} title={titleA} value={Number(shown(a) ?? 0)} step={step} min={min} scale={scale} suffix={suffix} onChange={(x) => change(a, b, x)} onCommit={() => store().commit()} />
         <KeyButton node={node} prop={a} ids={ids} />
       </div>
       <button
@@ -267,7 +271,7 @@ export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min
         {locked ? <Icons.link width={13} /> : <Icons.unlink width={13} />}
       </button>
       <div className="keyed">
-        <NumberField label={labelB} value={Number(shown(b) ?? 0)} step={step} min={min} onChange={(x) => change(b, a, x)} onCommit={() => store().commit()} />
+        <NumberField label={labelB} title={titleB} value={Number(shown(b) ?? 0)} step={step} min={min} scale={scale} suffix={suffix} onChange={(x) => change(b, a, x)} onCommit={() => store().commit()} />
         <KeyButton node={node} prop={b} ids={ids} />
       </div>
     </Row>
@@ -567,7 +571,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
     <>
       {ab.source?.linkId && <LinkedFileSection ab={ab} />}
       {ab.library && <LibraryArtboardSection ab={ab} project={project} />}
-      <Section help="artboards" title="Artboard">
+      <Section id="Artboard" help="artboards" title="Page">
         <TextField label="Name" value={ab.name} onChange={(v) => setAb((a) => (a.name = v), `ab-name-${ab.id}`)} />
         <Row className="linked-pair">
           <NumberField
@@ -585,7 +589,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             type="button"
             className={`lock-toggle link-toggle${ab.lockRatio ? ' on' : ''}`}
             aria-pressed={!!ab.lockRatio}
-            aria-label={ab.lockRatio ? "Unlink the artboard's width and height" : "Link the artboard's width and height"}
+            aria-label={ab.lockRatio ? "Unlink the page's width and height" : "Link the page's width and height"}
             title={ab.lockRatio ? 'Linked: changing one changes the other, keeping the ratio. Click to change them separately' : 'Link width and height: changing one changes the other, keeping the ratio'}
             onClick={() => setAb((a) => void (a.lockRatio ? delete a.lockRatio : (a.lockRatio = true)))}
           >
@@ -628,11 +632,11 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <div className="field-label block">Background</div>
         <PaintField paint={ab.background} project={project} box={{ w: ab.width, h: ab.height }} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
         </PropRow>
-        <CheckField label="Clip content to artboard" title="Preview and exports cut off whatever hangs outside the artboard. On the canvas it still shows faintly there (Preferences: Show layers outside clipped artboards)" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
+        <CheckField label="Clip content to page" title="Preview and exports cut off whatever hangs outside the page. On the canvas it still shows faintly there (Preferences: Show layers outside clipped artboards)" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
         {project.settings.library && !ab.library && (
           <CheckField
             label="Publish to library"
-            title="Offer this artboard as a component to projects that use this library. Publish from the Libraries tab"
+            title="Offer this page as a component to projects that use this library. Publish from the Libraries tab"
             value={!!ab.publish}
             onChange={(v) => setAb((a) => (v ? (a.publish = true) : delete a.publish))}
           />
@@ -640,7 +644,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         {project.settings.library && !ab.library && ab.publish && (
           <SelectField
             label="Brand kit start"
-            title="If this library is published as a brand kit: place this component in the first artboard of every project that starts from the kit (Add with starter items in the Libraries tab), at this spot"
+            title="If this library is published as a brand kit: place this component in the first page of every project that starts from the kit (Add with starter items in the Libraries tab), at this spot"
             value={ab.brandPlace ?? ''}
             options={[
               { value: '', label: 'Not placed' },
@@ -655,16 +659,16 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             onChange={(v) => setAb((a) => (v ? (a.brandPlace = v as BrandPlace) : delete a.brandPlace))}
           />
         )}
-        <Row k="Start artboard" words={['make start artboard', 'first page', 'home page', 'entry', 'duplicate artboard', 'copy', 'clone']}>
+        <Row k="Start page" words={['make start page', 'start artboard', 'first page', 'home page', 'entry', 'duplicate page', 'duplicate artboard', 'copy', 'clone']}>
           <button className="btn" disabled={project.settings.startArtboardId === ab.id} onClick={() => setProject((p) => (p.settings.startArtboardId = ab.id))}>
-            {project.settings.startArtboardId === ab.id ? 'Start artboard' : 'Make start artboard'}
+            {project.settings.startArtboardId === ab.id ? 'Start page' : 'Make start page'}
           </button>
-          <IconButton icon={<Icons.copy />} title="Duplicate artboard" onClick={() => store().duplicateArtboard(ab.id)} />
+          <IconButton icon={<Icons.copy />} title="Duplicate page" onClick={() => store().duplicateArtboard(ab.id)} />
         </Row>
         <Row>
           <SelectField
             label="Use in"
-            title="Place this artboard as an instance inside another artboard"
+            title="Place this page as an instance inside another page"
             value=""
             options={[{ value: '', label: 'Instance in…' }, ...project.artboards.filter((a) => a.id !== ab.id).map((a) => ({ value: a.id, label: a.name }))]}
             onChange={(target) => {
@@ -674,7 +678,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
               store().addNodes([inst], { artboardId: target });
             }}
           />
-          <IconButton icon={<Icons.trash />} title="Delete artboard" onClick={() => store().deleteArtboard(ab.id)} />
+          <IconButton icon={<Icons.trash />} title="Delete page" onClick={() => store().deleteArtboard(ab.id)} />
         </Row>
       </Section>
       <PageNavSection ids={[ab.id]} project={project} />
@@ -798,6 +802,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
   const isConn = sameType && n.type === 'connector';
   return (
     <>
+      {single && (n.type === 'image' || n.type === 'video') && <AltPromptCard node={n} projectId={project.id} />}
       <AlignBar count={nodes.length} shapes={nodes.filter((x) => !(x.type === 'group' || x.type === 'text' || x.type === 'link')).length} />
       {/* the layer's type heads its own section further down (Path, Text, ...), so this one is just "Layer" */}
       <Section id="layer-selection" help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
@@ -811,31 +816,40 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         )}
         {isConn ? (
           <Row className="aligned-pair">
-            <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
+            <Num node={n} ids={ids} prop="opacity" label="Opacity" suffix="%" scale={100} step={5} min={0} max={100} fallback={1} />
           </Row>
         ) : sameType && n.type === 'bone' ? (
           <Row>
             <Num node={n} ids={ids} prop="width" label="Length" title="The bone's length (the layer's width)" min={0} />
-            <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
+            <Num node={n} ids={ids} prop="rotation" label="Rotation" suffix="°" />
           </Row>
         ) : (
           <>
             <LinkedPair node={n} ids={ids} a="width" b="height" labelA="W" labelB="H" lockKey="lockRatio" min={0} />
             <Row className="aligned-pair">
-              <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
+              <Num node={n} ids={ids} prop="rotation" label="Rotation" suffix="°" />
               <span className="link-toggle link-gap" aria-hidden="true" />
-              <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
+              <Num node={n} ids={ids} prop="opacity" label="Opacity" suffix="%" scale={100} step={5} min={0} max={100} fallback={1} />
             </Row>
           </>
         )}
-        {!isConn && <LinkedPair node={n} ids={ids} a="scaleX" b="scaleY" labelA="Sx" labelB="Sy" lockKey="lockScale" step={0.05} />}
-        {!(sameType && (n.type === 'bone' || n.type === 'connector')) && (
-          <Row className="aligned-pair">
-            <NumberField label="Ox" title="Transform origin X (0-1)" value={n.originX} step={0.05} min={0} max={1} onChange={(v) => set({ originX: v })} />
-            <span className="link-toggle link-gap" aria-hidden="true" />
-            <NumberField label="Oy" title="Transform origin Y (0-1)" value={n.originY} step={0.05} min={0} max={1} onChange={(v) => set({ originY: v })} />
-          </Row>
+        {!isConn && (
+          <LinkedPair
+            node={n}
+            ids={ids}
+            a="scaleX"
+            b="scaleY"
+            labelA={"Scale\u00a0W"}
+            labelB={"Scale\u00a0H"}
+            titleA="Scale across, as a percent of the layer's own width: 100% is as drawn, 200% twice as wide, -100% flips it (scaleX)"
+            titleB="Scale down, as a percent of the layer's own height: 100% is as drawn, 200% twice as tall, -100% flips it (scaleY)"
+            lockKey="lockScale"
+            step={5}
+            scale={100}
+            suffix="%"
+          />
         )}
+        {!(sameType && (n.type === 'bone' || n.type === 'connector')) && <PivotFields originX={n.originX} originY={n.originY} onChange={(p) => set(p)} onCommit={() => store().commit()} />}
         <Row>
           <CheckField label="Visible" value={n.visible} onChange={(v) => set({ visible: v })} />
           <CheckField label="Locked" value={!!n.locked} onChange={(v) => set({ locked: v })} />
@@ -1427,6 +1441,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           />
           {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
+          {nodes.length === 1 && canCrop(n) && <CropFields node={n} />}
           {radius}
           <CheckField
             label="9-slice scaling"

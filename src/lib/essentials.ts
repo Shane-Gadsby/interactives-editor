@@ -12,7 +12,7 @@ import { hideSome, type DockLayout, type PanelId } from './dock';
 export const ESSENTIAL_PANELS: PanelId[] = ['layers', 'assets', 'inspector', 'timeline', 'logic', 'variables', 'checklist'];
 
 /** Put away in Essentials. */
-export const HIDDEN_PANELS: PanelId[] = ['libraries', 'comments', 'scripts', 'data', 'a11y', 'insights', 'interface', 'themes', 'usage', 'credits'];
+export const HIDDEN_PANELS: PanelId[] = ['icons', 'libraries', 'comments', 'scripts', 'data', 'a11y', 'insights', 'interface', 'themes', 'usage', 'credits'];
 
 /** Tool rail groups put away in Essentials (Shapes, Media with Text, and Web stay). */
 export const HIDDEN_TOOL_GROUPS = ['draw', 'data', 'rig'];

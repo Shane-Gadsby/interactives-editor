@@ -338,6 +338,6 @@ describe('help', () => {
     const t = TOPICS.find((x) => x.id === 'steps')!;
     expect(t).toBeDefined();
     const body = topicBody(t);
-    for (const word of ['Back and jumps', 'Go to step', 'On step', 'Scroll to scrub', 'Add a step bar', 'stepCount', 'ix.steps']) expect(body).toContain(word);
+    for (const word of ['Back and jumps', 'Go to step', 'When the step changes', 'Scroll to scrub', 'Add a step bar', 'stepCount', 'ix.steps']) expect(body).toContain(word);
   });
 });

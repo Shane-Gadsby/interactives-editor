@@ -371,7 +371,7 @@ describe('in the graph', () => {
     expect(note.querySelector('strong')!.textContent).toBe('bold');
     expect(note.getAttribute('aria-roledescription')).toBe('sticky note');
     expect(note.getAttribute('aria-label')).toContain('Sam');
-    expect(note.querySelector('.note-by')!.textContent).toBe('On start');
+    expect(note.querySelector('.note-by')!.textContent).toBe('When the page is shown');
   });
 
   it('hides with the other notes when they are put away', async () => {

@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { isLive, liveWriters, LIGHT_LOOK, planLive, uid, type Script, type Variable, type VariableType } from 'interactives-player';
 import { store, useEditor } from '../store/store';
-import { isIdentifier, uniqueIdentifier, uniqueName } from '../store/doc';
+import { isIdentifier, uniqueName } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
 import { CheckField, ColorField, IconButton, NumberField, SelectField, TextField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
 import { CodeEditor } from '../components/CodeEditor';
 import { Icons } from '../components/icons';
 import { SplitColumns } from '../components/SplitColumns';
+import { analyzeUsage, type Usage } from '../lib/dependencies';
+import { VARIABLE_KINDS, TYPE_LABELS, variableFor, type VariableKind } from '../lib/variable-kinds';
+import { go, sourceLabel } from './UsagePanel';
 
 const SCRIPT_TEMPLATE = `// Runs with \`ix\` (the player API), \`event\` (what triggered it) and \`vars\`.
 // Tick "Run on start" to register handlers when the player starts.
@@ -163,9 +166,13 @@ function VariableNameField({ name, onValid }: { name: string; onValid: (name: st
 export function VariablesPanel() {
   const vars = useEditor((st) => st.project.variables);
   const project = useEditor((st) => st.project);
+  // who uses each one (read on a deferred copy, so typing in a box is not held up by it)
+  const deferred = useDeferredValue(project);
+  const report = useMemo(() => analyzeUsage(deferred), [deferred]);
   //live variables that read each other in a circle, and the nodes that try to write one
   const circle = useMemo(() => new Set(planLive(project).cyclic.map((v) => v.id)), [project.variables, project.dataSources]); // eslint-disable-line react-hooks/exhaustive-deps
   const writers = useMemo(() => liveWriters(project), [project.artboards, project.variables]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [menu, setMenu] = useState(false);
   const setVar = (id: string, patch: Partial<Variable>, coalesce?: string) =>
     store().update(
       (d) => {
@@ -174,13 +181,13 @@ export function VariablesPanel() {
       },
       { coalesce },
     );
-  const add = () => {
-    const name = uniqueIdentifier(vars.map((v) => v.name), 'value');
+  const add = (kind: VariableKind) => {
+    const v = variableFor(kind, vars.map((x) => x.name));
     store().update((d) => {
-      d.variables.push({ id: uid('v'), name, type: 'number', initial: 0 });
+      d.variables.push(v);
     });
+    setMenu(false);
   };
-  const defaultFor = (t: VariableType) => (t === 'number' ? 0 : t === 'boolean' ? false : t === 'color' ? LIGHT_LOOK.button : t === 'enum' ? 'first' : t === 'list' ? '[]' : '');
   return (
     <div className="variables">
       <table className="var-table">
@@ -188,120 +195,208 @@ export function VariablesPanel() {
           <tr>
             <th>Name</th>
             <th>Type</th>
-            <th>Initial value</th>
-            <th title="Remember progress: keep the value between visits (in the learner's record when results are kept, otherwise in their browser)">Remember</th>
+            <th>Value</th>
             <th />
           </tr>
         </thead>
         <tbody>
           {vars.map((v) => (
-            <tr key={v.id}>
-              <td>
-                <VariableNameField name={v.name} onValid={(name) => setVar(v.id, { name })} />
-              </td>
-              <td>
-                <SelectField<VariableType>
-                  value={v.type}
-                  title="Number, text, true/false, colour, a choice from a list you define, or a list of items (for repeaters)"
-                  options={[
-                    { value: 'number', label: 'Number' },
-                    { value: 'string', label: 'Text' },
-                    { value: 'boolean', label: 'True/false' },
-                    { value: 'color', label: 'Colour' },
-                    { value: 'enum', label: 'Choice' },
-                    { value: 'list', label: 'List' },
-                  ]}
-                  onChange={(t) => setVar(v.id, t === 'enum' ? { type: t, options: v.options?.length ? v.options : ['first', 'second'], initial: v.options?.[0] ?? 'first' } : { type: t, initial: defaultFor(t) })}
-                />
-              </td>
-              <td>
-                {v.type === 'number' && <NumberField value={Number(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
-                {v.type === 'string' && <TextField value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
-                {v.type === 'boolean' && <CheckField label={v.initial ? 'true' : 'false'} value={!!v.initial} onChange={(x) => setVar(v.id, { initial: x })} />}
-                {v.type === 'color' && <ColorField value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
-                {v.type === 'list' && (
-                  <div className="enum-edit">
-                    <TextField
-                      value={String(v.initial)}
-                      multiline
-                      mono
-                      rows={3}
-                      commitOnBlur
-                      title="The starting items as JSON: an array, usually of objects"
-                      placeholder={'[{"name": "Ann"}, {"name": "Bo"}]'}
-                      onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)}
-                    />
-                    {!validList(String(v.initial)) && <div className="error small">Not a JSON array, so the list starts empty.</div>}
-                  </div>
-                )}
-                {v.type === 'enum' && (
-                  <div className="enum-edit">
-                    <SelectField value={String(v.initial)} title="Starting choice" options={(v.options ?? []).map((o) => ({ value: o, label: o }))} onChange={(x) => setVar(v.id, { initial: x })} />
-                    <TextField
-                      value={(v.options ?? []).join(', ')}
-                      title="The choices, separated by commas"
-                      placeholder="easy, medium, hard"
-                      commitOnBlur
-                      onChange={(x) => {
-                        const options = [...new Set(x.split(',').map((o) => o.trim()).filter(Boolean))];
-                        setVar(v.id, { options, initial: options.includes(String(v.initial)) ? v.initial : (options[0] ?? '') });
-                      }}
-                    />
-                  </div>
-                )}
-                <ExprField
-                  value={v.formula ?? ''}
-                  commitOnBlur
-                  title="Optional. A formula that works this variable out from the ones above it each time the project starts, instead of using the value above, for example crossword(words, 10) or wordSearch(words, 12). The value above is what it falls back to if the formula fails. The preview on the canvas follows it too."
-                  placeholder="Or work it out: e.g. crossword(words, 10)"
-                  onChange={(x) => setVar(v.id, x.trim() ? { formula: x } : { formula: undefined, live: undefined }, `var-formula-${v.id}`)}
-                />
-                {v.formula?.trim() && (
-                  <CheckField
-                    label="Keep up to date"
-                    title="Work the formula out again whenever a variable (or a layer, or data) it reads changes, not just when the project starts. A live variable is read only: Set variable, scripts and inputs cannot change it."
-                    value={!!v.live}
-                    onChange={(x) => setVar(v.id, x ? { live: true, userData: undefined } : { live: undefined })}
-                  />
-                )}
-                {isLive(v) && circle.has(v.id) && <div className="error small">This reads itself, or reads live variables that read it, so it stays at its starting value.</div>}
-                {isLive(v) && writers.some((w) => w.variable.id === v.id) && (
-                  <div className="error small">
-                    {writers.filter((w) => w.variable.id === v.id).length} interaction node(s) try to set this; they do nothing to it.
-                  </div>
-                )}
-                <CheckField
-                  label="Save as user data"
-                  title="Keep this value for the person playing: it is loaded before the project starts, saved a moment after it changes and when they leave the page or move to another artboard (the same place Save user data and Load user data use). userData.loaded is true in expressions once it has been looked for. Not for live variables."
-                  value={!!v.userData}
-                  disabled={isLive(v)}
-                  onChange={(x) => setVar(v.id, { userData: x ? true : undefined })}
-                />
-              </td>
-              <td>
-                <CheckField label="" value={!!v.persist} onChange={(x) => setVar(v.id, { persist: x })} />
-              </td>
-              <td>
-                <IconButton
-                  icon={<Icons.trash />}
-                  title="Delete variable"
-                  onClick={() =>
-                    store().update((d) => {
-                      d.variables = d.variables.filter((x) => x.id !== v.id);
-                    })
-                  }
-                />
-              </td>
-            </tr>
+            <VariableRow
+              key={v.id}
+              v={v}
+              used={report.variables.find((u) => u.id === v.id)?.usedBy ?? []}
+              circular={circle.has(v.id)}
+              writers={writers.filter((w) => w.variable.id === v.id).length}
+              setVar={setVar}
+            />
           ))}
         </tbody>
       </table>
-      <button className="btn" onClick={add}>
-        + Add variable
-      </button>
+      <div className="var-add">
+        <button className="btn" aria-expanded={menu} aria-haspopup="true" onClick={() => setMenu(!menu)}>
+          + Add variable
+        </button>
+        {menu && (
+          <div className="var-add-menu" role="menu" aria-label="What kind of variable" onKeyDown={(e) => e.key === 'Escape' && setMenu(false)}>
+            {VARIABLE_KINDS.map((k, i) => (
+              <button key={k.id} type="button" role="menuitem" className="var-add-item" autoFocus={i === 0} onClick={() => add(k)}>
+                <strong>{k.label}</strong>
+                <span>{k.note}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <p className="hint">
-        Use variables in text as <code>{'{name}'}</code>, in expressions and bindings by name, bind inputs to them, and change them with the Set variable action or <code>ix.vars</code>.
+        A variable is something the activity remembers while it runs: a count, a score, whether something is on. Use one in text as <code>{'{name}'}</code>, in expressions and bindings by name, bind inputs to
+        them, and change them with the Set variable action or <code>ix.vars</code>.
       </p>
     </div>
+  );
+}
+
+const defaultFor = (t: VariableType) => (t === 'number' ? 0 : t === 'boolean' ? false : t === 'color' ? LIGHT_LOOK.button : t === 'enum' ? 'first' : t === 'list' ? '[]' : '');
+
+/** One variable: its name and where it is used, its type and value, and the settings most people leave alone folded under Options. */
+function VariableRow({ v, used, circular, writers, setVar }: { v: Variable; used: Usage[]; circular: boolean; writers: number; setVar: (id: string, patch: Partial<Variable>, coalesce?: string) => void }) {
+  const [places, setPlaces] = useState(false);
+  // the formula box only shows for "Worked out": a variable that has one, or one the person just switched to it
+  const [worked, setWorked] = useState(!!v.formula?.trim());
+  useEffect(() => {
+    if (v.formula?.trim()) setWorked(true);
+  }, [v.formula]);
+  const remove = async () => {
+    if (used.length) {
+      const lines = used.slice(0, 8).map((u) => {
+        const l = sourceLabel(u.by, true);
+        return `${l.kind} "${l.name}"${l.where ? ` on ${l.where}` : ''}: ${u.how}`;
+      });
+      if (used.length > 8) lines.push(`and ${used.length - 8} more`);
+      const ok = await confirmDialog({
+        title: `Delete "${v.name}"?`,
+        message: `It is used in ${used.length} ${used.length === 1 ? 'place' : 'places'}. They will stop working, because the name they read is gone.\n\n${lines.join('\n')}`,
+        confirmLabel: 'Delete it anyway',
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    const mark = store().historyMark();
+    store().update((d) => {
+      d.variables = d.variables.filter((x) => x.id !== v.id);
+    });
+    store().toastUndo(`Deleted the variable "${v.name}".`, mark);
+  };
+  const optionsOpen = !!(v.persist || v.userData || v.live);
+  return (
+    <tr>
+      <td>
+        <VariableNameField name={v.name} onValid={(name) => setVar(v.id, { name })} />
+        <div className="var-used">
+          {used.length ? (
+            <button type="button" className="link-btn" aria-expanded={places} onClick={() => setPlaces(!places)} title="Where this variable is read or changed. Click to list the places">
+              used in {used.length} {used.length === 1 ? 'place' : 'places'}
+            </button>
+          ) : (
+            <span className="muted small" title="Nothing reads or changes it yet, so deleting it breaks nothing">
+              not used yet
+            </span>
+          )}
+        </div>
+        {places && used.length > 0 && (
+          <ul className="var-places">
+            {used.map((u, i) => {
+              const l = sourceLabel(u.by, true);
+              return (
+                <li key={i}>
+                  <button type="button" className="link-btn" onClick={() => go(u.by)} title="Go there">
+                    {l.kind} “{l.name}”{l.where ? ` on ${l.where}` : ''}
+                  </button>
+                  <span className="muted small"> {u.how}{u.loose ? ' (found in code, so it may not really use it)' : ''}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </td>
+      <td>
+        <SelectField<VariableType>
+          value={v.type}
+          title="Number (a counter or a score), text, true/false (a switch), colour, a choice from a list you define, or a list of items (for repeaters)"
+          options={(['number', 'string', 'boolean', 'color', 'enum', 'list'] as VariableType[]).map((t) => ({ value: t, label: TYPE_LABELS[t] }))}
+          onChange={(t) => setVar(v.id, t === 'enum' ? { type: t, options: v.options?.length ? v.options : ['first', 'second'], initial: v.options?.[0] ?? 'first' } : { type: t, initial: defaultFor(t) })}
+        />
+      </td>
+      <td>
+        <SelectField<'fixed' | 'worked'>
+          value={worked ? 'worked' : 'fixed'}
+          title="Starts as a value you type, or is worked out from other variables with a formula each time the project starts (the value is then what it falls back to if the formula fails)"
+          options={[
+            { value: 'fixed', label: 'Starts as a value' },
+            { value: 'worked', label: 'Worked out' },
+          ]}
+          onChange={(m) => {
+            if (m === 'worked') setWorked(true);
+            else {
+              setWorked(false);
+              if (v.formula !== undefined) setVar(v.id, { formula: undefined, live: undefined });
+            }
+          }}
+        />
+        {v.type === 'number' && <NumberField value={Number(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
+        {v.type === 'string' && <TextField value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
+        {v.type === 'boolean' && <CheckField label={v.initial ? 'true' : 'false'} value={!!v.initial} onChange={(x) => setVar(v.id, { initial: x })} />}
+        {v.type === 'color' && <ColorField value={String(v.initial)} onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)} />}
+        {v.type === 'list' && (
+          <div className="enum-edit">
+            <TextField
+              value={String(v.initial)}
+              multiline
+              mono
+              rows={3}
+              commitOnBlur
+              title="The starting items as JSON: an array, usually of objects"
+              placeholder={'[{"name": "Ann"}, {"name": "Bo"}]'}
+              onChange={(x) => setVar(v.id, { initial: x }, `var-${v.id}`)}
+            />
+            {!validList(String(v.initial)) && <div className="error small">Not a JSON array, so the list starts empty.</div>}
+          </div>
+        )}
+        {v.type === 'enum' && (
+          <div className="enum-edit">
+            <SelectField value={String(v.initial)} title="Starting choice" options={(v.options ?? []).map((o) => ({ value: o, label: o }))} onChange={(x) => setVar(v.id, { initial: x })} />
+            <TextField
+              value={(v.options ?? []).join(', ')}
+              title="The choices, separated by commas"
+              placeholder="easy, medium, hard"
+              commitOnBlur
+              onChange={(x) => {
+                const options = [...new Set(x.split(',').map((o) => o.trim()).filter(Boolean))];
+                setVar(v.id, { options, initial: options.includes(String(v.initial)) ? v.initial : (options[0] ?? '') });
+              }}
+            />
+          </div>
+        )}
+        {worked && (
+          <ExprField
+            value={v.formula ?? ''}
+            commitOnBlur
+            title="A formula that works this variable out from the ones above it each time the project starts, instead of using the value above, for example crossword(words, 10) or wordSearch(words, 12). The value above is what it falls back to if the formula fails. The preview on the canvas follows it too."
+            placeholder="Or work it out: e.g. crossword(words, 10)"
+            onChange={(x) => setVar(v.id, x.trim() ? { formula: x } : { formula: undefined, live: undefined }, `var-formula-${v.id}`)}
+          />
+        )}
+        {worked && v.formula?.trim() && (
+          <CheckField
+            label="Keep up to date"
+            title="Work the formula out again whenever a variable (or a layer, or data) it reads changes, not just when the project starts. A live variable is read only: Set variable, scripts and inputs cannot change it."
+            value={!!v.live}
+            onChange={(x) => setVar(v.id, x ? { live: true, userData: undefined } : { live: undefined })}
+          />
+        )}
+        {isLive(v) && circular && <div className="error small">This reads itself, or reads live variables that read it, so it stays at its starting value.</div>}
+        {isLive(v) && writers > 0 && <div className="error small">{writers} interaction node(s) try to set this; they do nothing to it.</div>}
+        <details className="var-options" open={optionsOpen}>
+          <summary title="Settings most variables never need">Options</summary>
+          <CheckField
+            label="Remember"
+            title="Keep the value between visits: in the learner's record when results are kept, otherwise in their browser. For a score or a place they got to, so they pick up where they left off."
+            value={!!v.persist}
+            onChange={(x) => setVar(v.id, { persist: x })}
+          />
+          <p className="hint">Keeps the value when the learner comes back, in their record when results are kept and otherwise in their browser.</p>
+          <CheckField
+            label="Save as user data"
+            title="Keep this value for the person playing: it is loaded before the project starts, saved a moment after it changes and when they leave the page or move to another artboard (the same place Save user data and Load user data use). userData.loaded is true in expressions once it has been looked for. Not for live variables."
+            value={!!v.userData}
+            disabled={isLive(v)}
+            onChange={(x) => setVar(v.id, { userData: x ? true : undefined })}
+          />
+          <p className="hint">Saves the value for each person on the server, so it follows them to another device. Switched off for a variable that is kept up to date.</p>
+        </details>
+      </td>
+      <td>
+        <IconButton icon={<Icons.trash />} title={used.length ? `Delete variable (used in ${used.length} ${used.length === 1 ? 'place' : 'places'}, you will be asked first)` : 'Delete variable'} onClick={() => void remove()} />
+      </td>
+    </tr>
   );
 }

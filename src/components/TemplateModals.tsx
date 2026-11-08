@@ -171,11 +171,12 @@ export function UpdateFromTemplateModal({ onClose }: { onClose: () => void }) {
         await putAsset(pid, a.id, blob);
         assetUrls.register(a.id, blob);
       }
+      const mark = store().historyMark();
       store().update((d) => {
         applyTemplateUpdate(d, data.snapshot, keys, info);
       });
       track('feature', 'template-update', { sum: { parts: keys.length } });
-      store().toast(keys.length ? `Updated from "${data.info.name}" to version ${data.info.version}: ${keys.length} part${keys.length === 1 ? '' : 's'}.` : `Now on version ${data.info.version} of "${data.info.name}".`);
+      store().toastUndo(keys.length ? `Updated from "${data.info.name}" to version ${data.info.version}: ${keys.length} part${keys.length === 1 ? '' : 's'}.` : `Now on version ${data.info.version} of "${data.info.name}".`, mark);
       onClose();
     } catch (e) {
       if (!noteIfStale(e)) setError(e instanceof Error ? e.message : String(e));

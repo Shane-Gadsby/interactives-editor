@@ -104,7 +104,7 @@ That is the whole interaction. The same list can go to another page, show or hid
 ## 4. See what it made
 
 1. Under the sentence press **Show in graph**. The bottom panel switches to **Interactions** and picks the new node.
-2. There are two nodes, joined: an **On pointer** event (its settings say **Layer: Slide button** and **Event: Click / tap**) and a **Control timeline** action. The Inspector's sentence is made from exactly these.
+2. There are two nodes, joined: a **When clicked or hovered** event (its settings say **Layer: Slide button** and **Event: Click / tap**) and a **Play or stop an animation** action. The Inspector's sentence is made from exactly these.
 3. The **Read as sentences** button above the graph shows the whole page this way. Use it to read a graph somebody else built.
 
 ![The Interactions tab: the node palette on the left, the graph in the middle and the selected node's settings on the right.](help/interactions-panel.png)
@@ -113,10 +113,10 @@ That is the whole interaction. The same list can go to another page, show or hid
 
 The graph can do much more than the list, and it helps to have drawn one flow yourself. Remove the sentence (**Remove** under it), then:
 
-1. Press **+ On click (empty)** in the Interactions section. An **On pointer** node appears with nothing joined to it.
-2. Find the small dot on the right edge of the **On pointer** node. That is its output. Drag from the dot into empty space and let go.
-3. A menu called **ADD AND CONNECT** opens. It lists only the nodes that make sense there. Choose **Action**, then **Control timeline**. The new node appears where you let go, already connected.
-4. Click the **Control timeline** node. Set **Timeline** to **Timeline** (the one you made), and **Do** to **Play**.
+1. Press **+ On click (empty)** in the Interactions section. A **When clicked or hovered** node appears with nothing joined to it.
+2. Find the small dot on the right edge of the **When clicked or hovered** node. That is its output. Drag from the dot into empty space and let go.
+3. A menu called **ADD AND CONNECT** opens. It lists only the nodes that make sense there. Choose **Action**, then **Play or stop an animation**. The new node appears where you let go, already connected.
+4. Click the **Play or stop an animation** node. Set **Timeline** to **Timeline** (the one you made), and **Do** to **Play**.
 5. Leave **Continue** on **When it finishes**. That setting decides when the *next* node would run. It matters once you chain more actions after this one.
 
 ![Dragging a connection into empty space: let go, pick a node, and it is added and joined for you.](help/drag-to-connect.mp4)
@@ -125,12 +125,12 @@ The graph can do much more than the list, and it helps to have drawn one flow yo
 
 1. Press **Preview**.
 2. Click **Slide the box**. The box slides.
-3. Want it to start from the left every time you click? Set **Do** to **Restart** on the **Control timeline** node instead of **Play**.
+3. Want it to start from the left every time you click? Set **Do** to **Restart** on the **Play or stop an animation** node instead of **Play**.
 
 ## Go further
 
-- **Toggle.** Add a **Toggle** node after the event. Join its **a** output to **Control timeline: Play** and its **b** output to **Control timeline: Play in reverse**. Each click now alternates.
-- **Hover.** Use **+ When hovered…** in the Inspector for a hover effect, such as **Show a layer**. For more control, **+ On hover (empty)** and the **Show / hide** or **Animate property** actions.
+- **Toggle.** Add an **Alternate between two paths** node after the event. Join its **a** output to **Control timeline: Play** and its **b** output to **Control timeline: Play in reverse**. Each click now alternates.
+- **Hover.** Use **+ When hovered…** in the Inspector for a hover effect, such as **Show a layer**. For more control, **+ On hover (empty)** and the **Show or hide a layer** or **Animate a layer's setting** actions.
 - **Wait.** A **Wait** node pauses a flow for some milliseconds before the next node.
 - **Log.** A **Log** node writes to your browser's console, which is handy when you're not sure a flow ran. The Preview's event list also shows every event as it fires.
 
@@ -155,9 +155,9 @@ You will build a lamp. A button switches it on and off, and a counter shows how 
 ## 1. Make a project and two variables
 
 1. Press **New project** on the projects page. In **Start a new project** keep **Blank project**, type **Lamp** as the name and press **Create project**.
-2. Open the **Variables** tab at the bottom and press **+ Add variable**. A row appears.
-3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). Set **Type** to **True/false**. Leave the starting value unticked (false).
-4. Press **+ Add variable** again. Name it \`taps\`. Leave **Type** on **Number** with the starting value 0.
+2. Open the **Variables** tab at the bottom, press **+ Add variable** and pick **Switch (on or off)**. A row appears.
+3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). The **Type** is already **True/false (switch)**. Leave the starting value unticked (false).
+4. Press **+ Add variable** again and pick **Counter**. Name it \`taps\`. The **Type** is **Number (counter, score)** with the starting value 0.
 
 Names can only use letters, digits and \`_\`, and can't start with a digit. That is so they work inside expressions.
 
@@ -192,7 +192,7 @@ That says: if \`lit\` is true the colour is yellow, otherwise it is grey. The fi
 2. Choose **Switch something on or off** and, under **Which switch**, pick **lit**. Press **Add**.
 3. Press **+ When clicked…** again. Choose **Add 1 to a counter** and pick **taps**. Press **Add**.
 
-The section now reads: **When clicked: switch lit on or off** and **When clicked: add 1 to taps**. Two flows start from the same click, and both run. (In the graph they are an **On pointer** joined to a **Set variable** each, with **Do** on **Toggle** and on **Add**.)
+The section now reads: **When clicked: switch lit on or off** and **When clicked: add 1 to taps**. Two flows start from the same click, and both run. (In the graph they are a **When clicked or hovered** joined to a **Change a value or counter** each, with **Do** on **Flip on or off** and on **Add to it**.)
 
 ## 5. Try it
 
@@ -206,13 +206,13 @@ The section now reads: **When clicked: switch lit on or off** and **When clicked
 
 - Make a variable called \`mode\` with **Type** **Choice** and the options \`off, on, broken\`. A choice shows as a dropdown wherever you set it.
 - Bind the bulb's fill through a **Look up** converter (use **+ Convert…** under the binding): it lists every option for you to give a colour.
-- Use an **If** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **If** has a **true** and a **false** output.
-- Tick **Remember** on a variable in the Variables tab to remember its value in the visitor's browser between visits.
+- Use a **Check a condition** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **Check a condition** has a **true** and a **false** output.
+- Tick **Remember** (under **Options**) on a variable in the Variables tab to remember its value in the visitor's browser between visits.
 
 ## What you learned
 
 - **Variables** hold state. They are shared by every artboard.
-- **Set variable** changes them. **On variable change** reacts to a change.
+- **Change a value or counter** changes them. **When a value changes** reacts to a change.
 - **Bindings** and \`{braces}\` in text show the state.
 
 **Next:** [Tutorial 4: Importing a design file](tutorial-import-design). More: [Variables](variables), [Bindings](bindings) and [Expressions](expressions).`,
@@ -312,7 +312,7 @@ Full details, including what each format does and doesn't carry over, are in [Im
 
 1. Click an empty part of the canvas, or the artboard's name, so nothing is selected. The Inspector shows **Artboard** and **Project**.
 2. Under **Project**, set **Page title** (the title of the browser tab), **Fit** (how the artboard scales to its space) and **Page background** (the colour around the artboard).
-3. Under **Artboard**, make sure the artboard people should see first is the start artboard. The button says **Start artboard** (greyed out) when it already is. If not, press **Make start artboard**.
+3. Under **Artboard**, make sure the artboard people should see first is the start artboard. The button says **Start artboard** (greyed out) when it already is. If not, press **Make start page**.
 
 ![The Project section of the Inspector: name, page title, description, fit, page background, sandbox and reduced motion.](help/project-settings.png)
 
