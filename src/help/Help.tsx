@@ -129,11 +129,11 @@ export function HelpHost() {
   }, [open]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      //Ctrl/Cmd+K is the link shortcut while editing text (F1 still opens the search there)
+      //F1 is the quick search, as it always was; Ctrl/Cmd+K does the same, except while editing text where it's the link shortcut.
+      //The Help button and ? open the page for what is highlighted
       if (e.key === 'F1') {
-        //F1 is the keyboard way to the Help button: the page for what is highlighted, with the caret in the search box
         e.preventDefault();
-        openContext();
+        openHelpSearch();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !(e.target instanceof HTMLElement && e.target.closest('.text-editor, .text-toolbar'))) {
         e.preventDefault();
         openHelpSearch();

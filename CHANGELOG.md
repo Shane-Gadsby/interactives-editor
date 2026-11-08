@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **F1 searches the help again** (as does Ctrl+K); **?** and the Help button open the page for what you're working on. The **Media Catalogue** button shows the catalogue's iris icon.
 - **Connectors**: a **Connector** tool (K) draws a line or arrow from one layer to another that follows them when they move: straight, elbow (it routes around both boxes) or curved, with arrowheads or dots and an optional label. Connectors can join copies of a repeated layer from a list of links, and redraw in the player, Preview and every export.
 - **Mind map and Flowchart starters**: a **Mind map** to explore (ideas fan out from the middle, fold, open for detail, move with the arrow keys, read as an outline) and one learners build and download; a **Flowchart** to follow (answer each decision and the route lights up, with a numbered text version) and a **complete the flowchart** activity. Both are laid out from lists, so you edit words, not shapes.
 - **Small buttons** keep their size: a button narrower than about 80 px used to grow by its padding, so a dot-sized button showed a white sliver beside it (the Dated timeline's event dots).

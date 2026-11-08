@@ -136,7 +136,7 @@ Prefer to start from something finished? The **Templates** tab on the projects p
 
 ## Where to get help
 
-Press <kbd>F1</kbd> anywhere for the page about what you have selected (with a search box ready), or <kbd>Ctrl</kbd>+<kbd>K</kbd> to search these pages. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
+Press <kbd>F1</kbd> (or <kbd>Ctrl</kbd>+<kbd>K</kbd>) anywhere to search these pages, or <kbd>?</kbd> for the page about what you have selected. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
 
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`,
   },
@@ -444,7 +444,8 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 ## Help
 | Key | Does |
 |---|---|
-| <kbd>F1</kbd> or <kbd>?</kbd> | Open the help for what is highlighted (the Help button), with the caret in its search box; <kbd>?</kbd> again closes it |
+| <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help |
+| <kbd>?</kbd> | Open the help for what is highlighted (the Help button); <kbd>?</kbd> again closes it |
 | <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
 | <kbd>Alt</kbd>+<kbd>Left</kbd> / <kbd>Alt</kbd>+<kbd>Right</kbd> | Back and forward through the pages you have read, in the help drawer |
 | <kbd>?</kbd> | Open the help |
@@ -4112,7 +4113,7 @@ Check the projects page for an active folder, tag or search (the **Clear filters
     summary: 'Search, tooltips and help links.',
     keywords: 'help docs search tooltip question',
     body: `- **Search**: press <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere for quick search, or type in the drawer's **Search help** box. Type a few words and press <kbd>Enter</kbd> to open the best match.
-- **The Help button** (top bar, <kbd>F1</kbd> or <kbd>?</kbd>) opens the page for whatever is highlighted, in this order: the **field** you last clicked in Properties (its section's page, or its own when it has one); the **node** selected in Interactions or the **keyframe** selected in the Timeline, while that is the panel you are working in; the **tool** you picked on the tool bar (not Select or Hand); the **layer type** you selected (Chart, Text, Button, Rectangle...); a selected **artboard** or **page master**; the **panel** you last worked in; then the general help. Its tooltip names what it will open, and the drawer says "Help for Chart layer" at the top with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. <kbd>Ctrl</kbd>+<kbd>K</kbd> is the quick search.
+- **The Help button** (top bar, or <kbd>?</kbd>) opens the page for whatever is highlighted, in this order: the **field** you last clicked in Properties (its section's page, or its own when it has one); the **node** selected in Interactions or the **keyframe** selected in the Timeline, while that is the panel you are working in; the **tool** you picked on the tool bar (not Select or Hand); the **layer type** you selected (Chart, Text, Button, Rectangle...); a selected **artboard** or **page master**; the **panel** you last worked in; then the general help. Its tooltip names what it will open, and the drawer says "Help for Chart layer" at the top with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. <kbd>Ctrl</kbd>+<kbd>K</kbd> is the quick search.
 - **Home, Back and Forward**: the three buttons at the left of the drawer's top. **Home** is the welcome page. **Back** and **Forward** walk through the pages and sections you have visited (links, search results and the Help button all count), and each page comes back scrolled to where you left it. <kbd>Alt</kbd>+<kbd>Left</kbd> and <kbd>Alt</kbd>+<kbd>Right</kbd> do the same while the drawer has the focus, and so do the mouse's back and forward buttons over it. The history is kept when you close the drawer, so Back from a new Help button press returns to what you were reading. The full help page (the **new tab** button) uses the browser's own Back and Forward, since each page has its own address.
 - **While Preview is open**: Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>?</kbd>, a **?** link or <kbd>Ctrl</kbd>+<kbd>K</kbd>) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and Tab stays inside Preview until you close it.
 - **The Help link** is also on the projects page.

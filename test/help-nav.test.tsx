@@ -149,12 +149,15 @@ describe('the drawer', () => {
     expect(document.querySelector('.help-context')).toBeNull();
   });
 
-  it('F1 opens the context help and Ctrl+K the search', async () => {
+  it('? opens the context help; F1 and Ctrl+K open the search', async () => {
     const { setContextHelp } = await import('../src/help/Help');
     setContextHelp(() => openHelp('charts', undefined, 'Chart layer'));
-    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F1', bubbles: true, cancelable: true })));
+    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true, cancelable: true })));
     expect(title()).toContain('Chart');
     expect(document.querySelector('.quick-help-backdrop')).toBeNull();
+    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F1', bubbles: true, cancelable: true })));
+    expect(document.querySelector('.quick-help-backdrop')).toBeTruthy();
+    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
     act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true })));
     expect(document.querySelector('.quick-help-backdrop')).toBeTruthy();
     setContextHelp(null);

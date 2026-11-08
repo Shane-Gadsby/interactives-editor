@@ -2157,7 +2157,7 @@ export function Canvas() {
         { label: 'Zoom to fit everything', hint: 'Shift+1', onClick: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })) },
         { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: 'Shift+R', onClick: () => setPrefs({ rulers: !prefs().rulers }) },
         ...gridMenu(),
-        { label: 'Help', hint: 'F1', onClick: openContextHelp },
+        { label: 'Help', hint: '?', onClick: openContextHelp },
       ];
     }
     setMenu({ x: e.clientX, y: e.clientY, items });
