@@ -80,6 +80,21 @@ describe('photo prompts notebook', () => {
     }
   });
 
+  it('is on the native features: live counts and one list for the board, set item for an entry, toggle for a pledge, next pages', () => {
+    const project = projectFromBrandedStarter(starter, COLOURWAYS[0]);
+    const live = project.variables.filter((v) => v.live).map((v) => v.name);
+    expect(live).toEqual(expect.arrayContaining(['rows', 'doneCount', 'skippedCount', 'lines']));
+    //the entries come from the prompts, so a prompt added to the list gets one
+    expect(project.variables.find((v) => v.name === 'entries')?.formula).toContain('prompts.map');
+    const ops = (page: string) => board(project, page).logic.nodes.filter((n) => n.kind === 'action.setVariable').map((n) => n.params.op);
+    expect(ops(PROMPT)).toContain('setItem');
+    expect(ops(PRIVACY)).toEqual(['toggleItem']);
+    //no If node on the privacy page: Continue's own Only if holds it
+    expect(board(project, PRIVACY).logic.nodes.some((n) => n.kind === 'logic.if')).toBe(false);
+    const named = project.artboards.filter((a) => !a.isMaster).flatMap((a) => a.logic.nodes.filter((n) => n.kind === 'action.artboard' && n.params.artboard && a.name !== NOTEBOOK));
+    expect(named).toHaveLength(0);
+  });
+
   it('passes the sensors check: a learner with no camera can finish through the example pictures', () => {
     for (const way of COLOURWAYS) {
       const project = projectFromBrandedStarter(starter, way);

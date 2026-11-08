@@ -5,12 +5,11 @@
 //Built from the media bridge's Take or choose a photo and Download a file nodes (the report is an HTML string with [[image:id]]
 //marks that the learner page fills in), list variables and repeaters. Photos live in memory only, so the wording says download
 //before leaving.
-import { createNode, uid, type Asset, type FrameNode, type ImageNode, type InputNode, type TemplateChecklistItem } from 'interactives-player';
+import { createNode, type FrameNode, type ImageNode, type InputNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import { BRAND_FONT, type Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, go, heroPage, lit, set, spreadPages } from '../games/common';
-import { textBox } from '../writing/shared';
+import { Graph, addVar, announce, bind, go, goNext, goPrevious, heroPage, lit, placeholderPicture as placeholder, resetVars, set, setItem, textBox, tickList, toggleItem, toggleVar } from './shared';
 
 const PROMPTS = [
   { title: 'A rule or sign that keeps people safe', hint: 'Look for a sign, a marking or a barrier. Photograph the thing, not a person using it.', exampleAlt: 'A yellow wet floor sign standing in an empty corridor' },
@@ -32,14 +31,6 @@ const TAGS = ['No tag', 'Key idea', 'Example', 'Safety or risk', 'A question I h
 
 const BINGO_COLUMNS = 3;
 
-/** A plain grey picture saying what it is for, so an empty slot and an example both show something until the author swaps them. */
-function placeholder(project: { assets: Asset[] }, name: string, line1: string, line2: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480"><rect width="640" height="480" fill="#DDDCD7"/><text x="320" y="230" text-anchor="middle" font-family="Open Sans, Arial, sans-serif" font-size="30" font-weight="600" fill="#6E6964">${line1}</text><text x="320" y="272" text-anchor="middle" font-family="Open Sans, Arial, sans-serif" font-size="22" fill="#6E6964">${line2}</text></svg>`;
-  const asset: Asset = { id: uid('as'), name, mime: 'image/svg+xml', size: svg.length, src: `data:image/svg+xml;base64,${btoa(svg)}` };
-  project.assets.push(asset);
-  return asset.id;
-}
-
 const done = (e: string) => `(${e}.status == "photo" || ${e}.status == "example")`;
 
 function build(colourway: Colourway) {
@@ -53,8 +44,8 @@ function build(colourway: Colourway) {
   addVar(project, 'prompts', 'list', PROMPTS.map((p, i) => ({ ...p, photo: photoIds[i], example: exampleIds[i] })));
   addVar(project, 'pledges', 'list', PLEDGES);
   const agreed = addVar(project, 'agreed', 'list', []);
-  const blank = { status: 'empty', caption: '', tag: TAGS[0], why: '', reason: '' };
-  const entries = addVar(project, 'entries', 'list', PROMPTS.map(() => blank));
+  //One entry per prompt, worked out from the prompts when the notebook starts (and again on Reset variables), so a prompt added to the list gets its entry
+  const entries = addVar(project, 'entries', 'list', [], { formula: 'prompts.map(p => ({status: "empty", caption: "", tag: "No tag", why: "", reason: ""}))' });
   const cur = addVar(project, 'current', 'number', 0);
   const caption = addVar(project, 'caption', 'string', '');
   const tag = addVar(project, 'tag', 'string', TAGS[0]);
@@ -63,6 +54,12 @@ function build(colourway: Colourway) {
   const skipping = addVar(project, 'skipping', 'boolean', false);
   const bingo = addVar(project, 'bingo', 'boolean', false);
   addVar(project, 'notebookTitle', 'string', 'My photo notebook');
+  //Live variables: what the notebook page and the hand-in page both say about how far the learner has got, and the one list the list and the board repeat over
+  const ent = (f: string, d: string) => `((entries[i] ?? {}).${f} ?? ${d})`;
+  addVar(project, 'rows', 'list', [], { formula: `prompts.map((p, i) => ({n: i + 1, title: p.title, photo: p.photo, example: p.example, exampleAlt: p.exampleAlt, status: ${ent('status', '"empty"')}, caption: ${ent('caption', '""')}, tag: ${ent('tag', '"No tag"')}, reason: ${ent('reason', '""')}}))`, live: true });
+  addVar(project, 'doneCount', 'number', 0, { formula: 'entries.filter(e => e.status == "photo" || e.status == "example").length', live: true });
+  addVar(project, 'skippedCount', 'number', 0, { formula: 'entries.filter(e => e.status == "skipped").length', live: true });
+  addVar(project, 'lines', 'number', 0, { formula: `[0, 1, 2, 3].filter(r => r * ${BINGO_COLUMNS} + ${BINGO_COLUMNS - 1} < prompts.length && [0, 1, 2].every(c => ${done('entries[r * 3 + c]')})).length`, live: true });
 
   const checklist: TemplateChecklistItem[] = [];
 
@@ -73,8 +70,7 @@ function build(colourway: Colourway) {
   const handin = brandedPage(ctx, 'Hand in your notebook', { footer: 'Photo prompts notebook' });
 
   //The current prompt's caption, tag and the two text boxes go back into its entry (status changed when one is given)
-  const commit = (status?: string): [string, Record<string, unknown>] =>
-    set(entries, `entries.map((e, i) => i == current ? {status: ${status ?? 'e.status'}, caption: caption, tag: tag, why: why, reason: skipReason} : e)`);
+  const commit = (status?: string): [string, Record<string, unknown>] => setItem(entries, `{status: ${status ?? 'item.status'}, caption: caption, tag: tag, why: why, reason: skipReason}`, { index: 'current' });
   //Show prompt number `idx` (an expression): save the one on screen, then load the new one's words into the boxes
   const open = (idx: string): [string, Record<string, unknown>][] => [
     commit(),
@@ -88,31 +84,13 @@ function build(colourway: Colourway) {
 
   // ---------------------------------------------------------------- hero
   const hg = new Graph(hero);
-  hg.run(
-    hg.click(start, 'Begin'),
-    set(entries, 'prompts.map(p => ({status: "empty", caption: "", tag: "No tag", why: "", reason: ""}))'),
-    set(cur, '0'),
-    set(caption, '""'),
-    set(tag, '"No tag"'),
-    set(why, '""'),
-    set(reason, '""'),
-    set(skipping, 'false'),
-    go(privacy),
-  );
+  hg.run(hg.click(start, 'Begin'), resetVars(entries, cur, caption, tag, why, reason, skipping), goNext());
   checklist.push(item('Write the title and the line under it on the first page', hero.children.find((n) => n.name === 'Subtitle'), hero));
 
   // ---------------------------------------------------------------- privacy page
   const pb = contentBox(privacy);
   const intro = text(ctx, 'Privacy intro', 'This notebook is about things and places, not people. Tick each line to show you agree, then start.', pb.x, pb.y, pb.width, { fontSize: 18, lineHeight: 1.35, autoSize: 'none', height: 30 });
-  const tick = createNode('rect', { name: 'Tick box', x: 12, y: 12, width: 24, height: 24, cornerRadius: 6, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true });
-  bind(tick, { 'fill.color': `agreed.includes(index) ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `agreed.includes(index) ? "${L.button}" : "${L.border}"` });
-  //Dark on the grey row until it is ticked (then it is only shown over the button colour, where its own colour is the one that reads)
-  const mark = text(ctx, 'Tick mark', '✓', 17, 11, 20, { fontSize: 17, fontWeight: 700, color: L.text, decorative: true });
-  bind(mark, { visible: 'agreed.includes(index)', color: `"${L.onButton}"` });
-  const rowText = text(ctx, 'Pledge text', '{item}', 52, 13, pb.width - 68, { fontSize: 16, decorative: true, autoSize: 'none', height: 24 });
-  const row = createNode('frame', { name: 'Pledge row', x: 0, y: 0, width: pb.width, height: 48, cornerRadius: 10, fill: solid(L.surface), stroke: null, clip: false, role: 'checkbox', focusable: true, cursor: 'pointer', children: [tick, mark, rowText] }) as FrameNode;
-  bind(row, { ariaChecked: 'agreed.includes(index)', ariaLabel: 'item' });
-  const rows = createNode('frame', { name: 'Pledges', x: pb.x, y: pb.y + 44, width: pb.width, height: 4 * 48 + 3 * 8, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Things you agree to before you start', repeat: { items: 'pledges', layout: 'vertical', gap: 8, columns: 1 }, children: [row] }) as FrameNode;
+  const { list: rows, row } = tickList(ctx, 'Pledges', 'Pledge row', pb.x, pb.y + 44, pb.width, { items: 'pledges', ticked: agreed, ariaLabel: 'Things you agree to before you start', rows: 4, rowHeight: 48, gap: 8 });
   const privacyCard = card(ctx, 'Privacy note panel', pb.x, pb.y + 44 + 4 * 48 + 3 * 8 + 18, pb.width, 86);
   const privacyNote = text(ctx, 'Privacy note', 'Your photos are not uploaded anywhere by this page. They stay on your device, in this page, until you download your notebook and hand it in. If you close or reload the page they are gone, so download before you leave. No camera? Every prompt has an example picture you can use instead.', pb.x + 20, pb.y + 44 + 4 * 48 + 3 * 8 + 28, pb.width - 40, { fontSize: 15, lineHeight: 1.35, autoSize: 'none', height: 66 });
   const pContinue = button(ctx, 'Continue', 'I agree, start', pb.x, pb.y + pb.height - 46, 240, true);
@@ -120,14 +98,10 @@ function build(colourway: Colourway) {
   const pLeft = text(ctx, 'Pledges left', '', pb.x + 256, pb.y + pb.height - 36, 500, { fontSize: 15, color: L.muted, bindings: { text: 'agreed.length < pledges.length ? "Tick all " + pledges.length + " lines to start." : ""' } } as never);
   privacy.children.push(intro, rows, privacyCard, privacyNote, pContinue, pLeft);
   const pg = new Graph(privacy);
-  const onRow = pg.click(row, 'Tick or untick a line');
-  const has = pg.add('logic.if', { condition: 'agreed.includes(event.index)' }, onRow);
-  pg.add('action.setVariable', { variable: agreed.id, op: 'remove', value: 'agreed.indexOf(event.index)' }, has, 'true');
-  pg.add('action.setVariable', { variable: agreed.id, op: 'push', value: 'event.index' }, has, 'false', { dy: 70 });
-  pg.gap(80);
-  //The button is disabled until then, and the flow checks too, so a click that gets past a disabled button still goes nowhere
-  const allAgreed = pg.add('logic.if', { condition: 'agreed.length >= pledges.length' }, pg.click(pContinue, 'Start the prompts'));
-  pg.runFrom(allAgreed, 'true', go(prompt));
+  pg.run(pg.click(row, 'Tick or untick a line'), toggleItem(agreed, 'event.index'));
+  //The button is disabled until then, and the event's Only if checks too, so a click that gets past a disabled button still goes nowhere
+  const start2 = pg.add('event.pointer', { target: pContinue.id, type: 'click', onlyIf: 'agreed.length >= pledges.length' }, null, 'out', { note: 'Start the prompts' });
+  pg.run(start2, goNext());
   checklist.push(item('Read the four lines on the privacy page and make them fit your task (Project > Variables > "pledges"). Have your privacy office read them, and say plainly who may be photographed, if anyone', rows, privacy));
 
   // ---------------------------------------------------------------- prompt page
@@ -137,13 +111,13 @@ function build(colourway: Colourway) {
   const RW = b.width - LW - 28;
 
   const counter = text(ctx, 'Prompt counter', 'Prompt {current + 1} of {prompts.length}', b.x, b.y, LW, { fontSize: 14, color: L.muted, autoSize: 'none', height: 20 });
-  const title = heading(ctx, 'Prompt title', '{prompts[current].title}', b.x, b.y + 22, LW, { fontSize: 21, autoSize: 'none', height: 58 });
-  const hint = text(ctx, 'Prompt hint', '{prompts[current].hint}', b.x, b.y + 82, LW, { fontSize: 14, color: L.muted, lineHeight: 1.35, autoSize: 'none', height: 40 });
+  const title = heading(ctx, 'Prompt title', '{prompts[current].title}', b.x, b.y + 22, LW, { fontSize: 21, autoSize: 'none', height: 52, lineHeight: 1.25 });
+  const hint = text(ctx, 'Prompt hint', '{prompts[current].hint}', b.x, b.y + 76, LW, { fontSize: 14, color: L.muted, lineHeight: 1.35, autoSize: 'none', height: 38 });
 
   //The photo frame: the photo (or the example picture) when there is one, words when there is not
   const statusIs = (s: string) => `entries[current].status == "${s}"`;
-  const photoY = b.y + 126;
-  const frameH = 232;
+  const photoY = b.y + 120;
+  const frameH = 220;
   const photo = createNode('image', {
     name: 'Photo',
     x: 0,
@@ -159,7 +133,7 @@ function build(colourway: Colourway) {
     assetId: `${statusIs('example')} ? prompts[current].example : prompts[current].photo`,
     ariaLabel: `${statusIs('example')} ? "Example picture: " + prompts[current].exampleAlt : (caption.trim() != "" ? "Your photo: " + caption : "Your photo for this prompt")`,
   });
-  const emptyNote = text(ctx, 'Empty slot note', '', 24, 80, LW - 48, {
+  const emptyNote = text(ctx, 'Empty slot note', '', 24, 72, LW - 48, {
     fontSize: 17,
     align: 'center',
     color: L.muted,
@@ -266,8 +240,9 @@ function build(colourway: Colourway) {
   g.runFrom(isSkipped, 'true', commit('"empty"'), announce('"Skip undone."'));
   g.runFrom(isSkipped, 'false', set(skipping, 'true'), announce('"Say why you are skipping this prompt, then choose Skip it."'));
   g.gap(80);
-  const hasReason = g.add('logic.if', { condition: 'skipReason.trim() != ""' }, g.click(confirmSkip, 'Skip it'));
-  g.runFrom(hasReason, 'true', ['action.photo', { op: 'remove', assetExpr: 'prompts[current].photo' }], commit('"skipped"'), set(skipping, 'false'), announce('"Prompt " + (current + 1) + " skipped."'));
+  //A skip needs its reason: the button is disabled without one, and the event's Only if holds a click that got past it
+  const onConfirm = g.add('event.pointer', { target: confirmSkip.id, type: 'click', onlyIf: 'skipReason.trim() != ""' }, null, 'out', { note: 'Skip it' });
+  g.run(onConfirm, ['action.photo', { op: 'remove', assetExpr: 'prompts[current].photo' }], commit('"skipped"'), set(skipping, 'false'), announce('"Prompt " + (current + 1) + " skipped."'));
   g.gap(80);
   g.run(g.click(cancelSkip, 'Cancel the skip'), set(skipping, 'false'));
 
@@ -275,24 +250,18 @@ function build(colourway: Colourway) {
   const onNext = g.click(nextBtn, 'Next prompt, or finish');
   const more = g.add('logic.if', { condition: 'current + 1 < prompts.length' }, onNext);
   g.runFrom(more, 'true', ...open('current + 1'));
-  g.runFrom(more, 'false', commit(), go(notebook));
+  g.runFrom(more, 'false', commit(), goNext());
   g.gap(80);
-  g.run(g.click(bookBtn, 'See my notebook'), commit(), go(notebook));
+  g.run(g.click(bookBtn, 'See my notebook'), commit(), goNext());
 
   // ---------------------------------------------------------------- notebook page
   const nb = contentBox(notebook);
-  //One row per prompt with what the learner did, for the list and the board to repeat over
-  const ent = (f: string, d: string) => `((entries[i] ?? {}).${f} ?? ${d})`;
-  const rowsExpr = `prompts.map((p, i) => ({n: i + 1, title: p.title, photo: p.photo, example: p.example, exampleAlt: p.exampleAlt, status: ${ent('status', '"empty"')}, caption: ${ent('caption', '""')}, tag: ${ent('tag', '"No tag"')}, reason: ${ent('reason', '""')}}))`;
-  const doneCount = 'entries.filter(e => e.status == "photo" || e.status == "example").length';
-  const skippedCount = 'entries.filter(e => e.status == "skipped").length';
-  const lines = `[0, 1, 2, 3].filter(r => r * ${BINGO_COLUMNS} + ${BINGO_COLUMNS - 1} < prompts.length && [0, 1, 2].every(c => ${done('entries[r * 3 + c]')})).length`;
   const summary = text(ctx, 'Summary', '', nb.x, nb.y + 6, nb.width - 280, {
     fontSize: 17,
     fontWeight: 600,
     autoSize: 'none',
     height: 30,
-    bindings: { text: `${doneCount} + " of " + prompts.length + " done" + (${skippedCount} > 0 ? ", " + ${skippedCount} + " skipped" : "") + (bingo ? ". Lines of three complete: " + ${lines} : "") + (${doneCount} == prompts.length ? ". Full board!" : "")` },
+    bindings: { text: 'doneCount + " of " + prompts.length + " done" + (skippedCount > 0 ? ", " + skippedCount + " skipped" : "") + (bingo ? ". Lines of three complete: " + lines : "") + (doneCount == prompts.length ? ". Full board!" : "")' },
   } as never);
   const viewToggle = button(ctx, 'Switch view', 'Show as bingo board', nb.x + nb.width - 260, nb.y, 260, false);
   bind(viewToggle, { label: 'bingo ? "Show as a list" : "Show as bingo board"' });
@@ -326,7 +295,7 @@ function build(colourway: Colourway) {
   const listCard = createNode('frame', { name: 'List card', x: 0, y: 0, width: CW, height: CH, cornerRadius: 14, fill: solid(L.surface), stroke: stroke(L.border, 1.5), clip: false, role: 'button', focusable: true, cursor: 'pointer', children: [thumb, thumbEmpty, cardTitle, cardState, cardCaption] }) as FrameNode;
   const cardLabel = (what: string) => `"Prompt " + item.n + ", " + item.title + ". " + (item.status == "photo" ? "Photo" : item.status == "example" ? "Example picture used" : item.status == "skipped" ? "Skipped" : "Not done yet") + ". ${what}"`;
   bind(listCard, { ariaLabel: cardLabel('Press to open it.'), 'stroke.paint.color': `${done('item')} ? "${L.button}" : "${L.border}"` });
-  const list = createNode('frame', { name: 'Notebook list', x: nb.x, y: gridY, width: nb.width, height: 3 * CH + 2 * 10, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your prompts', repeat: { items: rowsExpr, layout: 'grid', gap: 10, columns: 2 }, children: [listCard] }) as FrameNode;
+  const list = createNode('frame', { name: 'Notebook list', x: nb.x, y: gridY, width: nb.width, height: 3 * CH + 2 * 10, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your prompts', repeat: { items: 'rows', layout: 'grid', gap: 10, columns: 2 }, children: [listCard] }) as FrameNode;
   bind(list, { visible: '!bingo' });
 
   //The bingo board: the same prompts as squares
@@ -342,7 +311,7 @@ function build(colourway: Colourway) {
   bind(checkDisc, { visible: `${done('item')}` });
   const square = createNode('frame', { name: 'Bingo square', x: 0, y: 0, width: SW, height: SH, cornerRadius: 14, fill: solid(L.surfaceMuted), stroke: stroke(L.border, 2), clip: true, role: 'button', focusable: true, cursor: 'pointer', children: [squareImg, squareNum, band, bandText, checkDisc] }) as FrameNode;
   bind(square, { ariaLabel: cardLabel('Press to open it.'), 'stroke.paint.color': `${done('item')} ? "${L.button}" : "${L.border}"` });
-  const board = createNode('frame', { name: 'Bingo board', x: nb.x, y: gridY, width: nb.width, height: 2 * SH + 14, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your bingo board', repeat: { items: rowsExpr, layout: 'grid', gap: 14, columns: BINGO_COLUMNS }, children: [square] }) as FrameNode;
+  const board = createNode('frame', { name: 'Bingo board', x: nb.x, y: gridY, width: nb.width, height: 2 * SH + 14, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your bingo board', repeat: { items: 'rows', layout: 'grid', gap: 14, columns: BINGO_COLUMNS }, children: [square] }) as FrameNode;
   bind(board, { visible: 'bingo' });
 
   const nbY = nb.y + nb.height - 46;
@@ -352,11 +321,11 @@ function build(colourway: Colourway) {
   notebook.children.push(summary, viewToggle, list, board, handBtn, backBtn, nbWarn);
 
   const ng = new Graph(notebook);
-  ng.run(ng.click(viewToggle, 'Switch between list and bingo board'), set(bingo, '!bingo'), announce('bingo ? "Showing the bingo board." : "Showing the list."'));
+  ng.run(ng.click(viewToggle, 'Switch between list and bingo board'), toggleVar(bingo), announce('bingo ? "Showing the bingo board." : "Showing the list."'));
   ng.run(ng.click(listCard, 'Open a prompt from the list'), ...open('event.index'), go(prompt));
   ng.run(ng.click(square, 'Open a prompt from the board'), ...open('event.index'), go(prompt));
-  ng.run(ng.click(backBtn, 'Back to the prompts'), go(prompt));
-  ng.run(ng.click(handBtn, 'Hand in'), go(handin));
+  ng.run(ng.click(backBtn, 'Back to the prompts'), goPrevious());
+  ng.run(ng.click(handBtn, 'Hand in'), goNext());
   checklist.push(item('Choose the layout learners open in: Project > Variables > "bingo" (true is the bingo board, false the list). They can switch with the button either way. The board has rows of three, so six prompts make two lines', viewToggle, notebook));
 
   // ---------------------------------------------------------------- hand-in page
@@ -377,7 +346,7 @@ function build(colourway: Colourway) {
     color: L.muted,
     autoSize: 'none',
     height: 24,
-    bindings: { text: `"Your notebook has " + ${doneCount} + " of " + prompts.length + " prompts done" + (${skippedCount} > 0 ? " and " + ${skippedCount} + " skipped" : "") + "."` },
+    bindings: { text: '"Your notebook has " + doneCount + " of " + prompts.length + " prompts done" + (skippedCount > 0 ? " and " + skippedCount + " skipped" : "") + "."' },
   } as never);
   const saveBtn = button(ctx, 'Download my notebook', 'Download my notebook', hb.x, hb.y + 284, 300, true);
   const again = button(ctx, 'Back to my notebook', 'Back to my notebook', hb.x + 312, hb.y + 284, 260, false);
@@ -393,16 +362,28 @@ function build(colourway: Colourway) {
     `${done('entries[i]')} ? '<figure><img src="[[image:' + (${isEx} ? p.example : p.photo) + ']]" alt="' + html(${isEx} ? p.exampleAlt : (entries[i].caption.trim() != "" ? entries[i].caption : "Photo for this prompt")) + '"><figcaption>' + (${isEx} ? 'Example picture used instead of a photo. ' : '') + html(entries[i].caption) + '</figcaption></figure>' + (entries[i].tag != "No tag" ? '<p class="tag">Tag: ' + html(entries[i].tag) + '</p>' : '') + '<h3>Why this one</h3><p>' + (entries[i].why.trim() != "" ? ${nl('entries[i].why')} : 'Not written.') + '</p>' : ` +
     `entries[i].status == "skipped" ? '<p><strong>Skipped.</strong> Reason: ' + ${nl('entries[i].reason')} + '</p>' : '<p>Not done.</p>') + '</section>').join("")`;
   const css = 'body{font-family:"Open Sans",Arial,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;color:#2d2d2d;line-height:1.5}h1{font-size:1.8rem}h2{font-size:1.25rem;margin-top:2rem}h3{font-size:1rem;margin-bottom:0}img{max-width:100%;height:auto;border-radius:8px}figure{margin:1rem 0}figcaption{font-style:italic}.tag{font-size:.9rem}section{border-top:1px solid #ccc}';
-  const report = `'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>' + html(notebookTitle) + '</title><style>${css}</style></head><body><h1>' + html(notebookTitle) + '</h1><p>Saved ' + new Date().toLocaleDateString() + '. ' + ${doneCount} + ' of ' + prompts.length + ' prompts done.</p>' + ${section} + '</body></html>'`;
+  const report = `'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>' + html(notebookTitle) + '</title><style>${css}</style></head><body><h1>' + html(notebookTitle) + '</h1><p>Saved ' + new Date().toLocaleDateString() + '. ' + doneCount + ' of ' + prompts.length + ' prompts done.</p>' + ${section} + '</body></html>'`;
   const hg2 = new Graph(handin);
   hg2.run(hg2.click(saveBtn, 'Download the notebook'), ['action.saveFile', { name: lit('photo-notebook'), mime: 'text/html', text: report }], announce('"Your notebook was saved to your device. Upload it to your assignment."'));
-  hg2.run(hg2.click(again, 'Back to the notebook'), go(notebook));
+  hg2.run(hg2.click(again, 'Back to the notebook'), goPrevious());
   checklist.push(item('Check the report: open the file the Download button gives you and read it. Photos are inside the file as pictures, so it works offline and uploads as one file', saveBtn, handin));
   checklist.push(item('Turn on photos for the share link: Project settings > Microphone and camera has "photos" ticked already. Update the link for StudyDesk after any change, and test on a phone and a laptop with no camera (the file chooser then opens instead)', start, hero));
 
-  spreadPages(project);
+  //Notes for whoever edits the template, below each page
+  const below = (page: typeof prompt, x: number, w: number) => ({ x, y: page.height + 14, w, h: 96 });
+  addNote(privacy, { ...below(privacy, 0, 440), text: '**Tick list** The pledges are a repeater with one Set variable that adds a line to `agreed` or takes it out, so there is no If. Continue stays off until every line is in `agreed`.', colour: 'sky' });
+  addNote(prompt, { ...below(prompt, 0, 440), text: '**Set item** Each prompt\'s entry is changed in place with Set variable (change one list item), so a photo, a skip or a retake touches only that prompt.', colour: 'sky' });
+  addNote(prompt, { ...below(prompt, 456, 440), text: '[ ] Replace the six example pictures in the Assets panel and say what each shows in `exampleAlt`. They are how a learner with no camera finishes.', colour: 'gold' });
+  addNote(notebook, { ...below(notebook, 0, 440), text: '**Live variables** `rows`, `doneCount`, `skippedCount` and `lines` are worked out from `entries`, so the list, the board, the summary and the hand-in count all read the same numbers.', colour: 'sky' });
   return { project, checklist };
 }
+
+/** States for the layout check: the prompt page with a skip being written and the longest prompt, and the notebook as a board with some done. */
+const LAYOUT_STATES: LayoutState[] = [
+  { label: 'skipping', page: 'Photo prompt', vars: { skipping: true, current: 2, skipReason: 'No safe place to stand' } },
+  { label: 'photo taken', page: 'Photo prompt', vars: { entries: [{ status: 'photo', caption: 'A sign', tag: 'Key idea', why: '', reason: '' }, ...Array.from({ length: 5 }, () => ({ status: 'empty', caption: '', tag: 'No tag', why: '', reason: '' }))] } },
+  { label: 'bingo board', page: 'My notebook', vars: { bingo: true } },
+];
 
 export const photoNotebook: BrandedStarter = {
   key: 'media/photo-notebook',
@@ -411,4 +392,5 @@ export const photoNotebook: BrandedStarter = {
   description: 'A privacy pledge first, then about six prompts. Each has a photo slot (take or choose a photo, or use your example picture when there is no camera), a caption, a tag and a "why this one" box, with retake, delete and skip with a reason. See it as a list or as a bingo board, then download one report with the photos inside it to upload to a Moodle assignment. Photos are held in the page only, so the wording says download before leaving.',
   tags: ['photo', 'camera', 'fieldwork', 'bingo', 'report download', 'privacy', 'list variable'],
   build,
+  layoutStates: LAYOUT_STATES,
 };

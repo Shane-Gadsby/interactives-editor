@@ -6,15 +6,16 @@
 //OPTIONAL RECORDING (the media bridge): the starter does not declare the microphone, so as shipped it records nothing and the record layers never show. An
 //author ticks Microphone in Project > Microphone and camera and every scene page gets a "Recording step" under the typed reply box (Record, then Stop
 //recording, then Play mine) and a "Play my recording" button beside the expert reply on the review stage. They show only while the microphone is ready, so
-//a learner who says no, has no device or chooses "Do not use my microphone or camera" rehearses as before (say it aloud, or type it). It is off by default
+//a learner who says no, has no device or chooses "Do not use my microphone or camera" rehearses as before (say it aloud, or type it). Record is one Start or stop
+//node, Play mine says Stop while it plays, and the framework is a tick list with one Toggle in list step. It is off by default
 //because a hard conversation is exactly the kind of thing people want to rehearse without being asked for the microphone, and because a course page that
 //does not allow it would show a step that cannot work. One recording name ("reply") serves every scene: it is dropped when the next scene or a retry opens.
 import { createNode, type Artboard, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { brandedPage, brandedProject, button, byName, card, contentBox, heading, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, picture, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import { BRAND_FONT, type Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, darkButton, go, heroPage, set, spreadPages } from '../games/common';
-import { MIC_READY, dropTakeWhen, rec, recordStatus, wirePlay, wireRecord } from './recording';
+import { Graph, addVar, announce, bind, darkButton, go, goNext, heroPage, resetVars, set, setVar, tickList, toggleItem } from '../media/shared';
+import { MIC_READY, dropTakeWhen, playLabel, playToggle, rec, recordLabel, recordStatus, recordToggle } from './recording';
 
 //The framework the learner ticks against: a simple four point one for the sample, ISBAR (identify, situation, background, assessment, recommendation) fits a handover
 const FRAMEWORK = ['Acknowledged how they feel before anything else', 'Checked what is actually going on', 'Said clearly what you can and cannot do', 'Agreed a next step with a date'];
@@ -45,6 +46,8 @@ function build(colourway: Colourway) {
   const tense = addVar(project, 'tense', 'number', 0);
   const tries = addVar(project, 'tries', 'number', 0);
   const path = addVar(project, 'path', 'string', '');
+  //Live: how the conversation went, said once for the outcome and the headline on the last page
+  addVar(project, 'verdict', 'string', 'mixed', { formula: 'calm > tense ? "settled" : calm == tense ? "mixed" : "tense"', live: true });
   //Set to true once the scenes have audio: it shows the Play their line buttons. Every audio line still needs its transcript
   addVar(project, 'audioLines', 'boolean', false);
 
@@ -57,7 +60,7 @@ function build(colourway: Colourway) {
 
   const intro = hero.page.children.find((n) => n.name === 'Subtitle')!;
   const hg = new Graph(hero.page);
-  hg.run(hg.click(hero.start, 'Begin'), go(first));
+  hg.run(hg.click(hero.start, 'Begin'), goNext());
   checklist.push(item('Write the title and the line under it on the first page. Keep it clear that this is practice and not assessed', intro, hero.page));
 
   /** The reply, review and branch stages on one page. Returns the layers the checklist points at. */
@@ -109,14 +112,13 @@ function build(colourway: Colourway) {
     });
     bind(replyBox, { visible: 'typing' });
     //The recording step: optional, there only while the microphone is ready (see the note at the top of this file)
-    const record = bind(button(ctx, 'Record my reply', 'Record my reply', 0, 0, 190, false), { label: `${rec('reply').recording} ? "Stop recording" : ${rec('reply').has} ? "Record again" : "Record my reply"` });
+    const record = bind(button(ctx, 'Record my reply', 'Record my reply', 0, 0, 190, false), { label: recordLabel('reply', 'Record my reply') });
     record.ariaDescription = 'Records your voice. Asks you first, the first time. The recording stays on this device.';
-    const playMine = bind(button(ctx, 'Play mine', 'Play mine', 200, 0, 140, false), { visible: rec('reply').has, disabled: rec('reply').recording });
-    playMine.ariaLabel = 'Play my recorded reply';
+    const playMine = bind(button(ctx, 'Play mine', 'Play mine', 200, 0, 140, false), { label: playLabel('reply', 'Play mine'), ariaLabel: `${rec('reply').playing} ? "Stop my recorded reply" : "Play my recorded reply"`, visible: rec('reply').has, disabled: rec('reply').recording });
     const recStatus = text(ctx, 'Record status', `{${recordStatus('reply', 'Optional. Not recorded.')}}`, 352, 2, rw - 352, { fontSize: 13, lineHeight: 1.3, color: L.muted, autoSize: 'none', height: 44 });
     const slot = bind(createNode('frame', { name: 'Recording step', x: 0, y: 350, width: rw, height: 48, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Record your reply', children: [record, playMine, recStatus] }) as FrameNode, { visible: MIC_READY });
     //On the review stage the take plays again beside the expert reply, under their line
-    const playReview = bind(button(ctx, 'Play my recording', 'Play my recording', box.x + 210, box.y + 312, 170, false), { visible: `stage == "review" && ${MIC_READY} && ${rec('reply').has}` });
+    const playReview = bind(button(ctx, 'Play my recording', 'Play my recording', box.x + 210, box.y + 312, 170, false), { label: playLabel('reply', 'Play my recording'), visible: `stage == "review" && ${MIC_READY} && ${rec('reply').has}` });
     const compare = button(ctx, 'Compare with the expert', 'Compare with the expert reply', 0, 408, 330, true);
     const replyStage = createNode('frame', { name: 'Reply stage', x: rx, y: box.y, width: rw, height: box.height, fill: null, stroke: null, clip: false, children: [sayHead, sayHelp, typeToggle, replyBox, slot, compare] }) as FrameNode;
     bind(replyStage, { visible: 'stage == "reply"' });
@@ -126,14 +128,7 @@ function build(colourway: Colourway) {
     const expCard = card(ctx, 'Expert panel', 0, 28, rw, 108);
     const expert = text(ctx, 'Expert reply', cfg.expert, 16, 38, rw - 32, { fontSize: 15, lineHeight: 1.35, autoSize: 'none', height: 92 });
     const frameHead = heading(ctx, 'Framework heading', 'What a good reply includes. Tick what you covered.', 0, 146, rw, { fontSize: 17 });
-    const tick = createNode('rect', { name: 'Tick box', x: 6, y: 6, width: 22, height: 22, cornerRadius: 6, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true });
-    bind(tick, { 'fill.color': `ticked.includes(index) ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `ticked.includes(index) ? "${L.button}" : "${L.border}"` });
-    const mark = text(ctx, 'Tick mark', '✓', 10, 5, 18, { fontSize: 16, fontWeight: 700, color: L.onButton, decorative: true });
-    bind(mark, { visible: 'ticked.includes(index)' });
-    const rowText = text(ctx, 'Framework point', '{item}', 40, 6, rw - 52, { fontSize: 16, decorative: true });
-    const row = createNode('frame', { name: 'Framework row', x: 0, y: 0, width: rw, height: 34, cornerRadius: 8, fill: solid(L.background), stroke: null, clip: false, role: 'checkbox', focusable: true, cursor: 'pointer', children: [tick, mark, rowText] }) as FrameNode;
-    bind(row, { ariaChecked: 'ticked.includes(index)', ariaLabel: 'item', 'fill.color': `ticked.includes(index) ? "${L.surface}" : "${L.background}"` });
-    const rows = createNode('frame', { name: 'Framework', x: 0, y: 172, width: rw, height: 186, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'What a good reply includes', repeat: { items: 'framework', layout: 'grid', gap: 4, columns: 1 }, children: [row] }) as FrameNode;
+    const { list: rows, row } = tickList(ctx, 'Framework', 'Framework row', 0, 172, rw, { items: 'framework', ticked, ariaLabel: 'What a good reply includes', rows: 5, background: false });
     const status = text(ctx, 'Ticked count', 'You ticked {ticked.length} of {framework.length}. Now say how it landed.', 0, 370, rw - 196, { fontSize: 15, color: L.muted });
     const retry = button(ctx, 'Try this scene again', 'Try again', rw - 180, 362, 180, false);
     retry.ariaLabel = 'Try this scene again with a different reply';
@@ -145,32 +140,28 @@ function build(colourway: Colourway) {
     page.children.push(pic, who, role, mood, scenes, bubble, label, line, audio, playReview, mine, mineLabel, mineText, replyStage, reviewStage);
 
     const g = new Graph(page);
-    const fresh = (): [string, Record<string, unknown>][] => [set(stage, '"reply"'), set(typing, 'false'), set(reply, '""'), ['action.setVariable', { variable: ticked.id, op: 'clear' }]];
+    const fresh = (): [string, Record<string, unknown>][] => [resetVars(stage, typing, reply, ticked)];
     g.run(g.start('A fresh scene'), ...fresh());
 
     //Audio slot: pick the sound for this line in the node below. Nothing plays until one is chosen.
     g.run(g.click(audio, 'Play their line (pick the sound in the next node)'), ['action.sound', { asset: '', volume: 1 }]);
 
     //The optional recording: Record or Stop, Play mine in the reply stage, and the same take again on the review stage. A fresh scene or a retry drops it
-    wireRecord(g, record, 'reply', 'Record my reply, or stop');
-    wirePlay(g, playMine, 'reply', 'Play mine');
-    wirePlay(g, playReview, 'reply', 'Play my recording');
+    recordToggle(g, record, 'reply', 'Record my reply, or stop');
+    playToggle(g, playMine, 'reply', 'Play or stop mine');
+    playToggle(g, playReview, 'reply', 'Play or stop my recording');
     dropTakeWhen(g, stage, 'reply', 'stage == "reply"', 'Drop the take when a scene or a retry opens');
     g.gap(40);
 
     g.run(g.click(typeToggle, 'Type instead, or say it aloud'), set(typing, '!typing'), announce('typing ? "Typed reply box shown." : "Typed reply box hidden. Say your reply aloud."'));
     g.run(g.click(compare, 'Show the expert reply'), set(stage, '"review"'), announce('"The expert reply and the checklist are shown. Tick what you covered, then say how it landed."'));
 
-    const onRow = g.click(row, 'Tick or untick a point');
-    const has = g.add('logic.if', { condition: 'ticked.includes(event.index)' }, onRow);
-    g.add('action.setVariable', { variable: ticked.id, op: 'remove', value: 'ticked.indexOf(event.index)' }, has, 'true');
-    g.add('action.setVariable', { variable: ticked.id, op: 'push', value: 'event.index' }, has, 'false', { dy: 70 });
-    g.gap(80);
+    g.run(g.click(row, 'Tick or untick a point'), toggleItem(ticked, 'event.index'));
 
-    g.run(g.click(retry, 'Try this scene again'), ['action.setVariable', { variable: tries.id, op: 'add', value: '1' }], ...fresh(), announce('"Try this scene again. Say a different reply out loud."'));
+    g.run(g.click(retry, 'Try this scene again'), setVar(tries, '1', 'add'), ...fresh(), announce('"Try this scene again. Say a different reply out loud."'));
 
     const branch = (btn: SceneNode, note: string, counter: typeof calm, word: string, to: Artboard | 'ending') =>
-      g.run(g.click(btn, note), ['action.setVariable', { variable: counter.id, op: 'add', value: '1' }], set(path, `path ? path + " > ${word}" : "${word}"`), go(to === 'ending' ? ending : to));
+      g.run(g.click(btn, note), setVar(counter, '1', 'add'), set(path, `path ? path + " > ${word}" : "${word}"`), go(to === 'ending' ? ending : to));
     branch(calmBtn, 'It calms them down', calm, 'calmer', cfg.calmTo);
     branch(tenseBtn, 'It makes it tenser', tense, 'tenser', cfg.tenseTo);
     return { pic, who, line, expert, rows, slot, calmBtn, audio };
@@ -220,13 +211,13 @@ function build(colourway: Colourway) {
   const outcome = text(
     ctx,
     'Outcome',
-    '{calm > tense ? "You listened first and gave them a clear way forward, so they could take it in. Notice what worked and say it again next time." : calm == tense ? "Some of it landed. Rehearse the scene that went tenser and try a different opening." : "It stayed difficult, which is normal for a hard conversation. Go back, try the scenes again, and tick honestly what you left out."}',
+    '{verdict == "settled" ? "You listened first and gave them a clear way forward, so they could take it in. Notice what worked and say it again next time." : verdict == "mixed" ? "Some of it landed. Rehearse the scene that went tenser and try a different opening." : "It stayed difficult, which is normal for a hard conversation. Go back, try the scenes again, and tick honestly what you left out."}',
     112,
     396,
     800,
     { align: 'center', color: L.onGradient, fontSize: 18, lineHeight: 1.4 },
   );
-  const result = text(ctx, 'Result', '{calm > tense ? "The conversation settled" : calm == tense ? "A mixed result" : "Still tense"}   Scenes: {calm + tense}   Retries: {tries}', 112, 468, 800, { align: 'center', color: L.onGradient, fontSize: 18, fontWeight: 700 });
+  const result = text(ctx, 'Result', '{verdict == "settled" ? "The conversation settled" : verdict == "mixed" ? "A mixed result" : "Still tense"}   Scenes: {calm + tense}   Retries: {tries}', 112, 468, 800, { align: 'center', color: L.onGradient, fontSize: 18, fontWeight: 700 });
   const trail = text(ctx, 'Your path', 'Your path: {path}', 112, 500, 800, { align: 'center', color: L.onGradient, fontSize: 15 });
   const note = text(ctx, 'Rehearsal note', '{"This was rehearsal. Nothing here was marked, saved or sent to anyone." + (microphone == "ready" ? " Any recording you made stayed on this device and is gone." : "")}', 112, 528, 800, { align: 'center', color: L.onGradient, fontSize: 14 });
   const again = darkButton(ctx, 'Start again', 'Start again', 422, 566, 180);
@@ -234,9 +225,18 @@ function build(colourway: Colourway) {
   const eg = new Graph(ending);
   eg.run(eg.click(again, 'Start again'), ['action.startOver']);
 
-  spreadPages(project);
+  //Notes for whoever edits the template, below each page
+  const below = (page: Artboard, x: number, w: number) => ({ x, y: page.height + 14, w, h: 96 });
+  addNote(first, { ...below(first, 0, 440), text: '**Three stages on one page** The reply, review and branch stages are frames shown by the `stage` variable, so a scene is one page. Duplicate the page to add a scene and point a branch button at it.', colour: 'sky' });
+  addNote(first, { ...below(first, 456, 440), text: '**Recording is off** until you tick Microphone in Project > Microphone and camera. The record layers only show while it is ready, and Record is one Start or stop node.', colour: 'gold' });
+  addNote(ending, { ...below(ending, 0, 440), text: '**Live variable** `verdict` is settled, mixed or tense from `calm` and `tense`. The outcome and the headline both read it.', colour: 'sky' });
   return { project, checklist };
 }
+
+/** States for the layout check: the review stage with a five point framework ticked, and the longest line. */
+const LAYOUT_STATES: LayoutState[] = [
+  { label: 'review', vars: { stage: 'review', reply: 'I am sorry it has been so hard, Alex. Let me listen first and then we can work out what I can do.', ticked: [0, 1], framework: ['Acknowledged how they feel before anything else', 'Checked what is actually going on', 'Said clearly what you can and cannot do', 'Agreed a next step with a date', 'Asked how they would like to be supported'] } },
+];
 
 export const difficultConversation: BrandedStarter = {
   key: 'practice/difficult-conversation',
@@ -245,4 +245,5 @@ export const difficultConversation: BrandedStarter = {
   description: 'A branching rehearsal for a hard conversation, with no microphone needed. Each scene shows the other person and their line with a transcript (and an optional audio slot), asks the learner to say a reply out loud or type it, then reveals an expert reply and the author\'s framework as a checklist to tick. The learner picks whether it calmed them or made it tenser, which decides the next scene, and can retry a scene. Rehearsal only, nothing is scored.',
   tags: ['speaking', 'scenario', 'branching', 'rehearsal'],
   build,
+  layoutStates: LAYOUT_STATES,
 };

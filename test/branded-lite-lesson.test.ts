@@ -142,6 +142,8 @@ describe('Lite lesson starter', () => {
   it('remembers the choice: a later visit goes straight to that version, and Change version brings the chooser back', async () => {
     const p = make();
     let player = play(p);
+    //the saved values are looked for before the project starts
+    await settle(player);
     expect(player.artboard.name).toBe('Start');
     await click(layerId(p, 'Start', 'Start button'));
     await settle(player);
@@ -152,6 +154,8 @@ describe('Lite lesson starter', () => {
     player.destroy();
 
     player = play(p);
+    await settle(player);
+    expect(player.getVariable('version')).toBe('audio');
     await click(layerId(p, 'Start', 'Start button'));
     await settle(player);
     expect(player.artboard.name).toBe('Audio only lesson');
@@ -165,6 +169,7 @@ describe('Lite lesson starter', () => {
     const p = make();
     localStorage.clear();
     const player = play(p);
+    await settle(player);
     player.setVariable('version', 'carrier pigeon');
     await click(layerId(p, 'Start', 'Start button'));
     await settle(player);
@@ -220,5 +225,25 @@ describe('Lite lesson starter', () => {
       walk(board(p, name).children, (n) => n.type === 'text' && texts.push(n.text));
       expect(texts).toContain('{transcript}');
     }
+  });
+
+  it('is on the native features: the audio version is one Video layer with a sound and a poster, an empty video says so, the version is user data', () => {
+    const p = make();
+    const audio = board(p, 'Audio only lesson');
+    const player = byName(audio, 'Soundtrack') as VideoNode;
+    expect(player.type).toBe('video');
+    expect(p.assets.find((a) => a.id === player.assetId)?.mime).toBe('audio/wav');
+    expect(p.assets.find((a) => a.id === player.posterAssetId)?.mime).toBe('image/svg+xml');
+    expect(player.captions?.length).toBeGreaterThan(0);
+    //no timeline, no Play or pause and Start over buttons, no key image picture
+    expect(audio.timelines).toHaveLength(0);
+    for (const name of ['Play or pause button', 'Start over button', 'Key image']) expect(byName(audio, name), name).toBeUndefined();
+    const clip = byName(board(p, 'Video lesson'), 'Video') as VideoNode;
+    expect(clip.emptyText).toMatch(/No video/);
+    expect(byName(board(p, 'Video lesson'), 'Video placeholder')).toBeUndefined();
+    expect(p.variables.find((v) => v.name === 'version')?.userData).toBe(true);
+    const kinds = p.artboards.flatMap((a) => a.logic.nodes.map((n) => n.kind));
+    expect(kinds).not.toContain('action.saveUserData');
+    expect(kinds).not.toContain('action.loadUserData');
   });
 });

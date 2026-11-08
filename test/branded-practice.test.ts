@@ -89,7 +89,8 @@ describe('practice starters', () => {
       });
 
       it('keeps every content layer on the page and clear of the footer and logo band', () => {
-        const { project } = starter.build(COLOURWAYS[0]);
+        //as a person gets it, with the auto layout frames settled to their real height
+        const project = projectFromBrandedStarter(starter, COLOURWAYS[0]);
         for (const ab of project.artboards) {
           if (!byName(ab, 'Footer text')) continue;
           for (const n of ab.children) {
@@ -135,7 +136,11 @@ describe('practice starters', () => {
         //each shows only while the microphone is ready, so learners with it off, denied or missing see the rehearsal as it always was
         for (const s of steps) expect(s.bindings?.visible).toContain('microphone == "ready"');
         const nodes = project.artboards.flatMap((ab) => ab.logic.nodes.map((n) => n.kind));
-        expect(nodes).toEqual(expect.arrayContaining(['action.recordStart', 'action.recordStop', 'action.recordPlay']));
+        //Record is one Start recording node set to Start or stop (so no separate Stop recording is needed), and the take plays through Play recording
+        expect(nodes).toEqual(expect.arrayContaining(['action.recordStart', 'action.recordPlay']));
+        const starts = project.artboards.flatMap((ab) => ab.logic.nodes.filter((n) => n.kind === 'action.recordStart'));
+        expect(starts.length).toBeGreaterThan(0);
+        for (const n of starts) expect(n.params).toMatchObject({ op: 'toggle', quiet: true });
         expect(JSON.stringify(project)).not.toMatch(/getUserMedia|MediaRecorder/);
         //and the page says nothing is recorded, until it is switched on
         expect(JSON.stringify(project.artboards)).toMatch(/Nothing is recorded|No microphone is used/);
@@ -396,23 +401,30 @@ describe('practice starters', () => {
       player.destroy();
     });
 
-    it('the preparation clock runs out into the talk, and the talk clock runs out into the tally', async () => {
+    it('the preparation clock runs out into the talk, and the talk clock runs out into the tally (the native Countdown node)', async () => {
       const p = project();
       const player = await open(p);
+      player.setVariable('prepSeconds', 1);
+      player.setVariable('talkSeconds', 2);
       await draw(p, player);
-      player.setVariable('left', 1);
-      await flush(1150);
+      expect(player.getVariable('stage')).toBe('prep');
+      await vi.waitFor(() => expect(player.getVariable('stage')).toBe('talk'), { timeout: 2500 });
       await settle(player, 50);
-      expect(player.getVariable('stage')).toBe('talk');
-      expect(player.getVariable('left')).toBe(60);
+      expect(textOf(layer(p, R, 'Talk clock').id)).toMatch(/^0:0[12]$/);
       expect(shown(p, R, 'Talk stage')).toBe(true);
-      expect(textOf(layer(p, R, 'Talk clock').id)).toMatch(/^(1:00|0:5\d)$/);
-      player.setVariable('left', 1);
-      await flush(1150);
+      await vi.waitFor(() => expect(player.getVariable('stage')).toBe('tally'), { timeout: 3500 });
       await settle(player, 50);
-      expect(player.getVariable('stage')).toBe('tally');
       expect(shown(p, R, 'Tally stage')).toBe(true);
       player.destroy();
+    });
+
+    it('runs both countdowns with the Countdown node and a Progress bar, not a one second timer', () => {
+      const { project: built } = get('practice/timed-talk-rehearsal').build(COLOURWAYS[0]);
+      const nodes = board(built, R).logic.nodes;
+      expect(nodes.filter((n) => n.kind === 'action.clock').map((n) => n.params.seconds)).toEqual(expect.arrayContaining(['prepSeconds', 'talkSeconds']));
+      expect(nodes.some((n) => n.kind === 'event.timer')).toBe(false);
+      expect((byName(board(built, R), 'Prepare bar') as { type: string }).type).toBe('progress');
+      expect(built.variables.find((v) => v.name === 'pool')?.live).toBe(true);
     });
 
     it('the buttons move on early, and lengthened timers (the variables) are used', async () => {
@@ -443,7 +455,7 @@ describe('practice starters', () => {
       await draw(p, player);
       expect(player.getVariable('left')).toBe(0);
       expect(textOf(layer(p, R, 'Prepare clock').id)).toBe('No timer');
-      expect(shown(p, R, 'Prepare track')).toBe(false);
+      expect(shown(p, R, 'Prepare bar')).toBe(false);
       await flush(1150);
       await settle(player, 50);
       expect(player.getVariable('stage')).toBe('prep');
@@ -668,6 +680,11 @@ describe('practice starters', () => {
         expect(new Set(cards.map((c) => c.sound)).size).toBe(4);
         const { player } = await open(p);
         await clickOn(player, p, P, 'Play model');
+        //one button: while the model is playing it says Stop, and pressing it stops
+        await vi.waitFor(() => (player.step(50), expect(textOf(layer(p, P, 'Play model').id)).toBe('Stop')));
+        await clickOn(player, p, P, 'Play model');
+        await vi.waitFor(() => (player.step(50), expect(textOf(layer(p, P, 'Play model').id)).toBe('Play model')));
+        expect(heard[0].paused).toBe(true);
         await clickOn(player, p, P, 'Slow switch');
         expect(textOf(layer(p, P, 'Slow switch').id)).toContain('Slow: on');
         await clickOn(player, p, P, 'Play model');
@@ -679,6 +696,8 @@ describe('practice starters', () => {
         expect(first[first.length - 1].preservesPitch).toBe(true);
         player.setVariable('current', 2);
         await tick(player, 50);
+        //the last clip has finished (the button says Play model again) before the next press starts another
+        await vi.waitFor(() => (player.step(50), expect(textOf(layer(p, P, 'Play model').id)).toBe('Play model')));
         await clickOn(player, p, P, 'Play model');
         const third = heard.filter((h) => !h.src.startsWith('blob:take')).pop()!;
         expect(third.src).not.toBe(first[0].src);
@@ -719,12 +738,11 @@ describe('practice starters', () => {
         heard = [];
         await clickOn(player, p, P, 'Model then mine', 20);
         await vi.waitFor(() => expect(heard.map((h) => (h.src.startsWith('blob:take') ? 'mine' : 'model'))).toEqual(['model', 'mine']), { timeout: 3000 });
-        await vi.waitFor(() => expect(player.getVariable('busy')).toBe(false));
-        //Stop while the model is still going: the take is not played after it
+        await flush(100);
+        //Stop while the model is still going (Play model says Stop while it plays): its Stopped output is wired, so the take is not played after it
         heard = [];
         await clickOn(player, p, P, 'Model then mine', 0);
-        await clickOn(player, p, P, 'Stop', 0);
-        expect(player.getVariable('busy')).toBe(false);
+        await clickOn(player, p, P, 'Play model', 0);
         await flush(400);
         expect(heard.some((h) => h.src.startsWith('blob:take'))).toBe(false);
         player.destroy();
@@ -814,7 +832,7 @@ describe('practice starters', () => {
         await settle(player, 100);
         expect(shown(p, P, 'Record')).toBe(false);
         expect(shown(p, P, 'Plain version')).toBe(true);
-        await click(layer(p, P, 'Stop').id);
+        await click(layer(p, P, 'Play model').id);
         await click(layer(p, P, 'Check myself').id);
         await settle(player, 50);
         expect(player.getVariable('stage')).toBe('check');
@@ -873,13 +891,13 @@ describe('practice starters', () => {
         await tick(player);
         player.goTo(R);
         await tick(player);
+        player.setVariable('talkSeconds', 1);
         await clickOn(player, p, R, 'Draw a card');
         await clickOn(player, p, R, 'Prepare button');
         await clickOn(player, p, R, 'Record this talk');
-        player.setVariable('left', 1);
-        await flush(1200);
+        //the talk countdown runs out while the take is still going
+        await vi.waitFor(() => expect(player.getVariable('stage')).toBe('tally'), { timeout: 2500 });
         await settle(player, 150);
-        expect(player.getVariable('stage')).toBe('tally');
         expect(host.calls.some((c) => c.op === 'stop')).toBe(true);
         expect(shown(p, R, 'Replay step')).toBe(true);
         player.destroy();
@@ -925,6 +943,9 @@ describe('practice starters', () => {
         expect(shown(p, F, 'Play mine')).toBe(true);
         await clickOn(player, p, F, 'Play mine');
         await vi.waitFor(() => expect(heard.some((h) => h.src.startsWith('blob:take'))).toBe(true));
+        //one button: it says Stop while the take plays
+        await vi.waitFor(() => (player.step(50), expect(textOf(layer(p, F, 'Play mine').id)).toBe('Stop')));
+        await flush(80);
         expect(shown(p, F, 'Play my recording')).toBe(false);
         await clickOn(player, p, F, 'Compare with the expert');
         expect(player.getVariable('stage')).toBe('review');

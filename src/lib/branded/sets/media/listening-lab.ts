@@ -1,12 +1,12 @@
 //Listening lab: a sound check, then four short ear-training rounds (identify the sound, compare A and B, sort clips by dragging, what changed) with a score at the end.
-//Every clip is a Play sound node on its own button, so looping and slow replay come from the node's own Loop and Speed (the Loop and Slow buttons just flip two variables).
+//Every clip is a Play sound node on its own button, so looping and slow replay come from the node's own Loop and Speed (the Loop and Slow buttons are pressed
+//switches on two variables). The one button per clip is Play and Stop in one: its label reads soundPlaying() and a press stops the clip when it is going.
 //The sounds are placeholder tones the author swaps; each clip also has a written description, the way in for anyone who cannot or would rather not listen.
 import { createNode, type Artboard, type FrameNode, type SceneNode, type TemplateChecklistItem, type Variable } from 'interactives-player';
-import { brandedPage, brandedProject, button, byName, card, contentBox, heading, item, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { whenTrue } from '../assessment/gate';
-import { announce, bind, click, go, graph, panel, setVar, toggleVar, variable } from '../assessment/shared';
-import { boxText, endPage, goButton, heroPage, join, put, seq } from '../drag/shared';
+import { keyNavList, stack } from '../../parts';
+import { addVar, announce, bind, boxText, click, endPage, goNext, graph, heroPage, resetVars, setVar, toggleVar } from './shared';
 import { addPlaceholderSound, type Note } from './sounds';
 
 //Three rounds, read from the "rounds" list in the Variables tab: the question, up to three answers, the right one (counting from 0) and why
@@ -53,100 +53,111 @@ interface Clip {
 
 type G = ReturnType<typeof graph>;
 
-//A clip: its card with a waveform picture, Play and Stop, and its written description (shown when descriptions are on)
+//Play when nothing of this clip is going, Stop when it is: the label and the press both read soundPlaying() for the clip's own sound
+const toggleClip = (g: G, btn: SceneNode, name: string, asset: string, loopExpr: string, speedExpr: string): void => {
+  const ev = click(g, btn, name);
+  const going = g.then(ev, 'logic.if', { condition: `soundPlaying("${asset}")` });
+  g.then(going, 'action.stopSound', { asset }, 'true');
+  g.then(going, 'action.sound', { asset, loop: loopExpr, speed: speedExpr, keepPitch: true, solo: true, continue: 'start' }, 'false');
+};
+const playLabel = (asset: string) => `soundPlaying("${asset}") ? "Stop" : "Play"`;
+
+//A clip: its card with a waveform picture, one Play or Stop button, and its written description (shown when descriptions are on)
 function clipCard(ctx: BrandedCtx, page: Artboard, g: G, clip: Clip, x: number, y: number, w: number): { card: SceneNode; play: SceneNode } {
   const { L } = ctx;
-  const cardBox = card(ctx, `${clip.title} card`, x, y, w, 200);
-  const title = heading(ctx, `${clip.title} title`, clip.title, x + 20, y + 14, w - 40, { fontSize: 20 });
-  const wave = picture(ctx, `${clip.title} waveform`, x + 20, y + 48, w - 40, 50);
-  const play = button(ctx, `${clip.title} play button`, 'Play', x + 20, y + 108, 130);
-  play.ariaLabel = `Play ${clip.title}`;
-  const stop = button(ctx, `${clip.title} stop button`, 'Stop', x + 162, y + 108, 110, false);
-  stop.ariaLabel = `Stop ${clip.title}`;
-  const description = bind(text(ctx, `${clip.title} description`, `Description: ${clip.description}`, x + 20, y + 160, w - 40, { fontSize: 14, lineHeight: 1.3, color: L.muted }), { visible: 'showText' });
-  page.children.push(cardBox, title, wave, play, stop, description);
-  const ev = click(g, play, `Play ${clip.title}`);
-  g.then(ev, 'action.sound', { asset: clip.asset, loop: 'looping', speed: `slow ? ${SLOW} : 1`, keepPitch: true, solo: true, continue: 'start' });
-  g.then(click(g, stop, `Stop ${clip.title}`), 'action.stopSound', {});
+  const title = heading(ctx, `${clip.title} title`, clip.title, 20, 14, w - 40, { fontSize: 20 });
+  const wave = picture(ctx, `${clip.title} waveform`, 20, 48, w - 40, 50);
+  const play = bind(button(ctx, `${clip.title} play button`, 'Play', 20, 108, 160), { label: playLabel(clip.asset), ariaLabel: `soundPlaying("${clip.asset}") ? "Stop ${clip.title}" : "Play ${clip.title}"` });
+  const description = bind(text(ctx, `${clip.title} description`, `Description: ${clip.description}`, 20, 160, w - 40, { fontSize: 14, lineHeight: 1.3, color: L.muted }), { visible: 'showText' });
+  const cardBox = createNode('frame', { name: `${clip.title} card`, x, y, width: w, height: 200, cornerRadius: 16, fill: solid(L.surface), stroke: null, clip: false, role: 'region', ariaLabel: clip.title, children: [title, wave, play, description] }) as FrameNode;
+  page.children.push(cardBox);
+  toggleClip(g, play, `Play or stop ${clip.title}`, clip.asset, 'looping', `slow ? ${SLOW} : 1`);
   return { card: cardBox, play };
 }
 
-//Loop, Slow and Descriptions: three switches, each a variable with its state in its label
+//Loop, Slow and Descriptions: three switches, each a pressed button on a variable (a native pressed state, and a look that says so)
 function switches(ctx: BrandedCtx, page: Artboard, g: G, v: Vars, x: number, y: number): SceneNode[] {
-  const make = (name: string, w: number, label: string, on: Variable, dx: number, hint: string) => {
-    const b = bind(button(ctx, name, label, x + dx, y, w, false), { label: `${on.name} ? ${JSON.stringify(`${label}: on`)} : ${JSON.stringify(`${label}: off`)}` });
+  const { L } = ctx;
+  const make = (name: string, w: number, label: string, on: Variable, hint: string) => {
+    const b = bind(button(ctx, name, label, 0, 0, w, false), { ariaPressed: on.name, 'fill.color': `${on.name} ? "${L.button}" : "${L.background}"`, color: `${on.name} ? "${L.onButton}" : "${L.text}"` });
     b.ariaDescription = hint;
-    g.run(click(g, b, name), toggleVar(on));
-    return b;
+    return [b, on] as const;
   };
-  const list = [
-    make('Loop switch', 128, 'Loop', v.looping, 0, 'Plays a clip round and round until you press Stop. Applies the next time you press Play.'),
-    make('Slow switch', 128, 'Slow', v.slow, 140, 'Plays clips at a slower speed without changing the pitch. Applies the next time you press Play.'),
-    make('Descriptions switch', 184, 'Descriptions', v.showText, 280, 'Shows a written description of each clip.'),
+  const made = [
+    make('Loop switch', 128, 'Loop', v.looping, 'Plays a clip round and round until you press Stop. Applies the next time you press Play.'),
+    make('Slow switch', 128, 'Slow', v.slow, 'Plays clips at a slower speed without changing the pitch. Applies the next time you press Play.'),
+    make('Descriptions switch', 184, 'Descriptions', v.showText, 'Shows a written description of each clip.'),
   ];
-  page.children.push(...list);
+  const list = made.map(([b]) => b);
+  made.forEach(([b, on]) => g.run(g.event('event.pointer', { target: b.id, type: 'click' }, b.name), toggleVar(on)));
+  page.children.push(stack('Switches', x, y, 440, { direction: 'row', gap: 12, align: 'start', children: list }));
   return list;
 }
 
-//One round's question: the prompt, up to three answers read from rounds[index], a feedback panel and Next
-function round(ctx: BrandedCtx, page: Artboard, g: G, v: Vars, index: number, next: Artboard, o: { prompt: { x: number; y: number; w: number }; answers: { x: number; y: number; w: number; row: boolean }; feedback: { x: number; y: number; w: number }; nextLabel?: string }): SceneNode {
+//One round's question: the prompt, up to three answers read from rounds[index] (a key-navigated repeater, so the arrow keys move between them), a feedback panel and Next
+function round(ctx: BrandedCtx, page: Artboard, g: G, v: Vars, index: number, o: { prompt: { x: number; y: number; w: number }; answers: { x: number; y: number; w: number; row: boolean }; feedback: { x: number; y: number; w: number }; nextLabel?: string }): SceneNode {
   const { L } = ctx;
   const r = `rounds[${index}]`;
   const prompt = heading(ctx, 'Question', '{' + r + '.q}', o.prompt.x, o.prompt.y, o.prompt.w, { fontSize: 22, autoSize: 'none', height: o.answers.row ? 34 : 56, lineHeight: 1.25 } as never);
   page.children.push(prompt);
-  const answers = [0, 1, 2].map((k) => {
-    const b = button(ctx, `Answer ${k + 1}`, `Answer ${k + 1}`, o.answers.row ? o.answers.x + k * ((o.answers.w + 20) / 3) : o.answers.x, o.answers.row ? o.answers.y : o.answers.y + k * 58, o.answers.row ? (o.answers.w - 40) / 3 : o.answers.w, false);
-    Object.assign(b, { height: 48, cornerRadius: 14, fontSize: 17 });
-    const right = `locked && ${r}.answer == ${k}`;
-    const wrongPick = `locked && choice == ${k} && ${r}.answer != ${k}`;
-    bind(b, {
-      label: `(${right} ? "✓  " : ${wrongPick} ? "✗  " : "") + ${r}.options[${k}]`,
-      visible: `${r}.options.length > ${k}`,
-      disabled: 'locked',
-      opacity: `locked && !(${right}) && !(${wrongPick}) ? 0.5 : 1`,
-      'fill.color': `${right} ? "${L.successSurface}" : ${wrongPick} ? "${L.errorSurface}" : "${L.background}"`,
-      'stroke.paint.color': `${right} ? "${L.success}" : ${wrongPick} ? "${L.error}" : "${L.border}"`,
-      ariaDescription: `${right} ? "Right answer" : ${wrongPick} ? "Wrong" : ""`,
-    });
-    return b;
+  const gap = o.answers.row ? 20 : 10;
+  const w = o.answers.row ? (o.answers.w - 2 * gap) / 3 : o.answers.w;
+  const right = `locked && ${r}.answer == index`;
+  const wrongPick = `locked && choice == index && ${r}.answer != index`;
+  const answer = bind(button(ctx, 'Answer', '{item}', 0, 0, w, false), {
+    label: `(${right} ? "✓  " : ${wrongPick} ? "✗  " : "") + item`,
+    ariaLabel: '"Answer " + (index + 1) + ": " + item',
+    disabled: 'locked',
+    opacity: `locked && !(${right}) && !(${wrongPick}) ? 0.5 : 1`,
+    'fill.color': `${right} ? "${L.successSurface}" : ${wrongPick} ? "${L.errorSurface}" : "${L.background}"`,
+    'stroke.paint.color': `${right} ? "${L.success}" : ${wrongPick} ? "${L.error}" : "${L.border}"`,
+    ariaDescription: `${right} ? "Right answer" : ${wrongPick} ? "Wrong" : ""`,
   });
+  Object.assign(answer, { height: 48, cornerRadius: 14, fontSize: 17 });
+  const answers = keyNavList('Answers', o.answers.x, o.answers.y, o.answers.w, o.answers.row ? 48 : 3 * 48 + 2 * gap, { items: `${r}.options`, row: answer, orientation: o.answers.row ? 'horizontal' : 'vertical', gap, ariaLabel: 'Answers' });
   const flashText = text(ctx, 'Feedback text', `{lastRight ? "✓ Correct. " : "✗ Not quite. "}{${r}.why}`, 20, 12, o.feedback.w - 40 - 190, { fontSize: 16, fontWeight: 600, lineHeight: 1.3 });
-  const flash = bind(panel(ctx, 'Feedback', o.feedback.x, o.feedback.y, o.feedback.w, 74, [flashText], { role: 'region', stroke: stroke(L.border, 2) }), {
+  const nextBtn = button(ctx, 'Next button', o.nextLabel ?? 'Next', o.feedback.w - 190 - 12, 14, 190);
+  const flash = bind(createNode('frame', { name: 'Feedback', x: o.feedback.x, y: o.feedback.y, width: o.feedback.w, height: 74, cornerRadius: 16, fill: solid(L.surface), stroke: stroke(L.border, 2), clip: false, role: 'region', children: [flashText, nextBtn] }) as FrameNode, {
     visible: 'locked',
     'fill.color': `lastRight ? "${L.successSurface}" : "${L.errorSurface}"`,
     'stroke.paint.color': `lastRight ? "${L.success}" : "${L.error}"`,
     ariaLabel: `(lastRight ? "Correct. " : "Not quite. ") + ${r}.why`,
   });
-  const nextBtn = bind(button(ctx, 'Next button', o.nextLabel ?? 'Next', o.feedback.x + o.feedback.w - 190 - 12, o.feedback.y + 14, 190), { visible: 'locked' });
-  page.children.push(...answers, flash, nextBtn);
-  answers.forEach((b, k) => {
-    const open = g.then(click(g, b, `Answer ${k + 1}`), 'logic.if', { condition: `!locked && ${r}.options.length > ${k}` });
-    whenTrue(g, open, setVar(v.locked, 'true'), setVar(v.choice, String(k)), setVar(v.lastRight, `${r}.answer == ${k}`), setVar(v.score, 'lastRight ? 1 : 0', 'add'), announce(`(lastRight ? "Correct. " : "Not quite. The right answer was " + ${r}.options[${r}.answer] + ". ") + ${r}.why`));
-  });
-  g.run(click(g, nextBtn, 'Next'), go(next));
-  g.run(g.event('event.start', {}, 'Round starts'), setVar(v.locked, 'false'), setVar(v.choice, '-1'), setVar(v.lastRight, 'false'));
-  return answers[0];
+  page.children.push(answers, flash);
+  //One flow for every answer: the event says which copy was pressed, and a locked round ignores the rest
+  g.run(g.event('event.pointer', { target: answer.id, type: 'click', onlyIf: '!locked' }, 'An answer'), setVar(v.locked, 'true'), setVar(v.choice, 'event.index'), setVar(v.lastRight, `${r}.answer == event.index`), setVar(v.score, 'lastRight ? 1 : 0', 'add'), announce(`(lastRight ? "Correct. " : "Not quite. The right answer was " + ${r}.options[${r}.answer] + ". ") + ${r}.why`));
+  g.run(click(g, nextBtn, 'Next'), goNext());
+  g.run(g.event('event.start', {}, 'Round starts'), resetVars(v.locked, v.choice, v.lastRight));
+  return answer;
 }
+
+/** States for the layout check: a round answered (the feedback panel shows), the sorting round with a long message, and descriptions on. */
+const LAYOUT_STATES: LayoutState[] = [
+  { label: 'answered, descriptions on', vars: { locked: true, choice: 1, lastRight: false, showText: true, message: 'Sound 2 does not go in Higher sounds. Listen again and try the other group.' } },
+];
 
 function build(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'Listening lab');
   const { project, L } = ctx;
   const v: Vars = {
-    looping: variable(project, 'looping', 'boolean', false),
-    slow: variable(project, 'slow', 'boolean', false),
-    showText: variable(project, 'showText', 'boolean', false),
-    score: variable(project, 'score', 'number', 0),
-    locked: variable(project, 'locked', 'boolean', false),
-    choice: variable(project, 'choice', 'number', -1),
-    lastRight: variable(project, 'lastRight', 'boolean', false),
-    misses: variable(project, 'misses', 'number', 0),
-    message: variable(project, 'message', 'string', ''),
+    looping: addVar(project, 'looping', 'boolean', false),
+    slow: addVar(project, 'slow', 'boolean', false),
+    showText: addVar(project, 'showText', 'boolean', false),
+    score: addVar(project, 'score', 'number', 0),
+    locked: addVar(project, 'locked', 'boolean', false),
+    choice: addVar(project, 'choice', 'number', -1),
+    lastRight: addVar(project, 'lastRight', 'boolean', false),
+    misses: addVar(project, 'misses', 'number', 0),
+    message: addVar(project, 'message', 'string', ''),
   };
-  variable(project, 'rounds', 'list', ROUNDS);
-  const highs = variable(project, 'highSounds', 'list', []);
-  const lows = variable(project, 'lowSounds', 'list', []);
+  addVar(project, 'rounds', 'list', ROUNDS);
+  const highs = addVar(project, 'highSounds', 'list', []);
+  const lows = addVar(project, 'lowSounds', 'list', []);
+  //A live variable: how many sounds are in a group, which the count, the Next button and the finish check all read
+  addVar(project, 'sorted', 'number', 0, { formula: 'highSounds.length + lowSounds.length', live: true });
 
-  const { page: hero, start } = heroPage(ctx, 'Listening lab', 'Train your ear: name a sound, compare two clips, sort sounds by dragging and spot what changed. Every clip also has a written description.');
+  const { page: hero, start } = heroPage(ctx, 'Listening lab', 'Train your ear: name a sound, compare two clips, sort sounds by dragging and spot what changed. Every clip also has a written description.', 'Start', 'Start button');
+  hero.name = 'Start';
   const check = brandedPage(ctx, 'Before you start: sound check', { name: 'Sound check', footer: 'Listening lab' });
   const identify = brandedPage(ctx, 'Round 1: Identify the sound', { name: 'Identify the sound', footer: 'Loop and Slow apply from the next press of Play' });
   const compare = brandedPage(ctx, 'Round 2: Compare A and B', { name: 'Compare A and B', footer: 'Loop and Slow apply from the next press of Play' });
@@ -172,23 +183,24 @@ function build(colourway: Colourway) {
   //Hero
   {
     const g = graph(hero);
-    g.run(click(g, start, 'Navigation'), go(check));
+    g.run(click(g, start, 'Navigation'), goNext());
     checklist.push(item('Write the title and the line under it on the first page', byName(hero, 'Subtitle'), hero));
   }
 
   //Sound check: headphones and volume, a test tone, and the way in without sound
   const box = contentBox(check);
-  const tips = text(ctx, 'Sound check text', '1. Put your headphones on if you have them. Clips are easier to tell apart that way.\n2. Set your device volume to a comfortable level, about halfway.\n3. Press Play test sound. You should hear one steady note.\nOn a phone or tablet each clip needs its own tap to start.', box.x, box.y, 620, { fontSize: 19, lineHeight: 1.45 });
-  const testBtn = button(ctx, 'Play test sound button', 'Play test sound', box.x, box.y + 214, 220, false);
-  const heard = button(ctx, 'Heard it button', 'I heard it, start', box.x + 240, box.y + 214, 240);
-  const noSound = button(ctx, 'No sound button', 'I can\'t use sound: show descriptions', box.x, box.y + 280, 480, false);
-  const assure = text(ctx, 'Descriptions note', 'Every clip has a written description for anyone who cannot or would rather not listen. You can switch descriptions on or off on any round with the Descriptions button.', box.x, box.y + 350, 620, { fontSize: 16, color: L.muted, lineHeight: 1.4 });
-  check.children.push(tips, testBtn, heard, noSound, assure);
+  const tips = text(ctx, 'Sound check text', '1. Put your headphones on if you have them. Clips are easier to tell apart that way.\n2. Set your device volume to a comfortable level, about halfway.\n3. Press Play test sound. You should hear one steady note.\nOn a phone or tablet each clip needs its own tap to start.', 0, 0, 620, { fontSize: 19, lineHeight: 1.45 });
+  const testBtn = bind(button(ctx, 'Play test sound button', 'Play test sound', 0, 0, 220, false), { label: `soundPlaying("${sounds.test}") ? "Stop test sound" : "Play test sound"` });
+  const heard = button(ctx, 'Heard it button', 'I heard it, start', 0, 0, 240);
+  const testRow = stack('Test row', 0, 0, 620, { direction: 'row', gap: 20, align: 'start', children: [testBtn, heard] });
+  const noSound = button(ctx, 'No sound button', 'I can\'t use sound: show descriptions', 0, 0, 480, false);
+  const assure = text(ctx, 'Descriptions note', 'Every clip has a written description for anyone who cannot or would rather not listen. You can switch descriptions on or off on any round with the Descriptions button.', 0, 0, 620, { fontSize: 16, color: L.muted, lineHeight: 1.4 });
+  check.children.push(stack('Sound check column', box.x, box.y, 620, { gap: 18, children: [tips, testRow, noSound, assure] }));
   {
     const g = graph(check);
-    g.then(click(g, testBtn, 'Test tone'), 'action.sound', { asset: sounds.test, solo: true, continue: 'start' });
-    g.run(click(g, heard, 'Continue'), go(identify));
-    g.run(click(g, noSound, 'Without sound'), setVar(v.showText, 'true'), go(identify));
+    toggleClip(g, testBtn, 'Test tone', sounds.test, 'false', '1');
+    g.run(click(g, heard, 'Continue'), goNext());
+    g.run(click(g, noSound, 'Without sound'), setVar(v.showText, 'true'), goNext());
   }
   checklist.push(item('Check the sound check wording suits your learners, and swap the test tone for your own if you like (the Play sound node on the test button)', tips, check));
 
@@ -198,7 +210,7 @@ function build(colourway: Colourway) {
     const g = graph(identify);
     clipCard(ctx, identify, g, { title: 'Sound 1', asset: sounds.doorbell, description: 'Two soft bell notes, a higher one then a lower one, with a short gap between.' }, b.x, b.y, 448);
     switches(ctx, identify, g, v, b.x, b.y + 212);
-    round(ctx, identify, g, v, 0, compare, { prompt: { x: b.x + 480, y: b.y, w: 448 }, answers: { x: b.x + 480, y: b.y + 62, w: 448, row: false }, feedback: { x: b.x, y: b.y + 290, w: b.width } });
+    round(ctx, identify, g, v, 0, { prompt: { x: b.x + 480, y: b.y, w: 448 }, answers: { x: b.x + 480, y: b.y + 62, w: 448, row: false }, feedback: { x: b.x, y: b.y + 290, w: b.width } });
   }
 
   //Round 2: compare two clips (playing one stops the other, so only one is heard at a time)
@@ -208,12 +220,11 @@ function build(colourway: Colourway) {
     clipCard(ctx, compare, g, { title: 'Clip A', asset: sounds.steady, description: 'A steady, smooth note that stays the same.' }, b.x, b.y, 448);
     clipCard(ctx, compare, g, { title: 'Clip B', asset: sounds.rough, description: 'The same note, but it wobbles and buzzes.' }, b.x + 480, b.y, 448);
     switches(ctx, compare, g, v, b.x, b.y + 210);
-    round(ctx, compare, g, v, 1, sort, { prompt: { x: b.x, y: b.y + 266, w: b.width }, answers: { x: b.x, y: b.y + 306, w: b.width, row: true }, feedback: { x: b.x, y: b.y + 366, w: b.width } });
+    round(ctx, compare, g, v, 1, { prompt: { x: b.x, y: b.y + 266, w: b.width }, answers: { x: b.x, y: b.y + 306, w: b.width, row: true }, feedback: { x: b.x, y: b.y + 366, w: b.width } });
   }
 
   //Round 3: sort the clips into two groups by dragging
   const sortBox = contentBox(sort);
-  const sortedVars = [highs, lows];
   const GROUPS = [
     { name: 'Higher sounds', tag: 'high', list: highs },
     { name: 'Lower sounds', tag: 'low', list: lows },
@@ -224,13 +235,12 @@ function build(colourway: Colourway) {
     { title: 'Sound 3', asset: sounds.low2, tag: 'low', description: 'One long, very deep note.' },
     { title: 'Sound 4', asset: sounds.high2, tag: 'high', description: 'One long, bright note.' },
   ];
-  const total = sortedVars.map((l) => `${l.name}.length`).join(' + ');
   let firstChip: SceneNode;
   let firstZone: SceneNode;
   {
     const g = graph(sort);
     switches(ctx, sort, g, v, sortBox.x, sortBox.y);
-    const count = text(ctx, 'Count', `Sorted {${total}} of ${CHIPS.length}. Wrong drops: {misses}`, sortBox.x + 500, sortBox.y + 10, 428, { fontSize: 18, fontWeight: 700, align: 'right' });
+    const count = text(ctx, 'Count', `Sorted {sorted} of ${CHIPS.length}. Wrong drops: {misses}`, sortBox.x + 500, sortBox.y + 10, 428, { fontSize: 18, fontWeight: 700, align: 'right' });
     sort.children.push(count);
     const zones = GROUPS.map((gr, i) =>
       createNode('frame', {
@@ -266,30 +276,24 @@ function build(colourway: Colourway) {
         ariaLabel: c.title,
         children: [boxText(ctx, `${c.title} text`, c.title, 6, 0, 136, 46, { fontSize: 16, fontWeight: 600, align: 'center' })],
       }) as FrameNode;
-      const play = button(ctx, `${c.title} play button`, 'Play', sortBox.x + i * 232 + 156, chipY, 70, false);
-      play.ariaLabel = `Play ${c.title}`;
+      const play = bind(button(ctx, `${c.title} play button`, 'Play', sortBox.x + i * 232 + 156, chipY, 70, false), { label: playLabel(c.asset), ariaLabel: `soundPlaying("${c.asset}") ? "Stop ${c.title}" : "Play ${c.title}"` });
       const desc = bind(text(ctx, `${c.title} description`, `Description: ${c.description}`, sortBox.x + i * 232, chipY + 54, 222, { fontSize: 14, lineHeight: 1.3, color: L.muted }), { visible: 'showText' });
       sort.children.push(chip, play, desc);
-      g.then(click(g, play, `Play ${c.title}`), 'action.sound', { asset: c.asset, loop: 'looping', speed: `slow ? ${SLOW} : 1`, keepPitch: true, solo: true, continue: 'start' });
+      toggleClip(g, play, `Play or stop ${c.title}`, c.asset, 'looping', `slow ? ${SLOW} : 1`);
       return chip;
     });
     firstChip = chips[0];
     const feedback = text(ctx, 'Feedback', '{message}', sortBox.x, sortBox.y + 372, 700, { fontSize: 19, fontWeight: 600, bindings: { visible: 'message != ""' } });
-    const keys = text(ctx, 'Keyboard help', 'With the keyboard: Tab to a sound, press Space to pick it up, use the arrow keys to choose a group and Space to drop it.', sortBox.x, sortBox.y + 424, 700, { fontSize: 13, color: L.muted });
-    const see = bind(button(ctx, 'See next button', 'Next', sortBox.x + sortBox.width - 190, sortBox.y + 372, 190), { visible: `${total} == ${CHIPS.length}` });
+    const keys = text(ctx, 'Keyboard help', 'With the keyboard: Tab to a sound, press Space to pick it up, use the arrow keys to choose a group and Space to drop it.', sortBox.x + 8, sortBox.y + 420, 640, { fontSize: 13, color: L.muted });
+    const see = bind(button(ctx, 'See next button', 'Next', sortBox.x + sortBox.width - 190, sortBox.y + 372, 190), { visible: `sorted == ${CHIPS.length}` });
     sort.children.push(feedback, keys, see);
-    //A sound taken by a group, and one a group refused (below the Play rows of the graph)
-    const by = Math.max(0, ...sort.logic.nodes.map((n) => n.y)) + 150;
-    const ok = seq(sort, by, ['event.drop', { result: 'accepted' }, 'Sorting'], ['action.setVariable', { variable: v.message.id, op: 'set', value: 'event.layer + " goes in " + event.zone + ". Right."' }]);
-    const done = put(sort, 'logic.if', 520, by, { condition: `${total} == ${CHIPS.length}` });
-    const finished = put(sort, 'action.setVariable', 780, by - 60, { variable: v.message.id, op: 'set', value: `"All ${CHIPS.length} sorted. Well done!"` });
-    const sayDone = put(sort, 'action.announce', 1040, by - 60, { text: 'message' });
-    join(sort, ok[1], done);
-    join(sort, done, finished, 'true');
-    join(sort, finished, sayDone);
-    seq(sort, by + 160, ['event.drop', { result: 'rejected' }, 'Sorting'], ['action.setVariable', { variable: v.misses.id, op: 'add', value: '1' }], ['action.setVariable', { variable: v.message.id, op: 'set', value: 'event.layer + " does not go in " + event.zone + ". Listen again and try the other group."' }], ['action.announce', { text: 'message' }]);
-    seq(sort, by + 320, ['event.start', {}, 'Round starts'], ['action.dragReset', {}], ['action.setVariable', { variable: v.misses.id, op: 'set', value: '0' }], ['action.setVariable', { variable: v.message.id, op: 'set', value: '""' }]);
-    goButton(sort, see, changed, by + 480);
+    //A sound taken by a group (and the finish said once they are all in), and one a group refused
+    const ok = g.event('event.drop', { result: 'accepted' }, 'Sorting');
+    const done = g.then(g.then(ok, 'action.setVariable', { variable: v.message.id, op: 'set', value: 'event.layer + " goes in " + event.zone + ". Right."' }), 'logic.if', { condition: `sorted == ${CHIPS.length}` });
+    g.run(g.then(done, 'action.setVariable', { variable: v.message.id, op: 'set', value: `"All ${CHIPS.length} sorted. Well done!"` }, 'true'), announce('message'));
+    g.run(g.event('event.drop', { result: 'rejected' }, 'Sorting'), setVar(v.misses, '1', 'add'), setVar(v.message, 'event.layer + " does not go in " + event.zone + ". Listen again and try the other group."'), announce('message'));
+    g.run(g.event('event.start', {}, 'Round starts'), ['action.dragReset', {}], resetVars(v.misses, v.message));
+    g.run(click(g, see, 'Next'), goNext());
   }
 
   //Round 4: what changed (the second clip is the first with one thing different)
@@ -299,7 +303,7 @@ function build(colourway: Colourway) {
     clipCard(ctx, changed, g, { title: 'Before', asset: sounds.before, description: 'Three short beeps, all at the same pitch.' }, b.x, b.y, 448);
     clipCard(ctx, changed, g, { title: 'After', asset: sounds.after, description: 'Three short beeps, all higher than before.' }, b.x + 480, b.y, 448);
     switches(ctx, changed, g, v, b.x, b.y + 210);
-    round(ctx, changed, g, v, 2, results.page, { prompt: { x: b.x, y: b.y + 266, w: b.width }, answers: { x: b.x, y: b.y + 306, w: b.width, row: true }, feedback: { x: b.x, y: b.y + 366, w: b.width }, nextLabel: 'See results' });
+    round(ctx, changed, g, v, 2, { prompt: { x: b.x, y: b.y + 266, w: b.width }, answers: { x: b.x, y: b.y + 306, w: b.width, row: true }, feedback: { x: b.x, y: b.y + 366, w: b.width }, nextLabel: 'See results' });
   }
 
   //Results
@@ -316,10 +320,18 @@ function build(colourway: Colourway) {
     item('Write a description for every clip (the grey "Description:" line on its card or under its chip). It is the way in for learners who cannot or would rather not listen, so say what the sound is like without giving the answer away', byName(identify, 'Sound 1 description'), identify),
     item('Replace the grey waveform pictures with a waveform or spectrogram image, and write its alt text. Delete them if you do not want one', byName(identify, 'Sound 1 waveform'), identify),
     item('Round 3: rename the two groups (the box name, its heading and its Name read out) and give every sound the group it belongs to: its Tags (Draggable section) must match the Takes tags of its group', firstZone, sort),
-    item('To add a sound to the sorting round: duplicate a chip, its Play button and its description, then add a Play sound node for the new button and fix the "of 4" in the count, the Next button and the If node (Interactions tab)', firstChip, sort),
+    item('To add a sound to the sorting round: duplicate a chip, its Play button and its description, then add a Play sound node for the new button and fix the "of 4" in the count and the Next button (it shows when "sorted" reaches 4)', firstChip, sort),
     item('Try the Loop, Slow and Descriptions buttons: Loop and Slow are the Loop and Speed settings of every Play sound node (Interactions tab), and "Stop other sounds first" is on so two clips never play over each other', byName(identify, 'Loop switch'), identify),
     item('Change the results text, and pick the colourway on the Themes tab. The brand parts are locked', results.result, results.page),
   );
+
+  //Notes for whoever edits the template, below each page
+  const below = (page: Artboard, x: number, w: number) => ({ x, y: page.height + 14, w, h: 96 });
+  addNote(identify, { ...below(identify, 0, 440), text: '**Play and Stop** are one button: its label reads `soundPlaying()` for that clip, and pressing it stops the clip when it is going, so there is no busy variable to keep.', colour: 'sky' });
+  addNote(identify, { ...below(identify, 456, 440), text: '**One answer flow** The answers are a repeater over `rounds`, so one flow serves every answer and the arrow keys move between them. [ ] Write your questions in `rounds`.', colour: 'gold' });
+  addNote(sort, { ...below(sort, 0, 440), text: '**Live variable** `sorted` counts the sounds in both groups. The count, the Next button and the "all sorted" message all read it.', colour: 'sky' });
+  addNote(check, { ...below(check, 0, 440), text: '[ ] Swap the placeholder tones in the Assets panel for your own clips. Keep a written description for every one.', colour: 'gold' });
+
   return { project, checklist };
 }
 
@@ -330,4 +342,5 @@ export const listeningLab: BrandedStarter = {
   description: 'Ear training in four short rounds: identify a sound, compare A and B, sort sounds by dragging and spot what changed. Clips loop and play slowly with the pitch kept, each has a written description, and a sound check comes first. Placeholder tones to swap.',
   tags: ['audio', 'listening', 'sound', 'compare'],
   build,
+  layoutStates: LAYOUT_STATES,
 };
