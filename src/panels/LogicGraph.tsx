@@ -784,7 +784,7 @@ export function LogicGraph() {
 
   return (
     <div className="logic-root" onKeyDownCapture={panelKeys}>
-    <SplitColumns id="logic" columns={[{ width: 170, min: 120, max: 360 }, 'flex', { width: 260, min: 200, max: 560 }]} className="logic">
+    <SplitColumns id="logic" columns={[{ width: 200, min: 120, max: 360 }, 'flex', { width: 260, min: 200, max: 560 }]} className="logic">
       <GraphPalette onAdd={(kind) => add(kind)} inputRef={searchRef} />
       <div
         ref={canvasRef}
