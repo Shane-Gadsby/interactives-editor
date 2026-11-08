@@ -17,7 +17,7 @@ import { ParamForm } from '../src/panels/LogicGraph';
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const LOOKS = PAGE_TRANSITIONS.map((t) => t.value);
-const NEW = ['wipeLeft', 'wipeRight', 'wipeUp', 'wipeDown', 'iris', 'zoom', 'pushLeft', 'pushRight', 'pushUp', 'pushDown'];
+const NEW = ['wipeLeft', 'wipeRight', 'wipeUp', 'wipeDown', 'iris', 'zoom', 'pushLeft', 'pushRight', 'pushUp', 'pushDown', 'wipeDiagonal', 'barnDoors', 'star', 'diamond', 'heart', 'clock', 'blinds', 'grid', 'crosshatch', 'dots', 'dissolve', 'cube'];
 
 function book(): Project {
   const p = createProject('Book');
@@ -34,10 +34,17 @@ describe('the Go to a page form', () => {
     expect(new Set(LOOKS).size).toBe(LOOKS.length);
     expect(defaultParams('action.artboard')).toMatchObject({ transition: 'fade', from: 'clicked' });
     const from = def.params.find((p) => p.key === 'from')!;
-    expect(from.showIf?.values).toEqual(['iris', 'zoom']);
+    expect(from.showIf?.values).toEqual(['iris', 'zoom', 'star', 'diamond', 'heart', 'clock']);
     expect(describeNode({ id: 'g', kind: 'action.artboard', x: 0, y: 0, params: { ...defaultParams('action.artboard'), to: 'next', transition: 'fade' } }, book().artboards[0], book())).toBe('go to the next page');
     expect(describeNode({ id: 'g', kind: 'action.artboard', x: 0, y: 0, params: { ...defaultParams('action.artboard'), to: 'next', transition: 'wipeLeft' } }, book().artboards[0], book())).toBe('go to the next page (wipe left)');
     expect(describeNode({ id: 'g', kind: 'action.artboard', x: 0, y: 0, params: { ...defaultParams('action.artboard'), to: 'next', transition: 'iris' } }, book().artboards[0], book())).toBe('go to the next page (iris)');
+    //the newer looks in plain words, without the bracketed hint their label carries in the select
+    const said = (transition: string) => describeNode({ id: 'g', kind: 'action.artboard', x: 0, y: 0, params: { ...defaultParams('action.artboard'), to: 'next', transition } }, book().artboards[0], book());
+    expect(said('star')).toBe('go to the next page (star)');
+    expect(said('barnDoors')).toBe('go to the next page (barn doors)');
+    expect(said('grid')).toBe('go to the next page (grid of squares)');
+    expect(said('dissolve')).toBe('go to the next page (dissolve)');
+    expect(said('cube')).toBe('go to the next page (cube)');
   });
 });
 

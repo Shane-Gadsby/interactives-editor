@@ -38,7 +38,7 @@ export const NODE_SYNONYMS: Record<string, string[]> = {
   'action.setProperty': ['change', 'move', 'colour', 'color', 'opacity', 'size', 'position', 'style', 'property', 'text'],
   'action.animate': ['tween', 'ease', 'transition', 'move smoothly', 'fade', 'slide', 'grow', 'animation'],
   'action.visibility': ['show', 'hide', 'visible', 'toggle', 'reveal', 'appear', 'disappear'],
-  'action.artboard': ['goto', 'go to', 'navigate', 'page', 'next page', 'previous', 'back', 'screen', 'slide', 'jump', 'link', 'transition', 'wipe', 'iris', 'zoom', 'push'],
+  'action.artboard': ['goto', 'go to', 'navigate', 'page', 'next page', 'previous', 'back', 'screen', 'slide', 'jump', 'link', 'transition', 'wipe', 'iris', 'zoom', 'push', 'star', 'diamond', 'heart', 'clock', 'barn doors', 'blinds', 'grid', 'crosshatch', 'dots', 'dissolve', 'cube'],
   'action.moveView': ['camera', 'pan', 'zoom', 'map', 'scroll', 'focus on', 'frame', 'panel', 'comic', 'travel', 'view'],
   'action.url': ['link', 'website', 'open', 'browser', 'navigate', 'external'],
   'action.reportResult': ['score', 'grade', 'lms', 'complete', 'pass', 'fail', 'moodle', 'scorm', 'xapi'],
