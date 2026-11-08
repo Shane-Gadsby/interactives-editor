@@ -1,128 +1,106 @@
 import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, card, contentBox, item, stroke, text } from '../../kit';
+import { brandedPage, brandedProject, button, byName, contentBox, item, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { announce, bind, click, go, graph, heroPage, panel, setVar, variable } from './shared';
+import { stack } from '../../parts';
+import { bankQuestion, bind, click, goNext, graph, heroPage, noteBelow, scorePage, variable } from './shared';
 
 //Academic integrity, kept general: nothing here states a particular university's rules.
+//Each row is a question bank row: prompt, correct (true or false) and explain (shown after the answer).
 const STATEMENTS = [
-  { text: 'Putting someone else\'s idea into your own words without saying where it came from is still plagiarism.', answer: true, why: 'Plagiarism is using someone\'s words or ideas without credit, however you phrase them. Reference the source of an idea as well as a quotation.' },
-  { text: 'You only need to reference direct quotations.', answer: false, why: 'Paraphrased ideas, data, images and figures need a reference too, not just the words you quote.' },
-  { text: 'Two students may share the answers to an individual assignment if they both agree to it.', answer: false, why: 'Agreement between students does not change the rules. An individual assignment has to be your own work unless the task says otherwise.' },
-  { text: 'Talking through a topic with classmates before you write your own answer is usually fine.', answer: true, why: 'Discussing ideas is part of learning. Then write your answer yourself, in your own words, unless your course says otherwise.' },
-  { text: 'Changing a few words in a paragraph you found online makes it your own writing.', answer: false, why: 'Swapping a few words is not paraphrasing. Rewrite the idea properly, and reference where it came from.' },
-  { text: 'Handing in work you already submitted in another course, without asking, can break the rules.', answer: true, why: 'Work that has already been assessed is not new work. Ask your teacher before you reuse any of it.' },
-  { text: 'A reference manager means you no longer need to check your reference list.', answer: false, why: 'Tools save time on formatting but they can get details wrong. Check each reference against the referencing guide.' },
-  { text: 'If you are not sure whether something needs a reference, asking your teacher is a good idea.', answer: true, why: 'Asking is always better than guessing. Your teacher or the library can help you work it out.' },
+  { prompt: 'Putting someone else\'s idea into your own words without saying where it came from is still plagiarism.', correct: true, explain: 'Plagiarism is using someone\'s words or ideas without credit, however you phrase them. Reference the source of an idea as well as a quotation.' },
+  { prompt: 'You only need to reference direct quotations.', correct: false, explain: 'Paraphrased ideas, data, images and figures need a reference too, not just the words you quote.' },
+  { prompt: 'Two students may share the answers to an individual assignment if they both agree to it.', correct: false, explain: 'Agreement between students does not change the rules. An individual assignment has to be your own work unless the task says otherwise.' },
+  { prompt: 'Talking through a topic with classmates before you write your own answer is usually fine.', correct: true, explain: 'Discussing ideas is part of learning. Then write your answer yourself, in your own words, unless your course says otherwise.' },
+  { prompt: 'Changing a few words in a paragraph you found online makes it your own writing.', correct: false, explain: 'Swapping a few words is not paraphrasing. Rewrite the idea properly, and reference where it came from.' },
+  { prompt: 'Handing in work you already submitted in another course, without asking, can break the rules.', correct: true, explain: 'Work that has already been assessed is not new work. Ask your teacher before you reuse any of it.' },
+  { prompt: 'A reference manager means you no longer need to check your reference list.', correct: false, explain: 'Tools save time on formatting but they can get details wrong. Check each reference against the referencing guide.' },
+  { prompt: 'If you are not sure whether something needs a reference, asking your teacher is a good idea.', correct: true, explain: 'Asking is always better than guessing. Your teacher or the library can help you work it out.' },
+];
+
+/** The play page with a long statement answered wrong, and the result page with every statement missed, so the layout check sees the fullest they get. */
+export const TRUE_FALSE_LAYOUT_STATES: LayoutState[] = [
+  { label: 'long statement answered', page: 'True or false', vars: { q1_bankIndex: 2, q1_prompt: STATEMENTS[2].prompt + ' ' + STATEMENTS[0].prompt, q1_answered: true, q1_locked: true, q1_correct: false, q1_feedback: '✗ Not quite', q1_setCount: 8, q1_setLeft: 4, q1_setPos: 4, q1_setScore: 3 } },
+  { label: 'all missed', page: 'Your result', vars: { q1_missed: [0, 1, 2, 3, 4, 5, 6, 7], q1_setScore: 0, q1_setMax: 8 } },
 ];
 
 export function buildTrueFalse(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'True or false: academic integrity');
-  const { project, L } = ctx;
+  const { project } = ctx;
   const N = STATEMENTS.length;
 
   variable(project, 'statements', 'list', STATEMENTS);
-  const index = variable(project, 'index', 'number', 0);
-  const answered = variable(project, 'answered', 'boolean', false);
-  const lastRight = variable(project, 'lastRight', 'boolean', false);
-  const tally = variable(project, 'tally', 'number', 0);
-  const missed = variable(project, 'missed', 'list', []);
   variable(project, 'messageHigh', 'string', 'Great work. You know your way around academic integrity.');
   variable(project, 'messageMid', 'string', 'A good start. Look again at the statements below.');
   variable(project, 'messageLow', 'string', 'Have another look at the explanations, then try again.');
 
   const { page: hero, start } = heroPage(ctx, 'Academic integrity: true or false?', `Eight statements, one at a time. Say whether each is true or false and see why straight away.`, 'Start');
-  const play = brandedPage(ctx, 'True or false', { footer: 'Statement {index + 1} of {statements.length}' });
+  const play = brandedPage(ctx, 'True or false', { footer: 'Statement {q1_setPos} of {q1_setCount}' });
   const result = brandedPage(ctx, 'Your result', { footer: 'True or false: academic integrity' });
 
-  //The play page
+  //The statements are the rows of a question bank that is gone through once: the question kit keeps the position, the score and the missed list
   const box = contentBox(play);
-  const statementCard = card(ctx, 'Statement card', box.x, box.y, box.width, 160);
-  const statementLabel = text(ctx, 'Statement label', 'Is this statement true or false?', box.x + 32, box.y + 22, 600, { fontSize: 15, fontWeight: 600, color: L.muted });
-  const statement = text(ctx, 'Statement', '{statements[index].text}', box.x + 32, box.y + 54, box.width - 64, { fontSize: 26, fontWeight: 600, lineHeight: 1.3, role: 'heading', headingLevel: 2 });
-  const isTrue = button(ctx, 'True button', 'True', box.x, box.y + 184, 190);
-  const isFalse = button(ctx, 'False button', 'False', box.x + 206, box.y + 184, 190);
-  bind(isTrue, { disabled: 'answered', opacity: 'answered ? 0.5 : 1' });
-  bind(isFalse, { disabled: 'answered', opacity: 'answered ? 0.5 : 1' });
-  const running = text(ctx, 'Running tally', 'Correct so far: {tally} of {index + (answered ? 1 : 0)}', box.x + box.width - 400, box.y + 195, 400, { fontSize: 18, fontWeight: 600, align: 'right', color: L.muted });
-  const heading = text(ctx, 'Feedback heading', '{lastRight ? "✓ Correct" : "✗ Not quite"}', 24, 18, 400, { fontSize: 22, fontWeight: 700 });
-  const why = text(ctx, 'Explanation', '{statements[index].why}', 24, 56, box.width - 48, { fontSize: 18, lineHeight: 1.35 });
-  const feedback = bind(panel(ctx, 'Feedback', box.x, box.y + 258, box.width, 124, [heading, why], { role: 'region', stroke: stroke(L.border, 2) }), {
-    visible: 'answered',
-    'fill.color': `lastRight ? "${L.successSurface}" : "${L.errorSurface}"`,
-    'stroke.paint.color': `lastRight ? "${L.success}" : "${L.error}"`,
-    ariaLabel: '(lastRight ? "Correct. " : "Not quite. ") + statements[index].why',
+  const { frame, P } = bankQuestion(ctx, project, play, {
+    kind: 'truefalse',
+    name: 'Statement question',
+    items: 'statements',
+    noun: 'statement',
+    progressLabel: 'Statements answered',
+    explain: (P) => `statements[${P}_bankIndex].explain`,
+    patch: { prompt: STATEMENTS[0].prompt, feedbackCorrect: '✓ Correct', feedbackIncorrect: '✗ Not quite' },
   });
-  const next = bind(button(ctx, 'Next button', 'Next statement', box.x + box.width - 230, box.y + 398, 230), {
-    visible: 'answered',
-    label: `index >= statements.length - 1 ? "See my result" : "Next statement"`,
-  });
-  play.children.push(statementCard, statementLabel, statement, isTrue, isFalse, running, feedback, next);
-
-  {
-    const g = graph(play);
-    for (const [btn, value] of [[isTrue, 'true'], [isFalse, 'false']] as const) {
-      const ev = click(g, btn, `Answer ${value}`);
-      const end = g.run(
-        ev,
-        setVar(answered, 'true'),
-        setVar(lastRight, `statements[index].answer == ${value}`),
-        setVar(tally, 'lastRight ? 1 : 0', 'add'),
-        announce('(lastRight ? "Correct. " : "Not quite. ") + statements[index].why'),
-      );
-      g.then(g.then(end, 'logic.if', { condition: '!lastRight' }), 'action.setVariable', { variable: missed.id, op: 'push', value: 'statements[index].text' }, 'true');
-    }
-    const ev = click(g, next, 'Next statement');
-    const last = g.then(ev, 'logic.if', { condition: 'index >= statements.length - 1' });
-    //The true branch goes to the result page; the false branch moves on to the next statement
-    g.then(last, ...go(result), 'true');
-    g.run(
-      g.then(last, ...setVar(index, '1', 'add'), 'false'),
-      setVar(answered, 'false'),
-      announce('"Statement " + (index + 1) + " of " + statements.length + ": " + statements[index].text'),
-    );
-  }
   {
     const g = graph(hero);
-    g.run(click(g, start, 'Navigation'), go(play));
+    g.run(click(g, start, 'Navigation'), goNext());
   }
 
-  //The result page
-  const body = contentBox(result);
-  const scoreCard = card(ctx, 'Score card', body.x, body.y, 380, 230);
-  const scoreLabel = text(ctx, 'Score label', 'Your tally', body.x + 28, body.y + 26, 320, { fontSize: 18, fontWeight: 600, color: L.muted });
-  const scoreText = text(ctx, 'Score', '{tally} of {statements.length}', body.x + 28, body.y + 64, 330, { fontSize: 56, fontWeight: 700, lineHeight: 1.1 });
-  const scoreWords = text(ctx, 'Score words', 'statements right first time', body.x + 28, body.y + 150, 330, { fontSize: 18, color: L.muted });
-  const message = text(ctx, 'Result message', '{tally / statements.length >= 0.75 ? messageHigh : tally / statements.length >= 0.5 ? messageMid : messageLow}', body.x + 420, body.y + 24, body.width - 420, { fontSize: 26, fontWeight: 600, lineHeight: 1.3, role: 'heading', headingLevel: 2 });
-  const again = button(ctx, 'Try again button', 'Try again', body.x + 420, body.y + 150, 170);
-  const reviewHeading = bind(text(ctx, 'Review heading', 'Statements to look at again', body.x, body.y + 252, 600, { fontSize: 20, fontWeight: 700, role: 'heading', headingLevel: 2 }), { visible: 'missed.length > 0' });
-  const line = text(ctx, 'Review statement', '•  {item}', 0, 0, body.width, { fontSize: 15, lineHeight: 1.25 });
+  //The result page: the score from the run, a message banded from it, and the statements to look at again
+  variable(project, 'message', 'string', '', { formula: `band(${P}_setMax > 0 ? ${P}_setScore / ${P}_setMax : 0, [0.75, 0.5], [messageHigh, messageMid, messageLow])`, live: true });
+  const reviewHeading = bind(text(ctx, 'Review heading', 'Statements to look at again', 0, 0, 100, { fontSize: 20, fontWeight: 700, role: 'heading', headingLevel: 2 }), { visible: `${P}_missed.length > 0` });
+  const line = text(ctx, 'Review statement', '•  {item.prompt}', 0, 0, 100, { fontSize: 15, lineHeight: 1.25, autoSize: 'height' });
   const reviewList = createNode('frame', {
     name: 'Review list',
-    x: body.x,
-    y: body.y + 282,
-    width: body.width,
+    x: 0,
+    y: 0,
+    width: 100,
     height: 100,
     fill: null,
     stroke: null,
     clip: false,
     layout: { ...defaultAutoLayout('column'), gap: 4, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: 'stretch', hugHeight: true },
-    repeat: { items: 'missed', layout: 'none', gap: 0, columns: 1 },
+    repeat: { items: `${P}_missed.map(i => statements[i])`, layout: 'none', gap: 0, columns: 1 },
     children: [line],
   });
-  result.children.push(scoreCard, scoreLabel, scoreText, scoreWords, message, again, reviewHeading, reviewList);
+  const review = stack('Review', 0, 0, box.width, { gap: 8, children: [reviewHeading, reviewList] });
+  const tryAgain = button(ctx, 'Try again button', 'Try again', 0, 0, 170);
+  const missedBtn = bind(button(ctx, 'Missed button', 'Practise the missed ones', 0, 0, 250, false), { visible: `${P}_missed.length > 0` });
+  scorePage(ctx, result, {
+    label: 'Your tally',
+    score: `{${P}_setScore} of {${P}_setMax}`,
+    caption: 'statements right first time',
+    message: '{message}',
+    buttons: [tryAgain, missedBtn],
+    below: [review],
+  });
   {
     const g = graph(result);
-    g.run(click(g, again, 'Try again'), ['action.startOver', {}]);
-    g.run(g.event('event.start', {}, 'Result page'), announce('"You got " + tally + " of " + statements.length + " right. " + (tally / statements.length >= 0.75 ? messageHigh : tally / statements.length >= 0.5 ? messageMid : messageLow)'));
+    g.run(click(g, tryAgain, 'Try again'), ['action.startOver', {}]);
+    //Only the statements missed are asked again: the kit draws a run from the missed list, and the page before shows the first
+    g.run(click(g, missedBtn, 'Practise the missed ones'), ['action.questionReset', { question: frame.id, run: 'missed' }], ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
+    g.run(g.event('event.start', {}, 'Result page'), ['action.announce', { text: `"You got " + ${P}_setScore + " of " + ${P}_setMax + " right. " + message`, politeness: 'polite' }]);
   }
 
+  noteBelow(play, { text: '**Question bank** The statements are the rows of the `statements` list, asked once each. The question kit keeps the position, the score and the missed list for you (the `q1_set...` variables), so there is no counter to maintain.', colour: 'sky' });
+  noteBelow(play, { x: 456, text: 'Picking True or False **checks at once**: the Choose option node is followed by Check answer. Delete that node and bring back the Check button for a two step answer.', colour: 'sky' });
+  noteBelow(result, { text: '**Live variable** `message` is banded from the score, so the heading and the announcement read the same words. [ ] Reword the three messages in the Variables tab.', colour: 'gold' });
+
   const checklist: TemplateChecklistItem[] = [
-    item('Change the title and the line under it on the first page', hero.children.find((c) => c.name === 'Page title'), hero),
-    item('Write your own statements: the "statements" variable (Variables tab) is a list, one entry per statement, with its text, answer (true or false) and the explanation shown afterwards. Keep the same three names in each entry', statement, play),
-    item(`Add or remove statements in that list: the "Statement n of ${N}" footer, the tally and the result all follow its length`, undefined, play),
-    item('Reword the three result messages: the messageHigh, messageMid and messageLow variables (Variables tab)', message, result),
-    item('Change the instruction above the statement ("Is this statement true or false?")', statementLabel, play),
+    item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
+    item('Write your own statements: the "statements" variable (Variables tab) is a list, one entry per statement, with its prompt, correct (true or false) and the explanation shown afterwards. Keep those three names in each entry', frame, play),
+    item(`Add or remove statements in that list: the progress bar, the "Statement n of ${N}" footer, the tally and the result all follow its length`, undefined, play),
+    item('Reword the three result messages: the messageHigh, messageMid and messageLow variables (Variables tab)', byName(result, 'Result message'), result),
+    item('Ask only some of them, in a random order: select the question and, under Take the question from data, set Questions to draw and Random', frame, play),
     item('Change the colours for the whole piece with the Themes tab: the colourways are already set up', undefined, play),
   ];
   return { project, checklist };
 }
+

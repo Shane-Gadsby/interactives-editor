@@ -194,8 +194,9 @@ describe('playing the second batch', () => {
   describe('find multiple hotspots', () => {
     const { project } = starter('assessment/find-multiple-hotspots').build(COLOURWAYS[1]);
     const [hero, page, result] = project.artboards;
-    const targets = list(project, 'targets') as { name: string; feedback: string }[];
-    const area = (i: number) => idOf(page, `Area ${i + 1}`);
+    const targets = list(project, 'targets') as { name: string; feedback: string; x: number; y: number; w: number; h: number }[];
+    const areaId = () => idOf(page, 'Area');
+    const area = (i: number) => `${areaId()}~${i}`;
 
     async function open() {
       const player = play(project);
@@ -204,13 +205,22 @@ describe('playing the second batch', () => {
       return player;
     }
 
-    it('has five things to find, an area layer for each, and the areas are named for the keyboard', () => {
+    it('has five things to find, each with its place, drawn by one repeated area that is named for the keyboard', async () => {
       expect(targets).toHaveLength(5);
+      for (const t of targets) expect(t.w * t.h).toBeGreaterThan(0);
+      const tpl = byName(page, 'Area') as unknown as { role: string; focusable: boolean; bindings: Record<string, string> };
+      expect(tpl.role).toBe('button');
+      expect(tpl.focusable).toBe(true);
+      expect(tpl.bindings.ariaLabel).toBe('item.name');
+      //one click flow for every area, reading which copy was pressed
+      const onArea = page.logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.target === (tpl as unknown as { id: string }).id);
+      expect(onArea).toHaveLength(1);
+      expect(onArea[0].params.onlyIf).toBe('!found.includes(event.index)');
+      await open();
       for (let i = 0; i < 5; i++) {
-        const a = byName(page, `Area ${i + 1}`)!;
-        expect(a.role).toBe('button');
-        expect(a.focusable).toBe(true);
-        expect(a.bindings?.ariaLabel).toBe(`targets[${i}].name`);
+        expect(el(area(i)), `area ${i}`).toBeTruthy();
+        expect(el(area(i))!.style.transform).toContain(`translate(${targets[i].x}px, ${targets[i].y}px)`);
+        expect(el(area(i))!.style.width).toBe(`${targets[i].w}px`);
       }
     });
 
@@ -254,13 +264,25 @@ describe('playing the second batch', () => {
       expect(player.getVariable('found')).toEqual([]);
       expect(player.getVariable('wrong')).toBe(0);
     });
+
+    it('a sixth target is a sixth row, with no new layer or flow', async () => {
+      const more = JSON.parse(JSON.stringify(project)) as Project;
+      const v = more.variables.find((x) => x.name === 'targets')!;
+      v.initial = JSON.stringify([...targets, { name: 'A bird', feedback: 'Birds fly over the water.', x: 100, y: 100, w: 60, h: 40 }]);
+      const player = play(more);
+      await flush();
+      await click(idOf(more.artboards[0], 'Start button'));
+      await click(area(5));
+      expect(player.getVariable('found')).toEqual([5]);
+      expect(text()).toContain('Found 1 of 6');
+    });
   });
 
   describe('image choice', () => {
     const { project } = starter('assessment/image-choice').build(COLOURWAYS[2]);
     const [hero, page] = project.artboards;
     const options = list(project, 'options') as { label: string; alt: string; correct: boolean }[];
-    const card = (i: number) => idOf(page, `Choice ${i + 1}`);
+    const card = (i: number) => `${idOf(page, 'Choice')}~${i}`;
 
     async function open() {
       const player = play(project);
@@ -276,11 +298,17 @@ describe('playing the second batch', () => {
       for (let i = 0; i < 6; i++) {
         const c = el(card(i))!;
         expect(c.getAttribute('role')).toBe('checkbox');
-        expect(c.tabIndex).toBe(0);
+        //one Tab stop for the six, the arrow keys move between them
+        expect(c.tabIndex).toBe(i === 0 ? 0 : -1);
         expect(c.getAttribute('aria-label')).toBe(`${options[i].label}. ${options[i].alt}`);
       }
-      //six picture placeholders
-      expect(project.artboards[1].children.filter((n) => n.name.startsWith('Choice '))).toHaveLength(6);
+      //one repeated card, in a keyboard list
+      const list = byName(page, 'Choices') as unknown as { repeat: { items: string }; keyNav: { mode: string } };
+      expect(list.repeat.items).toBe('options');
+      expect(list.keyNav.mode).toBe('grid');
+      expect(page.logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.target === byName(page, 'Choice')!.id)).toHaveLength(2);
+      const live = project.variables.filter((v) => v.live).map((v) => v.name);
+      expect(live).toEqual(['nRight', 'nWrong', 'nTotal', 'outcome', 'verdict']);
     });
 
     it('picks several, takes one off again, and Check waits for a pick', async () => {
@@ -304,6 +332,7 @@ describe('playing the second batch', () => {
       await click(card(4));
       await click(idOf(page, 'Check button'));
       expect(player.getVariable('checked')).toBe(true);
+      expect(player.getVariable('nRight')).toBe(3);
       expect(text()).toContain((project.variables.find((v) => v.name === 'feedbackCorrect')!.initial as string));
       expect(text()).toContain('✓ Right');
       //a pick after checking changes nothing
@@ -343,8 +372,10 @@ describe('playing the second batch', () => {
   describe('single choice set', () => {
     const { project } = starter('assessment/single-choice-set').build(COLOURWAYS[3]);
     const [hero, game, result] = project.artboards;
-    const questions = list(project, 'questions') as { q: string; options: string[]; answer: number; why: string }[];
-    const answer = (i: number) => idOf(game, `Answer ${i + 1}`);
+    const questions = list(project, 'questions') as { prompt: string; options: string[]; correct: number; explain: string }[];
+    const frame = questionFrames(game)[0];
+    const answer = (i: number) => `${partsOf(frame).option[0].id}~${i}`;
+    const next = () => partsOf(frame).reset[0].id;
 
     async function open() {
       const player = play(project);
@@ -357,68 +388,79 @@ describe('playing the second batch', () => {
       expect(questions).toHaveLength(8);
       for (const q of questions) {
         expect(q.options).toHaveLength(3);
-        expect(q.answer).toBeGreaterThanOrEqual(0);
-        expect(q.answer).toBeLessThan(3);
-        expect(q.why.length).toBeGreaterThan(20);
+        expect(q.correct).toBeGreaterThanOrEqual(1);
+        expect(q.correct).toBeLessThanOrEqual(3);
+        expect(q.explain.length).toBeGreaterThan(20);
       }
     });
 
-    it('a right answer flashes Correct and moves on by itself, a wrong one shows the right one and waits for Next', async () => {
-      const player = await open();
-      expect(text()).toContain(questions[0].q);
-      expect(text()).toContain('Question 1 of 8');
-      await click(answer(questions[0].answer), 20);
-      expect(player.getVariable('locked')).toBe(true);
-      expect(player.getVariable('lastRight')).toBe(true);
-      expect(text()).toContain('✓ Correct');
-      expect(visible(idOf(game, 'Next button'))).toBe(false);
-      //after the pause it has moved on
-      await flush(1150);
-      expect(player.getVariable('index')).toBe(1);
-      expect(player.getVariable('locked')).toBe(false);
-      expect(text()).toContain(questions[1].q);
-      expect(text()).not.toContain('✓ Correct');
-      //a wrong answer: stays, shows the explanation and the right one marked, offers Next
-      const wrong = (questions[1].answer + 1) % 3;
-      await click(answer(wrong));
-      expect(player.getVariable('lastRight')).toBe(false);
-      expect(text()).toContain('✗ Not quite');
-      expect(text()).toContain(questions[1].why);
-      expect(text()).toContain(`✓  ${questions[1].options[questions[1].answer]}`);
-      expect(text()).toContain(`✗  ${questions[1].options[wrong]}`);
-      await flush(1150);
-      expect(player.getVariable('index')).toBe(1);
-      expect(visible(idOf(game, 'Next button'))).toBe(true);
-      //a second click on an answer is ignored
-      await click(answer(questions[1].answer));
-      expect(player.getVariable('score')).toBe(1);
-      await click(idOf(game, 'Next button'));
-      expect(player.getVariable('index')).toBe(2);
-      expect(text()).toContain(questions[2].q);
+    it('is one question over a bank gone through once, with the kit keeping the score and the position', () => {
+      expect(frame.question!.kind).toBe('single');
+      expect(frame.question!.bank).toMatchObject({ items: 'questions', end: 'finish' });
+      expect(project.variables.map((v) => v.name)).not.toEqual(expect.arrayContaining(['index', 'locked', 'choice', 'score']));
+      expect(byName(game, 'Questions answered')).toMatchObject({ type: 'progress' });
     });
 
-    it('ends on a score page with the total, and Try again starts over', async () => {
+    it('a right answer says Correct and moves on by itself, a wrong one shows the right one and the explanation and waits for Next', async () => {
+      const player = await open();
+      expect(text()).toContain(questions[0].prompt);
+      expect(text()).toContain('Question 1 of 8');
+      await click(answer(questions[0].correct - 1), 20);
+      expect(player.getVariable('q1_locked')).toBe(true);
+      expect(player.getVariable('q1_correct')).toBe(true);
+      expect(text()).toContain('✓ Correct');
+      expect(visible(next())).toBe(false);
+      //after the pause it has moved on
+      await flush(1150);
+      expect(player.getVariable('q1_setPos')).toBe(2);
+      expect(player.getVariable('q1_locked')).toBe(false);
+      expect(text()).toContain(questions[1].prompt);
+      expect(visible(partsOf(frame).feedback[0].id)).toBe(false);
+      //a wrong answer: stays, shows the explanation and the right one marked, offers Next
+      const wrong = questions[1].correct % 3;
+      await click(answer(wrong));
+      expect(player.getVariable('q1_correct')).toBe(false);
+      expect(text()).toContain('✗ Not quite');
+      expect(text()).toContain(questions[1].explain);
+      expect(text()).toContain('← Right answer');
+      await flush(1150);
+      expect(player.getVariable('q1_setPos')).toBe(2);
+      expect(visible(next())).toBe(true);
+      //a second click on an answer is ignored
+      await click(answer(questions[1].correct - 1));
+      expect(player.getVariable('q1_setScore')).toBe(1);
+      await click(next());
+      expect(player.getVariable('q1_setPos')).toBe(3);
+      expect(text()).toContain(questions[2].prompt);
+    });
+
+    it('ends on a score page with the total, a banded message and the missed questions, and Try again starts over', async () => {
       const player = await open();
       for (let i = 0; i < questions.length; i++) {
         const right = i % 2 === 0;
-        await click(answer(right ? questions[i].answer : (questions[i].answer + 1) % 3), right ? 1100 : 8);
-        if (!right) await click(idOf(game, 'Next button'));
+        await click(answer(right ? questions[i].correct - 1 : questions[i].correct % 3), right ? 1100 : 8);
+        if (!right) await click(next());
       }
-      expect(player.getVariable('score')).toBe(4);
+      expect(player.getVariable('q1_setScore')).toBe(4);
       expect(text()).toContain('4 / 8');
       expect(text()).toContain('50%');
       expect(text()).toContain(project.variables.find((v) => v.name === 'messageMid')!.initial as string);
+      expect(player.getVariable('q1_missed')).toEqual([1, 3, 5, 7]);
+      expect(text()).toContain('Questions to look at again');
+      expect(text()).toContain(questions[1].prompt);
       await click(idOf(result, 'Try again button'));
-      expect(player.getVariable('score')).toBe(0);
-      expect(player.getVariable('index')).toBe(0);
+      expect(player.getVariable('q1_setScore')).toBe(0);
+      expect(player.getVariable('q1_setPos')).toBe(0);
     }, 15000);
   });
 
   describe('summary', () => {
     const { project } = starter('assessment/summary').build(COLOURWAYS[4]);
     const [hero, game, result] = project.artboards;
-    const steps = list(project, 'steps') as { prompt: string; statements: string[]; answer: number; line: string }[];
-    const statement = (i: number) => idOf(game, `Statement ${i + 1}`);
+    const steps = list(project, 'steps') as { heading: string; prompt: string; options: string[]; correct: number; line: string }[];
+    const frame = questionFrames(game)[0];
+    const statement = (i: number) => `${partsOf(frame).option[0].id}~${i}`;
+    const next = () => partsOf(frame).reset[0].id;
 
     async function open() {
       const player = play(project);
@@ -430,60 +472,70 @@ describe('playing the second batch', () => {
     it('has five steps of three or four statements, one true', () => {
       expect(steps).toHaveLength(5);
       for (const s of steps) {
-        expect(s.statements.length).toBeGreaterThanOrEqual(3);
-        expect(s.statements.length).toBeLessThanOrEqual(4);
-        expect(s.answer).toBeLessThan(s.statements.length);
+        expect(s.options.length).toBeGreaterThanOrEqual(3);
+        expect(s.options.length).toBeLessThanOrEqual(4);
+        expect(s.correct).toBeLessThanOrEqual(s.options.length);
         expect(s.line.length).toBeGreaterThan(20);
       }
-      expect(steps.some((s) => s.statements.length === 3)).toBe(true);
-      expect(steps.some((s) => s.statements.length === 4)).toBe(true);
+      expect(steps.some((s) => s.options.length === 3)).toBe(true);
+      expect(steps.some((s) => s.options.length === 4)).toBe(true);
+    });
+
+    it('is a question bank run with unlimited tries that cost the point, and a live summary built from its log', () => {
+      expect(frame.question).toMatchObject({ kind: 'single', attempts: 0, attemptPenalty: 1, bank: { items: 'steps', end: 'finish' } });
+      const summary = project.variables.find((v) => v.name === 'summary')!;
+      expect(summary).toMatchObject({ live: true, formula: 'q1_setLog.map(e => steps[e.i].line)' });
+      const written = new Set(project.artboards.flatMap((a) => a.logic.nodes).filter((n) => n.kind === 'action.setVariable').map((n) => n.params.variable));
+      expect(written.has(summary.id)).toBe(false);
+      //the summary lines are measured by the player, not sized from a guess at the characters
+      expect(JSON.stringify(game.children)).not.toContain('Math.ceil(item.length');
     });
 
     it('adds the true statement to the summary, marks a wrong pick without adding it, and counts first-try picks', async () => {
       const player = await open();
       expect(text()).toContain('Nothing here yet');
-      expect(text()).toContain(steps[0].statements[0]);
+      expect(text()).toContain(steps[0].options[0]);
       //step 1 right first time
-      await click(statement(steps[0].answer));
-      expect(player.getVariable('locked')).toBe(true);
+      await click(statement(steps[0].correct - 1));
+      expect(player.getVariable('q1_locked')).toBe(true);
       expect(player.getVariable('summary')).toEqual([steps[0].line]);
       expect(text()).toContain(`•  ${steps[0].line}`);
       expect(text()).not.toContain('Nothing here yet');
-      await click(idOf(game, 'Next step button'));
-      expect(player.getVariable('step')).toBe(1);
-      expect(player.getVariable('locked')).toBe(false);
+      await click(next());
+      expect(player.getVariable('q1_setPos')).toBe(2);
+      expect(player.getVariable('q1_locked')).toBe(false);
       //step 2: a wrong pick first
-      const wrong = (steps[1].answer + 1) % steps[1].statements.length;
+      const wrong = steps[1].correct % steps[1].options.length;
       await click(statement(wrong));
-      expect(player.getVariable('wrongs')).toEqual([wrong]);
+      expect(player.getVariable('q1_locked')).toBe(false);
       expect(player.getVariable('summary')).toEqual([steps[0].line]);
       expect(text()).toContain('Not that one');
-      //the same wrong one again is ignored
+      //the same wrong one again changes nothing
       await click(statement(wrong));
-      expect(player.getVariable('tries')).toBe(1);
-      await click(statement(steps[1].answer));
+      expect(player.getVariable('q1_attempts')).toBe(2);
+      await click(statement(steps[1].correct - 1));
       expect(player.getVariable('summary')).toEqual([steps[0].line, steps[1].line]);
       //scored for the first only
-      expect(player.getVariable('score')).toBe(1);
+      expect(player.getVariable('q1_setScore')).toBe(1);
       expect(text()).toContain('Right first time: 1');
     });
 
-    it('hides the fourth statement slot on a step with three, and finishes on the summary page', async () => {
+    it('shows three or four statements by the step, and finishes on the summary page', async () => {
       const player = await open();
       for (let i = 0; i < steps.length; i++) {
-        expect(visible(statement(3))).toBe(steps[i].statements.length > 3);
-        if (i === 2) await click(statement((steps[i].answer + 1) % steps[i].statements.length));
-        await click(statement(steps[i].answer));
-        await click(idOf(game, 'Next step button'));
+        expect(document.querySelectorAll(`[data-ix-id^="${partsOf(frame).option[0].id}~"]`)).toHaveLength(steps[i].options.length);
+        if (i === 2) await click(statement((steps[i].correct) % steps[i].options.length));
+        await click(statement(steps[i].correct - 1));
+        await click(next());
       }
       expect(player.getVariable('summary')).toEqual(steps.map((s) => s.line));
-      expect(player.getVariable('score')).toBe(4);
+      expect(player.getVariable('q1_setScore')).toBe(4);
       expect(text()).toContain('4 of 5');
       for (const s of steps) expect(text()).toContain(s.line);
       expect(text()).toContain(project.variables.find((v) => v.name === 'messageHigh')!.initial as string);
       await click(idOf(result, 'Try again button'));
       expect(player.getVariable('summary')).toEqual([]);
-      expect(player.getVariable('step')).toBe(0);
+      expect(player.getVariable('q1_setPos')).toBe(0);
     });
   });
 

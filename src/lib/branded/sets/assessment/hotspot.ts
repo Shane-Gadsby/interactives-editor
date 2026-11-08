@@ -1,9 +1,9 @@
 import { createNode, defaultAutoLayout, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partsOf, setAreaShape, setQuestionSettings, syncQuestion } from '../../../question-kit';
-import { brandedPage, brandedProject, button, byName, card, contentBox, heading, item, picture, solid, stroke, text } from '../../kit';
+import { brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text } from '../../kit';
+import { fill, stack } from '../../parts';
 import type { Colourway } from '../../looks';
-import { whenTrue } from './gate';
-import { announce, bind, brandQuestionFrame, click, go, graph, heroPage, panel, setVar, variable } from './shared';
+import { announce, bind, brandQuestionFrame, click, goNext, graph, heroPage, noteBelow, scorePage, setVar, variable } from './shared';
 
 // ------------------------------------------------------------------------------------------------ Find the hotspot
 
@@ -43,6 +43,9 @@ export function buildFindHotspot(colourway: Colourway) {
   frame.layout = { ...frame.layout!, padding: { top: 16, right: 24, bottom: 16, left: 24 } };
   const spots = partsOf(frame).spots[0] as FrameNode;
   spots.height = 236;
+  //The areas are one group the question's single click flow reads: the picked area's place in it is the option
+  const group = partsOf(frame).spotAreas[0] as FrameNode;
+  group.height = 236;
   //The picture: a grey placeholder with sample labels to delete once the real picture is in
   const pic = partsOf(frame).picture[0] as FrameNode;
   Object.assign(pic, { height: 236, fill: solid(L.surfaceMuted), ariaLabel: 'Picture placeholder: a desk with a planner, a clock, a laptop and a plant. Replace with your own image and describe it here.' });
@@ -63,20 +66,22 @@ export function buildFindHotspot(colourway: Colourway) {
   });
   brandQuestionFrame(ctx, frame);
 
-  //The side card: what to do, tries left, how it went
-  const sideX = box.x + 640 + 32;
-  const sideW = box.width - 640 - 32;
-  const side = card(ctx, 'How it works card', sideX, box.y, sideW, 290);
-  const sideTitle = heading(ctx, 'How it works title', 'How it works', sideX + 20, box.y + 18, sideW - 40, { fontSize: 20 });
-  const sideBody = text(ctx, 'How it works text', 'Select the area you think is right, then press Check answer. Use Tab and the arrow keys to move between areas, and Enter or Space to select one.', sideX + 20, box.y + 54, sideW - 40, { fontSize: 15, lineHeight: 1.4 });
-  const tries = text(ctx, 'Tries left', `Tries left: {Math.max(0, ${P}_triesLeft)}`, sideX + 20, box.y + 206, sideW - 40, { fontSize: 18, fontWeight: 700, color: L.deep });
-  const outcome = bind(text(ctx, 'Outcome', `{${P}_correct ? "✓ You found it" : "✗ Out of tries"}`, sideX + 20, box.y + 238, sideW - 40, { fontSize: 18, fontWeight: 700 }), { visible: `${P}_locked`, color: `${P}_correct ? "${L.success}" : "${L.error}"` });
-  page.children.push(side, sideTitle, sideBody, tries, outcome);
+  //The side card: what to do, tries left, how it went. One column, so nothing in it can land on anything else
+  const sideTitle = heading(ctx, 'How it works title', 'How it works', 0, 0, 100, { fontSize: 20 });
+  const sideBody = text(ctx, 'How it works text', 'Select the area you think is right, then press Check answer. Use Tab and the arrow keys to move between areas, and Enter or Space to select one.', 0, 0, 100, { fontSize: 15, lineHeight: 1.4 });
+  const tries = text(ctx, 'Tries left', `Tries left: {Math.max(0, ${P}_triesLeft)}`, 0, 0, 100, { fontSize: 18, fontWeight: 700, color: L.deep });
+  const outcome = bind(text(ctx, 'Outcome', `{${P}_correct ? "✓ You found it" : "✗ Out of tries"}`, 0, 0, 100, { fontSize: 18, fontWeight: 700 }), { visible: `${P}_locked`, color: `${P}_correct ? "${L.success}" : "${L.error}"` });
+  const side = fill(stack('How it works card', 0, 0, 100, { gap: 12, padding: 20, box: { fill: solid(L.surface), cornerRadius: 16 }, children: [sideTitle, sideBody, tries, outcome] }));
+  page.children = page.children.filter((c) => c.id !== id);
+  page.children.push(stack('Play body', box.x, box.y, box.width, { direction: 'row', gap: 32, align: 'start', children: [frame, side] }));
 
   {
     const g = graph(hero);
-    g.run(click(g, start, 'Navigation'), go(page));
+    g.run(click(g, start, 'Navigation'), goNext());
   }
+
+  noteBelow(page, { text: '**One flow for every area** The areas sit in the "Areas" group and a single click flow hands Choose option the area\'s place, so adding an area in the Question section adds no flow.', colour: 'sky' });
+  noteBelow(page, { x: 456, text: '[ ] Put your picture in the grey placeholder, delete the sample labels, then drag each area over its place. Areas are invisible to a learner until picked.', colour: 'gold' });
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
@@ -106,7 +111,9 @@ export function buildFindHotspots(colourway: Colourway) {
   const { project, L } = ctx;
   const N = TARGETS.length;
 
-  variable(project, 'targets', 'list', TARGETS.map((t) => ({ name: t.name, feedback: t.feedback })));
+  //Each target carries its own place on the picture, so the areas are one repeated layer drawn from this list
+  variable(project, 'targets', 'list', TARGETS);
+  variable(project, 'showSampleLabels', 'boolean', true);
   const found = variable(project, 'found', 'list', []);
   const wrong = variable(project, 'wrong', 'number', 0);
   const message = variable(project, 'message', 'string', '');
@@ -114,6 +121,8 @@ export function buildFindHotspots(colourway: Colourway) {
   variable(project, 'messageGood', 'string', 'Sharp eyes. You found everything without a wrong click.');
   variable(project, 'messageOk', 'string', 'You found them all. A few wrong clicks on the way, which is fine.');
   variable(project, 'messageLow', 'string', 'You found them all in the end. Look at the picture again and see where the wrong clicks went.');
+  variable(project, 'allFound', 'boolean', false, { formula: 'found.length >= targets.length', live: true });
+  variable(project, 'resultMessage', 'string', '', { formula: 'wrong == 0 ? messageGood : wrong <= 5 ? messageOk : messageLow', live: true });
 
   const { page: hero, start } = heroPage(ctx, 'Find the hotspots', 'Five things are hidden in one picture. Find them all, and see how many wrong clicks it takes.', 'Start');
   const page = brandedPage(ctx, 'Find them all', { footer: '{found.length} of {targets.length} found. Wrong clicks: {wrong}' });
@@ -122,52 +131,61 @@ export function buildFindHotspots(colourway: Colourway) {
 
   const PICW = 616;
   const PICH = 420;
-  const pic = picture(ctx, 'Main picture', box.x, box.y, PICW, PICH);
+  const pic = picture(ctx, 'Main picture', 0, 0, PICW, PICH);
   Object.assign(pic, { role: 'button', focusable: false, ariaLabel: 'Picture placeholder: a landscape with the sun, a cloud, rain, a river and hills. Replace with your own image.' });
-  const picKids: SceneNode[] = TARGETS.map((t, i) => text(ctx, `Sample label ${i + 1}`, t.name, box.x + t.x, box.y + t.y + t.h / 2 - 12, t.w, { fontSize: 15, color: L.muted, align: 'center', decorative: true }));
-  page.children.push(pic, ...picKids);
 
-  //One area per target, over the picture: nothing shows until it is found, then an outline and a tick
-  const areas = TARGETS.map((t, i) => {
-    const tick = bind(text(ctx, `Area ${i + 1} tick`, '✓', 4, 2, 28, { fontSize: 22, fontWeight: 700, color: L.success, decorative: true }), { visible: `found.includes(${i})` });
-    const area = createNode('frame', {
-      name: `Area ${i + 1}`,
-      x: box.x + t.x,
-      y: box.y + t.y,
-      width: t.w,
-      height: t.h,
-      cornerRadius: 12,
-      fill: solid('transparent'),
-      stroke: stroke('transparent', 4),
-      clip: false,
-      role: 'button',
-      focusable: true,
-      cursor: 'pointer',
-      ariaLabel: t.name,
-      children: [tick],
-    } as never);
-    bind(area, {
-      'stroke.paint.color': `found.includes(${i}) ? "${L.success}" : "transparent"`,
-      'fill.color': `found.includes(${i}) ? "${L.successSurface}" : "transparent"`,
-      ariaLabel: `targets[${i}].name`,
-      ariaDescription: `found.includes(${i}) ? "Found" : ""`,
-      opacity: `found.includes(${i}) ? 0.9 : 1`,
-    });
-    page.children.push(area);
-    return area;
+  //One area, repeated for each target: placed and sized from its row, outlined and ticked once found. Its sample label is the words inside it
+  const tick = bind(text(ctx, 'Area tick', '✓', 4, 2, 28, { fontSize: 22, fontWeight: 700, color: L.success, decorative: true }), { visible: 'found.includes(index)' });
+  const sample = bind(text(ctx, 'Sample label', '{item.name}', 0, 0, 100, { fontSize: 15, color: L.muted, align: 'center', decorative: true, autoSize: 'none', height: 24, verticalAlign: 'middle' }), { visible: 'showSampleLabels && !found.includes(index)', width: 'item.w', y: 'item.h / 2 - 12' });
+  const area = createNode('frame', {
+    name: 'Area',
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 100,
+    cornerRadius: 12,
+    fill: solid('transparent'),
+    stroke: stroke('transparent', 4),
+    clip: false,
+    role: 'button',
+    focusable: true,
+    cursor: 'pointer',
+    ariaLabel: 'item.name',
+    children: [sample, tick],
+  } as never);
+  bind(area, {
+    x: 'item.x',
+    y: 'item.y',
+    width: 'item.w',
+    height: 'item.h',
+    'stroke.paint.color': `found.includes(index) ? "${L.success}" : "transparent"`,
+    'fill.color': `found.includes(index) ? "${L.successSurface}" : "transparent"`,
+    ariaLabel: 'item.name',
+    ariaDescription: 'found.includes(index) ? "Found" : ""',
   });
+  const areas = createNode('frame', {
+    name: 'Areas',
+    x: 0,
+    y: 0,
+    width: PICW,
+    height: PICH,
+    fill: null,
+    stroke: null,
+    clip: false,
+    repeat: { items: 'targets', layout: 'none', gap: 0, columns: 1 },
+    children: [area],
+  } as never);
+  const board = createNode('frame', { name: 'Picture board', x: 0, y: 0, width: PICW, height: PICH, fill: null, stroke: null, clip: false, children: [pic, areas] } as never);
 
   //Right column: the list, the counts and what just happened
-  const colX = box.x + PICW + 32;
-  const colW = box.width - PICW - 32;
-  const listTitle = heading(ctx, 'Find these', 'Find these', colX, box.y, colW, { fontSize: 22 });
-  const row = text(ctx, 'Target', '{item.found ? "✓ " : "○ "}{item.name}', 0, 0, colW, { fontSize: 18 });
+  const listTitle = heading(ctx, 'Find these', 'Find these', 0, 0, 100, { fontSize: 22 });
+  const row = text(ctx, 'Target', '{item.found ? "✓ " : "○ "}{item.name}', 0, 0, 100, { fontSize: 18, autoSize: 'height' });
   bind(row, { color: 'item.found ? "' + L.success + '" : "' + L.text + '"', fontWeight: 'item.found ? 700 : 400' });
   const list = createNode('frame', {
     name: 'Targets list',
-    x: colX,
-    y: box.y + 38,
-    width: colW,
+    x: 0,
+    y: 0,
+    width: 100,
     height: 150,
     fill: null,
     stroke: null,
@@ -178,66 +196,66 @@ export function buildFindHotspots(colourway: Colourway) {
     repeat: { items: 'targets.map((t, i) => ({name: t.name, found: found.includes(i)}))', layout: 'none', gap: 0, columns: 1 },
     children: [row],
   } as never);
-  const count = text(ctx, 'Found count', 'Found {found.length} of {targets.length}', colX, box.y + 200, colW, { fontSize: 20, fontWeight: 700, color: L.deep });
-  const wrongCount = text(ctx, 'Wrong clicks', 'Wrong clicks: {wrong}', colX, box.y + 232, colW, { fontSize: 18, color: L.muted });
-  const feedback = bind(panel(ctx, 'Feedback', colX, box.y + 272, colW, 92, [text(ctx, 'Feedback text', '{message}', 16, 14, colW - 32, { fontSize: 16, lineHeight: 1.35 })], { role: 'region', stroke: stroke(L.border, 2) }), {
+  const count = text(ctx, 'Found count', 'Found {found.length} of {targets.length}', 0, 0, 100, { fontSize: 20, fontWeight: 700, color: L.deep });
+  const wrongCount = text(ctx, 'Wrong clicks', 'Wrong clicks: {wrong}', 0, 0, 100, { fontSize: 18, color: L.muted });
+  const feedbackText = text(ctx, 'Feedback text', '{message}', 0, 0, 100, { fontSize: 16, lineHeight: 1.35 });
+  const feedback = bind(stack('Feedback', 0, 0, 100, { padding: 16, box: { fill: solid(L.surface), stroke: stroke(L.border, 2), cornerRadius: 16 }, extra: { role: 'region' }, children: [feedbackText] }), {
     visible: 'message != ""',
     'fill.color': `found.length > 0 && message != wrongMessage ? "${L.successSurface}" : "${L.warningSurface}"`,
     'stroke.paint.color': `found.length > 0 && message != wrongMessage ? "${L.success}" : "${L.warning}"`,
     ariaLabel: 'message',
   });
-  const finish = bind(button(ctx, 'See result button', 'See my result', colX, box.y + 380, 190), { visible: 'found.length >= targets.length' });
-  page.children.push(listTitle, list, count, wrongCount, feedback, finish);
+  const finish = bind(button(ctx, 'See result button', 'See my result', 0, 0, 190), { visible: 'allFound' });
+  const column = fill(stack('Find column', 0, 0, 100, { gap: 12, children: [listTitle, list, count, wrongCount, feedback, finish] }));
+  page.children.push(stack('Play body', box.x, box.y, box.width, { direction: 'row', gap: 32, align: 'start', children: [board, column] }));
 
   {
     const g = graph(page);
-    TARGETS.forEach((t, i) => {
-      const on = click(g, areas[i], `Find ${t.name}`);
-      const fresh = g.then(on, 'logic.if', { condition: `!found.includes(${i})` });
-      whenTrue(
-        g,
-        fresh,
-        ...([
-          ['action.setVariable', { variable: found.id, op: 'push', value: String(i) }],
-          setVar(message, `targets[${i}].feedback`),
-          announce(`"Found " + targets[${i}].name + ". " + found.length + " of " + targets.length + ". " + targets[${i}].feedback`),
-        ] as [string, Record<string, unknown>][]),
-      );
-    });
+    //One flow for every area: the copy that was pressed gives event.index, and a find that is already ticked does nothing
+    const on = g.event('event.pointer', { target: area.id, type: 'click', onlyIf: '!found.includes(event.index)' }, 'Find an area');
+    g.run(
+      on,
+      ['action.setVariable', { variable: found.id, op: 'push', value: 'event.index' }],
+      setVar(message, 'targets[event.index].feedback'),
+      announce('"Found " + targets[event.index].name + ". " + found.length + " of " + targets.length + ". " + targets[event.index].feedback'),
+    );
     //Any other click on the picture is a wrong one, until everything is found
-    const miss = click(g, pic, 'A click on the picture, nowhere that counts');
-    const open = g.then(miss, 'logic.if', { condition: 'found.length < targets.length' });
-    whenTrue(g, open, setVar(wrong, '1', 'add'), setVar(message, 'wrongMessage'), announce('wrongMessage + " Wrong clicks: " + wrong'));
-    g.run(click(g, finish, 'Navigation'), go(result));
+    const miss = g.event('event.pointer', { target: pic.id, type: 'click', onlyIf: '!allFound' }, 'A click on the picture, nowhere that counts');
+    g.run(miss, setVar(wrong, '1', 'add'), setVar(message, 'wrongMessage'), announce('wrongMessage + " Wrong clicks: " + wrong'));
+    g.run(click(g, finish, 'Navigation'), goNext());
   }
   {
     const g = graph(hero);
-    g.run(click(g, start, 'Navigation'), go(page));
+    g.run(click(g, start, 'Navigation'), goNext());
   }
 
   //The result page
-  const body = contentBox(result);
-  const scoreCard = card(ctx, 'Score card', body.x, body.y, 380, 230);
-  const scoreLabel = text(ctx, 'Score label', 'You found', body.x + 28, body.y + 26, 320, { fontSize: 18, fontWeight: 600, color: L.muted });
-  const scoreText = text(ctx, 'Score', '{found.length} of {targets.length}', body.x + 28, body.y + 62, 330, { fontSize: 56, fontWeight: 700, lineHeight: 1.1 });
-  const scoreWords = text(ctx, 'Score words', 'Wrong clicks: {wrong}', body.x + 28, body.y + 150, 330, { fontSize: 22, fontWeight: 600, color: L.muted });
-  const resultMessage = text(ctx, 'Result message', '{wrong == 0 ? messageGood : wrong <= 5 ? messageOk : messageLow}', body.x + 420, body.y + 24, body.width - 420, { fontSize: 26, fontWeight: 600, lineHeight: 1.3, role: 'heading', headingLevel: 2 });
-  const again = button(ctx, 'Try again button', 'Try again', body.x + 420, body.y + 150, 170);
-  result.children.push(scoreCard, scoreLabel, scoreText, scoreWords, resultMessage, again);
+  const again = button(ctx, 'Try again button', 'Try again', 0, 0, 170);
+  scorePage(ctx, result, {
+    label: 'You found',
+    score: '{found.length} of {targets.length}',
+    caption: 'Wrong clicks: {wrong}',
+    message: '{resultMessage}',
+    buttons: [again],
+  });
   {
     const g = graph(result);
     g.run(click(g, again, 'Try again'), ['action.startOver', {}]);
-    g.run(g.event('event.start', {}, 'Result page'), announce('"You found " + found.length + " of " + targets.length + " with " + wrong + " wrong clicks. " + (wrong == 0 ? messageGood : wrong <= 5 ? messageOk : messageLow)'));
+    g.run(g.event('event.start', {}, 'Result page'), announce('"You found " + found.length + " of " + targets.length + " with " + wrong + " wrong clicks. " + resultMessage'));
   }
+
+  noteBelow(page, { text: '**One repeated area** The areas are one layer drawn for each row of `targets`, placed by its `x`, `y`, `w` and `h`, and one click flow reads `event.index`. A new target is a new row, not a new layer and flow.', colour: 'sky' });
+  noteBelow(page, { x: 456, text: '[ ] Put your picture in the grey placeholder, set each target\'s place in the Variables tab (the areas show on the canvas as you type), then turn `showSampleLabels` off.', colour: 'gold' });
+  noteBelow(result, { text: '**Live variables** `allFound` shows the result button and `resultMessage` picks the wording from the wrong clicks. [ ] Reword the three messages in the Variables tab.', colour: 'gold' });
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
     item('Swap the grey picture for your own and write what it shows in its text alternative', pic, page),
-    item('Delete the grey "Sample label" texts on the picture once your own picture is in', picKids[0], page),
-    item('Write what to find and what to say when it is found: the "targets" variable (Variables tab) is a list of name and feedback, in the same order as the "Area" layers', areas[0], page),
-    item('Move and resize each "Area" layer over the thing it names. Areas are invisible until found, so check them in the Preview', areas[0], page),
-    item(`To add a target: add an entry to "targets", duplicate an Area layer and its "Find" flow in the Interactions tab, and change the index (${N}) in the copy's expressions`, undefined, page),
-    item('Reword the message for a wrong click and the three result messages: the wrongMessage, messageGood, messageOk and messageLow variables (Variables tab)', resultMessage, result),
+    item('Turn the grey sample labels off once your own picture is in: the "showSampleLabels" variable (Variables tab)', area, page),
+    item('Write what to find, what to say when it is found and where it is: the "targets" variable (Variables tab) is a list with name, feedback and the area\'s x, y, w and h in pixels from the picture\'s top left. The areas move on the canvas as you edit them', area, page),
+    item('Check the areas in the Preview: they are invisible until found, so move them over the thing they name until the outline sits right', area, page),
+    item(`To add a target: add an entry to "targets" (there are ${N} now). The area, the list and the counts follow it`, undefined, page),
+    item('Reword the message for a wrong click and the three result messages: the wrongMessage, messageGood, messageOk and messageLow variables (Variables tab)', byName(result, 'Result message'), result),
     item('Check the right-hand list: it follows the "targets" variable, so a longer list needs more room', list, page),
   ];
   return { project, checklist };

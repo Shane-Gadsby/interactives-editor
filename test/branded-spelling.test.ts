@@ -10,6 +10,7 @@ import { partsOf, questionFrames } from '../src/lib/question-kit';
 const starter = STARTERS.find((s) => s.key === 'assessment/spelling-test')!;
 const WORDS = ['colour', 'organise', 'neighbour', 'centre', 'necessary', 'separate'];
 const flush = () => new Promise((r) => setTimeout(r, 8));
+const quizScore = (p: Player) => (p as unknown as { quizNow(): { score: number } }).quizNow().score;
 
 describe('the spelling test starter', () => {
   const { project } = starter.build(COLOURWAYS[0]);
@@ -32,6 +33,8 @@ describe('the spelling test starter', () => {
 
   it('has the word only in the answer key: the served page, with the answers taken out, says none of them', () => {
     const served = JSON.parse(JSON.stringify(project)) as Project;
+    //a share carries no author notes, which are the one place a word like colour (the note colour) could turn up
+    for (const ab of served.artboards) delete ab.notes;
     const key = stripProject(served, (f, r) => `${f}-${r}`);
     expect(Object.keys(key.questions)).toHaveLength(6);
     expect(key.skipped).toEqual([]);
@@ -53,8 +56,9 @@ describe('the spelling test starter', () => {
     }
   });
 
-  it('has no Try again on a word, and a Retake that asks the server for the next round and starts over', () => {
-    for (const f of frames) expect(partsOf(f).reset ?? []).toHaveLength(0);
+  it('hides Try again on a word, and has a Retake that asks the server for the next round and starts over', () => {
+    for (const f of frames) expect(f.question).toMatchObject({ hideReset: true, keep: true });
+    for (const f of frames) expect(partsOf(f).reset[0].bindings!.visible).toBe('false');
     const result = project.artboards[7];
     const retake = byName(result, 'Retake button')!;
     const click = result.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.target === retake.id)!;
@@ -67,8 +71,9 @@ describe('the spelling test starter', () => {
 
   it('reports the total and the pass mark, and the pass mark matches the page\'s own', () => {
     const r = project.settings.reporting!;
-    expect(r).toMatchObject({ maxScore: 6, passMark: 80, completion: 'artboard', completionArtboard: project.artboards[7].id });
-    expect(project.variables.find((v) => v.name === 'passPercent')!.initial).toBe(80);
+    //the score is the total of the questions, so there is no total variable and no top score to keep in step
+    expect(r).toMatchObject({ scoreFrom: 'questions', passMark: 80, completion: 'artboard', completionArtboard: project.artboards[7].id });
+    expect(project.variables.map((v) => v.name)).not.toEqual(expect.arrayContaining(['total', 'outOf', 'passPercent']));
   });
 
   it('has the retake variables the result page reads', () => {
@@ -147,21 +152,20 @@ describe('playing the spelling test', () => {
     expect(player.getVariable('q1_correct')).toBe(true);
     expect(player.getVariable('q4_correct')).toBe(true);
     expect(player.getVariable('q5_correct')).toBe(false);
-    expect(player.getVariable('total')).toBe(4);
+    expect(quizScore(player)).toBe(4);
     expect(text()).toContain('4 / 6');
     expect(text()).toContain('Not a pass');
     expect(text()).toContain('Word 5');
     //nothing on record without a server, and the retake button is there
-    expect(text()).not.toContain('On record');
     expect(el(byName(page(7), 'Retake button')!.id)).toBeTruthy();
   });
 
   it('passes a clean run, and Retake starts over', async () => {
     const player = await run(WORDS);
-    expect(player.getVariable('total')).toBe(6);
+    expect(quizScore(player)).toBe(6);
     expect(text()).toContain('You passed');
     await click(byName(page(7), 'Retake button')!.id);
-    expect(player.getVariable('total')).toBe(0);
+    expect(quizScore(player)).toBe(0);
     expect(player.getVariable('q1_locked')).toBe(false);
     expect(text()).toContain('Spelling test');
   });
@@ -241,7 +245,7 @@ describe('playing it with the server marking', () => {
     expect(player.getVariable('q1_kept')).toBe(4);
     expect(player.getVariable('q1_keptMax')).toBe(6);
     expect(player.getVariable('q1_retakesLeft')).toBe(2);
-    expect(text()).toContain('On record: 4 out of 6');
+    expect(text()).toContain('4 / 6');
     expect(text()).toContain('Go 1 of 3');
     //a wrong word shows nothing of the right spelling while there is another go
     expect(text()).not.toMatch(/necessary|separate/);
@@ -252,7 +256,7 @@ describe('playing it with the server marking', () => {
     await go(served, WORDS);
     expect(player.getVariable('q1_round')).toBe(2);
     expect(player.getVariable('q1_kept')).toBe(6);
-    expect(text()).toContain('On record: 6 out of 6');
+    expect(text()).toContain('6 / 6');
     expect(text()).toContain('Go 2 of 3');
     expect(text()).toContain('You passed');
     //round 3 is the last, a worse go keeps the 6, and the Retake button goes
@@ -261,8 +265,9 @@ describe('playing it with the server marking', () => {
     expect(player.getVariable('q1_round')).toBe(3);
     expect(player.getVariable('q1_retakesLeft')).toBe(0);
     expect(player.getVariable('q1_kept')).toBe(6);
-    expect(text()).toContain('On record: 6 out of 6');
-    expect(text()).toContain('This go0 / 6');
+    //the score that counts stays the best round
+    expect(text()).toContain('6 / 6');
+    expect(text()).toContain('Go 3 of 3');
     expect((el(byName(served.artboards[7], 'Retake button')!.id) as HTMLElement).style.display).toBe('none');
   }, 20000);
 });

@@ -255,7 +255,19 @@ describe('the guard options', () => {
     return out as { noAssist?: boolean; noPaste?: boolean }[];
   };
   beforeEach(async () => {
-    s = new EditorStore(build());
+    //a spelling test made before the guard existed: the starter now ships with it on, so take it off the way those projects have it
+    const old = build();
+    const bare = (n: any) => {
+      if (n.type === 'input') delete n.noPaste;
+      (n.children ?? []).forEach(bare);
+    };
+    for (const ab of old.artboards) {
+      for (const f of questionFrames(ab)) {
+        delete f.question!.guard;
+        bare(f);
+      }
+    }
+    s = new EditorStore(old);
     setCurrentStore(s);
     host = document.createElement('div');
     document.body.appendChild(host);

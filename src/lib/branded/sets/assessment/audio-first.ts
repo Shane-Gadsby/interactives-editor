@@ -1,64 +1,68 @@
-import { createNode, defaultAutoLayout, type LogicNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, card, contentBox, edge, item, stroke, text } from '../../kit';
+import { createNode, defaultAutoLayout, type FrameNode, type LogicNode, type TemplateChecklistItem } from 'interactives-player';
+import { addQuestion, partsOf, setQuestionSettings, syncQuestion } from '../../../question-kit';
+import { brandedPage, brandedProject, button, byName, contentBox, edge, item, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { bind, click, go, graph, heroPage, panel, setVar, variable } from './shared';
+import { stack } from '../../parts';
+import { after, bind, brandQuestionFrame, click, goNext, graph, heroPage, kitNode, noteBelow, scorePage, variable } from './shared';
 
-//Study skills, kept general. Each row: the prompt, an optional `say` (what a voice says instead of the prompt), the options
-//(two to four, so a true or false row has two), `answer` (the place of the right option, from 1), `explain` (said and shown
+
+//Study skills, kept general. Each row of the question bank: the prompt, an optional `spoken` (what a voice says instead of the prompt), the
+//options (two to four, so a true or false row has two), `correct` (the place of the right option, from 1), `explain` (said and shown
 //after the answer) and an optional `hint`.
 const QUESTIONS = [
   {
     prompt: 'Which way of studying is usually best for remembering something for a long time?',
     options: ['Reading your notes again and again', 'Testing yourself from memory', 'Highlighting the key lines', 'Copying your notes out neatly'],
-    answer: 2,
+    correct: 2,
     explain: 'Trying to recall an idea from memory strengthens it more than re-reading does. Re-reading only makes the page feel familiar.',
     hint: 'Think about which one makes your brain work the hardest.',
   },
   {
     prompt: 'True or false: spreading your study over several days works better than doing it all the night before.',
     options: ['True', 'False'],
-    answer: 1,
+    correct: 1,
     explain: 'Short sessions over several days give you time to forget a little and recall it again, and that is what builds memory.',
     hint: 'Cramming can feel productive, but how much stays a week later?',
   },
   {
     prompt: 'How often should you take a short break in a long study session?',
-    say: 'How often should you take a short break when you study for a long time?',
+    spoken: 'How often should you take a short break when you study for a long time?',
     options: ['Never, a break ruins your focus', 'Every 25 to 50 minutes', 'Only when you are too tired to carry on', 'Once, at the very end'],
-    answer: 2,
+    correct: 2,
     explain: 'Regular short breaks help you keep your attention up. Somewhere between twenty-five and fifty minutes suits most people.',
     hint: 'Most people cannot stay sharp for hours without stopping.',
   },
   {
     prompt: 'True or false: listening to songs with words is the best way to concentrate while you read.',
     options: ['True', 'False'],
-    answer: 2,
+    correct: 2,
     explain: 'The words in a song compete with the words you are reading. Quiet, or music without words, is easier for most people.',
     hint: 'Your brain is trying to follow two lots of words at once.',
   },
   {
     prompt: 'What is a good first step when an assignment feels too big?',
     options: ['Wait until the deadline is closer', 'Break it into smaller tasks with dates', 'Start with the last paragraph', 'Read everything ever written on it first'],
-    answer: 2,
+    correct: 2,
     explain: 'Small tasks with their own dates are easier to start and show you your progress.',
     hint: 'A big job is easier when it is a list of small ones.',
   },
   {
     prompt: 'Which of these is the best check that you really understand an idea?',
     options: ['You can explain it in your own words', 'You recognise it when you see it', 'You have underlined it', 'Your friend says it is easy'],
-    answer: 1,
+    correct: 1,
     explain: 'Explaining an idea in your own words shows you what you know and what you only recognise.',
     hint: 'Recognising something and being able to say it are not the same.',
   },
 ];
-const MAX_OPTIONS = 4;
 
-//The question showing, written once: `order` holds the question numbers in the order they are asked (all of them, then just the missed ones)
-const CUR = 'questions[order[pos]]';
-const SAY_QUESTION = `"Question " + (pos + 1) + " of " + order.length + ". " + (${CUR}.say || ${CUR}.prompt) + " " + ${CUR}.options.map((o, i) => (i + 1) + ". " + o).join(". ") + "."`;
-const SAY_FEEDBACK = `(lastRight ? "Correct. " : "Not quite. The answer was " + ${CUR}.answer + ", " + ${CUR}.options[${CUR}.answer - 1] + ". ") + ${CUR}.explain`;
-const SAY_HINT = `"Hint. " + ${CUR}.hint`;
-const VOICE = 'spokenOn && voiceAvailable';
+/** Answered wrong, with the longest question and its explanation showing, and the score page with every question missed, so the layout check sees the fullest they get. */
+export const AUDIO_FIRST_LAYOUT_STATES: LayoutState[] = [
+  { label: 'answered', page: 'Audio-first quiz', vars: { q1_bankIndex: 2, q1_answered: true, q1_locked: true, q1_correct: false, q1_feedback: 'Not quite.', q1_hint: QUESTIONS[2].hint, q1_hintsUsed: 1, q1_setPos: 3, q1_setCount: 6, voiceAvailable: true, readRate: 0.75 } },
+  { label: 'all missed', page: 'Your result', vars: { q1_missed: [0, 1, 2, 3, 4, 5], q1_setScore: 0, q1_setMax: 6, voiceAvailable: true } },
+];
+
+//What a voice says, or a screen reader is told when the voice is off or there is none (Read aloud's "With no voice" setting, and Only speak when)
+const say = (text: string, extra: Record<string, unknown> = {}): [string, Record<string, unknown>] => ['action.speak', { op: 'text', text, fallback: 'announce', only: 'spokenOn', ...extra }];
 
 export function buildAudioFirstQuiz(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'Audio-first quiz: study skills');
@@ -67,15 +71,6 @@ export function buildAudioFirstQuiz(colourway: Colourway) {
   project.settings.readAloud = { lang: 'en' };
 
   variable(project, 'questions', 'list', QUESTIONS);
-  const order = variable(project, 'order', 'list', QUESTIONS.map((_, i) => i));
-  const pos = variable(project, 'pos', 'number', 0);
-  const answered = variable(project, 'answered', 'boolean', false);
-  const chosen = variable(project, 'chosen', 'number', 0);
-  const lastRight = variable(project, 'lastRight', 'boolean', false);
-  const tally = variable(project, 'tally', 'number', 0);
-  const missed = variable(project, 'missed', 'list', []);
-  const round = variable(project, 'round', 'number', 1);
-  const hintShown = variable(project, 'hintShown', 'boolean', false);
   const spokenOn = variable(project, 'spokenOn', 'boolean', true);
   //0: the learner moves on by hand (the default). 4 or 8: the next question comes that many seconds after the answer has been spoken
   const pace = variable(project, 'pace', 'number', 0);
@@ -87,199 +82,169 @@ export function buildAudioFirstQuiz(colourway: Colourway) {
   const { page: hero, start } = heroPage(ctx, 'Study skills: an audio-first quiz', 'Six questions you can answer by ear. Press 1 to 4, or tap an answer.', 'Start');
   const keysNote = text(ctx, 'Keys note', 'With a voice installed on your device each question is read aloud. R repeats it, S slows it down, H gives a hint, Space pauses, and 1 to 4 answers. Nothing is recorded or sent anywhere.', 48, hero.height * 0.42 + 256, hero.width * 0.62, { fontSize: 16, color: L.onGradient, lineHeight: 1.35 });
   hero.children.push(keysNote);
-  const play = brandedPage(ctx, 'Audio-first quiz', { footer: 'Question {pos + 1} of {order.length}' });
+  const play = brandedPage(ctx, 'Audio-first quiz', { footer: 'Question {q1_setPos} of {q1_setCount}' });
   const result = brandedPage(ctx, 'Your result', { footer: 'Audio-first quiz: study skills' });
 
-  //The play page
+  //The questions are the rows of a bank gone through once. The kit's number keys choose an option, its Listen button reads the question and is the Repeat button, and the options sit two to a row
   const box = contentBox(play);
-  const qCard = card(ctx, 'Question card', box.x, box.y, box.width, 128);
-  const qLabel = text(ctx, 'Question label', `Press 1 to {${CUR}.options.length}, or tap an answer`, box.x + 28, box.y + 16, 420, { fontSize: 15, fontWeight: 600, color: L.muted });
-  const qText = text(ctx, 'Question', `{${CUR}.prompt}`, box.x + 28, box.y + 46, box.width - 56, { fontSize: 25, fontWeight: 600, lineHeight: 1.3, role: 'heading', headingLevel: 2 });
-  const paceBtn = bind(button(ctx, 'Pace button', 'Next: by hand', box.x + box.width - 214, box.y + 12, 190, false), { label: 'pace == 0 ? "Next: by hand" : "Next: after " + pace + " s"' });
-  Object.assign(paceBtn, { height: 34, fontSize: 14, cornerRadius: 17 });
-  const bw = (box.width - 16) / 2;
-  const answers: SceneNode[] = [];
-  for (let k = 1; k <= MAX_OPTIONS; k++) {
-    const b = button(ctx, `Answer ${k} button`, `${k}.  Option`, box.x + ((k - 1) % 2) * (bw + 16), box.y + 144 + Math.floor((k - 1) / 2) * 66, bw, false);
-    Object.assign(b, { height: 56, cornerRadius: 14, fontSize: 17 });
-    bind(b, {
-      visible: `${CUR}.options.length >= ${k}`,
-      label: `"${k}.  " + ${CUR}.options[${k - 1}]`,
-      disabled: 'answered',
-      'fill.color': `answered ? (${k} == ${CUR}.answer ? "${L.successSurface}" : ${k} == chosen ? "${L.errorSurface}" : "${L.background}") : "${L.background}"`,
-      'stroke.paint.color': `answered ? (${k} == ${CUR}.answer ? "${L.success}" : ${k} == chosen ? "${L.error}" : "${L.border}") : "${L.border}"`,
-    });
-    answers.push(b);
-  }
-  const cw = (box.width - 4 * 10) / 5;
-  const control = (name: string, label: string, i: number, bindings: Record<string, string>) => {
-    const b = button(ctx, name, label, box.x + i * (cw + 10), box.y + 284, cw, false);
-    Object.assign(b, { height: 40, fontSize: 14, cornerRadius: 20 });
+  const id = addQuestion(project, play.id, 'single', { at: { x: box.x, y: box.y } })!;
+  setQuestionSettings(project, play.id, id, {
+    prompt: QUESTIONS[0].prompt,
+    options: QUESTIONS[0].options.map((t, i) => ({ id: `o${i + 1}`, text: t, ...(i + 1 === QUESTIONS[0].correct ? { correct: true } : {}) })),
+    hints: [QUESTIONS[0].hint],
+    hintPenalty: 0,
+    points: 1,
+    attempts: 1,
+    reveal: true,
+    report: null,
+    feedbackCorrect: 'Correct.',
+    feedbackIncorrect: 'Not quite.',
+    numberKeys: true,
+    listen: true,
+    bank: { items: 'questions', order: 'sequence', end: 'finish' },
+  });
+  const frame = play.children.find((c) => c.id === id) as FrameNode;
+  const P = frame.question!.prefix;
+  frame.name = 'Audio question';
+  frame.layout = { ...frame.layout!, gap: 8, padding: { top: 14, right: 24, bottom: 14, left: 24 } };
+  Object.assign(partsOf(frame).prompt[0], { fontSize: 22 });
+  //Picking an option answers, so no Check button; the verdict and the explanation are one line of feedback
+  const buttonRow = partsOf(frame).buttons[0] as FrameNode;
+  buttonRow.children = buttonRow.children.filter((c) => c.questionPart !== 'check' && c.questionPart !== 'score');
+  Object.assign(partsOf(frame).feedback[0], { text: `{${P}_feedback}{${P}_answered ? " " + rowExplain : ""}` });
+  //two options to a row
+  const options = partsOf(frame).options[0] as FrameNode;
+  options.layout = { ...options.layout!, direction: 'row', gap: 10, crossGap: 10, wrap: true, align: 'start', hugHeight: true };
+  const template = options.children[0] as FrameNode;
+  template.width = Math.floor((box.width - 48 - 10) / 2);
+  syncQuestion(project, play.id, id);
+  brandQuestionFrame(ctx, frame);
+  const next = partsOf(frame).reset[0] as unknown as { label: string; shortcut?: string; bindings?: Record<string, string> };
+  next.bindings = { ...next.bindings, label: `${P}_setLeft == 0 ? "See my score" : "Next question"` };
+  next.shortcut = 'n';
+  const hint = partsOf(frame).hint[0] as unknown as { label: string; shortcut?: string };
+  Object.assign(hint, { label: 'Hint (H)', shortcut: 'h' });
+  const repeat = partsOf(frame).listen[0] as unknown as { label: string; shortcut?: string; bindings?: Record<string, string> };
+  Object.assign(repeat, { label: 'Repeat (R)', shortcut: 'r' });
+  repeat.bindings = { ...repeat.bindings, visible: 'voiceAvailable && spokenOn' };
+
+  //Live variables: what the row showing says (so the feedback and the speech read it once), and the banded message for the score page
+  const rowNow = `questions[Math.max(0, ${P}_bankIndex)]`;
+  variable(project, 'rowExplain', 'string', '', { formula: `${rowNow}.explain`, live: true });
+  variable(project, 'rightPlace', 'number', 0, { formula: `${rowNow}.correct`, live: true });
+  variable(project, 'rightText', 'string', '', { formula: `${rowNow}.options[${rowNow}.correct - 1]`, live: true });
+  variable(project, 'message', 'string', '', { formula: `band(${P}_setMax > 0 ? ${P}_setScore / ${P}_setMax : 0, [0.75, 0.5], [messageHigh, messageMid, messageLow])`, live: true });
+
+  //Controls under the question: slower, pause, spoken prompts on or off, and the pace
+  const control = (name: string, label: string, shortcut: string | null, bindings: Record<string, string> = {}, width = 190) => {
+    const b = button(ctx, name, label, 0, 0, width, false);
+    Object.assign(b, { height: 40, fontSize: 14, cornerRadius: 20, ...(shortcut ? { shortcut } : {}) });
     return bind(b, bindings);
   };
-  const repeat = control('Repeat button', 'Repeat (R)', 0, { visible: 'voiceAvailable && spokenOn' });
-  const slower = control('Slower button', 'Slower (S)', 1, { visible: 'voiceAvailable && spokenOn', label: '"Slower (S): " + readRate + "x"' });
-  const hint = control('Hint button', 'Hint (H)', 2, { visible: `!answered && !!${CUR}.hint`, disabled: 'hintShown' });
-  const pause = control('Pause button', 'Pause (Space)', 3, { visible: 'voiceAvailable && spokenOn' });
-  const spoken = control('Spoken prompts button', 'Spoken prompts: on', 4, { visible: 'voiceAvailable', label: 'spokenOn ? "Spoken prompts: on" : "Spoken prompts: off"' });
-  const hintText = bind(text(ctx, 'Hint text', `Hint: {${CUR}.hint}`, box.x, box.y + 336, box.width, { fontSize: 16, fontStyle: 'italic', color: L.muted }), { visible: 'hintShown && !answered' });
-  const heading = text(ctx, 'Feedback heading', '{lastRight ? "✓ Correct" : "✗ Not quite"}', 24, 14, 400, { fontSize: 22, fontWeight: 700 });
-  const why = text(ctx, 'Explanation', `{lastRight ? "" : "The answer was " + ${CUR}.answer + ": " + ${CUR}.options[${CUR}.answer - 1] + ". "}{${CUR}.explain}`, 24, 50, box.width - 48 - 200, { fontSize: 17, lineHeight: 1.35 });
-  const next = bind(button(ctx, 'Next button', 'Next question', box.width - 24 - 180, 56, 180), { label: 'pos >= order.length - 1 ? "See my score" : "Next question"' });
-  const feedback = bind(panel(ctx, 'Feedback', box.x, box.y + 356, box.width, 110, [heading, why, next], { role: 'region', stroke: stroke(L.border, 2) }), {
-    visible: 'answered',
-    'fill.color': `lastRight ? "${L.successSurface}" : "${L.errorSurface}"`,
-    'stroke.paint.color': `lastRight ? "${L.success}" : "${L.error}"`,
-    ariaLabel: `${SAY_FEEDBACK}`,
-  });
-  play.children.push(qCard, qLabel, qText, paceBtn, ...answers, repeat, slower, hint, pause, spoken, hintText, feedback);
-
-  //Say it with the voice, or tell a screen reader when spoken prompts are off or the device has no voice
-  const said = (g: ReturnType<typeof graph>, from: LogicNode, expr: string, port = 'out', wait = false): { voice: LogicNode; quiet: LogicNode } => {
-    const gate = g.then(from, 'logic.if', { condition: VOICE }, port);
-    const voice = g.then(gate, 'action.speak', { op: 'text', text: expr, wait }, 'true');
-    const quiet = g.then(gate, 'action.announce', { text: expr, politeness: 'polite' }, 'false');
-    return { voice, quiet };
-  };
-  const key = (g: ReturnType<typeof graph>, k: string, note?: string) => g.event('event.key', { key: k, type: 'keydown' }, note);
-  const feed = (ev: LogicNode, first: LogicNode) => play.logic.edges.push(edge(ev, first));
+  const slower = control('Slower button', 'Slower (S)', 's', { visible: 'voiceAvailable && spokenOn', label: '"Slower (S): " + readRate + "x"' });
+  const pause = control('Pause button', 'Pause (Space)', 'Space', { visible: 'voiceAvailable && spokenOn' });
+  const spoken = control('Spoken prompts button', 'Spoken prompts: on', null, { visible: 'voiceAvailable', label: 'spokenOn ? "Spoken prompts: on" : "Spoken prompts: off"' }, 210);
+  const paceBtn = control('Pace button', 'Next: by hand', null, { label: 'pace == 0 ? "Next: by hand" : "Next: after " + pace + " s"' }, 190);
+  const controls = stack('Controls', 0, 0, box.width, { direction: 'row', gap: 10, align: 'center', children: [slower, pause, spoken, paceBtn] });
+  play.children = play.children.filter((c) => c.id !== id);
+  play.children.push(stack('Play body', box.x, box.y, box.width, { gap: 8, children: [frame, controls] }));
 
   {
     const g = graph(play);
+    //Say the question: where it is in the quiz, then the question with its numbered options (the question's own reading, with its "say it like" row)
+    const sayQuestion = (from: LogicNode, port = 'out') => {
+      const where = after(play, from, 'action.speak', say(`"Question " + ${P}_setPos + " of " + ${P}_setCount + "."`)[1], port);
+      return after(play, where, 'action.speak', { op: 'question', question: frame.id, fallback: 'announce', only: 'spokenOn' });
+    };
     //The page is only ever reached by a press (Start, or the review button), which is the tap that lets the first question be spoken
-    said(g, g.event('event.start', {}, 'Say the question'), SAY_QUESTION);
-    //The way on: Next, N or Enter. At the last question it goes to the score, else to the next question and says it.
-    const nextEvent = click(g, next, 'Next question');
-    const nextGuard = g.then(nextEvent, 'logic.if', { condition: 'answered' });
-    feed(key(g, 'n', 'Key N'), nextGuard);
-    feed(key(g, 'Enter', 'Key Enter'), nextGuard);
-    const last = g.then(nextGuard, 'logic.if', { condition: 'pos >= order.length - 1' }, 'true');
-    g.then(last, ...go(result), 'true');
-    const advance = g.run(g.then(last, ...setVar(pos, '1', 'add'), 'false'), setVar(answered, 'false'), setVar(chosen, '0'), setVar(hintShown, 'false'));
-    said(g, advance, SAY_QUESTION);
-
-    //Answering: a click on the answer or its number key
-    for (let k = 1; k <= MAX_OPTIONS; k++) {
-      const ev = click(g, answers[k - 1], `Answer ${k}`);
-      const guard = g.then(ev, 'logic.if', { condition: `!answered && ${CUR}.options.length >= ${k}` });
-      feed(key(g, String(k), `Key ${k}`), guard);
-      const marked = g.run(g.then(guard, ...setVar(chosen, String(k)), 'true'), setVar(answered, 'true'), setVar(answeredAt, 'Date.now()'), setVar(lastRight, `${k} == ${CUR}.answer`));
-      //A miss goes on the list for the review at the end
-      g.then(g.then(marked, 'logic.if', { condition: '!lastRight' }), 'action.setVariable', { variable: missed.id, op: 'push', value: 'order[pos]' }, 'true');
-      const counted = g.then(marked, ...setVar(tally, 'lastRight ? 1 : 0', 'add'));
-      const { voice, quiet } = said(g, counted, SAY_FEEDBACK, 'out', true);
-      //With a pace set, the next question follows once the feedback has been said (a stale timer does nothing: it checks the answer is the one it waited for)
-      const pacing = g.then(voice, 'logic.if', { condition: 'pace > 0' });
-      play.logic.edges.push(edge(quiet, pacing));
-      const short = g.then(pacing, 'logic.if', { condition: 'pace <= 4' }, 'true');
-      const wait4 = g.then(short, 'action.delay', { ms: 4000 }, 'true');
-      const wait8 = g.then(short, 'action.delay', { ms: 8000 }, 'false');
-      const stillHere = g.then(wait4, 'logic.if', { condition: 'answered && Date.now() - answeredAt >= pace * 1000 - 100' });
-      play.logic.edges.push(edge(wait8, stillHere));
-      play.logic.edges.push(edge(stillHere, nextGuard, 'true'));
-    }
-
-    //Repeat: the question, or the feedback once it has been answered
-    const rep = click(g, repeat, 'Repeat');
-    const repGate = g.then(rep, 'logic.if', { condition: VOICE });
-    g.then(repGate, 'action.speak', { op: 'text', text: `answered ? ${SAY_FEEDBACK} : ${SAY_QUESTION}` }, 'true');
-    feed(key(g, 'r', 'Key R'), repGate);
-    //Slower: one step down for good (it is remembered with the learner's other choices)
-    const slow = click(g, slower, 'Slower');
-    const slowGate = g.then(slow, 'logic.if', { condition: VOICE });
-    g.then(slowGate, 'action.speak', { op: 'slower' }, 'true');
-    feed(key(g, 's', 'Key S'), slowGate);
-    //Hint
-    const hintEv = click(g, hint, 'Hint');
-    const hintGate = g.then(hintEv, 'logic.if', { condition: `!answered && !hintShown && !!${CUR}.hint` });
-    feed(key(g, 'h', 'Key H'), hintGate);
-    said(g, g.then(hintGate, ...setVar(hintShown, 'true'), 'true'), SAY_HINT);
-    //Pause and carry on
-    const pauseEv = click(g, pause, 'Pause');
-    const pauseGate = g.then(pauseEv, 'logic.if', { condition: 'speaking' });
-    g.then(pauseGate, 'action.speak', { op: 'pause' }, 'true');
-    g.then(pauseGate, 'action.speak', { op: 'resume' }, 'false');
-    feed(g.event('event.key', { key: 'Space', type: 'keydown' }, 'Key Space'), pauseGate);
+    //(arriving keeps the row showing: the review button has dealt the first of the missed ones already)
+    kitNode(play, 'start:action').params.next = false;
+    sayQuestion(kitNode(play, 'start:action'));
+    const resetAct = kitNode(play, 'reset:action');
+    sayQuestion(resetAct);
+    after(play, resetAct, 'action.artboard', { to: 'next', transition: 'fade', duration: 250 }, 'done');
+    //Picking an option, or its number key, checks it
+    const check = after(play, kitNode(play, 'option:action'), 'action.questionCheck', { question: frame.id });
+    play.logic.edges.push(edge(kitNode(play, 'numberKeys:action'), check));
+    //Once it is checked: note when, say the feedback with the explanation (the right answer too when it was wrong), and with a pace set the next question follows
+    const when = after(play, check, 'action.setVariable', { variable: answeredAt.id, op: 'set', value: 'Date.now()' }, 'finished');
+    const feedback = after(play, when, 'action.speak', say(`${P}_feedback + " " + (${P}_correct ? "" : "The answer was " + rightPlace + ", " + rightText + ". ") + rowExplain`, { wait: true })[1]);
+    const pacing = after(play, feedback, 'logic.if', { condition: 'pace > 0' });
+    const wait = after(play, pacing, 'action.delay', { ms: 'pace <= 4 ? 4000 : 8000' }, 'true');
+    //a stale timer does nothing: it checks the answer is the one it waited for
+    const still = after(play, wait, 'logic.if', { condition: `${P}_answered && Date.now() - answeredAt >= pace * 1000 - 100` });
+    play.logic.edges.push(edge(still, resetAct, 'true'));
+    //The hint is said as well as shown
+    after(play, kitNode(play, 'hint:action'), 'action.speak', say(`"Hint. " + ${P}_hint`)[1]);
+    //Enter moves on as well as N (the Next button's shortcut), once the question is answered
+    play.logic.edges.push(edge(g.event('event.key', { key: 'Enter', type: 'keydown', onlyIf: `${P}_locked` }, 'Key Enter'), resetAct));
+    //Slower, one step down for good (remembered with the learner's other choices), and pause or carry on
+    g.run(click(g, slower, 'Slower'), ['action.speak', { op: 'slower' }]);
+    g.run(click(g, pause, 'Pause'), ['action.speak', { op: 'toggle' }]);
     //Turn off spoken prompts (and on again)
     g.run(click(g, spoken, 'Spoken prompts'), ['action.setVariable', { variable: spokenOn.id, op: 'toggle' }], ['action.speak', { op: 'stop' }]);
     //The pace
-    g.run(click(g, paceBtn, 'Pace'), setVar(pace, 'pace == 0 ? 4 : pace == 4 ? 8 : 0'));
+    g.run(click(g, paceBtn, 'Pace'), ['action.setVariable', { variable: pace.id, op: 'set', value: 'pace == 0 ? 4 : pace == 4 ? 8 : 0' }]);
   }
   {
     const g = graph(hero);
-    g.run(
-      click(g, start, 'Start'),
-      setVar(order, 'questions.map((q, i) => i)'),
-      setVar(pos, '0'),
-      setVar(answered, 'false'),
-      setVar(chosen, '0'),
-      setVar(tally, '0'),
-      ['action.setVariable', { variable: missed.id, op: 'clear' }],
-      setVar(round, '1'),
-      setVar(hintShown, 'false'),
-      go(play),
-    );
+    g.run(click(g, start, 'Start'), goNext());
   }
 
   //The result page
-  const body = contentBox(result);
-  const scoreCard = card(ctx, 'Score card', body.x, body.y, 380, 220);
-  const scoreLabel = text(ctx, 'Score label', '{round > 1 ? "This time" : "Your score"}', body.x + 28, body.y + 24, 320, { fontSize: 18, fontWeight: 600, color: L.muted });
-  const scoreText = text(ctx, 'Score', '{tally} of {order.length}', body.x + 28, body.y + 60, 330, { fontSize: 56, fontWeight: 700, lineHeight: 1.1 });
-  const scoreWords = text(ctx, 'Score words', 'questions right first time', body.x + 28, body.y + 146, 330, { fontSize: 18, color: L.muted });
-  const message = text(ctx, 'Result message', '{tally / order.length >= 0.75 ? messageHigh : tally / order.length >= 0.5 ? messageMid : messageLow}', body.x + 420, body.y + 22, body.width - 420, { fontSize: 26, fontWeight: 600, lineHeight: 1.3 });
-  const review = bind(button(ctx, 'Missed questions button', 'Go through the missed ones (M)', body.x + 420, body.y + 120, 320), { visible: 'missed.length > 0' });
-  const again = button(ctx, 'Try again button', 'Try the whole quiz again', body.x + 420, body.y + 176, 260, false);
-  const hear = bind(button(ctx, 'Hear again button', 'Hear it again (R)', body.x + 700, body.y + 176, 220, false), { visible: 'voiceAvailable && spokenOn' });
-  const reviewHeading = bind(text(ctx, 'Review heading', 'Questions to look at again', body.x, body.y + 244, 600, { fontSize: 20, fontWeight: 700, role: 'heading', headingLevel: 2 }), { visible: 'missed.length > 0' });
-  const line = text(ctx, 'Review question', '•  {questions[item].prompt}', 0, 0, body.width, { fontSize: 15, lineHeight: 1.25 });
+  const review = bind(button(ctx, 'Missed questions button', 'Go through the missed ones (M)', 0, 0, 320), { visible: `${P}_missed.length > 0` });
+  const again = button(ctx, 'Try again button', 'Try the whole quiz again', 0, 0, 260, false);
+  const hear = bind(button(ctx, 'Hear again button', 'Hear it again (R)', 0, 0, 220, false), { visible: 'voiceAvailable && spokenOn' });
+  Object.assign(review, { shortcut: 'm' });
+  Object.assign(hear, { shortcut: 'r' });
+  const reviewHeading = bind(text(ctx, 'Review heading', 'Questions to look at again', 0, 0, 100, { fontSize: 20, fontWeight: 700, role: 'heading', headingLevel: 2 }), { visible: `${P}_missed.length > 0` });
+  const line = text(ctx, 'Review question', '•  {item.prompt}', 0, 0, 100, { fontSize: 15, lineHeight: 1.25, autoSize: 'height' });
   const reviewList = createNode('frame', {
     name: 'Review list',
-    x: body.x,
-    y: body.y + 274,
-    width: body.width,
+    x: 0,
+    y: 0,
+    width: 100,
     height: 100,
     fill: null,
     stroke: null,
     clip: false,
     layout: { ...defaultAutoLayout('column'), gap: 4, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: 'stretch', hugHeight: true },
-    repeat: { items: 'missed', layout: 'none', gap: 0, columns: 1 },
+    repeat: { items: `${P}_missed.map(i => questions[i])`, layout: 'none', gap: 0, columns: 1 },
     children: [line],
   });
-  result.children.push(scoreCard, scoreLabel, scoreText, scoreWords, message, review, again, hear, reviewHeading, reviewList);
-  const SAY_SCORE = `"You got " + tally + " of " + order.length + (round > 1 ? " this time" : "") + ". " + (tally / order.length >= 0.75 ? messageHigh : tally / order.length >= 0.5 ? messageMid : messageLow) + (missed.length > 0 ? " You missed " + missed.length + (missed.length == 1 ? " question. Press M to go through it again." : " questions. Press M to go through them again.") : "")`;
+  scorePage(ctx, result, {
+    label: 'Your score',
+    score: `{${P}_setScore} of {${P}_setMax}`,
+    caption: 'questions right first time',
+    message: '{message}',
+    buttons: [review, again, hear],
+    below: [stack('Review', 0, 0, box.width, { gap: 8, children: [reviewHeading, reviewList] })],
+  });
   {
     const g = graph(result);
-    said(g, g.event('event.start', {}, 'Result page'), SAY_SCORE);
-    //The missed questions again: the order becomes the missed list, which starts empty again
-    const redo = click(g, review, 'Missed questions');
-    const redoGate = g.then(redo, 'logic.if', { condition: 'missed.length > 0' });
-    feed2(result, key(g, 'm', 'Key M'), redoGate);
-    g.run(g.then(redoGate, ...setVar(order, 'missed'), 'true'), setVar(pos, '0'), setVar(round, '1', 'add'), setVar(tally, '0'), ['action.setVariable', { variable: missed.id, op: 'clear' }], setVar(answered, 'false'), setVar(chosen, '0'), setVar(hintShown, 'false'), go(play));
+    g.run(g.event('event.start', {}, 'Result page'), say(`"You got " + ${P}_setScore + " of " + ${P}_setMax + ". " + message + (${P}_missed.length > 0 ? " You missed " + ${P}_missed.length + (${P}_missed.length == 1 ? " question. Press M to go through it again." : " questions. Press M to go through them again.") : "")`));
+    //The missed questions again: the kit draws a new run from the missed list, and the page before asks the first of them
+    g.run(click(g, review, 'Missed questions'), ['action.questionReset', { question: frame.id, run: 'missed' }], ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
     g.run(click(g, again, 'Try again'), ['action.startOver', {}]);
-    const hearEv = click(g, hear, 'Hear it again');
-    const hearGate = g.then(hearEv, 'logic.if', { condition: VOICE });
-    g.then(hearGate, 'action.speak', { op: 'text', text: SAY_SCORE }, 'true');
-    feed2(result, key(g, 'r', 'Key R'), hearGate);
+    g.run(click(g, hear, 'Hear it again'), ['action.speak', { op: 'repeat' }]);
   }
+
+  noteBelow(play, { text: '**Question bank** The questions are the rows of `questions`, asked once each. The kit\'s number keys answer, its Listen button is Repeat, and Read aloud\'s "With no voice" and "Only speak when" send the words to a screen reader when spoken prompts are off.', colour: 'sky' });
+  noteBelow(play, { x: 456, text: '**Shortcuts** R, S, H, N, M and Space are each button\'s Shortcut field, so there is no key node for them. [ ] Keep the key in the label ("Repeat (R)") so sighted learners see it too.', colour: 'sky' });
+  noteBelow(result, { text: '**Live variables** `rowExplain`, `rightPlace` and `rightText` read the row showing, and `message` is banded from the score. [ ] Reword the three messages in the Variables tab.', colour: 'gold' });
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page, and the note about the keys under the Start button', hero.children.find((c) => c.name === 'Page title'), hero),
-    item('Write your own questions: the "questions" variable (Variables tab) is a list, one entry per question. Each has a prompt, the options (two to four; a true or false question has two), answer (the place of the right option, counting from 1), explain (said and shown after the answer) and an optional hint', qText, play),
-    item('Add "say" to a question when a voice reads it badly (a formula, an abbreviation, a long scenario): it is said instead of the prompt, and the options are still read after it', qText, play),
+    item('Write your own questions: the "questions" variable (Variables tab) is a list, one entry per question. Each has a prompt, the options (two to four; a true or false question has two), correct (the place of the right option, counting from 1), explain (said and shown after the answer) and an optional hint', frame, play),
+    item('Add "spoken" to a question when a voice reads it badly (a formula, an abbreviation, a long scenario): it is said instead of the prompt, and the options are still read after it', frame, play),
     item('Add or remove questions in that list: the "Question n of N" footer, the score and the review all follow its length', undefined, play),
-    item('Say the options the way you want them heard, and keep each one short: a voice reads all of them before the learner can answer', answers[0], play),
+    item('Say the options the way you want them heard, and keep each one short: a voice reads all of them before the learner can answer', partsOf(frame).options[0], play),
     item('Set the language of the spoken prompts in Project settings, Read aloud (it is English here). A voice for another language is never used, so translating the questions means changing it too', undefined, play),
     item('Decide how the quiz moves on: by hand is the default. The "pace" variable is 0 (by hand), 4 or 8 (seconds after the answer has been spoken); the Pace button on the question page cycles it for the learner', paceBtn, play),
-    item('Reword the three result messages: the messageHigh, messageMid and messageLow variables', message, result),
-    item('Try it with a voice installed and with none (turn it off in your computer\'s settings or use another browser). With no voice the spoken buttons hide and it is an ordinary keyboard quiz with the same feedback on the page', undefined, play),
+    item('Reword the three result messages: the messageHigh, messageMid and messageLow variables', byName(result, 'Result message'), result),
+    item('Try it with a voice installed and with none (turn it off in your computer\'s settings or use another browser). With no voice the spoken buttons hide and it is an ordinary keyboard quiz with the same feedback announced', undefined, play),
     item('Do not offer it as the route for a screen reader user: they already have a reader, and two voices at once is worse. "Spoken prompts" turns the voice off, and the feedback is then announced to the reader instead', spoken, play),
     item('Change the colours for the whole piece with the Themes tab: the colourways are already set up', undefined, play),
   ];
   return { project, checklist };
-}
-
-//An extra wire from one event to a node (an event that feeds a chain another event already starts)
-function feed2(page: { logic: { edges: ReturnType<typeof edge>[] } }, ev: LogicNode, first: LogicNode): void {
-  page.logic.edges.push(edge(ev, first));
 }
