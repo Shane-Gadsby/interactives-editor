@@ -22,6 +22,13 @@ function messy(): Project {
 const text = (el: Element | null) => el?.textContent ?? '';
 const click = (el: Element | null | undefined) => act(() => void (el as HTMLElement).click());
 const byText = (root: ParentNode, sel: string, t: RegExp) => [...root.querySelectorAll(sel)].find((e) => t.test(e.textContent ?? ''));
+/** A group starts as one line: open it to see what is in it. */
+const opened = (root: ParentNode, id: string) => {
+  const g = root.querySelector(`[data-check="${id}"]`)!;
+  const t = g.querySelector<HTMLButtonElement>('.share-group-toggle')!;
+  if (t.getAttribute('aria-expanded') !== 'true') click(t);
+  return g;
+};
 
 describe('Before you share (the list)', () => {
   let root: Root;
@@ -50,10 +57,23 @@ describe('Before you share (the list)', () => {
     expect(text(host.querySelector('[data-check="dead-buttons"]'))).toMatch(/1 button does nothing when clicked/);
   });
 
+  it('shows one line per group, with the details behind a click', () => {
+    show();
+    const g = host.querySelector('[data-check="dead-buttons"]')!;
+    const t = g.querySelector('.share-group-toggle')!;
+    expect(t.getAttribute('aria-expanded')).toBe('false');
+    expect(g.querySelector('.share-items')).toBeNull();
+    click(t);
+    expect(t.getAttribute('aria-expanded')).toBe('true');
+    expect(g.querySelector(`#${t.getAttribute('aria-controls')} .share-items`)).toBeTruthy();
+    click(t);
+    expect(g.querySelector('.share-items')).toBeNull();
+  });
+
   it('Go there closes the list and selects the layer on its page', () => {
     const closed = vi.fn();
     show({ onClose: closed });
-    click(byText(host.querySelector('[data-check="dead-buttons"]')!, 'button', /Go there/));
+    click(byText(opened(host, 'dead-buttons'), 'button', /Go there/));
     expect(closed).toHaveBeenCalled();
     expect(store.get().activeArtboardId).toBe('p1');
     expect(store.get().selection).toEqual([store.get().project.artboards[0].children[0].id]);
@@ -61,7 +81,7 @@ describe('Before you share (the list)', () => {
 
   it('adds a description to a picture straight from the list, and the group goes', () => {
     show();
-    const group = host.querySelector('[data-check="alt-text"]')!;
+    const group = opened(host, 'alt-text');
     const input = group.querySelector<HTMLInputElement>('.share-describe input')!;
     act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'A pie cut in four');
@@ -77,7 +97,7 @@ describe('Before you share (the list)', () => {
 
   it('"This is fine" takes an item off the list and Forget puts it back', () => {
     show();
-    click(byText(host.querySelector('[data-check="dead-buttons"]')!, 'button', /This is fine/));
+    click(byText(opened(host, 'dead-buttons'), 'button', /This is fine/));
     expect(host.querySelector('[data-check="dead-buttons"]')).toBeNull();
     expect(text(host.querySelector('.share-body p'))).toMatch(/2 things to look at/);
     click(byText(host, 'button', /Forget what I marked as fine \(1\)/));
@@ -87,7 +107,7 @@ describe('Before you share (the list)', () => {
   it('Choose what it does opens the behaviour chooser for the button', async () => {
     const { BehaviourHost } = await import('../src/components/BehaviourDialog');
     act(() => root.render(<><BehaviourHost /><BeforeYouShareModal what="share" onClose={() => undefined} /></>));
-    click(byText(host.querySelector('[data-check="dead-buttons"]')!, 'button', /Choose what it does/));
+    click(byText(opened(host, 'dead-buttons'), 'button', /Choose what it does/));
     expect(document.querySelector('#behaviour-title')).toBeTruthy();
   });
 
@@ -105,6 +125,7 @@ describe('Before you share (the list)', () => {
 
   it('is a labelled dialog with a help link and keyboard reachable buttons', () => {
     show();
+    for (const id of ['dead-buttons', 'unreachable-pages', 'alt-text']) opened(host, id);
     for (const b of host.querySelectorAll('.share-group button')) expect((b as HTMLButtonElement).type).not.toBe('');
     expect(host.querySelector('.share-group .help-link')!.getAttribute('aria-label')).toMatch(/^Help:/);
   });

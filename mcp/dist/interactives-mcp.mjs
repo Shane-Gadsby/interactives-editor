@@ -12387,6 +12387,8 @@ While you are **typing in a text layer** <kbd>Ctrl</kbd>+<kbd>K</kbd> adds a lin
 Layers that are locked (the brand's logo and footer) are left out: they are not yours to change.
 
 ## Going there, fixing, and "This is fine"
+Each kind of problem is one line, saying how many there are. Click it (or press <kbd>Enter</kbd> on it) to open it and see each one, why it matters and the fixes; click again to close it. When there is only one kind it starts open.
+
 **Go there** closes the list, takes you to the page, selects the layer and (for words) lets you type. Press Share again when you are ready. Each row has **This is fine** for the ones that are meant to be like that (a decorative button, a picture that is only decoration): it leaves it off the list from then on. The mark is kept in this browser for the project, like the accessibility checker's **reviewed** marks (and a picture's mark is the same one the checker uses), and **Forget what I marked as fine** at the bottom puts them all back.
 
 **Share anyway** (or **Export anyway**) carries on regardless: the list only ever advises.
