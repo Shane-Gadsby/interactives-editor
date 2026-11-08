@@ -5,7 +5,7 @@ import { useSyncExternalStore } from 'react';
  * about this screen, so they're kept in this browser rather than with the other preferences.
  */
 export type Side = 'left' | 'right';
-export const PANEL_WIDTH = { left: { def: 240, min: 180, max: 560 }, right: { def: 320, min: 240, max: 640 } } as const;
+export const PANEL_WIDTH = { left: { def: 300, min: 180, max: 560 }, right: { def: 320, min: 240, max: 640 } } as const;
 // Only widths someone dragged to are kept (the old key also saved the defaults on every load, so a new default never
 // reached anyone who had opened the editor before)
 const KEY = 'ix-panel-widths-v2';

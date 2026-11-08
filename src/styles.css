@@ -1298,7 +1298,7 @@ hr.item-sep {
 .workspace {
   height: 100%;
   display: grid;
-  grid-template-columns: 72px var(--left-w, 240px) 1fr var(--right-w, 320px);
+  grid-template-columns: 72px var(--left-w, 300px) 1fr var(--right-w, 320px);
   grid-template-rows: 44px auto 1fr var(--bottom-h);
   grid-template-areas:
     'top top top top'
@@ -1308,7 +1308,7 @@ hr.item-sep {
 }
 /* The tool rail docked on the right, or floating (then it takes no column) */
 .workspace.tools-right {
-  grid-template-columns: var(--left-w, 240px) 1fr var(--right-w, 320px) 72px;
+  grid-template-columns: var(--left-w, 300px) 1fr var(--right-w, 320px) 72px;
   grid-template-areas:
     'top top top top'
     'banner banner banner banner'
@@ -1320,7 +1320,7 @@ hr.item-sep {
   border-left: 1px solid var(--line);
 }
 .workspace.tools-float {
-  grid-template-columns: var(--left-w, 240px) 1fr var(--right-w, 320px);
+  grid-template-columns: var(--left-w, 300px) 1fr var(--right-w, 320px);
   grid-template-areas:
     'top top top'
     'banner banner banner'
