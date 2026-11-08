@@ -2963,7 +2963,18 @@ function cleanVoice(raw) {
   if (raw.twice === true) out.twice = true;
   if (str$1(raw.node)) out.node = str$1(raw.node).slice(0, 100);
   if (str$1(raw.asset)) out.asset = str$1(raw.asset).slice(0, 100);
+  if (raw.own === true) out.own = true;
+  if (str$1(raw.ownAsset)) out.ownAsset = str$1(raw.ownAsset).slice(0, 100);
   if (raw.device === true) out.device = true;
+  return Object.keys(out).length ? out : void 0;
+}
+function cleanGuard(raw) {
+  if (!isObj$4(raw)) return void 0;
+  const out = {};
+  if (raw.mode === "block" || raw.mode === "warn" || raw.mode === "off") out.mode = raw.mode;
+  if (raw.spellcheck === false) out.spellcheck = false;
+  if (raw.paste === false) out.paste = false;
+  if (typeof raw.exempt === "string" && /^[0-9a-f]{64}$/.test(raw.exempt)) out.exempt = raw.exempt;
   return Object.keys(out).length ? out : void 0;
 }
 function normaliseQuestion(raw) {
@@ -3037,6 +3048,7 @@ function normaliseQuestion(raw) {
     ...raw.serverMarked === true ? { serverMarked: true } : {},
     ...isObj$4(raw.retake) ? { retake: { limit: Math.round(num$1(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
     ...cleanVoice(raw.voice) ? { voice: cleanVoice(raw.voice) } : {},
+    ...cleanGuard(raw.guard) ? { guard: cleanGuard(raw.guard) } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
     ...raw.multi === true ? { multi: true } : {},
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
@@ -3332,7 +3344,7 @@ function sanitizeNode(raw, seen) {
     }
   }
   if ("cornerRadii" in n && !(Array.isArray(n.cornerRadii) && n.cornerRadii.length === 4 && n.cornerRadii.every(isNum))) delete n.cornerRadii;
-  for (const k of ["mask", "locked", "noAssist"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  for (const k of ["mask", "locked", "noAssist", "noPaste"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
   if ("maskMode" in n && !["alpha", "inverted", "luminance", "invertedLuminance"].includes(n.maskMode)) delete n.maskMode;
   for (const k of ["blur", "fontWeight"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
   for (const k of ["blendMode", "cursor", "ariaLabel", "ariaDescription", "sayAs", "className"]) if (k in n && !isStr(n[k])) delete n[k];
@@ -6550,7 +6562,7 @@ From left to right:
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
 - Zoom: **−**, the percentage (click it to fit everything) and **+**.
-- **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**.
+- **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**. After you click or tab into a panel, Help opens that panel's own page (its tooltip names the panel); click the canvas or a toolbar and it goes back to the general help.
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
@@ -6575,7 +6587,7 @@ Drag the left and right panels' inner edges (beside the canvas) to make them wid
 All artboards side by side. See [Moving around the canvas](canvas). Right-click for menus: see [Layers, hidden and locked layers](layers-panel#right-click-menus).
 
 ## Inspector (right)
-Settings for the selection. A layer's settings start with **Layer** (name, position, size, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard and its **Responsive**, **Steps**, **Joysticks**, **Blends** and **Bones** sections, then the **Project** settings and the **Fonts**. The chain between **W** and **H** (and between **Sx** and **Sy**, and on an artboard's size) links the two: linked, changing one changes the other and keeps their ratio, and the canvas's resize handles keep it too (hold <kbd>Shift</kbd> to resize freely). Each layer remembers its own. The Inspector starts 320 px wide. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
+Settings for the selection. The search box at the top finds a property by name or by what it does ([The Properties panel](properties-panel)). A layer's settings start with **Layer** (name, position, size, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard and its **Responsive**, **Steps**, **Joysticks**, **Blends** and **Bones** sections, then the **Project** settings and the **Fonts**. The chain between **W** and **H** (and between **Sx** and **Sy**, and on an artboard's size) links the two: linked, changing one changes the other and keeps their ratio, and the canvas's resize handles keep it too (hold <kbd>Shift</kbd> to resize freely). Each layer remembers its own. The Inspector starts 320 px wide. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
 
 ## Bottom panel
 **Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility**, **Insights**, **Public interface**, **Themes** and **Usage**. A project made from a template also has a **Checklist** tab. Click a tab to open it, click the open one again to fold the bottom panel down to its tabs, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker), [Insights](insights), [Public interface](public-interface), [Themes](themes), [Usage](usage) and [Templates](templates#use-a-template).
@@ -6588,7 +6600,7 @@ Every panel can go anywhere: the left, right or bottom area, or a window of its 
 
 A floating window moves by its title bar and resizes from its bottom-right corner. Its **×** closes it and sends its panels back to where they started. An area nothing is docked in takes no room.
 
-Right-click a tab for **Dock on the left / right / at the bottom**, **Float in its own window** and **Reset panel layout** (everything back where it started). The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title), and drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right** and **Dock at the bottom** strips show, labelled for the tools, and the one you are over lights up. Along the bottom it becomes a strip across the page with its groups side by side, above the bottom panels. It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is. Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom** or **Floating**. Saved workspaces remember where the tool bar was. The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
+Right-click a tab (or press Shift+F10 on it) for **Dock on the left / right / at the bottom**, **Float in its own window**, **Help for this panel** and **Reset panel layout** (everything back where it started). The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title), and drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right** and **Dock at the bottom** strips show, labelled for the tools, and the one you are over lights up. Along the bottom it becomes a strip across the page with its groups side by side, above the bottom panels. It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is. Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom** or **Floating**. Saved workspaces remember where the tool bar was. The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
 **Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. The **Debug** panel (on by default) shows:
@@ -6885,6 +6897,27 @@ Select layers and drag them on the canvas. If you let go over a **different artb
 - **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**On click…**, **On hover…**) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
 - **An artboard**: **New** (a menu of layers to add where you clicked), **Paste**, **Make start artboard**, **Duplicate artboard**, **Zoom to artboard** and **Delete artboard**.
 - **Empty canvas**: **New artboard here**, **Paste**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`
+  },
+  {
+    id: "properties-panel",
+    title: "The Properties panel and its search",
+    group: "Design",
+    summary: "What the right-hand panel shows for a layer, an artboard and the project, and how to find a property with the search box.",
+    keywords: "properties inspector panel right search find filter property fuzzy synonym transparency opacity round corner radius alt description hide visible colour color z-order draw order aria typo did you mean slash ctrl f",
+    body: `The **Properties** panel is on the right. It shows the settings of whatever is selected: a layer (or several), an artboard, or, with nothing selected, the artboard's and the project's settings. Each group of settings is a **section** with a title. Click the title to fold it, and the **?** beside it opens that section's page.
+
+## Searching the properties
+The box at the top of the panel finds a property by what it does or what it is called. Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> while the focus is in the panel (or click the box).
+
+- It matches the label, the tooltip, the section title and other names people use. Try *transparency* (finds **Opacity**), *round* (**Corner radius**), *alt* or *aria* (**Description** and **Text alternative**), *hide* (**Visible**), *colour* or *color* (the colours), *font size* (**Size**), *z-order* (**Draw order**) or *width* (**W**).
+- Small typos are fine (*opacty*, *blnd*), and the order of the words doesn't matter (*radius corner*). Every word you type has to match something.
+- The best matches win: a property named exactly what you typed beats one that starts with it, which beats one with a word that starts with it, which beats a looser guess. Weaker guesses are left out when there are good matches.
+- The panel shows only the matching rows. Sections that start folded open, sections with nothing in them go away, and the section with the best match comes first. A line under the box says how many properties it found.
+- If nothing matches it says so and offers the closest name (*Did you mean Opacity?*); click it to use it.
+- The down arrow (or <kbd>Enter</kbd>) in the box moves to the first match. <kbd>Esc</kbd> clears the search, and the panel goes back to how it was.
+- Found fields work as they always do: type in them, drag their labels, key them with the diamond. The search stays while you pick other layers, so you can look at one property across several layers.
+
+The search works for a layer, several layers, an artboard, several artboards and the project settings.`
   },
   {
     id: "shapes",
@@ -7549,7 +7582,7 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
     body: `Web elements are real HTML controls, so they work with keyboards, screen readers and forms.
 
 - **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react. Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)). **Disabled** (also bindable, for a Next button that waits for an answer) greys it out and takes it out of the Tab sequence, and a disabled button or input looks dimmed by itself: **Disabled look** sets how opaque it is (0.5 by default, 1 for no dimming). A layer whose Opacity is bound keeps doing its own dimming.
-- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test. To do something when Enter is pressed in a text box, use an **On key** node set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions)).
+- **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test. **Block paste and drop** refuses pasted or dragged text, so the answer has to be typed. To do something when Enter is pressed in a text box, use an **On key** node set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions)).
 - **Link**: text that opens a URL. **Fit text to box** works here too.
 - **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
 - **Video**: a video file or URL.
@@ -8400,18 +8433,38 @@ A spelling test plays a word and the learner types it. Build one with one **Fill
 2. List every accepted spelling, one per line (\`judgement\` and \`judgment\`). Tick **Also accept American spellings** to accept the American form of each as well: the editor shows the forms it adds, so nothing is accepted that you can't see. It knows the common differences (colour/color, organise/organize, centre/center, travelled/traveled, paediatric/pediatric and a few dozen words that just differ) and leaves a word alone when it is not sure, so add anything else as its own line.
 3. Give the word its audio (see **The spoken word** below): a **Play sound** node on a button plays it. Write nothing of the word anywhere else (not in a layer name, a label or the prompt).
 
-**The spoken word.** With **Spelling** ticked, the question has a **Voice for the word** section. Press **Make the audio with a voice** and the server turns the first accepted spelling into speech and saves it as an ordinary sound in the project's Assets, picked in that word's **Play sound** node (a page with no Play sound node gets a **Play the word** button with one). **Make the audio for all words** does every word with the same voice and speed. The speech is made here, while you are editing, so the learner's page only ever has the sound.
+**The spoken word.** With **Spelling** ticked, the question has a **Voice for the word** section. **Word audio** says where the sound comes from: **Made with a voice** or **My own audio**. With a made voice, press **Make the audio with a voice** and the server turns the first accepted spelling into speech and saves it as an ordinary sound in the project's Assets, picked in that word's **Play sound** node (a page with no Play sound node gets a **Play the word** button with one). **Make the audio for all words** does every word with the same voice and speed. The speech is made here, while you are editing, so the learner's page only ever has the sound.
 
 - **Voice** and **Speed**: eight British voices (there is no Australian voice yet). A little under normal speed, the default, is clear for a spelling test.
 - **Preview** plays it without saving anything, so you can hear a word before it goes in.
 - **Say it like**: when the voice says a word wrongly, or does not know it, type the word as it sounds in ordinary English words (\`cull er\` for colour). It is only used to make the audio and is never in the page. A word the voice does not know says so and nothing is made until you give it a **Say it like**.
 - **Sentence** is said after the word, as a teacher would (\`The colour of the sky is blue.\`), and **Say the word again at the end** gives word, sentence, word. Both are only in the audio.
 - The first time anyone uses it, the server has to download the voice once (about 130 MB), and the section offers **Set up the voice**. If the server has no speech engine it says so, and you can still record the words yourself, upload the files and pick them in the **Play sound** node.
+- **My own audio** hides the voice controls and shows a sound picker: choose a sound already in Assets, **Add a new sound** (upload), or **Record it now** with your microphone. It goes in the same **Play sound** node the made voice uses, so the page's buttons and graph do not change. Switching between the two never deletes either file: the made audio and your own both stay in Assets and each question remembers which is in use. **Make the audio for all words** skips words set to My own audio. Marking on the server, and the word being kept off the learner's page, work exactly as before, because your audio is still the only place the word is. The editor warns when the audio file's name contains the word (Preview and exported files keep file names, and the share link renames them), so name it something else. Recordings are made in the browser (webm, ogg or m4a depending on the browser): use an uploaded mp3 or wav if you need a particular format.
 - Make a word again after you change it, and the new audio replaces the old. Listen to every word before you share: a voice can say an unusual word wrongly, and **Say it like** fixes that.
 
 **Practice mode.** Tick **Practice mode** and the learner's own device reads the word aloud instead (the **Play sound** node becomes a **Read aloud** node holding the word). The device voice has to be given the word, so **the word is in the page, where anyone can read it in their browser's developer tools**. Use it for practice, never a graded test. The question is then marked in the page and sends no grade, **Mark answers on the server** is turned off, and the share link does not hide the word. The voice is whatever the learner's device has, and with none for the language nothing is said. Turning it off puts the audio back but does not turn server marking back on: do that yourself.
 
 **What counts as right.** Every letter, in order. Case is ignored unless **Match case** is on, and spaces round the word are ignored. A curly apostrophe typed on a phone counts as a plain one, but a missing apostrophe or hyphen is wrong, and accents have to be there (cafe is not café). Numbers are not compared as numbers. The box has the browser's own spellcheck, autocorrect and automatic capitals switched off (**No browser help** in the input's settings), so it neither underlines nor fixes the word.
+
+**Spell checkers and writing tools.** With **Spelling** ticked, the question also has a **Spell checkers and writing tools** section. What the page can switch off, it does: the answer box asks for no spellcheck, autocorrect, automatic capitals or autofill, carries the opt-out attributes Grammarly and LanguageTool honour (\`data-gramm\`, \`data-enable-grammarly\`, \`data-lt-active\`), and with **Block paste and drop into the box** ticked the answer has to be typed. What it can't switch off, it looks for. The page watches for what writing tools put into it (Grammarly, LanguageTool, Microsoft Editor, ProWritingAid, QuillBot and Ginger) and for an answer that changes without anyone typing. **When a writing tool is found** chooses what happens:
+
+- **Block until it is turned off** puts up a panel that says what was found and how to turn that tool off for this site. Nothing behind it can be reached. The page checks again by itself and the panel goes as soon as nothing is found; **Check again** does it on the spot. If the answer changed by itself, the learner presses a button and the answer goes back to what they typed.
+- **Warn only** shows the same panel as a notice the learner can dismiss.
+- **Off** looks for nothing (the other ticks still apply).
+
+New spelling questions start on **Block** with paste refused. Existing ones are left as they were until you change them. Whatever was found is kept with the learner's result: **Results** shows the tools found and how often the panel came up, and the results spreadsheet has a **writing tools found** column. That works on the Link for StudyDesk, where there is a learner to keep it for. The settings, the watching and the panel are part of the player, so they work the same on the share link, in the StudyDesk embed and inside an exported single file (an exported file has no learner record to keep what was found in, so there the panel is all there is). In **Preview** the panel has a **Skip (Preview only)** button so you are not locked out of your own test.
+
+**Assistive technology.** Screen readers, magnifiers, switch devices and other assistive technology put nothing in the page and are never looked for. If a tool a learner relies on does look like a writing tool, set an **Exemption code**: the learner types it in the panel and is let through for the rest of their visit, and their result says an exemption was used. The page only holds a scrambled form of the code, so give the code itself to that learner only. The panel also tells learners to ask their teacher about an exemption.
+
+**What the guard cannot do.** Be plain with yourself about this, and with learners if you like:
+
+- The keyboard on a phone or tablet, and a computer's own autocorrect and text suggestions, are outside the page. The page can't see them or turn them off. On an iPhone or iPad the autocorrect setting is only a hint the keyboard may ignore.
+- A second device, a desktop program, or a tool that puts nothing in the page can't be seen at all.
+- The list of markers is what each tool is known (or, for Microsoft Editor, ProWritingAid, QuillBot and Ginger, generally believed) to put in a page. A tool that changes its markers slips through until the list (\`src/guard-tools.ts\` in the player) is updated, which is why the page also watches for an answer changing without typing.
+- A writing helper only shows it is on in the page if it is allowed to run on this site. A learner can turn one on after the panel has gone.
+
+So treat it as a strong nudge and a record, not a lock. It works best alongside what the test already does: the word is marked on the server and only in the audio.
 
 **Keeping the word out of the page.** The page learners get has no accepted spellings in it, because the question is marked on the server. The word is in the audio, so the audio is the only place it is. In a project with spelling questions, **Update to the latest version** on the share link also renames every audio asset to a plain name (\`colour.mp3\` becomes \`audio-1.mp3\`) and cuts the title and comment tags out of mp3 and wav files. Other kinds of audio keep their tags, and the share says so: use mp3 or wav. Speech made on the learner's own device (the browser reading text aloud) is not an option for a graded test: it would need the word as text in the page, which is why **Practice mode** is only for practice. Make the words with the **Voice for the word** section, or record them and upload the files. Audio the voice makes is a plain wav with no tags.
 
@@ -10259,13 +10312,13 @@ Check the projects page for an active folder, tag or search (the **Clear filters
     summary: "Search, tooltips and help links.",
     keywords: "help docs search tooltip question",
     body: `- **Search**: press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere for quick search. Type a few words and press <kbd>Enter</kbd> to open the best match.
-- **Help button**: the **?** at the bottom of the tool bar (it opens the page for the tool you're using), the **?** in the top bar, the **Help** link on the projects page, or <kbd>?</kbd>.
+- **Help button**: the **?** at the bottom of the tool bar (it opens the page for the tool you're using), the **?** in the top bar (after you click into a panel it opens that panel's page instead; right-click a panel's tab for **Help for this panel**), the **Help** link on the projects page, or <kbd>?</kbd>.
 - **Getting started**: the five tutorials start at [Tutorial 1](tutorial-first-animation). Stuck? [Troubleshooting and common questions](troubleshooting).
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
 - **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
 - **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
-- **? links**: inspector sections have a **?** that opens their page here.`
+- **? links**: inspector sections have a **?** that opens their page here. The panels' tabs don't have one: use the top bar's, or right-click the tab.`
   }
 ];
 function topicBody(t2) {
