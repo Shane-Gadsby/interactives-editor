@@ -301,6 +301,8 @@ export async function listAssetBlobs(projectId: string): Promise<Map<string, Blo
 }
 
 export async function assetBytes(projectId: string, asset: Asset): Promise<Uint8Array | null> {
+  // A picture linked from the Media Catalogue has no stored file; an export that wants it fetches it itself (lib/media-catalogue.ts)
+  if (/^https?:\/\//i.test(asset.src ?? '')) return null;
   if (asset.src?.startsWith('data:')) {
     const res = await fetch(asset.src);
     return new Uint8Array(await res.arrayBuffer());
@@ -311,8 +313,9 @@ export async function assetBytes(projectId: string, asset: Asset): Promise<Uint8
 
 // ---------------------------------------------------------------- .ixp import / export
 
-export async function exportPackage(p: Project): Promise<Blob> {
-  const bytes = await writePackage(p, (a) => assetBytes(p.id, a), 'interactives-editor');
+/** `fetched` holds bytes already in hand by asset id (the Media Catalogue pictures an export fetched), tried before the project's own storage. */
+export async function exportPackage(p: Project, fetched?: Map<string, Uint8Array>): Promise<Blob> {
+  const bytes = await writePackage(p, (a) => fetched?.get(a.id) ?? assetBytes(p.id, a), 'interactives-editor');
   return new Blob([bytes as BlobPart], { type: 'application/zip' });
 }
 

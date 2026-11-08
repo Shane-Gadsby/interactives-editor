@@ -7,6 +7,8 @@ import { extOf, reportError, track } from './analytics';
 import { embeddedFontStyles, inHead } from './font-embed';
 import { fontsBase } from './fonts';
 import { store } from '../store/store';
+import { alertDialog } from '../components/dialogs';
+import { embedLinkedAssets, failureMessage, withFetched, type LinkedFailure } from './media-catalogue';
 
 export function download(blob: Blob, filename: string): void {
   // What kind of file and how big, never its name
@@ -47,18 +49,29 @@ export function withoutLinks(project: Project): Project {
  */
 export async function standaloneHtml(
   project: Project,
-  opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; context?: Partial<ContextValues>; bytesFor?: (asset: Asset) => Promise<Uint8Array | null>; embedFonts?: boolean; optimise?: boolean; onWarning?: (text: string) => void } = {},
+  opts: { startArtboardId?: string; debug?: boolean; accessibility?: boolean; context?: Partial<ContextValues>; bytesFor?: (asset: Asset) => Promise<Uint8Array | null>; embedFonts?: boolean; optimise?: boolean; onWarning?: (text: string) => void; embedLinked?: boolean; onLinkedFailed?: (failed: LinkedFailure[]) => void } = {},
 ): Promise<string> {
   //A page for learners carries the attributions only when the Credits button or the exports option asks, and never the author's notes
   // The author's made-up context values are for designing, so a file for learners does not carry them
-  const { sampleContext: _sample, ...unsampled } = withoutLinks(project);
+  // Media Catalogue pictures stay links (a share, an embed, the preview) unless this file has to work on its own
+  let fetched = new Map<string, Uint8Array>();
+  let whole = project;
+  if (opts.embedLinked) {
+    const e = await embedLinkedAssets(project);
+    whole = e.project;
+    fetched = e.bytes;
+    if (e.failed.length) opts.onLinkedFailed?.(e.failed);
+  }
+  const { sampleContext: _sample, ...unsampled } = withoutLinks(whole);
   void _sample;
-  const clean = withPublishedCredits(unsampled as Project);
+  // Where a picture was found in the catalogue is the author's business, not something a page for learners carries
+  const unfound = unsampled.assets.some((a) => a.catalogue) ? { ...unsampled, assets: unsampled.assets.map(({ catalogue: _c, ...a }) => a) } : unsampled;
+  const clean = withPublishedCredits(unfound as Project);
   const named = opts.startArtboardId ? { ...clean, settings: { ...clean.settings, startArtboardId: opts.startArtboardId } } : clean;
   // The swapped assets carry their bytes as data: urls, which the builder embeds as they are (assetBytes reads them too)
   const p = opts.optimise && !opts.bytesFor ? await withOptimisedAssets(named) : named;
   const sandbox = p.settings.scriptSandbox && (p.scripts.length || hasCodeNodes(p) || hasScriptLayers(p)) ? await loadSandboxSource() : undefined;
-  const html = await buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: opts.bytesFor ?? ((a) => assetBytes(project.id, a)), debug: opts.debug, accessibility: opts.accessibility, context: opts.context, preconnectFonts: !opts.embedFonts, fontsBase: opts.embedFonts ? undefined : fontsBase() });
+  const html = await buildStandaloneHtml(p, { playerSource, sandboxSource: sandbox, bytesFor: withFetched(fetched, opts.bytesFor ?? ((a) => assetBytes(project.id, a))), debug: opts.debug, accessibility: opts.accessibility, context: opts.context, preconnectFonts: !opts.embedFonts, fontsBase: opts.embedFonts ? undefined : fontsBase() });
   // The player skips a Google font whose element id is already in the page, so these go in ahead of its script
   return opts.embedFonts ? inHead(html, await embeddedFontStyles(p, opts.onWarning)) : html;
 }
@@ -70,13 +83,23 @@ function hasCodeNodes(p: Project): boolean {
   return p.artboards.some((a) => a.logic.nodes.some((n) => n.kind === 'action.code' || n.kind === 'action.script'));
 }
 
+/** Says so when an export couldn't fetch some Media Catalogue pictures (it is made without them, not with links that might not work). */
+export const warnLinkedFailed = (file: string) => (failed: LinkedFailure[]) => {
+  const m = failureMessage(failed, file);
+  void alertDialog({ title: m.title, message: m.message });
+};
+
 export async function downloadStandalone(project: Project): Promise<void> {
-  const html = await failsAs('export', 'html', () => standaloneHtml(project, { embedFonts: true, optimise: true, onWarning: warnInEditor }));
+  const html = await failsAs('export', 'html', () => standaloneHtml(project, { embedFonts: true, optimise: true, onWarning: warnInEditor, embedLinked: true, onLinkedFailed: warnLinkedFailed('page') }));
   download(new Blob([html], { type: 'text/html' }), `${fileSafe(project.name)}.html`);
 }
 
 export async function downloadPackage(project: Project): Promise<void> {
-  const blob = await failsAs('export', 'ixp', () => exportPackage(withoutLinks(project)));
+  const blob = await failsAs('export', 'ixp', async () => {
+    const e = await embedLinkedAssets(project);
+    if (e.failed.length) warnLinkedFailed('package')(e.failed);
+    return exportPackage(withoutLinks(e.project), e.bytes);
+  });
   download(blob, `${fileSafe(project.name)}${PACKAGE_EXTENSION}`);
 }
 

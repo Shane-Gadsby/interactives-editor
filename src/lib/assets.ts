@@ -40,6 +40,20 @@ class AssetUrls {
 
   has = (id: string): boolean => this.urls.has(id);
 
+  /**
+   * Pictures linked from the Media Catalogue have no file of their own: their address is the url the canvas shows. Called
+   * with the project's assets whenever they change, so it covers opening a project, adding one and a collaborator's.
+   */
+  link(assets: { id: string; src?: string }[]): void {
+    let changed = false;
+    for (const a of assets) {
+      if (!a.src || !/^https?:\/\//i.test(a.src) || this.urls.get(a.id) === a.src) continue;
+      this.urls.set(a.id, a.src);
+      changed = true;
+    }
+    if (changed) this.bump();
+  }
+
   private fetching = new Set<string>();
 
   /**

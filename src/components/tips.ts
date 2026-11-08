@@ -3,6 +3,8 @@
  * Keep each to one short sentence that says what the setting does, not what it's called.
  */
 export const FIELD_TIPS: Record<string, string> = {
+  'Grid size': 'Width and height of one grid cell in pixels, measured from the artboard\'s top left corner',
+  'Stronger line every': 'Draw every Nth grid line heavier (1 draws them all alike)',
   X: 'Distance from the left edge of the parent (drag the label to scrub, type sums like 100/2)',
   Y: 'Distance from the top edge of the parent',
   W: 'Width',

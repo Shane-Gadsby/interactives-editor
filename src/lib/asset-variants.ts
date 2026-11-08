@@ -82,7 +82,8 @@ export interface OptimisedFile {
  */
 export async function optimisedFile(projectId: string, asset: Asset, level: OptimiseLevel): Promise<OptimisedFile | null> {
   try {
-    if (asset.src?.startsWith('data:')) return null;
+    // data: ones are embedded as they are, and a picture linked from the Media Catalogue has no stored original here
+    if (asset.src?.startsWith('data:') || /^https?:\/\//i.test(asset.src ?? '')) return null;
     const key = outputKey(level);
     const how = outputSource(asset.mime, variantSizes(projectId, asset.id), level);
     if (how === 'original') return null;

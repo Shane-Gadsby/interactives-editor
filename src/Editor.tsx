@@ -38,6 +38,7 @@ import { prefs, setPrefs, usePrefs } from './lib/prefs';
 import { useDock } from './lib/dock';
 import { gridFor, gridLabel, nudgeDelta, shiftSteps } from './lib/grid';
 import { gridMenu } from './components/grid-menu';
+import { MediaCatalogueModal } from './components/MediaCatalogueModal';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
 import { LinkChanges } from './components/LinkChanges';
@@ -538,6 +539,7 @@ function useRemoteAssets() {
   const projectId = useEditor((st) => st.project.id);
   const assets = useEditor((st) => st.project.assets);
   useEffect(() => {
+    assetUrls.link(assets);
     void assetUrls.ensure(
       projectId,
       assets.map((a) => a.id),
@@ -1028,6 +1030,7 @@ export function Toolbar() {
   const [open, toggle] = useToolGroups();
   const snapPrefs = usePrefs();
   const horizontal = useDock().tools.place === 'bottom';
+  const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [gridMenuAt, setGridMenuAt] = useState<{ x: number; y: number } | null>(null);
   const gridContext = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -1053,6 +1056,7 @@ export function Toolbar() {
       }}
     />
   );
+  const catalogue = <IconButton key="catalogue" icon={<Icons.catalogue />} title="Media Catalogue: find a photo and put it on the artboard as a picture" onClick={() => setCatalogueOpen(true)} />;
   const bones = <IconButton key="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={showBones ? 'Hide bones on the canvas (Shift+J)' : 'Show bones on the canvas (Shift+J)'} onClick={() => store().set({ showBones: !showBones })} />;
   return (
     <nav
@@ -1064,6 +1068,7 @@ export function Toolbar() {
       }}
     >
       {menu && <ContextMenu x={menu.x} y={menu.y} items={toolsMenu()} onClose={() => setMenu(null)} />}
+      {catalogueOpen && <MediaCatalogueModal onClose={() => setCatalogueOpen(false)} />}
       {gridMenuAt && <ContextMenu x={gridMenuAt.x} y={gridMenuAt.y} items={gridMenu()} onClose={() => setGridMenuAt(null)} />}
       <ToolsHead />
       <div className="tool-grid">
@@ -1084,6 +1089,7 @@ export function Toolbar() {
                 <>
                   {g.tools.map(btn)}
                   {g.id === 'media' && image}
+                  {g.id === 'media' && catalogue}
                   {g.id === 'web' && <AddQuestion key="q" />}
                   {g.id === 'rig' && bones}
                 </>
@@ -1112,6 +1118,7 @@ export function Toolbar() {
           onClick={() => setPrefs({ snapGrid: !snapPrefs.snapGrid })}
           onContextMenu={gridContext}
         />
+        {catalogue}
         {btn('comment')}
         <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
       </div>
