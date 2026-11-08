@@ -19,6 +19,7 @@ import {
   polygonPoints,
   roundedBoxPoints,
   starPoints,
+  withMaster,
   type Artboard,
   type Easing,
   type Paint,
@@ -311,8 +312,11 @@ export function exportLottie(project: Project, artboard: Artboard, opts: { timel
         ctx.assets.push({ id, w: Math.round(n.width), h: Math.round(n.height), u: '', p: `data:${ctx.mimeFor(n.assetId!)};base64,${btoa(bin)}`, e: 1 });
         layer = { ty: 2, refId: id };
         if (n.fit !== 'fill') ctx.warnings.add(`Image "${n.name}" is stretched to its box in Lottie`);
+        if (n.crop && (n.crop.zoom !== 1 || n.crop.x !== 0 || n.crop.y !== 0)) ctx.warnings.add(`Image "${n.name}" is cropped in the player; Lottie has no clipped picture, so it shows the whole picture in the box`);
       } else ctx.warnings.add(`Image "${n.name}" has no file and was skipped`);
     } else if (isContainer(n)) layer = { ty: 3 };
+    else if (n.type === 'connector') ctx.warnings.add(`Connectors ("${n.name}") follow other layers at runtime and are left out of Lottie`);
+    else if (n.type === 'progress' || n.type === 'chart') ctx.warnings.add(`${n.type === 'chart' ? 'Chart' : 'Progress'} layers ("${n.name}") are drawn from live values and are not part of Lottie`);
     else ctx.warnings.add(`${n.type} layers ("${n.name}") are web elements and are not part of Lottie`);
     if (!layer) return;
     if ((n.type === 'path' && n.skin) || (n.type === 'image' && n.mesh?.skin)) ctx.warnings.add('Skinned shapes and meshes export in their rest shape: Lottie has no bones, so they only bend in the player');
@@ -327,7 +331,8 @@ export function exportLottie(project: Project, artboard: Artboard, opts: { timel
     }
     if (isContainer(n)) for (const c of n.children) add(c, ind, n.name);
   };
-  for (const n of artboard.children) add(n, undefined, 'Layer');
+  // The page master's layers are drawn into the animation (flattened: a Lottie has no second artboard)
+  for (const n of withMaster(project.artboards, artboard)) add(n, undefined, 'Layer');
   // Lottie draws the first layer on top: ours were collected back to front, depth first.
   layers.reverse();
   const bg = artboard.background?.type === 'solid' ? artboard.background.color : null;

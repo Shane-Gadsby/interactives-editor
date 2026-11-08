@@ -11,6 +11,8 @@ import {hashOf} from './library.mjs'
 export const MAX_CHECKLIST = 40
 export const MAX_TEXT = 200
 export const MAX_DESCRIPTION = 1000
+//The longer how and why under an item
+export const MAX_DETAIL = 1500
 
 //A plain single line: control characters out, spaces collapsed, capped. Empty comes back as ''
 export const cleanLine = (value, max = MAX_TEXT) => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : ''
@@ -32,8 +34,12 @@ export const cleanChecklist = (list, makeId) => {
 
 		let item = {id: typeof raw.id === 'string' && ID.test(raw.id) && !out.some((i) => i.id === raw.id) ? raw.id : makeId(), text}
 
+		let detail = cleanLine(raw?.detail, MAX_DETAIL)
+
+		if (detail) item.detail = detail
 		if (typeof raw.artboardId === 'string' && ID.test(raw.artboardId)) item.artboardId = raw.artboardId
 		if (typeof raw.nodeId === 'string' && ID.test(raw.nodeId)) item.nodeId = raw.nodeId
+		if (typeof raw.field === 'string' && ID.test(raw.field)) item.field = raw.field
 
 		out.push(item)
 	}
@@ -67,6 +73,12 @@ export const cleanProject = (project) => {
 	return copy
 }
 
+//The brand kits a project has added, as {id, name}. A template made from it is a pre-branded one, and says so on its card
+export const brandKitsOf = (project) => (Array.isArray(project?.libraries) ? project.libraries : [])
+	.filter((l) => l && l.brand && typeof l.id === 'string')
+	.map((l) => ({id: l.id, name: cleanLine(l.name, 120) || 'Brand kit'}))
+	.slice(0, 5)
+
 //Hash of what a template holds, for "did saving it again change anything". The project's own identity doesn't count
 export const contentHash = (project) => {
 	let {id, name, created, updated, template, ...rest} = project
@@ -75,7 +87,7 @@ export const contentHash = (project) => {
 }
 
 //Where an artboard sits and which design file it came from is not part of what it holds
-const ARTBOARD_LOCAL = ['canvasX', 'canvasY', 'canvasHidden', 'guides', 'source', 'children', 'timelines', 'logic']
+const ARTBOARD_LOCAL = ['canvasX', 'canvasY', 'canvasHidden', 'guides', 'grid', 'source', 'children', 'timelines', 'logic', 'notes']
 
 export const artboardProps = (ab) => Object.fromEntries(Object.entries(ab).filter(([k]) => !ARTBOARD_LOCAL.includes(k)))
 export const nodeProps = (node) => {

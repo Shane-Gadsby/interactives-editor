@@ -1,18 +1,33 @@
+import { answerPreviewProgress, forgetPreviewCourse, forgetPreviewLearner, previewCourseHas, previewLearnerHas, usesCourseCollections } from './lib/preview-learner';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { PACKAGE_EXTENSION, defaultTheme, QUESTION_KINDS, setMembers, walk, type Project, type QuestionKind } from 'interactives-player';
+import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
-import { ConflictError, liveSeqOf, loadProjectRecord, saveProject } from './lib/db';
+import { ToastView } from './components/ToastView';
+import { canCrop } from './lib/crop';
+import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
 import { ensureFonts } from './lib/fonts';
 import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, standaloneHtml } from './lib/export';
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
+import { importGiftFile } from './lib/gift-import';
+import { TOOL_KEYS } from './lib/tool-keys';
+import { CommandPalette } from './components/CommandPalette';
+import { BeforeYouShareModal } from './components/BeforeShare';
+import { checkBeforeShare } from './lib/before-share';
+import { openPalette } from './lib/command-palette';
+import { APP_ACTION_EVENT, type AppAction } from './lib/app-actions';
+import { PasteQuestionsModal } from './components/PasteQuestionsModal';
 import { copySelection, pasteNodes } from './lib/clipboard';
+import { copySelectedKeys, isKeyClipText, keyContext, keysCopiedLast, pasteKeys, watchKeyContext } from './lib/key-edit';
 import { Canvas } from './canvas/Canvas';
 import { deleteSelectedKeys } from './panels/Timeline';
+import { deleteSelectionCommand } from './lib/artboard-commands';
+import { ThemeFixedHint } from './components/ThemeFixedHint';
 import { ReferenceModal } from './panels/InterfacePanel';
+import { MotionExportModal } from './components/MotionExportModal';
 import { exportProblems, typeDefinitions } from 'interactives-player';
 import { confirmDialog } from './components/dialogs';
 import { Icons, type IconName } from './components/icons';
@@ -20,15 +35,29 @@ import { IconButton } from './components/ui';
 import { PreviewWidth, responsiveSets, widthInside } from './components/PreviewWidth';
 import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
-import { HelpLink, openHelp } from './help/Help';
+import { HelpLink } from './help/Help';
+import { setPreviewOpen, trapFocus } from './lib/overlays';
+import { installInteractionsRoom } from './lib/interactions-room';
+import { clearFlow, lastQuietHit, pushFlow, useFlowVersion } from './lib/run-flow';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ContextMenu } from './components/ContextMenu';
-import { DockDragLayer, DockFloats, DockZone, FloatingTools, ToolsHead, toolsMenu, useDockSync, useZoneSizes } from './components/Dock';
+import { DockDragLayer, DockFloats, DockZone, FloatingTools, ToolsHead, openHeaderHelp, useHeaderHelpTitle, toolsMenu, useDockSync, useZoneSizes } from './components/Dock';
 import { PrefsModal } from './components/PrefsModal';
 import { HistoryModal, InviteModal, ShareForReviewModal, ShareModal } from './components/ProjectModals';
 import { SaveTemplateModal } from './components/TemplateModals';
 import { CHECKLIST_FLAG, hasChecklist } from './lib/templates';
 import { prefs, setPrefs, usePrefs } from './lib/prefs';
+import { hideSome, setDock, useDock } from './lib/dock';
+import { showFillIn } from './lib/content-form';
+import { toolGroupsInUse } from './lib/essentials';
+import { GettingStarted } from './components/GettingStarted';
+import { watchGettingStarted } from './lib/onboarding';
+import { applyNewcomerEssentials } from './lib/workspaces';
+import { gridFor, nudgeDelta, shiftSteps } from './lib/grid';
+import { snapAny, snapSettings, toggleSnap } from './lib/snapping';
+import { SnapMenu } from './components/SnapMenu';
+import { gridMenu } from './components/grid-menu';
+import { MediaCatalogueModal } from './components/MediaCatalogueModal';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
 import { LinkChanges } from './components/LinkChanges';
@@ -100,12 +129,16 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
           if (sessionStorage.getItem(CHECKLIST_FLAG) === p.id) {
             sessionStorage.removeItem(CHECKLIST_FLAG);
             if (hasChecklist(p)) s.set({ bottomTab: 'checklist' });
+            //a starter with a form opens it beside the page too: writing the content is the first job
+            if (p.contentForm?.sections.length) showFillIn();
           }
         } catch {
           /* no session storage */
         }
         setProject(p.id);
-        stopWatching = observeStore(s);
+        const stopUse = observeStore(s);
+        const stopJobs = watchGettingStarted(s);
+        stopWatching = () => (stopUse(), stopJobs());
         track('project', 'open', { ms: Date.now() - openedAt, sum: { artboards: p.artboards.length, assets: p.assets.length } });
         setReady(s);
       } catch (err) {
@@ -149,6 +182,21 @@ function useAutosave() {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let lastRev = s.revision;
     let saving = false;
+    // A save the network or the server dropped tries again by itself: 2 s, 4 s... up to a minute, and straight away
+    // when the browser says it is back online. A refused one (too big, not allowed) waits for the next change
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryIn = 2000;
+    let retrying = false;
+    let lastRefusal = '';
+    const retryLater = () => {
+      if (retryTimer) clearTimeout(retryTimer);
+      retrying = true;
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        void save();
+      }, retryIn);
+      retryIn = Math.min(60000, retryIn * 2);
+    };
     // The live session closes (parent cleanup) before this one runs, so remember now whether changes travel as ops
     let viaOps = !!liveSession();
     const save = async (force = false) => {
@@ -162,9 +210,23 @@ function useAutosave() {
         await saveProject(s.get().project, { force });
         s.set({ saveState: s.revision === rev ? 'saved' : 'dirty', saveError: null });
         setConflict(false);
+        if (retrying) s.toast('Saved again');
+        retrying = false;
+        retryIn = 2000;
+        lastRefusal = '';
       } catch (err) {
         if (err instanceof ConflictError) setConflict(true);
-        s.set({ saveState: 'error', saveError: err instanceof Error ? err.message : String(err) });
+        const message = err instanceof Error ? err.message : String(err);
+        const again = err instanceof ApiError && err.retryable;
+        s.set({ saveState: 'error', saveError: again ? `${message}. Trying again by itself` : message });
+        if (again) {
+          if (!retrying) s.toast(`Not saved: ${message}. It will keep trying; keep this tab open.`, 'error');
+          retryLater();
+        } else if (!(err instanceof ConflictError) && message !== lastRefusal) {
+          // Once per reason: the next change saves (and fails) again, and saying it on every keystroke helps nobody
+          lastRefusal = message;
+          s.toast(`Not saved: ${message}`, 'error');
+        }
       } finally {
         saving = false;
         if (s.revision !== rev) schedule();
@@ -190,6 +252,14 @@ function useAutosave() {
       }
     };
     window.addEventListener('beforeunload', beforeUnload);
+    const onOnline = () => {
+      if (!retrying) return;
+      if (retryTimer) clearTimeout(retryTimer);
+      retryTimer = null;
+      retryIn = 2000;
+      void save();
+    };
+    window.addEventListener('online', onOnline);
     // A live session the server stopped accepting: take the server's current revision, then save the whole document
     // the usual way (a conflict still shows the conflict bar)
     const onLiveFallback = () => {
@@ -201,6 +271,8 @@ function useAutosave() {
     window.addEventListener(LIVE_FALLBACK_EVENT, onLiveFallback);
     return () => {
       window.removeEventListener(LIVE_FALLBACK_EVENT, onLiveFallback);
+      window.removeEventListener('online', onOnline);
+      if (retryTimer) clearTimeout(retryTimer);
       unsub();
       if (timer) {
         clearTimeout(timer);
@@ -216,28 +288,20 @@ function useAutosave() {
 
 // ---------------------------------------------------------------- shortcuts
 
-const TOOL_KEYS: Record<string, Tool> = {
-  v: 'select',
-  h: 'hand',
-  a: 'artboard',
-  f: 'frame',
-  r: 'rect',
-  o: 'ellipse',
-  l: 'line',
-  p: 'pen',
-  n: 'pencil',
-  w: 'bend',
-  t: 'text',
-  b: 'button',
-  j: 'bone',
-  c: 'comment',
-};
 
 function useShortcuts() {
   useEffect(() => {
+    //Ctrl+S saves the project from anywhere in the editor, a text box, the code editor and the graph included (panels that
+    //keep their keys to themselves too, hence the capture phase), and never lets the browser save the page's html instead
+    const onSave = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== 's') return;
+      e.preventDefault();
+      void (window as unknown as { __ixForceSave?: () => Promise<void> }).__ixForceSave?.();
+    };
+    window.addEventListener('keydown', onSave, true);
     const onKey = (e: KeyboardEvent) => {
       const t = e.target instanceof HTMLElement ? e.target : null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || t.closest('.cm-editor') || t.closest('.react-flow'))) return;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || t.closest('.cm-editor') || t.closest('.react-flow') || t.closest('.note'))) return;
       const s = store();
       const st = s.get();
       const mod = e.ctrlKey || e.metaKey;
@@ -265,22 +329,18 @@ function useShortcuts() {
         return;
       }
       if (mod && k === 'c') {
-        copySelection();
+        if (!(keyContext() && copySelectedKeys())) copySelection();
         return;
       }
       if (mod && k === 'x') {
-        copySelection(true);
+        if (keyContext() && copySelectedKeys(true)) deleteSelectedKeys();
+        else copySelection(true);
         return;
       }
       if (mod && k === 'a') {
         e.preventDefault();
         const ab = s.artboard();
         if (ab) s.select(ab.children.filter((n) => !n.locked).map((n) => n.id));
-        return;
-      }
-      if (mod && k === 's') {
-        e.preventDefault();
-        void (window as unknown as { __ixForceSave?: () => Promise<void> }).__ixForceSave?.();
         return;
       }
       if (mod && (k === '0' || k === '1')) {
@@ -298,6 +358,16 @@ function useShortcuts() {
         setPrefs({ rulers: !prefs().rulers });
         return;
       }
+      if (e.shiftKey && !mod && !e.altKey && k === 'g') {
+        e.preventDefault();
+        setPrefs({ showGrid: !prefs().showGrid });
+        return;
+      }
+      if (mod && !e.shiftKey && !e.altKey && e.key === "'") {
+        e.preventDefault();
+        toggleSnap('grid');
+        return;
+      }
       if (e.shiftKey && (e.code === 'Digit1' || e.code === 'Digit2')) {
         e.preventDefault();
         zoomTo(e.code === 'Digit1' ? 'fit' : 'selection');
@@ -305,11 +375,12 @@ function useShortcuts() {
       }
       if (k === 'delete' || k === 'backspace') {
         e.preventDefault();
-        if (!deleteSelectedKeys()) s.deleteSelection();
+        if (!deleteSelectedKeys()) deleteSelectionCommand();
         return;
       }
       if (k === 'escape') {
-        if (st.editingTextId) s.set({ editingTextId: null });
+        if (st.croppingId) s.set({ croppingId: null });
+        else if (st.editingTextId) s.set({ editingTextId: null });
         else if (st.focusId) s.set({ selection: [st.focusId], focusId: null }); else if (st.selection.length || st.artboardSelected) s.set({ selection: [], artboardSelected: false });
         else s.set({ tool: 'select' });
         return;
@@ -319,6 +390,7 @@ function useShortcuts() {
         if (n?.type === 'group' || n?.type === 'frame') s.set({ focusId: n.id, selection: n.children.map((c) => c.id).slice(-1) });
         else if (n?.type === 'path') s.set({ editingPathId: n.id });
         else if (n?.type === 'text' || n?.type === 'button' || n?.type === 'link') s.set({ editingTextId: n.id });
+        else if (n?.type === 'image' && canCrop(n)) s.set({ croppingId: n.id });
         return;
       }
       if (e.altKey && !mod && k.startsWith('arrow') && st.selection.length === 1) {
@@ -332,8 +404,17 @@ function useShortcuts() {
       if (k.startsWith('arrow') && st.selection.length) {
         e.preventDefault();
         const d = e.shiftKey ? 10 : 1;
-        const dx = k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0;
-        const dy = k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0;
+        let dx = k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0;
+        let dy = k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0;
+        // With the grid on a nudge goes to the next grid line (Shift: a major step), by the selection's edge. Ctrl turns it off
+        const ab = snapSettings().grid && !mod ? s.artboard() : null;
+        const sb = ab && selectionBounds(ab, st.selection);
+        if (ab && sb) {
+          const g = gridFor(ab, prefs());
+          const steps = e.shiftKey ? shiftSteps(g) : 1;
+          if (dx) dx = nudgeDelta(sb.x, dx < 0 ? -1 : 1, g.size, steps);
+          if (dy) dy = nudgeDelta(sb.y, dy < 0 ? -1 : 1, g.size, steps);
+        }
         const changes = new Map<string, Record<string, unknown>>();
         for (const n of s.selectedNodes()) if (!n.locked) changes.set(n.id, { x: n.x + dx, y: n.y + dy });
         s.setEach(changes, 'nudge');
@@ -361,11 +442,19 @@ function useShortcuts() {
         return;
       }
       const text = e.clipboardData?.getData('text/plain');
+      // Keys copied from the timeline paste at the playhead; the system clipboard says which was copied last, else this session's memory does
+      if ((isKeyClipText(text) || (!text?.includes('interactives/nodes') && keysCopiedLast())) && pasteKeys(text)) {
+        e.preventDefault();
+        return;
+      }
       if (pasteNodes(text)) e.preventDefault();
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('paste', onPaste);
+    const unwatch = watchKeyContext();
     return () => {
+      unwatch();
+      window.removeEventListener('keydown', onSave, true);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('paste', onPaste);
     };
@@ -459,6 +548,7 @@ function useRemoteAssets() {
   const projectId = useEditor((st) => st.project.id);
   const assets = useEditor((st) => st.project.assets);
   useEffect(() => {
+    assetUrls.link(assets);
     void assetUrls.ensure(
       projectId,
       assets.map((a) => a.id),
@@ -466,22 +556,52 @@ function useRemoteAssets() {
   }, [projectId, assets]);
 }
 
+//Power users (and the server's brand group) can switch the brand kit lock off for a session, with the suite's F9 / Ctrl+F8. The
+//server says who qualifies; nothing is saved with it, and a reload puts the lock back
+function useBrandOverride() {
+  useEffect(() => {
+    let allowed = false;
+    let live = true;
+    session()
+      .then((who) => void (allowed = live && !!(who.brand || who.power)))
+      .catch(() => undefined);
+    const onKey = (e: KeyboardEvent) => {
+      if (!allowed || !window.powerUser?.isToggleKey(e)) return;
+      e.preventDefault();
+      const st = store();
+      const on = !st.get().brandOverride;
+      st.set({ brandOverride: on });
+      st.toast(on ? 'Brand lock off: you can edit and detach brand kit items, and change the logo, colours and fonts of a branded starter project (F9 to turn it back on)' : 'Brand lock on', 'info');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      live = false;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
+}
+
 function Workspace({ home }: { home: () => void }) {
   const conflict = useAutosave();
   useRemoteAssets();
   useThumbnails();
   useShortcuts();
-  const s = useEditor((st) => ({ toast: st.toast, report: st.report }));
+  useBrandOverride();
+  const s = useEditor((st) => ({ toast: st.toast, report: st.report, brandOverride: st.brandOverride }));
   const [widths, setWidth] = usePanelWidths();
   useDockSync();
   const z = useZoneSizes(widths);
   const [preview, setPreview] = useState(false);
+  // Someone new (they saw the first-run screen) opens their first project in Essentials, once. A template's checklist stays the tab that is open
+  useEffect(() => void applyNewcomerEssentials(), []);
   // Fitted before the first paint (the canvas opens at its final zoom, not at 100% for a frame), and again a frame later in
   // case the panels settled the canvas to a different size
   useLayoutEffect(() => {
     zoomTo('fit');
     requestAnimationFrame(() => zoomTo('fit'));
   }, []);
+  //The Interactions tab lifts the bottom panel while it is open (only from the default height)
+  useEffect(() => installInteractionsRoom(), []);
   // Tell the others what is selected (and on which artboard)
   useEffect(() => {
     let last = '';
@@ -496,13 +616,16 @@ function Workspace({ home }: { home: () => void }) {
     });
   }, []);
   return (
-    <div className={`workspace tools-${z.tools}`} style={{ ['--bottom-h' as string]: `${z.bottom}px`, ['--left-w' as string]: `${z.left}px`, ['--right-w' as string]: `${z.right}px` }}>
+    <div className={`workspace tools-${z.tools}`} style={{ ['--bottom-h' as string]: `${z.bottom}px`, ['--top-h' as string]: `${z.top}px`, ['--left-w' as string]: `${z.left}px`, ['--right-w' as string]: `${z.right}px` }}>
       <TopBar home={home} onPreview={() => (store().set({ previewPlaying: false }), setPreview(true))} />
       <div className="banner-area">
         {conflict && <ConflictBanner />}
+        {s.brandOverride && <div className="power-banner">Power user mode: the brand lock is off for this session. Edits to brand kit items, and to the logo, colours and fonts of a branded starter project, are yours to make (F9 to turn it back on).</div>}
         <LinkBanner />
         <LinkChanges />
+        <GettingStarted />
       </div>
+      <DockZone zone="top" />
       {z.tools === 'float' ? (
         <FloatingTools>
           <Toolbar />
@@ -523,8 +646,9 @@ function Workspace({ home }: { home: () => void }) {
       <DockFloats />
       <DockDragLayer />
       {preview && <PreviewModal onClose={() => setPreview(false)} />}
-      {s.toast && <div className={`toast ${s.toast.kind}`}>{s.toast.text}</div>}
-      {s.report && <ReportModal title={s.report.title} lines={s.report.lines} />}
+      <CommandPalette />
+      {s.toast && <ToastView toast={s.toast} />}
+      {s.report && <ReportModal title={s.report.title} lines={s.report.lines} undo={!!s.report.undo} />}
     </div>
   );
 }
@@ -552,22 +676,36 @@ function ThemeSwitch() {
   const shown = useEditor((s) => s.canvasTheme);
   const themes = project.themes;
   if (!themes?.list.length) return null;
+  const [hint, setHint] = useState(false);
   const current = themes.list.find((t) => t.id === shown) ?? defaultTheme(themes);
   return (
-    <label className="theme-switch" title="The theme the canvas shows while you edit. Layers with theme colours change, plain colours don't. Exports and pictures use it too. It is not saved with the project">
-      <Icons.themes width={14} />
-      <select value={current.id} onChange={(e) => store().set({ canvasTheme: e.target.value })} onKeyDown={(e) => e.stopPropagation()} aria-label="Theme shown on the canvas">
-        {themes.list.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <span className="theme-switch-wrap">
+      <label className="theme-switch" title="The theme the canvas shows while you edit. Layers with theme colours change, plain colours don't. Exports and pictures use it too. It is not saved with the project">
+        <Icons.themes width={14} />
+        <select
+          value={current.id}
+          onChange={(e) => (store().set({ canvasTheme: e.target.value }), setHint(true))}
+          onKeyDown={(e) => e.stopPropagation()}
+          aria-label="Theme shown on the canvas"
+        >
+          {themes.list.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {hint && (
+        <div className="theme-fixed-pop">
+          <ThemeFixedHint onCanvas onClose={() => setHint(false)} />
+        </div>
+      )}
+    </span>
   );
 }
 
 function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }) {
+  const helpTitle = useHeaderHelpTitle();
   const s = useEditor((st) => ({ name: st.project.name, saveState: st.saveState, saveError: st.saveError, zoom: st.zoom, rev: st.project.updated, live: st.live, peers: st.peers }));
   const [menu, setMenu] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
@@ -578,6 +716,10 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   const [inviteOpen, setInviteOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
+  const [motionOpen, setMotionOpen] = useState(false);
+  //Share and the exports that hand the project to others first show what is likely wrong (Before you share), when there is anything
+  const [gate, setGate] = useState<{ what: 'share' | 'export'; go: () => void } | null>(null);
+  const gated = (what: 'share' | 'export', go: () => void) => (checkBeforeShare(st.get().project).length ? setGate({ what, go }) : go());
   const exportDefinitions = () => {
     const project = st.get().project;
     download(new Blob([typeDefinitions(project)], { type: 'text/plain' }), `${fileSafe(project.name)}.d.ts`);
@@ -625,6 +767,29 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       st.toast(err instanceof Error ? err.message : String(err), 'error');
     }
   };
+  //What the command palette (and anything else) asks the top bar to do, by name: the same calls the buttons make
+  const doAction = useRef<(a: AppAction) => void>(() => undefined);
+  doAction.current = (a) => {
+    const html = checked(() => downloadStandalone(st.get().project));
+    const pack = checked(() => downloadPackage(st.get().project));
+    if (a === 'export-html') return gated('export', () => void run(html));
+    if (a === 'export-package') return gated('export', () => void run(pack));
+    const file = a === 'export-html-now' ? html : a === 'export-package-now' ? pack : a === 'export-json' ? checked(() => downloadJson(st.get().project)) : a === 'export-png' ? () => exportPicture('png', 2) : a === 'export-svg' ? () => exportPicture('svg', 1) : a === 'export-lottie' ? () => exportActiveAsLottie('json') : null;
+    if (file) return void run(file);
+    if (a === 'preview') onPreview();
+    else if (a === 'share') gated('share', () => setShareOpen(true));
+    else if (a === 'invite') setInviteOpen(true);
+    else if (a === 'template') setTemplateOpen(true);
+    else if (a === 'history') setHistoryOpen(true);
+    else if (a === 'prefs') setPrefsOpen(true);
+    else if (a === 'motion') setMotionOpen(true);
+    else if (a === 'reference') setReferenceOpen(true);
+  };
+  useEffect(() => {
+    const on = (e: Event) => doAction.current((e as CustomEvent<AppAction>).detail);
+    window.addEventListener(APP_ACTION_EVENT, on);
+    return () => window.removeEventListener(APP_ACTION_EVENT, on);
+  }, []);
   return (
     <header className="topbar">
       <IconButton icon={<Icons.home />} title="All projects" onClick={home} />
@@ -677,12 +842,15 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         <button onClick={() => st.set({ zoom: Math.min(32, s.zoom * 1.25) })}>+</button>
       </div>
       <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)} />
-      <IconButton icon={<Icons.help />} title="Help (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp()} />
+      <IconButton icon={<Icons.search />} title="Find a command and do it: add a layer, go to a page, turn the grid on, share... (Ctrl+K)" onClick={() => void openPalette(false)} />
+      <IconButton icon={<Icons.help />} title={helpTitle} onClick={openHeaderHelp} />
       {prefsOpen && <PrefsModal workspace onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
+      {gate && <BeforeYouShareModal what={gate.what} onGo={gate.go} onClose={() => setGate(null)} />}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
       {templateOpen && <SaveTemplateModal onClose={() => setTemplateOpen(false)} />}
       {referenceOpen && <ReferenceModal onClose={() => setReferenceOpen(false)} />}
+      {motionOpen && <MotionExportModal onClose={() => setMotionOpen(false)} />}
       {reviewOpen && <ShareForReviewModal onClose={() => setReviewOpen(false)} />}
       {historyOpen && <HistoryModal onClose={() => setHistoryOpen(false)} />}
       <button className="btn primary" onClick={onPreview} title="Play the project exactly as the exported file will">
@@ -694,11 +862,11 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         </button>
         {menu && (
           <div className="menu" onMouseLeave={() => setMenu(false)}>
-            <button onClick={() => run(checked(() => downloadStandalone(st.get().project)))}>
+            <button onClick={() => (setMenu(false), gated('export', () => void run(checked(() => downloadStandalone(st.get().project)))))}>
               Single HTML file
               <span className="muted small">Player, project and assets in one file</span>
             </button>
-            <button onClick={() => run(checked(() => downloadPackage(st.get().project)))}>
+            <button onClick={() => (setMenu(false), gated('export', () => void run(checked(() => downloadPackage(st.get().project)))))}>
               Project package ({PACKAGE_EXTENSION})
               <span className="muted small">Whole project, re-importable</span>
             </button>
@@ -734,6 +902,10 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
               SVG image (this artboard)
               <span className="muted small">Scales cleanly; opens in browsers</span>
             </button>
+            <button onClick={() => run(() => setMotionOpen(true))}>
+              Video, GIF or frames…
+              <span className="muted small">A timeline of this artboard as MP4, WebM, GIF or PNG pictures</span>
+            </button>
           </div>
         )}
       </div>
@@ -743,9 +915,9 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         </button>
         {shareMenu && (
           <div className="menu" onMouseLeave={() => setShareMenu(false)}>
-            <button onClick={() => (setShareMenu(false), setShareOpen(true))}>
-              Share link…
-              <span className="muted small">A link that plays the project in the browser, and the Link for StudyDesk that keeps learners' results</span>
+            <button onClick={() => (setShareMenu(false), gated('share', () => setShareOpen(true)))}>
+              Share…
+              <span className="muted small">Choose where people will use it (a StudyDesk page, the gradebook, a link, a file) and copy the one thing it needs</span>
             </button>
             <button onClick={() => (setShareMenu(false), setInviteOpen(true))}>
               Invite to collaborate…
@@ -766,38 +938,28 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   );
 }
 
-/** The help page for whatever tool is in use. */
-function helpTopicForTool(tool: Tool): string {
-  if (['button', 'input', 'link', 'embed', 'video'].includes(tool)) return 'web-elements';
-  if (tool === 'draw') return 'script-layers';
-  if (tool === 'shader') return 'shader-layers';
-  if (tool === 'bone') return 'bones';
-  if (tool === 'comment') return 'comments';
-  if (tool === 'text') return 'text';
-  if (tool === 'artboard') return 'artboards';
-  if (tool === 'frame') return 'groups-frames';
-  if (tool === 'select' || tool === 'hand') return 'interface';
-  return 'shapes';
-}
-
 const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'select', icon: 'select', label: 'Select', key: 'V' },
   { tool: 'hand', icon: 'hand', label: 'Hand', key: 'H / Space' },
-  { tool: 'artboard', icon: 'artboard', label: 'Artboard', key: 'A' },
+  { tool: 'artboard', icon: 'artboard', label: 'Page', key: 'A' },
   { tool: 'frame', icon: 'frame', label: 'Frame', key: 'F' },
   { tool: 'rect', icon: 'rect', label: 'Rectangle', key: 'R' },
   { tool: 'ellipse', icon: 'ellipse', label: 'Ellipse', key: 'O' },
   { tool: 'polygon', icon: 'polygon', label: 'Polygon' },
   { tool: 'star', icon: 'star', label: 'Star' },
   { tool: 'line', icon: 'line', label: 'Line', key: 'L' },
+  { tool: 'connector', icon: 'connector', label: 'Connector (drag from one layer to another to join them with a line or arrow that follows them)', key: 'K' },
   { tool: 'pen', icon: 'pen', label: 'Pen', key: 'P' },
   { tool: 'pencil', icon: 'pencil', label: 'Pencil (freehand)', key: 'N' },
   { tool: 'bend', icon: 'bend', label: 'Bend (drag an edge into a curve; Alt bends one side)', key: 'W' },
   { tool: 'text', icon: 'text', label: 'Text', key: 'T' },
   { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
   { tool: 'shader', icon: 'shader', label: 'Shader layer (GPU effects, backdrops)' },
+  { tool: 'progress', icon: 'progress', label: 'Progress bar (a bar that fills to a value, for scores, steps and timers)' },
+  { tool: 'chart', icon: 'chart', label: 'Chart (bar, column, line, pie and donut charts from a list)' },
   { tool: 'bone', icon: 'bone', label: 'Bone (drag to draw one; start on a bone tip to continue the chain)', key: 'J' },
   { tool: 'comment', icon: 'comment', label: 'Comment (click where you want to say something; reviewers see these, exports never do)', key: 'C' },
+  { tool: 'note', icon: 'note', label: 'Note (draw a sticky note for the people making this project; players and exports never see it)', key: 'S' },
 ];
 
 const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
@@ -811,6 +973,12 @@ const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] =
 /** The Add question button: a menu of question types; picking one builds the question on the open artboard and selects it. */
 function AddQuestion() {
   const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  useEffect(() => {
+    const open = () => setPasteOpen(true);
+    window.addEventListener('ix-paste-questions', open);
+    return () => window.removeEventListener('ix-paste-questions', open);
+  }, []);
   const add = (kind: QuestionKind) => {
     const s = store();
     const ab = s.artboard();
@@ -823,13 +991,14 @@ function AddQuestion() {
   };
   return (
     <>
+      {pasteOpen && <PasteQuestionsModal onClose={() => setPasteOpen(false)} />}
       <IconButton
         icon={<Icons.question />}
         title="Add question: multiple choice, true/false, fill in the blank, ordering, matching, hotspot"
         active={!!at}
         onClick={(e) => {
           const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          setAt(at ? null : { left: r.right + 6, top: Math.max(8, Math.min(r.top, window.innerHeight - 440)) });
+          setAt(at ? null : { left: r.right + 6, top: Math.max(8, Math.min(r.top, window.innerHeight - 520)) });
         }}
       />
       {at && (
@@ -845,6 +1014,27 @@ function AddQuestion() {
                 <span className="muted small">{k.hint}</span>
               </button>
             ))}
+            <div className="q-menu-title">Import</div>
+            <button
+              role="menuitem"
+              onClick={() => {
+                setAt(null);
+                setPasteOpen(true);
+              }}
+            >
+              Paste questions from Word or Excel
+              <span className="muted small">A table, a list or lines, with a preview and templates to fill in</span>
+            </button>
+            <button
+              role="menuitem"
+              onClick={() => {
+                setAt(null);
+                void importGiftFile();
+              }}
+            >
+              Import questions from a GIFT file
+              <span className="muted small">One question per artboard, from Moodle or the GIFT converter</span>
+            </button>
           </div>
         </>
       )}
@@ -854,10 +1044,11 @@ function AddQuestion() {
 
 // The tools column in groups that fold (Shapes and Draw start open), so it fits without scrolling. Select and Hand
 // always show; a folded group still shows its tool when that's the one in use
-const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
+export const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
   { id: 'shapes', label: 'Shapes', tools: ['artboard', 'frame', 'rect', 'ellipse', 'polygon', 'star'], open: true },
-  { id: 'draw', label: 'Draw', tools: ['line', 'pen', 'pencil', 'bend'], open: true },
+  { id: 'draw', label: 'Draw', tools: ['line', 'connector', 'pen', 'pencil', 'bend'], open: true },
   { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', 'video'], open: false },
+  { id: 'data', label: 'Data', tools: ['progress', 'chart'], open: false },
   { id: 'web', label: 'Web', tools: ['button', 'input', 'link', 'embed'], open: false },
   { id: 'rig', label: 'Rig', tools: ['bone'], open: false },
 ];
@@ -885,11 +1076,40 @@ function useToolGroups(): [Record<string, boolean>, (id: string) => void] {
   return [open, toggle];
 }
 
+/** Show or hide the sticky notes on the canvas (a preference of the person, so a template's explanations can be put away), with how many there are. */
+function NotesToggle() {
+  const { showNotes } = usePrefs();
+  const count = useEditor((st) => countNotes(st.project));
+  const title = `${showNotes ? 'Hide' : 'Show'} notes on the canvas (${count})`;
+  return (
+    <button type="button" className={`icon-btn note-toggle${showNotes ? ' active' : ''}`} title={title} aria-label={title} aria-pressed={showNotes} onClick={() => setPrefs({ showNotes: !showNotes })}>
+      {showNotes ? <Icons.eye /> : <Icons.eyeOff />}
+      {count > 0 && <span className="note-count">{count > 99 ? '99+' : count}</span>}
+    </button>
+  );
+}
+
 export function Toolbar() {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const tool = useEditor((st) => st.tool);
   const showBones = useEditor((st) => st.showBones);
   const [open, toggle] = useToolGroups();
+  const snapPrefs = usePrefs();
+  const dock = useDock();
+  const place = dock.tools.place;
+  // Essentials puts some groups away: they come back when the project already has layers from them or one of their tools is in use
+  const away = dock.hiddenTools ?? [];
+  const usedAway = useEditor((st) => (away.length ? toolGroupsInUse(st.project) : '')).split(',');
+  const putAway = (g: { id: string; tools: Tool[] }) => away.includes(g.id) && !usedAway.includes(g.id) && !g.tools.includes(tool);
+  const horizontal = place === 'bottom' || place === 'top';
+  const [catalogueOpen, setCatalogueOpen] = useState(false);
+  const [gridMenuAt, setGridMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const [snapMenuAt, setSnapMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const gridContext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setGridMenuAt({ x: e.clientX, y: e.clientY });
+  };
   const all = [...TOOLS, ...WEB_TOOLS];
   const btn = (id: Tool) => {
     const t = all.find((x) => x.tool === id);
@@ -903,28 +1123,34 @@ export function Toolbar() {
       icon={<Icons.image />}
       title="Image"
       onClick={async () => {
-        const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft');
+        const files = await pickFiles('image/*,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,.pptx');
         const ab = store().artboard();
         if (files.length && ab) await insertFiles(files, ab.id, { x: ab.width / 2, y: ab.height / 2 });
       }}
     />
   );
+  //an action, not a tool mode: it opens the modal and never stays lit
+  const catalogue = <IconButton key="catalogue" icon={<Icons.catalogue />} title="Media Catalogue: find a photo and put it on the artboard as a picture" onClick={() => setCatalogueOpen(true)} />;
   const bones = <IconButton key="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={showBones ? 'Hide bones on the canvas (Shift+J)' : 'Show bones on the canvas (Shift+J)'} onClick={() => store().set({ showBones: !showBones })} />;
   return (
     <nav
-      className="toolbar"
+      className={`toolbar${horizontal ? ' horizontal' : ''}`}
+      aria-orientation={horizontal ? 'horizontal' : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
         setMenu({ x: e.clientX, y: e.clientY });
       }}
     >
       {menu && <ContextMenu x={menu.x} y={menu.y} items={toolsMenu()} onClose={() => setMenu(null)} />}
+      {catalogueOpen && <MediaCatalogueModal onClose={() => setCatalogueOpen(false)} />}
+      {gridMenuAt && <ContextMenu x={gridMenuAt.x} y={gridMenuAt.y} items={gridMenu()} onClose={() => setGridMenuAt(null)} />}
+      {snapMenuAt && <SnapMenu x={snapMenuAt.x} y={snapMenuAt.y} onClose={() => setSnapMenuAt(null)} />}
       <ToolsHead />
       <div className="tool-grid">
         {btn('select')}
         {btn('hand')}
       </div>
-      {TOOL_GROUPS.map((g) => {
+      {TOOL_GROUPS.filter((g) => !putAway(g)).map((g) => {
         const isOpen = !!open[g.id];
         const activeHere = g.tools.includes(tool);
         return (
@@ -938,6 +1164,7 @@ export function Toolbar() {
                 <>
                   {g.tools.map(btn)}
                   {g.id === 'media' && image}
+                  {g.id === 'media' && catalogue}
                   {g.id === 'web' && <AddQuestion key="q" />}
                   {g.id === 'rig' && bones}
                 </>
@@ -948,10 +1175,37 @@ export function Toolbar() {
           </div>
         );
       })}
+      {TOOL_GROUPS.some(putAway) && (
+        <button type="button" className="tool-group-head more-tools" title={`More tools: ${TOOL_GROUPS.filter(putAway).map((g) => g.label).join(', ')}`} onClick={() => setDock((l) => hideSome(l, l.hidden ?? [], []))}>
+          More tools
+        </button>
+      )}
       <div className="toolbar-fill" />
       <div className="tool-grid">
+        <IconButton
+          icon={<Icons.grid />}
+          title={`${snapPrefs.showGrid ? 'Hide' : 'Show'} the grid (Shift+G). Right-click for the grid size`}
+          active={snapPrefs.showGrid}
+          pressed={snapPrefs.showGrid}
+          onClick={() => setPrefs({ showGrid: !snapPrefs.showGrid })}
+          onContextMenu={gridContext}
+        />
+        <IconButton
+          icon={<Icons.magnet />}
+          title={`Snapping is ${snapPrefs.snapOn ? (snapAny(snapSettings(snapPrefs)) ? 'on' : 'on, with nothing ticked') : 'off'}: click for the targets (grid, artboard, layers, guides, spacing, pixels, points). Hold Ctrl while dragging to skip it, Ctrl+' toggles the grid`}
+          active={snapPrefs.snapOn && snapAny(snapSettings(snapPrefs))}
+          pressed={snapPrefs.snapOn}
+          popup="menu"
+          expanded={!!snapMenuAt}
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            setSnapMenuAt(snapMenuAt ? null : place === 'top' ? { x: r.left, y: r.bottom + 6 } : horizontal ? { x: r.left, y: Math.max(8, r.top - 330) } : { x: r.right + 6, y: Math.max(8, r.top - 300) });
+          }}
+          onContextMenu={gridContext}
+        />
         {btn('comment')}
-        <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
+        {btn('note')}
+        <NotesToggle />
       </div>
     </nav>
   );
@@ -978,7 +1232,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const eventsBox = useRef<HTMLElement>(null);
   const [vars, setVars] = useState<Record<string, unknown> | null>(null);
   type DebugState = { artboard: string; timelines: { name: string; playing: boolean; time: number; duration: number }[]; instances: number; variant?: { set: string; width: number } };
-  type Trace = { artboard: string; event: string; target?: string; then: string[]; note?: string; depth: number; at: number };
+  type Trace = { artboard: string; artboardId?: string; id?: string; event: string; target?: string; then: string[]; note?: string; depth: number; at: number };
   const [dbg, setDbg] = useState<DebugState | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
   // Script layers that failed or hit a limit, as the player reports them (newest last)
@@ -992,7 +1246,57 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const t0 = useRef(performance.now());
   const [showVars, setShowVars] = useState(true);
   const [nonce, setNonce] = useState(0);
+  //Which frame has loaded: a new one stays see-through until its page is in, so the empty frame's white never shows
+  const [frameShown, setFrameShown] = useState(-1);
   const frame = useRef<HTMLIFrameElement>(null);
+  //Preview is a modal above everything: focus stays in it, Esc closes it (not the help drawer behind), and help asked for while it is open goes to its own window
+  const modalRef = useRef<HTMLDivElement>(null);
+  //"Beside the editor": Preview moves up to the right so the canvas and the Interactions graph underneath show while it runs, which is
+  //where the nodes light up and the layer that was clicked pulses. The focus trap and the click-outside close are off in that mode.
+  const [peek, setPeek] = useState(false);
+  const peekRef = useRef(false);
+  peekRef.current = peek;
+  useEffect(() => {
+    setPreviewOpen(true);
+    return () => {
+      setPreviewOpen(false);
+      clearFlow();
+    };
+  }, []);
+  useEffect(() => {
+    const release = !peek && modalRef.current ? trapFocus(modalRef.current) : undefined;
+    return () => release?.();
+  }, [peek]);
+  //Its height is whatever is left above the bottom panels
+  useLayoutEffect(() => {
+    const box = modalRef.current;
+    if (!peek || !box) return;
+    const fit = () => {
+      const bottom = document.querySelector<HTMLElement>('.bottom-dock');
+      const top = bottom ? bottom.getBoundingClientRect().top : window.innerHeight * 0.65;
+      box.style.height = `${Math.max(240, top - 16)}px`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
+    const dock = document.querySelector('.bottom-dock');
+    if (ro && dock) ro.observe(dock);
+    return () => {
+      window.removeEventListener('resize', fit);
+      ro?.disconnect();
+      box.style.height = '';
+    };
+  }, [peek]);
+  //Select a line of the events list's node in the Interactions graph (and bring the graph into view beside Preview)
+  const showNode = (artboardId: string | undefined, id: string | undefined) => {
+    if (!id) return;
+    const st = store();
+    const ab = artboardId ? st.get().project.artboards.find((a) => a.id === artboardId) : undefined;
+    setPeek(true);
+    st.set({ ...(ab ? { activeArtboardId: ab.id, artboardSelected: false } : {}), selection: [], bottomTab: 'logic', logicSelection: id });
+  };
+  useFlowVersion();
+  const quiet = lastQuietHit();
   // Responsive sets: the width of the page the preview runs in (null: all the room there is), and how much room that is
   const sets = responsiveSets(project as Project);
   const [pageWidth, setPageWidth] = useState<number | null>(null);
@@ -1021,6 +1325,13 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const [theme, setTheme] = useState('auto');
   const [viewer, setViewer] = useState<'device' | 'dark' | 'contrast' | 'dark-contrast'>('device');
   const [host, setHost] = useState<'none' | 'moodle'>('none');
+  // The pretend microphone and camera: what they do in the running preview (a real one cannot be had in a sandboxed preview)
+  const [mediaSim, setMediaSim] = useState<FakeBehaviour>('works');
+  const [keptData, setKeptData] = useState(() => previewLearnerHas((project as Project).id));
+  //Course collections have no course in Preview: they are this browser's, and the toolbar says so while the project uses them
+  const [usesCourse] = useState(() => usesCourseCollections(project as Project));
+  const [keptCourse, setKeptCourse] = useState(() => previewCourseHas());
+  const simulateMedia = (b: FakeBehaviour) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'simulateMedia', behaviour: b }, '*');
   const applyTheme = (t = theme, v = viewer, h = host) => {
     const w = frame.current?.contentWindow;
     if (!w || !themes?.list.length) return;
@@ -1039,7 +1350,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     let live = true;
     setBuildError(null);
-    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility }).then(
+    // The preview pretends to be a signed in learner on the sample course from the Data panel, so per-course values and context show
+    standaloneHtml(project as Project, { startArtboardId: from === 'current' ? abId : undefined, debug: true, accessibility, context: sampleContextFor(project as Project) }).then(
       (h) => live && setHtml(h),
       (err) => live && setBuildError(err instanceof Error ? err.message : String(err)),
     );
@@ -1058,9 +1370,26 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
       if (e.data?.source === 'interactives-debug') {
         if (e.data.vars) setVars(e.data.vars);
         if (e.data.state) setDbg(e.data.state);
+        if (Array.isArray(e.data.flow)) {
+          pushFlow(e.data.flow);
+          //Watching beside the editor, the graph shown follows the page that is running
+          if (peekRef.current) {
+            const st = store();
+            const on = (e.data.flow as { a?: string }[]).find((f) => f.a && f.a !== st.get().activeArtboardId && st.get().project.artboards.some((a) => a.id === f.a && !a.canvasHidden));
+            if (on?.a) st.set({ activeArtboardId: on.a, artboardSelected: false });
+          }
+        }
         if (e.data.trace) setTraces((l) => [...l.slice(-199), { ...e.data.trace, at: performance.now() - t0.current }]);
         if (e.data.scripterror) setScriptErrors((l) => [...l.slice(-49), e.data.scripterror]);
         if (e.data.announce) setSaid((l) => [...l.slice(-2), e.data.announce]);
+        return;
+      }
+      //Save user data and remembered progress: kept here per project, like the learner page keeps them in StudyDesk
+      const kept = answerPreviewProgress(e.data, store().get().project as Project);
+      if (kept) {
+        if (e.data.rid) frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'progress', rid: e.data.rid, ...kept }, '*');
+        if (e.data.op === 'userdata-save' || e.data.op === 'save' || e.data.op === 'shared-add') setKeptData(true);
+        if (e.data.op === 'course-add') setKeptCourse(true);
         return;
       }
       if (e.data?.source !== 'interactives') return;
@@ -1079,15 +1408,15 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const ab = getArtboard(project, from === 'current' ? abId : project.settings.startArtboardId);
   const post = (name: string, value: unknown) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'setVariable', name, value }, '*');
   return (
-    <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal preview-modal">
+    <div className={`modal-backdrop preview-backdrop${peek ? ' peek' : ''}`} onPointerDown={(e) => !peek && e.target === e.currentTarget && onClose()}>
+      <div className="modal preview-modal" ref={modalRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Preview">
         <header>
           <strong>Preview</strong>
           <select value={from} onChange={(e) => setFrom(e.target.value as 'start' | 'current')}>
             <option value="start">From the start artboard</option>
             <option value="current">From this artboard</option>
           </select>
-          <span className="muted small">{ab ? `${ab.width} × ${ab.height}` : ''} · runs exactly like the exported file</span>
+          <span className="muted small preview-size">{ab ? `${ab.width} × ${ab.height}` : ''}{peek ? '' : ' · runs exactly like the exported file'}</span>
           <button
             className={`btn${accessibility ? ' active' : ''}`}
             onClick={() => setPrefs({ accessibility: !accessibility })}
@@ -1104,6 +1433,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           </button>
           {themes?.list.length ? (
             <>
+              <ThemeFixedHint />
               <select
                 value={theme}
                 title="The theme the preview shows. Follow the viewer picks one from the colour scheme and contrast settings, the way the finished interactive does"
@@ -1133,6 +1463,50 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               )}
             </>
           ) : null}
+          {keptData && (
+            <button
+              type="button"
+              className="btn"
+              title="Preview keeps what Save user data and remembered progress save, for this project in this browser, so reopening Preview is like a learner coming back. Forget it to start as a new learner"
+              onClick={() => (forgetPreviewLearner((project as Project).id), setKeptData(false), setNonce((n) => n + 1))}
+            >
+              Forget saved data
+            </button>
+          )}
+          {usesCourse && (
+            <span
+              className="muted small"
+              style={{ whiteSpace: 'nowrap' }}
+              role="status"
+              title="Course collections are shared by every interactive in a StudyDesk course. Preview has no course, so its collections are kept in this browser only, under their names, and shared by the projects you preview here"
+            >
+              Collections: this browser only
+            </span>
+          )}
+          {keptCourse && (
+            <button
+              type="button"
+              className="btn"
+              title="Forget every course collection Preview has kept in this browser (all projects), to start as a learner with an empty passport"
+              onClick={() => (forgetPreviewCourse(), setKeptCourse(false), setNonce((n) => n + 1))}
+            >
+              Forget collections
+            </button>
+          )}
+          {declaresSensors((project as Project).settings.sensors) && (
+            <select
+              value={mediaSim}
+              title="The preview has a pretend microphone and camera, since the real ones need the page the project is shared in. Make it fail the ways a real one does to build and try the plain version. Try the real devices from the share link in StudyDesk"
+              aria-label="Microphone and camera in the preview"
+              onChange={(e) => (setMediaSim(e.target.value as FakeBehaviour), simulateMedia(e.target.value as FakeBehaviour))}
+            >
+              {FAKE_BEHAVIOURS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  Microphone and camera: {o.label}
+                </option>
+              ))}
+            </select>
+          )}
           {hasDrag && (
             <button
               className={`btn${hitAreas ? ' active' : ''}`}
@@ -1156,11 +1530,20 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               setScriptErrors([]);
               setSaid([]);
               setDbg(null);
+              clearFlow();
               t0.current = performance.now();
             }}
             title="Start again from the beginning (timelines, variables and all)"
           >
             Restart
+          </button>
+          <button
+            className={`btn${peek ? ' active' : ''}`}
+            aria-pressed={peek}
+            onClick={() => setPeek(!peek)}
+            title="Move Preview to the side so you can watch the Interactions graph and the canvas while it runs: the nodes that run light up, and the layer you click shows a ring"
+          >
+            Beside editor
           </button>
           <button className={`btn${showVars ? ' active' : ''}`} onClick={() => setShowVars(!showVars)} title="Debug: what's showing, running timelines, variables (editable) and the events that fire">
             Debug
@@ -1168,7 +1551,9 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
           <IconButton icon={<Icons.close />} title="Close (Esc)" onClick={onClose} />
         </header>
         {sets.length > 0 && <PreviewWidth sets={sets} width={pageWidth} max={room} current={dbg?.variant ? dbg.artboard : undefined} onChange={setPageWidth} />}
-        <div className="preview-body">
+        {/* The project's own page colour from the first frame: while it builds, while the frame loads and while the player waits,
+            so opening Preview never flashes black, then white, then the page */}
+        <div className="preview-body" style={{ background: /^(#|rgb|hsl)/.test((project as Project).settings.pageBackground ?? '') ? (project as Project).settings.pageBackground : undefined }}>
           {showVars && vars && (
             <aside className="preview-vars">
               {dbg && (
@@ -1224,7 +1609,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             </aside>
           )}
           <div className="preview-stage" ref={stageBox}>
-          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : undefined} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (hitAreas && showHitAreas(true), applyTheme())} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <div className="center-msg muted">Building…</div>}
+          {html && frameShown !== nonce && <BuildingSpinner project={project as Project} overlay />}
+          {html ? <iframe key={nonce} ref={frame} title="Preview" allow="autoplay" style={{ ...(pageWidth !== null && pageWidth < room ? { flex: 'none', width: pageWidth } : {}), opacity: frameShown === nonce ? 1 : 0 }} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" srcDoc={html} onLoad={() => (setFrameShown(nonce), hitAreas && showHitAreas(true), applyTheme(), mediaSim !== 'works' && simulateMedia(mediaSim))} /> : buildError ? <div className="center-msg">Could not build the preview: {buildError}</div> : <BuildingSpinner project={project as Project} />}
           </div>
         </div>
         {accessibility && screenReader && (
@@ -1261,10 +1647,21 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
                 {x.source === 'shader' ? 'Shader layer' : 'Script layer'} “{x.layer}” {x.kind === 'error' ? 'stopped' : 'warning'}: {x.message}
               </div>
             ))}
+            {quiet && (
+              <div className="trace why-nothing" role="status">
+                <strong>Why did nothing happen?</strong> {quiet.reason}
+              </div>
+            )}
             {traces.map((t, i) => (
               <div key={i} className="trace" title={t.note}>
                 <span className="muted">{(t.at / 1000).toFixed(2)}s</span> {t.depth ? <span className="muted">[{t.artboard}] </span> : null}
-                <strong>{t.event}</strong>
+                {t.id ? (
+                  <button type="button" className="link-btn trace-node" onClick={() => showNode(t.artboardId, t.id)} title="Show this node in the Interactions graph" aria-label={`${t.event}: show this node in the Interactions graph`}>
+                    <strong>{t.event}</strong>
+                  </button>
+                ) : (
+                  <strong>{t.event}</strong>
+                )}
                 {t.target ? ` (${t.target})` : ''} → {t.then.length ? t.then.join(', ') : <span className="muted">nothing connected</span>}
               </div>
             ))}
@@ -1288,7 +1685,7 @@ const SIMULATED_MOODLE: Record<string, string> = {
   '--bs-secondary-color': '#495057',
 };
 
-function ReportModal({ title, lines }: { title: string; lines: string[] }) {
+function ReportModal({ title, lines, undo }: { title: string; lines: string[]; undo?: boolean }) {
   const close = () => store().set({ report: null });
   // Like the other dialogs, Escape closes it
   useEffect(() => {
@@ -1302,6 +1699,11 @@ function ReportModal({ title, lines }: { title: string; lines: string[] }) {
         <header>
           <strong>{title}</strong>
           <div className="spacer" />
+          {undo && (
+            <button type="button" className="toast-action" title="Take the whole thing back, as one undo step (Ctrl+Z does the same)" onClick={() => store().undoReport()}>
+              Undo
+            </button>
+          )}
           <IconButton icon={<Icons.close />} title="Close" onClick={close} />
         </header>
         <div className="report-body">
@@ -1313,6 +1715,32 @@ function ReportModal({ title, lines }: { title: string; lines: string[] }) {
           </ul>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * While Preview builds its page there is no player yet to show its own spinner, so this stands in for it: the same ring, in
+ * the project's colours for the theme this device would get (its primary or button token on its background token), with the
+ * toolbox gold on the page colour when the project has no themes.
+ */
+function BuildingSpinner({ project, overlay }: { project: Project; overlay?: boolean }) {
+  const t = project.themes;
+  const theme = t?.list.length ? pickTheme(t, readViewerPrefs()) : null;
+  const colour = (...names: string[]) => {
+    if (!t || !theme) return undefined;
+    for (const n of names) {
+      const tok = tokenByName(t, n);
+      const v = tok && tokenValue(t, tok, theme.id);
+      if (v && !v.startsWith('token:')) return v;
+    }
+    return undefined;
+  };
+  const arc = colour('color/primary', 'color/button') ?? '#ffb448';
+  const backdrop = colour('color/background');
+  return (
+    <div className={`preview-building${overlay ? ' overlay' : ''}`} style={backdrop ? { background: backdrop } : undefined} role="status" aria-label="Building the preview">
+      <div className="preview-building-ring" style={{ borderColor: `color-mix(in srgb, ${arc} 25%, transparent)`, borderTopColor: arc }} />
     </div>
   );
 }

@@ -442,6 +442,48 @@ describe('applyChanges', () => {
   });
 });
 
+describe('data layers by agents', () => {
+  it('adds a progress layer and a chart, repairs wrong values, and sets their own settings', () => {
+    const p = sample();
+    const ab = p.artboards[0].id;
+    const { project } = change(p, [
+      { op: 'add_layer', artboard_id: ab, type: 'progress', ref: 'bar', props: { value: 'lots', max: 20, semantics: 'loud' } },
+      { op: 'add_layer', artboard_id: ab, type: 'chart', ref: 'chart', props: { kind: 'radar', data: '[1, 2]', colors: ['#fff', 3] } },
+    ]);
+    const kids = project.artboards[0].children;
+    const bar = kids.find((n) => n.type === 'progress') as { value: number; max: number; semantics: string; id: string };
+    const chart = kids.find((n) => n.type === 'chart') as { kind: string; colors: string[]; id: string };
+    expect([bar.value, bar.max, bar.semantics]).toEqual([40, 20, 'progressbar']);
+    expect([chart.kind, chart.colors]).toEqual(['column', ['#fff']]);
+    const next = change(project, [{ op: 'set_props', id: bar.id, props: { value: 15, 'barFill.color': '#00ff00' } }]).project;
+    const bar2 = next.artboards[0].children.find((n) => n.id === bar.id) as { value: number; barFill: { color: string } };
+    expect([bar2.value, bar2.barFill.color]).toEqual([15, '#00ff00']);
+    expect(mcp.overview(next, {})).toContain('progress 15/20');
+  });
+});
+
+describe('connectors by agents', () => {
+  it('adds two layers and a connector between them, repairs wrong values, and shows it in the outline', () => {
+    const p = sample();
+    const ab = p.artboards[0].id;
+    const { project } = change(p, [
+      { op: 'add_layer', artboard_id: ab, type: 'rect', ref: 'a', props: { x: 0, y: 0, width: 100, height: 60 } },
+      { op: 'add_layer', artboard_id: ab, type: 'rect', ref: 'b', props: { x: 300, y: 100, width: 100, height: 60 } },
+    ]);
+    const [a, b] = project.artboards[0].children.slice(-2);
+    const next = change(project, [
+      { op: 'add_layer', artboard_id: ab, type: 'connector', ref: 'c', props: { from: { layer: a.id, side: 'right' }, to: { layer: b.id, side: 'sideways' }, route: 'zigzag', endCap: 'arrow', label: 'Yes', labelAt: 4 } },
+    ]).project;
+    const c = next.artboards[0].children.find((n) => n.type === 'connector') as { route: string; from: { layer: string; side?: string }; to: { layer: string; side?: string }; labelAt: number; endCap: string };
+    expect([c.route, c.from.layer, c.from.side, c.to.layer, c.to.side, c.labelAt, c.endCap]).toEqual(['curved', a.id, 'right', b.id, undefined, 1, 'arrow']);
+    const text = mcp.overview(next, {});
+    expect(text).toContain(`curved connector ${a.id}.right to ${b.id} labelled "Yes"`);
+    const again = change(next, [{ op: 'set_props', id: (next.artboards[0].children.find((n) => n.type === 'connector') as { id: string }).id, props: { route: 'elbow', 'to.side': 'left' } }]).project;
+    const e = again.artboards[0].children.find((n) => n.type === 'connector') as { route: string; to: { side: string } };
+    expect([e.route, e.to.side]).toEqual(['elbow', 'left']);
+  });
+});
+
 describe('reference', () => {
   it('lists every interaction node kind with its parameters', () => {
     const text = mcp.reference('interactions');
@@ -458,9 +500,16 @@ describe('reference', () => {
 
   it('describes every layer type with its defaults, and the script and shader layers', () => {
     const text = mcp.reference('layers');
-    for (const t of ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance', 'draw', 'shader', 'bone']) expect(text).toContain(`\n- ${t}: {`);
+    for (const t of ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance', 'draw', 'shader', 'progress', 'chart', 'connector', 'bone']) expect(text).toContain(`\n- ${t}: {`);
     expect(text).toContain('Script layers');
     expect(text).toContain('Shader layers');
+    expect(text).toContain('Progress bars (type "progress"');
+    expect(text).toContain('Charts (type "chart"');
+    expect(text).toContain('Connectors (type "connector"');
+  });
+
+  it('lists the settings only a progress layer has', () => {
+    expect(mcp.reference('properties')).toContain('On a progress layer only: value (number): Progress value; max (number): Progress maximum');
   });
 
   it('serves any help page by id, and says what topics exist when asked for something else', () => {
@@ -504,7 +553,7 @@ describe('JSON-RPC handler', () => {
   it('lists its tools, each with a schema whose required fields exist', async () => {
     const r = await rpc({ id: 5, method: 'tools/list' });
     const tools = r.result.tools as { name: string; description: string; inputSchema: { type: string; properties: Record<string, unknown>; required: string[] } }[];
-    expect(tools.map((t) => t.name)).toEqual(['list_projects', 'join_session', 'get_selection', 'get_overview', 'get_layers', 'get_interactions', 'edit', 'validate', 'read_reference', 'leave_session']);
+    expect(tools.map((t) => t.name)).toEqual(['list_projects', 'join_session', 'get_selection', 'get_overview', 'get_layers', 'get_interactions', 'edit', 'list_notes', 'add_note', 'add_graph_note', 'edit_note', 'remove_note', 'validate', 'read_reference', 'leave_session']);
     expect(new Set(tools.map((t) => t.name)).size).toBe(tools.length);
     for (const t of tools) {
       expect(t.description.length).toBeGreaterThan(10);
@@ -542,3 +591,111 @@ describe('JSON-RPC handler', () => {
   });
 });
 
+
+describe('sticky notes', () => {
+  it('add_note puts a note on an artboard or the canvas, set_note changes it, delete_note removes it', () => {
+    const p = sample();
+    const ab = p.artboards[0];
+    const out = change(p, [
+      { op: 'add_note', artboard_id: ab.id, x: 40, y: 50, text: 'Swap the photo', colour: 'sky', ref: 'n1' },
+      { op: 'add_note', text: 'Whole-project hint', x: -300, y: 0 },
+    ]);
+    expect(out.project.artboards[0].notes).toHaveLength(1);
+    expect(out.project.artboards[0].notes![0]).toMatchObject({ x: 40, y: 50, text: 'Swap the photo', colour: 'sky', author: 'Agent (AI)' });
+    expect(out.project.notes![0].text).toBe('Whole-project hint');
+    expect(out.created.n1).toBe(out.project.artboards[0].notes![0].id);
+    const id = out.created.n1;
+    const set = change(out.project, [{ op: 'set_note', id, text: 'Done', colour: 'rose', x: 1, w: 300 }]);
+    expect(set.project.artboards[0].notes![0]).toMatchObject({ text: 'Done', colour: 'rose', x: 1, y: 50, w: 300 });
+    const gone = change(set.project, [{ op: 'delete_note', id }]);
+    expect(gone.project.artboards[0].notes).toBeUndefined();
+    expect(gone.project.notes).toHaveLength(1);
+    // the document it started from is untouched
+    expect(ab.notes).toBeUndefined();
+  });
+
+  it('a note placed against a layer follows it, beside it unless told where', () => {
+    const p = sample();
+    const ab = p.artboards[0];
+    const { project } = change(p, [{ op: 'add_note', artboard_id: ab.id, layer_id: 'r1', text: 'about the box' }]);
+    const n = project.artboards[0].notes![0];
+    expect(n.anchor).toEqual({ layerId: 'r1', lx: 112, ly: 0 });
+    expect(n.x).toBeCloseTo(10.46 + 100 + 12, 1);
+    const moved = change(project, [{ op: 'set_note', id: n.id, layer_id: null }]);
+    expect(moved.project.artboards[0].notes![0].anchor).toBeUndefined();
+    expect(() => change(p, [{ op: 'add_note', artboard_id: ab.id, layer_id: 'nope', text: 'x' }])).toThrow(/no layer/);
+    expect(() => change(p, [{ op: 'set_note', id: 'nope', text: 'x' }])).toThrow(/no note/);
+    expect(() => change(p, [{ op: 'delete_note', id: 'nope' }])).toThrow(/no note/);
+  });
+
+  it('the node reference an agent reads keeps every node\'s full text: the summary and then the details, with what an event gives', () => {
+    const text = mcp.reference('interactions');
+    for (const d of CATALOG) expect(text, d.kind).toContain(d.description);
+    const key = CATALOG.find((d) => d.kind === 'event.key')!;
+    expect(key.details).toBeTruthy();
+    expect(text).toContain('Gives: event.key, event.code');
+  });
+
+  it('graph notes: add_graph_note follows a node or group, set_note moves or lets go, delete_note removes, and list_notes shows them', () => {
+    const p = sample();
+    const ab = p.artboards[0];
+    ab.logic.nodes.push({ id: 'ev', kind: 'event.start', x: 100, y: 300, params: {} });
+    ab.logic.groups = [{ id: 'grp', label: 'Flow', x: 0, y: 500, width: 300, height: 200 }];
+    const out = change(p, [
+      { op: 'add_graph_note', artboard_id: ab.id, node_id: 'ev', text: '**Only if** stops the arrow keys', colour: 'sky', ref: 'g1' },
+      { op: 'add_graph_note', artboard_id: ab.id, node_id: 'grp', text: 'about the group', x: 10, y: 420 },
+      { op: 'add_graph_note', artboard_id: ab.id, text: 'loose', x: 700, y: 20 },
+    ]);
+    const notes = out.project.artboards[0].logic.notes!;
+    expect(notes).toHaveLength(3);
+    expect(notes[0]).toMatchObject({ x: 100, y: 170, colour: 'sky', author: 'Agent (AI)' });
+    expect(notes[0].anchor).toEqual({ layerId: 'ev', lx: 0, ly: -130 });
+    expect(notes[1].anchor).toEqual({ layerId: 'grp', lx: 10, ly: -80 });
+    expect(notes[2].anchor).toBeUndefined();
+    expect(out.created.g1).toBe(notes[0].id);
+    // not mixed up with the canvas or artboard notes
+    expect(out.project.artboards[0].notes).toBeUndefined();
+    expect(out.project.notes).toBeUndefined();
+    const set = change(out.project, [{ op: 'set_note', id: notes[0].id, text: 'Done', anchor_id: null }, { op: 'set_note', id: notes[2].id, anchor_id: 'ev' }]);
+    expect(set.project.artboards[0].logic.notes![0].anchor).toBeUndefined();
+    expect(set.project.artboards[0].logic.notes![0].text).toBe('Done');
+    expect(set.project.artboards[0].logic.notes![2].anchor).toEqual({ layerId: 'ev', lx: 600, ly: -280 });
+    const gone = change(set.project, [{ op: 'delete_note', id: notes[0].id }, { op: 'delete_note', id: notes[1].id }, { op: 'delete_note', id: notes[2].id }]);
+    expect(gone.project.artboards[0].logic.notes).toBeUndefined();
+    expect(() => change(p, [{ op: 'add_graph_note', artboard_id: ab.id, node_id: 'nope', text: 'x' }])).toThrow(/no node or group/);
+    expect(() => change(p, [{ op: 'add_graph_note', artboard_id: 'nope', text: 'x' }])).toThrow(/No artboard/);
+    expect(() => change(out.project, [{ op: 'set_note', id: notes[0].id, anchor_id: 'nope' }])).toThrow(/no node or group/);
+    const text = mcp.notesReport(out.project);
+    expect(text).toContain('on the interaction graph of');
+    expect(text).toContain('follows node or group ev');
+  });
+
+  it('cleans wrong-typed graph notes an agent wrote', () => {
+    const p = sample();
+    (p.artboards[0].logic as unknown as { notes: unknown }).notes = [{ id: 'a', x: 'far', text: 7 }, { nonsense: 1 }];
+    const { project } = change(p, [{ op: 'add_note', text: 'anything' }]);
+    expect(project.artboards[0].logic.notes).toHaveLength(1);
+    expect(project.artboards[0].logic.notes![0]).toMatchObject({ id: 'a', x: 0, text: '' });
+  });
+
+  it('puts wrong-typed values an agent wrote right (or drops them)', () => {
+    const p = sample();
+    const { project } = change(p, [{ op: 'set_artboard', id: p.artboards[0].id, props: { notes: [{ id: 'a', x: 'far', text: 7, colour: 'neon' }, { nonsense: 1 }] } }]);
+    expect(project.artboards[0].notes).toHaveLength(1);
+    expect(project.artboards[0].notes![0]).toMatchObject({ id: 'a', x: 0, text: '' });
+    expect(project.artboards[0].notes![0].colour).toBeUndefined();
+  });
+
+  it('the overview says how many there are, and list_notes reads them out', async () => {
+    const p = sample();
+    const { project } = change(p, [
+      { op: 'add_note', artboard_id: p.artboards[0].id, text: 'one\n- two', x: 1, y: 2 },
+      { op: 'add_note', text: 'canvas', x: 0, y: 0 },
+    ]);
+    const o = mcp.overview(project, {});
+    expect(o).toContain('Notes: 1 (use list_notes)');
+    expect(o).toContain('Notes on the canvas outside any artboard: 1');
+    const tool = mcp.TOOLS.find((t) => t.name === 'list_notes')!;
+    expect(tool).toBeTruthy();
+  });
+});

@@ -1,0 +1,658 @@
+//The second batch of branded assessment starters (find the hotspot, find multiple hotspots, image choice, single choice set,
+//summary, essay): each builds in every colourway, paints only with tokens, and its main interaction works under jsdom.
+//The generic checks in branded-assessment.test.ts already loop over every starter in the set, these add what is particular to each.
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Player, normalizeProject, walk, type Artboard, type Project } from 'interactives-player';
+import { STARTERS } from '../src/lib/branded/sets/assessment';
+import { COLOURWAYS, HIGH_CONTRAST } from '../src/lib/branded/looks';
+import { byName } from '../src/lib/branded/kit';
+import { partsOf, questionFrames } from '../src/lib/question-kit';
+
+const WAYS = [...COLOURWAYS, HIGH_CONTRAST];
+const KEYS = ['assessment/find-the-hotspot', 'assessment/find-multiple-hotspots', 'assessment/image-choice', 'assessment/single-choice-set', 'assessment/summary', 'assessment/essay'];
+const starter = (key: string) => STARTERS.find((s) => s.key === key)!;
+const flush = (ms = 8) => new Promise((r) => setTimeout(r, ms));
+
+describe('the second batch of assessment starters', () => {
+  it('is listed after the first four, with names and descriptions for the help', () => {
+    expect(STARTERS.map((s) => s.key).slice(4, 4 + KEYS.length)).toEqual(KEYS);
+    for (const k of KEYS) {
+      const s = starter(k);
+      expect(s.set).toBe('assessment');
+      expect(s.description.length).toBeGreaterThan(80);
+      expect(s.description).not.toMatch(/—/);
+      expect(s.tags.length).toBeGreaterThan(1);
+    }
+  });
+
+  it('says in the essay description that it is a self-check and not marking', () => {
+    expect(starter('assessment/essay').description).toMatch(/self-check/);
+    expect(starter('assessment/essay').description).toMatch(/not marking/);
+  });
+
+  for (const k of KEYS) {
+    it(`${k} builds in every colourway with tokens only, Open Sans, a hero page, and a checklist that points at real layers`, () => {
+      for (const way of WAYS) {
+        const { project, checklist } = starter(k).build(way);
+        expect(project.themes!.default).toBe(`theme-${way.id}`);
+        expect(project.artboards.length).toBeGreaterThanOrEqual(2);
+        expect(byName(project.artboards[0], 'Start button')).toBeTruthy();
+        for (const ab of project.artboards) {
+          expect(JSON.stringify([ab.children, ab.background]), `${k} ${ab.name}`).not.toMatch(/"#[0-9a-f]{3,8}"/i);
+          expect(JSON.stringify([ab.children, ab.logic, ab.name])).not.toMatch(/—/);
+          //every wire runs between nodes that exist
+          const nodes = new Set(ab.logic.nodes.map((n) => n.id));
+          for (const e of ab.logic.edges) {
+            expect(nodes.has(e.from)).toBe(true);
+            expect(nodes.has(e.to)).toBe(true);
+          }
+        }
+        expect(JSON.stringify(project.artboards)).toContain('"fontFamily":"Open Sans"');
+        const ids = new Set<string>();
+        for (const ab of project.artboards) {
+          ids.add(ab.id);
+          walk(ab.children, (n) => void ids.add(n.id));
+        }
+        expect(checklist.length).toBeGreaterThanOrEqual(5);
+        for (const c of checklist) {
+          expect(c.text).not.toMatch(/—/);
+          if (c.nodeId) expect(ids.has(c.nodeId), c.text).toBe(true);
+          if (c.artboardId) expect(ids.has(c.artboardId), c.text).toBe(true);
+        }
+        const back = normalizeProject(JSON.parse(JSON.stringify(project)));
+        expect(back.artboards).toHaveLength(project.artboards.length);
+      }
+    });
+  }
+});
+
+describe('playing the second batch', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="stage" style="width:1024px;height:640px"></div>';
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => setTimeout(() => cb(performance.now()), 0) as unknown as number);
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
+  });
+  const made: Player[] = [];
+  afterEach(() => {
+    for (const p of made.splice(0)) p.destroy?.();
+    vi.unstubAllGlobals();
+  });
+
+  const play = (p: Project, artboard?: string) => {
+    document.getElementById('stage')!.innerHTML = '';
+    const player = new Player(document.getElementById('stage')!, JSON.parse(JSON.stringify(p)), { loadData: false, ...(artboard ? { artboard } : {}) });
+    made.push(player);
+    return player;
+  };
+  const el = (id: string) => document.querySelector<HTMLElement>(`[data-ix-id="${id}"]`);
+  const click = async (id: string, wait = 8) => {
+    const e = el(id);
+    if (!e) throw new Error(`no layer ${id}`);
+    e.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flush(wait);
+  };
+  const press = async (id: string, key: string) => {
+    const e = el(id);
+    if (!e) throw new Error(`no layer ${id}`);
+    e.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    e.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }));
+    await flush();
+  };
+  const type = async (id: string, value: string) => {
+    const input = (el(id)?.matches('input,textarea') ? el(id) : el(id)?.querySelector('input,textarea')) as HTMLInputElement | null;
+    if (!input) throw new Error(`no input ${id}`);
+    input.value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await flush();
+  };
+  const idOf = (ab: Artboard, name: string) => {
+    const n = byName(ab, name);
+    if (!n) throw new Error(`no layer named ${name}`);
+    return n.id;
+  };
+  const text = () => {
+    const walkText = (n: Node): string => {
+      if (n.nodeType === 3) return n.textContent ?? '';
+      if (n.nodeType !== 1) return '';
+      if ((n as HTMLElement).style.display === 'none') return '';
+      return [...n.childNodes].map(walkText).join('');
+    };
+    return walkText(document.getElementById('stage')!);
+  };
+  const list = (p: Project, name: string) => JSON.parse(p.variables.find((v) => v.name === name)!.initial as string);
+  const disabled = (id: string) => (el(id)?.querySelector('button') as HTMLButtonElement | null)?.disabled;
+  const visible = (id: string) => {
+    for (let e: HTMLElement | null = el(id); e; e = e.parentElement) if (e.style.display === 'none') return false;
+    return !!el(id);
+  };
+
+  describe('find the hotspot', () => {
+    const { project } = starter('assessment/find-the-hotspot').build(COLOURWAYS[0]);
+    const [hero, page] = project.artboards;
+    const frame = () => questionFrames(page)[0];
+    const area = (n: number) => partsOf(frame()).spot[n].id;
+
+    it('is the question kit hotspot question, with four areas, one right, two tries and a hint, over a placeholder picture', () => {
+      expect(questionFrames(page)).toHaveLength(1);
+      const q = frame().question!;
+      expect(q.kind).toBe('hotspot');
+      expect(q.options.map((o) => o.text)).toEqual(['Planner', 'Clock', 'Laptop', 'Plant']);
+      expect(q.options.filter((o) => o.correct)).toHaveLength(1);
+      expect(q.attempts).toBe(2);
+      expect(q.hints.length).toBe(1);
+      const pic = partsOf(frame()).picture[0];
+      expect(pic.ariaLabel).toMatch(/placeholder/i);
+      //the areas are keyboard reachable radios with a name
+      for (const a of partsOf(frame()).spot) {
+        expect(a.role).toBe('radio');
+        expect(a.focusable).toBe(true);
+        expect(a.ariaLabel).toBeTruthy();
+      }
+    });
+
+    it('gives feedback on a wrong area, a second try, and then the right area is found', async () => {
+      const player = play(project);
+      await flush();
+      await click(idOf(hero, 'Start button'));
+      expect(text()).toContain('Tries left: 2');
+      const check = partsOf(frame()).check[0].id;
+      await click(area(2));
+      await click(check);
+      expect(player.getVariable('q1_correct')).toBe(false);
+      expect(player.getVariable('q1_locked')).toBe(false);
+      expect(text()).toContain('Not there. Have another look at the picture and try again.');
+      expect(text()).toContain('Tries left: 1');
+      //a wrong check leaves the question open: pick another area and check again
+      await click(area(0));
+      await click(check);
+      expect(player.getVariable('q1_correct')).toBe(true);
+      expect(player.getVariable('q1_locked')).toBe(true);
+      expect(text()).toContain('You found it. A planner helps you see the whole week at a glance.');
+      expect(text()).toContain('✓ You found it');
+    });
+
+    it('runs out of tries after two wrong checks, and shows the right area', async () => {
+      const player = play(project);
+      await flush();
+      await click(idOf(hero, 'Start button'));
+      const check = partsOf(frame()).check[0].id;
+      for (const n of [1, 3]) {
+        await click(area(n));
+        await click(check);
+      }
+      expect(player.getVariable('q1_locked')).toBe(true);
+      expect(player.getVariable('q1_correct')).toBe(false);
+      expect(text()).toContain('Out of tries');
+      expect(text()).toContain('✗ Out of tries');
+      //Try again gives the tries back
+      await click(partsOf(frame()).reset[0].id);
+      expect(player.getVariable('q1_locked')).toBe(false);
+      expect(text()).toContain('Tries left: 2');
+    });
+  });
+
+  describe('find multiple hotspots', () => {
+    const { project } = starter('assessment/find-multiple-hotspots').build(COLOURWAYS[1]);
+    const [hero, page, result] = project.artboards;
+    const targets = list(project, 'targets') as { name: string; feedback: string; x: number; y: number; w: number; h: number }[];
+    const areaId = () => idOf(page, 'Area');
+    const area = (i: number) => `${areaId()}~${i}`;
+
+    async function open() {
+      const player = play(project);
+      await flush();
+      await click(idOf(hero, 'Start button'));
+      return player;
+    }
+
+    it('has five things to find, each with its place, drawn by one repeated area that is named for the keyboard', async () => {
+      expect(targets).toHaveLength(5);
+      for (const t of targets) expect(t.w * t.h).toBeGreaterThan(0);
+      const tpl = byName(page, 'Area') as unknown as { role: string; focusable: boolean; bindings: Record<string, string> };
+      expect(tpl.role).toBe('button');
+      expect(tpl.focusable).toBe(true);
+      expect(tpl.bindings.ariaLabel).toBe('item.name');
+      //one click flow for every area, reading which copy was pressed
+      const onArea = page.logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.target === (tpl as unknown as { id: string }).id);
+      expect(onArea).toHaveLength(1);
+      expect(onArea[0].params.onlyIf).toBe('!found.includes(event.index)');
+      await open();
+      for (let i = 0; i < 5; i++) {
+        expect(el(area(i)), `area ${i}`).toBeTruthy();
+        expect(el(area(i))!.style.transform).toContain(`translate(${targets[i].x}px, ${targets[i].y}px)`);
+        expect(el(area(i))!.style.width).toBe(`${targets[i].w}px`);
+      }
+    });
+
+    it('ticks a find off with its feedback, counts wrong clicks on the picture, and ignores a repeat', async () => {
+      const player = await open();
+      expect(text()).toContain('Found 0 of 5');
+      await click(idOf(page, 'Main picture'));
+      await click(idOf(page, 'Main picture'));
+      expect(player.getVariable('wrong')).toBe(2);
+      expect(text()).toContain('Nothing there. Keep looking.');
+      expect(text()).toContain('Wrong clicks: 2');
+      await click(area(1));
+      expect(player.getVariable('found')).toEqual([1]);
+      expect(text()).toContain(targets[1].feedback);
+      expect(text()).toContain('✓ A cloud');
+      expect(text()).toContain('Found 1 of 5');
+      //finding it again changes nothing
+      await click(area(1));
+      expect(player.getVariable('found')).toEqual([1]);
+      expect(player.getVariable('wrong')).toBe(2);
+      //the keyboard finds one too
+      await press(area(3), 'Enter');
+      expect(player.getVariable('found')).toEqual([1, 3]);
+      expect(visible(idOf(page, 'See result button'))).toBe(false);
+    });
+
+    it('goes to a result page with the wrong clicks once everything is found, and Try again starts over', async () => {
+      const player = await open();
+      await click(idOf(page, 'Main picture'));
+      for (let i = 0; i < 5; i++) await click(area(i));
+      expect(player.getVariable('found')).toEqual([0, 1, 2, 3, 4]);
+      expect(visible(idOf(page, 'See result button'))).toBe(true);
+      //a click on the picture after the last find is not counted
+      await click(idOf(page, 'Main picture'));
+      expect(player.getVariable('wrong')).toBe(1);
+      await click(idOf(page, 'See result button'));
+      expect(text()).toContain('5 of 5');
+      expect(text()).toContain('Wrong clicks: 1');
+      expect(text()).toContain(project.variables.find((v) => v.name === 'messageOk')!.initial as string);
+      await click(idOf(result, 'Try again button'));
+      expect(player.getVariable('found')).toEqual([]);
+      expect(player.getVariable('wrong')).toBe(0);
+    });
+
+    it('a sixth target is a sixth row, with no new layer or flow', async () => {
+      const more = JSON.parse(JSON.stringify(project)) as Project;
+      const v = more.variables.find((x) => x.name === 'targets')!;
+      v.initial = JSON.stringify([...targets, { name: 'A bird', feedback: 'Birds fly over the water.', x: 100, y: 100, w: 60, h: 40 }]);
+      const player = play(more);
+      await flush();
+      await click(idOf(more.artboards[0], 'Start button'));
+      await click(area(5));
+      expect(player.getVariable('found')).toEqual([5]);
+      expect(text()).toContain('Found 1 of 6');
+    });
+  });
+
+  describe('image choice', () => {
+    const { project } = starter('assessment/image-choice').build(COLOURWAYS[2]);
+    const [hero, page] = project.artboards;
+    const options = list(project, 'options') as { label: string; alt: string; correct: boolean }[];
+    const card = (i: number) => `${idOf(page, 'Choice')}~${i}`;
+
+    async function open() {
+      const player = play(project);
+      await flush();
+      await click(idOf(hero, 'Start button'));
+      return player;
+    }
+
+    it('has six picture cards each with alt text, labelled for a screen reader and reachable by keyboard', async () => {
+      expect(options).toHaveLength(6);
+      for (const o of options) expect(o.alt.length).toBeGreaterThan(20);
+      await open();
+      for (let i = 0; i < 6; i++) {
+        const c = el(card(i))!;
+        expect(c.getAttribute('role')).toBe('checkbox');
+        //one Tab stop for the six, the arrow keys move between them
+        expect(c.tabIndex).toBe(i === 0 ? 0 : -1);
+        expect(c.getAttribute('aria-label')).toBe(`${options[i].label}. ${options[i].alt}`);
+      }
+      //one repeated card, in a keyboard list
+      const list = byName(page, 'Choices') as unknown as { repeat: { items: string }; keyNav: { mode: string } };
+      expect(list.repeat.items).toBe('options');
+      expect(list.keyNav.mode).toBe('grid');
+      expect(page.logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.target === byName(page, 'Choice')!.id)).toHaveLength(2);
+      const live = project.variables.filter((v) => v.live).map((v) => v.name);
+      expect(live).toEqual(['nRight', 'nWrong', 'nTotal', 'outcome', 'verdict']);
+    });
+
+    it('picks several, takes one off again, and Check waits for a pick', async () => {
+      const player = await open();
+      expect(disabled(idOf(page, 'Check button'))).toBe(true);
+      await click(card(0));
+      await click(card(1));
+      expect(player.getVariable('picked')).toEqual([0, 1]);
+      await click(card(1));
+      expect(player.getVariable('picked')).toEqual([0]);
+      expect(el(card(0))!.getAttribute('aria-checked')).toBe('true');
+      await press(card(2), ' ');
+      expect(player.getVariable('picked')).toEqual([0, 2]);
+      expect(disabled(idOf(page, 'Check button'))).toBe(false);
+    });
+
+    it('marks right, wrong and missed, with the feedback for all right, part right and none right, and Try again clears', async () => {
+      const player = await open();
+      await click(card(0));
+      await click(card(2));
+      await click(card(4));
+      await click(idOf(page, 'Check button'));
+      expect(player.getVariable('checked')).toBe(true);
+      expect(player.getVariable('nRight')).toBe(3);
+      expect(text()).toContain((project.variables.find((v) => v.name === 'feedbackCorrect')!.initial as string));
+      expect(text()).toContain('✓ Right');
+      //a pick after checking changes nothing
+      await click(card(1));
+      expect(player.getVariable('picked')).toEqual([0, 2, 4]);
+      await click(idOf(page, 'Try again button'));
+      expect(player.getVariable('picked')).toEqual([]);
+      expect(player.getVariable('checked')).toBe(false);
+      //part right: one right and one wrong
+      await click(card(0));
+      await click(card(1));
+      await click(idOf(page, 'Check button'));
+      expect(player.getVariable('nRight')).toBe(1);
+      expect(player.getVariable('nWrong')).toBe(1);
+      expect(text()).toContain((project.variables.find((v) => v.name === 'feedbackPartial')!.initial as string));
+      expect(text()).toContain('✗ Wrong');
+      expect(text()).toContain('← Right answer');
+      await click(idOf(page, 'Try again button'));
+      //none right
+      await click(card(3));
+      await click(idOf(page, 'Check button'));
+      expect(text()).toContain((project.variables.find((v) => v.name === 'feedbackWrong')!.initial as string));
+    });
+
+    it('with "multiple" off a pick swaps the choice for one answer', async () => {
+      const single = JSON.parse(JSON.stringify(project)) as Project;
+      single.variables.find((v) => v.name === 'multiple')!.initial = false;
+      const player = play(single);
+      await flush();
+      await click(idOf(single.artboards[0], 'Start button'));
+      await click(card(0));
+      await click(card(2));
+      expect(player.getVariable('picked')).toEqual([2]);
+    });
+  });
+
+  describe('single choice set', () => {
+    const { project } = starter('assessment/single-choice-set').build(COLOURWAYS[3]);
+    const [hero, game, result] = project.artboards;
+    const questions = list(project, 'questions') as { prompt: string; options: string[]; correct: number; explain: string }[];
+    const frame = questionFrames(game)[0];
+    const answer = (i: number) => `${partsOf(frame).option[0].id}~${i}`;
+    const next = () => partsOf(frame).reset[0].id;
+
+    async function open() {
+      const player = play(project);
+      await flush();
+      await click(idOf(hero, 'Start button'));
+      return player;
+    }
+
+    it('has eight questions with three options each and one right answer', () => {
+      expect(questions).toHaveLength(8);
+      for (const q of questions) {
+        expect(q.options).toHaveLength(3);
+        expect(q.correct).toBeGreaterThanOrEqual(1);
+        expect(q.correct).toBeLessThanOrEqual(3);
+        expect(q.explain.length).toBeGreaterThan(20);
+      }
+    });
+
+    it('is one question over a bank gone through once, with the kit keeping the score and the position', () => {
+      expect(frame.question!.kind).toBe('single');
+      expect(frame.question!.bank).toMatchObject({ items: 'questions', end: 'finish' });
+      expect(project.variables.map((v) => v.name)).not.toEqual(expect.arrayContaining(['index', 'locked', 'choice', 'score']));
+      expect(byName(game, 'Questions answered')).toMatchObject({ type: 'progress' });
+    });
+
+    it('a right answer says Correct and moves on by itself, a wrong one shows the right one and the explanation and waits for Next', async () => {
+      const player = await open();
+      expect(text()).toContain(questions[0].prompt);
+      expect(text()).toContain('Question 1 of 8');
+      await click(answer(questions[0].correct - 1), 20);
+      expect(player.getVariable('q1_locked')).toBe(true);
+      expect(player.getVariable('q1_correct')).toBe(true);
+      expect(text()).toContain('✓ Correct');
+      expect(visible(next())).toBe(false);
+      //after the pause it has moved on
+      await flush(1150);
+      expect(player.getVariable('q1_setPos')).toBe(2);
+      expect(player.getVariable('q1_locked')).toBe(false);
+      expect(text()).toContain(questions[1].prompt);
+      expect(visible(partsOf(frame).feedback[0].id)).toBe(false);
+      //a wrong answer: stays, shows the explanation and the right one marked, offers Next
+      const wrong = questions[1].correct % 3;
+      await click(answer(wrong));
+      expect(player.getVariable('q1_correct')).toBe(false);
+      expect(text()).toContain('✗ Not quite');
+      expect(text()).toContain(questions[1].explain);
+      expect(text()).toContain('← Right answer');
+      await flush(1150);
+      expect(player.getVariable('q1_setPos')).toBe(2);
+      expect(visible(next())).toBe(true);
+      //a second click on an answer is ignored
+      await click(answer(questions[1].correct - 1));
+      expect(player.getVariable('q1_setScore')).toBe(1);
+      await click(next());
+      expect(player.getVariable('q1_setPos')).toBe(3);
+      expect(text()).toContain(questions[2].prompt);
+    });
+
+    it('ends on a score page with the total, a banded message and the missed questions, and Try again starts over', async () => {
+      const player = await open();
+      for (let i = 0; i < questions.length; i++) {
+        const right = i % 2 === 0;
+        await click(answer(right ? questions[i].correct - 1 : questions[i].correct % 3), right ? 1100 : 8);
+        if (!right) await click(next());
+      }
+      expect(player.getVariable('q1_setScore')).toBe(4);
+      expect(text()).toContain('4 / 8');
+      expect(text()).toContain('50%');
+      expect(text()).toContain(project.variables.find((v) => v.name === 'messageMid')!.initial as string);
+      expect(player.getVariable('q1_missed')).toEqual([1, 3, 5, 7]);
+      expect(text()).toContain('Questions to look at again');
+      expect(text()).toContain(questions[1].prompt);
+      await click(idOf(result, 'Try again button'));
+      expect(player.getVariable('q1_setScore')).toBe(0);
+      expect(player.getVariable('q1_setPos')).toBe(0);
+    }, 15000);
+  });
+
+  describe('summary', () => {
+    const { project } = starter('assessment/summary').build(COLOURWAYS[4]);
+    const [hero, game, result] = project.artboards;
+    const steps = list(project, 'steps') as { heading: string; prompt: string; options: string[]; correct: number; line: string }[];
+    const frame = questionFrames(game)[0];
+    const statement = (i: number) => `${partsOf(frame).option[0].id}~${i}`;
+    const next = () => partsOf(frame).reset[0].id;
+
+    async function open() {
+      const player = play(project);
+      await flush();
+      await click(idOf(hero, 'Start button'));
+      return player;
+    }
+
+    it('has five steps of three or four statements, one true', () => {
+      expect(steps).toHaveLength(5);
+      for (const s of steps) {
+        expect(s.options.length).toBeGreaterThanOrEqual(3);
+        expect(s.options.length).toBeLessThanOrEqual(4);
+        expect(s.correct).toBeLessThanOrEqual(s.options.length);
+        expect(s.line.length).toBeGreaterThan(20);
+      }
+      expect(steps.some((s) => s.options.length === 3)).toBe(true);
+      expect(steps.some((s) => s.options.length === 4)).toBe(true);
+    });
+
+    it('is a question bank run with unlimited tries that cost the point, and a live summary built from its log', () => {
+      expect(frame.question).toMatchObject({ kind: 'single', attempts: 0, attemptPenalty: 1, bank: { items: 'steps', end: 'finish' } });
+      const summary = project.variables.find((v) => v.name === 'summary')!;
+      expect(summary).toMatchObject({ live: true, formula: 'q1_setLog.map(e => steps[e.i].line)' });
+      const written = new Set(project.artboards.flatMap((a) => a.logic.nodes).filter((n) => n.kind === 'action.setVariable').map((n) => n.params.variable));
+      expect(written.has(summary.id)).toBe(false);
+      //the summary lines are measured by the player, not sized from a guess at the characters
+      expect(JSON.stringify(game.children)).not.toContain('Math.ceil(item.length');
+    });
+
+    it('adds the true statement to the summary, marks a wrong pick without adding it, and counts first-try picks', async () => {
+      const player = await open();
+      expect(text()).toContain('Nothing here yet');
+      expect(text()).toContain(steps[0].options[0]);
+      //step 1 right first time
+      await click(statement(steps[0].correct - 1));
+      expect(player.getVariable('q1_locked')).toBe(true);
+      expect(player.getVariable('summary')).toEqual([steps[0].line]);
+      expect(text()).toContain(`•  ${steps[0].line}`);
+      expect(text()).not.toContain('Nothing here yet');
+      await click(next());
+      expect(player.getVariable('q1_setPos')).toBe(2);
+      expect(player.getVariable('q1_locked')).toBe(false);
+      //step 2: a wrong pick first
+      const wrong = steps[1].correct % steps[1].options.length;
+      await click(statement(wrong));
+      expect(player.getVariable('q1_locked')).toBe(false);
+      expect(player.getVariable('summary')).toEqual([steps[0].line]);
+      expect(text()).toContain('Not that one');
+      //the same wrong one again changes nothing
+      await click(statement(wrong));
+      expect(player.getVariable('q1_attempts')).toBe(2);
+      await click(statement(steps[1].correct - 1));
+      expect(player.getVariable('summary')).toEqual([steps[0].line, steps[1].line]);
+      //scored for the first only
+      expect(player.getVariable('q1_setScore')).toBe(1);
+      expect(text()).toContain('Right first time: 1');
+    });
+
+    it('shows three or four statements by the step, and finishes on the summary page', async () => {
+      const player = await open();
+      for (let i = 0; i < steps.length; i++) {
+        expect(document.querySelectorAll(`[data-ix-id^="${partsOf(frame).option[0].id}~"]`)).toHaveLength(steps[i].options.length);
+        if (i === 2) await click(statement((steps[i].correct) % steps[i].options.length));
+        await click(statement(steps[i].correct - 1));
+        await click(next());
+      }
+      expect(player.getVariable('summary')).toEqual(steps.map((s) => s.line));
+      expect(player.getVariable('q1_setScore')).toBe(4);
+      expect(text()).toContain('4 of 5');
+      for (const s of steps) expect(text()).toContain(s.line);
+      expect(text()).toContain(project.variables.find((v) => v.name === 'messageHigh')!.initial as string);
+      await click(idOf(result, 'Try again button'));
+      expect(player.getVariable('summary')).toEqual([]);
+      expect(player.getVariable('q1_setPos')).toBe(0);
+    });
+  });
+
+  describe('essay', () => {
+    const { project } = starter('assessment/essay').build(COLOURWAYS[5]);
+    const [hero, write, feedback] = project.artboards;
+
+    async function open() {
+      const player = play(project);
+      await flush();
+      await click(idOf(hero, 'Start button'));
+      return player;
+    }
+    const words = (n: number, extra = '') => `${Array.from({ length: n }, () => 'word').join(' ')} ${extra}`.trim();
+
+    it('has a large answer box bound to a variable, a word count, and keywords the author sets', () => {
+      const box = byName(write, 'Answer box') as unknown as { inputType: string; variableId: string; height: number };
+      expect(box.inputType).toBe('textarea');
+      expect(box.variableId).toBe(project.variables.find((v) => v.name === 'essay')!.id);
+      expect(box.height).toBeGreaterThanOrEqual(280);
+      expect(list(project, 'required').length).toBeGreaterThanOrEqual(3);
+      expect(list(project, 'optional').length).toBeGreaterThanOrEqual(2);
+      expect(JSON.stringify([write.children, feedback.children])).toMatch(/not marking|not marked/);
+    });
+
+    it('counts words as you type, and Submit stays off until there is something to submit', async () => {
+      await open();
+      expect(disabled(idOf(write, 'Submit button'))).toBe(true);
+      await type(idOf(write, 'Answer box'), 'one two  three\nfour');
+      expect(text()).toContain('4');
+      expect(disabled(idOf(write, 'Submit button'))).toBe(false);
+    });
+
+    it('finds required and optional keywords whatever the case, lists what is missing, and judges the length', async () => {
+      const player = await open();
+      await type(idOf(write, 'Answer box'), words(60, 'Spaced practice helps MEMORY and sleep'));
+      await click(idOf(write, 'Submit button'));
+      expect(player.getVariable('wc')).toBe(66);
+      expect(player.getVariable('foundReq')).toEqual(['spac', 'memory']);
+      expect(player.getVariable('missingReq')).toEqual(['forget', 'cram']);
+      expect(player.getVariable('foundOpt')).toEqual(['sleep']);
+      expect(player.getVariable('missingOpt')).toEqual(['test yourself', 'review']);
+      expect(player.getVariable('lengthState')).toBe('ok');
+      expect(text()).toContain('Your feedback');
+      expect(text()).toContain('Key ideas you covered: spac, memory');
+      expect(text()).toContain('Key ideas not found yet: forget, cram');
+      expect(text()).toContain('✓ Length: 66 words');
+      expect(text()).toContain('Extras you mentioned: sleep');
+      expect(text()).toContain('not marked');
+    });
+
+    it('says when the answer is too short or too long, and when every key idea is there', async () => {
+      const player = await open();
+      await type(idOf(write, 'Answer box'), 'Cram and forget the memory in spaced bursts.');
+      await click(idOf(write, 'Submit button'));
+      expect(player.getVariable('lengthState')).toBe('short');
+      expect(text()).toContain('under 50');
+      expect(text()).toContain('Every key idea is in your answer');
+      await click(idOf(feedback, 'Edit button'));
+      expect(text()).toContain('Write your answer');
+      await type(idOf(write, 'Answer box'), words(200, 'spaced memory forget cram'));
+      await click(idOf(write, 'Submit button'));
+      expect(player.getVariable('lengthState')).toBe('long');
+      expect(text()).toContain('over 150');
+    });
+
+    it('reveals the model answer on request, Edit keeps the answer, and Start again clears it', async () => {
+      const player = await open();
+      const model = project.variables.find((v) => v.name === 'modelAnswer')!.initial as string;
+      await type(idOf(write, 'Answer box'), words(55, 'spaced'));
+      await click(idOf(write, 'Submit button'));
+      expect(text()).not.toContain(model);
+      await click(idOf(feedback, 'Show model answer button'));
+      expect(player.getVariable('showModel')).toBe(true);
+      expect(text()).toContain(model);
+      await click(idOf(feedback, 'Edit button'));
+      expect(player.getVariable('essay')).toContain('spaced');
+      expect(player.getVariable('showModel')).toBe(false);
+      await click(idOf(write, 'Submit button'));
+      await click(idOf(feedback, 'Start again button'));
+      expect(player.getVariable('essay')).toBe('');
+      expect(player.getVariable('wc')).toBe(0);
+      expect(text()).toContain('Write an answer');
+    });
+
+    it('uses the native features: live variables, next and previous pages, a progress bar, auto layout and notes', () => {
+      const live = project.variables.filter((v) => v.live);
+      expect(live.map((v) => v.name)).toEqual(['wc', 'foundReq', 'missingReq', 'foundOpt', 'missingOpt', 'lengthState']);
+      expect(live.every((v) => !!v.formula)).toBe(true);
+      //nothing writes a live variable, and Submit is just announce and next page
+      const written = new Set(project.artboards.flatMap((a) => a.logic.nodes).filter((n) => n.kind === 'action.setVariable').map((n) => n.params.variable));
+      for (const v of live) expect(written.has(v.id), v.name).toBe(false);
+      const submitFlow = write.logic.nodes.map((n) => n.kind);
+      expect(submitFlow).toEqual(['event.pointer', 'action.announce', 'action.artboard']);
+      expect(project.artboards.flatMap((a) => a.logic.nodes).filter((n) => n.kind === 'action.artboard').map((n) => n.params.to)).toEqual(['next', 'next', 'previous']);
+      const bar = byName(write, 'Word count bar') as unknown as { type: string; bindings: Record<string, string> };
+      expect(bar.type).toBe('progress');
+      expect(bar.bindings).toEqual({ value: 'wc', max: 'maxWords' });
+      expect((byName(write, 'Write body') as unknown as { layout: unknown }).layout).toBeTruthy();
+      expect(JSON.stringify(write.children)).toContain('pageNumber');
+      //its chrome is a master, and the notes sit outside the page
+      expect(write.master).toBeTruthy();
+      for (const page of [hero, write, feedback]) {
+        for (const n of page.notes ?? []) expect(n.y).toBeGreaterThanOrEqual(page.height);
+      }
+      expect((write.notes ?? []).length + (hero.notes ?? []).length + (feedback.notes ?? []).length).toBe(4);
+    });
+
+    it('reads the feedback live: a changed answer changes the feedback page without another Submit', async () => {
+      const player = await open();
+      await type(idOf(write, 'Answer box'), words(60, 'spaced memory'));
+      await click(idOf(write, 'Submit button'));
+      expect(player.getVariable('foundReq')).toEqual(['spac', 'memory']);
+      await click(idOf(feedback, 'Edit button'));
+      await type(idOf(write, 'Answer box'), words(60, 'spaced memory forget cram'));
+      expect(player.getVariable('missingReq')).toEqual([]);
+      expect(text()).toContain('Step 1 of 2');
+    });
+  });
+});

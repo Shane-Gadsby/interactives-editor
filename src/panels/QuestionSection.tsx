@@ -1,20 +1,28 @@
 import { useState } from 'react';
 import {
   MAX_BLANKS,
+  MAX_CARDS,
+  MAX_EXTRAS,
+  MAX_GROUPS,
   MAX_HINTS,
   MAX_HOTSPOTS,
   MAX_OPTIONS,
   MAX_PAIRS,
   QUESTION_KINDS,
+  americanForms,
   isMultiple,
   newQuestion,
   questionProblems,
   questionVars,
+  serverMarkingProblem,
   type Artboard,
   type FrameNode,
   type Project,
   type Question,
   type QuestionBlank,
+  type QuestionCard,
+  type QuestionExtra,
+  type QuestionGroup,
   type QuestionKind,
   type QuestionOption,
   type QuestionPair,
@@ -22,6 +30,10 @@ import {
 } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
+import { ExprField } from '../components/ExprField';
+import { syncPractice } from '../lib/voice';
+import { VoiceSection } from './VoiceSection';
+import { GuardSection } from './GuardSection';
 import { growAreas, makeIndependent, partOf, partsOf, setAreaShape, setQuestionSettings, shapeOfArea, sharedPrefix, type AreaShape } from '../lib/question-kit';
 
 const PART_LABELS: [string, string][] = [
@@ -33,6 +45,10 @@ const PART_LABELS: [string, string][] = [
   ['matchDefinition', 'Definition'],
   ['matchZone', 'Slot'],
   ['matchState', 'Pair result'],
+  ['catZone', 'Group box'],
+  ['catCard', 'Item'],
+  ['blankZone', 'Blank slot'],
+  ['blankWord', 'Word'],
   ['picture', 'Picture'],
   ['spots', 'Picture area'],
   ['spot', 'Area'],
@@ -60,8 +76,16 @@ const nextId = (list: { id: string }[], prefix: string): string => {
 export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: Artboard; project: Project }) {
   const q = frame.question!;
   const apply = (patch: Partial<Question>, key?: string) =>
-    store().update((d) => setQuestionSettings(d as Project, ab.id, frame.id, patch), { coalesce: key ? `question-${frame.id}-${key}` : undefined });
+    store().update(
+      (d) => {
+        setQuestionSettings(d as Project, ab.id, frame.id, patch);
+        //Practice mode has the word in a Read aloud node, which follows the word when it is edited
+        syncPractice(d as Project, ab.id, frame.id);
+      },
+      { coalesce: key ? `question-${frame.id}-${key}` : undefined },
+    );
   const problems = questionProblems(q);
+  const serverProblem = serverMarkingProblem(q);
   const shared = sharedPrefix(project, frame);
   const choice = q.kind === 'single' || q.kind === 'multiple';
   const parts = partsOf(frame);
@@ -80,6 +104,13 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
     list.splice(i + by, 0, moved);
     apply({ pairs: list });
   };
+  const extras = q.extras ?? [];
+  const setExtra = (i: number, patch: Partial<QuestionExtra>, key?: string) => apply({ extras: extras.map((x, j) => (j === i ? { ...x, ...patch } : x)) }, key ?? `extra-${i}`);
+  const groups = q.groups ?? [];
+  const cards = q.cards ?? [];
+  const setGroup = (i: number, patch: Partial<QuestionGroup>, key?: string) => apply({ groups: groups.map((g, j) => (j === i ? { ...g, ...patch } : g)) }, key ?? `group-${i}`);
+  const setCard = (i: number, patch: Partial<QuestionCard>, key?: string) => apply({ cards: cards.map((c, j) => (j === i ? { ...c, ...patch } : c)) }, key ?? `card-${i}`);
+  const dragWords = q.kind === 'blank' && q.answerBy === 'drag';
   const changeKind = (kind: QuestionKind) => {
     if (kind === q.kind) return;
     //Each kind keeps what it can: the options carry over between the choice kinds and ordering, true/false has its two
@@ -91,16 +122,32 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       const first = options.findIndex((o) => o.correct);
       options = options.map((o, i) => ({ ...o, correct: i === first ? true : undefined }));
     }
+    let groups = q.groups;
+    let cards = q.cards;
+    if (kind === 'categorise' && (!groups || groups.length < 2 || !cards || cards.length < 2)) {
+      const fresh = newQuestion('categorise');
+      groups = fresh.groups;
+      cards = fresh.cards;
+    }
     if (kind === 'blank' && !blanks.length) blanks = [{ id: 'b1', label: 'Answer', answers: [''] }];
     const pairs = kind === 'matching' && q.pairs.length < 2 ? newQuestion('matching').pairs : q.pairs;
     if (kind === 'hotspot') {
       //The options become the areas: at least one, with one right
-      if (!options.length || q.kind === 'blank' || q.kind === 'matching') options = newQuestion('hotspot').options;
+      if (!options.length || q.kind === 'blank' || q.kind === 'matching' || q.kind === 'categorise') options = newQuestion('hotspot').options;
       if (!options.some((o) => o.correct)) options = options.map((o, i) => ({ ...o, correct: i === 0 ? true : undefined }));
       options = options.slice(0, MAX_HOTSPOTS);
     }
-    if (kind !== 'blank' && kind !== 'truefalse' && kind !== 'matching' && kind !== 'hotspot' && options.length < 2) options = [{ id: 'o1', text: 'First', correct: true }, { id: 'o2', text: 'Second' }, { id: 'o3', text: 'Third' }];
-    apply({ kind, options, blanks, pairs, partial: kind === 'multiple' || kind === 'ordering' || kind === 'blank' || kind === 'matching', ...(kind === 'matching' || kind === 'hotspot' ? { bank: null } : {}) });
+    if (kind !== 'blank' && kind !== 'truefalse' && kind !== 'matching' && kind !== 'categorise' && kind !== 'hotspot' && options.length < 2) options = [{ id: 'o1', text: 'First', correct: true }, { id: 'o2', text: 'Second' }, { id: 'o3', text: 'Third' }];
+    apply({
+      kind,
+      options,
+      blanks,
+      pairs,
+      ...(kind === 'categorise' ? { groups, cards } : {}),
+      partial: kind === 'multiple' || kind === 'ordering' || kind === 'blank' || kind === 'matching' || kind === 'categorise',
+      ...(kind === 'matching' || kind === 'categorise' || kind === 'hotspot' ? { bank: null } : {}),
+      ...(kind !== 'blank' && q.answerBy ? { answerBy: undefined } : {}),
+    });
   };
   const select = (id: string) => store().select([id]);
   return (
@@ -199,6 +246,19 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       )}
 
       {q.kind === 'blank' && (
+        <SelectField<'type' | 'drag'>
+          label="Answer by"
+          title="Type: the learner types into a box. Drag: the learner drags a word from a word bank into each blank. The bank holds the first plain accepted answer of every blank, and the extra words below"
+          value={q.answerBy ?? 'type'}
+          options={[
+            { value: 'type', label: 'Typing' },
+            { value: 'drag', label: 'Dragging words from a word bank' },
+          ]}
+          onChange={(v) => apply({ answerBy: v === 'drag' ? 'drag' : undefined, ...(v === 'drag' ? { bank: null } : {}) })}
+        />
+      )}
+      {dragWords && <ExtrasList label="Extra words" noun="word" extras={extras} setExtra={setExtra} apply={apply} />}
+      {q.kind === 'blank' && (
         <div className="q-list" role="group" aria-label="Blanks">
           {q.blanks.map((b, i) => (
             <div key={b.id} className="q-option">
@@ -207,8 +267,12 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
                 <IconButton icon={<span aria-hidden="true">×</span>} title="Remove this blank" disabled={q.blanks.length <= 1} onClick={() => apply({ blanks: q.blanks.filter((_, j) => j !== i) })} />
               </Row>
               <TextField
-                label="Accepted answers"
-                title="One per line. Case and extra spaces are ignored. A number is compared as a number. /pattern/i is a pattern"
+                label={b.spelling ? 'Accepted spellings' : 'Accepted answers'}
+                title={
+                  b.spelling
+                    ? 'One per line. Every letter has to match. Put alternative spellings (judgement, judgment) on their own lines. Case and spaces round the word are ignored unless you tick Match case'
+                    : 'One per line. Case and extra spaces are ignored. A number is compared as a number. /pattern/i is a pattern'
+                }
                 value={b.answers.join('\n')}
                 multiline
                 rows={2}
@@ -216,8 +280,32 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
               />
               <Row>
                 <CheckField label="Match case" value={!!b.caseSensitive} onChange={(v) => setBlank(i, { caseSensitive: v || undefined })} />
-                <NumberField label="± Tolerance" title="How far off a number answer may be" value={b.tolerance ?? 0} min={0} step={0.1} onChange={(v) => setBlank(i, { tolerance: v > 0 ? v : undefined }, `blank-tol-${i}`)} />
+                {!b.spelling && <NumberField label="± Tolerance" title="How far off a number answer may be" value={b.tolerance ?? 0} min={0} step={0.1} onChange={(v) => setBlank(i, { tolerance: v > 0 ? v : undefined }, `blank-tol-${i}`)} />}
               </Row>
+              <CheckField
+                label="Spelling: letters must match exactly"
+                title="For a word to spell. No numbers, tolerance or guessing: every letter has to be there. A curly apostrophe typed on a phone counts as a plain one, and the browser's own spellcheck and autocorrect are switched off in the box"
+                value={!!b.spelling}
+                onChange={(v) =>
+                  //A new word to spell starts with the guard on: paste refused, and a writing tool found holds the learner
+                  apply({ blanks: q.blanks.map((x, j) => (j === i ? { ...x, spelling: v || undefined, usSpelling: v ? x.usSpelling : undefined, tolerance: v ? undefined : x.tolerance } : x)), ...(v && !q.guard && !q.blanks.some((x) => x.spelling) ? { guard: { mode: 'block' as const } } : {}) }, `blank-${i}`)
+                }
+              />
+              {b.spelling && (
+                <>
+                  <CheckField
+                    label="Also accept American spellings"
+                    title="Accepts the American spelling of each accepted spelling as well (colour, color; organise, organize). It knows the common differences, listed below, and leaves a word alone when it is not sure. Add anything else as its own line"
+                    value={!!b.usSpelling}
+                    onChange={(v) => setBlank(i, { usSpelling: v || undefined })}
+                  />
+                  {b.usSpelling && (
+                    <div className="muted small">
+                      {americanForms(b.answers).length ? `American forms accepted too: ${americanForms(b.answers).join(', ')}.` : 'No American form of these spellings differs, so nothing is added.'}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ))}
           <button className="btn" disabled={q.blanks.length >= MAX_BLANKS} onClick={() => apply({ blanks: [...q.blanks, { id: nextId(q.blanks, 'b'), label: `Answer ${q.blanks.length + 1}`, answers: [''] }] })}>
@@ -225,6 +313,8 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
           </button>
         </div>
       )}
+      {q.kind === 'blank' && q.blanks.some((b) => b.spelling) && <VoiceSection frame={frame} ab={ab} project={project} />}
+      {q.kind === 'blank' && q.blanks.some((b) => b.spelling) && <GuardSection frame={frame} ab={ab} />}
 
       {q.kind === 'matching' && (
         <div className="q-list" role="group" aria-label="Pairs">
@@ -244,7 +334,60 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
           <button className="btn" disabled={q.pairs.length >= MAX_PAIRS} onClick={() => apply({ pairs: [...q.pairs, { id: nextId(q.pairs, 'p'), term: '', match: '' }] })}>
             + Add pair
           </button>
+          <ExtrasList label="Extra terms" noun="term" extras={extras} setExtra={setExtra} apply={apply} />
           <div className="muted small">Terms, definitions and slots are ordinary layers: restyle them, or move the slots onto a diagram to match labels to places.</div>
+        </div>
+      )}
+
+      {q.kind === 'categorise' && (
+        <div className="q-list" role="group" aria-label="Groups and items">
+          <div className="muted small">Each group is a box the learner drags items into. A group takes any number of items. Pick the group each item belongs in.</div>
+          {groups.map((g, i) => (
+            <Row key={g.id}>
+              <span className="muted small q-num">{i + 1}.</span>
+              <TextField value={g.name} placeholder={`Group ${i + 1}`} title="The group's name, shown in its box and read out by screen readers" onChange={(v) => setGroup(i, { name: v }, `group-name-${i}`)} />
+              <IconButton
+                icon={<span aria-hidden="true">×</span>}
+                title="Remove this group and the items in it"
+                disabled={groups.length <= 2}
+                onClick={() => apply({ groups: groups.filter((_, j) => j !== i), cards: cards.filter((c) => c.group !== g.id) })}
+              />
+            </Row>
+          ))}
+          <button className="btn" disabled={groups.length >= MAX_GROUPS} onClick={() => apply({ groups: [...groups, { id: nextId(groups, 'g'), name: '' }] })}>
+            + Add group
+          </button>
+          {cards.map((c, i) => (
+            <div key={c.id} className="q-option">
+              <Row>
+                <span className="muted small q-num">{i + 1}.</span>
+                <TextField value={c.text} placeholder={`Item ${i + 1}`} title="The layer the learner drags" onChange={(v) => setCard(i, { text: v }, `card-text-${i}`)} />
+                <IconButton icon={<span aria-hidden="true">×</span>} title="Remove this item" disabled={cards.length <= 2} onClick={() => apply({ cards: cards.filter((_, j) => j !== i) })} />
+              </Row>
+              <SelectField<string>
+                label="Belongs in"
+                title="The group this item is right in"
+                value={groups.some((g) => g.id === c.group) ? c.group : ''}
+                options={[{ value: '', label: 'Choose a group' }, ...groups.map((g, k) => ({ value: g.id, label: g.name || `Group ${k + 1}` }))]}
+                onChange={(v) => setCard(i, { group: v })}
+              />
+              <TextField value={c.feedback ?? ''} placeholder="Feedback if put in the wrong group (optional)" onChange={(v) => setCard(i, { feedback: v || undefined }, `card-fb-${i}`)} />
+            </div>
+          ))}
+          <button
+            className="btn"
+            disabled={cards.length >= MAX_CARDS}
+            onClick={() => apply({ cards: [...cards, { id: nextId(cards, 'c'), text: '', group: groups[0]?.id ?? '' }] })}
+          >
+            + Add item
+          </button>
+          <CheckField
+            label="Say right or wrong as each item is dropped"
+            title="Each drop tells the learner whether the item is in the right group (or the item's own feedback when it is not), without using a try. Check answer still marks the lot. Good for practice; leave it off when the check is the test"
+            value={!!q.dropFeedback}
+            onChange={(v) => apply({ dropFeedback: v || undefined })}
+          />
+          <div className="muted small">Group boxes and items are ordinary layers: restyle them, enlarge a box or move it onto a picture.</div>
         </div>
       )}
 
@@ -312,19 +455,47 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       )}
 
       <div className="q-sub">Marking</div>
-      <Row>
-        <NumberField label="Points" title="Points a right answer is worth" value={q.points} min={0} step={0.5} onChange={(v) => apply({ points: v }, 'points')} />
-        <NumberField label="Tries" title="How many times the answer can be checked before it locks. 0 is no limit" value={q.attempts} min={0} step={1} onChange={(v) => apply({ attempts: Math.round(v) }, 'attempts')} />
-      </Row>
-      <Row>
-        <NumberField label="Retry −%" title="Points taken off for each check after the first, as a percentage" value={Math.round(q.attemptPenalty * 100)} min={0} max={100} onChange={(v) => apply({ attemptPenalty: Math.min(1, Math.max(0, v / 100)) }, 'attemptPenalty')} />
-        <NumberField label="Hint −%" title="Points taken off for each hint shown, as a percentage" value={Math.round(q.hintPenalty * 100)} min={0} max={100} onChange={(v) => apply({ hintPenalty: Math.min(1, Math.max(0, v / 100)) }, 'hintPenalty')} />
-      </Row>
-      {(q.kind === 'multiple' || q.kind === 'ordering' || q.kind === 'blank' || q.kind === 'matching' || isMultiple(q)) && (
+      <div className="labels-54">
+        <Row>
+          <NumberField label="Points" title="Points a right answer is worth" value={q.points} min={0} step={0.5} onChange={(v) => apply({ points: v }, 'points')} />
+          <NumberField label="Tries" title="How many times the answer can be checked before it locks. 0 is no limit" value={q.attempts} min={0} step={1} onChange={(v) => apply({ attempts: Math.round(v) }, 'attempts')} />
+        </Row>
+        <Row>
+          <NumberField label="Retry −%" title="Points taken off for each check after the first, as a percentage" value={Math.round(q.attemptPenalty * 100)} min={0} max={100} onChange={(v) => apply({ attemptPenalty: Math.min(1, Math.max(0, v / 100)) }, 'attemptPenalty')} />
+          <NumberField label="Hint −%" title="Points taken off for each hint shown, as a percentage" value={Math.round(q.hintPenalty * 100)} min={0} max={100} onChange={(v) => apply({ hintPenalty: Math.min(1, Math.max(0, v / 100)) }, 'hintPenalty')} />
+        </Row>
+      </div>
+      {(q.kind === 'multiple' || q.kind === 'ordering' || q.kind === 'blank' || q.kind === 'matching' || q.kind === 'categorise' || isMultiple(q)) && (
         <CheckField label="Part marks" title="Give a share of the points for the parts that are right" value={q.partial} onChange={(v) => apply({ partial: v })} />
       )}
-      {q.kind !== 'truefalse' && q.kind !== 'blank' && q.kind !== 'hotspot' && <CheckField label="Shuffle" title="A different order each time the question starts" value={q.shuffle} onChange={(v) => apply({ shuffle: v })} />}
+      {q.kind !== 'truefalse' && (q.kind !== 'blank' || dragWords) && q.kind !== 'hotspot' && <CheckField label={dragWords ? 'Shuffle the word bank' : 'Shuffle'} title="A different order each time the question starts" value={q.shuffle} onChange={(v) => apply({ shuffle: v })} />}
       <CheckField label="Show the right answer when finished wrong" value={q.reveal} onChange={(v) => apply({ reveal: v })} />
+      <CheckField
+        label="Keep the answer when the page is revisited"
+        title="Coming back to the page later in the same visit finds the question as the learner left it, instead of starting it again. Drag questions put the layers back where they were at the last check"
+        value={!!q.keep}
+        onChange={(v) => apply({ keep: v || undefined })}
+      />
+      <CheckField
+        label="Hide Try again"
+        title="Leaves out the Try again (Next question) button. The question is still set up when the page starts, and a button of your own can run a Reset question node"
+        value={!!q.hideReset}
+        onChange={(v) => apply({ hideReset: v || undefined })}
+      />
+      <CheckField
+        label="Mark answers on the server"
+        title="On the share link and the Link for StudyDesk, the right answers are kept off the learner's page and the server marks each check and records the score. In the editor's Preview and in files you export, the question marks in the page as usual"
+        value={!!q.serverMarked}
+        disabled={!!serverProblem && !q.serverMarked}
+        onChange={(v) => apply({ serverMarked: v || undefined })}
+      />
+      {q.serverMarked && !serverProblem && (
+        <div className="muted small">
+          Learners get this question without its right answers, patterns, hints or feedback, and the server marks it. Only the share link and the Link for StudyDesk do this (the answers go out when you update the link). Preview and exported files still carry the answers.
+        </div>
+      )}
+      {q.serverMarked && !serverProblem && <Retakes q={q} apply={apply} />}
+      {serverProblem && <div className={q.serverMarked ? 'q-problem' : 'muted small'}>{q.serverMarked ? 'Marked in the page for now. ' : ''}{serverProblem}</div>}
 
       <div className="q-sub">Hints and feedback</div>
       <TextField
@@ -336,10 +507,46 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         placeholder="Optional"
         onChange={(v) => apply({ hints: v.split('\n').slice(0, MAX_HINTS) }, 'hints')}
       />
-      <TextField label="Right" title="Said when the answer is right" value={q.feedbackCorrect} onChange={(v) => apply({ feedbackCorrect: v }, 'fb-ok')} />
-      <TextField label="Wrong" title="Said when the answer is wrong" value={q.feedbackIncorrect} onChange={(v) => apply({ feedbackIncorrect: v }, 'fb-no')} />
-      <TextField label="Partly right" title="Said instead of Wrong when part marks are on and some of it is right" value={q.feedbackPartial} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackPartial: v }, 'fb-part')} />
-      <TextField label="Out of tries" title="Said when the last try is used up without a right answer" value={q.feedbackOutOfTries} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackOutOfTries: v }, 'fb-out')} />
+      <div className="labels-66">
+        <TextField label="Right" title="Said when the answer is right" value={q.feedbackCorrect} onChange={(v) => apply({ feedbackCorrect: v }, 'fb-ok')} />
+        <TextField label="Wrong" title="Said when the answer is wrong" value={q.feedbackIncorrect} onChange={(v) => apply({ feedbackIncorrect: v }, 'fb-no')} />
+        <TextField label="Partly right" title="Said instead of Wrong when part marks are on and some of it is right" value={q.feedbackPartial} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackPartial: v }, 'fb-part')} />
+        <TextField label="Out of tries" title="Said when the last try is used up without a right answer" value={q.feedbackOutOfTries} placeholder="Same as Wrong" onChange={(v) => apply({ feedbackOutOfTries: v }, 'fb-out')} />
+      </div>
+
+      <div className="q-sub">Listening and keys</div>
+      <CheckField
+        label="Listen button"
+        title="Adds a Listen button beside Check. It reads the question and its options aloud, and the feedback once the answer has been checked, with a voice on the learner's own device. It hides itself when the device has no voice, and never starts by itself"
+        value={!!q.listen}
+        onChange={(v) => apply({ listen: v || undefined })}
+      />
+      <TextField
+        label="Say the prompt like"
+        title="What a voice says for the prompt instead of its text, for a formula, an abbreviation or a long scenario that reads badly aloud. The options are still read after it"
+        value={q.spoken ?? ''}
+        multiline
+        rows={2}
+        placeholder="Optional. Empty: the prompt"
+        onChange={(v) => apply({ spoken: v || undefined }, 'spoken')}
+      />
+      <TextField
+        label="Spoken explanation"
+        title="Said after the feedback when the learner presses Listen once the answer has been checked: why the answer is what it is."
+        value={q.explain ?? ''}
+        multiline
+        rows={2}
+        placeholder="Optional. e.g. Because a whale breathes air"
+        onChange={(v) => apply({ explain: v || undefined }, 'explain')}
+      />
+      {(q.kind === 'single' || q.kind === 'multiple' || q.kind === 'truefalse') && (
+        <CheckField
+          label="Number keys 1 to 9 choose"
+          title="Pressing 1 to 9 chooses the option in that place (several choices toggle). It works anywhere on the page, so use it on one question at a time. Choosing still needs Check answer"
+          value={!!q.numberKeys}
+          onChange={(v) => apply({ numberKeys: v || undefined })}
+        />
+      )}
 
       <SelectField<'' | 'progress' | 'complete'>
         label="Report result"
@@ -353,7 +560,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         onChange={(v) => apply({ report: v || null })}
       />
 
-      {q.kind !== 'matching' && q.kind !== 'hotspot' && <QuestionBank q={q} project={project} apply={apply} />}
+      {q.kind !== 'matching' && q.kind !== 'categorise' && q.kind !== 'hotspot' && !dragWords && <QuestionBank q={q} project={project} apply={apply} />}
 
       <div className="q-sub">Variables</div>
       <TextField
@@ -394,6 +601,73 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
   );
 }
 
+/** Wrong choices mixed in on purpose: terms that match nothing, or words in the word bank that fit no blank. */
+function ExtrasList({ label, noun, extras, setExtra, apply }: { label: string; noun: string; extras: QuestionExtra[]; setExtra: (i: number, patch: Partial<QuestionExtra>, key?: string) => void; apply: (patch: Partial<Question>, key?: string) => void }) {
+  const next = () => {
+    let n = extras.length + 1;
+    while (extras.some((x) => x.id === `x${n}`)) n++;
+    return `x${n}`;
+  };
+  return (
+    <div className="q-list" role="group" aria-label={label}>
+      <div className="q-sub">{label}</div>
+      <div className="muted small">Dragged like the others, but they belong nowhere: left in the pile is right, and one dropped in a {noun === 'term' ? 'slot' : 'blank'} is wrong.</div>
+      {extras.map((x, i) => (
+        <Row key={x.id}>
+          <TextField value={x.text} placeholder={`Extra ${noun} ${i + 1}`} onChange={(v) => setExtra(i, { text: v }, `extra-text-${i}`)} />
+          <IconButton icon={<span aria-hidden="true">×</span>} title={`Remove this extra ${noun}`} onClick={() => apply({ extras: extras.filter((_, j) => j !== i) })} />
+        </Row>
+      ))}
+      <button className="btn" disabled={extras.length >= MAX_EXTRAS} onClick={() => apply({ extras: [...extras, { id: next(), text: '' }] })}>
+        + Add extra {noun}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Goes at the whole set, for questions marked on the server. Questions that have it are one test: the learner finishes all of
+ * them, that is a round, and the score that counts is the best round or the latest. Set it the same on every question of the test.
+ */
+function Retakes({ q, apply }: { q: Question; apply: (patch: Partial<Question>, key?: string) => void }) {
+  const mode = !q.retake ? 'off' : q.retake.limit < 0 ? 'unlimited' : 'limited';
+  const set = (m: 'off' | 'limited' | 'unlimited') =>
+    apply({ retake: m === 'off' ? undefined : { limit: m === 'unlimited' ? -1 : Math.max(1, q.retake && q.retake.limit > 0 ? q.retake.limit : 1), keep: q.retake?.keep ?? 'best' } });
+  return (
+    <>
+      <SelectField<'off' | 'limited' | 'unlimited'>
+        label="Retakes"
+        title="Whether the learner can go through the whole set of questions again after finishing it. Off: the first go is the mark that counts, and Try again is practice. Otherwise the server keeps every round, a Reset question node with Retake on starts the next one, and the right answers stay hidden until the last go"
+        value={mode}
+        options={[
+          { value: 'off', label: 'Off (first go counts, then practice)' },
+          { value: 'limited', label: 'A set number of retakes' },
+          { value: 'unlimited', label: 'Unlimited retakes' },
+        ]}
+        onChange={set}
+      />
+      {q.retake && q.retake.limit >= 0 && (
+        <NumberField label="Retakes allowed" title="Goes at the whole set after the first. 1 means two goes in all" value={q.retake.limit} min={1} max={100} step={1} onChange={(v) => apply({ retake: { ...q.retake!, limit: Math.max(1, Math.round(v)) } }, 'retake-limit')} />
+      )}
+      {q.retake && (
+        <>
+          <SelectField<'best' | 'latest'>
+            label="Score kept"
+            title="Which round's score is the mark: the best one, or the most recent (which can be lower than an earlier go)"
+            value={q.retake.keep}
+            options={[
+              { value: 'best', label: 'Best round' },
+              { value: 'latest', label: 'Latest round' },
+            ]}
+            onChange={(v) => apply({ retake: { ...q.retake!, keep: v } })}
+          />
+          <div className="muted small">Set this the same on every question of the test. A round is every one of them finished once. Add a Reset question node with Retake on (for example on a Retake button) to start the next round; Try again on a single question is hidden.</div>
+        </>
+      )}
+    </>
+  );
+}
+
 function QuestionBank({ q, project, apply }: { q: Question; project: Project; apply: (patch: Partial<Question>, key?: string) => void }) {
   const [open, setOpen] = useState(!!q.bank);
   const on = !!q.bank;
@@ -411,12 +685,11 @@ function QuestionBank({ q, project, apply }: { q: Question; project: Project; ap
       />
       {on && open && (
         <>
-          <TextField
+          <ExprField
             label="Rows"
-            title="An expression giving the rows: the name of a data source, or part of one such as quiz.questions"
+            title="An expression giving the rows: the name of a data source, part of one such as quiz.questions, or a list variable"
             value={q.bank!.items}
             commitOnBlur
-            mono
             placeholder="quiz"
             onChange={(v) => apply({ bank: { ...q.bank!, items: v.trim() } })}
           />
@@ -424,6 +697,15 @@ function QuestionBank({ q, project, apply }: { q: Question; project: Project; ap
             <div className="muted small">
               Data sources: {project.dataSources.map((d) => d.name).join(', ')}
             </div>
+          )}
+          {project.variables.some((v) => v.type === 'list' && !/_(items|bankSeen|setOrder|setLog|missed)$/.test(v.name)) && (
+            <SelectField<string>
+              label="Or a list variable"
+              title="Use a list variable as the rows (a list of objects with the same columns as a data row). Handy for a set of questions the project builds itself, such as the ones missed"
+              value=""
+              options={[{ value: '', label: 'Pick a list variable' }, ...project.variables.filter((v) => v.type === 'list' && !/_(items|bankSeen|setOrder|setLog|missed)$/.test(v.name)).map((v) => ({ value: v.name, label: v.name }))]}
+              onChange={(v) => v && apply({ bank: { ...q.bank!, items: v } })}
+            />
           )}
           <SelectField<'random' | 'sequence'>
             label="Order"
@@ -435,6 +717,31 @@ function QuestionBank({ q, project, apply }: { q: Question; project: Project; ap
             ]}
             onChange={(v) => apply({ bank: { ...q.bank!, order: v } })}
           />
+          <SelectField<'loop' | 'finish'>
+            label="When the rows run out"
+            title="Loop: carry on for ever (a random bank comes round again). Finish: a run. The learner goes through the rows once, the question keeps the totals in its set variables, and the Check and Reset question nodes have a Set done output for the end"
+            value={q.bank!.end ?? 'loop'}
+            options={[
+              { value: 'loop', label: 'Loop for ever' },
+              { value: 'finish', label: 'Finish after one go through' },
+            ]}
+            onChange={(v) => apply({ bank: { ...q.bank!, end: v === 'finish' ? 'finish' : undefined, count: v === 'finish' ? q.bank!.count : undefined } })}
+          />
+          {q.bank!.end === 'finish' && (
+            <>
+              <NumberField
+                label="Questions to draw"
+                title="How many rows to ask in a run. 0 asks every row"
+                value={q.bank!.count ?? 0}
+                min={0}
+                step={1}
+                onChange={(v) => apply({ bank: { ...q.bank!, count: v >= 1 ? Math.floor(v) : undefined } }, 'bank-count')}
+              />
+              <div className="muted small">
+                The run keeps {q.prefix}_setScore, {q.prefix}_setMax, {q.prefix}_setPos, {q.prefix}_setLeft, {q.prefix}_setCount, {q.prefix}_setDone and {q.prefix}_missed (the rows got wrong). Wire a Reset question node with Bank run set to Review the missed ones to practise those, or Start a new run to draw again.
+              </div>
+            </>
+          )}
           <div className="muted small">Columns: prompt, options and correct (or answer, items), hint, feedback, points. The Try again button becomes Next question.</div>
         </>
       )}

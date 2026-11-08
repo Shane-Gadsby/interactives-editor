@@ -99,7 +99,7 @@ export function extOf(name: unknown): string {
 }
 
 /** A server route with the ids and names taken out: `projects/<id>/comments` -> `projects/:id/comments`. */
-export const ROUTE_WORDS = new Set(['api', 'assets', 'collaborators', 'comments', 'people', 'duplicate', 'insights', 'learn', 'libraries', 'library', 'live', 'messages', 'meta', 'notices', 'ops', 'play', 'prefs', 'presence', 'progress', 'projects', 'user-data', 'publish', 'read', 'replies', 'report', 'restore', 'results', 'review', 'revisions', 's', 'session', 'share', 'thumbnail', 'analytics', 'usage', 'templates', 'template', 'use', 'examples', 'remix', 'mcp']);
+export const ROUTE_WORDS = new Set(['api', 'admin', 'assets', 'audit', 'health', 'duplicates', 'dedupe', 'bin', 'collaborators', 'comments', 'people', 'duplicate', 'insights', 'in-use', 'learn', 'libraries', 'library', 'live', 'messages', 'meta', 'notices', 'ops', 'owner', 'play', 'prefs', 'presence', 'progress', 'projects', 'user-data', 'publish', 'read', 'replies', 'report', 'restore', 'revert', 'results', 'results.csv', 'review', 'revisions', 's', 'session', 'share', 'thumbnail', 'analytics', 'usage', 'templates', 'template', 'use', 'examples', 'remix', 'mcp', 'variant', 'lti13', 'brand', 'check', 'voice', 'guard', 'fonts', 'media-bridge.mjs', 'shared', 'hidden', 'answers', 'withdraw', 'course']);
 export function routePattern(url: string): string {
   let path = url;
   try {
@@ -199,11 +199,26 @@ function bucketKey(area: string, action: string, thing: string | undefined, proj
     .join(',')}`;
 }
 
+const tapped = new Set<(area: string, action: string, thing: string | undefined) => void>();
+
+/** Hear about every event as it is noted (the Getting started strip ticks its jobs off this). Never sees details or numbers. Returns the cleanup. */
+export function onTrack(f: (area: string, action: string, thing: string | undefined) => void): () => void {
+  tapped.add(f);
+  return () => tapped.delete(f);
+}
+
 /** Note that something happened. Added up with the same thing in the window and sent as one row. Never throws. */
 export function track(area: Area, action: string, f: Fields = {}): void {
   try {
     const act = token(action);
     if (!act) return;
+    for (const hear of tapped) {
+      try {
+        hear(area, act, f.thing === undefined ? undefined : token(f.thing));
+      } catch {
+        // a listener's trouble is its own
+      }
+    }
     const now = Date.now();
     events++;
     lastActive = now;

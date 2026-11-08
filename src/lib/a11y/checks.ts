@@ -3,7 +3,7 @@
  * found, per artboard. It reports "checks found", never "compliant": some things it can't see (a photo behind text, what a
  * script does), and those come back as `review` findings so a person looks instead of assuming.
  */
-import { coveredMs, defaultTheme, hasTokens, isContainer, isTokenRef, makeColorResolver, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
+import { a11yContext, coveredMs, declaresSensors, isTabStop, parseShortcut, shortcutDuplicates, shortcutId, shortcutKeyEvents, defaultTheme, sensorsUsed, usesLine, hasTokens, isContainer, isTokenRef, makeColorResolver, overlappingSpeech, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
 import { backdropAt, buildPaintList, samplePoints, textExtent, type ArtboardPaint, type ImageColours, type Target, type TextMeasure } from './backdrop';
 import { contrastRatio, luminance, over, requiredRatio, suggestColour, toRgba, withTokens, type RGB } from './colour';
 import { FLASH_PROPS, maxFlashesPerSecond, trackSignal } from './flash';
@@ -92,7 +92,14 @@ export const CHECKS: CheckInfo[] = [
     title: 'Video and narration need captions',
     wcag: '1.2.1 Audio-only and Video-only (Prerecorded), A; 1.2.2 Captions (Prerecorded), A; 1.2.5 Audio Description, AA',
     why: 'Deaf and hard of hearing people need captions for the speech and sounds in a video or a narration, and blind people need the pictures described. A checker cannot hear a file, but it can see that a narration on a timeline has no captions, or only some.',
-    how: 'For narration on a timeline: add captions in the timeline\'s Captions row (paste the transcript, or import a WebVTT or SRT file); the player shows them and offers the transcript. For a video layer: import its captions in the layer\'s settings, or check the file has them and mark this reviewed.',
+    how: 'For narration on a timeline: add captions in the timeline\'s Captions row (paste the transcript, or import a WebVTT or SRT file); the player shows them and offers the transcript. For a video layer: import its captions in the layer\'s settings, or check the file has them and mark this reviewed. For the pictures (1.2.5): add descriptions of what is on screen to the timeline\'s Descriptions row, or to a video layer\'s Descriptions settings. A voice on the viewer\'s device reads them in the gaps while the sound is turned down, and the transcript lists them with the captions. That is a cheaper aid, not a recorded described version: where a course must have one, record it and mark this reviewed.',
+  },
+  {
+    id: 'sensors',
+    title: 'Needs a microphone or camera to finish',
+    wcag: '2.1.1 Keyboard, A; 1.3.3 Sensory Characteristics, A; 2.5.1 Pointer Gestures, A',
+    why: 'Learners who are deaf or have no voice, are in a shared room, have no device or have it blocked by their browser or their course site, or simply do not want to be recorded, cannot use a microphone or camera. If the only way to finish goes through one, the activity locks them out.',
+    how: 'Add a button (or a text box and a Check button) that leads to the same finish without it, such as "Type your answer instead", and show it when microphone or camera is not ready (read them with an If or a binding: unavailable, denied, ready, off). Learners can choose "Do not use my microphone or camera" once and every project then reads off. If there truly cannot be an equal way (an assessment of speaking), say why in Project > Microphone and camera > No equal way to finish: the learner is told, and this check settles.',
   },
   {
     id: 'title',
@@ -109,12 +116,13 @@ const INFO = new Map(CHECKS.map((c) => [c.id, c]));
 export const NOT_CHECKED = [
   'Whether text is right: reading order, heading structure, plain language, or the language of the page.',
   'Anything a script does (script and code nodes, embedded HTML and pages): keyboard handling, focus, flashing, announcements.',
-  'Whether a video has captions or audio description. Whether captions say what is actually spoken, or are timed to it (only that narration on a timeline has some, and how much of it they cover).',
+  'Whether a video has captions or audio description in the file itself (it only sees the captions and descriptions added here), or whether a description says what is really on screen. Whether captions say what is actually spoken, or are timed to it (only that narration on a timeline has some, and how much of it they cover).',
   'Colour as the only way to tell things apart, and text that is part of a picture.',
   'Flashing from anything but timelines (timers, scripts, video, shader layers).',
   'Contrast over photos that are not loaded, over video, shaders and blend modes, and anything a binding or timeline changes while it runs.',
   'Focus order and visible focus: the Tab order follows the layer order and the browser default.',
   'Content that only appears after something is done (hidden layers are checked as they would look when shown).',
+  'Whether the other way to finish a microphone or camera activity is as good as the first. The checker only finds that there is one, by a click, key or typed change that reaches a finish without going through the sensor.',
 ];
 
 // ---------------------------------------------------------------------------
@@ -189,7 +197,7 @@ const KIND_OF: Record<string, PointerKind> = {
 
 interface Interactions {
   /** Layer id -> what kinds of pointer event it listens for, and what each runs. */
-  pointer: Map<string, { kinds: Set<PointerKind>; runs: Map<PointerKind, Set<string>> }>;
+  pointer: Map<string, { kinds: Set<PointerKind>; runs: Map<PointerKind, Set<string>>; /** Every event on it is "only when a child is hit": the layer itself is not what is pressed. */ children: boolean }>;
   /** What each On key event runs. */
   keys: Set<string>[];
   /** Timelines that something can pause or stop. */
@@ -225,7 +233,8 @@ function interactionsOf(ab: Artboard): Interactions {
       const kind = KIND_OF[String(ln.params.type ?? 'click')];
       if (!target || !kind) continue;
       let e = pointer.get(target);
-      if (!e) pointer.set(target, (e = { kinds: new Set(), runs: new Map() }));
+      if (!e) pointer.set(target, (e = { kinds: new Set(), runs: new Map(), children: true }));
+      if (ln.params.childrenOnly !== true) e.children = false;
       e.kinds.add(kind);
       const set = e.runs.get(kind) ?? new Set<string>();
       for (const a of reach(ab, ln.id)) set.add(a);
@@ -237,6 +246,71 @@ function interactionsOf(ab: Artboard): Interactions {
     }
   }
   return { pointer, keys, pausable };
+}
+
+// ---------------------------------------------------------------------------
+// Sensors: a way to finish that does not need the microphone or camera
+
+/** Nodes that use a sensor, and the ports they leave by when it did NOT work (the way a project carries on without it). */
+const SENSOR_NODES: Record<string, string[]> = {
+  'action.listen': ['failed'],
+  'action.recordStart': ['failed'],
+  'action.recordStop': ['failed'],
+  'action.recordPlay': ['none'],
+  'action.cameraPreview': ['failed'],
+  'action.photo': ['none'],
+};
+/** Events a learner makes by hand: a click or tap, a key, a typed or chosen value changing a variable. */
+const HAND_EVENTS = new Set(['event.pointer', 'event.key', 'event.variable']);
+
+export interface SensorRoutes {
+  /** Places the project can finish or move on (Report result as complete, Go to artboard, Steps, Check answer, the completion variable). */
+  finishes: number;
+  /** Of those, how many a click, key or typed change reaches without going through a working microphone or camera. */
+  free: number;
+}
+
+/**
+ * Where the finishes are and which of them do not need a sensor. A route starts at an event a person makes by hand and follows the
+ * graph, but never leaves a sensor node by the port that means it worked: past a Start recording only its "could not start" port counts,
+ * since that is how a project carries on when the sensor is not there. Structure only: whether the other way is as good is a person's call.
+ */
+export function sensorRoutes(project: Project): SensorRoutes {
+  const done = project.settings.reporting?.completionVariable;
+  const finishNode = (n: LogicNode) => {
+    if (n.kind === 'action.reportResult') return String(n.params.completed ?? 'complete') !== 'progress';
+    if (n.kind === 'action.artboard' || n.kind === 'action.steps' || n.kind === 'action.questionCheck') return true;
+    if (n.kind === 'action.setVariable') return !!done && (n.params.variable === done || project.variables.some((v) => v.id === done && v.name === n.params.variable));
+    return false;
+  };
+  let finishes = 0;
+  let free = 0;
+  for (const ab of project.artboards) {
+    const byId = new Map(ab.logic.nodes.map((n) => [n.id, n]));
+    const all = ab.logic.nodes.filter(finishNode).length;
+    finishes += all;
+    const reached = new Set<string>();
+    for (const start of ab.logic.nodes) {
+      if (!HAND_EVENTS.has(start.kind)) continue;
+      const seen = new Set<string>([start.id]);
+      const queue = [start.id];
+      while (queue.length) {
+        const id = queue.shift()!;
+        const node = byId.get(id);
+        const only = node ? SENSOR_NODES[node.kind] : undefined;
+        for (const e of ab.logic.edges) {
+          if (e.from !== id || seen.has(e.to)) continue;
+          if (only && !only.includes(e.fromPort)) continue;
+          seen.add(e.to);
+          queue.push(e.to);
+          const next = byId.get(e.to);
+          if (next && finishNode(next)) reached.add(next.id);
+        }
+      }
+    }
+    free += reached.size;
+  }
+  return { finishes, free };
 }
 
 // ---------------------------------------------------------------------------
@@ -420,7 +494,10 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
       const target = paint.targets.get(n.id);
       const sem = semanticsOf(n);
       const native = n.type === 'button' || n.type === 'input' || n.type === 'link' || !!n.link;
-      const ptr = inter.pointer.get(n.id);
+      //A flow on a group that runs only when one of its own layers is hit is pressed through those layers: when one of them is a button, a radio and so on, that is what the keyboard and a screen reader meet
+      const rawPtr = inter.pointer.get(n.id);
+      const viaChildren = !!rawPtr?.children && isContainer(n) && n.children.some((c) => { const cs = semanticsOf(c); return cs.focusable && OPERABLE_ROLES.has(cs.role); });
+      const ptr = viaChildren ? undefined : rawPtr;
       const interactive = native || !!ptr || !!(n.draggable && n.draggable.enabled !== false);
       const hiddenNote = target && target.hidden.length ? ' It is hidden until something shows it, and was checked as it will look then.' : '';
 
@@ -429,7 +506,8 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
         const operable = sem.focusable && OPERABLE_ROLES.has(sem.role);
         const keyDoes = (kind: PointerKind) => {
           const runs = ptr.runs.get(kind) ?? new Set<string>();
-          return operable || [...runs].length === 0 || inter.keys.some((k) => [...runs].some((r) => k.has(r)));
+          // (a shortcut is a key that clicks the layer, so it does the layer's click)
+          return operable || [...runs].length === 0 || (kind === 'click' && !!parseShortcut(n.shortcut)) || inter.keys.some((k) => [...runs].some((r) => k.has(r)));
         };
         const missing = (['click', 'hover', 'drag'] as PointerKind[]).filter((k) => ptr.kinds.has(k) && !keyDoes(k));
         const clickMissing = missing.includes('click');
@@ -456,6 +534,27 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
         }
       }
 
+      // ---- Dialogs: a name, and something inside the keyboard can reach
+      if (n.type === 'frame' && n.dialog && !sem.decorative) {
+        if (!sem.label) add(ab, n, 'name', 'issue', 'Dialog has no name', `${n.name} is a dialog with no ARIA label, so a screen reader announces just "dialog" when it opens. Name it after what it is for ("Settings", "Delete this note?").${hiddenNote}`, { fix: labelFix(ab, n, 'a name', meaningfulName(n.name)), key: `${n.id}:dialog` });
+        const cx = a11yContext(ab);
+        let reachable = false;
+        walkAll(n.children, (k) => {
+          if (isTabStop(k, cx)) reachable = true;
+        });
+        if (!reachable) add(ab, n, 'keyboard', 'warning', 'Nothing in the dialog can be reached by keyboard', `${n.name} is a dialog, and nothing inside it is a button, link, field or clickable layer a keyboard can reach. Focus lands on the dialog itself and Escape closes it, but people need something to press.${hiddenNote}`, { key: `${n.id}:dialog` });
+      }
+
+      // ---- Shortcuts: a real key, not shared
+      if (n.shortcut && !sem.decorative) {
+        if (!parseShortcut(n.shortcut)) add(ab, n, 'keyboard', 'warning', 'Shortcut is not a key', `${n.name} has the shortcut "${n.shortcut}", which names no key, so it does nothing. Write a key with any of Ctrl, Alt, Shift or Meta before it: r, 1, Ctrl+Enter.${hiddenNote}`, { key: `${n.id}:shortcut` });
+        else {
+          const same = (shortcutDuplicates(ab).get(shortcutId(n.shortcut)!) ?? []).filter((id) => id !== n.id);
+          if (same.length) add(ab, n, 'keyboard', 'warning', 'Two layers use the same shortcut', `${n.name} and ${same.length} other layer${same.length === 1 ? '' : 's'} use the shortcut "${n.shortcut}", and only the first one runs.${hiddenNote}`, { key: `${n.id}:shortcut` });
+          else if (shortcutKeyEvents(ab, n.shortcut).length) add(ab, n, 'keyboard', 'warning', 'A shortcut and an On key event share keys', `${n.name} has the shortcut "${n.shortcut}", and an On key event listens for the same keys, so both run.${hiddenNote}`, { key: `${n.id}:shortcut` });
+        }
+      }
+
       // ---- Target size
       if (interactive && n.type !== 'link' && target && !(n.type === 'input' && n.inputType === 'textarea')) {
         const sw = Math.hypot(target.m[0], target.m[1]) * n.width;
@@ -470,9 +569,16 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
         if (n.type === 'image' && n.assetId) add(ab, n, 'description', 'warning', 'Picture has no description', `${n.name} has no ARIA label, so a screen reader skips it. If it shows something that matters, describe it. If it is decoration, mark this reviewed.${hiddenNote}`, { fix: labelFix(ab, n, 'a description', meaningfulName(n.name)) });
         else if (n.type === 'video' && (n.assetId || n.src)) add(ab, n, 'description', 'warning', 'Video has no description', `${n.name} has no ARIA label. Say what the video is about in one sentence.${hiddenNote}`, { fix: labelFix(ab, n, 'a description', meaningfulName(n.name)) });
         else if (n.type === 'embed' && n.mode === 'iframe' && n.src) add(ab, n, 'description', 'warning', 'Embedded page has no title', `${n.name} is an embedded page with no ARIA label. Screen reader users get a list of frames by title, and an untitled one is just "frame".${hiddenNote}`, { fix: labelFix(ab, n, 'a title', meaningfulName(n.name)) });
+        else if (n.type === 'chart') add(ab, n, 'description', 'warning', 'Chart has no description', `${n.name} has no ARIA label. Its numbers reach a screen reader as a hidden table${n.table === false ? ' (turned off in its settings)' : ''}, and the chart still needs a name that says what it shows, such as "Sales by month".${hiddenNote}`, { fix: labelFix(ab, n, 'a description', meaningfulName(n.name)) });
+        else if (n.type === 'progress' && n.semantics !== 'none') add(ab, n, 'description', 'warning', 'Progress bar has no name', `${n.name} tells screen readers it is a ${n.semantics === 'meter' ? 'meter' : 'progress bar'} but has no ARIA label, so they hear a value with no subject. Say what it measures, such as "Course progress".${hiddenNote}`, { fix: labelFix(ab, n, 'a name', meaningfulName(n.name)) });
         else if (n.type === 'draw' || n.type === 'shader') add(ab, n, 'description', 'review', `${n.type === 'draw' ? 'Script' : 'Shader'} layer may need a description`, `${n.name} is painted by code. If it shows information (a chart, a diagram), give it an ARIA label that says what it shows. If it is decoration, mark this reviewed.${hiddenNote}`, { fix: labelFix(ab, n, 'a description', '') });
       }
       if (n.type === 'embed' && n.mode === 'html') add(ab, n, 'description', 'review', 'Embedded HTML is not checked', `${n.name} runs your own HTML, which this checker does not read. Test it with a keyboard and a screen reader.`);
+
+      // ---- A video with nothing to play (the player draws a grey box, or the layer's own text, in its place)
+      if (n.type === 'video' && !n.assetId && !n.src?.trim() && !n.bindings?.src && !n.bindings?.assetId) {
+        add(ab, n, 'description', 'warning', 'Video has nothing to play', `${n.name} has no video file or address, so learners see ${n.emptyText?.trim() ? `its own text ("${n.emptyText.trim()}")` : 'an empty grey box'} where the video goes. Choose a video in the layer's settings, or delete the layer.${hiddenNote}`);
+      }
 
       // ---- Video: autoplay and captions
       if (n.type === 'video' && (n.assetId || n.src)) {
@@ -486,8 +592,8 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
             add(ab, n, 'autoplay-media', loud ? 'issue' : 'warning', 'Video starts by itself', `${n.name} plays as soon as it is shown${loud ? ', with sound' : ''}${still ? `${loud ? ' and' : ','} has no controls to pause it` : ''}.${hiddenNote}`, { fix: layerFix(ab, n, loud && still ? 'Mute it and show controls' : loud ? 'Mute it' : 'Show controls', set) });
           }
         }
-        // Captions imported for the layer are there to see; the pictures may still need describing
-        if (!(n as { captions?: unknown[] }).captions?.length) add(ab, n, 'captions', 'review', 'Check this video has captions', `${n.name} is a video. A checker cannot tell whether it has captions or an audio description. Import its captions in the layer's settings, or mark this reviewed when the file has them.`);
+        // Captions imported for the layer are there to see; descriptions written for it (1.2.5) too, a described version in the file only a person knows about
+        if (!(n as { captions?: unknown[] }).captions?.length) add(ab, n, 'captions', 'review', 'Check this video has captions', `${n.name} is a video. A checker cannot tell whether it has captions or an audio description. Import its captions in the layer's settings, or mark this reviewed when the file has them. For the pictures (1.2.5), add descriptions in the same place: a voice on the viewer's device reads them while the video is turned down, and the transcript lists them. That is a cheaper aid, not a recorded described version.`);
       }
 
       // ---- Text: contrast and size
@@ -504,6 +610,11 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
       if ((t.loop !== 'once' || t.duration > 5000) && !inter.pausable.has(t.id)) {
         add(ab, null, 'pause', 'warning', 'No way to pause moving content', `"${t.name}" starts by itself and ${t.loop === 'once' ? `runs for ${Math.round(t.duration / 100) / 10} seconds` : 'loops'}. Nothing on this artboard pauses or stops it.`, { key: t.id });
       }
+    }
+    // ---- Descriptions that sit over speech would be read on top of it
+    for (const t of ab.timelines) {
+      const clashing = (t.descriptions ?? []).flatMap((d) => d.cues).filter((c) => (t.captions ?? []).some((cap) => overlappingSpeech(c, cap.cues).length));
+      if (clashing.length) add(ab, null, 'captions', 'warning', 'Descriptions overlap the captions', `"${t.name}": ${clashing.length} ${clashing.length === 1 ? 'description runs' : 'descriptions run'} while a caption is showing, so the voice would talk over the speech. Move ${clashing.length === 1 ? 'it' : 'them'} into a gap in the Descriptions row.`, { key: `describe-clash:${t.id}` });
     }
     // ---- Narration: sound that carries words needs captions; sound that starts itself needs a way to stop it
     const soundNodes = ab.logic.nodes.some((ln) => ln.kind === 'action.captions' && String(ln.params.op ?? '').startsWith('sound'));
@@ -562,6 +673,36 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
 
   if (!project.settings.title?.trim()) {
     add(null, null, 'title', 'warning', 'The project has no title', 'The title is empty. It is what a screen reader reads first and what the browser tab shows.', { key: 'title', fix: { label: `Use "${project.name}" as the title`, target: { scope: 'project' }, set: { 'settings.title': project.name } } });
+  }
+
+  // ---- Sensors: a project that uses a microphone or camera needs a way to finish without one
+  const sensors = project.settings.sensors;
+  if (declaresSensors(sensors)) {
+    const routes = sensorRoutes(project);
+    const what = sensorsUsed(sensors).map((k) => (k === 'photos' ? 'the photo picker' : `the ${k}`)).join(' and ');
+    if (routes.finishes > 0 && routes.free === 0) {
+      if (sensors?.noAlternative) {
+        add(null, null, 'sensors', 'review', 'No equal way to finish (you said why)', `${usesLine(sensors)} You said there is no equal way to finish: "${sensors.noAlternative}". Learners are told this before they are asked. Check that someone who cannot use ${what} is not left without help (a clear message, and a way to ask for another arrangement).`, { key: 'sensors' });
+      } else {
+        add(
+          null,
+          null,
+          'sensors',
+          'issue',
+          'Needs a microphone or camera to finish',
+          `${usesLine(sensors)} Every way to finish (${routes.finishes} in all) goes through ${what}. Nothing a click, a key or typing alone reaches gets there, so a learner who cannot or would rather not use it is stuck. Add a button or a typed answer that finishes without it, shown when microphone or camera is not "ready". If there cannot be an equal way, say why.`,
+          {
+            key: 'sensors',
+            fix: {
+              label: 'There is no equal way to finish: say why',
+              target: { scope: 'project' },
+              set: {},
+              input: { key: 'settings.sensors.noAlternative', label: 'Why there is no other way', placeholder: 'This task assesses speaking, so it needs a voice', value: '' },
+            },
+          },
+        );
+      }
+    }
   }
 
   const order = new Map(project.artboards.map((a, i) => [a.id, i]));

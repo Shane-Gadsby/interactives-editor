@@ -5,6 +5,7 @@ import { checklistProgress, detachTemplate, findLayer, itemState, setItemDone, u
 import { confirmDialog } from '../components/dialogs';
 import { ReviewModal, UpdateFromTemplateModal } from '../components/TemplateModals';
 import { Icons } from '../components/icons';
+import { fieldById, openFormField } from '../lib/content-form';
 
 /** Take the editor to the layer an item is about: its artboard, the layer selected and in the middle of the canvas. */
 export function revealLayer(nodeId: string, artboardId?: string): boolean {
@@ -97,9 +98,22 @@ export function ChecklistPanel() {
             return (
               <li key={item.id} className={item.done ? 'done' : ''}>
                 <input type="checkbox" checked={!!item.done} aria-label={`Done: ${item.text}`} onChange={(e) => store().update((d) => setItemDone(d, item.id, e.target.checked))} />
-                <button className="link-btn checklist-text" disabled={!item.nodeId && !item.artboardId} onClick={() => select(item.id)} title={item.nodeId ? 'Select the layer this is about' : item.artboardId ? 'Go to the artboard this is about' : 'A general item'}>
-                  {item.text}
-                </button>
+                <div className="checklist-body">
+                  <button className="link-btn checklist-text" disabled={!item.nodeId && !item.artboardId} onClick={() => select(item.id)} title={item.nodeId ? 'Select the layer this is about' : item.artboardId ? 'Go to the artboard this is about' : 'A general item'}>
+                    {item.text}
+                  </button>
+                  {item.detail && (
+                    <details className="checklist-detail">
+                      <summary>Why and how</summary>
+                      <p>{item.detail}</p>
+                    </details>
+                  )}
+                </div>
+                {item.field && fieldById(project.contentForm, item.field) && (
+                  <button className="btn small" title="Open the form at the place where you write this" onClick={() => openFormField(item.field!)}>
+                    Fill in
+                  </button>
+                )}
                 {label && (
                   <span className={`badge${st === 'missing' ? ' usage-flag bad' : ''}`} title={label[1]}>
                     {label[0]}

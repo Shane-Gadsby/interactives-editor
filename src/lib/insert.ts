@@ -2,7 +2,9 @@ import { extOf, reportError, track } from './analytics';
 import { createNode, type Asset, type SceneNode } from 'interactives-player';
 import { store } from '../store/store';
 import { assetKind, assetUrls, imageSize, storeFile, swapAssetId, videoSize } from './assets';
+import { refreshAudioDuration, type ReplacedAudioFit } from './captions-edit';
 import { importSvg } from './svg-import';
+import { askAboutPictures } from './alt-prompt';
 import { acceptsDesignFiles, isDesignFile, pickWithHandles } from './links';
 
 /** Upload files as assets. Images and videos are placed on the artboard at `at` (artboard coordinates). */
@@ -87,7 +89,10 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
     }
   }
   if (!added.length) {
-    if (nodes.length && artboardId) st.addNodes(nodes, { artboardId });
+    if (nodes.length && artboardId) {
+      st.addNodes(nodes, { artboardId });
+      askAboutPictures(projectId, nodes.map((node) => ({ node })));
+    }
     return added;
   }
   st.update((d) => {
@@ -99,7 +104,10 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
       }
     }
   });
-  if (nodes.length && artboardId) st.addNodes(nodes, { artboardId });
+  if (nodes.length && artboardId) {
+    st.addNodes(nodes, { artboardId });
+    askAboutPictures(projectId, nodes.map((node) => ({ node })));
+  }
   const fonts = added.filter((a) => assetKind(a.mime, a.name) === 'font').length;
   if (fonts) st.toast(`Added ${fonts} font${fonts > 1 ? 's' : ''}; pick ${fonts > 1 ? 'them' : 'it'} in a text layer's font list`);
   return added;
@@ -145,7 +153,8 @@ export function acceptFor(mime: string, name: string): string {
  * uploaded under a new asset id and every reference to the old id is pointed at it, in one undo step, so it reaches
  * everyone in a live session like any new upload does (keeping the id would leave other tabs on their cached copy of
  * the old bytes). The record keeps its place in the list. The old bytes stay on the server, so an undo brings them back;
- * the Usage tab's "Remove unused assets" clears them for good.
+ * the Usage tab's "Remove unused assets" clears them for good. A sound on a timeline gets the new file's length, and when that
+ * leaves the timeline too short or no longer the length of its sound, it is offered to fit the timeline to it.
  */
 export async function replaceAssetFile(oldId: string, file: File): Promise<boolean> {
   const st = store();
@@ -166,12 +175,39 @@ export async function replaceAssetFile(oldId: string, file: File): Promise<boole
     return false;
   }
   track('feature', 'asset-replace', { thing: extOf(file.name) });
+  // How long the new sound is, if a timeline plays the old one
+  const onTimeline = p.artboards.some((ab) => ab.timelines.some((tl) => tl.audio?.some((t) => t.assetId === oldId)));
+  const ms = onTimeline && (now === 'audio' || now === 'video') ? await (await import('./waveform')).fileDuration(file) : 0;
+  let fits: ReplacedAudioFit[] = [];
+  const mark = st.historyMark();
   st.update((d) => {
     swapAssetId(d, oldId, asset.id);
     const i = d.assets.findIndex((a) => a.id === asset.id);
     if (i >= 0) d.assets[i] = asset;
     else d.assets.push(asset);
+    fits = refreshAudioDuration(d, asset.id, ms);
   });
-  st.toast(old.name === file.name ? `Updated ${file.name}` : `Replaced ${old.name} with ${file.name}`, 'info');
+  st.toastUndo(old.name === file.name ? `Updated ${file.name}` : `Replaced ${old.name} with ${file.name}`, mark);
+  if (fits.length) await offerFit(fits, ms);
   return true;
+}
+
+/** Ask whether to set the timelines to the length of the sound that replaced theirs (one undo step for all). */
+async function offerFit(fits: ReplacedAudioFit[], ms: number): Promise<void> {
+  const secs = (v: number) => `${Math.round(v / 100) / 10} s`;
+  const names = fits.map((f) => `“${f.timeline}” (${secs(f.was)} to ${secs(f.to)})`).join(', ');
+  const { confirmDialog } = await import('../components/dialogs');
+  const yes = await confirmDialog({
+    title: 'Fit the timeline to the new sound?',
+    message: fits.length === 1 ? `The new sound is ${secs(ms)} long. Set the timeline ${names} to match, so nothing is cut off or left silent?` : `The new sound is ${secs(ms)} long. Set these timelines to match: ${names}?`,
+    confirmLabel: fits.length === 1 ? 'Fit the timeline' : 'Fit the timelines',
+  });
+  if (!yes) return;
+  const st = store();
+  st.update((d) => {
+    for (const ab of d.artboards) for (const tl of ab.timelines) {
+      const f = fits.find((x) => x.timelineId === tl.id);
+      if (f) tl.duration = f.to;
+    }
+  });
 }

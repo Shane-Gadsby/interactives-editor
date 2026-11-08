@@ -3,8 +3,9 @@
  * and Play for the real thing. Open to anyone with the link; a link that allows guests asks them for a display name, one
  * that doesn't wants a signed in StudyDesk user. The pins are an overlay on this page, never part of the project.
  */
+import { useNoProgressHost } from './lib/preview-learner';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Renderer, normalizeProject, prepareNodes, type Artboard, type Project } from 'interactives-player';
+import { Renderer, normalizeProject, prepareNodes, withMaster, type Artboard, type Project } from 'interactives-player';
 import type { Anchor, CommentUser, Person, Thread } from '../shared/comments.mjs';
 import { comments, useComments } from './lib/comments';
 import { anchorAt, pinPlace, placeLabel } from './lib/comment-anchor';
@@ -186,7 +187,7 @@ function ReviewBoard({ project, artboard, scale }: { project: Project; artboard:
     const r = renderer.current;
     if (!r) return;
     const vars = previewScope(project, artboard);
-    r.render(artboard, prepareNodes(artboard.children, { vars }), { vars });
+    r.render(artboard, prepareNodes(withMaster(project.artboards, artboard), { vars }), { vars });
   }, [project, artboard]);
 
   const place = (e: React.MouseEvent) => {
@@ -238,6 +239,7 @@ function ReviewBoard({ project, artboard, scale }: { project: Project; artboard:
 
 /** The real thing, in a sandbox like a share link's: the page built from the project, with its assets fetched through the link. */
 function ReviewPlay({ token, project, startArtboardId, onClose }: { token: string; project: Project; startArtboardId?: string; onClose: () => void }) {
+  const progressHost = useNoProgressHost();
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const bytesFor = useMemo(
@@ -260,7 +262,7 @@ function ReviewPlay({ token, project, startArtboardId, onClose }: { token: strin
   }, [project, startArtboardId, bytesFor]);
   return (
     <div className="review-play" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      {html ? <iframe title="Play" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : <div className="center-msg muted">{error ? `Could not build it: ${error}` : 'Building…'}</div>}
+      {html ? <iframe ref={progressHost} title="Play" sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : <div className="center-msg muted">{error ? `Could not build it: ${error}` : 'Building…'}</div>}
       <button type="button" className="btn review-play-close" onClick={onClose} title="Back to the comments (Esc)">
         Close
       </button>

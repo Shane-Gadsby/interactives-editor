@@ -201,6 +201,9 @@ describe('user data (Save user data / Load user data)', () => {
     await saveUD(sam, { a: 1 });
     expect((await saveUD(sam, { a: 1 }, 'nosuchtokennosuchtoken1')).status).toBe(404);
     await h.call('DELETE', '/api/projects/prlearn001', { user: ann });
+    //kept while the project is in the bin, gone with it for good
+    expect(kept().length).toBeGreaterThan(0);
+    await h.call('DELETE', '/api/bin/prlearn001', { user: ann });
     expect(kept()).toHaveLength(0);
   });
 });
@@ -211,6 +214,26 @@ describe('the learner page', () => {
     expect(r.text).toContain("m.op === 'userdata-save'");
     expect(r.text).toContain("call('PUT', 'user-data'");
     expect(r.text).toContain("'user-data?names='");
+  });
+
+  it('hands the player\'s height on to the page around it (setILARSize), so an embed in StudyDesk tracks the project', async () => {
+    const r = await h.call('GET', `/play/${token}`);
+    expect(r.text).toContain('<script src="/utilities.js"></script>');
+    expect(r.text).toContain("typeof m.height === 'number'");
+    expect(r.text).toContain('setILARSize(null, Math.ceil(m.height)');
+    //Only what the project frame said, and only when there is a page around this one to tell
+    expect(r.text).toContain('e.source !== frame.contentWindow');
+    expect(r.text).toContain('window.parent !== window');
+  });
+
+  it('can be framed by StudyDesk: no frame-ancestors, no X-Frame-Options, and the project frame still gets fullscreen and autoplay', async () => {
+    const r = await h.call('GET', `/play/${token}`);
+    expect(r.headers.get('x-frame-options')).toBeNull();
+    expect(r.headers.get('content-security-policy')).not.toContain('frame-ancestors');
+    expect(r.text).toContain('allow="fullscreen; autoplay"');
+    //A bare query string, like the one the embed code adds, changes nothing
+    const q = await h.call('GET', `/play/${token}?title=Hello&cdtID=1790000000000`);
+    expect(q.status).toBe(200);
   });
 
   it('frames the share link in its sandbox, with a nonce script and a locked-down policy', async () => {
@@ -274,15 +297,69 @@ describe('results for the owner', () => {
     expect((await h.call('GET', '/api/projects/prnothere01/results', { user: ann })).status).toBe(404);
   });
 
+  it('lets only the owner (or a power user) clear results, not a collaborator', async () => {
+    expect((await h.call('POST', '/api/projects/prlearn001/collaborators', { user: ann, json: { username: 'bob' } })).status).toBe(200);
+    expect((await h.call('GET', '/api/projects/prlearn001/results', { user: ann })).json.mayClear).toBe(true);
+    expect((await h.call('GET', '/api/projects/prlearn001/results', { user: bob })).json.mayClear).toBe(false);
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('DELETE', '/api/projects/prlearn001/results', { user: bob })).status).toBe(403);
+    expect((await h.call('DELETE', '/api/projects/prlearn001/results', { user: { username: 'pat', power: true } })).status).toBe(200);
+    process.env.SUITE_SESSION_ENFORCE = '';
+  });
+
   it('clears the records on request, and with the project', async () => {
     expect((await h.call('DELETE', '/api/projects/prlearn001/results', { user: ann })).json).toEqual({ ok: true, deleted: 3 });
     expect(records()).toHaveLength(0);
     await report(sam, result(5));
     await h.call('DELETE', '/api/projects/prlearn001', { user: ann });
+    expect(records().length).toBeGreaterThan(0);
+    await h.call('DELETE', '/api/bin/prlearn001', { user: ann });
     expect(records()).toHaveLength(0);
   });
 
   it('summarises nothing without dividing by zero', () => {
     expect(summarise([])).toMatchObject({ learners: 0, records: 0, completionRate: null, passRate: null, averageBestPercent: null, list: [] });
+  });
+});
+
+describe('in use (the warning before delete or turning the link off)', () => {
+  it('says the share link is on and counts learners per course, newest course first', async () => {
+    expect((await h.call('GET', '/api/projects/prlearn001/in-use', { user: ann })).json).toMatchObject({ share: true, review: false, learners: 0, courses: [] });
+    const gap = () => new Promise((r) => setTimeout(r, 5));
+    await report(sam, result(10));
+    await gap();
+    await report(lee, result(12));
+    await gap();
+    await report(lee2, result(5));
+    const u = (await h.call('GET', '/api/projects/prlearn001/in-use', { user: ann })).json;
+    expect(u.learners).toBe(3);
+    expect(u.courses.map((c: { course: string; learners: number }) => [c.course, c.learners])).toEqual([
+      ['PHY2000_2026_S1', 1],
+      ['MAT1000_2026_S1', 2],
+    ]);
+    expect(u.last).toBeTruthy();
+  });
+
+  it('is only for people who may change the project', async () => {
+    process.env.SUITE_SESSION_ENFORCE = '1';
+    expect((await h.call('GET', '/api/projects/prlearn001/in-use', { user: bob })).status).toBe(403);
+    process.env.SUITE_SESSION_ENFORCE = '';
+  });
+});
+
+describe('results as CSV', () => {
+  it('has a row per learner with scores, and quotes cells that could be formulas', async () => {
+    await report(sam, result(10));
+    await report({ ...lee, fullName: '=HYPERLINK("x")' }, result(15));
+    const r = await h.call('GET', '/api/projects/prlearn001/results.csv', { user: ann });
+    expect(r.status).toBe(200);
+    expect(r.headers.get('content-type')).toMatch(/text\/csv/);
+    const lines = r.text.replace(/^﻿/, '').trim().split('\r\n');
+    expect(lines[0]).toBe('username,name,course,completed,passed,attempts,best score,best max,best percent,last score,last max,last percent,completed at,last active');
+    expect(lines).toHaveLength(3);
+    const lee1 = lines.find((l) => l.startsWith('lee,'))!;
+    expect(lee1).toContain(`"'=HYPERLINK(""x"")"`);
+    expect(lee1).toContain('MAT1000_2026_S1,yes');
+    expect(lee1).toContain(',15,20,');
   });
 });

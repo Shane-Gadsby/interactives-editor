@@ -22,3 +22,15 @@ examples/
    `const db = await import('/src/lib/db.ts'), ie = await import('/src/lib/image-export.ts'); const blob = await ie.projectThumbnail(await db.loadProjectRecord('<projectId>'), 480)`,
    then save `blob` (for example by POSTing it to a small local script that writes the file).
 4. Commit `examples/`. Keep an example small (under a few MB with its files).
+
+## Keeping them tidy
+
+`node scripts/upgrade-examples.mjs [key ...]` (also `npm run examples:upgrade`) is the one place the shipped examples are brought up to the
+editor's native features: it edits each `project.json` with the editor's own helpers (graph tidy for every interaction graph, the artboard
+tidy for the canvas, the player's layout for the layout demos), applies the per-example changes written in `scripts/examples-upgrade.ts`, and
+gives each example its author notes. The notes (ids starting `note_example_`) sit beside the artboard, never over a layer, are never drawn
+by the player, and are replaced rather than added to on a second run, so running it twice changes nothing (`test/examples.test.ts` checks
+that, plays every example, and keeps the notes off the artboards). An example whose interaction graph is more than 5 nodes also gets graph notes
+(`graphNotes` in its entry, ids starting `note_example_gn_`, kept in `logic.notes` and anchored to a node so the tidy moves them with it), one or two
+that say what the flow does; the Rive import has one overview note. They are stripped from anything that plays, like the canvas notes. When you add an example, add its entry to `UPGRADES` there. Rebuild a
+`thumb.jpg` whenever an upgrade changes what the first artboard looks like.

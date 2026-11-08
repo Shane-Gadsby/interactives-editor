@@ -25,9 +25,9 @@ export interface AnimationImport {
   lastModified?: number;
 }
 
-export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft';
+export const ANIMATION_ACCEPT = '.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,.pptx';
 
-/** Read a Lottie (.json/.lottie), Rive (.riv, or the editor's own .rev), Photoshop (.psd), Illustrator (.ai), PDF, AutoCAD (.dxf/.dwg), VectorCraft (.vectorcraft) or PhotoCraft (.pcraft) file into artboards. */
+/** Read a Lottie (.json/.lottie), Rive (.riv, or the editor's own .rev), Photoshop (.psd), Illustrator (.ai), PDF, AutoCAD (.dxf/.dwg), VectorCraft (.vectorcraft), PhotoCraft (.pcraft) or PowerPoint (.pptx) file into artboards. */
 export async function readAnimationFile(file: File): Promise<AnimationImport> {
   const ext = extOf(file.name);
   const done = span('import', 'read', { thing: ext });
@@ -75,6 +75,10 @@ async function readAnimationFileInner(file: File): Promise<AnimationImport> {
   if (/\.(vectorcraft|drawcraft)$/i.test(file.name) || gzip || (jsonLike && /"format"\s*:\s*"(vectorcraft|drawcraft)"/.test(new TextDecoder().decode(bytes.subarray(0, 256))))) {
     const { importVectorCraft, isVectorCraft } = await import('./vectorcraft-import');
     if (/\.(vectorcraft|drawcraft)$/i.test(file.name) || isVectorCraft(bytes)) return { ...importVectorCraft(bytes, base), source: 'VectorCraft' };
+  }
+  if (/\.pptx$/i.test(file.name) || zip) {
+    const { importPptx, isPptx } = await import('./pptx-import');
+    if (/\.pptx$/i.test(file.name) || isPptx(bytes)) return { ...importPptx(bytes, base), source: 'PowerPoint' };
   }
   if (/\.pcraft$/i.test(file.name) || zip) {
     const { importPhotoCraft, isPhotoCraft } = await import('./photocraft-import');
@@ -174,6 +178,7 @@ export async function addImportedArtboard(imp: AnimationImport, link?: FileLink)
     list = list.map((a, i) => ({ ...a, source: sources[i] }));
   }
   const start = list.find((a) => a.id === imp.artboard.id) ?? list[0];
+  const mark = st.historyMark();
   st.update((d) => {
     d.assets.push(...imp.assets.map((a) => ({ id: a.id, name: a.name, mime: a.mime, size: a.bytes.byteLength })));
     d.artboards.push(...list);
@@ -181,7 +186,7 @@ export async function addImportedArtboard(imp: AnimationImport, link?: FileLink)
     for (const f of imp.fonts ?? []) if (!d.fonts.some((x) => x.family === f.family)) d.fonts.push(f);
   });
   st.set({ activeArtboardId: start.id, artboardSelected: true, selection: [], activeTimelineId: start.timelines[0]?.id ?? null, bottomTab: 'timeline' });
-  showReport(`Imported ${imp.source}: ${list.length > 1 ? `${list.length} artboards` : start.name}${link ? `, linked to ${link.file.name}` : ''}`, imp.warnings);
+  showReport(`Imported ${imp.source}: ${list.length > 1 ? `${list.length} artboards` : start.name}${link ? `, linked to ${link.file.name}` : ''}`, imp.warnings, mark);
 }
 
 /** Create a whole new project from an animation file (projects page). */
@@ -228,9 +233,14 @@ function mergeVariables(into: Variable[], add: Variable[], artboards: Artboard[]
   }
 }
 
-export function showReport(title: string, lines: string[]): void {
-  if (lines.length) store().set({ report: { title, lines } });
-  else store().toast(title);
+export function showReport(title: string, lines: string[], mark?: number): void {
+  const st = store();
+  if (mark !== undefined) {
+    // an import carries an Undo button, on the message or in the report
+    if (lines.length) st.setReportUndo(title, lines, mark);
+    else st.toastUndo(title, mark);
+  } else if (lines.length) st.set({ report: { title, lines } });
+  else st.toast(title);
 }
 
 /** Export the active artboard as Lottie JSON or dotLottie. */
@@ -269,13 +279,16 @@ export async function updateFromFile(linkId: string): Promise<void> {
   }
   try {
     track('feature', 'design-update', { thing: kind });
+    const mark = st.historyMark();
     const r = await reimportLink(st, linkId, file);
     // A new version saved under a new name: the artboards say where they came from now
     if (file.name !== src.fileName)
       st.update((d) => {
         for (const ab of d.artboards) if (ab.source?.linkId === linkId) ab.source.fileName = file.name;
       });
-    st.toast(`${r.changed ? r.message : `${file.name}: nothing has changed since the last update.`}${r.missing.length ? ` Not in the new file: ${r.missing.join(', ')}.` : ''}`, 'info');
+    const said = `${r.changed ? r.message : `${file.name}: nothing has changed since the last update.`}${r.missing.length ? ` Not in the new file: ${r.missing.join(', ')}.` : ''}`;
+    if (r.changed) st.toastUndo(said, mark);
+    else st.toast(said, 'info');
   } catch (err) {
     st.toast(`${file.name}: ${err instanceof Error ? err.message : String(err)}`, 'error');
   }

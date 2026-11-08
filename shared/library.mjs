@@ -27,7 +27,7 @@ export const stable = (value) => JSON.stringify(value, (key, v) => v && typeof v
 export const hashOf = (value) => cyrb53(stable(value)).toString(36)
 
 //Where an artboard sits and who it is linked to is not part of what it looks like
-const LOCAL_KEYS = ['canvasX', 'canvasY', 'canvasHidden', 'guides', 'publish', 'library', 'source']
+const LOCAL_KEYS = ['canvasX', 'canvasY', 'canvasHidden', 'guides', 'grid', 'publish', 'library', 'source']
 
 export const hashArtboard = (ab) => hashOf(Object.fromEntries(Object.entries(ab).filter(([k]) => !LOCAL_KEYS.includes(k))))
 
@@ -43,7 +43,7 @@ export const cleanArtboard = (ab) => {
 	return copy
 }
 
-//Artboards an artboard places as instances, at any depth of its layers
+//Artboards an artboard places as instances, at any depth of its layers, and the page master it draws
 export const instanceTargets = (ab) => {
 	let found = new Set(),
 		walk = (list) => {
@@ -54,6 +54,8 @@ export const instanceTargets = (ab) => {
 		}
 
 	walk(ab.children)
+
+	if (ab.master) found.add(ab.master)
 
 	return [...found]
 }
@@ -150,6 +152,10 @@ export const mayUseLibrary = (lib, me, enforcing) => {
 
 	return lib.owner.username === me.username || !!lib.shared?.everyone || (lib.shared?.users || []).includes(me.username)
 }
+
+//Who may publish, mark and withdraw a brand kit: a power user (the suite's rule, decided by the caller), or anybody whose
+//session access list holds the group named in the server's settings. No group set means power users only
+export const mayMarkBrand = (access, power, group) => !!power || (typeof group === 'string' && group.trim() !== '' && Array.isArray(access) && access.includes(group.trim()))
 
 //The mongo filter for the same rule, for the list route
 export const accessFilter = (me, enforcing) => {

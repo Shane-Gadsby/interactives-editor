@@ -2,6 +2,8 @@ import { defaultLayout, getDock, movePanel, normalise, setDock, showPanel, type 
 import { getPanelWidths, PANEL_WIDTH, setPanelWidths } from '../components/PanelResize';
 import { prefs, setPrefs } from './prefs';
 import { store } from '../store/store';
+import { essentialsLayout } from './essentials';
+import { noteEssentialsApplied, wantsEssentials } from './onboarding';
 
 /**
  * Workspaces: whole panel arrangements to switch between (Preferences > Workspace). One is the dock layout (lib/dock.ts),
@@ -38,6 +40,12 @@ export const BUILT_IN: { id: string; name: string; about: string; make: () => Om
     make: () => ({ layout: defaultLayout(), widths: def(), bottomHeight: 260 }),
   },
   {
+    id: 'essentials',
+    name: 'Essentials',
+    about: 'Only what a first project needs: Timeline, Interactions, Variables and the checklist along the bottom, and the Shapes, Text, Media and Web tools. Everything else is one click away under More panels',
+    make: () => ({ layout: essentialsLayout(defaultLayout()), widths: def(), bottomHeight: 260 }),
+  },
+  {
     id: 'animate',
     name: 'Animate',
     about: 'A tall timeline across the bottom, with the layers and properties beside the canvas',
@@ -58,7 +66,7 @@ export const BUILT_IN: { id: string; name: string; about: string; make: () => Om
     name: 'Big canvas',
     about: 'Everything on the right in one column of tabs, and the bottom tools folded away, for the most room to design',
     make: () => {
-      const l = gather(defaultLayout(), 'right', ['inspector', 'layers', 'assets', 'libraries', 'comments']);
+      const l = gather(defaultLayout(), 'right', ['inspector', 'layers', 'assets', 'icons', 'libraries', 'comments']);
       return { layout: { ...l, bottomFolded: true }, widths: { left: PANEL_WIDTH.left.def, right: 400 }, bottomHeight: 260 };
     },
   },
@@ -93,10 +101,24 @@ export function savedWorkspaces(): SavedWorkspace[] {
 export function applyWorkspace(w: Omit<Workspace, 'id' | 'name'>): void {
   setDock(normalise(w.layout));
   setPanelWidths(w.widths);
-  store().set({ bottomHeight: Math.max(140, Math.min(window.innerHeight - 200, w.bottomHeight)) });
+  // no more than half the window, so a short screen keeps room for the canvas and the tool bar
+  store().set({ bottomHeight: Math.max(140, Math.min(window.innerHeight - 200, Math.round(window.innerHeight * 0.5), w.bottomHeight)) });
   // the tool panel that's open now is the one code thinks of as open
   const bottom = getDock().zones.bottom.active;
   if (bottom && !getDock().bottomFolded) store().set({ bottomTab: bottom as never });
+}
+
+/**
+ * Someone new (they saw the first-run screen) opens their first project in Essentials, once. Whatever tab the project asked for
+ * (a template's Checklist) stays the one that is open. Returns whether it did anything.
+ */
+export function applyNewcomerEssentials(): boolean {
+  if (!wantsEssentials()) return false;
+  const asked = store().get().bottomTab;
+  applyWorkspace(BUILT_IN.find((w) => w.id === 'essentials')!.make());
+  if (asked) store().set({ bottomTab: asked });
+  noteEssentialsApplied();
+  return true;
 }
 
 /** The current arrangement, to save. */

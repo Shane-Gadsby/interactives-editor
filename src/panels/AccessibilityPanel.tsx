@@ -34,8 +34,9 @@ function applyOne(f: Finding, typed?: string): void {
   }
   const fix = f.fix;
   track('feature', 'a11y-fix', { thing: f.check, detail: { severity: f.severity } });
+  const mark = store().historyMark();
   store().update((d) => void applyFix(d as Project, fix, typed));
-  store().toast(`${f.fix.label}: done. Undo with Ctrl+Z`);
+  store().toastUndo(`${f.fix.label}: done.`, mark);
 }
 
 /** Every fix that needs no typing, as one undo step. */
@@ -44,10 +45,11 @@ function applyQuick(list: Finding[]): void {
   if (!fixes.length) return;
   track('feature', 'a11y-fix-all', { sum: { fixes: fixes.length } });
   for (const f of list) if (f.fix && !f.fix.input) track('feature', 'a11y-fix', { thing: f.check, detail: { severity: f.severity, bulk: true } });
+  const mark = store().historyMark();
   store().update((d) => {
     for (const fx of fixes) applyFix(d as Project, fx);
   });
-  store().toast(`${fixes.length} fix${fixes.length === 1 ? '' : 'es'} applied. Undo with Ctrl+Z`);
+  store().toastUndo(`${fixes.length} fix${fixes.length === 1 ? '' : 'es'} applied.`, mark);
 }
 
 /** Lists what automatic accessibility checks found, per artboard, with a plain reason for each and a fix where one is safe. */
@@ -158,7 +160,7 @@ export function AccessibilityPanel() {
                   }}
                 >
                   <span className={`a11y-dot ${f.severity}`} aria-label={SEVERITY.find((s) => s.id === f.severity)!.label} />
-                  <span className="a11y-row-text">
+                  <span className="a11y-row-text" title={`${f.title}${f.nodeName ? ` · ${f.nodeName}` : ''}`}>
                     <strong>{f.title}</strong>
                     {f.nodeName && <span className="muted"> · {f.nodeName}</span>}
                   </span>

@@ -9,6 +9,7 @@ import {
   frameTime,
   sampleKeys,
   cloneWithNewIds,
+  remapConnectorIds,
   getPath,
   isContainer,
   setPath,
@@ -22,6 +23,7 @@ import {
   sanitizeLayerInPlace,
   setBase,
   setMembers,
+  masterOf,
   type Artboard,
   type Keyframe,
   type Project,
@@ -34,6 +36,11 @@ import {
 } from 'interactives-player';
 import { applyRuns, nodePropsToRunStyle } from '../lib/rich-text';
 import { lockViolation, unlinkStyleRef } from '../lib/libraries';
+import { clampBrandInstances, hasBrandArtboards } from '../lib/brand';
+import { brandLookViolation, isBrandLocked, lockBrandChrome, snapToBrand } from '../lib/branded/lock';
+import { applyTidy } from '../lib/artboard-tidy';
+import { alignBoards, distributeBoards, freshGroupName, leaveGroups, makeGroup, pickedArtboardIds, pruneGroups, removeGroup, withSets, type AlignMode } from '../lib/artboard-groups';
+import { applyAnimation, type AnimOptions, type AnimPresetId, type AnimResult } from '../lib/animate-presets';
 import { addModifier, applyPreset, removeModifier, type TextPresetId } from '../lib/text-modifiers';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths, remapPointTracks, shapeToPaths } from '../lib/path-edit';
@@ -45,6 +52,7 @@ import { adoptQuestions, dropOrphanKitNodes } from '../lib/question-kit';
 import { track } from '../lib/analytics';
 import { noteNodeAdded, noteProps } from '../lib/usage';
 import { variantPlan, type VariantSide } from '../lib/variants-edit';
+import { detachMaster, dropMasterRefs, markMaster, setMaster } from '../lib/page-master';
 
 /** Whether any frame in a tree has auto layout. */
 function hasAutoLayout(list: SceneNode[]): boolean {
@@ -134,6 +142,7 @@ export type Tool =
   | 'pen'
   | 'pencil'
   | 'bend'
+  | 'connector'
   | 'text'
   | 'frame'
   | 'image'
@@ -144,8 +153,11 @@ export type Tool =
   | 'video'
   | 'draw'
   | 'shader'
+  | 'progress'
+  | 'chart'
   | 'bone'
-  | 'comment';
+  | 'comment'
+  | 'note';
 
 /** Called whenever something sets bottomTab: the dock shows that panel (lib/dock.ts registers it). */
 let panelRequestHandler: ((id: BottomTab | null) => void) | null = null;
@@ -153,7 +165,7 @@ export function onPanelRequest(fn: ((id: BottomTab | null) => void) | null): voi
   panelRequestHandler = fn;
 }
 
-export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface' | 'checklist' | 'themes';
+export type BottomTab = 'timeline' | 'logic' | 'scripts' | 'variables' | 'data' | 'usage' | 'a11y' | 'insights' | 'interface' | 'checklist' | 'themes' | 'credits';
 
 /** Where learners clicked on one artboard (from Insights), drawn over the canvas as a heat map. Never saved. */
 export interface HeatOverlay {
@@ -169,14 +181,25 @@ export interface EditorState {
   selection: string[];
   /** The active artboard itself is selected (its frame, not its layers). */
   artboardSelected: boolean;
+  /**
+   * Every artboard that is selected when more than one is (Ctrl+click or Shift+click on a name on the canvas or a row in the
+   * Layers panel). Only counts while `artboardSelected` is on and `activeArtboardId` is in it; `pickedArtboardIds` has the rule.
+   * Anything else that picks an artboard or a layer sets this back to empty (see `set`).
+   */
+  artboardPicked: string[];
   /** Container the user double-clicked into: clicks select its children. */
   focusId: string | null;
   tool: Tool;
+  /** The sticky note picked on the canvas, and the one being typed into (interface state, never saved). */
+  selectedNote: string | null;
+  editingNote: string | null;
   zoom: number;
   panX: number;
   panY: number;
   editingPathId: string | null;
   editingTextId: string | null;
+  /** The picture layer being cropped on the canvas (drag it inside its frame, scroll to zoom). Interface state, never saved. */
+  croppingId: string | null;
   /** Draw bone glyphs on the canvas (they are never drawn in the player). */
   showBones: boolean;
   /** The selected range (UTF-16 offsets into the layer's text) while editing text on the canvas; style changes apply to it. */
@@ -204,11 +227,15 @@ export interface EditorState {
    * one of them the settings column shows; it wins when it isn't in this list (something else selected a single node).
    */
   logicPicked: string[];
+  /** The Interactions panel as the node graph, or as the sentences it says (read only, from the same graph). */
+  logicView: 'graph' | 'sentences';
   saveState: 'saved' | 'saving' | 'dirty' | 'error';
   saveError: string | null;
-  toast: { text: string; kind: 'info' | 'error' } | null;
+  /** A power user (or brand group member) has switched the brand kit lock off for this session (F9). Nothing is saved with it. */
+  brandOverride: boolean;
+  toast: Toast | null;
   /** A list worth reading (import/export notes), shown in a dialog. */
-  report: { title: string; lines: string[] } | null;
+  report: { title: string; lines: string[]; undo?: { steps: number; tick: number } } | null;
   /** Live editing connection, when there is one. */
   live: { status: 'live' | 'reconnecting' | 'deleted'; color?: string } | null;
   /** Other people in the project right now. */
@@ -221,6 +248,19 @@ interface HistoryEntry {
   activeArtboardId: string;
   /** How many remote batches (of `EditorStore.remoteTotal`) this snapshot has the changes of; the rest are put on when it is used. */
   seen: number;
+}
+
+/** The button on a message: undo (or redo) the `steps` changes it is about, as long as nothing else has changed since. */
+export interface ToastAction {
+  kind: 'undo' | 'redo';
+  steps: number;
+  /** Set once another change has been made, so the button can no longer mean "exactly that change". */
+  stale?: boolean;
+}
+export interface Toast {
+  text: string;
+  kind: 'info' | 'error';
+  action?: ToastAction;
 }
 
 type Listener = () => void;
@@ -243,6 +283,10 @@ export class EditorStore {
   private remoteTotal = 0;
   private lastCoalesce: { key: string; time: number } | null = null;
   private lastLockToast = 0;
+  /** Counts undo steps ever made, so a message can tell which change it is about. */
+  private pushes = 0;
+  /** Counts every change to the history (a step added, an undo, a redo), so a button can tell nothing else happened since. */
+  private ticks = 0;
   /** Bumped on each document change, for autosave. */
   revision = 0;
   /** Live editing hook: called with the document before and after every local change. */
@@ -251,7 +295,7 @@ export class EditorStore {
   constructor(project: Project) {
     // Lay out auto-layout frames once on open, so the first edit (and its undo) starts from settled positions.
     // (an unchanged produce still freezes the document, so a stray in-place edit throws instead of corrupting history)
-    this.state = EditorStore.initial(settleLayout(produce(project, () => undefined)));
+    this.state = EditorStore.initial(settleLayout(lockBrandChrome(produce(project, () => undefined))));
   }
 
   static initial(project: Project): EditorState {
@@ -261,13 +305,17 @@ export class EditorStore {
       activeArtboardId: project.settings.startArtboardId ?? first?.id ?? '',
       selection: [],
       artboardSelected: false,
+      artboardPicked: [],
       focusId: null,
       tool: 'select',
+      selectedNote: null,
+      editingNote: null,
       zoom: 1,
       panX: 80,
       panY: 80,
       editingPathId: null,
       editingTextId: null,
+      croppingId: null,
       showBones: true,
       textSelection: null,
       bottomTab: 'timeline',
@@ -282,8 +330,10 @@ export class EditorStore {
       selectedKeys: [],
       logicSelection: null,
       logicPicked: [],
+      logicView: 'graph',
       saveState: 'saved',
       saveError: null,
+      brandOverride: false,
       toast: null,
       report: null,
       live: null,
@@ -304,7 +354,10 @@ export class EditorStore {
 
   /** UI state change (not undoable). */
   set(partial: Partial<EditorState> | ((s: EditorState) => Partial<EditorState>)): void {
-    const p = typeof partial === 'function' ? partial(this.state) : partial;
+    let p = typeof partial === 'function' ? partial(this.state) : partial;
+    // Choosing an artboard (or going back to layers) on its own means just that one: a multi-selection only survives a change
+    // that carries its own list
+    if (('activeArtboardId' in p || 'artboardSelected' in p) && !('artboardPicked' in p) && this.state.artboardPicked.length) p = { ...p, artboardPicked: [] };
     this.state = { ...this.state, ...p };
     this.emit();
     //Asking for a panel shows it even when it's the one already asked for (it may be docked out of sight since)
@@ -313,26 +366,47 @@ export class EditorStore {
 
   /**
    * Change the document. Consecutive changes with the same `coalesce` key
-   * within a second (e.g. a drag) become one undo step.
+   * within a second (e.g. a drag) become one undo step. `library` is for library operations and `brand` for the editor's own
+   * changes to a branded project's chrome (the learner colourway switcher); both skip the lock that guards them.
    */
-  update(recipe: (draft: Draft<Project>) => void, opts: { coalesce?: string; library?: boolean } = {}): void {
+  update(recipe: (draft: Draft<Project>) => void, opts: { coalesce?: string; library?: boolean; brand?: boolean } = {}): void {
     const before = this.state.project;
     // Artboards that came from a library are read-only: a change that touches one (other than moving or renaming it)
-    // is refused. Library operations (insert, update, detach) say so with `library: true`.
+    // is refused. Library operations (insert, update, detach) say so with `library: true`. A brand kit's copies are
+    // stricter still (brand.ts), and the only ones the override lets through
     let edited: Project | null = null;
     if (!opts.library && before.artboards.some((a) => a.library)) {
       edited = produce(before, (d) => {
         recipe(d);
       });
-      const locked = lockViolation(before, edited);
+      const override = this.state.brandOverride;
+      const locked = lockViolation(before, edited, override);
       if (locked) {
         const now = Date.now();
         if (now - this.lastLockToast > 1500) {
           this.lastLockToast = now;
-          this.toast(`“${locked.name}” comes from a library and is read-only. Detach it to edit it here.`, 'error');
+          this.toast(locked.library?.brand ? `“${locked.name}” is part of a brand kit and is locked.` : `“${locked.name}” comes from a library and is read-only. Detach it to edit it here.`, 'error');
         }
         return;
       }
+      // Instances of brand kit artboards keep the kit's proportions and size range
+      if (!override && hasBrandArtboards(edited)) edited = clampBrandInstances(before, edited);
+    }
+    // A project made from a branded starter pack keeps its brand layers, theme colours and font (branded/lock.ts), until the override
+    if (!opts.library && !opts.brand && !this.state.brandOverride && isBrandLocked(before)) {
+      edited ??= produce(before, (d) => {
+        recipe(d);
+      });
+      const why = brandLookViolation(before, edited);
+      if (why) {
+        const now = Date.now();
+        if (now - this.lastLockToast > 1500) {
+          this.lastLockToast = now;
+          this.toast(why, 'error');
+        }
+        return;
+      }
+      edited = snapToBrand(before, edited);
     }
     // Auto-layout frames re-position their children after every change, in the same undo step.
     const next = settleLayout(edited ?? produce(before, (d) => void recipe(d)), true);
@@ -341,8 +415,10 @@ export class EditorStore {
     const merge = opts.coalesce && this.lastCoalesce && this.lastCoalesce.key === opts.coalesce && t - this.lastCoalesce.time < 1000;
     if (!merge) {
       this.past.push({ project: before, selection: this.state.selection, activeArtboardId: this.state.activeArtboardId, seen: this.remoteTotal });
+      this.pushes++;
       if (this.past.length > HISTORY_LIMIT) this.past.shift();
     }
+    this.staleToastAction();
     this.lastCoalesce = opts.coalesce ? { key: opts.coalesce, time: t } : null;
     if (!merge) track('doc', 'edit');
     this.future = [];
@@ -455,6 +531,7 @@ export class EditorStore {
 
   private restore(h: HistoryEntry): void {
     this.lastCoalesce = null;
+    this.staleToastAction();
     this.revision++;
     const before = this.state.project;
     queueMicrotask(() => this.onLocalChange?.(before, h.project));
@@ -477,20 +554,24 @@ export class EditorStore {
     const activeTimelineId = ab?.timelines.some((t) => t.id === s.activeTimelineId) ? s.activeTimelineId : null;
     const focusId = ab && s.focusId && locate(ab, s.focusId) ? s.focusId : null;
     const editingPathId = ab && s.editingPathId && locate(ab, s.editingPathId) ? s.editingPathId : null;
-    // a group can be selected too, not only a node
-    const inGraph = (id: string) => !!ab && (ab.logic.nodes.some((n) => n.id === id) || !!ab.logic.groups?.some((g) => g.id === id));
+    const croppingId = ab && s.croppingId && locate(ab, s.croppingId)?.node.type === 'image' ? s.croppingId : null;
+    // a group can be selected too, not only a node, and so can a note on the graph
+    const inGraph = (id: string) => !!ab && (ab.logic.nodes.some((n) => n.id === id) || !!ab.logic.groups?.some((g) => g.id === id) || !!ab.logic.notes?.some((n) => n.id === id));
     const logicSelection = s.logicSelection && inGraph(s.logicSelection) ? s.logicSelection : null;
     const logicPicked = s.logicPicked.every(inGraph) ? s.logicPicked : s.logicPicked.filter(inGraph);
+    const artboardPicked = s.artboardPicked.every((id) => !!getArtboard(s.project, id)) ? s.artboardPicked : s.artboardPicked.filter((id) => !!getArtboard(s.project, id));
     if (
+      artboardPicked !== s.artboardPicked ||
       activeArtboardId !== s.activeArtboardId ||
       selection.length !== s.selection.length ||
       activeTimelineId !== s.activeTimelineId ||
       focusId !== s.focusId ||
       editingPathId !== s.editingPathId ||
+      croppingId !== s.croppingId ||
       logicSelection !== s.logicSelection ||
       logicPicked !== s.logicPicked
     ) {
-      this.state = { ...s, activeArtboardId, selection, activeTimelineId, focusId, editingPathId, logicSelection, logicPicked };
+      this.state = { ...s, activeArtboardId, selection, activeTimelineId, focusId, editingPathId, croppingId, logicSelection, logicPicked, artboardPicked };
     }
   }
 
@@ -519,12 +600,68 @@ export class EditorStore {
     });
   }
 
-  toast(text: string, kind: 'info' | 'error' = 'info'): void {
-    this.set({ toast: { text, kind } });
+  toast(text: string, kind: 'info' | 'error' = 'info', action?: ToastAction): void {
+    this.set({ toast: { text, kind, action } });
     const current = this.state.toast;
     setTimeout(() => {
       if (this.state.toast === current) this.set({ toast: null });
-    }, kind === 'error' ? 6000 : 2500);
+    }, kind === 'error' ? 6000 : action ? 9000 : 2500);
+  }
+
+  /** Where the undo history is now: take it before a command that ends in `toastUndo`. */
+  historyMark(): number {
+    return this.pushes;
+  }
+
+  /**
+   * A message with an Undo button that takes back exactly what a command just did (every undo step it made since `mark`).
+   * The button turns itself off the moment anything else changes the document, so it can never undo something else.
+   * Nothing changed since `mark` is a plain message.
+   */
+  toastUndo(text: string, mark: number): void {
+    const steps = this.pushes - mark;
+    this.toast(text, 'info', steps > 0 ? { kind: 'undo', steps } : undefined);
+  }
+
+  /** What the button on a message does. Returns false when it was already stale (the message is left to run out). */
+  runToastAction(): boolean {
+    const a = this.state.toast?.action;
+    if (!a || a.stale) return false;
+    const back = a.kind === 'undo';
+    for (let i = 0; i < a.steps; i++) back ? this.undo() : this.redo();
+    // the opposite button, for as many steps as were just taken
+    this.toast(back ? 'Undone' : 'Redone', 'info', { kind: back ? 'redo' : 'undo', steps: a.steps });
+    return true;
+  }
+
+  /**
+   * A report (the dialog after an import that left things out) with an Undo button for the command that made it, or a plain
+   * message when the command changed nothing.
+   */
+  setReportUndo(title: string, lines: string[], mark: number): void {
+    const steps = this.pushes - mark;
+    this.set({ report: { title, lines, undo: steps > 0 ? { steps, tick: this.ticks } : undefined } });
+  }
+
+  /** The Undo button in a report: takes back that command, unless something else has changed since. */
+  undoReport(): boolean {
+    const u = this.state.report?.undo;
+    if (!u) return false;
+    this.set({ report: null });
+    if (u.tick !== this.ticks) {
+      this.toast('Something else has changed since, so Undo here would take back that instead. Ctrl+Z still undoes the latest change.');
+      return false;
+    }
+    for (let i = 0; i < u.steps; i++) this.undo();
+    this.toast('Undone', 'info', { kind: 'redo', steps: u.steps });
+    return true;
+  }
+
+  private staleToastAction(): void {
+    this.ticks++;
+    const t = this.state.toast;
+    if (!t?.action || t.action.stale) return;
+    this.state = { ...this.state, toast: { ...t, action: { ...t.action, stale: true } } };
   }
 
   // ---------------------------------------------------------------- node editing
@@ -566,7 +703,7 @@ export class EditorStore {
         const loc = locate(ab as Artboard, id);
         if (!loc) continue;
         for (const [prop, value] of Object.entries(props)) {
-          if (animatableProp(prop) && (record || animated(id, prop))) {
+          if (animatableProp(prop, loc.node) && (record || animated(id, prop))) {
             const dtl = ab.timelines.find((t) => t.id === tl!.id)!;
             setKey(dtl as Timeline, id, prop, keyTime(dtl as Timeline, s.playhead), value as Keyframe['value']);
           } else if (prop === 'text' && loc.node.type === 'text' && loc.node.runs?.length) {
@@ -629,7 +766,7 @@ export class EditorStore {
     const ab = this.artboard();
     if (!ab) return;
     if (this.state.artboardSelected) {
-      this.deleteArtboard(ab.id);
+      this.deleteArtboards(this.pickedArtboards());
       return;
     }
     const ids = new Set(this.state.selection);
@@ -658,6 +795,11 @@ export class EditorStore {
   }
 
   duplicateSelection(offset = 10): void {
+    // With artboards selected (not layers), Ctrl+D duplicates the artboards
+    if (this.state.artboardSelected) {
+      this.duplicateArtboards(this.pickedArtboards());
+      return;
+    }
     track('doc', 'duplicate');
     const ab = this.artboard();
     if (!ab) return;
@@ -681,6 +823,43 @@ export class EditorStore {
       adoptQuestions(d as Project, ab.id, newIds);
     });
     this.select(newIds);
+  }
+
+  /**
+   * Resize the artboard to the bounds of the selected layers, keeping everything where it is on the canvas: the artboard moves
+   * to the selection's corner, its top-level layers (and their x/y keyframes) shift by the same amount the other way. Only for
+   * a selection on one artboard (a layer selection always is; with several artboards picked it does nothing).
+   */
+  fitArtboardToSelection(): boolean {
+    const ab = this.artboard();
+    if (!ab || !this.state.selection.length || pickedArtboardIds(this.state).length > 1) return false;
+    const b = selectionBounds(ab, topmost(ab, this.state.selection));
+    if (!b || b.width < 1 || b.height < 1) return false;
+    const x0 = Math.floor(b.x);
+    const y0 = Math.floor(b.y);
+    const w = Math.ceil(b.x + b.width) - x0;
+    const h = Math.ceil(b.y + b.height) - y0;
+    if (!x0 && !y0 && w === ab.width && h === ab.height) return false;
+    track('doc', 'fit-artboard');
+    this.update((d) => {
+      const dab = getArtboard(d as Project, ab.id)!;
+      const top = new Set(dab.children.map((n) => n.id));
+      for (const n of dab.children) {
+        n.x -= x0;
+        n.y -= y0;
+      }
+      for (const tl of dab.timelines)
+        for (const tr of tl.tracks) {
+          if (!top.has(tr.nodeId) || (tr.prop !== 'x' && tr.prop !== 'y')) continue;
+          const by = tr.prop === 'x' ? x0 : y0;
+          for (const k of tr.keys) if (typeof k.value === 'number') k.value -= by;
+        }
+      dab.canvasX += x0;
+      dab.canvasY += y0;
+      dab.width = w;
+      dab.height = h;
+    });
+    return true;
   }
 
   groupSelection(): void {
@@ -819,6 +998,7 @@ export class EditorStore {
     const src = this.artboard();
     if (!src || src.id === targetId) return;
     const moved: string[] = [];
+    const mark = this.historyMark();
     this.update((d) => {
       const sab = getArtboard(d as Project, src.id)!;
       const tab = getArtboard(d as Project, targetId);
@@ -845,7 +1025,7 @@ export class EditorStore {
     if (moved.length) {
       this.set({ activeArtboardId: targetId, selection: moved, activeTimelineId: null });
       const tab = getArtboard(this.state.project, targetId);
-      this.toast(`Moved ${moved.length === 1 ? 'the layer' : `${moved.length} layers`} to “${tab?.name}”.`);
+      this.toastUndo(`Moved ${moved.length === 1 ? 'the layer' : `${moved.length} layers`} to “${tab?.name}”.`, mark);
     }
   }
 
@@ -962,6 +1142,116 @@ export class EditorStore {
 
   // ---------------------------------------------------------------- artboards
 
+  /**
+   * Tidy up artboards: lay them out in a grid in the Artboards list order (lib/artboard-tidy.ts), each artboard group together
+   * as a block of its own. With `ids`, only those (and the rest of their responsive sets) are laid out, among themselves, where
+   * their top left corner is now. One undo step, and since it goes through update() it reaches live rooms like any edit.
+   * Returns how many artboards moved.
+   */
+  tidyArtboards(ids?: string[]): number {
+    track('feature', 'artboards-tidy');
+    let moved = 0;
+    const only = ids ? new Set(withSets(this.state.project, ids)) : undefined;
+    this.update((d) => {
+      const before = d.artboards.map((a) => `${a.canvasX},${a.canvasY}`);
+      applyTidy(d as Project, undefined, only);
+      moved = d.artboards.filter((a, i) => `${a.canvasX},${a.canvasY}` !== before[i]).length;
+    });
+    return moved;
+  }
+
+  // ---------------------------------------------------------------- artboard selection and groups
+
+  /** The selected artboards (see `pickedArtboardIds`). */
+  pickedArtboards(): string[] {
+    return pickedArtboardIds(this.state);
+  }
+
+  /**
+   * Select artboards: these, with `main` (the last one by default) the active one the inspector shows. Layers and the timeline
+   * are left (a layer selection and an artboard selection don't mix); the timeline stays when the active artboard does.
+   */
+  pickArtboards(ids: string[], main?: string): void {
+    const list = ids.filter((id) => !!getArtboard(this.state.project, id));
+    const active = main && list.includes(main) ? main : (list[list.length - 1] ?? this.state.activeArtboardId);
+    this.set({
+      activeArtboardId: active,
+      artboardSelected: list.length > 0,
+      artboardPicked: list.length > 1 ? list : [],
+      selection: [],
+      focusId: null,
+      activeTimelineId: active === this.state.activeArtboardId ? this.state.activeTimelineId : null,
+    });
+  }
+
+  /** Ctrl+click on an artboard: add it to the selected ones, or take it out when it is one already. */
+  toggleArtboardPick(id: string): void {
+    const now = this.pickedArtboards();
+    if (!now.includes(id)) this.pickArtboards([...now, id], id);
+    else {
+      const rest = now.filter((x) => x !== id);
+      this.pickArtboards(rest, rest.includes(this.state.activeArtboardId) ? this.state.activeArtboardId : rest[rest.length - 1]);
+    }
+  }
+
+  /** The artboards in a group (all of them selected). */
+  pickGroup(gid: string, add = false): void {
+    const ids = this.state.project.artboards.filter((a) => a.group === gid).map((a) => a.id);
+    if (!ids.length) return;
+    this.pickArtboards(add ? [...new Set([...this.pickedArtboards(), ...ids])] : ids, ids[0]);
+  }
+
+  /**
+   * Put these artboards (and the rest of their responsive sets) in a new group, and select them. They leave any group they were
+   * in. Returns the group's id, or null when there is nothing to group.
+   */
+  groupArtboards(ids: string[], name?: string): string | null {
+    const all = withSets(this.state.project, ids);
+    if (!all.length) return null;
+    track('feature', 'artboards-group');
+    let gid: string | null = null;
+    this.update((d) => {
+      gid = makeGroup(d as Project, all, name);
+    });
+    if (gid) this.pickArtboards(all);
+    return gid;
+  }
+
+  /** Break a group up: its artboards stay where they are and stay selected. */
+  ungroupArtboards(gid: string): void {
+    track('feature', 'artboards-ungroup');
+    this.update((d) => removeGroup(d as Project, gid));
+  }
+
+  /** Take artboards out of their groups. */
+  leaveArtboardGroups(ids: string[]): void {
+    this.update((d) => leaveGroups(d as Project, ids));
+  }
+
+  renameArtboardGroup(gid: string, name: string): void {
+    const clean = name.trim().slice(0, 200);
+    if (!clean) return;
+    this.update(
+      (d) => {
+        const g = d.artboardGroups?.find((x) => x.id === gid);
+        if (g) g.name = clean;
+      },
+      { coalesce: `abgroup-name-${gid}` },
+    );
+  }
+
+  /** Line artboards up on an edge or centre (one undo step). */
+  alignArtboards(ids: string[], mode: AlignMode): void {
+    track('feature', 'artboards-align', { thing: mode });
+    this.update((d) => alignBoards(d as Project, ids, mode));
+  }
+
+  /** Space artboards evenly across or down their span (one undo step). */
+  distributeArtboards(ids: string[], axis: 'x' | 'y'): void {
+    track('feature', 'artboards-distribute', { thing: axis });
+    this.update((d) => distributeBoards(d as Project, ids, axis));
+  }
+
   addArtboard(partial: Partial<Artboard> = {}): string {
     track('doc', 'artboard-add');
     const p = this.state.project;
@@ -969,7 +1259,7 @@ export class EditorStore {
     const ab = createArtboard({
       name: uniqueName(
         p.artboards.map((a) => a.name),
-        'Artboard',
+        'Page',
       ),
       canvasX: p.artboards.length ? right + 100 : 0,
       canvasY: 0,
@@ -983,26 +1273,40 @@ export class EditorStore {
   }
 
   deleteArtboard(id: string): void {
-    track('doc', 'artboard-delete');
-    if (this.state.project.artboards.length <= 1) {
-      this.toast('A project needs at least one artboard', 'error');
+    this.deleteArtboards([id]);
+  }
+
+  /** Delete several artboards in one undo step (a project always keeps at least one). A group left with none is taken away too. */
+  deleteArtboards(ids: string[]): void {
+    const gone = new Set(ids.filter((id) => !!getArtboard(this.state.project, id)));
+    if (!gone.size) return;
+    track('doc', 'artboard-delete', { sum: { artboards: gone.size } });
+    if (this.state.project.artboards.length - gone.size < 1) {
+      this.toast('A project needs at least one page', 'error');
       return;
     }
+    const mark = this.historyMark();
     this.update((d) => {
-      // The base of a responsive set goes: its narrowest variant becomes the base of the rest
-      const gone = d.artboards.find((a) => a.id === id);
-      const heirs = d.artboards.filter((a) => a.variantOf === id);
-      if (gone && heirs.length) {
-        const heir = setMembers(d.artboards as Artboard[], gone as Artboard).find((a) => a.id !== id)!;
-        delete heir.variantOf;
-        for (const a of heirs) if (a !== heir) a.variantOf = heir.id;
-        if (d.settings.startArtboardId === id) d.settings.startArtboardId = heir.id;
-        if (d.settings.reporting?.completionArtboard === id) d.settings.reporting.completionArtboard = heir.id;
+      for (const id of gone) {
+        // The base of a responsive set goes: its narrowest variant becomes the base of the rest
+        const dead = d.artboards.find((a) => a.id === id);
+        const heirs = d.artboards.filter((a) => a.variantOf === id);
+        if (dead && heirs.length) {
+          const heir = setMembers(d.artboards as Artboard[], dead as Artboard).find((a) => a.id !== id)!;
+          delete heir.variantOf;
+          for (const a of heirs) if (a !== heir) a.variantOf = heir.id;
+          if (d.settings.startArtboardId === id) d.settings.startArtboardId = heir.id;
+          if (d.settings.reporting?.completionArtboard === id) d.settings.reporting.completionArtboard = heir.id;
+        }
+        d.artboards = d.artboards.filter((a) => a.id !== id);
+        if (d.settings.startArtboardId === id) d.settings.startArtboardId = d.artboards[0].id;
       }
-      d.artboards = d.artboards.filter((a) => a.id !== id);
-      if (d.settings.startArtboardId === id) d.settings.startArtboardId = d.artboards[0].id;
+      // Pages whose master went stand on their own (undo brings it back)
+      dropMasterRefs(d as Project, gone);
+      pruneGroups(d as Project);
     });
     this.set({ artboardSelected: false, selection: [] });
+    this.toastUndo(gone.size === 1 ? 'Deleted the page.' : `Deleted ${gone.size} pages.`, mark);
   }
 
   /**
@@ -1013,7 +1317,7 @@ export class EditorStore {
   addVariant(id: string, side: VariantSide = 'narrower'): string | null {
     track('feature', 'variant-add', { thing: side });
     const src = getArtboard(this.state.project, id);
-    if (!src) return null;
+    if (!src || this.brandCopyRefused(src)) return null;
     const all = this.state.project.artboards;
     const base = setBase(all, src);
     const members = setMembers(all, src);
@@ -1074,21 +1378,141 @@ export class EditorStore {
     );
   }
 
-  duplicateArtboard(id: string): void {
-    track('doc', 'artboard-duplicate');
-    const src = getArtboard(this.state.project, id);
-    if (!src) return;
-    const copy = this.copyArtboard(src);
+  /** Use an artboard as the page master of these pages (null: take them off their master). */
+  setMasterOf(pageIds: string[], masterId: string | null): void {
+    track('feature', 'master-set', { thing: masterId ? 'use' : 'clear' });
     this.update((d) => {
-      d.artboards.push(copy);
+      for (const id of pageIds) setMaster(d as Project, id, masterId);
     });
-    this.set({ activeArtboardId: copy.id, selection: [], artboardSelected: true });
+  }
+
+  /** Keep an artboard as a page master (listed apart, with its layers drawn on the pages that use it). */
+  markAsMaster(id: string, on: boolean): void {
+    track('feature', 'master-mark', { thing: on ? 'on' : 'off' });
+    this.update((d) => markMaster(d as Project, id, on));
+  }
+
+  /** Put the master's layers into the page as ordinary layers and stop using the master. */
+  detachMasterOf(pageId: string): void {
+    track('feature', 'master-detach');
+    this.update((d) => void detachMaster(d as Project, pageId));
+  }
+
+  /** Select a page's master to edit it (it is shown on the canvas if it was hidden). */
+  editMasterOf(pageId: string): void {
+    const p = this.state.project;
+    const page = getArtboard(p, pageId);
+    const m = page ? masterOf(p.artboards, page) : null;
+    if (!m) return;
+    track('feature', 'master-edit');
+    if (m.canvasHidden) {
+      this.update((d) => {
+        const a = getArtboard(d as Project, m.id);
+        if (a) delete a.canvasHidden;
+      });
+    }
+    this.set({ activeArtboardId: m.id, artboardSelected: true, selection: [], activeTimelineId: null });
+  }
+
+  /** Leave one of the master's layers (by name) off a page, or put it back. */
+  setMasterHidden(pageId: string, name: string, hidden: boolean): void {
+    this.update((d) => {
+      const a = getArtboard(d as Project, pageId);
+      if (!a) return;
+      const list = (a.masterHide ?? []).filter((x) => x !== name);
+      if (hidden) list.push(name);
+      if (list.length) a.masterHide = list;
+      else delete a.masterHide;
+    });
+  }
+
+  /** Fill one text slot of the master on a page (empty: back to the master's own text). */
+  setMasterSlot(pageId: string, slot: string, value: string): void {
+    this.update(
+      (d) => {
+        const a = getArtboard(d as Project, pageId);
+        if (!a) return;
+        const slots = { ...(a.masterSlots ?? {}) };
+        if (value) slots[slot] = value;
+        else delete slots[slot];
+        if (Object.keys(slots).length) a.masterSlots = slots;
+        else delete a.masterSlots;
+      },
+      { coalesce: `master-slot-${pageId}-${slot}` },
+    );
+  }
+
+  /** On a master: draw one of its top-level layers over the pages instead of under them. */
+  setMasterOver(masterId: string, layerId: string, over: boolean): void {
+    this.update((d) => {
+      const a = getArtboard(d as Project, masterId);
+      if (!a) return;
+      const list = (a.masterOver ?? []).filter((x) => x !== layerId);
+      if (over) list.push(layerId);
+      if (list.length) a.masterOver = list;
+      else delete a.masterOver;
+    });
+  }
+
+  /** A copy of a brand kit artboard would be an unlocked one, which is the detach the kit doesn't allow. */
+  private brandCopyRefused(src: Artboard): boolean {
+    if (!src.library?.brand || this.state.brandOverride) return false;
+    this.toast(`“${src.name}” is part of a brand kit, so it can't be copied. Place an instance of it instead.`, 'error');
+    return true;
+  }
+
+  duplicateArtboard(id: string): void {
+    this.duplicateArtboards([id]);
+  }
+
+  /**
+   * Duplicate several artboards in one undo step. The copies keep their layout among themselves and sit to the right of the
+   * originals; they are selected afterwards. A copy joins the group of its original, except when a whole group is duplicated:
+   * then the copies are a new group of their own ("Quiz copy").
+   */
+  duplicateArtboards(ids: string[]): void {
+    const p = this.state.project;
+    const srcs = p.artboards.filter((a) => ids.includes(a.id));
+    if (!srcs.length || srcs.some((a) => this.brandCopyRefused(a))) return;
+    track('doc', 'artboard-duplicate', { sum: { artboards: srcs.length } });
+    const copies = srcs.map((a) => ({ src: a, copy: this.copyArtboard(a) }));
+    if (srcs.length > 1) {
+      //keep the layout: slide the whole set along to clear the originals (one copy sits next to its original as before)
+      const left = Math.min(...srcs.map((a) => a.canvasX));
+      const right = Math.max(...srcs.map((a) => a.canvasX + a.width));
+      for (const c of copies) {
+        c.copy.canvasX = c.src.canvasX + (right - left) + 100;
+        c.copy.canvasY = c.src.canvasY;
+      }
+      //names stay unique across the copies too
+      const taken = new Set(p.artboards.map((a) => a.name));
+      for (const c of copies) {
+        c.copy.name = uniqueName([...taken], c.src.name);
+        taken.add(c.copy.name);
+      }
+    }
+    //a group copied whole becomes a group of copies
+    const wholeGroups = (p.artboardGroups ?? []).filter((g) => p.artboards.filter((a) => a.group === g.id).every((a) => ids.includes(a.id)) && srcs.some((a) => a.group === g.id));
+    const fresh = new Map(wholeGroups.map((g) => [g.id, { id: uid('abg'), name: freshGroupName(p, `${g.name} copy`) }]));
+    this.update((d) => {
+      for (const { copy } of copies) {
+        const g = copy.group ? fresh.get(copy.group) : undefined;
+        if (g) {
+          if (!d.artboardGroups?.some((x) => x.id === g.id)) (d.artboardGroups ??= []).push({ ...g });
+          copy.group = g.id;
+        }
+        d.artboards.push(copy);
+      }
+    });
+    this.pickArtboards(copies.map((c) => c.copy.id));
   }
 
   /** A copy of an artboard with new ids all through (layers, timelines, joysticks, blends and the interactions that point at them), next to it on the canvas. Not added to the project. */
   private copyArtboard(src: Artboard): Artboard {
     const idMap = new Map<string, string>();
     const children = src.children.map((c) => cloneWithNewIds(JSON.parse(JSON.stringify(c)) as SceneNode, idMap));
+    // (a connector copied before the layers it joins found no copy of them yet: they all have one now)
+    for (const c of children) walk([c], (n) => remapConnectorIds(n, idMap));
     const copy: Artboard = {
       ...JSON.parse(JSON.stringify(src)),
       id: uid('ab'),
@@ -1106,6 +1530,8 @@ export class EditorStore {
     delete copy.minWidth;
     // and a copy of a library artboard is your own to edit
     delete copy.library;
+    // a copy of a master draws the same layers over the pages, which now have new ids
+    if (copy.masterOver) copy.masterOver = copy.masterOver.map((x) => idMap.get(x) ?? x);
     delete copy.publish;
     for (const tl of copy.timelines) {
       tl.id = uid('tl');
@@ -1171,6 +1597,26 @@ export class EditorStore {
       tlId = applyPreset(d as Project, ab.id, nodeId, preset);
     });
     if (tlId) this.set({ activeTimelineId: tlId, playhead: 0, bottomTab: 'timeline' });
+  }
+
+  /**
+   * An animation preset (Fade in, Pop...) on each layer: a timeline named for the layer and the event that starts it, in one undo
+   * step. The last layer's timeline becomes the open one. Returns what it wrote, one entry per layer it could animate.
+   */
+  applyAnimation(nodeIds: string[], preset: AnimPresetId, opts: AnimOptions = {}): AnimResult[] {
+    track('feature', 'animation-preset', { thing: preset });
+    const ab = this.artboard();
+    if (!ab) return [];
+    const made: AnimResult[] = [];
+    this.update((d) => {
+      for (const id of nodeIds) {
+        const r = applyAnimation(d as Project, ab.id, id, preset, opts);
+        if (r) made.push(r);
+      }
+    });
+    const last = made[made.length - 1];
+    if (last) this.set({ activeTimelineId: last.timelineId, playhead: 0 });
+    return made;
   }
 
   // ---------------------------------------------------------------- timelines

@@ -21,7 +21,7 @@ const CATS: { id: Cat; label: string; tip: string }[] = [
 const KIND_LABEL: Record<string, string> = { artboard: 'artboard', asset: 'asset', variable: 'variable', data: 'data source', script: 'script', timeline: 'timeline', layer: 'layer' };
 
 /** Short text for who is using something. */
-function sourceLabel(s: UsageSource, multi: boolean): { kind: string; name: string; where: string } {
+export function sourceLabel(s: UsageSource, multi: boolean): { kind: string; name: string; where: string } {
   const where = 'artboardName' in s && multi ? s.artboardName : '';
   switch (s.type) {
     case 'layer':
@@ -48,7 +48,7 @@ function sourceLabel(s: UsageSource, multi: boolean): { kind: string; name: stri
 }
 
 /** Jump to where a source lives: select the layer or artboard, or open the tab that edits it. */
-function go(s: UsageSource): boolean {
+export function go(s: UsageSource): boolean {
   const st = store();
   switch (s.type) {
     case 'layer':
@@ -99,7 +99,7 @@ function itemSource(i: UsageItem): UsageSource | null {
 }
 
 /** Remove assets nothing uses, after asking. Same clean-up as the assets panel's remove button. */
-async function removeUnusedAssets(report: UsageReport, projectId: string) {
+export async function removeUnusedAssets(report: UsageReport, projectId: string) {
   const ids = unusedAssetIds(report);
   if (!ids.length) return;
   const names = report.assets.filter((a) => a.unused).map((a) => a.name);
@@ -181,7 +181,13 @@ export function UsagePanel() {
                 {l.where && <span className="muted"> in {l.where}</span>}
                 <span className="muted">
                   {' '}
-                  points at a missing {KIND_LABEL[m.what]} ({m.how}): <code>{m.ref}</code>
+                  {m.problem ? (
+                    m.problem
+                  ) : (
+                    <>
+                      points at a missing {KIND_LABEL[m.what]} ({m.how}): <code>{m.ref}</code>
+                    </>
+                  )}
                 </span>
               </button>
             );

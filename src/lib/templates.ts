@@ -12,6 +12,7 @@
  *   has touched (like a library update), and add what is new. Parts the person changed are kept and listed.
  */
 import { isContainer, type Artboard, type Asset, type Project, type SceneNode, type TemplateChecklistItem, type TemplateUse } from 'interactives-player';
+import { dropMasterRefs } from './page-master';
 import { artboardProps, baselineOf, nodeProps, partHash, partsOf } from '../../shared/template.mjs';
 
 /** A template as the server lists it (no snapshot). */
@@ -26,7 +27,9 @@ export interface TemplateInfo {
   mine: boolean;
   /** Visible to everyone, not only its owner. */
   everyone: boolean;
-  checklist: { id: string; text: string; artboardId?: string; nodeId?: string }[];
+  checklist: { id: string; text: string; detail?: string; artboardId?: string; nodeId?: string; field?: string }[];
+  /** The brand kits the template starts with (a pre-branded template), when it has any. */
+  brand?: { id: string; name: string }[];
   artboards: number;
   preview: { width: number; height: number; background: string } | null;
   thumb: number | null;
@@ -298,7 +301,7 @@ export function applyTemplateUpdate(d: Project, snapshot: Project, keys: string[
       taken.push(ab);
     } else {
       const next = copy(artboardProps(ab as unknown as Record<string, unknown>)) as Record<string, unknown>;
-      for (const k of Object.keys(mine)) if (!['children', 'timelines', 'logic', 'canvasX', 'canvasY', 'canvasHidden', 'guides', 'source'].includes(k) && !(k in next)) delete (mine as unknown as Record<string, unknown>)[k];
+      for (const k of Object.keys(mine)) if (!['children', 'timelines', 'logic', 'canvasX', 'canvasY', 'canvasHidden', 'guides', 'grid', 'source', 'notes'].includes(k) && !(k in next)) delete (mine as unknown as Record<string, unknown>)[k];
       Object.assign(mine, next);
       taken.push(next);
     }
@@ -387,6 +390,9 @@ export function applyTemplateUpdate(d: Project, snapshot: Project, keys: string[
     else d.variables.push(next);
     taken.push(next);
   }
+
+  // A page whose master was not taken (or is gone) stands on its own
+  dropMasterRefs(d, new Set(d.artboards.map((a) => a.master).filter((m): m is string => !!m && !d.artboards.some((a) => a.id === m))));
 
   // Everything that now matches the template (taken just now, or already) has the template's hash as its baseline
   const now = locate(d);

@@ -1,18 +1,20 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * Where the editor's panels are: three docked areas around the canvas (left, right, bottom), each a group of tabs, plus
+ * Where the editor's panels are: four docked areas around the canvas (left, right, bottom, and a top one under the header that
+ * takes no room until something is docked in it), each a group of tabs, plus
  * any number of floating windows over the canvas, and which side the tool rail is on. Panels move between them by
  * dragging their tab (components/Dock.tsx) or from the tab's right-click menu. It's about this screen, not the
  * project, so it's kept in this browser like the panel widths.
  *
  * Every panel is in exactly one place. A group shows its active tab; the bottom area can also be folded down to its
- * tab strip. Something asking for a panel from code (store.set({ bottomTab })) shows it wherever it is.
+ * tab strip (so can the top one). Something asking for a panel from code (store.set({ bottomTab })) shows it wherever it is.
  */
 
 export type PanelId =
   | 'layers'
   | 'assets'
+  | 'icons'
   | 'libraries'
   | 'comments'
   | 'inspector'
@@ -26,10 +28,17 @@ export type PanelId =
   | 'interface'
   | 'themes'
   | 'usage'
-  | 'checklist';
+  | 'credits'
+  | 'checklist'
+  | 'content';
 
-export type Zone = 'left' | 'right' | 'bottom';
-export const ZONES: Zone[] = ['left', 'right', 'bottom'];
+export type Zone = 'left' | 'right' | 'bottom' | 'top';
+export const ZONES: Zone[] = ['left', 'right', 'bottom', 'top'];
+
+/** How tall the top area is to begin with, the least and the most (it is also kept per layout, so workspaces carry it). */
+export const TOP_HEIGHT = { def: 160, min: 80, max: 600 };
+/** Height of a folded area: its tab strip. */
+export const FOLDED_HEIGHT = 34;
 
 export interface DockGroup {
   tabs: PanelId[];
@@ -44,26 +53,40 @@ export interface FloatWin extends DockGroup {
   h: number;
 }
 
-export type ToolsPlace = 'left' | 'right' | 'float';
+/** Where the tool rail is: any of the docked areas (at the top or bottom it is a horizontal strip) or floating. */
+export type ToolsPlace = Zone | 'float';
+export const TOOLS_PLACES: ToolsPlace[] = ['left', 'right', 'bottom', 'top', 'float'];
 
 export interface DockLayout {
   v: 1;
   zones: Record<Zone, DockGroup>;
   /** The bottom area folded down to its tabs. */
   bottomFolded: boolean;
+  /** The top area folded down to its tabs. */
+  topFolded: boolean;
+  /** The top area's height. */
+  topHeight: number;
   floats: FloatWin[];
   tools: { place: ToolsPlace; x: number; y: number };
+  /**
+   * Panels put away until wanted (the Essentials workspace). A hidden panel still has its place in a group, it just has no tab
+   * until something asks for it (`showPanel`), the project uses what it is for (lib/essentials.ts), or the person shows all.
+   */
+  hidden?: PanelId[];
+  /** Tool rail groups (`TOOL_GROUPS` ids) put away the same way. The one holding the tool in use always shows. */
+  hiddenTools?: string[];
 }
 
 /** Where a tab can be dropped: a docked area or a floating window (at a position in its tabs), or a new window. */
 export type DropTarget = { zone: Zone; index: number } | { float: string; index: number } | { newFloat: { x: number; y: number } };
 
-export const ALL_PANELS: PanelId[] = ['layers', 'assets', 'libraries', 'comments', 'inspector', 'timeline', 'logic', 'scripts', 'variables', 'data', 'a11y', 'insights', 'interface', 'checklist', 'themes', 'usage'];
+export const ALL_PANELS: PanelId[] = ['layers', 'assets', 'icons', 'libraries', 'comments', 'inspector', 'timeline', 'logic', 'scripts', 'variables', 'data', 'a11y', 'insights', 'interface', 'checklist', 'content', 'themes', 'usage', 'credits'];
 
 /** Where each panel lives in the default layout (and goes back to when its floating window is closed). */
 export const HOME: Record<PanelId, Zone> = {
   layers: 'left',
   assets: 'left',
+  icons: 'left',
   libraries: 'left',
   comments: 'left',
   inspector: 'right',
@@ -77,7 +100,9 @@ export const HOME: Record<PanelId, Zone> = {
   interface: 'bottom',
   themes: 'bottom',
   usage: 'bottom',
+  credits: 'bottom',
   checklist: 'bottom',
+  content: 'bottom',
 };
 
 export function defaultLayout(): DockLayout {
@@ -85,7 +110,7 @@ export function defaultLayout(): DockLayout {
   zones.left.active = 'layers';
   zones.right.active = 'inspector';
   zones.bottom.active = 'timeline';
-  return { v: 1, zones, bottomFolded: false, floats: [], tools: { place: 'left', x: 80, y: 120 } };
+  return { v: 1, zones, bottomFolded: false, topFolded: false, topHeight: TOP_HEIGHT.def, floats: [], tools: { place: 'left', x: 80, y: 120 } };
 }
 
 const isPanel = (v: unknown): v is PanelId => typeof v === 'string' && (ALL_PANELS as string[]).includes(v);
@@ -113,8 +138,55 @@ export function normalise(raw: unknown): DockLayout {
   }
   for (const p of ALL_PANELS) if (!seen.has(p)) zones[HOME[p]].tabs.push(p);
   for (const z of ZONES) if (!zones[z].active) zones[z].active = zones[z].tabs[0] ?? null;
-  const place = r.tools?.place === 'right' || r.tools?.place === 'float' ? r.tools.place : 'left';
-  return { v: 1, zones, bottomFolded: !!r.bottomFolded, floats, tools: { place, x: num(r.tools?.x, 80), y: num(r.tools?.y, 120) } };
+  // layouts saved before the rail could go to the bottom only ever said left, right or float, and still read the same
+  const place = (TOOLS_PLACES as unknown[]).includes(r.tools?.place) ? (r.tools!.place as ToolsPlace) : 'left';
+  // layouts saved before the top area had no top group, and read as an empty one
+  const topHeight = Math.max(TOP_HEIGHT.min, Math.min(TOP_HEIGHT.max, Math.round(num(r.topHeight, TOP_HEIGHT.def))));
+  const out: DockLayout = { v: 1, zones, bottomFolded: !!r.bottomFolded, topFolded: !!r.topFolded, topHeight, floats, tools: { place, x: num(r.tools?.x, 80), y: num(r.tools?.y, 120) } };
+  // only written when something is put away, so a layout that hides nothing reads the same as it always did
+  const hidden = Array.isArray(r.hidden) ? [...new Set(r.hidden.filter(isPanel))] : [];
+  if (hidden.length) out.hidden = hidden;
+  const hiddenTools = Array.isArray(r.hiddenTools) ? [...new Set(r.hiddenTools.filter((g): g is string => typeof g === 'string' && g.length > 0 && g.length < 30))].slice(0, 20) : [];
+  if (hiddenTools.length) out.hiddenTools = hiddenTools;
+  return out;
+}
+
+/** Is the panel put away (and nothing has asked for it)? */
+export const isHidden = (l: DockLayout, p: PanelId): boolean => !!l.hidden?.includes(p);
+
+/** The layout with these panels put away (and, optionally, these tool groups). */
+export function hideSome(l: DockLayout, panels: PanelId[], tools: string[] = []): DockLayout {
+  const next: DockLayout = { ...l };
+  if (panels.length) next.hidden = [...new Set(panels)];
+  else delete next.hidden;
+  if (tools.length) next.hiddenTools = [...new Set(tools)];
+  else delete next.hiddenTools;
+  return next;
+}
+
+/** Bring a panel back (and make it the one showing). */
+export function unhidePanel(l: DockLayout, p: PanelId): DockLayout {
+  return showPanel(l, p);
+}
+
+/** Show every panel and tool group again. */
+export function showAll(l: DockLayout): DockLayout {
+  return hideSome(l, [], []);
+}
+
+/** What is under a dragged tool rail: an edge to dock it on, the tab strip of a panel group (it can't be a tab), or the open canvas. */
+export type ToolsDrop = { place: Zone } | { tabs: true } | { float: true };
+
+/** Where a dragged rail would go. Edges dock it, tab strips refuse it (it is a rail, not a tab), anywhere else it floats. */
+export function toolsDropFor(hit: { edge?: Zone | null; strip?: boolean }): ToolsDrop {
+  if (hit.edge) return { place: hit.edge };
+  if (hit.strip) return { tabs: true };
+  return { float: true };
+}
+
+/** The rail moved to a docked area or put floating (at a position, when given). */
+export function placeTools(l: DockLayout, place: ToolsPlace, at?: { x: number; y: number }): DockLayout {
+  return { ...l, tools: { place, x: at ? Math.round(at.x) : l.tools.x, y: at ? Math.round(at.y) : l.tools.y } };
 }
 
 /** Where a panel is now. */
@@ -124,9 +196,9 @@ export function locatePanel(l: DockLayout, p: PanelId): { zone: Zone } | { float
   return f ? { float: f.id } : { zone: HOME[p] };
 }
 
-/** Is the panel on screen: the active tab of its group, and not in the folded bottom area. */
+/** Is the panel on screen: the active tab of its group, and not in a folded bottom or top area. */
 export function isShown(l: DockLayout, p: PanelId): boolean {
-  for (const z of ZONES) if (l.zones[z].active === p) return !(z === 'bottom' && l.bottomFolded);
+  for (const z of ZONES) if (l.zones[z].active === p) return !(z === 'bottom' && l.bottomFolded) && !(z === 'top' && l.topFolded);
   return l.floats.some((f) => f.active === p);
 }
 
@@ -159,22 +231,26 @@ export function movePanel(l: DockLayout, p: PanelId, to: DropTarget): DockLayout
   const zones = Object.fromEntries(ZONES.map((z) => [z, without(l.zones[z], p)])) as Record<Zone, DockGroup>;
   let floats = l.floats.map((f) => ({ ...f, ...without(f, p) }));
   let bottomFolded = l.bottomFolded;
+  let topFolded = l.topFolded;
   if ('zone' in to) {
     zones[to.zone] = inserted(zones[to.zone], p, index);
     if (to.zone === 'bottom') bottomFolded = false;
+    if (to.zone === 'top') topFolded = false;
   } else if ('float' in to) floats = floats.map((f) => (f.id === to.float ? { ...f, ...inserted(f, p, index) } : f));
   else floats.push({ id: newFloatId(), tabs: [p], active: p, x: Math.round(to.newFloat.x), y: Math.round(to.newFloat.y), w: 380, h: 320 });
   floats = floats.filter((f) => f.tabs.length);
-  return { ...l, zones, floats, bottomFolded };
+  return { ...l, zones, floats, bottomFolded, topFolded };
 }
 
-/** Make a panel the active tab of its group, unfolding the bottom area or bringing its window to the front. */
+/** Make a panel the active tab of its group, unfolding the bottom or top area or bringing its window to the front. */
 export function showPanel(l: DockLayout, p: PanelId): DockLayout {
+  // asking for a panel is wanting it: it comes out of the put-away list first
+  if (l.hidden?.includes(p)) l = hideSome(l, l.hidden.filter((x) => x !== p), l.hiddenTools ?? []);
   const at = locatePanel(l, p);
   if ('zone' in at) {
     const z = at.zone;
     if (!l.zones[z].tabs.includes(p)) return movePanel(l, p, { zone: z, index: l.zones[z].tabs.length });
-    return { ...l, zones: { ...l.zones, [z]: { ...l.zones[z], active: p } }, bottomFolded: z === 'bottom' ? false : l.bottomFolded };
+    return { ...l, zones: { ...l.zones, [z]: { ...l.zones[z], active: p } }, bottomFolded: z === 'bottom' ? false : l.bottomFolded, topFolded: z === 'top' ? false : l.topFolded };
   }
   const f = l.floats.find((x) => x.id === at.float)!;
   return { ...l, floats: [...l.floats.filter((x) => x !== f), { ...f, active: p }] };
@@ -198,6 +274,15 @@ function load(): DockLayout {
     return normalise(JSON.parse(localStorage.getItem(KEY) ?? 'null'));
   } catch {
     return defaultLayout();
+  }
+}
+
+/** Has this browser ever kept an arrangement of the panels (so a person who set theirs up is not handed a different one)? */
+export function hasSavedLayout(): boolean {
+  try {
+    return localStorage.getItem(KEY) !== null;
+  } catch {
+    return false;
   }
 }
 

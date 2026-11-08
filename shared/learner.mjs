@@ -70,6 +70,49 @@ export const cleanResult = (body) => {
 	}
 }
 
+//What the spelling guard found in a learner's browser (the player's GuardRecord): which writing tools it saw, how often an answer
+//changed without typing, how often the panel came up, and whether a teacher's exemption code was used. The ids are only from
+//what the guard knows, so anything else is dropped. The learner's own word again, so shape and size only
+const GUARD_TOOL_IDS = new Set(['grammarly', 'languagetool', 'mseditor', 'prowritingaid', 'quillbot', 'ginger', 'answer-changed'])
+
+export const cleanGuard = (body) => {
+	let g = body?.guard ?? body
+
+	if (!g || typeof g !== 'object' || Array.isArray(g)) {
+		return null
+	}
+
+	let count = (n) => finite(n) ? Math.min(100000, Math.max(0, Math.floor(n))) : 0,
+		tools = Array.isArray(g.tools) ? [...new Set(g.tools.filter((t) => typeof t === 'string' && GUARD_TOOL_IDS.has(t)))] : []
+
+	return {tools, valueChanges: count(g.valueChanges), shown: count(g.shown), exempt: g.exempt === true, mode: g.mode === 'block' ? 'block' : 'warn'}
+}
+
+//The fields to set when a guard record comes in. What was seen is kept for good (the teacher sees what was there, not only what
+//is there now), the counts only go up, and the player's tally is for the whole visit so a larger one replaces a smaller
+export const guardUpdate = (existing, clean, who, now) => {
+	let was = existing?.guard || {}
+
+	return {
+		...identity(who),
+		guard: {
+			tools: [...new Set([...(was.tools || []), ...clean.tools])],
+			valueChanges: Math.max(was.valueChanges || 0, clean.valueChanges),
+			shown: Math.max(was.shown || 0, clean.shown),
+			exempt: !!was.exempt || clean.exempt,
+			mode: clean.mode,
+			first: was.first || now,
+			last: now
+		},
+		updated: now
+	}
+}
+
+//How a record's guard reads to a teacher: nothing, or the tools in words and the counts
+const GUARD_NAMES = {grammarly: 'Grammarly', languagetool: 'LanguageTool', mseditor: 'Microsoft Editor', prowritingaid: 'ProWritingAid', quillbot: 'QuillBot', ginger: 'Ginger', 'answer-changed': 'Answer changed without typing'}
+
+export const guardLabel = (g) => g && (g.tools?.length || g.exempt) ? [...(g.tools || []).map((t) => GUARD_NAMES[t] || t), ...(g.exempt ? ['Exemption code used'] : [])].join('; ') : ''
+
 //The fields to set on the record when the learner saves progress. A restart (Start over) opens a new attempt:
 //this attempt isn't complete, but best score, completion and pass stay on the record
 export const progressUpdate = (existing, clean, who, now) => {
@@ -256,9 +299,33 @@ export const summarise = (rows, limit = 200) => {
 				attempts: r.attempts || 1,
 				completed: !!r.completed,
 				passed: !!r.passed,
+				guard: r.guard && (r.guard.tools?.length || r.guard.exempt) ? {tools: r.guard.tools || [], valueChanges: r.guard.valueChanges || 0, shown: r.guard.shown || 0, exempt: !!r.guard.exempt, label: guardLabel(r.guard)} : null,
 				bestPercent: r.bestPercent ?? null,
 				lastPercent: r.lastPercent ?? null,
 				updated: r.updated || null
 			}))
 	}
+}
+
+//One row per learner for a spreadsheet. A cell starting with = + - @ (or a tab/return) gets a leading quote, so a
+//name or course label can't turn into a formula when it's opened
+const csvCell = (v) => {
+	if (v === null || v === undefined) return ''
+	let s = v instanceof Date ? v.toISOString() : String(v)
+	if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
+	return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+export const RESULTS_CSV_COLUMNS = ['username', 'name', 'course', 'completed', 'passed', 'attempts', 'best score', 'best max', 'best percent', 'last score', 'last max', 'last percent', 'completed at', 'last active']
+
+//The writing tools column is only there when the spelling guard found something for somebody, so a project without one has the file it always had
+export const resultsCsv = (rows) => {
+	let guarded = rows.some((r) => guardLabel(r.guard))
+
+	return [
+		guarded ? [...RESULTS_CSV_COLUMNS, 'writing tools found'] : RESULTS_CSV_COLUMNS,
+		...[...rows]
+			.sort((a, b) => new Date(b.updated || 0) - new Date(a.updated || 0))
+			.map((r) => [r.username, r.name, r.courseLabel || r.course, r.completed ? 'yes' : 'no', r.passed ? 'yes' : 'no', r.attempts || 1, r.bestScore, r.bestMax, r.bestPercent, r.lastScore, r.lastMax, r.lastPercent, r.completedAt, r.updated, ...(guarded ? [guardLabel(r.guard)] : [])])
+	].map((line) => line.map(csvCell).join(',')).join('\r\n') + '\r\n'
 }

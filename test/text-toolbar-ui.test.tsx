@@ -138,11 +138,13 @@ describe('the buttons', () => {
     expect(inp.defaultPrevented).toBe(false);
   });
 
-  it('a command from the keyboard puts the focus back in the text', () => {
-    const { editor } = mount('Hello world', undefined, { start: 0, end: 5 });
+  it('a command from the keyboard leaves the focus on the button that did it', () => {
+    const { editor, node } = mount('Hello world', undefined, { start: 0, end: 5 });
     act(() => btn('Bold').focus());
     click(btn('Bold'));
-    expect(document.activeElement).toBe(editor.current);
+    expect(node().runs![0].fontWeight).toBe(700);
+    expect(document.activeElement).toBe(btn('Bold'));
+    expect(document.activeElement).not.toBe(editor.current);
   });
 
   it('size applies on change, not on every keystroke, and ignores nonsense', () => {
@@ -307,5 +309,150 @@ describe('the inspector', () => {
     expect(sec.querySelector('.runs')).toBeTruthy();
     expect(sec.textContent).toMatch(/toolbar that floats over the text/);
     expect(sec.querySelector('.runs button')!.textContent).toBe('Text runs (2)');
+  });
+});
+
+const key = (el: Element, k: string, extra: KeyboardEventInit = {}) => {
+  const ev = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...extra });
+  act(() => void el.dispatchEvent(ev));
+  return ev;
+};
+
+describe('the focus stays in the control being used', () => {
+  it('Enter in the size box applies it and stays there', () => {
+    const { node } = mount('Hello world', undefined, { start: 0, end: 5 });
+    const size = host.querySelector<HTMLInputElement>('.tt-size')!;
+    act(() => size.focus());
+    setValue(size, '40', 'input');
+    const ev = key(size, 'Enter');
+    expect(ev.defaultPrevented).toBe(true);
+    expect(node().runs![0].fontSize).toBe(40);
+    expect(document.activeElement).toBe(size);
+  });
+
+  it('Up and Down step the size and keep the focus (Shift steps by ten), as one undo step', () => {
+    const { node, s, render } = mount('Hello world', undefined, { start: 0, end: 5 });
+    const size = host.querySelector<HTMLInputElement>('.tt-size')!;
+    act(() => size.focus());
+    const base = node().fontSize;
+    key(size, 'ArrowUp');
+    render();
+    expect(node().runs![0].fontSize).toBe(base + 1);
+    expect(document.activeElement).toBe(size);
+    key(size, 'ArrowUp', { shiftKey: true });
+    render();
+    expect(node().runs![0].fontSize).toBe(base + 11);
+    key(size, 'ArrowDown');
+    expect(node().runs![0].fontSize).toBe(base + 10);
+    expect(document.activeElement).toBe(size);
+    s.commit();
+    s.undo();
+    expect(node().runs).toBeUndefined();
+  });
+
+  it('typing a number and pressing Down steps from what was typed', () => {
+    const { node } = mount('Hello world', undefined, { start: 0, end: 5 });
+    const size = host.querySelector<HTMLInputElement>('.tt-size')!;
+    act(() => size.focus());
+    setValue(size, '30', 'input');
+    key(size, 'ArrowDown');
+    expect(node().runs![0].fontSize).toBe(29);
+    expect(document.activeElement).toBe(size);
+  });
+
+  it('picking a font with the keyboard leaves the focus in the font box', () => {
+    const { node } = mount('Hello world', undefined, { start: 6, end: 11 });
+    const font = host.querySelector<HTMLInputElement>('.tt-font input')!;
+    act(() => font.focus());
+    setValue(font, 'Georgia', 'input');
+    key(font, 'ArrowDown');
+    key(font, 'Enter');
+    expect(node().runs![1].fontFamily).toBeTruthy();
+    expect(document.activeElement).toBe(font);
+  });
+
+  it('a colour change keeps the focus on the colour control', () => {
+    const { node } = mount('Hello world', undefined, { start: 0, end: 5 });
+    const col = host.querySelector<HTMLInputElement>('.tt-swatch input')!;
+    act(() => col.focus());
+    setValue(col, '#00ff00', 'input');
+    expect(node().runs![0].color).toBe('#00ff00');
+    expect(document.activeElement).toBe(col);
+  });
+
+  it('the selection is remembered: the next change in another control still lands on it', () => {
+    const { node, s: store, render } = mount('Hello world', undefined, { start: 0, end: 5 });
+    act(() => btn('Bold').focus());
+    click(btn('Bold'));
+    render();
+    act(() => btn('Italic').focus());
+    click(btn('Italic'));
+    expect(node().runs![0]).toEqual({ text: 'Hello', fontWeight: 700, italic: true });
+    expect(store.get().textSelection).toMatchObject({ start: 0, end: 5 });
+  });
+
+  it('Escape from a control goes back to the text with the same selection', () => {
+    const { editor, s: store } = mount('Hello world', undefined, { start: 0, end: 5 });
+    editor.current!.textContent = 'Hello world';
+    const size = host.querySelector<HTMLInputElement>('.tt-size')!;
+    act(() => size.focus());
+    key(size, 'Escape');
+    expect(document.activeElement).toBe(editor.current);
+    expect(store.get().textSelection).toMatchObject({ start: 0, end: 5 });
+    const r = document.getSelection()!.getRangeAt(0);
+    expect(r.toString()).toBe('Hello');
+  });
+
+  it('Shift+Tab off the first control goes back to the text', () => {
+    const { editor } = mount('Hello world', undefined, { start: 0, end: 5 });
+    editor.current!.textContent = 'Hello world';
+    act(() => btn('Bold').focus());
+    const ev = key(btn('Bold'), 'Tab', { shiftKey: true });
+    expect(ev.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(editor.current);
+  });
+
+  it('a button that switches itself off does not drop the focus on the page', () => {
+    const { render } = mount('Hello big world', [{ text: 'Hello ' }, { text: 'big', fontWeight: 700 }, { text: ' world' }], { start: 6, end: 9 });
+    act(() => btn('Clear formatting').focus());
+    click(btn('Clear formatting'));
+    render();
+    expect(btn('Clear formatting').disabled).toBe(true);
+    expect(document.activeElement).not.toBe(document.body);
+    expect(host.querySelector('.text-toolbar')!.contains(document.activeElement)).toBe(true);
+  });
+
+  it('the link box returns the focus to the Link button when it was opened from there, and to the text when it was opened from the text', () => {
+    const { editor } = mount('Hello world', undefined, { start: 0, end: 5 });
+    editor.current!.textContent = 'Hello world';
+    act(() => btn('Link').focus());
+    click(btn('Link'));
+    const input = host.querySelector<HTMLInputElement>('.tt-link input[type=text]')!;
+    expect(document.activeElement).toBe(input);
+    setValue(input, 'https://example.com', 'input');
+    act(() => void host.querySelector('.tt-link')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(host.querySelector('.tt-link')).toBeNull();
+    expect(document.activeElement).toBe(btn('Link'));
+  });
+
+  it('a link box opened from the text (the shortcut) closes back into the text', () => {
+    const { editor, commands } = mount('Hello world', undefined, { start: 0, end: 5 });
+    editor.current!.textContent = 'Hello world';
+    act(() => editor.current!.focus());
+    act(() => commands.current!.apply('link'));
+    const input = host.querySelector<HTMLInputElement>('.tt-link input[type=text]')!;
+    setValue(input, 'https://example.com', 'input');
+    act(() => void host.querySelector('.tt-link')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(document.activeElement).toBe(editor.current);
+  });
+
+  it('the mouse still keeps the focus where it was (in the text) and does not need it moved', () => {
+    const { editor, node } = mount('Hello world', undefined, { start: 0, end: 5 });
+    act(() => editor.current!.focus());
+    const ev = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    btn('Bold').dispatchEvent(ev);
+    click(btn('Bold'));
+    expect(node().runs![0].fontWeight).toBe(700);
+    expect(document.activeElement).toBe(editor.current);
   });
 });

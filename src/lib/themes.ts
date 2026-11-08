@@ -120,6 +120,12 @@ export function lookDefaults(project: Project, type: NodeType): Record<string, u
       return { fill: solid(l.background), stroke: { paint: solid(l.border), width: 1 }, color: l.text };
     case 'link':
       return { color: l.link };
+    case 'progress':
+      return { fill: solid(l.surfaceMuted), barFill: solid(l.button) };
+    case 'chart':
+      return { colors: [l.button, l.link, l.success, l.warning, l.error, l.muted], color: l.text };
+    case 'connector':
+      return { fill: solid(l.background), stroke: { paint: solid(l.muted), width: 2, cap: 'round', join: 'round' }, color: l.text };
     default:
       return {};
   }
@@ -264,6 +270,8 @@ function detachAll(draft: Project, id: string, to: string): void {
     if (o.stroke) paint((o.stroke as { paint: Paint }).paint);
     for (const s of (o.strokes as { paint: Paint }[]) ?? []) paint(s.paint);
     if (typeof o.color === 'string') o.color = fix(o.color);
+    if (o.barFill) paint(o.barFill as Paint);
+    if (n.type === 'chart' && Array.isArray(o.colors)) o.colors = (o.colors as string[]).map(fix);
     const sh = o.shadow as { color: string } | null | undefined;
     if (sh) sh.color = fix(sh.color);
     for (const r of (o.runs as { color?: string }[]) ?? []) if (r.color) r.color = fix(r.color);

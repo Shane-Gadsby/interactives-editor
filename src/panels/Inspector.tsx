@@ -1,4 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
+import { PropSearchBox } from './PropSearchBox';
 import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
 import {
   LIGHT_LOOK,
@@ -21,6 +23,9 @@ import {
   type DrawNode,
   type ImageNode,
   type ShaderNode,
+  type ProgressNode,
+  type ChartNode,
+  type ConnectorNode,
   DRAW_API,
   DRAW_TEMPLATES,
   type DrawTemplate,
@@ -41,7 +46,11 @@ import {
   type SceneNode,
   type Shadow,
   type TextRun,
+  type BrandPlace,
+  type TextFit,
   type TextStyle,
+  textAutoSize,
+  textFitOf,
   paintFx,
   type Constraint,
   type ConstraintType,
@@ -50,8 +59,16 @@ import {
   shownAmount,
 } from 'interactives-player';
 import { keyTime, store, useEditor, valueAt } from '../store/store';
-import { getArtboard, locate } from '../store/doc';
+import { getArtboard, isIdentifier, locate } from '../store/doc';
+import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
+import { ExprField } from '../components/ExprField';
+import { openBehaviours } from '../components/BehaviourDialog';
+import { flowSentence, flowsForLayer } from '../lib/flow-describe';
+import { removeFlow, setFlowOff, showInGraph } from '../lib/flow-actions';
+
+/** What a joystick's X and Y expressions see on top of the project's. */
+const POINTER_LOCALS = ['pointer'];
 import { gapUnit, lineGapUnit, paddingOwnerWidth, paddingUnit, patchGap, patchLineGap, patchPadding } from '../lib/layout-units';
 import { Icons } from '../components/icons';
 import { assetKind } from '../lib/assets';
@@ -59,23 +76,39 @@ import { acceptFor, pickFiles, replaceAssetFile } from '../lib/insert';
 import { updateFromFile } from '../lib/importers';
 import { pointTracks } from '../lib/path-edit';
 import { formatTracks, parseTracks } from '../lib/grid-tracks';
-import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
+import { addAssetOption, createVariable, withQuickAdd } from '../lib/quick-add';
+import { SearchPicker, type PickerOption } from '../components/SearchPicker';
 import { CodeEditor } from '../components/CodeEditor';
 import { AccessibilitySection, TabOrderSection } from './AccessibilitySections';
+import { DialogSection, KeyNavSection } from './FrameA11ySections';
 import { DragDropSections } from './DragDropSections';
 import { QuestionPartNote, QuestionSection } from './QuestionSection';
 import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
 import { ChildOrder } from '../components/ChildOrder';
 import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
 import { GridAlignFields } from '../components/GridAlignFields';
+import { PivotFields } from '../components/PivotFields';
+import { AltPromptCard } from './AltPromptCard';
+import { CropFields } from '../components/CropFields';
+import { canCrop } from '../lib/crop';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
+import { OptimiseOutputFields } from './OptimiseOutput';
+import { WeightSection } from './WeightSection';
 import { RecordsSection } from './RecordsSection';
-import { CaptionsSection, VideoCaptions } from './CaptionsSection';
+import { SensorsSection } from './SensorsSection';
+import { CreditsSettingsFields } from './CreditsPanel';
+import { CaptionsSection, VideoCaptions, VideoDescriptions } from './CaptionsSection';
+import { VideoCues } from './VideoCuesSection';
+import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
+import { MasterSection } from './MasterSection';
+import { PageLinkSection } from './PageLinkSection';
+import { PageNavSection } from './PageNavSection';
 import { StepsSection } from './StepsSection';
 import { blendExample } from '../lib/blend-example';
 import { BindingsSection as BindingsSectionView } from './BindingsSection';
+import { AnimateSection } from './AnimateSection';
 import { TEXT_PRESETS } from '../lib/text-modifiers';
 import { applyDrawTemplate } from '../lib/draw-templates';
 import { useDrawProblem } from '../lib/draw-edit';
@@ -83,6 +116,8 @@ import { confirmDialog } from '../components/dialogs';
 import { detach as detachFromLibrary } from '../lib/library-actions';
 import { ShaderFilterFields, ShaderSection } from './ShaderInspector';
 import { FillSection, PaintOrderSection, StrokeSection } from './PaintLayers';
+import { ChartSection, ProgressSection } from './DataLayerInspectors';
+import { ConnectorSection } from './ConnectorInspector';
 import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
 import { BindSelectionSection, BonesArtboardSection, BoneSection, SkinSection } from './RigSection';
 import { skinnable } from '../lib/rig';
@@ -90,6 +125,8 @@ import { FontField, FontPicker, type FontPick } from '../components/FontPicker';
 import { ensureGoogleFont, firstFamily } from '../lib/font-catalog';
 import { CornerRadii } from './CornerRadii';
 import { hasCornerRadii } from '../lib/corner-radii';
+import { pickedArtboardIds } from '../lib/artboard-groups';
+import { ArtboardsSelection } from './ArtboardsSelection';
 
 
 export function Inspector() {
@@ -97,19 +134,49 @@ export function Inspector() {
     project: st.project,
     selection: st.selection,
     artboardSelected: st.artboardSelected,
+    artboardPicked: st.artboardPicked,
     activeArtboardId: st.activeArtboardId,
     timelineShown: st.timelineShown,
     activeTimelineId: st.activeTimelineId,
     playhead: st.playhead,
     recording: st.recording,
   }));
+  // The search lives here (not in the box) so it survives clicking from layer to layer
+  const [store] = useState(() => new PropSearchStore());
+  const [query, setQueryState] = useState('');
+  const box = useRef<HTMLInputElement>(null);
+  const setQuery = (q: string) => {
+    setQueryState(q);
+    store.setQuery(q.trim());
+  };
   const ab = getArtboard(s.project, s.activeArtboardId);
   if (!ab) return <aside className="inspector" />;
   const nodes = s.selection.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
+  const pickedAbs = pickedArtboardIds(s);
+  // "/" or Ctrl+F anywhere in the panel (outside a field you're typing in) goes to the search; Esc clears it
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    const t = e.target as HTMLElement;
+    const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t.isContentEditable;
+    if ((e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f')) {
+      e.preventDefault();
+      e.stopPropagation();
+      box.current?.focus();
+      box.current?.select();
+    } else if (e.key === 'Escape' && query && !e.defaultPrevented) {
+      e.preventDefault();
+      setQuery('');
+    }
+  };
   return (
-    <aside className="inspector">
-      {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
-      {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />}
+    <aside className={`inspector${query.trim() ? ' ps-on' : ''}`} tabIndex={-1} onKeyDown={onKeyDown}>
+      <PropSearchProvider value={store}>
+        <PropSearchBox store={store} query={query} setQuery={setQuery} inputRef={box} />
+        {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
+        {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : (
+          // several artboards selected: what applies to all of them, instead of the active one's own settings
+          pickedAbs.length > 1 ? <ArtboardsSelection ids={pickedAbs} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />
+        )}
+      </PropSearchProvider>
     </aside>
   );
 }
@@ -131,7 +198,7 @@ export function useShown(node: SceneNode) {
 /** Keys the property at the playhead, for every layer in `ids` (the selection the field edits; just `node` without it). */
 export function KeyButton({ node, prop, ids }: { node: SceneNode; prop: string; ids?: string[] }) {
   const s = useEditor((st) => ({ timelineShown: st.timelineShown, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
-  if (!s.timelineShown || !animatableProp(prop)) return null;
+  if (!s.timelineShown || !animatableProp(prop, node)) return null;
   const ab = store().artboard();
   const tl = ab?.timelines.find((t) => t.id === s.tl);
   const track = tl?.tracks.find((t) => t.nodeId === node.id && t.prop === prop);
@@ -150,13 +217,13 @@ export function KeyButton({ node, prop, ids }: { node: SceneNode; prop: string; 
   );
 }
 
-export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string }) {
+export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title, scale }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string; scale?: number }) {
   const shown = useShown(node);
   const set = useSetter(ids);
   const v = Number(shown(prop) ?? fallback);
   return (
     <div className="keyed">
-      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
+      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} scale={scale} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
       <KeyButton node={node} prop={prop} ids={ids} />
     </div>
   );
@@ -167,7 +234,7 @@ export function Num({ node, ids, prop, label, step, min, max, suffix, fallback =
  * ratio they had, for each selected layer. The chain is saved on the layer (`lockKey`), and the canvas's resize handles
  * keep the ratio of a layer with lockRatio on as well.
  */
-export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min }: { node: SceneNode; ids: string[]; a: string; b: string; labelA: string; labelB: string; lockKey: 'lockRatio' | 'lockScale'; step?: number; min?: number }) {
+export function LinkedPair({ node, ids, a, b, labelA, labelB, titleA, titleB, lockKey, step, min, scale, suffix }: { node: SceneNode; ids: string[]; a: string; b: string; labelA: string; labelB: string; titleA?: string; titleB?: string; lockKey: 'lockRatio' | 'lockScale'; step?: number; min?: number; scale?: number; suffix?: string }) {
   const shown = useShown(node);
   const locked = !!node[lockKey];
   const set = useSetter(ids);
@@ -186,11 +253,11 @@ export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min
     }
     store().setEach(changes, `insp-${a}${b}-${ids.join(',')}`);
   };
-  const what = lockKey === 'lockRatio' ? 'width and height' : 'horizontal and vertical scale';
+  const what = lockKey === 'lockRatio' ? 'width and height' : 'width and height scale';
   return (
     <Row className="linked-pair">
       <div className="keyed">
-        <NumberField label={labelA} value={Number(shown(a) ?? 0)} step={step} min={min} onChange={(x) => change(a, b, x)} onCommit={() => store().commit()} />
+        <NumberField label={labelA} title={titleA} value={Number(shown(a) ?? 0)} step={step} min={min} scale={scale} suffix={suffix} onChange={(x) => change(a, b, x)} onCommit={() => store().commit()} />
         <KeyButton node={node} prop={a} ids={ids} />
       </div>
       <button
@@ -204,7 +271,7 @@ export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min
         {locked ? <Icons.link width={13} /> : <Icons.unlink width={13} />}
       </button>
       <div className="keyed">
-        <NumberField label={labelB} value={Number(shown(b) ?? 0)} step={step} min={min} onChange={(x) => change(b, a, x)} onCommit={() => store().commit()} />
+        <NumberField label={labelB} title={titleB} value={Number(shown(b) ?? 0)} step={step} min={min} scale={scale} suffix={suffix} onChange={(x) => change(b, a, x)} onCommit={() => store().commit()} />
         <KeyButton node={node} prop={b} ids={ids} />
       </div>
     </Row>
@@ -466,15 +533,19 @@ function ReplaceAssetButton({ assetId }: { assetId: string }) {
 function LibraryArtboardSection({ ab, project }: { ab: Artboard; project: Project }) {
   const link = ab.library!;
   const name = project.libraries?.find((l) => l.id === link.libraryId)?.name ?? 'a library';
+  const override = useEditor((st) => st.brandOverride);
+  const locked = !!link.brand && !override;
   return (
-    <Section help="libraries" title="Library">
+    <Section id="library-link" help={link.brand ? 'brand-kits' : 'libraries'} title={link.brand ? 'Brand kit' : 'Library'}>
       <p className="hint">
         {link.internal ? 'Used inside a library component. ' : ''}From <strong>{name}</strong>, version {link.version}. It is read-only here: its layers, timelines and interactions come from the library and are replaced when you update it. Instances of it in your own artboards, their inputs and your variables are yours.
+        {link.brand && ' It is part of a brand kit, so it stays linked and locked. You can move it, and change the text the kit marks as editable. Instances of it keep its proportions and can be scaled between half and double its size.'}
       </p>
       <Row>
         <button
           className="btn"
-          title="Make a copy you can edit. It stops getting updates"
+          disabled={locked}
+          title={locked ? 'Part of a brand kit, so it stays linked and locked' : 'Make a copy you can edit. It stops getting updates'}
           onClick={async () => {
             if (await confirmDialog({ title: 'Detach', message: `“${ab.name}” becomes a normal artboard you can edit. It will not get library updates any more.`, confirmLabel: 'Detach' })) detachFromLibrary(ab.id);
           }}
@@ -500,7 +571,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
     <>
       {ab.source?.linkId && <LinkedFileSection ab={ab} />}
       {ab.library && <LibraryArtboardSection ab={ab} project={project} />}
-      <Section help="artboards" title="Artboard">
+      <Section id="Artboard" help="artboards" title="Page">
         <TextField label="Name" value={ab.name} onChange={(v) => setAb((a) => (a.name = v), `ab-name-${ab.id}`)} />
         <Row className="linked-pair">
           <NumberField
@@ -518,7 +589,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             type="button"
             className={`lock-toggle link-toggle${ab.lockRatio ? ' on' : ''}`}
             aria-pressed={!!ab.lockRatio}
-            aria-label={ab.lockRatio ? "Unlink the artboard's width and height" : "Link the artboard's width and height"}
+            aria-label={ab.lockRatio ? "Unlink the page's width and height" : "Link the page's width and height"}
             title={ab.lockRatio ? 'Linked: changing one changes the other, keeping the ratio. Click to change them separately' : 'Link width and height: changing one changes the other, keeping the ratio'}
             onClick={() => setAb((a) => void (a.lockRatio ? delete a.lockRatio : (a.lockRatio = true)))}
           >
@@ -557,27 +628,47 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             { value: '800x600', label: '800 × 600' },
           ]}
         />
+        <PropRow k="Background" words={['colour', 'color', 'fill', 'backdrop', 'gradient', 'paint']}>
         <div className="field-label block">Background</div>
         <PaintField paint={ab.background} project={project} box={{ w: ab.width, h: ab.height }} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
-        <CheckField label="Clip content to artboard" title="Preview and exports cut off whatever hangs outside the artboard. On the canvas it still shows faintly there (Preferences: Show layers outside clipped artboards)" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
+        </PropRow>
+        <CheckField label="Clip content to page" title="Preview and exports cut off whatever hangs outside the page. On the canvas it still shows faintly there (Preferences: Show layers outside clipped artboards)" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
         {project.settings.library && !ab.library && (
           <CheckField
             label="Publish to library"
-            title="Offer this artboard as a component to projects that use this library. Publish from the Libraries tab"
+            title="Offer this page as a component to projects that use this library. Publish from the Libraries tab"
             value={!!ab.publish}
             onChange={(v) => setAb((a) => (v ? (a.publish = true) : delete a.publish))}
           />
         )}
-        <Row>
+        {project.settings.library && !ab.library && ab.publish && (
+          <SelectField
+            label="Brand kit start"
+            title="If this library is published as a brand kit: place this component in the first page of every project that starts from the kit (Add with starter items in the Libraries tab), at this spot"
+            value={ab.brandPlace ?? ''}
+            options={[
+              { value: '', label: 'Not placed' },
+              { value: 'top', label: 'Top, centred' },
+              { value: 'bottom', label: 'Bottom, centred' },
+              { value: 'top-left', label: 'Top left' },
+              { value: 'top-right', label: 'Top right' },
+              { value: 'bottom-left', label: 'Bottom left' },
+              { value: 'bottom-right', label: 'Bottom right' },
+              { value: 'center', label: 'Centre' },
+            ]}
+            onChange={(v) => setAb((a) => (v ? (a.brandPlace = v as BrandPlace) : delete a.brandPlace))}
+          />
+        )}
+        <Row k="Start page" words={['make start page', 'start artboard', 'first page', 'home page', 'entry', 'duplicate page', 'duplicate artboard', 'copy', 'clone']}>
           <button className="btn" disabled={project.settings.startArtboardId === ab.id} onClick={() => setProject((p) => (p.settings.startArtboardId = ab.id))}>
-            {project.settings.startArtboardId === ab.id ? 'Start artboard' : 'Make start artboard'}
+            {project.settings.startArtboardId === ab.id ? 'Start page' : 'Make start page'}
           </button>
-          <IconButton icon={<Icons.copy />} title="Duplicate artboard" onClick={() => store().duplicateArtboard(ab.id)} />
+          <IconButton icon={<Icons.copy />} title="Duplicate page" onClick={() => store().duplicateArtboard(ab.id)} />
         </Row>
         <Row>
           <SelectField
             label="Use in"
-            title="Place this artboard as an instance inside another artboard"
+            title="Place this page as an instance inside another page"
             value=""
             options={[{ value: '', label: 'Instance in…' }, ...project.artboards.filter((a) => a.id !== ab.id).map((a) => ({ value: a.id, label: a.name }))]}
             onChange={(target) => {
@@ -587,18 +678,24 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
               store().addNodes([inst], { artboardId: target });
             }}
           />
-          <IconButton icon={<Icons.trash />} title="Delete artboard" onClick={() => store().deleteArtboard(ab.id)} />
+          <IconButton icon={<Icons.trash />} title="Delete page" onClick={() => store().deleteArtboard(ab.id)} />
         </Row>
       </Section>
+      <PageNavSection ids={[ab.id]} project={project} />
       <VariantsSection ab={ab} project={project} />
+      <MasterSection ab={ab} project={project} />
       <TabOrderSection ab={ab} />
       <StepsSection ab={ab} project={project} />
       <JoysticksSection ab={ab} />
       <BlendsSection ab={ab} project={project} />
       <BonesArtboardSection ab={ab} />
+      <WeightSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">
-        <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
-        <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
+        <ColourwayRow project={project} />
+        <div className="labels-66">
+          <TextField label="Name" value={project.name} onChange={(v) => setProject((p) => (p.name = v), 'project-name')} />
+          <TextField label="Page title" value={project.settings.title} onChange={(v) => setProject((p) => (p.settings.title = v), 'project-title')} />
+        </div>
         <TextField label="Description" value={project.settings.description} multiline onChange={(v) => setProject((p) => (p.settings.description = v), 'project-desc')} />
         <SelectField<FitMode>
           label="Fit"
@@ -647,13 +744,40 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           value={!!project.settings.reducedMotion}
           onChange={(v) => setProject((p) => (p.settings.reducedMotion = v))}
         />
+        <NumberField
+          label="Depth range"
+          title="How far in pixels a layer with a depth of 100% moves as the pointer goes from the middle to an edge of the window. Layers are set up in their own Depth section"
+          value={project.settings.parallax?.range ?? 40}
+          min={0}
+          max={400}
+          suffix="px"
+          onChange={(v) => setProject((p) => (p.settings.parallax = { ...p.settings.parallax, range: v === 40 ? undefined : v }), 'project-parallax-range')}
+        />
+        <CheckField
+          label="Tilt moves depth layers"
+          title="Phones and tablets: layers with a depth follow how the device is tilted, as well as the pointer. Off by default. On iPhones and iPads the viewer's first tap asks permission for the motion sensor; if they refuse (or there is no sensor) the layers follow the pointer only. Nothing moves for viewers who ask for less motion"
+          value={!!project.settings.parallax?.tilt}
+          onChange={(v) => setProject((p) => (p.settings.parallax = { ...p.settings.parallax, tilt: v ? true : undefined }))}
+        />
+        <OptimiseOutputFields project={project} />
       </Section>
       <CaptionsSection project={project} />
+      <ReadAloudSection project={project} />
       <ReportingSection project={project} />
       <RecordsSection project={project} />
+      <SensorsSection project={project} />
+      <Section help="attributions" title="Credits" defaultOpen={false}>
+        <CreditsSettingsFields />
+        <p className="hint">The entries themselves are in the Attributions tab. They are your own record unless you turn the button on.</p>
+        <Row k="Open Attributions" words={['credits', 'references', 'sources']}>
+          <button className="btn" onClick={() => store().set({ bottomTab: 'credits', previewPlaying: false })} title="Open the Attributions tab">
+            Open Attributions
+          </button>
+        </Row>
+      </Section>
       <Section help="text" title="Fonts">
         {project.fonts.map((f, i) => (
-          <Row key={i} className="font-row">
+          <Row key={i} className="font-row" k="Project fonts" words={[f.family, 'remove font', 'typeface']}>
             <span className="font-name" style={{ fontFamily: f.family }}>
               {f.family}
             </span>
@@ -661,6 +785,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             <IconButton icon={<Icons.trash />} title="Remove font" onClick={() => setProject((p) => p.fonts.splice(i, 1))} />
           </Row>
         ))}
+        <PropRow k="Add a font" words={['google fonts', 'typeface', 'upload font', 'font family']}>
         <FontPicker
           ariaLabel="Add a font"
           title="Search every Google font and add it to this project (the player loads it). Fonts you upload in Assets show here too"
@@ -673,6 +798,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             if (o.kind !== 'system') setProject((p) => void ensureGoogleFont(p.fonts, o.family, [400, 600, 700], { force: true }));
           }}
         />
+        </PropRow>
         <p className="hint">Upload .woff2/.ttf files in Assets to use your own fonts.</p>
       </Section>
     </>
@@ -687,43 +813,64 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
   const set = useSetter(ids);
   const single = nodes.length === 1;
   const sameType = nodes.every((x) => x.type === n.type);
+  //A connector's box is the route between the two layers it joins, so there is nothing to place, size, turn or lay out
+  const isConn = sameType && n.type === 'connector';
   return (
     <>
+      {single && (n.type === 'image' || n.type === 'video') && <AltPromptCard node={n} projectId={project.id} />}
       <AlignBar count={nodes.length} shapes={nodes.filter((x) => !(x.type === 'group' || x.type === 'text' || x.type === 'link')).length} />
       {/* the layer's type heads its own section further down (Path, Text, ...), so this one is just "Layer" */}
-      <Section help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
+      <Section id="layer-selection" help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
         {single && <TextField label="Name" value={n.name} onChange={(v) => set({ name: v }, `name-${n.id}`)} />}
-        <Row>
-          <Num node={n} ids={ids} prop="x" label="X" />
-          <Num node={n} ids={ids} prop="y" label="Y" />
-        </Row>
-        {sameType && n.type === 'bone' ? (
+        {!isConn && (
+          <Row className="aligned-pair">
+            <Num node={n} ids={ids} prop="x" label="X" />
+            <span className="link-toggle link-gap" aria-hidden="true" />
+            <Num node={n} ids={ids} prop="y" label="Y" />
+          </Row>
+        )}
+        {isConn ? (
+          <Row className="aligned-pair">
+            <Num node={n} ids={ids} prop="opacity" label="Opacity" suffix="%" scale={100} step={5} min={0} max={100} fallback={1} />
+          </Row>
+        ) : sameType && n.type === 'bone' ? (
           <Row>
             <Num node={n} ids={ids} prop="width" label="Length" title="The bone's length (the layer's width)" min={0} />
-            <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
+            <Num node={n} ids={ids} prop="rotation" label="Rotation" suffix="°" />
           </Row>
         ) : (
           <>
             <LinkedPair node={n} ids={ids} a="width" b="height" labelA="W" labelB="H" lockKey="lockRatio" min={0} />
-            <Row>
-              <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
-              <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
+            <Row className="aligned-pair">
+              <Num node={n} ids={ids} prop="rotation" label="Rotation" suffix="°" />
+              <span className="link-toggle link-gap" aria-hidden="true" />
+              <Num node={n} ids={ids} prop="opacity" label="Opacity" suffix="%" scale={100} step={5} min={0} max={100} fallback={1} />
             </Row>
           </>
         )}
-        <LinkedPair node={n} ids={ids} a="scaleX" b="scaleY" labelA="Sx" labelB="Sy" lockKey="lockScale" step={0.05} />
-        {!(sameType && n.type === 'bone') && (
-          <Row>
-            <NumberField label="Ox" title="Transform origin X (0-1)" value={n.originX} step={0.05} min={0} max={1} onChange={(v) => set({ originX: v })} />
-            <NumberField label="Oy" title="Transform origin Y (0-1)" value={n.originY} step={0.05} min={0} max={1} onChange={(v) => set({ originY: v })} />
-          </Row>
+        {!isConn && (
+          <LinkedPair
+            node={n}
+            ids={ids}
+            a="scaleX"
+            b="scaleY"
+            labelA={"Scale\u00a0W"}
+            labelB={"Scale\u00a0H"}
+            titleA="Scale across, as a percent of the layer's own width: 100% is as drawn, 200% twice as wide, -100% flips it (scaleX)"
+            titleB="Scale down, as a percent of the layer's own height: 100% is as drawn, 200% twice as tall, -100% flips it (scaleY)"
+            lockKey="lockScale"
+            step={5}
+            scale={100}
+            suffix="%"
+          />
         )}
+        {!(sameType && (n.type === 'bone' || n.type === 'connector')) && <PivotFields originX={n.originX} originY={n.originY} onChange={(p) => set(p)} onCommit={() => store().commit()} />}
         <Row>
           <CheckField label="Visible" value={n.visible} onChange={(v) => set({ visible: v })} />
           <CheckField label="Locked" value={!!n.locked} onChange={(v) => set({ locked: v })} />
         </Row>
-        <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />
-        {n.mask && (
+        {!isConn && <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />}
+        {n.mask && !isConn && (
           <SelectField
             label="Mask mode"
             value={n.maskMode ?? 'alpha'}
@@ -740,20 +887,33 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       </Section>
       {single && n.type === 'frame' && n.question && <QuestionSection frame={n} ab={ab} project={project} />}
       {single && n.questionPart && <QuestionPartNote node={n} ab={ab} />}
-      <LayoutItemSection nodes={nodes} ab={ab} />
+      {!isConn && <LayoutItemSection nodes={nodes} ab={ab} />}
       {sameType && <TypeSection nodes={nodes} project={project} />}
       {!single && <BindSelectionSection nodes={nodes} abId={ab.id} />}
       {single && skinnable(n) && <SkinSection node={n} abId={ab.id} />}
+      {single && n.type === 'text' && project.settings.library && !ab.library && (
+        <CheckField
+          label="Editable in brand kit projects"
+          title="If this library is published as a brand kit: whoever uses the kit can change what this text says (and nothing else about it). Everything else in the kit stays locked"
+          value={!!n.brandEditable}
+          onChange={(v) => set({ brandEditable: v ? true : undefined })}
+        />
+      )}
       {single && n.type === 'text' && <TextModifiersSection node={n} />}
       {sameType && 'fill' in n && <FillSection nodes={nodes} project={project} />}
       {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
-      {sameType && single && 'stroke' in n && <PaintOrderSection nodes={nodes} />}
+      {sameType && single && 'stroke' in n && !isConn && <PaintOrderSection nodes={nodes} />}
       <EffectsSection nodes={nodes} />
-      {single && <ConstraintsSection node={n} />}
+      {!isConn && <DepthSection nodes={nodes} project={project} />}
+      {single && !isConn && <ConstraintsSection node={n} />}
+      {single && !isConn && <PageLinkSection node={n} ab={ab} project={project} />}
+      {!isConn && nodes.every((x) => x.type !== 'bone') && <AnimateSection nodes={nodes} />}
       <LinkCursorSection nodes={nodes} project={project} />
       {single && (n.type === 'group' || n.type === 'frame') && <SoloSection node={n} />}
       {single && (n.type === 'group' || n.type === 'frame') && n.children.length > 1 && <DrawOrderSection node={n} />}
       {single && (n.type === 'group' || n.type === 'frame') && <RepeatSection node={n} project={project} />}
+      {single && (n.type === 'group' || n.type === 'frame') && <KeyNavSection node={n} project={project} />}
+      {single && n.type === 'frame' && <DialogSection node={n} ab={ab} project={project} />}
       {single && <BindingsSectionView node={n} project={project} set={set} />}
       {single && <InteractionsSection node={n} ab={ab} />}
       <DragDropSections nodes={nodes} ab={ab} project={project} />
@@ -919,6 +1079,7 @@ function RunsEditor({ node: n }: { node: Extract<SceneNode, { type: 'text' }> })
     else clear(i, key);
   };
   return (
+    <PropRow k="Text runs" words={['rich text', 'styled stretch', 'bold part', 'mixed styles', 'inline style']}>
     <div className="runs">
       <button className="btn" onClick={() => setOpen(!open)} title="Every differently styled stretch of the text, one by one. The normal way: double-click the text on the canvas, select some of it and use the toolbar.">
         {open ? 'Hide text runs' : rich ? `Text runs (${runs.length})` : 'Text runs…'}
@@ -969,6 +1130,40 @@ function RunsEditor({ node: n }: { node: Extract<SceneNode, { type: 'text' }> })
         </>
       )}
     </div>
+    </PropRow>
+  );
+}
+
+/** Auto text size: the tickbox, and the smallest and largest sizes it may pick (blank is any). Text layers, button labels and links. */
+export function FitTextFields({ nodes }: { nodes: (SceneNode & { fitText?: TextFit | null })[] }) {
+  const n = nodes[0];
+  const ids = nodes.map((x) => x.id);
+  const set = useSetter(ids);
+  const fit = textFitOf(n);
+  const shown = (v?: number | null) => (typeof v === 'number' && v > 0 ? String(v) : '');
+  //Blank, "any" or anything that is not a positive number is "any": the key is left out
+  const limit = (k: 'min' | 'max', v: string) => {
+    const num = Number(v.trim());
+    const next: TextFit = { ...fit };
+    if (v.trim() !== '' && Number.isFinite(num) && num > 0) next[k] = Math.round(num * 100) / 100;
+    else delete next[k];
+    set({ fitText: next });
+  };
+  //Fitting needs a box that stays put, so a text layer goes to Fixed sizing (buttons and links have no Sizing)
+  return (
+    <>
+      <CheckField
+        label="Fit text to box"
+        value={!!fit}
+        onChange={(v) => set(v ? { fitText: {}, ...(nodes.every((x) => x.type === 'text') ? { autoSize: 'none' } : {}) } : { fitText: null })}
+      />
+      {fit && (
+        <Row>
+          <TextField label="Smallest" value={shown(fit.min)} placeholder="any" commitOnBlur onChange={(v) => limit('min', v)} />
+          <TextField label="Largest" value={shown(fit.max)} placeholder="any" commitOnBlur onChange={(v) => limit('max', v)} />
+        </Row>
+      )}
+    </>
   );
 }
 
@@ -994,7 +1189,13 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
     <>
       <FontField label="Font" value={n.fontFamily} mixed={mixedFont} project={project.fonts} onPick={pickFont} />
       <Row>
-        <Num node={n} ids={ids} prop="fontSize" label="Size" min={1} />
+        {textFitOf(n as { fitText?: TextFit | null }) ? (
+          <div className="fit-off" title="The size is chosen for you while Fit text to box is on" {...({ inert: '' } as object)}>
+            <Num node={n} ids={ids} prop="fontSize" label="Size" min={1} />
+          </div>
+        ) : (
+          <Num node={n} ids={ids} prop="fontSize" label="Size" min={1} />
+        )}
         <SelectField
           label="Weight"
           value={String(n.fontWeight)}
@@ -1021,7 +1222,7 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
 /** Rect, ellipse, polygon and star become a path (same outline) so their points can be edited, bent and keyed. */
 function ConvertToPath({ node }: { node: SceneNode }) {
   return (
-    <Row>
+    <Row k="Convert to path" words={['outline', 'vector', 'edit points', 'editable']}>
       <button className="btn" title="Turn this shape into a path with the same outline, so its points can be edited, bent and keyed" onClick={() => store().convertToPath(node.id)}>
         Convert to path
       </button>
@@ -1038,7 +1239,7 @@ function ShapeKeys({ node }: { node: SceneNode }) {
   const onKey = tracks.some((t) => t.keys.some((k) => Math.abs(k.t - at) < 1));
   return (
     <>
-      <Row>
+      <Row k="Key shape" words={['keyframe', 'morph', 'animate points', 'clear shape keys']}>
         <button
           className={`btn key-btn${tracks.length ? ' tracked' : ''}${onKey ? ' on-key' : ''}`}
           title={tl ? `Key the whole shape (every point and handle) at ${at} ms. Key it at one time, move the playhead, edit the points with recording on, and the shape morphs` : 'Key the whole shape at the playhead (creates a timeline)'}
@@ -1057,13 +1258,68 @@ function ShapeKeys({ node }: { node: SceneNode }) {
   );
 }
 
+/**
+ * An input's value. Its variable is the ordinary data binding on `value`: this row is a shortcut that adds it in ⇄ Both
+ * (typing writes the variable, the variable fills the box), and the Data bindings section below edits it from there.
+ * Out keeps the box's own value, so the text field stays for it; In and Both take the value from the variable.
+ */
+function InputValue({ nodes, project, set }: { nodes: SceneNode[]; project: Project; set: (patch: Record<string, unknown>, coalesce?: string) => void }) {
+  const n = nodes[0] as Extract<SceneNode, { type: 'input' }>;
+  const single = nodes.length === 1;
+  const expr = single ? n.bindings?.value : undefined;
+  const mode = n.bindingModes?.value ?? 'in';
+  const filled = expr !== undefined && mode !== 'out';
+  const kind = n.inputType === 'checkbox' ? 'boolean' : n.inputType === 'number' || n.inputType === 'range' ? 'number' : 'string';
+  const bindTo = (name: string) => set({ bindings: { ...n.bindings, value: name }, bindingModes: { ...n.bindingModes, value: 'both' } }, `bind-${n.id}`);
+  const unbind = () => {
+    const { value: _b, ...bindings } = n.bindings ?? {};
+    const { value: _m, ...modes } = n.bindingModes ?? {};
+    const { value: _c, ...converters } = n.converters ?? {};
+    set({ bindings: Object.keys(bindings).length ? bindings : undefined, bindingModes: Object.keys(modes).length ? modes : undefined, converters: Object.keys(converters).length ? converters : undefined }, `bind-${n.id}`);
+  };
+  const options: PickerOption[] = project.variables.filter((v) => isIdentifier(v.name)).map((v) => ({ value: v.name, label: v.name, hint: v.type }));
+  const label = mode === 'both' ? '⇄ Both' : mode === 'out' ? 'Out →' : '← In';
+  return (
+    <>
+      {!filled && <TextField label="Value" value={n.value} onChange={(v) => set({ value: v })} />}
+      {single && expr === undefined && (
+        <PropRow k="Bind value" label="Variable" tip="Tie the box to a variable: typing writes it and it fills the box (a ⇄ Both data binding on Value, editable under Data bindings)" words={['bind', 'variable', 'data', 'two-way', 'both']}>
+          <SearchPicker
+            value=""
+            options={options}
+            onChange={bindTo}
+            buttonLabel="Bind to a variable…"
+            className="add-binding"
+            title="Tie the box to a variable: typing writes it and it fills the box (a ⇄ Both data binding on Value)"
+            searchPlaceholder="Search variables"
+            actions={[{ label: '+ New variable…', onSelect: () => void createVariable(kind, n.name.replace(/\W+/g, '') || 'value').then((id) => {
+              const v = id && store().get().project.variables.find((x) => x.id === id);
+              if (v) bindTo(v.name);
+            }) }]}
+          />
+        </PropRow>
+      )}
+      {single && expr !== undefined && (
+        <PropRow k="Value binding" label="Variable" words={['bind', 'variable', 'data', 'two-way', 'both']}>
+          <p className="hint" style={{ margin: 0 }}>
+            Value is bound <strong>{label}</strong> {expr.trim() ? <code>{expr.trim()}</code> : 'to nothing yet'}: change it under Data bindings.{' '}
+            <button type="button" className="link-btn" onClick={unbind}>
+              Unbind
+            </button>
+          </p>
+        </PropRow>
+      )}
+    </>
+  );
+}
+
 function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
   const set = useSetter(ids);
-  const varOptions = [{ value: '', label: 'Not bound' }, ...project.variables.map((v) => ({ value: v.id, label: `${v.name} (${v.type})` }))];
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
   const videos = project.assets.filter((a) => assetKind(a.mime, a.name) === 'video');
+  const sounds = project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio');
   const radius = 'cornerRadius' in n ? <Num node={n} ids={ids} prop="cornerRadius" label="Radius" min={0} /> : null;
   switch (n.type) {
     case 'rect':
@@ -1143,10 +1399,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'text':
       return (
         <Section help="text" title="Text">
-          {nodes.length === 1 && <TextField label="Text" value={n.text} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
+          {nodes.length === 1 && <ExprField label="Text" template mono={false} value={n.text} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
           <SelectField
             label="Sizing"
-            value={n.autoSize}
+            title={textFitOf(n) ? 'Fixed while Fit text to box is on: the text is sized to the box, not the box to the text' : undefined}
+            disabled={!!textFitOf(n)}
+            value={textAutoSize(n)}
             options={[
               { value: 'width', label: 'Auto width' },
               { value: 'height', label: 'Auto height' },
@@ -1154,8 +1412,9 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             ]}
             onChange={(v) => set({ autoSize: v })}
           />
+          <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
           <Row>
-            {n.autoSize === 'none' && (
+            {textAutoSize(n) === 'none' && (
               <SelectField<'visible' | 'hidden' | 'ellipsis'>
                 label="Overflow"
                 title="What happens to lines that don't fit the box: shown anyway, clipped at the box, or cut with an ellipsis"
@@ -1198,6 +1457,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           />
           {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
+          {nodes.length === 1 && canCrop(n) && <CropFields node={n} />}
           {radius}
           <CheckField
             label="9-slice scaling"
@@ -1236,9 +1496,11 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'button':
       return (
         <Section help="web-elements" title="Button">
-          {nodes.length === 1 && <TextField label="Label" value={n.label} onChange={(v) => set({ label: v }, `label-${n.id}`)} />}
+          {nodes.length === 1 && <ExprField label="Label" template mono={false} value={n.label} onChange={(v) => set({ label: v }, `label-${n.id}`)} />}
           {radius}
           <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
+          <NumberField label="Disabled look" title="How opaque the button looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={n.disabledOpacity ?? 0.5} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
+          <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           <p className="hint">Add a click interaction to make it do something.</p>
         </Section>
@@ -1252,17 +1514,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             options={['text', 'number', 'email', 'password', 'textarea', 'checkbox', 'range', 'select']}
             onChange={(v) => set({ inputType: v })}
           />
-          <SelectField
-            label="Variable"
-            value={n.variableId ?? ''}
-            options={[...varOptions, addVariableOption()]}
-            onChange={withQuickAdd((v) => set({ variableId: v || null }), {
-              variableType: n.inputType === 'checkbox' ? 'boolean' : n.inputType === 'number' || n.inputType === 'range' ? 'number' : 'string',
-              variableName: n.name.replace(/\W+/g, '') || 'value',
-            })}
-          />
           {n.inputType !== 'checkbox' && n.inputType !== 'range' && n.inputType !== 'select' && <TextField label="Placeholder" value={n.placeholder} onChange={(v) => set({ placeholder: v })} />}
-          {!n.variableId && <TextField label="Value" value={n.value} onChange={(v) => set({ value: v })} />}
+          <InputValue nodes={nodes} project={project} set={set} />
           {(n.inputType === 'number' || n.inputType === 'range') && (
             <Row>
               <NumberField label="Min" value={n.min ?? 0} onChange={(v) => set({ min: v })} />
@@ -1271,7 +1524,15 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             </Row>
           )}
           {n.inputType === 'select' && <TextField label="Options" value={n.options ?? ''} multiline placeholder="One per line" onChange={(v) => set({ options: v })} />}
+          {(n.inputType === 'text' || n.inputType === 'textarea' || n.inputType === 'email') && (
+            <>
+              <CheckField label="No browser help" title="Turns off the spellcheck underline, autocorrect, automatic capitals and autofill in this box. For a spelling test, so the browser does not mark or fix the word" value={!!n.noAssist} onChange={(v) => set({ noAssist: v || undefined })} />
+              <CheckField label="Block paste and drop" title="Refuses text pasted or dragged into this box, so an answer has to be typed. For a spelling test" value={!!n.noPaste} onChange={(v) => set({ noPaste: v || undefined })} />
+            </>
+          )}
           {radius}
+          <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
+          <NumberField label="Disabled look" title="How opaque the input looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={n.disabledOpacity ?? 0.5} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           {!project.variables.length && <p className="hint">Create a variable in the Variables tab to bind this input to.</p>}
         </Section>
@@ -1282,6 +1543,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           {nodes.length === 1 && <TextField label="Text" value={n.text} onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
           <TextField label="URL" value={n.href} onChange={(v) => set({ href: v })} />
           <CheckField label="Open in new tab" value={n.newTab} onChange={(v) => set({ newTab: v })} />
+          <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
         </Section>
       );
@@ -1301,10 +1563,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />
           ) : (
             nodes.length === 1 && (
+              <PropRow k="HTML" words={['embed code', 'iframe', 'markup', 'source', 'code']}>
               <div className="code-field">
                 <div className="field-label block">HTML (scripts run in the published player, not on the canvas)</div>
                 <CodeEditor language="html" value={n.html} onChange={(v) => set({ html: v }, `html-${n.id}`)} height={200} />
               </div>
+              </PropRow>
             )
           )}
           {radius}
@@ -1317,7 +1581,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             label="Video"
             value={n.assetId ?? ''}
             onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'video' })}
-            options={[{ value: '', label: 'Use a URL' }, ...videos.map((a) => ({ value: a.id, label: a.name })), addAssetOption('video')]}
+            options={[{ value: '', label: 'Use a URL' }, ...videos.map((a) => ({ value: a.id, label: a.name })), ...sounds.map((a) => ({ value: a.id, label: `${a.name} (sound only: shows the poster)` })), addAssetOption('video')]}
           />
           {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
           {!n.assetId && <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />}
@@ -1330,9 +1594,25 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             <CheckField label="Controls" value={n.controls} onChange={(v) => set({ controls: v })} />
           </Row>
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
+          <NumberField label="Speed" title="How fast it plays: 1 is normal, 0.5 half speed, 2 double. The pitch stays where it was. To set it from a variable or a node, use a Playback speed binding or the Control video node" value={n.playbackRate ?? 1} step={0.25} min={0.0625} max={16} suffix="x" onChange={(v) => set({ playbackRate: v > 0 ? v : undefined }, `rate-${n.id}`)} onCommit={() => store().commit()} />
+          <Row>
+            <CheckField label="Speed buttons" title="Show Slower, Faster and a speed readout over the video for the viewer. Keys: < and > when the video or the buttons have focus" value={!!n.speedControl} onChange={(v) => set({ speedControl: v || undefined })} />
+            <CheckField label="Frame step" title="Show Back and Forward one frame buttons over the video for the viewer (it pauses first). Keys: , and . when the video or the buttons have focus" value={!!n.frameStepControl} onChange={(v) => set({ frameStepControl: v || undefined })} />
+          </Row>
+          {n.frameStepControl && <NumberField label="Frames per second" title="What one frame is. Most video is 24, 25 or 30; 30 if you leave it" value={n.frameRate ?? 30} step={1} min={1} max={240} onChange={(v) => set({ frameRate: v > 0 ? v : undefined }, `fps-${n.id}`)} onCommit={() => store().commit()} />}
           {radius}
-          <p className="hint">To use where the video is, whether it's playing or how long it is, add a <strong>Data binding</strong> below (Playback position, Playing, Length) and pick which way it goes.</p>
+          <SelectField
+            label="Poster"
+            title="A picture shown before the video plays, and the whole time for a sound-only file. It sits under the video's own controls"
+            value={n.posterAssetId ?? ''}
+            onChange={withQuickAdd((v) => set({ posterAssetId: v || undefined }), { asset: 'image' })}
+            options={[{ value: '', label: 'None' }, ...images.map((a) => ({ value: a.id, label: a.name })), addAssetOption('image')]}
+          />
+          <TextField label="Text when empty" title="What a video with no source says while playing. Empty draws a plain grey box. The editor always shows Choose a video" value={n.emptyText ?? ''} commitOnBlur onChange={(v) => set({ emptyText: v.trim() ? v : undefined })} />
+          <p className="hint">To use where the video is, whether it's playing, how long it is or which chapter it is in, add a <strong>Data binding</strong> below (Playback position, Playing, Playback speed, Length, Chapter showing, Hold paused) and pick which way it goes.</p>
+          <VideoCues node={n} set={(patch) => set(patch)} />
           <VideoCaptions node={n} set={(patch) => set(patch)} />
+          <VideoDescriptions node={n} set={(patch) => set(patch)} />
         </Section>
       );
     case 'instance':
@@ -1341,6 +1621,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return <BoneSection node={n} abId={store().get().activeArtboardId} />;
     case 'draw':
       return <DrawSection nodes={nodes as DrawNode[]} />;
+    case 'progress':
+      return <ProgressSection nodes={nodes as ProgressNode[]} project={project} />;
+    case 'chart':
+      return <ChartSection nodes={nodes as ChartNode[]} project={project} ab={store().artboard()} />;
+    case 'connector':
+      return <ConnectorSection nodes={nodes as ConnectorNode[]} project={project} ab={store().artboard()} />;
     case 'shader':
       return nodes.length === 1 ? <ShaderSection node={n as ShaderNode} project={project} /> : <p className="hint">Select one shader layer to edit its code and uniforms.</p>;
     case 'group':
@@ -1353,7 +1639,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onChange={(v) => set({ fitContents: v ? undefined : false })}
           />
           {(n as GroupNode).fitContents !== false && (n.rotation || n.scaleX !== 1 || n.scaleY !== 1) ? <p className="hint">This group is rotated or scaled, so its box stays as it is (refitting it would move its pivot).</p> : null}
-          <p className="hint">Double-click to select inside. Ctrl/⌘-click selects deep layers directly.</p>
+          <p className="hint">Double-click to select inside. Ctrl/⌘-click adds a layer inside to the selection.</p>
         </Section>
       );
     default:
@@ -1379,12 +1665,14 @@ function DrawSection({ nodes }: { nodes: DrawNode[] }) {
         onChange={(id) => id && applyDrawTemplate(nodes.map((x) => x.id), id)}
       />
       {nodes.length === 1 && (
+        <PropRow k="Draw script" words={['code', 'javascript', 'canvas', 'draw function']}>
         <div className="code-field">
           <div className="field-label block">
             Draw script: <code>function draw(g, t, dt)</code>
           </div>
           <CodeEditor value={n.code} onChange={(v) => set({ code: v }, `code-${n.id}`)} height={280} />
         </div>
+        </PropRow>
       )}
       {problem && <p className={problem.kind === 'error' ? 'hint error' : 'hint'}>{problem.kind === 'error' ? `Script error, the layer stopped: ${problem.message}` : problem.message}</p>}
       <Row>
@@ -1418,7 +1706,9 @@ function DrawSection({ nodes }: { nodes: DrawNode[] }) {
 }
 
 function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
-  const events = ab.logic.nodes.filter((l) => l.params.target === node.id);
+  const project = useEditor((st) => st.project);
+  //What this layer does, as sentences, from the graph (lib/flow-describe.ts)
+  const flows = flowsForLayer({ ab, project }, node.id, { limit: 6 });
   const add = (type: string) => {
     const id = `lg${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     const maxY = ab.logic.nodes.reduce((m, l) => Math.max(m, l.y), 0);
@@ -1430,21 +1720,47 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
   };
   return (
     <Section help="interactions" title="Interactions" defaultOpen>
-      {events.length ? (
-        events.map((e) => (
-          <button key={e.id} className="interaction-chip" onClick={() => store().set({ bottomTab: 'logic', logicSelection: e.id })}>
-            {e.kind.replace(/^\w+\./, '')} {String(e.params.type ?? '')}
-          </button>
-        ))
+      {flows.length ? (
+        <ul className="flow-list" aria-label="What this layer does">
+          {flows.map((f) => {
+            const sentence = flowSentence(f);
+            return (
+              <li key={f.event.id} className={`flow-item${f.off ? ' off' : ''}${f.steps.length ? '' : ' empty'}`}>
+                <div className="flow-sentence" title={f.steps.map((s) => s.summary).filter(Boolean).join('\n') || undefined}>
+                  {sentence}.
+                </div>
+                <div className="flow-actions">
+                  <button type="button" className="link-btn" aria-label={`Show in the graph: ${sentence}`} onClick={() => showInGraph(f.event.id)}>
+                    Show in graph
+                  </button>
+                  <button type="button" className="link-btn" aria-label={`${f.off ? 'Turn on' : 'Turn off'}: ${sentence}`} aria-pressed={f.off} title={f.off ? 'It does nothing while it is off. Turn it back on' : 'Stop it doing anything for now, without removing it'} onClick={() => setFlowOff(ab.id, f.event.id, !f.off)}>
+                    {f.off ? 'Turn on' : 'Turn off'}
+                  </button>
+                  <button type="button" className="link-btn danger" aria-label={`Remove: ${sentence}`} onClick={() => removeFlow(ab.id, f.event.id)}>
+                    Remove
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
-        <p className="hint">No interactions on this layer yet.</p>
+        <p className="hint">Nothing happens when this layer is used yet.</p>
       )}
-      <Row>
-        <button className="btn" onClick={() => add('click')}>
-          + On click
+      <Row k="Add interaction" words={['on click', 'on hover', 'event', 'action', 'trigger', 'click', 'hover', 'behaviour', 'when', 'show', 'hide', 'page', 'sound', 'counter']}>
+        <button className="btn" title="Choose what happens when this layer is clicked: go to a page, show or hide something, play a sound, count..." onClick={() => openBehaviours({ abId: ab.id, layerId: node.id, trigger: 'click' })}>
+          + When clicked…
         </button>
-        <button className="btn" onClick={() => add('pointerenter')}>
-          + On hover
+        <button className="btn" title="Choose what happens when the pointer moves onto this layer" onClick={() => openBehaviours({ abId: ab.id, layerId: node.id, trigger: 'pointerenter' })}>
+          + When hovered…
+        </button>
+      </Row>
+      <Row k="Add an empty event" words={['empty', 'advanced', 'graph', 'on pointer', 'on click', 'on hover']}>
+        <button className="btn small" title="Add just the On pointer event, with nothing joined to it, and build the rest in the graph" onClick={() => add('click')}>
+          + On click (empty)
+        </button>
+        <button className="btn small" title="Add just the On pointer event, with nothing joined to it, and build the rest in the graph" onClick={() => add('pointerenter')}>
+          + On hover (empty)
         </button>
       </Row>
       <CheckField
@@ -1453,7 +1769,7 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
         value={!!node.interactiveWhenFaded}
         onChange={(v) => store().setProps([node.id], { interactiveWhenFaded: v || undefined })}
       />
-      {shownAmount(node) < 1 && !node.interactiveWhenFaded && (events.length > 0 || !!node.link?.url) ? <p className="hint">This layer is see-through ({Math.round(shownAmount(node) * 100)}%), so it can't be clicked while playing until it's fully showing.</p> : null}
+      {shownAmount(node) < 1 && !node.interactiveWhenFaded && (flows.length > 0 || !!node.link?.url) ? <p className="hint">This layer is see-through ({Math.round(shownAmount(node) * 100)}%), so it can't be clicked while playing until it's fully showing.</p> : null}
       {node.interactiveWhenFaded ? <p className="hint">Ticked: this layer stays clickable (hand cursor, clicks, hovers) even while faded out.</p> : null}
     </Section>
   );
@@ -1477,6 +1793,49 @@ const CURSOR_LABELS: Record<string, string> = {
   none: 'none (hidden)',
 };
 
+const DEPTH_PRESETS: { value: string; label: string; amount: number }[] = [
+  { value: 'small', label: 'Small (20%)', amount: 20 },
+  { value: 'medium', label: 'Medium (50%)', amount: 50 },
+  { value: 'large', label: 'Large (100%)', amount: 100 },
+];
+
+/** Parallax: how far this layer shifts as the viewer moves the pointer (or tilts the phone), for a layered-postcard look. */
+export function DepthSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
+  const n = nodes[0];
+  const set = useSetter(nodes.map((x) => x.id));
+  const depth = n.depth ?? 0;
+  const preset = depth === 0 ? 'none' : DEPTH_PRESETS.find((p) => p.amount === Math.abs(depth) && depth > 0)?.value ?? 'custom';
+  const dragged = !!n.draggable && n.draggable.enabled !== false;
+  return (
+    <Section help="fill-stroke#depth-parallax" title="Depth" defaultOpen={!!n.depth}>
+      <SelectField
+        label="Depth"
+        title="How far this layer shifts as the viewer moves the pointer (or tilts a phone, if the project allows it). Nearer layers move more than far ones, which gives a layered-postcard look. Only in Preview and the exported player, never on the canvas"
+        value={preset}
+        options={[{ value: 'none', label: 'None (stays still)' }, ...DEPTH_PRESETS, ...(preset === 'custom' ? [{ value: 'custom', label: 'Custom' }] : [])]}
+        onChange={(v) => set({ depth: v === 'none' ? undefined : DEPTH_PRESETS.find((p) => p.value === v)?.amount ?? depth })}
+      />
+      <NumberField
+        label="Amount"
+        title="Percent of the project's depth range (see Project settings). Positive layers are nearer and move against the pointer, negative ones move with it"
+        value={depth}
+        min={-100}
+        max={100}
+        suffix="%"
+        onChange={(v) => set({ depth: v ? v : undefined }, 'depth')}
+      />
+      {n.depth ? (
+        <p className="hint">
+          Moves up to {Math.round((Math.abs(depth) / 100) * (project.settings.parallax?.range ?? 40))} px{depth < 0 ? ', with the pointer' : ', against the pointer'}. Everything inside the layer goes with it.
+          {dragged ? ' A layer people can drag holds still.' : ''} Nothing moves for viewers who ask for less motion.
+        </p>
+      ) : (
+        <p className="hint">Give a background a small depth and the foreground a large one. Set the range, and whether phones tilt, in Project settings.</p>
+      )}
+    </Section>
+  );
+}
+
 function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
   const n = nodes[0];
   const set = useSetter(nodes.map((x) => x.id));
@@ -1485,8 +1844,10 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
   return (
     <>
     <Section help="links-cursors#link" title="Link" defaultOpen={!!link}>
-      <TextField
+      <ExprField
         label="Link"
+        template
+        mono={false}
         value={link?.url ?? ''}
         placeholder="https://… (makes the whole layer a link)"
         commitOnBlur
@@ -1499,9 +1860,9 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
     <Section help="links-cursors#cursor" title="Cursor on hover" defaultOpen={!!(n.cursor || n.cursorImage)}>
       <SelectField
         label="Cursor"
-        title="The mouse cursor shown while the pointer is over this layer (and its children), like CSS :hover { cursor }"
+        title="The mouse cursor shown while the pointer is over this layer (and its children), like CSS :hover { cursor }. Automatic shows a pointer if the layer is a link or clickable"
         value={n.cursor ?? ''}
-        options={[{ value: '', label: 'Automatic: pointer if it is a link or clickable' }, ...CURSORS.map((c) => ({ value: c, label: CURSOR_LABELS[c] ?? c }))]}
+        options={[{ value: '', label: 'Automatic' }, ...CURSORS.map((c) => ({ value: c, label: CURSOR_LABELS[c] ?? c }))]}
         onChange={(v) => set({ cursor: v || undefined })}
       />
       <SelectField
@@ -1585,7 +1946,7 @@ export function RepeatSection({ node, project }: { node: SceneNode & { repeat?: 
       />
       {rep && (
         <>
-          <TextField label="Items" mono value={rep.items} commitOnBlur placeholder="products" onChange={(v) => update({ items: v })} />
+          <ExprField label="Items" value={rep.items} commitOnBlur placeholder="products" onChange={(v) => update({ items: v })} />
           <Row>
             <SelectField
               label="Layout"
@@ -1634,6 +1995,7 @@ function AlignBar({ count, shapes }: { count: number; shapes: number }) {
     return <IconButton key={title} icon={<I width={16} />} title={title} onClick={fn} disabled={disabled} />;
   };
   return (
+    <PropRow k="Align and boolean" words={['align', 'distribute', 'left', 'right', 'centre', 'center', 'top', 'bottom', 'union', 'subtract', 'intersect', 'exclude', 'combine shapes', 'boolean']}>
     <div className="align-bar">
       {b('alignLeft', 'Align left', () => st.align('left'))}
       {b('alignHCenter', 'Align horizontal centres', () => st.align('hcenter'))}
@@ -1653,6 +2015,7 @@ function AlignBar({ count, shapes }: { count: number; shapes: number }) {
         </>
       )}
     </div>
+    </PropRow>
   );
 }
 
@@ -1759,7 +2122,7 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
           </Row>
           {L.wrap && !L.grid && lineGapField('Line gap', 'The space between wrapped rows (or columns). Empty uses Gap')}
           <LayoutAnimateFields value={L.animate} onChange={(animate) => update({ animate })} />
-          <Row>
+          <Row k="Remove auto layout" words={['delete layout', 'stop stacking']}>
             <button className="btn" onClick={() => set({ layout: null })}>
               Remove auto layout
             </button>
@@ -1796,7 +2159,7 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
         onChange={(v) => set({ fit: v })}
       />
       {target && (
-        <Row>
+        <Row k="Reset size" words={['edit artboard', 'match artboard', 'original size']}>
           <button className="btn" onClick={() => set({ width: target.width, height: target.height })}>
             Reset size
           </button>
@@ -1868,7 +2231,7 @@ function TextModifiersSection({ node }: { node: Extract<SceneNode, { type: 'text
       defaultOpen={list.length > 0}
       actions={<IconButton icon={<Icons.plus />} title="Add a text modifier: animate letters, words or lines one after another" onClick={() => store().addTextModifier(node.id)} />}
     >
-      <Row>
+      <Row k="Text animation presets" words={['presets', 'animate letters', 'typewriter', 'wave', 'fade in']}>
         <span className="field-label" title="Ready-made animations: each adds a modifier and a timeline for it">
           Presets
         </span>
@@ -2107,9 +2470,9 @@ function JoysticksSection({ ab }: { ab: Artboard }) {
             <IconButton icon={<Icons.trash />} title="Remove joystick" onClick={() => update((js) => void js.splice(i, 1))} />
           </Row>
           <SelectField label="X timeline" title="Timeline positioned by the X value" value={j.xTimeline ?? ''} options={tls} onChange={(v) => update((js) => void (js[i].xTimeline = v || null))} />
-          <TextField label="X value" mono title="Expression from 0 to 1. pointer {x, y}, artboard {width, height} and every variable are in scope" value={j.x} commitOnBlur onChange={(v) => update((js) => void (js[i].x = v))} />
+          <ExprField label="X value" locals={POINTER_LOCALS} title="Expression from 0 to 1. pointer {x, y}, artboard {width, height} and every variable are in scope" value={j.x} commitOnBlur onChange={(v) => update((js) => void (js[i].x = v))} />
           <SelectField label="Y timeline" title="Optional second timeline, positioned by the Y value" value={j.yTimeline ?? ''} options={tls} onChange={(v) => update((js) => void (js[i].yTimeline = v || null))} />
-          {j.yTimeline && <TextField label="Y value" mono title="Expression from 0 to 1" value={j.y ?? ''} commitOnBlur onChange={(v) => update((js) => void (js[i].y = v))} />}
+          {j.yTimeline && <ExprField label="Y value" locals={POINTER_LOCALS} title="Expression from 0 to 1" value={j.y ?? ''} commitOnBlur onChange={(v) => update((js) => void (js[i].y = v))} />}
           <SelectField
             label="Handle"
             title="A layer the pointer drags around. Where its origin sits inside the area below is handle.x and handle.y (0 to 1) in the expressions"
@@ -2171,6 +2534,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
     >
       {!list.length && <p className="hint">Mix several timelines by a number: blend idle, walk and run by speed, or layer a lean on top of a loop. Start one with a Play blend node.</p>}
       {!list.length && (
+        <PropRow k="Build a blend example" words={['example', 'demo', 'pose', 'blend']}>
         <button
           className="link-btn"
           title="Add a circle, two pose timelines, a 0 to 1 variable with a labelled slider ('Drag me: blend weight') on the artboard, and a blend between the poses. Then open Preview and drag that slider"
@@ -2189,6 +2553,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
         >
           Build an example to try
         </button>
+        </PropRow>
       )}
       {list.map((b, i) => {
         const oneD = b.mode === '1d';

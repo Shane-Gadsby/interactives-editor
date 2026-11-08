@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { DEFAULT_GRID } from './grid';
 import { installSessionHeader, sessionUser } from './session';
 
 /**
@@ -12,6 +13,32 @@ export interface Prefs {
   tooltips: boolean;
   /** Rulers along the canvas edges (Shift+R). */
   rulers: boolean;
+  /** The grid drawn on the canvas (Shift+G). It never shows in Preview or exports. */
+  showGrid: boolean;
+  /** Snapping at all (the master switch; the choices below are kept while it is off). Ctrl while dragging turns snapping off for that drag. */
+  snapOn: boolean;
+  /** Snap target Grid: moves, resizes, new shapes, pen points and arrow-key nudges land on the grid (Ctrl+'). */
+  snapGrid: boolean;
+  /** Snap target Artboard: the artboard's edges and centre (and, moving an artboard, the other artboards'). */
+  snapArtboard: boolean;
+  /** Snap target Layers: edges and centres of other layers. */
+  snapLayers: boolean;
+  /** Layers reach every layer on the artboard, not only the ones in the same parent as what is dragged. */
+  snapLayersAll: boolean;
+  /** Snap target Guides: ruler guides. */
+  snapGuides: boolean;
+  /** Snap target Spacing: equal gaps between neighbouring layers, drawn with the distance. */
+  snapSpacing: boolean;
+  /** Snap target Pixels: whole-pixel positions and sizes. */
+  snapPixels: boolean;
+  /** Snap target Points: path anchor points and bone joints. */
+  snapPoints: boolean;
+  /** How close (screen pixels) something has to be to snap. */
+  snapDistance: number;
+  /** Grid cell size in artboard pixels. An artboard can override it (`artboard.grid`). */
+  gridSize: number;
+  /** A stronger line every this many cells. */
+  gridSubdivisions: number;
   /** Colour theme; 'auto' follows the system. */
   theme: 'dark' | 'light' | 'auto';
   /** Font family for new text layers and the font every new project includes. */
@@ -27,12 +54,24 @@ export interface Prefs {
   commentNotices: boolean;
   /** Draw the parts of layers that hang outside an artboard that clips faintly beside it, so they can be seen and picked. On by default; the player and exports still clip. */
   ghostOutside: boolean;
+  /** Draw the sticky notes authors leave on the canvas (never part of the player or an export). On by default; templates carry their own explanations as notes, so this is how they are put away. */
+  showNotes: boolean;
+  /** Ask "What is this a picture of?" on a picture or video as it is added (lib/alt-prompt.ts). On by default; never blocks, and skipping is remembered per project. */
+  askPictureDescription: boolean;
+  /** Show the technical names (On pointer, Set variable, ...) instead of the plain wording for the interaction nodes and their choices. Off by default. */
+  technicalWording: boolean;
+  /** Inspector sections the person folded or opened, by section key, only where that differs from the section's own default (lib/section-fold.ts). */
+  sectionFolds?: Record<string, boolean>;
+  /** The "Getting started" strip in the editor (lib/onboarding.ts). On by default; it also puts itself away once every job on it is done. */
+  gettingStarted: boolean;
+  /** What first-run remembers, as short keys to booleans: `job-<id>` for a ticked job, `dismissed`, `fresh`, `essentials`, `welcomed` (lib/onboarding.ts). */
+  onboarding?: Record<string, boolean>;
   /** Panel arrangements saved under a name (lib/workspaces.ts checks each one before using it). */
   workspaces?: unknown[];
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true };
+const DEFAULTS: Prefs = { technicalWording: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 
@@ -65,6 +104,17 @@ const notify = () => subs.forEach((f) => f());
 export function prefs(): Prefs {
   return current;
 }
+
+/** Who these preferences belong to ('guest' when there is no session, which is also the user the server shares between everyone without one). */
+export const prefsUser = (): string => user;
+
+const loadedHooks = new Set<(ok: boolean) => void>();
+/** Run when the server's copy has arrived (ok), or when it could not be reached (not ok). Returns the cleanup. */
+export function onPrefsLoaded(f: (ok: boolean) => void): () => void {
+  loadedHooks.add(f);
+  return () => loadedHooks.delete(f);
+}
+const loaded = (ok: boolean) => loadedHooks.forEach((f) => f(ok));
 
 /** Put the theme on <html> so the stylesheet can switch colours. */
 export function applyTheme(): void {
@@ -104,6 +154,7 @@ export async function loadUserPrefs(): Promise<void> {
     const res = await fetch(API, { credentials: 'same-origin' });
     if (!res.ok) {
       early = null;
+      loaded(false);
       return;
     }
     const body = (await res.json()) as { user: string; prefs: Partial<Prefs> };
@@ -120,8 +171,10 @@ export async function loadUserPrefs(): Promise<void> {
     applyTheme();
     notify();
     if ((first && Object.keys(local).length) || Object.keys(changed).length) save();
+    loaded(true);
   } catch {
     early = null;
+    loaded(false);
     /* offline: keep the cached copy */
   }
 }

@@ -56,3 +56,19 @@ describe('tidying the interaction graph', () => {
     expect(g.y).toBeGreaterThanOrEqual(positions.get('a')!.y + 60);
   });
 });
+
+describe('tidying twice', () => {
+  it('leaves a graph with a group where it was (it used to creep down by the group title each time)', () => {
+    const nodes: TidyNode[] = [
+      { id: 'a', x: 0, y: 0, width: 160, height: 60 },
+      { id: 'b', x: 300, y: 0, width: 160, height: 60 },
+      { id: 'c', x: 600, y: 0, width: 160, height: 60 },
+    ];
+    const edges: TidyEdge[] = [{ from: 'a', to: 'b' }, { from: 'b', to: 'c' }];
+    const groups = [{ id: 'g', members: ['a', 'b'] }];
+    const once = tidyGraph(nodes, edges, groups);
+    const again = tidyGraph(nodes.map((n) => ({ ...n, ...once.positions.get(n.id)! })), edges, groups);
+    for (const n of nodes) expect(again.positions.get(n.id)).toEqual(once.positions.get(n.id));
+    expect(again.groups.get('g')).toEqual(once.groups.get('g'));
+  });
+});

@@ -3,6 +3,7 @@ import { createNode, type Artboard, type BoneNode, type Project, type SceneNode,
 import { store } from '../store/store';
 import { getArtboard } from '../store/doc';
 import { CheckField, IconButton, NumberField, Row, Section, SelectField } from '../components/ui';
+import { PropRow } from '../lib/prop-search';
 import { Icons } from '../components/icons';
 import { addBonesExample } from '../lib/bones-example';
 import { autoWeightPoint, bindLayer, bonesOf, setPointWeights, skinOf, unbindLayer } from '../lib/rig';
@@ -37,9 +38,11 @@ export function BonesArtboardSection({ ab }: { ab: Artboard }) {
           ? `${count} bone${count > 1 ? 's' : ''} on this artboard. Draw more with the Bone tool (J), then bind paths and images to them.`
           : 'Rig a character: draw bones with the Bone tool (J), bind paths and images to them, and pose limbs with IK. Not sure where to start?'}
       </p>
-      <button className="link-btn" title={EXAMPLE_TIP} onClick={() => buildExample(ab.id)}>
-        Build an example to try
-      </button>
+      <PropRow k="Build a rig example" words={['example rig', 'arm', 'ik', 'demo']}>
+        <button className="link-btn" title={EXAMPLE_TIP} onClick={() => buildExample(ab.id)}>
+          Build an example to try
+        </button>
+      </PropRow>
     </Section>
   );
 }
@@ -53,14 +56,16 @@ export function BoneSection({ node, abId }: { node: BoneNode; abId: string }) {
   return (
     <Section help="bones" title="Bone">
       <p className="hint">The bone points along its own x axis from its base (X, Y), for its length. Turn it with ↻ or drag it on the canvas; child bones and layers inside it follow.</p>
-      <Row>
+      <Row k="Add child bone" words={['skeleton', 'rig', 'joint']}>
         <button className="btn" title="Add a bone that starts at this bone's tip" onClick={addChild}>
           Add child bone
         </button>
       </Row>
-      <button className="link-btn" title={EXAMPLE_TIP} onClick={() => buildExample(abId)}>
-        Build an example to try
-      </button>
+      <PropRow k="Build an example" words={['example rig', 'arm', 'ik', 'demo']}>
+        <button className="link-btn" title={EXAMPLE_TIP} onClick={() => buildExample(abId)}>
+          Build an example to try
+        </button>
+      </PropRow>
     </Section>
   );
 }
@@ -75,6 +80,7 @@ export function BindSelectionSection({ nodes, abId }: { nodes: SceneNode[]; abId
       <p className="hint">
         {layers.length} layer{layers.length > 1 ? 's' : ''} and {bones.length} bone{bones.length > 1 ? 's' : ''} selected.
       </p>
+      <PropRow k="Bind to selected bones" words={['skin', 'weights', 'attach', 'rig']}>
       <button
         className="btn"
         title="Pull each layer's points along with the selected bones. Weights come from distance to the bones; the poses they are in now become the bind pose"
@@ -86,6 +92,7 @@ export function BindSelectionSection({ nodes, abId }: { nodes: SceneNode[]; abId
       >
         Bind to selected bones
       </button>
+      </PropRow>
     </Section>
   );
 }
@@ -114,7 +121,7 @@ export function SkinSection({ node, abId }: { node: Extract<SceneNode, { type: '
   const setInfl = (list: SkinInfluence[], coalesce?: string) => edit(abId, (a) => setPointWeights(a, node.id, si, pi, list), coalesce);
 
   return (
-    <Section help="bones#skinning" title={isImage ? 'Mesh and skin' : 'Skin'} defaultOpen={!!skin}>
+    <Section id="skin" help="bones#skinning" title={isImage ? 'Mesh and skin' : 'Skin'} defaultOpen={!!skin}>
       {!skin && (
         <>
           <p className="hint">
@@ -135,9 +142,11 @@ export function SkinSection({ node, abId }: { node: Extract<SceneNode, { type: '
                 />
               ))}
               <NumberField label="Max per point" title="How many bones may pull on one point (1 to 4)" value={max} step={1} min={1} max={4} onChange={setMax} />
-              <button className="btn" disabled={!chosen.length} onClick={() => edit(abId, (a) => void bindLayer(a, node.id, chosen, { maxInfluences: max }))}>
+              <PropRow k="Bind to bones" words={['skin', 'weights', 'attach', 'mesh']}>
+                <button className="btn" disabled={!chosen.length} onClick={() => edit(abId, (a) => void bindLayer(a, node.id, chosen, { maxInfluences: max }))}>
                 Bind to {chosen.length} bone{chosen.length === 1 ? '' : 's'}
               </button>
+              </PropRow>
             </>
           )}
         </>

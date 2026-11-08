@@ -1,8 +1,11 @@
 import { Fragment, useState } from 'react';
-import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
+import { PropRow } from '../lib/prop-search';
+import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerOwnProps, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { findArtboardOf, isIdentifier } from '../store/doc';
 import { previewScope } from '../lib/data';
-import { IconButton, Section, TextField } from '../components/ui';
+import { IconButton, Section } from '../components/ui';
+import { ConditionField } from '../components/ConditionField';
+import { ExprField, ExprLocals } from '../components/ExprField';
 import { Icons } from '../components/icons';
 import { SearchPicker, type PickerOption } from '../components/SearchPicker';
 import { ConvertersEditor } from '../components/Converters';
@@ -22,7 +25,7 @@ const show = (v: unknown): string => {
   return String(v);
 };
 
-const CONVERTER_NAME: Record<string, string> = { format: 'Number to text', round: 'Round', invert: 'Invert', range: 'Remap', map: 'Look up', toNumber: 'To number', toText: 'To text', toBoolean: 'To true/false', expr: 'Formula' };
+const CONVERTER_NAME: Record<string, string> = { format: 'Number to text', round: 'Round', invert: 'Invert', range: 'Remap', map: 'Look up', toNumber: 'To number', toText: 'To text', toBoolean: 'To true/false', duration: 'Seconds to m:ss', expr: 'Formula' };
 
 /**
  * What the binding does with the starting values: the variable's value, what each converter turns it into, and what the
@@ -57,7 +60,7 @@ const humanize = (k: string) => k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^
  * video what it is doing (media.time, media.playing...).
  */
 export function bindableProps(node: SceneNode, project: Project): { prop: string; label: string; kind?: string; readOnly?: boolean }[] {
-  const out: { prop: string; label: string; kind?: string; readOnly?: boolean }[] = [...ANIMATABLE_PROPS, ...nodeUniformProps(node), ...instanceInputProps(node, project.variables)];
+  const out: { prop: string; label: string; kind?: string; readOnly?: boolean }[] = [...ANIMATABLE_PROPS, ...layerOwnProps(node), ...nodeUniformProps(node), ...instanceInputProps(node, project.variables)];
   const have = new Set(out.map((p) => p.prop));
   for (const [k, v] of Object.entries(node)) {
     if (have.has(k) || NOT_BINDABLE.has(k)) continue;
@@ -65,6 +68,12 @@ export function bindableProps(node: SceneNode, project: Project): { prop: string
     if (kind) out.push({ prop: k, label: humanize(k), kind });
   }
   for (const m of MEDIA_ATTRIBUTES) if (m.types.includes(node.type)) out.push(m);
+  //an input's value is text in the document, but a checkbox holds true/false and a number or slider a number: a new variable for it is made that type
+  if (node.type === 'input') {
+    const at = out.findIndex((p) => p.prop === 'value');
+    const kind = node.inputType === 'checkbox' ? 'boolean' : node.inputType === 'number' || node.inputType === 'range' ? 'number' : 'string';
+    if (at >= 0) out[at] = { ...out[at], kind };
+  }
   return out;
 }
 
@@ -117,6 +126,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
           Nothing is bound yet. A binding ties a property to a variable: in (visible ← lives &gt; 0, the text ← score), out (a dragged layer's x → boxX, a video's position → videoTime) or both ways.
         </p>
       )}
+      <ExprLocals.Provider value={{ self: node }}>
       {entries.map(([p, expr], i) => (
         <Fragment key={p}>
           {i > 0 && <hr className="item-sep" />}
@@ -126,6 +136,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
             kind={animatableProp(p, node)?.kind ?? props.find((x) => x.prop === p)?.kind}
             readOnly={!!props.find((x) => x.prop === p)?.readOnly}
             mode={modes[p] ?? 'in'}
+            dragged={!!node.draggable && node.draggable.enabled !== false && (p === 'x' || p === 'y')}
             onMode={(m) => {
               // out and both name a variable: a formula can't be written into
               const keepExpr = m === 'in' || project.variables.some((v) => v.name === expr.trim());
@@ -145,8 +156,9 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
           />
         </Fragment>
       ))}
+      </ExprLocals.Provider>
       {entries.length > 0 && <hr className="item-sep" />}
-      {addPicker(false)}
+      <PropRow k="Add binding" words={['bind', 'variable', 'data', 'connect']}>{addPicker(false)}</PropRow>
       {project.variables.some((v) => !isIdentifier(v.name)) && <p className="hint">Some variable names are not valid identifiers and can't be used in formulas.</p>}
     </Section>
   );
@@ -158,6 +170,7 @@ function BindingItem({
   kind,
   readOnly,
   mode,
+  dragged,
   onMode,
   expr,
   list,
@@ -172,6 +185,8 @@ function BindingItem({
   kind?: string;
   readOnly: boolean;
   mode: BindingMode;
+  /** X or Y of a layer the learner can drag: an In binding then never hears about the drag */
+  dragged?: boolean;
   onMode: (m: BindingMode) => void;
   expr: string;
   list: Converter[];
@@ -217,6 +232,15 @@ function BindingItem({
           </button>
         ))}
       </div>
+      {dragged && mode === 'in' && variables.some((v) => v.name === expr.trim()) && (
+        <p className="hint">
+          This layer can be dragged, but with <b>← In</b> a drag doesn't change <code>{expr.trim()}</code>, so saving or remembering it keeps the old value. Choose{' '}
+          <button type="button" className="link-btn" onClick={() => onMode('both')}>
+            ⇄ Both
+          </button>{' '}
+          to keep {label} and <code>{expr.trim()}</code> equal.
+        </p>
+      )}
       {mode !== 'in' ? (
         <SyncedSource label={label} prop={prop} kind={kind} mode={mode} expr={expr} variables={variables} varOptions={varOptions} onExpr={onExpr} />
       ) : (
@@ -233,8 +257,11 @@ function BindingItem({
             Formula
           </button>
         </div>
-        {formula ? (
-          <TextField value={expr} mono commitOnBlur placeholder="e.g. lives > 0" title="A formula of variables; its result sets the property" onChange={onExpr} />
+        {formula && kind === 'boolean' ? (
+          // a yes/no property (visible, disabled...) is set by a condition, so it gets the pickers
+          <ConditionField label="Condition" value={expr} title="A condition: when it is true the property is on" placeholder="e.g. lives > 0" onChange={onExpr} />
+        ) : formula ? (
+          <ExprField value={expr} commitOnBlur placeholder="e.g. lives > 0" title="A formula of variables; its result sets the property" onChange={onExpr} />
         ) : (
           <SearchPicker
             value={expr.trim()}

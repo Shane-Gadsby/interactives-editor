@@ -1,6 +1,7 @@
-import { Renderer, prepareNodes, walk, type ColorResolver, type Artboard, type InstanceMount, type InstanceNode, type Project } from 'interactives-player';
+import { Renderer, masterOf, prepareNodes, walk, type ColorResolver, type Artboard, type InstanceMount, type InstanceNode, type Project } from 'interactives-player';
 import { assetUrls } from '../lib/assets';
 import { previewScope } from '../lib/data';
+import { withMasterCached } from '../lib/page-master';
 
 /** Scale and offset that fit an artboard of size aw x ah into a box, per an instance's fit mode. */
 export function fitInBox(fit: InstanceNode['fit'], bw: number, bh: number, aw: number, ah: number): { sx: number; sy: number; ox: number; oy: number } {
@@ -44,6 +45,9 @@ export function instanceTargets(ab: Artboard): string[] {
  */
 export function instanceDepsKey(project: Project, ab: Artboard, depth = 0, seen = new Set<string>()): string {
   const parts: string[] = [];
+  // A page master is drawn with the page, so a change to it redraws the page
+  const master = masterOf(project.artboards, ab);
+  if (master) parts.push(`m${refKey(master)}`);
   for (const id of instanceTargets(ab)) {
     if (seen.has(id)) continue;
     seen.add(id);
@@ -77,7 +81,7 @@ export function editInstanceMount(getProject: () => Project, depth = 0, resolveA
       r.setColorResolver(colors);
       const vars = previewScope(project, ab);
       for (const [k, v] of Object.entries(n.inputs ?? {})) vars[k] = v;
-      r.render(ab, prepareNodes(ab.children, { vars }), { vars });
+      r.render(ab, prepareNodes(withMasterCached(project.artboards, ab), { vars }), { vars });
       const f = fitInBox(n.fit, n.width, n.height, ab.width, ab.height);
       r.root.style.transform = `translate(${f.ox}px, ${f.oy}px) scale(${f.sx}, ${f.sy})`;
     };

@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { rankEntries } from '../lib/prop-search';
 
 export type MenuItem =
-  | { label: string; onClick: () => void; hint?: string; danger?: boolean; disabled?: boolean; title?: string; color?: string }
+  | { label: string; onClick: () => void; hint?: string; danger?: boolean; disabled?: boolean; title?: string; color?: string; /** Other names it is searched by. */ find?: string[]; /** What the search treats as its topic, when the submenu it is in is not one. */ group?: string }
   | { label: string; items: MenuItem[]; hint?: string; color?: string }
   | { separator: true }
   | { heading: string };
@@ -48,15 +49,10 @@ function SearchMenu({ x, y, items, onClose, placeholder }: { x: number; y: numbe
   useEffect(() => {
     input.current?.focus({ preventScroll: true });
   }, []);
-  const term = q.trim().toLowerCase();
-  //Label matches first, then the ones that only match on their description
+  const term = q.trim();
+  //Ranked by the same scorer as the properties panel and the node palette (label, other names, topic, then the description)
   const all = leaves(items);
-  const matches = term
-    ? [
-        ...all.filter((l) => l.item.label.toLowerCase().includes(term) || l.parent?.label.toLowerCase().includes(term)),
-        ...all.filter((l) => !l.item.label.toLowerCase().includes(term) && !l.parent?.label.toLowerCase().includes(term) && l.item.title?.toLowerCase().includes(term)),
-      ]
-    : [];
+  const matches = term ? rankEntries(term, all, (l) => ({ key: l.item.label, label: l.item.label, tip: l.item.title, extra: l.item.find, section: l.item.group ?? l.parent?.label, plain: true })) : [];
   const pick = (l: Leaf) => {
     onClose();
     l.onClick();

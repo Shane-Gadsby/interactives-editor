@@ -58,6 +58,34 @@ describe('live editing', () => {
     vi.unstubAllGlobals();
   });
 
+  it("doesn't say Saved while the server can't store the room, and says so when it can again", async () => {
+    const { a, s, es, sent, live } = await open(() => ({ ok: true, status: 200 }));
+    const toasts: string[] = [];
+    s.toast = (t: string) => void toasts.push(t);
+    es.emit('stored', { ok: false, error: 'The server could not save this project (mongo down)' });
+    expect(s.get().saveState).toBe('error');
+    expect(s.get().saveError).toMatch(/^Not saved yet: The server could not save/);
+    expect(toasts).toHaveLength(1);
+    //an edit the room acknowledges is still not stored
+    s.setProps([a.id], { x: 5 });
+    await tick(150);
+    es.emit('ops', { seq: 1, clientId: live.clientId, ops: sent[0].ops });
+    expect(s.get().saveState).toBe('error');
+    //a second failure doesn't toast again
+    es.emit('stored', { ok: false, error: 'still down' });
+    expect(toasts).toHaveLength(1);
+    es.emit('stored', { ok: true });
+    expect(s.get().saveState).toBe('saved');
+    expect(toasts.at(-1)).toBe('Saved again');
+  });
+
+  it("hears that the room isn't being stored from the hello when it joins", async () => {
+    const { s, es } = await open(() => ({ ok: true, status: 200 }));
+    s.toast = () => {};
+    es.emit('hello', { seq: 0, rev: 1, clientId: 'x', color: '#f00', peers: [], stored: { ok: false, error: 'too big' } });
+    expect(s.get().saveError).toMatch(/Not saved yet: too big/);
+  });
+
   it('a remote op on a property with a queued (not yet sent) local edit does not overwrite it, so both sides converge', async () => {
     const { a, s, es, sent, abId } = await open(() => ({ ok: true, status: 200 }));
     const xOf = (doc: any) => doc.artboards[0].children[0].x;

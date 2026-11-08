@@ -1,9 +1,11 @@
+import { isChromeNode } from '../lib/branded/lock';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { recordDrawnGeometry } from '../store/doc';
 import { flushSync } from 'react-dom';
-import { Renderer, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, layoutConnectors, isMasterId, paintToCss, drawnDifferently, isContainer, measureCopies, measureTextBox, prepareNodes, type CopySizes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
+import { withMasterCached } from '../lib/page-master';
 import { canvasResolver, shownTheme } from '../lib/themes';
 import { createEditorDraw, type EditorDraw } from '../lib/draw-edit';
 import { createEditorShader, type EditorShader } from '../lib/shader-edit';
@@ -11,6 +13,7 @@ import { assetUrls } from '../lib/assets';
 import { store } from '../store/store';
 import { usePrefs } from '../lib/prefs';
 import { ghostLayers, outsideClipPath, setGhostExtent } from './ghost';
+import { fontsReadyFor, fontsReadyNow } from '../lib/fonts';
 import { cachedStill, isCachedUrl, saveStill, stillHash } from '../lib/still-cache';
 
 interface Props {
@@ -154,7 +157,9 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
 
   // What the artboard looks like, as one image, while you work elsewhere (see the stills below). One saved from the last session
   // is here from the first render, so the artboard is never an empty background that fills in later.
-  const key = `${snapKey(artboard)}|${depsKey}|${assetVersion}|${dataVersion}|${snapKey(project.variables)}|${snapKey(project.fonts)}|${themeSig}`;
+  // Bumped when a still had to be made before its fonts had loaded: the next font load makes it again
+  const [fontTick, setFontTick] = useState(0);
+  const key = `${snapKey(artboard)}|${depsKey}|${assetVersion}|${dataVersion}|${snapKey(project.variables)}|${snapKey(project.fonts)}|${themeSig}|${fontTick}`;
   const [snap, setSnap] = useState<Snap | null>(() => {
     const url = active ? null : cachedStill(project.id, artboard.id, stillHash(project, artboard, shownTheme(project, canvasTheme)?.id ?? null));
     return url ? { url, key } : null;
@@ -174,6 +179,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   // What was drawn last, so a change to a few layers (a keystroke in a field, a timeline frame) redraws just those.
   // Tied to the renderer it was drawn into: a new renderer has drawn nothing, whatever the props say.
   // (Declared above the renderer effect, whose cleanup clears it.)
+  // What auto-sized text in repeated copies measured as, by copy id (it lives only in the drawn tree, so not in the document)
+  const copySizes = useRef<CopySizes>(new Map());
   const lastDraw = useRef<{ renderer: Renderer; resolver: unknown; artboard: Artboard; variables: unknown; dataSources: unknown; assetVersion: number; dataVersion: number; depsKey: string; nodes: SceneNode[]; plain: boolean } | null>(null);
 
   // A layout effect, declared before the render one, so the renderer exists for the very first render.
@@ -207,7 +214,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     if (!r || !started) return;
     r.setColorResolver(resolver);
     const last = lastDraw.current;
-    const sampled: SceneNode[] = timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children;
+    // The page master's layers go around the page's own (the same copies until the master changes, so a drag redraws only the page)
+    const sampled: SceneNode[] = withMasterCached(project.artboards, artboard, timeline ? sampleArtboard(artboard.children, timeline, time) : artboard.children);
     let drawn = false;
     // What got drawn (bindings, repeaters and layout applied), which the ghost layers are picked from
     let shown: SceneNode[] = sampled;
@@ -224,21 +232,28 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     if (!drawn) {
       const vars = previewScope(project, artboard);
       // Same bindings and repeaters the player applies, against initial variable values and the loaded data.
-      const nodes = prepareNodes(sampled, { vars });
+      let nodes = prepareNodes(sampled, { vars }, { measured: copySizes.current });
       // Script layers paint at the timeline's time (0 when none is showing), again when assets or data change
       draw.current?.configure(timeline ? time / 1000 : 0, `${assetVersion}|${dataVersion}`);
       shader.current?.configure(timeline ? time / 1000 : 0, assetVersion);
       r.render(artboard, nodes, { vars });
+      // Auto-sized text in repeated copies only exists in what was just drawn: measure it, and draw once more with those sizes (the
+      // same second pass the player makes). Only on the artboard being worked on, like the layers' own measuring below
+      if (live && measureCopies(r, nodes, copySizes.current, artboard.width)) {
+        nodes = prepareNodes(sampled, { vars }, { measured: copySizes.current });
+        r.render(artboard, nodes, { vars });
+      }
       shown = nodes;
       // Where layers ended up after bindings, repeaters and layout, for the selection outline and hit testing (only for the
       // design view: a timeline's pose is not where the document has the layer)
-      if (!timeline) recordDrawnGeometry(artboard.id, artboard.children, nodes);
+      if (!timeline) recordDrawnGeometry(artboard.id, artboard.children, layoutConnectors(nodes).nodes);
       let plain = nodes === sampled;
       if (plain) walk(sampled, (n) => void (plain &&= !drawnDifferently(n)));
       lastDraw.current = { renderer: r, resolver, artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };
     }
     // Layers past the edge of an artboard that clips: a faint copy of just those, outside the artboard only
-    const ghost = ghostOutside && artboard.clip ? ghostLayers(shown, artboard.width, artboard.height) : null;
+    // locked brand chrome (a master's sweeps) can't be picked anyway, so its faint overhang is only clutter
+    const ghost = ghostOutside && artboard.clip ? ghostLayers(shown.filter((n) => !isMasterId(n.id) && !(n.locked && isChromeNode(n))), artboard.width, artboard.height) : null;
     setGhostExtent(artboard.id, ghost?.extent ?? null);
     if (ghost && ghostEl.current) {
       if (!ghostR.current) {
@@ -273,7 +288,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     // document. Their text is measured when the artboard becomes the active one.
     if (live)
       walk(artboard.children, (n, parent) => {
-        if (n.type !== 'text' || n.autoSize === 'none') return;
+        if (n.type !== 'text' || textAutoSize(n) === 'none') return;
         // Measuring forces a layout: only layers whose text, styling or width changed since they were last measured
         if (!r.textNeedsMeasure(n.id)) return;
         const el = r.element(n.id);
@@ -331,15 +346,25 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       const r = renderer.current;
       if (cancelled || !r || keyRef.current !== key) return;
       try {
-        const { snapshotFromDom } = await import('../lib/image-export');
+        const { snapshotFromDom, videosReady } = await import('../lib/image-export');
+        //A video still loading its first frame would go into the still as a dark box, and stay that way
+        await videosReady(r.root);
+        // Text in a fallback face would go into the still and stay that way: wait for the artboard's fonts (and the drawing that follows them)
+        const wasReady = fontsReadyNow(store().get().project, [artboard]);
+        const fontsOk = await fontsReadyFor(store().get().project, [artboard]);
+        if (!fontsOk) {
+          // Gave up waiting: the picture is shown, but not kept for the next session, and it is made again when a font does arrive
+          document.fonts?.addEventListener?.('loadingdone', () => !cancelled && setFontTick((n) => n + 1), { once: true });
+        } else if (!wasReady) await new Promise<void>((r2) => requestAnimationFrame(() => requestAnimationFrame(() => r2())));
+        if (cancelled || keyRef.current !== key) return;
         const url = await snapshotFromDom(store().get().project, artboard, r.root, assetUrls.resolve);
         if (cancelled || keyRef.current !== key) {
           URL.revokeObjectURL(url);
           return;
         }
         setSnap({ url, key });
-        // For the next session (the key just confirmed this is the artboard as it is now)
-        saveStill(store().get().project.id, artboard.id, stillHash(store().get().project, artboard, shownTheme(project, canvasTheme)?.id ?? null), url);
+        // For the next session (the key just confirmed this is the artboard as it is now), unless it was drawn before its fonts arrived
+        if (fontsOk) saveStill(store().get().project.id, artboard.id, stillHash(store().get().project, artboard, shownTheme(project, canvasTheme)?.id ?? null), url);
       } catch (err) {
         console.warn('[interactives] artboard still failed', mine, err);
       }

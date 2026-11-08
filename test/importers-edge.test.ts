@@ -12,6 +12,7 @@ import { importAi } from '../src/lib/ai-import';
 import { importRive } from '../src/lib/rive-import';
 import { importVectorCraft } from '../src/lib/vectorcraft-import';
 import { importPhotoCraft } from '../src/lib/photocraft-import';
+import { importPptx } from '../src/lib/pptx-import';
 import { importDwg } from '../src/lib/dwg-import';
 import { readAnimationFile } from '../src/lib/importers';
 
@@ -85,6 +86,8 @@ describe('empty and tiny files', () => {
     ['empty.vectorcraft', ''],
     ['empty.drawcraft', ''],
     ['empty.pcraft', ''],
+    ['empty.pptx', ''],
+    ['header only.pptx', 'PK\u0003\u0004'],
     ['noextension', ''],
     ['spaces.json', '   \n\t '],
     ['null.json', 'null'],
@@ -113,6 +116,7 @@ describe('empty and tiny files', () => {
     await tidy('rive', () => importRive(none, 'x'));
     await tidy('vectorcraft', () => importVectorCraft(none, 'x'));
     await tidy('photocraft', () => importPhotoCraft(none, 'x'));
+    await tidy('pptx', () => importPptx(none, 'x'));
   });
 });
 

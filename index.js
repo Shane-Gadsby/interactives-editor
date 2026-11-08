@@ -1,6 +1,7 @@
 require('../suite-libs/crash-guard')
 let port = Number(process.env.PORT) || 3048,
-	version = '0.1.0',
+	//What version-reporting and /health say, from package.json so it can't sit at 0.1.0 again
+	version = require('./package.json').version,
 	appName = 'interactives',
 	express = require('express'),
 	fs = require('fs'),
@@ -72,10 +73,20 @@ let port = Number(process.env.PORT) || 3048,
 	templates,
 	userData,
 	activityData,
+	sharedRows,
+	sharedHidden,
+	courseRows,
 	userLookup,
 	ingest,
 	commentRows,
 	commentNotices,
+	docChunks,
+	projectsBin,
+	auditLog,
+
+	//A whole-document save. Documents too big for one mongo record are split (shared/docstore.mjs), so this is
+	//the real ceiling now
+	saveLimit = '64mb',
 
 	//Revision ids are strings (time first, so they sort), keeps mongodb's ObjectId out of this app's requires
 	revisionID = () => `${Date.now().toString(36)}${crypto.randomBytes(5).toString('hex')}`,
@@ -88,8 +99,17 @@ let ops = null,
 	template = null,
 	safety = null,
 	learner = null,
+	marker = null,
+	notesLib = null,
+	markLimiter = null,
 	records = null,
-	commentLib = null
+	media = null,
+	commentLib = null,
+	responses = null,
+	courseLib = null,
+	sharedLimits = {},
+	courseLimits = {},
+	store = null
 const rooms = new Map(),
 	LOG_KEEP = 2000,
 	PALETTE = ['#e5484d', '#30a46c', '#3e63dd', '#f76b15', '#8e4ec6', '#12a594', '#d6409f', '#ad7f58'],
@@ -110,7 +130,11 @@ const rooms = new Map(),
 	revisionCap = 100,
 	lastRevision = new Map(),
 
-	snapshot = async (projectID, docString, rev, by, reason, force) => {
+	//Pinned revisions (named versions) are kept whatever their age, up to pinCap a project; the prune skips them
+	pinCap = 20,
+	cleanRevisionName = (v) => typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80) || null : null,
+
+	snapshot = async (projectID, docString, rev, by, reason, force, extra = {}) => {
 		let last = lastRevision.get(projectID)
 
 		if (!force && last === undefined) {
@@ -121,35 +145,118 @@ const rooms = new Map(),
 		if (!force && Date.now() - last < revisionEvery) return
 
 		lastRevision.set(projectID, Date.now())
-		await revisions.insertOne({_id: revisionID(), project: projectID, created: new Date(), rev, by: by || null, reason: reason || 'Autosave', size: docString.length, doc: docString})
+		let revID = revisionID(),
+			fields = await store.put(projectID, `r:${revID}`, docString)
+		await revisions.insertOne({_id: revID, project: projectID, created: new Date(), rev, by: by || null, reason: reason || 'Autosave', size: docString.length, ...extra, ...fields})
+			.catch(async (err) => {
+				await store.drop(fields.docChunks)
+				throw err
+			})
 
 		//Keep the newest revisionCap
-		let old = await revisions.find({project: projectID}, {sort: {created: -1}, skip: revisionCap, projection: {_id: 1}}).toArray()
-		if (old.length) await revisions.deleteMany({_id: {$in: old.map((r) => r._id)}})
+		let old = await revisions.find({project: projectID, pinned: {$ne: true}}, {sort: {created: -1}, skip: revisionCap, projection: {_id: 1, docChunks: 1}}).toArray()
+		if (old.length) {
+			await revisions.deleteMany({_id: {$in: old.map((r) => r._id)}})
+			for (let r of old) await store.drop(r.docChunks)
+		}
+		return revID
 	},
 
-	//Writes the room's document back to mongo, bumping rev so plain (non-live) saves still see conflicts
+	//Writes a project's document through the doc store (parts for one too big for its row). write(fields) does the
+	//actual insert or update with those fields in its $set and says whether the row took them. Then the parts the row
+	//no longer points at go: the old set when it moved, the new set when it didn't. Throws what the write threw
+	storeProjectDoc = async (id, rev, str, oldRef, write) => {
+		let fields = await store.put(id, `p:${id}:${rev}`, str),
+			moved = false
+		try {
+			moved = await write(fields)
+		} finally {
+			let stale = moved ? oldRef : fields.docChunks
+			if (stale && stale.key !== (moved ? fields.docChunks?.key : null)) {
+				await store.drop(stale).catch((err) => console.trace(`${appName}: dropping old parts of ${id} failed`, err))
+			}
+		}
+		return {fields, moved}
+	},
+
+	//What a failed save says. Mongo's own record limit is the one people actually hit (a project with big inline data),
+	//and it used to come back as "saved somewhere else"
+	tooBig = (err) => err?.code === 10334 || err?.code === 17419 || /too large|BSONObj size|object to insert too large/i.test(err?.message || ''),
+	saveFailure = (err) => tooBig(err)
+		? {status: 413, error: 'This project is too big to save. Large pictures or data pasted into layers are the usual cause: move them into the Assets panel'}
+		: {status: 500, error: `The server could not save this project (${String(err?.message || err).slice(0, 120)})`},
+
+	//Writes the room's document back to mongo, bumping rev so plain (non-live) saves still see conflicts. A failure
+	//keeps the room dirty, tries again (2 s, 4 s... up to a minute) and tells everyone in the room, since their editors
+	//said "Saved" the moment the server took their ops
+	//One save at a time per room: two overlapping could finish in the wrong order and leave the row on the older copy
 	persist = async (room) => {
+		while (room.persisting) await room.persisting
 		if (!room.dirty || room.deleted) return
+		let done
+		room.persisting = new Promise((r) => (done = r))
+		try {
+			await persistNow(room)
+		} finally {
+			room.persisting = null
+			done()
+		}
+	},
+
+	persistNow = async (room) => {
 		room.dirty = false
+		room.dirtySince = 0
 		clearTimeout(room.saveTimer)
 		room.rev++
-		let p = room.doc, first = p.artboards?.[0]
-		snapshot(room.id, JSON.stringify(p), room.rev, null, 'Autosave').catch((err) => console.trace(`${appName}: revision of ${room.id} failed`, err))
-		await projects.updateOne({_id: room.id}, {$set: {
-			name: String(p.name || 'Untitled project').slice(0, 200),
-			updated: new Date(),
-			doc: JSON.stringify(p),
-			rev: room.rev,
-			meta: {
-				artboards: p.artboards?.length || 0,
-				library: !!p.settings?.library,
-				preview: first ? {width: first.width, height: first.height, background: first.background?.type === 'solid' ? first.background.color : '#ffffff'} : null
+		let p = room.doc, first = p.artboards?.[0], str = JSON.stringify(p), rev = room.rev
+		let agents = room.agentEdits?.size ? [...room.agentEdits] : null
+		snapshot(room.id, str, rev, null, agents ? `Autosave (edited with ${agents.join(', ')})` : 'Autosave', false, agents ? {agents} : {})
+			.then((revID) => revID && agents && agents.forEach((a) => room.agentEdits.delete(a)))
+			.catch((err) => console.trace(`${appName}: revision of ${room.id} failed`, err))
+		try {
+			let {fields} = await storeProjectDoc(room.id, rev, str, room.docChunks, async (fields) => {
+				await projects.updateOne({_id: room.id}, {$set: {
+					name: String(p.name || 'Untitled project').slice(0, 200),
+					updated: new Date(),
+					...fields,
+					rev,
+					meta: {
+						artboards: p.artboards?.length || 0,
+						library: !!p.settings?.library,
+						preview: first ? {width: first.width, height: first.height, background: first.background?.type === 'solid' ? first.background.color : '#ffffff'} : null
+					}
+				}})
+				return true
+			})
+			room.docChunks = fields.docChunks
+			if (room.storeFailed) {
+				room.storeFailed = false
+				room.storeRetry = 0
+				broadcast(room, 'stored', {ok: true})
 			}
-		}}).catch((err) => {
+		} catch (err) {
+			if (room.deleted) return
 			room.dirty = true
+			room.dirtySince ||= Date.now()
 			console.trace(`${appName}: live save of ${room.id} failed`, err)
-		})
+			room.storeFailed = true
+			room.storeError = saveFailure(err).error
+			room.storeRetry = Math.min(60000, (room.storeRetry || 1000) * 2)
+			broadcast(room, 'stored', {ok: false, error: room.storeError})
+			clearTimeout(room.saveTimer)
+			room.saveTimer = setTimeout(() => persist(room), room.storeRetry)
+		}
+	},
+
+	//After an op: save a second after the last one, but never more than liveSaveMax after the first unsaved one, so a
+	//room that never goes quiet still reaches mongo
+	liveSaveMax = 10 * 1000,
+	scheduleSave = (room) => {
+		room.dirty = true
+		room.dirtySince ||= Date.now()
+		if (room.storeFailed) return
+		clearTimeout(room.saveTimer)
+		room.saveTimer = setTimeout(() => persist(room), Math.max(0, Math.min(1000, room.dirtySince + liveSaveMax - Date.now())))
 	},
 
 	openRoom = async (id) => {
@@ -162,7 +269,9 @@ const rooms = new Map(),
 		if (!doc) return null
 		//Someone may have opened it while we waited on mongo
 		if (rooms.has(id)) return rooms.get(id)
-		room = {id, doc: JSON.parse(doc.doc), owner: doc.owner || null, rev: doc.rev || 0, seq: 0, log: [], clients: new Set(), dirty: false, saveTimer: null, closeTimer: null, nextColor: 0}
+		let parsed = await store.parse(doc)
+		if (rooms.has(id)) return rooms.get(id)
+		room = {id, doc: parsed, docChunks: doc.docChunks || null, owner: doc.owner || null, rev: doc.rev || 0, seq: 0, log: [], clients: new Set(), dirty: false, dirtySince: 0, saveTimer: null, closeTimer: null, nextColor: 0}
 		rooms.set(id, room)
 		return room
 	},
@@ -195,19 +304,26 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//Admins and power users, minus presentation mode. Same rule as everywhere else in the suite
 	isPower = (req) => powerUser.canUse(req.sessionData?.access),
 
+	//Who may publish, mark and withdraw a brand kit: power users, plus anyone in the si-admin group named by INTERACTIVES_BRAND_GROUP
+	//(nobody extra when it isn't set). A brand kit is the one place a library locks what projects take from it
+	canMarkBrand = (req) => library.mayMarkBrand(req.sessionData?.access, isPower(req), process.env.INTERACTIVES_BRAND_GROUP),
+
 	//Your own projects only (or ones you've been invited to collaborate on), unless you're a power user. ownerOnly is
 	//for the things only the owner does: deleting the project, changing who collaborates. Logs instead of refusing
 	//until the box enforces sessions, same as session-check
+	//The owner, a power user, or anyone at all for a project with no owner (dev). No logging, no reply: for working out
+	//what to offer, mayChange is still the check
+	ownsOrPower = (req, doc) => {
+		let me = whoIs(req)
+		return !doc?.owner?.username || !!(me && (me.username === doc.owner.username || isPower(req)))
+	},
+
 	mayChange = (req, res, doc, {ownerOnly = false} = {}) => {
-		if (!doc?.owner?.username) {
+		if (ownsOrPower(req, doc)) {
 			return true
 		}
 
 		let me = whoIs(req)
-
-		if (me && (me.username === doc.owner.username || isPower(req))) {
-			return true
-		}
 
 		if (!ownerOnly && me?.username && Array.isArray(doc.collaborators) && doc.collaborators.some((c) => c.username === me.username)) {
 			return true
@@ -258,6 +374,8 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//Every id is checked by validID before it gets near here, so these can't climb out of storageDir
 	projectDir = (projectID) => path.join(storageDir, projectID),
 	shareFile = (token) => path.join(storageDir, 'shares', `${token}.html`),
+	//The page an update replaced, kept for one-click revert. Tokens are [\w-] only, so /s/<token> can never reach it
+	sharePrevFile = (token) => path.join(storageDir, 'shares', `${token}.prev.html`),
 	thumbFile = (projectID) => path.join(storageDir, 'thumbs', `${projectID}.jpg`),
 	assetFile = (projectID, assetID) => path.join(storageDir, projectID, assetID),
 
@@ -265,13 +383,41 @@ const enforcing = () => process.env.SUITE_SESSION_ENFORCE === '1',
 	//people when the library project edits or deletes an asset. Library ids are project ids, so validID covers them too
 	libraryDir = (libraryID) => path.join(storageDir, '_libraries', libraryID),
 
+	//A deleted project's files while it's in the bin: its asset folder as files/, its share page and its thumbnail
+	binDir = (projectID) => path.join(storageDir, '_bin', projectID),
+	binDays = 30,
+
 	//Same for a saved template: its own copy of the files (and its thumbnail, thumb.jpg, a name no asset id can have)
 	templateDir = (templateID) => path.join(storageDir, '_templates', templateID),
+
+	//Smaller copies of an image asset (the editor's canvas proxy, the optimised output for a share or export), as
+	//_variants/<assetID>.<key> with a .json sidecar like the asset's. Asset ids can't start with _ or hold a dot, so
+	//nothing here can be mistaken for an asset
+	variantDir = (projectID) => path.join(storageDir, projectID, '_variants'),
+	variantFile = (projectID, assetID, key) => path.join(variantDir(projectID), `${assetID}.${key}`),
+	validVariantKey = (key) => typeof key === 'string' && /^[a-z0-9-]{1,40}$/.test(key),
+	maxVariants = 8,
+
+	removeVariants = async (projectID, assetID) => {
+		let names = []
+
+		try {
+			names = await fs.promises.readdir(variantDir(projectID))
+		}
+		catch (e) {
+			return
+		}
+
+		for (let name of names.filter((n) => n.startsWith(`${assetID}.`))) {
+			await fs.promises.rm(path.join(variantDir(projectID), name), {force: true})
+		}
+	},
 
 	removeAssets = async (projectID, assetID) => {
 		if (assetID) {
 			await fs.promises.rm(assetFile(projectID, assetID), {force: true})
 			await fs.promises.rm(`${assetFile(projectID, assetID)}.json`, {force: true})
+			await removeVariants(projectID, assetID)
 		}
 		else {
 			await fs.promises.rm(projectDir(projectID), {recursive: true, force: true})
@@ -290,19 +436,75 @@ router.use((req, res, next) => {
 	next()
 })
 
+//For a load balancer, pm2 or a person checking the box: can it reach mongo and write its storage folder. No session
+//needed and nothing about anyone's projects, just yes/no and counts. 503 when either check fails
+const started = Date.now()
+router.get('/health', cacheHeaders.api, async (req, res) => {
+	let check = async (fn) => {
+		let t = Date.now()
+		try {
+			await Promise.race([fn(), new Promise((_, no) => setTimeout(() => no(new Error('timed out')), 3000).unref())])
+			return {ok: true, ms: Date.now() - t}
+		} catch (err) {
+			return {ok: false, ms: Date.now() - t, error: String(err?.message || err).slice(0, 80)}
+		}
+	}
+	let mongo = await check(() => projects.findOne({_id: '__health'}, {projection: {_id: 1}})),
+		storage = await check(async () => {
+			let probe = path.join(storageDir, `.health-${process.pid}`)
+			await fs.promises.writeFile(probe, 'ok')
+			await fs.promises.rm(probe, {force: true})
+		}),
+		ok = mongo.ok && storage.ok
+
+	res.status(ok ? 200 : 503).json({ok, app: appName, version, uptime: Math.round((Date.now() - started) / 1000), mongo, storage, rooms: rooms.size, mcp: !mcpOff()})
+})
+
 router.use(cacheHeaders.stampGate)
 
 //Every api route: never cached, staff session wanted (log only until SUITE_SESSION_ENFORCE=1)
 router.use('/api', cacheHeaders.api, sessionCheck({staff: true, tool: 'interactives'}))
 
+//The Spelling test's synthesised voice: the word in, a wav out, for the author to save as a sound asset (voice.js)
+const voice = require('./voice')({express, storageDir})
+router.use('/api/voice', voice.router)
+
+//Google Fonts, kept here: the css and files are fetched from Google once and served from storage/_fonts after that, so nobody's browser
+//calls Google for a font (fonts-proxy.js says how it is held in check). INTERACTIVES_FONTS_PROXY=off turns it off
+const fontsProxy = require('./fonts-proxy')({express, storageDir})
+router.use('/fonts', fontsProxy.router)
+fontsProxy.prewarm()
+
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
-const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean'},
+const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', askPictureDescription: 'boolean', technicalWording: 'boolean', gettingStarted: 'boolean'},
 	cleanPrefs = (p) => {
 		let out = {}
 		for (let [k, rule] of Object.entries(PREF_KEYS)) {
 			let v = p?.[k]
-			if (Array.isArray(rule) ? rule.includes(v) : rule === 'string' ? typeof v === 'string' && v.length < 120 : typeof v === rule) out[k] = v
+			if (rule?.min !== undefined) {
+				//A whole number inside the range
+				if (Number.isInteger(v) && v >= rule.min && v <= rule.max) out[k] = v
+			}
+			else if (Array.isArray(rule) ? rule.includes(v) : rule === 'string' ? typeof v === 'string' && v.length < 120 : typeof v === rule) out[k] = v
+		}
+		//Which inspector sections are folded or opened, against each section's own default. An object of short keys to
+		//booleans, kept to 300 entries, and anything that isn't a short key with a true/false is dropped
+		if (p?.sectionFolds && typeof p.sectionFolds === 'object' && !Array.isArray(p.sectionFolds)) {
+			out.sectionFolds = Object.fromEntries(
+				Object.entries(p.sectionFolds)
+					.filter(([k, v]) => k.length > 0 && k.length <= 60 && k !== '__proto__' && typeof v === 'boolean')
+					.slice(0, 300)
+			)
+		}
+		//What the first-run screen and the Getting started strip remember (which jobs are ticked, whether it was put away).
+		//Short keys to booleans, at most 40, same rule as the folds
+		if (p?.onboarding && typeof p.onboarding === 'object' && !Array.isArray(p.onboarding)) {
+			out.onboarding = Object.fromEntries(
+				Object.entries(p.onboarding)
+					.filter(([k, v]) => k.length > 0 && k.length <= 40 && k !== '__proto__' && typeof v === 'boolean')
+					.slice(0, 40)
+			)
 		}
 		//Saved workspaces (panel layouts under a name). The editor checks the layout inside each one itself, so here
 		//it's only the shape and the size: at most 12, each with an id and a name and no bigger than 8 KB
@@ -330,7 +532,7 @@ router.put('/api/prefs', express.json({limit: '128kb'}), async (req, res) => {
 
 //Who the editor's talking to, for the projects list and the owner badge
 router.get('/api/session', (req, res) => {
-	res.json({user: whoIs(req), power: isPower(req)})
+	res.json({user: whoIs(req), power: isPower(req), brand: canMarkBrand(req)})
 })
 
 //The projects list, mine only (owned or invited to). ?all=1 gets everyone's, but only for power users (god mode),
@@ -386,12 +588,12 @@ router.get('/api/projects/:id', async (req, res) => {
 
 	//A live room has newer content than mongo until its next save
 	let room = rooms.get(req.params.id)
-	res.json({project: room ? room.doc : JSON.parse(doc.doc), rev: room ? room.rev : doc.rev, owner: doc.owner || null, live: room ? room.seq : null})
+	res.json({project: room ? room.doc : await store.parse(doc), rev: room ? room.rev : doc.rev, owner: doc.owner || null, live: room ? room.seq : null})
 })
 
 //Save. The editor sends the rev it loaded, and a mismatch means someone else saved in between,
 //so it gets a 409 instead of quietly flattening their work. rev 0 (or none) is a brand new project
-router.put('/api/projects/:id', express.json({limit: '25mb'}), async (req, res) => {
+router.put('/api/projects/:id', express.json({limit: saveLimit}), async (req, res) => {
 	let id = req.params.id,
 		project = req.body.project,
 		rev = Number(req.body.rev) || 0
@@ -416,13 +618,12 @@ router.put('/api/projects/:id', express.json({limit: '25mb'}), async (req, res) 
 
 	let firstBoard = project.artboards[0],
 		next = (existing?.rev || 0) + 1,
+		//Stored as a string on purpose. Bindings and logic params use keys like "fill.color", and user
+		//data has no business deciding what mongo sees as a field path
+		docString = JSON.stringify(project),
 		set = {
 			name: String(project.name || 'Untitled project').slice(0, 200),
 			updated: new Date(),
-
-			//Stored as a string on purpose. Bindings and logic params use keys like "fill.color", and user
-			//data has no business deciding what mongo sees as a field path
-			doc: JSON.stringify(project),
 			rev: next,
 			meta: {
 				artboards: project.artboards.length,
@@ -431,24 +632,43 @@ router.put('/api/projects/:id', express.json({limit: '25mb'}), async (req, res) 
 			}
 		}
 
-	//Filter on the rev we checked, so two saves racing each other can't both win
-	let result = await projects.updateOne(
-		existing ? {_id: id, rev: existing.rev} : {_id: id},
-		{$set: set, $setOnInsert: {created: new Date(), owner: whoIs(req)}},
-		{upsert: !existing}
-	).catch((err) => err)
+	//Filter on the rev we checked, so two saves racing each other can't both win. A duplicate key on the insert is
+	//the same race for a brand new project. Anything else is the server failing, and says so
+	let raced = false,
+		stored
+	try {
+		stored = await storeProjectDoc(id, next, docString, existing?.docChunks, async (fields) => {
+			let result = await projects.updateOne(
+				existing ? {_id: id, rev: existing.rev} : {_id: id},
+				{$set: {...set, ...fields}, $setOnInsert: {created: new Date(), owner: whoIs(req)}},
+				{upsert: !existing}
+			).catch((err) => {
+				//A duplicate key on the insert, or mongo's own write conflict (code 112) under contention: both are
+				//another save getting there first
+				if (err?.code === 11000 || err?.code === 112 || /write ?conflict/i.test(err?.message || '')) return {matchedCount: 0, raced: true}
+				throw err
+			})
+			raced = !!result.raced || (existing && result.matchedCount === 0)
+			return !raced
+		})
+	} catch (err) {
+		console.trace(`${appName}: save of ${id} failed`, err)
+		let f = saveFailure(err)
+		return res.status(f.status).json({error: f.error})
+	}
 
-	if (result instanceof Error || (existing && result.matchedCount === 0)) {
+	if (raced) {
 		return res.status(409).json({error: 'This project was saved somewhere else at the same moment'})
 	}
 
-	snapshot(id, set.doc, next, whoIs(req), existing ? 'Autosave' : 'Created').catch((err) => console.trace(`${appName}: revision of ${id} failed`, err))
+	snapshot(id, docString, next, whoIs(req), existing ? 'Autosave' : 'Created').catch((err) => console.trace(`${appName}: revision of ${id} failed`, err))
 
 	//Somebody saved the whole document while a live room is open (a non-live client, an import): the room takes it
 	//and everyone connected reloads
 	let room = rooms.get(id)
 	if (room) {
 		room.doc = project
+		room.docChunks = stored.fields.docChunks
 		room.rev = next
 		room.dirty = false
 		room.log = []
@@ -521,6 +741,35 @@ router.patch('/api/projects/:id/meta', express.json({limit: '16kb'}), async (req
 	res.json(metaOf({...existing, ...set}))
 })
 
+//Governance events, for power users to look back on: who turned a link on or off, changed who's invited, cleared
+//results, deleted or restored a project or handed it on. Append only, one helper, and a failure to write it never
+//fails the action it's about
+//Ids sort in the order things happened, even two in the same millisecond (a counter after the time)
+let auditSeq = 0
+const audit = (req, event, project, detail = {}) => {
+	let me = whoIs(req),
+		now = Date.now()
+	auditLog.insertOne({_id: `${now.toString(36)}${String(++auditSeq % 1e8).padStart(8, '0')}${crypto.randomBytes(2).toString('hex')}`, at: new Date(now), event, project: project?._id ?? project ?? null, projectName: project?.name ?? null, by: me ? {username: me.username, name: me.name} : null, power: isPower(req) && !(me && project?.owner?.username === me.username), detail})
+		.catch((err) => console.trace(`${appName}: audit ${event} not written`, err))
+}
+
+//Moving a file or folder that may not be there. rename can't cross filesystems (storage/ is a symlink on test and
+//prod, but _bin sits inside it, so it never has to)
+const moveIfThere = async (from, to) => {
+	try {
+		await fs.promises.mkdir(path.dirname(to), {recursive: true})
+		await fs.promises.rename(from, to)
+		return true
+	} catch (err) {
+		if (err.code === 'ENOENT') return false
+		throw err
+	}
+}
+
+//Delete puts a project in the bin for binDays days. Its row moves to projects-bin, so no route that serves a project
+//(the editor, the share and review links, the learner page) finds it any more, and its files move to storage/_bin.
+//Revisions, comments, learner records and a published library stay where they are until it's purged, so a restore
+//gets all of it back. The bin is small and only listed per owner, so it has no index
 router.delete('/api/projects/:id', async (req, res) => {
 	let id = req.params.id
 
@@ -528,7 +777,7 @@ router.delete('/api/projects/:id', async (req, res) => {
 		return res.status(400).json({error: 'Bad project id'})
 	}
 
-	let existing = await projects.findOne({_id: id}, {projection: {doc: 0}})
+	let existing = await projects.findOne({_id: id})
 
 	if (!existing) {
 		return res.json({ok: true})
@@ -539,9 +788,13 @@ router.delete('/api/projects/:id', async (req, res) => {
 	}
 
 	//Drop the live room first: no pending autosave or close timer may write the project (or a revision of it) back
-	//after it is gone
+	//after it is gone. Whatever it had unsaved goes into the row that moves to the bin
 	let room = rooms.get(id)
 	if (room) {
+		if (room.dirty) {
+			await persist(room)
+			existing = await projects.findOne({_id: id}) || existing
+		}
 		room.deleted = true
 		room.dirty = false
 		clearTimeout(room.saveTimer)
@@ -549,26 +802,194 @@ router.delete('/api/projects/:id', async (req, res) => {
 		rooms.delete(id)
 	}
 
-	await removeAssets(id)
-	await revisions.deleteMany({project: id})
-
-	//The learners' records go with it, and so do the review comments
-	await userData.deleteMany({project: id})
-	await activityData.deleteMany({project: id})
-	await commentRows.deleteMany({project: id})
-	await commentNotices.deleteMany({project: id})
+	let me = whoIs(req)
+	await projectsBin.insertOne({...existing, binned: {at: new Date(), by: me ? {username: me.username, name: me.name} : null}})
+		.catch(async (err) => {
+			//Binned before and restored since, with the old bin row somehow left behind: this copy is the newer one
+			if (err?.code !== 11000) throw err
+			await projectsBin.deleteOne({_id: id})
+			await projectsBin.insertOne({...existing, binned: {at: new Date(), by: me ? {username: me.username, name: me.name} : null}})
+		})
+	await moveIfThere(projectDir(id), path.join(binDir(id), 'files'))
+	if (existing.share?.token) {
+		await moveIfThere(shareFile(existing.share.token), path.join(binDir(id), 'share.html'))
+		await moveIfThere(sharePrevFile(existing.share.token), path.join(binDir(id), 'share.prev.html'))
+	}
+	await moveIfThere(thumbFile(id), path.join(binDir(id), 'thumb.jpg'))
 	hubEnd(id)
-	await fs.promises.rm(thumbFile(id), {force: true})
-	await libraries.deleteOne({_id: id})
-	await fs.promises.rm(libraryDir(id), {recursive: true, force: true})
-	if (existing.share?.token) await fs.promises.rm(shareFile(existing.share.token), {force: true})
 	await projects.deleteOne({_id: id})
+	audit(req, 'project-binned', existing)
 
 	if (room) {
 		broadcast(room, 'deleted', {})
 		for (let c of room.clients) c.res.end()
 	}
 
+	res.json({ok: true, bin: binDays})
+})
+
+//Gone for good: everything delete used to remove at once. From the bin's Delete forever, and the sweep below
+const purgeProject = async (row) => {
+	let id = row._id
+	await fs.promises.rm(binDir(id), {recursive: true, force: true})
+	await revisions.deleteMany({project: id})
+	await store.dropProject(id)
+	await userData.deleteMany({project: id})
+	await activityData.deleteMany({project: id})
+	await sharedRows.deleteMany({project: id})
+	await sharedHidden.deleteMany({project: id})
+	await commentRows.deleteMany({project: id})
+	await commentNotices.deleteMany({project: id})
+	await libraries.deleteOne({_id: id})
+	await fs.promises.rm(libraryDir(id), {recursive: true, force: true})
+	await projectsBin.deleteOne({_id: id})
+}
+
+//Anything in the bin longer than binDays. At start and every 6 hours; one failure doesn't stop the rest
+const sweepBin = async () => {
+	let old = await projectsBin.find({'binned.at': {$lt: new Date(Date.now() - binDays * 24 * 60 * 60 * 1000)}}, {projection: {_id: 1}}).toArray()
+	for (let row of old) {
+		await purgeProject(row).catch((err) => console.trace(`${appName}: purging ${row._id} from the bin failed`, err))
+	}
+	return old.length
+}
+
+//The admin page's table: every project with its owner, size (document plus files), links, library and learners, and
+//what's in the bin. Power users only. Sizes come from the sidecars, so a project's files are one readdir each
+router.get('/api/admin/projects', async (req, res) => {
+	if (!isPower(req)) {
+		return res.status(403).json({error: 'Only power users can see every project'})
+	}
+
+	let list = await projects.find({}, {projection: {doc: 0}}).sort({updated: -1}).limit(5000).toArray(),
+		ids = list.map((d) => d._id),
+		learners = new Map(),
+		openComments = new Map()
+
+	for (let r of await userData.find({project: {$in: ids}}, {projection: {project: 1}}).limit(200000).toArray()) learners.set(r.project, (learners.get(r.project) || 0) + 1)
+	for (let r of await commentRows.find({project: {$in: ids}, root: true, status: 'open'}, {projection: {project: 1}}).toArray()) openComments.set(r.project, (openComments.get(r.project) || 0) + 1)
+
+	const filesOf = async (id) => {
+		let total = 0, count = 0
+		try {
+			for (let name of (await fs.promises.readdir(projectDir(id))).filter((n) => n.endsWith('.json'))) {
+				try {
+					total += JSON.parse(await fs.promises.readFile(path.join(projectDir(id), name), 'utf8')).size || 0
+					count++
+				} catch (e) {
+					//half written
+				}
+			}
+		} catch (e) {
+			//no files
+		}
+		return {total, count}
+	}
+
+	let rows = []
+	for (let d of list) {
+		let files = await filesOf(d._id),
+			//Rows saved before docSize existed have none until their next save
+			docBytes = d.docSize ?? null
+		rows.push({
+			id: d._id, name: d.name, owner: d.owner || null, collaborators: Array.isArray(d.collaborators) ? d.collaborators.length : 0,
+			created: d.created, updated: d.updated, docBytes, fileBytes: files.total, files: files.count,
+			share: !!d.share?.token, shareUpdated: d.share?.updated || null, review: !!d.review?.token, library: !!d.meta?.library, libraryVersion: d.library?.version || 0,
+			learners: learners.get(d._id) || 0, openComments: openComments.get(d._id) || 0, serverMarked: !!d.marking
+		})
+	}
+	let bin = await projectsBin.countDocuments({})
+	res.json({projects: rows, bin, generatedAt: new Date()})
+})
+
+//The audit log, power users only: newest first, by project if asked (?project=), at most 500
+router.get('/api/audit', async (req, res) => {
+	if (!isPower(req)) {
+		return res.status(403).json({error: 'Only power users can read the audit log'})
+	}
+	let filter = {}
+	if (typeof req.query.project === 'string' && validID(req.query.project)) filter.project = req.query.project
+	if (typeof req.query.event === 'string' && /^[a-z-]{2,40}$/.test(req.query.event)) filter.event = req.query.event
+	let limit = Math.min(500, Math.max(1, Number(req.query.limit) || 200))
+	res.json(await auditLog.find(filter, {projection: {_id: 0}}).sort({at: -1, _id: -1}).limit(limit).toArray())
+})
+
+//Your bin (power users with ?all=1: everyone's). Card details only, no documents
+router.get('/api/bin', async (req, res) => {
+	let me = whoIs(req),
+		guests = !['testing', 'production'].includes(process.env.NODE_ENV),
+		filter = req.query.all === '1' && isPower(req) ? {} : me?.username ? {'owner.username': me.username} : guests ? {'owner.username': null} : {_id: null},
+		list = await projectsBin.find(filter, {projection: {doc: 0, docChunks: 0}}).sort({'binned.at': -1}).limit(500).toArray()
+
+	res.json(list.map((d) => ({
+		...metaOf(d),
+		binned: d.binned,
+		purge: new Date(d.binned.at.getTime() + binDays * 24 * 60 * 60 * 1000)
+	})))
+})
+
+//The owner (or a power user) of a binned project, as mayChange would judge it if it were still a project
+const binnedFor = async (req, res) => {
+	let id = req.params.id
+	if (!validID(id)) {
+		res.status(400).json({error: 'Bad project id'})
+		return null
+	}
+	let row = await projectsBin.findOne({_id: id}, {projection: {doc: 0, docChunks: 0}})
+	if (!row) {
+		res.status(404).json({error: 'That project is not in the bin'})
+		return null
+	}
+	return mayChange(req, res, row, {ownerOnly: true}) ? row : null
+}
+
+router.post('/api/bin/:id/restore', async (req, res) => {
+	let row = await binnedFor(req, res)
+	if (!row) {
+		return
+	}
+
+	let id = row._id,
+		full = await projectsBin.findOne({_id: id}),
+		{binned, ...back} = full
+
+	//Ids are random, but a project made with this one since would be overwritten
+	if (await projects.findOne({_id: id}, {projection: {_id: 1}})) {
+		return res.status(409).json({error: 'A project with this id exists again, so this one can\'t come back'})
+	}
+
+	await moveIfThere(path.join(binDir(id), 'files'), projectDir(id))
+	if (back.share?.token) {
+		await moveIfThere(path.join(binDir(id), 'share.html'), shareFile(back.share.token))
+		await moveIfThere(path.join(binDir(id), 'share.prev.html'), sharePrevFile(back.share.token))
+	}
+	await moveIfThere(path.join(binDir(id), 'thumb.jpg'), thumbFile(id))
+	await projects.insertOne(back)
+	await projectsBin.deleteOne({_id: id})
+	audit(req, 'project-restored', back)
+	await fs.promises.rm(binDir(id), {recursive: true, force: true})
+
+	res.json({ok: true, id})
+})
+
+router.get('/api/bin/:id/thumbnail', async (req, res) => {
+	let row = await binnedFor(req, res)
+	if (!row) {
+		return
+	}
+	res.set('Cache-Control', 'private, max-age=31536000, immutable')
+	res.sendFile(path.join(binDir(row._id), 'thumb.jpg'), (err) => {
+		if (err && !res.headersSent) res.status(404).end()
+	})
+})
+
+router.delete('/api/bin/:id', async (req, res) => {
+	let row = await binnedFor(req, res)
+	if (!row) {
+		return
+	}
+	await purgeProject(row)
+	audit(req, 'project-purged', row)
 	res.json({ok: true})
 })
 
@@ -593,7 +1014,7 @@ router.post('/api/projects/:id/duplicate', express.json(), async (req, res) => {
 	}
 
 	let newID = safety.newProjectID(),
-		project = JSON.parse(doc.doc),
+		project = rooms.get(id) ? JSON.parse(JSON.stringify(rooms.get(id).doc)) : await store.parse(doc),
 		now = new Date()
 
 	//A random id colliding is next to impossible, but this is the check that makes it a promise
@@ -609,12 +1030,15 @@ router.post('/api/projects/:id/duplicate', express.json(), async (req, res) => {
 		await fs.promises.cp(projectDir(id), projectDir(newID), {recursive: true})
 	}
 
-	await projects.insertOne({_id: newID, name: project.name, created: now, updated: now, doc: JSON.stringify(project), rev: 1, meta: doc.meta, tags: doc.tags || [], folder: doc.folder || null, owner: whoIs(req)})
+	await storeProjectDoc(newID, 1, JSON.stringify(project), null, async (fields) => {
+		await projects.insertOne({_id: newID, name: project.name, created: now, updated: now, ...fields, rev: 1, meta: doc.meta, tags: doc.tags || [], folder: doc.folder || null, owner: whoIs(req)})
+		return true
+	})
 	res.json({ok: true, id: newID})
 })
 
 //Asset routes check the project's owner too. One lookup each, it's not a hot path
-const projectFor = async (req, res) => {
+const projectFor = async (req, res, opts) => {
 	let {id, assetId} = req.params
 
 	if (!validID(id) || (assetId !== undefined && !validID(assetId))) {
@@ -629,8 +1053,34 @@ const projectFor = async (req, res) => {
 		return null
 	}
 
-	return mayChange(req, res, doc) ? doc : null
+	return mayChange(req, res, doc, opts) ? doc : null
 }
+
+//How live a project is, for the warnings before deleting it or turning its link off: whether the share link (which is
+//also the Link for StudyDesk) and the review link are on, and the learners with records, per course, with when each
+//course last did anything. Reads interactives-user-data only (its index starts with project), not the big ingest
+router.get('/api/projects/:id/in-use', async (req, res) => {
+	let doc = await projectFor(req, res)
+	if (!doc) {
+		return
+	}
+
+	let rows = await userData.find({project: doc._id}, {projection: {courseLabel: 1, course: 1, updated: 1}}).limit(20000).toArray(),
+		byCourse = new Map(),
+		last = null
+
+	for (let r of rows) {
+		let key = r.courseLabel || r.course || 'Outside a course',
+			c = byCourse.get(key) || {course: key, learners: 0, last: null}
+		c.learners++
+		if (r.updated && (!c.last || r.updated > c.last)) c.last = r.updated
+		if (r.updated && (!last || r.updated > last)) last = r.updated
+		byCourse.set(key, c)
+	}
+
+	let courses = [...byCourse.values()].sort((a, b) => (b.last?.getTime?.() || 0) - (a.last?.getTime?.() || 0))
+	res.json({share: !!doc.share?.token, review: !!doc.review?.token, learners: rows.length, last, courses: courses.slice(0, 8), moreCourses: Math.max(0, courses.length - 8)})
+})
 
 router.get('/api/projects/:id/assets', async (req, res) => {
 	if (!await projectFor(req, res)) {
@@ -639,12 +1089,35 @@ router.get('/api/projects/:id/assets', async (req, res) => {
 
 	let dir = projectDir(req.params.id),
 		names = fs.existsSync(dir) ? await fs.promises.readdir(dir) : [],
+		variants = new Map(),
 		list = []
+
+	//Which smaller copies each asset has, with their sizes (0 is "the original is as good", see the variant route)
+	try {
+		for (let name of (await fs.promises.readdir(variantDir(req.params.id))).filter((n) => n.endsWith('.json'))) {
+			try {
+				let meta = JSON.parse(await fs.promises.readFile(path.join(variantDir(req.params.id), name), 'utf8')),
+					[assetID, key] = name.slice(0, -5).split('.')
+
+				variants.set(assetID, {...variants.get(assetID), [key]: meta.size})
+			}
+			catch (e) {
+				//Half written, skip it
+			}
+		}
+	}
+	catch (e) {
+		//No variants yet
+	}
 
 	for (let name of names.filter((n) => n.endsWith('.json'))) {
 		try {
-			let meta = JSON.parse(await fs.promises.readFile(path.join(dir, name), 'utf8'))
-			list.push({id: name.slice(0, -5), mime: meta.mime, size: meta.size})
+			let meta = JSON.parse(await fs.promises.readFile(path.join(dir, name), 'utf8')),
+				id = name.slice(0, -5),
+				row = {id: id, mime: meta.mime, size: meta.size}
+
+			if (variants.has(id)) row.variants = variants.get(id)
+			list.push(row)
 		}
 		catch (e) {
 			//A half written sidecar, skip it
@@ -652,6 +1125,91 @@ router.get('/api/projects/:id/assets', async (req, res) => {
 	}
 
 	res.json(list)
+})
+
+//Files in a project with the same bytes, uploaded twice (the same logo dropped on three artboards, a re-import). Groups
+//of ids, biggest saving first. The hash goes in the sidecar (keyed by size and mtime) so it's worked out once a file
+router.get('/api/projects/:id/assets/duplicates', async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	let dir = projectDir(req.params.id),
+		names = fs.existsSync(dir) ? (await fs.promises.readdir(dir)).filter((n) => n.endsWith('.json')) : [],
+		byHash = new Map()
+
+	for (let name of names) {
+		let id = name.slice(0, -5),
+			file = path.join(dir, id),
+			side = path.join(dir, name)
+		try {
+			let meta = JSON.parse(await fs.promises.readFile(side, 'utf8')),
+				st = await fs.promises.stat(file),
+				key = `${st.size}:${st.mtimeMs}`
+
+			if (meta.sha256?.key !== key) {
+				let hash = crypto.createHash('sha256')
+				for await (let chunk of fs.createReadStream(file)) hash.update(chunk)
+				meta.sha256 = {key, hex: hash.digest('hex')}
+				await fs.promises.writeFile(side, JSON.stringify(meta))
+			}
+			let group = byHash.get(meta.sha256.hex) || {size: st.size, ids: []}
+			group.ids.push(id)
+			byHash.set(meta.sha256.hex, group)
+		}
+		catch (e) {
+			//A file without its sidecar or the other way round: not ours to judge
+		}
+	}
+
+	let groups = [...byHash.values()].filter((g) => g.ids.length > 1).sort((a, b) => b.size * (b.ids.length - 1) - a.size * (a.ids.length - 1))
+	res.json({groups})
+})
+
+//After the editor merged duplicates in the document: each dropped copy becomes a hard link to the kept file, so the
+//disk space comes back but every old id still answers (an Undo in the editor points layers back at them)
+router.post('/api/projects/:id/assets/dedupe', express.json({limit: '64kb'}), async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	let id = req.params.id,
+		plan = Array.isArray(req.body?.plan) ? req.body.plan.slice(0, 500) : [],
+		linked = 0,
+		freed = 0
+
+	const hashOf = async (assetID) => {
+		let hash = crypto.createHash('sha256')
+		for await (let chunk of fs.createReadStream(assetFile(id, assetID))) hash.update(chunk)
+		return hash.digest('hex')
+	}
+
+	for (let p of plan) {
+		if (!validID(p?.keep) || !Array.isArray(p.drop)) continue
+		let keepFile = assetFile(id, p.keep), keepHash
+		try {
+			keepHash = await hashOf(p.keep)
+		} catch {
+			continue
+		}
+		for (let drop of p.drop.filter(validID)) {
+			let file = assetFile(id, drop)
+			try {
+				let [a, b] = await Promise.all([fs.promises.stat(keepFile), fs.promises.stat(file)])
+				//Already one file, or not the same bytes after all: leave it
+				if (a.ino === b.ino || await hashOf(drop) !== keepHash) continue
+				let tmp = `${file}.link`
+				await fs.promises.link(keepFile, tmp)
+				await fs.promises.rename(tmp, file)
+				linked++
+				freed += b.size
+			} catch (err) {
+				//A filesystem without hard links, or the file's gone: nothing to free, nothing broken
+			}
+		}
+	}
+
+	res.json({ok: true, linked, freed})
 })
 
 //Raw bytes in, raw bytes out. The editor never reuses an asset id for different bytes, so a fetched asset can sit
@@ -674,7 +1232,93 @@ router.put('/api/projects/:id/assets/:assetId', express.raw({type: () => true, l
 	await fs.promises.rename(temp, file)
 	await fs.promises.writeFile(`${file}.json`, JSON.stringify({mime: mime, size: bytes.length, created: new Date()}))
 
+	//New bytes under an id that had smaller copies made from the old ones
+	await removeVariants(id, assetId)
+
 	res.json({ok: true, size: bytes.length})
+})
+
+//A smaller copy of an image asset, made in the browser: the canvas proxy (key "edit") or an optimised output (a key
+//that says its size and quality). Same owner check and size limit as the asset. An empty body is a real answer, it
+//means "the original is already as good", so nobody works that out again. At most maxVariants per asset, the oldest
+//goes when there is one too many
+router.put('/api/projects/:id/assets/:assetId/variant/:key', express.raw({type: () => true, limit: maxAsset}), async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	let {id, assetId, key} = req.params,
+		bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0),
+		mime = String(req.get('content-type') || '').split(';')[0].trim().toLowerCase()
+
+	if (!validVariantKey(key)) {
+		return res.status(400).json({error: 'Bad variant key'})
+	}
+
+	if (!/^image\/(jpeg|png|webp)$/.test(mime)) {
+		return res.status(415).json({error: 'A variant is a jpeg, png or webp picture'})
+	}
+
+	if (!fs.existsSync(`${assetFile(id, assetId)}.json`)) {
+		return res.status(404).json({error: 'No such asset'})
+	}
+
+	let file = variantFile(id, assetId, key),
+		temp = `${file}.${process.pid}.${Date.now()}.tmp`
+
+	await fs.promises.mkdir(variantDir(id), {recursive: true})
+
+	let mine = []
+
+	for (let name of await fs.promises.readdir(variantDir(id))) {
+		if (name.startsWith(`${assetId}.`) && name.endsWith('.json') && name !== `${assetId}.${key}.json`) {
+			mine.push({name: name.slice(0, -5), time: (await fs.promises.stat(path.join(variantDir(id), name)).catch(() => ({mtimeMs: 0}))).mtimeMs})
+		}
+	}
+
+	mine.sort((a, b) => a.time - b.time)
+
+	for (let old of mine.slice(0, Math.max(0, mine.length - (maxVariants - 1)))) {
+		await fs.promises.rm(path.join(variantDir(id), old.name), {force: true})
+		await fs.promises.rm(path.join(variantDir(id), `${old.name}.json`), {force: true})
+	}
+
+	await fs.promises.writeFile(temp, bytes)
+	await fs.promises.rename(temp, file)
+	await fs.promises.writeFile(`${file}.json`, JSON.stringify({mime: mime, size: bytes.length, created: new Date()}))
+
+	res.json({ok: true, size: bytes.length})
+})
+
+router.get('/api/projects/:id/assets/:assetId/variant/:key', async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	let {id, assetId, key} = req.params
+
+	if (!validVariantKey(key)) {
+		return res.status(400).json({error: 'Bad variant key'})
+	}
+
+	let file = variantFile(id, assetId, key),
+		meta
+
+	try {
+		meta = JSON.parse(await fs.promises.readFile(`${file}.json`, 'utf8'))
+	}
+	catch (e) {
+		return res.status(404).json({error: 'No such variant'})
+	}
+
+	//Revalidated, a PUT under the same key replaces it
+	res.setHeader('Cache-Control', 'private, no-cache')
+	safety.assetHeaders(res, meta.mime)
+	res.sendFile(file, (err) => {
+		if (err && !res.headersSent) {
+			res.status(404).json({error: 'No such variant'})
+		}
+	})
 })
 
 router.get('/api/projects/:id/assets/:assetId', async (req, res) => {
@@ -733,8 +1377,13 @@ router.get('/api/projects/:id/live', async (req, res) => {
 		//Who they are: the checked session first, then the name the page's own session (fetchActivity) gave it, which
 		//only matters where there's no session to check (local dev). It's just a label on the presence list
 		claimed = typeof req.query.name === 'string' ? req.query.name.replace(/[^\p{L}\p{N} .'-]+/gu, '').slice(0, 60).trim() : '',
-		client = {id: clientId, res, name: agent ? `${agent} (AI)` : me?.name || me?.username || claimed || 'Guest', color: PALETTE[room.nextColor++ % PALETTE.length], presence: {}},
+		client = {id: clientId, res, agent: agent || null, name: agent ? `${agent} (AI)` : me?.name || me?.username || claimed || 'Guest', color: PALETTE[room.nextColor++ % PALETTE.length], presence: {}},
 		since = Number(req.query.since)
+
+	//Agent access switched off for this box: an agent can't join a room either
+	if (agent && mcpOff()) {
+		return res.status(403).json({error: 'AI agent access is turned off on this server'})
+	}
 
 	res.writeHead(200, {'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no'})
 	res.write(':ok\n\n')
@@ -748,7 +1397,7 @@ router.get('/api/projects/:id/live', async (req, res) => {
 		else for (let e of missed) sseSend(res, 'ops', e, e.seq)
 	}
 
-	sseSend(res, 'hello', {seq: room.seq, rev: room.rev, clientId, color: client.color, peers: presenceOf(room)})
+	sseSend(res, 'hello', {seq: room.seq, rev: room.rev, clientId, color: client.color, peers: presenceOf(room), stored: room.storeFailed ? {ok: false, error: room.storeError} : {ok: true}})
 	broadcast(room, 'presence', {clientId, name: client.name, color: client.color, joined: true})
 
 	//Heartbeat under haproxy's 25s server timeout, or the stream gets cut every half minute
@@ -783,9 +1432,11 @@ router.post('/api/projects/:id/ops', express.json({limit: '25mb'}), async (req, 
 	if (room.log.length > LOG_KEEP) room.log.splice(0, room.log.length - LOG_KEEP)
 	broadcast(room, 'ops', entry, entry.seq)
 
-	room.dirty = true
-	clearTimeout(room.saveTimer)
-	room.saveTimer = setTimeout(() => persist(room), 1000)
+	//Edits an AI agent made go down in the next revision's reason ("Autosave (edited with Claude (AI))")
+	let sender = [...room.clients].find((c) => c.id === entry.clientId)
+	if (sender?.agent) (room.agentEdits ||= new Set()).add(sender.name)
+
+	scheduleSave(room)
 	maybeCloseRoom(room)
 
 	res.json({ok: true, seq: entry.seq})
@@ -866,8 +1517,71 @@ router.get('/api/projects/:id/revisions', async (req, res) => {
 		return
 	}
 
-	let list = await revisions.find({project: id}, {sort: {created: -1}, projection: {doc: 0}}).limit(revisionCap).toArray()
-	res.json(list.map((r) => ({id: String(r._id), created: r.created, rev: r.rev, by: r.by, reason: r.reason, size: r.size})))
+	//The newest revisionCap, plus any pinned ones older than that
+	let list = await revisions.find({project: id}, {sort: {created: -1}, projection: {doc: 0, docChunks: 0}}).limit(revisionCap).toArray(),
+		have = new Set(list.map((r) => String(r._id))),
+		pinned = await revisions.find({project: id, pinned: true}, {sort: {created: -1}, projection: {doc: 0, docChunks: 0}}).toArray()
+
+	list = [...list, ...pinned.filter((r) => !have.has(String(r._id)))]
+	res.json(list.map((r) => ({id: String(r._id), created: r.created, rev: r.rev, by: r.by, reason: r.reason, size: r.size, name: r.name || null, pinned: !!r.pinned})))
+})
+
+//Save what's there now as a named, pinned version ("Sent to the unit coordinator", "Before the redesign")
+router.post('/api/projects/:id/revisions', express.json({limit: '4kb'}), async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	let name = cleanRevisionName(req.body?.name)
+	if (!name) {
+		return res.status(400).json({error: 'Give the version a name'})
+	}
+	if (await revisions.countDocuments({project: id, pinned: true}) >= pinCap) {
+		return res.status(400).json({error: `A project keeps up to ${pinCap} named versions. Unpin one first`})
+	}
+
+	let room = rooms.get(id)
+	if (room) await persist(room)
+	let current = room ? JSON.stringify(room.doc) : await store.get(doc),
+		revID = await snapshot(id, current, room ? room.rev : doc.rev, whoIs(req), 'Named version', true, {name, pinned: true})
+
+	res.json({ok: true, id: revID})
+})
+
+//Name, rename or pin/unpin a revision. A pinned one is never pruned
+router.patch('/api/projects/:id/revisions/:revID', express.json({limit: '4kb'}), async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0, docChunks: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+
+	let r = validRevision(req.params.revID) && await revisions.findOne({_id: req.params.revID, project: id}, {projection: {pinned: 1}})
+	if (!r) {
+		return res.status(404).json({error: 'No such revision'})
+	}
+
+	let set = {}
+	if ('name' in (req.body || {})) set.name = cleanRevisionName(req.body.name)
+	if (typeof req.body?.pinned === 'boolean') {
+		if (req.body.pinned && !r.pinned && await revisions.countDocuments({project: id, pinned: true}) >= pinCap) {
+			return res.status(400).json({error: `A project keeps up to ${pinCap} named versions. Unpin one first`})
+		}
+		set.pinned = req.body.pinned
+	}
+
+	await revisions.updateOne({_id: r._id}, {$set: set})
+	res.json({ok: true, ...set})
 })
 
 router.get('/api/projects/:id/revisions/:revID', async (req, res) => {
@@ -893,7 +1607,7 @@ router.get('/api/projects/:id/revisions/:revID', async (req, res) => {
 		return res.status(404).json({error: 'No such revision'})
 	}
 
-	res.json({project: JSON.parse(r.doc), created: r.created, rev: r.rev})
+	res.json({project: await store.parse(r), created: r.created, rev: r.rev})
 })
 
 router.post('/api/projects/:id/revisions/:revID/restore', async (req, res) => {
@@ -922,19 +1636,25 @@ router.post('/api/projects/:id/revisions/:revID/restore', async (req, res) => {
 	//Whatever's there now goes into history first, so a restore can itself be undone
 	let room = rooms.get(id)
 	if (room) await persist(room)
-	let current = room ? JSON.stringify(room.doc) : doc.doc,
-		currentRev = room ? room.rev : doc.rev
+	let current = room ? JSON.stringify(room.doc) : await store.get(doc),
+		currentRev = room ? room.rev : doc.rev,
+		//The room's save may just have moved the row onto a new set of parts
+		oldRef = room ? room.docChunks : doc.docChunks
 	await snapshot(id, current, currentRev, whoIs(req), 'Before restore', true)
 
-	let project = JSON.parse(r.doc),
+	let project = await store.parse(r),
 		next = currentRev + 1
 
 	//The restored copy keeps this project's id (a revision from before a rename still belongs here)
 	project.id = id
-	await projects.updateOne({_id: id}, {$set: {doc: JSON.stringify(project), rev: next, updated: new Date(), name: String(project.name || 'Untitled project').slice(0, 200)}})
+	let {fields} = await storeProjectDoc(id, next, JSON.stringify(project), oldRef, async (fields) => {
+		await projects.updateOne({_id: id}, {$set: {...fields, rev: next, updated: new Date(), name: String(project.name || 'Untitled project').slice(0, 200)}})
+		return true
+	})
 
 	if (room) {
 		room.doc = project
+		room.docChunks = fields.docChunks
 		room.rev = next
 		room.dirty = false
 		room.log = []
@@ -1036,6 +1756,7 @@ router.post('/api/projects/:id/collaborators', express.json({limit: '4kb'}), asy
 	if (!list.some((c) => c.username === username)) {
 		list = [...list, {username, name: name || null, added: new Date(), by: whoIs(req)?.username ?? null}]
 		await projects.updateOne({_id: id}, {$set: {collaborators: list}})
+		audit(req, 'collaborator-added', doc, {username})
 	}
 
 	res.json({collaborators: list})
@@ -1060,8 +1781,134 @@ router.delete('/api/projects/:id/collaborators/:username', async (req, res) => {
 	let list = (Array.isArray(doc.collaborators) ? doc.collaborators : []).filter((c) => c.username !== req.params.username)
 
 	await projects.updateOne({_id: id}, {$set: {collaborators: list}})
+	audit(req, 'collaborator-removed', doc, {username: String(req.params.username).slice(0, 80), left: !!leaving})
 	res.json({collaborators: list})
 })
+
+//Hand a project to one of its collaborators: they become the owner and the old owner stays on as a collaborator, so
+//nobody loses access. Same id, same share token, so every StudyDesk embed keeps working (duplicating, the old
+//workaround for a leaver, broke them all). The library published from it and templates saved from it by the old
+//owner follow. Owner or power user only
+router.post('/api/projects/:id/owner', express.json({limit: '4kb'}), async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0, docChunks: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+
+	if (!mayChange(req, res, doc, {ownerOnly: true})) {
+		return
+	}
+
+	let username = String(req.body?.username ?? '').trim().toLowerCase(),
+		list = Array.isArray(doc.collaborators) ? doc.collaborators : [],
+		next = list.find((c) => c.username === username)
+
+	if (!next) {
+		return res.status(400).json({error: 'Invite them to collaborate first, then make them the owner'})
+	}
+
+	//userID from the suite's user lookup when it knows them (the owner record carries one from a real session)
+	let known = await userLookup.findOne({username}, {projection: {userID: 1}}).catch(() => null),
+		owner = {username, userID: known?.userID ?? null, name: next.name || username},
+		old = doc.owner?.username ? doc.owner : null,
+		collaborators = list.filter((c) => c.username !== username)
+
+	if (old && !collaborators.some((c) => c.username === old.username)) {
+		collaborators.push({username: old.username, name: old.name || null, added: new Date(), by: whoIs(req)?.username ?? null})
+	}
+
+	await projects.updateOne({_id: id}, {$set: {owner, collaborators, ownerChanged: {at: new Date(), from: old?.username || null, by: whoIs(req)?.username ?? null}}})
+	await libraries.updateOne({_id: id}, {$set: {owner}}).catch((err) => console.trace(`${appName}: library owner of ${id} not moved`, err))
+	if (old) await templates.updateMany({source: id, 'owner.username': old.username}, {$set: {owner}}).catch((err) => console.trace(`${appName}: template owners from ${id} not moved`, err))
+
+	let room = rooms.get(id)
+	if (room) room.owner = owner
+	audit(req, 'owner-changed', doc, {from: old?.username || null, to: username})
+
+	res.json({owner, collaborators})
+})
+
+//Questions that are set to be marked on the server (Question > Mark answers on the server). The share page the editor builds holds
+//the whole project as JSON, right answers and all, so before it is kept for learners the answers are taken out of that JSON
+//(the player's own stripProject) and the answer key goes on the project's record instead, where /learn/<token>/check marks
+//against it. Only the page served to learners is changed: what the owner exports from the editor still marks by itself.
+//Returns null when nothing in the page is set that way; throws when something is but the project could not be read, so a page
+//that still has its answers in it is never kept
+const audioClean = require('./shared/audio-clean.cjs')
+
+const markedIds = (salt) => (frame, real) => crypto.createHmac('sha256', salt).update(`${frame}\0${real}`).digest('base64url').slice(0, 10)
+
+const prepareMarkedShare = (html, oldSalt) => {
+	if (!html.includes('"serverMarked":true')) {
+		return null
+	}
+
+	let open = html.indexOf('id="ix-project">'),
+		start = open + 'id="ix-project">'.length,
+		end = open < 0 ? -1 : html.indexOf('</script>', start)
+
+	if (end < 0) {
+		throw new Error('no project in the page')
+	}
+
+	let project = JSON.parse(html.slice(start, end)),
+		salt = oldSalt || crypto.randomBytes(16).toString('hex'),
+		stripped = marker.stripProject(project, markedIds(salt)),
+		ids = Object.keys(stripped.questions)
+
+	if (!ids.length) {
+		return null
+	}
+
+	if (ids.length > 200) {
+		throw new Error('too many questions marked on the server')
+	}
+
+	//Spelling questions play a spoken word: what the audio files are called and the tags inside them are as readable as the page
+	let audioNotes = Object.values(stripped.questions).some((q) => q.blanks.some((b) => b.spelling)) ? audioClean.cleanAudioAssets(project) : []
+
+	//The same escaping the player's page builder uses for JSON inside a script element
+	let json = JSON.stringify(project).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029'),
+		pass = project.settings?.reporting?.passMark
+
+	return {
+		html: html.slice(0, start) + json + html.slice(end),
+		marking: {salt, passMark: typeof pass === 'number' && Number.isFinite(pass) ? pass : null, questions: stripped.questions, skipped: stripped.skipped, updated: new Date()},
+		audioNotes
+	}
+}
+
+//What the project says it uses of the learner's device (Project > Microphone and camera), read out of the page being shared the same way and
+//kept on the share record. The learner page builds its consent screen and its limits from this copy, so what a project asks for over
+//postMessage is held to what the owner declared when they shared it, never to what the project says now. Null when it declares nothing.
+//A project that offers a download (Download a file) with no sensor gets an empty declaration: the learner page still needs the bridge,
+//since the project's frame is sandboxed and can't save a file itself
+const declaredSensors = (html) => {
+	let saves = html.includes('"kind":"action.saveFile"')
+
+	if (!saves && !html.includes('"sensors":')) {
+		return null
+	}
+
+	let open = html.indexOf('id="ix-project">'),
+		start = open + 'id="ix-project">'.length,
+		end = open < 0 ? -1 : html.indexOf('</script>', start)
+
+	if (end < 0) {
+		return null
+	}
+
+	try {
+		let sensors = media.cleanSensors(JSON.parse(html.slice(start, end)).settings?.sensors)
+
+		return sensors && media.declaresSensors(sensors) ? sensors : saves ? {} : null
+	}
+	catch (err) {
+		return null
+	}
+}
 
 //Share links: the project as one standalone HTML file (built by the editor), at /interactives/s/<token>.
 //Anyone with the link can play it, no session (a link opened in a new tab can't carry one), so it's off until
@@ -1096,12 +1943,101 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 		return res.status(400).json({error: 'Not an HTML page'})
 	}
 
+	//Questions set to be marked on the server get their answers taken out of the page that is served, and the answer key kept here
+	let html = req.body,
+		prepared = null
+
+	//Sticky notes are the authors' own: the editor leaves them out of the page, and whatever arrives is stripped again here
+	try {
+		html = notesLib.stripNotesFromPage(html)
+	}
+	catch (err) {
+		console.trace(`${appName}: could not read the project out of the shared page of ${id} to take its notes out`, err)
+		return res.status(400).json({error: 'The notes could not be taken out of that page, so it was not shared'})
+	}
+
+	try {
+		prepared = prepareMarkedShare(html, doc.marking?.salt)
+	}
+	catch (err) {
+		console.trace(`${appName}: could not read the project out of the shared page of ${id}`, err)
+		return res.status(400).json({error: 'The answers could not be taken out of that page, so it was not shared'})
+	}
+
 	let token = doc.share?.token || crypto.randomBytes(18).toString('base64url'),
-		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix}
+		sensors = declaredSensors(html),
+		shared = responses.declaredShared(html),
+		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {})}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
-	await fs.promises.writeFile(shareFile(token), req.body)
-	await projects.updateOne({_id: id}, {$set: {share}})
+	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
+	let prevKept = false
+	if (doc.share?.token && await moveIfThere(shareFile(token), sharePrevFile(token))) {
+		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {})}
+		prevKept = true
+	}
+	await fs.promises.writeFile(shareFile(token), prepared ? prepared.html : html)
+
+	//The answer key goes with the page it was made for: the new one for this page, the old one kept beside the kept page
+	//so a revert puts both back together
+	let set = {share}, unset = {}
+	if (prepared) set.marking = prepared.marking
+	else unset.marking = ''
+	if (prevKept) {
+		if (doc.marking) set.previousMarking = doc.marking
+		else unset.previousMarking = ''
+	}
+	await projects.updateOne({_id: id}, Object.keys(unset).length ? {$set: set, $unset: unset} : {$set: set})
+	audit(req, doc.share?.token ? 'share-updated' : 'share-on', doc)
+	res.json({share, marking: prepared ? {questions: Object.keys(prepared.marking.questions).length, skipped: prepared.marking.skipped, ...(prepared.audioNotes.length ? {audioNotes: prepared.audioNotes} : {})} : null})
+})
+
+//Put the previous page back (and keep the one it replaces as the previous, so a revert can itself be undone)
+router.post('/api/projects/:id/share/revert', async (req, res) => {
+	let id = req.params.id,
+		doc = validID(id) && (await projects.findOne({_id: id}, {projection: {doc: 0, docChunks: 0}}))
+
+	if (!doc) {
+		return res.status(404).json({error: 'No such project'})
+	}
+	if (!mayChange(req, res, doc)) {
+		return
+	}
+	let token = doc.share?.token
+	if (!token || !doc.share.previous || !fs.existsSync(sharePrevFile(token))) {
+		return res.status(400).json({error: 'There is no previous version of this share link to go back to'})
+	}
+
+	let swap = path.join(storageDir, 'shares', `${token}.swap.html`)
+	await fs.promises.rename(shareFile(token), swap)
+	await fs.promises.rename(sharePrevFile(token), shareFile(token))
+	await fs.promises.rename(swap, sharePrevFile(token))
+
+	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
+		set = {share}, unset = {}
+
+	//The page that came back has the sensors it was shared with
+	if (doc.share.previous.sensors) {
+		share.sensors = doc.share.previous.sensors
+	}
+	else {
+		delete share.sensors
+	}
+
+	//And the shared responses it declared
+	if (doc.share.previous.shared) {
+		share.shared = doc.share.previous.shared
+	}
+	else {
+		delete share.shared
+	}
+	//The answer keys swap with their pages
+	if (doc.previousMarking) set.marking = doc.previousMarking
+	else unset.marking = ''
+	if (doc.marking) set.previousMarking = doc.marking
+	else unset.previousMarking = ''
+	await projects.updateOne({_id: id}, Object.keys(unset).length ? {$set: set, $unset: unset} : {$set: set})
+	audit(req, 'share-reverted', doc)
 	res.json({share})
 })
 
@@ -1117,8 +2053,12 @@ router.delete('/api/projects/:id/share', async (req, res) => {
 		return
 	}
 
-	if (doc.share?.token) await fs.promises.rm(shareFile(doc.share.token), {force: true})
-	await projects.updateOne({_id: id}, {$unset: {share: ''}})
+	if (doc.share?.token) {
+		await fs.promises.rm(shareFile(doc.share.token), {force: true})
+		await fs.promises.rm(sharePrevFile(doc.share.token), {force: true})
+		audit(req, 'share-off', doc)
+	}
+	await projects.updateOne({_id: id}, {$unset: {share: '', marking: '', previousMarking: ''}})
 	res.json({ok: true})
 })
 
@@ -1160,6 +2100,7 @@ const maxSnapshot = 12 * 1024 * 1024,
 		version: doc.version,
 		updated: doc.updated,
 		note: doc.note || '',
+		brand: !!doc.brand,
 		mine: !!me?.username && doc.owner?.username === me.username,
 		//Only the owner sees who it's shared with
 		shared: !!me?.username && doc.owner?.username === me.username ? doc.shared || {everyone: false, users: []} : undefined,
@@ -1251,9 +2192,9 @@ router.post('/api/projects/:id/library/publish', express.json({limit: '16kb'}), 
 	}
 
 	let id = req.params.id,
-		full = await projects.findOne({_id: id}, {projection: {doc: 1}}),
+		full = await projects.findOne({_id: id}, {projection: {doc: 1, docChunks: 1}}),
 		room = rooms.get(id),
-		project = room ? room.doc : JSON.parse(full.doc)
+		project = room ? room.doc : await store.parse(full)
 
 	if (!project.settings?.library) {
 		return res.status(400).json({error: 'Turn on "This project is a library" in the project settings first'})
@@ -1266,8 +2207,18 @@ router.post('/api/projects/:id/library/publish', express.json({limit: '16kb'}), 
 	}
 
 	let existing = await libraries.findOne({_id: id}, {projection: {snapshot: 0}}),
-		me = whoIs(req),
-		now = new Date(),
+		me = whoIs(req)
+
+	//A brand kit is changed by the people who may run one, not by whoever happens to own the project
+	if (existing?.brand && !canMarkBrand(req)) {
+		console.warn(`${appName}: ${enforcing() ? 'rejected' : 'would reject'} ${req.method} ${req.originalUrl.split('?')[0]}: not allowed to publish a brand kit`)
+
+		if (enforcing()) {
+			return res.status(403).json({error: 'This library is a brand kit, and only the people who look after brand kits can publish it'})
+		}
+	}
+
+	let now = new Date(),
 		plan = library.planPublish(existing, snap, {note: req.body.note, by: me?.username || me?.name || null, now})
 
 	if (plan.unchanged) {
@@ -1341,6 +2292,31 @@ router.put('/api/projects/:id/library/share', express.json({limit: '16kb'}), asy
 	res.json({shared})
 })
 
+//Mark the published library as a brand kit, or take that off. Its owner, and only someone who may run brand kits
+//(canMarkBrand). What projects already copied is locked or unlocked the next time they use or update the library
+router.put('/api/projects/:id/library/brand', express.json({limit: '1kb'}), async (req, res) => {
+	if (!await projectFor(req, res)) {
+		return
+	}
+
+	if (!canMarkBrand(req)) {
+		console.warn(`${appName}: ${enforcing() ? 'rejected' : 'would reject'} ${req.method} ${req.originalUrl.split('?')[0]}: not allowed to mark a brand kit`)
+
+		if (enforcing()) {
+			return res.status(403).json({error: 'Only the people who look after brand kits can mark one'})
+		}
+	}
+
+	let brand = req.body?.brand === true,
+		result = await libraries.updateOne({_id: req.params.id}, {$set: {brand}})
+
+	if (!result.matchedCount) {
+		return res.status(409).json({error: 'Publish the library first'})
+	}
+
+	res.json({brand})
+})
+
 //The library's state for its own project: published or not, version, who it's shared with
 router.get('/api/projects/:id/library', async (req, res) => {
 	if (!await projectFor(req, res)) {
@@ -1356,6 +2332,14 @@ router.get('/api/projects/:id/library', async (req, res) => {
 router.delete('/api/projects/:id/library', async (req, res) => {
 	if (!await projectFor(req, res)) {
 		return
+	}
+
+	if ((await libraries.findOne({_id: req.params.id}, {projection: {brand: 1}}))?.brand && !canMarkBrand(req)) {
+		console.warn(`${appName}: ${enforcing() ? 'rejected' : 'would reject'} ${req.method} ${req.originalUrl.split('?')[0]}: not allowed to withdraw a brand kit`)
+
+		if (enforcing()) {
+			return res.status(403).json({error: 'This library is a brand kit, and only the people who look after brand kits can stop publishing it'})
+		}
 	}
 
 	await libraries.deleteOne({_id: req.params.id})
@@ -1386,6 +2370,7 @@ const maxTemplate = 12 * 1024 * 1024,
 		mine: ownTemplate(doc, me),
 		everyone: !!doc.shared?.everyone,
 		checklist: doc.checklist || [],
+		brand: doc.brand || [],
 		artboards: doc.artboards || 0,
 		preview: doc.preview || null,
 		thumb: doc.thumb || null,
@@ -1457,26 +2442,30 @@ const maxTemplate = 12 * 1024 * 1024,
 
 		let firstBoard = project.artboards[0]
 
-		await projects.insertOne({
-			_id: newID,
-			name: project.name,
-			created: now,
-			updated: now,
-			doc: JSON.stringify(project),
-			rev: 1,
-			meta: {
-				artboards: project.artboards.length,
-				library: !!project.settings?.library,
-				preview: firstBoard ? {width: firstBoard.width, height: firstBoard.height, background: firstBoard.background?.type === 'solid' ? firstBoard.background.color : '#ffffff'} : null
-			},
-			tags: [],
-			folder: folder || null,
-			thumb,
-			owner: whoIs(req),
-			...extra
+		let docString = JSON.stringify(project)
+		await storeProjectDoc(newID, 1, docString, null, async (fields) => {
+			await projects.insertOne({
+				_id: newID,
+				name: project.name,
+				created: now,
+				updated: now,
+				...fields,
+				rev: 1,
+				meta: {
+					artboards: project.artboards.length,
+					library: !!project.settings?.library,
+					preview: firstBoard ? {width: firstBoard.width, height: firstBoard.height, background: firstBoard.background?.type === 'solid' ? firstBoard.background.color : '#ffffff'} : null
+				},
+				tags: [],
+				folder: folder || null,
+				thumb,
+				owner: whoIs(req),
+				...extra
+			})
+			return true
 		})
 
-		return {id: newID, project, doc: JSON.stringify(project)}
+		return {id: newID, project, doc: docString}
 	}
 
 //Templates I can use: my own, and the ones shared with everyone. No snapshots, those are a request each
@@ -1547,9 +2536,9 @@ router.post('/api/projects/:id/template', express.json({limit: '64kb'}), async (
 
 	let id = req.params.id,
 		body = req.body || {},
-		full = await projects.findOne({_id: id}, {projection: {doc: 1}}),
+		full = await projects.findOne({_id: id}, {projection: {doc: 1, docChunks: 1}}),
 		room = rooms.get(id),
-		project = template.cleanProject(room ? room.doc : JSON.parse(full.doc)),
+		project = template.cleanProject(room ? room.doc : await store.parse(full)),
 		name = template.cleanLine(body.name) || template.cleanLine(project.name) || 'Untitled template',
 		existing = null
 
@@ -1626,6 +2615,7 @@ router.post('/api/projects/:id/template', express.json({limit: '64kb'}), async (
 			description: template.cleanDescription(body.description),
 			checklist: template.cleanChecklist(body.checklist, safety.newItemID),
 			shared: {everyone: body.everyone === true},
+			brand: template.brandKitsOf(project),
 			updated: now,
 			version: plan.version,
 			hash: plan.hash,
@@ -2214,6 +3204,7 @@ router.put('/api/projects/:id/review', express.json({limit: '1kb'}), async (req,
 	let review = {token: doc.review?.token || crypto.randomBytes(18).toString('base64url'), guests: !!req.body.guests, created: doc.review?.created || new Date(), updated: new Date(), by: whoIs(req)}
 
 	await projects.updateOne({_id: doc._id}, {$set: {review}})
+	audit(req, doc.review?.token ? 'review-updated' : 'review-on', doc, {guests: review.guests})
 	res.json({review})
 })
 
@@ -2226,6 +3217,7 @@ router.delete('/api/projects/:id/review', async (req, res) => {
 	}
 
 	await projects.updateOne({_id: doc._id}, {$unset: {review: ''}})
+	if (doc.review?.token) audit(req, 'review-off', doc)
 
 	if (doc.review?.token) {
 		hubEnd(doc._id, doc.review.token)
@@ -2309,7 +3301,8 @@ router.get('/review/:token', async (req, res) => {
 	res.json({
 		id: doc._id,
 		name: doc.name,
-		project: room ? room.doc : JSON.parse(doc.doc),
+		//Reviewers are not editors: sticky notes stay with the people making the project
+		project: notesLib.stripNotes(room ? room.doc : await store.parse(doc)),
 		guests: !!doc.review.guests,
 		me: actor ? {...actor.by, manager: actor.manager} : null,
 		owner: doc.owner ? {username: doc.owner.username, name: doc.owner.name} : null,
@@ -2396,7 +3389,15 @@ router.use('/review', (err, req, res, next) => {
 //people playing a project are mostly students. The project comes from the share token, so a project only
 //collects results while its share link is on. No session (dev, or a link opened outside StudyDesk) means nothing
 //is kept here, and the player falls back to the learner's own browser
+//Someone launched from another LMS over LTI 1.3 (lti13.js) has no suite session; their launch session, sent by the learner page
+//in X-LTI-Session, stands in for it, but only for the project they were launched into
+const lti13 = require('./lti13')({express, isPower: (req) => isPower(req), whoIs: (req) => whoIs(req), clientIP: (req) => clientIP(req)})
+
 const learnerOf = (req) => {
+	if (req.ltiLearner) {
+		return req.ltiLearner.token === req.params.token ? lti13.learner(req.ltiLearner) : null
+	}
+
 	let me = whoIs(req)
 
 	if (!me?.username) {
@@ -2458,7 +3459,13 @@ const saveRecord = async (key, build, into = userData) => {
 	}
 }
 
-router.use('/learn', cacheHeaders.api, sessionCheck({tool: 'interactives'}))
+const learnSession = sessionCheck({tool: 'interactives'})
+
+router.use('/learn', cacheHeaders.api, lti13.attachLearner, (req, res, next) => req.ltiLearner ? next() : learnSession(req, res, next))
+
+//LTI 1.3: the platform-facing routes are open (the id_token is their credential), the admin ones are power users under the /api session check
+router.use('/lti13', cacheHeaders.api, lti13.router)
+router.use('/api/lti13', lti13.admin)
 
 //Remix: someone who opened a share link that allows it copies the project into their own projects. Needs a signed in
 //editor user (the new project is theirs), so it sits under the same staff session check as the api. The copy is the project
@@ -2489,7 +3496,7 @@ router.post('/remix/:token', async (req, res) => {
 	}
 
 	let room = rooms.get(doc._id),
-		project = JSON.parse(JSON.stringify(room ? room.doc : JSON.parse(doc.doc)))
+		project = room ? JSON.parse(JSON.stringify(room.doc)) : await store.parse(doc)
 
 	//A remix starts fresh: it is not tied to a template the original came from, nor to the original's library
 	delete project.template
@@ -2554,6 +3561,12 @@ router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, r
 		return res.json({available: false})
 	}
 
+	//A project with questions marked on the server takes its results from that marking alone. What the browser says about a score
+	//is its own word, so it is dropped (the player still tells the page around it, which is no business of the record)
+	if (markingOf(project)) {
+		return res.json({available: true, ok: true, ignored: true})
+	}
+
 	let result = learner.cleanResult(req.body)
 
 	if (!result) {
@@ -2562,6 +3575,173 @@ router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, r
 
 	await saveRecord({project: project._id, username: who.username, course: who.course}, (existing) => learner.reportUpdate(existing, result, who, new Date()))
 	res.json({available: true, ok: true})
+})
+
+//What the spelling guard found in the learner's browser (writing tools, answers that changed without typing, the exemption code
+//used), kept on their record for the teacher. Not marked on the server, so it works the same for server-marked projects
+router.post('/learn/:token/guard', express.json({limit: '4kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let clean = learner.cleanGuard(req.body)
+
+	if (!clean) {
+		return res.status(400).json({error: 'That is not the right shape'})
+	}
+
+	await saveRecord({project: project._id, username: who.username, course: who.course}, (existing) => learner.guardUpdate(existing, clean, who, new Date()))
+	res.json({available: true, ok: true})
+})
+
+//The answer key of a project's server-marked questions, or null when it has none
+const markingOf = (project) => project.marking?.questions && Object.keys(project.marking.questions).length ? project.marking : null
+
+//Writes a learner's record only if nobody else has since it was read (markRev counts the writes marking has made), so two checks sent
+//at once can't both be counted against the same tries. build gets what is there and returns the fields to set, or null to leave it.
+//False if it kept losing the race
+const markWrite = async (key, build) => {
+	for (let tries = 0; tries < 6; tries++) {
+		let existing = await userData.findOne(key),
+			set = build(existing)
+
+		if (!set) {
+			return true
+		}
+
+		let rev = existing?.markRev ?? null
+
+		try {
+			let r = await userData.updateOne({...key, markRev: rev}, {$set: {...set, markRev: (rev || 0) + 1}, $setOnInsert: {created: new Date()}}, {upsert: !existing})
+
+			if (!existing || r.matchedCount) {
+				return true
+			}
+		}
+		catch (e) {
+			if (e.code !== 11000) {
+				throw e
+			}
+		}
+	}
+
+	return false
+}
+
+//Grade passback. A learner who came in over LTI 1.3 with a line item (lti13.learner gives who.lti) has the result of a project marked
+//on the server sent to their gradebook once every question is finished, and again whenever the result on record changes. What was
+//sent and whether it got there is kept on their record (grade), so nothing is sent twice and a failure is tried again: a few seconds
+//later, and with the learner's next request. It is the server's own marking that is sent, never what the page says.
+const gradeRetryMs = Number(process.env.IX_GRADE_RETRY_MS ?? 30000)
+
+const passGradeBack = async (project, key, who, retry = true) => {
+	if (!who.lti) {
+		return
+	}
+
+	let id = {project: project._id, username: who.username, course: who.course},
+		record = await userData.findOne(id),
+		result = record ? marker.resultOf(key, marker.pruneStates(key, marker.parseStates(record.marked))) : null
+
+	if (!result?.completed) {
+		return
+	}
+
+	let sent = record.grade
+
+	if (sent && sent.score === result.score && sent.max === result.max && (sent.ok || (retry && Date.now() - new Date(sent.at).getTime() < 20000))) {
+		return
+	}
+
+	let r = await lti13.grade.send(who.lti, result.score, result.max)
+
+	await userData.updateOne(id, {$set: {grade: {score: result.score, max: result.max, ok: r.ok, ...(r.ok ? {} : {why: r.why}), at: new Date()}}})
+
+	if (!r.ok && retry && gradeRetryMs > 0) {
+		setTimeout(() => passGradeBack(project, key, who, false).catch((e) => console.trace(`${appName}: grade passback retry`, e)), gradeRetryMs).unref()
+	}
+}
+
+//Marking, hints and starting again for a question set to be marked on the server. The learner is whoever the session says; the
+//answer is marked by the player's own marking code against the key kept at share time, the tries, hints and the mark that counts
+//are kept on the learner's record, and the result is worked out from those. Checks and hints are rate limited per learner
+router.post('/learn/:token/check', express.json({limit: '8kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let key = markingOf(project)
+
+	if (!key) {
+		return res.status(404).json({error: 'Nothing in this project is marked on the server'})
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let request = marker.cleanMarkRequest(req.body)
+
+	if (!request) {
+		return res.status(400).json({error: 'That is not a request the marker understands'})
+	}
+
+	if (marker.RATE_LIMITED.includes(request.action)) {
+		let taken = markLimiter.take(`${project._id}:${who.username}`, Date.now())
+
+		if (!taken.ok) {
+			return res.json({available: true, status: 'limited', retryAfter: taken.retryAfter})
+		}
+	}
+
+	let step = null,
+		now = new Date(),
+		kept = await markWrite({project: project._id, username: who.username, course: who.course}, (existing) => {
+			let before = marker.parseStates(existing?.marked)
+
+			step = marker.stepMarking(key, before, request, markedIds(key.salt))
+
+			if (step.error || step.states === before) {
+				return null
+			}
+
+			let set = {...learner.identity(who), marked: JSON.stringify(marker.pruneStates(key, step.states)), updated: now}
+
+			//A question finished for the first time: its mark counts now, so the record's result moves with it
+			if (step.counted) {
+				let result = learner.cleanResult(marker.resultOf(key, step.states))
+
+				set = {...set, ...learner.reportUpdate(existing, result, who, now)}
+			}
+
+			return set
+		})
+
+	if (step.error) {
+		return res.status(400).json({error: step.error})
+	}
+
+	if (!kept) {
+		return res.json({available: true, status: 'busy'})
+	}
+
+	res.json({available: true, ...step.reply})
+
+	if (who.lti) {
+		passGradeBack(project, key, who).catch((e) => console.trace(`${appName}: grade passback`, e))
+	}
 })
 
 //User data (Save user data / Load user data nodes), for the learner whose session this is, in the project the share
@@ -2612,12 +3792,386 @@ router.put('/learn/:token/user-data', express.json({limit: '100kb'}), async (req
 	res.json({available: true, ok: true})
 })
 
+//Shared responses: short answers people add that a whole class sees counted (a word cloud, a poll). A shared page declares its
+//sources when it is shared (share.shared, by data source id: who sees, the limits, the blocklist), and these routes hold to that,
+//never to what a browser sends. Identity is the session's, like user data. Answers a person adds for "Only me" are kept apart
+//(own) from the ones the class sees (answers), so changing a project's setting later never shows anyone what they kept to themselves.
+//Counts come back, never names. A class is a project + course; the unique index on project, source, course and username is what
+//makes one list per person.
+const sharedCache = new Map(),
+	sharedCacheMs = 3000,
+	sharedKeyOf = (project, source, course) => `${project}|${source}|${course}`,
+
+	//The class's lists with no usernames in them, held a few seconds so a room full of players polling is not a room full of queries
+	sharedClass = async (project, source, course) => {
+		let key = sharedKeyOf(project, source, course),
+			hit = sharedCache.get(key)
+
+		if (hit && Date.now() - hit.at < sharedCacheMs) {
+			return hit
+		}
+
+		let docs = await sharedRows.find({project, source, course}, {projection: {username: 0}}).toArray(),
+			hidden = await sharedHidden.findOne({project, source, course}),
+			next = {at: Date.now(), docs: docs.map((d) => ({answers: d.answers || []})), hidden: new Set(hidden?.keys || [])}
+
+		sharedCache.set(key, next)
+
+		if (sharedCache.size > 500) {
+			for (let [k, v] of sharedCache) {
+				if (Date.now() - v.at > sharedCacheMs) {
+					sharedCache.delete(k)
+				}
+			}
+		}
+
+		return next
+	},
+
+	sharedForget = (project, source, course) => sharedCache.delete(sharedKeyOf(project, source, course)),
+
+	//What this person is told: the class's counts or their own list, and their own list and allowance either way
+	sharedValue = async (at, who, problem = '') => {
+		let {project, person, declared, source} = at,
+			row = await sharedRows.findOne({project: project._id, source, course: person.course, username: person.username}),
+			mine = (who === 'me' ? row?.own : row?.answers || []) || [],
+			klass = who === 'me' ? {docs: [], hidden: new Set()} : await sharedClass(project._id, source, person.course)
+
+		return responses.valueFor({declared, who, docs: klass.docs, mine: mine.map((a) => a.text), hidden: klass.hidden, problem})
+	},
+
+	//The project, the person (off the session) and what the owner declared for this source, or the reply already sent
+	sharedAt = async (req, res) => {
+		let project = await sharedProject(req, res)
+
+		if (!project) {
+			return null
+		}
+
+		let person = learnerOf(req)
+
+		if (!person) {
+			res.json({available: false})
+			return null
+		}
+
+		let source = req.params.source,
+			declared = project.share?.shared?.[source]
+
+		if (!declared) {
+			res.status(404).json({error: 'That project has no such shared responses (share it again after adding them)'})
+			return null
+		}
+
+		return {project, person, declared, source}
+	}
+
+router.get('/learn/:token/shared/:source', async (req, res) => {
+	let at = await sharedAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let who = responses.effectiveWho(at.declared, req.query.who)
+
+	if (!sharedLimits.read.hit(`${at.project._id}|${at.person.username}`)) {
+		return res.json({available: true, ok: true, value: null, problem: 'busy'})
+	}
+
+	res.json({available: true, ok: true, value: await sharedValue(at, who)})
+})
+
+router.post('/learn/:token/shared/:source', express.json({limit: '4kb'}), async (req, res) => {
+	let at = await sharedAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let {project, person, declared, source} = at,
+		who = responses.effectiveWho(declared, req.body?.who),
+		busy = !sharedLimits.write.hit(`${project._id}|${person.username}`)
+
+	if (busy) {
+		return res.json({available: true, ok: true, kept: 0, value: {...(await sharedValue(at, who, 'busy'))}})
+	}
+
+	let key = {project: project._id, source, course: person.course, username: person.username},
+		field = who === 'me' ? 'own' : 'answers',
+		plan = null
+
+	let saved = await saveRecord(key, (existing) => {
+		plan = responses.planAdd(existing?.[field] || [], req.body?.answers, declared)
+
+		return plan.kept ? {[field]: plan.list, updated: new Date()} : null
+	}, sharedRows)
+
+	if (saved) {
+		sharedForget(project._id, source, person.course)
+	}
+
+	res.json({available: true, ok: true, kept: saved ? plan.kept : 0, value: await sharedValue(at, who, plan?.problem || '')})
+})
+
+router.post('/learn/:token/shared/:source/withdraw', express.json({limit: '4kb'}), async (req, res) => {
+	let at = await sharedAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let {project, person, declared, source} = at,
+		who = responses.effectiveWho(declared, req.body?.who)
+
+	if (!sharedLimits.write.hit(`${project._id}|${person.username}`)) {
+		return res.json({available: true, ok: true, value: await sharedValue(at, who, 'busy')})
+	}
+
+	let key = {project: project._id, source, course: person.course, username: person.username},
+		field = who === 'me' ? 'own' : 'answers'
+
+	await saveRecord(key, (existing) => existing && existing[field]?.length ? {[field]: responses.planWithdraw(existing[field], req.body?.answers, declared), updated: new Date()} : null, sharedRows)
+	sharedForget(project._id, source, person.course)
+	res.json({available: true, ok: true, value: await sharedValue(at, who)})
+})
+
+//Course collections: named stamps and counters that every project in the same course can read and add to, for one learner. Not a
+//project's: the key is the person, their course and the collection name, so a passport that one piece adds to is there for the next
+//piece, whatever project it is. Identity and course come off the session (learnerOf), never the request, and a person only ever
+//reaches their own row. No session, or a session that is in no course, has nowhere to keep it ({available: false}) and the player
+//keeps it in the browser instead. The share token only has to be a link that is on, so a project can't collect while its link is off.
+//Adds are one atomic update, $addToSet for stamps and $max for counters, upserted on the unique index, so two tabs (or two pieces)
+//at once can neither duplicate a row nor take a counter backwards. Rows are kept until someone clears them: deleting a project doesn't
+//touch them, since they were never its own
+const courseAt = async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return null
+	}
+
+	let person = learnerOf(req)
+
+	if (!person?.course) {
+		res.json({available: false})
+		return null
+	}
+
+	let collection = courseLib.cleanCollection(req.params.collection)
+
+	if (!collection) {
+		res.status(400).json({error: 'A collection needs a name'})
+		return null
+	}
+
+	return {project, person, collection, key: {username: person.username, course: person.course, collection}}
+}
+
+const busyCourse = {stamps: [], counts: {}, course: true, changed: 0, problem: 'busy'}
+
+router.get('/learn/:token/course/:collection', async (req, res) => {
+	let at = await courseAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	if (!courseLimits.read.hit(at.person.username)) {
+		return res.json({available: true, ok: true, value: busyCourse})
+	}
+
+	res.json({available: true, ok: true, value: courseLib.valueOf(await courseRows.findOne(at.key))})
+})
+
+router.post('/learn/:token/course/:collection', express.json({limit: '4kb'}), async (req, res) => {
+	let at = await courseAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let {person, key} = at
+
+	if (!courseLimits.write.hit(person.username)) {
+		return res.json({available: true, ok: true, value: busyCourse})
+	}
+
+	//Never more than a handful in one go, whatever the body says
+	let stamps = Array.isArray(req.body?.stamps) ? req.body.stamps.slice(0, 50) : [],
+		counts = Object.fromEntries(Object.entries(req.body?.counts && typeof req.body.counts === 'object' && !Array.isArray(req.body.counts) ? req.body.counts : {}).slice(0, 50))
+
+	for (let tries = 0; ; tries++) {
+		let row = await courseRows.findOne(key),
+			plan = courseLib.planAdd(row, {stamps, counts})
+
+		//A person can only keep so many collections in a course
+		if (!row && courseLib.changed(plan) && await courseRows.countDocuments({username: person.username, course: person.course}) >= courseLib.LIMITS.collections) {
+			return res.json({available: true, ok: true, value: courseLib.valueOf(null, {changed: 0, problem: 'full'})})
+		}
+
+		if (!courseLib.changed(plan)) {
+			return res.json({available: true, ok: true, value: courseLib.valueOf(row, {changed: 0, problem: plan.problem})})
+		}
+
+		try {
+			await courseRows.updateOne(key, courseLib.updateFor(plan, new Date()), {upsert: true})
+
+			//Read it back, so the answer has whatever the other tab added meanwhile
+			return res.json({available: true, ok: true, value: courseLib.valueOf(await courseRows.findOne(key), {changed: courseLib.changed(plan), problem: plan.problem})})
+		}
+		catch (e) {
+			//Two first adds at once: the unique index let one insert, and this goes again as an update
+			if (e.code !== 11000 || tries > 2) {
+				throw e
+			}
+		}
+	}
+})
+
+//What the owner (or a power user) sees and does about a project's shared responses: every source the shared page declares, and for each
+//course the answers with their counts before the minimum applies. Hiding an answer keeps it but takes it out of what the class
+//sees (and can be undone); removing it takes it out of everyone's lists; clearing empties the course. None of it touches what
+//people keep for themselves under Only me
+const sharedSourceOf = async (req, res) => {
+	let doc = await projectFor(req, res, {ownerOnly: true})
+
+	if (!doc) {
+		return null
+	}
+
+	let source = req.params.source,
+		declared = doc.share?.shared?.[source]
+
+	if (!declared) {
+		res.status(404).json({error: 'That project has no such shared responses. Share it again after adding them'})
+		return null
+	}
+
+	return {doc, source, declared}
+}
+
+const sharedCourse = (req) => typeof req.body?.course === 'string' ? req.body.course : typeof req.query.course === 'string' ? req.query.course : ''
+
+router.get('/api/projects/:id/shared', async (req, res) => {
+	let doc = await projectFor(req, res, {ownerOnly: true})
+
+	if (!doc) {
+		return
+	}
+
+	let out = []
+
+	for (let [source, declared] of Object.entries(doc.share?.shared || {})) {
+		let rows = await sharedRows.find({project: doc._id, source}, {projection: {username: 0, own: 0}}).toArray(),
+			hiddenRows = await sharedHidden.find({project: doc._id, source}).toArray(),
+			courses = new Map()
+
+		for (let row of rows) {
+			let list = courses.get(row.course || '') || []
+
+			list.push({answers: row.answers || []})
+			courses.set(row.course || '', list)
+		}
+
+		for (let h of hiddenRows) {
+			if (!courses.has(h.course || '')) {
+				courses.set(h.course || '', [])
+			}
+		}
+
+		out.push({
+			source,
+			name: declared.name || source,
+			declared: {who: declared.who, byVariable: declared.byVariable, minCount: declared.minCount, perPerson: declared.perPerson, maxLength: declared.maxLength, blocked: declared.blocked},
+			courses: [...courses.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([course, docs]) => ({course, ...responses.moderationView(docs, new Set(hiddenRows.find((h) => (h.course || '') === course)?.keys || []), declared)}))
+		})
+	}
+
+	res.json({sources: out})
+})
+
+router.put('/api/projects/:id/shared/:source/hidden', express.json({limit: '4kb'}), async (req, res) => {
+	let at = await sharedSourceOf(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let course = sharedCourse(req),
+		text = responses.cleanAnswer(req.body?.text, 120),
+		key = responses.answerKey(text)
+
+	if (!key) {
+		return res.status(400).json({error: 'Which answer?'})
+	}
+
+	let where = {project: at.doc._id, source: at.source, course},
+		existing = await sharedHidden.findOne(where),
+		keys = new Set(existing?.keys || [])
+
+	if (req.body?.hidden === false) {
+		keys.delete(key)
+	}
+	else if (keys.size < 1000) {
+		keys.add(key)
+	}
+
+	await sharedHidden.updateOne(where, {$set: {keys: [...keys], updated: new Date()}}, {upsert: true})
+	sharedForget(at.doc._id, at.source, course)
+	audit(req, req.body?.hidden === false ? 'shared-unhide' : 'shared-hide', at.doc, {source: at.source, course})
+	res.json({ok: true, hidden: keys.has(key)})
+})
+
+router.delete('/api/projects/:id/shared/:source/answers', express.json({limit: '4kb'}), async (req, res) => {
+	let at = await sharedSourceOf(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let course = sharedCourse(req),
+		text = responses.cleanAnswer(req.body?.text ?? req.query.text, 120),
+		key = responses.answerKey(text),
+		where = {project: at.doc._id, source: at.source, course}
+
+	//One answer from everyone's list, or (with no text) every answer in the course
+	let removed = 0
+
+	if (key) {
+		for (let row of await sharedRows.find(where).toArray()) {
+			let keep = (row.answers || []).filter((a) => responses.answerKey(a.text) !== key)
+
+			if (keep.length !== (row.answers || []).length) {
+				await sharedRows.updateOne({...where, username: row.username}, {$set: {answers: keep, updated: new Date()}})
+				removed++
+			}
+		}
+	}
+	else {
+		let r = await sharedRows.updateMany(where, {$set: {answers: [], updated: new Date()}})
+		removed = r.modifiedCount ?? r.matchedCount ?? 0
+		await sharedHidden.deleteMany(where)
+	}
+
+	sharedForget(at.doc._id, at.source, course)
+	audit(req, key ? 'shared-removed' : 'shared-cleared', at.doc, {source: at.source, course, people: removed})
+	res.json({ok: true, people: removed})
+})
+
 //The learner page for a share link: the shared project in its sandbox, framed by a small page that does have
 //the session. The project asks it (postMessage) to load, save and report for the learner, and it passes that on to
 //the routes above with the session id, so the sandboxed project never sees a session itself. Embed this in
 //StudyDesk instead of /s/<token> to collect results. The session id comes from the url or sessionStorage the way
 //utilities.js finds it, but is added here directly so the page has nothing to load from the suite's host root
-const learnerPage = (token, base, nonce, project, remix) => `<!doctype html>
+//JSON that is safe inside a script element, free text and all
+const scriptJson = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
+
+//A project that declared sensors (microphone, camera, photos) has the trusted media bridge in this page: it owns the devices, and the project
+//asks it by postMessage. Only what was declared when the link was shared is allowed. The frame's address carries a nonce the bridge expects
+//on every request (#ixm=<nonce>), since the frame's own origin is opaque and a window is not proof enough: a frame that navigated away
+//keeps the window but loses the address. Without a declaration none of it is in the page
+const learnerPage = (token, base, nonce, project, remix, sensors, mediaNonce) => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2626,7 +4180,7 @@ const learnerPage = (token, base, nonce, project, remix) => `<!doctype html>
 <style>html,body{margin:0;height:100%;background:#111}iframe{border:0;display:block;width:100%;height:100%}#remix{position:fixed;right:12px;bottom:12px;z-index:2;display:none;font:600 13px/1 system-ui,sans-serif;color:#fff;background:#3b5bfd;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);text-decoration:none}#remix:hover,#remix:focus-visible{background:#2f49d0}#remix[aria-disabled=true]{opacity:.7;cursor:progress}#remix.err{background:#b3261e}</style>
 </head>
 <body>
-<iframe id="project" src="${base}/s/${token}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
+<iframe id="project" src="${base}/s/${token}${sensors ? `#ixm=${mediaNonce}` : ''}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms" allow="fullscreen; autoplay" title="Interactive"></iframe>
 ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into your own projects, to change as you like">Remix this</a>' : ''}
 <script src="/utilities.js"></script>
 <script nonce="${nonce}">
@@ -2638,15 +4192,29 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	}
 	catch (e) {
 	}
+	//Launched from another LMS over LTI 1.3: the launch hands its session over in the url fragment, which goes into sessionStorage
+	//and off the address bar. It stands in for the StudyDesk session (and there is no StudyDesk account to remix into)
+	var ltiSession = null
+	try {
+		var fromHash = new URLSearchParams(location.hash.slice(1)).get('lti')
+		if (fromHash) {
+			sessionStorage.setItem('ixlti', fromHash)
+			history.replaceState(null, '', location.pathname + location.search)
+		}
+		if (!sessionID || sessionID === 'null') ltiSession = sessionStorage.getItem('ixlti')
+	}
+	catch (e) {
+	}
 	var answer = function (m, reply) {
 		if (m.rid) frame.contentWindow.postMessage(Object.assign({target: 'interactives', type: 'progress', rid: m.rid}, reply), '*')
 	}
 	//One request at a time, so a save and a report that leave together can't both try to make the learner's first record
 	var chain = Promise.resolve()
-	var diagQueue = [], diagTaken = 0, diagSettled = false, diagTimer = null
+	var diagQueue = [], diagTaken = 0, diagSettled = false, diagTimer = null, lastHeight = 0
 	var call = function (method, path, body) {
 		var headers = {'Content-Type': 'application/json'}
 		if (sessionID && sessionID !== 'null') headers['X-Session-ID'] = sessionID
+		else if (ltiSession) headers['X-LTI-Session'] = ltiSession
 		var run = function () {
 			return fetch(base + '/learn/' + token + '/' + path, {method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body), keepalive: body !== undefined}).then(function (r) {
 				//Saving and reporting results is this page's own job, so when it fails that is worth knowing (the route and status, nothing else)
@@ -2667,7 +4235,7 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	//usual user and course fields. The project is whatever this page was made for, whatever the record claims. Nothing
 	//is sent without a signed-in StudyDesk user, and utilities.js drops it in a preview
 	//Remix this: only for someone signed in to StudyDesk (the copy becomes theirs), and only when the owner allowed it
-	var remixOn = ${remix ? 'true' : 'false'}, remixLink = document.getElementById('remix'), remixBusy = false
+	var remixOn = ${remix ? 'true' : 'false'} && !ltiSession, remixLink = document.getElementById('remix'), remixBusy = false
 	var showRemix = function () {
 		if (!remixOn || !remixLink) return
 		remixLink.style.display = 'block'
@@ -2705,6 +4273,13 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	var rowFor = ${records.rowFor.toString()}
 	var cleanDiag = ${records.cleanDiag.toString()}
 	var diagRow = ${records.diagRow.toString()}
+	var contextFrom = ${records.contextFrom.toString()}
+	//The project's built-in context (course, first name, student or staff) is answered from the session once fetchActivity has
+	//one. Never the username, email or id, and it is not sent to analytics. A project that asks before then waits in the queue
+	var contextReady = false, contextData = null, contextAsks = []
+	var answerContext = function (m) {
+		answer(m, {ok: true, available: !!contextData, data: contextData})
+	}
 	var project = ${JSON.stringify(project)}, run = Math.random().toString(36).slice(2) + Date.now().toString(36), queue = [], taken = 0, known = false, timer = null
 	var flushRecords = function () {
 		timer = null
@@ -2744,6 +4319,9 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 		window.m.app = 'Interactives'
 		fetchActivity(function (err, data) {
 			settleDiags()
+			contextData = err || !data ? null : contextFrom(data.user, data.activity)
+			contextReady = true
+			while (contextAsks.length) answerContext(contextAsks.shift())
 			if (err || !data || !data.user || !data.user.username) return
 			window.m.user = data.user
 			window.m.activity = data.activity || {}
@@ -2752,16 +4330,31 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			if (queue.length && !timer) timer = setTimeout(flushRecords, 300)
 		})
 	}
+	else contextReady = true
 	window.addEventListener('message', function (e) {
 		if (e.source !== frame.contentWindow) return
 		var m = e.data
 		if (m && m.source === 'interactives-record') return takeRecord(m.record)
 		if (m && m.source === 'interactives-diag') return takeDiag(m.diag)
+		//The player's height for its width, handed on to the page around this one the way every toolbox app does (setILARSize), so
+		//the embed code's iframe in StudyDesk tracks the project. The player's own message goes to the top window, where si-manager
+		//can't tell which iframe it came from, since it came out of two frames down. Only a sane number is passed on
+		if (m && typeof m.height === 'number' && isFinite(m.height) && m.height > 0 && m.height <= 20000 && typeof m.cacheID === 'string') {
+			if (window.parent !== window && typeof setILARSize === 'function' && m.height !== lastHeight) {
+				lastHeight = m.height
+				setILARSize(null, Math.ceil(m.height), m.cacheID.slice(0, 200))
+			}
+			return
+		}
 		if (!m || m.source !== 'interactives-progress') return
 		var failed = function () {
 			answer(m, {ok: false, available: false})
 		}
-		if (m.op === 'load') {
+		if (m.op === 'context') {
+			if (contextReady) answerContext(m)
+			else contextAsks.push(m)
+		}
+		else if (m.op === 'load') {
 			call('GET', 'progress').then(function (j) {
 				answer(m, {ok: true, available: !!j.available, data: j.progress || null})
 			}, failed)
@@ -2782,6 +4375,41 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 				answer(m, {ok: true, available: !!j.available, data: j.variables || null})
 			}, failed)
 		}
+		else if (m.op === 'shared-read') {
+			call('GET', 'shared/' + encodeURIComponent(m.sharedSource) + '?who=' + encodeURIComponent(m.who || '')).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
+		else if (m.op === 'shared-add') {
+			call('POST', 'shared/' + encodeURIComponent(m.sharedSource), {who: m.who, answers: m.answers}).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value ? Object.assign({kept: j.kept || 0}, j.value) : null})
+			}, failed)
+		}
+		else if (m.op === 'shared-withdraw') {
+			call('POST', 'shared/' + encodeURIComponent(m.sharedSource) + '/withdraw', {who: m.who, answers: m.answers}).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
+		else if (m.op === 'course-read' && typeof m.collection === 'string') {
+			call('GET', 'course/' + encodeURIComponent(m.collection)).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
+		else if (m.op === 'course-add' && typeof m.collection === 'string') {
+			call('POST', 'course/' + encodeURIComponent(m.collection), {stamps: m.stamps, counts: m.counts}).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
+		else if (m.op === 'mark') {
+			//A question marked on the server: the project sends the answer, the server marks it and says how it went
+			call('POST', 'check', {question: m.question, action: m.action, answer: m.answer}).then(function (j) {
+				answer(m, {ok: true, available: !!j.available, data: j})
+			}, failed)
+		}
+		else if (m.op === 'guard') {
+			call('POST', 'guard', {guard: m.guard}).catch(function () {
+			})
+		}
 		else if (m.op === 'report') {
 			call('POST', 'report', {result: m.result}).catch(function () {
 			})
@@ -2792,9 +4420,18 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 	})
 })()
 </script>
+${sensors ? `<script type="module" nonce="${nonce}">
+import {startBridge} from ${JSON.stringify(`${base}/media-bridge.mjs`)}
+startBridge({frame: document.getElementById('project'), nonce: ${JSON.stringify(mediaNonce)}, declaration: ${scriptJson(sensors)}})
+</script>` : ''}
 </body>
 </html>
 `
+
+//The trusted media bridge the learner page loads (a module, from this host, so script-src 'self' lets it in). Revalidated, never stale
+router.get('/media-bridge.mjs', cacheHeaders.document, (req, res) => {
+	res.type('text/javascript').sendFile(path.join(__dirname, 'shared', 'media-bridge.mjs'), {headers: {'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff'}})
+})
 
 router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	let token = req.params.token
@@ -2804,7 +4441,7 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	}
 
 	//The project the link is for, so the records its learners make are filed under it
-	let project = await projects.findOne({'share.token': token}, {projection: {_id: 1, 'share.remix': 1}})
+	let project = await projects.findOne({'share.token': token}, {projection: {_id: 1, 'share.remix': 1, 'share.sensors': 1}})
 
 	if (!project) {
 		return res.status(404).send('This share link has been turned off, or never existed')
@@ -2813,12 +4450,13 @@ router.get('/play/:token', cacheHeaders.api, async (req, res) => {
 	let nonce = crypto.randomBytes(16).toString('base64')
 
 	//Its own script, the suite's utilities.js from this host (script-src 'self') and its own api and the suite's
-	//analytics (connect-src 'self'), and the project in its sandbox as the one frame. It can be framed by StudyDesk
-	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'`)
+	//analytics (connect-src 'self'), and the project in its sandbox as the one frame. It can be framed by StudyDesk.
+	//media-src blob: is the one thing added for the media bridge: a recorded video plays from memory in the page
+	res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' 'self'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'self'; media-src blob:; base-uri 'none'; form-action 'none'`)
 	res.setHeader('X-Content-Type-Options', 'nosniff')
 	res.setHeader('Referrer-Policy', 'no-referrer')
 	res.setHeader('X-Robots-Tag', 'noindex')
-	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id, !!project.share?.remix))
+	res.type('html').send(learnerPage(token, req.baseUrl, nonce, project._id, !!project.share?.remix, project.share?.sensors || null, crypto.randomBytes(16).toString('hex')))
 })
 
 //What the project's learners have done, for its owner (this is under /api, which is staff). Counts and averages
@@ -2830,9 +4468,9 @@ router.get('/api/projects/:id/results', async (req, res) => {
 		return
 	}
 
-	let rows = await userData.find({project: doc._id}, {projection: {variables: 0}}).sort({updated: -1}).limit(5000).toArray()
+	let rows = await userData.find({project: doc._id}, {projection: {variables: 0, marked: 0}}).sort({updated: -1}).limit(5000).toArray()
 
-	res.json({...learner.summarise(rows), truncated: rows.length >= 5000, shared: !!doc.share?.token})
+	res.json({...learner.summarise(rows), truncated: rows.length >= 5000, shared: !!doc.share?.token, mayClear: ownsOrPower(req, doc)})
 })
 
 //What learners did in the project (the records its learner page sent to the suite's analytics), as counts: artboard
@@ -2878,14 +4516,32 @@ router.get('/api/analytics/usage', async (req, res) => {
 })
 
 //Start the results afresh (a test run that left records behind, or a new intake)
-router.delete('/api/projects/:id/results', async (req, res) => {
+//Every learner's record as a CSV file (the dialog only lists the latest 200). Same access as the Results dialog
+router.get('/api/projects/:id/results.csv', async (req, res) => {
 	let doc = await projectFor(req, res)
+	if (!doc) {
+		return
+	}
+
+	let rows = await userData.find({project: doc._id}, {projection: {variables: 0, marked: 0}}).sort({updated: -1}).limit(20000).toArray(),
+		name = String(doc.name || 'project').replace(/[^\w .-]+/g, '').trim().slice(0, 60) || 'project'
+
+	res.set('Content-Type', 'text/csv; charset=utf-8')
+	res.set('Content-Disposition', `attachment; filename="${name} results.csv"`)
+	//A BOM so Excel reads the names as UTF-8
+	res.send('\ufeff' + learner.resultsCsv(rows))
+})
+
+//Wiping every learner's record is the owner's call (or a power user's), not a collaborator's
+router.delete('/api/projects/:id/results', async (req, res) => {
+	let doc = await projectFor(req, res, {ownerOnly: true})
 
 	if (!doc) {
 		return
 	}
 
 	let result = await userData.deleteMany({project: doc._id})
+	audit(req, 'results-cleared', doc, {records: result.deletedCount})
 
 	res.json({ok: true, deleted: result.deletedCount})
 })
@@ -2902,7 +4558,17 @@ router.use('/api', (err, req, res, next) => {
 		return next(err)
 	}
 
-	res.status(err.status || 500).json({error: err.type === 'entity.too.large' ? 'That is too big to save' : 'Something went wrong on the server'})
+	if (err.type === 'entity.too.large') {
+		let wholeProject = req.method === 'PUT' && /^\/projects\/[^/]+$/.test(req.path)
+		return res.status(413).json({error: wholeProject ? `This project is too big to save (over ${saveLimit.replace('mb', ' MB')}). Large pictures or data pasted into layers are the usual cause: move them into the Assets panel` : 'That is too big to save'})
+	}
+
+	//A split document whose parts are not all there (shared/docstore.mjs). Say so rather than hand back half a project
+	if (err.name === 'MissingPartsError') {
+		return res.status(500).json({error: err.message})
+	}
+
+	res.status(err.status || 500).json({error: 'Something went wrong on the server'})
 })
 
 //A shared project. Tokens are base64url only, so the path can't climb out of storage/shares
@@ -2957,6 +4623,16 @@ setInterval(async () => {
 		}
 	}
 }, 10 * 60 * 1000).unref()
+
+//IT can switch AI agent access off for a box without a code change: INTERACTIVES_MCP=off (and a restart). The MCP
+//endpoint then answers 503 to everything and agents can't join live rooms
+const mcpOff = () => /^(off|0|false|no)$/i.test(process.env.INTERACTIVES_MCP || '')
+router.use('/mcp', (req, res, next) => {
+	if (!mcpOff()) {
+		return next()
+	}
+	res.status(503).json({jsonrpc: '2.0', id: null, error: {code: -32000, message: 'AI agent access is turned off on this server'}})
+})
 
 router.post('/mcp', cacheHeaders.api, express.json({limit: '4mb'}), async (req, res) => {
 	//A browser page on some other site has no business driving this (DNS rebinding and friends). Agents send no Origin
@@ -3065,30 +4741,59 @@ client.connect()
 		templates = db.collection('templates')
 		commentRows = db.collection('comments')
 		commentNotices = db.collection('comment-notices')
+		docChunks = db.collection('doc-chunks')
+		projectsBin = db.collection('projects-bin')
+		auditLog = db.collection('audit')
 		userData = analyticsDB.collection('interactives-user-data')
 		activityData = analyticsDB.collection('interactives-activity-user-data')
+		sharedRows = db.collection('shared-responses')
+		sharedHidden = db.collection('shared-hidden')
+		courseRows = analyticsDB.collection('interactives-course-collections')
 		ingest = analyticsDB.collection('ingest')
 		userLookup = analyticsDB.collection('user-lookup')
 		fs.mkdirSync(storageDir, {recursive: true})
 
+		//Mongo indexes for the lti13-* collections are in suite-libs/indexes.js
+		lti13.init(db, projects).catch((err) => console.trace(`${appName}: LTI 1.3 could not start`, err))
+
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/records.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs'), import('./shared/course.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, recordsMod, commentsMod, templateMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod, courseMod]) => {
 		ops = opsMod
+		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
 		template = templateMod
 		safety = safetyMod
 		learner = learnerMod
+		marker = markerMod
+		notesLib = notesMod
+		responses = responsesMod
+		courseLib = courseMod
+		markLimiter = markerMod.makeLimiter()
 		records = recordsMod
+		media = mediaMod
 		commentLib = commentsMod
 
 		//Sliding windows for review comments: a guest's address, a guest through one link, and anyone signed in
 		commentLimits.guestIP = new commentsMod.Limiter(10, 10 * 60 * 1000)
 		commentLimits.guestToken = new commentsMod.Limiter(60, 60 * 60 * 1000)
 		commentLimits.person = new commentsMod.Limiter(60, 10 * 60 * 1000)
+
+		//Shared responses: how often one person may add or take back (per project), and how often they may read
+		sharedLimits.write = new commentsMod.Limiter(30, 60 * 1000)
+		sharedLimits.read = new commentsMod.Limiter(180, 60 * 1000)
+
+		//Course collections: per person, whatever the project
+		courseLimits.write = new commentsMod.Limiter(60, 60 * 1000)
+		courseLimits.read = new commentsMod.Limiter(180, 60 * 1000)
 		cacheHeaders.watchEpoch()
+
+		//The bin, now and every 6 hours
+		let sweep = () => sweepBin().then((n) => n && console.log(`${appName}: purged ${n} project(s) from the bin`)).catch((err) => console.trace(`${appName}: bin sweep failed`, err))
+		sweep()
+		setInterval(sweep, 6 * 60 * 60 * 1000).unref()
 
 		app.listen(port, (err) => {
 			//Express 5 hands a failed bind to this callback instead of throwing

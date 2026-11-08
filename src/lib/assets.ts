@@ -1,5 +1,10 @@
 import { uid, type Asset } from 'interactives-player';
-import { getAsset, listAssetBlobs, putAsset } from './db';
+import { getAsset, loadAssetsForCanvas, putAsset } from './db';
+import { ensureProxy, rememberListing } from './asset-variants';
+import { proxyKey, rasterMime } from './image-optimise';
+
+/** Pictures lighter than this don't get a canvas proxy made on the way past (one that is big in pixels but light still gets one when it is uploaded). */
+const PROXY_MIN_BYTES = 256 * 1024;
 
 /** Blob URLs for the open project's assets, so the canvas can show them. */
 class AssetUrls {
@@ -9,9 +14,21 @@ class AssetUrls {
 
   async load(projectId: string): Promise<void> {
     this.clear();
-    const blobs = await listAssetBlobs(projectId);
+    const { blobs, proxied, listing } = await loadAssetsForCanvas(projectId, proxyKey());
     for (const [id, blob] of blobs) this.urls.set(id, URL.createObjectURL(blob));
+    rememberListing(projectId, listing);
     this.bump();
+    //Big pictures from before proxies, or uploaded by something that doesn't make them: one at a time, in the background
+    const pending = listing.filter((a) => !proxied.has(a.id) && blobs.has(a.id) && rasterMime(a.mime) && a.size >= PROXY_MIN_BYTES && a.variants?.[proxyKey()] === undefined);
+    void (async () => {
+      for (const a of pending) await this.proxy(projectId, a.id, a.mime, blobs.get(a.id)!);
+    })();
+  }
+
+  /** Make the canvas proxy for a picture this tab has the original of, and show it instead once there is one. */
+  async proxy(projectId: string, id: string, mime: string, original: Blob): Promise<void> {
+    const small = await ensureProxy(projectId, id, mime, original);
+    if (small && this.urls.has(id)) this.register(id, small);
   }
 
   register(id: string, blob: Blob): void {
@@ -22,6 +39,20 @@ class AssetUrls {
   }
 
   has = (id: string): boolean => this.urls.has(id);
+
+  /**
+   * Pictures linked from the Media Catalogue have no file of their own: their address is the url the canvas shows. Called
+   * with the project's assets whenever they change, so it covers opening a project, adding one and a collaborator's.
+   */
+  link(assets: { id: string; src?: string }[]): void {
+    let changed = false;
+    for (const a of assets) {
+      if (!a.src || !/^https?:\/\//i.test(a.src) || this.urls.get(a.id) === a.src) continue;
+      this.urls.set(a.id, a.src);
+      changed = true;
+    }
+    if (changed) this.bump();
+  }
 
   private fetching = new Set<string>();
 
@@ -37,7 +68,10 @@ class AssetUrls {
       need.map(async (id) => {
         try {
           const blob = await getAsset(projectId, id);
-          if (blob && !this.urls.has(id)) this.register(id, blob);
+          if (blob && !this.urls.has(id)) {
+            this.register(id, blob);
+            if (rasterMime(blob.type) && blob.size >= PROXY_MIN_BYTES) void this.proxy(projectId, id, blob.type, blob);
+          }
         } finally {
           this.fetching.delete(id);
         }
@@ -88,6 +122,8 @@ export async function storeFile(projectId: string, file: File): Promise<Asset> {
   const mime = file.type || guessMime(file.name);
   await putAsset(projectId, id, file);
   assetUrls.register(id, file);
+  //The canvas shows a lighter copy of a big picture from here on, made while the person carries on
+  if (rasterMime(mime) && file.size >= PROXY_MIN_BYTES) void assetUrls.proxy(projectId, id, mime, file);
   return { id, name: file.name, mime, size: file.size };
 }
 
@@ -139,12 +175,14 @@ export function videoSize(url: string): Promise<{ width: number; height: number 
 
 /**
  * Point every reference to one asset id at another, anywhere in a document (asset ids are random and unique, so a
- * string equal to one is a reference to it). Used to replace an asset's file under a new id: see replaceAssetFile.
+ * string equal to one is a reference to it, and so is one inside a list variable's JSON text). Used to replace an asset's file under a new id: see replaceAssetFile.
  */
 export function swapAssetId<T>(doc: T, oldId: string, newId: string): T {
   // Only the matching strings are written, so an immer draft only copies the branches that really change
   const walk = (v: unknown): unknown => {
     if (v === oldId) return newId;
+    //A list variable keeps its rows as JSON text, so a card's sound id sits inside a string: ids are random, so a plain swap inside text that is JSON is safe
+    if (typeof v === 'string' && v.length > oldId.length && (v[0] === '[' || v[0] === '{') && v.includes(oldId)) return v.split(oldId).join(newId);
     if (v && typeof v === 'object') {
       const o = v as Record<string, unknown>;
       for (const k of Object.keys(o)) {

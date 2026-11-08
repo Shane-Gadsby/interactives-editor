@@ -3,7 +3,7 @@
 /** `issue`: a check found a problem. `warning`: probably a problem, a person decides. `review`: the checker could not tell, a person has to look. */
 export type Severity = 'issue' | 'warning' | 'review';
 
-export type CheckId = 'contrast' | 'small-text' | 'keyboard' | 'name' | 'description' | 'target-size' | 'autoplay-motion' | 'autoplay-media' | 'pause' | 'flashing' | 'captions' | 'title';
+export type CheckId = 'contrast' | 'small-text' | 'keyboard' | 'name' | 'description' | 'target-size' | 'autoplay-motion' | 'autoplay-media' | 'pause' | 'flashing' | 'captions' | 'title' | 'sensors';
 
 export interface CheckInfo {
   id: CheckId;

@@ -1,10 +1,11 @@
-import { Renderer, createStillShaders, prepareNodes, sampleArtboard, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, createStillShaders, measureCopies, prepareNodes, withMaster, type CopySizes, sampleArtboard, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { assetBytes } from './db';
 import { download, fileSafe } from './export';
 import { previewScope } from './data';
 import { editInstanceMount } from '../canvas/instances';
 import { canvasResolver } from './themes';
 import { fontUseIn, neededFonts, type FontNeed } from './font-use';
+import { googleFontCss, toDataUrl } from './font-embed';
 
 /** A small JPEG of the start artboard, for the projects page. */
 export async function projectThumbnail(project: Project, width = 400): Promise<Blob | null> {
@@ -29,13 +30,6 @@ export async function projectThumbnail(project: Project, width = 400): Promise<B
  * Pictures of an artboard: the same renderer the player uses, drawn into an SVG <foreignObject> with every image
  * and font inlined, so the file stands alone. PNG rasterises that SVG.
  */
-
-const toDataUrl = (bytes: Uint8Array, mime: string) =>
-  new Promise<string>((resolve) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.readAsDataURL(new Blob([bytes as BlobPart], { type: mime }));
-  });
 
 // Font CSS per set of fonts a picture needs (Google stylesheets and their files are fetched once)
 const fontCssCache = new Map<string, Promise<string>>();
@@ -74,10 +68,14 @@ export async function snapshotFromDom(project: Project, ab: Artboard, root: HTML
   return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
 }
 
-/** Canvas pixels don't survive serialising: a copy of the tree where each canvas (script layers) is the picture it shows. */
+/**
+ * Canvas pixels and video frames don't survive serialising: a copy of the tree where each canvas (script layers) and each
+ * video is the picture it shows. A video left as itself draws as an empty player with its controls in the still.
+ */
 function withCanvasesAsImages(root: HTMLElement): HTMLElement {
   const live = root.querySelectorAll('canvas');
-  if (!live.length) return root;
+  const vids = root.querySelectorAll('video');
+  if (!live.length && !vids.length) return root;
   const copy = root.cloneNode(true) as HTMLElement;
   const copies = copy.querySelectorAll('canvas');
   live.forEach((c, i) => {
@@ -91,7 +89,46 @@ function withCanvasesAsImages(root: HTMLElement): HTMLElement {
       /* a canvas the browser won't read: it is left out of the picture */
     }
   });
+  const vidCopies = copy.querySelectorAll('video');
+  vids.forEach((v, i) => vidCopies[i].replaceWith(videoFrame(v)));
   return copy;
+}
+
+/** Wait (up to a few seconds) for every video under `root` to have a frame to show. */
+export function videosReady(root: HTMLElement, ms = 3000): Promise<void> {
+  const waiting = [...root.querySelectorAll('video')].filter((v) => v.readyState < 2 && (v.currentSrc || v.src));
+  if (!waiting.length) return Promise.resolve();
+  return Promise.race([
+    Promise.all(waiting.map((v) => new Promise<void>((done) => {
+      v.addEventListener('loadeddata', () => done(), { once: true });
+      v.addEventListener('error', () => done(), { once: true });
+    }))).then(() => undefined),
+    new Promise<void>((done) => setTimeout(done, ms)),
+  ]);
+}
+
+/** The frame a video is showing, as an image laid out like the video (a plain dark box when it has no frame yet or won't be read). */
+function videoFrame(v: HTMLVideoElement): HTMLElement {
+  if (v.readyState >= 2 && v.videoWidth && v.videoHeight) {
+    try {
+      const c = document.createElement('canvas');
+      c.width = v.videoWidth;
+      c.height = v.videoHeight;
+      c.getContext('2d')!.drawImage(v, 0, 0);
+      const img = document.createElement('img');
+      img.src = c.toDataURL('image/jpeg', 0.85);
+      img.className = v.className;
+      img.style.cssText = v.style.cssText;
+      return img;
+    } catch {
+      /* a video from another site taints the canvas: the dark box below */
+    }
+  }
+  const box = document.createElement('div');
+  box.className = v.className;
+  box.style.cssText = v.style.cssText;
+  box.style.background = '#000';
+  return box;
 }
 
 async function fontCss(project: Project, needs: FontNeed[]): Promise<string> {
@@ -103,14 +140,7 @@ async function fontCss(project: Project, needs: FontNeed[]): Promise<string> {
         const bytes = a && (await assetBytes(project.id, a));
         if (bytes) parts.push(`@font-face{font-family:${JSON.stringify(f.family)};src:url("${await toDataUrl(bytes, a!.mime || 'font/woff2')}")}`);
       } else if (f.source === 'google') {
-        const weights = used.join(';');
-        let css = await (await fetch(`https://fonts.googleapis.com/css2?family=${encodeURIComponent(f.family).replace(/%20/g, '+')}:wght@${weights}`)).text();
-        // Inline each font file the stylesheet points at
-        for (const m of [...css.matchAll(/url\((https:[^)]+)\)/g)]) {
-          const bytes = new Uint8Array(await (await fetch(m[1])).arrayBuffer());
-          css = css.replace(m[1], await toDataUrl(bytes, 'font/woff2'));
-        }
-        parts.push(css);
+        parts.push(await googleFontCss(f.family, used));
       }
     } catch {
       /* offline or blocked: the text falls back to a system font */
@@ -160,7 +190,15 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
     host.appendChild(r.root);
     const vars = previewScope(project, ab);
     const sampled: SceneNode[] = timeline ? sampleArtboard(ab.children, timeline, time) : ab.children;
-    r.render(ab, prepareNodes(sampled, { vars }), { vars });
+    const page = withMaster(project.artboards, ab, sampled);
+    const sizes: CopySizes = new Map();
+    let drawn = prepareNodes(page, { vars }, { measured: sizes });
+    r.render(ab, drawn, { vars });
+    // Text in repeated copies is measured, and drawn again at the size it took
+    if (measureCopies(r, drawn, sizes, ab.width)) {
+      drawn = prepareNodes(page, { vars }, { measured: sizes });
+      r.render(ab, drawn, { vars });
+    }
     if (r.root.querySelector('iframe, video, [data-ix-embed]')) warnings.push('Embeds and video show as empty boxes in pictures.');
     if (r.root.querySelector('canvas.ix-draw')) warnings.push('Script layers show as empty boxes in pictures.');
     if (r.root.querySelector('canvas.ix-shader')) {
@@ -212,5 +250,25 @@ export async function downloadArtboardPng(project: Project, ab: Artboard, timeli
   const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
   if (!blob) throw new Error('The browser could not make the PNG.');
   download(blob, `${fileSafe(ab.name)}${scale !== 1 ? `@${scale}x` : ''}.png`);
+  return warnings;
+}
+
+/**
+ * One frame of an artboard at `time`, drawn into `ctx` at `width` x `height` (the same drawing as the PNG export, so a frame
+ * is exactly the picture you'd get with the playhead there). `background` fills first; null leaves the canvas transparent.
+ */
+export async function drawArtboardFrame(project: Project, ab: Artboard, timeline: Timeline | null, time: number, ctx: CanvasRenderingContext2D, width: number, height: number, opts: { theme?: string | null; background?: string | null } = {}): Promise<string[]> {
+  const { svg, warnings } = await artboardSvg(project, ab, timeline, time, { theme: opts.theme });
+  // A data: url, as the PNG export uses: Chrome taints the canvas for an SVG with a foreignObject loaded from a blob:
+  // url, and then neither getImageData (GIF) nor VideoFrame (MP4, WebM) will read it
+  const img = new Image();
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await img.decode();
+  ctx.clearRect(0, 0, width, height);
+  if (opts.background) {
+    ctx.fillStyle = opts.background;
+    ctx.fillRect(0, 0, width, height);
+  }
+  ctx.drawImage(img, 0, 0, width, height);
   return warnings;
 }

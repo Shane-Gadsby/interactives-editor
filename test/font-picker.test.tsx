@@ -197,7 +197,7 @@ describe('FontPicker as a combobox', () => {
     expect(host.querySelector<HTMLElement>('.font-spacer')!.style.height).toMatch(/^\d{5,}px$/);
   });
 
-  it('asks Google for the names of the rows on screen in their own font, after scrolling settles', () => {
+  it('asks the font route (Google through it) for the names of the rows on screen in their own font, after scrolling settles', () => {
     vi.useFakeTimers();
     mountPicker({ project: [{ family: 'Open Sans', source: 'google', weights: [400] }] });
     focus(combo());
@@ -206,7 +206,7 @@ describe('FontPicker as a combobox', () => {
     const links = [...document.head.querySelectorAll<HTMLLinkElement>('link[data-font-preview]')];
     expect(links.length).toBeGreaterThan(3);
     expect(links.length).toBeLessThan(40);
-    expect(links.every((l) => /fonts\.googleapis\.com\/css2\?family=[^&]+&text=[^&]+&display=swap/.test(l.href))).toBe(true);
+    expect(links.every((l) => /\/fonts\/css2\?family=[^&]+&text=[^&]+$/.test(l.href))).toBe(true);
     // the project loads Open Sans in full: a name-only copy of it must not follow
     expect(links.some((l) => l.dataset.fontPreview === 'Open Sans')).toBe(false);
   });

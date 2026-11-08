@@ -45,6 +45,22 @@ export interface SessionInfo {
   user: { username: string | null; userID: string | number | null; name: string | null } | null;
   /** Admin or power user (the suite's god mode rule), as the server sees it. */
   power: boolean;
+  /** May publish and mark brand kits (a power user, or in the server's brand group); also the brand lock override in the editor. */
+  brand?: boolean;
+}
+
+/** A request the server answered with an error (status 0: it was never reached). */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+  /** Worth sending again as it is: the server or the network had trouble. Any other 4xx fails the same way every time. */
+  get retryable(): boolean {
+    return this.status === 0 || this.status >= 500 || this.status === 408 || this.status === 429;
+  }
 }
 
 export class ConflictError extends Error {
@@ -69,7 +85,7 @@ async function call<T>(path: string, init: RequestInit = {}, as?: 'blob'): Promi
     res = await fetch(API + path, { credentials: 'same-origin', ...init });
   } catch (err) {
     reportError({ kind: 'api', error: err, where: route, detail: { method, status: 0 } });
-    throw new Error('Could not reach the Interactives server');
+    throw new ApiError('Could not reach the Interactives server', 0);
   }
   // Which parts of the server get used (the route with its ids taken out), how long they take, and what it refused or broke on
   if (res.ok) track('api', 'call', { thing: route, ms: Date.now() - started, detail: { method } });
@@ -83,7 +99,7 @@ async function call<T>(path: string, init: RequestInit = {}, as?: 'blob'): Promi
       /* not json */
     }
     if (res.status === 409) throw new ConflictError(body.error ?? 'Conflict', body.rev ?? 0);
-    throw new Error(body.error ?? `Server error ${res.status}`);
+    throw new ApiError(body.error ?? `Server error ${res.status}`, res.status);
   }
   const type = res.headers.get('content-type') ?? '';
   return (as !== 'blob' && type.includes('application/json') ? res.json() : res.blob()) as Promise<T>;
@@ -129,10 +145,71 @@ export async function saveProject(p: Project, opts: { force?: boolean } = {}): P
   revs.set(p.id, r.rev);
 }
 
+/** Moves the project to the bin (kept 30 days; restore it from the projects page's Bin). */
 export async function deleteProject(id: string): Promise<void> {
   await call(`projects/${encodeURIComponent(id)}`, { method: 'DELETE' });
   revs.delete(id);
 }
+
+/** Who is using a project: its links, and learners with records per course (GET projects/:id/in-use). */
+export interface InUse {
+  share: boolean;
+  review: boolean;
+  learners: number;
+  last: string | null;
+  courses: { course: string; learners: number; last: string | null }[];
+  moreCourses: number;
+}
+
+export const projectInUse = (id: string) => call<InUse>(`projects/${encodeURIComponent(id)}/in-use`);
+
+/** One row of the admin page's table (`GET /api/admin/projects`, power users). */
+export interface AdminProject {
+  id: string;
+  name: string;
+  owner: { username: string | null; name: string | null } | null;
+  collaborators: number;
+  created: string;
+  updated: string;
+  docBytes: number | null;
+  fileBytes: number;
+  files: number;
+  share: boolean;
+  shareUpdated: string | null;
+  review: boolean;
+  library: boolean;
+  libraryVersion: number;
+  learners: number;
+  openComments: number;
+  serverMarked: boolean;
+}
+export const getAdminProjects = () => call<{ projects: AdminProject[]; bin: number; generatedAt: string }>('admin/projects');
+
+/** A governance event (`GET /api/audit`, power users). */
+export interface AuditEvent {
+  at: string;
+  event: string;
+  project: string | null;
+  projectName: string | null;
+  by: { username: string | null; name: string | null } | null;
+  power: boolean;
+  detail: Record<string, unknown>;
+}
+export const getAudit = (q: { project?: string; event?: string; limit?: number } = {}) =>
+  call<AuditEvent[]>(`audit?${new URLSearchParams(Object.entries(q).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)])).toString()}`);
+
+export const stopShareFor = (projectId: string) => call<{ ok: boolean }>(`projects/${encodeURIComponent(projectId)}/share`, { method: 'DELETE' });
+
+/** A project in the bin: its card details, when and by whom it was deleted, and when it goes for good. */
+export interface BinnedProject extends ProjectMeta {
+  binned: { at: string; by: { username: string | null; name: string | null } | null };
+  purge: string;
+}
+
+export const listBin = (all = false) => call<BinnedProject[]>(`bin${all ? '?all=1' : ''}`);
+export const restoreFromBin = (id: string) => call<{ ok: boolean; id: string }>(`bin/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+/** Gone for good: the project, its files, revisions, learner records and comments. */
+export const deleteForever = (id: string) => call<{ ok: boolean }>(`bin/${encodeURIComponent(id)}`, { method: 'DELETE' });
 
 export async function putAsset(projectId: string, assetId: string, blob: Blob): Promise<void> {
   await call(`projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`, {
@@ -150,15 +227,72 @@ export async function getAsset(projectId: string, assetId: string): Promise<Blob
   }
 }
 
+/** Files in a project with the same bytes, as groups of asset ids. */
+export const assetDuplicates = (projectId: string) => call<{ groups: { size: number; ids: string[] }[] }>(`projects/${encodeURIComponent(projectId)}/assets/duplicates`);
+
+/** After merging duplicates in the document: the server makes each dropped copy a hard link to the kept file. */
+export const dedupeAssetFiles = (projectId: string, plan: { keep: string; drop: string[] }[]) =>
+  call<{ ok: boolean; linked: number; freed: number }>(`projects/${encodeURIComponent(projectId)}/assets/dedupe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan }) });
+
 export async function deleteAsset(projectId: string, assetId: string): Promise<void> {
   await call(`projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`, { method: 'DELETE' });
 }
 
+/** One row of the server's asset list. `variants` is the sizes of the smaller copies kept beside it, by key (0 means the original is as good). */
+export interface AssetListing {
+  id: string;
+  mime: string;
+  size: number;
+  variants?: Record<string, number>;
+}
+
+export const listAssets = (projectId: string) => call<AssetListing[]>(`projects/${encodeURIComponent(projectId)}/assets`);
+
+const variantPath = (projectId: string, assetId: string, key: string) => `projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}/variant/${encodeURIComponent(key)}`;
+
+/** A smaller copy of an asset (see image-optimise.ts), or null when there is none. */
+export async function getVariant(projectId: string, assetId: string, key: string): Promise<Blob | null> {
+  try {
+    return await call<Blob>(variantPath(projectId, assetId, key), {}, 'blob');
+  } catch {
+    return null;
+  }
+}
+
+/** Keep a smaller copy beside the asset. An empty blob records that the original is already as good. */
+export async function putVariant(projectId: string, assetId: string, key: string, blob: Blob): Promise<void> {
+  await call(variantPath(projectId, assetId, key), { method: 'PUT', headers: { 'Content-Type': blob.type || 'image/webp' }, body: blob });
+}
+
+/**
+ * Every asset's file for the canvas: the proxy where one is stored, the original where not. `listing` is what the
+ * server said, so the caller can see which assets have copies and which big ones don't.
+ */
+export async function loadAssetsForCanvas(projectId: string, proxy: string): Promise<{ blobs: Map<string, Blob>; proxied: Set<string>; listing: AssetListing[] }> {
+  const listing = await listAssets(projectId);
+  const blobs = new Map<string, Blob>();
+  const proxied = new Set<string>();
+  await Promise.all(
+    listing.map(async (a) => {
+      if (a.variants?.[proxy]) {
+        const small = await getVariant(projectId, a.id, proxy);
+        if (small) {
+          blobs.set(a.id, small);
+          proxied.add(a.id);
+          return;
+        }
+      }
+      const b = await getAsset(projectId, a.id);
+      if (b) blobs.set(a.id, b);
+    }),
+  );
+  return { blobs, proxied, listing };
+}
+
 export async function listAssetBlobs(projectId: string): Promise<Map<string, Blob>> {
-  const list = await call<{ id: string }[]>(`projects/${encodeURIComponent(projectId)}/assets`);
   const out = new Map<string, Blob>();
   await Promise.all(
-    list.map(async (a) => {
+    (await listAssets(projectId)).map(async (a) => {
       const b = await getAsset(projectId, a.id);
       if (b) out.set(a.id, b);
     }),
@@ -167,6 +301,8 @@ export async function listAssetBlobs(projectId: string): Promise<Map<string, Blo
 }
 
 export async function assetBytes(projectId: string, asset: Asset): Promise<Uint8Array | null> {
+  // A picture linked from the Media Catalogue has no stored file; an export that wants it fetches it itself (lib/media-catalogue.ts)
+  if (/^https?:\/\//i.test(asset.src ?? '')) return null;
   if (asset.src?.startsWith('data:')) {
     const res = await fetch(asset.src);
     return new Uint8Array(await res.arrayBuffer());
@@ -177,8 +313,9 @@ export async function assetBytes(projectId: string, asset: Asset): Promise<Uint8
 
 // ---------------------------------------------------------------- .ixp import / export
 
-export async function exportPackage(p: Project): Promise<Blob> {
-  const bytes = await writePackage(p, (a) => assetBytes(p.id, a), 'interactives-editor');
+/** `fetched` holds bytes already in hand by asset id (the Media Catalogue pictures an export fetched), tried before the project's own storage. */
+export async function exportPackage(p: Project, fetched?: Map<string, Uint8Array>): Promise<Blob> {
+  const bytes = await writePackage(p, (a) => fetched?.get(a.id) ?? assetBytes(p.id, a), 'interactives-editor');
   return new Blob([bytes as BlobPart], { type: 'application/zip' });
 }
 
@@ -241,7 +378,15 @@ export interface RevisionMeta {
   by: { username: string | null; name: string | null } | null;
   reason: string;
   size: number;
+  /** A name someone gave it ("Sent to the coordinator"). */
+  name?: string | null;
+  /** Pinned: kept whatever its age (up to 20 a project). */
+  pinned?: boolean;
 }
+
+export const saveNamedVersion = (projectId: string, name: string) => call<{ ok: boolean; id: string }>(`projects/${encodeURIComponent(projectId)}/revisions`, postJson({ name }));
+export const updateRevision = (projectId: string, revId: string, patch: { name?: string | null; pinned?: boolean }) =>
+  call<{ ok: boolean }>(`projects/${encodeURIComponent(projectId)}/revisions/${encodeURIComponent(revId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
 
 export const listRevisions = (projectId: string) => call<RevisionMeta[]>(`projects/${projectId}/revisions`);
 
@@ -260,7 +405,16 @@ export interface ShareInfo {
   updated: string;
   /** Signed in people who play it from the learner link get a "Remix this" button that copies the project into their own. */
   remix?: boolean;
+  /** What the project declared it uses of the learner's device when this page was published (the learner page only allows these). */
+  sensors?: { microphone?: boolean; camera?: boolean; photos?: boolean } | null;
+  /** Who published the page now showing. */
+  by?: { username: string | null; name: string | null } | null;
+  /** The page an update replaced, kept for one-click revert. */
+  previous?: { updated: string | null; by: { username: string | null; name: string | null } | null } | null;
 }
+
+/** Put the page the last update replaced back on the share link (the current one becomes the previous). */
+export const revertShare = (projectId: string) => call<{ share: ShareInfo }>(`projects/${encodeURIComponent(projectId)}/share/revert`, { method: 'POST' }).then((r) => r.share);
 
 export const getShare = (projectId: string) => call<{ share: ShareInfo | null }>(`projects/${projectId}/share`).then((r) => r.share);
 
@@ -289,8 +443,16 @@ export const addCollaborator = (projectId: string, username: string, name = '') 
 export const removeCollaborator = (projectId: string, username: string) =>
   call<{ collaborators: Collaborator[] }>(`projects/${encodeURIComponent(projectId)}/collaborators/${encodeURIComponent(username)}`, { method: 'DELETE' }).then((r) => r.collaborators);
 
-export const publishShare = (projectId: string, html: string) =>
-  call<{ share: ShareInfo }>(`projects/${projectId}/share`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html }).then((r) => r.share);
+/** Make a collaborator the owner; the old owner becomes a collaborator. */
+export const transferOwner = (projectId: string, username: string) =>
+  call<{ owner: { username: string; name: string | null }; collaborators: Collaborator[] }>(`projects/${encodeURIComponent(projectId)}/owner`, postJson({ username }));
+
+/** `onAudioNotes` hears about audio in a spelling test whose tags the server could not clean (see shared/audio-clean.cjs). */
+export const publishShare = (projectId: string, html: string, onAudioNotes?: (notes: string[]) => void) =>
+  call<{ share: ShareInfo; marking?: { audioNotes?: string[] } | null }>(`projects/${projectId}/share`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html }).then((r) => {
+    if (r.marking?.audioNotes?.length) onAudioNotes?.(r.marking.audioNotes);
+    return r.share;
+  });
 
 /** Turn "Allow remix" on or off for an existing share link. */
 export const setShareRemix = (projectId: string, remix: boolean) =>
@@ -315,6 +477,8 @@ export interface ResultsRow {
   bestPercent: number | null;
   lastPercent: number | null;
   updated: string | null;
+  /** What the spelling guard found in this learner's browser, or null when it found nothing and no exemption was used. */
+  guard?: { tools: string[]; valueChanges: number; shown: number; exempt: boolean; label: string } | null;
 }
 
 export interface Results {
@@ -332,11 +496,55 @@ export interface Results {
   truncated: boolean;
   /** The project has a share link on (results are only collected through one). */
   shared: boolean;
+  /** Whether this person may clear them: the owner or a power user, never a collaborator. */
+  mayClear?: boolean;
 }
 
 export const getResults = (projectId: string) => call<Results>(`projects/${encodeURIComponent(projectId)}/results`);
 
+/** Every learner's record as a CSV file. */
+export const resultsCsv = (projectId: string) => call<Blob>(`projects/${encodeURIComponent(projectId)}/results.csv`, {}, 'blob');
+
 export const clearResults = (projectId: string) => call<{ ok: boolean; deleted: number }>(`projects/${encodeURIComponent(projectId)}/results`, { method: 'DELETE' });
+
+// ---------------------------------------------------------------- shared responses (the class's answers, for the owner to moderate)
+
+/** One answer in a course, with how many people gave it and why it may not be showing. */
+export interface SharedAnswerRow {
+  text: string;
+  count: number;
+  /** The owner hid it from the class. */
+  hidden: boolean;
+  /** It holds a word on the blocklist. */
+  blocked: boolean;
+  /** The class sees it right now (not hidden, not blocked, enough people gave it). */
+  shown: boolean;
+}
+
+export interface SharedCourse {
+  /** The course label, empty for people with no course. */
+  course: string;
+  people: number;
+  answers: SharedAnswerRow[];
+}
+
+export interface SharedSourceInfo {
+  /** The data source's id. */
+  source: string;
+  name: string;
+  declared: { who: 'me' | 'class'; byVariable: boolean; minCount: number; perPerson: number; maxLength: number; blocked: string[] };
+  courses: SharedCourse[];
+}
+
+/** What the class has answered, per shared data source and course, as of the last time the project was shared (GET projects/:id/shared). Owner or power user. */
+export const getSharedResponses = (projectId: string) => call<{ sources: SharedSourceInfo[] }>(`projects/${encodeURIComponent(projectId)}/shared`);
+
+/** Hide an answer from the class, or show it again. */
+export const hideSharedAnswer = (projectId: string, source: string, course: string, text: string, hidden: boolean) => call<{ ok: boolean; hidden: boolean }>(`projects/${encodeURIComponent(projectId)}/shared/${encodeURIComponent(source)}/hidden`, json({ course, text, hidden }));
+
+/** Take one answer out of everyone's lists in a course, or (no text) every answer in it. */
+export const removeSharedAnswers = (projectId: string, source: string, course: string, text?: string) =>
+  call<{ ok: boolean; people: number }>(`projects/${encodeURIComponent(projectId)}/shared/${encodeURIComponent(source)}/answers`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ course, ...(text ? { text } : {}) }) });
 
 // ---------------------------------------------------------------- learner insights
 
@@ -391,6 +599,9 @@ export const publishLibrary = (projectId: string, note: string) =>
 export const shareLibrary = (projectId: string, share: { everyone: boolean; users: string[] }) =>
   call<{ shared: { everyone: boolean; users: string[] } }>(`projects/${encodeURIComponent(projectId)}/library/share`, json(share));
 
+/** Mark this project's published library as a brand kit, or take that off (power users and the server's brand group). */
+export const markBrandKit = (projectId: string, brand: boolean) => call<{ brand: boolean }>(`projects/${encodeURIComponent(projectId)}/library/brand`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ brand }) });
+
 export const unpublishLibrary = (projectId: string) => call<{ ok: boolean }>(`projects/${encodeURIComponent(projectId)}/library`, { method: 'DELETE' });
 
 // ---------------------------------------------------------------- templates
@@ -398,7 +609,7 @@ export const unpublishLibrary = (projectId: string) => call<{ ok: boolean }>(`pr
 export interface SaveTemplateBody {
   name: string;
   description: string;
-  checklist: { id?: string; text: string; artboardId?: string; nodeId?: string }[];
+  checklist: { id?: string; text: string; artboardId?: string; nodeId?: string; field?: string }[];
   everyone: boolean;
   /** Save over one of yours as its next version. */
   templateId?: string;

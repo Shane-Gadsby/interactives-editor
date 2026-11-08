@@ -102,7 +102,7 @@ describe('blend example', () => {
     ab.children.push(...ex.nodes);
     ab.timelines.push(...ex.timelines);
     ab.blends = [ex.blend];
-    expect(ex.nodes[1]).toMatchObject({ type: 'input', inputType: 'range', variableId: ex.variable.id });
+    expect(ex.nodes[1]).toMatchObject({ type: 'input', inputType: 'range', bindings: { value: ex.variable.name }, bindingModes: { value: 'both' } });
     document.body.innerHTML = '<div id="st" style="width:800px;height:600px"></div>';
     let raf: FrameRequestCallback | null = null;
     vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) => ((raf = f), 1));

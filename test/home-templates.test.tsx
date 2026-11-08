@@ -13,6 +13,7 @@ vi.mock('../src/lib/image-export', () => ({ projectThumbnail: async () => null }
 vi.mock('../src/lib/session', () => ({ sessionUser: async () => null }));
 
 import { Home } from '../src/Home';
+import { BRANDED_STARTERS, type BrandedStarter } from '../src/lib/branded';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -21,7 +22,10 @@ let host: HTMLElement;
 const flush = () => act(async () => void (await new Promise((r) => setTimeout(r, 0))));
 const tab = (name: string) => [...host.querySelectorAll<HTMLElement>('.home-tabs [role=tab]')].find((t) => t.textContent === name)!;
 
+//The branded packs have their own tests (branded-ui): these are about the plain built-in starters and templates
+let realStarters: BrandedStarter[] = [];
 beforeEach(async () => {
+  realStarters = BRANDED_STARTERS.splice(0);
   localStorage.clear();
   host = document.createElement('div');
   document.body.appendChild(host);
@@ -30,6 +34,7 @@ beforeEach(async () => {
   await flush();
 });
 afterEach(() => {
+  BRANDED_STARTERS.splice(0, BRANDED_STARTERS.length, ...realStarters);
   act(() => root.unmount());
   host.remove();
 });

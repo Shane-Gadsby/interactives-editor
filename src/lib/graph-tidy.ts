@@ -9,6 +9,8 @@
  * 4. Positions: columns as wide as their widest node plus a gap, nodes stacked with a gap, each column centred on the
  *    nodes it connects to where there's room.
  * 5. Groups: a group is resized to fit the nodes that were in it, with room for its title.
+ * 6. Notes: a note that follows a node or group is given room (its node is laid out as if it were as big as node and note together),
+ *    and moves with its host; a loose note that landed on a node or a group is moved clear of it.
  */
 
 export interface TidyNode {
@@ -29,15 +31,77 @@ export interface TidyGroup {
   id: string;
   /** The nodes in it. */
   members: string[];
+  /** Where its frame is now (without them, from its members: a tidy of a graph the editor has not measured yet). */
+  x?: number;
+  y?: number;
+}
+export interface TidyNote {
+  id: string;
+  /** Where it is drawn now. */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** The node or group it follows, when it follows one. */
+  host?: string;
+}
+export interface TidyBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
-export const TIDY = { colGap: 90, rowGap: 28, chainGap: 70, groupPad: 24, groupTitle: 40 };
+export const TIDY = { colGap: 90, rowGap: 28, chainGap: 70, groupPad: 24, groupTitle: 40, noteGap: 12 };
 
 export function tidyGraph(
-  nodes: TidyNode[],
+  rawNodes: TidyNode[],
   edges: TidyEdge[],
   groups: TidyGroup[] = [],
-): { positions: Map<string, { x: number; y: number }>; groups: Map<string, { x: number; y: number; width: number; height: number }> } {
+  notes: TidyNote[] = [],
+): { positions: Map<string, { x: number; y: number }>; groups: Map<string, TidyBox>; notes: Map<string, { x: number; y: number }> } {
+  // 0. room for the notes that follow a node or a group: its node is laid out as big as node and notes together
+  const real = new Map(rawNodes.map((n) => [n.id, n]));
+  const pad = new Map<string, { left: number; top: number; right: number; bottom: number }>();
+  const grow = (id: string, rx: number, ry: number, w: number, h: number) => {
+    const n = real.get(id);
+    if (!n) return;
+    const p = pad.get(id) ?? { left: 0, top: 0, right: 0, bottom: 0 };
+    p.left = Math.max(p.left, -rx);
+    p.top = Math.max(p.top, -ry);
+    p.right = Math.max(p.right, rx + w - n.width);
+    p.bottom = Math.max(p.bottom, ry + h - n.height);
+    pad.set(id, p);
+  };
+  const groupOrigin = (g: TidyGroup) => {
+    const m = g.members.map((id) => real.get(id)).filter(Boolean) as TidyNode[];
+    if (g.x !== undefined && g.y !== undefined) return { x: g.x, y: g.y };
+    return m.length ? { x: Math.min(...m.map((n) => n.x)) - TIDY.groupPad, y: Math.min(...m.map((n) => n.y)) - TIDY.groupTitle } : null;
+  };
+  for (const note of notes) {
+    if (!note.host) continue;
+    if (real.has(note.host)) {
+      const n = real.get(note.host)!;
+      grow(note.host, note.x - n.x, note.y - n.y, note.width, note.height);
+      continue;
+    }
+    const g = groups.find((x) => x.id === note.host);
+    const o = g && groupOrigin(g);
+    if (!g || !o) continue;
+    // the frame's corner ends up (groupPad, groupTitle) up and left of its top left member, so that is the node that has to make room
+    const host = g.members.map((id) => real.get(id)).filter(Boolean).sort((a, b) => a!.y - b!.y || a!.x - b!.x)[0];
+    if (host) grow(host.id, note.x - o.x - TIDY.groupPad, note.y - o.y - TIDY.groupTitle, note.width, note.height);
+  }
+  const gap = TIDY.noteGap;
+  const nodes = rawNodes.map((n) => {
+    const p = pad.get(n.id);
+    if (!p) return n;
+    const left = p.left ? p.left + gap : 0;
+    const top = p.top ? p.top + gap : 0;
+    pad.set(n.id, { left, top, right: p.right ? p.right + gap : 0, bottom: p.bottom ? p.bottom + gap : 0 });
+    const q = pad.get(n.id)!;
+    return { ...n, x: n.x - left, y: n.y - top, width: n.width + left + q.right, height: n.height + top + q.bottom };
+  });
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const valid = edges.filter((e) => byId.has(e.from) && byId.has(e.to) && e.from !== e.to);
   const outs = new Map<string, TidyEdge[]>();
@@ -79,7 +143,9 @@ export function tidyGraph(
   for (const g of groups) for (const id of g.members) if (!groupOf.has(id)) groupOf.set(id, g.id);
   const positions = new Map<string, { x: number; y: number }>();
   const left = nodes.length ? Math.min(...nodes.map((n) => n.x)) : 0;
-  let top = nodes.length ? Math.min(...nodes.map((n) => n.y)) : 0;
+  // where the graph starts: a grouped node sits under its group's title, so measuring from the title keeps a second tidy from
+  // pushing everything down by the title's height each time
+  let top = nodes.length ? Math.min(...nodes.map((n) => n.y - (groupOf.has(n.id) ? TIDY.groupTitle : 0))) : 0;
 
   for (const chain of chains) {
     const members = new Set(chain);
@@ -186,18 +252,55 @@ export function tidyGraph(
     top = bottom + TIDY.chainGap;
   }
 
+  // the nodes themselves sit inside the room made for their notes
+  for (const [id, p] of positions) {
+    const q = pad.get(id);
+    if (q) positions.set(id, { x: p.x + q.left, y: p.y + q.top });
+  }
+
   // 5. groups fit their members
-  const out = new Map<string, { x: number; y: number; width: number; height: number }>();
+  const out = new Map<string, TidyBox>();
   for (const g of groups) {
     const pts = g.members.filter((id) => positions.has(id));
     if (!pts.length) continue;
     const x0 = Math.min(...pts.map((id) => positions.get(id)!.x));
     const y0 = Math.min(...pts.map((id) => positions.get(id)!.y));
-    const x1 = Math.max(...pts.map((id) => positions.get(id)!.x + byId.get(id)!.width));
-    const y1 = Math.max(...pts.map((id) => positions.get(id)!.y + byId.get(id)!.height));
+    const x1 = Math.max(...pts.map((id) => positions.get(id)!.x + real.get(id)!.width));
+    const y1 = Math.max(...pts.map((id) => positions.get(id)!.y + real.get(id)!.height));
     out.set(g.id, { x: x0 - TIDY.groupPad, y: y0 - TIDY.groupTitle, width: x1 - x0 + TIDY.groupPad * 2, height: y1 - y0 + TIDY.groupTitle + TIDY.groupPad });
   }
-  return { positions, groups: out };
+
+  // 6. notes: the ones that follow something keep their offset from it, the loose ones get out of the way of what they landed on
+  const placed = new Map<string, { x: number; y: number }>();
+  const taken: TidyBox[] = [...[...positions].map(([id, p]) => ({ x: p.x, y: p.y, width: real.get(id)!.width, height: real.get(id)!.height })), ...out.values()];
+  for (const note of notes) {
+    if (!note.host) continue;
+    if (real.has(note.host)) {
+      const was = real.get(note.host)!;
+      const at = positions.get(note.host)!;
+      placed.set(note.id, { x: Math.round(at.x + (note.x - was.x)), y: Math.round(at.y + (note.y - was.y)) });
+    } else {
+      const g = groups.find((x) => x.id === note.host);
+      const o = g && groupOrigin(g);
+      const now = out.get(note.host);
+      if (o && now) placed.set(note.id, { x: Math.round(now.x + (note.x - o.x)), y: Math.round(now.y + (note.y - o.y)) });
+    }
+    const at = placed.get(note.id);
+    if (at) taken.push({ ...at, width: note.width, height: note.height });
+  }
+  const hits = (a: TidyBox, b: TidyBox) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  for (const note of notes) {
+    if (placed.has(note.id)) continue;
+    const box: TidyBox = { x: note.x, y: note.y, width: note.width, height: note.height };
+    for (let i = 0; i < 40; i++) {
+      const hit = taken.find((t) => hits(box, t));
+      if (!hit) break;
+      box.y = hit.y + hit.height + TIDY.noteGap;
+    }
+    placed.set(note.id, { x: Math.round(box.x), y: Math.round(box.y) });
+    taken.push(box);
+  }
+  return { positions, groups: out, notes: placed };
 }
 
 /** How many pairs of connections cross, with nodes at these positions (for the tests, and to check a tidy helped). */

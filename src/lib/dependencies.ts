@@ -11,7 +11,8 @@
  * anything found only inside a script or code snippet is marked `loose`: it might be a false hit, but a miss
  * is unlikely.
  */
-import { CATALOG_BY_KIND, converterExpressions, isContainer, type Artboard, type DataSource, type Id, type Paint, type Project, type SceneNode, type Timeline, type Variable } from 'interactives-player';
+import { nodeLabel } from './plain-words';
+import { CATALOG, CATALOG_BY_KIND, converterExpressions, isContainer, liveWriters, planLive, type Artboard, type DataSource, type Id, type Paint, type Project, type SceneNode, type Timeline, type Variable } from 'interactives-player';
 
 export type EntityKind = 'artboard' | 'asset' | 'variable' | 'data' | 'script' | 'timeline' | 'layer';
 
@@ -54,6 +55,8 @@ export interface MissingRef {
   what: EntityKind;
   ref: string;
   how: string;
+  /** Set when it is not a missing thing but another problem, said in words after the name ("writes x, a live variable..."). */
+  problem?: string;
 }
 
 export interface UsageReport {
@@ -195,6 +198,7 @@ export function analyzeUsage(project: Project): UsageReport {
   for (const f of project.fonts) {
     if (f.assetId) useId('asset', f.assetId, { type: 'font', id: f.family, name: f.family }, 'font file');
   }
+  for (const v of project.variables) if (v.formula) useExpr(v.formula, { type: 'project', id: v.id, name: `Variable ${v.name}` }, 'formula');
   for (const d of project.dataSources) {
     const by: UsageSource = { type: 'data', id: d.id, name: d.name };
     if (d.source === 'asset' && d.assetId) useId('asset', d.assetId, by, 'data file');
@@ -208,6 +212,7 @@ export function analyzeUsage(project: Project): UsageReport {
   // Artboards
   for (const ab of project.artboards) {
     const abSrc: UsageSource = { type: 'artboard', id: ab.id, name: ab.name };
+    if (ab.master) useId('artboard', ab.master, abSrc, 'page master');
     const nodeById = new Map<string, SceneNode>();
     const walkAll = (list: SceneNode[]) => {
       for (const n of list) {
@@ -253,7 +258,24 @@ export function analyzeUsage(project: Project): UsageReport {
         if (n.type === 'draw') useCode(n.code, by, 'script layer code');
         // Pictures a shader reads (image uniforms of a shader layer or an image layer's shader filter)
         for (const u of (n.type === 'shader' ? n.uniforms : n.type === 'image' ? n.shaderFilter?.uniforms : undefined) ?? []) if (u.type === 'image' && typeof u.value === 'string' && u.value) useId('asset', u.value, by, 'shader image');
-        if (n.type === 'input') useId('variable', n.variableId, by, 'input bound to variable');
+        if (n.type === 'chart' && n.data.trim()) useExpr(n.data, by, 'chart data');
+        if (n.type === 'chart') for (const t of [n.prefix, n.suffix]) if (t) for (const e of templateSlots(t)) useExpr(e, by, 'chart prefix or suffix');
+        if (n.type === 'connector') {
+          //Each end names a layer (the template of a repeated one), and a copy-picking end holds an expression; the label holds slots
+          for (const e of [n.from, n.to]) {
+            const l = e?.layer;
+            if (typeof l === 'string') useLayer(l, by, 'connector end');
+            else if (l && typeof l.repeat === 'string') {
+              useLayer(l.repeat, by, 'connector end');
+              if (l.index?.trim()) useExpr(l.index, by, 'connector copy');
+            }
+          }
+          if (n.label) for (const e of templateSlots(n.label)) useExpr(e, by, 'connector label');
+        }
+        if (n.type === 'progress' && n.valueText) for (const e of templateSlots(n.valueText)) useExpr(e, by, 'spoken value template');
+        //the binding itself counts as the use; an input's out and both-ways value has to name a variable that is there
+        const tied = n.type === 'input' && (n.bindingModes?.value === 'out' || n.bindingModes?.value === 'both') ? n.bindings?.value?.trim() : '';
+        if (tied && !varByName.has(tied)) missing.push({ by, what: 'variable', ref: tied, how: 'input bound to variable' });
         if (n.type === 'instance') {
           useId('artboard', n.artboardId, by, 'instance of artboard');
           for (const name of Object.keys(n.inputs ?? {})) {
@@ -310,11 +332,11 @@ export function analyzeUsage(project: Project): UsageReport {
     // Interaction graph
     for (const ln of ab.logic.nodes) {
       const def = CATALOG_BY_KIND[ln.kind];
-      const by: UsageSource = { type: 'logic', artboardId: ab.id, artboardName: ab.name, id: ln.id, name: def?.label ?? ln.kind };
+      const by: UsageSource = { type: 'logic', artboardId: ab.id, artboardName: ab.name, id: ln.id, name: def ? nodeLabel(def) : ln.kind };
       for (const p of def?.params ?? []) {
         const value = ln.params[p.key];
         if (value === undefined || value === null || value === '') continue;
-        const how = def!.label;
+        const how = nodeLabel(def!);
         switch (p.type) {
           case 'node':
             useLayer(value, by, how);
@@ -368,6 +390,17 @@ export function analyzeUsage(project: Project): UsageReport {
     for (const a of unusedAssets) {
       if (raw.includes(a.id)) use('asset', a.id, projectSrc, 'mentioned in the document', true);
     }
+  }
+
+  // Live variables: nodes that try to write one, and ones that read each other in a circle
+  for (const w of liveWriters(project)) {
+    // (the player names the node by its file name: say it the way the editor does)
+    const said = CATALOG.find((d) => d.label === w.label);
+    const shown = said ? nodeLabel(said) : w.label;
+    missing.push({ by: { type: 'logic', artboardId: w.artboardId, artboardName: w.artboardName, id: w.nodeId, name: shown }, what: 'variable', ref: w.variable.name, how: shown, problem: `writes ${w.variable.name}, a live variable that is worked out from its formula, so it does nothing` });
+  }
+  for (const v of planLive(project).cyclic) {
+    missing.push({ by: { type: 'project', id: v.id, name: `Variable ${v.name}` }, what: 'variable', ref: v.name, how: 'live formula', problem: `${v.name} reads itself, or live variables that read it, so it stays at its starting value` });
   }
 
   const list = (kind: EntityKind) => [...items.values()].filter((i) => i.kind === kind);

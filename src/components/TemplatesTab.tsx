@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNoProgressHost } from '../lib/preview-learner';
 import { track } from '../lib/analytics';
-import { changeTemplate, createProjectRecord, deleteTemplate, exampleAssetBytes, exampleThumbUrl, getExample, listExamples, listTemplates, setProjectMeta, templateThumbUrl, useExample, useTemplate, type ExampleInfo } from '../lib/db';
+import { changeTemplate, createProjectRecord, deleteTemplate, putAsset, exampleAssetBytes, exampleThumbUrl, getExample, listExamples, listTemplates, setProjectMeta, templateThumbUrl, useExample, useTemplate, type ExampleInfo } from '../lib/db';
 import { standaloneHtml } from '../lib/export';
 import { STARTERS, projectFromStarter, type Starter } from '../lib/template-starters';
+import { BRANDED_STARTERS, projectFromBrandedStarter, takeInlineAssets, type BrandedStarter, type Colourway } from '../lib/branded';
+import { GOALS, goalsOf, plainTags, starterMatches, type Goal } from '../lib/starter-goals';
+import { starterPlayHtml, type StarterPick } from '../lib/starter-pick';
+import { STARTER_FINDER_HELP } from '../help/context';
 import { CHECKLIST_FLAG, type TemplateInfo } from '../lib/templates';
 import { noteIfStale } from '../lib/stale-build';
 import { confirmDialog } from './dialogs';
 import { Modal } from './ProjectModals';
 import { ChecklistEditor, type DraftItem } from './ChecklistEditor';
+import { BrandedPacks } from './BrandedPacks';
 import { Icons } from './icons';
 
 type Sub = 'mine' | 'shared' | 'builtin' | 'examples';
@@ -48,7 +54,7 @@ export function StarterPicture({ starter }: { starter: Starter }) {
   return <span className="thumb-board template-blank">{url === undefined ? '' : starter.name}</span>;
 }
 
-export type Pick = { kind: 'saved'; t: TemplateInfo } | { kind: 'builtin'; s: Starter } | { kind: 'example'; e: ExampleInfo };
+export type Pick = { kind: 'saved'; t: TemplateInfo } | { kind: 'builtin'; s: Starter } | { kind: 'branded'; s: BrandedStarter; way: Colourway } | { kind: 'example'; e: ExampleInfo };
 
 /** Makes the project for a pick (a saved template, a built-in starter or an example) and says which, so the checklist opens for the ones that have one. Returns the new project's id. */
 export async function makeFromPick(pick: Pick, o: { name: string; folder: string | null }): Promise<string> {
@@ -58,12 +64,15 @@ export async function makeFromPick(pick: Pick, o: { name: string; folder: string
   } else if (pick.kind === 'example') {
     id = await useExample(pick.e.key, { name: o.name, folder: o.folder });
   } else {
-    const p = projectFromStarter(pick.s, o.name);
+    const p = pick.kind === 'branded' ? projectFromBrandedStarter(pick.s, pick.way, o.name) : projectFromStarter(pick.s, o.name);
+    //A starter's placeholder sounds ride in the project as data addresses: they go up as files once the project exists
+    const files = pick.kind === 'branded' ? takeInlineAssets(p) : new Map<string, Blob>();
     await createProjectRecord(p);
+    for (const [assetId, blob] of files) await putAsset(p.id, assetId, blob);
     if (o.folder) await setProjectMeta(p.id, { folder: o.folder }).catch(() => undefined);
     id = p.id;
   }
-  track('feature', 'template-use', { thing: pick.kind === 'saved' ? 'saved' : pick.kind === 'example' ? `example-${pick.e.key}`.slice(0, 40) : pick.s.key });
+  track('feature', 'template-use', { thing: pick.kind === 'saved' ? 'saved' : pick.kind === 'example' ? `example-${pick.e.key}`.slice(0, 40) : pick.kind === 'branded' ? `branded-${pick.s.key}`.slice(0, 40) : pick.s.key });
   if (pick.kind !== 'example') {
     try {
       sessionStorage.setItem(CHECKLIST_FLAG, id);
@@ -77,12 +86,12 @@ export async function makeFromPick(pick: Pick, o: { name: string; folder: string
 /** "Use template": what it expects of you (its checklist), a name, then a new project in the folder you have open. */
 function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { pick: Pick; folder: string | null; folders: string[]; onClose: () => void; onMade: (id: string) => void }) {
   const [folder, setFolder] = useState<string | null>(initialFolder);
-  const title = pick.kind === 'saved' ? pick.t.name : pick.kind === 'builtin' ? pick.s.name : pick.e.title;
-  const description = pick.kind === 'saved' ? pick.t.description : pick.kind === 'builtin' ? pick.s.description : pick.e.description;
+  const title = pick.kind === 'saved' ? pick.t.name : pick.kind === 'example' ? pick.e.title : pick.s.name;
+  const description = pick.kind === 'saved' ? pick.t.description : pick.kind === 'example' ? pick.e.description : pick.s.description;
   const [name, setName] = useState(title);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const items = useMemo(() => (pick.kind === 'saved' ? pick.t.checklist.map((i) => i.text) : pick.kind === 'builtin' ? pick.s.build().checklist.map((i) => i.text) : []), [pick]);
+  const items = useMemo(() => (pick.kind === 'saved' ? pick.t.checklist.map((i) => i.text) : pick.kind === 'builtin' ? pick.s.build().checklist.map((i) => i.text) : pick.kind === 'branded' ? pick.s.build(pick.way).checklist.map((i) => i.text) : []), [pick]);
   const go = async () => {
     setBusy(true);
     setError(null);
@@ -100,24 +109,37 @@ function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { p
           <span>Name of your new project</span>
           <input value={name} maxLength={200} autoFocus onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !busy && void go()} />
         </label>
-        {description && <p className="muted">{description}</p>}
-        {pick.kind === 'example' ? (
-          <p className="small muted">The example stays as it is for everyone. You get a copy of it in your own projects to change, break and keep.</p>
-        ) : items.length > 0 ? (
-          <>
-            <strong>Things to change</strong>
-            <p className="small muted">This template has hard-coded content in it. A checklist opens with your new project to walk you through replacing it.</p>
-            <ul className="use-items">
-              {items.map((t, i) => (
-                <li key={i}>
-                  <Icons.check width={12} height={12} /> {t}
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="small muted">The author did not list anything to change. Look through it before you share it: the words and pictures in it are the author's.</p>
-        )}
+        {/* The long part scrolls; the name, folder and buttons stay put like a header and footer */}
+        <div className="use-scroll" role="region" aria-label="About this template" tabIndex={0}>
+          {description && <p className="muted">{description}</p>}
+          {pick.kind === 'saved' && !!pick.t.brand?.length && (
+            <p className="small muted">
+              This one starts with the brand kit <strong>{pick.t.brand.map((b) => b.name).join(', ')}</strong>. The kit's logos, headers, colours and fonts are already in your project and locked, so they stay on brand. Everything else is yours to change.
+            </p>
+          )}
+          {pick.kind === 'branded' && (
+            <p className="small muted">
+              This one is in the <strong>{pick.way.name}</strong> colourway. The logo and brand layers are locked and colours come from the project's theme, so it stays on brand. You can switch colourway later in the project settings.
+            </p>
+          )}
+          {pick.kind === 'example' ? (
+            <p className="small muted">The example stays as it is for everyone. You get a copy of it in your own projects to change, break and keep.</p>
+          ) : items.length > 0 ? (
+            <>
+              <strong>Things to change</strong>
+              <p className="small muted">This template has hard-coded content in it. A checklist opens with your new project to walk you through replacing it.</p>
+              <ul className="use-items">
+                {items.map((t, i) => (
+                  <li key={i}>
+                    <Icons.check width={12} height={12} /> {t}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="small muted">The author did not list anything to change. Look through it before you share it: the words and pictures in it are the author's.</p>
+          )}
+        </div>
         <label className="field">
           <span>Folder</span>
           <select value={folder ?? ''} onChange={(e) => setFolder(e.target.value || null)}>
@@ -143,30 +165,39 @@ function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { p
   );
 }
 
-/** Plays an example the way a share link would (the single-file build in a sandbox), without opening anything of yours. */
-function PlayModal({ e, onClose, onCopy }: { e: ExampleInfo; onClose: () => void; onCopy: () => void }) {
+/** What a Play window can run: an example (fetched from the server) or a starter (built right here, never saved). */
+export type Playing = { kind: 'example'; e: ExampleInfo } | { kind: 'starter'; pick: StarterPick };
+
+/** Plays something the way a share link would (the single-file build in a sandbox), without opening or saving anything of yours. */
+export function PlayModal({ playing, onClose, onUse }: { playing: Playing; onClose: () => void; onUse: () => void }) {
+  const progressHost = useNoProgressHost();
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const isExample = playing.kind === 'example';
+  const name = playing.kind === 'example' ? playing.e.title : playing.pick.s.name;
+  const description = playing.kind === 'example' ? playing.e.description : playing.pick.s.description;
+  const key = playing.kind === 'example' ? `e:${playing.e.key}` : `s:${playing.pick.s.key}:${playing.pick.kind === 'branded' ? playing.pick.way.id : ''}`;
   useEffect(() => {
     let live = true;
-    getExample(e.key)
-      .then(({ project }) => standaloneHtml(project, { bytesFor: (a) => exampleAssetBytes(e.key, a.id) }))
-      .then((h) => live && setHtml(h))
-      .catch((err) => live && setError(err instanceof Error ? err.message : String(err)));
+    setHtml(null);
+    setError(null);
+    const build = playing.kind === 'example' ? getExample(playing.e.key).then(({ project }) => standaloneHtml(project, { bytesFor: (a) => exampleAssetBytes((playing as { e: ExampleInfo }).e.key, a.id) })) : starterPlayHtml(playing.pick);
+    build.then((h) => live && setHtml(h)).catch((err) => live && setError(err instanceof Error ? err.message : String(err)));
     return () => {
       live = false;
     };
-  }, [e.key]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
   return (
-    <Modal title={`Example: ${e.title}`} help="templates#examples" onClose={onClose} className="preview-modal example-play">
+    <Modal title={isExample ? `Example: ${name}` : `Try it: ${name}`} help={isExample ? 'templates#examples' : STARTER_FINDER_HELP.to} onClose={onClose} className="preview-modal example-play">
       <div className="preview-body">
-        {html ? <iframe title={e.title} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : error ? <div className="center-msg">Could not play it: {error}</div> : <div className="center-msg muted">Building…</div>}
+        {html ? <iframe ref={progressHost} title={name} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : error ? <div className="center-msg">Could not play it: {error}</div> : <div className="center-msg muted">Building…</div>}
       </div>
       <div className="row example-bar">
-        <span className="muted small">{e.description}</span>
+        <span className="muted small">{isExample ? description : `${description} Nothing is saved until you use it.`}</span>
         <span className="spacer" />
-        <button className="btn primary" onClick={onCopy} title="Get your own copy of this example to change">
-          Make my copy
+        <button className="btn primary" onClick={onUse} title={isExample ? 'Get your own copy of this example to change' : 'Make a new project from this starter, with a checklist of what to change'}>
+          {isExample ? 'Make my copy' : 'Use this template'}
         </button>
       </div>
     </Modal>
@@ -235,7 +266,9 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
   const [pick, setPick] = useState<Pick | null>(null);
   const [editing, setEditing] = useState<TemplateInfo | null>(null);
   const [examples, setExamples] = useState<ExampleInfo[] | null>(null);
-  const [playing, setPlaying] = useState<ExampleInfo | null>(null);
+  const [playing, setPlaying] = useState<Playing | null>(null);
+  const [query, setQuery] = useState('');
+  const [goal, setGoal] = useState<Goal | null>(null);
   useEffect(() => {
     listExamples().then(setExamples, () => setExamples([]));
   }, []);
@@ -267,6 +300,12 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
     }
   };
   const saved = shown === 'mine' ? mine : shown === 'shared' ? shared : [];
+  // The built-in starters the search and the goal chip leave. Each chip's count is what it would show with the same search
+  const fits = (s: { key: string; name: string; description: string; tags: string[] }, g: Goal | null) => (!g || goalsOf(s.key).includes(g)) && starterMatches(query, s);
+  const plain = STARTERS.filter((s) => fits(s, goal));
+  const branded = BRANDED_STARTERS.filter((s) => fits(s, goal));
+  const total = plain.length + branded.length;
+  const countFor = (g: Goal | null) => STARTERS.filter((s) => fits(s, g)).length + BRANDED_STARTERS.filter((s) => fits(s, g)).length;
   return (
     <div className="templates-tab">
       <div className="templates-head">
@@ -278,7 +317,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
             Shared <span className="tag-n">{shared.length}</span>
           </button>
           <button role="tab" aria-selected={shown === 'builtin'} className={shown === 'builtin' ? 'on' : ''} onClick={() => choose('builtin')} title="Starters that come with Interactives, always up to date with the editor">
-            Built-in <span className="tag-n">{STARTERS.length}</span>
+            Built-in <span className="tag-n">{STARTERS.length + BRANDED_STARTERS.length}</span>
           </button>
           <button role="tab" aria-selected={shown === 'examples'} className={shown === 'examples' ? 'on' : ''} onClick={() => choose('examples')} title="Finished projects that come with Interactives, the same for everyone: play one, or make your own copy to change">
             Examples <span className="tag-n">{examples?.length ?? 0}</span>
@@ -287,10 +326,42 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
         <span className="muted small">{folder ? `New projects go in "${folder}".` : 'Use a template to start a project from it.'}</span>
       </div>
       {error && <div className="error-banner">{error}</div>}
+      {shown === 'builtin' && (
+        <div className="templates-find" role="search">
+          <input type="search" className="home-search starter-search" value={query} aria-label="Search the built-in starters" placeholder="Search the starters: quiz, timeline, hotspots, flip cards…" title="Show only the starters whose name, description or tags contain every word you type" onChange={(e) => setQuery(e.target.value)} />
+          <div className="goal-chips" role="group" aria-label="What do you want to make?">
+            <button type="button" className={`tag-chip${goal === null ? ' active' : ''}`} aria-pressed={goal === null} onClick={() => setGoal(null)} title="Every starter">
+              Everything <span className="tag-n">{countFor(null)}</span>
+            </button>
+            {GOALS.map((g) => (
+              <button key={g.id} type="button" className={`tag-chip${goal === g.id ? ' active' : ''}`} aria-pressed={goal === g.id} onClick={() => setGoal(goal === g.id ? null : g.id)} title={`${g.want}: ${g.about}`}>
+                {g.chip} <span className="tag-n">{countFor(g.id)}</span>
+              </button>
+            ))}
+          </div>
+          <span className="sr-only" role="status">
+            {total} {total === 1 ? 'starter' : 'starters'}
+          </span>
+        </div>
+      )}
+      {shown === 'builtin' && total === 0 && (
+        <div className="empty-state">
+          <p>No starter matches{query.trim() ? ` "${query.trim()}"` : ''}{goal ? ` for ${GOALS.find((g) => g.id === goal)?.chip.toLowerCase()}` : ''}.</p>
+          <button className="btn" onClick={() => (setQuery(''), setGoal(null))}>
+            Clear search
+          </button>
+        </div>
+      )}
+      {shown === 'builtin' && branded.length > 0 && (
+        <>
+          <BrandedPacks starters={branded} onPick={(s, way) => setPick({ kind: 'branded', s, way })} onPlay={(s, way) => setPlaying({ kind: 'starter', pick: { kind: 'branded', s, way } })} />
+          {plain.length > 0 && <h2 className="branded-packs-title">Starters</h2>}
+        </>
+      )}
       <div className="project-grid templates-grid" style={{ '--card-size': '260px' } as React.CSSProperties}>
         {(shown === 'examples' ? examples === null : list === null) && <p className="muted">Loading…</p>}
         {shown === 'builtin' &&
-          STARTERS.map((s) => (
+          plain.map((s) => (
             <article key={s.key} className="project-card template-card">
               <button className="project-thumb" onClick={() => setPick({ kind: 'builtin', s })} aria-label={`Use the ${s.name} starter`}>
                 <StarterPicture starter={s} />
@@ -299,7 +370,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
                 <div className="project-name">{s.name}</div>
                 <div className="muted small template-desc">{s.description}</div>
                 <div className="card-tags">
-                  {s.tags.map((t) => (
+                  {plainTags(s.tags, s.key).map((t) => (
                     <span key={t} className="tag-chip static">
                       <span className="tag-label">{t}</span>
                     </span>
@@ -307,7 +378,9 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
                 </div>
               </div>
               <div className="project-actions">
-                <span className="muted small">Starter</span>
+                <button className="btn" onClick={() => setPlaying({ kind: 'starter', pick: { kind: 'builtin', s } })} title="Play it here to see how it works. Nothing is saved until you use it" aria-label={`Play the ${s.name} starter`}>
+                  Play
+                </button>
                 <span className="spacer" />
                 <button className="btn primary" onClick={() => setPick({ kind: 'builtin', s })} title="Make a new project from this starter, with a checklist of what to change">
                   Use template
@@ -323,7 +396,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
               <div className="project-grid templates-grid" style={{ '--card-size': '260px' } as React.CSSProperties}>
                 {items.map((e) => (
                   <article key={e.key} className="project-card template-card example-card">
-                    <button className="project-thumb" onClick={() => setPlaying(e)} aria-label={`Play ${e.title}`}>
+                    <button className="project-thumb" onClick={() => setPlaying({ kind: 'example', e })} aria-label={`Play ${e.title}`}>
                       <img className="thumb-board thumb-img" src={exampleThumbUrl(e.key)} alt="" loading="lazy" style={e.preview ? { aspectRatio: `${e.preview.width} / ${e.preview.height}` } : undefined} onError={(ev) => ((ev.target as HTMLImageElement).style.visibility = 'hidden')} />
                     </button>
                     <div className="project-info">
@@ -338,7 +411,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
                       </div>
                     </div>
                     <div className="project-actions">
-                      <button className="btn" onClick={() => setPlaying(e)} title="Play it here. Nothing of yours is touched">
+                      <button className="btn" onClick={() => setPlaying({ kind: 'example', e })} title="Play it here. Nothing of yours is touched">
                         Play
                       </button>
                       <span className="spacer" />
@@ -379,6 +452,11 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
                 <span className="badge library-badge" title={`Version ${t.version}. Projects made from it can pull newer versions in`}>
                   v{t.version}
                 </span>
+                {!!t.brand?.length && (
+                  <span className="badge library-badge" title={`Starts with the brand kit ${t.brand.map((b) => b.name).join(', ')}. Its items are locked in your project`}>
+                    Brand kit
+                  </span>
+                )}
               </div>
               {t.description && <div className="muted small template-desc">{t.description}</div>}
               <div className="muted small">
@@ -404,7 +482,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
           </article>
         ))}
       </div>
-      {playing && <PlayModal e={playing} onClose={() => setPlaying(null)} onCopy={() => (setPick({ kind: 'example', e: playing }), setPlaying(null))} />}
+      {playing && <PlayModal playing={playing} onClose={() => setPlaying(null)} onUse={() => (setPick(playing.kind === 'example' ? { kind: 'example', e: playing.e } : playing.pick), setPlaying(null))} />}
       {pick && <UseModal pick={pick} folder={folder} folders={folders} onClose={() => setPick(null)} onMade={open} />}
       {editing && <EditModal t={editing} onClose={() => setEditing(null)} onSaved={(next) => setList((l) => l && l.map((x) => (x.id === next.id ? { ...x, ...next } : x)))} />}
     </div>

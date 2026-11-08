@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PropRow } from '../lib/prop-search';
 import { PAINT_BLEND_OPTIONS } from '../lib/blend-modes';
 import { LIGHT_LOOK, fillList, fillPath, formatColor, movePaint, orderedPaints, paintToCss, parseColor, orderWithAdded, orderWithRemoved, paintFields, paintOrder, strokeList, strokePath, type BlendMode, type Paint, type PaintEntry, type PaintKind, type Project, type SceneNode, type ShapeStyle, type Stroke } from 'interactives-player';
 import { store } from '../store/store';
@@ -87,7 +88,7 @@ function FxFields({ n, ids, prefix, set }: { n: Painted; ids: string[]; prefix: 
   return (
     <>
       <Row>
-        <Num node={n} ids={ids} prop={`${prefix}.opacity`} label="α" title="Opacity of this paint alone (0 to 1)" step={0.05} min={0} max={1} fallback={1} />
+        <Num node={n} ids={ids} prop={`${prefix}.opacity`} label="Opacity" title="How solid this paint is on its own, as a percent (0 to 1 in the file)" suffix="%" scale={100} step={5} min={0} max={100} fallback={1} />
         <SelectField label="Blend" title="How this paint mixes with what is under it" value={(get('blend') as BlendMode | undefined) ?? 'normal'} options={PAINT_BLEND_OPTIONS} onChange={(v) => set({ [`${prefix}.blend`]: v === 'normal' ? undefined : v })} />
       </Row>
       <Row>
@@ -125,8 +126,9 @@ export function FillSection({ nodes, project }: { nodes: SceneNode[]; project: P
   const rows = list.map((p, i) => ({ p, i })).reverse();
   return (
     <Section
+      id="fill"
       help="fill-stroke"
-      title="Fill"
+      title={n.type === 'progress' ? 'Track fill' : n.type === 'connector' ? 'Label background' : 'Fill'}
       actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add fill" onClick={() => write([...list, { type: 'solid', color: list.length ? LIGHT_LOOK.background : LIGHT_LOOK.surfaceMuted }], orderWithAdded(order, 'fill'))} />}
     >
       {rows.map(({ p, i }) => {
@@ -147,17 +149,19 @@ export function FillSection({ nodes, project }: { nodes: SceneNode[]; project: P
               onMove={(from, to) => write(moved(list, from, to))}
               onRemove={() => remove(i)}
             />
-            <PaintField
-              paint={paint}
-              project={project}
-              box={{ w: n.width, h: n.height }}
-              onChange={(np) => {
-                if (!np) remove(i);
-                // Only the colour moved: set its colour, so recording turns it into a keyframe
-                else if (np.type === 'solid' && p.type === 'solid') set({ [`${prefix}.color`]: np.color }, `fill-${i}-${ids.join()}`);
-                else write(list.map((x, j) => (j === i ? np : x)));
-              }}
-            />
+            <PropRow k={label} words={['colour', 'color', 'gradient', 'paint', 'solid', 'background', 'image fill']}>
+              <PaintField
+                paint={paint}
+                project={project}
+                box={{ w: n.width, h: n.height }}
+                onChange={(np) => {
+                  if (!np) remove(i);
+                  // Only the colour moved: set its colour, so recording turns it into a keyframe
+                  else if (np.type === 'solid' && p.type === 'solid') set({ [`${prefix}.color`]: np.color }, `fill-${i}-${ids.join()}`);
+                  else write(list.map((x, j) => (j === i ? np : x)));
+                }}
+              />
+            </PropRow>
             {p.type === 'solid' && <KeyRow node={n} ids={ids} prop={`${prefix}.color`} />}
             {!simple && <FxFields n={n} ids={ids} prefix={prefix} set={set} />}
           </div>
@@ -210,13 +214,15 @@ export function StrokeSection({ nodes, project }: { nodes: SceneNode[]; project:
               onMove={(from, to) => write(moved(list, from, to))}
               onRemove={() => write(list.filter((_, j) => j !== i), orderWithRemoved(order, 'stroke', i))}
             />
-            <PaintField
-              paint={s.paint.type === 'solid' && typeof color === 'string' ? { ...s.paint, color } : s.paint}
-              allowNone={false}
-              project={project}
-              box={{ w: n.width, h: n.height }}
-              onChange={(p) => (p?.type === 'solid' && s.paint.type === 'solid' ? set({ [`${prefix}.paint.color`]: p.color }, `stroke-paint-${i}`) : set({ [`${prefix}.paint`]: p! }, `stroke-paint-${i}`))}
-            />
+            <PropRow k={label} words={['outline', 'border', 'colour', 'color', 'line', 'gradient']}>
+              <PaintField
+                paint={s.paint.type === 'solid' && typeof color === 'string' ? { ...s.paint, color } : s.paint}
+                allowNone={false}
+                project={project}
+                box={{ w: n.width, h: n.height }}
+                onChange={(p) => (p?.type === 'solid' && s.paint.type === 'solid' ? set({ [`${prefix}.paint.color`]: p.color }, `stroke-paint-${i}`) : set({ [`${prefix}.paint`]: p! }, `stroke-paint-${i}`))}
+              />
+            </PropRow>
             <Row>
               <Num node={n} ids={ids} prop={`${prefix}.width`} label="W" min={0} />
               <TextField

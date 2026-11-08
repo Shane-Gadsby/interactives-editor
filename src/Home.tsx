@@ -1,30 +1,33 @@
 import { track } from './lib/analytics';
 import { VersionInfo } from './components/VersionInfo';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { PACKAGE_EXTENSION } from 'interactives-player';
 import { newProjectWithThemes } from './lib/themes';
 import { whenPaletteReady } from './lib/palette-look';
-import { createProjectRecord, deleteProject, duplicateProject, importPackage, listProjects, loadProjectRecord, META_MAX_LABEL, META_MAX_TAGS, session, setProjectMeta, type ProjectMeta, type SessionInfo } from './lib/db';
+import { inUseWarning } from './lib/in-use';
+import { createProjectRecord, deleteForever, deleteProject, duplicateProject, importPackage, listBin, listProjects, loadProjectRecord, META_MAX_LABEL, META_MAX_TAGS, restoreFromBin, session, setProjectMeta, type BinnedProject, type ProjectMeta, type SessionInfo } from './lib/db';
 import { downloadPackage } from './lib/export';
 import { pickFiles } from './lib/insert';
 import { confirmDialog, promptDialog } from './components/dialogs';
 import { Icons } from './components/icons';
 import { PrefsModal } from './components/PrefsModal';
-import { DEFAULT_FONT, prefs } from './lib/prefs';
+import { DEFAULT_FONT, prefs, usePrefs } from './lib/prefs';
+import { FirstRun } from './components/FirstRun';
 import { ensureGoogleFont, loadCatalog } from './lib/font-catalog';
 import { sessionUser, type SessionUser } from './lib/session';
 import { noteIfStale } from './lib/stale-build';
 import { NoticeBell } from './components/NoticeBell';
 import { TemplatesTab } from './components/TemplatesTab';
 import { NewProjectModal } from './components/NewProjectModal';
+import { clearLeft, peekLeft } from './lib/home-return';
 
 declare global {
   interface Window {
-    powerUser?: { isToggleKey(e: KeyboardEvent): boolean; canUse(access: unknown): boolean };
+    powerUser?: { isToggleKey(e: KeyboardEvent): boolean; canUse(access: unknown): boolean; follow?(scope: object, onChange: (on: boolean) => void): boolean };
   }
 }
 
-type FolderSel = { kind: 'all' } | { kind: 'none' } | { kind: 'folder'; name: string };
+type FolderSel = { kind: 'all' } | { kind: 'none' } | { kind: 'folder'; name: string } | { kind: 'bin' };
 type SortKey = 'updated' | 'name';
 
 const SORT_KEY = 'ix.home.sort';
@@ -117,7 +120,52 @@ function TagAdder({ onAdd, disabled, suggestions }: { onAdd: (tag: string) => vo
   );
 }
 
-function readTab(): 'projects' | 'templates' {
+const dayMs = 24 * 60 * 60 * 1000;
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** Deleted projects: when, by whom, how long until they go for good, with Restore and Delete forever. */
+function BinView({ bin, busy, onRestore, onForget }: { bin: BinnedProject[]; busy: boolean; onRestore: (p: BinnedProject) => void; onForget: (p: BinnedProject) => void }) {
+  const now = Date.now();
+  return (
+    <main className="project-grid as-list bin-view">
+      <p className="muted bin-intro">Deleted projects stay here for 30 days, then go for good with their revision history, learner records and comments. While a project is here its share and review links don't work.</p>
+      {!bin.length && <p className="muted">The Bin is empty.</p>}
+      {bin.map((p) => {
+        const left = Math.max(0, Math.ceil((new Date(p.purge).getTime() - now) / dayMs));
+        return (
+          <article key={p.id} className="project-card">
+            <div className="project-thumb" aria-hidden="true">
+              {p.thumb ? (
+                <img className="thumb-board thumb-img" src={`api/bin/${p.id}/thumbnail?v=${p.thumb}`} alt="" loading="lazy" style={p.preview ? { aspectRatio: `${p.preview.width} / ${p.preview.height}` } : undefined} />
+              ) : (
+                p.preview && <span className="thumb-board" style={{ background: p.preview.background, aspectRatio: `${p.preview.width} / ${p.preview.height}` }} />
+              )}
+            </div>
+            <div className="project-info">
+              <div className="project-name">{p.name}</div>
+              <div className="muted small">
+                Deleted {shortDate(p.binned.at)}
+                {p.binned.by?.name ? ` by ${p.binned.by.name}` : ''} · goes for good {left <= 1 ? 'within a day' : `in ${left} days`} ({shortDate(p.purge)})
+              </div>
+            </div>
+            <div className="project-actions">
+              <button className="btn" disabled={busy} onClick={() => onRestore(p)} title="Put it back in your projects, with its files, history and links">
+                Restore
+              </button>
+              <button className="btn danger" disabled={busy} onClick={() => onForget(p)} title="Delete it now, for good">
+                Delete forever
+              </button>
+            </div>
+          </article>
+        );
+      })}
+    </main>
+  );
+}
+
+function readTab(left: string | null): 'projects' | 'templates' {
+  //coming back from a project always lands on Projects, whatever tab it was opened from; the remembered tab is for a fresh visit
+  if (left) return 'projects';
   try {
     return localStorage.getItem(TAB_KEY) === 'templates' ? 'templates' : 'projects';
   } catch {
@@ -125,8 +173,20 @@ function readTab(): 'projects' | 'templates' {
   }
 }
 
+//the project just left scrolls into view once, and the highlight fades on its own
+function scrollIntoViewOnce(el: HTMLElement | null) {
+  if (el && !el.dataset.seen) {
+    el.dataset.seen = '1';
+    el.scrollIntoView?.({ block: 'center' });
+  }
+}
+
 export function Home({ open }: { open: (id: string) => void }) {
-  const [tab, setTab] = useState<'projects' | 'templates'>(readTab);
+  const [left] = useState(peekLeft);
+  useEffect(() => clearLeft(), []);
+  const [tab, setTab] = useState<'projects' | 'templates'>(() => readTab(left));
+  //A new person's empty page asks what they want to make, until they have chosen or looked around
+  const welcomeLeft = !!usePrefs().onboarding?.left;
   const pickTab = (t: 'projects' | 'templates') => {
     setTab(t);
     keep(TAB_KEY, t);
@@ -152,6 +212,8 @@ export function Home({ open }: { open: (id: string) => void }) {
   const [view, setView] = useState<'grid' | 'list'>(readView);
   const [size, setSize] = useState(readSize);
 
+  const [bin, setBin] = useState<BinnedProject[]>([]);
+  const [binNote, setBinNote] = useState<{ text: string; undo?: string } | null>(null);
   const refresh = async (all = power) => {
     try {
       setList(await listProjects(all));
@@ -159,6 +221,10 @@ export function Home({ open }: { open: (id: string) => void }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
+    // The bin is a side list: if it can't load, the projects still show
+    listBin(all)
+      .then(setBin)
+      .catch(() => setBin([]));
   };
 
   useEffect(() => {
@@ -169,10 +235,30 @@ export function Home({ open }: { open: (id: string) => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Inside the toolbox, power user mode is the toolbox's: follow it (and its F9), like the suite's other apps do.
+  // Opened on its own, this page has its own F9 below
+  const following = useRef(false);
+  useEffect(() => {
+    const scope = { powerUserMode: false, $applyAsync() {} };
+    const on = (v: boolean) => {
+      setPower(v);
+      void refresh(v);
+    };
+    if (!window.powerUser?.follow?.(scope, on)) return;
+    following.current = true;
+    // follow() only hears the toolbox on its next change: if it's already on, show everything now
+    try {
+      if ((window.parent as unknown as { m?: { powerUserMode?: boolean } }).m?.powerUserMode) on(true);
+    } catch {
+      /* not the toolbox */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Power user (god mode): the suite's shared key and rule; the server checks again.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!window.powerUser?.isToggleKey(e) || !who?.power) return;
+      if (following.current || !window.powerUser?.isToggleKey(e) || !who?.power) return;
       e.preventDefault();
       const next = !power;
       setPower(next);
@@ -223,13 +309,13 @@ export function Home({ open }: { open: (id: string) => void }) {
 
   const doImport = () =>
     run(async () => {
-      const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft`, false);
+      const files = await pickFiles(`${PACKAGE_EXTENSION},.zip,.json,.lottie,.riv,.rev,.psd,.ai,.pdf,.dxf,.dwg,.vectorcraft,.drawcraft,.pcraft,.pptx`, false);
       const f = files[0];
       if (!f) return;
-      // Lottie / Rive (.riv, .rev) / Photoshop / Illustrator / PDF / VectorCraft / PhotoCraft files become a new project; anything else is an Interactives package or project JSON.
+      // Lottie / Rive (.riv, .rev) / Photoshop / Illustrator / PDF / VectorCraft / PhotoCraft / PowerPoint files become a new project; anything else is an Interactives package or project JSON.
       const head = new Uint8Array(await f.slice(0, 4096).arrayBuffer());
       const text = new TextDecoder().decode(head);
-      const animation = /\.(lottie|riv|rev|psd|ai|pdf|dxf|dwg|vectorcraft|drawcraft|pcraft)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
+      const animation = /\.(lottie|riv|rev|psd|ai|pdf|dxf|dwg|vectorcraft|drawcraft|pcraft|pptx)$/i.test(f.name) || (/\.json$/i.test(f.name) && /"layers"\s*:/.test(text) && !/"format"\s*:\s*"interactives"/.test(text));
       if (animation) {
         const { chooseLinking, projectFromAnimation } = await import('./lib/importers');
         const linking = await chooseLinking([f]);
@@ -342,6 +428,19 @@ export function Home({ open }: { open: (id: string) => void }) {
         </div>
         <div className="home-actions">
           {(who?.user || me2) && <span className="muted home-user" title="Signed in through the toolbox">{who?.user?.name ?? me2?.name ?? who?.user?.username}</span>}
+          {power && (
+            <>
+              <span className="power-pill" title="Power user mode is on: everyone's projects are showing (F9 turns it off)">
+                Power user mode
+              </span>
+              <a className="btn" href="#/admin" title="Every project in one table, bulk actions and the audit log">
+                Admin
+              </a>
+              <a className="btn" href="#/usage" title="How the editor is used and its errors">
+                Usage
+              </a>
+            </>
+          )}
           <NoticeBell open={open} />
           <button className="icon-btn" title="Preferences (theme, mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)}>
             <Icons.gear width={16} />
@@ -361,10 +460,33 @@ export function Home({ open }: { open: (id: string) => void }) {
       </header>
       {power && (
         <div className="power-banner">
-          Power user mode: showing everyone's projects (F9 to turn off). <a href="#/usage">Usage and errors</a>
+          Power user mode: showing everyone's projects (F9 to turn off). <a href="#/usage">Usage and errors</a> · <a href="#/admin">Admin</a>
         </div>
       )}
       {error && <div className="error-banner">{error}</div>}
+      {binNote && (
+        <div className="bin-note" role="status">
+          {binNote.text}
+          {binNote.undo && (
+            <button
+              className="link-btn inline"
+              disabled={busy}
+              onClick={() =>
+                run(async () => {
+                  await restoreFromBin(binNote.undo!);
+                  setBinNote({ text: 'Restored.' });
+                  await refresh();
+                })
+              }
+            >
+              Undo
+            </button>
+          )}
+          <button className="icon-btn" title="Dismiss" aria-label="Dismiss" onClick={() => setBinNote(null)}>
+            ×
+          </button>
+        </div>
+      )}
       {choosing && <NewProjectModal projects={list ?? []} me={me ?? undefined} folder={folderSel.kind === 'folder' ? folderSel.name : null} folders={folders.names} onBlank={createBlank} onMade={open} onClose={() => setChoosing(false)} />}
       <nav className="home-tabs" role="tablist" aria-label="Projects or templates">
         <button role="tab" aria-selected={tab === 'projects'} className={tab === 'projects' ? 'on' : ''} onClick={() => pickTab('projects')} title="Your projects">
@@ -431,11 +553,11 @@ export function Home({ open }: { open: (id: string) => void }) {
         </div>
       )}
       {tab === 'projects' && <div className="home-body">
-        {!!list?.length && (
+        {(!!list?.length || !!bin.length) && (
           <aside className="folder-side" aria-label="Folders">
             <button className={`folder-item${folderSel.kind === 'all' ? ' active' : ''}`} onClick={() => setFolderSel({ kind: 'all' })} title="Every project">
               <span>All projects</span>
-              <span className="tag-n">{list.length}</span>
+              <span className="tag-n">{list?.length ?? 0}</span>
             </button>
             <button className={`folder-item${folderSel.kind === 'none' ? ' active' : ''}`} onClick={() => setFolderSel({ kind: 'none' })} title="Projects that are not in any folder">
               <span>No folder</span>
@@ -464,11 +586,50 @@ export function Home({ open }: { open: (id: string) => void }) {
               );
             })}
             <div className="hint">Use a card's folder menu to move a project into a folder, or to start a new one.</div>
+            {!!bin.length && (
+              <button className={`folder-item bin-item${folderSel.kind === 'bin' ? ' active' : ''}`} onClick={() => setFolderSel({ kind: 'bin' })} title="Deleted projects, kept for 30 days: restore them from here">
+                <Icons.trash width={13} height={13} />
+                <span className="folder-name">Bin</span>
+                <span className="tag-n">{bin.length}</span>
+              </button>
+            )}
           </aside>
         )}
+      {folderSel.kind === 'bin' ? (
+        <BinView
+          bin={bin}
+          busy={busy}
+          onRestore={(p) =>
+            run(async () => {
+              track('project', 'restore');
+              await restoreFromBin(p.id);
+              setBinNote({ text: `Restored “${p.name}”.` });
+              if (bin.length <= 1) setFolderSel({ kind: 'all' });
+              await refresh();
+            })
+          }
+          onForget={async (p) => {
+            if (!(await confirmDialog({ title: 'Delete forever', message: `Delete “${p.name}” for good? Its files, revision history, learner records and review comments go too, and a library published from it stops being available. This cannot be undone.`, confirmLabel: 'Delete forever', danger: true }))) return;
+            await run(async () => {
+              track('project', 'purge');
+              await deleteForever(p.id);
+              if (bin.length <= 1) setFolderSel({ kind: 'all' });
+              await refresh();
+            });
+          }}
+        />
+      ) : (
       <main className={`project-grid${view === 'list' ? ' as-list' : ''}`} style={{ '--card-size': `${size}px` } as React.CSSProperties}>
         {list === null && !error && <p className="muted">Loading…</p>}
-        {list?.length === 0 && (
+        {list?.length === 0 && !welcomeLeft && !error && (
+          <FirstRun
+            folder={folderSel.kind === 'folder' ? folderSel.name : null}
+            onBlank={async () => open(await createBlank('Untitled project', folderSel.kind === 'folder' ? folderSel.name : null))}
+            onMade={open}
+            onBrowse={() => pickTab('templates')}
+          />
+        )}
+        {list?.length === 0 && (welcomeLeft || !!error) && (
           <div className="empty-state">
             <h2>No projects yet</h2>
             <p>Interactives builds interactive 2D experiences for the web: vector artboards, web controls, timelines, node-based interactions and your own JavaScript, exported as a single HTML file or a {PACKAGE_EXTENSION} package.</p>
@@ -512,7 +673,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           </div>
         )}
         {shown.map((p) => (
-          <article key={p.id} className="project-card">
+          <article key={p.id} className={`project-card${p.id === left ? ' just-left' : ''}`} data-project-id={p.id} ref={p.id === left ? scrollIntoViewOnce : undefined}>
             <button className="project-thumb" onClick={() => open(p.id)} aria-label={`Open ${p.name}`}>
               {p.thumb ? (
                 <img className="thumb-board thumb-img" src={`api/projects/${p.id}/thumbnail?v=${p.thumb}`} alt="" loading="lazy" style={p.preview ? { aspectRatio: `${p.preview.width} / ${p.preview.height}` } : undefined} />
@@ -606,10 +767,12 @@ export function Home({ open }: { open: (id: string) => void }) {
                 className="icon-btn"
                 title="Delete"
                 onClick={async () => {
-                  if (!(await confirmDialog({ title: 'Delete project', message: `Delete "${p.name}"? This cannot be undone.`, confirmLabel: 'Delete project', danger: true }))) return;
+                  const live = await inUseWarning(p.id, 'delete');
+                  if (!(await confirmDialog({ title: 'Delete project', message: `Move “${p.name}” to the Bin? You can restore it from the Bin for 30 days, then it goes for good.${live ? `\n\n${live}` : ''}`, confirmLabel: 'Move to Bin', danger: true }))) return;
                   await run(async () => {
                     track('project', 'delete');
                     await deleteProject(p.id);
+                    setBinNote({ text: `Moved “${p.name}” to the Bin.`, undo: p.id });
                     await refresh();
                   });
                 }}
@@ -620,6 +783,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           </article>
         ))}
       </main>
+      )}
       </div>}
     </div>
   );

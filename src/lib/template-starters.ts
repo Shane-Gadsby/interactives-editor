@@ -3,10 +3,11 @@
  * itself uses (the question kit, the step bar), so they always match the current format and never go stale. Every one comes with a
  * checklist of the parts to change, pointing at the layers it is about.
  */
-import { createArtboard, createNode, createProject, uid, type Artboard, type LogicEdge, type LogicNode, type Project, type SceneNode, type TemplateChecklistItem, type Timeline, type TextNode } from 'interactives-player';
+import { createArtboard, createNode, createProject, uid, type Artboard, type LogicEdge, type LogicNode, type Project, type SceneNode, type TemplateChecklistItem, type Timeline, type TextNode, migrateInputVariables } from 'interactives-player';
 import { addQuestion } from './question-kit';
 import { addStepsExample } from './steps';
 import { lookFor, starterThemes } from './themes';
+import { applyTidy } from './artboard-tidy';
 
 //The starters use the starter theme tokens: base() gives each project the Light, Dark and High contrast themes and picks these up.
 let L = lookFor(undefined);
@@ -397,6 +398,8 @@ export const starterByKey = (key: string): Starter | undefined => STARTERS.find(
 export function projectFromStarter(s: Starter, name?: string): Project {
   const { project, checklist } = s.build();
   project.name = name || s.name;
+  migrateInputVariables(project);
+  applyTidy(project, { x: 0, y: 0 });
   project.template = { builtin: s.key, name: s.name, version: 1, checklist };
   return project;
 }

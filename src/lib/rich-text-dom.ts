@@ -80,8 +80,8 @@ export function selectionOffsets(el: HTMLElement): { start: number; end: number 
   return { start, end: start + r.toString().length };
 }
 
-/** Put the selection back at text offsets. */
-export function setSelectionOffsets(el: HTMLElement, start: number, end: number): void {
+/** A range over text offsets inside the editor (without touching the page's selection, so it can't move the focus). */
+export function rangeAtOffsets(el: HTMLElement, start: number, end: number): Range {
   const doc = el.ownerDocument;
   const find = (offset: number): { node: Node; offset: number } => {
     const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -99,7 +99,13 @@ export function setSelectionOffsets(el: HTMLElement, start: number, end: number)
   const range = doc.createRange();
   range.setStart(a.node, a.offset);
   range.setEnd(b.node, b.offset);
-  const sel = doc.getSelection();
+  return range;
+}
+
+/** Put the selection back at text offsets. In some browsers this also focuses the editor, so only call it when that is wanted. */
+export function setSelectionOffsets(el: HTMLElement, start: number, end: number): void {
+  const range = rangeAtOffsets(el, start, end);
+  const sel = el.ownerDocument.getSelection();
   sel?.removeAllRanges();
   sel?.addRange(range);
 }

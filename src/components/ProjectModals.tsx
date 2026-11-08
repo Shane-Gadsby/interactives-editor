@@ -1,15 +1,20 @@
 import { track } from '../lib/analytics';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Renderer, prepareNodes, type Project } from 'interactives-player';
+import { Renderer, prepareNodes, withMaster, type Project } from 'interactives-player';
 import { getArtboard } from '../store/doc';
 import { store } from '../store/store';
-import { addCollaborator, clearResults, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, publishShare, restoreRevision, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
+import { serverMarkedCounts } from '../lib/question-kit';
+import { embedAspect, embedCode } from '../lib/embed';
+import { addCollaborator, clearResults, resultsCsv, transferOwner, findPeople, getCollaborators, type Person, removeCollaborator, type CollaboratorList, getResults, getShare, learnerUrl, listRevisions, loadRevision, saveNamedVersion, updateRevision, publishShare, restoreRevision, revertShare, setShareRemix, shareUrl, stopShare, type Results, type RevisionMeta, type ShareInfo } from '../lib/db';
 import { assetUrls } from '../lib/assets';
-import { standaloneHtml } from '../lib/export';
+import { download, standaloneHtml, warnInEditor } from '../lib/export';
 import { IconButton } from './ui';
+import { BeforeShareLine, BeforeYouShareModal } from './BeforeShare';
+import { ShareWhere } from './ShareWhere';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
-import { confirmDialog } from './dialogs';
+import { confirmDialog, promptDialog } from './dialogs';
+import { inUseWarning } from '../lib/in-use';
 import { getReview, putReview, reviewUrl, stopReview, type ReviewLink } from '../lib/comments';
 
 export function Modal({ title, help, onClose, children, className }: { title: string; help?: string; onClose: () => void; children: React.ReactNode; className?: string }) {
@@ -51,7 +56,7 @@ function ProjectThumb({ project }: { project: Project }) {
     if (!ab) return;
     const r = new Renderer({ mode: 'edit', resolveAsset: assetUrls.resolve });
     const vars = Object.fromEntries(project.variables.map((v) => [v.name, v.initial]));
-    r.render(ab, prepareNodes(ab.children, { vars }), { vars });
+    r.render(ab, prepareNodes(withMaster(project.artboards, ab), { vars }), { vars });
     const scale = Math.min(el.clientWidth / ab.width, el.clientHeight / ab.height);
     Object.assign(r.root.style, { position: 'absolute', left: `${(el.clientWidth - ab.width * scale) / 2}px`, top: `${(el.clientHeight - ab.height * scale) / 2}px`, transform: `scale(${scale})`, transformOrigin: '0 0' });
     el.appendChild(r.root);
@@ -67,14 +72,46 @@ export function HistoryModal({ onClose }: { onClose: () => void }) {
   const [sel, setSel] = useState<string | null>(null);
   const [preview, setPreview] = useState<Project | null>(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => {
+  const reload = (select?: string) =>
     listRevisions(projectId)
       .then((l) => {
         setList(l);
-        if (l[0]) setSel(l[0].id);
+        setSel((cur) => select ?? cur ?? l[0]?.id ?? null);
       })
       .catch((e) => setError(String(e.message ?? e)));
+  useEffect(() => {
+    void reload();
   }, [projectId]);
+  const saveNamed = async () => {
+    const name = await promptDialog({ title: 'Save a named version', message: 'Keeps the project as it is now under this name, pinned so it is never cleared out of the history.', label: 'Name', placeholder: 'For example: Sent to the coordinator', confirmLabel: 'Save version' });
+    if (!name?.trim()) return;
+    setBusy(true);
+    try {
+      const r = await saveNamedVersion(projectId, name);
+      track('feature', 'revision-named');
+      await reload(r.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const patch = async (p: { name?: string | null; pinned?: boolean }) => {
+    if (!chosen) return;
+    try {
+      await updateRevision(projectId, chosen.id, p);
+      track('feature', p.pinned !== undefined ? 'revision-pin' : 'revision-rename');
+      await reload(chosen.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const rename = async () => {
+    if (!chosen) return;
+    const name = await promptDialog({ title: 'Name this version', label: 'Name', initial: chosen.name ?? '', placeholder: 'Leave empty to remove the name', confirmLabel: 'Save' });
+    if (name === null) return;
+    await patch({ name: name.trim() || null });
+  };
   useEffect(() => {
     setPreview(null);
     if (sel) loadRevision(projectId, sel).then(setPreview, (e) => setError(String(e.message ?? e)));
@@ -101,7 +138,10 @@ export function HistoryModal({ onClose }: { onClose: () => void }) {
           {list?.map((r) => (
             <li key={r.id}>
               <button className={r.id === sel ? 'active' : ''} onClick={() => setSel(r.id)}>
-                <strong>{r.reason}</strong>
+                <strong>
+                  {r.pinned && <Icons.pin width={12} height={12} aria-label="Pinned" />} {r.name ?? r.reason}
+                </strong>
+                {r.name && <span className="small muted">{r.reason}</span>}
                 <span className="small muted">{when(r.created)}</span>
                 {r.by?.name && <span className="small muted">{r.by.name}</span>}
               </button>
@@ -120,6 +160,17 @@ export function HistoryModal({ onClose }: { onClose: () => void }) {
             <button className="btn primary" disabled={!chosen || busy} onClick={restore} title="Replace the project with this version (the current one is kept in the history)">
               {busy ? 'Restoring…' : 'Restore this version'}
             </button>
+            <button className="btn" disabled={!chosen || busy} onClick={() => void rename()} title="Give this version a name, so it's easy to find">
+              {chosen?.name ? 'Rename' : 'Name it'}
+            </button>
+            <button className="btn" disabled={!chosen || busy} onClick={() => void patch({ pinned: !chosen?.pinned })} title={chosen?.pinned ? 'Let this version be cleared out of the history in time, like the others' : 'Keep this version whatever its age (up to 20 a project)'}>
+              {chosen?.pinned ? 'Unpin' : 'Pin'}
+            </button>
+          </div>
+          <div className="row">
+            <button className="btn" disabled={busy} onClick={() => void saveNamed()} title="Keep the project as it is now under a name, pinned">
+              Save a named version…
+            </button>
           </div>
         </div>
       </div>
@@ -134,7 +185,12 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedLearner, setCopiedLearner] = useState(false);
+  const [copiedEmbed, setCopiedEmbed] = useState(false);
+  // Stamped on the embed code the way the Toolbox stamps Date.now() on an item: one per time the dialog is open
+  const [embedId] = useState(() => Date.now());
   const [resultsOpen, setResultsOpen] = useState(false);
+  const [checkOpen, setCheckOpen] = useState(false);
+  const serverMarked = serverMarkedCounts(store().get().project);
   useEffect(() => {
     getShare(projectId).then(setShare, (e) => setError(String(e.message ?? e)));
   }, [projectId]);
@@ -142,7 +198,7 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
     setBusy('Building and uploading…');
     setError(null);
     try {
-      setShare(await publishShare(projectId, await standaloneHtml(store().get().project)));
+      setShare(await publishShare(projectId, await standaloneHtml(store().get().project, { embedFonts: true, optimise: true, onWarning: warnInEditor }), (notes) => store().toast(notes.join(' '), 'error')));
       track('feature', 'share-publish');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -150,8 +206,25 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
       setBusy(null);
     }
   };
+  const revert = async () => {
+    const prev = share?.previous;
+    if (!prev) return;
+    const when = prev.updated ? new Date(prev.updated).toLocaleString() : 'before the last update';
+    if (!(await confirmDialog({ title: 'Revert share link', message: `Put back the version published ${when}${prev.by?.name ? ` by ${prev.by.name}` : ''}? Everyone using the link (and the Link for StudyDesk) gets it straight away. The version showing now is kept, so you can switch back the same way.`, confirmLabel: 'Revert' }))) return;
+    setBusy('Reverting…');
+    try {
+      setShare(await revertShare(projectId));
+      track('feature', 'share-revert');
+      store().toast('The previous version is back on the share link.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
   const stop = async () => {
-    if (!(await confirmDialog({ title: 'Turn off share link', message: 'Turn the share link off? Anyone using it will get a "turned off" page.', confirmLabel: 'Turn off', danger: true }))) return;
+    const live = await inUseWarning(projectId, 'unshare');
+    if (!(await confirmDialog({ title: 'Turn off share link', message: live ? `Turn the share link off?\n\n${live}` : 'Turn the share link off? Anyone using it will get a "turned off" page.', confirmLabel: 'Turn off', danger: true }))) return;
     setBusy('Turning off…');
     try {
       await stopShare(projectId);
@@ -164,10 +237,15 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
     }
   };
   const url = share ? shareUrl(share.token) : '';
+  const embed = share ? embedCode({ url: learnerUrl(share.token), title: store().get().project.name, sensors: share.sensors, aspect: embedAspect(store().get().project), cdtID: embedId }) : '';
   return (
     <>
-      <Modal title="Share link" help="export#share-link" onClose={() => !resultsOpen && onClose()} className="share-modal">
+      <Modal title="Share" help="export#share-link" onClose={() => !resultsOpen && !checkOpen && onClose()} className="share-modal">
         <div className="share-body">
+          <BeforeShareLine onOpen={() => setCheckOpen(true)} />
+          <ShareWhere projectId={projectId} share={share} busy={busy} publish={publish} embedId={embedId} marked={serverMarked.marked} />
+          <details className="share-more">
+            <summary>More ways to share, and the settings of the link</summary>
           {share === undefined && !error && <p className="muted">Checking…</p>}
           {share === null && (
             <>
@@ -198,6 +276,12 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
                 </a>
               </div>
               <p className="small muted">Last updated {when(share.updated)}.</p>
+              {serverMarked.marked > 0 && (
+                <p className="small muted">
+                  {serverMarked.marked === 1 ? '1 question is' : `${serverMarked.marked} questions are`} marked on the server: both links serve the project without {serverMarked.marked === 1 ? 'its' : 'their'} right answers, and the score the server works out is the one recorded. Learners need the Link for StudyDesk to have an answer checked. Update the link after changing a question. Files you export and the Preview still carry the answers.
+                  {serverMarked.inPage > 0 && ` ${serverMarked.inPage === 1 ? '1 more is' : `${serverMarked.inPage} more are`} set that way but can't be, so ${serverMarked.inPage === 1 ? 'it is' : 'they are'} marked in the page.`}
+                </p>
+              )}
               <div className="learner-link">
                 <strong>Link for StudyDesk</strong>
                 <p className="small muted">Use this one in StudyDesk instead, when you want each learner's score, completion and progress kept, and what they do counted for Insights. Learners signed in to StudyDesk resume where they left off; anyone else plays as with the link above.</p>
@@ -216,6 +300,28 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
                   </button>
                   <button className="btn" onClick={() => setResultsOpen(true)} title="Who has played, how they did">
                     Results…
+                  </button>
+                </div>
+              </div>
+              <div className="learner-link embed-code">
+                <strong>Embed code</strong>
+                <p className="small muted">
+                  Paste this into the Source code view of a StudyDesk, StaffDesk or open site page, the way you would any other Toolbox item. It is the Link for StudyDesk in an iframe, sized to the project's shape and
+                  resized by the page as the project resizes{share.sensors?.microphone || share.sensors?.camera ? `, and it is allowed to use the ${[share.sensors.microphone && 'microphone', share.sensors.camera && 'camera'].filter(Boolean).join(' and ')} the project asked for` : ''}. The same code works in all three.
+                </p>
+                <textarea className="embed-text" readOnly rows={4} value={embed} aria-label="Embed code" onFocus={(e) => e.target.select()} />
+                <div className="row">
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(embed).then(() => {
+                        setCopiedEmbed(true);
+                        setTimeout(() => setCopiedEmbed(false), 1500);
+                        track('feature', 'share-embed-copy');
+                      });
+                    }}
+                  >
+                    {copiedEmbed ? 'Copied' : 'Copy embed code'}
                   </button>
                 </div>
               </div>
@@ -247,16 +353,28 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
                 <button className="btn primary" disabled={!!busy} onClick={publish} title="Publish the project as it is now to the same link">
                   {busy ?? 'Update to the latest version'}
                 </button>
+                {share.previous && (
+                  <button
+                    className="btn"
+                    disabled={!!busy}
+                    onClick={() => void revert()}
+                    title={`Put back the version published ${share.previous.updated ? new Date(share.previous.updated).toLocaleString() : 'before'}${share.previous.by?.name ? ` by ${share.previous.by.name}` : ''}. The one showing now is kept, so you can switch back`}
+                  >
+                    Revert to previous version
+                  </button>
+                )}
                 <button className="btn danger" disabled={!!busy} onClick={stop}>
                   Turn off link
                 </button>
               </div>
             </>
           )}
+          </details>
           {error && <p className="error">{error}</p>}
         </div>
       </Modal>
       {resultsOpen && <ResultsModal onClose={() => setResultsOpen(false)} />}
+      {checkOpen && <BeforeYouShareModal what="share" onClose={() => setCheckOpen(false)} />}
     </>
   );
 }
@@ -425,6 +543,7 @@ export function ResultsModal({ onClose }: { onClose: () => void }) {
                         <th title="Best score over every attempt">Best</th>
                         <th title="The most recent reported score">Latest</th>
                         <th>Attempts</th>
+                        {results.list.some((r) => r.guard) && <th title="Writing tools or spell checkers the spelling guard found in the learner's browser, or an exemption code they used">Spelling guard</th>}
                         <th>Last seen</th>
                       </tr>
                     </thead>
@@ -437,6 +556,7 @@ export function ResultsModal({ onClose }: { onClose: () => void }) {
                           <td>{pct(r.bestPercent)}</td>
                           <td>{pct(r.lastPercent)}</td>
                           <td>{r.attempts}</td>
+                          {results.list.some((x) => x.guard) && <td>{r.guard ? `${r.guard.label} (panel shown ${r.guard.shown} ${r.guard.shown === 1 ? 'time' : 'times'})` : '–'}</td>}
                           <td>{r.updated ? new Date(r.updated).toLocaleDateString() : '–'}</td>
                         </tr>
                       ))}
@@ -450,7 +570,26 @@ export function ResultsModal({ onClose }: { onClose: () => void }) {
               <button className="btn" onClick={load}>
                 Refresh
               </button>
-              <button className="btn danger" disabled={results.records === 0} onClick={clear}>
+              <button
+                className="btn"
+                disabled={results.records === 0}
+                title="Download every learner's record as a spreadsheet (CSV): username, name, course, completed, passed, attempts, best and last score, last active"
+                onClick={() => {
+                  track('feature', 'results-csv');
+                  resultsCsv(projectId).then(
+                    (blob) => download(blob, `${store().get().project.name || 'project'} results.csv`),
+                    (e) => setError(e instanceof Error ? e.message : String(e)),
+                  );
+                }}
+              >
+                Export CSV
+              </button>
+              <button
+                className="btn danger"
+                disabled={results.records === 0 || results.mayClear === false}
+                title={results.mayClear === false ? "Only the project's owner can clear its results" : undefined}
+                onClick={clear}
+              >
                 Clear results
               </button>
             </div>
@@ -496,6 +635,23 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
       setUsername('');
       setFound([]);
       store().toast(`${person?.name ?? u} can now open and edit this project.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const makeOwner = async (c: { username: string; name: string | null }) => {
+    const who = c.name || c.username;
+    if (!(await confirmDialog({ title: 'Transfer ownership', message: `Make ${who} the owner of this project? They can then delete it, clear its results and change who's invited. You stay on as a collaborator. The share link, the Link for StudyDesk and its library don't change.`, confirmLabel: 'Make owner', danger: true }))) return;
+    setBusy(true);
+    try {
+      const r = await transferOwner(projectId, c.username);
+      setData((d) => (d ? { ...d, owner: r.owner, collaborators: r.collaborators, canManage: false } : d));
+      track('feature', 'transfer-owner');
+      store().toast(`${who} is now the owner.`);
+      // A power user still manages it; ask the server rather than guess
+      getCollaborators(projectId).then(setData, () => undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -555,6 +711,11 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
             <li key={c.username}>
               <span>{c.name || c.username}</span>
               <span className="muted small">{c.username} · can edit</span>
+              {data.canManage && (
+                <button className="btn small" disabled={busy} title={`Make ${c.name || c.username} the owner. You stay on as a collaborator; the links and StudyDesk embeds don't change`} onClick={() => void makeOwner(c)}>
+                  Make owner
+                </button>
+              )}
               {data.canManage && <IconButton icon={<Icons.trash />} title={`Remove ${c.username}`} onClick={() => void remove(c.username)} />}
             </li>
           ))}

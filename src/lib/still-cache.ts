@@ -6,7 +6,7 @@
  * depends on (the artboard, the artboards its instances draw, variables, fonts, data sources, the asset list and this build of
  * the editor). A change anywhere else just misses, and the artboard draws the way it always did.
  */
-import type { Artboard, Project } from 'interactives-player';
+import { masterOf, type Artboard, type Project } from 'interactives-player';
 import { instanceTargets } from '../canvas/instances';
 
 declare const __IX_BUILD__: string | undefined;
@@ -87,6 +87,12 @@ function contextHash(p: Project): string {
 /** The artboards an artboard's instances draw (directly or nested), so a still of the outer one goes stale with the inner one */
 function targetsOf(ab: Artboard, project: Project, seen: Set<string>, depth: number): Artboard[] {
   const out: Artboard[] = [];
+  // The page master is drawn into the still too
+  const master = masterOf(project.artboards, ab);
+  if (master && !seen.has(master.id)) {
+    seen.add(master.id);
+    out.push(master);
+  }
   for (const id of instanceTargets(ab)) {
     if (seen.has(id)) continue;
     seen.add(id);

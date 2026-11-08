@@ -196,7 +196,7 @@
 	{
 		"key": "dusk-poster",
 		"title": "Dusk poster",
-		"description": "A vector poster (39 paths and gradients) brought in from a VectorCraft file.",
+		"description": "A vector poster brought in from a VectorCraft file: gradients and paths, with its twenty stars drawn by one repeated layer.",
 		"group": "Drawing",
 		"tags": [
 			"illustration",

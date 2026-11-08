@@ -1,5 +1,8 @@
 import type { Converter, Variable } from 'interactives-player';
 import { IconButton, NumberField, Row, SelectField, TextField, CheckField } from './ui';
+import { ExprField } from './ExprField';
+
+const CONVERTER_LOCALS = ['value'];
 import { Icons } from './icons';
 
 type MapValue = string | number | boolean;
@@ -13,6 +16,7 @@ const KINDS: { value: Converter['type']; label: string }[] = [
   { value: 'toNumber', label: 'To number' },
   { value: 'toText', label: 'To text' },
   { value: 'toBoolean', label: 'To true/false' },
+  { value: 'duration', label: 'Seconds to m:ss' },
   { value: 'expr', label: 'Expression' },
 ];
 
@@ -94,7 +98,7 @@ function ConverterRow({ c, expr, variables, onChange, onRemove }: { c: Converter
         </>
       )}
       {c.type === 'map' && <MapEditor c={c} enumVar={enumVar} onChange={onChange} />}
-      {c.type === 'expr' && <TextField value={c.expr} mono commitOnBlur placeholder="value * 2" title="An expression; `value` is the incoming value" onChange={(v) => onChange({ ...c, expr: v })} />}
+      {c.type === 'expr' && <ExprField value={c.expr} locals={CONVERTER_LOCALS} commitOnBlur placeholder="value * 2" title="An expression; `value` is the incoming value" onChange={(v) => onChange({ ...c, expr: v })} />}
     </div>
   );
 }

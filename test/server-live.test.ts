@@ -252,9 +252,9 @@ describe('whole-document changes while people are connected', () => {
     await h.call('DELETE', `/api/projects/${id}`, { user: ann });
     await a.waitFor((e) => e.event === 'deleted');
     await new Promise((res) => setTimeout(res, 1300));
-    //nothing came back from the room's timers
+    //nothing came back from the room's timers, and the edit the room hadn't saved went into the bin with it
     expect(h.db.projects.docs.find((d) => d._id === id)).toBeUndefined();
-    expect(h.db.revisions.docs.filter((r) => r.project === id)).toHaveLength(0);
+    expect(JSON.parse(h.db['projects-bin'].docs.find((d) => d._id === id)!.doc).name).toBe('x');
   }, 8000);
 
   it('a failed save to mongo leaves the room dirty so it is tried again', async () => {
@@ -266,6 +266,53 @@ describe('whole-document changes while people are connected', () => {
     await post([setName('retry me again')]);
     await vi.waitFor(() => expect(JSON.parse(h.db.projects.docs.find((d) => d._id === id)!.doc).name).toBe('retry me again'), { timeout: 3000 });
   }, 10000);
+
+  it('tells the room when mongo refuses the save, tries again by itself, and says when it got there', async () => {
+    const a = await join('clientId=A');
+    h.db.projects.failNext.updateOne = new Error('mongo down');
+    await post([setName('no second post')]);
+    const failed = await a.waitFor((e) => e.event === 'stored' && e.data.ok === false, 3000);
+    expect(failed.data.error).toMatch(/could not save/);
+    //someone joining while it's failing hears it in their hello
+    const b = await join('clientId=B', bob);
+    expect(b.events.find((e) => e.event === 'hello')!.data.stored).toMatchObject({ ok: false });
+    //no new ops: the retry is the server's own
+    await a.waitFor((e) => e.event === 'stored' && e.data.ok === true, 5000);
+    expect(JSON.parse(h.db.projects.docs.find((d) => d._id === id)!.doc).name).toBe('no second post');
+  }, 10000);
+
+  it('says the project is too big rather than that it was saved somewhere else', async () => {
+    const a = await join('clientId=A');
+    h.db.projects.failNext.updateOne = Object.assign(new Error('BSONObj size: 17000000 is invalid'), { code: 10334 });
+    await post([setName('huge')]);
+    const failed = await a.waitFor((e) => e.event === 'stored' && e.data.ok === false, 3000);
+    expect(failed.data.error).toMatch(/too big to save/);
+  }, 8000);
+});
+
+describe('a room that never goes quiet', () => {
+  const settle = async () => {
+    for (let i = 0; i < 50; i++) await new Promise((r) => setImmediate(r));
+  };
+
+  it('still saves within 10 seconds of the first unsaved change', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    try {
+      await join('clientId=A');
+      const row = () => h.db.projects.docs.find((d) => d._id === id)!;
+      //an op every half second, so a plain one-second debounce would never fire
+      for (let i = 0; i < 24 && row().rev === 1; i++) {
+        await post([setName(`edit ${i}`)]);
+        await settle();
+        await vi.advanceTimersByTimeAsync(500);
+      }
+      await settle();
+      expect(row().rev).toBeGreaterThan(1);
+      expect(JSON.parse(row().doc).name).toMatch(/^edit (19|20|21)$/);
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 15000);
 });
 
 describe('closing a room', () => {
@@ -315,4 +362,35 @@ describe('closing a room', () => {
       vi.useRealTimers();
     }
   }, 15000);
+});
+
+describe('AI agents', () => {
+  it("marks the revision when an agent's edits went into it", async () => {
+    await join('clientId=AG&agent=Claude');
+    //revisions are at least 5 minutes apart, and creating the project just wrote one
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.now() + 6 * 60 * 1000);
+    try {
+      await post([setName('agent was here')], 'AG');
+      await vi.waitFor(() => expect(h.db.revisions.docs.some((r) => r.project === id && /edited with Claude \(AI\)/.test(r.reason))).toBe(true), { timeout: 4000 });
+      expect(h.db.revisions.docs.find((r) => r.project === id && /edited with/.test(r.reason))!.agents).toEqual(['Claude (AI)']);
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 8000);
+
+  it('INTERACTIVES_MCP=off shuts the MCP endpoint and keeps agents out of rooms', async () => {
+    process.env.INTERACTIVES_MCP = 'off';
+    try {
+      const r = await h.call('POST', '/mcp', { user: ann, json: { jsonrpc: '2.0', id: 1, method: 'initialize', params: {} } });
+      expect(r.status).toBe(503);
+      expect(r.json.error.message).toMatch(/turned off/);
+      const s = await h.call('GET', `/api/projects/${id}/live?clientId=AG&agent=Claude`, { user: ann });
+      expect(s.status).toBe(403);
+      //people still join
+      await join('clientId=P1');
+    } finally {
+      delete process.env.INTERACTIVES_MCP;
+    }
+  });
 });

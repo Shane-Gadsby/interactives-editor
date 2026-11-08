@@ -1,7 +1,7 @@
 import { track as usage } from '../lib/analytics';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { createMixer, unlockAudio, ANIMATABLE_PROPS, animatableProp, instanceInputProps, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL, type TimelineMarker } from 'interactives-player';
+import { createMixer, unlockAudio, ANIMATABLE_PROPS, animatableProp, layerOwnProps, instanceInputProps, nodeUniformProps, EASING_NAMES, ease, pathPointProp, stepList, uid, walk, type Easing, type Keyframe, type SceneNode, type Timeline as TL, type TimelineMarker } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { getArtboard, locate } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -15,9 +15,13 @@ import { addMarkerInteraction, markerEvents, nextMarkerName, nudgeMarker, rename
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import type { Project } from 'interactives-player';
 import { assetKind, assetUrls } from '../lib/assets';
-import { ensureCaptionTrack, addCue } from '../lib/captions-edit';
+import { ensureCaptionTrack, ensureDescriptionTrack, findTrack, addCue } from '../lib/captions-edit';
 import { MediaEditor, MediaLabels, MediaLanes, TranscriptDialog, addSoundToTimeline, exportCaptions, importCaptionsInto, type MediaCtx, type MediaSel } from './TimelineMedia';
 import { promptDialog } from '../components/dialogs';
+import { magnetNudge, staggerSelected } from '../lib/key-edit';
+
+/** How close (in screen pixels) a dragged key has to get to the playhead or a marker to snap onto it. */
+const MAGNET_PX = 6;
 
 const LABEL_W = 220;
 
@@ -225,6 +229,41 @@ export function TimelinePanel() {
     if (!id) (usage('feature', 'captions-track-add'), store().updateTimeline((d) => void (id = ensureCaptionTrack(d as TL).id)));
     return id;
   };
+  /** The description track to work on: the selected one when it is one, else the first (made when there is none). */
+  const descriptionTrackId = (): string => {
+    const sel = media && media.kind !== 'audio' && media.kind !== 'vkey' ? media.track : null;
+    let id = sel && tl.descriptions?.some((c) => c.id === sel) ? sel : tl.descriptions?.[0]?.id ?? '';
+    if (!id) (usage('feature', 'descriptions-track-add'), store().updateTimeline((d) => void (id = ensureDescriptionTrack(d as TL).id)));
+    return id;
+  };
+  const descriptionAction = async (action: string) => {
+    if (action === 'cue') {
+      const id = descriptionTrackId();
+      let cue = '';
+      setTl((d) => {
+        const t = findTrack(d, id);
+        if (t) cue = addCue(t, s.playhead, 3000, 'New description').id;
+      });
+      usage('feature', 'descriptions-cue-add');
+      setMedia({ kind: 'cue', track: id, cue });
+    } else if (action === 'import') {
+      const id = descriptionTrackId();
+      setMedia({ kind: 'captions', track: id });
+      const msg = await importCaptionsInto(id);
+      if (msg) store().toast(msg);
+    } else if (action === 'vtt' || action === 'srt') {
+      const id = descriptionTrackId();
+      const track = findTrack(tl, id);
+      if (track) exportCaptions(s.project, tl, track, action);
+    } else if (action === 'track') {
+      const lang = await promptDialog({ title: 'Add a description language', label: 'Language tag (en, fr, pt-BR ...)', initial: '', placeholder: 'fr', confirmLabel: 'Add' });
+      if (lang === null) return;
+      let id = '';
+      usage('feature', 'descriptions-track-add', { thing: 'language' });
+      setTl((d) => void (id = ensureDescriptionTrack(d, lang.trim() || undefined).id));
+      setMedia({ kind: 'captions', track: id });
+    }
+  };
   const captionAction = async (action: string) => {
     if (action === 'cue') {
       const id = captionTrackId();
@@ -352,7 +391,10 @@ export function TimelinePanel() {
   /** Press on one key, or on a layer's summary diamond (all of its keys at that time): select, then drag them. */
   const keysDown = (e: React.PointerEvent, refs: string[], t: number) => {
     e.stopPropagation();
-    let sel = store().get().selectedKeys;
+    // Where the playhead was before this press moved it: dragged keys snap to it, and to the markers (Alt turns that off)
+    const live = store().get();
+    const snapPoints = [live.playhead, ...(getArtboard(live.project, live.activeArtboardId)?.timelines.find((x) => x.id === live.activeTimelineId)?.markers ?? []).map((m) => m.time)];
+    let sel = live.selectedKeys;
     const allIn = refs.every((r) => sel.includes(r));
     if (e.shiftKey) sel = allIn ? sel.filter((x) => !refs.includes(x)) : [...new Set([...sel, ...refs])];
     else if (!allIn) sel = refs;
@@ -369,11 +411,13 @@ export function TimelinePanel() {
     for (const tr of tl.tracks) for (const k of tr.keys) if (sel.includes(`${tr.id}:${k.id}`)) starts.set(k.id, k.t);
     const move = (ev: PointerEvent) => {
       const dt = (ev.clientX - startX) / pxPerMs;
+      // Close to the playhead or a marker, the whole drag shifts onto it (so the keys keep their spacing); otherwise the grid
+      const nudge = ev.altKey ? null : magnetNudge([...starts.values()], dt, snapPoints, MAGNET_PX / pxPerMs);
       setTl((d) => {
         for (const tr of d.tracks) {
           for (const k of tr.keys) {
             const t0 = starts.get(k.id);
-            if (t0 !== undefined) k.t = Math.max(0, Math.min(d.duration, snap(t0 + dt, ev)));
+            if (t0 !== undefined) k.t = Math.max(0, Math.min(d.duration, nudge === null ? snap(t0 + dt, ev) : Math.round(t0 + dt + nudge)));
           }
           tr.keys.sort((a, b) => a.t - b.t);
         }
@@ -388,6 +432,18 @@ export function TimelinePanel() {
     el.addEventListener('pointerup', up);
   };
 
+  // How many of the selected layers have keys on this timeline (Stagger needs two)
+  const staggerable = s.selection.filter((id) => byNode.has(id)).length;
+  const stagger = async () => {
+    const v = await promptDialog({
+      title: 'Stagger',
+      label: 'Offset between layers (ms)',
+      initial: '100',
+      confirmLabel: 'Stagger',
+      validate: (x) => (x.trim() !== '' && Number.isFinite(Number(x)) && Number(x) !== 0 ? null : 'Enter a number of milliseconds, other than 0'),
+    });
+    if (v !== null) staggerSelected(Math.round(Number(v)));
+  };
   const selectedKey = s.selectedKeys.length === 1 ? findKey(tl, s.selectedKeys[0]) : null;
   const selectedTween = (() => {
     if (!tween) return null;
@@ -436,6 +492,7 @@ export function TimelinePanel() {
           onChange={(v) => setTl((d) => (d.loop = v))}
         />
           <CheckField label="Autoplay" title="Start when the artboard is shown" value={tl.autoplay} onChange={(v) => setTl((d) => (d.autoplay = v))} />
+          <CheckField label="Skip for less motion" title="For viewers whose device asks for less motion: jump to the last pose instead of playing (the animation presets turn this on)" value={!!tl.calm} onChange={(v) => setTl((d) => void (v ? (d.calm = true) : delete d.calm))} />
           <NumberField label="Speed" value={tl.speed} step={0.1} min={0.1} onChange={(v) => setTl((d) => (d.speed = v), 'tl-speed')} />
           <NumberField
           label="Frame rate"
@@ -459,6 +516,9 @@ export function TimelinePanel() {
         </TimelineSettings>
         <button className="btn" title="Add a marker at the playhead. An On timeline marker node runs when playback passes it" onClick={() => addMarker()}>
           + Marker
+        </button>
+        <button className="btn" disabled={staggerable < 2} title={staggerable < 2 ? 'Stagger: select two or more layers that have keys on this timeline, then set how many ms each one starts after the one before' : 'Stagger the selected layers: each one’s keys move later by the step you give, in the Layers panel’s order (the first stays put). A negative step runs the other way'} onClick={stagger}>
+          Stagger…
         </button>
         <button
           className={`btn${isSteps ? ' active' : ''}`}
@@ -485,7 +545,7 @@ export function TimelinePanel() {
           <div className="ruler-spacer">
             {selNode ? (
               <div className="add-track">
-                <SelectField value={addProp} options={[...ANIMATABLE_PROPS, ...nodeUniformProps(selNode), ...instanceInputProps(selNode, s.project.variables)].map((a) => ({ value: a.prop, label: a.label }))} onChange={setAddProp} />
+                <SelectField value={addProp} options={[...ANIMATABLE_PROPS, ...layerOwnProps(selNode), ...nodeUniformProps(selNode), ...instanceInputProps(selNode, s.project.variables)].map((a) => ({ value: a.prop, label: a.label }))} onChange={setAddProp} />
                 <button className="btn" title={`Keyframe ${selNode.name}'s ${addProp} at the playhead`} onClick={() => store().keyCurrent(selNode.id, addProp)}>
                   + Key
                 </button>
@@ -502,6 +562,7 @@ export function TimelinePanel() {
               if (made) setMedia({ kind: 'audio', track: made });
             }}
             onCaptionAction={captionAction}
+            onDescriptionAction={descriptionAction}
           />
           <TrackLabels byNode={byNode} nodeIndex={nodeIndex} pointsOpen={pointsOpen} setPointsOpen={setPointsOpen} setTl={setTl} />
         </div>

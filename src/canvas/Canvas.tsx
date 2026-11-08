@@ -25,6 +25,7 @@ import {
   nodeRuns,
   rotationFor,
   type Artboard,
+  type ConnectorNode,
   type Matrix,
   type NodeType,
   type PathNode,
@@ -40,21 +41,38 @@ import { TextToolbar, type ToolbarCommands } from './TextToolbar';
 import { paintRuns, readRuns, selectionOffsets, setSelectionOffsets } from '../lib/rich-text-dom';
 import { store, useEditor, type Tool } from '../store/store';
 import { CommentLayer } from './CommentLayer';
+import { NotesLayer } from './NotesLayer';
+import { HitPulse } from './HitPulse';
+import { PageLinkLayer } from './PageLinkLayer';
+import { setShowRoutes, showRoutes } from '../lib/page-routes-pref';
+import { addNote, leaveNote, noteScale } from '../lib/notes';
+import { NOTE_DEFAULT_H, NOTE_DEFAULT_W } from 'interactives-player';
 import { anchorAt } from '../lib/comment-anchor';
 import { comments } from '../lib/comments';
-import { drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
+import { drawnBox, drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
+import { isBrandHeld } from '../lib/branded/lock';
+import { tidyArtboardsCommand } from '../lib/tidy-command';
+import { groupFrame, groupMembers, pickedArtboardIds } from '../lib/artboard-groups';
+import { artboardMenuItems } from '../lib/artboard-commands';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
+import { artboardGridMenu, gridMenu } from '../components/grid-menu';
+import { gridFor, gridLabel, gridLook } from '../lib/grid';
+import { SNAP_LABEL, buildTargets, pixelRound, snapAny, snapArtboardBox, snapFor, snapMoveBox, snapPointer, type Gap, type SnapSet, type SnapSettings, type Target } from '../lib/snapping';
 import { fontStack } from '../lib/font-catalog';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
+import { selectSameItems } from '../lib/layer-find';
 import { copySelection, pasteNodes } from '../lib/clipboard';
 import { inGhostExtent } from './ghost';
-import { openHelp } from '../help/Help';
+import { openContextHelp } from '../help/Help';
 import { Rulers } from './Rulers';
+import { CropOverlay } from './CropOverlay';
+import { canCrop } from '../lib/crop';
 import { Icons } from '../components/icons';
 import { freehandToPath } from './freehand';
 import { ArtboardView, holdView, whenViewDrawn } from './ArtboardView';
+import { fontsReadyFor, fontsReadyNow } from '../lib/fonts';
 import { hasCachedStill, stillHash } from '../lib/still-cache';
 import { lookDefaults, lookFor, shownTheme } from '../lib/themes';
 import { viewPlan } from './viewPlan';
@@ -65,9 +83,15 @@ import { captureDrop } from '../lib/links';
 import { liveSession } from '../lib/live';
 import { bendPaths, hasShapeKeys, nearestSegment, shapeToPaths, type SegmentHit } from '../lib/path-edit';
 import { confirmDialog } from '../components/dialogs';
+import { openBehaviours } from '../components/BehaviourDialog';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
 import { rangeLabel } from '../lib/variants-edit';
+import { ANIM_PRESETS, animOptions } from '../lib/animate-presets';
 import { boneEndAt, boneFromDrag, boneGlyphs } from '../lib/rig';
+import { newConnector, pickEnd, pickedFromEnd, previewPath, sideMid, type Picked } from './connect';
+
+/** Shift, Ctrl or Cmd held on a click: add to the selection (or take out of it) instead of replacing it. Ctrl and Cmd still pick the deepest layer too. */
+const adds = (e: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => e.shiftKey || e.ctrlKey || e.metaKey;
 
 type Pt = { x: number; y: number };
 
@@ -78,7 +102,7 @@ type Drag =
   | { kind: 'gradPt'; id: string; prefix: string; part: 'from' | 'to' | 'center' | 'radius'; node0: SceneNode; parentM: Matrix }
   | { kind: 'resizeMulti'; handle: Handle; bounds0: Rect; items: { id: string; node0: SceneNode; off: Pt }[] }
   | { kind: 'rotate'; center: Pt; angle0: number; items: { id: string; r0: number }[] }
-  | { kind: 'moveAb'; id: string; x0: number; y0: number; start: Pt }
+  | { kind: 'moveAb'; start: Pt; items: { id: string; x0: number; y0: number }[]; moved: boolean; collapse?: string }
   | { kind: 'resizeAb'; handle: Handle; id: string; ab0: Artboard }
   | { kind: 'create'; tool: Tool; abId: string | null; start: Pt; parentId: string | null }
   | { kind: 'marquee'; abId: string | null; start: Pt; additive: string[] }
@@ -87,6 +111,7 @@ type Drag =
   | { kind: 'bend'; id: string; si: number; i: number; t: number; start: Pt; node0: PathNode; parentM: Matrix }
   | { kind: 'pathPoint'; si: number; pi: number; start: Pt; node0: PathNode; parentM: Matrix }
   | { kind: 'pathHandle'; si: number; pi: number; which: 'in' | 'out'; node0: PathNode; parentM: Matrix; mirror: boolean }
+  | { kind: 'connect'; abId: string; fixed: Picked; id: string | null; which: 'from' | 'to'; route: ConnectorNode['route']; started: Pt }
   | { kind: 'boneDraw'; abId: string; parentId: string | null; chain: boolean; a: Pt }
   | { kind: 'boneRotate'; abId: string; id: string }
   | { kind: 'boneMove'; abId: string; id: string; start: Pt; x0: number; y0: number; inv: Matrix };
@@ -105,12 +130,13 @@ const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
   video: 'video',
   draw: 'draw',
   shader: 'shader',
+  progress: 'progress',
+  chart: 'chart',
 };
 
 /** Tools that start a new layer where you press, so the selection's resize and rotate handles stay out of the way. */
-const CREATION_TOOLS = new Set<Tool>(['artboard', 'line', 'pen', 'pencil', 'image', ...(Object.keys(CREATE_TYPES) as Tool[])]);
+const CREATION_TOOLS = new Set<Tool>(['artboard', 'line', 'connector', 'pen', 'pencil', 'image', ...(Object.keys(CREATE_TYPES) as Tool[])]);
 
-const SNAP_PX = 6;
 /** Where world (0, 0) sits in the scrollable pan space; pan is measured from here. */
 const PAN_ORIGIN = 4_000_000;
 // The longest a big project's first fill is held back (see `opening`)
@@ -125,12 +151,14 @@ export function Canvas() {
     activeArtboardId: st.activeArtboardId,
     selection: st.selection,
     artboardSelected: st.artboardSelected,
+    artboardPicked: st.artboardPicked,
     tool: st.tool,
     zoom: st.zoom,
     panX: st.panX,
     panY: st.panY,
     editingPathId: st.editingPathId,
     editingTextId: st.editingTextId,
+    croppingId: st.croppingId,
     focusId: st.focusId,
     showBones: st.showBones,
     timelineShown: st.timelineShown,
@@ -185,7 +213,28 @@ export function Canvas() {
     boneDraftRef.current = b;
     setBoneDraftState(b);
   };
-  const [guides, setGuides] = useState<{ abId: string; x: number[]; y: number[] } | null>(null);
+  //A connector being drawn or re-attached: the end that stays, and what the end under the pointer settled on. Also what the
+  //Connector tool is hovering over before a press, so the layer and its sides show
+  const [connDraft, setConnDraftState] = useState<{ abId: string; fixed: Picked | null; moving: Picked; route: ConnectorNode['route'] } | null>(null);
+  const connDraftRef = useRef(connDraft);
+  const setConnDraft = (c: typeof connDraft) => {
+    connDraftRef.current = c;
+    setConnDraftState(c);
+  };
+  //What snapped, to draw: lines by kind, and gaps for Spacing (artboard space, or canvas space when abId is null)
+  const [guides, setGuides] = useState<{ abId: string | null; x: Target[]; y: Target[]; gaps: Gap[] } | null>(null);
+  const showSnap = (abId: string | null, x: Target[], y: Target[], gaps: Gap[] = []) => setGuides(x.length || y.length || gaps.length ? { abId, x, y, gaps } : null);
+  //The candidate lines of a drag, worked out once per drag (the layers being dragged are the only ones that change)
+  const snapCache = useRef<{ key: string; proj: unknown; set: SnapSet } | null>(null);
+  const snapSetFor = (ab: Artboard, sn: SnapSettings, exclude: string[], parent?: () => string | null): SnapSet => {
+    const key = [ab.id, exclude.join(','), sn.on, sn.artboard, sn.layers, sn.layersAll, sn.guides, sn.spacing, sn.points].join('|');
+    const proj = store().get().project;
+    const c = snapCache.current;
+    if (c && c.key === key && (drag.current || c.proj === proj)) return c.set;
+    const set = buildTargets(ab, sn, new Set(exclude), parent?.() ?? null);
+    snapCache.current = { key, proj, set };
+    return set;
+  };
   const [pen, setPen] = useState<{ abId: string; points: PathPoint[]; cursor: Pt | null } | null>(null);
   const [selPoint, setSelPoint] = useState<{ si: number; pi: number } | null>(null);
   const penRef = useRef(pen);
@@ -194,6 +243,8 @@ export function Canvas() {
   const { project, zoom, panX, panY } = s;
   // Library copies that only back instances stay off the canvas (see canvasHidden)
   const onCanvas = useMemo(() => project.artboards.filter((a) => !a.canvasHidden), [project.artboards]);
+  const userPrefs = usePrefs();
+  const showGrid = userPrefs.showGrid;
   const baseActive = getArtboard(project, s.activeArtboardId);
   const timeline = s.timelineShown ? baseActive?.timelines.find((t) => t.id === s.activeTimelineId) ?? null : null;
   // While a timeline is open the canvas shows its frame at the playhead, so outlines and handles follow that frame too.
@@ -224,6 +275,37 @@ export function Canvas() {
     return ab && active && ab.id === active.id ? active : ab;
   };
   const local = (ab: Artboard, w: Pt): Pt => ({ x: w.x - ab.canvasX, y: w.y - ab.canvasY });
+  /** A point on the bare canvas (the Artboard tool, resizing an artboard): the person's own grid, and the other artboards' edges. */
+  const gridPoint = (w: Pt, e: { ctrlKey: boolean; metaKey: boolean }, exclude: string[] = []): Pt => {
+    const sn = snapFor(e);
+    if (!sn.on || (!sn.grid && !sn.artboard)) return w;
+    const set: SnapSet = { xs: [], ys: [], rects: [], points: [] };
+    if (sn.artboard)
+      for (const a of onCanvas) {
+        if (exclude.includes(a.id)) continue;
+        for (const [at, k] of [[a.canvasX, 'x'], [a.canvasX + a.width / 2, 'x'], [a.canvasX + a.width, 'x'], [a.canvasY, 'y'], [a.canvasY + a.height / 2, 'y'], [a.canvasY + a.height, 'y']] as const) (k === 'x' ? set.xs : set.ys).push({ at, kind: 'artboard' });
+      }
+    const r = snapPointer(set, sn, w, zoom, sn.grid ? gridFor(null, prefs()).size : null);
+    showSnap(null, r.x, r.y);
+    return r.p;
+  };
+  /**
+   * A canvas point put on whatever the snapping choices say for this artboard (grid, artboard edges, layers, guides, and
+   * with `points` path points and bone joints), when Ctrl is not held. \`exclude\` is what is being dragged, which cannot
+   * snap to itself. Shows what snapped.
+   */
+  const snapWorld = (ab: Artboard, w: Pt, e: { ctrlKey: boolean; metaKey: boolean }, exclude: string[] = [], points = false): Pt => {
+    const sn = snapFor(e);
+    const use = points ? sn : { ...sn, points: false };
+    if (!snapAny(use)) {
+      setGuides(null);
+      return w;
+    }
+    const set = snapSetFor(ab, use, exclude, () => (exclude[0] ? locate(ab, exclude[0])?.parent?.id ?? null : null));
+    const r = snapPointer(set, use, local(ab, w), zoom, use.grid ? gridFor(ab, prefs()).size : null);
+    showSnap(ab.id, r.x, r.y);
+    return { x: ab.canvasX + r.p.x, y: ab.canvasY + r.p.y };
+  };
   /**
    * The layer under the pointer. The artboard under the pointer goes first; then layers hanging outside their
    * artboard (the open one, or any that doesn't clip), so things moved past the edge can still be picked. So can the faint
@@ -313,6 +395,10 @@ export function Canvas() {
       window.removeEventListener('keyup', up);
     };
   });
+  // Picking another layer (or nothing) ends crop mode
+  useEffect(() => {
+    if (s.croppingId && (s.selection.length !== 1 || s.selection[0] !== s.croppingId)) store().set({ croppingId: null });
+  }, [s.croppingId, s.selection]);
   const selPointRef = useRef(selPoint);
   selPointRef.current = selPoint;
 
@@ -373,6 +459,7 @@ export function Canvas() {
 
   const onPointerDown = (e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
+    snapCache.current = null;
     pointerDown(e);
     // The pointer is captured for the drag, so the canvas has to show what it is doing. A handle says it itself (its own cursor)
     const d = drag.current;
@@ -381,11 +468,18 @@ export function Canvas() {
   };
   const pointerDown = (e: React.PointerEvent) => {
     if (e.button === 2) return;
+    // A press the notes didn't take puts a picked note away
+    if (store().get().selectedNote && e.button === 0) {
+      leaveNote();
+      store().set({ selectedNote: null });
+    }
     // The Comment tool places its pin on click (see placeComment), so there is no drag to start and no pointer to capture.
     // Panning (middle button, Space, the Hand tool) still goes through below
     if (store().get().tool === 'comment' && e.button === 0 && !spaceDown.current) return;
     const st = store().get();
     const target = e.target as HTMLElement;
+    // A press on the right-click menu (it sits inside the canvas) is the menu's: capturing the pointer here would send the click to the canvas instead of the item
+    if (target.closest?.('.ctx-menu')) return;
     const handle = (target.closest('[data-handle]') as HTMLElement | null)?.dataset.handle;
     const w = toWorld(e.clientX, e.clientY);
     try {
@@ -409,10 +503,30 @@ export function Canvas() {
         store().set({ activeArtboardId: a, artboardSelected: true, selection: [], focusId: null, activeTimelineId: a === st.activeArtboardId ? st.activeTimelineId : null });
         return;
       }
-      if (kind === 'ab') {
-        const target = getArtboard(st.project, a)!;
-        store().set({ activeArtboardId: a, artboardSelected: true, selection: [], focusId: null, activeTimelineId: a === st.activeArtboardId ? st.activeTimelineId : null });
-        drag.current = { kind: 'moveAb', id: a, x0: target.canvasX, y0: target.canvasY, start: w };
+      if (kind === 'ab' || kind === 'abgroup') {
+        // A name on the canvas: click picks the artboard, Ctrl/Cmd+click adds it or takes it out, Shift+click adds it; a group's
+        // title picks all its artboards. Dragging moves every selected artboard together
+        const s2 = store();
+        const adds = e.ctrlKey || e.metaKey;
+        let collapse: string | undefined;
+        if (kind === 'abgroup') s2.pickGroup(a, adds || e.shiftKey);
+        else if (adds) s2.toggleArtboardPick(a);
+        else if (e.shiftKey) {
+          const now = pickedArtboardIds(st);
+          if (!now.includes(a)) s2.pickArtboards([...now, a], a);
+        } else {
+          const now = pickedArtboardIds(st);
+          if (now.length > 1 && now.includes(a)) {
+            // pressing on one of several selected keeps them for the drag, and picks just this one if it turns out to be a click
+            s2.pickArtboards(now, a);
+            collapse = a;
+          } else s2.pickArtboards([a]);
+        }
+        const now = pickedArtboardIds(s2.get());
+        // taken out of the selection with Ctrl+click: nothing to drag
+        if (kind === 'ab' && !now.includes(a)) return;
+        const items = now.map((id) => getArtboard(s2.get().project, id)).filter(Boolean).map((x) => ({ id: x!.id, x0: x!.canvasX, y0: x!.canvasY }));
+        drag.current = { kind: 'moveAb', start: w, items, moved: false, collapse };
         return;
       }
       if (kind === 'abresize' && ab) {
@@ -495,13 +609,24 @@ export function Canvas() {
           setBoneDraft({ abId: ab.id, a: glyph.tip, b: glyph.tip });
           return;
         }
-        const sel = e.shiftKey ? (st.selection.includes(a) ? st.selection.filter((x) => x !== a) : [...st.selection, a]) : st.selection.includes(a) && st.selection.length > 1 ? st.selection : [a];
+        //Shift, Ctrl or Cmd adds to the selection (or takes this one out of it)
+        const sel = adds(e) ? (st.selection.includes(a) ? st.selection.filter((x) => x !== a) : [...st.selection, a]) : st.selection.includes(a) && st.selection.length > 1 ? st.selection : [a];
         store().set({ selection: sel, artboardSelected: false, editingPathId: null });
         if (loc.node.locked) return;
         if (b === 'base') {
           const pm = parentToArtboard(ab, a);
           drag.current = { kind: 'boneMove', abId: ab.id, id: a, start: local(ab, w), x0: loc.node.x, y0: loc.node.y, inv: invert([pm[0], pm[1], pm[2], pm[3], 0, 0]) };
         } else drag.current = { kind: 'boneRotate', abId: ab.id, id: a };
+        return;
+      }
+      if (kind === 'conn' && ab) {
+        // One end of the selected connector: dragging it settles on whatever layer (or empty spot) it is dropped on
+        const loc = locate(ab, b);
+        if (!loc || loc.node.type !== 'connector' || loc.node.locked) return;
+        const which = a as 'from' | 'to';
+        const fixed = pickedFromEnd(ab, which === 'from' ? loc.node.to : loc.node.from);
+        drag.current = { kind: 'connect', abId: ab.id, fixed, id: b, which, route: loc.node.route, started: local(ab, w) };
+        setConnDraft({ abId: ab.id, fixed, moving: pickedFromEnd(ab, which === 'from' ? loc.node.from : loc.node.to), route: loc.node.route });
         return;
       }
       if (kind === 'penstart' && penRef.current) {
@@ -521,7 +646,7 @@ export function Canvas() {
     if (tool === 'pen') {
       const pab = penRef.current ? getArtboard(st.project, penRef.current.abId) : hitAb ?? ab;
       if (!pab) return;
-      const p = local(pab, w);
+      const p = local(pab, snapWorld(pab, w, e, [], true));
       const pts = penRef.current?.points ?? [];
       setPen({ abId: pab.id, points: [...pts, { x: p.x, y: p.y }], cursor: p });
       if (!penRef.current) store().set({ activeArtboardId: pab.id, selection: [] });
@@ -552,9 +677,30 @@ export function Canvas() {
       return;
     }
 
+    if (tool === 'connector') {
+      const cab = hitAb ?? ab;
+      if (!cab) return;
+      if (cab.id !== st.activeArtboardId) store().set({ activeArtboardId: cab.id, selection: [], activeTimelineId: null });
+      const start = local(cab, w);
+      const fixed = pickEnd(cab, start, zoom, [], e.ctrlKey || e.metaKey);
+      drag.current = { kind: 'connect', abId: cab.id, fixed, id: null, which: 'to', route: 'curved', started: start };
+      setConnDraft({ abId: cab.id, fixed, moving: fixed, route: 'curved' });
+      return;
+    }
+
+    if (tool === 'note') {
+      // A note drawn on an artboard belongs to it (and moves with it); anywhere else on the canvas it belongs to the canvas
+      const nab = hitAb;
+      const at = nab ? local(nab, w) : w;
+      drag.current = { kind: 'create', tool, abId: nab?.id ?? null, start: at, parentId: null };
+      setBox({ abId: nab?.id ?? null, rect: { x: at.x, y: at.y, width: 0, height: 0 } });
+      return;
+    }
+
     if (tool === 'artboard') {
-      drag.current = { kind: 'create', tool, abId: null, start: w, parentId: null };
-      setBox({ abId: null, rect: { x: w.x, y: w.y, width: 0, height: 0 } });
+      const aw = gridPoint(w, e);
+      drag.current = { kind: 'create', tool, abId: null, start: aw, parentId: null };
+      setBox({ abId: null, rect: { x: aw.x, y: aw.y, width: 0, height: 0 } });
       return;
     }
 
@@ -565,8 +711,9 @@ export function Canvas() {
       // Draw into the frame under the pointer, if any.
       const path = hitTest(cab, p.x, p.y);
       const frame = [...path].reverse().find((n) => n.type === 'frame');
-      drag.current = { kind: 'create', tool, abId: cab.id, start: p, parentId: tool === 'frame' ? null : frame?.id ?? null };
-      setBox({ abId: cab.id, rect: { x: p.x, y: p.y, width: 0, height: 0 } });
+      const gp = local(cab, snapWorld(cab, w, e));
+      drag.current = { kind: 'create', tool, abId: cab.id, start: gp, parentId: tool === 'frame' ? null : frame?.id ?? null };
+      setBox({ abId: cab.id, rect: { x: gp.x, y: gp.y, width: 0, height: 0 } });
       if (cab.id !== st.activeArtboardId) store().set({ activeArtboardId: cab.id, selection: [], activeTimelineId: null });
       return;
     }
@@ -588,15 +735,15 @@ export function Canvas() {
       }
       if (hit) {
         let sel = store().get().selection;
-        if (e.shiftKey) sel = sel.includes(hit.id) ? sel.filter((x) => x !== hit.id) : [...sel, hit.id];
+        if (adds(e)) sel = sel.includes(hit.id) ? sel.filter((x) => x !== hit.id) : [...sel, hit.id];
         else if (!sel.includes(hit.id)) sel = [hit.id];
         store().set({ selection: sel, artboardSelected: false });
         if (sel.includes(hit.id)) startMove(hitAb, p, e.altKey);
         return;
       }
       // Empty part of an artboard: marquee.
-      store().set({ selection: e.shiftKey ? st.selection : [], artboardSelected: false, focusId: e.shiftKey ? st.focusId : null });
-      drag.current = { kind: 'marquee', abId: hitAb.id, start: p, additive: e.shiftKey ? st.selection : [] };
+      store().set({ selection: adds(e) ? st.selection : [], artboardSelected: false, focusId: adds(e) ? st.focusId : null });
+      drag.current = { kind: 'marquee', abId: hitAb.id, start: p, additive: adds(e) ? st.selection : [] };
       setBox({ abId: hitAb.id, rect: { x: p.x, y: p.y, width: 0, height: 0 } });
       return;
     }
@@ -621,6 +768,13 @@ export function Canvas() {
       return;
     }
     if (toolHint) setToolHint(null);
+    // The Connector tool shows the layer it would join, with its sides, before anything is pressed
+    if (st.tool === 'connector' && !drag.current) {
+      const hab = abAt(w);
+      const picked = hab ? pickEnd(hab, local(hab, w), zoom, [], deep) : null;
+      setConnDraft(picked?.box && hab ? { abId: hab.id, fixed: null, moving: picked, route: 'curved' } : null);
+      return;
+    }
     if (st.tool !== 'select') return;
     const found = layerAt(w, deep);
     const hab = found?.ab ?? abAt(w);
@@ -665,7 +819,7 @@ export function Canvas() {
       }
       if (st.tool === 'pen' && penRef.current) {
         const pab = getArtboard(st.project, penRef.current.abId);
-        if (pab) setPen({ ...penRef.current, cursor: local(pab, w) });
+        if (pab) setPen({ ...penRef.current, cursor: local(pab, snapWorld(pab, w, e, [], true)) });
       }
       return;
     }
@@ -695,14 +849,17 @@ export function Canvas() {
           if (Math.abs(dx) > Math.abs(dy)) dy = 0;
           else dx = 0;
         }
-        const snap = e.ctrlKey || e.metaKey ? { dx: 0, dy: 0, guides: { x: [], y: [] } } : snapMove(mab, d.bounds0, dx, dy, d.items.map((i) => i.id), zoom);
+        const sn = snapFor(e);
+        const ids = d.items.map((i) => i.id);
+        const snap = snapMoveBox(snapSetFor(mab, sn, ids, () => locate(mab, ids[0])?.parent?.id ?? null), sn, d.bounds0, dx, dy, zoom, sn.grid ? gridFor(mab, prefs()).size : null);
         dx += snap.dx;
         dy += snap.dy;
-        setGuides(snap.guides.x.length || snap.guides.y.length ? { abId: mab.id, ...snap.guides } : null);
+        showSnap(mab.id, snap.x, snap.y, snap.gaps);
+        const px = pixelRound(sn);
         const changes = new Map<string, Record<string, unknown>>();
         for (const it of d.items) {
           const q = apply(it.inv, dx, dy);
-          changes.set(it.id, { x: round(it.x0 + q.x), y: round(it.y0 + q.y) });
+          changes.set(it.id, { x: px(it.x0 + q.x), y: px(it.y0 + q.y) });
         }
         store().setEach(changes, 'move');
         // Letting go over another artboard offers to move the layers there: say so while it's possible
@@ -712,13 +869,15 @@ export function Canvas() {
       }
       case 'resize': {
         if (!ab) break;
-        const pp = apply(invert(d.parentM), w.x - ab.canvasX, w.y - ab.canvasY);
+        const gw = snapWorld(ab, w, e, [d.id]);
+        const pp = apply(invert(d.parentM), gw.x - ab.canvasX, gw.y - ab.canvasY);
         const lp = apply(invert(nodeMatrix(d.node0)), pp.x, pp.y);
         // Shift keeps the ratio, and a layer whose W and H are linked keeps it unless Shift is held
         const keep = d.node0.lockRatio ? !e.shiftKey : e.shiftKey;
         const nb = resizeBox(d.node0.width, d.node0.height, d.handle, lp.x, lp.y, keep, e.altKey);
         const placed = placeBox(d.node0, nb.l, nb.t, nb.w, nb.h);
-        const props: Record<string, unknown> = { x: round(placed.x), y: round(placed.y), width: round(nb.w), height: round(nb.h) };
+        const px = pixelRound(snapFor(e));
+        const props: Record<string, unknown> = { x: px(placed.x), y: px(placed.y), width: px(nb.w), height: px(nb.h) };
         if (d.node0.type === 'path') props.paths = scalePaths(d.node0.paths, nb.w / Math.max(1, d.node0.width), nb.h / Math.max(1, d.node0.height));
         if (d.node0.type === 'text' && d.node0.autoSize !== 'none') {
           const [, hy] = HANDLE_POS[d.handle];
@@ -742,22 +901,23 @@ export function Canvas() {
       case 'resizeMulti': {
         if (!ab) break;
         const b0 = d.bounds0;
-        const p = local(ab, w);
+        const p = local(ab, snapWorld(ab, w, e, d.items.map((it) => it.id)));
         // all of them linked: the selection keeps its ratio unless Shift is held
         const linked = d.items.length > 0 && d.items.every((it) => it.node0.lockRatio);
         const nb = resizeBox(b0.width, b0.height, d.handle, p.x - b0.x, p.y - b0.y, linked ? !e.shiftKey : e.shiftKey, e.altKey);
         const sx = nb.w / Math.max(1, b0.width);
         const sy = nb.h / Math.max(1, b0.height);
+        const px = pixelRound(snapFor(e));
         const changes = new Map<string, Record<string, unknown>>();
         for (const it of d.items) {
           const n0 = it.node0;
           const ax = it.off.x + n0.x;
           const ay = it.off.y + n0.y;
           const props: Record<string, unknown> = {
-            x: round(b0.x + nb.l + (ax - b0.x) * sx - it.off.x),
-            y: round(b0.y + nb.t + (ay - b0.y) * sy - it.off.y),
-            width: round(n0.width * sx),
-            height: round(n0.height * sy),
+            x: px(b0.x + nb.l + (ax - b0.x) * sx - it.off.x),
+            y: px(b0.y + nb.t + (ay - b0.y) * sy - it.off.y),
+            width: px(n0.width * sx),
+            height: px(n0.height * sy),
           };
           if (n0.type === 'path') props.paths = scalePaths(n0.paths, sx, sy);
           changes.set(it.id, props);
@@ -781,14 +941,33 @@ export function Canvas() {
         break;
       }
       case 'moveAb': {
-        const nx = round(d.x0 + w.x - d.start.x);
-        const ny = round(d.y0 + w.y - d.start.y);
+        let dx = w.x - d.start.x;
+        let dy = w.y - d.start.y;
+        const sn = snapFor(e);
+        if (sn.on && (sn.grid || sn.artboard)) {
+          //the moved artboards go as one box against the ones that stay
+          const moved = d.items.map((it) => ({ it, a: getArtboard(st.project, it.id) })).filter((m) => m.a);
+          const x0 = Math.min(...moved.map((m) => m.it.x0));
+          const y0 = Math.min(...moved.map((m) => m.it.y0));
+          const box = { x: x0, y: y0, width: Math.max(...moved.map((m) => m.it.x0 + m.a!.width)) - x0, height: Math.max(...moved.map((m) => m.it.y0 + m.a!.height)) - y0 };
+          const others = onCanvas.filter((a) => !d.items.some((it) => it.id === a.id)).map((a) => ({ x: a.canvasX, y: a.canvasY, width: a.width, height: a.height }));
+          const r = snapArtboardBox(others, sn, box, dx, dy, zoom, sn.grid ? gridFor(null, prefs()).size : null);
+          dx += r.dx;
+          dy += r.dy;
+          showSnap(null, r.x, r.y);
+        } else setGuides(null);
+        const px = pixelRound(sn);
+        dx = px(dx);
+        dy = px(dy);
+        if (dx || dy) d.moved = true;
+        const at = new Map(d.items.map((it) => [it.id, it]));
         store().update(
           (dr) => {
-            const a = dr.artboards.find((x) => x.id === d.id);
-            if (a) {
-              a.canvasX = nx;
-              a.canvasY = ny;
+            for (const a of dr.artboards) {
+              const it = at.get(a.id);
+              if (!it) continue;
+              a.canvasX = px(it.x0 + dx);
+              a.canvasY = px(it.y0 + dy);
             }
           },
           { coalesce: 'moveAb' },
@@ -797,7 +976,8 @@ export function Canvas() {
       }
       case 'resizeAb': {
         const a0 = d.ab0;
-        const nb = resizeBox(a0.width, a0.height, d.handle, w.x - a0.canvasX, w.y - a0.canvasY, e.shiftKey, e.altKey);
+        const gw = gridPoint(w, e, [d.id]);
+        const nb = resizeBox(a0.width, a0.height, d.handle, gw.x - a0.canvasX, gw.y - a0.canvasY, e.shiftKey, e.altKey);
         store().update(
           (dr) => {
             const a = dr.artboards.find((x) => x.id === d.id);
@@ -820,7 +1000,7 @@ export function Canvas() {
       }
       case 'create': {
         const cab = d.abId ? getArtboard(st.project, d.abId) : null;
-        const p = cab ? local(cab, w) : w;
+        const p = cab ? local(cab, snapWorld(cab, w, e)) : gridPoint(w, e);
         let x2 = p.x;
         let y2 = p.y;
         if (e.shiftKey && d.tool !== 'line') {
@@ -855,7 +1035,7 @@ export function Canvas() {
         if (!pn) break;
         const pab = getArtboard(st.project, pn.abId);
         if (!pab) break;
-        const p = local(pab, w);
+        const p = local(pab, snapWorld(pab, w, e, [], true));
         const pts = pn.points.slice();
         const pt = pts[d.index];
         if (!pt) break;
@@ -866,7 +1046,7 @@ export function Canvas() {
       }
       case 'pathPoint': {
         if (!ab) break;
-        const lp = toNodeLocal(d.node0, d.parentM, local(ab, w));
+        const lp = toNodeLocal(d.node0, d.parentM, local(ab, snapWorld(ab, w, e, [d.node0.id], true)));
         const sp = toNodeLocal(d.node0, d.parentM, d.start);
         const paths = structuredClone(d.node0.paths);
         const pt = paths[d.si]?.points[d.pi];
@@ -882,6 +1062,20 @@ export function Canvas() {
         const sp = toNodeLocal(d.node0, d.parentM, d.start);
         const paths = bendPaths(d.node0.paths, d.si, d.i, d.t, { x: lp.x - sp.x, y: lp.y - sp.y }, e.altKey);
         store().setPathPoints(d.node0.id, paths, { from: d.node0.paths, coalesce: 'bend' });
+        break;
+      }
+      case 'connect': {
+        const cab = getArtboard(st.project, d.abId);
+        if (!cab) break;
+        const p = local(cab, w);
+        const skip = [d.id ?? '', d.fixed.layerId ?? ''].filter(Boolean);
+        let moving = pickEnd(cab, p, zoom, skip, e.ctrlKey || e.metaKey);
+        // A loose end follows the grid and the other layers' edges like anything else dropped on the artboard
+        if (!moving.box) {
+          const q = local(cab, snapWorld(cab, w, e));
+          moving = { ...moving, end: { layer: '', x: round(q.x), y: round(q.y) }, at: q };
+        } else setGuides(null);
+        setConnDraft({ abId: d.abId, fixed: d.fixed, moving, route: d.route });
         break;
       }
       case 'boneDraw': {
@@ -940,6 +1134,8 @@ export function Canvas() {
     const d = drag.current;
     drag.current = null;
     setDragCursorNow(null);
+    // a click (not a drag) on one of several selected artboards' names picks just that one
+    if (d?.kind === 'moveAb' && !d.moved && d.collapse) store().pickArtboards([d.collapse]);
     if (d?.kind === 'bend' && !store().get().recording) {
       // the curve can reach past the layer's box: settle the box around the points (not for keyed shapes, whose keys hold the points as they are)
       const st = store().get();
@@ -988,9 +1184,40 @@ export function Canvas() {
         store().set({ tool: 'select' });
         return;
       }
+      if (d.tool === 'note') {
+        // A click makes a note of the usual size; a drag makes it the size that was drawn (as it looks on screen at this zoom)
+        const tiny = Math.abs(b.width) * zoom < 12 && Math.abs(b.height) * zoom < 12;
+        const sc = noteScale(zoom);
+        const id = addNote(d.abId, { x: b.x, y: b.y, w: tiny ? NOTE_DEFAULT_W : (b.width * zoom) / sc, h: tiny ? NOTE_DEFAULT_H : (b.height * zoom) / sc });
+        if (id) store().set({ tool: 'select', selectedNote: id, editingNote: id });
+        return;
+      }
       const cab = d.abId ? getArtboard(st.project, d.abId) : undefined;
       if (!cab) return;
       createFromBox(cab, d.tool, b, d.parentId, e.shiftKey);
+      return;
+    }
+    if (d.kind === 'connect') {
+      const draft = connDraftRef.current;
+      setConnDraft(null);
+      const cab = getArtboard(st.project, d.abId);
+      if (!draft || !cab) return;
+      const to = draft.moving.end;
+      if (d.id) {
+        // Re-attached: only the end that was dragged changes (a click on the handle changes nothing)
+        const loc = locate(cab, d.id);
+        const was = loc?.node.type === 'connector' ? (d.which === 'from' ? loc.node.from : loc.node.to) : null;
+        if (!was || JSON.stringify(was) === JSON.stringify(to)) return;
+        store().setProps([d.id], d.which === 'from' ? { from: to } : { to }, 'connector-end');
+        store().commit();
+        return;
+      }
+      // A press that goes nowhere draws nothing
+      const moved = Math.hypot(draft.moving.at.x - d.fixed.at.x, draft.moving.at.y - d.fixed.at.y) * zoom;
+      if (moved < 6 || (draft.moving.layerId && draft.moving.layerId === d.fixed.layerId)) return;
+      const node = newConnector(d.fixed.end, to, lookDefaults(store().get().project, 'connector') as Partial<ConnectorNode>);
+      store().addNodes([node], { artboardId: cab.id });
+      if (!e.shiftKey) store().set({ tool: 'select' });
       return;
     }
     if (d.kind === 'boneDraw') {
@@ -1015,8 +1242,8 @@ export function Canvas() {
         const ids = d.items.map((i) => i.id);
         const what = ids.length === 1 ? `“${src && locate(src, ids[0])?.node.name}”` : `${ids.length} layers`;
         void confirmDialog({
-          title: 'Move to artboard',
-          message: `Move ${what} to the artboard “${target.name}”?\n\nIts keys in this artboard's timelines are removed, and interactions here that use it will need fixing.`,
+          title: 'Move to page',
+          message: `Move ${what} to the page “${target.name}”?\n\nIts keys in this page's timelines are removed, and interactions here that use it will need fixing.`,
           confirmLabel: 'Move',
         }).then((ok) => ok && store().moveToArtboard(ids, target.id));
       }
@@ -1066,6 +1293,10 @@ export function Canvas() {
     if (picked.type === 'path') {
       store().set({ editingPathId: picked.id, selection: [picked.id] });
       setSelPoint(null);
+      return;
+    }
+    if (picked.type === 'image' && canCrop(picked)) {
+      store().set({ croppingId: picked.id, selection: [picked.id] });
       return;
     }
     if (picked.type === 'text' || picked.type === 'button' || picked.type === 'link') {
@@ -1294,6 +1525,43 @@ export function Canvas() {
   });
   const toS = (ab: Artboard, p: Pt) => oscreen(ab, p);
 
+  // The grid, under everything else in the overlay. Each artboard has its own cell size (the person's, or its override);
+  // far out the cells fade, then the stronger lines do. Editor only: Preview and every export are built without it
+  if (showGrid && !s.previewPlaying) {
+    for (const ab of onCanvas) {
+      const g = gridFor(ab, userPrefs);
+      const look = gridLook(g, zoom);
+      if (look.minor <= 0 && look.major <= 0) continue;
+      const tl = oscreen(ab, { x: 0, y: 0 });
+      const cell = g.size * zoom;
+      const major = cell * g.subdivisions;
+      const lines = (size: number) => `M ${size} 0 H 0 V ${size}`;
+      overlay.push(
+        <g key={`grid-${ab.id}`} className="canvas-grid" pointerEvents="none">
+          <defs>
+            <pattern id={`gm-${ab.id}`} patternUnits="userSpaceOnUse" x={tl.x} y={tl.y} width={cell} height={cell}>
+              <path d={lines(cell)} className="grid-minor" opacity={g.subdivisions > 1 ? look.minor : 0} />
+            </pattern>
+            <pattern id={`gM-${ab.id}`} patternUnits="userSpaceOnUse" x={tl.x} y={tl.y} width={major} height={major}>
+              <path d={lines(major)} className="grid-major" opacity={look.major} />
+            </pattern>
+            <pattern id={`g1-${ab.id}`} patternUnits="userSpaceOnUse" x={tl.x} y={tl.y} width={cell} height={cell}>
+              <path d={lines(cell)} className="grid-major" opacity={look.minor} />
+            </pattern>
+          </defs>
+          {g.subdivisions > 1 ? (
+            <>
+              {look.minor > 0 && <rect x={tl.x} y={tl.y} width={ab.width * zoom} height={ab.height * zoom} fill={`url(#gm-${ab.id})`} />}
+              <rect x={tl.x} y={tl.y} width={ab.width * zoom} height={ab.height * zoom} fill={`url(#gM-${ab.id})`} />
+            </>
+          ) : (
+            <rect x={tl.x} y={tl.y} width={ab.width * zoom} height={ab.height * zoom} fill={`url(#g1-${ab.id})`} />
+          )}
+        </g>,
+      );
+    }
+  }
+
   // Where learners clicked (Insights > Click heat): one square per grid cell, hotter the more clicks
   if (s.heat) {
     const hab = getArtboard(project, s.heat.artboardId);
@@ -1312,20 +1580,50 @@ export function Canvas() {
     }
   }
 
+  // Artboard groups: a dashed frame round their artboards with the group's name on a chip above its top left corner. The frame lets the pointer through; the
+  // name is the handle (click picks the group's artboards, drag moves them together)
+  const pickedNow = pickedArtboardIds(s);
+  for (const g of project.artboardGroups ?? []) {
+    const fr = groupFrame(project, g.id);
+    if (!fr) continue;
+    const members = groupMembers(project, g.id);
+    const all = members.every((m) => pickedNow.includes(m.id));
+    const x = fr.x * zoom;
+    const y = fr.y * zoom;
+    const title = `${g.name}  ·  ${members.length}`;
+    const tw = Math.round(title.length * 7 + 20);
+    overlay.push(
+      <g key={`abg-${g.id}`} className={`ab-group${all ? ' picked' : ''}`}>
+        <rect className="ab-group-frame" x={x} y={y} width={fr.width * zoom} height={fr.height * zoom} rx={10} />
+        <rect data-handle={`abgroup:${g.id}`} className="ab-group-chip" x={x} y={y - 28} width={tw} height={24} rx={6}>
+          <title>{`${g.name}: a group of ${members.length} artboards. Click to select them all, drag to move them together, right-click for more`}</title>
+        </rect>
+        <text className="ab-group-title" x={x + 10} y={y - 11.5} pointerEvents="none">
+          {title}
+        </text>
+      </g>,
+    );
+  }
+
   for (const ab of onCanvas) {
     const tl = oscreen(ab, { x: 0, y: 0 });
     const isActive = ab.id === s.activeArtboardId;
+    const isPicked = pickedNow.includes(ab.id);
+    const labelText = `${ab.name}${project.settings.startArtboardId === ab.id ? '  ▸ start' : ''}${ab.library ? (ab.library.brand ? '  ◆ brand kit' : '  ◆ library') : ''}`;
+    // a chosen artboard's name sits on a gold chip (the outline round it stays blue)
+    if (isPicked)
+      overlay.push(
+        <rect key={`labelbg-${ab.id}`} data-handle={`ab:${ab.id}`} className="ab-label-chip" x={tl.x - 4} y={tl.y - 24} width={Math.round(labelText.length * 6.3 + 10)} height={19} rx={5} />,
+      );
     overlay.push(
       <text
         key={`label-${ab.id}`}
         data-handle={`ab:${ab.id}`}
-        className={`ab-label${isActive ? ' active' : ''}`}
+        className={`ab-label${isActive ? ' active' : ''}${isPicked ? ' picked' : ''}`}
         x={tl.x}
         y={tl.y - 8}
       >
-        {ab.name}
-        {project.settings.startArtboardId === ab.id ? '  ▸ start' : ''}
-        {ab.library ? '  ◆ library' : ''}
+        {labelText}
       </text>,
     );
     // Artboards of a responsive set: one pill per member on the label line, to jump between them
@@ -1372,15 +1670,29 @@ export function Canvas() {
       const bw = active.width * zoom;
       const bh = active.height * zoom;
       overlay.push(<rect key="ab-sel" className="sel-outline" x={a.x} y={a.y} width={bw} height={bh} />);
-      for (const h of HANDLES) {
+      // the other selected artboards get the same outline (and no handles: they are moved, grouped and tidied together)
+      for (const id of pickedNow) {
+        const other = id === active.id ? null : getArtboard(project, id);
+        if (!other || other.canvasHidden) continue;
+        const o = toS(other, { x: 0, y: 0 });
+        overlay.push(<rect key={`ab-sel-${id}`} className="sel-outline" x={o.x} y={o.y} width={other.width * zoom} height={other.height * zoom} />);
+      }
+      if (pickedNow.length > 1) {
+        overlay.push(
+          <text key="ab-size" className="size-label" x={a.x + bw / 2} y={a.y + bh + 18}>
+            {pickedNow.length} artboards selected
+          </text>,
+        );
+      } else for (const h of HANDLES) {
         const [fx, fy] = HANDLE_POS[h];
         overlay.push(<rect key={`abh-${h}`} data-handle={`abresize:${h}`} className={`handle h-${h}`} x={a.x + fx * bw - 4} y={a.y + fy * bh - 4} width={8} height={8} />);
       }
-      overlay.push(
-        <text key="ab-size" className="size-label" x={a.x + bw / 2} y={a.y + bh + 18}>
-          {Math.round(active.width)} × {Math.round(active.height)}
-        </text>,
-      );
+      if (pickedNow.length < 2)
+        overlay.push(
+          <text key="ab-size" className="size-label" x={a.x + bw / 2} y={a.y + bh + 18}>
+            {Math.round(active.width)} × {Math.round(active.height)}
+          </text>,
+        );
     }
 
     // Bones: octahedral glyphs, a joint at each base and a handle on each tip. Click or drag the body to select and turn,
@@ -1437,9 +1749,26 @@ export function Canvas() {
       };
       const center = at(0.5, 0.5);
       const locked = ids.some((id) => locate(active, id)!.node.locked);
+      //A connector has no box to resize or turn: it has two ends, and they are the handles
+      const conn = ids.length === 1 ? locate(active, ids[0])!.node : null;
+      const connector = conn?.type === 'connector' ? conn : null;
+      if (connector && !locked && s.tool === 'select') {
+        const drawn = nodeToArtboard(active, connector.id);
+        const g = drawnBox(active, connector).computed;
+        if (g) {
+          for (const which of ['from', 'to'] as const) {
+            const p = toS(active, apply(drawn, which === 'from' ? g.start.x : g.end.x, which === 'from' ? g.start.y : g.end.y));
+            overlay.push(
+              <circle key={`conn-${which}`} data-handle={`conn:${which}:${connector.id}`} className="conn-handle" cx={p.x} cy={p.y} r={6} style={{ cursor: 'grab' }}>
+                <title>{which === 'from' ? 'Start of the connector (drag onto a layer to attach it)' : 'End of the connector (drag onto a layer to attach it)'}</title>
+              </circle>,
+            );
+          }
+        }
+      }
       // The Bend tool works on the edges themselves, and a creation tool draws wherever you drag (the rotate zones outside a
       // selected layer's corners would otherwise swallow the start of a new shape), so no resize/rotate handles sit on top then
-      if (!locked && s.tool !== 'bend' && s.tool !== 'bone' && !CREATION_TOOLS.has(s.tool)) {
+      if (!locked && !connector && s.tool !== 'bend' && s.tool !== 'bone' && !CREATION_TOOLS.has(s.tool)) {
         for (const h of ['nw', 'ne', 'se', 'sw'] as Handle[]) {
           const [fx, fy] = HANDLE_POS[h];
           const c = at(fx, fy);
@@ -1456,7 +1785,7 @@ export function Canvas() {
       }
       // Gradients with points of their own: the points are handles, dragged in the layer's own px
       const sel1 = ids.length === 1 ? (locate(active, ids[0])!.node as unknown as { fill: Paint | null; stroke: Stroke | null; fills?: Paint[]; strokes?: Stroke[]; paintOrder?: never } & SceneNode) : null;
-      if (sel1 && !locked && size.w > 0 && size.h > 0 && s.tool !== 'bend' && s.tool !== 'bone' && !CREATION_TOOLS.has(s.tool)) {
+      if (sel1 && !locked && !connector && size.w > 0 && size.h > 0 && s.tool !== 'bend' && s.tool !== 'bone' && !CREATION_TOOLS.has(s.tool)) {
         const paints = [
           ...fillList(sel1).map((p, i) => ({ p, prefix: fillPath(i, sel1) })),
           ...strokeList(sel1).map((st, i) => ({ p: st.paint, prefix: `${strokePath(i, sel1)}.paint` })),
@@ -1489,11 +1818,12 @@ export function Canvas() {
         }
       }
       const bottom = Math.max(...quad.map((p) => p.y));
-      overlay.push(
-        <text key="size" className="size-label" x={center.x} y={bottom + 18}>
-          {Math.round(size.w)} × {Math.round(size.h)}
-        </text>,
-      );
+      if (!connector)
+        overlay.push(
+          <text key="size" className="size-label" x={center.x} y={bottom + 18}>
+            {Math.round(size.w)} × {Math.round(size.h)}
+          </text>,
+        );
     }
 
     // Path editing
@@ -1561,6 +1891,35 @@ export function Canvas() {
     }
   }
 
+  // A connector being drawn, or an end being dragged: the layer it would land on with its sides, and the line so far
+  if (connDraft) {
+    const cab = getArtboard(project, connDraft.abId) ?? null;
+    const P = (p: Pt) => oscreen(cab, p);
+    const m = connDraft.moving;
+    if (m.box) {
+      const b = m.box;
+      const corners = [P({ x: b.x, y: b.y }), P({ x: b.x + b.w, y: b.y }), P({ x: b.x + b.w, y: b.y + b.h }), P({ x: b.x, y: b.y + b.h })];
+      overlay.push(<polygon key="conn-target" className="conn-target" points={corners.map((c) => `${c.x},${c.y}`).join(' ')} />);
+      for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+        const c = P(sideMid(b, side));
+        overlay.push(<circle key={`conn-side-${side}`} className={`conn-side${m.end.side === side ? ' on' : ''}`} cx={c.x} cy={c.y} r={m.end.side === side ? 6 : 4} />);
+      }
+    }
+    if (connDraft.fixed?.box && drag.current?.kind === 'connect' && !drag.current.id) {
+      const b = connDraft.fixed.box;
+      const corners = [P({ x: b.x, y: b.y }), P({ x: b.x + b.w, y: b.y }), P({ x: b.x + b.w, y: b.y + b.h }), P({ x: b.x, y: b.y + b.h })];
+      overlay.push(<polygon key="conn-from" className="conn-target conn-from" points={corners.map((c) => `${c.x},${c.y}`).join(' ')} />);
+    }
+    if (connDraft.fixed && drag.current?.kind === 'connect') {
+      const which = drag.current.which;
+      const [a, b] = which === 'to' ? [connDraft.fixed, m] : [m, connDraft.fixed];
+      const raw = previewPath(a, b, connDraft.route);
+      // (the preview's coordinates are the artboard's: shift them onto the screen with the same transform the points use)
+      const o = P({ x: 0, y: 0 });
+      overlay.push(<path key="conn-draft" className="conn-draft" transform={`translate(${o.x} ${o.y}) scale(${zoom})`} d={raw} vectorEffect="non-scaling-stroke" />);
+    }
+  }
+
   // A bone being drawn
   if (boneDraft) {
     const bab = getArtboard(project, boneDraft.abId) ?? null;
@@ -1580,18 +1939,38 @@ export function Canvas() {
     );
   }
 
-  // Snap guides
+  // Snap guides: a line for each thing that took the drag, in its kind's colour, equal gaps with their distance, and a ring on a point
   if (guides) {
-    const gab = getArtboard(project, guides.abId);
-    if (gab) {
-      for (const x of guides.x) {
-        const a = oscreen(gab, { x, y: -10000 });
-        overlay.push(<line key={`gx-${x}`} className="guide" x1={a.x} x2={a.x} y1={-100000} y2={100000} />);
+    const gab = guides.abId ? getArtboard(project, guides.abId) : null;
+    if (gab || guides.abId === null) {
+      const at = gab ?? null;
+      for (const t of guides.x) {
+        const a = oscreen(at, { x: t.at, y: -10000 });
+        overlay.push(<line key={`gx-${t.kind}-${t.at}`} className={`guide guide-${t.kind}`} x1={a.x} x2={a.x} y1={-100000} y2={100000} />);
       }
-      for (const y of guides.y) {
-        const a = oscreen(gab, { x: -10000, y });
-        overlay.push(<line key={`gy-${y}`} className="guide" x1={-100000} x2={100000} y1={a.y} y2={a.y} />);
+      for (const t of guides.y) {
+        const a = oscreen(at, { x: -10000, y: t.at });
+        overlay.push(<line key={`gy-${t.kind}-${t.at}`} className={`guide guide-${t.kind}`} x1={-100000} x2={100000} y1={a.y} y2={a.y} />);
       }
+      const pt = guides.x.find((t) => t.kind === 'points') && guides.y.find((t) => t.kind === 'points');
+      if (pt) {
+        const c = oscreen(at, { x: guides.x[0].at, y: guides.y[0].at });
+        overlay.push(<circle key="snap-point" className="guide-point" cx={c.x} cy={c.y} r={7} />);
+      }
+      guides.gaps.forEach((g, i) => {
+        const a = g.axis === 'x' ? oscreen(at, { x: g.from, y: g.at }) : oscreen(at, { x: g.at, y: g.from });
+        const b = g.axis === 'x' ? oscreen(at, { x: g.to, y: g.at }) : oscreen(at, { x: g.at, y: g.to });
+        overlay.push(
+          <g key={`gap-${i}`} className="guide-gap">
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+            <line x1={g.axis === 'x' ? a.x : a.x - 4} x2={g.axis === 'x' ? a.x : a.x + 4} y1={g.axis === 'x' ? a.y - 4 : a.y} y2={g.axis === 'x' ? a.y + 4 : a.y} />
+            <line x1={g.axis === 'x' ? b.x : b.x - 4} x2={g.axis === 'x' ? b.x : b.x + 4} y1={g.axis === 'x' ? b.y - 4 : b.y} y2={g.axis === 'x' ? b.y + 4 : b.y} />
+            <text className="guide-gap-label" x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 6} textAnchor="middle">
+              {g.label}
+            </text>
+          </g>,
+        );
+      });
     }
   }
 
@@ -1674,6 +2053,8 @@ export function Canvas() {
       { type: 'video', label: 'Video' },
       { type: 'draw', label: 'Script layer' },
       { type: 'shader', label: 'Shader layer' },
+      { type: 'progress', label: 'Progress bar' },
+      { type: 'chart', label: 'Chart' },
     ];
     const newHere = (ab: Artboard): MenuItem => ({
       label: 'New',
@@ -1697,6 +2078,19 @@ export function Canvas() {
       },
     };
     let items: MenuItem[];
+    // The name of an artboard, or of a group, on the canvas: the artboard menu for what is selected (picking it first when it isn't)
+    const [hk, ha] = ((e.target as Element).closest?.('[data-handle]')?.getAttribute('data-handle') ?? '').split(':');
+    if ((hk === 'ab' && getArtboard(st.project, ha)) || (hk === 'abgroup' && st.project.artboardGroups?.some((g) => g.id === ha))) {
+      if (hk === 'abgroup') {
+        if (!groupMembers(st.project, ha).every((m) => pickedArtboardIds(st).includes(m.id))) s2.pickGroup(ha);
+        items = artboardMenuItems(groupMembers(st.project, ha).map((m) => m.id), ha);
+      } else {
+        if (!pickedArtboardIds(st).includes(ha)) s2.pickArtboards([ha]);
+        items = artboardMenuItems(pickedArtboardIds(s2.get()));
+      }
+      setMenu({ x: e.clientX, y: e.clientY, items });
+      return;
+    }
     const hit = hab ? pickFromHit(hitTest(hab, local(hab, w).x, local(hab, w).y), e.ctrlKey || e.metaKey) : null;
     if (hab && hit) {
       // A layer: select it (keeping a multi-selection it belongs to), then act on the selection
@@ -1721,6 +2115,8 @@ export function Canvas() {
           ],
         },
         { label: 'Group', hint: 'Ctrl+G', onClick: () => s2.groupSelection() },
+        //Selections are on one artboard; with several artboards picked it isn't offered
+        ...(pickedArtboardIds(s2.get()).length > 1 ? [] : [{ label: 'Fit page to selection', title: 'Resize the page to just these layers, keeping them where they are', onClick: () => s2.fitArtboardToSelection() } as MenuItem]),
         ...(one && (one.type === 'group' || one.type === 'frame') ? [{ label: 'Ungroup', hint: 'Ctrl+Shift+G', onClick: () => s2.ungroupSelection() } as MenuItem] : []),
         ...(sel.length > 1
           ? [
@@ -1733,59 +2129,81 @@ export function Canvas() {
         { separator: true },
         { label: one?.visible === false ? 'Show' : 'Hide', onClick: () => s2.setProps(sel.map((n) => n.id), { visible: one?.visible === false }) },
         { label: 'Lock', onClick: () => s2.setProps(sel.map((n) => n.id), { locked: true }) },
+        ...(sel.every((n) => n.type !== 'bone')
+          ? [
+              {
+                label: 'Animate',
+                items: ANIM_PRESETS.map((pr) => ({
+                  label: pr.label,
+                  title: `${pr.tip}. Uses the When and Delay in the Animate section`,
+                  onClick: () => s2.applyAnimation(sel.map((n) => n.id), pr.id, animOptions()),
+                })),
+              } as MenuItem,
+            ]
+          : []),
+        ...(one ? [{ separator: true } as MenuItem, ...selectSameItems(hab, one)] : []),
         ...(one
           ? [
               {
                 label: 'Add interaction',
                 items: [
-                  { label: 'On click…', onClick: () => addInteraction(hab, one.id, 'click') },
-                  { label: 'On hover…', onClick: () => addInteraction(hab, one.id, 'pointerenter') },
+                  { label: 'When clicked…', onClick: () => openBehaviours({ abId: hab.id, layerId: one.id, trigger: 'click' }) },
+                  { label: 'When hovered…', onClick: () => openBehaviours({ abId: hab.id, layerId: one.id, trigger: 'pointerenter' }) },
+                  { separator: true },
+                  { label: 'Empty On click event', title: 'Just the On pointer event, with nothing joined to it', onClick: () => addInteraction(hab, one.id, 'click') },
+                  { label: 'Empty On hover event', title: 'Just the On pointer event, with nothing joined to it', onClick: () => addInteraction(hab, one.id, 'pointerenter') },
                 ],
               } as MenuItem,
               ...(one.type === 'text' || one.type === 'button' || one.type === 'link' ? [{ label: 'Edit text', hint: 'Enter', onClick: () => s2.set({ editingTextId: one.id }) } as MenuItem] : []),
+              ...(one.type === 'image' && canCrop(one) ? [{ label: 'Crop picture', hint: 'Enter', onClick: () => s2.set({ croppingId: one.id }) } as MenuItem] : []),
             ]
           : []),
         { separator: true },
         newHere(hab),
       ];
     } else if (hab) {
-      // An artboard's empty area
-      s2.set({ activeArtboardId: hab.id, artboardSelected: true, selection: [] });
+      // An artboard's empty area: the artboard (or the artboards, when this one is among several selected)
+      if (!pickedArtboardIds(st).includes(hab.id)) s2.pickArtboards([hab.id]);
+      const ids = pickedArtboardIds(s2.get());
       items = [
-        { heading: hab.name },
+        { heading: ids.length > 1 ? `${ids.length} pages` : hab.name },
         newHere(hab),
         paste,
         { separator: true },
-        { label: 'Make start artboard', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) },
-        { label: 'Duplicate artboard', onClick: () => s2.duplicateArtboard(hab.id) },
-        { label: 'Zoom to artboard', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) },
-        { separator: true },
-        { label: 'Delete artboard', danger: true, onClick: () => s2.deleteArtboard(hab.id) },
+        ...(ids.length === 1
+          ? [
+              { label: 'Make start page', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) } as MenuItem,
+              { label: 'Zoom to page', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) } as MenuItem,
+              artboardGridMenu(hab),
+              { separator: true } as MenuItem,
+            ]
+          : []),
+        ...artboardMenuItems(ids).slice(1),
       ];
     } else {
       items = [
-        { label: 'New artboard here', onClick: () => s2.addArtboard({ canvasX: round(w.x), canvasY: round(w.y) }) },
+        { label: 'New page here', onClick: () => s2.addArtboard({ canvasX: round(w.x), canvasY: round(w.y) }) },
         paste,
         { separator: true },
+        { label: showRoutes() ? 'Hide page arrows' : 'Show page arrows', title: 'The faint arrows between pages that show where Go to page, Next and Previous lead (editor only)', onClick: () => setShowRoutes(!showRoutes()) },
+        { label: 'Tidy up pages', disabled: st.project.artboards.filter((a) => !a.canvasHidden).length < 2, onClick: tidyArtboardsCommand },
         { label: 'Zoom to fit everything', hint: 'Shift+1', onClick: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })) },
         { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: 'Shift+R', onClick: () => setPrefs({ rulers: !prefs().rulers }) },
-        { label: 'Help', hint: 'F1', onClick: () => openHelp('canvas') },
+        ...gridMenu(),
+        { label: 'Help', hint: '?', onClick: openContextHelp },
       ];
     }
     setMenu({ x: e.clientX, y: e.clientY, items });
   }
 
-  /** Add an "On pointer" event for a layer with an action to fill in, and open the Interactions tab on it. */
+  /** Add just an "On pointer" event for a layer, with nothing joined to it (the recipes in the behaviour dialog add the action too), and open the Interactions tab on it. */
   function addInteraction(ab: Artboard, nodeId: string, type: 'click' | 'pointerenter') {
     const ev = { id: uid('lg'), kind: 'event.pointer', x: 40, y: 40 + ab.logic.nodes.length * 30, params: { ...defaultParams('event.pointer'), target: nodeId, type } };
-    const act = { id: uid('lg'), kind: 'action.timeline', x: 300, y: ev.y, params: defaultParams('action.timeline') };
     store().update((d) => {
       const a = d.artboards.find((x) => x.id === ab.id);
-      if (!a) return;
-      a.logic.nodes.push(ev, act);
-      a.logic.edges.push({ id: uid('e'), from: ev.id, fromPort: 'out', to: act.id, toPort: 'in' });
+      a?.logic.nodes.push(ev);
     });
-    store().set({ bottomTab: 'logic', logicSelection: act.id });
+    store().set({ bottomTab: 'logic', logicSelection: ev.id });
   }
 
   function zoomToBox(b: Rect) {
@@ -1824,13 +2242,15 @@ export function Canvas() {
   // them back (invisible, but drawn in fuller frames) until the ones in view are done, then fade them in together. Once, at open,
   // and never for longer than OPENING_MAX. (Whether they are in view isn't known yet: the workspace fits the zoom after this first
   // render. A project of a few artboards isn't worth it.)
-  const [opening, setOpening] = useState(() => onCanvas.length > 3);
+  // Also held (briefly) when the artboard being opened draws with a web font that hasn't loaded: the text would first show in a fallback face and jump.
+  const openingFirst = onCanvas.find((ab) => ab.id === s.activeArtboardId) ?? onCanvas[0];
+  const [opening, setOpening] = useState(() => onCanvas.length > 3 || (!!openingFirst && !fontsReadyNow(project, [openingFirst])));
   const [allSaved] = useState(() => onCanvas.every((ab) => ab.id === s.activeArtboardId || hasCachedStill(project.id, ab.id, stillHash(project, ab, shownTheme(project, s.canvasTheme)?.id ?? null))));
   useEffect(() => {
     if (!opening) return;
     let off = false;
     holdView(true);
-    void whenViewDrawn(allSaved ? OPENING_MAX_SAVED : OPENING_MAX).then(() => {
+    void Promise.all([whenViewDrawn(allSaved ? OPENING_MAX_SAVED : OPENING_MAX), openingFirst ? fontsReadyFor(project, [openingFirst]) : null]).then(() => {
       if (off) return;
       holdView(false);
       setOpening(false);
@@ -1842,7 +2262,7 @@ export function Canvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const showRulers = usePrefs().rulers;
+  const showRulers = userPrefs.rulers;
   // Space pans, a drag shows what it is doing, then what a press under the pointer would do, then the tool's own
   const cursor = dragCursorNow ?? (spaceHeld ? 'grab' : s.tool === 'select' || s.tool === 'bend' ? hoverCursor ?? toolCursor(s.tool) : toolCursor(s.tool));
 
@@ -1900,6 +2320,8 @@ export function Canvas() {
           const b = lab && selectionBounds(lab, [lockedHover.id]);
           const n = lab && locate(lab, lockedHover.id)?.node;
           if (!lab || !b || !n || (!n.locked && n.visible)) return null;
+          //a brand layer has no quick unlock: it is part of the brand, only the F9 override lifts it (from the Layers panel)
+          if (isBrandHeld(project, n, store().get().brandOverride)) return null;
           const at = screen(lab, { x: b.x + b.width, y: b.y });
           const keep = {
             onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
@@ -1943,9 +2365,31 @@ export function Canvas() {
             </div>
           );
         })()}
+      {userPrefs.snapOn && userPrefs.snapGrid && active && (
+        <button
+          type="button"
+          className="canvas-status"
+          title="Snap to grid is on. Click for the snapping choices and the grid size (Ctrl while dragging skips snapping, Ctrl+' turns the grid off)"
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            setMenu({ x: r.left, y: r.top - 8, items: gridMenu() });
+          }}
+        >
+          <Icons.grid width={13} /> Snap {gridLabel(gridFor(active, userPrefs))}
+        </button>
+      )}
+      {guides && (guides.x.length > 0 || guides.y.length > 0 || guides.gaps.length > 0) && (
+        <div className="snap-now" role="status" aria-live="off">
+          Snapped to {[...new Set([...guides.x, ...guides.y].map((t) => t.kind).concat(guides.gaps.length ? ['spacing' as const] : []))].map((k) => SNAP_LABEL[k]).join(', ')}
+        </div>
+      )}
       <CommentLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} />
+      <NotesLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} passive={s.tool === 'hand' || spaceHeld} />
+      <PageLinkLayer project={project} zoom={zoom} panX={panX} panY={panY} active={active} selection={s.selection} tool={s.tool} hidden={s.previewPlaying} />
+      <HitPulse project={project} zoom={zoom} panX={panX} panY={panY} />
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
+      {s.croppingId && active && <CropOverlay ab={active} id={s.croppingId} zoom={zoom} panX={panX} panY={panY} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} bounds={{ width: vp.current?.clientWidth ?? 2000, height: vp.current?.clientHeight ?? 1200 }} />}
       {toolHint && (
         <div className="tool-hint" role="status" style={{ left: toolHint.x + 18, top: toolHint.y + 20 }}>
@@ -1967,7 +2411,7 @@ function TextEditor({ ab, id, zoom, panX, panY, bounds }: { ab: Artboard; id: st
 }
 
 /** In-place editor for text layers: a contenteditable with one span per run, so ranges can be styled (the floating toolbar, Ctrl/Cmd+B, I, U, K, Shift+X; or the inspector). */
-function RichTextEditor({ node: n, ab, zoom, panX, panY, bounds }: { node: Extract<SceneNode, { type: 'text' }>; ab: Artboard; zoom: number; panX: number; panY: number; bounds: { width: number; height: number } }) {
+export function RichTextEditor({ node: n, ab, zoom, panX, panY, bounds }: { node: Extract<SceneNode, { type: 'text' }>; ab: Artboard; zoom: number; panX: number; panY: number; bounds: { width: number; height: number } }) {
   const id = n.id;
   const ref = useRef<HTMLDivElement>(null);
   const painted = useRef<TextRun[]>([]);
@@ -2003,7 +2447,8 @@ function RichTextEditor({ node: n, ab, zoom, panX, panY, bounds }: { node: Extra
     if (!el || sigOf(n) === ownSig.current) return;
     paint();
     const sel = store().get().textSelection;
-    if (sel && sel.id === id && (document.activeElement === el || document.activeElement?.closest('.text-toolbar, .palette-pop'))) setSelectionOffsets(el, sel.start, sel.end);
+    //only when the text has the focus: with it in the toolbar, setting the selection would pull the focus back into the text (the toolbar draws the remembered selection itself)
+    if (sel && sel.id === id && document.activeElement === el) setSelectionOffsets(el, sel.start, sel.end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [n.text, n.runs, zoom]);
   useEffect(() => {
@@ -2158,40 +2603,6 @@ function isTyping(e: KeyboardEvent): boolean {
   return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || !!t.closest?.('.cm-editor'));
 }
 
-/** Snap a moved selection's edges/centre to the artboard and to other top-level layers. */
-function snapMove(ab: Artboard, b: Rect, dx: number, dy: number, moving: string[], zoom: number): { dx: number; dy: number; guides: { x: number[]; y: number[] } } {
-  const th = SNAP_PX / zoom;
-  const xs = [0, ab.width / 2, ab.width, ...(ab.guides?.x ?? [])];
-  const ys = [0, ab.height / 2, ab.height, ...(ab.guides?.y ?? [])];
-  const set = new Set(moving);
-  for (const n of ab.children) {
-    if (set.has(n.id) || !n.visible) continue;
-    const nb = selectionBounds(ab, [n.id]);
-    if (!nb) continue;
-    xs.push(nb.x, nb.x + nb.width / 2, nb.x + nb.width);
-    ys.push(nb.y, nb.y + nb.height / 2, nb.y + nb.height);
-  }
-  const best = (cands: number[], targets: number[]) => {
-    let bestD = Infinity;
-    let at = 0;
-    for (const c of cands)
-      for (const t of targets) {
-        const d = t - c;
-        if (Math.abs(d) < Math.abs(bestD)) {
-          bestD = d;
-          at = t;
-        }
-      }
-    return Math.abs(bestD) <= th ? { d: bestD, at } : null;
-  };
-  const cx = [b.x + dx, b.x + dx + b.width / 2, b.x + dx + b.width];
-  const cy = [b.y + dy, b.y + dy + b.height / 2, b.y + dy + b.height];
-  const sx = best(cx, xs);
-  const sy = best(cy, ys);
-  return { dx: sx?.d ?? 0, dy: sy?.d ?? 0, guides: { x: sx ? [sx.at] : [], y: sy ? [sy.at] : [] } };
-}
-
-
 /** What a shape will look like while it is being drawn, in screen pixels (the defaults the new layer gets). */
 function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zoom: number) {
   if (w < 1 || h < 1) return null;
@@ -2252,6 +2663,22 @@ function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zo
         <>
           <rect x={x} y={y} width={w} height={h} fill="#1a1030" fillOpacity={0.9} />
           {h > 14 * zoom && label('Shader layer', '#c58bff', 14)}
+        </>
+      );
+    case 'progress':
+      return (
+        <>
+          <rect x={x} y={y} width={w} height={h} rx={Math.min(h / 2, 6 * zoom)} fill={LIGHT_LOOK.surfaceMuted} fillOpacity={0.9} />
+          <rect x={x} y={y} width={w * 0.4} height={h} rx={Math.min(h / 2, 6 * zoom)} fill={LIGHT_LOOK.button} fillOpacity={0.9} />
+        </>
+      );
+    case 'chart':
+      return (
+        <>
+          <rect x={x} y={y} width={w} height={h} fill={LIGHT_LOOK.surface} fillOpacity={0.6} />
+          {[0.2, 0.45, 0.3, 0.6].map((v, i) => (
+            <rect key={i} x={x + w * (0.1 + i * 0.22)} y={y + h * (0.9 - v)} width={w * 0.14} height={h * v} fill={LIGHT_LOOK.button} fillOpacity={0.9} />
+          ))}
         </>
       );
     default:

@@ -158,6 +158,25 @@ describe('joining and editing a live room', () => {
     await run('leave_session');
   });
 
+  it('leaves, reads, edits and removes sticky notes, which people in the room see arrive and which stay out of the shared page', async () => {
+    const person = await human();
+    const added = await run('add_note', { artboard_id: project.artboards[0].id, text: 'Swap this photo', x: 30, y: 40, layer_id: 'r1' });
+    expect(added).toContain('Applied 1 change');
+    await person.waitFor((e) => e.event === 'ops' && JSON.stringify(e.data).includes('Swap this photo'));
+    const notes = (await live()).artboards[0].notes!;
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toMatchObject({ text: 'Swap this photo', author: 'Tester (AI)', anchor: { layerId: 'r1' } });
+    expect(await run('list_notes')).toContain('Swap this photo');
+    expect(await run('list_notes', { artboard_id: 'no such artboard' }).catch((e: Error) => e.message)).toMatch(/No artboard/);
+    await run('edit_note', { id: notes[0].id, text: 'Photo swapped', colour: 'green', layer_id: null });
+    expect((await live()).artboards[0].notes![0]).toMatchObject({ text: 'Photo swapped', colour: 'green' });
+    expect((await live()).artboards[0].notes![0].anchor).toBeUndefined();
+    await run('remove_note', { id: notes[0].id });
+    expect((await live()).artboards[0].notes).toBeUndefined();
+    expect(await run('list_notes')).toBe('No notes.');
+    await run('leave_session');
+  });
+
   it('cannot join a project that does not exist, and can try again afterwards', async () => {
     await expect(tool('join_session').run({ project_id: 'prmissing01' })).rejects.toThrow(/Could not join the live session \(404\)/);
     expect(mcp.sessions.has('prmissing01')).toBe(false);

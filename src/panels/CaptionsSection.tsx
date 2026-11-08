@@ -1,4 +1,4 @@
-import { createNode, cuesToSrt, cuesToVtt, parseCaptions, type CaptionSettings, type CaptionCue, type Project, type VideoNode } from 'interactives-player';
+import { createNode, cuesToSrt, cuesToVtt, overlappingSpeech, parseCaptions, uid, type CaptionSettings, type CaptionCue, type Project, type VideoNode } from 'interactives-player';
 import { store } from '../store/store';
 import { getArtboard } from '../store/doc';
 import { CheckField, ColorField, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
@@ -10,7 +10,7 @@ import { pickFiles } from '../lib/insert';
 /** Edit the project's caption settings, dropping a key when it goes back to its default so the document stays small. */
 export function patchCaptions(project: Project, patch: Partial<CaptionSettings>): CaptionSettings | undefined {
   const next: Record<string, unknown> = { ...project.settings.captions };
-  const defaults: Record<string, unknown> = { defaultOn: true, display: 'region', position: 'bottom', controls: 'auto', controlsAt: 'top', transcript: true, fontSize: 22 };
+  const defaults: Record<string, unknown> = { defaultOn: true, display: 'region', position: 'bottom', controls: 'auto', controlsAt: 'top', transcript: true, fontSize: 22, descriptionsOn: false };
   for (const [k, v] of Object.entries(patch)) {
     if (v === undefined || v === '' || defaults[k] === v) delete next[k];
     else next[k] = v;
@@ -34,7 +34,7 @@ export function CaptionsSection({ project }: { project: Project }) {
       { coalesce },
     );
   const layerMode = c.display === 'layer';
-  const hasMedia = project.artboards.some((a) => a.timelines.some((t) => t.audio?.length || t.captions?.length));
+  const hasMedia = project.artboards.some((a) => a.timelines.some((t) => t.audio?.length || t.captions?.length || t.descriptions?.length));
   /** A text layer that shows the caption text, on the artboard being edited (the variable is made when needed). */
   const makeLayer = () => {
     const st = store();
@@ -55,6 +55,12 @@ export function CaptionsSection({ project }: { project: Project }) {
     <Section help="captions" title="Captions and narration" defaultOpen={hasMedia}>
       <p className="hint">Sound and captions are put on a timeline (Timeline tab: Sound and Captions rows). These settings are for how they show.</p>
       <CheckField label="Captions on to start" title="Captions show until the viewer turns them off. Their choice is remembered in their browser" value={c.defaultOn !== false} onChange={(v) => set({ defaultOn: v })} />
+      <CheckField
+        label="Descriptions on to start"
+        title="A voice on the viewer's device says what is on screen (the descriptions you wrote) while the sound is turned down. Most viewers do not need it, so it starts off. Their own choice is remembered in their browser"
+        value={c.descriptionsOn === true}
+        onChange={(v) => set({ descriptionsOn: v })}
+      />
       <SelectField<NonNullable<CaptionSettings['display']>>
         label="Shown in"
         title="The caption box the player draws, or a text layer of your own that the player keeps filled with the words"
@@ -125,7 +131,7 @@ export function VideoCaptions({ node, set }: { node: VideoNode; set: (patch: Par
     <>
       <div className="field-label block">Captions</div>
       <p className="hint">{cues.length ? `${cues.length} caption${cues.length === 1 ? '' : 's'}, timed from the start of the video. The viewer's captions button turns them on and off.` : 'Import a WebVTT or SRT file made for this video. Without captions, the accessibility check asks you to confirm the video has them.'}</p>
-      <Row>
+      <Row k="Import captions" words={['webvtt', 'srt', 'subtitles', 'export', 'transcript']}>
         <button className="btn small-btn" onClick={importFile}>
           Import…
         </button>
@@ -144,6 +150,72 @@ export function VideoCaptions({ node, set }: { node: VideoNode; set: (patch: Par
         </button>
       </Row>
       {cues.length > 0 && <TextField label="Language" title="A language tag such as en or fr" value={node.captionLang ?? ''} placeholder="en" commitOnBlur onChange={(v) => set({ captionLang: v.trim() || undefined })} />}
+    </>
+  );
+}
+
+/**
+ * A video layer's descriptions of what the picture shows: the same cues as captions, never drawn. With the viewer's descriptions on,
+ * a voice on their device reads each one while the video plays and the video is turned down; the transcript lists them too.
+ */
+export function VideoDescriptions({ node, set }: { node: VideoNode; set: (patch: Partial<VideoNode>) => void }) {
+  const cues = node.descriptions ?? [];
+  const importFile = async () => {
+    const files = await pickFiles('.vtt,.srt,text/vtt,application/x-subrip,text/plain', false);
+    if (!files.length) return;
+    const parsed = parseCaptions(await files[0].text());
+    if (!parsed.cues.length) {
+      await alertDialog({ title: 'No descriptions found', message: parsed.warnings.join(' ') || 'That file has no cues in it.' });
+      return;
+    }
+    set({ descriptions: parsed.cues as CaptionCue[] });
+    store().toast(`${parsed.cues.length} descriptions imported.${parsed.warnings.length ? ` ${parsed.warnings.join(' ')}` : ''}`);
+  };
+  const add = () => {
+    const last = cues.reduce((m, c) => Math.max(m, c.end), 0);
+    set({ descriptions: [...cues, { id: uid('cu'), start: last, end: last + 3000, text: 'Say what is on screen here.' }].sort((a, b) => a.start - b.start) });
+  };
+  const edit = (id: string, patch: Partial<CaptionCue>) => set({ descriptions: cues.map((c) => (c.id === id ? { ...c, ...patch } : c)).sort((a, b) => a.start - b.start) });
+  const seconds = (ms: number) => Math.round(ms) / 1000;
+  return (
+    <>
+      <div className="field-label block">Descriptions (what is on screen)</div>
+      <p className="hint">
+        {cues.length
+          ? `${cues.length} description${cues.length === 1 ? '' : 's'}, timed from the start of the video. They are not drawn. With the viewer's Descriptions button on, a voice on their device reads each one while the video plays and the video is turned down. They are in the transcript too. This is a cheaper aid, not a recorded described version.`
+          : 'Short sentences saying what the picture shows when it matters, placed in the gaps between speech. Read aloud by the viewer\'s own voice if they turn it on, and listed in the transcript. A cheaper aid, not a recorded described version.'}
+      </p>
+      <Row k="Add a description" words={['audio description', 'describe', 'what is on screen', 'import']}>
+        <button className="btn small-btn" onClick={add}>
+          Add one
+        </button>
+        <button className="btn small-btn" onClick={importFile}>
+          Import…
+        </button>
+        <button className="btn small-btn" disabled={!cues.length} onClick={() => download(new Blob([cuesToVtt(cues)], { type: 'text/vtt' }), `${fileSafe(node.name)}-descriptions.vtt`)}>
+          Export WebVTT
+        </button>
+        <button className="btn small-btn" disabled={!cues.length} onClick={() => set({ descriptions: undefined })}>
+          Clear
+        </button>
+      </Row>
+      {cues.map((c) => {
+        const clash = overlappingSpeech(c, node.captions).length > 0;
+        return (
+          <div key={c.id} className="video-cue">
+            <Row>
+              <NumberField label="From" title="Seconds from the start of the video" value={seconds(c.start)} min={0} step={0.5} suffix="s" onChange={(v) => edit(c.id, { start: Math.max(0, Math.round(v * 1000)), end: Math.max(c.end, Math.round(v * 1000) + 500) })} />
+              <NumberField label="To" title="Seconds from the start of the video" value={seconds(c.end)} min={0} step={0.5} suffix="s" onChange={(v) => edit(c.id, { end: Math.max(c.start + 100, Math.round(v * 1000)) })} />
+            </Row>
+            <TextField label="Text" title="What is on screen, in a sentence a voice can read" value={c.text} multiline rows={2} commitOnBlur onChange={(v) => edit(c.id, { text: v })} />
+            {clash && <p className="hint warn">This overlaps a caption, so the voice would talk over the speech. Move it into a gap.</p>}
+            <button className="btn small-btn" onClick={() => set({ descriptions: cues.filter((x) => x.id !== c.id) })}>
+              Delete this one
+            </button>
+          </div>
+        );
+      })}
+      {cues.length > 0 && <TextField label="Language" title="A language tag such as en or fr. It picks the voice that reads them" value={node.descriptionLang ?? ''} placeholder="en" commitOnBlur onChange={(v) => set({ descriptionLang: v.trim() || undefined })} />}
     </>
   );
 }

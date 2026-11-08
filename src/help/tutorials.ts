@@ -91,47 +91,53 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 1. Press <kbd>B</kbd> for the **Button** tool and drag a button below the box.
 2. In the Inspector, change **Label** to **Slide the box**. The label is the text on the button. Change **Name** to **Slide button** so it is easy to find later.
 
-## 3. Add the event
+## 3. Say what should happen
 
-1. With the button selected, scroll the Inspector to its **Interactions** section and press **+ On click**.
-2. The bottom panel switches to the **Interactions** tab and an **On pointer** node appears. Its settings on the right say **Layer: Slide button** and **Event: Click / tap**. That reads as "when Slide button is clicked".
+1. With the button selected, scroll the Inspector to its **Interactions** section and press **+ When clicked…**.
+2. A short list of things that can happen opens. Choose **Play an animation**, then pick your timeline under **Which animation**. The line at the bottom reads back what it will do: *When clicked: play “Timeline”*.
+3. Press **Add**. The section now says it in a sentence: **When clicked: play “Timeline”.**
 
-> A shortcut for later: right-click a layer, choose **Add interaction**, then **On click…**. It adds an **On pointer** node and a **Control timeline** node, already joined.
+That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, add 1 to a counter or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
 
-## 4. Add the action by dragging
+> A shortcut: right-click a layer, choose **Add interaction**, then **When clicked…**.
 
-1. Find the small dot on the right edge of the **On pointer** node. That is its output.
-2. Drag from the dot into empty space and let go.
-3. A menu called **ADD AND CONNECT** opens. It lists only the nodes that make sense there. Choose **Action**, then **Control timeline**.
-4. The new node appears where you let go, already connected.
+## 4. See what it made
 
-![Dragging a connection into empty space: let go, pick a node, and it is added and joined for you.](help/drag-to-connect.mp4)
-
-## 5. Choose what it does
-
-1. Click the **Control timeline** node. Its settings show on the right.
-2. Set **Timeline** to **Timeline** (the one you made), and **Do** to **Play**.
-3. Leave **Continue** on **When it finishes**. That setting decides when the *next* node would run. It matters once you chain more actions after this one.
+1. Under the sentence press **Show in graph**. The bottom panel switches to **Interactions** and picks the new node.
+2. There are two nodes, joined: a **When clicked or hovered** event (its settings say **Layer: Slide button** and **Event: Click / tap**) and a **Play or stop an animation** action. The Inspector's sentence is made from exactly these.
+3. The **Read as sentences** button above the graph shows the whole page this way. Use it to read a graph somebody else built.
 
 ![The Interactions tab: the node palette on the left, the graph in the middle and the selected node's settings on the right.](help/interactions-panel.png)
+
+## 5. Build the same thing by hand
+
+The graph can do much more than the list, and it helps to have drawn one flow yourself. Remove the sentence (**Remove** under it), then:
+
+1. Press **+ On click (empty)** in the Interactions section. A **When clicked or hovered** node appears with nothing joined to it.
+2. Find the small dot on the right edge of the **When clicked or hovered** node. That is its output. Drag from the dot into empty space and let go.
+3. A menu called **ADD AND CONNECT** opens. It lists only the nodes that make sense there. Choose **Action**, then **Play or stop an animation**. The new node appears where you let go, already connected.
+4. Click the **Play or stop an animation** node. Set **Timeline** to **Timeline** (the one you made), and **Do** to **Play**.
+5. Leave **Continue** on **When it finishes**. That setting decides when the *next* node would run. It matters once you chain more actions after this one.
+
+![Dragging a connection into empty space: let go, pick a node, and it is added and joined for you.](help/drag-to-connect.mp4)
 
 ## 6. Try it
 
 1. Press **Preview**.
 2. Click **Slide the box**. The box slides.
-3. Want it to start from the left every time you click? Set **Do** to **Restart** on the **Control timeline** node instead of **Play**.
+3. Want it to start from the left every time you click? Set **Do** to **Restart** on the **Play or stop an animation** node instead of **Play**.
 
 ## Go further
 
-- **Toggle.** Add a **Toggle** node after the event. Join its **a** output to **Control timeline: Play** and its **b** output to **Control timeline: Play in reverse**. Each click now alternates.
-- **Hover.** Use **+ On hover** in the Inspector for a hover effect. Choose **Show / hide** or **Animate property** actions.
+- **Toggle.** Add an **Alternate between two paths** node after the event. Join its **a** output to **Control timeline: Play** and its **b** output to **Control timeline: Play in reverse**. Each click now alternates.
+- **Hover.** Use **+ When hovered…** in the Inspector for a hover effect, such as **Show a layer**. For more control, **+ On hover (empty)** and the **Show or hide a layer** or **Animate a layer's setting** actions.
 - **Wait.** A **Wait** node pauses a flow for some milliseconds before the next node.
 - **Log.** A **Log** node writes to your browser's console, which is handy when you're not sure a flow ran. The Preview's event list also shows every event as it fires.
 
 ## What you learned
 
 - **Events** (green) start flows, **actions** (blue) do things, **logic** (purple) chooses the way.
-- You can drag from an output into empty space to add and join a node in one move.
+- **+ When clicked…** writes the nodes for you, and **Show in graph** shows them. You can also drag from an output into empty space to add and join a node in one move.
 - The **Preview** and its event list are the quickest way to test.
 
 **Next:** [Tutorial 3: A state machine with variables](tutorial-state-machine). More on the graph: [Interactions](interactions) and [Interaction node reference](interaction-nodes).`,
@@ -149,9 +155,9 @@ You will build a lamp. A button switches it on and off, and a counter shows how 
 ## 1. Make a project and two variables
 
 1. Press **New project** on the projects page. In **Start a new project** keep **Blank project**, type **Lamp** as the name and press **Create project**.
-2. Open the **Variables** tab at the bottom and press **+ Add variable**. A row appears.
-3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). Set **Type** to **True/false**. Leave the starting value unticked (false).
-4. Press **+ Add variable** again. Name it \`taps\`. Leave **Type** on **Number** with the starting value 0.
+2. Open the **Variables** tab at the bottom, press **+ Add variable** and pick **Switch (on or off)**. A row appears.
+3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). The **Type** is already **True/false (switch)**. Leave the starting value unticked (false).
+4. Press **+ Add variable** again and pick **Counter**. Name it \`taps\`. The **Type** is **Number (counter, score)** with the starting value 0.
 
 Names can only use letters, digits and \`_\`, and can't start with a digit. That is so they work inside expressions.
 
@@ -182,13 +188,11 @@ That says: if \`lit\` is true the colour is yellow, otherwise it is grey. The fi
 
 ## 4. Add the interaction
 
-1. Select the **Switch** button. In its **Interactions** section press **+ On click**.
-2. Drag from the **On pointer** node's output dot into empty space. Choose **Action**, then **Set variable**.
-3. In the settings, set **Variable** to **lit** and **Do** to **Toggle (boolean)**.
-4. Drag from the new node's output into empty space again. Choose **Action**, then **Set variable**.
-5. Set **Variable** to **taps**, **Do** to **Add**, and **Value** to \`1\`.
+1. Select the **Switch** button. In its **Interactions** section press **+ When clicked…**.
+2. Choose **Switch something on or off** and, under **Which switch**, pick **lit**. Press **Add**.
+3. Press **+ When clicked…** again. Choose **Add 1 to a counter** and pick **taps**. Press **Add**.
 
-You now have: click → flip \`lit\` → add 1 to \`taps\`.
+The section now reads: **When clicked: switch lit on or off** and **When clicked: add 1 to taps**. Two flows start from the same click, and both run. (In the graph they are a **When clicked or hovered** joined to a **Change a value or counter** each, with **Do** on **Flip on or off** and on **Add to it**.)
 
 ## 5. Try it
 
@@ -202,13 +206,13 @@ You now have: click → flip \`lit\` → add 1 to \`taps\`.
 
 - Make a variable called \`mode\` with **Type** **Choice** and the options \`off, on, broken\`. A choice shows as a dropdown wherever you set it.
 - Bind the bulb's fill through a **Look up** converter (use **+ Convert…** under the binding): it lists every option for you to give a colour.
-- Use an **If** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **If** has a **true** and a **false** output.
-- Tick **Remember** on a variable in the Variables tab to remember its value in the visitor's browser between visits.
+- Use a **Check a condition** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **Check a condition** has a **true** and a **false** output.
+- Tick **Remember** (under **Options**) on a variable in the Variables tab to remember its value in the visitor's browser between visits.
 
 ## What you learned
 
 - **Variables** hold state. They are shared by every artboard.
-- **Set variable** changes them. **On variable change** reacts to a change.
+- **Change a value or counter** changes them. **When a value changes** reacts to a change.
 - **Bindings** and \`{braces}\` in text show the state.
 
 **Next:** [Tutorial 4: Importing a design file](tutorial-import-design). More: [Variables](variables), [Bindings](bindings) and [Expressions](expressions).`,
@@ -248,7 +252,7 @@ There are three ways:
 
 ## 3. Choose: Link or Embed
 
-For Photoshop, Illustrator, PDF, AutoCAD, VectorCraft and PhotoCraft files, a dialog called **Import design file** asks what to do with each file.
+For Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and PowerPoint files, a dialog called **Import design file** asks what to do with each file.
 
 - **Embed** copies the file in once. This is the simplest choice and works in every browser.
 - **Link** keeps a connection to the file on your computer. When you save the file in the design app, the changes come into the artboard, and your own edits stay. Linking needs Chrome or Edge.
@@ -308,7 +312,7 @@ Full details, including what each format does and doesn't carry over, are in [Im
 
 1. Click an empty part of the canvas, or the artboard's name, so nothing is selected. The Inspector shows **Artboard** and **Project**.
 2. Under **Project**, set **Page title** (the title of the browser tab), **Fit** (how the artboard scales to its space) and **Page background** (the colour around the artboard).
-3. Under **Artboard**, make sure the artboard people should see first is the start artboard. The button says **Start artboard** (greyed out) when it already is. If not, press **Make start artboard**.
+3. Under **Artboard**, make sure the artboard people should see first is the start artboard. The button says **Start artboard** (greyed out) when it already is. If not, press **Make start page**.
 
 ![The Project section of the Inspector: name, page title, description, fit, page background, sandbox and reduced motion.](help/project-settings.png)
 
@@ -324,17 +328,17 @@ Full details, including what each format does and doesn't carry over, are in [Im
 
 A share link needs no uploading. Anyone with the link can play the project in their browser. They can't edit it.
 
-1. Choose **Share → Share link…** (the **Share** button is next to **Export**).
-2. Press **Create share link**. A link appears.
+1. Choose **Share → Share…** (the **Share** button is next to **Export**). If something looks unfinished (a button that does nothing, sample words, a picture with no description) a short [Before you share](before-you-share) list comes first.
+2. Under **Where will people use it?** choose **Anyone with a link**, and press **Create the link**. The link appears.
 3. Press **Copy** and send it, or **Open** to try it.
 4. The link is a snapshot. When you've changed the project, open the dialog again and press **Update to the latest version**.
-5. To stop sharing, press **Turn off link** and confirm. The link then shows a "turned off" page.
+5. To stop sharing, open **More ways to share**, press **Turn off link** and confirm. The link then shows a "turned off" page.
 
-Under it is the **Link for StudyDesk**. Use that one inside StudyDesk when you want each learner's score and progress kept, or when you want to see [Insights](insights). Tick **Allow remix** if you are happy for staff to copy the project into their own projects.
+To use it inside StudyDesk, choose **In a StudyDesk page, and keep learners' results** instead and copy the code it shows into the page's Source code view: each learner's score and progress are kept, and you can see [Insights](insights). Under **More ways to share**, tick **Allow remix** if you are happy for staff to copy the project into their own projects.
 
 ![The Share menu: Share link, Invite to collaborate, Save as template and Share for review.](help/share-menu.png)
 
-![The Share link dialog: the link with Copy and Open, then Update to the latest version and Turn off link.](help/share-link-dialog.png)
+![The Share dialog: Where will people use it?, the thing to copy, and More ways to share folded underneath.](help/share-where.png)
 
 ## 5. Put it on a page
 

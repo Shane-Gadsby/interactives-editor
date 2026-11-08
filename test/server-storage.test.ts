@@ -258,7 +258,7 @@ describe('revision history', () => {
     h.db.revisions.docs.push({ _id: 'zz000000000a', project: id, created: new Date(Date.now() + 5000), rev: 7, by: { username: 'bob' }, reason: 'Autosave', size: 3, doc: JSON.stringify(project(id, { name: 'old' })) });
     const list = (await h.call('GET', `/api/projects/${id}/revisions`, { user: ann })).json;
     expect(list.map((r: { id: string }) => r.id)[0]).toBe('zz000000000a');
-    expect(list[0]).toEqual({ id: 'zz000000000a', created: expect.any(String), rev: 7, by: { username: 'bob' }, reason: 'Autosave', size: 3 });
+    expect(list[0]).toEqual({ id: 'zz000000000a', created: expect.any(String), rev: 7, by: { username: 'bob' }, reason: 'Autosave', size: 3, name: null, pinned: false });
     const one = await h.call('GET', `/api/projects/${id}/revisions/zz000000000a`, { user: ann });
     expect(one.json.project.name).toBe('old');
     expect(one.json.rev).toBe(7);
@@ -432,5 +432,42 @@ describe('component libraries', () => {
     expect((await h.call('GET', '/api/libraries/bad', { user: ann })).status).toBe(400);
     expect((await h.call('GET', '/api/libraries/prlib00001/assets/bad', { user: ann })).status).toBe(400);
     expect((await h.call('GET', '/api/libraries/prlib00001/assets/logo000001', { user: ann })).status).toBe(404);
+  });
+});
+
+describe('health', () => {
+  it('says yes with mongo reachable and storage writable, without a session', async () => {
+    const r = await h.call('GET', '/health', { user: null });
+    expect(r.status).toBe(200);
+    expect(r.json).toMatchObject({ ok: true, app: 'interactives', mongo: { ok: true }, storage: { ok: true } });
+    expect(r.json.version).toBe(JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).version);
+  });
+
+  it('answers 503 when mongo fails', async () => {
+    h.db.projects.failNext.findOne = new Error('connection refused');
+    const r = await h.call('GET', '/health', { user: null });
+    expect(r.status).toBe(503);
+    expect(r.json.mongo).toMatchObject({ ok: false, error: 'connection refused' });
+  });
+});
+
+describe('duplicate files', () => {
+  it('finds files with the same bytes, and turns the dropped copies into links to the kept one', async () => {
+    const id = 'prdup00001';
+    await h.call('PUT', `/api/projects/${id}`, { user: ann, json: { project: project(id), rev: 0 } });
+    for (const [a, body] of [['assetAAAA1111', 'same bytes'], ['assetBBBB2222', 'same bytes'], ['assetCCCC3333', 'different']] as const) {
+      await h.call('PUT', `/api/projects/${id}/assets/${a}`, { user: ann, body: Buffer.from(body), type: 'image/png' });
+    }
+    const g = (await h.call('GET', `/api/projects/${id}/assets/duplicates`, { user: ann })).json.groups;
+    expect(g).toHaveLength(1);
+    expect(g[0].ids.sort()).toEqual(['assetAAAA1111', 'assetBBBB2222']);
+    const r = (await h.call('POST', `/api/projects/${id}/assets/dedupe`, { user: ann, json: { plan: [{ keep: 'assetAAAA1111', drop: ['assetBBBB2222', 'assetCCCC3333'] }] } })).json;
+    //the one with different bytes is left alone
+    expect(r).toMatchObject({ ok: true, linked: 1, freed: 10 });
+    const st = (a: string) => fs.statSync(path.join(h.storage, id, a));
+    expect(st('assetBBBB2222').ino).toBe(st('assetAAAA1111').ino);
+    expect(st('assetCCCC3333').ino).not.toBe(st('assetAAAA1111').ino);
+    //the old id still serves the bytes
+    expect((await h.call('GET', `/api/projects/${id}/assets/assetBBBB2222`, { user: ann })).text).toBe('same bytes');
   });
 });

@@ -19,7 +19,7 @@ export function VariantsSection({ ab, project }: { ab: Artboard; project: Projec
     return (
       <Section help="responsive" title="Responsive" defaultOpen={false}>
         <p className="hint">Show a different arrangement of this artboard when the page is narrower or wider. Each variant is a whole artboard of its own; the player picks the one that fits and keeps the viewer&rsquo;s variables, timelines and changes when it switches.</p>
-        <Row>
+        <Row k="Add variants" words={['responsive', 'narrow variant', 'wide variant', 'phone', 'mobile', 'breakpoint']}>
           <button className="btn" title="Copy this artboard as a phone-sized variant (360 px). It is shown when the page is narrower than this artboard's breakpoint" onClick={() => store().addVariant(ab.id, 'narrower')}>
             Add narrow variant
           </button>

@@ -15,7 +15,7 @@ export function blendExample(ab: Artboard, taken: string[]): { nodes: SceneNode[
   const cx = Math.round(ab.width / 2);
   const cy = Math.round(ab.height / 2);
   const ball = createNode('ellipse', { name: 'Blend ball', x: cx - 50, y: cy - 90, width: 100, height: 100 });
-  const slider = createNode('input', { name: 'Blend slider', x: cx - 160, y: cy + 78, width: 320, height: 32, inputType: 'range', variableId: variable.id, min: 0, max: 1, step: 0.01, value: '0' } as Partial<SceneNode>);
+  const slider = createNode('input', { name: 'Blend slider', x: cx - 160, y: cy + 78, width: 320, height: 32, inputType: 'range', bindings: { value: variable.name }, bindingModes: { value: 'both' }, min: 0, max: 1, step: 0.01, value: '0' } as Partial<SceneNode>);
   const label = (nameText: string, text: string, x: number, y: number, width: number, extra: Record<string, unknown> = {}) =>
     createNode('text', { name: nameText, text, x, y, width, height: 24, fontSize: 16, color: '#344054', align: 'center', ...extra } as Partial<SceneNode>);
   const tw = Math.min(600, ab.width - 32);

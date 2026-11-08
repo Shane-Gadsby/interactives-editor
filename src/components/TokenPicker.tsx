@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { isTokenRef, tokenIdOf, tokenRef, tokenValue, type Project, type ThemeToken } from 'interactives-player';
 import { maybeStore, store } from '../store/store';
+import { isBrandLocked } from '../lib/branded/lock';
 import { ensureThemes, shownColor, shownTheme, tokenById } from '../lib/themes';
 import { Icons } from './icons';
 
@@ -14,10 +15,24 @@ export function useThemeState(): { project: Project; canvasTheme: string | null 
   return st ? { project: st.project, canvasTheme: st.canvasTheme } : null;
 }
 
+/** True in a branded starter project whose lock is on: colour pickers offer the theme tokens only. */
+export function useBrandLocked(): boolean {
+  const s = maybeStore();
+  const get = () => (s ? isBrandLocked(s.get().project) && !s.get().brandOverride : false);
+  return useSyncExternalStore(s ? s.subscribe : noop, get, get);
+}
+
 /** A token colour as drawn in the theme being shown, and the token behind it. */
 export function linked(ts: { project: Project; canvasTheme: string | null } | null, value: string): { token: ThemeToken | undefined; shown: string } | null {
   if (!ts || !isTokenRef(value)) return null;
   return { token: tokenById(ts.project.themes, tokenIdOf(value)), shown: shownColor(ts.project, ts.canvasTheme, value) };
+}
+
+/** Each theme's value of a token as one line of text (Gold #f5b800, Purple #7a4ca0, ...), for a tooltip. */
+export function tokenSummary(project: Project, token: ThemeToken): string {
+  const t = project.themes;
+  if (!t) return '';
+  return t.list.map((th) => `${th.name} ${tokenValue(t, token, th.id) ?? 'transparent'}`).join(', ');
 }
 
 /** Each theme's value of a token, as small swatches with the theme's name. */

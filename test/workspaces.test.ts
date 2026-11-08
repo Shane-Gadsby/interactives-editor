@@ -55,4 +55,15 @@ describe('workspaces', () => {
     expect(list.map((w) => w.name)).toEqual(['Ok']);
     expect(list[0].layout).toEqual(defaultLayout());
   });
+
+  it('keeps where the tool rail is, and reads one saved before it could go to the bottom', () => {
+    setDock({ ...defaultLayout(), tools: { place: 'bottom', x: 80, y: 120 } });
+    saveWorkspace('Strip');
+    expect(savedWorkspaces()[0].layout.tools.place).toBe('bottom');
+    // an older saved workspace has only left, right or float for it
+    setPrefs({ workspaces: [{ id: 'old', name: 'Old', layout: { ...defaultLayout(), tools: { place: 'right', x: 1, y: 2 } } }] });
+    expect(savedWorkspaces()[0].layout.tools).toEqual({ place: 'right', x: 1, y: 2 });
+    applyWorkspace(savedWorkspaces()[0]);
+    expect(getDock().tools.place).toBe('right');
+  });
 });

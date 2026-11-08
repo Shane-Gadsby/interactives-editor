@@ -96,7 +96,7 @@ describe('projects', () => {
   });
 
   it('asks the server who it is', async () => {
-    expect(await db.session()).toEqual({ user: null, power: false });
+    expect(await db.session()).toEqual({ user: null, power: false, brand: false });
   });
 });
 
@@ -241,5 +241,31 @@ describe('revisions, sharing and libraries', () => {
     const p = fresh();
     await db.createProjectRecord(p);
     await expect(db.publishLibrary(p.id, '')).rejects.toThrow(/project is a library/);
+  });
+});
+
+describe('shared responses', () => {
+  it('the owner\'s client lists what the class said, hides, removes and clears against the real routes', async () => {
+    const p = fresh('Cloud');
+    p.dataSources.push({ id: 'dsshared', name: 'responses', kind: 'json', source: 'shared', shared: { who: 'class', perPerson: 5, blocked: [] } } as never);
+    await db.createProjectRecord(p);
+    const page = `<!doctype html><html><body><script type="application/json" id="ix-project">${JSON.stringify(p)}</script></body></html>`;
+    const share = await db.publishShare(p.id, page);
+    const learner = { 'x-test-session': JSON.stringify({ user: { username: 'sam', fullName: 'Sam', userID: 1 }, access: {}, activity: { courseLabel: 'MAT1000_26S1' } }) };
+    const token = share.token;
+    await fetch(`${h.base}/learn/${token}/shared/dsshared`, { method: 'POST', headers: { ...learner, 'content-type': 'application/json' }, body: JSON.stringify({ who: 'class', answers: ['alpha', 'beta'] }) });
+
+    const listed = await db.getSharedResponses(p.id);
+    expect(listed.sources[0]).toMatchObject({ source: 'dsshared', name: 'responses', declared: { who: 'class' } });
+    expect(listed.sources[0].courses[0]).toMatchObject({ course: 'MAT1000_26S1', people: 1 });
+    expect(listed.sources[0].courses[0].answers.map((a) => a.text)).toEqual(['alpha', 'beta']);
+
+    expect(await db.hideSharedAnswer(p.id, 'dsshared', 'MAT1000_26S1', 'alpha', true)).toMatchObject({ ok: true, hidden: true });
+    expect((await db.getSharedResponses(p.id)).sources[0].courses[0].answers.find((a) => a.text === 'alpha')).toMatchObject({ hidden: true, shown: false });
+
+    expect(await db.removeSharedAnswers(p.id, 'dsshared', 'MAT1000_26S1', 'beta')).toMatchObject({ ok: true, people: 1 });
+    expect((await db.getSharedResponses(p.id)).sources[0].courses[0].answers.map((a) => a.text)).toEqual(['alpha']);
+    await db.removeSharedAnswers(p.id, 'dsshared', 'MAT1000_26S1');
+    expect((await db.getSharedResponses(p.id)).sources[0].courses[0].answers).toEqual([]);
   });
 });

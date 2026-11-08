@@ -113,6 +113,8 @@ describe('the editor routes', () => {
     expect(h.db.comments.docs.every((d) => d.project === id)).toBe(true);
     expect((await h.call('GET', `/api/projects/${dup.json.id}/comments`, { user: ann })).json.threads).toEqual([]);
     await h.call('DELETE', `/api/projects/${id}`, { user: ann });
+    expect(h.db.comments.docs.length).toBeGreaterThan(0);
+    await h.call('DELETE', `/api/bin/${id}`, { user: ann });
     expect(h.db.comments.docs).toHaveLength(0);
   });
 });

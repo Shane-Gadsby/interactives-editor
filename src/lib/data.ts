@@ -1,4 +1,4 @@
-import { artboardScope, dataPolicyFor, enumOptions, fetchDataSource, initialValue, layerScope, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
+import { sampleValue, artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -14,7 +14,7 @@ class DataCache {
   private policy: DataPolicy = {};
 
   private sig(ds: DataSource): string {
-    return JSON.stringify([ds.kind, ds.source, ds.assetId, ds.url, this.policy.allow]);
+    return JSON.stringify([ds.kind, ds.source, ds.assetId, ds.url, this.policy.allow, ds.source === 'shared' ? ds.shared : null]);
   }
 
   /** Make sure every source is loaded (or loading) for its current definition. */
@@ -30,6 +30,12 @@ class DataCache {
     const sig = this.sig(ds);
     this.values.set(ds.id, { ...(this.values.get(ds.id) ?? {}), sig, loading: true });
     this.bump();
+    // Shared responses have no server here: the canvas shows the author's sample answers, as if a class had given them
+    if (ds.source === 'shared') {
+      this.values.set(ds.id, { sig, value: sampleValue(ds.shared), loading: false });
+      this.bump();
+      return;
+    }
     try {
       const value = await fetchDataSource(ds, assetUrls.resolve, undefined, this.policy);
       this.values.set(ds.id, { sig, value, loading: false });
@@ -82,11 +88,36 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
       byKey.set(n.id, n);
       if (!byKey.has(n.name)) byKey.set(n.name, n);
     });
-    board.artboard = artboardScope(artboard);
+    // where this artboard is among the pages, as the player has it (`pageNumber`, `pageCount`, `artboard.index`...)
+    const pages = pageInfo(project, artboard);
+    board.pageNumber = pages.index + 1;
+    board.pageCount = pages.list.length;
+    board.artboard = artboardScope(artboard, { index: pages.index, count: pages.list.length, group: pages.group });
     board.layer = (key: unknown) => layerScope(byKey.get(String(key)));
   }
-  const vars: Record<string, unknown> = { ...board, ...data, data, enums: enumOptions(project.variables) };
-  for (const v of project.variables) vars[v.name] = initialValue(v);
+  // `context` is the project's sample course and learner (Data panel), under data and variables of the same name like the player has it
+  const context = sampleContextFor(project);
+  // The microphone and camera as a project that declares them starts: ready, with no recordings (the player keeps these current when it runs)
+  const used = new Set(sensorsUsed(project.settings.sensors));
+  const sensors = { ...NO_SENSORS, microphone: used.has('microphone') ? 'ready' : 'unavailable', camera: used.has('camera') ? 'ready' : 'unavailable', photos: used.has('photos') ? 'ready' : 'unavailable', recordings: emptySlots(slotNamesOf(project)) };
+  const vars: Record<string, unknown> = { context, ...sensors, ...board, ...data, data, enums: enumOptions(project.variables), userData: { loaded: false, restored: 0 } };
+  // The sample course's rows in place of initial values, the way the player starts on the real course
+  const perCourse = courseValuesFor(project.courseValues, context.courseLabel, project.variables);
+  // A variable with a formula is worked out from the ones above it (the crossword's layout from its word list), as the player does at the start
+  const start: Record<string, unknown> = {};
+  for (const v of project.variables) {
+    start[v.name] = vars[v.name] = perCourse.has(v.id) ? initialValue({ ...v, initial: perCourse.get(v.id)! }) : startingValue(v, start);
+  }
+  // `quiz` (score, max, the list of questions) as the player has it at the start, so a results page doesn't show its raw formula on the canvas.
+  // A variable or data source of that name wins, like in the player
+  if (!('quiz' in vars)) {
+    const sources: QuizSource[] = [];
+    for (const ab of project.artboards) walk(ab.children as SceneNode[], (n) => void (n.type === 'frame' && n.question && sources.push({ question: n.question, page: ab.name })));
+    vars.quiz = quizState(sources, (prefix, suffix) => vars[`${prefix}_${suffix}`], project.settings.reporting?.passMark);
+  }
+  // Live variables read all of them (the ones below too), so they are worked out once everything else has its value
+  const live = planLive(project);
+  if (live.order.length) runLive(live, vars, null);
   // An artboard with steps shows its first step: the dots of a step bar, and the variables the player would keep up to date
   const cfg = artboard?.steps;
   const list = cfg ? stepList(stepsTimeline(artboard!)) : [];

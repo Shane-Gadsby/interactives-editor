@@ -10,7 +10,7 @@
  *   INTERACTIVES_AGENT_NAME  name shown to people in the editor (default "Agent")
  */
 import { CATALOG } from '../../interactives-player/src/catalog';
-import { ANIMATABLE_PROPS } from '../../interactives-player/src/animation';
+import { ANIMATABLE_PROPS, layerOwnProps } from '../../interactives-player/src/animation';
 import { createNode } from '../../interactives-player/src/defaults';
 import { createArtboard, isContainer, uid, walk, type Artboard, type LogicNode, type NodeType, type Project, type SceneNode, type Variable } from '../../interactives-player/src/format';
 import { DRAW_API } from '../../interactives-player/src/draw';
@@ -19,7 +19,10 @@ import { SHADER_PRESETS } from '../../interactives-player/src/shader-presets';
 import { SHADER_BUILTINS, SHADER_UNIFORM_TYPES } from '../../interactives-player/src/shader-uniforms';
 import { runsPatch } from '../../interactives-player/src/textruns';
 import { sanitizeLayerInPlace } from '../../interactives-player/src/sanitize';
+import { liveProblems } from '../../interactives-player/src/live';
 import { checkExpression } from '../../interactives-player/src/expr';
+import { cleanNotes, makeNote, NOTE_COLOURS } from '../../interactives-player/src/notes';
+import type { Note } from '../../interactives-player/src/format';
 import { diff } from '../shared/ops.mjs';
 import { TOPICS, topicBody } from '../src/help/topics';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -164,6 +167,9 @@ function outline(list: SceneNode[], depth: number, maxDepth: number, out: string
     if (n.type === 'instance') extra.push(`artboard=${n.artboardId}`);
     if (n.type === 'draw') extra.push(`script layer${n.fps ? ` ${n.fps}fps` : ''}, ${n.code.split('\n').length} lines`);
     if (n.type === 'shader') extra.push(`shader layer, ${n.code.split('\n').length} lines, uniforms: ${(n.uniforms ?? []).map((u) => `${u.name}:${u.type}`).join(',') || 'none'}`);
+    if (n.type === 'progress') extra.push(`progress ${n.value}/${n.max}, ${n.orientation}, ${n.semantics}`);
+    if (n.type === 'chart') extra.push(`${n.kind} chart of ${JSON.stringify(n.data.slice(0, 40))}`);
+    if (n.type === 'connector') extra.push(`${n.route} connector ${connectorEnd(n.from)} to ${connectorEnd(n.to)}${n.label ? ` labelled ${JSON.stringify(n.label.slice(0, 30))}` : ''}`);
     if (n.type === 'image' && n.shaderFilter) extra.push(`shader filter, ${n.shaderFilter.code.split('\n').length} lines`);
     if (!n.visible) extra.push('hidden');
     if (n.locked) extra.push('locked');
@@ -177,21 +183,34 @@ function outline(list: SceneNode[], depth: number, maxDepth: number, out: string
   }
 }
 const r = (v: number) => Math.round(v * 10) / 10;
+/** A connector end for the outline: the layer it hangs on (a copy of a repeated one says which), or its loose spot. */
+function connectorEnd(e: { layer: string | { repeat: string; index: string }; x?: number; y?: number; side?: string }): string {
+  const side = e.side && e.side !== 'auto' ? `.${e.side}` : '';
+  if (typeof e.layer === 'string') return e.layer ? `${e.layer}${side}` : `(${r(e.x ?? 0)},${r(e.y ?? 0)})`;
+  return `${e.layer?.repeat}[${e.layer?.index}]${side}`;
+}
 
 function overview(p: Project, opts: { artboardId?: string; depth?: number }): string {
   const lines: string[] = [`# ${p.name} (${p.id})`, `Start artboard: ${p.settings.startArtboardId}`, ''];
   for (const ab of p.artboards) {
     if (opts.artboardId && ab.id !== opts.artboardId) continue;
     lines.push(`## Artboard ${ab.name} [${ab.id}] ${ab.width}x${ab.height}`);
+    const master = ab.master ? p.artboards.find((a) => a.id === ab.master) : null;
+    if (master) lines.push(`Page master: ${master.name} [${master.id}]${ab.masterHide?.length ? `, leaves out ${ab.masterHide.join(', ')}` : ''}${ab.masterSlots ? `, text slots ${JSON.stringify(ab.masterSlots)}` : ''} (its layers are drawn on this page, read only: edit them on the master)`);
+    const users = p.artboards.filter((a) => a.master === ab.id).length;
+    if (users) lines.push(`Used as a page master by ${users} page${users === 1 ? '' : 's'}${ab.masterOver?.length ? `; drawn over the pages: ${ab.masterOver.join(', ')}` : ''}`);
     if (ab.timelines.length) lines.push(`Timelines: ${ab.timelines.map((t) => `${t.name} [${t.id}] ${t.duration}ms ${t.loop}${t.autoplay ? ' autoplay' : ''} (${t.tracks.length} tracks)`).join('; ')}`);
+    if (ab.notes?.length) lines.push(`Notes: ${ab.notes.length} (use list_notes)`);
     if (ab.blends?.length) lines.push(`Blends: ${ab.blends.map((b) => `${b.name} [${b.id}] ${b.mode} (${b.entries.length} timelines)`).join('; ')}`);
+    if (ab.logic.notes?.length) lines.push(`Graph notes: ${ab.logic.notes.length} (use list_notes)`);
     if (ab.logic.nodes.length) lines.push(`Interactions: ${ab.logic.nodes.length} nodes, ${ab.logic.edges.length} connections (use get_interactions)`);
     const out: string[] = [];
     outline(ab.children, 0, opts.depth ?? (opts.artboardId ? 8 : 2), out, { n: opts.artboardId ? 600 : 80 });
     lines.push(...out, '');
   }
-  if (p.variables.length) lines.push('## Variables', ...p.variables.map((v) => `- ${v.name} [${v.id}] ${v.type} = ${JSON.stringify(v.initial)}${v.shared ? ' shared' : ''}${v.options ? ` options=${v.options.join('|')}` : ''}`), '');
-  if (p.dataSources.length) lines.push('## Data sources', ...p.dataSources.map((d) => `- ${d.name} [${d.id}] ${d.kind} from ${d.source === 'url' ? d.url : `asset ${d.assetId}`}`), '');
+  if (p.notes?.length) lines.push(`Notes on the canvas outside any artboard: ${p.notes.length} (use list_notes)`, '');
+  if (p.variables.length) lines.push('## Variables', ...p.variables.map((v) => `- ${v.name} [${v.id}] ${v.type} = ${JSON.stringify(v.initial)}${v.shared ? ' shared' : ''}${v.formula ? ` formula=${JSON.stringify(v.formula)}` : ''}${v.live ? ' live' : ''}${v.userData ? ' userData' : ''}${v.options ? ` options=${v.options.join('|')}` : ''}`), '');
+  if (p.dataSources.length) lines.push('## Data sources', ...p.dataSources.map((d) => `- ${d.name} [${d.id}] ${d.kind} from ${d.source === 'url' ? d.url : d.source === 'shared' ? `shared responses (${d.shared?.who === 'me' ? 'only me' : 'everyone in the class'}${d.shared?.whoVariable ? `, switched by variable ${d.shared.whoVariable}` : ''})` : `asset ${d.assetId}`}`), '');
   if (p.scripts.length) lines.push('## Scripts', ...p.scripts.map((sc) => `- ${sc.name} [${sc.id}]${sc.runOnStart ? ' runs on start' : ''} (${sc.code.split('\n').length} lines)`), '');
   if (p.assets.length) lines.push('## Assets', ...p.assets.map((a) => `- ${a.name} [${a.id}] ${a.mime}`));
   return lines.join('\n');
@@ -249,7 +268,28 @@ function validate(p: Project): string[] {
     }
     for (const e of ab.logic.edges) if (!ab.logic.nodes.some((n) => n.id === e.to) || !ab.logic.nodes.some((n) => n.id === e.from)) problems.push(`${ab.name}: a connection points at a missing node (${e.id})`);
   }
+  problems.push(...liveProblems(p));
   return problems;
+}
+
+/** Every note of a project with where it lives (the artboard, none for the canvas, or `graph` when it is on an artboard's interaction graph). */
+function listNotes(p: Project): { note: Note; ab: Artboard | null; list: Note[]; graph?: boolean }[] {
+  return [
+    ...(p.notes ?? []).map((note) => ({ note, ab: null as Artboard | null, list: p.notes! })),
+    ...p.artboards.flatMap((ab) => (ab.notes ?? []).map((note) => ({ note, ab: ab as Artboard | null, list: ab.notes! }))),
+    ...p.artboards.flatMap((ab) => (ab.logic.notes ?? []).map((note) => ({ note, ab: ab as Artboard | null, list: ab.logic.notes!, graph: true }))),
+  ];
+}
+/** A node or group of an artboard's graph, by id: where its top left corner is. */
+const graphOrigin = (ab: Artboard, id: string): { x: number; y: number } | undefined => ab.logic.nodes.find((n) => n.id === id) ?? ab.logic.groups?.find((g) => g.id === id);
+const findNote = (p: Project, id: string) => listNotes(p).find((x) => x.note.id === id);
+
+function notesReport(p: Project, artboardId?: string): string {
+  const rows = listNotes(p).filter((x) => !artboardId || x.ab?.id === artboardId);
+  if (!rows.length) return 'No notes.';
+  return rows
+    .map(({ note: n, ab, graph }) => `- [${n.id}] ${graph ? `on the interaction graph of ${ab!.name} [${ab!.id}]` : ab ? `on ${ab.name} [${ab.id}]` : 'on the canvas'} at ${r(n.x)},${r(n.y)} ${r(n.w)}x${r(n.h)} ${n.colour ?? 'gold'}${n.anchor ? ` follows ${graph ? 'node or group' : 'layer'} ${n.anchor.layerId}` : ''}${n.author ? ` by ${n.author}` : ''}\n${n.text.split('\n').map((l) => `    ${l}`).join('\n')}`)
+    .join('\n');
 }
 
 // ---------------------------------------------------------------- editing
@@ -337,13 +377,22 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
       }
       case 'set_artboard': {
         const ab = findAb(c.id);
-        for (const [k, v] of Object.entries(resolveRefs(c.props ?? {}) as Record<string, unknown>)) if (!['id', 'children', 'timelines', 'logic'].includes(k)) (ab as unknown as Record<string, unknown>)[k] = v;
+        for (const [k, v] of Object.entries(resolveRefs(c.props ?? {}) as Record<string, unknown>)) {
+          if (['id', 'children', 'timelines', 'logic'].includes(k)) continue;
+          // A page master can be given by artboard name
+          if (k === 'master' && typeof v === 'string') (ab as unknown as Record<string, unknown>)[k] = p.artboards.find((a) => a.id === v || a.name === v)?.id ?? v;
+          else (ab as unknown as Record<string, unknown>)[k] = v;
+        }
         break;
       }
       case 'add_variable': {
         const v: Variable = { id: uid('v'), name: String(c.name), type: (c.type as Variable['type']) ?? 'number', initial: (c.initial as Variable['initial']) ?? 0 };
         if (Array.isArray(c.options)) v.options = c.options.map(String);
         if (c.shared) v.shared = true;
+        if (typeof c.formula === 'string' && c.formula.trim()) v.formula = c.formula;
+        if (c.live && v.formula) v.live = true;
+        if (c.user_data && !v.live) v.userData = true;
+        if (c.persist) v.persist = true;
         if (p.variables.some((x) => x.name === v.name)) throw new Error(`${where}: a variable called ${v.name} already exists`);
         p.variables.push(v);
         if (key) created[key] = v.id;
@@ -417,8 +466,91 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
         if (typeof c.run_on_start === 'boolean') (sc as { runOnStart?: boolean }).runOnStart = c.run_on_start;
         break;
       }
+      case 'add_note': {
+        // artboard_id puts the note on that artboard (x, y in its pixels); without one it sits on the canvas. layer_id makes it follow that layer
+        const ab = c.artboard_id ? findAb(c.artboard_id) : null;
+        const layer = c.layer_id && ab ? locate(p, ref(c.layer_id)) : null;
+        if (c.layer_id && (!layer || layer.ab !== ab)) throw new Error(`${where}: no layer ${String(c.layer_id)} on that artboard`);
+        const at = { x: typeof c.x === 'number' ? c.x : layer ? layer.node.x + layer.node.width + 12 : 0, y: typeof c.y === 'number' ? c.y : layer ? layer.node.y : 0 };
+        const note = makeNote({ ...at, w: typeof c.w === 'number' ? c.w : undefined, h: typeof c.h === 'number' ? c.h : undefined, text: String(c.text ?? ''), colour: NOTE_COLOURS.includes(c.colour as never) ? (c.colour as Note['colour']) : undefined, author: typeof c.author === 'string' && c.author ? c.author : `${ctx().agent} (AI)`, created: new Date().toISOString() });
+        // A layer's own box starts at its corner, so a note placed beside it keeps that offset
+        if (layer) note.anchor = { layerId: layer.node.id, lx: Math.round((at.x - layer.node.x) * 10) / 10, ly: Math.round((at.y - layer.node.y) * 10) / 10 };
+        if (ab) (ab.notes ??= []).push(note);
+        else (p.notes ??= []).push(note);
+        if (key) created[key] = note.id;
+        break;
+      }
+      case 'add_graph_note': {
+        // A note on an artboard's interaction graph (x, y in graph coordinates). node_id (a node or a group of that graph) makes it follow it; it is placed above it unless x and y say otherwise
+        const ab = findAb(c.artboard_id);
+        const host = c.node_id ? graphOrigin(ab, ref(c.node_id)) : undefined;
+        if (c.node_id && !host) throw new Error(`${where}: no node or group ${String(c.node_id)} on ${ab.name}`);
+        const at = { x: typeof c.x === 'number' ? c.x : host ? host.x : 0, y: typeof c.y === 'number' ? c.y : host ? host.y - 130 : 0 };
+        const note = makeNote({ ...at, w: typeof c.w === 'number' ? c.w : 220, h: typeof c.h === 'number' ? c.h : 110, text: String(c.text ?? ''), colour: NOTE_COLOURS.includes(c.colour as never) ? (c.colour as Note['colour']) : undefined, author: typeof c.author === 'string' && c.author ? c.author : `${ctx().agent} (AI)`, created: new Date().toISOString() });
+        if (host) note.anchor = { layerId: ref(c.node_id), lx: Math.round((at.x - host.x) * 10) / 10, ly: Math.round((at.y - host.y) * 10) / 10 };
+        (ab.logic.notes ??= []).push(note);
+        if (key) created[key] = note.id;
+        break;
+      }
+      case 'set_note': {
+        const found = findNote(p, ref(c.id));
+        if (!found) throw new Error(`${where}: no note ${String(c.id)}`);
+        const n = found.note;
+        if (found.graph) {
+          // a graph note follows a node or group (anchor_id; null lets go)
+          for (const k of ['x', 'y', 'w', 'h'] as const) if (typeof c[k] === 'number') n[k] = c[k] as number;
+          if (typeof c.text === 'string') n.text = c.text;
+          if (NOTE_COLOURS.includes(c.colour as never)) n.colour = c.colour as Note['colour'];
+          if (c.anchor_id === null) delete n.anchor;
+          else if (typeof c.anchor_id === 'string') {
+            const host = graphOrigin(found.ab!, ref(c.anchor_id));
+            if (!host) throw new Error(`${where}: no node or group ${c.anchor_id} on that note's graph`);
+            n.anchor = { layerId: ref(c.anchor_id), lx: Math.round((n.x - host.x) * 10) / 10, ly: Math.round((n.y - host.y) * 10) / 10 };
+          }
+          break;
+        }
+        for (const k of ['x', 'y', 'w', 'h'] as const) if (typeof c[k] === 'number') n[k] = c[k] as number;
+        if (typeof c.text === 'string') n.text = c.text;
+        if (NOTE_COLOURS.includes(c.colour as never)) n.colour = c.colour as Note['colour'];
+        if (c.layer_id === null) delete n.anchor;
+        else if (typeof c.layer_id === 'string') {
+          const layer = locate(p, ref(c.layer_id));
+          if (!layer || layer.ab !== found.ab) throw new Error(`${where}: no layer ${c.layer_id} on that note's artboard`);
+          n.anchor = { layerId: layer.node.id, lx: Math.round((n.x - layer.node.x) * 10) / 10, ly: Math.round((n.y - layer.node.y) * 10) / 10 };
+        }
+        break;
+      }
+      case 'delete_note': {
+        const found = findNote(p, ref(c.id));
+        if (!found) throw new Error(`${where}: no note ${String(c.id)}`);
+        found.list.splice(found.list.indexOf(found.note), 1);
+        if (!found.list.length) {
+          if (found.graph) delete found.ab!.logic.notes;
+          else if (found.ab) delete found.ab.notes;
+          else delete p.notes;
+        }
+        break;
+      }
       default:
         throw new Error(`${where}: unknown op "${c.op}"`);
+    }
+  }
+  // An agent can write any value into a note: put wrong-typed ones right before they are shared
+  if (p.notes) {
+    const list = cleanNotes(p.notes);
+    if (list) p.notes = list;
+    else delete p.notes;
+  }
+  for (const ab of p.artboards) {
+    if (ab.notes) {
+      const list = cleanNotes(ab.notes);
+      if (list) ab.notes = list;
+      else delete ab.notes;
+    }
+    if (ab.logic.notes) {
+      const list = cleanNotes(ab.logic.notes);
+      if (list) ab.logic.notes = list;
+      else delete ab.logic.notes;
     }
   }
   return { project: p, created, touched };
@@ -450,17 +582,21 @@ function setPath(obj: Record<string, unknown>, path: string, v: unknown) {
 
 function reference(topic: string): string {
   if (topic === 'interactions') {
-    return CATALOG.map((d) => `### ${d.kind} — ${d.label} (${d.category})\n${d.description}${d.outputs.length > 1 || d.outputs[0]?.label ? `\nOutputs: ${d.outputs.map((o) => o.id).join(', ')}` : ''}\n${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join('|')}` : ''}${pd.default !== undefined ? `, default ${JSON.stringify(pd.default)}` : ''})${pd.help ? `: ${pd.help}` : ''}`).join('\n')}`).join('\n\n');
+    return CATALOG.map((d) => `### ${d.kind} — ${d.label} (${d.category})\n${d.description}${d.gives ? `\nGives: ${d.gives.join(', ')}` : ''}${d.outputs.length > 1 || d.outputs[0]?.label ? `\nOutputs: ${d.outputs.map((o) => o.id).join(', ')}` : ''}\n${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join('|')}` : ''}${pd.default !== undefined ? `, default ${JSON.stringify(pd.default)}` : ''})${pd.help ? `: ${pd.help}` : ''}`).join('\n')}`).join('\n\n');
   }
-  if (topic === 'properties') return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join('\n');
+  if (topic === 'properties') return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join('\n') + '\nOn a progress layer only: ' + layerOwnProps(createNode('progress')).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join('; ') + '\nOn a connector layer only: ' + layerOwnProps(createNode('connector')).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join('; ');
   if (topic === 'layers') {
-    const types: NodeType[] = ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance', 'draw', 'shader', 'bone'];
+    const types: NodeType[] = ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance', 'draw', 'shader', 'progress', 'chart', 'connector', 'bone'];
     return (
-      'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, decorative (hide from assistive tech), focusable (tab stop override), tabOrder, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it).\n' +
+      'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, depth (parallax, percent -100 to 100: while playing the layer shifts against the pointer, more the nearer it is; 0 is still; settings.parallax on the project {range px for depth 100, default 40; tilt true to follow a phone tilt too} sets how far), link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, ariaExpanded, ariaPressed (a toggle button: true/false), ariaCurrent (true, or page|step|location|date|time: the current tab, page or step), decorative (hide from assistive tech), focusable (tab stop override), tabOrder, shortcut (a key that clicks the layer, e.g. "r", "1", "Ctrl+Enter"), className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it). Buttons and inputs take disabled (bindable) and disabledOpacity (0-1, default 0.5, how dimmed they look while disabled). A frame can be a dialog: dialog {modal (default true), scrim (a solid paint over the artboard behind it), closeOnEscape (default true), closeOnOutsideClick, initialFocus (layer id), returnFocus (default true), openVariable (variable id: the frame shows while it is on, Escape turns it off)}. A frame or group can carry keyNav {mode: list|grid|radio, orientation: vertical|horizontal|both, columns (grid on a container; a grid repeater uses its own), wrap, indexVariable (variable id, number from 0; setting it moves focus too when it is inside), countHidden (hidden copies keep their numbers and are stepped over)}: one item is the Tab stop and the arrows, Home and End move between a repeater\'s copies or a container\'s children; radio mode also selects (clicks) the item it lands on.\n' +
       'Text layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\n' +
       'Text layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\n' +
       'Script layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t) => `"${t.name}"`).join(', ') + '. The g API:\n' + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join('\n') + '\nExample: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear(\'#10131a\');\\n  g.fill(\'#6f8cff\');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.\n' +
       'Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ' + SHADER_BUILTINS.join(', ') + ' (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: ' + SHADER_UNIFORM_TYPES.join('|') + ', value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset\'s): ' + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === 'filter' ? ', reads u_image' : ''})`).join(', ') + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\n' +
+      'Progress bars (type "progress"): a track with a bar filling it. Fields: value, max (both take bindings; value is animatable, so a timeline track or Animate property can fill it), fill/stroke (the track, any paints), barFill (the bar\'s paint), cornerRadius, orientation (horizontal | vertical), reverse (grow from the right or the top), semantics (progressbar | meter | none: the role and aria-valuenow/min/max/valuetext it carries; bars made for a screen reader need ariaLabel), valueText (a text template: {value}, {max}, {percent} and variables). Colours may be theme token references.\n' +
+      'Pictures (type "image"): assetId, fit (cover | contain | fill) and an optional crop {x, y, zoom} that moves and zooms the picture inside its frame without touching the file: zoom is 1 to 20 (2 shows the middle quarter), x and y are fractions of the frame\'s width and height the picture is moved by (0.1 is a tenth to the right), and the frame clips the rest. Leave crop off for the picture as fit draws it. A new picture wants an ariaLabel saying what it shows (or decorative: true).\n' +
+      'Charts (type "chart"): a column | bar | line | pie | donut chart drawn from data, an expression for a list: numbers, objects (label from labelKey, number from valueKey; blank guesses), [label, value] pairs, or one object. Fields: kind, data, labelKey, valueKey, colors (tokens or colours handed out in turn; varyColors for one each on bar, column and line), color (labels and axes), fontFamily, fontSize, min/max (fixed axis ends, null fits the data), gridlines, axisLabels, valueLabels, legend, hole (donut, 0.1-0.95), animate, table (a hidden data table for screen readers), decimals, prefix, suffix ({variable} slots work in both). An object item with hidden: true (or the field hiddenKey names) is a placeholder: a dashed empty mark with a ?, read out as hidden, kept out of the auto axis unless it also has a number. Clicks, presses, hovers and focus on a mark give event.index (the item\'s position) to On pointer and On focus nodes. Give it an ariaLabel.\n' +
+      'Connectors (type "connector"): a line or arrow joining two layers that follows them, so you never position it. Fields: from and to, each {layer: layerId | {repeat: templateLayerId, index: "expression"} | "" for a loose point, side?: auto|top|right|bottom|left, offset?: px along the side, x?/y? for a loose point (in the connector\'s parent)}; route: straight | elbow | curved; stroke (the line: {paint, width, dash?, ...}, paints may be tokens); startCap/endCap: none | arrow | dot; capSize (0 = from the stroke width); gap (px short of each layer); cornerRadius (elbow corners and the label chip); label (text, {variable} slots work), labelAt (0-1 along the line), color (label text), fill (label background), fontFamily, fontSize, fontWeight. x, y, width, height and rotation are ignored (the box is worked out from the route; leave them 0). It is hidden while either layer is hidden or missing. To connect repeated layers: the repeater\'s template (its first child) has an id, copy i is id~i; put the connector in a repeater of its own over a list of links and use from.layer {repeat: templateId, index: "item.from"}. Decorative (hidden from screen readers) unless ariaLabel is set, so give the page a text alternative (a nested list) for what it shows. Stroke trimEnd animates a draw-in.\n' +
       'Shader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\n' +
       'Bones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\n' +
       'Paths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' +
@@ -476,6 +612,14 @@ function reference(topic: string): string {
 
 const S = (props: Record<string, unknown>, required: string[] = []) => ({ type: 'object', properties: props, required });
 const str = (description: string) => ({ type: 'string', description });
+
+/** The notes tools are conveniences over the edit tool, so they take the same path: one batch, live to everyone. */
+const runEdit = (a: Record<string, unknown>, changes: Change[], explain: string): Promise<string> => {
+  const edit = TOOLS.find((t) => t.name === 'edit')!;
+  // (an undefined value would be sent as nothing at all by JSON, but applyChanges reads them as given, so leave them out)
+  const clean = changes.map((c) => Object.fromEntries(Object.entries(c).filter(([, v]) => v !== undefined)) as Change);
+  return edit.run({ project_id: a.project_id, changes: clean, explain });
+};
 
 const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a: Record<string, unknown>) => Promise<string> }[] = [
   {
@@ -548,11 +692,13 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       'Each change is {op, ...}: ' +
       'set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); ' +
       'add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; ' +
-      'add_artboard {name, width, height, ref?}; set_artboard {id, props}; ' +
-      'add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, ref?}; set_variable {id or name, props}; ' +
+      'add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); ' +
+      'add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; ' +
       'add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; ' +
       'add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; ' +
-      'add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}. ' +
+      'add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; ' +
+      'add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; ' +
+      'add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). ' +
       'Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
     inputSchema: S({ project_id: str('Project id'), changes: { type: 'array', items: { type: 'object' } }, explain: str('One line saying what this does (shown in the editor log)') }, ['project_id', 'changes']),
     run: async (a) => {
@@ -569,6 +715,47 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       const problems = validate(project);
       return `Applied ${(a.changes as unknown[]).length} change(s) as ${ops.length} op(s).${Object.keys(created).length ? `\nCreated: ${JSON.stringify(created)}` : ''}${problems.length ? `\n\nProblems now in the project:\n- ${problems.slice(0, 30).join('\n- ')}` : ''}`;
     },
+  },
+  {
+    name: 'list_notes',
+    description: 'The sticky notes in a project (or one artboard): id, where, colour, the layer it follows, who wrote it, and its text. Notes are the authors\' own annotations ("swap this photo before release", what a template\'s parts are for); the player, exports and share links never carry them. Read them before changing a project you did not make.',
+    inputSchema: S({ project_id: str('Project id'), artboard_id: str('Optional: only the notes on this artboard (id or name)') }, ['project_id']),
+    run: async (a) => {
+      const p = await loadProject(String(a.project_id));
+      const ab = a.artboard_id ? p.artboards.find((x) => x.id === a.artboard_id || x.name === a.artboard_id) : undefined;
+      if (a.artboard_id && !ab) throw new Error(`No artboard ${String(a.artboard_id)}`);
+      return notesReport(p, ab?.id);
+    },
+  },
+  {
+    name: 'add_note',
+    description: 'Leave a sticky note for the people editing this project, on an artboard (x, y in the artboard\'s pixels; the note can sit outside it) or on the canvas (leave artboard_id out). Give layer_id to attach it to a layer so it follows that layer (it is placed beside the layer unless x and y say otherwise). Text takes light markdown: **bold**, *italic*, `code`, "- " bullets, "[ ]" and "[x]" tasks. Players never see notes.',
+    inputSchema: S(
+      { project_id: str('Project id'), artboard_id: str('Artboard id or name (omit for a note on the canvas)'), x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number', description: 'Width in note pixels (default 200)' }, h: { type: 'number', description: 'Height (default 120)' }, text: str('What the note says'), colour: str('gold, orange, green, sky, purple or rose'), layer_id: str('A layer on that artboard for the note to follow') },
+      ['project_id', 'text'],
+    ),
+    run: async (a) => runEdit(a, [{ op: 'add_note', artboard_id: a.artboard_id, x: a.x, y: a.y, w: a.w, h: a.h, text: a.text, colour: a.colour, layer_id: a.layer_id, ref: 'note' }], 'Add a note'),
+  },
+  {
+    name: 'add_graph_note',
+    description: 'Leave a sticky note on an artboard\'s interaction graph, for the people reading the flows: what a chain or group does and why, what to change to adapt it, the output that is easy to miss. Give node_id (a node or group id from get_interactions) to attach it so it moves with that node or group; it is placed above it unless x and y (graph coordinates) say otherwise. Keep notes to 1 to 3 lines, with **bold** for the key idea and [ ] for what the author must do. Like every note it never reaches players, exports or share links. Edit or remove it with edit_note and remove_note.',
+    inputSchema: S(
+      { project_id: str('Project id'), artboard_id: str('Artboard id or name'), node_id: str('Node or group id to follow (optional)'), x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number', description: 'Width (default 220)' }, h: { type: 'number', description: 'Height (default 110)' }, text: str('What the note says'), colour: str('gold, orange, green, sky, purple or rose') },
+      ['project_id', 'artboard_id', 'text'],
+    ),
+    run: async (a) => runEdit(a, [{ op: 'add_graph_note', artboard_id: a.artboard_id, node_id: a.node_id, x: a.x, y: a.y, w: a.w, h: a.h, text: a.text, colour: a.colour, ref: 'note' }], 'Add a graph note'),
+  },
+  {
+    name: 'edit_note',
+    description: 'Change a note: its text, colour, position or size, or which layer it follows (layer_id null lets go), or for a graph note which node or group it follows (anchor_id, null lets go). Use list_notes for ids.',
+    inputSchema: S({ project_id: str('Project id'), id: str('Note id'), text: str('New text'), colour: str('gold, orange, green, sky, purple or rose'), x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' }, anchor_id: { type: ['string', 'null'], description: 'A graph note only: the node or group to follow, or null to let go' }, layer_id: { type: ['string', 'null'], description: 'Layer to follow, or null to let go' } }, ['project_id', 'id']),
+    run: async (a) => runEdit(a, [{ op: 'set_note', id: a.id, text: a.text, colour: a.colour, x: a.x, y: a.y, w: a.w, h: a.h, ...('layer_id' in a ? { layer_id: a.layer_id } : {}), ...('anchor_id' in a ? { anchor_id: a.anchor_id } : {}) }], 'Edit a note'),
+  },
+  {
+    name: 'remove_note',
+    description: 'Delete a sticky note.',
+    inputSchema: S({ project_id: str('Project id'), id: str('Note id') }, ['project_id', 'id']),
+    run: async (a) => runEdit(a, [{ op: 'delete_note', id: a.id }], 'Remove a note'),
   },
   {
     name: 'validate',
@@ -667,7 +854,7 @@ function closeContext(c: McpContext) {
 }
 
 // The stdio loop only runs when this file is the server. The tests import the pieces below and drive them directly
-export { TOOLS, applyChanges, closeContext, handle, interactions, locate, overview, reference, respond, sessions, setPath, syncRuns, validate };
+export { TOOLS, applyChanges, closeContext, handle, interactions, locate, notesReport, overview, reference, respond, sessions, setPath, syncRuns, validate };
 
 if (!process.env.INTERACTIVES_MCP_NO_STDIO) {
   let buffer = '';
