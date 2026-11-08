@@ -16,6 +16,7 @@ import { ScriptsPanel, VariablesPanel } from '../panels/ScriptsVariables';
 import { DataPanel } from '../panels/DataPanel';
 import { UsagePanel } from '../panels/UsagePanel';
 import { CreditsPanel } from '../panels/CreditsPanel';
+import { IconsPanel } from '../panels/IconsPanel';
 import { InsightsPanel } from '../panels/InsightsPanel';
 import { InterfacePanel } from '../panels/InterfacePanel';
 import { ThemesPanel } from '../panels/ThemesPanel';
@@ -51,6 +52,7 @@ function CommentsBody() {
 const PANELS: Record<PanelId, PanelDef> = {
   layers: { label: 'Layers', help: 'layers-panel', tip: 'The artboards and the layers on them', body: () => <Layers /> },
   assets: { label: 'Assets', help: 'assets', tip: 'Every file in the project: pictures, video, sound, fonts, data and design files', body: () => <Assets /> },
+  icons: { label: 'Icons', help: 'icons', tip: 'The Toolbox\'s own icons (tick, bell, speech bubble, arrows and more), added as vector layers in a theme colour', body: () => <IconsPanel /> },
   libraries: { label: 'Libraries', help: 'libraries', tip: 'Share components and styles between projects', body: () => <LibrariesPanel /> },
   comments: { label: 'Comments', help: 'comments', tip: 'Review comments: notes pinned on the canvas by you and by reviewers, with replies, resolve and assignees', body: () => <CommentsBody /> },
   inspector: { label: 'Properties', help: 'properties-panel', tip: 'The settings of the selected layers, or of the artboard and project', body: () => <Inspector /> },

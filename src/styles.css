@@ -9904,3 +9904,83 @@ code {
   opacity: 0.45;
   cursor: default;
 }
+
+/* ---------------------------------------------------------------- the Icons tab */
+.icons-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+}
+.icons-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.icons-search {
+  width: 100%;
+  box-sizing: border-box;
+}
+.icons-colours {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.icons-dot {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.icons-dot.on {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 2px;
+}
+.icons-theme {
+  padding: 2px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.icons-theme.on {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.icons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.icons-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  text-align: center;
+  cursor: pointer;
+}
+.icons-item:hover,
+.icons-item:focus-visible {
+  border-color: var(--primary-bg);
+}
