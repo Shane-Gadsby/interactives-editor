@@ -217,6 +217,8 @@ export class FakeDb {
   'comment-notices' = new FakeCollection();
   'interactives-user-data' = new FakeCollection();
   'interactives-activity-user-data' = new FakeCollection();
+  'shared-responses' = new FakeCollection();
+  'shared-hidden' = new FakeCollection();
   ingest = new FakeCollection();
   'user-lookup' = new FakeCollection();
   'doc-chunks' = new FakeCollection();
