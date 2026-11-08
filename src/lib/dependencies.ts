@@ -211,6 +211,7 @@ export function analyzeUsage(project: Project): UsageReport {
   // Artboards
   for (const ab of project.artboards) {
     const abSrc: UsageSource = { type: 'artboard', id: ab.id, name: ab.name };
+    if (ab.master) useId('artboard', ab.master, abSrc, 'page master');
     const nodeById = new Map<string, SceneNode>();
     const walkAll = (list: SceneNode[]) => {
       for (const n of list) {

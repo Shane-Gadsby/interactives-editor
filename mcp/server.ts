@@ -184,6 +184,10 @@ function overview(p: Project, opts: { artboardId?: string; depth?: number }): st
   for (const ab of p.artboards) {
     if (opts.artboardId && ab.id !== opts.artboardId) continue;
     lines.push(`## Artboard ${ab.name} [${ab.id}] ${ab.width}x${ab.height}`);
+    const master = ab.master ? p.artboards.find((a) => a.id === ab.master) : null;
+    if (master) lines.push(`Page master: ${master.name} [${master.id}]${ab.masterHide?.length ? `, leaves out ${ab.masterHide.join(', ')}` : ''}${ab.masterSlots ? `, text slots ${JSON.stringify(ab.masterSlots)}` : ''} (its layers are drawn on this page, read only: edit them on the master)`);
+    const users = p.artboards.filter((a) => a.master === ab.id).length;
+    if (users) lines.push(`Used as a page master by ${users} page${users === 1 ? '' : 's'}${ab.masterOver?.length ? `; drawn over the pages: ${ab.masterOver.join(', ')}` : ''}`);
     if (ab.timelines.length) lines.push(`Timelines: ${ab.timelines.map((t) => `${t.name} [${t.id}] ${t.duration}ms ${t.loop}${t.autoplay ? ' autoplay' : ''} (${t.tracks.length} tracks)`).join('; ')}`);
     if (ab.blends?.length) lines.push(`Blends: ${ab.blends.map((b) => `${b.name} [${b.id}] ${b.mode} (${b.entries.length} timelines)`).join('; ')}`);
     if (ab.logic.nodes.length) lines.push(`Interactions: ${ab.logic.nodes.length} nodes, ${ab.logic.edges.length} connections (use get_interactions)`);
@@ -339,7 +343,12 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
       }
       case 'set_artboard': {
         const ab = findAb(c.id);
-        for (const [k, v] of Object.entries(resolveRefs(c.props ?? {}) as Record<string, unknown>)) if (!['id', 'children', 'timelines', 'logic'].includes(k)) (ab as unknown as Record<string, unknown>)[k] = v;
+        for (const [k, v] of Object.entries(resolveRefs(c.props ?? {}) as Record<string, unknown>)) {
+          if (['id', 'children', 'timelines', 'logic'].includes(k)) continue;
+          // A page master can be given by artboard name
+          if (k === 'master' && typeof v === 'string') (ab as unknown as Record<string, unknown>)[k] = p.artboards.find((a) => a.id === v || a.name === v)?.id ?? v;
+          else (ab as unknown as Record<string, unknown>)[k] = v;
+        }
         break;
       }
       case 'add_variable': {
@@ -554,7 +563,7 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       'Each change is {op, ...}: ' +
       'set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); ' +
       'add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; ' +
-      'add_artboard {name, width, height, ref?}; set_artboard {id, props}; ' +
+      'add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); ' +
       'add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; ' +
       'add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; ' +
       'add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; ' +

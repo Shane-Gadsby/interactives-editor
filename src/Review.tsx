@@ -5,7 +5,7 @@
  */
 import { useNoProgressHost } from './lib/preview-learner';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Renderer, normalizeProject, prepareNodes, type Artboard, type Project } from 'interactives-player';
+import { Renderer, normalizeProject, prepareNodes, withMaster, type Artboard, type Project } from 'interactives-player';
 import type { Anchor, CommentUser, Person, Thread } from '../shared/comments.mjs';
 import { comments, useComments } from './lib/comments';
 import { anchorAt, pinPlace, placeLabel } from './lib/comment-anchor';
@@ -187,7 +187,7 @@ function ReviewBoard({ project, artboard, scale }: { project: Project; artboard:
     const r = renderer.current;
     if (!r) return;
     const vars = previewScope(project, artboard);
-    r.render(artboard, prepareNodes(artboard.children, { vars }), { vars });
+    r.render(artboard, prepareNodes(withMaster(project.artboards, artboard), { vars }), { vars });
   }, [project, artboard]);
 
   const place = (e: React.MouseEvent) => {

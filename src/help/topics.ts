@@ -1031,6 +1031,41 @@ A page has a **Score** variable, a bar chart that grows on a timeline called **I
 - A host page can listen for the switch: \`player.on('variantchange', ({ from, to, set, width }) => ...)\`, or \`ix-variant\` on the \`<interactives-player>\` element. \`player.resize()\` makes the player re-measure its box if the page changes its size without the browser reporting it.`,
   },
   {
+    id: 'page-master',
+    title: 'Page masters',
+    group: 'Design',
+    summary: 'One artboard holds what every page shares (logo, accent bar, footer); pages draw it under their own layers. Change it once and every page follows.',
+    keywords: 'master page template chrome logo footer header shared background brand repeat layers slide master text slot hide',
+    body: `Pages in a deck repeat the same things: a logo, an accent bar, a footer line. Copying them onto every page makes every project bigger, and a change means editing every page. A **page master** is an artboard that holds those layers once. A page that uses it draws the master's layers under its own, in the same renderer (it is not an [instance](instances), so there is no nested player). Edit the master and every page changes at once, while you work and in the player.
+
+## Quick start
+1. Build an artboard with the shared layers: the logo, the bar, the footer. It does not need a background; the page keeps its own.
+2. Right-click it in the Layers panel and choose **Make this a master** (or **Make this a master** in its **Page master** section).
+3. Select a page, open **Page master** in the Inspector and pick the master. Or select the master and choose **Use as master for…**, or **Use for all other pages**.
+4. To change the shared layers, click **Edit master** on any page. The master's own layers are read-only on a page: clicking where one is selects the page, not the master's layer.
+
+## On a page
+- **Master**: the artboard drawn under this page, or **None**.
+- **Show these master layers on this page**: untick a layer to leave it off this page only (matched by the layer's name, at any depth). Name the layers clearly in the master.
+- **Text slots**: put \`{pageTitle}\` (any name) in a text layer of the master and the page's **Text slots** list gets a field for it. What you type is what that page says. A slot with nothing typed shows the project variable of that name, if there is one. What you type can use \`{variable}\` itself.
+- **Detach** copies the master's layers into the page as ordinary, editable layers and stops using the master.
+
+## On the master
+- **Draw over the pages**: tick the top-level layers that should sit over the pages' own layers (a corner fold, a footer bar). Everything else goes under.
+- The list of pages that use it. A master that pages use can't be turned back into an ordinary artboard until they stop. Deleting a master takes it off its pages (Undo brings it back).
+- A master can't have a master of its own, and a page that is a master can't use one.
+
+## What a master layer is
+- **Read-only and decorative.** Master layers are hidden from screen readers, are never tab stops, and the pointer goes through them to the page. A layer with a **Role** or an **Accessible name** (a logo with alt text) stays in the reading order. The master's layers come first (under) or last (over) in a page's reading order.
+- **Shapes, paths, text, pictures, groups and frames only.** Buttons, inputs, links, video, embeds, instances, script layers and shaders are left out. A master has no interactions or timelines of its own that run on a page, so **On click** on a master layer does nothing: put interactive things on the page.
+- **Bindings still work**, so a progress bar or a title bound to a variable is fine in a master.
+- **Names and ids never clash.** The master's layers can't be targeted from a page's graph, timeline or script, and a page layer with the same name is never confused with one.
+- **Responsive sets**: every member is an artboard of its own, so give each its own master of the right size. A master is drawn at its own coordinates.
+
+## Everywhere else
+Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.ixp\` packages and the player all draw the master. A **Lottie** export flattens it into the animation. A library component that uses a master brings the master along (as an inner artboard). In a project made from a branded starter, the master's brand layers are locked like any other brand layer, and a page can't leave them off or drop its master.`,
+  },
+  {
     id: 'instances',
     title: 'Instances (components)',
     group: 'Design',

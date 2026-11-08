@@ -12,6 +12,7 @@
  *   has touched (like a library update), and add what is new. Parts the person changed are kept and listed.
  */
 import { isContainer, type Artboard, type Asset, type Project, type SceneNode, type TemplateChecklistItem, type TemplateUse } from 'interactives-player';
+import { dropMasterRefs } from './page-master';
 import { artboardProps, baselineOf, nodeProps, partHash, partsOf } from '../../shared/template.mjs';
 
 /** A template as the server lists it (no snapshot). */
@@ -389,6 +390,9 @@ export function applyTemplateUpdate(d: Project, snapshot: Project, keys: string[
     else d.variables.push(next);
     taken.push(next);
   }
+
+  // A page whose master was not taken (or is gone) stands on its own
+  dropMasterRefs(d, new Set(d.artboards.map((a) => a.master).filter((m): m is string => !!m && !d.artboards.some((a) => a.id === m))));
 
   // Everything that now matches the template (taken just now, or already) has the template's hash as its baseline
   const now = locate(d);

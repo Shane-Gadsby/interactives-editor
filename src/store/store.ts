@@ -22,6 +22,7 @@ import {
   sanitizeLayerInPlace,
   setBase,
   setMembers,
+  masterOf,
   type Artboard,
   type Keyframe,
   type Project,
@@ -49,6 +50,7 @@ import { adoptQuestions, dropOrphanKitNodes } from '../lib/question-kit';
 import { track } from '../lib/analytics';
 import { noteNodeAdded, noteProps } from '../lib/usage';
 import { variantPlan, type VariantSide } from '../lib/variants-edit';
+import { detachMaster, dropMasterRefs, markMaster, setMaster } from '../lib/page-master';
 
 /** Whether any frame in a tree has auto layout. */
 function hasAutoLayout(list: SceneNode[]): boolean {
@@ -1202,6 +1204,8 @@ export class EditorStore {
         d.artboards = d.artboards.filter((a) => a.id !== id);
         if (d.settings.startArtboardId === id) d.settings.startArtboardId = d.artboards[0].id;
       }
+      // Pages whose master went stand on their own (undo brings it back)
+      dropMasterRefs(d as Project, gone);
       pruneGroups(d as Project);
     });
     this.set({ artboardSelected: false, selection: [] });
@@ -1274,6 +1278,82 @@ export class EditorStore {
       },
       { coalesce: `ab-bp-${id}` },
     );
+  }
+
+  /** Use an artboard as the page master of these pages (null: take them off their master). */
+  setMasterOf(pageIds: string[], masterId: string | null): void {
+    track('feature', 'master-set', { thing: masterId ? 'use' : 'clear' });
+    this.update((d) => {
+      for (const id of pageIds) setMaster(d as Project, id, masterId);
+    });
+  }
+
+  /** Keep an artboard as a page master (listed apart, with its layers drawn on the pages that use it). */
+  markAsMaster(id: string, on: boolean): void {
+    track('feature', 'master-mark', { thing: on ? 'on' : 'off' });
+    this.update((d) => markMaster(d as Project, id, on));
+  }
+
+  /** Put the master's layers into the page as ordinary layers and stop using the master. */
+  detachMasterOf(pageId: string): void {
+    track('feature', 'master-detach');
+    this.update((d) => void detachMaster(d as Project, pageId));
+  }
+
+  /** Select a page's master to edit it (it is shown on the canvas if it was hidden). */
+  editMasterOf(pageId: string): void {
+    const p = this.state.project;
+    const page = getArtboard(p, pageId);
+    const m = page ? masterOf(p.artboards, page) : null;
+    if (!m) return;
+    track('feature', 'master-edit');
+    if (m.canvasHidden) {
+      this.update((d) => {
+        const a = getArtboard(d as Project, m.id);
+        if (a) delete a.canvasHidden;
+      });
+    }
+    this.set({ activeArtboardId: m.id, artboardSelected: true, selection: [], activeTimelineId: null });
+  }
+
+  /** Leave one of the master's layers (by name) off a page, or put it back. */
+  setMasterHidden(pageId: string, name: string, hidden: boolean): void {
+    this.update((d) => {
+      const a = getArtboard(d as Project, pageId);
+      if (!a) return;
+      const list = (a.masterHide ?? []).filter((x) => x !== name);
+      if (hidden) list.push(name);
+      if (list.length) a.masterHide = list;
+      else delete a.masterHide;
+    });
+  }
+
+  /** Fill one text slot of the master on a page (empty: back to the master's own text). */
+  setMasterSlot(pageId: string, slot: string, value: string): void {
+    this.update(
+      (d) => {
+        const a = getArtboard(d as Project, pageId);
+        if (!a) return;
+        const slots = { ...(a.masterSlots ?? {}) };
+        if (value) slots[slot] = value;
+        else delete slots[slot];
+        if (Object.keys(slots).length) a.masterSlots = slots;
+        else delete a.masterSlots;
+      },
+      { coalesce: `master-slot-${pageId}-${slot}` },
+    );
+  }
+
+  /** On a master: draw one of its top-level layers over the pages instead of under them. */
+  setMasterOver(masterId: string, layerId: string, over: boolean): void {
+    this.update((d) => {
+      const a = getArtboard(d as Project, masterId);
+      if (!a) return;
+      const list = (a.masterOver ?? []).filter((x) => x !== layerId);
+      if (over) list.push(layerId);
+      if (list.length) a.masterOver = list;
+      else delete a.masterOver;
+    });
   }
 
   /** A copy of a brand kit artboard would be an unlocked one, which is the detach the kit doesn't allow. */
@@ -1350,6 +1430,8 @@ export class EditorStore {
     delete copy.minWidth;
     // and a copy of a library artboard is your own to edit
     delete copy.library;
+    // a copy of a master draws the same layers over the pages, which now have new ids
+    if (copy.masterOver) copy.masterOver = copy.masterOver.map((x) => idMap.get(x) ?? x);
     delete copy.publish;
     for (const tl of copy.timelines) {
       tl.id = uid('tl');
