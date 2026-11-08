@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Page changes**: twelve more looks on Go to a page: star, diamond, heart and clock (opening from the clicked layer), barn doors, a diagonal wipe, blinds, a grid of squares, crosshatch, dots, dissolve and a turning cube. All of them take the speed presets and are instant with reduced motion.
 - **Question cards**: a question's own button (Play the word, Repeat, a clip's Play) now leads the card in the accent colour, with Submit answer at the far right, so the two never look alike in any theme.
 - **Page change speed**: wherever you choose how a page changes (Go to a page, When clicked, Page navigation and a layer's Go to page), a **Speed** of Slow, Medium, Fast or Custom (the milliseconds) sits beside the look, and is left out for Instant. Medium is the 300 ms every page change already had, so nothing in an existing project plays differently; what is stored is still the plain number. The Inspector's sentences say it too, as in "go to the next page (iris, slow)".
 - **More page transitions**: pages can now wipe in four directions, push, open an iris from the clicked layer, or zoom into it, chosen wherever you pick a page change (Go to a page, When clicked, Page navigation and a layer's link). Reduced motion still makes every change instant.
