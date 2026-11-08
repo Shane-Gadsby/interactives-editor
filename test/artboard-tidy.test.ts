@@ -56,7 +56,10 @@ describe('starters come out laid out', () => {
   it('puts a multi page starter in a real grid with even gaps', () => {
     const s = BRANDED_STARTERS.find((x) => x.key === 'assessment/spelling-test')!;
     const p = projectFromBrandedStarter(s);
-    expect(p.artboards.length).toBe(8);
+    const pages = p.artboards.filter((a) => !a.isMaster);
+    expect(pages.length).toBe(8);
+    //the masters come after the pages, in cells of the same grid
+    expect(p.artboards.slice(0, 8)).toEqual(pages);
     const xs = [...new Set(p.artboards.map((a) => a.canvasX))].sort((a, b) => a - b);
     const ys = [...new Set(p.artboards.map((a) => a.canvasY))].sort((a, b) => a - b);
     expect(xs.length).toBeGreaterThan(1);
@@ -66,7 +69,7 @@ describe('starters come out laid out', () => {
     xs.slice(1).forEach((x, i) => expect(x - xs[i]).toBe(w + TIDY_GAP_X));
     ys.slice(1).forEach((y, i) => expect(y - ys[i]).toBe(h + TIDY_GAP_Y));
     //reading order is the artboard list order
-    expect(p.artboards.map((a) => a.name)).toEqual(['Spelling test', 'Word 1', 'Word 2', 'Word 3', 'Word 4', 'Word 5', 'Word 6', 'Your result']);
+    expect(pages.map((a) => a.name)).toEqual(['Spelling test', 'Word 1', 'Word 2', 'Word 3', 'Word 4', 'Word 5', 'Word 6', 'Your result']);
     expect(p.artboards[0].canvasX).toBe(0);
     expect(p.artboards[0].canvasY).toBe(0);
   });
@@ -75,7 +78,7 @@ describe('starters come out laid out', () => {
     const s = BRANDED_STARTERS.find((x) => x.key === 'practice/sign-practice')!;
     const p = projectFromBrandedStarter(s);
     const clips = p.artboards.find((a) => a.name === 'Model clips')!;
-    const pages = p.artboards.filter((a) => a !== clips && !a.variantOf);
+    const pages = p.artboards.filter((a) => a !== clips && !a.variantOf && !a.isMaster);
     const last = Math.max(...pages.map((a) => a.canvasY * 1e6 + a.canvasX));
     expect(clips.canvasY * 1e6 + clips.canvasX).toBeGreaterThan(last);
     for (const a of p.artboards.filter((x) => x.variantOf)) {
@@ -177,22 +180,25 @@ describe('the Tidy up artboards command', () => {
     brandedPage(ctx, 'Three');
     const st = new EditorStore(ctx.project);
     setCurrentStore(st);
-    expect(st.tidyArtboards()).toBe(2);
+    //(the hero and the content page each have a master, so five boards to lay out, and the first stays put)
+    expect(st.tidyArtboards()).toBe(4);
     expect(st.get().toast).toBeNull();
   });
 });
 
 describe('brand layers are truly locked', () => {
+  //the chrome is on the pages' masters (kit.ts brandedPage), the title and footer stay on the page
   const sample = () => {
     const ctx = brandedProject(COLOURWAYS[1], 'Pack');
     brandedPage(ctx, 'Welcome', { kind: 'hero', subtitle: 'Sub' });
     const page = brandedPage(ctx, 'One', { footer: 'Page 1' });
-    return { ctx, project: ctx.project, page };
+    const master = ctx.project.artboards.find((a) => a.id === page.master)!;
+    return { ctx, project: ctx.project, page, master };
   };
 
   it('every chrome layer carries the ordinary lock, so the canvas skips it for clicks, marquee and select all', () => {
     const { project } = sample();
-    for (const ab of project.artboards) {
+    for (const ab of project.artboards.filter((a) => a.isMaster)) {
       const chrome = ab.children.filter(isChrome);
       expect(chrome.length).toBeGreaterThan(0);
       for (const n of chrome) expect(n.locked, n.name).toBe(true);
@@ -210,9 +216,9 @@ describe('brand layers are truly locked', () => {
   });
 
   it('lists brand layers and what is inside them for the Layers panel, and nothing with the F9 override on', () => {
-    const { project, page } = sample();
+    const { project, page, master } = sample();
     const held = brandHeldIds(project);
-    const logo = page.children.find((n) => n.name === 'UniSQ logo') as unknown as { id: string; children: { id: string }[] };
+    const logo = master.children.find((n) => n.name === 'UniSQ logo') as unknown as { id: string; children: { id: string }[] };
     expect(held.has(logo.id)).toBe(true);
     for (const k of logo.children) expect(held.has(k.id)).toBe(true);
     expect(held.has(page.children.find((n) => n.name === 'Page title')!.id)).toBe(false);
@@ -224,12 +230,12 @@ describe('brand layers are truly locked', () => {
   });
 
   it('locks the chrome of a branded project saved before chrome carried the lock, when the editor opens it', () => {
-    const { project, page } = sample();
-    const logo = page.children.find((n) => n.name === 'UniSQ logo')!;
+    const { project, master } = sample();
+    const logo = master.children.find((n) => n.name === 'UniSQ logo')!;
     delete logo.locked;
     const fresh = JSON.parse(JSON.stringify(project)) as Project;
     const store = new EditorStore(fresh);
-    const opened = store.get().project.artboards[1].children.find((n) => n.name === 'UniSQ logo')!;
+    const opened = store.get().project.artboards.find((a) => a.id === master.id)!.children.find((n) => n.name === 'UniSQ logo')!;
     expect(opened.locked).toBe(true);
     //an ordinary project is untouched, and a locked one comes back as the same object
     const plain = createProject('P');
@@ -238,15 +244,16 @@ describe('brand layers are truly locked', () => {
   });
 
   it('is still lifted by the override: the layer can be edited, and unlocked by hand', () => {
-    const { project, page } = sample();
+    const { project, master } = sample();
     const s = new EditorStore(project);
     setCurrentStore(s);
-    s.set({ activeArtboardId: page.id });
-    const id = page.children.find((n) => n.name === 'UniSQ logo')!.id;
+    s.set({ activeArtboardId: master.id });
+    const id = master.children.find((n) => n.name === 'UniSQ logo')!.id;
+    const logoNow = () => s.get().project.artboards.find((a) => a.id === master.id)!.children.find((n) => n.id === id)!;
     s.setProps([id], { locked: false });
-    expect(s.get().project.artboards[1].children.find((n) => n.id === id)!.locked).toBe(true);
+    expect(logoNow().locked).toBe(true);
     s.set({ brandOverride: true });
     s.setProps([id], { locked: false });
-    expect(s.get().project.artboards[1].children.find((n) => n.id === id)!.locked).toBe(false);
+    expect(logoNow().locked).toBe(false);
   });
 });

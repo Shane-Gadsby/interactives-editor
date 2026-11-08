@@ -187,7 +187,7 @@ describe('Listening lab', () => {
 
   it('has the sound check first, then four rounds and the results', () => {
     const { project } = setup();
-    expect(project.artboards.map((a) => a.name)).toEqual(['Start', 'Sound check', 'Identify the sound', 'Compare A and B', 'Sort the sounds', 'What changed?', 'Results']);
+    expect(project.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['Start', 'Sound check', 'Identify the sound', 'Compare A and B', 'Sort the sounds', 'What changed?', 'Results']);
   });
 
   it('the sound check plays a test tone, and "I can\'t use sound" turns the descriptions on', async () => {

@@ -29,6 +29,18 @@ export const SET_NAMES: Record<StarterSet, string> = {
   media: 'Listen, watch and capture',
 };
 
+/**
+ * A state of a starter to run the layout check in as well as its starting one (`test/starter-layout.test.ts`): the feedback page with
+ * long answers in it, a panel that is open. `vars` are variable values (by name) put in over the starting values, for `page` (a page
+ * name or names; all pages when left out). The check only sees what shows at the start, so anything that appears later (a feedback
+ * message, a dialog, a long answer) needs a state to be checked.
+ */
+export interface LayoutState {
+  label: string;
+  page?: string | string[];
+  vars: Record<string, unknown>;
+}
+
 export interface BrandedStarter {
   /** Stable, used in the project's template record: `<set>/<name>`, e.g. `assessment/multi-page-quiz`. */
   key: string;
@@ -37,6 +49,8 @@ export interface BrandedStarter {
   description: string;
   tags: string[];
   build(colourway: Colourway): { project: Project; checklist: TemplateChecklistItem[] };
+  /** Extra states for the layout check to run each page in (see `LayoutState`). */
+  layoutStates?: LayoutState[];
 }
 
 export type ColourKey = LookKey | BrandKey;
@@ -46,6 +60,8 @@ export interface BrandedCtx {
   project: Project;
   colourway: Colourway;
   L: Record<ColourKey, string>;
+  /** The page masters made so far, by kind and page size (see `brandedPage`). */
+  masters: Map<string, Artboard>;
 }
 
 /** The page size every branded page uses unless a starter asks otherwise (16:10, like the slides). */
@@ -53,6 +69,13 @@ export const PAGE = { width: 1024, height: 640 } as const;
 const SIDE = 48;
 const TOP = 40;
 const FOOTER = 44;
+//The logo on the white pages and the purple ones sits this far from the bottom edge of the page
+const LOGO_BOTTOM = 18;
+/** The clear space round the logo, as a share of the logo's height: nothing but the page's own background goes inside it (the layout check, test/starter-layout.test.ts, holds pages to it). */
+export const LOGO_CLEAR = 0.3;
+/** Layer tag for something that overlaps other layers on purpose (a panel over its own text, a scrim): the layout check skips it and everything inside it. */
+export const OVERLAY_TAG = 'layout-overlay';
+export const overlay = <T extends SceneNode>(n: T): T => Object.assign(n, { tags: [...((n as { tags?: string[] }).tags ?? []), OVERLAY_TAG] });
 
 /**
  * Marks a layer as part of the brand (logo, sweeps, bars, footer line): locked in branded projects. It is tagged, and it also
@@ -114,7 +137,7 @@ export function brandedProject(colourway: Colourway, name: string): BrandedCtx {
   for (const [key, tokenName] of Object.entries(BRAND_TOKEN_NAMES) as [BrandKey, string][]) L[key] = ref(tokenName);
   project.fonts.push({ family: BRAND_FONT, source: 'google', weights: [400, 600, 700] });
   project.brandLook = { id: colourway.id, name: colourway.name };
-  return { project, colourway, L };
+  return { project, colourway, L, masters: new Map() };
 }
 
 export type PageKind = 'content' | 'hero' | 'section' | 'end';
@@ -193,11 +216,50 @@ export function logo(ctx: BrandedCtx, x: number, y: number, width = 150, onConte
   return chrome(createNode('group', { name: 'UniSQ logo', x, y, width, height: round1(parts.height * s), children, role: 'image', ariaLabel: 'University of Southern Queensland' } as unknown as Partial<SceneNode>));
 }
 
+/** The logo's height for a width (the artwork's own proportions), so a page can place it by its bottom edge. */
+const logoHeight = (width: number) => round1((logoShapes().height * width) / logoShapes().width);
+
+/**
+ * The page master for a kind of page at a size: the chrome (logo, accent bar, sweeps, web address) built once per project and
+ * named by every page of that kind, instead of copied onto each. Masters sit after the pages in the artboard list. On the white
+ * pages the logo goes over the page (`masterOver`), so a screen reader meets it last, as it did when it was a page layer.
+ */
+function masterFor(ctx: BrandedCtx, kind: PageKind, width: number, height: number): Artboard {
+  const key = `${kind}|${width}x${height}`;
+  const have = ctx.masters.get(key);
+  if (have) return have;
+  const { L } = ctx;
+  const size = width === PAGE.width && height === PAGE.height ? '' : ` ${width}x${height}`;
+  const master = createArtboard({ name: `${kind[0].toUpperCase()}${kind.slice(1)} master${size}`, width, height, background: null, isMaster: true });
+  const kids: SceneNode[] = [];
+  if (kind === 'content') {
+    kids.push(chrome(createNode('rect', { name: 'Brand accent', x: SIDE, y: TOP + 50, width: 56, height: 4, cornerRadius: 2, fill: { type: 'solid', color: L.accent } })));
+    const mark = logo(ctx, SIDE, round1(height - LOGO_BOTTOM - logoHeight(80)), 80, true);
+    kids.push(mark);
+    master.masterOver = [mark.id];
+  } else if (kind === 'section') {
+    kids.push(chrome(createNode('rect', { name: 'Brand accent', x: SIDE, y: height / 2 + 20, width: 72, height: 6, cornerRadius: 3, fill: { type: 'solid', color: L.logoMarkOnLight } })));  //gold on the deep purple in every colourway (the accent is purple in Gold)
+    kids.push(logo(ctx, SIDE, round1(height - LOGO_BOTTOM - logoHeight(96)), 96, 'deep'));
+  } else {
+    kids.push(...sweeps(ctx, master));
+    kids.push(logo(ctx, SIDE, TOP - 8, 150));
+    if (kind === 'end') kids.push(chrome(createNode('text', { name: 'Brand web address', text: 'unisq.edu.au', x: SIDE, y: height / 2 + 30, width: width - SIDE * 2, fontSize: 18, fontWeight: 600, color: L.onGradient, align: 'center', fontFamily: BRAND_FONT } as Partial<TextNode>)));
+  }
+  master.children.push(...(kids as Artboard['children']));
+  ctx.masters.set(key, master);
+  ctx.project.artboards.push(master);
+  return master;
+}
+
 /**
  * A page. `content` (the default): white, a title at the top, the logo small bottom left and a footer line bottom right.
  * `hero`: the full-bleed gradient with sweeps, the logo top left and a big title. `section`: deep purple with the accent
  * line. `end`: the gradient, the logo and unisq.edu.au. The first page made becomes the start artboard. Put content inside
  * `contentBox(page)`.
+ *
+ * The chrome (logo, accent bar, sweeps, web address) is not on the page: it is the page's master (`masterFor`), shared by every
+ * page of the kind and size, and locked like any chrome. What stays on the page is what an author edits per page: the title, the
+ * subtitle and the footer text. Pages go ahead of the masters in the artboard list.
  */
 export function brandedPage(ctx: BrandedCtx, title: string, opts: { kind?: PageKind; name?: string; footer?: string; subtitle?: string; width?: number; height?: number } = {}): Artboard {
   const { L } = ctx;
@@ -208,32 +270,32 @@ export function brandedPage(ctx: BrandedCtx, title: string, opts: { kind?: PageK
   const kids: SceneNode[] = [];
   if (kind === 'content') {
     ab.background = { type: 'solid', color: L.background };
-    kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: TOP, width: width - SIDE * 2, fontSize: 30, fontWeight: 600, color: L.text, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
-    kids.push(chrome(createNode('rect', { name: 'Brand accent', x: SIDE, y: TOP + 50, width: 56, height: 4, cornerRadius: 2, fill: { type: 'solid', color: L.accent } })));
-    kids.push(logo(ctx, SIDE, height - FOOTER + 4, 96, true));
-    kids.push(createNode('text', { name: 'Footer text', text: opts.footer ?? '', x: width / 2, y: height - FOOTER + 14, width: width / 2 - SIDE, fontSize: 12, color: L.muted, align: 'right', fontFamily: BRAND_FONT } as Partial<TextNode>));
+    //A title that is too long for one line shrinks to fit (down to 18) instead of wrapping onto the accent bar and the content
+    kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: TOP, width: width - SIDE * 2, height: 46, autoSize: 'none', fitText: { min: 18, max: 30 }, fontSize: 30, fontWeight: 600, color: L.text, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
+    //The footer line sits level with the middle of the logo
+    kids.push(createNode('text', { name: 'Footer text', text: opts.footer ?? '', x: width / 2, y: round1(height - LOGO_BOTTOM - logoHeight(80) / 2 - 8), width: width / 2 - SIDE, fontSize: 12, color: L.muted, align: 'right', fontFamily: BRAND_FONT } as Partial<TextNode>));
   } else if (kind === 'section') {
     ab.background = { type: 'solid', color: L.deep };
-    kids.push(chrome(createNode('rect', { name: 'Brand accent', x: SIDE, y: height / 2 + 20, width: 72, height: 6, cornerRadius: 3, fill: { type: 'solid', color: L.logoMarkOnLight } })));  //gold on the deep purple in every colourway (the accent is purple in Gold)
-    kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 60, width: width - SIDE * 2, fontSize: 44, fontWeight: 700, color: L.onDeep, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
-    kids.push(logo(ctx, SIDE, height - FOOTER - 8, 96, 'deep'));
+    kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 60, width: width - SIDE * 2, height: 76, autoSize: 'none', fitText: { min: 24, max: 44 }, fontSize: 44, fontWeight: 700, color: L.onDeep, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
   } else {
     ab.background = gradient(ctx);
-    kids.push(...sweeps(ctx, ab));
-    kids.push(logo(ctx, SIDE, TOP - 8, 150));
     if (kind === 'hero') {
       //A title that wraps takes its second line upwards, so it never lands on the subtitle (about 0.52 of the size per character in Open Sans bold)
       const lines = Math.max(1, Math.ceil((title.length * 48 * 0.52) / (width * 0.7)));
       kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height * 0.42 - (lines - 1) * 58, width: width * 0.7, fontSize: 48, fontWeight: 700, color: L.onGradient, role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
       if (opts.subtitle !== undefined) kids.push(createNode('text', { name: 'Subtitle', text: opts.subtitle, x: SIDE, y: height * 0.42 + 72, width: width * 0.6, fontSize: 20, color: L.onGradient, fontFamily: BRAND_FONT } as Partial<TextNode>));
     } else {
-      kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 30, width: width - SIDE * 2, fontSize: 40, fontWeight: 700, color: L.onGradient, align: 'center', role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
-      kids.push(chrome(createNode('text', { name: 'Brand web address', text: 'unisq.edu.au', x: SIDE, y: height / 2 + 30, width: width - SIDE * 2, fontSize: 18, fontWeight: 600, color: L.onGradient, align: 'center', fontFamily: BRAND_FONT } as Partial<TextNode>)));
+      kids.push(createNode('text', { name: 'Page title', text: title, x: SIDE, y: height / 2 - 30, width: width - SIDE * 2, height: 52, autoSize: 'none', fitText: { min: 20, max: 40 }, fontSize: 40, fontWeight: 700, color: L.onGradient, align: 'center', role: 'heading', headingLevel: 1, fontFamily: BRAND_FONT } as Partial<TextNode>));
     }
   }
+  ab.master = masterFor(ctx, kind, width, height).id;
   ab.children.push(...kids);
-  ctx.project.artboards.push(ab);
-  if (ctx.project.artboards.length === 1) ctx.project.settings.startArtboardId = ab.id;
+  //pages go ahead of the masters, so a starter can count on its pages being the first artboards
+  const arts = ctx.project.artboards;
+  const firstMaster = arts.findIndex((a) => a.isMaster);
+  if (firstMaster < 0) arts.push(ab);
+  else arts.splice(firstMaster, 0, ab);
+  if (arts.filter((a) => !a.isMaster).length === 1) ctx.project.settings.startArtboardId = ab.id;
   return ab;
 }
 

@@ -1,4 +1,4 @@
-import { artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, planLive, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
+import { artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -82,7 +82,11 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
       byKey.set(n.id, n);
       if (!byKey.has(n.name)) byKey.set(n.name, n);
     });
-    board.artboard = artboardScope(artboard);
+    // where this artboard is among the pages, as the player has it (`pageNumber`, `pageCount`, `artboard.index`...)
+    const pages = pageInfo(project, artboard);
+    board.pageNumber = pages.index + 1;
+    board.pageCount = pages.list.length;
+    board.artboard = artboardScope(artboard, { index: pages.index, count: pages.list.length, group: pages.group });
     board.layer = (key: unknown) => layerScope(byKey.get(String(key)));
   }
   // `context` is the project's sample course and learner (Data panel), under data and variables of the same name like the player has it

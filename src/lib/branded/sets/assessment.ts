@@ -8,7 +8,7 @@ import { buildFindHotspot, buildFindHotspots } from './assessment/hotspot';
 import { buildImageChoice } from './assessment/image-choice';
 import { buildSingleChoiceSet } from './assessment/single-choice-set';
 import { buildSummary } from './assessment/summary';
-import { buildEssay } from './assessment/essay';
+import { ESSAY_LAYOUT_STATES, buildEssay } from './assessment/essay';
 import { buildAudioFirstQuiz } from './assessment/audio-first';
 import { buildSpellingTest } from './assessment/spelling-test';
 
@@ -92,6 +92,7 @@ export const STARTERS: BrandedStarter[] = [
     description: 'A writing prompt with a large answer box and a live word count. Submit gives automatic feedback from keywords the author sets (key ideas found and missing, optional extras, and whether the length is within a minimum and maximum), and a model answer can be revealed. It is a formative self-check for the learner, not marking: it matches words, it cannot judge meaning.',
     tags: ['essay', 'writing', 'keywords', 'word count', 'self-check'],
     build: buildEssay,
+    layoutStates: ESSAY_LAYOUT_STATES,
   },
   {
     key: 'assessment/audio-first-quiz',

@@ -72,7 +72,7 @@ describe('photo prompts notebook', () => {
     expect(project.settings.sensors?.microphone).toBeFalsy();
     const prompts = project.variables.find((v) => v.name === 'prompts')!;
     expect(JSON.parse(String(prompts.initial))).toHaveLength(6);
-    expect(project.artboards.map((a) => a.name)).toEqual(['Photo prompts notebook', PRIVACY, PROMPT, NOTEBOOK, HANDIN]);
+    expect(project.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['Photo prompts notebook', PRIVACY, PROMPT, NOTEBOOK, HANDIN]);
     //every prompt's two pictures are assets in the project
     const ids = new Set(project.assets.map((a) => a.id));
     for (const p of JSON.parse(String(prompts.initial)) as { photo: string; example: string }[]) {

@@ -66,7 +66,7 @@ describe('live sound lab', () => {
 
   it('has two scenes after the hero page, each with a way on that does not need the microphone', () => {
     const p = projectFromBrandedStarter(starter, COLOURWAYS[0]);
-    expect(p.artboards.map((a) => a.name)).toEqual(['Live sound lab', METER, BARS]);
+    expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['Live sound lab', METER, BARS]);
     expect(layer(p, METER, 'Practice level slider')).toMatchObject({ type: 'input', inputType: 'range' });
     expect(layer(p, BARS, 'Practice loudness slider')).toMatchObject({ type: 'input', inputType: 'range' });
     expect(layer(p, BARS, 'Practice pitch slider')).toMatchObject({ type: 'input', inputType: 'range' });

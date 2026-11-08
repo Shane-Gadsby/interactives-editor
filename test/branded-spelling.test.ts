@@ -22,7 +22,7 @@ describe('the spelling test starter', () => {
   });
 
   it('is six spelling blanks, marked on the server, one try each, with the retake rule on every one', () => {
-    expect(project.artboards).toHaveLength(8);
+    expect(project.artboards.filter((a) => !a.isMaster)).toHaveLength(8);
     expect(frames).toHaveLength(6);
     frames.forEach((f, i) => {
       expect(f.question).toMatchObject({ kind: 'blank', attempts: 1, partial: false, serverMarked: true, retake: { limit: 2, keep: 'best' }, prefix: `q${i + 1}` });

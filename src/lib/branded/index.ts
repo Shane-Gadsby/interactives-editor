@@ -13,6 +13,8 @@ import { STARTERS as media } from './sets/media';
 import type { BrandedStarter, StarterSet } from './kit';
 import { COLOURWAYS, type Colourway } from './looks';
 import { applyTidy } from '../artboard-tidy';
+import { finishGraphs } from './graph-kit';
+import { settleLayout } from './layout-check';
 
 export { COLOURWAYS, HIGH_CONTRAST, colourwayById, type Colourway } from './looks';
 export { SET_NAMES, type BrandedStarter, type StarterSet } from './kit';
@@ -26,6 +28,10 @@ export const brandedStarterByKey = (key: string): BrandedStarter | undefined => 
 export function projectFromBrandedStarter(s: BrandedStarter, colourway: Colourway = COLOURWAYS[0], name?: string): Project {
   const { project, checklist } = s.build(colourway);
   project.name = name || s.name;
+  //graphs laid out the way the Interactions tab's Tidy up does it, whatever order the starter built them in
+  finishGraphs(project);
+  //auto layout frames laid out in the document, as the editor does after an edit
+  settleLayout(project);
   //every page was made at the same canvas spot: lay them out in order, in a grid, before anyone sees them
   applyTidy(project, { x: 0, y: 0 });
   project.template = { builtin: `branded:${s.key}`, name: s.name, version: 1, checklist: checklist as TemplateChecklistItem[] };

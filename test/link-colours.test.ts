@@ -158,7 +158,9 @@ describe('link colours: brand and libraries', () => {
     const page = brandedPage(ctx, 'One', { footer: 'Page 1' });
     const p = ctx.project;
     // a plain colour on a brand layer, as a hand edit under the override would leave
-    const chrome = page.children.find((n) => (n as { tags?: string[] }).tags?.includes('brand-chrome') && (n as { fill?: unknown }).fill) as RectNode | undefined;
+    //the chrome is on the page's master
+    const master = p.artboards.find((a) => a.id === page.master)!;
+    const chrome = master.children.find((n) => (n as { tags?: string[] }).tags?.includes('brand-chrome') && (n as { fill?: unknown }).fill) as RectNode | undefined;
     expect(chrome).toBeTruthy();
     const hex = val(p, 'color/surface');
     chrome!.fill = solid(hex);
