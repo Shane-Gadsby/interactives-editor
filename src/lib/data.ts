@@ -1,4 +1,4 @@
-import { artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
+import { artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, planLive, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -90,7 +90,7 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
   // The microphone and camera as a project that declares them starts: ready, with no recordings (the player keeps these current when it runs)
   const used = new Set(sensorsUsed(project.settings.sensors));
   const sensors = { ...NO_SENSORS, microphone: used.has('microphone') ? 'ready' : 'unavailable', camera: used.has('camera') ? 'ready' : 'unavailable', photos: used.has('photos') ? 'ready' : 'unavailable', recordings: emptySlots(slotNamesOf(project)) };
-  const vars: Record<string, unknown> = { context, ...sensors, ...board, ...data, data, enums: enumOptions(project.variables) };
+  const vars: Record<string, unknown> = { context, ...sensors, ...board, ...data, data, enums: enumOptions(project.variables), userData: { loaded: false, restored: 0 } };
   // The sample course's rows in place of initial values, the way the player starts on the real course
   const perCourse = courseValuesFor(project.courseValues, context.courseLabel, project.variables);
   // A variable with a formula is worked out from the ones above it (the crossword's layout from its word list), as the player does at the start
@@ -98,6 +98,9 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
   for (const v of project.variables) {
     start[v.name] = vars[v.name] = perCourse.has(v.id) ? initialValue({ ...v, initial: perCourse.get(v.id)! }) : startingValue(v, start);
   }
+  // Live variables read all of them (the ones below too), so they are worked out once everything else has its value
+  const live = planLive(project);
+  if (live.order.length) runLive(live, vars, null);
   // An artboard with steps shows its first step: the dots of a step bar, and the variables the player would keep up to date
   const cfg = artboard?.steps;
   const list = cfg ? stepList(stepsTimeline(artboard!)) : [];

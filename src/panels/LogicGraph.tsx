@@ -29,6 +29,7 @@ import {
   defaultParams,
   uid,
   isContainer,
+  isLive,
   walk,
   type Artboard,
   type LogicGroup,
@@ -928,17 +929,47 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
         return pick(ab.timelines.map((t) => ({ value: t.id, label: t.name })), ab.timelines.length ? 'Choose timeline…' : 'No timelines yet');
       case 'blend':
         return pick((ab.blends ?? []).map((b) => ({ value: b.id, label: b.name })), ab.blends?.length ? 'Choose blend…' : 'No blends yet (add one on the artboard)');
-      case 'variable':
-        return pick(project.variables.map((x) => ({ value: x.id, label: x.name })), project.variables.length ? 'Choose variable…' : 'No variables yet', [addVariableOption()], { variableType: 'number' });
+      case 'variable': {
+        const chosenVar = project.variables.find((x) => x.id === v);
+        // A live variable is worked out from its formula, so a Set variable node cannot write it
+        const dead = node.kind === 'action.setVariable' && !!chosenVar && isLive(chosenVar);
+        return (
+          <div key={p.key}>
+            {pick(project.variables.map((x) => ({ value: x.id, label: node.kind === 'action.setVariable' && isLive(x) ? `${x.name} (live, read only)` : x.name })), project.variables.length ? 'Choose variable…' : 'No variables yet', [addVariableOption()], { variableType: 'number' })}
+            {dead && (
+              <div className="error small" role="status">
+                {chosenVar!.name} is a live variable: it is worked out from its formula, so this node does nothing to it. Turn off Keep up to date in the Variables tab to set it by hand.
+              </div>
+            )}
+          </div>
+        );
+      }
       case 'variables': {
         // Several variables: one box each, kept as a list of ids (in the order they were ticked)
         const chosen = Array.isArray(v) ? v.map(String) : [];
         return (
           <div key={p.key} className="param-variables">
             <div className="field-label block">{p.label}</div>
+            {project.variables.length > 1 && (
+              <div className="param-variables-all">
+                <button className="btn small" onClick={() => set(p.key, project.variables.filter((x) => !(node.kind === 'action.resetVariables' && isLive(x))).map((x) => x.id))}>
+                  All
+                </button>{' '}
+                <button className="btn small" onClick={() => set(p.key, [])}>
+                  None
+                </button>{' '}
+                <span className="muted small">{chosen.length} chosen</span>
+              </div>
+            )}
             {project.variables.length ? (
               project.variables.map((x) => (
-                <CheckField key={x.id} label={x.name} value={chosen.includes(x.id)} onChange={(on) => set(p.key, on ? [...chosen, x.id] : chosen.filter((id) => id !== x.id))} />
+                <CheckField
+                  key={x.id}
+                  label={node.kind === 'action.resetVariables' && isLive(x) ? `${x.name} (live, left alone)` : x.name}
+                  value={chosen.includes(x.id)}
+                  disabled={node.kind === 'action.resetVariables' && isLive(x)}
+                  onChange={(on) => set(p.key, on ? [...chosen, x.id] : chosen.filter((id) => id !== x.id))}
+                />
               ))
             ) : (
               <div className="hint">No variables yet. Add some in the Variables panel.</div>

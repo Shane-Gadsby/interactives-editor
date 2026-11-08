@@ -1627,7 +1627,7 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
 ![The Interactions section of a layer whose opacity is 50%: the note says it can't be clicked while playing until it is fully showing, and the Clickable while see-through tick overrides that.](help/see-through-toggle.png)
 
 - **Events** (green) start a flow: a click, a key, a timer, a variable changing, a timeline ending, a message from the host page, scrolling, data loading, the artboard starting, or the activity loading.
-- **Actions** (blue) do something and continue: **Control timeline**, **Play blend**, **Wait for blend-in**, **Wait for time in timeline**, **Set variable**, **Set property**, **Animate property**, **Show / hide**, **Go to artboard**, **Open URL**, **Play sound**, **Control video**, **Run script**, **Send message**, **Wait** and more.
+- **Actions** (blue) do something and continue: **Control timeline**, **Play blend**, **Wait** (milliseconds, or an expression such as \`pace <= 4 ? 4000 : 8000\`, worked out when the wait starts), **Wait for blend-in**, **Wait for time in timeline**, **Set variable**, **Reset variables**, **Set property**, **Animate property**, **Show / hide**, **Go to artboard**, **Open URL**, **Play sound**, **Control video**, **Run script**, **Send message**, **Wait** and more.
 - **Logic** (purple) chooses where to go: **If** (a **true** and a **false** output), **Toggle** (alternates between **a** and **b**), **Once**, **Sequence** (runs **1**, then **2**, then **3**) and **Random** (continues down one of up to six outputs, picked at random; *Weights* is a list that sets each output's chance, [1, 3] making the second three times as likely, and *Only if* is a list of conditions, so an output whose condition is false is never picked).
 
 ![The Interactions tab: the node palette, the graph and the settings of the selected node.](help/interactions-panel.png)
@@ -1967,10 +1967,24 @@ Add them in the **Variables** tab. Each has a name, a type and a starting value.
 Choice variables show as a dropdown wherever you set them, so you can't type a value that isn't on the list. In expressions, \`enums.difficulty\` is the list of that choice's options, so \`enums.difficulty.indexOf(difficulty)\` is its position. A solo group's **active child** can be bound straight to a choice whose options are the children's names.
 
 ## Lists
-A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Set variable**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. In scripts assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
+A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Set variable**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. The other list ops are *Add to list, or take out if there* (a tick-list: adds the value, or removes it when it is already in), *Remove from list (value)* (every item equal to the value, objects compared by what they hold) and *Change one list item*: give the item's position (left empty it is \`event.index\`, the item the event came from), an optional **Field** to change only that field of an object item, and the new value, which can read \`item\` (what is there now) and \`index\` (\`item.count + 1\`). A position that is not in the list changes nothing. In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
 
 ## Worked out from a formula
 Instead of typing a starting value, give a variable a **formula** (the line under its value in the Variables tab): an [expression](expressions) over the variables above it in the list. The player works it out each time the project starts (and after **Start over**), and the canvas preview works it out too, so what you see while editing follows the variables it depends on. The typed value is only what it falls back to if the formula fails. It is still an ordinary variable once it plays, so Set variable can change it. The branded Crossword and Word search starters use this: you edit a plain list of words (and clues) and the grid is laid out from it, with \`crossword(words, 10)\` and \`wordSearch(words, 12)\` (see [Expressions](expressions)). Clear the formula to type or lay the value out yourself.
+
+## Live variables
+Tick **Keep up to date** under a variable's formula and it becomes *live*: the formula is worked out again whenever a variable it reads changes (and, for a formula that reads layers, data or the microphone, whenever something moves), not just at the start. Use one for anything you would otherwise paste the same long expression for in several places: a word count (\`wordCount(essay)\`), whether the score passes (\`score / total >= 0.5\`), a band (\`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\`), a list filtered by another variable. Layers then just show \`{wordsLeft}\`.
+
+- A live variable is **read only**. *Set variable*, scripts, inputs and the page cannot change it (they are told so in the console), and the Usage tab lists a *Set variable* or *Reset variables* node that names one under **Broken**. Untick it to set it by hand again.
+- Live variables can read each other, in any order in the list. If they read each other in a circle (or one reads itself) they stay at their starting value and the Variables tab and **Usage** say so.
+- **On variable change** fires when a live variable's value changes, like any other, and a script's \`ix.get\` always sees the current value.
+- The typed value is what it falls back to when the formula fails (data not loaded yet, say). The canvas preview shows live variables worked out too.
+
+## Save as user data
+Tick **Save as user data** on a variable and the player looks after the rest. Its saved value is put back **before the project starts**, so the first thing a returning learner sees is their own work; it is saved a moment after it changes (a burst of typing is one save), and straight away when they move to another artboard or leave the page. It goes to the same place as the *Save user data* and *Load user data* nodes (see [Results and resume](results)), so you no longer need a *Save user data* node before every Next and Back. In expressions, \`userData.loaded\` is true once the saved values have been looked for (for a "Welcome back" panel that should not flash on a first visit) and \`userData.restored\` is how many variables came back. A live variable cannot be saved. Instances inside a page keep nothing: tick it in the main project.
+
+## Putting variables back
+*Set variable → Back to its starting value* puts one variable back, and the **Reset variables** node puts several back in one go (tick them in the node's list, or **All**). A starting value is the one for this course if there is one, else the typed value, else the formula worked out again (so a formula that shuffles gives a fresh order). Live variables are left alone. This is lighter than **Start over**, which also leaves the page. Scripts: \`ix.reset('score', 'answers')\`.
 
 ## Different values for different courses
 One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
@@ -1978,7 +1992,7 @@ One project can start with different values in different courses (a due date, a 
 ## Using variables
 - In text: \`Score: {score}\`.
 - In [bindings](bindings): drive any property from a variable.
-- In interactions: **Set variable** (set, add, toggle), **On variable change**.
+- In interactions: **Set variable** (set, add, toggle, list changes, reset), **Reset variables**, **On variable change**.
 - On inputs: bind a text field, checkbox or slider to a variable.
 - In scripts: \`ix.vars.score += 1\`.
 - From the host page: \`player.setVariable('score', 10)\`.
@@ -2150,7 +2164,9 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 ## The ix API
 | Call | Does |
 |---|---|
-| \`ix.vars.name\`, \`ix.get(name)\`, \`ix.set(name, v)\` | Read and write variables |
+| \`ix.vars.name\`, \`ix.get(name)\`, \`ix.set(name, v)\` | Read and write variables (not a live one: those are worked out from their formula and read only) |
+| \`ix.reset(name, ...)\` | Put variables back to their starting values |
+| \`ix.toggleItem(name, v)\`, \`ix.removeValue(name, v)\`, \`ix.setItem(name, index, v, field?)\` | Change a list variable: add or take out a value, take out every match, or replace one item (or one field of it) |
 | \`ix.node('Name')\` | A layer by name or id: \`.get(prop)\`, \`.set(prop, v)\`, \`.show()\`, \`.hide()\`, \`.toggle()\`, \`await .animate(prop, v, {duration, ease})\` |
 | \`ix.timeline('Name')\` | \`.play()\`, \`.pause()\`, \`.stop()\`, \`.restart()\`, \`.reverse()\`, \`.seek(ms)\` |
 | \`ix.goTo('Artboard', 'fade')\` | Go to another artboard |
@@ -2617,7 +2633,7 @@ Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](exp
 ## Save user data and Load user data
 **Remember** keeps a variable's value all the time, on its own. When you'd rather choose the moment, use the two action nodes instead: **Save user data** keeps the variables you tick, as they are right then (say, when the learner presses *Submit*), and **Load user data** puts them back on a later visit. Put the load in **Before activity loads** so the values are in place before anything shows. *Load user data* goes on from **Loaded** when anything came back, and from **Nothing saved** on a first visit, so you can set up a fresh start there.
 
-They go to the same places as remembered progress: on the **Link for StudyDesk**, one record per learner per course, kept by their StudyDesk session; with no session or in an export, in the browser. **Preview** keeps them too, for that project in this browser, so closing and reopening Preview is like a learner coming back; **Forget saved data** in Preview's bar starts you again as a new learner. Each save only changes the variables it names. User data is kept apart from remembered progress and from results, so **Clear results** and **Start over** leave it alone; it goes when the project goes for good (30 days after it's deleted, or straight away with **Delete forever**).
+Most of the time you do not need the nodes: tick **Save as user data** on a variable in the [Variables](variables) tab and it is loaded before the project starts and saved as it changes. They go to the same places as remembered progress: on the **Link for StudyDesk**, one record per learner per course, kept by their StudyDesk session; with no session or in an export, in the browser. **Preview** keeps them too, for that project in this browser, so closing and reopening Preview is like a learner coming back; **Forget saved data** in Preview's bar starts you again as a new learner. Each save only changes the variables it names. User data is kept apart from remembered progress and from results, so **Clear results** and **Start over** leave it alone; it goes when the project goes for good (30 days after it's deleted, or straight away with **Delete forever**).
 
 ## See the results
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. The owner and people invited to collaborate can see it. **Export CSV** downloads every learner's record as a spreadsheet: username, name, course, completed, passed, attempts, best and last score and percentage, and when they were last active (the list in the dialog shows the latest 200). **Clear results** deletes every record for the project (handy after testing); only the owner can use it (collaborators see it greyed out), since it can't be undone.

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { LIGHT_LOOK, uid, type Script, type Variable, type VariableType } from 'interactives-player';
+import { useEffect, useMemo, useState } from 'react';
+import { isLive, liveWriters, LIGHT_LOOK, planLive, uid, type Script, type Variable, type VariableType } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueIdentifier, uniqueName } from '../store/doc';
 import { confirmDialog } from '../components/dialogs';
@@ -84,6 +84,9 @@ export function ScriptsPanel() {
         <div className="field-label block">ix API</div>
         <pre className="api-ref">{`ix.vars.score += 1
 ix.get('name') / ix.set('name', v)
+ix.reset('score', 'tags') // back to the start
+ix.toggleItem('picked', v) / ix.removeValue('picked', v)
+ix.setItem('cards', 2, 'down', 'state')
 ix.node('Ball')        // by name or id
   .get('x') .set('x', 10)
   .show() .hide() .toggle()
@@ -157,6 +160,10 @@ function VariableNameField({ name, onValid }: { name: string; onValid: (name: st
 
 export function VariablesPanel() {
   const vars = useEditor((st) => st.project.variables);
+  const project = useEditor((st) => st.project);
+  //live variables that read each other in a circle, and the nodes that try to write one
+  const circle = useMemo(() => new Set(planLive(project).cyclic.map((v) => v.id)), [project.variables, project.dataSources]); // eslint-disable-line react-hooks/exhaustive-deps
+  const writers = useMemo(() => liveWriters(project), [project.artboards, project.variables]); // eslint-disable-line react-hooks/exhaustive-deps
   const setVar = (id: string, patch: Partial<Variable>, coalesce?: string) =>
     store().update(
       (d) => {
@@ -245,7 +252,28 @@ export function VariablesPanel() {
                   commitOnBlur
                   title="Optional. A formula that works this variable out from the ones above it each time the project starts, instead of using the value above, for example crossword(words, 10) or wordSearch(words, 12). The value above is what it falls back to if the formula fails. The preview on the canvas follows it too."
                   placeholder="Or work it out: e.g. crossword(words, 10)"
-                  onChange={(x) => setVar(v.id, { formula: x.trim() ? x : undefined }, `var-formula-${v.id}`)}
+                  onChange={(x) => setVar(v.id, x.trim() ? { formula: x } : { formula: undefined, live: undefined }, `var-formula-${v.id}`)}
+                />
+                {v.formula?.trim() && (
+                  <CheckField
+                    label="Keep up to date"
+                    title="Work the formula out again whenever a variable (or a layer, or data) it reads changes, not just when the project starts. A live variable is read only: Set variable, scripts and inputs cannot change it."
+                    value={!!v.live}
+                    onChange={(x) => setVar(v.id, x ? { live: true, userData: undefined } : { live: undefined })}
+                  />
+                )}
+                {isLive(v) && circle.has(v.id) && <div className="error small">This reads itself, or reads live variables that read it, so it stays at its starting value.</div>}
+                {isLive(v) && writers.some((w) => w.variable.id === v.id) && (
+                  <div className="error small">
+                    {writers.filter((w) => w.variable.id === v.id).length} interaction node(s) try to set this; they do nothing to it.
+                  </div>
+                )}
+                <CheckField
+                  label="Save as user data"
+                  title="Keep this value for the person playing: it is loaded before the project starts, saved a moment after it changes and when they leave the page or move to another artboard (the same place Save user data and Load user data use). userData.loaded is true in expressions once it has been looked for. Not for live variables."
+                  value={!!v.userData}
+                  disabled={isLive(v)}
+                  onChange={(x) => setVar(v.id, { userData: x ? true : undefined })}
                 />
               </td>
               <td>
