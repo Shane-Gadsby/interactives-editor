@@ -846,7 +846,7 @@ function hotspotBody(q: Question): SceneNode {
 /** The default look of the Try again / Next question button for this question. */
 export const resetLabel = (q: Question): string => (q.bank ? RESET_LABELS.next : RESET_LABELS.again);
 //A question that is retaken with the whole set has no Try again of its own: a Retake button elsewhere starts the next round for all of them
-const resetVisible = (q: Question): string => (q.retake ? 'false' : q.bank ? varName(q, 'locked') : `${varName(q, 'locked')} && !${varName(q, 'correct')}`);
+const resetVisible = (q: Question): string => (q.retake || q.hideReset ? 'false' : q.bank ? varName(q, 'locked') : `${varName(q, 'locked')} && !${varName(q, 'correct')}`);
 
 function bodyFor(q: Question, style: Style, blankVars: string[]): SceneNode {
   if (style === 'blank') return blanksBody(q, blankVars);
@@ -1014,6 +1014,8 @@ function ensureGraph(d: Project, ab: Artboard, frame: FrameNode, q: Question): v
     const own = w.event.kind === 'event.pointer' || w.event.kind === 'event.drop' || (w.event.kind === 'event.key' && w.event.params.target) ? ['target'] : w.event.kind === 'event.dataLoaded' ? ['source'] : [];
     for (const k of own) ev.params[k] = w.event.params[k];
     ac.params.question = frame.id;
+    //The On start reset leaves a kept answer alone; the Try again button's reset never does
+    if (w.actionSlot === 'start:action') ac.params.keepAnswer = !!q.keep;
     if (w.option !== undefined) ac.params.option = w.option;
     else if (w.actionSlot === 'numberKeys:action') ac.params.option = KEY_OPTION;
     keep.add(ev.id);
@@ -1029,10 +1031,14 @@ function ensureGraph(d: Project, ab: Artboard, frame: FrameNode, q: Question): v
   if (q.report && check) {
     let rep = find('report:action');
     if (!rep) {
-      rep = { id: uid('l'), kind: 'action.reportResult', x: check.x + 320, y: check.y + 40, params: { ...defaultParams('action.reportResult'), score: varName(q, 'score') }, kit: { frame: frame.id, slot: 'report:action' } };
+      rep = { id: uid('l'), kind: 'action.reportResult', x: check.x + 320, y: check.y + 40, params: { ...defaultParams('action.reportResult'), score: d.settings.reporting?.scoreFrom === 'questions' ? '' : varName(q, 'score') }, kit: { frame: frame.id, slot: 'report:action' } };
       logic.nodes.push(rep);
     }
     rep.params.completed = q.report;
+    //With the score from all the questions, each report sends the whole quiz's score, so the node carries none of its own
+    const total = d.settings.reporting?.scoreFrom === 'questions';
+    if (total && rep.params.score === varName(q, 'score')) rep.params.score = '';
+    else if (!total && rep.params.score === '') rep.params.score = varName(q, 'score');
     keep.add(rep.id);
     const repId = rep.id;
     if (!logic.edges.some((e) => e.from === check.id && e.fromPort === 'finished' && e.to === repId)) logic.edges.push({ id: uid('e'), from: check.id, fromPort: 'finished', to: repId, toPort: 'in' });
@@ -1291,7 +1297,7 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
   //The reset button's wording and when it shows depend on there being a bank. Only the default wording follows.
   const reset = partsOf(frame).reset?.[0];
   if (reset && reset.type === 'button') {
-    if (!before || Boolean(before.bank) !== Boolean(q.bank) || Boolean(before.retake) !== Boolean(q.retake)) {
+    if (!before || Boolean(before.bank) !== Boolean(q.bank) || Boolean(before.retake) !== Boolean(q.retake) || Boolean(before.hideReset) !== Boolean(q.hideReset)) {
       const other = before?.bank ? RESET_LABELS.next : RESET_LABELS.again;
       if (reset.label === other || !before) reset.label = resetLabel(q);
       reset.bindings = { ...(reset.bindings ?? {}), visible: resetVisible(q) };
@@ -1419,3 +1425,8 @@ export function adoptQuestions(d: Project, abId: string, nodeIds: string[]): voi
 
 export { buildItems };
 export const KIT_CATALOG = ['action.questionCheck', 'action.questionReset', 'action.questionHint', 'action.questionChoose', 'action.questionMove'].filter((k) => CATALOG_BY_KIND[k]);
+
+/** The project's Results now take their score from the questions (or not): the kit's Report result nodes follow. */
+export function syncReportScores(d: Project): void {
+  for (const ab of d.artboards) for (const f of questionFrames(ab)) syncQuestion(d, ab.id, f.id);
+}

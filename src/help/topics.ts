@@ -1866,6 +1866,21 @@ Moodle XML files are not read yet.
 
 **Shuffle** deals the options (or ordering items, or a matching question's terms) in a new order every time the question starts or resets. In a multiple choice, tick **Stays in place when shuffled** on an option such as "None of these". Feedback and marking follow the option, not its place.
 
+## The whole quiz
+
+Every project has a built-in \`quiz\` that adds up its questions, for a results page that needs no wiring per question:
+
+| Name | Holds |
+|---|---|
+| \`quiz.score\`, \`quiz.max\`, \`quiz.percent\` | points earned, the most all the questions can score, and the share (two places) |
+| \`quiz.passed\`, \`quiz.passMark\` | at or over the pass mark from [Results and progress](results) (false and empty when there is none) |
+| \`quiz.count\`, \`quiz.finished\`, \`quiz.right\`, \`quiz.done\` | how many questions, how many are finished, how many of those are right, and whether all are finished |
+| \`quiz.questions\` | one entry for each question: \`prefix\`, \`page\` (its artboard's name), \`score\`, \`points\`, \`correct\`, \`locked\` |
+
+Use \`quiz.questions\` as a repeater's items to show a row for each question: \`{item.page}: {item.score} of {item.points}\`. Adding a question to the quiz adds a row, and a question's own settings are all there is to wire. A bank gone through once counts as one question with the run's score and points. A variable or data source called \`quiz\` takes the name over, as for any built-in. In Results and progress, **Score from: Total of all questions** makes the project's reported score this total.
+
+Two settings in the Question section help a quiz of several pages: **Keep the answer when the page is revisited** (coming back to the page in the same visit finds the question as it was left, rather than set up again; a drag question puts its layers back where the last check found them) and **Hide Try again** (leaves out the button, for a test that is marked once).
+
 ## Question banks from data
 
 Banks work with the choice, true/false, fill in the blank and ordering types. A matching or hotspot question is built from layers you place, so it takes only the prompt, hints, feedback and points from a row.
@@ -2612,6 +2627,7 @@ Open **Results and progress** in the Project section of the Inspector (click an 
 
 | Setting | Meaning |
 |---|---|
+| Score from | **A score variable** (the default) or **Total of all questions**. The total adds up every question's points, out of the most they can score, so adding a question needs nothing else here (see [the whole quiz](question-kit#the-whole-quiz)). It shows only when the project has questions |
 | Score variable | The number variable that holds the score |
 | Top score | The score that counts as 100% (the default is 100). A score above it is reported as 100% |
 | Pass mark | Tick it and give a percentage to report pass or fail as well as the score |
@@ -2619,6 +2635,8 @@ Open **Results and progress** in the Project section of the Inspector (click an 
 | Resume on the same artboard | A returning learner opens on the artboard they left |
 
 Then tick **Remember** on each variable that should keep its value between visits (the Variables tab).
+
+With **Total of all questions** there is no score variable or top score: the pass mark is a percentage of the questions' points, and Report result with its Score empty sends the total (the kit's own Report result nodes do that for you). A question marked on the server counts the mark the server keeps (its first go; with retakes the best or latest round, as set), so a practice go afterwards changes nothing.
 
 ## Report result and Start over
 - **Report result** (action node) sends the result: *Complete* marks this attempt complete, *Score so far* reports the score without completing. Leave **Score** empty to use the score variable, or give an expression such as \`correct * 10\`. In scripts: \`ix.report({ completed: true, score: 7 })\`.

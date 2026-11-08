@@ -466,6 +466,18 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       {q.kind !== 'truefalse' && (q.kind !== 'blank' || dragWords) && q.kind !== 'hotspot' && <CheckField label={dragWords ? 'Shuffle the word bank' : 'Shuffle'} title="A different order each time the question starts" value={q.shuffle} onChange={(v) => apply({ shuffle: v })} />}
       <CheckField label="Show the right answer when finished wrong" value={q.reveal} onChange={(v) => apply({ reveal: v })} />
       <CheckField
+        label="Keep the answer when the page is revisited"
+        title="Coming back to the page later in the same visit finds the question as the learner left it, instead of starting it again. Drag questions put the layers back where they were at the last check"
+        value={!!q.keep}
+        onChange={(v) => apply({ keep: v || undefined })}
+      />
+      <CheckField
+        label="Hide Try again"
+        title="Leaves out the Try again (Next question) button. The question is still set up when the page starts, and a button of your own can run a Reset question node"
+        value={!!q.hideReset}
+        onChange={(v) => apply({ hideReset: v || undefined })}
+      />
+      <CheckField
         label="Mark answers on the server"
         title="On the share link and the Link for StudyDesk, the right answers are kept off the learner's page and the server marks each check and records the score. In the editor's Preview and in files you export, the question marks in the page as usual"
         value={!!q.serverMarked}

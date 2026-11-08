@@ -1,4 +1,4 @@
-/*! built from the player's marking sources f3fc81e0c1c372075591 */
+/*! built from the player's marking sources c7ac18d2a493da80f486 */
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
 const MAX_WORK = 65536;
@@ -1382,6 +1382,8 @@ function normaliseQuestion(raw) {
     ...typeof raw.spoken === "string" && raw.spoken.trim() ? { spoken: raw.spoken.slice(0, 2e3) } : {},
     ...typeof raw.explain === "string" && raw.explain.trim() ? { explain: raw.explain.slice(0, 2e3) } : {},
     ...raw.numberKeys === true ? { numberKeys: true } : {},
+    ...raw.keep === true ? { keep: true } : {},
+    ...raw.hideReset === true ? { hideReset: true } : {},
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
@@ -1776,7 +1778,8 @@ const viewOf = (q, st, key, states) => ({
   locked: st.locked,
   score: st.score,
   correct: st.correct,
-  answered: st.attempts > 0
+  answered: st.attempts > 0,
+  counted: st.counted ? st.counted.score : -1
 });
 function realAnswer(q, frameId, a, idFor) {
   if (q.kind === "blank") {
