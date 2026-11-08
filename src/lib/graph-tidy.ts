@@ -79,7 +79,9 @@ export function tidyGraph(
   for (const g of groups) for (const id of g.members) if (!groupOf.has(id)) groupOf.set(id, g.id);
   const positions = new Map<string, { x: number; y: number }>();
   const left = nodes.length ? Math.min(...nodes.map((n) => n.x)) : 0;
-  let top = nodes.length ? Math.min(...nodes.map((n) => n.y)) : 0;
+  // where the graph starts: a grouped node sits under its group's title, so measuring from the title keeps a second tidy from
+  // pushing everything down by the title's height each time
+  let top = nodes.length ? Math.min(...nodes.map((n) => n.y - (groupOf.has(n.id) ? TIDY.groupTitle : 0))) : 0;
 
   for (const chain of chains) {
     const members = new Set(chain);
