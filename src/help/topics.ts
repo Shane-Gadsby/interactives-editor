@@ -1872,6 +1872,21 @@ Banks work with the choice, true/false, fill in the blank and ordering types. A 
 
 Tick **Take the question from data** and give the name of a [data source](data-sources) (or part of one, like \`quiz.questions\`). Each row is a question; what a row leaves out stays as set in the Question section (except hints, which come only from the row). With a bank the card's Try again button becomes **Next question**, which draws the next row (**Random** shows every row once before any repeats; **In order** goes round).
 
+The rows can also be a **list variable** (pick one under **Or a list variable**): a list of objects with the same columns, such as questions the project builds itself.
+
+### Going through the rows once
+
+By default a bank loops for ever. Set **When the rows run out** to *Finish after one go through* and it is a **run**: the learner is asked each row once, then it is done. **Questions to draw** asks that many rows, picked at random (or the first ones for *In order*); 0 asks them all. The question keeps the run in these variables (with its own prefix, here \`q1\`):
+
+| Variable | Holds |
+|---|---|
+| \`q1_setPos\`, \`q1_setCount\`, \`q1_setLeft\` | which question of the run this is, how many it has, how many are not finished |
+| \`q1_setScore\`, \`q1_setMax\` | points earned so far, and the most the run can score (each row's own \`points\`, else the question's) |
+| \`q1_setDone\` | true once every question is finished |
+| \`q1_missed\` | the rows (counting from 0) that finished wrong, in this run |
+
+**Check answer** has a **set done** output that fires when the question just checked was the last of the run, and **Reset question** has one that fires when there is no next question, so a Next question button can go straight to a results page. Moving on from a question without finishing it counts it as missed. On Reset question, **Bank run** set to *Start a new run* draws a fresh run with clean totals, and *Review the missed ones* runs only the rows in \`q1_missed\` (with nothing missed it is done at once).
+
 Columns a row can have:
 
 | Column | For |

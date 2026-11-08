@@ -1,4 +1,4 @@
-/*! built from the player's marking sources aca9d01ef6f507702816 */
+/*! built from the player's marking sources f3fc81e0c1c372075591 */
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
 const MAX_WORK = 65536;
@@ -1349,7 +1349,12 @@ function normaliseQuestion(raw) {
     group: str(c.group),
     ...str(c.feedback) ? { feedback: str(c.feedback) } : {}
   }));
-  const bank = isObj(raw.bank) && str(raw.bank.items).trim() ? { items: str(raw.bank.items), order: raw.bank.order === "sequence" ? "sequence" : "random" } : null;
+  const bank = isObj(raw.bank) && str(raw.bank.items).trim() ? {
+    items: str(raw.bank.items),
+    order: raw.bank.order === "sequence" ? "sequence" : "random",
+    ...raw.bank.end === "finish" ? { end: "finish" } : {},
+    ...raw.bank.end === "finish" && typeof raw.bank.count === "number" && raw.bank.count >= 1 ? { count: Math.min(1e3, Math.floor(raw.bank.count)) } : {}
+  } : null;
   return {
     kind,
     prefix: isIdentifier(str(raw.prefix)) ? str(raw.prefix) : d.prefix,

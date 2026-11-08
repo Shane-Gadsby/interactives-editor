@@ -670,7 +670,7 @@ function QuestionBank({ q, project, apply }: { q: Question; project: Project; ap
         <>
           <ExprField
             label="Rows"
-            title="An expression giving the rows: the name of a data source, or part of one such as quiz.questions"
+            title="An expression giving the rows: the name of a data source, part of one such as quiz.questions, or a list variable"
             value={q.bank!.items}
             commitOnBlur
             placeholder="quiz"
@@ -680,6 +680,15 @@ function QuestionBank({ q, project, apply }: { q: Question; project: Project; ap
             <div className="muted small">
               Data sources: {project.dataSources.map((d) => d.name).join(', ')}
             </div>
+          )}
+          {project.variables.some((v) => v.type === 'list' && !/_(items|bankSeen|setOrder|setLog|missed)$/.test(v.name)) && (
+            <SelectField<string>
+              label="Or a list variable"
+              title="Use a list variable as the rows (a list of objects with the same columns as a data row). Handy for a set of questions the project builds itself, such as the ones missed"
+              value=""
+              options={[{ value: '', label: 'Pick a list variable' }, ...project.variables.filter((v) => v.type === 'list' && !/_(items|bankSeen|setOrder|setLog|missed)$/.test(v.name)).map((v) => ({ value: v.name, label: v.name }))]}
+              onChange={(v) => v && apply({ bank: { ...q.bank!, items: v } })}
+            />
           )}
           <SelectField<'random' | 'sequence'>
             label="Order"
@@ -691,6 +700,31 @@ function QuestionBank({ q, project, apply }: { q: Question; project: Project; ap
             ]}
             onChange={(v) => apply({ bank: { ...q.bank!, order: v } })}
           />
+          <SelectField<'loop' | 'finish'>
+            label="When the rows run out"
+            title="Loop: carry on for ever (a random bank comes round again). Finish: a run. The learner goes through the rows once, the question keeps the totals in its set variables, and the Check and Reset question nodes have a Set done output for the end"
+            value={q.bank!.end ?? 'loop'}
+            options={[
+              { value: 'loop', label: 'Loop for ever' },
+              { value: 'finish', label: 'Finish after one go through' },
+            ]}
+            onChange={(v) => apply({ bank: { ...q.bank!, end: v === 'finish' ? 'finish' : undefined, count: v === 'finish' ? q.bank!.count : undefined } })}
+          />
+          {q.bank!.end === 'finish' && (
+            <>
+              <NumberField
+                label="Questions to draw"
+                title="How many rows to ask in a run. 0 asks every row"
+                value={q.bank!.count ?? 0}
+                min={0}
+                step={1}
+                onChange={(v) => apply({ bank: { ...q.bank!, count: v >= 1 ? Math.floor(v) : undefined } }, 'bank-count')}
+              />
+              <div className="muted small">
+                The run keeps {q.prefix}_setScore, {q.prefix}_setMax, {q.prefix}_setPos, {q.prefix}_setLeft, {q.prefix}_setCount, {q.prefix}_setDone and {q.prefix}_missed (the rows got wrong). Wire a Reset question node with Bank run set to Review the missed ones to practise those, or Start a new run to draw again.
+              </div>
+            </>
+          )}
           <div className="muted small">Columns: prompt, options and correct (or answer, items), hint, feedback, points. The Try again button becomes Next question.</div>
         </>
       )}
