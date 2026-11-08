@@ -258,6 +258,7 @@ export function analyzeUsage(project: Project): UsageReport {
         // Pictures a shader reads (image uniforms of a shader layer or an image layer's shader filter)
         for (const u of (n.type === 'shader' ? n.uniforms : n.type === 'image' ? n.shaderFilter?.uniforms : undefined) ?? []) if (u.type === 'image' && typeof u.value === 'string' && u.value) useId('asset', u.value, by, 'shader image');
         if (n.type === 'chart' && n.data.trim()) useExpr(n.data, by, 'chart data');
+        if (n.type === 'chart') for (const t of [n.prefix, n.suffix]) if (t) for (const e of templateSlots(t)) useExpr(e, by, 'chart prefix or suffix');
         if (n.type === 'progress' && n.valueText) for (const e of templateSlots(n.valueText)) useExpr(e, by, 'spoken value template');
         if (n.type === 'input') useId('variable', n.variableId, by, 'input bound to variable');
         if (n.type === 'instance') {

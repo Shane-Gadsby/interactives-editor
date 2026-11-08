@@ -2216,18 +2216,38 @@ div.text-editor {
 .artboard-row:hover {
   background: var(--panel-2);
 }
-.layer-row.selected {
-  background: color-mix(in srgb, var(--accent) 25%, transparent);
-}
-/* A chosen artboard (or group) row: the palette's gold with its dark text, like the other chosen states */
+/* A chosen layer, artboard or group row: the palette's gold with its dark text, like the other chosen states. Hover on a
+   plain row is the panel grey, hover on a chosen one the darker gold, a multi-selection carries a dark bar down its left
+   edge (a lone selection has none), and keyboard focus is an inset ring (blue on a plain row, dark on gold) */
+.layer-row.selected,
 .artboard-row.selected {
   background: var(--primary-bg);
   color: var(--primary-fg);
+}
+.layer-row.selected:hover,
+.artboard-row.selected:hover {
+  background: var(--primary-bg-hover);
+}
+.layer-row.selected.multi {
+  box-shadow: inset 3px 0 0 var(--primary-fg);
+}
+.layer-row:focus-visible,
+.artboard-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.layer-row.selected:focus-visible,
+.artboard-row.selected:focus-visible {
+  outline-color: var(--primary-fg);
 }
 .artboard-row.selected .badge {
   color: var(--pill-fg);
   background: var(--pill-on-gold);
 }
+.layer-row.selected .twisty,
+.layer-row.selected .layer-icon,
+.layer-row.selected .layer-actions button,
+.layer-row.selected .layer-actions button.on,
 .artboard-row.selected .twisty,
 .artboard-row.selected svg {
   color: var(--primary-fg);
