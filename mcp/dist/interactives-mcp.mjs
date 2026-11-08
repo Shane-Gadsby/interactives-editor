@@ -1703,24 +1703,24 @@ function defaultModifier(patch = {}) {
   return { unit: "letter", start: 0, end: 100, offset: 0, shape: "square", strength: 100, x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0, blur: 0, ...patch };
 }
 const isNum$3 = (v) => typeof v === "number" && Number.isFinite(v);
-const num$2 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
+const num$4 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeModifier(raw) {
   const r2 = raw && typeof raw === "object" ? raw : {};
   const d = defaultModifier();
   const m = {
     unit: MODIFIER_UNITS.includes(r2.unit) ? r2.unit : d.unit,
-    start: num$2(r2.start, d.start),
-    end: num$2(r2.end, d.end),
-    offset: num$2(r2.offset, d.offset),
+    start: num$4(r2.start, d.start),
+    end: num$4(r2.end, d.end),
+    offset: num$4(r2.offset, d.offset),
     shape: MODIFIER_SHAPES.includes(r2.shape) ? r2.shape : d.shape,
-    strength: num$2(r2.strength, d.strength),
-    x: num$2(r2.x, d.x),
-    y: num$2(r2.y, d.y),
-    rotation: num$2(r2.rotation, d.rotation),
-    scale: num$2(r2.scale, d.scale),
-    opacity: num$2(r2.opacity, d.opacity),
-    letterSpacing: num$2(r2.letterSpacing, d.letterSpacing),
-    blur: num$2(r2.blur, d.blur)
+    strength: num$4(r2.strength, d.strength),
+    x: num$4(r2.x, d.x),
+    y: num$4(r2.y, d.y),
+    rotation: num$4(r2.rotation, d.rotation),
+    scale: num$4(r2.scale, d.scale),
+    opacity: num$4(r2.opacity, d.opacity),
+    letterSpacing: num$4(r2.letterSpacing, d.letterSpacing),
+    blur: num$4(r2.blur, d.blur)
   };
   if (isNum$3(r2.falloffStart)) m.falloffStart = r2.falloffStart;
   if (isNum$3(r2.falloffEnd)) m.falloffEnd = r2.falloffEnd;
@@ -2668,7 +2668,7 @@ function run(ctx2, startPc, startPos, gen) {
 }
 let stackBase = 0;
 const progOf = (re) => compile$1(re.source, re.flags);
-const advance = (s, i, u) => u && i + 1 < s.length && s.codePointAt(i) > 65535 ? i + 2 : i + 1;
+const advance$1 = (s, i, u) => u && i + 1 < s.length && s.codePointAt(i) > 65535 ? i + 2 : i + 1;
 function result(prog, s, caps) {
   const out = [];
   for (let k = 0; k < prog.ncap; k++) out.push(caps[2 * k] < 0 || caps[2 * k + 1] < 0 ? void 0 : s.slice(caps[2 * k], caps[2 * k + 1]));
@@ -2719,7 +2719,7 @@ function linearMatch(re, s) {
     const m = linearExec(re, s);
     if (!m) break;
     out.push(m[0]);
-    if (m[0] === "") re.lastIndex = advance(s, re.lastIndex, prog.u);
+    if (m[0] === "") re.lastIndex = advance$1(s, re.lastIndex, prog.u);
   }
   return out.length ? out : null;
 }
@@ -2733,7 +2733,7 @@ function linearMatchAll(re, s) {
     const m = linearExec(copy, s);
     if (!m) break;
     out.push(m);
-    if (m[0] === "") copy.lastIndex = advance(s, copy.lastIndex, prog.u);
+    if (m[0] === "") copy.lastIndex = advance$1(s, copy.lastIndex, prog.u);
   }
   return out;
 }
@@ -2792,7 +2792,7 @@ function linearReplace(re, s, replacement, all) {
       const m = linearExec(re, s);
       if (!m) break;
       matches.push(m);
-      if (m[0] === "") re.lastIndex = advance(s, re.lastIndex, prog.u);
+      if (m[0] === "") re.lastIndex = advance$1(s, re.lastIndex, prog.u);
     }
   } else {
     const m = linearExec(re, s);
@@ -2826,7 +2826,7 @@ function linearSplit(re, s, limit) {
     if (!caps || caps[0] >= size) break;
     const e = Math.min(caps[1], size);
     if (e === p) {
-      q = advance(s, caps[0], prog.u);
+      q = advance$1(s, caps[0], prog.u);
       continue;
     }
     out.push(s.slice(p, caps[0]));
@@ -2952,12 +2952,12 @@ function opts(texts, right) {
 }
 const isObj$4 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const str$1 = (v, d = "") => typeof v === "string" ? v : d;
-const num$1 = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
+const num$3 = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
 function cleanVoice(raw) {
   if (!isObj$4(raw)) return void 0;
   const out = {};
   if (str$1(raw.voice)) out.voice = str$1(raw.voice).slice(0, 40);
-  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num$1(raw.speed, 1, 0.5, 1.5);
+  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num$3(raw.speed, 1, 0.5, 1.5);
   if (str$1(raw.say).trim()) out.say = str$1(raw.say).slice(0, 200);
   if (str$1(raw.sentence).trim()) out.sentence = str$1(raw.sentence).slice(0, 300);
   if (raw.twice === true) out.twice = true;
@@ -3018,7 +3018,7 @@ function normaliseQuestion(raw) {
     kind,
     prefix: isIdentifier(str$1(raw.prefix)) ? str$1(raw.prefix) : d.prefix,
     prompt: str$1(raw.prompt),
-    points: num$1(raw.points, 1, 0, 1e3),
+    points: num$3(raw.points, 1, 0, 1e3),
     options,
     blanks,
     pairs,
@@ -3028,10 +3028,10 @@ function normaliseQuestion(raw) {
     ...kind === "blank" && raw.answerBy === "drag" ? { answerBy: "drag" } : {},
     shuffle: raw.shuffle === true,
     partial: raw.partial === true,
-    attempts: Math.round(num$1(raw.attempts, 0, 0, 100)),
-    attemptPenalty: num$1(raw.attemptPenalty, 0, 0, 1),
+    attempts: Math.round(num$3(raw.attempts, 0, 0, 100)),
+    attemptPenalty: num$3(raw.attemptPenalty, 0, 0, 1),
     hints: (Array.isArray(raw.hints) ? raw.hints : []).filter((h) => typeof h === "string").slice(0, MAX_HINTS),
-    hintPenalty: num$1(raw.hintPenalty, 0, 0, 1),
+    hintPenalty: num$3(raw.hintPenalty, 0, 0, 1),
     feedbackCorrect: str$1(raw.feedbackCorrect),
     feedbackPartial: str$1(raw.feedbackPartial),
     feedbackIncorrect: str$1(raw.feedbackIncorrect),
@@ -3046,7 +3046,7 @@ function normaliseQuestion(raw) {
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
-    ...isObj$4(raw.retake) ? { retake: { limit: Math.round(num$1(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
+    ...isObj$4(raw.retake) ? { retake: { limit: Math.round(num$3(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
     ...cleanVoice(raw.voice) ? { voice: cleanVoice(raw.voice) } : {},
     ...cleanGuard(raw.guard) ? { guard: cleanGuard(raw.guard) } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
@@ -3125,22 +3125,22 @@ const NOTE_MIN_W = 80;
 const NOTE_MIN_H = 48;
 const NOTE_MAX_TEXT = 4e3;
 const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
-const num = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
+const num$2 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
 function cleanNote(raw) {
   if (!isObj$1(raw) || typeof raw.id !== "string" || !raw.id) return null;
   const n = {
     id: raw.id,
-    x: num(raw.x, 0),
-    y: num(raw.y, 0),
-    w: Math.max(NOTE_MIN_W, num(raw.w, NOTE_DEFAULT_W)),
-    h: Math.max(NOTE_MIN_H, num(raw.h, NOTE_DEFAULT_H)),
+    x: num$2(raw.x, 0),
+    y: num$2(raw.y, 0),
+    w: Math.max(NOTE_MIN_W, num$2(raw.w, NOTE_DEFAULT_W)),
+    h: Math.max(NOTE_MIN_H, num$2(raw.h, NOTE_DEFAULT_H)),
     text: typeof raw.text === "string" ? raw.text.slice(0, NOTE_MAX_TEXT) : ""
   };
   if (NOTE_COLOURS.includes(raw.colour)) n.colour = raw.colour;
   if (typeof raw.author === "string" && raw.author) n.author = raw.author.slice(0, 120);
   if (typeof raw.created === "string") n.created = raw.created.slice(0, 40);
   const a = raw.anchor;
-  if (isObj$1(a) && typeof a.layerId === "string" && a.layerId) n.anchor = { layerId: a.layerId, lx: num(a.lx, 0), ly: num(a.ly, 0) };
+  if (isObj$1(a) && typeof a.layerId === "string" && a.layerId) n.anchor = { layerId: a.layerId, lx: num$2(a.lx, 0), ly: num$2(a.ly, 0) };
   return n;
 }
 function cleanNotes(raw) {
@@ -3229,11 +3229,11 @@ function stringMap(v) {
   return out;
 }
 function sanitizeLayerInPlace(node) {
-  const clean = sanitizeNode(node, /* @__PURE__ */ new Set());
-  if (!clean) return false;
+  const clean2 = sanitizeNode(node, /* @__PURE__ */ new Set());
+  if (!clean2) return false;
   const target = node;
-  for (const k of Object.keys(target)) if (!(k in clean)) delete target[k];
-  for (const [k, v] of Object.entries(clean)) if (!same$1(target[k], v)) target[k] = v;
+  for (const k of Object.keys(target)) if (!(k in clean2)) delete target[k];
+  for (const [k, v] of Object.entries(clean2)) if (!same$1(target[k], v)) target[k] = v;
   return true;
 }
 function same$1(a, b) {
@@ -4397,13 +4397,13 @@ function runsPatch(runs) {
   return { text: runsText(norm), runs: isPlainRuns(norm) ? void 0 : norm };
 }
 const MAX_SIZE = 30;
-const memo = /* @__PURE__ */ new Map();
+const memo$2 = /* @__PURE__ */ new Map();
 function remembered(key, make) {
-  let hit = memo.get(key);
+  let hit = memo$2.get(key);
   if (hit === void 0) {
     hit = JSON.stringify(make());
-    if (memo.size >= 8) memo.delete(memo.keys().next().value);
-    memo.set(key, hit);
+    if (memo$2.size >= 8) memo$2.delete(memo$2.keys().next().value);
+    memo$2.set(key, hit);
   }
   return JSON.parse(hit);
 }
@@ -4490,12 +4490,12 @@ function layoutCrossword(words, size = 10, tries = 400) {
   return remembered("c" + size + ":" + tries + ":" + JSON.stringify(words), () => layOut(words, size, tries));
 }
 function layOut(words, size, tries) {
-  const clean = cleanWords(words, size);
-  if (!clean.length) return [];
+  const clean2 = cleanWords(words, size);
+  if (!clean2.length) return [];
   const rand = prng(20240607);
-  const longestFirst = [...clean].sort((a, b) => b.answer.length - a.answer.length);
-  const orders = clean.map((w) => [w, ...longestFirst.filter((x) => x !== w)]);
-  for (let i = 0; i < tries; i++) orders.push(clean.map((w) => ({ w, r: rand() })).sort((a, b) => a.r - b.r).map((o) => o.w));
+  const longestFirst = [...clean2].sort((a, b) => b.answer.length - a.answer.length);
+  const orders = clean2.map((w) => [w, ...longestFirst.filter((x) => x !== w)]);
+  for (let i = 0; i < tries; i++) orders.push(clean2.map((w) => ({ w, r: rand() })).sort((a, b) => a.r - b.r).map((o) => o.w));
   let best = [];
   let bestScore = -1;
   for (const order of orders) {
@@ -4519,8 +4519,8 @@ function hide(words, size, seed) {
   const rand = prng(seed);
   const grid = Array(size * size).fill("");
   const text = (Array.isArray(words) ? words : []).slice(0, MAX_WORDS).map((w) => typeof w === "string" ? w : w && typeof w === "object" ? String(w.answer ?? w.word ?? "") : "");
-  const clean = text.map((w) => w.toUpperCase().replace(/[^A-Z]/g, "")).filter((w) => w.length >= 2 && w.length <= size);
-  const order = clean.map((w, i) => ({ w, i })).sort((a, b) => b.w.length - a.w.length);
+  const clean2 = text.map((w) => w.toUpperCase().replace(/[^A-Z]/g, "")).filter((w) => w.length >= 2 && w.length <= size);
+  const order = clean2.map((w, i) => ({ w, i })).sort((a, b) => b.w.length - a.w.length);
   for (const { w, i } of order) {
     for (let tries = 0; tries < 400; tries++) {
       const [dr, dc] = DIRECTIONS[(i + Math.floor(tries / 100)) % DIRECTIONS.length];
@@ -4541,6 +4541,469 @@ function hide(words, size, seed) {
   const pool = "EEEEEAAAAIIIOOOUUNNNRRRSSSTTTLLCCDDMMPPHHBGFWYKV";
   for (let i = 0; i < grid.length; i++) if (!grid[i]) grid[i] = pool[Math.floor(rand() * pool.length)];
   return Array.from({ length: size }, (_, r2) => grid.slice(r2 * size, (r2 + 1) * size).join(""));
+}
+const W = {
+  " ": 0.26,
+  a: 0.556,
+  b: 0.612,
+  c: 0.479,
+  d: 0.612,
+  e: 0.562,
+  f: 0.336,
+  g: 0.543,
+  h: 0.613,
+  i: 0.252,
+  j: 0.252,
+  k: 0.525,
+  l: 0.252,
+  m: 0.926,
+  n: 0.613,
+  o: 0.602,
+  p: 0.612,
+  q: 0.612,
+  r: 0.409,
+  s: 0.477,
+  t: 0.356,
+  u: 0.613,
+  v: 0.5,
+  w: 0.775,
+  x: 0.523,
+  y: 0.501,
+  z: 0.469,
+  A: 0.632,
+  B: 0.646,
+  C: 0.63,
+  D: 0.726,
+  E: 0.556,
+  F: 0.516,
+  G: 0.727,
+  H: 0.737,
+  I: 0.279,
+  J: 0.269,
+  K: 0.612,
+  L: 0.522,
+  M: 0.899,
+  N: 0.753,
+  O: 0.778,
+  P: 0.602,
+  Q: 0.778,
+  R: 0.617,
+  S: 0.548,
+  T: 0.551,
+  U: 0.729,
+  V: 0.596,
+  W: 0.923,
+  X: 0.578,
+  Y: 0.559,
+  Z: 0.572,
+  ".": 0.263,
+  ",": 0.259,
+  ":": 0.263,
+  ";": 0.263,
+  "-": 0.322,
+  "–": 0.5,
+  "—": 0.9,
+  "'": 0.219,
+  "’": 0.169,
+  '"': 0.398,
+  "?": 0.432,
+  "!": 0.264,
+  "(": 0.295,
+  ")": 0.295,
+  "/": 0.367,
+  "%": 0.827,
+  "&": 0.729,
+  "+": 0.572,
+  "=": 0.572,
+  "•": 0.376,
+  "·": 0.263,
+  "@": 0.896,
+  "#": 0.646,
+  "$": 0.572,
+  "*": 0.551,
+  "_": 0.438,
+  "|": 0.549
+};
+const advance = (ch) => W[ch] ?? (ch >= "0" && ch <= "9" ? 0.572 : ch.charCodeAt(0) > 8192 ? 1 : 0.56);
+const TEXT_WIDTH_MARGIN = 0.04;
+function textWidth(text, size, weight = 400) {
+  const bold = weight >= 700 ? 1.07 : weight >= 600 ? 1.04 : 1;
+  let em = 0;
+  for (const ch of String(text)) em += advance(ch);
+  return em * size * bold * (1 + TEXT_WIDTH_MARGIN);
+}
+function wrapLines(text, room, size, weight = 400) {
+  const lines = [];
+  let line = "";
+  let widest = 0;
+  const close = () => {
+    widest = Math.max(widest, textWidth(line, size, weight));
+    lines.push(line);
+  };
+  for (const word of String(text).trim().split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && textWidth(next, size, weight) > room) {
+      close();
+      line = word;
+    } else line = next;
+  }
+  close();
+  return { lines, width: widest };
+}
+const FLOOR = 11;
+const HARD_MAX_WORDS = 120;
+const WEIGHT = 600;
+const num$1 = (v, fallback) => {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : fallback;
+};
+const clean = (s) => s.trim().replace(/\s+/g, " ");
+const stripEnds = (s) => s.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+const cloudKey = (text) => clean(String(text ?? "")).toLowerCase();
+function wordBox(text, size) {
+  const padX = Math.max(12, size * 0.3);
+  const padY = Math.max(4, size * 0.16);
+  return { w: Math.ceil(textWidth(text, size, WEIGHT) + 2 * padX), h: Math.ceil(size + 2 * padY) };
+}
+function gather(input, blocked, minCount) {
+  const merged = /* @__PURE__ */ new Map();
+  const rows = Array.isArray(input) ? input : [];
+  for (const raw of rows) {
+    const isObj2 = !!raw && typeof raw === "object" && !Array.isArray(raw);
+    const text = clean(String(isObj2 ? raw.text ?? "" : typeof raw === "string" || typeof raw === "number" ? raw : ""));
+    if (!text) continue;
+    const key = text.toLowerCase();
+    if (blocked.has(key) || key.split(" ").some((t2) => blocked.has(stripEnds(t2)))) continue;
+    const weight = isObj2 ? Math.max(0, num$1(raw.weight, 1)) : 1;
+    const have = merged.get(key);
+    if (have) have.weight += weight;
+    else {
+      const { text: _t, weight: _w, ...extra } = isObj2 ? raw : {};
+      merged.set(key, { key, text, weight, extra });
+    }
+  }
+  return [...merged.values()].filter((r2) => r2.weight >= minCount && r2.weight > 0).sort((a, b) => b.weight - a.weight || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+}
+const GOLDEN = 2.399963229728653;
+function pack(boxes, W2, H, gap) {
+  const placed = [];
+  const out = [];
+  const cx = W2 / 2;
+  const cy = H / 2;
+  const squash = Math.min(1, H / W2);
+  const reach = W2 / 2 + Math.max(...boxes.map((b) => b.w), 0);
+  boxes.forEach((b, i) => {
+    if (b.w > W2 || b.h > H) {
+      out.push(null);
+      return;
+    }
+    const free = (x, y) => {
+      if (x < 0 || y < 0 || x + b.w > W2 || y + b.h > H) return false;
+      for (const r22 of placed) if (x < r22.x + r22.w + gap && x + b.w + gap > r22.x && y < r22.y + r22.h + gap && y + b.h + gap > r22.y) return false;
+      return true;
+    };
+    let theta = i * GOLDEN;
+    let r2 = 0;
+    let found = null;
+    while (r2 <= reach) {
+      const x = Math.round(cx + r2 * Math.cos(theta) - b.w / 2);
+      const y = Math.round(cy + r2 * Math.sin(theta) * squash - b.h / 2);
+      if (free(x, y)) {
+        found = { x, y, w: b.w, h: b.h };
+        break;
+      }
+      theta += Math.min(0.5, 6 / Math.max(r2, 6));
+      r2 += 1.5 * Math.min(0.5, 6 / Math.max(r2, 6));
+    }
+    if (found) placed.push(found);
+    out.push(found);
+  });
+  return out;
+}
+const memo$1 = /* @__PURE__ */ new Map();
+function layoutCloud(input, width, height, options) {
+  const o = options && typeof options === "object" ? options : {};
+  const W2 = Math.min(4e3, Math.max(40, num$1(width, 600)));
+  const H = Math.min(4e3, Math.max(40, num$1(height, 400)));
+  const minSize = Math.max(FLOOR, num$1(o.minSize, 16));
+  const maxSize = Math.max(minSize, num$1(o.maxSize, 64));
+  const gap = Math.max(0, num$1(o.gap, 6));
+  const scale = o.scale === "linear" || o.scale === "log" ? o.scale : "sqrt";
+  const minCount = Math.max(0, num$1(o.minCount, 0));
+  const grow1 = Math.max(1, Math.min(3, num$1(o.grow, 1)));
+  const limit = Math.min(HARD_MAX_WORDS, Math.max(1, Math.round(num$1(o.max, 60))));
+  const blocked = new Set((Array.isArray(o.blocked) ? o.blocked : []).map((b) => stripEnds(cloudKey(b))).filter(Boolean));
+  const key = JSON.stringify([input, W2, H, minSize, maxSize, gap, scale, minCount, limit, grow1, [...blocked]]);
+  const hit = memo$1.get(key);
+  if (hit !== void 0) return JSON.parse(hit);
+  const rows = gather(input, blocked, minCount).slice(0, limit);
+  const top = rows.length ? rows[0].weight : 1;
+  const low = rows.length ? rows[rows.length - 1].weight : 1;
+  const tOf = (w) => top === low ? 0.5 : (w - low) / (top - low);
+  const grow = (t2) => scale === "linear" ? t2 : scale === "log" ? Math.log1p(t2 * 9) / Math.log(10) : Math.sqrt(t2);
+  const sizes = rows.map((r2) => top === low ? (minSize + maxSize) / 2 : minSize + (maxSize - minSize) * grow(tOf(r2.weight)));
+  const area = (k2) => rows.reduce((sum, r2, i) => {
+    const b = wordBox(r2.text, Math.max(FLOOR, Math.round(sizes[i] * k2)));
+    return sum + (b.w + gap) * (b.h + gap);
+  }, 0);
+  let k = Math.min(grow1, Math.sqrt(0.5 * W2 * H / Math.max(1, area(1))));
+  let spots = [];
+  let at = [];
+  for (let attempt2 = 0; attempt2 < 14; attempt2++) {
+    at = rows.map((r2, i) => {
+      const size = Math.max(FLOOR, Math.round(sizes[i] * k));
+      return { size, box: wordBox(r2.text, size) };
+    });
+    spots = pack(at.map((a) => a.box), W2, H, gap);
+    if (spots.every(Boolean) || at.every((a) => a.size <= FLOOR)) break;
+    k *= 0.93;
+  }
+  const result2 = rows.map((r2, i) => {
+    const f2 = top === low ? 0.5 : grow(tOf(r2.weight));
+    const spot = spots[i];
+    return {
+      ...r2.extra,
+      text: r2.text,
+      weight: r2.weight,
+      rank: i,
+      size: at[i].size,
+      tier: f2 >= 0.7 ? 0 : f2 >= 0.4 ? 1 : 2,
+      x: spot ? spot.x : 0,
+      y: spot ? spot.y : 0,
+      w: at[i].box.w,
+      h: at[i].box.h,
+      shown: !!spot
+    };
+  });
+  if (memo$1.size >= 8) memo$1.delete(memo$1.keys().next().value);
+  memo$1.set(key, JSON.stringify(result2));
+  return result2;
+}
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const SHORT$1 = MONTHS.map((m) => m.slice(0, 3));
+const num = (v, fallback) => {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : fallback;
+};
+const daysIn = (y, m) => [31, y % 4 === 0 && y % 100 !== 0 || y % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+function parseDate(v) {
+  if (typeof v === "number") return Number.isFinite(v) && Number.isInteger(v) ? { t: v, tEnd: v + 1, precision: "year", year: v, month: 1, day: 1 } : null;
+  if (typeof v !== "string") return null;
+  const m = /^\s*(-?\d{1,6})(?:-(\d{1,2}))?(?:-(\d{1,2}))?(?:[T ].*)?\s*$/.exec(v);
+  if (!m) return null;
+  const year = Number(m[1]);
+  if (m[2] === void 0) return { t: year, tEnd: year + 1, precision: "year", year, month: 1, day: 1 };
+  const month = Number(m[2]);
+  if (month < 1 || month > 12) return null;
+  if (m[3] === void 0) return { t: year + (month - 1) / 12, tEnd: year + month / 12, precision: "month", year, month, day: 1 };
+  const day = Number(m[3]);
+  if (day < 1 || day > daysIn(year, month)) return null;
+  const t2 = year + (month - 1 + (day - 1) / daysIn(year, month)) / 12;
+  return { t: t2, tEnd: year + (month - 1 + day / daysIn(year, month)) / 12, precision: "day", year, month, day };
+}
+const yearText = (y) => y < 0 ? `${-y} BCE` : String(y);
+function dateText(d) {
+  const y = yearText(d.year);
+  return d.precision === "day" ? `${d.day} ${MONTHS[d.month - 1]} ${y}` : d.precision === "month" ? `${MONTHS[d.month - 1]} ${y}` : y;
+}
+const rowsOf = (v) => Array.isArray(v) ? v.filter((r2) => !!r2 && typeof r2 === "object" && !Array.isArray(r2)) : [];
+const STEPS = [1 / 12, 1 / 4, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4];
+function timeBounds(events, eras, marker) {
+  const points = [];
+  for (const e of rowsOf(events)) {
+    const a = parseDate(e.date);
+    if (!a) continue;
+    points.push(a.t);
+    const b = e.end === void 0 || e.end === null || e.end === "" ? null : parseDate(e.end);
+    if (b) points.push(b.tEnd);
+  }
+  for (const e of rowsOf(eras)) {
+    const a = parseDate(e.from);
+    const b = parseDate(e.to);
+    if (a) points.push(a.t);
+    if (b) points.push(b.t);
+  }
+  const mk = markerDate(marker);
+  if (mk) points.push(mk.t);
+  if (!points.length) return { from: 0, to: 1, span: 1, count: 0 };
+  const lo = Math.min(...points);
+  const hi = Math.max(...points);
+  const room = Math.max(0.5, (hi - lo) * 0.04);
+  let from = Math.floor(lo - room);
+  let to = Math.ceil(hi + room);
+  if (to - from < 2) {
+    from -= 1;
+    to += 1;
+  }
+  return { from, to, span: to - from, count: rowsOf(events).length };
+}
+function markerDate(v) {
+  if (v === "today") {
+    const now2 = /* @__PURE__ */ new Date();
+    return parseDate(`${now2.getFullYear()}-${now2.getMonth() + 1}-${now2.getDate()}`);
+  }
+  return v === void 0 || v === null || v === "" ? null : parseDate(v);
+}
+const memo = /* @__PURE__ */ new Map();
+function timelineLayout(eventsIn, erasIn, fromIn, toIn, options) {
+  const o = options && typeof options === "object" ? options : {};
+  const length = Math.min(2e4, Math.max(40, num(o.length, 880)));
+  const vertical = o.orientation === "vertical";
+  const size = Math.max(8, num(o.labelSize, 14));
+  const lanes = Math.max(1, Math.min(12, Math.round(num(o.lanes, 4))));
+  const maxLabel = Math.max(40, num(o.maxLabel, 170));
+  const column = Math.max(40, num(o.columnWidth, 150));
+  const maxLines = Math.max(1, Math.min(6, Math.round(num(o.maxLines, 2))));
+  const gap = Math.max(0, num(o.gap, 8));
+  const tickSpace = Math.max(20, num(o.tickSpace, 64));
+  const lineH = size * 1.25;
+  const dateLine = o.dateLine === true;
+  const sides = num(o.sides, 2) === 1 ? 1 : 2;
+  const from = num(fromIn, 0);
+  let to = num(toIn, from + 1);
+  if (to <= from) to = from + 1;
+  const key = JSON.stringify([eventsIn, erasIn, from, to, length, vertical, size, lanes, maxLabel, column, maxLines, gap, tickSpace, o.marker === "today" ? (/* @__PURE__ */ new Date()).toDateString() : o.marker, dateLine, sides]);
+  const hit = memo.get(key);
+  if (hit !== void 0) return JSON.parse(hit);
+  const span = to - from;
+  const px = length / span;
+  const at = (t2) => (t2 - from) * px;
+  const problems = [];
+  const eraRows = rowsOf(erasIn).flatMap((e, i) => {
+    const a = parseDate(e.from);
+    const b = parseDate(e.to);
+    if (!a || !b || b.t <= a.t) {
+      problems.push(`Era ${i + 1} ("${String(e.name ?? e.title ?? "")}"): the from and to dates need to be dates, from before to`);
+      return [];
+    }
+    return [{ row: e, a, b, i }];
+  }).sort((x, y) => x.a.t - y.a.t || x.i - y.i);
+  const parsed = rowsOf(eventsIn).flatMap((e, i) => {
+    const a = parseDate(e.date);
+    if (!a) {
+      problems.push(`Event ${i + 1} ("${String(e.title ?? "")}"): the date "${String(e.date ?? "")}" can't be read. Write it as 1969, 1969-07 or 1969-07-20`);
+      return [];
+    }
+    const hasEnd = e.end !== void 0 && e.end !== null && e.end !== "";
+    const b = hasEnd ? parseDate(e.end) : null;
+    if (hasEnd && !b) problems.push(`Event ${i + 1} ("${String(e.title ?? "")}"): the end date "${String(e.end)}" can't be read, so it shows as a single date`);
+    const stop = b && b.tEnd > a.t ? b.tEnd : a.t;
+    return [{ row: e, a, b: b && b.tEnd > a.t ? b : null, stop, i }];
+  }).sort((x, y) => x.a.t - y.a.t || x.i - y.i);
+  const items = parsed.map((p, index) => {
+    const title = String(p.row.title ?? p.row.name ?? "");
+    const range = !!p.b;
+    const text = range ? `${dateText(p.a)} to ${dateText(p.b)}` : dateText(p.a);
+    const eraIdx = eraRows.findIndex((e) => p.a.t >= e.a.t && p.a.t < e.b.t);
+    const inView = p.a.t <= to && p.stop >= from;
+    const wrapped = vertical ? wrapLines(title, column, size, 600) : wrapLines(title, maxLabel, size, 600);
+    const lines = Math.min(maxLines, wrapped.lines.length) + (dateLine ? 1 : 0);
+    const room = vertical ? column : maxLabel;
+    const labelW = Math.ceil(Math.min(room, Math.max(wrapped.width, dateLine ? textWidth(text, size, 600) : 0)));
+    return {
+      ...p.row,
+      index,
+      title,
+      range,
+      start: p.a.t,
+      stop: p.stop,
+      dateText: text,
+      spoken: range ? `from ${text}` : text,
+      eraIndex: eraIdx,
+      eraName: eraIdx >= 0 ? String(eraRows[eraIdx].row.name ?? eraRows[eraIdx].row.title ?? "") : "",
+      inView,
+      pos: round(at(p.a.t)),
+      pos2: round(at(p.stop)),
+      len: Math.max(0, round(at(p.stop) - at(p.a.t))),
+      lane: -1,
+      labelled: false,
+      labelPos: 0,
+      labelW,
+      labelH: Math.ceil(lines * lineH),
+      lines,
+      priority: num(p.row.priority, 0)
+    };
+  });
+  const along = (it) => vertical ? it.labelH : it.labelW;
+  const taken = Array.from({ length: lanes }, () => []);
+  const stems = [];
+  const sideOf = (lane) => sides === 1 ? 0 : lane % 2;
+  const STEM = 4;
+  const order = items.filter((it) => it.inView).sort((x, y) => y.priority - x.priority || x.index - y.index);
+  for (const it of order) {
+    const room = along(it);
+    const start = Math.max(0, Math.min(it.pos, length - room));
+    const a = Math.min(start, it.pos);
+    const b = Math.max(start + room, it.range ? it.pos2 : it.pos);
+    const lane = taken.findIndex((used, k) => {
+      if (!used.every((u) => b + gap <= u.a || a >= u.b + gap)) return false;
+      for (let j = 0; j < k; j++) if (sideOf(j) === sideOf(k) && taken[j].some((u) => it.pos >= u.a - STEM && it.pos <= u.b + STEM)) return false;
+      return !stems.some((st) => st.lane > k && sideOf(st.lane) === sideOf(k) && st.pos >= a - STEM && st.pos <= b + STEM);
+    });
+    if (lane < 0) continue;
+    taken[lane].push({ a, b });
+    stems.push({ pos: it.pos, lane });
+    it.lane = lane;
+    it.labelled = true;
+    it.labelPos = round(start);
+  }
+  const eraOut = eraRows.map((e, n) => {
+    const lo = Math.max(e.a.t, from);
+    const hi = Math.min(e.b.t, to);
+    const shown = hi > lo;
+    return {
+      ...e.row,
+      index: n,
+      name: String(e.row.name ?? e.row.title ?? ""),
+      dateText: `${dateText(e.a)} to ${dateText(e.b)}`,
+      inView: shown,
+      clipStart: shown && e.a.t < from,
+      clipEnd: shown && e.b.t > to,
+      pos: shown ? round(at(lo)) : 0,
+      pos2: shown ? round(at(hi)) : 0,
+      len: shown ? round(at(hi) - at(lo)) : 0
+    };
+  });
+  const step = STEPS.find((s) => s * px >= tickSpace) ?? STEPS[STEPS.length - 1];
+  const ticks = [];
+  if (step < 1) {
+    const months = Math.round(step * 12);
+    for (let m = Math.ceil(from * 12 / months) * months; m / 12 <= to + 1e-9 && ticks.length < 400; m += months) {
+      const yr = Math.floor(m / 12);
+      const mo = m - yr * 12;
+      ticks.push({ value: m / 12, label: mo === 0 ? yearText(yr) : `${SHORT$1[mo]} ${yearText(yr)}`, pos: round(at(m / 12)), major: mo === 0 });
+    }
+  } else {
+    for (let k = Math.ceil(from / step); k * step <= to + 1e-9 && ticks.length < 400; k++) {
+      ticks.push({ value: k * step, label: yearText(k * step), pos: round(at(k * step)), major: k % 5 === 0 });
+    }
+  }
+  const rangeText = span >= 5 ? `${yearText(Math.round(from))} to ${yearText(Math.round(to))}` : `${monthYear(from)} to ${monthYear(to)}`;
+  const mk = markerDate(o.marker);
+  const marker = mk ? { pos: round(at(mk.t)), text: dateText(mk), inView: mk.t >= from && mk.t <= to } : null;
+  const result2 = {
+    from,
+    to,
+    span,
+    length,
+    events: items,
+    eras: eraOut,
+    ticks,
+    rangeText,
+    marker,
+    earlier: items.filter((it) => it.stop < from).length,
+    later: items.filter((it) => it.start > to).length,
+    unlabelled: items.filter((it) => it.inView && !it.labelled).length,
+    problems
+  };
+  if (memo.size >= 8) memo.delete(memo.keys().next().value);
+  memo.set(key, JSON.stringify(result2));
+  return result2;
+}
+const round = (v) => Math.round(v * 10) / 10;
+function monthYear(t2) {
+  const m = Math.min(11, Math.max(0, Math.floor((t2 - Math.floor(t2)) * 12 + 1e-9)));
+  return `${MONTHS[m]} ${yearText(Math.floor(t2 + 1e-9))}`;
 }
 class ExprError extends Error {
 }
@@ -5743,6 +6206,28 @@ const FORMULA_HELPERS = {
   },
   crossword: (words, size = 10) => layoutCrossword(words, size),
   wordSearch: (words, size = 12, seed = 7) => makeWordSearch(words, size, seed),
+  cloud: (words, width, height, options) => layoutCloud(words, width, height, options),
+  //Variables hold text, numbers, true/false and lists, so the timeline is handed over a part at a time, each a list: `part` is "events" (the default), "eras", "ticks", "marker" (no row, or one) or "info" (one row: rangeText, unlabelled, earlier, later, problems)
+  timelineLayout: (events, eras, from, to, options, part = "events") => {
+    const r2 = timelineLayout(events, eras, from, to, options);
+    switch (part) {
+      case "eras":
+        return r2.eras;
+      case "ticks":
+        return r2.ticks;
+      case "marker":
+        return r2.marker ? [r2.marker] : [];
+      case "info":
+        return [{ rangeText: r2.rangeText, unlabelled: r2.unlabelled, earlier: r2.earlier, later: r2.later, problems: r2.problems, from: r2.from, to: r2.to }];
+      default:
+        return r2.events;
+    }
+  },
+  //[from, to, span, count]: the years that hold every event and era, whole years with room at each end
+  timeBounds: (events, eras, marker) => {
+    const b = timeBounds(events, eras, marker);
+    return [b.from, b.to, b.span, b.count];
+  },
   /** How many words a text has (runs of anything but spaces). */
   wordCount: (text) => {
     const t2 = text === void 0 || text === null ? "" : String(text).trim();
@@ -6476,7 +6961,7 @@ Prefer to start from something finished? The **Templates** tab on the projects p
 
 ## Where to get help
 
-Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pages. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
+Press <kbd>F1</kbd> anywhere for the page about what you have selected (with a search box ready), or <kbd>Ctrl</kbd>+<kbd>K</kbd> to search these pages. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
 
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`
   },
@@ -6563,11 +7048,11 @@ From left to right:
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
 - Zoom: **−**, the percentage (click it to fit everything) and **+**.
-- **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**. After you click or tab into a panel, Help opens that panel's own page (its tooltip names the panel); click the canvas or a toolbar and it goes back to the general help.
+- **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**. Help opens the page for whatever you have highlighted, and its tooltip says which ("Help: Chart layer"): the Properties field you are in, the selected layer's type, the selected node in Interactions or key in the Timeline, the tool you picked, a selected artboard or page master, or the panel you last worked in; with none of those it is the general help. See [Using this help](help).
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
-**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)), and the **Media Catalogue** button, which opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image and the Media Catalogue), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)). The **Media Catalogue** button sits in the **Media** group with image and video: it opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). It is an action rather than a tool, so it doesn't stay lit after you use it. There is no Help button on the tool bar: **Help** is in the top bar, and right-clicking the tool bar has **Help for the tools**. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## What the pointer shows
 The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
@@ -6606,7 +7091,7 @@ The **top** area sits under the header and above the canvas and its rulers, acro
 Right-click a tab (or press Shift+F10 on it) for **Dock on the left / right / at the bottom / at the top**, **Float in its own window**, **Help for this panel** and **Reset panel layout** (everything back where it started). The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title), and drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right**, **Dock at the bottom** and **Dock at the top** strips show, labelled for the tools, and the one you are over lights up. Along the bottom or the top it becomes a strip across the page with its groups side by side (at the top it sits under the header, over the top panels). It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is. Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom**, **Dock at the top** or **Floating**. Saved workspaces remember where the tool bar was. The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
-**Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. The **Debug** panel (on by default) shows:
+**Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
 
 - **Now showing**: the artboard on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
@@ -6783,7 +7268,9 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 ## Help
 | Key | Does |
 |---|---|
-| <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
+| <kbd>F1</kbd> or <kbd>?</kbd> | Open the help for what is highlighted (the Help button), with the caret in its search box; <kbd>?</kbd> again closes it |
+| <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
+| <kbd>Alt</kbd>+<kbd>Left</kbd> / <kbd>Alt</kbd>+<kbd>Right</kbd> | Back and forward through the pages you have read, in the help drawer |
 | <kbd>?</kbd> | Open the help |
 
 ## Text
@@ -6909,6 +7396,9 @@ Select layers and drag them on the canvas. If you let go over a **different artb
     summary: "What the right-hand panel shows for a layer, an artboard and the project, and how to find a property with the search box.",
     keywords: "properties inspector panel right search find filter property fuzzy synonym transparency opacity round corner radius alt description hide visible colour color z-order draw order aria typo did you mean slash ctrl f",
     body: `The **Properties** panel is on the right. It shows the settings of whatever is selected: a layer (or several), an artboard, or, with nothing selected, the artboard's and the project's settings. Each group of settings is a **section** with a title. Click the title to fold it, and the **?** beside it opens that section's page.
+
+## Folding sections
+Click a section's title to fold it or open it. The editor remembers: fold **Accessibility** on one layer and it stays folded on the next layer, and after you reload (it is kept in this browser, and only the sections you changed are kept, so a section you never touched still follows the editor's own default). **Alt**-click a title to open only that section and fold the rest. Right-click a title, or use the arrow button beside the search box, to **fold all** or **unfold all**; the menu also has **Back to the default folds**. Searching still opens every section so nothing is hidden from it, and your folds come back when you clear the box. The **+** buttons open their section so you can see what you added.
 
 ## Searching the properties
 The box at the top of the panel finds a property by what it does or what it is called. Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> while the focus is in the panel (or click the box).
@@ -7189,7 +7679,7 @@ Copyright reporting for a course is run at course level, and this tab does not r
     keywords: "image picture photo svg video audio sound mp3 upload drop paste asset nine slice 9-slice n-slice",
     body: `Drop files on the canvas, paste them, or use the **Image** tool. SVG files become editable vector layers; other images become image layers. Video files become video layers; audio files are stored as assets for the **Play sound** action.
 
-Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Media Catalogue** button on the tool bar finds a photo in the suite's library instead: see [The Media Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
+Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Media Catalogue** button in the tool bar's Media group finds a photo in the suite's library instead: see [The Media Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
 
 ## Image settings
 **Fit** (cover, contain, stretch), corner radius, and:
@@ -7397,7 +7887,8 @@ The grid is never in **Preview**, in exports, in share links or in pictures of t
     group: "Design",
     summary: "Put a photo from the suite's Media Catalogue on an artboard, and how it is saved and exported.",
     keywords: "media catalogue photo photography gallery library insert picture image studydesk",
-    body: `The **Media Catalogue** button on the tool bar (a camera) opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
+    icon: "catalogue",
+    body: `The **Media Catalogue** button, in the tool bar's **Media** group (open the group if it is folded) with the same icon as the catalogue button in StudyDesk's editor, opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
 
 ## How it is stored
 The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
@@ -8611,6 +9102,9 @@ These work in every expression:
 | \`html(text)\` | Text made safe to put in a web page (a downloaded report): \`<\`, \`>\`, \`&\` and quotes are replaced |
 | \`crossword(words, size)\` | A crossword laid out from a list of \`{answer, clue}\` rows (or plain words), inside a \`size\` by \`size\` grid. Each row comes back with \`row\`, \`col\` (its first letter, from 0 at the top left) and \`down\` added, in reading order. Words that are too long, or that cannot cross the others, are left out. The same words always make the same puzzle. Best used as a variable's [formula](variables) |
 | \`wordSearch(words, size, seed)\` | A \`size\` by \`size\` letter grid hiding the words (across, down, diagonal and backwards), one string per row. The same words and seed always make the same grid |
+| \`cloud(words, width, height, options)\` | A word cloud packed onto a stage \`width\` by \`height\`. \`words\` is plain text (each mention counts once) or rows \`{text, weight, ...}\`; the same word in other capitals is one word and the weights add. It comes back one row per word, the biggest first, each with \`size\` (the font size), \`x\`, \`y\`, \`w\`, \`h\` (its box on the stage, nothing overlapping), \`rank\`, \`tier\` (0 biggest, 2 smallest), \`shown\` (false when it cannot fit even small) and its own other fields. Options: \`minSize\`, \`maxSize\`, \`scale\` ("sqrt", "linear" or "log"), \`gap\`, \`grow\`, \`max\`, \`minCount\` and \`blocked\` (a list of words to leave out). The same words always make the same cloud |
+| \`timelineLayout(events, eras, from, to, options, part)\` | A dated timeline for the years \`from\` to \`to\`. Events are rows \`{date, end, title, ...}\` with dates written 1969, 1969-07 or 1969-07-20 (an \`end\` makes a range, counted to the end of its period); eras are \`{name, from, to}\`. \`part\` picks the list you get back: "events" (the default: each with \`pos\` and \`pos2\` along an axis \`options.length\` px long, \`lane\`, \`labelled\`, \`labelPos\`, \`labelW\`, \`labelH\`, \`dateText\`, \`spoken\`, \`inView\` and \`eraName\`), "eras", "ticks", "marker" (no row or one) or "info" (one row: \`rangeText\`, \`unlabelled\`, \`earlier\`, \`later\`, \`problems\`). Options: \`length\`, \`orientation\`, \`labelSize\`, \`lanes\`, \`sides\`, \`dateLine\`, \`maxLabel\`, \`columnWidth\`, \`maxLines\`, \`gap\`, \`tickSpace\` and \`marker\`. Labels never overlap and a leader line never crosses another label |
+| \`timeBounds(events, eras, marker)\` | \`[from, to, span, count]\`: the whole years that hold every event, era and marker, with room at each end |
 | \`wordCount(text)\` | How many words a text has (runs of anything but spaces). \`wordCount("one two  three")\` is 3 |
 | \`band(value, thresholds, labels)\` | A label for where a value falls. Thresholds go from the highest down and there is one more label than thresholds: \`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\` |
 | \`clock(seconds)\` | Seconds as \`m:ss\` (\`h:mm:ss\` from an hour): \`clock(95)\` is \`1:35\` |
@@ -9928,7 +10422,7 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
       return `A **branded starter pack** is a ready-made activity in the UniSQ look: a gradient title page with the logo, white content pages with a footer line, and sections on deep purple. You write the content; the look is already done, and it stays done.
 
 ## Using one
-Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace. A starter with sound (the **Listening lab**) comes with short placeholder tones in the project's **Assets**, named "(replace)": use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it. **Keep the beat** has no metronome timer to drift: one steady 16 ms clock (held back by its **Only while** until a drill is running) reads \`Date.now()\` against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. Its drills, tempos and how close a tap has to be are the **presets** variable (Variables tab). **Sign practice with self-review** keeps the model clip on one page, **Model clips** (one Video layer whose asset follows the sign in view: each sign in the **signs** variable names its clip, a placeholder tone in **Assets** to swap for the signer's video), and every other page shows it. Its Watch and choose half needs no camera, and its camera half records a short video take that stays on the learner's device. Each page has a phone version that stacks the model above the camera (see [Responsive artboards](responsive)), with the same layer names, so a change to wording or layout on one is made on the other too. It says plainly that it supports practice and is not feedback from a Deaf teacher, so keep that in; you also need the signer's consent and the rights to each clip. The **Live sound lab** uses the microphone as a number and records nothing: a loudness meter with a target band (steady volume, or a noise check worded as a rough guide) and eight frequency bars. Its project is set to listen only, the learner is asked once and sees a Listening bar with Stop, and a slider on each scene makes the same numbers when there is no microphone (see [Microphone, camera and photos](sensors)). Try the real microphone from the Link for StudyDesk, not Preview. Its target band, noise line and band names are variables. The **Photo prompts notebook** has a privacy pledge, about six prompts (each a photo slot, caption, tag and "why this one" box, with retake, delete and skip with a reason), a list or bingo board view (the **bingo** variable) and a hand-in page that downloads one web page with the photos inside it. Photos are only held in the page, so it tells learners to download before leaving. The **prompts** variable holds the prompts; each has a photo and example field naming two image assets, and the example is the way through for a learner with no camera. **Shadow the model** (Speaking and practice) is a few phrase cards: each plays a model clip (with a **Slow** switch that keeps the pitch), the learner records themselves, plays their take or the model then their take back to back, ticks your self-check and rates themselves. It declares the microphone, so open **Project > Microphone and camera** to see the purpose and the 30 second cap, and untick Microphone for a listen-and-repeat version. A learner who says no, has no microphone or chooses "Do not use my microphone or camera" gets the plain version (listen, say it aloud, self-check), so nobody is shut out. The recording stays in their browser, is dropped when they go to the next card and is gone on a reload, and the page says so. Each card is a row of the **cards** variable (phrase, note, sound, checks); the sound is the clip's asset, so replacing a placeholder with the arrow in **Assets** keeps the card pointing at it, and for a new row you type the clip's name in **sound**. The **Difficult conversation** and **Timed talk** rehearsals ship with an optional recording step that is switched off: tick Microphone in the same place and *Record my reply* or *Record this talk* and the play-back buttons appear, only for learners whose microphone works.
+Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace. A starter with sound (the **Listening lab**) comes with short placeholder tones in the project's **Assets**, named "(replace)": use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it. **Keep the beat** has no metronome timer to drift: one steady 16 ms clock (held back by its **Only while** until a drill is running) reads \`Date.now()\` against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. Its drills, tempos and how close a tap has to be are the **presets** variable (Variables tab). **Sign practice with self-review** keeps the model clip on one page, **Model clips** (one Video layer whose asset follows the sign in view: each sign in the **signs** variable names its clip, a placeholder tone in **Assets** to swap for the signer's video), and every other page shows it. Its Watch and choose half needs no camera, and its camera half records a short video take that stays on the learner's device. Each page has a phone version that stacks the model above the camera (see [Responsive artboards](responsive)), with the same layer names, so a change to wording or layout on one is made on the other too. It says plainly that it supports practice and is not feedback from a Deaf teacher, so keep that in; you also need the signer's consent and the rights to each clip. The **Live sound lab** uses the microphone as a number and records nothing: a loudness meter with a target band (steady volume, or a noise check worded as a rough guide) and eight frequency bars. Its project is set to listen only, the learner is asked once and sees a Listening bar with Stop, and a slider on each scene makes the same numbers when there is no microphone (see [Microphone, camera and photos](sensors)). Try the real microphone from the Link for StudyDesk, not Preview. Its target band, noise line and band names are variables. The **Photo prompts notebook** has a privacy pledge, about six prompts (each a photo slot, caption, tag and "why this one" box, with retake, delete and skip with a reason), a list or bingo board view (the **bingo** variable) and a hand-in page that downloads one web page with the photos inside it. Photos are only held in the page, so it tells learners to download before leaving. The **prompts** variable holds the prompts; each has a photo and example field naming two image assets, and the example is the way through for a learner with no camera. **Shadow the model** (Speaking and practice) is a few phrase cards: each plays a model clip (with a **Slow** switch that keeps the pitch), the learner records themselves, plays their take or the model then their take back to back, ticks your self-check and rates themselves. It declares the microphone, so open **Project > Microphone and camera** to see the purpose and the 30 second cap, and untick Microphone for a listen-and-repeat version. A learner who says no, has no microphone or chooses "Do not use my microphone or camera" gets the plain version (listen, say it aloud, self-check), so nobody is shut out. The recording stays in their browser, is dropped when they go to the next card and is gone on a reload, and the page says so. Each card is a row of the **cards** variable (phrase, note, sound, checks); the sound is the clip's asset, so replacing a placeholder with the arrow in **Assets** keeps the card pointing at it, and for a new row you type the clip's name in **sound**. The **Difficult conversation** and **Timed talk** rehearsals ship with an optional recording step that is switched off: tick Microphone in the same place and *Record my reply* or *Record this talk* and the play-back buttons appear, only for learners whose microphone works. The **Word cloud** (Explore and reveal) makes a cloud from a list of words and weights, \`ourWords\` (a text, a weight, and a detail and link for the dialog a word opens), with the **cloud** formula helper: sizes follow weights, nothing overlaps, and the same words always give the same picture. Words are buttons in one Tab stop with the arrow keys moving through them biggest first, and **View as list** is the text alternative with the counts. Its second page lets one learner type words and watch their own cloud grow (kept as user data, with a **blocked** list and a **minCount**). One author setting, **whoSees**, will choose Only me or Everyone in this class: Only me works now, and the class option arrives with shared responses (until then it keeps showing the learner's own words). The **Dated timeline** (Explore and reveal) is a timeline on a real scale: **events** and **eras** are lists with dates, and the **timelineLayout** helper places them for the years in view, lays the labels out in lanes so they never collide and picks the scale (decades, years, then months) as you zoom. Earlier, Later, Zoom and Fit all move the view, Next event and Previous event walk the events and the view follows, a click or Enter opens an event in a dialog, and **View as list** is the text alternative. Its page is the base of a responsive set with a portrait variant under 560 px wide (same layer names, so a change to wording or layout is made on both), and an ordering activity follows it. The simpler **Interactive timeline** is still in Drag, sort and timelines.
 
 ## Colourways
 Every branded project carries all of these as [themes](themes), plus **High contrast**, which a viewer who asks for more contrast gets automatically. Every colour in the project is a theme colour, so switching colourway re-colours the whole thing at once.
@@ -10342,13 +10836,16 @@ Check the projects page for an active folder, tag or search (the **Clear filters
     group: "Reference",
     summary: "Search, tooltips and help links.",
     keywords: "help docs search tooltip question",
-    body: `- **Search**: press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere for quick search. Type a few words and press <kbd>Enter</kbd> to open the best match.
-- **Help button**: the **?** at the bottom of the tool bar (it opens the page for the tool you're using), the **?** in the top bar (after you click into a panel it opens that panel's page instead; right-click a panel's tab for **Help for this panel**), the **Help** link on the projects page, or <kbd>?</kbd>.
+    body: `- **Search**: press <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere for quick search, or type in the drawer's **Search help** box. Type a few words and press <kbd>Enter</kbd> to open the best match.
+- **The Help button** (top bar, <kbd>F1</kbd> or <kbd>?</kbd>) opens the page for whatever is highlighted, in this order: the **field** you last clicked in Properties (its section's page, or its own when it has one); the **node** selected in Interactions or the **keyframe** selected in the Timeline, while that is the panel you are working in; the **tool** you picked on the tool bar (not Select or Hand); the **layer type** you selected (Chart, Text, Button, Rectangle...); a selected **artboard** or **page master**; the **panel** you last worked in; then the general help. Its tooltip names what it will open, and the drawer says "Help for Chart layer" at the top with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. <kbd>Ctrl</kbd>+<kbd>K</kbd> is the quick search.
+- **Home, Back and Forward**: the three buttons at the left of the drawer's top. **Home** is the welcome page. **Back** and **Forward** walk through the pages and sections you have visited (links, search results and the Help button all count), and each page comes back scrolled to where you left it. <kbd>Alt</kbd>+<kbd>Left</kbd> and <kbd>Alt</kbd>+<kbd>Right</kbd> do the same while the drawer has the focus, and so do the mouse's back and forward buttons over it. The history is kept when you close the drawer, so Back from a new Help button press returns to what you were reading. The full help page (the **new tab** button) uses the browser's own Back and Forward, since each page has its own address.
+- **While Preview is open**: Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>?</kbd>, a **?** link or <kbd>Ctrl</kbd>+<kbd>K</kbd>) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and Tab stays inside Preview until you close it.
+- **The Help link** is also on the projects page.
 - **Getting started**: the five tutorials start at [Tutorial 1](tutorial-first-animation). Stuck? [Troubleshooting and common questions](troubleshooting).
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
 - **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
-- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
+- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>Ctrl</kbd>+<kbd>K</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
 - **? links**: inspector sections have a **?** that opens their page here. The panels' tabs don't have one: use the top bar's, or right-click the tab.`
   }
 ];
@@ -10818,8 +11315,8 @@ const S = (props, required = []) => ({ type: "object", properties: props, requir
 const str = (description) => ({ type: "string", description });
 const runEdit = (a, changes, explain) => {
   const edit = TOOLS.find((t2) => t2.name === "edit");
-  const clean = changes.map((c2) => Object.fromEntries(Object.entries(c2).filter(([, v]) => v !== void 0)));
-  return edit.run({ project_id: a.project_id, changes: clean, explain });
+  const clean2 = changes.map((c2) => Object.fromEntries(Object.entries(c2).filter(([, v]) => v !== void 0)));
+  return edit.run({ project_id: a.project_id, changes: clean2, explain });
 };
 const TOOLS = [
   {
