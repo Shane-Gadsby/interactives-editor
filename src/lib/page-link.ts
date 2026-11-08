@@ -34,6 +34,19 @@ export function pageLinksOf(ab: Logic, layerId: string): PageLink[] {
 /** The page a layer's click goes to, or null when it has no such link. */
 export const linkedPage = (ab: Logic, layerId: string): string | null => pageLinksOf(ab, layerId)[0]?.to || null;
 
+/** How the page changes when a layer's link is followed (a link written without one fades). The first link's, when there are several. */
+export const linkTransition = (ab: Logic, layerId: string): string => String(pageLinksOf(ab, layerId)[0]?.go.params.transition ?? 'fade');
+
+/** Set how every link on the layer changes page. Returns whether there was a link to set it on. */
+export function setLinkTransition(ab: Logic, layerId: string, transition: string): boolean {
+	const links = pageLinksOf(ab, layerId);
+	for (const l of links) {
+		const node = ab.logic.nodes.find((n) => n.id === l.go.id);
+		if (node) node.params = { ...node.params, transition };
+	}
+	return links.length > 0;
+}
+
 /** What a Go to node reads as in the graph's chip: "Go to Results". */
 export const goLabel = (project: Pick<Project, 'artboards'>, id: string): string => `Go to ${project.artboards.find((a) => a.id === id)?.name ?? 'a page'}`;
 

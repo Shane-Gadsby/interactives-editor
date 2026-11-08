@@ -1,4 +1,4 @@
-import { defaultParams, uid, walk, type Artboard, type LogicEdge, type LogicNode, type Project, type Variable } from 'interactives-player';
+import { defaultParams, isPageTransition, uid, walk, type Artboard, type LogicEdge, type LogicNode, type Project, type Variable } from 'interactives-player';
 import { assetKind } from './assets';
 import { buildFlow, flowSentence } from './flow-describe';
 import { writeClickFlow } from './click-flow';
@@ -15,7 +15,7 @@ export type Trigger = 'click' | 'pointerenter';
 
 export const TRIGGER_WORDS: Record<Trigger, string> = { click: 'clicked', pointerenter: 'hovered over' };
 
-export type NeedKind = 'layer' | 'page' | 'timeline' | 'sound' | 'link' | 'counter' | 'switch';
+export type NeedKind = 'layer' | 'page' | 'timeline' | 'sound' | 'link' | 'counter' | 'switch' | 'transition';
 
 export interface Need {
   key: string;
@@ -49,30 +49,34 @@ export const THIS_LAYER = '__self__';
 
 const first = <T,>(xs: T[]): T | undefined => xs[0];
 
+/** How the page changes: asked for by the page recipes, and always optional (the usual fade when left alone). */
+const HOW: Need = { key: 'transition', kind: 'transition', label: 'How the page changes' };
+const pageParams = (a: Answers, to: Record<string, unknown>) => ({ ...defaultParams('action.artboard'), ...to, ...(isPageTransition(a.transition ?? '') ? { transition: a.transition } : {}) });
+
 export const RECIPES: Recipe[] = [
   {
     id: 'page-next',
     label: 'Go to the next page',
     hint: 'Moves on to the page after this one.',
     group: 'Pages',
-    needs: [],
-    action: () => ({ kind: 'action.artboard', params: { ...defaultParams('action.artboard'), to: 'next' } }),
+    needs: [HOW],
+    action: (a) => ({ kind: 'action.artboard', params: pageParams(a, { to: 'next' }) }),
   },
   {
     id: 'page-previous',
     label: 'Go to the previous page',
     hint: 'Goes back one page.',
     group: 'Pages',
-    needs: [],
-    action: () => ({ kind: 'action.artboard', params: { ...defaultParams('action.artboard'), to: 'previous' } }),
+    needs: [HOW],
+    action: (a) => ({ kind: 'action.artboard', params: pageParams(a, { to: 'previous' }) }),
   },
   {
     id: 'page-pick',
     label: 'Go to a page…',
     hint: 'Jumps to the page you choose.',
     group: 'Pages',
-    needs: [{ key: 'page', kind: 'page', label: 'Which page' }],
-    action: (a) => ({ kind: 'action.artboard', params: { ...defaultParams('action.artboard'), to: 'picked', artboard: a.page ?? '' } }),
+    needs: [{ key: 'page', kind: 'page', label: 'Which page' }, HOW],
+    action: (a) => ({ kind: 'action.artboard', params: pageParams(a, { to: 'picked', artboard: a.page ?? '' }) }),
   },
   {
     id: 'show',
@@ -196,6 +200,7 @@ export function defaultAnswers(recipe: Recipe, ctx: RecipeCtx): Answers {
     else if (n.kind === 'sound') out[n.key] = first(audioAssets(ctx.project))?.id ?? '';
     else if (n.kind === 'counter') out[n.key] = first(counterChoices(ctx.project))?.id ?? NEW_PREFIX + NEW_NAME.counter;
     else if (n.kind === 'switch') out[n.key] = first(switchChoices(ctx.project))?.id ?? NEW_PREFIX + NEW_NAME.switch;
+    else if (n.kind === 'transition') out[n.key] = 'fade';
     else out[n.key] = '';
   }
   return out;
@@ -205,6 +210,7 @@ export function defaultAnswers(recipe: Recipe, ctx: RecipeCtx): Answers {
 export function incomplete(recipe: Recipe, a: Answers): string | null {
   for (const n of recipe.needs) {
     const v = (a[n.key] ?? '').trim();
+    if (n.kind === 'transition') continue;
     if (!v) return `Choose ${n.label.toLowerCase()}.`;
     if ((n.kind === 'counter' || n.kind === 'switch') && v.startsWith(NEW_PREFIX) && !v.slice(NEW_PREFIX.length).trim()) return `Name the ${n.kind}.`;
     if (n.kind === 'link' && !/^(https?:\/\/|mailto:|\/)/i.test(v)) return 'A web address starts with https://';

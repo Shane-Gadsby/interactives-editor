@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Project } from 'interactives-player';
-import { Row, Section } from '../components/ui';
+import { PAGE_TRANSITIONS, type Project } from 'interactives-player';
+import { Row, Section, SelectField } from '../components/ui';
 import { store } from '../store/store';
 import { addPageNavigation, hasOwnNavigation, NAV_STYLES, navPages, removePageNav, PAGE_NAV_TAG, type NavResult, type NavStyle } from '../lib/page-nav';
 
@@ -14,13 +14,14 @@ const hasNav = (project: Project, ids: string[]) =>
  */
 export function PageNavSection({ ids, project }: { ids: string[]; project: Project }) {
 	const [style, setStyle] = useState<NavStyle>('back-next');
+	const [look, setLook] = useState('fade');
 	const [said, setSaid] = useState<NavResult | { removed: number } | null>(null);
 	const everyone = navPages(project).map((a) => a.id);
 	const targets = ids.filter((id) => everyone.includes(id));
 	const run = (to: string[]) => {
 		let res: NavResult = { added: [], skipped: [] };
 		store().update((d) => {
-			res = addPageNavigation(d as Project, to, style);
+			res = addPageNavigation(d as Project, to, style, look);
 		});
 		setSaid(res);
 	};
@@ -46,6 +47,7 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 				))}
 			</div>
 			</Row>
+			<SelectField label="How the page changes" title="The look of the change when Back or Next is clicked. Learners who prefer reduced motion always get an instant change" value={look} options={PAGE_TRANSITIONS} onChange={setLook} />
 			<Row k="Add navigation" words={['add', 'remove', 'all pages', 'page navigation', 'generate']} className="row-actions">
 				<button type="button" className="btn primary" disabled={!targets.length} onClick={() => run(targets)} title="Add the chosen navigation along the bottom of the page. A page that already has it gets this style instead">
 					{targets.length > 1 ? `Add to these ${targets.length} pages` : 'Add to this page'}

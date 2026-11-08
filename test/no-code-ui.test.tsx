@@ -187,6 +187,17 @@ describe('BehaviourDialog', () => {
     expect(q('[role=dialog]')!.getAttribute('aria-modal')).toBe('true');
   });
 
+  it('Go to the next page asks how the page changes, and the sentence and node follow it', () => {
+    const sc = open();
+    const how = qa('.behaviour-dialog select').find((x) => [...(x as HTMLSelectElement).options].some((o) => o.value === 'iris')) as HTMLSelectElement;
+    expect(how.value).toBe('fade');
+    expect([...how.options].map((o) => o.value)).toEqual(expect.arrayContaining(['wipeLeft', 'iris', 'zoom', 'pushDown']));
+    set(how, 'iris');
+    expect(q('.behaviour-preview')!.textContent).toBe('It will do this: When clicked: go to the next page (iris).');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes.find((n) => n.kind === 'action.artboard')?.params).toMatchObject({ to: 'next', transition: 'iris' });
+  });
+
   it('Add writes the nodes as one undo step, and leaves them picked, without leaving the panel', () => {
     const sc = open();
     choose('Show a layer');
