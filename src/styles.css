@@ -3767,22 +3767,83 @@ button.twisty:hover {
   padding: 3px 6px;
   vertical-align: top;
 }
-/* Remember and delete sit level with the first box of their row, in columns of their own width */
+/* delete sits level with the first box of its row, in a column of its own width */
 .var-table th:nth-child(4),
 .var-table td:nth-child(4) {
-  width: 84px;
-  text-align: center;
-}
-.var-table th:nth-child(5),
-.var-table td:nth-child(5) {
   width: 36px;
 }
-.var-table td:nth-child(4) .check-field,
-.var-table td:nth-child(5) .icon-btn {
+.var-table td:nth-child(4) .icon-btn {
   height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+.var-used {
+  margin-top: 2px;
+}
+.var-used .link-btn {
+  font-size: 12px;
+}
+.var-places {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+}
+.var-options {
+  margin-top: 6px;
+}
+.var-options summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.var-options .hint {
+  margin: 0 0 4px 22px;
+}
+.var-add {
+  position: relative;
+  display: inline-block;
+}
+.var-add-menu {
+  position: absolute;
+  z-index: 8;
+  bottom: calc(100% + 4px);
+  left: 0;
+  width: min(420px, 90vw);
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
+}
+.var-add-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.var-add-item span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.var-add-item:hover,
+.var-add-item:focus-visible {
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.var-add-item:hover span,
+.var-add-item:focus-visible span {
+  color: inherit;
 }
 
 /* ---------------------------------------------------------------- modal, toast */

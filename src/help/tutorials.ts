@@ -149,9 +149,9 @@ You will build a lamp. A button switches it on and off, and a counter shows how 
 ## 1. Make a project and two variables
 
 1. Press **New project** on the projects page. In **Start a new project** keep **Blank project**, type **Lamp** as the name and press **Create project**.
-2. Open the **Variables** tab at the bottom and press **+ Add variable**. A row appears.
-3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). Set **Type** to **True/false**. Leave the starting value unticked (false).
-4. Press **+ Add variable** again. Name it \`taps\`. Leave **Type** on **Number** with the starting value 0.
+2. Open the **Variables** tab at the bottom, press **+ Add variable** and pick **Switch (on or off)**. A row appears.
+3. In **Name** type \`lit\`, then press <kbd>Tab</kbd> (the name is saved when you leave the field). The **Type** is already **True/false (switch)**. Leave the starting value unticked (false).
+4. Press **+ Add variable** again and pick **Counter**. Name it \`taps\`. The **Type** is **Number (counter, score)** with the starting value 0.
 
 Names can only use letters, digits and \`_\`, and can't start with a digit. That is so they work inside expressions.
 
@@ -203,7 +203,7 @@ You now have: click → flip \`lit\` → add 1 to \`taps\`.
 - Make a variable called \`mode\` with **Type** **Choice** and the options \`off, on, broken\`. A choice shows as a dropdown wherever you set it.
 - Bind the bulb's fill through a **Look up** converter (use **+ Convert…** under the binding): it lists every option for you to give a colour.
 - Use an **If** node with a condition like \`taps >= 5\` to move to \`broken\` after five presses. **If** has a **true** and a **false** output.
-- Tick **Remember** on a variable in the Variables tab to remember its value in the visitor's browser between visits.
+- Tick **Remember** (under **Options**) on a variable in the Variables tab to remember its value in the visitor's browser between visits.
 
 ## What you learned
 

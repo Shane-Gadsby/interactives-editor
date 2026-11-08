@@ -2277,7 +2277,13 @@ One project can start with different values in different courses (a due date, a 
 - In scripts: \`ix.vars.score += 1\`.
 - From the host page: \`player.setVariable('score', 10)\`.
 
-Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field. Tick **Remember** to keep the value between visits (for a score, a saved choice or a name): in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results). Press **+ Add variable** to make one, and the bin to delete it. See [Tutorial 3](tutorial-state-machine) for a worked example.
+Variable names must be letters, digits and \`_\` so expressions can use them. The name is saved when you leave the field. Tick **Remember** to keep the value between visits (for a score, a saved choice or a name): in the learner's record when the project is played from the Link for StudyDesk, otherwise in their browser. See [Results and progress](results). Press **+ Add variable** and pick what it is for: a **Counter** (a number that goes up and down), a **Switch (on or off)**, **Text**, a **Score** (a running total, remembered between visits), a **List**, a **Choice** or a **Colour**. Each one is an ordinary variable of that type with a name you can change, so the table still shows the type and starting value. See [Tutorial 3](tutorial-state-machine) for a worked example.
+
+Under each name the table says **used in 3 places** (or **not used yet**). Click it to list the places (layers, expressions, interactions, scripts), and click one to go there. The bin asks first when the variable is used, naming the places, because they stop working once the name is gone; a variable nothing uses goes straight away, and the message at the bottom has an **Undo**.
+
+Next to the type, **Starts as a value** is the number, text or switch the project starts with. **Worked out** is for a variable that is calculated, such as a crossword grid: it shows a box for the formula (for example \`crossword(words, 10)\`), and the value stays as what it falls back to if the formula fails. **Keep up to date** (for a formula) works it out again whenever something it reads changes.
+
+**Options** (folded away until something in it is on) holds **Remember** (keep the value between visits) and **Save as user data** (keep it on the server for each person), each with a sentence saying what it does.
 
 ![The Variables tab.](help/variables-panel.png)`,
   },
