@@ -11,7 +11,8 @@
  * anything found only inside a script or code snippet is marked `loose`: it might be a false hit, but a miss
  * is unlikely.
  */
-import { CATALOG_BY_KIND, converterExpressions, isContainer, liveWriters, planLive, type Artboard, type DataSource, type Id, type Paint, type Project, type SceneNode, type Timeline, type Variable } from 'interactives-player';
+import { nodeLabel } from './plain-words';
+import { CATALOG, CATALOG_BY_KIND, converterExpressions, isContainer, liveWriters, planLive, type Artboard, type DataSource, type Id, type Paint, type Project, type SceneNode, type Timeline, type Variable } from 'interactives-player';
 
 export type EntityKind = 'artboard' | 'asset' | 'variable' | 'data' | 'script' | 'timeline' | 'layer';
 
@@ -331,11 +332,11 @@ export function analyzeUsage(project: Project): UsageReport {
     // Interaction graph
     for (const ln of ab.logic.nodes) {
       const def = CATALOG_BY_KIND[ln.kind];
-      const by: UsageSource = { type: 'logic', artboardId: ab.id, artboardName: ab.name, id: ln.id, name: def?.label ?? ln.kind };
+      const by: UsageSource = { type: 'logic', artboardId: ab.id, artboardName: ab.name, id: ln.id, name: def ? nodeLabel(def) : ln.kind };
       for (const p of def?.params ?? []) {
         const value = ln.params[p.key];
         if (value === undefined || value === null || value === '') continue;
-        const how = def!.label;
+        const how = nodeLabel(def!);
         switch (p.type) {
           case 'node':
             useLayer(value, by, how);
@@ -393,7 +394,10 @@ export function analyzeUsage(project: Project): UsageReport {
 
   // Live variables: nodes that try to write one, and ones that read each other in a circle
   for (const w of liveWriters(project)) {
-    missing.push({ by: { type: 'logic', artboardId: w.artboardId, artboardName: w.artboardName, id: w.nodeId, name: w.label }, what: 'variable', ref: w.variable.name, how: w.label, problem: `writes ${w.variable.name}, a live variable that is worked out from its formula, so it does nothing` });
+    // (the player names the node by its file name: say it the way the editor does)
+    const said = CATALOG.find((d) => d.label === w.label);
+    const shown = said ? nodeLabel(said) : w.label;
+    missing.push({ by: { type: 'logic', artboardId: w.artboardId, artboardName: w.artboardName, id: w.nodeId, name: shown }, what: 'variable', ref: w.variable.name, how: shown, problem: `writes ${w.variable.name}, a live variable that is worked out from its formula, so it does nothing` });
   }
   for (const v of planLive(project).cyclic) {
     missing.push({ by: { type: 'project', id: v.id, name: `Variable ${v.name}` }, what: 'variable', ref: v.name, how: 'live formula', problem: `${v.name} reads itself, or live variables that read it, so it stays at its starting value` });
