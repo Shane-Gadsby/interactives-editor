@@ -190,7 +190,7 @@ function CondRowEditor({
 
   return (
     <div className="cond-row" role="group" aria-label={`Condition ${n}`}>
-      <SearchPicker value={row.left} options={withCurrent(row.left)} onChange={pickLeft} placeholder="Choose a value…" searchPlaceholder="Search values" ariaLabel={`Condition ${n}: the value to look at`} title="The value to look at: a variable, or something the page knows" />
+      <SearchPicker className="cond-left" value={row.left} options={withCurrent(row.left)} onChange={pickLeft} placeholder="Choose a value…" searchPlaceholder="Search values" ariaLabel={`Condition ${n}: the value to look at`} title="The value to look at: a variable, or something the page knows" />
       <select className="cond-op" aria-label={`Condition ${n}: how to compare`} value={row.op} onChange={(e) => setOp(e.target.value as CondOp)}>
         {ops.map((op) => (
           <option key={op} value={op}>

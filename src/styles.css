@@ -10183,3 +10183,19 @@ button.flow-text:focus-visible {
 .cond-text .link-btn {
   font-size: 11px;
 }
+
+/* two lines in a narrow settings column: the value and how to compare it, then what to compare it with */
+.cond-row .cond-left {
+  flex: 1 1 42%;
+  min-width: 100px;
+}
+.cond-row .cond-op {
+  flex: 1 1 42%;
+}
+.cond-row .cond-kind,
+.cond-row .cond-val {
+  flex: 1 1 80px;
+}
+.cond-row .cond-left .search-picker-hint {
+  display: none;
+}

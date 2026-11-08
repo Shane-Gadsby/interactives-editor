@@ -1,6 +1,7 @@
 import { defaultParams, uid, walk, type Artboard, type LogicEdge, type LogicNode, type Project, type Variable } from 'interactives-player';
 import { assetKind } from './assets';
 import { buildFlow, flowSentence } from './flow-describe';
+import { writeClickFlow } from './click-flow';
 import { uniqueIdentifier } from '../store/doc';
 
 /**
@@ -230,7 +231,7 @@ const identifier = (raw: string, taken: string[], fallback: string): string => u
 
 /**
  * The nodes (and variable, and layer setting) for one recipe on one layer. Nothing is written: `applyBehaviour` does that, in one
- * undo step. `makeId` is there so a test can have predictable ids.
+ * undo step. `makeId` is for the ids of new variables (a test can then have predictable ones); the nodes come from the shared click-flow writer.
  */
 export function buildBehaviour(ctx: RecipeCtx, recipeId: string, trigger: Trigger, answers: Answers, makeId: (prefix: string) => string = uid): Behaviour {
   const recipe = RECIPE_BY_ID[recipeId];
@@ -248,11 +249,11 @@ export function buildBehaviour(ctx: RecipeCtx, recipeId: string, trigger: Trigge
     }
   }
   const act = recipe.action(a, ctx);
-  const maxY = ctx.ab.logic.nodes.reduce((m, l) => Math.max(m, l.y), -100);
-  const y = maxY + 140;
-  const event: LogicNode = { id: makeId('lg'), kind: 'event.pointer', x: 40, y, params: { ...defaultParams('event.pointer'), target: ctx.layerId, type: trigger } };
-  const action: LogicNode = { id: makeId('lg'), kind: act.kind, x: 300, y, params: act.params };
-  const edges: LogicEdge[] = [{ id: makeId('e'), from: event.id, fromPort: 'out', to: action.id, toPort: 'in' }];
+  // written onto a scratch copy of the graph by the shared click-flow writer, so the nodes land where a real write would put them
+  const scratch = { logic: { nodes: [...ctx.ab.logic.nodes], edges: [] as LogicEdge[] } };
+  const { event, steps } = writeClickFlow(scratch, ctx.layerId, [{ kind: act.kind, params: act.params }], trigger);
+  const action = steps[0];
+  const edges = scratch.logic.edges;
   const patches: Behaviour['patches'] = [];
   // showing another layer: it has to be hidden to begin with, or there is nothing to show
   if (recipe.id === 'show') {
