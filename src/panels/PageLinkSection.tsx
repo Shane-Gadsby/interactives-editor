@@ -1,7 +1,7 @@
-import type { Artboard, Project, SceneNode } from 'interactives-player';
+import { PAGE_TRANSITIONS, type Artboard, type Project, type SceneNode } from 'interactives-player';
 import { Section, SelectField } from '../components/ui';
 import { store } from '../store/store';
-import { linkedPage, linkToPage, pageLinksOf, pagesToLinkTo } from '../lib/page-link';
+import { linkedPage, linkToPage, linkTransition, pageLinksOf, pagesToLinkTo, setLinkTransition } from '../lib/page-link';
 
 /**
  * "Go to page": which page clicking this layer opens, chosen from a list (or by dragging the handle on the canvas onto a page).
@@ -21,6 +21,12 @@ export function PageLinkSection({ node, ab, project }: { node: SceneNode; ab: Ar
 			if (a) linkToPage(a, node.id, v || null);
 		});
 	};
+	const how = (v: string) => {
+		store().update((d) => {
+			const a = d.artboards.find((x) => x.id === ab.id);
+			if (a) setLinkTransition(a, node.id, v);
+		});
+	};
 	return (
 		<Section help="links-cursors#go-to-a-page" title="Go to page" defaultOpen={!!to || node.type === 'button' || node.type === 'link'}>
 			<SelectField
@@ -30,6 +36,15 @@ export function PageLinkSection({ node, ab, project }: { node: SceneNode; ab: Ar
 				options={[{ value: '', label: 'No page' }, ...(to && !known ? [{ value: to, label: name(to) }] : []), ...pages.map((p) => ({ value: p.id, label: p.name }))]}
 				onChange={choose}
 			/>
+			{links.length > 0 && (
+				<SelectField
+					label="How the page changes"
+					title="The look of the change: a fade, a slide, a wipe, a push, an iris opening from this layer or a zoom into it. Learners who prefer reduced motion always get an instant change"
+					value={linkTransition(ab, node.id)}
+					options={PAGE_TRANSITIONS}
+					onChange={how}
+				/>
+			)}
 			<p className="hint">
 				{to ? <>Clicking it goes to <b>{name(to)}</b>.{links.length > 1 ? ' More than one click here goes to a page: changing it changes them all.' : ''}</> : 'Pick a page, or drag the round handle on the canvas onto one. It is written as a click and a Go to artboard in Interactions.'}
 			</p>

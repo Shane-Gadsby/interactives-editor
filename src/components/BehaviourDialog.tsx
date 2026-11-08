@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { PAGE_TRANSITIONS } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { pickNewAsset } from '../lib/quick-add';
 import { RECIPES, RECIPE_BY_ID, NEW_PREFIX, THIS_LAYER, TRIGGER_WORDS, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, incomplete, layerChoices, otherPages, switchChoices, unavailable, type Answers, type Need, type Recipe, type RecipeCtx, type Trigger } from '../lib/recipes';
@@ -211,6 +212,8 @@ function NeedField({ need, ctx, answers, onAnswer }: { need: Need; ctx: RecipeCt
       const me = layerChoices(ctx.ab).find((l) => l.id === ctx.layerId);
       return sel(v, [{ value: THIS_LAYER, label: `This layer (${me?.name ?? 'this one'})` }, ...others.map((l) => ({ value: l.id, label: l.hidden ? `${l.name} (hidden)` : l.name }))], onAnswer);
     }
+    case 'transition':
+      return sel(v || 'fade', PAGE_TRANSITIONS, onAnswer);
     case 'page':
       return sel(v, otherPages(ctx).map((a) => ({ value: a.id, label: a.name })), onAnswer);
     case 'timeline':

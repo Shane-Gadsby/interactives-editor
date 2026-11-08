@@ -1,4 +1,4 @@
-import { ANIMATABLE_PROPS, CATALOG_BY_KIND, defaultParams, walk, type Artboard, type LogicEdge, type LogicNode, type Project } from 'interactives-player';
+import { ANIMATABLE_PROPS, CATALOG_BY_KIND, defaultParams, PAGE_TRANSITIONS, walk, type Artboard, type LogicEdge, type LogicNode, type Project } from 'interactives-player';
 import { conditionWords } from './condition';
 import { nodeLabel, optionLabel, pw } from './plain-words';
 
@@ -244,17 +244,20 @@ const ACTION: Record<string, (p: P, c: Names) => string> = {
     return p.op === 'show' ? `show ${t}` : p.op === 'hide' ? `hide ${t}` : `show or hide ${t}`;
   },
   'action.artboard': (p, c) => {
+    //a plain fade (or none given) is the usual, so only the others are mentioned
+    const look = PAGE_TRANSITIONS.find((t) => t.value === p.transition && t.value !== 'fade');
+    const how = look ? ` (${look.label.replace(/ \(.*\)$/, '').toLowerCase()})` : '';
     switch (String(p.to ?? 'picked')) {
       case 'next':
-        return 'go to the next page';
+        return `go to the next page${how}`;
       case 'previous':
-        return 'go to the previous page';
+        return `go to the previous page${how}`;
       case 'back':
-        return 'go back to the page the learner came from';
+        return `go back to the page the learner came from${how}`;
       case 'expression':
-        return 'go to the page a formula names';
+        return `go to the page a formula names${how}`;
       default:
-        return `go to the page ${quoted(c.page(p.artboard))}`;
+        return `go to the page ${quoted(c.page(p.artboard))}${how}`;
     }
   },
   'action.moveView': (p, c) => (p.to === 'page' ? 'show the whole page again' : `move the view to ${c.layer(p.target)}`),

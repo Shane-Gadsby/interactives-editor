@@ -108,9 +108,10 @@ export function navPages(project: Project): Artboard[] {
 /**
  * Put the navigation on the pages named (a plain project or an immer draft). A page that has had it before gets it again in this
  * style, a page with its own Next/Back is skipped. Page dots need to know how many pages there are, so add again after adding or
- * removing pages to refresh them (the buttons, the number and the bar follow the page order by themselves).
+ * removing pages to refresh them (the buttons, the number and the bar follow the page order by themselves). `transition` is how the
+ * page changes when Next or Back is clicked (one of the page looks).
  */
-export function addPageNavigation(project: Project, pageIds: string[], style: NavStyle): NavResult {
+export function addPageNavigation(project: Project, pageIds: string[], style: NavStyle, transition = 'fade'): NavResult {
 	const parts = PARTS[style];
 	const ctx = paletteOf(project);
 	const result: NavResult = { added: [], skipped: [] };
@@ -170,8 +171,8 @@ export function addPageNavigation(project: Project, pageIds: string[], style: Na
 		if (counter) layers.push(tag(text(ctx, 'Page counter', 'Page {pageNumber} of {pageCount}', from, y + 11, room, { fontSize: 15, color: ctx.L.muted, align: 'center' })));
 		if (parts.bar) layers.push(tag(progressBar(ctx, 'Page progress', box.x, y - 22, box.width, { value: 'pageNumber', max: 'pageCount', label: 'Progress through the pages', height: 8 })));
 		page.children.push(...layers);
-		if (next) writeClickFlow(page, next.id, [{ kind: 'action.artboard', params: { to: 'next', transition: 'fade', duration: 250 } }], 'click', 'Next page');
-		if (back) writeClickFlow(page, back.id, [{ kind: 'action.artboard', params: { to: 'previous', transition: 'fade', duration: 250 } }], 'click', 'Previous page');
+		if (next) writeClickFlow(page, next.id, [{ kind: 'action.artboard', params: { to: 'next', transition, duration: 250 } }], 'click', 'Next page');
+		if (back) writeClickFlow(page, back.id, [{ kind: 'action.artboard', params: { to: 'previous', transition, duration: 250 } }], 'click', 'Previous page');
 		result.added.push(page.name);
 	}
 	return result;
