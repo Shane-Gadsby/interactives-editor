@@ -53,6 +53,13 @@ export function brandQuestionFrame(ctx: BrandedCtx, frame: FrameNode): void {
       //a pill (the small hint button) keeps to its own height
       n.cornerRadius = Math.min(22, n.height / 2);
       n.fontWeight = 600;
+      //edges that stand off the card by 3:1, the same as the starters' own buttons (kit.ts button)
+      if (n.questionPart === 'check') n.stroke = stroke(ctx.L.onButton);
+      else {
+        n.fill = solid(ctx.L.background);
+        n.stroke = stroke(ctx.L.border);
+        n.color = ctx.L.text;
+      }
     }
     //The kit's orange and muted small text on the grey card is too faint
     if (n.type === 'text' && (n.questionPart === 'score' || n.questionPart === 'blankAnswer')) n.color = ctx.L.text;
@@ -79,6 +86,8 @@ export function scorePage(ctx: BrandedCtx, page: Artboard, o: { label: string; s
   const card = stack('Score card', 0, 0, 380, { gap: 8, padding: 28, box: { fill: solid(L.surface), cornerRadius: 16 }, children: kids });
   const message = text(ctx, 'Result message', o.message, 0, 0, 100, { fontSize: 26, fontWeight: 600, lineHeight: 1.3, role: 'heading', headingLevel: 2, ...(o.messageColor ? { bindings: { color: o.messageColor } } : {}) });
   const buttons = stack('Result buttons', 0, 0, 100, { direction: 'row', gap: 12, align: 'start', children: o.buttons });
+  //three buttons are wider than the column beside the score: they wrap onto a second line instead of running off the page
+  buttons.layout!.wrap = true;
   const side = fill(stack('Result column', 0, 0, 100, { gap: 20, children: [message, buttons] }));
   const top = stack('Score row', 0, 0, body.width, { direction: 'row', gap: 40, align: 'start', children: [card, side] });
   const column = stack('Result body', body.x, body.y, body.width, { gap: 24, children: [top, ...(o.below ?? [])] });

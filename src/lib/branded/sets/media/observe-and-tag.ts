@@ -229,7 +229,7 @@ function build(colourway: Colourway) {
   bind(youMarker, {
     x: markerX('item.t'),
     'fill.color': `youHit[index] ? "${L.success}" : "${L.button}"`,
-    'stroke.paint.color': `youHit[index] ? "${L.success}" : "${L.button}"`,
+    'stroke.paint.color': `youHit[index] ? "${L.success}" : "${L.primary}"`,
     ariaLabel: `"Your tag at " + ${clock('item.t')} + ", " + categories[item.cat - 1] + (youHit[index] ? ", the expert agreed" : ", the expert did not tag this") + ". Press for the detail."`,
   });
   bind(youMarker.children[0], { color: `youHit[index] ? "${L.background}" : "${L.onButton}"` });

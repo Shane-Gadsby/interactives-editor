@@ -46,7 +46,7 @@ export const beforeAndAfter: BrandedStarter = {
     const afterHint = text(ctx, 'After picture hint', 'Replace with your After picture', W / 2 + 24, H / 2 - 24, W / 2 - 48, { align: 'center', color: L.muted, fontSize: 18, decorative: true });
     const afterLabel = label('After label', 'After', W - 16 - 112);
     const beforePic = picture(ctx, 'Before picture', 0, 0, W, H);
-    Object.assign(beforePic, { ariaLabel: 'Before picture: replace with your own image', fill: solid(L.border) });
+    Object.assign(beforePic, { ariaLabel: 'Before picture: replace with your own image', fill: solid(L.surface) });
     const beforeHint = text(ctx, 'Before picture hint', 'Replace with your Before picture', 24, H / 2 - 24, W / 2 - 48, { align: 'center', color: L.text, fontSize: 18, decorative: true });
     const beforeLabel = label('Before label', 'Before', 16);
     const before = createNode('frame', {
@@ -70,7 +70,7 @@ export const beforeAndAfter: BrandedStarter = {
       width: 48,
       height: 48,
       cornerRadius: 24,
-      fill: solid(L.button),
+      fill: solid(L.primary),
       stroke: stroke(L.background, 4),
       clip: false,
       role: 'button',
@@ -78,7 +78,7 @@ export const beforeAndAfter: BrandedStarter = {
       ariaLabel: 'Divider',
       ariaDescription: 'Use the left and right arrow keys to move it, Home to show only the After picture and End to show only the Before picture',
       bindings: { x: `${pos.name} - 24`, ariaLabel: `"Divider, showing " + Math.round(${pos.name} / ${W} * 100) + " percent Before"` },
-      children: [text(ctx, 'Divider arrows', '‹ ›', 0, 10, 48, { fontSize: 22, fontWeight: 700, align: 'center', color: L.onButton, decorative: true })],
+      children: [text(ctx, 'Divider arrows', '‹ ›', 0, 10, 48, { fontSize: 22, fontWeight: 700, align: 'center', color: L.onPrimary, decorative: true })],
     } as never);
     const comparison = group('Comparison', box.x, box.y, W, H, { cornerRadius: 16, children: [afterPic, afterHint, afterLabel, before, line, handle] });
     page.children.push(comparison);

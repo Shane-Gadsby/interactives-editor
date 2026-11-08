@@ -103,7 +103,7 @@ function build(colourway: Colourway) {
       {
         ariaLabel: 'item.label + ": " + (item.done ? "written" : "not written yet")',
         'fill.color': `artboard.name == item.page ? "${L.button}" : "${L.background}"`,
-        'stroke.paint.color': `artboard.name == item.page ? "${L.button}" : "${L.border}"`,
+        'stroke.paint.color': `artboard.name == item.page ? "${L.primary}" : "${L.border}"`,
       },
     );
     const heading = text(ctx, 'Progress heading', 'Progress', 16, 14, LIST_W - 32, { fontSize: 14, fontWeight: 700, color: L.muted, role: 'heading', headingLevel: 2 });

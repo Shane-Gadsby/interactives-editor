@@ -39,7 +39,7 @@ export const accordion: BrandedStarter = {
     const isOpen = 'open.includes(index)';
     const marker = createNode('rect', { name: 'Open marker', x: 10, y: 12, width: 5, height: 32, cornerRadius: 3, fill: solid(L.accent), stroke: null, decorative: true, bindings: { visible: isOpen } } as never);
     const title = text(ctx, 'Section title', '{item.title}', 28, 15, 780, { fontSize: 20, fontWeight: 600, lineHeight: 1.3 });
-    const sign = text(ctx, 'Section sign', '+', 868, 10, 32, { fontSize: 28, fontWeight: 600, align: 'center', color: L.deep, decorative: true, bindings: { text: `${isOpen} ? "–" : "+"` } });
+    const sign = text(ctx, 'Section sign', '+', 868, 10, 32, { fontSize: 28, fontWeight: 600, align: 'center', color: L.logoTextOnLight, decorative: true, bindings: { text: `${isOpen} ? "–" : "+"` } });
     const header = createNode('frame', {
       name: 'Section header',
       x: 0,

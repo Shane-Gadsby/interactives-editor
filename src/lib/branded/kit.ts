@@ -98,6 +98,7 @@ export const BRAND_TOKEN_NAMES: Record<BrandKey, string> = {
   logoText: 'brand/logo-text',
   logoMarkOnLight: 'brand/logo-mark-on-light',
   logoTextOnLight: 'brand/logo-text-on-light',
+  scrim: 'brand/scrim',
 };
 
 export const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
@@ -144,6 +145,13 @@ export type PageKind = 'content' | 'hero' | 'section' | 'end';
 
 /** The brand gradient as a paint: start to end colour of the colourway, at an angle. */
 export const gradient = (ctx: BrandedCtx, angle = 135): Paint => ({ type: 'linear', angle, stops: [{ offset: 0, color: ctx.L.gradientStart }, { offset: 1, color: ctx.L.gradientEnd }] });
+
+/**
+ * The scrim of the Orange and Red colourways as a layer for a panel that paints the gradient itself (a card face): put it right over the
+ * gradient and under the words. Clear in the others. See the scrim in looks.ts for why.
+ */
+export const scrimOver = (ctx: BrandedCtx, width: number, height: number, cornerRadius = 0): SceneNode =>
+  createNode('rect', { name: 'Brand scrim', x: 0, y: 0, width, height, cornerRadius, fill: { type: 'solid', color: ctx.L.scrim }, decorative: true } as Partial<SceneNode>);
 
 /** The soft sweeps of the title slides: big overlapping curves in the gradient's colours, low key. Chrome. */
 export function sweeps(ctx: BrandedCtx, ab: Artboard): SceneNode[] {
@@ -242,6 +250,8 @@ function masterFor(ctx: BrandedCtx, kind: PageKind, width: number, height: numbe
     kids.push(logo(ctx, SIDE, round1(height - LOGO_BOTTOM - logoHeight(96)), 96, 'deep'));
   } else {
     kids.push(...sweeps(ctx, master));
+    //clear in most colourways: see the scrim in looks.ts
+    kids.push(chrome(createNode('rect', { name: 'Brand scrim', x: 0, y: 0, width, height, fill: { type: 'solid', color: L.scrim }, decorative: true } as Partial<SceneNode>)));
     kids.push(logo(ctx, SIDE, TOP - 8, 150));
     if (kind === 'end') kids.push(chrome(createNode('text', { name: 'Brand web address', text: 'unisq.edu.au', x: SIDE, y: height / 2 + 30, width: width - SIDE * 2, fontSize: 18, fontWeight: 600, color: L.onGradient, align: 'center', fontFamily: BRAND_FONT } as Partial<TextNode>)));
   }
@@ -325,7 +335,10 @@ export const button = (ctx: BrandedCtx, name: string, label: string, x: number, 
     height: 46,
     cornerRadius: 23,
     fill: solid(primary ? ctx.L.button : ctx.L.background),
-    stroke: primary ? null : stroke(ctx.L.border),
+    //The edge of a button is its fill (a secondary one: its stroke) and has to stand off what is round it by 3:1. A primary button's own colour
+    //can match the page it is on (gold on white in Purple, the gradient's own blue on the Blue hero), so it carries a stroke in the colour of its
+    //label, which is always far from the button and, on those pages, far from the page too.
+    stroke: primary ? stroke(ctx.L.onButton) : stroke(ctx.L.border),
     color: primary ? ctx.L.onButton : ctx.L.text,
     fontSize: 16,
     fontWeight: 600,

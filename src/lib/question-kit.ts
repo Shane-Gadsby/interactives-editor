@@ -858,9 +858,10 @@ const resetVisible = (q: Question, gate?: string): string => {
 
 const GATED = /^([A-Za-z_$][\w$]*) && /;
 /** The project boolean a kit part is switched by (the start of its Visible binding), if there is one. */
-function gateOf(d: Project, visible: string | undefined): string | undefined {
+function gateOf(d: Project, q: Question, visible: string | undefined): string | undefined {
   const m = GATED.exec(visible ?? '');
-  return m && d.variables.some((v) => v.name === m[1] && v.type === 'boolean') ? m[1] : undefined;
+  //(the question's own variables are what the button shows on already, not a switch of the template's)
+  return m && !m[1].startsWith(`${q.prefix}_`) && d.variables.some((v) => v.name === m[1] && v.type === 'boolean') ? m[1] : undefined;
 }
 
 function bodyFor(q: Question, style: Style, blankVars: string[]): SceneNode {
@@ -1332,7 +1333,7 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
     if (!before || Boolean(before.bank) !== Boolean(q.bank) || Boolean(before.retake) !== Boolean(q.retake) || Boolean(before.hideReset) !== Boolean(q.hideReset)) {
       const other = before?.bank ? RESET_LABELS.next : RESET_LABELS.again;
       if (reset.label === other || !before) reset.label = resetLabel(q);
-      reset.bindings = { ...(reset.bindings ?? {}), visible: resetVisible(q, gateOf(d, reset.bindings?.visible)) };
+      reset.bindings = { ...(reset.bindings ?? {}), visible: resetVisible(q, gateOf(d, q, reset.bindings?.visible)) };
     }
   }
   syncListen(ab, frame as FrameNode, q);

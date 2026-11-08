@@ -107,7 +107,7 @@ function build(colourway: Colourway) {
       {
         ariaLabel: '"Part " + item.n + ": " + item.short + ": " + (item.done ? "written" : "not written yet")',
         'fill.color': `artboard.name == item.page ? "${L.button}" : "${L.background}"`,
-        'stroke.paint.color': `artboard.name == item.page ? "${L.button}" : "${L.border}"`,
+        'stroke.paint.color': `artboard.name == item.page ? "${L.primary}" : "${L.border}"`,
       },
     );
     const pills = createNode('frame', { name: 'Part pills', x: box.x, y: box.y - 4, width: box.width, height: 42, fill: null, stroke: null, clip: false, repeat: { items: 'parts', layout: 'horizontal', gap: 12, columns: 1 }, children: [pill] } as never);

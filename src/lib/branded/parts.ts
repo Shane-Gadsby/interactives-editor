@@ -49,7 +49,7 @@ export function fill<T extends SceneNode>(n: T, axis: 'width' | 'height' = 'widt
 // ------------------------------------------------------------------ progress bar
 
 /**
- * A native Progress bar: the track on the warm grey, the bar in the button colour. `value` and `max` are expressions (bound, so the
+ * A native Progress bar: the track on the warm grey, the bar in the primary colour. `value` and `max` are expressions (bound, so the
  * bar follows the variables) or plain numbers. `label` is what a screen reader calls it ("Quiz progress"), `valueText` how it reads
  * the number (`Question {step} of {total}`, blank says the percentage). Pass `decorative` for a bar that only repeats something already said.
  *
@@ -69,7 +69,7 @@ export function progressBar(ctx: BrandedCtx, name: string, x: number, y: number,
     value: typeof opts.value === 'number' ? opts.value : 0,
     max: typeof opts.max === 'number' ? opts.max : 100,
     fill: solid(ctx.L.surfaceMuted),
-    barFill: solid(ctx.L.button),
+    barFill: solid(ctx.L.primary),
     cornerRadius: height / 2,
     stroke: null,
     ...(opts.decorative ? { decorative: true, semantics: 'none' } : { semantics: 'progressbar', ariaLabel: opts.label ?? name, ...(opts.valueText ? { valueText: opts.valueText } : {}) }),

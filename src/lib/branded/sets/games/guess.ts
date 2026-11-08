@@ -1,6 +1,6 @@
 //Guess the answer: a picture and a question on a card, the learner thinks, then turns the card to see the answer, across a set of five.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, item, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, item, scrimOver, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { stack } from '../../parts';
 import { Graph, addVar, announce, bind, darkButton, emit, focus, go, goNext, heroPage, set } from './common';
@@ -64,7 +64,7 @@ function build(colourway: Colourway) {
       fill: front ? solid(L.surface) : gradient(ctx, 135),
       stroke: front ? stroke(L.border, 2) : null,
       bindings: { visible: front ? '!turned' : 'turned' },
-      children: [pic, label, main, sub],
+      children: front ? [pic, label, main, sub] : [scrimOver(ctx, CARD_W, CARD_H, 20), pic, label, main, sub],
     } as never);
   };
   const deck = createNode('frame', {

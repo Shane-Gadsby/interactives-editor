@@ -109,7 +109,7 @@ function build(colourway: Colourway) {
     visible: 'item.ch != ""',
     ariaLabel: '"Row " + (item.r + 1) + ", column " + (item.c + 1) + (item.num > 0 ? ", clue " + item.num : "") + ", " + (item.t == "" ? "empty" : item.t)',
     'fill.color': `index == sel ? "${L.button}" : item.s == "bad" ? "${L.errorSurface}" : item.s == "ok" ? "${L.successSurface}" : item.s == "shown" ? "${L.surfaceMuted}" : wordCells.includes(index) ? "${L.warm}" : "${L.background}"`,
-    'stroke.paint.color': `index == sel ? "${L.button}" : item.s == "bad" ? "${L.error}" : item.s == "ok" ? "${L.success}" : "${L.border}"`,
+    'stroke.paint.color': `index == sel ? "${L.primary}" : item.s == "bad" ? "${L.error}" : item.s == "ok" ? "${L.success}" : "${L.border}"`,
   });
   const side = SIZE * CELL + (SIZE - 1) * GAP;
   const grid = createNode('frame', {
@@ -150,7 +150,7 @@ function build(colourway: Colourway) {
     bind(row, {
       ariaLabel: `item.n + " ${dirName}, " + item.clue + ", " + item.len + " letters"`,
       'fill.color': `item.i == aw ? "${L.warm}" : "${L.surface}"`,
-      'stroke.paint.color': `item.i == aw ? "${L.button}" : "${L.surface}"`,
+      'stroke.paint.color': `item.i == aw ? "${L.primary}" : "${L.surface}"`,
     });
     return createNode('frame', {
       name: `${name}s`,

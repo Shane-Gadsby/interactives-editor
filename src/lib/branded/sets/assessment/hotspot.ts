@@ -69,7 +69,7 @@ export function buildFindHotspot(colourway: Colourway) {
   //The side card: what to do, tries left, how it went. One column, so nothing in it can land on anything else
   const sideTitle = heading(ctx, 'How it works title', 'How it works', 0, 0, 100, { fontSize: 20 });
   const sideBody = text(ctx, 'How it works text', 'Select the area you think is right, then press Check answer. Use Tab and the arrow keys to move between areas, and Enter or Space to select one.', 0, 0, 100, { fontSize: 15, lineHeight: 1.4 });
-  const tries = text(ctx, 'Tries left', `Tries left: {Math.max(0, ${P}_triesLeft)}`, 0, 0, 100, { fontSize: 18, fontWeight: 700, color: L.deep });
+  const tries = text(ctx, 'Tries left', `Tries left: {Math.max(0, ${P}_triesLeft)}`, 0, 0, 100, { fontSize: 18, fontWeight: 700, color: L.logoTextOnLight });
   const outcome = bind(text(ctx, 'Outcome', `{${P}_correct ? "✓ You found it" : "✗ Out of tries"}`, 0, 0, 100, { fontSize: 18, fontWeight: 700 }), { visible: `${P}_locked`, color: `${P}_correct ? "${L.success}" : "${L.error}"` });
   const side = fill(stack('How it works card', 0, 0, 100, { gap: 12, padding: 20, box: { fill: solid(L.surface), cornerRadius: 16 }, children: [sideTitle, sideBody, tries, outcome] }));
   page.children = page.children.filter((c) => c.id !== id);
@@ -196,7 +196,7 @@ export function buildFindHotspots(colourway: Colourway) {
     repeat: { items: 'targets.map((t, i) => ({name: t.name, found: found.includes(i)}))', layout: 'none', gap: 0, columns: 1 },
     children: [row],
   } as never);
-  const count = text(ctx, 'Found count', 'Found {found.length} of {targets.length}', 0, 0, 100, { fontSize: 20, fontWeight: 700, color: L.deep });
+  const count = text(ctx, 'Found count', 'Found {found.length} of {targets.length}', 0, 0, 100, { fontSize: 20, fontWeight: 700, color: L.logoTextOnLight });
   const wrongCount = text(ctx, 'Wrong clicks', 'Wrong clicks: {wrong}', 0, 0, 100, { fontSize: 18, color: L.muted });
   const feedbackText = text(ctx, 'Feedback text', '{message}', 0, 0, 100, { fontSize: 16, lineHeight: 1.35 });
   const feedback = bind(stack('Feedback', 0, 0, 100, { padding: 16, box: { fill: solid(L.surface), stroke: stroke(L.border, 2), cornerRadius: 16 }, extra: { role: 'region' }, children: [feedbackText] }), {

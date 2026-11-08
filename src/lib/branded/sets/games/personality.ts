@@ -140,7 +140,7 @@ function build(colourway: Colourway) {
   //How the four compared
   const rowName = text(ctx, 'Score name', '{item.name}', 0, 3, 150, { fontSize: 15, fontWeight: 600, autoSize: 'none', height: 22, decorative: true });
   //Each row's bar is a Progress layer (the percent is its value), the top style's in the button colour and the others in the border grey
-  const rowBar = bind(progressBar(ctx, 'Score bar', 160, 7, 280, { value: 'item.pct', max: 100, height: 14, decorative: true }), { 'barFill.color': `item.top ? "${L.button}" : "${L.border}"` });
+  const rowBar = bind(progressBar(ctx, 'Score bar', 160, 7, 280, { value: 'item.pct', max: 100, height: 14, decorative: true }), { 'barFill.color': `item.top ? "${L.primary}" : "${L.border}"` });
   const rowPct = text(ctx, 'Score percent', '{item.pct}%', 452, 3, 60, { fontSize: 15, color: L.muted, autoSize: 'none', height: 22, decorative: true });
   const row = createNode('frame', { name: 'Score', x: 0, y: 0, width: rw, height: 28, fill: null, stroke: null, clip: false, children: [rowName, rowBar, rowPct], bindings: { ariaLabel: 'item.name + ", " + item.pct + " percent"' } } as never);
   const rows = createNode('frame', {

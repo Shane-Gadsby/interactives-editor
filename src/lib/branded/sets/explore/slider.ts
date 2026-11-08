@@ -81,7 +81,7 @@ export const imageSlider: BrandedStarter = {
     //the dots sit centred in the gap between Previous and Play
     const dotsW = SLIDES.length * DOT + (SLIDES.length - 1) * 8;
     const dotsX = (box.x + 140 + play.x - dotsW) / 2;
-    const ring = createNode('ellipse', { name: 'Dot ring', x: 6, y: 6, width: 16, height: 16, fill: null, stroke: stroke(L.button, 2), decorative: true } as never);
+    const ring = createNode('ellipse', { name: 'Dot ring', x: 6, y: 6, width: 16, height: 16, fill: null, stroke: stroke(L.primary, 2), decorative: true } as never);
     const dotFill = createNode('ellipse', { name: 'Dot fill', x: 9, y: 9, width: 10, height: 10, fill: solid(L.button), stroke: null, decorative: true, bindings: { visible: 'slide == index + 1' } } as never);
     const dot = createNode('frame', {
       name: 'Dot',

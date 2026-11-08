@@ -159,7 +159,7 @@ function build(colourway: Colourway) {
   const flag = (name: string, label: string, v: typeof opening, y: number) => {
     const bg = createNode('frame', { name, x: 0, y, width: rw, height: 48, cornerRadius: 16, fill: solid(L.surface), stroke: null, clip: false, role: 'checkbox', focusable: true, cursor: 'pointer', ariaLabel: label }) as FrameNode;
     const box22 = createNode('rect', { name: `${name} box`, x: 14, y: 13, width: 22, height: 22, cornerRadius: 6, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true });
-    bind(box22, { 'fill.color': `${v.name} ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `${v.name} ? "${L.button}" : "${L.border}"` });
+    bind(box22, { 'fill.color': `${v.name} ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `${v.name} ? "${L.primary}" : "${L.border}"` });
     const mark = bind(text(ctx, `${name} mark`, '✓', 18, 12, 18, { fontSize: 16, fontWeight: 700, color: L.onButton, decorative: true }), { visible: v.name });
     const l = text(ctx, `${name} label`, label, 50, 13, rw - 64, { fontSize: 17, fontWeight: 600, decorative: true });
     bg.children = [box22, mark, l];

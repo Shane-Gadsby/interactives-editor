@@ -69,7 +69,7 @@ export function buildMarkWords(colourway: Colourway) {
     ariaLabel: 'item.text',
     ariaDescription: 'checked ? (item.picked ? (item.right ? "Right" : "Wrong") : (item.right ? "Missed" : "")) : ""',
     'fill.color': `checked ? (item.picked ? (item.right ? "${L.successSurface}" : "${L.errorSurface}") : (item.right ? "${L.warningSurface}" : "${L.background}")) : (item.picked ? "${L.button}" : "${L.background}")`,
-    'stroke.paint.color': `checked ? (item.picked ? (item.right ? "${L.success}" : "${L.error}") : (item.right ? "${L.warning}" : "${L.border}")) : (item.picked ? "${L.button}" : "${L.border}")`,
+    'stroke.paint.color': `checked ? (item.picked ? (item.right ? "${L.success}" : "${L.error}") : (item.right ? "${L.warning}" : "${L.border}")) : (item.picked ? "${L.primary}" : "${L.border}")`,
   });
   const passage = createNode('frame', {
     name: 'Passage',
