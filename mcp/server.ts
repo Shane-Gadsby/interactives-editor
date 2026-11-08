@@ -536,7 +536,7 @@ function setPath(obj: Record<string, unknown>, path: string, v: unknown) {
 
 function reference(topic: string): string {
   if (topic === 'interactions') {
-    return CATALOG.map((d) => `### ${d.kind} — ${d.label} (${d.category})\n${d.description}${d.outputs.length > 1 || d.outputs[0]?.label ? `\nOutputs: ${d.outputs.map((o) => o.id).join(', ')}` : ''}\n${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join('|')}` : ''}${pd.default !== undefined ? `, default ${JSON.stringify(pd.default)}` : ''})${pd.help ? `: ${pd.help}` : ''}`).join('\n')}`).join('\n\n');
+    return CATALOG.map((d) => `### ${d.kind} — ${d.label} (${d.category})\n${d.description}${d.gives ? `\nGives: ${d.gives.join(', ')}` : ''}${d.outputs.length > 1 || d.outputs[0]?.label ? `\nOutputs: ${d.outputs.map((o) => o.id).join(', ')}` : ''}\n${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join('|')}` : ''}${pd.default !== undefined ? `, default ${JSON.stringify(pd.default)}` : ''})${pd.help ? `: ${pd.help}` : ''}`).join('\n')}`).join('\n\n');
   }
   if (topic === 'properties') return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join('\n') + '\nOn a progress layer only: ' + layerOwnProps(createNode('progress')).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join('; ');
   if (topic === 'layers') {

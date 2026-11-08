@@ -9210,3 +9210,12 @@ code {
 .inspector.ps-on > :not(.section):not(.prop-search):not(.recording-banner):not(:has(.section)) {
   display: none;
 }
+
+/* Node summary in the Interactions settings column, with the link on to the reference */
+.node-summary .link-btn {
+  white-space: normal;
+  text-align: left;
+}
+.node-gives code {
+  font-size: 11px;
+}

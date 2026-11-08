@@ -78,7 +78,7 @@ function IxNode({ data, selected }: NodeProps<Node<IxNodeData>>) {
         <span className="gn-cat">{def.category}</span>
         {def.label}
       </div>
-      <div className="gn-body">{data.summary || <span className="muted">{def.description}</span>}</div>
+      <div className="gn-body">{data.summary || <span className="muted">{def.summary}</span>}</div>
       <div className="gn-outs">
         {def.outputs.map((o, i) => (
           <div key={o.id} className="gn-out" style={{ top: 34 + i * 18 }}>
@@ -640,7 +640,7 @@ export function LogicGraph() {
       .map((cat) => ({
         label: cat === 'event' ? 'Event' : cat === 'action' ? 'Action' : 'Logic',
         color: CAT_COLOR[cat],
-        items: CATALOG.filter((d) => d.category === cat && (!only || only(d.kind))).map((d) => ({ label: d.label, title: d.description, onClick: () => pick(d.kind) })),
+        items: CATALOG.filter((d) => d.category === cat && (!only || only(d.kind))).map((d) => ({ label: d.label, title: d.summary, onClick: () => pick(d.kind) })),
       }))
       .filter((g) => g.items.length);
 
@@ -778,7 +778,7 @@ export function LogicGraph() {
               <button
                 key={d.kind}
                 className="palette-item"
-                title={d.description}
+                title={d.summary}
                 draggable
                 onDragStart={(e) => {
                   e.dataTransfer.effectAllowed = 'copy';
@@ -916,6 +916,29 @@ export function LogicGraph() {
   );
 }
 
+/** The names an event node hands to the flow after it, in short: the first few, and a link to the rest in the node reference. */
+function NodeGives({ def }: { def: { label: string; gives?: string[] } }) {
+  const all = def.gives ?? [];
+  const shown = all.slice(0, 4);
+  const more = all.length - shown.length;
+  return (
+    <p className="hint node-gives">
+      Gives{' '}
+      {shown.map((g, i) => (
+        <span key={g}>
+          <code>{g}</code>
+          {i < shown.length - 1 || more > 0 ? ', ' : ''}
+        </span>
+      ))}
+      {more > 0 && (
+        <button type="button" className="link-btn" onClick={() => openHelp('interaction-nodes', slug(def.label))} aria-label={`${more} more names ${def.label} gives, in the node reference`}>
+          and {more} more →
+        </button>
+      )}
+    </p>
+  );
+}
+
 function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; ab: Artboard; project: Project; onChange: (p: Record<string, unknown>) => void; onNote: (n: string) => void }) {
   const def = CATALOG_BY_KIND[node.kind];
   if (!def) return null;
@@ -933,7 +956,7 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
     if (p.showIf && !p.showIf.values.includes(params[p.showIf.key])) return null;
     const v = params[p.key];
     const pick = (options: { value: string; label: string }[], empty: string, extra: { value: string; label: string }[] = [], quick: Parameters<typeof withQuickAdd>[1] = {}) => (
-      <SelectField key={p.key} label={p.label} value={String(v ?? '')} options={[{ value: '', label: empty }, ...options, ...extra]} onChange={withQuickAdd((x) => set(p.key, x), quick)} />
+      <SelectField key={p.key} label={p.label} title={p.help} value={String(v ?? '')} options={[{ value: '', label: empty }, ...options, ...extra]} onChange={withQuickAdd((x) => set(p.key, x), quick)} />
     );
     switch (p.type) {
       case 'node':
@@ -1000,23 +1023,23 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
       case 'data':
         return pick(project.dataSources.map((d) => ({ value: d.id, label: d.name })), project.dataSources.length ? 'Choose data source…' : 'No data sources yet');
       case 'cursor':
-        return <SelectField key={p.key} label={p.label} value={String(v ?? 'pointer')} options={[...CURSORS]} onChange={(x) => set(p.key, x)} />;
+        return <SelectField key={p.key} label={p.label} title={p.help} value={String(v ?? 'pointer')} options={[...CURSORS]} onChange={(x) => set(p.key, x)} />;
       case 'prop': {
         // The layer this node acts on can have settings of its own (a progress layer's value)
         let target: SceneNode | undefined;
         walk(ab.children, (x) => {
           if (x.id === node.params.target) target = x;
         });
-        return <SelectField key={p.key} label={p.label} value={String(v ?? '')} options={[...ANIMATABLE_PROPS, ...layerOwnProps(target)].map((a) => ({ value: a.prop, label: a.label }))} onChange={(x) => set(p.key, x)} />;
+        return <SelectField key={p.key} label={p.label} title={p.help} value={String(v ?? '')} options={[...ANIMATABLE_PROPS, ...layerOwnProps(target)].map((a) => ({ value: a.prop, label: a.label }))} onChange={(x) => set(p.key, x)} />;
       }
       case 'select':
-        return <SelectField key={p.key} label={p.label} value={String(v ?? '')} options={p.options ?? []} onChange={(x) => set(p.key, x)} />;
+        return <SelectField key={p.key} label={p.label} title={p.help} value={String(v ?? '')} options={p.options ?? []} onChange={(x) => set(p.key, x)} />;
       case 'easing':
-        return <SelectField key={p.key} label={p.label} value={String(v ?? 'easeInOut')} options={[...EASING_NAMES]} onChange={(x) => set(p.key, x)} />;
+        return <SelectField key={p.key} label={p.label} title={p.help} value={String(v ?? 'easeInOut')} options={[...EASING_NAMES]} onChange={(x) => set(p.key, x)} />;
       case 'number':
-        return <NumberField key={p.key} label={p.label} value={Number(v ?? 0)} onChange={(x) => set(p.key, x)} />;
+        return <NumberField key={p.key} label={p.label} title={p.help} value={Number(v ?? 0)} onChange={(x) => set(p.key, x)} />;
       case 'boolean':
-        return <CheckField key={p.key} label={p.label} value={!!v} onChange={(x) => set(p.key, x)} />;
+        return <CheckField key={p.key} label={p.label} title={p.help} value={!!v} onChange={(x) => set(p.key, x)} />;
       case 'expr': {
         // Setting a choice variable: pick from its choices (stored as a quoted value), or type an expression
         const enumVar = node.kind === 'action.setVariable' && p.key === 'value' ? project.variables.find((x) => x.id === node.params.variable && x.type === 'enum') : undefined;
@@ -1039,7 +1062,7 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
         }
         return (
           <div key={p.key}>
-            <ExprField label={p.label} value={String(v ?? '')} locals={GRAPH_LOCALS} commitOnBlur placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
+            <ExprField label={p.label} title={p.help} value={String(v ?? '')} locals={GRAPH_LOCALS} commitOnBlur placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
             <div className="hint">{p.help ?? 'JavaScript expression; variables by name, plus event.'}</div>
           </div>
         );
@@ -1052,13 +1075,24 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
               <CodeEditor value={String(v ?? '')} onChange={(x) => set(p.key, x)} height={160} />
             </div>
           );
-        return <TextField key={p.key} label={p.label} value={String(v ?? '')} placeholder={p.placeholder} commitOnBlur onChange={(x) => set(p.key, x)} />;
+        return <TextField key={p.key} label={p.label} title={p.help} value={String(v ?? '')} placeholder={p.placeholder} commitOnBlur onChange={(x) => set(p.key, x)} />;
     }
   };
   return (
     <div className="param-form">
       <div className="param-title">{def.label}</div>
-      <p className="hint">{def.description}</p>
+      <p className="hint node-summary">
+        {def.summary}
+        {def.details && (
+          <>
+            {' '}
+            <button type="button" className="link-btn" onClick={() => openHelp('interaction-nodes', slug(def.label))} aria-label={`More about ${def.label}, in the node reference`}>
+              More about {def.label} →
+            </button>
+          </>
+        )}
+      </p>
+      {def.gives && <NodeGives def={def} />}
       {def.params.map(field)}
       <TextField label="Note" value={node.note ?? ''} commitOnBlur onChange={onNote} />
       <button

@@ -1910,7 +1910,9 @@ Everyone should be able to finish the activity, so every drag has two ways that 
               .map((p) => `- **${p.label}**${p.help ? `: ${p.help}` : p.options ? `: ${p.options.map((o) => o.label).join(', ')}` : ''}`)
               .join('\n');
             const outs = d.outputs.filter((o) => o.label).map((o) => o.label);
-            return `### ${d.label}\n${d.description}${outs.length ? ` Outputs: ${outs.join(', ')}.` : ''}\n\n${params}`;
+            const rest = `${d.details ?? ''}${outs.length ? `${d.details ? ' ' : ''}Outputs: ${outs.join(', ')}.` : ''}`;
+            const gives = d.gives ? `**Gives:** ${d.gives.map((g) => `\`${g}\``).join(', ')}.` : '';
+            return [`### ${d.label}`, d.summary, rest, gives, params].filter(Boolean).join('\n\n');
           })
           .join('\n\n');
       return [section('Events', 'event'), section('Actions', 'action'), section('Logic', 'logic')].join('\n\n');

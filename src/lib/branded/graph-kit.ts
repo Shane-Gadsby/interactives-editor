@@ -270,7 +270,7 @@ export function goButton(ab: Artboard, btn: SceneNode, to: Artboard, y: number):
 
 /**
  * How big a node will draw in the Interactions tab (React Flow measures them in the browser, so a built starter has to guess):
- * 170 to 240 wide by what its settings say, a header, the summary of its settings (or the description of the node when it has
+ * 170 to 240 wide by what its settings say, a header, the summary of its settings (or the node's own summary line when it has
  * none) at about 31 characters a line, and a row per output.
  */
 export function nodeSizeGuess(n: LogicNode): { width: number; height: number } {
@@ -282,7 +282,7 @@ export function nodeSizeGuess(n: LogicNode): { width: number; height: number } {
     if (p.showIf && !p.showIf.values.includes((n.params[p.showIf.key] ?? '') as never)) continue;
     chars += Math.min(String(v).length, 40) + 3;
   }
-  if (!chars) chars = Math.min(def?.description.length ?? 0, 120);
+  if (!chars) chars = Math.min(def?.summary.length ?? 0, 120);
   const width = Math.min(240, Math.max(170, 140 + chars * 2));
   const lines = Math.max(1, Math.ceil(chars / Math.floor((width - 20) / 6.3)));
   const outs = Math.max(1, def?.outputs.length ?? 1);
