@@ -9,5 +9,7 @@ import { beforeAndAfter } from './explore/compare';
 import { flipAndDialogCards } from './explore/cards';
 import { imageHotspots } from './explore/hotspots';
 import { imageSlider } from './explore/slider';
+import { mindMapStarter } from './explore/mindmap';
+import { flowchartStarter } from './explore/flowchart';
 
-export const STARTERS: BrandedStarter[] = [imageHotspots, accordion, flipAndDialogCards, imageSlider, beforeAndAfter, imageSequence, informationWall, collage, chart];
+export const STARTERS: BrandedStarter[] = [imageHotspots, accordion, flipAndDialogCards, imageSlider, beforeAndAfter, imageSequence, informationWall, collage, chart, mindMapStarter, flowchartStarter];
