@@ -180,6 +180,15 @@ describe('the layout check', () => {
     expect(checkProjectLayout(ctx.project)).toEqual([]);
   });
 
+  it('does not count words a clipping or scrolling frame cuts off', () => {
+    const ctx = brandedProject(COLOURWAYS[0], 'T');
+    const page = brandedPage(ctx, 'One');
+    const box = contentBox(page);
+    const long = text(ctx, 'Long', Array.from({ length: 60 }, () => 'many words here').join(' '), 20, 20, 200);
+    page.children.push(stack('Scroller', box.x, box.y, 300, { height: 80, box: { clip: true }, extra: { scroll: 'vertical' }, children: [long] }), button(ctx, 'Below', 'Below', box.x, box.y + 120));
+    expect(checkProjectLayout(ctx.project)).toEqual([]);
+  });
+
   it('runs a starter in its extra states', () => {
     const ctx = brandedProject(COLOURWAYS[0], 'T');
     const page = brandedPage(ctx, 'One');

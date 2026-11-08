@@ -131,7 +131,7 @@ const isClickable = (n: SceneNode): boolean => {
   return (n.type === 'frame' || n.type === 'group') && (x.role === 'button' || x.role === 'checkbox' || x.role === 'radio' || !!x.focusable || !!x.draggable);
 };
 
-function collect(nodes: SceneNode[], scope: ExprScope, out: Item[], ctx: { dx: number; dy: number; path: string[]; overlay: boolean; clipped: boolean; control?: string; master: boolean }): void {
+function collect(nodes: SceneNode[], scope: ExprScope, out: Item[], ctx: { dx: number; dy: number; path: string[]; overlay: boolean; clipped: boolean; clip: Box | null; control?: string; master: boolean }): void {
   for (const n of nodes) {
     if (n.visible === false || n.opacity === 0) continue;
     const master = ctx.master || n.id.startsWith('ixm~');
@@ -143,13 +143,26 @@ function collect(nodes: SceneNode[], scope: ExprScope, out: Item[], ctx: { dx: n
       const t = n as TextNode;
       const text = fill(t.text ?? '', scope);
       item.text = text;
-      if (text.trim()) item.ink = inkOf(t, text, box.x, box.y);
+      if (text.trim()) {
+        const ink = inkOf(t, text, box.x, box.y);
+        //what a clipping or scrolling frame above it cuts off is not seen
+        if (ctx.clip) {
+          const x0 = Math.max(ink.x, ctx.clip.x);
+          const y0 = Math.max(ink.y, ctx.clip.y);
+          const x1 = Math.min(ink.x + ink.w, ctx.clip.x + ctx.clip.w);
+          const y1 = Math.min(ink.y + ink.h, ctx.clip.y + ctx.clip.h);
+          if (x1 > x0 && y1 > y0) item.ink = { ...ink, x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+        } else item.ink = ink;
+      }
     }
     out.push(item);
     const kids = (n as { children?: SceneNode[] }).children;
     if (Array.isArray(kids) && kids.length) {
       const f = n as SceneNode & { clip?: boolean; scroll?: string };
+      const cuts = n.type === 'frame' && (f.clip || (!!f.scroll && f.scroll !== 'none'));
+      const mine: Box | null = cuts ? (ctx.clip ? { x: Math.max(box.x, ctx.clip.x), y: Math.max(box.y, ctx.clip.y), w: Math.max(0, Math.min(box.x + box.w, ctx.clip.x + ctx.clip.w) - Math.max(box.x, ctx.clip.x)), h: Math.max(0, Math.min(box.y + box.h, ctx.clip.y + ctx.clip.h) - Math.max(box.y, ctx.clip.y)) } : box) : ctx.clip;
       collect(kids, scope, out, {
+        clip: mine,
         dx: box.x,
         dy: box.y,
         path: [...ctx.path, n.id],
@@ -285,7 +298,7 @@ export function checkPageLayout(project: Project, page: Artboard, state?: Layout
     extra: { pageNumber: info.index + 1, pageCount: info.list.length, artboard: artboardScope(page, { index: info.index, count: info.list.length, group: info.group }), quiz: { questions: [], score: 0, points: 0 }, event: {} },
   };
   const items: Item[] = [];
-  collect(drawn(project, page, scope), scope, items, { dx: 0, dy: 0, path: [], overlay: false, clipped: false, master: false });
+  collect(drawn(project, page, scope), scope, items, { dx: 0, dy: 0, path: [], overlay: false, clipped: false, clip: null, master: false });
   const out: LayoutViolation[] = [];
   const add = (kind: ViolationKind, a: Item, b: Item | undefined, detail: string) => out.push({ kind, page: state ? `${page.name} [${state.label}]` : page.name, a: label(a), ...(b ? { b: label(b) } : {}), detail });
   const sheet: Box = { x: 0, y: 0, w: page.width, h: page.height };
