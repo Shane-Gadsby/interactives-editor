@@ -69,7 +69,7 @@ export function buildMarkWords(colourway: Colourway) {
     ariaLabel: 'item.text',
     ariaDescription: 'checked ? (item.picked ? (item.right ? "Right" : "Wrong") : (item.right ? "Missed" : "")) : ""',
     'fill.color': `checked ? (item.picked ? (item.right ? "${L.successSurface}" : "${L.errorSurface}") : (item.right ? "${L.warningSurface}" : "${L.background}")) : (item.picked ? "${L.button}" : "${L.background}")`,
-    'stroke.paint.color': `checked ? (item.picked ? (item.right ? "${L.success}" : "${L.error}") : (item.right ? "${L.warning}" : "${L.border}")) : (item.picked ? "${L.button}" : "${L.border}")`,
+    'stroke.paint.color': `checked ? (item.picked ? (item.right ? "${L.success}" : "${L.error}") : (item.right ? "${L.warning}" : "${L.border}")) : (item.picked ? "${L.primary}" : "${L.border}")`,
   });
   const passage = createNode('frame', {
     name: 'Passage',
@@ -90,7 +90,7 @@ export function buildMarkWords(colourway: Colourway) {
     children: [chip],
   } as never) as FrameNode;
 
-  const check = bind(button(ctx, 'Check button', 'Check', 0, 0, 140), { disabled: 'checked' });
+  const check = bind(button(ctx, 'Check button', 'Check answer', 0, 0, 170), { disabled: 'checked' });
   const again = bind(button(ctx, 'Try again button', 'Try again', 0, 0, 160, false), { visible: 'checked' });
   const actions = stack('Actions', 0, 0, box.width, { direction: 'row', gap: 14, align: 'center', children: [check, again] });
   const scoreText = text(ctx, 'Score', 'Score: {score} out of {totalRight}', 0, 0, 100, { fontSize: 24, fontWeight: 700 });

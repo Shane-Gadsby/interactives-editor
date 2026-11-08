@@ -1,7 +1,7 @@
 import { createNode, defaultAutoLayout, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partsOf, setAreaShape, setQuestionSettings, syncQuestion } from '../../../question-kit';
 import { brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text } from '../../kit';
-import { fill, stack } from '../../parts';
+import { fill, extrasChecklist, questionExtras, stack } from '../../parts';
 import type { Colourway } from '../../looks';
 import { announce, bind, brandQuestionFrame, click, goNext, graph, heroPage, noteBelow, scorePage, setVar, variable } from './shared';
 
@@ -23,7 +23,7 @@ export function buildFindHotspot(colourway: Colourway) {
   const page = brandedPage(ctx, 'Find the spot', { footer: 'Find the hotspot' });
   const box = contentBox(page);
 
-  const id = addQuestion(project, page.id, 'hotspot', { at: { x: box.x, y: box.y } })!;
+  const id = addQuestion(project, page.id, 'hotspot', { at: { x: box.x, y: box.y }, ...questionExtras(project, { hint: true, tryAgain: true }) })!;
   setQuestionSettings(project, page.id, id, {
     prompt: 'Click the item on the desk that helps you plan your week.',
     options: AREAS.map((a) => ({ id: a.id, text: a.text, ...(a.id === 'o1' ? { correct: true, feedback: 'Yes, the planner is where you lay out your week.' } : { feedback: `Not the ${a.text.toLowerCase()}. Look for something you would write plans in.` }) })),
@@ -69,7 +69,7 @@ export function buildFindHotspot(colourway: Colourway) {
   //The side card: what to do, tries left, how it went. One column, so nothing in it can land on anything else
   const sideTitle = heading(ctx, 'How it works title', 'How it works', 0, 0, 100, { fontSize: 20 });
   const sideBody = text(ctx, 'How it works text', 'Select the area you think is right, then press Check answer. Use Tab and the arrow keys to move between areas, and Enter or Space to select one.', 0, 0, 100, { fontSize: 15, lineHeight: 1.4 });
-  const tries = text(ctx, 'Tries left', `Tries left: {Math.max(0, ${P}_triesLeft)}`, 0, 0, 100, { fontSize: 18, fontWeight: 700, color: L.deep });
+  const tries = text(ctx, 'Tries left', `Tries left: {Math.max(0, ${P}_triesLeft)}`, 0, 0, 100, { fontSize: 18, fontWeight: 700, color: L.logoTextOnLight });
   const outcome = bind(text(ctx, 'Outcome', `{${P}_correct ? "✓ You found it" : "✗ Out of tries"}`, 0, 0, 100, { fontSize: 18, fontWeight: 700 }), { visible: `${P}_locked`, color: `${P}_correct ? "${L.success}" : "${L.error}"` });
   const side = fill(stack('How it works card', 0, 0, 100, { gap: 12, padding: 20, box: { fill: solid(L.surface), cornerRadius: 16 }, children: [sideTitle, sideBody, tries, outcome] }));
   page.children = page.children.filter((c) => c.id !== id);
@@ -92,6 +92,7 @@ export function buildFindHotspot(colourway: Colourway) {
     item('Change how many tries a learner gets (Question section, Tries) and keep the "Tries left" text on the right in step', tries, page),
     item('Try it with the keyboard: Tab to an area, Enter to select it, then Check answer', undefined, page),
   ];
+  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }
 
@@ -196,7 +197,7 @@ export function buildFindHotspots(colourway: Colourway) {
     repeat: { items: 'targets.map((t, i) => ({name: t.name, found: found.includes(i)}))', layout: 'none', gap: 0, columns: 1 },
     children: [row],
   } as never);
-  const count = text(ctx, 'Found count', 'Found {found.length} of {targets.length}', 0, 0, 100, { fontSize: 20, fontWeight: 700, color: L.deep });
+  const count = text(ctx, 'Found count', 'Found {found.length} of {targets.length}', 0, 0, 100, { fontSize: 20, fontWeight: 700, color: L.logoTextOnLight });
   const wrongCount = text(ctx, 'Wrong clicks', 'Wrong clicks: {wrong}', 0, 0, 100, { fontSize: 18, color: L.muted });
   const feedbackText = text(ctx, 'Feedback text', '{message}', 0, 0, 100, { fontSize: 16, lineHeight: 1.35 });
   const feedback = bind(stack('Feedback', 0, 0, 100, { padding: 16, box: { fill: solid(L.surface), stroke: stroke(L.border, 2), cornerRadius: 16 }, extra: { role: 'region' }, children: [feedbackText] }), {

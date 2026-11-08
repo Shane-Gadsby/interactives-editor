@@ -6,7 +6,7 @@
 import { createNode, uid, type Artboard, type CaptionCue, type FrameNode, type SceneNode, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { stack } from '../../parts';
+import { pillButton, stack } from '../../parts';
 import { addVar, announce, bind, click, endPage, go, graph, heroPage, placeholderPicture, resetVars, toggleVar } from './shared';
 import { addPlaceholderSound, type Note } from './sounds';
 
@@ -135,10 +135,11 @@ function build(colourway: Colourway) {
       emptyText: 'No video has been chosen yet.',
     } as Partial<VideoNode>);
     const aside = text(ctx, 'Video note', 'Turn on captions from the buttons in the corner of the page. The transcript is the same text the other two versions show.', 0, 0, 560, { fontSize: 14, color: L.muted, lineHeight: 1.3 });
-    const toggle = bind(button(ctx, 'Transcript button', 'Show transcript', 0, 0, 344, false), { label: 'showText ? "Hide transcript" : "Show transcript"', ariaExpanded: 'showText' });
+    const toggle = bind(pillButton(ctx, 'Transcript button', 'Show transcript', 0, 0, 168), { label: 'showText ? "Hide transcript" : "Show transcript"', ariaExpanded: 'showText' });
     toggle.ariaLabel = 'Show or hide the transcript';
+    //a small secondary button at the top right of the transcript (its own bar, pushed to the end), so the lesson's one full size button is the one that finishes it
     const words = bind(createNode('frame', { name: 'Transcript panel', x: 0, y: 0, width: 344, height: 338, cornerRadius: 16, fill: solid(L.surface), stroke: null, clip: true, role: 'region', ariaLabel: 'Transcript', children: [text(ctx, 'Transcript text', '{transcript}', 20, 16, 304, { fontSize: 15, lineHeight: 1.4 })] }) as FrameNode, { visible: 'showText' });
-    video.children.push(stack('Clip column', b.x, b.y, 560, { gap: 16, children: [clip, aside] }), stack('Transcript column', b.x + 584, b.y, 344, { gap: 14, children: [toggle, words] }));
+    video.children.push(stack('Clip column', b.x, b.y, 560, { gap: 16, children: [clip, aside] }), stack('Transcript column', b.x + 584, b.y, 344, { gap: 14, children: [stack('Transcript bar', 0, 0, 344, { direction: 'row', justify: 'end', align: 'center', children: [toggle] }), words] }));
     g.run(click(g, toggle, 'Transcript'), toggleVar(showText), announce('showText ? "Transcript shown" : "Transcript hidden"'));
     g.run(g.event('event.start', {}, 'Transcript starts hidden'), resetVars(showText));
     footerRow(ctx, video, done.page, choose);

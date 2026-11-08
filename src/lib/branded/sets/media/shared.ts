@@ -51,7 +51,7 @@ export function tickList(ctx: BrandedCtx, name: string, rowName: string, x: numb
   const gap = opts.gap ?? 4;
   const on = `${opts.ticked.name}.includes(index)`;
   const tick = createNode('rect', { name: 'Tick box', x: 8, y: (rowH - 22) / 2, width: 22, height: 22, cornerRadius: 6, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true });
-  tick.bindings = { 'fill.color': `${on} ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `${on} ? "${L.button}" : "${L.border}"` };
+  tick.bindings = { 'fill.color': `${on} ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `${on} ? "${L.primary}" : "${L.border}"` };
   //Dark on the row until it is ticked: it only shows over the button colour, where its own (onButton) colour is the one that reads, and a contrast check that cannot see that is not fooled
   const mark = text(ctx, 'Tick mark', '✓', 12, (rowH - 22) / 2 - 1, 18, { fontSize: 16, fontWeight: 700, color: L.text, decorative: true });
   mark.bindings = { visible: on, color: `"${L.onButton}"` };

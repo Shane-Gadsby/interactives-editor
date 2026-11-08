@@ -61,11 +61,11 @@ function build(colourway: Colourway) {
     role: 'button',
     focusable: true,
     fill: solid(L.button),
-    stroke: stroke(L.button, 3),
+    stroke: stroke(L.primary, 3),
     bindings: {
       ariaLabel: '"Card " + (index + 1) + (item.state == "down" ? ", face down" : ": " + item.text + (item.state == "matched" ? ", matched" : ""))',
       'fill.color': `item.state == "down" ? "${L.button}" : item.state == "matched" ? "${L.successSurface}" : "${L.background}"`,
-      'stroke.paint.color': `item.state == "matched" ? "${L.success}" : item.state == "up" ? "${L.accent}" : "${L.button}"`,
+      'stroke.paint.color': `item.state == "matched" ? "${L.success}" : item.state == "up" ? "${L.primary}" : "${L.primary}"`,
     },
     children: [back, face],
   });

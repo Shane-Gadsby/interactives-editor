@@ -1,11 +1,11 @@
 //The Spelling test starter: what it is made of, that its words are only in the answer key the server takes out, and that it plays
 //through in the page (where it marks for itself, as Preview does) and shows the result.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Player, hostProgressStore, newQuestion, stepMarking, stripProject, type Artboard, type MarkingKey, type MarkRequest, type Project, type ProgressStore, type StateMap } from 'interactives-player';
+import { Player, hostProgressStore, newQuestion, stepMarking, stripProject, type Artboard, type FrameNode, type MarkingKey, type MarkRequest, type Project, type ProgressStore, type StateMap } from 'interactives-player';
 import { STARTERS } from '../src/lib/branded/sets/assessment';
 import { COLOURWAYS } from '../src/lib/branded/looks';
 import { byName } from '../src/lib/branded/kit';
-import { partsOf, questionFrames } from '../src/lib/question-kit';
+import { makeIndependent, partsOf, questionFrames } from '../src/lib/question-kit';
 
 const starter = STARTERS.find((s) => s.key === 'assessment/spelling-test')!;
 const WORDS = ['colour', 'organise', 'neighbour', 'centre', 'necessary', 'separate'];
@@ -56,9 +56,8 @@ describe('the spelling test starter', () => {
     }
   });
 
-  it('hides Try again on a word, and has a Retake that asks the server for the next round and starts over', () => {
-    for (const f of frames) expect(f.question).toMatchObject({ hideReset: true, keep: true });
-    for (const f of frames) expect(partsOf(f).reset[0].bindings!.visible).toBe('false');
+  it('has a Retake that asks the server for the next round and starts over, and keeps what a word was when you come back to it', () => {
+    for (const f of frames) expect(f.question).toMatchObject({ keep: true });
     const result = project.artboards[7];
     const retake = byName(result, 'Retake button')!;
     const click = result.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.target === retake.id)!;
@@ -67,6 +66,50 @@ describe('the spelling test starter', () => {
     expect(result.logic.edges.some((e) => e.from === click.id && e.to === reset.id)).toBe(true);
     expect(result.logic.nodes.some((n) => n.kind === 'action.startOver')).toBe(true);
     expect(retake.bindings!.visible).toBe('q1_retakesLeft != 0');
+  });
+
+  it('says Submit answer, and Try again and Hint are each one project setting, off to begin with', () => {
+    expect(project.variables.find((v) => v.name === 'allowTryAgain')).toMatchObject({ type: 'boolean', initial: false });
+    expect(project.variables.find((v) => v.name === 'offerHint')).toMatchObject({ type: 'boolean', initial: false });
+    frames.forEach((f, i) => {
+      const parts = partsOf(f);
+      expect(parts.check[0]).toMatchObject({ label: 'Submit answer' });
+      expect(parts.reset[0].bindings!.visible).toBe(`allowTryAgain && q${i + 1}_locked && !q${i + 1}_correct`);
+      expect(parts.hint[0].bindings!.visible).toBe(`offerHint && q${i + 1}_hintsLeft > 0 && !q${i + 1}_locked`);
+      expect(f.question!.hints).toHaveLength(1);
+      expect(f.question!.hints[0].toLowerCase()).not.toContain(WORDS[i]);
+    });
+  });
+
+  it('puts the hint in a small pill at the top right of the card, opposite the prompt, on every word', () => {
+    for (const f of frames) {
+      const parts = partsOf(f);
+      const row = parts.promptRow[0] as FrameNode;
+      expect(row.children.map((c) => c.questionPart)).toEqual(['prompt', 'hint']);
+      expect(f.children[0]).toBe(row);
+      expect(parts.hint[0]).toMatchObject({ type: 'button', height: 32, cornerRadius: 16, width: 84 });
+      expect(parts.hint[0].height).toBeLessThan(parts.check[0].height);
+      //the pill is not in the row of full size buttons
+      expect((parts.buttons[0] as FrameNode).children.some((c) => c.questionPart === 'hint')).toBe(false);
+    }
+  });
+
+  it('keeps the options when the word page is copied (the copy is a new question that shares the layers\' wording)', () => {
+    const copy = JSON.parse(JSON.stringify(project)) as Project;
+    const ab = copy.artboards[1];
+    const f = questionFrames(ab)[0];
+    makeIndependent(copy, ab.id, f.id);
+    expect(partsOf(f).hint[0].bindings!.visible).toMatch(/^offerHint && /);
+    expect(partsOf(f).reset[0].bindings!.visible).toMatch(/^allowTryAgain && /);
+    expect(partsOf(f).promptRow).toHaveLength(1);
+  });
+
+  it('has its Play the word button disabled and reading Playing... while a sound goes', () => {
+    for (const ab of project.artboards.slice(1, 7)) {
+      const play = byName(ab, 'Play word button')!;
+      expect(play.bindings).toMatchObject({ disabled: 'soundPlaying()', label: 'soundPlaying() ? "Playing…" : "Play the word"' });
+      expect(play.bindings!.ariaLabel).toMatch(/Playing word/);
+    }
   });
 
   it('reports the total and the pass mark, and the pass mark matches the page\'s own', () => {
@@ -168,6 +211,131 @@ describe('playing the spelling test', () => {
     expect(quizScore(player)).toBe(0);
     expect(player.getVariable('q1_locked')).toBe(false);
     expect(text()).toContain('Spelling test');
+  });
+});
+
+//A stand in for the browser's audio, so a test can say when a word has finished (or that it could not load)
+let voices: FakeAudio[] = [];
+class FakeAudio {
+  volume = 1;
+  muted = false;
+  loop = false;
+  playbackRate = 1;
+  duration = 2;
+  private on = new Map<string, (() => void)[]>();
+  constructor(public src: string) {
+    voices.push(this);
+  }
+  play() {
+    return Promise.resolve();
+  }
+  pause() {}
+  addEventListener(type: string, fn: () => void) {
+    this.on.set(type, [...(this.on.get(type) ?? []), fn]);
+  }
+  fire(type: string) {
+    for (const fn of this.on.get(type) ?? []) fn();
+  }
+}
+
+describe('the word button and the options, played', () => {
+  beforeEach(() => {
+    voices = [];
+    document.body.innerHTML = '<div id="stage" style="width:1024px;height:640px"></div>';
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => setTimeout(() => cb(performance.now()), 0) as unknown as number);
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
+    vi.stubGlobal('Audio', FakeAudio);
+  });
+  const made: Player[] = [];
+  afterEach(() => {
+    //the sounds going are the browser's, not this test's: let every one of them end
+    for (const v of voices) v.fire('ended');
+    for (const p of made.splice(0)) p.destroy?.();
+    vi.unstubAllGlobals();
+  });
+  //a copy with a recording in the Play the word node of every word, and without the writing tool guard (it reads typing the test does not do)
+  const built = JSON.parse(JSON.stringify(starter.build(COLOURWAYS[0]).project)) as Project;
+  built.assets.push({ id: 'wordsound', name: 'word.wav', mime: 'audio/wav', size: 4, src: 'data:audio/wav;base64,AAAA' });
+  for (const ab of built.artboards) for (const n of ab.logic.nodes) if (n.kind === 'action.sound') n.params.asset = 'wordsound';
+  for (const ab of built.artboards) for (const f of questionFrames(ab)) delete f.question!.guard;
+  const word = (n: number) => built.artboards[n];
+  const el = (id: string) => document.querySelector<HTMLElement>(`[data-ix-id="${id}"]`);
+  const click = async (id: string) => {
+    const e = el(id);
+    if (!e) throw new Error(`no layer ${id}`);
+    e.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flush();
+  };
+  const type = async (id: string, value: string) => {
+    const input = (el(id)?.matches('input') ? el(id) : el(id)?.querySelector('input')) as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await flush();
+  };
+  const open = async () => {
+    const project = JSON.parse(JSON.stringify(built)) as Project;
+    project.settings.startArtboardId = word(1).id;
+    const player = new Player(document.getElementById('stage')!, project, { loadData: false });
+    made.push(player);
+    await flush();
+    return player;
+  };
+  const isDisabled = (id: string) => !!(el(id)?.matches('button') ? (el(id) as HTMLButtonElement).disabled : el(id)?.querySelector('button')?.disabled);
+  const shown = (id: string) => !!el(id) && el(id)!.style.display !== 'none';
+
+  it('disables Play the word while the word is going and turns it back on when it ends', async () => {
+    await open();
+    const play = byName(word(1), 'Play word button')!;
+    expect(isDisabled(play.id)).toBe(false);
+    await click(play.id);
+    expect(voices).toHaveLength(1);
+    expect(isDisabled(play.id)).toBe(true);
+    expect(el(play.id)!.textContent).toContain('Playing…');
+    //a second press while it goes does not start the word over the top of itself (a browser does not click a disabled button, so neither does this)
+    (el(play.id)!.matches('button') ? el(play.id)! : el(play.id)!.querySelector('button')!).click();
+    await flush();
+    expect(voices).toHaveLength(1);
+    voices[0].fire('ended');
+    await flush();
+    expect(isDisabled(play.id)).toBe(false);
+    expect(el(play.id)!.textContent).toContain('Play the word');
+    await click(play.id);
+    expect(voices).toHaveLength(2);
+  });
+
+  it('is not stuck disabled when the sound cannot load', async () => {
+    await open();
+    const play = byName(word(1), 'Play word button')!;
+    await click(play.id);
+    expect(isDisabled(play.id)).toBe(true);
+    voices[0].fire('error');
+    await flush();
+    expect(isDisabled(play.id)).toBe(false);
+  });
+
+  it('offers no Hint and no Try again until the two settings are on, then each follows its own', async () => {
+    const player = await open();
+    const frame = questionFrames(word(1))[0];
+    const parts = partsOf(frame);
+    expect(shown(parts.hint[0].id)).toBe(false);
+    await type(parts.blankInput[0].id, 'kolour');
+    await click(parts.check[0].id);
+    expect(player.getVariable('q1_locked')).toBe(true);
+    expect(shown(parts.reset[0].id)).toBe(false);
+
+    player.setVariable('allowTryAgain', true);
+    await flush();
+    expect(shown(parts.reset[0].id)).toBe(true);
+    await click(parts.reset[0].id);
+    expect(player.getVariable('q1_locked')).toBe(false);
+    expect(shown(parts.reset[0].id)).toBe(false);
+
+    player.setVariable('offerHint', true);
+    await flush();
+    expect(shown(parts.hint[0].id)).toBe(true);
+    await click(parts.hint[0].id);
+    expect(player.getVariable('q1_hint')).toBe('Six letters. It starts with C.');
+    expect(shown(parts.hint[0].id)).toBe(false);
   });
 });
 

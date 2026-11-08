@@ -7,13 +7,16 @@
  *                 counter from `pageNumber`/`pageCount`, not a hard wired neighbour and a typed count
  *   dialogPanel   a frame that is a dialog (focus kept inside, Escape closes, scrim, focus returns), opened by a variable
  *   keyNavList    a repeater whose copies are one tab stop with the arrow keys moving between them
+ *   questionExtras  the template's switches for a question's optional buttons (Hint, Try again), and the pill the Hint is
+ *   pillButton    a small secondary button (Show transcript, Skip, Hint) that sits to the side of a heading, not in a row of full size ones
  *
  * Colours come from the colourway's tokens like everything in the kit. Each takes the page (or the group) it builds for and
  * adds its layers and wires, and returns what the starter needs to refer to afterwards.
  */
-import { createNode, defaultAutoLayout, type AutoLayout, type Artboard, type ButtonNode, type FrameNode, type KeyNav, type LogicNode, type ProgressNode, type SceneNode, type TextNode, type Variable } from 'interactives-player';
+import { createNode, defaultAutoLayout, type AutoLayout, type Artboard, type ButtonNode, type FrameNode, type KeyNav, type LogicNode, type ProgressNode, type SceneNode, type TextNode, type Project, type Variable } from 'interactives-player';
 import { addNote, button, contentBox, heading, solid, stroke, text, type BrandedCtx } from './kit';
-import { bind, click, goNext, goPrevious, graph, set } from './graph-kit';
+import { addVar, bind, click, goNext, goPrevious, graph, set } from './graph-kit';
+import type { KitOptions } from '../question-kit';
 
 export { addNote };
 
@@ -49,7 +52,7 @@ export function fill<T extends SceneNode>(n: T, axis: 'width' | 'height' = 'widt
 // ------------------------------------------------------------------ progress bar
 
 /**
- * A native Progress bar: the track on the warm grey, the bar in the button colour. `value` and `max` are expressions (bound, so the
+ * A native Progress bar: the track on the warm grey, the bar in the primary colour. `value` and `max` are expressions (bound, so the
  * bar follows the variables) or plain numbers. `label` is what a screen reader calls it ("Quiz progress"), `valueText` how it reads
  * the number (`Question {step} of {total}`, blank says the percentage). Pass `decorative` for a bar that only repeats something already said.
  *
@@ -69,7 +72,7 @@ export function progressBar(ctx: BrandedCtx, name: string, x: number, y: number,
     value: typeof opts.value === 'number' ? opts.value : 0,
     max: typeof opts.max === 'number' ? opts.max : 100,
     fill: solid(ctx.L.surfaceMuted),
-    barFill: solid(ctx.L.button),
+    barFill: solid(ctx.L.primary),
     cornerRadius: height / 2,
     stroke: null,
     ...(opts.decorative ? { decorative: true, semantics: 'none' } : { semantics: 'progressbar', ariaLabel: opts.label ?? name, ...(opts.valueText ? { valueText: opts.valueText } : {}) }),
@@ -190,4 +193,49 @@ export function keyNavList(name: string, x: number, y: number, width: number, he
     keyNav: { mode, ...(opts.orientation ? { orientation: opts.orientation } : {}), ...(grid && opts.columns ? { columns: opts.columns } : {}), ...(opts.wrap ? { wrap: true } : {}), ...(opts.countHidden ? { countHidden: true } : {}), ...(opts.indexVariable ? { indexVariable: opts.indexVariable.id } : {}) },
     children: [opts.row],
   } as never) as FrameNode;
+}
+
+// ------------------------------------------------------------------ optional extras
+
+/**
+ * The template-level switches for what a question page offers beyond answering it: a Hint (a small pill at the top right of the card, so
+ * the one full size button is the primary one) and Try again. Each is one boolean project variable (`offerHint`, `allowTryAgain`) the
+ * author changes once in the Variables tab for every question, not a button to delete from each page. Makes the variables when the
+ * project lacks them (`hintOn` and `tryAgainOn` are what they start as) and returns the options to spread into `addQuestion`:
+ *
+ *   addQuestion(project, page.id, 'single', { at, ...questionExtras(project, { hint: true, tryAgain: true }) })
+ *
+ * Leave a switch out (`hint: false`) for a question that has none: the Hint is then still the pill, shown whenever the question has a hint.
+ */
+export function questionExtras(project: Project, o: { hint?: boolean; tryAgain?: boolean; hintOn?: boolean; tryAgainOn?: boolean }): KitOptions {
+  const make = (name: string, on: boolean) => {
+    if (!project.variables.some((v) => v.name === name)) addVar(project, name, 'boolean', on);
+    return name;
+  };
+  return {
+    hint: 'pill',
+    ...(o.hint ? { hintWhen: make('offerHint', o.hintOn ?? true) } : {}),
+    ...(o.tryAgain ? { resetWhen: make('allowTryAgain', o.tryAgainOn ?? true) } : {}),
+  };
+}
+
+// ------------------------------------------------------------------ pill
+
+/** A small secondary button for the side of a heading or card: 32 high, in the outline look, `width` wide. Not for the one thing a page is for. */
+export function pillButton(ctx: BrandedCtx, name: string, label: string, x: number, y: number, width = 130): ButtonNode {
+  const b = button(ctx, name, label, x, y, width, false);
+  Object.assign(b, { height: 32, cornerRadius: 16, fontSize: 14 });
+  return b;
+}
+
+/**
+ * The checklist line for the switches `questionExtras` made, worded for what the starter has (`hint`: it has a Hint switch, `tryAgain`: a
+ * Try again one) and what they start as.
+ */
+export function extrasChecklist(o: { hint?: boolean; tryAgain?: boolean; hintOn?: boolean; tryAgainOn?: boolean }): string {
+  const on = (v: boolean | undefined, d: boolean) => (v ?? d ? 'on' : 'off');
+  const parts: string[] = [];
+  if (o.hint) parts.push(`offerHint (${on(o.hintOn, true)} to start) shows or hides the small Hint pill at the top right of every question, which shows the hints you typed in the Hints part of its Question section`);
+  if (o.tryAgain) parts.push(`allowTryAgain (${on(o.tryAgainOn, true)} to start) shows or hides Try again after a wrong answer`);
+  return `Optional extras, one switch each for every question, in the Variables tab: ${parts.join('; ')}. Set them once, not question by question`;
 }

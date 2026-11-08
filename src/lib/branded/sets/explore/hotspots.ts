@@ -46,7 +46,7 @@ export const imageHotspots: BrandedStarter = {
     //The points sit in one frame over the picture: one click flow serves them all (event.childIndex is which)
     const hots: SceneNode[] = SPOTS.map((s, i) => {
       const ring = createNode('ellipse', { name: `Point ${i + 1} explored ring`, x: -7, y: -7, width: HOT + 14, height: HOT + 14, fill: null, stroke: stroke(L.success, 4), decorative: true, bindings: { visible: `seen[${i}]` } } as never);
-      const num = text(ctx, `Point ${i + 1} number`, String(i + 1), 0, 10, HOT, { fontSize: 18, fontWeight: 700, align: 'center', color: L.onButton, decorative: true });
+      const num = text(ctx, `Point ${i + 1} number`, String(i + 1), 0, 10, HOT, { fontSize: 18, fontWeight: 700, align: 'center', color: L.onPrimary, decorative: true });
       return createNode('frame', {
         name: `Point ${i + 1}`,
         x: s.x,
@@ -54,7 +54,7 @@ export const imageHotspots: BrandedStarter = {
         width: HOT,
         height: HOT,
         cornerRadius: HOT / 2,
-        fill: solid(L.button),
+        fill: solid(L.primary),
         stroke: stroke(L.background, 3),
         clip: false,
         role: 'button',
@@ -70,7 +70,7 @@ export const imageHotspots: BrandedStarter = {
     const colX = box.x + PICW + 32;
     const colW = box.width - PICW - 32;
     const intro = text(ctx, 'Instructions', 'Select each numbered point on the picture to learn about that stage. Press Esc to close the panel.', 0, 0, colW, { fontSize: 18 });
-    const count = text(ctx, 'Explored count', '{explored} of {spots.length} explored', 0, 0, colW, { fontSize: 24, fontWeight: 700, color: L.deep });
+    const count = text(ctx, 'Explored count', '{explored} of {spots.length} explored', 0, 0, colW, { fontSize: 24, fontWeight: 700, color: L.logoTextOnLight });
     const bar = progressBar(ctx, 'Explored progress', 0, 0, colW, { value: 'explored', max: 'spots.length', label: 'Points explored', valueText: '{value} of {max} explored' });
     const finish = bind(button(ctx, 'Finish', 'Finish', 0, 0, 160), { visible: 'explored >= spots.length' });
     const finishRow = stack('Finish row', 0, 0, colW, { direction: 'row', align: 'start', children: [finish] });

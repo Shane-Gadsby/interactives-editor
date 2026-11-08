@@ -8,6 +8,7 @@ import { addNote, brandedPage, brandedProject, button, byName, contentBox, item,
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
 import { dressQuestion, endPage, goNextOn, heroPage } from './shared';
+import { extrasChecklist, questionExtras } from '../../parts';
 
 //The pictures: what each should show, then the partner it goes with (a word and a line)
 const PAIRS: { shows: string; term: string; line: string }[] = [
@@ -47,7 +48,7 @@ export function imagePairing(colourway: Colourway) {
   const results = endPage(ctx, 'Well done', 'You matched {pairs_score} of ' + N + ' pictures to their cards.', 'Try again');
   const box = contentBox(page);
 
-  const id = addQuestion(project, page.id, 'matching', { at: { x: box.x, y: box.y - 8 } })!;
+  const id = addQuestion(project, page.id, 'matching', { at: { x: box.x, y: box.y - 8 }, ...questionExtras(project, { tryAgain: true }) })!;
   setQuestionSettings(project, page.id, id, {
     prefix: 'pairs',
     prompt: 'Drag each picture onto the card it goes with.',
@@ -140,5 +141,6 @@ export function imagePairing(colourway: Colourway) {
     item('Change the results page text', results.result, results.page),
     item('Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
   ];
+  checklist.push(item(extrasChecklist({ tryAgain: true })));
   return { project, checklist };
 }

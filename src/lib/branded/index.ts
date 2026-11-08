@@ -16,6 +16,7 @@ import { COLOURWAYS, type Colourway } from './looks';
 import { applyTidy } from '../artboard-tidy';
 import { finishGraphs } from './graph-kit';
 import { settleLayout } from './layout-check';
+import { finishControls } from './finish';
 
 export { COLOURWAYS, HIGH_CONTRAST, colourwayById, type Colourway } from './looks';
 export { SET_NAMES, type BrandedStarter, type StarterSet } from './kit';
@@ -33,6 +34,8 @@ export function projectFromBrandedStarter(s: BrandedStarter, colourway: Colourwa
   //an input's old Variable setting becomes a two-way binding now, not on the next load
   migrateInputVariables(project);
   finishGraphs(project);
+  //the same edges and gradient-page buttons on every starter
+  finishControls(project);
   //auto layout frames laid out in the document, as the editor does after an edit
   settleLayout(project);
   //every page was made at the same canvas spot: lay them out in order, in a grid, before anyone sees them

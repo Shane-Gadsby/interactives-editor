@@ -9,7 +9,7 @@
  */
 import type { LookKey } from 'interactives-player';
 
-export type BrandKey = 'gradientStart' | 'gradientEnd' | 'onGradient' | 'deep' | 'onDeep' | 'accent' | 'warm' | 'logoMark' | 'logoText' | 'logoMarkOnLight' | 'logoTextOnLight';
+export type BrandKey = 'gradientStart' | 'gradientEnd' | 'onGradient' | 'deep' | 'onDeep' | 'accent' | 'warm' | 'logoMark' | 'logoText' | 'logoMarkOnLight' | 'logoTextOnLight' | 'scrim';
 
 export interface Colourway {
   id: string;
@@ -33,30 +33,41 @@ export const CONTENT_TOKENS: Partial<Record<LookKey, string>> = {
   surface: '#f4f3f0',
   surfaceMuted: '#dddcd7',
   text: INK,
-  muted: '#6e6964',
-  border: '#b4aea7',
+  //muted, border and the three status colours are as light as they can be and still clear
+  //4.5:1 (text) or 3:1 (a control's outline) on the page, the cards and their own status surfaces (starter-contrast.test.ts holds them to it)
+  muted: '#65605b',
+  border: '#80776d',
   divider: '#dddcd7',
   link: '#0563c1',
-  success: '#3e8521',
+  success: '#38791e',
   successSurface: '#e6f0e1',
-  error: '#cc3b40',
+  error: '#be3236',
   errorSurface: '#f8e1e2',
-  warning: '#ed6a21',
+  warning: '#b54a0f',
   warningSurface: '#fdeadf',
 };
 
-const way = (id: string, name: string, description: string, start: string, end: string, button: string, onButton: string, onGradient: string, accent: string, logoMark: string, logoText: string): Colourway => ({
+//`button` is what a button is filled with and `primary` what a bar, a chart mark or a selected outline is drawn in. They differ in Purple:
+//gold is the button (dark text on it) but is under 3:1 on the white pages, so the marks use purple. The focus ring is drawn on the white
+//pages (and cards) the most, so it is the darker of the two (3:1 or more there, which gold and the old orange ring were not).
+//White words on the Orange and Red gradients reach only about 3.6:1 at the light end, and no other brand colour does better at the dark end,
+//so those two carry a soft black scrim over the gradient (under the words, over the sweeps): 22% takes the light end to 4.5:1 and keeps the hue. The other
+//colourways have a clear one, so every hero and end page has the same layers whichever colourway is showing.
+const CLEAR = '#00000000';
+const SCRIM = '#00000038';
+
+const way = (id: string, name: string, description: string, start: string, end: string, button: string, onButton: string, onGradient: string, accent: string, logoMark: string, logoText: string, primary = button): Colourway => ({
   id,
   name,
   description,
-  tokens: { primary: button, button, onButton, focus: accent === GOLD ? '#fb9400' : button, onPrimary: onButton },
-  brand: { gradientStart: start, gradientEnd: end, onGradient, deep: PURPLE, onDeep: WHITE, accent, warm: PEACH, logoMark, logoText, logoMarkOnLight: GOLD, logoTextOnLight: PURPLE },
+  tokens: { primary, button, onButton, focus: primary, onPrimary: primary === button ? onButton : WHITE },
+  brand: { gradientStart: start, gradientEnd: end, onGradient, deep: PURPLE, onDeep: WHITE, accent, warm: PEACH, logoMark, logoText, logoMarkOnLight: GOLD, logoTextOnLight: PURPLE, scrim: id === 'orange' || id === 'red' ? SCRIM : CLEAR },
 });
 
 /** In the order the picker shows them. The first is the default. */
 export const COLOURWAYS: Colourway[] = [
   way('gold', 'Gold', 'Gold gradient with purple, like the UniSQ title slides.', '#f58220', GOLD, PURPLE, WHITE, PURPLE, PURPLE, PURPLE, PURPLE),
-  way('purple', 'Purple', 'Deep purple with gold, the UniSQ dark slides.', PURPLE, '#775d94', GOLD, INK, WHITE, GOLD, GOLD, WHITE),
+  way('purple', 'Purple', 'Deep purple with gold, the UniSQ dark slides.', PURPLE, '#775d94', GOLD, INK, WHITE, GOLD, GOLD, WHITE, PURPLE),
   way('blue', 'Blue', 'The palette blue gradient, gold accents.', '#00497d', '#0080a8', '#00497d', WHITE, WHITE, GOLD, GOLD, WHITE),
   way('green', 'Green', 'The palette green gradient, for science and health.', '#0e6a6f', '#3e8521', '#0e6a6f', WHITE, WHITE, GOLD, GOLD, WHITE),
   way('orange', 'Orange', 'The palette orange gradient, warm and bold.', '#d0372b', '#ed6a21', '#b52f24', WHITE, WHITE, GOLD, GOLD, WHITE),
@@ -69,7 +80,7 @@ export const HIGH_CONTRAST: Colourway = {
   name: 'High contrast',
   description: 'Black and white with gold, for viewers who ask for more contrast.',
   tokens: { background: '#000000', surface: '#000000', surfaceMuted: '#1e1e1e', text: WHITE, muted: WHITE, border: WHITE, divider: WHITE, primary: GOLD, button: GOLD, onButton: '#000000', onPrimary: '#000000', focus: WHITE, link: '#9fd1ff', success: '#8fe388', successSurface: '#000000', error: '#ff9b9b', errorSurface: '#000000', warning: GOLD, warningSurface: '#000000' },
-  brand: { gradientStart: '#000000', gradientEnd: '#000000', onGradient: WHITE, deep: '#000000', onDeep: WHITE, accent: GOLD, warm: '#000000', logoMark: GOLD, logoText: WHITE, logoMarkOnLight: GOLD, logoTextOnLight: WHITE },
+  brand: { gradientStart: '#000000', gradientEnd: '#000000', onGradient: WHITE, deep: '#000000', onDeep: WHITE, accent: GOLD, warm: '#000000', logoMark: GOLD, logoText: WHITE, logoMarkOnLight: GOLD, logoTextOnLight: WHITE, scrim: CLEAR },
 };
 
 export const colourwayById = (id: string): Colourway | undefined => [...COLOURWAYS, HIGH_CONTRAST].find((c) => c.id === id);

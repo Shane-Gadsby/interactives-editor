@@ -5,6 +5,7 @@ import { addNote, brandedPage, brandedProject, button, byName, contentBox, item,
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
 import { dressQuestion, endPage, goNextOn, heroPage } from './shared';
+import { extrasChecklist, questionExtras } from '../../parts';
 
 /** After a wrong check: the longest feedback, with the steps marked, so the card at its tallest is checked against the footer. */
 export const ORDER_LAYOUT_STATES: LayoutState[] = [
@@ -25,7 +26,7 @@ export function putInOrder(colourway: Colourway) {
   const results = endPage(ctx, 'Well done', 'You scored {order_score} of 6.', 'Try again');
   const box = contentBox(page);
 
-  const id = addQuestion(project, page.id, 'ordering', { at: { x: box.x, y: box.y - 8 } })!;
+  const id = addQuestion(project, page.id, 'ordering', { at: { x: box.x, y: box.y - 8 }, ...questionExtras(project, { hint: true, tryAgain: true }) })!;
   setQuestionSettings(project, page.id, id, {
     prefix: 'order',
     prompt: 'Put the steps of writing an assignment in order, using the arrows.',
@@ -87,5 +88,6 @@ export function putInOrder(colourway: Colourway) {
     item('Change the results page text', results.result, results.page),
     item('Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
   ];
+  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }

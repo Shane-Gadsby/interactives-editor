@@ -171,7 +171,7 @@ function build(colourway: Colourway) {
   const exampleBtn = button(ctx, 'Use the example picture', 'Use the example', b.x + 240, row1, 180, false);
   exampleBtn.ariaLabel = 'Use the example picture instead of a photo';
   const deleteBtn = button(ctx, 'Delete photo', 'Delete photo', b.x, row2, 150, false);
-  bind(deleteBtn, { disabled: `!${statusIs('photo')}`, opacity: `${statusIs('photo')} ? 1 : 0.5` });
+  bind(deleteBtn, { disabled: `!(${statusIs('photo')})`, opacity: `${statusIs('photo')} ? 1 : 0.5` });
   const skipBtn = button(ctx, 'Skip this prompt', 'Skip this prompt', b.x + 162, row2, 218, false);
   bind(skipBtn, { label: `${statusIs('skipped')} ? "Undo skip" : "Skip this prompt"` });
 
@@ -294,7 +294,7 @@ function build(colourway: Colourway) {
   } as never);
   const listCard = createNode('frame', { name: 'List card', x: 0, y: 0, width: CW, height: CH, cornerRadius: 14, fill: solid(L.surface), stroke: stroke(L.border, 1.5), clip: false, role: 'button', focusable: true, cursor: 'pointer', children: [thumb, thumbEmpty, cardTitle, cardState, cardCaption] }) as FrameNode;
   const cardLabel = (what: string) => `"Prompt " + item.n + ", " + item.title + ". " + (item.status == "photo" ? "Photo" : item.status == "example" ? "Example picture used" : item.status == "skipped" ? "Skipped" : "Not done yet") + ". ${what}"`;
-  bind(listCard, { ariaLabel: cardLabel('Press to open it.'), 'stroke.paint.color': `${done('item')} ? "${L.button}" : "${L.border}"` });
+  bind(listCard, { ariaLabel: cardLabel('Press to open it.'), 'stroke.paint.color': `${done('item')} ? "${L.primary}" : "${L.border}"` });
   const list = createNode('frame', { name: 'Notebook list', x: nb.x, y: gridY, width: nb.width, height: 3 * CH + 2 * 10, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your prompts', repeat: { items: 'rows', layout: 'grid', gap: 10, columns: 2 }, children: [listCard] }) as FrameNode;
   bind(list, { visible: '!bingo' });
 
@@ -310,7 +310,7 @@ function build(colourway: Colourway) {
   const checkDisc = createNode('frame', { name: 'Square tick', x: SW - 42, y: SH - 40, width: 30, height: 30, cornerRadius: 15, fill: solid(L.button), stroke: null, clip: false, decorative: true, children: [text(ctx, 'Tick', '✓', 0, 3, 30, { fontSize: 17, fontWeight: 700, color: L.onButton, align: 'center', decorative: true, autoSize: 'none', height: 24 })] }) as FrameNode;
   bind(checkDisc, { visible: `${done('item')}` });
   const square = createNode('frame', { name: 'Bingo square', x: 0, y: 0, width: SW, height: SH, cornerRadius: 14, fill: solid(L.surfaceMuted), stroke: stroke(L.border, 2), clip: true, role: 'button', focusable: true, cursor: 'pointer', children: [squareImg, squareNum, band, bandText, checkDisc] }) as FrameNode;
-  bind(square, { ariaLabel: cardLabel('Press to open it.'), 'stroke.paint.color': `${done('item')} ? "${L.button}" : "${L.border}"` });
+  bind(square, { ariaLabel: cardLabel('Press to open it.'), 'stroke.paint.color': `${done('item')} ? "${L.primary}" : "${L.border}"` });
   const board = createNode('frame', { name: 'Bingo board', x: nb.x, y: gridY, width: nb.width, height: 2 * SH + 14, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your bingo board', repeat: { items: 'rows', layout: 'grid', gap: 14, columns: BINGO_COLUMNS }, children: [square] }) as FrameNode;
   bind(board, { visible: 'bingo' });
 

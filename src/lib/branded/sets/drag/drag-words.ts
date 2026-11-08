@@ -9,6 +9,7 @@ import { addNote, brandedPage, brandedProject, button, byName, contentBox, item,
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
 import { dressQuestion, endPage, goNextOn, heroPage, lit } from './shared';
+import { extrasChecklist, questionExtras } from '../../parts';
 
 //The passage, one sentence a row. A number is a gap (its index in ANSWERS), a string is the text around it
 const SENTENCES: (string | number)[][] = [
@@ -50,7 +51,7 @@ export function dragTheWords(colourway: Colourway) {
   const results = endPage(ctx, 'Well done', 'You filled {words_score} of ' + N + ' gaps with the right word.', 'Try again');
   const box = contentBox(page);
 
-  const id = addQuestion(project, page.id, 'blank', { at: { x: box.x, y: box.y - 8 } })!;
+  const id = addQuestion(project, page.id, 'blank', { at: { x: box.x, y: box.y - 8 }, ...questionExtras(project, { tryAgain: true }) })!;
   setQuestionSettings(project, page.id, id, {
     prefix: 'words',
     prompt: 'Drag each word into the gap where it belongs.',
@@ -152,5 +153,6 @@ export function dragTheWords(colourway: Colourway) {
     item('Try it with the keyboard: Tab to a word, Space, arrow keys, Space, then Check answer', undefined, page),
     item('Pick the colourway on the Themes tab. The brand parts are locked; the passage, words and gaps are yours', undefined, page),
   ];
+  checklist.push(item(extrasChecklist({ tryAgain: true })));
   return { project, checklist };
 }

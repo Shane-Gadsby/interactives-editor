@@ -83,7 +83,8 @@ function build(colourway: Colourway) {
     width: Math.max(...centres.map((c) => c[0])) - x0,
     height: Math.max(...centres.map((c) => c[1])) - y0,
     fill: null,
-    stroke: stroke(L.border, 4),
+    //white, so a marker's own outline (the border colour) stands off the path where it meets it
+    stroke: stroke(L.background, 4),
     decorative: true,
     paths: [{ closed: false, points: centres.map(([x, y]) => ({ x: x - x0, y: y - y0 })) }],
   } as never);
@@ -116,7 +117,7 @@ function build(colourway: Colourway) {
         ? `"Reward, " + (done >= ${i} ? "ready, press Enter to open it" : "locked until all five stages are complete")`
         : `stages[${i}] + ", stage ${i + 1}, " + (done > ${i} ? "complete" : done == ${i} ? "ready, press Enter to start" : "locked, finish stage ${i} first")`,
       'fill.color': isReward ? `done >= ${i} ? "${L.button}" : "${L.surface}"` : `done > ${i} ? "${L.success}" : done == ${i} ? "${L.button}" : "${L.surface}"`,
-      'stroke.paint.color': isReward ? `done >= ${i} ? "${L.button}" : "${L.border}"` : `done > ${i} ? "${L.success}" : done == ${i} ? "${L.button}" : "${L.border}"`,
+      'stroke.paint.color': isReward ? `done >= ${i} ? "${L.primary}" : "${L.border}"` : `done > ${i} ? "${L.success}" : done == ${i} ? "${L.primary}" : "${L.border}"`,
     });
     //A name under it, on a small white tag so it reads over any picture
     tags.push(createNode('frame', { name: isReward ? 'Reward tag' : `Stage ${i + 1} tag`, x: box.x + x + MARK / 2 - 80, y: box.y + y + MARK + 6, width: 160, height: 28, cornerRadius: 14, clip: false, fill: solid(L.background), stroke: null, decorative: true, children: [text(ctx, isReward ? 'Reward label' : `Stage ${i + 1} label`, isReward ? 'Reward' : `{stages[${i}]}`, 0, 4, 160, { fontSize: 14, fontWeight: 600, align: 'center', autoSize: 'none', height: 20, decorative: true })] } as never));

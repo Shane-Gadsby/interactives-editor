@@ -58,7 +58,8 @@ export function dressQuestion(ctx: BrandedCtx, frame: FrameNode, width: number, 
     if (n.type === 'text' || n.type === 'button') n.fontFamily = BRAND_FONT;
     if (n.type === 'input') Object.assign(n, lookDefaults(ctx.project, 'input'), { cornerRadius: 10, fontFamily: BRAND_FONT });
     if (n.type === 'button') {
-      n.cornerRadius = 22;
+      //(a pill, the small hint button, keeps to its own height)
+      n.cornerRadius = Math.min(22, n.height / 2);
       n.fontWeight = 600;
       if (partOf(n) === 'check') {
         n.fill = solid(L.button);

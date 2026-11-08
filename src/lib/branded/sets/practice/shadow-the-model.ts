@@ -194,7 +194,7 @@ function build(colourway: Colourway) {
       ariaLabel: label,
       children: [text(ctx, 'Rating label', label, 0, 7, RW, { fontSize: 15, fontWeight: 700, align: 'center', decorative: true, height: 24, autoSize: 'none' })],
     }) as FrameNode;
-    bind(dot, { ariaChecked: `rating == ${k}`, 'fill.color': `rating == ${k} ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `rating == ${k} ? "${L.button}" : "${L.border}"` });
+    bind(dot, { ariaChecked: `rating == ${k}`, 'fill.color': `rating == ${k} ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `rating == ${k} ? "${L.primary}" : "${L.border}"` });
     bind(dot.children[0], { color: `rating == ${k} ? "${L.onButton}" : "${L.text}"` });
     return dot;
   });

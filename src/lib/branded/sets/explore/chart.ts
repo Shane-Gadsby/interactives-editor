@@ -121,7 +121,7 @@ export const chart: BrandedStarter = {
     const CH = 300;
     //One data table, two charts over it. Each is a native layer: scale, hover and focus readout, arrow keys and a hidden table come with it
     const barChart = bind(
-      chartLayer(ctx, 'Bar chart', box.x, FY, box.width, CH, { kind: 'column', data: 'rows', labelKey: 'label', valueKey: 'value', colors: [L.button], varyColors: false, min: 0, legend: false, ariaLabel: 'Bar chart of hours a week on each kind of study' }),
+      chartLayer(ctx, 'Bar chart', box.x, FY, box.width, CH, { kind: 'column', data: 'rows', labelKey: 'label', valueKey: 'value', colors: [L.primary], varyColors: false, min: 0, legend: false, ariaLabel: 'Bar chart of hours a week on each kind of study' }),
       { visible: 'view == "bar"' }
     );
     const pieChart = bind(
@@ -192,7 +192,7 @@ export const chart: BrandedStarter = {
       data: 'rows.map((r, i) => !revealed && i == target - 1 ? {label: r.label, hidden: true} : {label: r.label, value: r.value}).concat([{label: "Your guess", value: guess}])',
       labelKey: 'label',
       valueKey: 'value',
-      colors: [...Array.from({ length: N }, () => L.button), L.warning],
+      colors: [...Array.from({ length: N }, () => L.primary), L.warning],
       varyColors: true,
       min: 0,
       max: 20,
