@@ -44,6 +44,7 @@ import { openHelp } from '../help/Help';
 import { slug } from '../help/markdown';
 import { getArtboard } from '../store/doc';
 import { CheckField, NumberField, SelectField, TextField } from '../components/ui';
+import { ConditionField } from '../components/ConditionField';
 import { ExprField } from '../components/ExprField';
 
 /** Names an expression in a graph node sees on top of the project's. */
@@ -65,6 +66,7 @@ import { compatibleKinds, newNodePort, type DragDirection } from '../lib/graph';
 import { artboardChoices } from '../lib/variants-edit';
 import { nodeMenuItems } from '../lib/node-menu';
 import { GraphPalette } from './GraphPalette';
+import { FlowSentences } from './FlowSentences';
 import { stepArtboard, stepKey } from './ArtboardPicker';
 import { GraphNoteForm, GraphNoteNode, resizing as noteResizing, type GraphNoteData } from './GraphNoteNode';
 import { flashOf, useFlowVersion, wireClass } from '../lib/run-flow';
@@ -218,11 +220,15 @@ export function summarize(n: LogicNode, ab: Artboard, project: Project): string 
 }
 
 export function LogicGraph() {
-  const s = useEditor((st) => ({ project: st.project, abId: st.activeArtboardId, sel: st.logicSelection, picked: st.logicPicked }));
+  const s = useEditor((st) => ({ project: st.project, abId: st.activeArtboardId, sel: st.logicSelection, picked: st.logicPicked, view: st.logicView }));
   const { theme, showNotes } = usePrefs();
   const ab = getArtboard(s.project, s.abId);
   const rf = useRef<ReactFlowInstance<Node<IxNodeData>, Edge> | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  //The graph is not on screen while the sentences are, so its handle is let go (it comes back with onInit)
+  useEffect(() => {
+    if (s.view === 'sentences') rf.current = null;
+  }, [s.view]);
   const searchRef = useRef<HTMLInputElement>(null);
   //A menu pick (or a drop) leaves focus on a button that's just been removed, so on the page itself, where Delete and the
   //other shortcuts mean the artboard's layers. Back into the graph, unless the person has gone to a field of their own
@@ -963,6 +969,17 @@ export function LogicGraph() {
           pasteFragment(logicToPaste(e.clipboardData.getData('text/plain')));
         }}
       >
+        <div className="logic-view-toggle seg" role="radiogroup" aria-label="How to show the interactions">
+          <button type="button" role="radio" aria-checked={s.view === 'graph'} className={`seg-btn${s.view === 'graph' ? ' on' : ''}`} title="The node graph" onClick={() => store().set({ logicView: 'graph' })}>
+            Graph
+          </button>
+          <button type="button" role="radio" aria-checked={s.view === 'sentences'} className={`seg-btn${s.view === 'sentences' ? ' on' : ''}`} title="Read everything on this page as plain sentences" onClick={() => store().set({ logicView: 'sentences' })}>
+            Read as sentences
+          </button>
+        </div>
+        {s.view === 'sentences' ? (
+          <FlowSentences ab={ab} project={s.project} picked={s.sel} />
+        ) : (
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -1007,8 +1024,9 @@ export function LogicGraph() {
             </ControlButton>
           </Controls>
         </ReactFlow>
+        )}
         {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} search={menu.search} onClose={() => setMenu(null)} />}
-        {!ab.logic.nodes.length && (
+        {s.view === 'graph' && !ab.logic.nodes.length && (
           <div className="logic-empty">
             <p>
               Add an <b>event</b> (e.g. On pointer), then connect it to <b>actions</b>. Drag from a node's right edge to the next node. Right-click for a menu of nodes, or drag a connection into empty space to add and connect one.
@@ -1188,9 +1206,15 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
             </div>
           );
         }
+        // Wherever the graph asks for a yes/no condition: pickers, with the formula one click away
+        const isCondition = p.key === 'onlyIf' || (node.kind === 'logic.if' && p.key === 'condition') || (node.kind === 'event.timer' && p.key === 'while');
         return (
           <div key={p.key}>
-            <ExprField label={p.label} title={p.help} value={String(v ?? '')} locals={GRAPH_LOCALS} commitOnBlur placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
+            {isCondition ? (
+              <ConditionField label={p.label} title={p.help} value={String(v ?? '')} locals={GRAPH_LOCALS} placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
+            ) : (
+              <ExprField label={p.label} title={p.help} value={String(v ?? '')} locals={GRAPH_LOCALS} commitOnBlur placeholder={p.placeholder} onChange={(x) => set(p.key, x)} />
+            )}
             <div className="hint">{p.help ?? 'JavaScript expression; variables by name, plus event.'}</div>
           </div>
         );
