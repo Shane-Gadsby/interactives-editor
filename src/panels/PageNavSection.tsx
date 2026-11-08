@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Project } from 'interactives-player';
-import { Section } from '../components/ui';
+import { Row, Section } from '../components/ui';
 import { store } from '../store/store';
 import { addPageNavigation, hasOwnNavigation, NAV_STYLES, navPages, removePageNav, PAGE_NAV_TAG, type NavResult, type NavStyle } from '../lib/page-nav';
 
@@ -36,6 +36,7 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 	return (
 		<Section help="page-navigation" title="Page navigation" defaultOpen={everyone.length > 1}>
 			<p className="hint">Back, Next and the page number along the bottom of the page, wired to the order of your pages, in one click. It is ordinary layers and Interactions you can change afterwards.</p>
+			<Row k="Navigation style" words={['next', 'back', 'previous', 'dots', 'progress bar', 'page number', 'buttons']}>
 			<div role="radiogroup" aria-label="Navigation style" className="nav-styles">
 				{NAV_STYLES.map((s) => (
 					<button key={s.id} type="button" role="radio" aria-checked={style === s.id} className={`nav-style${style === s.id ? ' chosen' : ''}`} onClick={() => setStyle(s.id)} title={s.about}>
@@ -44,7 +45,8 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 					</button>
 				))}
 			</div>
-			<div className="row-actions">
+			</Row>
+			<Row k="Add navigation" words={['add', 'remove', 'all pages', 'page navigation', 'generate']} className="row-actions">
 				<button type="button" className="btn primary" disabled={!targets.length} onClick={() => run(targets)} title="Add the chosen navigation along the bottom of the page. A page that already has it gets this style instead">
 					{targets.length > 1 ? `Add to these ${targets.length} pages` : 'Add to this page'}
 				</button>
@@ -58,7 +60,7 @@ export function PageNavSection({ ids, project }: { ids: string[]; project: Proje
 						Remove
 					</button>
 				)}
-			</div>
+			</Row>
 			{own > 0 && !said && <p className="hint">{own === 1 ? 'This page has' : `${own} of these pages have`} its own Next or Back button, so it is left as it is.</p>}
 			{said && (
 				<p className="hint" role="status">
