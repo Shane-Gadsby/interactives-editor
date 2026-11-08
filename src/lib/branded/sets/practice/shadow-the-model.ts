@@ -15,9 +15,9 @@ import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem 
 import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, overlay, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { stack } from '../../parts';
-import { Graph, addVar, announce, bind, goNext, heroPage, resetVars, set, setVar, tickList, toggleItem } from '../media/shared';
+import { Graph, addVar, announce, bind, goNext, graphNote, heroPage, resetVars, set, setVar, tickList, toggleItem } from '../media/shared';
 import { addPlaceholderSound, type Note } from '../media/sounds';
-import { MIC_READY, dropTakeWhen, playLabel, playToggle, rec, recordLabel, recordStatus, recordToggle } from './recording';
+import { MIC_READY, dropTakeWhen, labelled, playLabel, playToggle, rec, recordLabel, recordStatus, recordToggle } from './recording';
 
 const SLOW = 0.7;
 const RIGHT_X = 456;
@@ -217,10 +217,14 @@ function build(colourway: Colourway) {
   g.gap(80);
   g.run(g.click(slowSwitch, 'Slow on or off'), set(slow, '!slow'), announce('slow ? "Slow on. The model plays slower." : "Slow off."'));
 
+  graphNote(practice, { anchor: onModel, colour: 'sky', text: '**The clip comes from the card\'s own sound field** (Sound from expression), so every card shares these nodes and the cards stay one plain list. The same button stops it, and Slow keeps the pitch.' });
+
   //Record (one node, Start or stop), then play mine (one button that stops too)
   recordToggle(g, record, 'take', 'Record, or stop recording');
   playToggle(g, mine, 'take', 'Play or stop mine');
   playToggle(g, mine2, 'take', 'Play or stop mine');
+
+  graphNote(practice, { anchor: labelled(practice, /^Record, or stop recording$/), colour: 'sky', text: '**One recording name, take, serves every card**, because recording names are fixed text, not expressions. It is dropped when the card changes and gone on a reload. [ ] Tick Microphone in Project > Microphone and camera for it to show.' });
 
   //The model, then the take straight after. Stopping the model (its Stopped output) ends it there, so the second half only plays when the model finished
   const onBoth = g.click(both, 'Model, then mine');
@@ -229,6 +233,8 @@ function build(colourway: Colourway) {
   g.add('action.recordPlay', { op: 'play', slot: 'take', volume: 1, continue: 'start' }, model, 'out');
   g.add('action.announce', { text: '"Stopped."', politeness: 'polite' }, model, 'stopped', { dy: 70 });
   g.gap(80);
+
+  graphNote(practice, { anchor: onBoth, colour: 'sky', text: '**The model plays to its end, then the take starts.** Pressing Stop leaves by **Stopped**, which has its own branch, so a stopped model never runs on into the recording.' });
 
   //A take is dropped when the learner moves to another card
   dropTakeWhen(g, current, 'take', 'true', 'Drop the take when the card changes');
@@ -246,6 +252,7 @@ function build(colourway: Colourway) {
   const reset = (): [string, Record<string, unknown>][] => [['action.stopSound', {}], resetVars(checked, rating, stage)];
   g.run(g.click(next, 'Save and go to the next card'), save, ...reset(), set(current, 'current + 1'), announce('"Card " + (current + 1) + " of " + cards.length + ". " + cards[current].phrase'));
   g.run(g.click(finish, 'Save and see the results'), save, ...reset(), goNext());
+  graphNote(practice, { anchor: labelled(practice, /^Save and go to the next card$/), colour: 'sky', text: '**Both save buttons push one row into results**, including whether a take was made, then clear the self-check. Next moves `current` on, which is also what drops the take.' });
 
   checklist.push(
     item('Write the title and the line under it on the first page. Keep it clear that this is practice, not assessed, and that a recording stays on the learner\'s device', intro, hero.page),

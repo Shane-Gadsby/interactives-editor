@@ -7,7 +7,7 @@ import { createNode, uid, type Artboard, type CaptionCue, type FrameNode, type S
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { pillButton, stack } from '../../parts';
-import { addVar, announce, bind, click, endPage, go, graph, heroPage, placeholderPicture, resetVars, toggleVar } from './shared';
+import { addVar, announce, bind, click, endPage, go, graph, graphNote, heroPage, placeholderPicture, resetVars, toggleVar } from './shared';
 import { addPlaceholderSound, type Note } from './sounds';
 
 //Artboard names are what downloadSize() is asked about on the Choose page
@@ -101,7 +101,9 @@ function build(colourway: Colourway) {
       pick.ariaLabel = `${c.go}. ${c.title} version`;
       buttons.push(pick);
       //Choosing remembers the version (it is user data) and opens it
-      g.run(click(g, pick, c.title), ['action.setVariable', { variable: version.id, op: 'set', value: `"${c.id}"` }], go(pages[c.id]));
+      const onPick = click(g, pick, c.title);
+      g.run(onPick, ['action.setVariable', { variable: version.id, op: 'set', value: `"${c.id}"` }], go(pages[c.id]));
+      if (c.id === 'video') graphNote(choose, { anchor: onPick, colour: 'sky', text: '**Each card remembers its version.** `version` is user data, so next time the start page\'s Go to page jumps straight to that lesson, and falls out of **No artboard** to this page when nothing is saved yet.' });
       //The marked card gets the accent outline, only when the connection says so
       return bind(createNode('frame', { name: `${c.title} card`, x: 0, y: 0, width: W, height: 300, cornerRadius: 16, fill: solid(L.surface), stroke: stroke(L.border, 2), clip: false, role: 'region', ariaLabel: `${c.title} version`, children: [title, says, size, sizeNote, badge, pick] }) as FrameNode, { 'stroke.paint.color': `lowBandwidth && suggested == "${c.id}" ? "${L.accent}" : "${L.border}"` });
     });
@@ -109,7 +111,9 @@ function build(colourway: Colourway) {
     const note = text(ctx, 'Size note', '{assetsEmbedded ? "This copy of the lesson already holds all three versions, so the sizes show what each one contains. Choosing changes what plays, not what has been downloaded." : "Only the version you choose is loaded. Sizes are what its pictures, sound and video weigh."}', 0, 0, b.width, { fontSize: 14, color: L.muted, lineHeight: 1.3 });
     choose.children.push(stack('Choose column', b.x, b.y, b.width, { gap: 12, children: [intro, hint, row, note] }));
     //The connection hint: the lightest option for a data-saver or very slow connection, the middle one for a slower one. It is only ever a mark on a card
-    g.run(g.event('event.start', {}, 'Mark the lighter option'), ['action.setVariable', { variable: project.variables.find((x) => x.name === 'suggested')!.id, op: 'set', value: 'saveData || connectionType == "slow-2g" || connectionType == "2g" ? "text" : lowBandwidth ? "audio" : "video"' }]);
+    const onMark = g.event('event.start', {}, 'Mark the lighter option');
+    graphNote(choose, { anchor: onMark, colour: 'sky', text: '**The suggestion is only a mark on a card**, never a choice made for them. A data saver or a 2G link points at text, a low bandwidth at audio, otherwise video. [ ] Change the rule in this Set variable.' });
+    g.run(onMark, ['action.setVariable', { variable: project.variables.find((x) => x.name === 'suggested')!.id, op: 'set', value: 'saveData || connectionType == "slow-2g" || connectionType == "2g" ? "text" : lowBandwidth ? "audio" : "video"' }]);
     checklist.push(
       item('Check the three cards. The sizes are read from the files on each version\'s artboard (downloadSize in the text), so they fill in by themselves when you add your video, sound and pictures. If you rename an artboard (Video lesson, Audio only lesson, Text only lesson) change its name in the size line too', byName(choose, 'Video size'), choose),
       item('Change the line under "Choose a version" if you want to say more about when to use each. The marked card only shows when the browser reports a slow connection or Data Saver; it never picks for the learner', intro, choose),
@@ -140,7 +144,9 @@ function build(colourway: Colourway) {
     //a small secondary button at the top right of the transcript (its own bar, pushed to the end), so the lesson's one full size button is the one that finishes it
     const words = bind(createNode('frame', { name: 'Transcript panel', x: 0, y: 0, width: 344, height: 338, cornerRadius: 16, fill: solid(L.surface), stroke: null, clip: true, role: 'region', ariaLabel: 'Transcript', children: [text(ctx, 'Transcript text', '{transcript}', 20, 16, 304, { fontSize: 15, lineHeight: 1.4 })] }) as FrameNode, { visible: 'showText' });
     video.children.push(stack('Clip column', b.x, b.y, 560, { gap: 16, children: [clip, aside] }), stack('Transcript column', b.x + 584, b.y, 344, { gap: 14, children: [stack('Transcript bar', 0, 0, 344, { direction: 'row', justify: 'end', align: 'center', children: [toggle] }), words] }));
-    g.run(click(g, toggle, 'Transcript'), toggleVar(showText), announce('showText ? "Transcript shown" : "Transcript hidden"'));
+    const onTranscript = click(g, toggle, 'Transcript');
+    graphNote(video, { anchor: onTranscript, colour: 'sky', text: '**The transcript button flips showText**, which the panel\'s visibility reads, and says which way it went. Opening this page hides it again.' });
+    g.run(onTranscript, toggleVar(showText), announce('showText ? "Transcript shown" : "Transcript hidden"'));
     g.run(g.event('event.start', {}, 'Transcript starts hidden'), resetVars(showText));
     footerRow(ctx, video, done.page, choose);
     checklist.push(item('Video version: select the Video layer and pick your video in the inspector. Until you do, the layer says no video has been chosen. Add captions to it there too', clip, video));

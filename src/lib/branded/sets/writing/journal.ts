@@ -5,7 +5,7 @@ import type { Colourway } from '../../looks';
 import { progressBar } from '../../parts';
 import { panel } from '../assessment/shared';
 import { groupPages } from '../story/common';
-import { addVar, bind, click, empty, goNext, goPrevious, graph, reportExpr, setVar, textBox, writingHero } from './shared';
+import { addVar, bind, click, empty, goNext, goPrevious, graph, graphNote, reportExpr, setVar, textBox, writingHero } from './shared';
 
 const TITLE = 'Reflection journal';
 const CARD_W = 330;
@@ -133,9 +133,12 @@ function build(colourway: Colourway) {
     //One flow for the pills: a pill goes to its part's page (the pill for the page you are on does nothing)
     const onPill = g.event('event.pointer', { target: pill.id, type: 'click', onlyIf: 'parts[event.index].page != artboard.name' }, 'A part pill');
     g.then(onPill, 'action.artboard', { to: 'expression', expr: 'parts[event.index].page', transition: 'fade', duration: 250 });
-    const goBack = g.then(click(g, back, 'Back'), ...goPrevious());
+    const onBack = click(g, back, 'Back');
+    const goBack = g.then(onBack, ...goPrevious());
     if (i === 0) g.then(goBack, 'action.artboard', { artboard: hero.id, transition: 'fade', duration: 250 }, 'none');
     g.then(click(g, next, 'Next'), ...goNext());
+    if (i === 0) graphNote(page, { anchor: onPill, colour: 'sky', text: '**One flow serves every part pill.** `event.index` picks the part from the live `parts` list, and *Only if* leaves the pill for the page you are on alone. [ ] A new part is a new prompt plus a page named to match.' });
+    graphNote(page, { anchor: onBack, colour: 'sky', text: i === 0 ? '**Back from the first part has no page before it**, so the **No artboard** output goes to the start page. Each part is `userData`, kept as it is typed, so leaving loses nothing.' : '**Back and Next follow the page order**, so adding a part needs no wiring. What is written is kept as it is typed (`userData`), so leaving a part loses nothing.' });
     checklist.push(item(`Part ${i + 1}: write your own lead line, the three things to think about and the placeholder`, lead, page));
   });
 
@@ -160,7 +163,10 @@ function build(colourway: Colourway) {
     const g = graph(whole);
     const arrive = g.event('event.start', {}, 'Put it all together');
     g.run(arrive, setVar(reflection, reportExpr('My reflection', PROMPTS.map((p, i) => [p.short, vars[i]] as [string, typeof reflection]), '(Not written yet)')));
-    g.then(g.event('event.pointer', { target: row.id, type: 'click' }, 'A part row'), 'action.artboard', { to: 'expression', expr: 'parts[event.index].page', transition: 'fade', duration: 250 });
+    const onRow = g.event('event.pointer', { target: row.id, type: 'click' }, 'A part row');
+    graphNote(whole, { anchor: arrive, colour: 'sky', text: '**Arriving builds the whole reflection** into `reflection`, each part under its heading with "(Not written yet)" for gaps. [ ] Reword the headings in this Set variable.' });
+    graphNote(whole, { anchor: onRow, colour: 'sky', text: '**A row takes the reader back to that part**, using the same `parts` list as the pills, so they can fix something and come straight back.' });
+    g.then(onRow, 'action.artboard', { to: 'expression', expr: 'parts[event.index].page', transition: 'fade', duration: 250 });
     g.run(click(g, back, 'Back'), goPrevious());
     g.run(click(g, save, 'Download'), ['action.saveFile', { name: '"my-reflection"', text: 'reflection', mime: 'text/plain' }]);
     checklist.push(

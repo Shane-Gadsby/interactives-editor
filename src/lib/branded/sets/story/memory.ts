@@ -3,7 +3,7 @@ import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { keyNavList } from '../../parts';
 import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, darkButton, go, goNext, set } from './common';
+import { Graph, addVar, darkButton, go, goNext, graphNote, set } from './common';
 
 const PAIRS = [
   { term: 'Plagiarism', match: 'Presenting someone else\'s work as your own' },
@@ -83,6 +83,7 @@ function build(colourway: Colourway) {
   const onDeal = g.add('event.message', { name: 'deal' }, null, 'out', { note: 'Shuffle and deal: edit the shuffle here' });
   g.run(onDeal, set(cards, deal), ['action.resetVariables', { variables: [moves.id] }], ['action.announce', { text: '"Cards dealt. " + cards.length + " cards, face down."' }]);
 
+  graphNote(play, { anchor: onDeal, colour: 'sky', text: '**Opening the page and New game both send deal**, so the shuffle lives in one Set variable. It doubles every pair into two face-down cards. [ ] Change the shuffle there, not in two places.' });
   //One click handler for every card: event.index says which one. A card that is face down turns up (a set item on it), and the second one up is a move
   const pick = g.add('event.pointer', { target: card.id, type: 'click', onlyIf: '!busy && cards[event.index].state == "down"' }, null, 'out', { note: 'Turn a card' });
   const up = g.add('action.setVariable', { variable: cards.id, op: 'setItem', index: '', field: 'state', value: '"up"' }, pick);
@@ -90,11 +91,13 @@ function build(colourway: Colourway) {
   g.runFrom(second, 'false', ['action.announce', { text: '"Card " + (event.index + 1) + ": " + cards[event.index].text' }]);
   const count = g.add('action.setVariable', { variable: moves.id, op: 'add', value: '1' }, second, 'true');
   const same = g.add('logic.if', { condition: 'cards[ups[0]].pair == cards[ups[1]].pair' }, count);
+  graphNote(play, { anchor: pick, colour: 'sky', text: '**One flow serves every card.** *Only if* `!busy` ignores clicks while two cards are up (`busy` is live, from `ups`), and Set item turns just the card clicked. Only the second card up counts as a move.' });
   //A match: both stay up
   const keep = g.add('action.setVariable', { variable: cards.id, op: 'set', value: 'cards.map(c => c.state == "up" ? {...c, state: "matched"} : c)' }, same, 'true');
   const sayYes = g.add('action.announce', { text: '"Card " + (event.index + 1) + ": " + cards[event.index].text + ". Matched."' }, keep);
   const over = g.add('logic.if', { condition: 'matched >= pairs.length' }, sayYes);
   g.runFrom(over, 'true', ['action.delay', { ms: 700 }], goNext());
+  graphNote(play, { anchor: same, colour: 'sky', text: '**Match** locks both as `matched` and moves on once the live `matched` reaches the pair count. **No match** has its own row below: it waits a second while `busy` blocks clicks, then turns both back down.' });
   //No match: a moment to look (clicks wait, because two are still up), then both flip back
   const sayNo = g.add('action.announce', { text: '"Card " + (event.index + 1) + ": " + cards[event.index].text + ". Not a match."' }, same, 'false', { dy: 220 });
   g.run(sayNo, ['action.delay', { ms: 1000 }], ['action.setVariable', { variable: cards.id, op: 'set', value: 'cards.map(c => c.state == "up" ? {...c, state: "down"} : c)' }]);

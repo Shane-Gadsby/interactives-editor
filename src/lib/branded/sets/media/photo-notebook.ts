@@ -9,7 +9,7 @@ import { createNode, type FrameNode, type ImageNode, type InputNode, type Templa
 import { lookDefaults } from '../../../themes';
 import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import { BRAND_FONT, type Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, go, goNext, goPrevious, heroPage, lit, placeholderPicture as placeholder, resetVars, set, setItem, textBox, tickList, toggleItem, toggleVar } from './shared';
+import { Graph, addVar, announce, bind, go, goNext, goPrevious, graphNote, heroPage, lit, placeholderPicture as placeholder, resetVars, set, setItem, textBox, tickList, toggleItem, toggleVar } from './shared';
 
 const PROMPTS = [
   { title: 'A rule or sign that keeps people safe', hint: 'Look for a sign, a marking or a barrier. Photograph the thing, not a person using it.', exampleAlt: 'A yellow wet floor sign standing in an empty corridor' },
@@ -228,6 +228,7 @@ function build(colourway: Colourway) {
   const got = g.add('action.photo', { op: 'take', source: 'pick', assetExpr: 'prompts[current].photo', maxEdge: 1600 }, onTake);
   g.runFrom(got, 'out', set(skipping, 'false'), commit('"photo"'), announce('"Photo added for prompt " + (current + 1) + ". Now write a caption and say why you chose it."'));
   g.add('action.announce', { text: '"No photo was added."', politeness: 'polite' }, got, 'none', { dy: 70 });
+  graphNote(prompt, { anchor: onTake, colour: 'sky', text: '**Take or choose has two exits.** A photo is stored as an asset under `prompts[current].photo` and the entry becomes `photo`. **None** means the picker was closed, so nothing changes and it just says so.' });
   g.gap(80);
 
   g.run(g.click(exampleBtn, 'Use the example picture'), set(skipping, 'false'), commit('"example"'), announce('"Example picture used for prompt " + (current + 1) + "."'));
@@ -242,15 +243,19 @@ function build(colourway: Colourway) {
   g.gap(80);
   //A skip needs its reason: the button is disabled without one, and the event's Only if holds a click that got past it
   const onConfirm = g.add('event.pointer', { target: confirmSkip.id, type: 'click', onlyIf: 'skipReason.trim() != ""' }, null, 'out', { note: 'Skip it' });
+  graphNote(prompt, { anchor: onConfirm, colour: 'sky', text: '**A skip needs a reason**: *Only if* keeps Skip it dead while `skipReason` is empty. It also deletes the photo, so a skipped prompt never keeps a picture.' });
   g.run(onConfirm, ['action.photo', { op: 'remove', assetExpr: 'prompts[current].photo' }], commit('"skipped"'), set(skipping, 'false'), announce('"Prompt " + (current + 1) + " skipped."'));
   g.gap(80);
   g.run(g.click(cancelSkip, 'Cancel the skip'), set(skipping, 'false'));
 
-  g.run(g.click(prevBtn, 'Previous prompt'), ...open('current - 1'));
+  const onPrev = g.click(prevBtn, 'Previous prompt');
+  graphNote(prompt, { anchor: onPrev, colour: 'sky', text: '**Moving saves, then loads.** `caption`, `tag`, `why` and `skipReason` are scratch variables: the first Set item files them in `entries[current]`, then `current` moves and the next entry fills them. [ ] A new field has to be added to both halves.' });
+  g.run(onPrev, ...open('current - 1'));
   const onNext = g.click(nextBtn, 'Next prompt, or finish');
   const more = g.add('logic.if', { condition: 'current + 1 < prompts.length' }, onNext);
   g.runFrom(more, 'true', ...open('current + 1'));
   g.runFrom(more, 'false', commit(), goNext());
+  graphNote(prompt, { anchor: onNext, colour: 'sky', text: '**Next is Finish on the last prompt:** the If runs out of prompts, saves the last one and goes on to the notebook.' });
   g.gap(80);
   g.run(g.click(bookBtn, 'See my notebook'), commit(), goNext());
 
@@ -322,7 +327,9 @@ function build(colourway: Colourway) {
 
   const ng = new Graph(notebook);
   ng.run(ng.click(viewToggle, 'Switch between list and bingo board'), toggleVar(bingo), announce('bingo ? "Showing the bingo board." : "Showing the list."'));
-  ng.run(ng.click(listCard, 'Open a prompt from the list'), ...open('event.index'), go(prompt));
+  const onList = ng.click(listCard, 'Open a prompt from the list');
+  graphNote(notebook, { anchor: onList, colour: 'sky', text: '**The list and the bingo board open a prompt the same way:** save the one on screen, set `current` to `event.index`, load that entry, go to the prompt page. [ ] Keep both flows in step if you change it.' });
+  ng.run(onList, ...open('event.index'), go(prompt));
   ng.run(ng.click(square, 'Open a prompt from the board'), ...open('event.index'), go(prompt));
   ng.run(ng.click(backBtn, 'Back to the prompts'), goPrevious());
   ng.run(ng.click(handBtn, 'Hand in'), goNext());

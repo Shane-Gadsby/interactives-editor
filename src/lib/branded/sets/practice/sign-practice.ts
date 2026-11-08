@@ -20,8 +20,9 @@
 import { createArtboard, createNode, type Artboard, type FrameNode, type InstanceNode, type SceneNode, type TemplateChecklistItem, type TextNode, type VideoNode } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, solid, stroke, text, type BrandedCtx, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, darkButton, go, goNext, goPrevious, resetVars, set, setVar, tickList, toggleItem, toggleVar } from '../media/shared';
+import { Graph, addVar, announce, bind, darkButton, go, goNext, goPrevious, graphNote, resetVars, set, setVar, tickList, toggleItem, toggleVar } from '../media/shared';
 import { addPlaceholderSound } from '../media/sounds';
+import { labelled } from './recording';
 
 //The signs. meaning is the answer, wrong the two other choices, look what to notice. These are placeholders: the clips have to be the author's own,
 //and nothing here claims what a real sign looks like.
@@ -444,6 +445,7 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
   ag.run(ag.click(about.skipSign, 'Straight to Part 2'), ...rewind, go(T.tryIt));
   //The learner's own choice, kept by the page around the project, then on to the part that needs no camera
   ag.run(ag.click(about.noCamera, 'Never use my camera'), ['action.sensorsOff', {}], ...rewind, go(T.watch));
+  graphNote(about.page, { anchor: labelled(about.page, /^Part 1, no camera$/), colour: 'sky', text: '**Three ways in, one reset.** Each runs `rewind`, a single Reset variables that puts the walk back to sign 1. **Never use my camera** also turns the sensors off for good (the learner\'s own choice, kept around the project) before the no-camera part.' });
 
   //Speed and loop: the page's buttons set the shared variables the clip's video layers are bound to
   const clipButtons = (g: Graph, b: { slow: SceneNode; normal: SceneNode; loop: SceneNode }) => {
@@ -466,6 +468,8 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
     set(v.practised, 'practised.includes(current) ? practised : [...practised, current]'),
     announce('(picked == signs[current].meaning ? "Correct. " : "Not this time. The meaning is " + signs[current].meaning + ". ") + signs[current].look'),
   );
+  graphNote(watch.page, { anchor: labelled(watch.page, /^A choice$/), colour: 'sky', text: '**A choice counts once** (*Only if* `!answered`). Right or wrong it is shown and the sign is marked practised. `choices` is a live variable of the sign in view, so a new sign needs a row in `signs` and a clip, not a new flow.' });
+  graphNote(watch.page, { anchor: labelled(watch.page, /^Half speed$/), colour: 'sky', text: '**Speed, loop and play are shared variables** (`clipRate`, `clipLoop`, `clipPlaying`) bound to the one Video layer inside the Model clips component, so these buttons drive the clip on every page that shows it.' });
   wg.gap(60);
   const onNext = wg.click(watch.next, 'Next sign');
   const more = wg.add('logic.if', { condition: 'current + 1 < signs.length' }, onNext);
@@ -473,6 +477,7 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
   //After the last sign: back to the first for the camera half, and on to it (the next page)
   const last = wg.add('action.setVariable', { variable: v.current.id, op: 'reset' }, more, 'false', { dy: 90 });
   wg.run(last, resetVars(v.answered, v.picked, v.clipPlaying, v.clipTime, v.stage), goNext());
+  graphNote(watch.page, { anchor: onNext, colour: 'sky', text: '**After the last sign** `current` goes back to the first for the camera half and the page moves on to it. **Finish here** skips that and goes straight to the summary, which is the whole no-camera route.' });
   wg.gap(60);
   wg.run(wg.click(watch.finish, 'Finish here'), set(v.clipPlaying, 'false'), go(T.summary));
   wg.run(wg.click(watch.skip, 'Skip to signing'), ...rewind, go(T.tryIt));
@@ -485,6 +490,7 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
   const preview = tg.add('action.cameraPreview', { op: 'on', target: tryIt.camFrame.id, mirror: true, facing: 'user' }, camOnEv);
   tg.runFrom(preview, 'out', set(v.stage, '"live"'), announce('"Camera on. Press Start recording when you are ready."'));
   tg.add('action.announce', { text: 'mediaMessage != "" ? mediaMessage : "The camera could not start. You can practise without it."', politeness: 'polite' }, preview, 'failed', { dy: 90 });
+  graphNote(tryIt.page, { anchor: camOnEv, colour: 'sky', text: '**Camera on, Start and Stop each have a Failed exit.** It says why (`mediaMessage`) and leaves `stage` as it was, so the learner can carry on without the camera. Stop also switches the preview off.' });
   tg.gap(100);
   const startEv = tg.click(tryIt.startRec, 'Start recording');
   const rec = tg.add('action.recordStart', { slot: 'take', source: 'camera', maxSeconds: 0 }, startEv);
@@ -499,6 +505,7 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
   tg.gap(100);
   const readyEv = tg.add('event.media', { when: 'ready', slot: 'take' }, null, 'out', { note: 'Stopped from the recording bar' });
   tg.run(readyEv, cameraDown(), set(v.stage, '"off"'), announce('"Recording kept on this device. Review your take."'), goNext());
+  graphNote(tryIt.page, { anchor: readyEv, colour: 'sky', text: '**The recording bar\'s own Stop is a separate event**, so it has to do the same tidy-up as the Stop button: camera down, `stage` off, on to the review.' });
   tg.gap(20);
   tg.run(tg.click(tryIt.camOff, 'Turn off the camera'), cameraDown(), set(v.stage, '"off"'));
   tg.run(tg.click(tryIt.noCam, 'Practise without the camera'), cameraDown(), set(v.stage, '"off"'), set(v.clipPlaying, 'false'), goNext());
@@ -511,6 +518,7 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
   rg.run(rg.click(review.again, 'Record again'), ['action.recordDiscard', { slot: 'take' }], resetVars(v.clipPlaying, v.clipTime), goPrevious());
   rg.run(rg.click(review.download, 'Download my take'), ['action.recordDownload', { slot: 'take', name: '"sign-" + (current + 1) + "-take"' }]);
   rg.run(rg.click(review.checkRow, 'Tick or untick a line'), toggleItem(v.ticked, 'event.index'));
+  graphNote(review.page, { anchor: labelled(review.page, /^Play both together$/), colour: 'sky', text: '**Play both together** puts the clip at 0 and playing, then plays the take on the same press, so the two start together.' });
   //One row in the log for this sign, the take thrown away, then the next sign or the summary
   const onDone = rg.click(review.done, 'Done with this sign');
   const logged = rg.run(
@@ -520,6 +528,7 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
     ['action.recordDiscard', { slot: 'take' }],
     resetVars(v.ticked, v.clipPlaying, v.clipTime),
   );
+  graphNote(review.page, { anchor: onDone, colour: 'sky', text: '**Done logs one row in reviewLog** (replacing any earlier row for that sign), throws the take away and goes back to Part 2 for the next sign, or on to the summary after the last.' });
   const more2 = rg.add('logic.if', { condition: 'current + 1 < signs.length' }, logged);
   rg.runFrom(more2, 'true', set(v.current, 'current + 1'), resetVars(v.stage), announce('"Sign " + (current + 1) + " of " + signs.length + "."'), goPrevious());
   rg.add('action.artboard', { to: 'next', transition: 'fade', duration: 250 }, more2, 'false', { dy: 90 });
@@ -535,6 +544,7 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
       text: '"Sign practice notes (" + language + ")\\n\\nSigns practised: " + practised.length + " of " + signs.length + "\\nMeaning questions right: " + rightCount + " of " + answeredCount + "\\n\\n" + reviewLog.map(r => r.n + ". " + r.sign + ": " + r.ticked + " of " + r.of + " self-review lines ticked, " + (r.take ? "a take recorded" : "no recording")).join("\\n") + "\\n\\nThis is my own practice record. It is not feedback from a teacher. What I would like to ask my tutor: "',
     }],
   );
+  graphNote(summary.page, { anchor: labelled(summary.page, /^Download my practice notes$/), colour: 'sky', text: '**The tutor note is plain text built from practised, rightCount and reviewLog.** Nothing leaves the device unless the learner downloads it. [ ] Say who it goes to in your course.' });
   sg.run(sg.click(summary.redo, 'Practise again'), resetVars(v.rightCount, v.answeredCount, v.practised, v.reviewLog, v.ticked), ...rewind, go(T.watch));
 }
 

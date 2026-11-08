@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { stripNotes } from 'interactives-player';
 import { BRANDED_STARTERS, COLOURWAYS, projectFromBrandedStarter } from '../src/lib/branded';
 import { nodeSizeGuess } from '../src/lib/branded/graph-kit';
+import { noteHeightFor } from '../src/lib/graph-notes-core';
 import { graphNotePlace } from '../src/lib/graph-notes';
 
 /** Graphs with more nodes than this need a note. */
@@ -14,29 +15,6 @@ const BIG = 5;
  * on it but already has a note on every big graph fails the test, so the list only ever shrinks.
  */
 const NOT_ANNOTATED_YET = [
-  'story/course-presentation',
-  'story/memory-game',
-  'story/video-questions',
-  'story/interactive-book',
-  'games/crossword',
-  'games/word-search',
-  'games/arithmetic-quiz',
-  'games/guess-the-answer',
-  'games/personality-quiz',
-  'games/game-map',
-  'writing/questionnaire',
-  'writing/documentation-tool',
-  'writing/reflection-journal',
-  'practice/difficult-conversation',
-  'practice/timed-talk-rehearsal',
-  'practice/keep-the-beat',
-  'practice/sign-practice',
-  'practice/shadow-the-model',
-  'media/observe-and-tag',
-  'media/listening-lab',
-  'media/lite-lesson',
-  'media/live-sound-lab',
-  'media/photo-notebook',
 ];
 
 const built = BRANDED_STARTERS.map((starter) => ({ starter, project: projectFromBrandedStarter(starter, COLOURWAYS[0]) }));
@@ -73,6 +51,15 @@ describe('starter graph notes', () => {
           expect(n.text, b.starter.key).toMatch(/\*\*[^*]+\*\*/);
           expect(n.text, b.starter.key).not.toMatch(/—/);
           expect(n.text.split('\n').length, b.starter.key).toBeLessThanOrEqual(3);
+        }
+  });
+
+  it('no note has code marks inside bold (the note shows the backticks as they are), and a note is tall enough for its words', () => {
+    for (const b of built)
+      for (const a of b.project.artboards)
+        for (const n of a.logic.notes ?? []) {
+          for (const m of n.text.matchAll(/\*\*([^*]+)\*\*/g)) expect(m[1], `${b.starter.key}: ${n.text}`).not.toContain('`');
+          expect(n.h, `${b.starter.key}: ${n.text}`).toBeGreaterThanOrEqual(noteHeightFor(n.text, n.w));
         }
   });
 
