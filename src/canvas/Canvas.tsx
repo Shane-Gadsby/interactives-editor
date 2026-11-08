@@ -60,7 +60,7 @@ import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { selectSameItems } from '../lib/layer-find';
 import { copySelection, pasteNodes } from '../lib/clipboard';
 import { inGhostExtent } from './ghost';
-import { openHelp } from '../help/Help';
+import { openContextHelp } from '../help/Help';
 import { Rulers } from './Rulers';
 import { Icons } from '../components/icons';
 import { freehandToPath } from './freehand';
@@ -1960,7 +1960,7 @@ export function Canvas() {
         { label: 'Zoom to fit everything', hint: 'Shift+1', onClick: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })) },
         { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: 'Shift+R', onClick: () => setPrefs({ rulers: !prefs().rulers }) },
         ...gridMenu(),
-        { label: 'Help', hint: 'F1', onClick: () => openHelp('canvas') },
+        { label: 'Help', hint: 'F1', onClick: openContextHelp },
       ];
     }
     setMenu({ x: e.clientX, y: e.clientY, items });

@@ -77,7 +77,9 @@ let contextOpener: (() => void) | null = null;
 export function setContextHelp(fn: (() => void) | null): void {
   contextOpener = fn;
 }
-const openContext = () => (contextOpener ? contextOpener() : openHelp());
+/** The Help button's and F1's action: the page for what is highlighted. */
+export const openContextHelp = (): void => (contextOpener ? contextOpener() : openHelp());
+const openContext = openContextHelp;
 
 function useHelpState(): HelpState {
   return useSyncExternalStore(
