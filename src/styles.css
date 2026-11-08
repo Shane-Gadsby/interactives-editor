@@ -9988,3 +9988,7 @@ code {
   border-radius: 6px;
   background: #ffffff;
 }
+.var-table th:nth-child(2),
+.var-table td:nth-child(2) {
+  width: 210px;
+}
