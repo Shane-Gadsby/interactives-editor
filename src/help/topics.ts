@@ -2575,13 +2575,21 @@ Pick the **Chart** tool (in the **Data** group of the tool bar, which starts fol
 - **pairs**: \`[["Mon", 4], ["Tue", 8]]\`;
 - **one object**: \`{Mon: 4, Tue: 8}\`.
 
-Anything that is not a number counts as 0. A chart draws up to 200 items. Under the expression, a **preview** shows the first few items as the chart reads them (and what is wrong when it can't), using the project's variables at their starting values and the loaded data. The chart redraws when a variable or data source it reads changes.
+Anything that is not a number counts as 0. A chart draws up to 200 items.
+
+## Hiding a value
+
+An object item with \`hidden: true\` is a placeholder, for a guessing page where one bar is the answer: \`[{label: "Mon", value: 4}, {label: "Tue", hidden: true}, ...]\`. It is drawn as a dashed, empty mark with a **?** (even with **Value labels** off), and the hover readout, the screen reader and the table say *hidden* instead of a number. Put \`hidden\` on from a variable and the real bar can be revealed later by changing the data (\`hidden: !answered\`). **Hidden key** names another field to use instead of \`hidden\`.
+
+A hidden item without a number of its own is left out when the axis is worked out, and shows as a slot the full length of the axis (a column or bar), a hollow point halfway up with a gap in the line (a line chart), and nothing in a pie or donut (it has no share). Give it a \`value\` as well and the dashed mark is drawn at that size and counts for the axis, which is how to show an outline of where the bar will land.
+
+ Under the expression, a **preview** shows the first few items as the chart reads them (and what is wrong when it can't), using the project's variables at their starting values and the loaded data. The chart redraws when a variable or data source it reads changes.
 
 ## Kinds and look
 
 - **Column** (vertical bars), **Bar** (sideways), **Line** (one point per item, joined), **Pie** and **Donut** (shares of the total; negative values count as 0; **Hole** sizes the donut's).
 - The axis runs from zero (or lower, for negative values) to a round number above the biggest value. **Axis min** and **Axis max** fix either end.
-- **Gridlines**, **Axis labels**, **Value labels** (the number on each mark) and **Legend** (when each item has its own colour) switch on and off. **Decimals**, **Prefix** and **Suffix** control how numbers are written (\`$\`, \`kg\`, \`%\`). Crowded labels are shortened or thinned out.
+- **Gridlines**, **Axis labels**, **Value labels** (the number on each mark) and **Legend** (when each item has its own colour) switch on and off. **Decimals**, **Prefix** and **Suffix** control how numbers are written (\`$\`, \`kg\`, \`%\`). Prefix and suffix take variables in braces (\`{unit}\`), so changing a unit variable relabels the whole chart. Crowded labels are shortened or thinned out.
 - **Colours** is a list of colours or [theme tokens](themes) handed out in turn. With one colour every bar and the line use it; **A colour for each item** gives each item the next colour (pie and donut charts always do). **Text colour**, **Font** and **Size** style the labels and axes. Using tokens, a chart changes with the theme and the colourway like everything else.
 
 ## Reading it

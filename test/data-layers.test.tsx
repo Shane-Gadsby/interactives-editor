@@ -131,6 +131,20 @@ describe('chart layer inspector', () => {
     expect(chartPreview(p, undefined, { data: '', labelKey: '', valueKey: '' }).problem).toMatch(/expression/);
   });
 
+  it('names the field that hides an item, and the preview says which items are hidden', () => {
+    const { host, node } = mountWith(createNode('chart', { id: 'c', data: '[{label: "A", value: 3}, {label: "B", secret: true}]' } as Partial<ChartNode>));
+    const rows = () => [...host.querySelectorAll('.chart-preview tbody tr')].map((r) => r.textContent);
+    //nothing is hidden until the key says so
+    expect(rows()[1]).toBe('B0');
+    change(input(host, 'Hidden key'), 'secret');
+    expect((node() as ChartNode).hiddenKey).toBe('secret');
+    expect(rows()[1]).toBe('Bhidden');
+    change(input(host, 'Hidden key'), '');
+    expect((node() as ChartNode).hiddenKey).toBeUndefined();
+    const p = createProject('T');
+    expect(chartPreview(p, undefined, { data: '[{label: "A", hidden: true}]', labelKey: '', valueKey: '', hiddenKey: '' }).items[0].hidden).toBe(true);
+  });
+
   it('changes kind, switches options and edits the colour list', () => {
     const { host, node } = mountWith(createNode('chart', { id: 'c', data: 'sales' }), sales);
     change(select(host, 'Kind'), 'donut');
@@ -192,8 +206,10 @@ describe('in a project', () => {
     p.variables.push({ id: 'v', name: 'sales', type: 'list', initial: '[]' } as never);
     p.variables.push({ id: 'w', name: 'unused', type: 'list', initial: '[]' } as never);
     p.variables.push({ id: 'x', name: 'step', type: 'number', initial: 0 } as never);
-    p.artboards[0].children.push(createNode('chart', { data: 'sales' }), createNode('progress', { valueText: 'Step {step} of 5' }));
+    p.variables.push({ id: 'y', name: 'unit', type: 'text', initial: 'kg' } as never);
+    p.artboards[0].children.push(createNode('chart', { data: 'sales', suffix: ' {unit}' }), createNode('progress', { valueText: 'Step {step} of 5' }));
     const r = analyzeUsage(p);
+    expect(r.variables.find((v) => v.name === 'unit')!.unused).toBe(false);
     const unused = (n: string) => r.variables.find((v) => v.name === n)!.unused;
     expect(unused('sales')).toBe(false);
     expect(unused('step')).toBe(false);

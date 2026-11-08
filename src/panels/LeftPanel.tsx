@@ -407,9 +407,22 @@ export function Layers() {
     return (
       <div
         key={n.id}
-        className={`layer-row${selected ? ' selected' : ''}${brand ? ' brand-held' : ''}${shown ? '' : ' hidden-layer'}${filtering && !found.hits.has(n.id) ? ' not-a-hit' : ''}${dropClass}`}
+        className={`layer-row${selected ? ` selected${s.selection.length > 1 ? ' multi' : ''}` : ''}${brand ? ' brand-held' : ''}${shown ? '' : ' hidden-layer'}${filtering && !found.hits.has(n.id) ? ' not-a-hit' : ''}${dropClass}`}
         style={{ paddingLeft: 8 + depth * 14 }}
         draggable={renaming !== n.id && !filtering && !brand}
+        tabIndex={brand ? undefined : selected || (!s.selection.length && n.id === firstLayerId) ? 0 : -1}
+        onKeyDown={(e) => {
+          //only for the row itself: the rename box and the lock and eye buttons keep their own keys
+          if (e.target !== e.currentTarget || brand) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.currentTarget.click();
+          } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            const rows = Array.from(e.currentTarget.parentElement?.querySelectorAll<HTMLElement>('.layer-row:not(.brand-held)') ?? []);
+            rows[rows.indexOf(e.currentTarget) + (e.key === 'ArrowDown' ? 1 : -1)]?.focus();
+          }
+        }}
         title={brand ? 'Part of the UniSQ brand: locked, so it can’t be selected or changed' : undefined}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -510,6 +523,7 @@ export function Layers() {
     );
   };
 
+  const firstLayerId = flat.slice(first, last).find((r) => r.kind !== 'group' && r.kind !== 'artboard')?.n?.id;
   const hitCount = found.hits.size + found.artboards.size;
   return (
     <>

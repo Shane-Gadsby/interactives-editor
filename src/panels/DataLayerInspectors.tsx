@@ -94,7 +94,7 @@ function MaybeNumber({ label, title, value, placeholder, onChange }: { label: st
 }
 
 /** What the data expression gives right now, as the chart reads it: the first few items, or what is wrong. */
-export function chartPreview(project: Project, ab: Artboard | undefined, n: Pick<ChartNode, 'data' | 'labelKey' | 'valueKey'>): { items: { label: string; value: number }[]; total: number; problem: string | null } {
+export function chartPreview(project: Project, ab: Artboard | undefined, n: Pick<ChartNode, 'data' | 'labelKey' | 'valueKey' | 'hiddenKey'>): { items: { label: string; value: number; hidden?: boolean }[]; total: number; problem: string | null } {
   const src = n.data?.trim();
   if (!src) return { items: [], total: 0, problem: 'Write an expression for the list to chart, such as a list variable or a data source.' };
   let raw: unknown;
@@ -103,7 +103,7 @@ export function chartPreview(project: Project, ab: Artboard | undefined, n: Pick
   } catch (e) {
     return { items: [], total: 0, problem: `The expression has a problem: ${e instanceof Error ? e.message : String(e)}` };
   }
-  const all = chartData(raw, n.labelKey, n.valueKey);
+  const all = chartData(raw, n.labelKey, n.valueKey, n.hiddenKey);
   const more = chartOverflow(raw);
   if (!all.length) return { items: [], total: 0, problem: 'The expression gives no items. It should give a list (of numbers, objects or [label, value] pairs) or an object of label: value.' };
   return { items: all.slice(0, 8), total: all.length + more, problem: null };
@@ -116,7 +116,7 @@ export function ChartSection({ nodes, project, ab }: { nodes: ChartNode[]; proje
   const set = useSetter(ids);
   const single = nodes.length === 1;
   const circle = n.kind === 'pie' || n.kind === 'donut';
-  const preview = useMemo(() => (single ? chartPreview(project, ab, n) : null), [single, project, ab, n.data, n.labelKey, n.valueKey]);
+  const preview = useMemo(() => (single ? chartPreview(project, ab, n) : null), [single, project, ab, n.data, n.labelKey, n.valueKey, n.hiddenKey]);
   const pickFont = (o: FontPick) => {
     const key = `font-${ids.join(',')}`;
     if (o.google) store().update((d) => void ensureGoogleFont(d.fonts, o.family, [400, 600]), { coalesce: key });
@@ -148,6 +148,7 @@ export function ChartSection({ nodes, project, ab }: { nodes: ChartNode[]; proje
         <TextField label="Label key" title="Which field of each item is its name. Blank picks label, name, title or the first text" value={n.labelKey} placeholder="label" onChange={(v) => set({ labelKey: v }, `chart-lk-${n.id}`)} />
         <TextField label="Value key" title="Which field of each item is its number. Blank picks value, y, count or the first number" value={n.valueKey} placeholder="value" onChange={(v) => set({ valueKey: v }, `chart-vk-${n.id}`)} />
       </Row>
+      <TextField label="Hidden key" title="An item with this field set to true is a placeholder: a dashed empty mark with a ?, read out as hidden, left out of the axis unless it has a number too. Blank uses hidden" value={n.hiddenKey ?? ''} placeholder="hidden" onChange={(v) => set({ hiddenKey: v || undefined }, `chart-hk-${n.id}`)} />
       {preview && (
         <div className="chart-preview" aria-label="What the chart reads from its data">
           {preview.problem ? (
@@ -161,7 +162,7 @@ export function ChartSection({ nodes, project, ab }: { nodes: ChartNode[]; proje
                 {preview.items.map((it, i) => (
                   <tr key={i}>
                     <th scope="row">{it.label}</th>
-                    <td>{it.value}</td>
+                    <td>{it.hidden ? 'hidden' : it.value}</td>
                   </tr>
                 ))}
                 {preview.total > preview.items.length && (
@@ -211,8 +212,8 @@ export function ChartSection({ nodes, project, ab }: { nodes: ChartNode[]; proje
       </Row>
       <Row>
         <MaybeNumber label="Decimals" title="How many decimals values are written with. Blank is as short as it can be" value={n.decimals} placeholder="Auto" onChange={(v) => set({ decimals: v === null ? null : Math.max(0, Math.min(10, Math.round(v))) })} />
-        <TextField label="Prefix" title="Written before every value, such as $" value={n.prefix} onChange={(v) => set({ prefix: v }, `chart-prefix-${n.id}`)} />
-        <TextField label="Suffix" title="Written after every value, such as % or kg" value={n.suffix} onChange={(v) => set({ suffix: v }, `chart-suffix-${n.id}`)} />
+        <TextField label="Prefix" title="Written before every value, such as $. Variables work in braces: {unit}" value={n.prefix} onChange={(v) => set({ prefix: v }, `chart-prefix-${n.id}`)} />
+        <TextField label="Suffix" title="Written after every value, such as % or kg. Variables work in braces: {unit}" value={n.suffix} onChange={(v) => set({ suffix: v }, `chart-suffix-${n.id}`)} />
       </Row>
       <CheckField label="Grow in" title="The marks grow in when the chart first appears. Not for viewers who ask their device for less motion" value={n.animate} onChange={(v) => set({ animate: v })} />
       <CheckField label="Table for screen readers" title="The same numbers as a table that only a screen reader finds. Leave it on unless a text alternative says it all" value={n.table} onChange={(v) => set({ table: v })} />
