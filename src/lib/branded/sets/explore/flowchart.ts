@@ -10,9 +10,10 @@ import { flowChart, flowLinks } from 'interactives-player';
 import { addQuestion, partsOf, setQuestionSettings } from '../../../question-kit';
 import { BRAND_FONT } from '../../looks';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
-import { addVar, announce, bind, click, goNext, goPrevious, graph, set, toggleVar } from '../../graph-kit';
-import { fill, stack } from '../../parts';
+import { addVar, announce, bind, click, goPrevious, graph, graphNote, set, toggleVar } from '../../graph-kit';
+import { extrasChecklist, fill, questionExtras, stack } from '../../parts';
 import { boxText, dressQuestion, endPage, goNextOn, retray } from '../drag/shared';
+import { kitNode } from '../assessment/shared';
 import { heroButtons } from './helpers';
 
 const STEPS = [
@@ -271,6 +272,7 @@ export const flowchartStarter: BrandedStarter = {
       const g = graph(walkPage);
       //One flow for every answer: the click lands on a copy of the button (event.childIndex), which names the link to follow
       const onChoice = g.event('event.pointer', { target: choices.id, type: 'click', childrenOnly: true }, 'Follow an answer');
+      graphNote(walkPage, { anchor: onChoice, colour: 'sky', text: '**One flow serves every answer.** The click lands on a copy of the button, `event.childIndex` says which link out of `current` it was, and the route grows by that link\'s step.' });
       g.run(onChoice, ['action.setVariable', { variable: path.id, op: 'push', value: 'outs[event.childIndex].to' }], set(current, 'path[path.length - 1]'), announce('"Now at: " + fc[here].label + (atEnd ? ". This is the end of the flowchart." : "")'));
       g.run(click(g, back, 'Go back one step'), set(path, 'path.slice(0, path.length - 1)'), set(current, 'path[path.length - 1]'), announce('"Back at: " + fc[here].label'));
       g.run(click(g, again, 'Start again'), ['action.resetVariables', { variables: [current.id, path.id] }], announce('"Back at the start: " + fc[here].label'));
@@ -279,7 +281,7 @@ export const flowchartStarter: BrandedStarter = {
 
     // ------------------------------------------------------------------ complete
     const cbox = contentBox(donePage);
-    const qid = addQuestion(project, donePage.id, 'matching', { at: { x: cbox.x, y: cbox.y - 8 } })!;
+    const qid = addQuestion(project, donePage.id, 'matching', { at: { x: cbox.x, y: cbox.y - 8 }, ...questionExtras(project, { tryAgain: true }) })!;
     setQuestionSettings(project, donePage.id, qid, {
       prefix: 'flow',
       prompt: 'Drag each step into the blank shape where it belongs in the flowchart.',
@@ -382,13 +384,12 @@ export const flowchartStarter: BrandedStarter = {
     const next = bind(button(ctx, 'See results button', 'See results', 0, 0, 180), { visible: 'flow_locked' });
     (parts.buttons[0] as FrameNode).children.push(next);
 
-    goNextOn(hero, byName(hero, 'Follow button')!, 'Navigation');
     goNextOn(donePage, next, 'Navigation');
+    graphNote(donePage, { anchor: kitNode(donePage, 'check:action'), colour: 'sky', text: '**The question kit made most of this graph.** Check answer, tries, hints and Try again are its flows, and the blanks are its drop zones, so the chart\'s layout is the part that is yours.' });
     {
       const g = graph(results.page);
       g.run(click(g, results.again, 'Try again'), goPrevious());
     }
-    void goNext;
 
     // ------------------------------------------------------------------ notes and checklist
     const below = (page: typeof walkPage, x: number) => ({ x, y: page.height + 14, w: 440, h: 96 });
@@ -410,6 +411,7 @@ export const flowchartStarter: BrandedStarter = {
       item('Set the tries, the points (the results say "of 3") and the feedback messages', frame, donePage),
       item('Check the text version: press Show as a list on the Follow page and read it as a learner using a screen reader would', byName(walkPage, 'View button'), walkPage),
       item('Change the results page text', results.result, results.page),
+      item(extrasChecklist({ tryAgain: true })),
     ];
     return { project, checklist };
   },

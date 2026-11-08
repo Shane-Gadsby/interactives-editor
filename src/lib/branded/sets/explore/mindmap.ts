@@ -8,7 +8,7 @@ import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem,
 import { lookDefaults } from '../../../themes';
 import { BRAND_FONT } from '../../looks';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, overlay, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
-import { addVar, announce, bind, click, graph, set, toggleVar, type ActionStep } from '../../graph-kit';
+import { addVar, announce, bind, click, graph, graphNote, set, toggleVar, type ActionStep } from '../../graph-kit';
 import { dialogPanel, fill, openDialog, stack } from '../../parts';
 import { heroButtons } from './helpers';
 
@@ -220,6 +220,7 @@ export const mindMapStarter: BrandedStarter = {
       const g = graph(explore);
       //One flow for every idea: the click lands on a copy of the box (event.childIndex), which then has the keyboard, and opens its dialog
       const onIdea = g.event('event.pointer', { target: layers.ideas.id, type: 'click', childrenOnly: true }, 'Open an idea');
+      graphNote(explore, { anchor: onIdea, colour: 'sky', text: '**One flow serves every idea.** The click lands on a copy of the box, `event.childIndex` says which, and that idea then has the keyboard (`focused`) and its dialog opens.' });
       g.run(onIdea, set(focused, 'event.childIndex'), openDialog(detailOpen), announce('place[focused].label + ". " + (place[focused].detail ?? "")'));
       //...and one for every fold button
       const onFold = g.event('event.pointer', { target: layers.folds!.id, type: 'click', childrenOnly: true }, 'Fold or unfold a branch');
@@ -307,7 +308,9 @@ export const mindMapStarter: BrandedStarter = {
       //Any change that can move an idea in the list: remember which one it was by its id, change, then find it again
       const change = (expr: string): ActionStep[] => [set(picked, 'mine[mineAt].id'), set(mine, expr), set(at, 'mine.findIndex(n => n.id == picked)')];
       const adds = (parent: string): ActionStep[] => [set(picked, 'mindMapNextId(mine)'), set(mine, `mindMapEdit(mine, "add", ${parent}, draft)`), set(at, 'mine.findIndex(n => n.id == picked)'), announce('"Added " + mine[mineAt].label')];
-      g.run(g.event('event.start', {}, 'Coming back: show the selected idea in the box'), set(draft, 'mineLayout[mineAt].label'));
+      const onStart = g.event('event.start', {}, 'Coming back: show the selected idea in the box');
+      graphNote(build, { anchor: onStart, colour: 'sky', text: '**Every change goes through `mindMapEdit`.** An idea can move in the list when it is changed, so each flow keeps its id in `picked` and finds it again.' });
+      g.run(onStart, set(draft, 'mineLayout[mineAt].label'));
       g.run(g.event('event.variable', { variable: at.id }, 'A different idea is selected'), set(draft, 'mineLayout[mineAt].label'));
       g.run(g.event('event.pointer', { target: mineLayers.ideas.id, type: 'click', childrenOnly: true }, 'Select an idea'), set(at, 'event.childIndex'));
       g.run(click(g, addIn, 'Add an idea inside the selected one'), ...adds('mineAt'));
