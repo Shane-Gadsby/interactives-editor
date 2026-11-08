@@ -7,7 +7,7 @@ import { lookDefaults } from '../../../themes';
 import { BRAND_FONT } from '../../looks';
 import { brandedPage, button, solid, stroke, text, type BrandedCtx } from '../../kit';
 
-export { addVar as variable, after, announce, bind, clearVar, click, go, graph, setVar, toggleVar } from '../../graph-kit';
+export { addVar as variable, after, announce, bind, clearVar, click, go, goNext, goPrevious, graph, setVar, toggleVar } from '../../graph-kit';
 
 /** A hero page with its Start button, the way every starter opens. */
 export function heroPage(ctx: BrandedCtx, title: string, subtitle: string, label = 'Start'): { page: Artboard; start: SceneNode } {

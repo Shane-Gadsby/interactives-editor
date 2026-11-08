@@ -29,6 +29,18 @@ export const SET_NAMES: Record<StarterSet, string> = {
   media: 'Listen, watch and capture',
 };
 
+/**
+ * A state of a starter to run the layout check in as well as its starting one (`test/starter-layout.test.ts`): the feedback page with
+ * long answers in it, a panel that is open. `vars` are variable values (by name) put in over the starting values, for `page` (a page
+ * name or names; all pages when left out). The check only sees what shows at the start, so anything that appears later (a feedback
+ * message, a dialog, a long answer) needs a state to be checked.
+ */
+export interface LayoutState {
+  label: string;
+  page?: string | string[];
+  vars: Record<string, unknown>;
+}
+
 export interface BrandedStarter {
   /** Stable, used in the project's template record: `<set>/<name>`, e.g. `assessment/multi-page-quiz`. */
   key: string;
@@ -37,6 +49,8 @@ export interface BrandedStarter {
   description: string;
   tags: string[];
   build(colourway: Colourway): { project: Project; checklist: TemplateChecklistItem[] };
+  /** Extra states for the layout check to run each page in (see `LayoutState`). */
+  layoutStates?: LayoutState[];
 }
 
 export type ColourKey = LookKey | BrandKey;

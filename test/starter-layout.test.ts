@@ -26,7 +26,7 @@ describe('starter layout', () => {
     const found: Found[] = [];
     for (const starter of BRANDED_STARTERS) {
       for (const way of WAYS) {
-        const violations = checkProjectLayout(projectFromBrandedStarter(starter, way));
+        const violations = checkProjectLayout(projectFromBrandedStarter(starter, way), starter.layoutStates);
         if (violations.length) found.push({ starter, way: way.id, violations });
       }
     }

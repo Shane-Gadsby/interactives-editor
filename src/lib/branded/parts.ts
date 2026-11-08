@@ -11,11 +11,40 @@
  * Colours come from the colourway's tokens like everything in the kit. Each takes the page (or the group) it builds for and
  * adds its layers and wires, and returns what the starter needs to refer to afterwards.
  */
-import { createNode, type Artboard, type ButtonNode, type FrameNode, type KeyNav, type LogicNode, type ProgressNode, type SceneNode, type TextNode, type Variable } from 'interactives-player';
+import { createNode, defaultAutoLayout, type AutoLayout, type Artboard, type ButtonNode, type FrameNode, type KeyNav, type LogicNode, type ProgressNode, type SceneNode, type TextNode, type Variable } from 'interactives-player';
 import { addNote, button, contentBox, heading, solid, stroke, text, type BrandedCtx } from './kit';
 import { bind, click, goNext, goPrevious, graph, set } from './graph-kit';
 
 export { addNote };
+
+// ------------------------------------------------------------------ auto layout
+
+/**
+ * An auto layout frame (a column or a row that places its visible children one after another, so text that wraps or a layer
+ * that is hidden moves what follows instead of landing on it). It hugs its height, takes `width` and is transparent unless
+ * `box` is given (a card: `{ fill: solid(L.surface), cornerRadius: 16 }`), with `padding` as one number or per side. A child
+ * that should share out the free width of a row, or stretch across a column, is `fill(child)`.
+ *
+ *   stack('Body', box.x, box.y, box.width, { gap: 16, children: [prompt, fill(row), submit] })
+ */
+export function stack(name: string, x: number, y: number, width: number, opts: { direction?: AutoLayout['direction']; gap?: number; padding?: number | { top: number; right: number; bottom: number; left: number }; align?: AutoLayout['align']; justify?: AutoLayout['justify']; height?: number; box?: Record<string, unknown>; children: SceneNode[]; extra?: Record<string, unknown> }): FrameNode {
+  const p = opts.padding ?? 0;
+  const layout: AutoLayout = {
+    ...defaultAutoLayout(opts.direction ?? 'column'),
+    gap: opts.gap ?? 12,
+    padding: typeof p === 'number' ? { top: p, right: p, bottom: p, left: p } : p,
+    align: opts.align ?? 'stretch',
+    ...(opts.justify ? { justify: opts.justify } : {}),
+    hugHeight: opts.height === undefined,
+  };
+  return createNode('frame', { name, x, y, width, height: opts.height ?? 100, fill: null, stroke: null, clip: false, ...(opts.box ?? {}), layout, children: opts.children, ...(opts.extra ?? {}) } as never) as FrameNode;
+}
+
+/** Make a child of an auto layout frame take the free room along the frame's direction (the width of a row, the height of a column), shared with its other `fill` siblings. */
+export function fill<T extends SceneNode>(n: T, axis: 'width' | 'height' = 'width'): T {
+  n.layoutItem = { ...(n.layoutItem ?? {}), [axis]: 'fill' };
+  return n;
+}
 
 // ------------------------------------------------------------------ progress bar
 

@@ -16,7 +16,7 @@
  * panel that opens later is not (build the page's states into a test when one matters).
  */
 import { REPEAT_SEP, artboardScope, isContainer, pageInfo, prepareNodes, relayoutTree, startingValue, evaluate, textAutoSize, withMaster, type Artboard, type CopySizes, type ExprScope, type Project, type SceneNode, type TextNode } from 'interactives-player';
-import { LOGO_CLEAR, OVERLAY_TAG } from './kit';
+import { LOGO_CLEAR, OVERLAY_TAG, type LayoutState } from './kit';
 
 export type ViolationKind = 'button-text' | 'logo-clear' | 'text-overflow' | 'text-chrome' | 'text-text';
 
@@ -236,10 +236,49 @@ function drawn(project: Project, page: Artboard, scope: ExprScope): SceneNode[] 
   return mine;
 }
 
+/**
+ * Lays out the auto layout frames of a built project's pages, in the document itself, the way the editor does after every change
+ * (the canvas draws the stored positions of a frame's children, and a built starter has never been through an edit). Auto sized
+ * text takes the height its words are estimated to need, so a frame that hugs it comes out the right size. A page without an auto
+ * layout frame is left alone.
+ */
+export function settleLayout(project: Project): void {
+  for (const page of project.artboards) {
+    if (page.isMaster) continue;
+    let any = false;
+    walkNodes(page.children, (n) => void (n.type === 'frame' && n.layout && (any = true)));
+    if (!any) continue;
+    const vars: Record<string, unknown> = {};
+    for (const v of project.variables) vars[v.name] = startingValue(v, vars);
+    const info = pageInfo(project, page);
+    const scope: ExprScope = { vars, extra: { pageNumber: info.index + 1, pageCount: info.list.length, artboard: artboardScope(page, { index: info.index, count: info.list.length, group: info.group }), event: {} } };
+    for (let pass = 0; pass < 12; pass++) {
+      let changed = false;
+      walkNodes(page.children, (n, inRepeat) => {
+        if (n.type !== 'text' || inRepeat || textAutoSize(n) === 'none') return;
+        const size = textSize(n, scope);
+        if (Math.abs(size.width - n.width) > 0.5 || Math.abs(size.height - n.height) > 0.5) {
+          Object.assign(n, size);
+          changed = true;
+        }
+      });
+      if (relayoutTree(page.children)) changed = true;
+      if (!changed) break;
+    }
+  }
+}
+
+function walkNodes(list: SceneNode[], fn: (n: SceneNode, inRepeat: boolean) => void, inRepeat = false): void {
+  for (const n of list) {
+    fn(n, inRepeat);
+    if (isContainer(n)) walkNodes(n.children, fn, inRepeat || !!(n as { repeat?: unknown }).repeat);
+  }
+}
+
 /** Every violation on one page of a project. */
-export function checkPageLayout(project: Project, page: Artboard): LayoutViolation[] {
+export function checkPageLayout(project: Project, page: Artboard, state?: LayoutState): LayoutViolation[] {
   const vars: Record<string, unknown> = {};
-  for (const v of project.variables) vars[v.name] = startingValue(v, vars);
+  for (const v of project.variables) vars[v.name] = state && Object.prototype.hasOwnProperty.call(state.vars, v.name) ? state.vars[v.name] : startingValue(v, vars);
   const info = pageInfo(project, page);
   const scope = {
     vars,
@@ -248,7 +287,7 @@ export function checkPageLayout(project: Project, page: Artboard): LayoutViolati
   const items: Item[] = [];
   collect(drawn(project, page, scope), scope, items, { dx: 0, dy: 0, path: [], overlay: false, clipped: false, master: false });
   const out: LayoutViolation[] = [];
-  const add = (kind: ViolationKind, a: Item, b: Item | undefined, detail: string) => out.push({ kind, page: page.name, a: label(a), ...(b ? { b: label(b) } : {}), detail });
+  const add = (kind: ViolationKind, a: Item, b: Item | undefined, detail: string) => out.push({ kind, page: state ? `${page.name} [${state.label}]` : page.name, a: label(a), ...(b ? { b: label(b) } : {}), detail });
   const sheet: Box = { x: 0, y: 0, w: page.width, h: page.height };
 
   const texts = items.filter((i) => i.ink && !i.fromMaster && !i.overlay);
@@ -309,12 +348,19 @@ export function checkPageLayout(project: Project, page: Artboard): LayoutViolati
   return out;
 }
 
-/** Every violation on every page of a project (masters and hidden library copies are not pages). */
-export function checkProjectLayout(project: Project): LayoutViolation[] {
+/**
+ * Every violation on every page of a project (masters and hidden library copies are not pages), as the pages start and in each of
+ * the extra `states` (variable values for the pages that state names).
+ */
+export function checkProjectLayout(project: Project, states: LayoutState[] = []): LayoutViolation[] {
   const out: LayoutViolation[] = [];
   for (const page of project.artboards) {
     if (page.isMaster || page.library || page.canvasHidden) continue;
     out.push(...checkPageLayout(project, page));
+    for (const state of states) {
+      const pages = state.page === undefined ? null : Array.isArray(state.page) ? state.page : [state.page];
+      if (!pages || pages.includes(page.name)) out.push(...checkPageLayout(project, page, state));
+    }
   }
   return out;
 }

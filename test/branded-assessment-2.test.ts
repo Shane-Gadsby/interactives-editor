@@ -565,8 +565,42 @@ describe('playing the second batch', () => {
       await click(idOf(write, 'Submit button'));
       await click(idOf(feedback, 'Start again button'));
       expect(player.getVariable('essay')).toBe('');
-      expect(player.getVariable('submitted')).toBe(false);
+      expect(player.getVariable('wc')).toBe(0);
       expect(text()).toContain('Write an answer');
+    });
+
+    it('uses the native features: live variables, next and previous pages, a progress bar, auto layout and notes', () => {
+      const live = project.variables.filter((v) => v.live);
+      expect(live.map((v) => v.name)).toEqual(['wc', 'foundReq', 'missingReq', 'foundOpt', 'missingOpt', 'lengthState']);
+      expect(live.every((v) => !!v.formula)).toBe(true);
+      //nothing writes a live variable, and Submit is just announce and next page
+      const written = new Set(project.artboards.flatMap((a) => a.logic.nodes).filter((n) => n.kind === 'action.setVariable').map((n) => n.params.variable));
+      for (const v of live) expect(written.has(v.id), v.name).toBe(false);
+      const submitFlow = write.logic.nodes.map((n) => n.kind);
+      expect(submitFlow).toEqual(['event.pointer', 'action.announce', 'action.artboard']);
+      expect(project.artboards.flatMap((a) => a.logic.nodes).filter((n) => n.kind === 'action.artboard').map((n) => n.params.to)).toEqual(['next', 'next', 'previous']);
+      const bar = byName(write, 'Word count bar') as unknown as { type: string; bindings: Record<string, string> };
+      expect(bar.type).toBe('progress');
+      expect(bar.bindings).toEqual({ value: 'wc', max: 'maxWords' });
+      expect((byName(write, 'Write body') as unknown as { layout: unknown }).layout).toBeTruthy();
+      expect(JSON.stringify(write.children)).toContain('pageNumber');
+      //its chrome is a master, and the notes sit outside the page
+      expect(write.master).toBeTruthy();
+      for (const page of [hero, write, feedback]) {
+        for (const n of page.notes ?? []) expect(n.y).toBeGreaterThanOrEqual(page.height);
+      }
+      expect((write.notes ?? []).length + (hero.notes ?? []).length + (feedback.notes ?? []).length).toBe(4);
+    });
+
+    it('reads the feedback live: a changed answer changes the feedback page without another Submit', async () => {
+      const player = await open();
+      await type(idOf(write, 'Answer box'), words(60, 'spaced memory'));
+      await click(idOf(write, 'Submit button'));
+      expect(player.getVariable('foundReq')).toEqual(['spac', 'memory']);
+      await click(idOf(feedback, 'Edit button'));
+      await type(idOf(write, 'Answer box'), words(60, 'spaced memory forget cram'));
+      expect(player.getVariable('missingReq')).toEqual([]);
+      expect(text()).toContain('Step 1 of 2');
     });
   });
 });
