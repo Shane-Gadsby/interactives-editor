@@ -46,7 +46,11 @@ export function clampCrop(c: ImageCrop, fit: ImageFit, frame: Size, natural: Siz
 
 /** Move the picture by a distance in the frame's own pixels. */
 export function panBy(c: ImageCrop, dx: number, dy: number, frame: Size): ImageCrop {
-  return { ...c, x: c.x + dx / Math.max(1, frame.w), y: c.y + dy / Math.max(1, frame.h) };
+  return {
+    ...c,
+    x: c.x + dx / Math.max(1, frame.w),
+    y: c.y + dy / Math.max(1, frame.h),
+  };
 }
 
 /**
@@ -59,7 +63,11 @@ export function zoomAt(c: ImageCrop, zoom: number, at: { x: number; y: number },
   // the picture's offset from the middle, in pixels, grows by k about the point that stays still
   const tx = at.x - (at.x - c.x * frame.w) * k;
   const ty = at.y - (at.y - c.y * frame.h) * k;
-  return { x: tx / Math.max(1, frame.w), y: ty / Math.max(1, frame.h), zoom: z };
+  return {
+    x: tx / Math.max(1, frame.w),
+    y: ty / Math.max(1, frame.h),
+    zoom: z,
+  };
 }
 
 /** What gets stored: nothing at all for a crop that is back at rest. */

@@ -14,7 +14,13 @@ export function CropOverlay({ ab, id, zoom, panX, panY }: { ab: Artboard; id: st
   const loc = locate(ab, id);
   const node = loc?.node.type === 'image' ? (loc.node as ImageNode) : null;
   const layer = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ kind: 'pan' | 'zoom'; x: number; y: number; crop: ReturnType<typeof cropOf>; dist: number } | null>(null);
+  const drag = useRef<{
+    kind: 'pan' | 'zoom';
+    x: number;
+    y: number;
+    crop: ReturnType<typeof cropOf>;
+    dist: number;
+  } | null>(null);
   const natural = useNaturalSize(node?.assetId);
 
   const frame = node ? drawnBox(ab, node) : null;
@@ -22,7 +28,10 @@ export function CropOverlay({ ab, id, zoom, panX, panY }: { ab: Artboard; id: st
   const m = useMemo(() => nodeToArtboard(ab, id), [ab, id, node?.x, node?.y, node?.width, node?.height, node?.rotation, node?.scaleX, node?.scaleY]);
   const toScreen = (lx: number, ly: number) => {
     const a = apply(m, lx, ly);
-    return { x: panX + (ab.canvasX + a.x) * zoom, y: panY + (ab.canvasY + a.y) * zoom };
+    return {
+      x: panX + (ab.canvasX + a.x) * zoom,
+      y: panY + (ab.canvasY + a.y) * zoom,
+    };
   };
   const done = () => {
     store().commit();
@@ -84,7 +93,13 @@ export function CropOverlay({ ab, id, zoom, panX, panY }: { ab: Artboard; id: st
     }
     layer.current!.setPointerCapture(e.pointerId);
     const p = frameSpace(e.clientX, e.clientY);
-    drag.current = { kind: corner ? 'zoom' : 'pan', x: e.clientX, y: e.clientY, crop: now(), dist: Math.max(1, Math.hypot(p.x, p.y)) };
+    drag.current = {
+      kind: corner ? 'zoom' : 'pan',
+      x: e.clientX,
+      y: e.clientY,
+      crop: now(),
+      dist: Math.max(1, Math.hypot(p.x, p.y)),
+    };
   };
   const move = (e: React.PointerEvent) => {
     e.stopPropagation();
@@ -133,7 +148,11 @@ export function CropOverlay({ ab, id, zoom, panX, panY }: { ab: Artboard; id: st
   };
   const top = Math.min(...corners.map((p) => p.y));
   const bottom = Math.max(...corners.map((p) => p.y));
-  const barAt = { left: centre.x, top: top > 56 ? top - 12 : bottom + 12, transform: `translate(-50%, ${top > 56 ? '-100%' : '0'})` };
+  const barAt = {
+    left: centre.x,
+    top: top > 56 ? top - 12 : bottom + 12,
+    transform: `translate(-50%, ${top > 56 ? '-100%' : '0'})`,
+  };
   return (
     <div
       ref={layer}

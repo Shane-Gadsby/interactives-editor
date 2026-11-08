@@ -29,7 +29,10 @@ export function IconsPanel() {
     const st = store();
     const ab = st.artboard();
     if (!ab) return;
-    const node = iconNode(icon, colour, project, { x: ab.width / 2, y: ab.height / 2 });
+    const node = iconNode(icon, colour, project, {
+      x: ab.width / 2,
+      y: ab.height / 2,
+    });
     st.addNodes([node], { artboardId: ab.id });
     st.set({ tool: 'select' });
     track('feature', 'stock-icon', { thing: icon.id, detail: { colour } });
@@ -67,7 +70,11 @@ export function IconsPanel() {
             role="radio"
             aria-checked={colour === 'theme'}
             className={`icons-theme${colour === 'theme' ? ' on' : ''}`}
-            title={hasTheme ? 'Paint the icon with the project’s colour tokens, so it follows the theme' : 'Paint the icon with the starter colours. Once the project has themes (the Themes tab) it follows them'}
+            title={
+              hasTheme
+                ? 'Paint the icon with the project’s colour tokens, so it follows the theme'
+                : 'Paint the icon with the starter colours. Once the project has themes (the Themes tab) it follows them'
+            }
             onClick={() => setPicked('theme')}
           >
             Follow theme
@@ -87,14 +94,16 @@ export function IconsPanel() {
           {shown.map((icon) => (
             <li key={icon.id}>
               <button type="button" className="icons-item" onClick={() => add(icon)} title={`Add the ${icon.title} icon to the artboard`} aria-label={`Add the ${icon.title} icon`}>
-                <svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true" focusable="false">
-                  {icon.ring.map((d, i) => (
-                    <path key={`r${i}`} d={d} fill={previewColour(ring, project)} />
-                  ))}
-                  {icon.glyph.map((d, i) => (
-                    <path key={`g${i}`} d={d} fill={previewColour(glyph, project)} />
-                  ))}
-                </svg>
+                <span className="icons-preview" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" width="40" height="40" focusable="false">
+                    {icon.ring.map((d, i) => (
+                      <path key={`r${i}`} d={d} fill={previewColour(ring, project)} />
+                    ))}
+                    {icon.glyph.map((d, i) => (
+                      <path key={`g${i}`} d={d} fill={previewColour(glyph, project)} />
+                    ))}
+                  </svg>
+                </span>
                 <span>{icon.title}</span>
               </button>
             </li>

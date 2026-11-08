@@ -37,9 +37,15 @@ export const GLYPH_HEX = '#1e1e1e';
 export function iconPaints(colour: IconColour, project: Project): { ring: string; glyph: string } {
   if (colour === 'theme') {
     const look = lookFor(hasTokens(project.themes) ? project.themes : null);
-    return { ring: look.button ?? LIGHT_LOOK.button, glyph: look.text ?? LIGHT_LOOK.text };
+    return {
+      ring: look.button ?? LIGHT_LOOK.button,
+      glyph: look.text ?? LIGHT_LOOK.text,
+    };
   }
-  return { ring: ICON_COLOURS.find((c) => c.id === colour)?.hex ?? ICON_COLOURS[0].hex, glyph: GLYPH_HEX };
+  return {
+    ring: ICON_COLOURS.find((c) => c.id === colour)?.hex ?? ICON_COLOURS[0].hex,
+    glyph: GLYPH_HEX,
+  };
 }
 
 /** The colour a new icon starts in: the project's own tokens when it has them, the Toolbox's gold when it does not. */
@@ -47,7 +53,11 @@ export const defaultIconColour = (project: Project): IconColour => (hasTokens(pr
 
 // ---------------------------------------------------------------- finding one
 
-const words = (s: string): string[] => s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+const words = (s: string): string[] =>
+  s
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
 
 /**
  * Icons that match what was typed, best first. Every word has to match something: the start of a word in the name scores
@@ -89,7 +99,12 @@ function shape(name: string, ds: string[], fill: string, k: number): SceneNode {
   const raw: SubPath[] = ds.flatMap((d) => parsePathData(d));
   const paths: SubPath[] = raw.map((sp) => ({
     closed: sp.closed,
-    points: sp.points.map((p) => ({ x: p.x * k, y: p.y * k, in: p.in ? { x: p.in.x * k, y: p.in.y * k } : null, out: p.out ? { x: p.out.x * k, y: p.out.y * k } : null })),
+    points: sp.points.map((p) => ({
+      x: p.x * k,
+      y: p.y * k,
+      in: p.in ? { x: p.in.x * k, y: p.in.y * k } : null,
+      out: p.out ? { x: p.out.x * k, y: p.out.y * k } : null,
+    })),
   }));
   const b = pathBounds(paths);
   return createNode('path', {
@@ -101,7 +116,14 @@ function shape(name: string, ds: string[], fill: string, k: number): SceneNode {
     fill: { type: 'solid', color: fill },
     stroke: null,
     fillRule: 'nonzero',
-    paths: paths.map((s) => ({ closed: s.closed, points: s.points.map((p) => ({ ...p, x: r2(p.x - b.x), y: r2(p.y - b.y) })) })),
+    paths: paths.map((s) => ({
+      closed: s.closed,
+      points: s.points.map((p) => ({
+        ...p,
+        x: r2(p.x - b.x),
+        y: r2(p.y - b.y),
+      })),
+    })),
   } as never);
 }
 

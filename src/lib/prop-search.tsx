@@ -164,11 +164,11 @@ function prepare(e: PropEntry): Prepared {
   let p = prepared.get(e);
   if (!p) {
     const named = e.plain ? undefined : NAMES[e.label];
-    const syn = [...(e.plain ? [] : (normSyn.get(e.label.toLowerCase()) ?? [])), ...(named ? (normSyn.get(named.toLowerCase()) ?? []) : []), ...(e.extra ?? []).map((x) => wordsOf(x).join(' '))];
+    const syn = [...(e.plain ? [] : (normSyn.get(e.label.replace(/\u00a0/g, ' ').toLowerCase()) ?? [])), ...(named ? (normSyn.get(named.toLowerCase()) ?? []) : []), ...(e.extra ?? []).map((x) => wordsOf(x).join(' '))];
     p = {
       label: wordsOf(e.label).join(' '),
       names: [...(named ? [wordsOf(named).join(' ')] : []), ...syn].filter(Boolean),
-      tip: wordsOf(e.tip ?? (e.plain ? '' : FIELD_TIPS[e.label]) ?? '').join(' '),
+      tip: wordsOf(e.tip ?? (e.plain ? '' : FIELD_TIPS[e.label.replace(/\u00a0/g, ' ')]) ?? '').join(' '),
       section: wordsOf(e.section ?? '').join(' '),
     };
     prepared.set(e, p);

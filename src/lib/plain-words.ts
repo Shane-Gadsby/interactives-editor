@@ -138,6 +138,9 @@ export function plainParam(kind: string, p: ParamDef, technical = technicalWordi
     label: pw(p.label, false),
     help: p.help ? pw(p.help, false) : p.help,
     placeholder: p.placeholder ? pw(p.placeholder, false) : p.placeholder,
-    options: p.options?.map((o) => ({ ...o, label: pw(optionLabel(kind, p.key, o, false), false) })),
+    options: p.options?.map((o) => ({
+      ...o,
+      label: pw(optionLabel(kind, p.key, o, false), false),
+    })),
   };
 }

@@ -586,7 +586,7 @@ export function Layers() {
           for (const file of files) await importAnimationFile(file, linking);
         }}
       >
-        + Import file as artboard
+        + Import file as page
       </button>
     </div>
     {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}

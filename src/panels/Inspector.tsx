@@ -565,7 +565,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
     <>
       {ab.source?.linkId && <LinkedFileSection ab={ab} />}
       {ab.library && <LibraryArtboardSection ab={ab} project={project} />}
-      <Section help="artboards" title="Artboard">
+      <Section id="Artboard" help="artboards" title="Page">
         <TextField label="Name" value={ab.name} onChange={(v) => setAb((a) => (a.name = v), `ab-name-${ab.id}`)} />
         <Row className="linked-pair">
           <NumberField
@@ -583,7 +583,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             type="button"
             className={`lock-toggle link-toggle${ab.lockRatio ? ' on' : ''}`}
             aria-pressed={!!ab.lockRatio}
-            aria-label={ab.lockRatio ? "Unlink the artboard's width and height" : "Link the artboard's width and height"}
+            aria-label={ab.lockRatio ? "Unlink the page's width and height" : "Link the page's width and height"}
             title={ab.lockRatio ? 'Linked: changing one changes the other, keeping the ratio. Click to change them separately' : 'Link width and height: changing one changes the other, keeping the ratio'}
             onClick={() => setAb((a) => void (a.lockRatio ? delete a.lockRatio : (a.lockRatio = true)))}
           >
@@ -626,11 +626,11 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         <div className="field-label block">Background</div>
         <PaintField paint={ab.background} project={project} box={{ w: ab.width, h: ab.height }} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
         </PropRow>
-        <CheckField label="Clip content to artboard" title="Preview and exports cut off whatever hangs outside the artboard. On the canvas it still shows faintly there (Preferences: Show layers outside clipped artboards)" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
+        <CheckField label="Clip content to page" title="Preview and exports cut off whatever hangs outside the page. On the canvas it still shows faintly there (Preferences: Show layers outside clipped artboards)" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
         {project.settings.library && !ab.library && (
           <CheckField
             label="Publish to library"
-            title="Offer this artboard as a component to projects that use this library. Publish from the Libraries tab"
+            title="Offer this page as a component to projects that use this library. Publish from the Libraries tab"
             value={!!ab.publish}
             onChange={(v) => setAb((a) => (v ? (a.publish = true) : delete a.publish))}
           />
@@ -638,7 +638,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
         {project.settings.library && !ab.library && ab.publish && (
           <SelectField
             label="Brand kit start"
-            title="If this library is published as a brand kit: place this component in the first artboard of every project that starts from the kit (Add with starter items in the Libraries tab), at this spot"
+            title="If this library is published as a brand kit: place this component in the first page of every project that starts from the kit (Add with starter items in the Libraries tab), at this spot"
             value={ab.brandPlace ?? ''}
             options={[
               { value: '', label: 'Not placed' },
@@ -653,16 +653,16 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             onChange={(v) => setAb((a) => (v ? (a.brandPlace = v as BrandPlace) : delete a.brandPlace))}
           />
         )}
-        <Row k="Start artboard" words={['make start artboard', 'first page', 'home page', 'entry', 'duplicate artboard', 'copy', 'clone']}>
+        <Row k="Start page" words={['make start page', 'start artboard', 'first page', 'home page', 'entry', 'duplicate page', 'duplicate artboard', 'copy', 'clone']}>
           <button className="btn" disabled={project.settings.startArtboardId === ab.id} onClick={() => setProject((p) => (p.settings.startArtboardId = ab.id))}>
-            {project.settings.startArtboardId === ab.id ? 'Start artboard' : 'Make start artboard'}
+            {project.settings.startArtboardId === ab.id ? 'Start page' : 'Make start page'}
           </button>
-          <IconButton icon={<Icons.copy />} title="Duplicate artboard" onClick={() => store().duplicateArtboard(ab.id)} />
+          <IconButton icon={<Icons.copy />} title="Duplicate page" onClick={() => store().duplicateArtboard(ab.id)} />
         </Row>
         <Row>
           <SelectField
             label="Use in"
-            title="Place this artboard as an instance inside another artboard"
+            title="Place this page as an instance inside another page"
             value=""
             options={[{ value: '', label: 'Instance in…' }, ...project.artboards.filter((a) => a.id !== ab.id).map((a) => ({ value: a.id, label: a.name }))]}
             onChange={(target) => {
@@ -672,7 +672,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
               store().addNodes([inst], { artboardId: target });
             }}
           />
-          <IconButton icon={<Icons.trash />} title="Delete artboard" onClick={() => store().deleteArtboard(ab.id)} />
+          <IconButton icon={<Icons.trash />} title="Delete page" onClick={() => store().deleteArtboard(ab.id)} />
         </Row>
       </Section>
       <VariantsSection ab={ab} project={project} />
@@ -832,8 +832,8 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
             ids={ids}
             a="scaleX"
             b="scaleY"
-            labelA="Scale W"
-            labelB="Scale H"
+            labelA={"Scale\u00a0W"}
+            labelB={"Scale\u00a0H"}
             titleA="Scale across, as a percent of the layer's own width: 100% is as drawn, 200% twice as wide, -100% flips it (scaleX)"
             titleB="Scale down, as a percent of the layer's own height: 100% is as drawn, 200% twice as tall, -100% flips it (scaleY)"
             lockKey="lockScale"

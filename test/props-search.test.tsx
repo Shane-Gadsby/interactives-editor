@@ -295,8 +295,9 @@ describe('searching the properties panel', () => {
     x.s.set({ activeArtboardId: x.ids.ab, selection: [], artboardSelected: true });
     render();
     await type('page title');
-    expect(shown()).toEqual(['page-title']);
-    expect(sections()).toEqual(['Project']);
+    // the Page section's own Name row (a page's title) comes up with it now that the section says Page
+    expect(shown()).toEqual(expect.arrayContaining(['page-title']));
+    expect(sections()).toContain('Project');
     await type('preset');
     expect(shown()).toContain('preset');
     act(() => x.s.select([x.ids.rect, x.ids.ellipse]));

@@ -13,7 +13,7 @@ import { isSectionOpen, onlySectionOpen, registerSection, resetSectionFolds, sec
 /** An explicit title, or the standard explanation for a field label. */
 export function tipFor(label: ReactNode, title?: string): string | undefined {
   if (title) return title;
-  return typeof label === 'string' ? FIELD_TIPS[label] : undefined;
+  return typeof label === 'string' ? FIELD_TIPS[label.replace(/\u00a0/g, ' ')] : undefined;
 }
 
 /** A field label that never breaks after a hyphen ("V-align" would wrap to "V-" and "align" in a tight row). */

@@ -50,7 +50,14 @@ export function hintFromFileName(name: string): string {
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/[-_.+]+/g, ' ')
     .split(/\s+/)
-    .filter((w) => w && !/^\d+$/.test(w) && !/^(img|dsc|dscn|pxl|mvimi|vid|mov|p)\d+$/i.test(w) && !/^(img|dsc|dscn|pxl|mvimi|vid|image|photo|picture|screenshot|screen|copy|final|edit|edited)$/i.test(w) && !/^[a-f0-9]{8,}$/i.test(w));
+    .filter(
+      (w) =>
+        w &&
+        !/^\d+$/.test(w) &&
+        !/^(img|dsc|dscn|pxl|mvimi|vid|mov|p)\d+$/i.test(w) &&
+        !/^(img|dsc|dscn|pxl|mvimi|vid|image|photo|picture|screenshot|screen|copy|final|edit|edited)$/i.test(w) &&
+        !/^[a-f0-9]{8,}$/i.test(w),
+    );
   if (!words.length) return '';
   const text = words.join(' ').toLowerCase();
   return text.charAt(0).toUpperCase() + text.slice(1);
