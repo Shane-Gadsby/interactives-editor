@@ -28,6 +28,7 @@ import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink } from './help/Help';
 import { setPreviewOpen, trapFocus } from './lib/overlays';
+import { installInteractionsRoom } from './lib/interactions-room';
 import { clearFlow, lastQuietHit, pushFlow, useFlowVersion } from './lib/run-flow';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ContextMenu } from './components/ContextMenu';
@@ -595,6 +596,8 @@ function Workspace({ home }: { home: () => void }) {
     zoomTo('fit');
     requestAnimationFrame(() => zoomTo('fit'));
   }, []);
+  //The Interactions tab lifts the bottom panel while it is open (only from the default height)
+  useEffect(() => installInteractionsRoom(), []);
   // Tell the others what is selected (and on which artboard)
   useEffect(() => {
     let last = '';
