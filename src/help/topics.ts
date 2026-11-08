@@ -225,7 +225,7 @@ From left to right:
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
-**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## What the pointer shows
 The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
@@ -2432,6 +2432,77 @@ An **image** layer can draw itself through a shader: **+** in **Effects**, then 
   },
 
   {
+    id: 'progress-bars',
+    title: 'Progress bars',
+    group: 'Interactivity',
+    summary: 'A bar that fills to a value: scores, steps and timers, with a screen reader role and spoken value.',
+    keywords: 'progress bar meter gauge value max fill track percent score steps timer aria progressbar',
+    body: `A **Progress bar** layer is a track with a bar that fills it up to a **value** out of a **max**. Use it for a score, the step someone is on, a countdown, or how much of a list is done. It replaces the pair of rectangles and the width formula that bars used to be made from, and unlike them it can tell a screen reader what it is.
+
+Pick the **Progress bar** tool (in the **Data** group of the tool bar, which starts folded) and drag a box, or right-click the canvas and choose **New**, **Progress bar**. It starts at 40 of 100.
+
+## Value and max
+
+- **Value** and **Max** in the *Progress bar* section are the numbers. A value past either end is held at it: 150 of 100 is a full bar, below zero is an empty one.
+- To make the bar follow something, open **Bindings**, add *Value* and write an expression: \`score\`, \`step / 5 * 100\`, \`timeLeft\`. *Max* can be bound too, so \`questions.length\` can be the whole bar.
+- **Value** can be keyed on a [timeline](timelines) (the **\u25c6** beside it), set by a **Set property** or **Animate property** node (pick *Progress value* in the list), or by a script with \`ix.node('Bar').set('value', 60)\`. Animate it from 0 to 100 over a few seconds and you have a countdown.
+
+## Look
+
+- The **track** is the layer's own **Fill** (shown as *Track fill*) and **Stroke**: any colour, gradient, token or several paints, a stroke around it, a shadow. The **bar** is the **Bar** paint in the progress section. Both can use [theme tokens](themes), so a bar restyles with the theme and the colourway.
+- **Direction** is *Across* (it grows from the left) or *Up* (from the bottom). **From the far end** grows it from the right, or the top, instead.
+- **Radius** rounds the track, and the bar is clipped to it. A gradient bar is laid over the whole track and uncovered as the bar grows, so a green-to-red meter shows red only when it is nearly full.
+
+## For screen readers
+
+**Tells screen readers** chooses what the layer is: a **progress bar** (work towards a goal), a **meter** (a measurement in a range, like volume) or nothing. The first two put \`role\` and \`aria-valuenow\`, \`aria-valuemin\` (0), \`aria-valuemax\` and \`aria-valuetext\` on the layer, kept up to date as the value changes. Give the layer a **text alternative** in *Accessibility* ("Course progress"): the [checker](accessibility-checker) asks for one. A layer marked **Decorative** is hidden from screen readers whatever this says.
+
+**Spoken value** is what is read out for the number. Blank says the percentage ("40%"). Write your own with \`{value}\`, \`{max}\`, \`{percent}\` and any variable: \`Step {step} of 5\`. A max of 0 or less makes the bar indeterminate: it has no value to announce.
+
+## Where it works
+
+Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard. They are **not** part of a Lottie export (the export lists them as left out).`,
+  },
+  {
+    id: 'charts',
+    title: 'Charts',
+    group: 'Interactivity',
+    summary: 'Column, bar, line, pie and donut charts drawn from a list, with an axis, a legend, a hover readout, keyboard reading and a table for screen readers.',
+    keywords: 'chart graph bar column line pie donut data visualisation axis legend gridlines tooltip readout colours table accessible event index',
+    body: `A **Chart** layer draws a chart from a list: sales by month, a quiz score breakdown, answers from a poll. It scales its axis to the data, restyles with the theme, can be read with the keyboard, and gives a screen reader the numbers as a table.
+
+Pick the **Chart** tool (in the **Data** group of the tool bar, which starts folded) and drag a box, or right-click the canvas and choose **New**, **Chart**. It starts as a column chart of four made-up items so there is something to look at.
+
+## The data
+
+**Data** is an expression that gives the list: a [list variable](variables) (\`scores\`), a [data source](data-sources) (\`sales\`), or one written out (\`[3, 5, 2]\`). Items can be:
+
+- **numbers**: \`[3, 5, 2]\`, labelled 1, 2, 3;
+- **objects**: \`[{label: "Mon", value: 4}, ...]\`. **Label key** and **Value key** say which fields to use; left blank the chart looks for \`label\`, \`name\`, \`title\` or the first text, and \`value\`, \`y\`, \`count\` or the first number;
+- **pairs**: \`[["Mon", 4], ["Tue", 8]]\`;
+- **one object**: \`{Mon: 4, Tue: 8}\`.
+
+Anything that is not a number counts as 0. A chart draws up to 200 items. Under the expression, a **preview** shows the first few items as the chart reads them (and what is wrong when it can't), using the project's variables at their starting values and the loaded data. The chart redraws when a variable or data source it reads changes.
+
+## Kinds and look
+
+- **Column** (vertical bars), **Bar** (sideways), **Line** (one point per item, joined), **Pie** and **Donut** (shares of the total; negative values count as 0; **Hole** sizes the donut's).
+- The axis runs from zero (or lower, for negative values) to a round number above the biggest value. **Axis min** and **Axis max** fix either end.
+- **Gridlines**, **Axis labels**, **Value labels** (the number on each mark) and **Legend** (when each item has its own colour) switch on and off. **Decimals**, **Prefix** and **Suffix** control how numbers are written (\`$\`, \`kg\`, \`%\`). Crowded labels are shortened or thinned out.
+- **Colours** is a list of colours or [theme tokens](themes) handed out in turn. With one colour every bar and the line use it; **A colour for each item** gives each item the next colour (pie and donut charts always do). **Text colour**, **Font** and **Size** style the labels and axes. Using tokens, a chart changes with the theme and the colourway like everything else.
+
+## Reading it
+
+- **Hover** a bar, slice or point to see a readout with its name and value. **Tab** moves into the chart and the **arrow keys**, **Home** and **End** move between items, with the same readout. **Enter** or **Space** clicks the item.
+- Clicks, presses and hovers on a mark run **On pointer** nodes on the chart layer with \`event.index\`: the item's place in the list, from 0 (\`event.index\` is null away from the marks). **Pointer moves over it** gives it for each item you cross; **Hover start** only for the item you first entered. Arrowing between items fires **On focus** nodes with \`event.index\` too. So \`scores[event.index].name\` is the item that was clicked.
+- A **Table for screen readers** (on by default) puts the same numbers in a table that only a screen reader finds, with a share column for pie and donut charts. Give the chart a **text alternative** in *Accessibility* that says what it shows ("Sales by month, 2026"): the [checker](accessibility-checker) asks for one. A chart marked **Decorative** is hidden from screen readers.
+- **Grow in** makes columns and bars rise, slices and points pop, and a line draw itself, the first time the chart appears. Viewers whose device asks for less motion just get the chart (the project's *reduced motion* setting turns it on for you, as it does for animations).
+
+## Where it works
+
+Charts draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard (as they look when fully grown, without the readout). They are **not** part of a Lottie export. There is no 3D, stacking or mixing of kinds. For anything else, a [Script layer](script-layers) can draw whatever you like.`,
+  },
+  {
     id: 'usage',
     title: 'Usage: what uses what',
     group: 'Reference',
@@ -2712,6 +2783,8 @@ Only the course, the learner's first name and display name, and whether they are
 Inside the copies, \`item\` is the current item and \`index\` its position (from 0): \`{index + 1}. {item.name} - {item.price}\`.
 
 **Layout** places the copies: vertical, horizontal, grid (with columns), or none (when the frame uses [auto layout](auto-layout), which is usually best). A grid has a **Fill** direction: *Rows first* goes across each row and then down (1 2 3 / 4 5 6 / 7), *Columns first* goes down each column and then across (1 4 7 / 2 5 / 3 6), with **Cols** still the number of columns.
+
+**Text in the copies sizes itself.** A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there, so a long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow. There is no need to guess a height from the number of characters. A height or width you bind on the template layer still wins. Only copies whose text changed are measured again.
 
 **Instances in a repeater** can take their [inputs](instances) from the item: select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
 

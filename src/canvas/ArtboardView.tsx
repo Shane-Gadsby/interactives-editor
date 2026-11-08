@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { recordDrawnGeometry } from '../store/doc';
 import { flushSync } from 'react-dom';
-import { Renderer, isMasterId, paintToCss, drawnDifferently, isContainer, measureTextBox, prepareNodes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, isMasterId, paintToCss, drawnDifferently, isContainer, measureCopies, measureTextBox, prepareNodes, type CopySizes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
 import { withMasterCached } from '../lib/page-master';
@@ -178,6 +178,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
   // What was drawn last, so a change to a few layers (a keystroke in a field, a timeline frame) redraws just those.
   // Tied to the renderer it was drawn into: a new renderer has drawn nothing, whatever the props say.
   // (Declared above the renderer effect, whose cleanup clears it.)
+  // What auto-sized text in repeated copies measured as, by copy id (it lives only in the drawn tree, so not in the document)
+  const copySizes = useRef<CopySizes>(new Map());
   const lastDraw = useRef<{ renderer: Renderer; resolver: unknown; artboard: Artboard; variables: unknown; dataSources: unknown; assetVersion: number; dataVersion: number; depsKey: string; nodes: SceneNode[]; plain: boolean } | null>(null);
 
   // A layout effect, declared before the render one, so the renderer exists for the very first render.
@@ -229,11 +231,17 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
     if (!drawn) {
       const vars = previewScope(project, artboard);
       // Same bindings and repeaters the player applies, against initial variable values and the loaded data.
-      const nodes = prepareNodes(sampled, { vars });
+      let nodes = prepareNodes(sampled, { vars }, { measured: copySizes.current });
       // Script layers paint at the timeline's time (0 when none is showing), again when assets or data change
       draw.current?.configure(timeline ? time / 1000 : 0, `${assetVersion}|${dataVersion}`);
       shader.current?.configure(timeline ? time / 1000 : 0, assetVersion);
       r.render(artboard, nodes, { vars });
+      // Auto-sized text in repeated copies only exists in what was just drawn: measure it, and draw once more with those sizes (the
+      // same second pass the player makes). Only on the artboard being worked on, like the layers' own measuring below
+      if (live && measureCopies(r, nodes, copySizes.current, artboard.width)) {
+        nodes = prepareNodes(sampled, { vars }, { measured: copySizes.current });
+        r.render(artboard, nodes, { vars });
+      }
       shown = nodes;
       // Where layers ended up after bindings, repeaters and layout, for the selection outline and hit testing (only for the
       // design view: a timeline's pose is not where the document has the layer)

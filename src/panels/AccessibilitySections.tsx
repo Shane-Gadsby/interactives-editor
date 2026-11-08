@@ -58,7 +58,7 @@ export function AccessibilitySection({ nodes, ab }: { nodes: SceneNode[]; ab: Ar
   const stop = single && isTabStop(n, cx);
   const tab: TabChoice = n.focusable === true ? 'yes' : n.focusable === false ? 'no' : 'auto';
   const open = !!(n.role || n.decorative || n.ariaDescription || n.ariaLabel || n.sayAs || n.ariaPressed !== undefined || n.ariaCurrent || n.shortcut || n.focusable !== undefined || (single && stop));
-  const nameHint = n.type === 'image' || n.type === 'video' || n.type === 'draw' || n.type === 'shader' ? 'Describe what it shows' : 'What it is or does, e.g. "Next question"';
+  const nameHint = n.type === 'image' || n.type === 'video' || n.type === 'draw' || n.type === 'shader' || n.type === 'chart' ? 'Describe what it shows' : n.type === 'progress' ? 'What it measures, e.g. "Course progress"' : 'What it is or does, e.g. "Next question"';
   return (
     <Section help="accessibility" title="Accessibility" defaultOpen={open}>
       {!native && (

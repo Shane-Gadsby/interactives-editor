@@ -314,6 +314,7 @@ export function exportLottie(project: Project, artboard: Artboard, opts: { timel
         if (n.fit !== 'fill') ctx.warnings.add(`Image "${n.name}" is stretched to its box in Lottie`);
       } else ctx.warnings.add(`Image "${n.name}" has no file and was skipped`);
     } else if (isContainer(n)) layer = { ty: 3 };
+    else if (n.type === 'progress' || n.type === 'chart') ctx.warnings.add(`${n.type === 'chart' ? 'Chart' : 'Progress'} layers ("${n.name}") are drawn from live values and are not part of Lottie`);
     else ctx.warnings.add(`${n.type} layers ("${n.name}") are web elements and are not part of Lottie`);
     if (!layer) return;
     if ((n.type === 'path' && n.skin) || (n.type === 'image' && n.mesh?.skin)) ctx.warnings.add('Skinned shapes and meshes export in their rest shape: Lottie has no bones, so they only bend in the player');

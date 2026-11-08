@@ -117,6 +117,8 @@ const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
   video: 'video',
   draw: 'draw',
   shader: 'shader',
+  progress: 'progress',
+  chart: 'chart',
 };
 
 /** Tools that start a new layer where you press, so the selection's resize and rotate handles stay out of the way. */
@@ -1781,6 +1783,8 @@ export function Canvas() {
       { type: 'video', label: 'Video' },
       { type: 'draw', label: 'Script layer' },
       { type: 'shader', label: 'Shader layer' },
+      { type: 'progress', label: 'Progress bar' },
+      { type: 'chart', label: 'Chart' },
     ];
     const newHere = (ab: Artboard): MenuItem => ({
       label: 'New',
@@ -2386,6 +2390,22 @@ function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zo
         <>
           <rect x={x} y={y} width={w} height={h} fill="#1a1030" fillOpacity={0.9} />
           {h > 14 * zoom && label('Shader layer', '#c58bff', 14)}
+        </>
+      );
+    case 'progress':
+      return (
+        <>
+          <rect x={x} y={y} width={w} height={h} rx={Math.min(h / 2, 6 * zoom)} fill={LIGHT_LOOK.surfaceMuted} fillOpacity={0.9} />
+          <rect x={x} y={y} width={w * 0.4} height={h} rx={Math.min(h / 2, 6 * zoom)} fill={LIGHT_LOOK.button} fillOpacity={0.9} />
+        </>
+      );
+    case 'chart':
+      return (
+        <>
+          <rect x={x} y={y} width={w} height={h} fill={LIGHT_LOOK.surface} fillOpacity={0.6} />
+          {[0.2, 0.45, 0.3, 0.6].map((v, i) => (
+            <rect key={i} x={x + w * (0.1 + i * 0.22)} y={y + h * (0.9 - v)} width={w * 0.14} height={h * v} fill={LIGHT_LOOK.button} fillOpacity={0.9} />
+          ))}
         </>
       );
     default:

@@ -150,6 +150,8 @@ export type Tool =
   | 'video'
   | 'draw'
   | 'shader'
+  | 'progress'
+  | 'chart'
   | 'bone'
   | 'comment'
   | 'note';
@@ -614,7 +616,7 @@ export class EditorStore {
         const loc = locate(ab as Artboard, id);
         if (!loc) continue;
         for (const [prop, value] of Object.entries(props)) {
-          if (animatableProp(prop) && (record || animated(id, prop))) {
+          if (animatableProp(prop, loc.node) && (record || animated(id, prop))) {
             const dtl = ab.timelines.find((t) => t.id === tl!.id)!;
             setKey(dtl as Timeline, id, prop, keyTime(dtl as Timeline, s.playhead), value as Keyframe['value']);
           } else if (prop === 'text' && loc.node.type === 'text' && loc.node.runs?.length) {

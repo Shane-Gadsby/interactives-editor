@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
+import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerOwnProps, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { findArtboardOf, isIdentifier } from '../store/doc';
 import { previewScope } from '../lib/data';
 import { IconButton, Section } from '../components/ui';
@@ -58,7 +58,7 @@ const humanize = (k: string) => k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^
  * video what it is doing (media.time, media.playing...).
  */
 export function bindableProps(node: SceneNode, project: Project): { prop: string; label: string; kind?: string; readOnly?: boolean }[] {
-  const out: { prop: string; label: string; kind?: string; readOnly?: boolean }[] = [...ANIMATABLE_PROPS, ...nodeUniformProps(node), ...instanceInputProps(node, project.variables)];
+  const out: { prop: string; label: string; kind?: string; readOnly?: boolean }[] = [...ANIMATABLE_PROPS, ...layerOwnProps(node), ...nodeUniformProps(node), ...instanceInputProps(node, project.variables)];
   const have = new Set(out.map((p) => p.prop));
   for (const [k, v] of Object.entries(node)) {
     if (have.has(k) || NOT_BINDABLE.has(k)) continue;

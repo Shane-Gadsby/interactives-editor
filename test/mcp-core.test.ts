@@ -442,6 +442,26 @@ describe('applyChanges', () => {
   });
 });
 
+describe('data layers by agents', () => {
+  it('adds a progress layer and a chart, repairs wrong values, and sets their own settings', () => {
+    const p = sample();
+    const ab = p.artboards[0].id;
+    const { project } = change(p, [
+      { op: 'add_layer', artboard_id: ab, type: 'progress', ref: 'bar', props: { value: 'lots', max: 20, semantics: 'loud' } },
+      { op: 'add_layer', artboard_id: ab, type: 'chart', ref: 'chart', props: { kind: 'radar', data: '[1, 2]', colors: ['#fff', 3] } },
+    ]);
+    const kids = project.artboards[0].children;
+    const bar = kids.find((n) => n.type === 'progress') as { value: number; max: number; semantics: string; id: string };
+    const chart = kids.find((n) => n.type === 'chart') as { kind: string; colors: string[]; id: string };
+    expect([bar.value, bar.max, bar.semantics]).toEqual([40, 20, 'progressbar']);
+    expect([chart.kind, chart.colors]).toEqual(['column', ['#fff']]);
+    const next = change(project, [{ op: 'set_props', id: bar.id, props: { value: 15, 'barFill.color': '#00ff00' } }]).project;
+    const bar2 = next.artboards[0].children.find((n) => n.id === bar.id) as { value: number; barFill: { color: string } };
+    expect([bar2.value, bar2.barFill.color]).toEqual([15, '#00ff00']);
+    expect(mcp.overview(next, {})).toContain('progress 15/20');
+  });
+});
+
 describe('reference', () => {
   it('lists every interaction node kind with its parameters', () => {
     const text = mcp.reference('interactions');
@@ -458,9 +478,15 @@ describe('reference', () => {
 
   it('describes every layer type with its defaults, and the script and shader layers', () => {
     const text = mcp.reference('layers');
-    for (const t of ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance', 'draw', 'shader', 'bone']) expect(text).toContain(`\n- ${t}: {`);
+    for (const t of ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance', 'draw', 'shader', 'progress', 'chart', 'bone']) expect(text).toContain(`\n- ${t}: {`);
     expect(text).toContain('Script layers');
     expect(text).toContain('Shader layers');
+    expect(text).toContain('Progress bars (type "progress"');
+    expect(text).toContain('Charts (type "chart"');
+  });
+
+  it('lists the settings only a progress layer has', () => {
+    expect(mcp.reference('properties')).toContain('On a progress layer only: value (number): Progress value; max (number): Progress maximum');
   });
 
   it('serves any help page by id, and says what topics exist when asked for something else', () => {

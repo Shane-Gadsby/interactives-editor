@@ -257,6 +257,8 @@ export function analyzeUsage(project: Project): UsageReport {
         if (n.type === 'draw') useCode(n.code, by, 'script layer code');
         // Pictures a shader reads (image uniforms of a shader layer or an image layer's shader filter)
         for (const u of (n.type === 'shader' ? n.uniforms : n.type === 'image' ? n.shaderFilter?.uniforms : undefined) ?? []) if (u.type === 'image' && typeof u.value === 'string' && u.value) useId('asset', u.value, by, 'shader image');
+        if (n.type === 'chart' && n.data.trim()) useExpr(n.data, by, 'chart data');
+        if (n.type === 'progress' && n.valueText) for (const e of templateSlots(n.valueText)) useExpr(e, by, 'spoken value template');
         if (n.type === 'input') useId('variable', n.variableId, by, 'input bound to variable');
         if (n.type === 'instance') {
           useId('artboard', n.artboardId, by, 'instance of artboard');

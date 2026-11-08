@@ -35,6 +35,8 @@ function localRings(n: SceneNode): Pair[][] {
     case 'embed':
     case 'draw':
     case 'shader':
+    case 'progress':
+    case 'chart':
     case 'video': {
       // Radii per corner draw instead of the single radius
       const radii = cornerRadiiOf(n as { cornerRadii?: unknown });
