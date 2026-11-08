@@ -8,20 +8,22 @@
  *                text, chart labels and the words in chips and feedback notes are all text
  *   placeholder  an input's placeholder (the browser draws it in its own grey, #757575) under 4.5:1 against the input's box
  *   control-edge a button, input or clickable frame whose edge is under 3:1 against what is around it, by its fill or its stroke
- *   focus        the focus ring (the `focus` token, 3 px outside the control) under 3:1 against what is around the control
+ *   focus        the focus ring under 3:1 against what is around the control. The ring is two tones (the player draws it, see focus-ring.ts in
+ *                   the player): the `focus` token, 3 px, with a 2 px halo of black or white either side of it, whichever is further from
+ *                   the token. It passes when either tone is 3:1 clear of what is around the control, so the one colourway token serves a
+ *                   white page, a gradient and a dark panel alike
  *   progress     a progress bar's bar under 3:1 against its track
  *   chart        chart marks under 3:1 against what is behind the chart
  *
- *   focus-brand  the same, on a hero or end page (a gradient behind the control) or on a deep panel, where what is behind it is dark. The ring is one colour (the player draws it
- *                   from the `focus` token, and a page cannot have its own), which has to clear 3:1 on the white content pages where nearly every
- *                   control is, and no one colour does that and clears the dark ends of the Blue, Green and Purple gradients too. Listed, not failed.
+ *   focus-brand  the same as focus, on a hero or end page (a gradient behind the control) or on a deep panel. It used to be listed and not failed, back
+ *                   when the ring was one colour and no single colour cleared both the white pages and the dark ends of the gradients. It is strict now
  *
  * A disabled control is exempt from all of them (it is dimmed, and WCAG does not ask for more). Gradients are read at the point
  * under the words, not by their worst end. Anything over a picture, a video or another unknown painter is left out, not guessed.
  * Hover and pressed have no look of their own in the player (a layer that wants one binds its colours, and those show up in the
  * state it is bound to), so they are checked where a starter's states reach them and nowhere else.
  */
-import { fillList, invert, isContainer, isTokenRef, makeColorResolver, multiply, nodeMatrix, apply, type Artboard, type ContainerNode, type Matrix, type Paint, type Project, type RGBA, type SceneNode } from 'interactives-player';
+import { fillList, focusHaloFor, invert, isContainer, isTokenRef, makeColorResolver, multiply, nodeMatrix, apply, type Artboard, type ContainerNode, type Matrix, type Paint, type Project, type RGBA, type SceneNode } from 'interactives-player';
 import { contrastRatio, over, requiredRatio, toRgba, withTokens, type RGB } from '../a11y/colour';
 import { samplePoints, textExtent } from '../a11y/backdrop';
 import { OVERLAY_TAG, type LayoutState } from './kit';
@@ -29,8 +31,8 @@ import { filledText, preparedPage } from './layout-check';
 
 export type ContrastKind = 'text' | 'placeholder' | 'control-edge' | 'focus' | 'focus-brand' | 'progress' | 'chart';
 
-/** The kinds that fail the starter-contrast test. `focus-brand` is listed only: see its note at the top of this file. */
-export const STRICT_CONTRAST_KINDS: ContrastKind[] = ['text', 'placeholder', 'control-edge', 'focus', 'progress', 'chart'];
+/** The kinds that fail the starter-contrast test: all of them. */
+export const STRICT_CONTRAST_KINDS: ContrastKind[] = ['text', 'placeholder', 'control-edge', 'focus', 'focus-brand', 'progress', 'chart'];
 
 export interface ContrastFinding {
   kind: ContrastKind;
@@ -281,6 +283,8 @@ function drawn(sheet: Sheet, e: Entry): boolean {
   });
 }
 
+const haloOf = (c: RGBA): RGB => (focusHaloFor([c[0], c[1], c[2]]) === '#ffffff' ? [255, 255, 255] : [0, 0, 0]);
+
 function checkControl(cx: Ctx, sheet: Sheet, e: Entry): void {
   if (!drawn(sheet, e)) return;
   const n = e.node as SceneNode & { stroke?: { paint: Paint; width: number } | null; strokes?: unknown[] };
@@ -308,14 +312,15 @@ function checkControl(cx: Ctx, sheet: Sheet, e: Entry): void {
     }
     if (strokeSpec && strokeSpec !== 'unknown' && strokeSpec.kind === 'solid') best = Math.max(best, contrastRatio(over(strokeSpec.c, out, e.alpha), out));
     worst = Math.min(worst, best);
-    if (cx.focus) focusWorst = Math.min(focusWorst, contrastRatio(over(cx.focus, out, 1), out));
+    //the ring is two tones: it shows when either one is clear of what is around the control
+    if (cx.focus) focusWorst = Math.min(focusWorst, Math.max(contrastRatio(over(cx.focus, out, 1), out), contrastRatio(haloOf(cx.focus), out)));
     //(under 3.4:1 against black is a luminance under 0.12)
     if (contrastRatio(out, [0, 0, 0]) < 3.4) darkAround = true;
   }
   if (!any) return;
   //a control with nothing painted (a hit area over a picture, say) has no edge to see
   if (edgeMatters && (fillSpec || strokeSpec) && worst < 3) cx.out.push({ kind: 'control-edge', theme: cx.theme, page: cx.page, layer: label(e.node, (n as { label?: string }).label), ratio: r2(worst), need: 3, detail: 'its fill or stroke against what is around it' });
-  if (cx.focus && focusWorst < 3) cx.out.push({ kind: cx.gradient || darkAround ? 'focus-brand' : 'focus', theme: cx.theme, page: cx.page, layer: label(e.node, (n as { label?: string }).label), ratio: r2(focusWorst), need: 3, detail: `the focus ring ${hex(cx.focus)} against what is around it` });
+  if (cx.focus && focusWorst < 3) cx.out.push({ kind: cx.gradient || darkAround ? 'focus-brand' : 'focus', theme: cx.theme, page: cx.page, layer: label(e.node, (n as { label?: string }).label), ratio: r2(focusWorst), need: 3, detail: `the focus ring ${hex(cx.focus)} with its ${focusHaloFor([cx.focus[0], cx.focus[1], cx.focus[2]])} halo, against what is around it` });
 }
 
 function checkPage(cx: Ctx, page: Artboard, nodes: SceneNode[], scope: Parameters<typeof filledText>[1]): void {
