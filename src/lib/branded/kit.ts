@@ -102,6 +102,8 @@ export const BRAND_TOKEN_NAMES: Record<BrandKey, string> = {
   logoMarkOnLight: 'brand/logo-mark-on-light',
   logoTextOnLight: 'brand/logo-text-on-light',
   scrim: 'brand/scrim',
+  accentButton: 'brand/accent-button',
+  onAccentButton: 'brand/on-accent-button',
 };
 
 export const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
@@ -339,8 +341,11 @@ export const text = (ctx: BrandedCtx, name: string, value: string, x: number, y:
 export const heading = (ctx: BrandedCtx, name: string, value: string, x: number, y: number, width: number, extra: Partial<TextNode> = {}): TextNode =>
   text(ctx, name, value, x, y, width, { fontSize: 24, fontWeight: 700, role: 'heading', headingLevel: 2, ...extra });
 
-export const button = (ctx: BrandedCtx, name: string, label: string, x: number, y: number, width = 180, primary = true) =>
-  createNode('button', {
+//`accent`: a question's own action (Play the word, Repeat, a clip's Play), in the accent button colours so it never looks like Submit
+export const button = (ctx: BrandedCtx, name: string, label: string, x: number, y: number, width = 180, primary: boolean | 'accent' = true) =>
+  primary === 'accent'
+    ? createNode('button', { name, label, x, y, width, height: 46, cornerRadius: 23, fill: solid(ctx.L.accentButton), stroke: stroke(ctx.L.onAccentButton), color: ctx.L.onAccentButton, fontSize: 16, fontWeight: 600, fontFamily: BRAND_FONT })
+    : createNode('button', {
     name,
     label,
     x,

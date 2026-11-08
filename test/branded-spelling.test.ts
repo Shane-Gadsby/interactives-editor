@@ -88,7 +88,7 @@ describe('the spelling test starter', () => {
     for (const f of frames) {
       const parts = partsOf(f);
       const row = parts.promptRow[0] as FrameNode;
-      expect(row.children.map((c) => c.questionPart ?? c.name)).toEqual(['prompt', 'Play word button', 'hint']);
+      expect(row.children.map((c) => c.questionPart)).toEqual(['prompt', 'hint']);
       expect(f.children[0]).toBe(row);
       expect(parts.hint[0]).toMatchObject({ type: 'button', height: 32, cornerRadius: 16, width: 84 });
       expect(parts.hint[0].height).toBeLessThan(parts.check[0].height);
@@ -97,30 +97,34 @@ describe('the spelling test starter', () => {
     }
   });
 
-  it('puts Play the word inside the card, at the right of the prompt, ahead of the hint, and not above the card', () => {
+  it('puts Play the word at the start of the card\'s button row in the accent colour, and Submit answer at the far right', () => {
     for (const ab of project.artboards.slice(1, 7)) {
       const f = questionFrames(ab)[0];
-      const row = partsOf(f).promptRow[0] as FrameNode;
-      const play = byName(ab, 'Play word button')!;
-      expect(row.children.indexOf(play)).toBe(1);
-      expect(row.layout).toMatchObject({ align: 'center' });
-      expect(partsOf(f).prompt[0].layoutItem).toMatchObject({ width: 'fill' });
+      const row = partsOf(f).buttons[0] as FrameNode;
+      const play = byName(ab, 'Play word button')! as ButtonNode;
+      const order = row.children.map((c) => c.questionPart ?? c.name);
+      expect(order[0]).toBe('Play word button');
+      expect(order[1]).toBe('gap');
+      expect(order[order.length - 1]).toBe('check');
+      expect(partsOf(f).gap[0].layoutItem).toMatchObject({ width: 'fill' });
+      expect(row.layoutItem).toMatchObject({ width: 'fill' });
       //the word body holds only the card now
-      const body = byName(ab, 'Word body') as FrameNode;
-      expect(body.children).toEqual([f]);
-      //it keeps its own dark look, it is not restyled as one of the card's secondary buttons
-      expect(play).toMatchObject({ height: 40, fill: expect.anything() });
-      expect(JSON.stringify((play as ButtonNode).fill)).not.toBe(JSON.stringify((partsOf(f).hint[0] as ButtonNode).fill));
+      expect((byName(ab, 'Word body') as FrameNode).children).toEqual([f]);
+      //never the same look as Submit: the accent button tokens, not the button ones
+      const submit = partsOf(f).check[0] as ButtonNode;
+      expect(JSON.stringify(play.fill)).not.toBe(JSON.stringify(submit.fill));
+      expect(JSON.stringify(play.fill)).toContain(project.themes!.tokens.find((t) => t.name === 'brand/accent-button')!.id);
     }
   });
 
-  it('keeps Play the word in the prompt row when the word page is copied', () => {
+  it('keeps Play the word leading the button row when the word page is copied', () => {
     const copy = JSON.parse(JSON.stringify(project)) as Project;
     const ab = copy.artboards[1];
     const f = questionFrames(ab)[0];
     makeIndependent(copy, ab.id, f.id);
-    const row = partsOf(f).promptRow[0] as FrameNode;
-    expect(row.children.map((c) => c.questionPart ?? c.name)).toEqual(['prompt', 'Play word button', 'hint']);
+    const order = (partsOf(f).buttons[0] as FrameNode).children.map((c) => c.questionPart ?? c.name);
+    expect(order[0]).toBe('Play word button');
+    expect(order[order.length - 1]).toBe('check');
   });
 
   it('keeps the options when the word page is copied (the copy is a new question that shares the layers\' wording)', () => {

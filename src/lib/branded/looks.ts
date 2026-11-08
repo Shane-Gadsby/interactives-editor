@@ -9,7 +9,7 @@
  */
 import type { LookKey } from 'interactives-player';
 
-export type BrandKey = 'gradientStart' | 'gradientEnd' | 'onGradient' | 'deep' | 'onDeep' | 'accent' | 'warm' | 'logoMark' | 'logoText' | 'logoMarkOnLight' | 'logoTextOnLight' | 'scrim';
+export type BrandKey = 'gradientStart' | 'gradientEnd' | 'onGradient' | 'deep' | 'onDeep' | 'accent' | 'warm' | 'logoMark' | 'logoText' | 'logoMarkOnLight' | 'logoTextOnLight' | 'scrim' | 'accentButton' | 'onAccentButton';
 
 export interface Colourway {
   id: string;
@@ -61,8 +61,12 @@ const way = (id: string, name: string, description: string, start: string, end: 
   name,
   description,
   tokens: { primary, button, onButton, focus: primary, onPrimary: primary === button ? onButton : WHITE },
-  brand: { gradientStart: start, gradientEnd: end, onGradient, deep: PURPLE, onDeep: WHITE, accent, warm: PEACH, logoMark, logoText, logoMarkOnLight: GOLD, logoTextOnLight: PURPLE, scrim: id === 'orange' || id === 'red' ? SCRIM : CLEAR },
+  brand: { gradientStart: start, gradientEnd: end, onGradient, deep: PURPLE, onDeep: WHITE, accent, warm: PEACH, logoMark, logoText, logoMarkOnLight: GOLD, logoTextOnLight: PURPLE, scrim: id === 'orange' || id === 'red' ? SCRIM : CLEAR, ...accentButton(button) },
 });
+
+//The accent button (a question's own action, Play the word, beside the dark Submit): gold, or purple where the button is gold
+//already, so the two never look the same in any colourway
+const accentButton = (button: string) => (button === GOLD ? { accentButton: PURPLE, onAccentButton: WHITE } : { accentButton: GOLD, onAccentButton: INK });
 
 /** In the order the picker shows them. The first is the default. */
 export const COLOURWAYS: Colourway[] = [
@@ -80,7 +84,7 @@ export const HIGH_CONTRAST: Colourway = {
   name: 'High contrast',
   description: 'Black and white with gold, for viewers who ask for more contrast.',
   tokens: { background: '#000000', surface: '#000000', surfaceMuted: '#1e1e1e', text: WHITE, muted: WHITE, border: WHITE, divider: WHITE, primary: GOLD, button: GOLD, onButton: '#000000', onPrimary: '#000000', focus: WHITE, link: '#9fd1ff', success: '#8fe388', successSurface: '#000000', error: '#ff9b9b', errorSurface: '#000000', warning: GOLD, warningSurface: '#000000' },
-  brand: { gradientStart: '#000000', gradientEnd: '#000000', onGradient: WHITE, deep: '#000000', onDeep: WHITE, accent: GOLD, warm: '#000000', logoMark: GOLD, logoText: WHITE, logoMarkOnLight: GOLD, logoTextOnLight: WHITE, scrim: CLEAR },
+  brand: { gradientStart: '#000000', gradientEnd: '#000000', onGradient: WHITE, deep: '#000000', onDeep: WHITE, accent: GOLD, warm: '#000000', logoMark: GOLD, logoText: WHITE, logoMarkOnLight: GOLD, logoTextOnLight: WHITE, scrim: CLEAR, accentButton: '#000000', onAccentButton: WHITE },
 };
 
 export const colourwayById = (id: string): Colourway | undefined => [...COLOURWAYS, HIGH_CONTRAST].find((c) => c.id === id);

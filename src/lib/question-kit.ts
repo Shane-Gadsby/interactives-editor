@@ -1348,7 +1348,7 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
 
 /**
  * The Listen button, made in the buttons row: there when the question offers read aloud, gone when it does not. It hides itself
- * when the device has no voice. A starter may have moved it to the prompt's row (`titleControls`), so it is looked for anywhere in the card.
+ * when the device has no voice. A starter may have moved it (`leadControls`), so it is looked for anywhere in the card.
  */
 function syncListen(ab: Artboard, frame: FrameNode, q: Question): void {
   const row = partsOf(frame).buttons?.[0];
@@ -1418,11 +1418,11 @@ export interface KitOptions {
   /** A project boolean variable that switches Try again on (`allowTryAgain`): the button shows only while it is true, whatever the retake rule says. */
   resetWhen?: string;
   /**
-   * The starter's own layers that belong to this one question (Play the word, Play the clip, Replay): they go in the prompt's
-   * row, at the right, ahead of the Hint pill, instead of a row of their own outside the card. Moved, not copied, so their
-   * wiring stays as it is.
+   * The starter's own layers that belong to this one question (Play the word, Repeat): they lead the buttons row at the left,
+   * and the kit's own buttons go to the far right with Check (Submit) last, so the question's action and its answer button
+   * sit at opposite ends. Moved, not copied, so their wiring stays as it is.
    */
-  titleControls?: SceneNode[];
+  leadControls?: SceneNode[];
 }
 
 /** The pill: the look of a secondary action, small enough to sit beside a heading. */
@@ -1464,25 +1464,27 @@ export function setKitOptions(d: Project, abId: string, frameId: string, o: KitO
       }
     }
   }
-  if (o.titleControls?.length) {
-    const row = promptRow(ab, frame);
-    if (row) {
-      const add = o.titleControls.filter((c) => !row.children.includes(c));
-      //Out of wherever they were first (a starter's own stack, say), then in after the prompt and before the Hint pill
-      for (const c of add) {
+  if (o.leadControls?.length) {
+    const row = parts.buttons?.[0];
+    if (row && isContainer(row)) {
+      const lead = o.leadControls;
+      //Out of wherever they were first (a starter's own stack, say)
+      for (const c of lead) {
+        if (row.children.includes(c)) continue;
         const was = locate(ab, c.id);
         if (was) was.siblings.splice(was.index, 1);
       }
-      const pill = row.children.findIndex((c) => c.questionPart === 'hint');
-      row.children.splice(pill < 0 ? row.children.length : pill, 0, ...add);
-      //a button is taller than one line of heading, so the heading sits level with it rather than at the top
-      row.layout = { ...row.layout!, align: 'center' };
+      const gap = row.children.find((c) => c.questionPart === 'gap') ?? createNode('frame', { name: 'Gap', questionPart: 'gap', fill: null, stroke: null, width: 1, height: 1, decorative: true, layoutItem: { width: 'fill' } });
+      const kit = row.children.filter((c) => !lead.includes(c) && c !== gap);
+      const check = kit.filter((c) => c.questionPart === 'check');
+      row.children = [...lead, gap, ...kit.filter((c) => c.questionPart !== 'check'), ...check];
+      //the row spans the card, so the gap has room to push the kit's buttons to the right
+      row.layoutItem = { ...(row.layoutItem ?? {}), width: 'fill' };
     }
   }
 }
 
-//One row for the heading and whatever sits beside it (the Hint pill, the starter's own controls), made once: the prompt keeps the
-//room and the rest sits at the right
+//One row for the heading and the Hint pill beside it, made once: the prompt keeps the room and the pill sits at the right
 function promptRow(ab: Artboard, frame: ContainerNode): FrameNode | null {
   const parts = partsOf(frame);
   const made = parts.promptRow?.[0];

@@ -40,16 +40,17 @@ export function buildSpellingTest(colourway: Colourway) {
     //The footer counts the word pages from the page order
     const page = brandedPage(ctx, `Word ${n}`, { footer: 'Word {pageNumber - 1} of {pageCount - 2}' });
     const at = box(page);
-    //The play button sits in the card at the right of the prompt, so it reads as this word's own and comes straight after the instruction
+    //The play button leads the card's button row, in the accent colour, and Submit answer sits at the far right: the word's own action
+    //and the final answer at opposite ends, and never the same look
     //Playing the word is not a second press away while it is going: the button is disabled and says so until the sound ends (or is stopped)
-    const play = bind(Object.assign(button(ctx, 'Play word button', 'Play the word', 0, 0, 170), { height: 40, cornerRadius: 20, fontSize: 16 }), {
+    const play = bind(button(ctx, 'Play word button', 'Play the word', 0, 0, 180, 'accent'), {
       disabled: 'soundPlaying()',
       label: 'soundPlaying() ? "Playing…" : "Play the word"',
       ariaLabel: `soundPlaying() ? "Playing word ${n}" : "Play word ${n}"`,
     });
     plays.push(play);
     //Submit, not Check: the answer is final and marked. Hint is a small pill at the top right of the card, Try again is off: both follow one switch each
-    const id = addQuestion(project, page.id, 'blank', { at: { x: at.x, y: at.y + 70 }, checkLabel: 'Submit answer', hint: 'pill', hintWhen: 'offerHint', resetWhen: 'allowTryAgain', titleControls: [play] })!;
+    const id = addQuestion(project, page.id, 'blank', { at: { x: at.x, y: at.y + 70 }, checkLabel: 'Submit answer', hint: 'pill', hintWhen: 'offerHint', resetWhen: 'allowTryAgain', leadControls: [play] })!;
     setQuestionSettings(project, page.id, id, {
       prompt: 'Listen to the word, then type it.',
       points: 1,

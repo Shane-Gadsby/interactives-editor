@@ -355,22 +355,22 @@ describe('Listening lab', () => {
 });
 
 describe('the listening lab clip cards', () => {
-  it('put each clip\'s Play at the right of its title, inside the card, read straight after the title', () => {
+  it('put each clip\'s Play bottom left of its card, under the waveform, in the accent colour', () => {
     const s = BRANDED_STARTERS.find((x) => x.key === 'media/listening-lab')!;
     const p = projectFromBrandedStarter(s, COLOURWAYS[0]);
+    const accent = p.themes!.tokens.find((t) => t.name === 'brand/accent-button')!.id;
     let seen = 0;
     for (const ab of p.artboards) {
       for (const name of ['Sound 1', 'Clip A', 'Clip B', 'Before', 'After']) {
-        const card = byName(ab, `${name} card`) as (SceneNode & { width: number; children: SceneNode[] }) | null;
+        const card = byName(ab, `${name} card`) as (SceneNode & { children: SceneNode[] }) | null;
         if (!card) continue;
         seen++;
-        const title = byName(ab, `${name} title`) as SceneNode & { x: number; y: number; width: number };
-        const play = byName(ab, `${name} play button`) as SceneNode & { x: number; y: number; width: number; height: number };
-        expect(card.children.slice(0, 2)).toEqual([title, play]);
-        //on the title's line, at the right edge of the card, clear of the title
-        expect(play.y).toBeLessThan(title.y + 20);
-        expect(play.x + play.width).toBe(card.width - 20);
-        expect(title.x + title.width).toBeLessThan(play.x);
+        const wave = byName(ab, `${name} waveform`) as SceneNode & { y: number; height: number };
+        const play = byName(ab, `${name} play button`) as SceneNode & { x: number; y: number; fill: unknown };
+        expect(card.children.map((c) => c.name)).toEqual([`${name} title`, `${name} waveform`, `${name} play button`, `${name} description`]);
+        expect(play.x).toBe(20);
+        expect(play.y).toBeGreaterThan(wave.y + wave.height);
+        expect(JSON.stringify(play.fill)).toContain(accent);
       }
     }
     expect(seen).toBe(5);

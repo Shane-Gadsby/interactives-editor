@@ -120,9 +120,10 @@ describe('putting the made audio in the document', () => {
     expect(nodes).toHaveLength(1);
     expect(targetNode(a, questionFrames(a)[0].question!)!.id).toBe(nodes[0].id);
     const click = a.logic.nodes.find((n) => n.kind === 'event.pointer' && a.logic.edges.some((e) => e.from === n.id && e.to === nodes[0].id))!;
-    //the button goes in the card, in the prompt's row, not above the card
-    const row = partsOf(questionFrames(a)[0]).promptRow[0] as FrameNode;
+    //the button leads the card's button row, not above the card
+    const row = partsOf(questionFrames(a)[0]).buttons[0] as FrameNode;
     expect(row.children.some((c) => c.id === click.params.target && c.type === 'button')).toBe(true);
+    expect(row.children[row.children.length - 1].questionPart).toBe('check');
     expect(a.children.some((c) => c.id === click.params.target)).toBe(false);
   });
 

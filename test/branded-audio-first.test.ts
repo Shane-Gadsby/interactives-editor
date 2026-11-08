@@ -345,19 +345,20 @@ describe('the Audio-first quiz', () => {
 });
 
 describe('the audio-first quiz layout', () => {
-  it('puts Repeat (R) in the card beside the prompt, a pill ahead of the Hint, and keeps it there through a sync', () => {
+  it('puts Repeat (R) at the start of the button row in the accent colour, Next at the far right, and keeps it there through a sync', () => {
     const p = projectFromBrandedStarter(starter, COLOURWAYS[0]);
     const ab = p.artboards[1];
     const f = questionFrames(ab)[0];
-    const parts = partsOf(f);
-    const row = parts.promptRow[0] as FrameNode;
-    expect(row.children.map((c) => c.questionPart)).toEqual(['prompt', 'listen', 'hint']);
-    expect(parts.listen).toHaveLength(1);
-    expect(parts.listen[0]).toMatchObject({ label: 'Repeat (R)', height: 32 });
-    expect((parts.buttons[0] as FrameNode).children.some((c) => c.questionPart === 'listen')).toBe(false);
-    //a settings change runs the sync, which must not make a second Listen in the buttons row
+    const order = () => (partsOf(f).buttons[0] as FrameNode).children.map((c) => c.questionPart);
+    expect(order()[0]).toBe('listen');
+    expect(order()[1]).toBe('gap');
+    expect(order()[order().length - 1]).toBe('reset');
+    expect(partsOf(f).listen[0]).toMatchObject({ label: 'Repeat (R)' });
+    expect(JSON.stringify((partsOf(f).listen[0] as FrameNode).fill)).toContain(p.themes!.tokens.find((t) => t.name === 'brand/accent-button')!.id);
+    //a settings change runs the sync, which must not make a second Listen
     setQuestionSettings(p, ab.id, f.id, { hintPenalty: 0 });
     expect(partsOf(f).listen).toHaveLength(1);
+    expect(order()[0]).toBe('listen');
     setQuestionSettings(p, ab.id, f.id, { listen: false });
     expect(partsOf(f).listen ?? []).toHaveLength(0);
   });
