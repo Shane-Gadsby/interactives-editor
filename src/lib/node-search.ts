@@ -48,7 +48,7 @@ export const NODE_SYNONYMS: Record<string, string[]> = {
   'action.loadUserData': ['load', 'restore', 'resume', 'remember', 'progress'],
   'action.loadData': ['fetch', 'refresh', 'reload', 'api', 'csv', 'json', 'data source'],
   'action.clock': ['timer', 'clock', 'countdown', 'stopwatch', 'time limit', 'seconds'],
-  'action.sound': ['sound', 'audio', 'music', 'play audio', 'mp3', 'effect', 'noise', 'loop'],
+  'action.sound': ['sound', 'audio', 'music', 'soundtrack', 'background music', 'play audio', 'mp3', 'effect', 'noise', 'loop'],
   'action.video': ['video', 'play video', 'pause video', 'seek', 'speed', 'frame'],
   'action.stopSound': ['silence', 'mute', 'stop audio', 'end loop'],
   'action.recordStart': ['microphone', 'mic', 'record', 'voice', 'audio', 'camera'],

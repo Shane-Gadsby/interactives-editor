@@ -181,7 +181,7 @@ describe('BehaviourDialog', () => {
   it('lists what can happen in plain words, grouped, with the first one ready', () => {
     open();
     expect(q('#behaviour-title')!.textContent).toBe('When “Next button” is clicked…');
-    expect(radios().map((r) => r.querySelector('.recipe-name')!.textContent)).toEqual(['Go to the next page', 'Go to the previous page', 'Go to a page…', 'Show a layer', 'Hide a layer', 'Show or hide a layer', 'Play an animation', 'Play a sound', 'Add 1 to a counter', 'Switch something on or off', 'Open a link', 'Start over']);
+    expect(radios().map((r) => r.querySelector('.recipe-name')!.textContent)).toEqual(['Go to the next page', 'Go to the previous page', 'Go to a page…', 'Show a layer', 'Hide a layer', 'Show or hide a layer', 'Play an animation', 'Play a sound', 'Play music that carries on across pages', 'Stop the music', 'Add 1 to a counter', 'Switch something on or off', 'Open a link', 'Start over']);
     expect(radios()[0].getAttribute('aria-checked')).toBe('true');
     expect(q('.behaviour-preview')!.textContent).toBe('It will do this: When clicked: go to the next page.');
     expect(q('[role=dialog]')!.getAttribute('aria-modal')).toBe('true');

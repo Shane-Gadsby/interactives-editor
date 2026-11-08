@@ -261,7 +261,7 @@ const ACTION: Record<string, (p: P, c: Names) => string> = {
   'action.startOver': () => 'start over',
   'action.reportResult': (p) => (p.completed === 'progress' ? `report the score so far${p.score ? ` (${val(p.score)})` : ''}` : `report the result${p.score ? ` (score ${val(p.score)})` : ''}`),
   'action.record': (p) => `record ${quoted(String(p.name ?? 'milestone'))}`,
-  'action.sound': (p, c) => `play ${p.asset ? quoted(c.asset(p.asset)) : p.source ? `the sound ${val(p.source)}` : 'a sound'}${String(p.loop ?? 'false') === 'true' ? ' on a loop' : ''}`,
+  'action.sound': (p, c) => `play ${p.asset ? quoted(c.asset(p.asset)) : p.source ? `the sound ${val(p.source)}` : 'a sound'}${String(p.loop ?? 'false') === 'true' ? ' on a loop' : ''}${p.soundtrack === true ? ' as the soundtrack' : ''}`,
   'action.stopSound': (p, c) => (p.asset ? `stop the sound ${quoted(c.asset(p.asset))}` : 'stop all sounds'),
   'action.delay': (p) => `wait ${secs(p.ms)}`,
   'action.emit': (p) => `send the message ${p.name ? quoted(String(p.name)) : 'you name'}`,

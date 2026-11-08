@@ -48,6 +48,9 @@ describe('buildBehaviour', () => {
     expect(act('page-next').params).toMatchObject({ to: 'next' });
     expect(act('page-previous').params).toMatchObject({ to: 'previous' });
     expect(act('page-pick', { page: f.quiz.id }).params).toMatchObject({ to: 'picked', artboard: f.quiz.id });
+    expect(act('soundtrack', { sound: 'snd' }).params).toMatchObject({ asset: 'snd', loop: 'true', soundtrack: true });
+    expect(act('soundtrack-stop')).toMatchObject({ kind: 'action.stopSound' });
+    expect(buildBehaviour(ctx, 'soundtrack', 'click', { sound: 'snd' }, mk).sentence).toContain('as the soundtrack');
     expect(act('show', { layer: f.hint.id })).toMatchObject({ kind: 'action.visibility', params: { target: f.hint.id, op: 'show' } });
     expect(act('hide', { layer: THIS_LAYER }).params).toMatchObject({ target: f.btn.id, op: 'hide' });
     expect(act('toggle', { layer: f.hint.id }).params).toMatchObject({ op: 'toggle' });

@@ -115,6 +115,22 @@ export const RECIPES: Recipe[] = [
     action: (a) => ({ kind: 'action.sound', params: { ...defaultParams('action.sound'), asset: a.sound ?? '' } }),
   },
   {
+    id: 'soundtrack',
+    label: 'Play music that carries on across pages',
+    hint: 'The soundtrack: it keeps playing when the page changes, goes quiet under narration, and stops at Stop the music.',
+    group: 'Motion and sound',
+    needs: [{ key: 'sound', kind: 'sound', label: 'Which music' }],
+    action: (a) => ({ kind: 'action.sound', params: { ...defaultParams('action.sound'), asset: a.sound ?? '', loop: 'true', soundtrack: true } }),
+  },
+  {
+    id: 'soundtrack-stop',
+    label: 'Stop the music',
+    hint: 'Fades the soundtrack out. Other sounds stop too.',
+    group: 'Motion and sound',
+    needs: [],
+    action: () => ({ kind: 'action.stopSound', params: { ...defaultParams('action.stopSound') } }),
+  },
+  {
     id: 'counter',
     label: 'Add 1 to a counter',
     hint: 'Counts how many times it happens, in a number you can show or test.',
