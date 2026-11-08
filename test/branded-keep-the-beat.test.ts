@@ -40,7 +40,7 @@ beforeEach(() => {
   vi.stubGlobal('requestAnimationFrame', () => 0);
   vi.stubGlobal('cancelAnimationFrame', () => undefined);
   vi.stubGlobal('Audio', FakeAudio);
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date', 'performance'] });
   vi.setSystemTime(1_700_000_000_000);
 });
 afterEach(() => {
@@ -101,7 +101,9 @@ describe('Keep the beat', () => {
     return n.id;
   };
   const click = async (pg: string, name: string) => {
-    must(id(pg, name)).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    //a copy of a repeated layer is its layer's id and ~ and its place ("Choose drill~1")
+    const [base, copy] = name.split('~');
+    must(copy === undefined ? id(pg, base) : `${id(pg, base)}~${copy}`).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
     await vi.advanceTimersByTimeAsync(1);
     player.step(1);
   };
@@ -129,7 +131,7 @@ describe('Keep the beat', () => {
     player = new Player(document.getElementById('stage')!, project, { loadData: false });
     await click('Start', 'Start button');
     expect(player.artboard.name).toBe('Pick a drill');
-    await click('Pick a drill', `Choose drill ${drill + 1}`);
+    await click('Pick a drill', `Choose drill~${drill}`);
     expect(player.artboard.name).toBe('Drill');
     await click('Drill', 'Start button');
     const startAt = Number(v('startAt'));
@@ -153,6 +155,21 @@ describe('Keep the beat', () => {
         expect(n.y + n.height, `${pg.name}: ${n.name}`).toBeLessThanOrEqual(640 - 44 - 16 + 0.5);
       }
     }
+  });
+
+  it('is built on the native pieces: one steady clock gated by Only while, drill cards and beat markers as repeaters, the tempo reading as live variables', () => {
+    const p = projectFromBrandedStarter(beat, COLOURWAYS[0]);
+    project = p;
+    const timers = page('Drill').logic.nodes.filter((n) => n.kind === 'event.timer');
+    expect(timers).toHaveLength(1);
+    expect(timers[0].params).toMatchObject({ ms: 16, steady: true, while: 'phase == "lead" || phase == "keep"' });
+    const live = p.variables.filter((x) => x.live).map((x) => x.name);
+    expect(live).toEqual(expect.arrayContaining(['period', 'lead', 'tol', 'accuracy', 'recent', 'slopeMs', 'drift', 'driftText']));
+    expect((byName(page('Pick a drill'), 'Drills') as { repeat?: { items: string } }).repeat?.items).toBe('presets');
+    expect((byName(page('Drill'), 'Beat markers') as { repeat?: { items: string } }).repeat?.items).toBe('marks');
+    //one flow chooses any drill, and the marks come from "keep"
+    expect(page('Pick a drill').logic.nodes.filter((n) => n.kind === 'event.pointer')).toHaveLength(1);
+    expect(p.variables.find((x) => x.name === 'marks')?.formula).toContain('keep');
   });
 
   it('opens on the drills, each with its own tempo, tolerance and wording (the compression pace says rhythm practice only)', async () => {
@@ -218,7 +235,7 @@ describe('Keep the beat', () => {
     project = JSON.parse(JSON.stringify(projectFromBrandedStarter(beat, COLOURWAYS[0])));
     player = new Player(document.getElementById('stage')!, project, { loadData: false });
     await click('Start', 'Start button');
-    await click('Pick a drill', 'Choose drill 1');
+    await click('Pick a drill', 'Choose drill~0');
     await click('Drill', 'Guide switch');
     expect(v('guide')).toBe(true);
     await click('Drill', 'Start button');
@@ -305,7 +322,7 @@ describe('Keep the beat', () => {
     project = JSON.parse(JSON.stringify(projectFromBrandedStarter(beat, COLOURWAYS[0])));
     player = new Player(document.getElementById('stage')!, project, { loadData: false });
     await click('Start', 'Start button');
-    await click('Pick a drill', 'Choose drill 2');
+    await click('Pick a drill', 'Choose drill~1');
     expect(v('bpm')).toBe(PRESETS[1].bpm);
     for (let i = 0; i < 8; i++) await click('Drill', 'Faster button');
     expect(v('bpm')).toBe(120);
