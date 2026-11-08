@@ -1,7 +1,7 @@
 /** Accordion: one section repeated over a list, each a header button that opens its panel and pushes the rest down (the repeater is an auto layout column, so the copies reflow). */
 import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, byName, contentBox, item, solid, text, type BrandedStarter } from '../../kit';
-import { addVar, click, graph } from '../../graph-kit';
+import { addVar, click, graph, graphNote } from '../../graph-kit';
 import { heroButtons } from './helpers';
 
 const SECTIONS = [
@@ -39,7 +39,7 @@ export const accordion: BrandedStarter = {
     const isOpen = 'open.includes(index)';
     const marker = createNode('rect', { name: 'Open marker', x: 10, y: 12, width: 5, height: 32, cornerRadius: 3, fill: solid(L.accent), stroke: null, decorative: true, bindings: { visible: isOpen } } as never);
     const title = text(ctx, 'Section title', '{item.title}', 28, 15, 780, { fontSize: 20, fontWeight: 600, lineHeight: 1.3 });
-    const sign = text(ctx, 'Section sign', '+', 868, 10, 32, { fontSize: 28, fontWeight: 600, align: 'center', color: L.deep, decorative: true, bindings: { text: `${isOpen} ? "–" : "+"` } });
+    const sign = text(ctx, 'Section sign', '+', 868, 10, 32, { fontSize: 28, fontWeight: 600, align: 'center', color: L.logoTextOnLight, decorative: true, bindings: { text: `${isOpen} ? "–" : "+"` } });
     const header = createNode('frame', {
       name: 'Section header',
       x: 0,
@@ -106,6 +106,7 @@ export const accordion: BrandedStarter = {
       const many = g.then(press, 'logic.if', { condition: 'allowMany' });
       g.then(many, 'action.setVariable', { variable: open.id, op: 'toggleItem', value: 'event.index' }, 'true');
       g.then(many, 'action.setVariable', { variable: open.id, op: 'set', value: 'open.includes(event.index) ? [] : [event.index]' }, 'false');
+      graphNote(page, { anchor: press, colour: 'sky', text: '**One flow serves every header.** `event.index` says which section was pressed. With `allowMany` off, the false branch sets `open` to just that one, which shuts the rest.' });
     }
 
     const below = (x: number) => ({ x, y: page.height + 14, w: 300, h: 100 });

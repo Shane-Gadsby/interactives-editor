@@ -3,13 +3,16 @@
 //the project a review link hands out, so a note's text is never in JSON that ships even if a page came from an old editor tab.
 //Plain ESM like the rest of shared/, used by index.js and the tests.
 
-//The project without any notes (the same object when it had none)
+//The project without any notes (the same object when it had none). Three places hold them: the canvas (project.notes), each
+//artboard (artboard.notes) and each artboard's interaction graph (artboard.logic.notes)
+const hasGraphNotes = (a) => !!a && typeof a.logic === 'object' && a.logic !== null && a.logic.notes !== undefined
+
 export const stripNotes = (project) => {
 	if (!project || typeof project !== 'object') {
 		return project
 	}
 
-	let any = project.notes !== undefined || (Array.isArray(project.artboards) && project.artboards.some((a) => a && a.notes !== undefined))
+	let any = project.notes !== undefined || (Array.isArray(project.artboards) && project.artboards.some((a) => a && (a.notes !== undefined || hasGraphNotes(a))))
 
 	if (!any) {
 		return project
@@ -19,11 +22,17 @@ export const stripNotes = (project) => {
 
 	if (Array.isArray(rest.artboards)) {
 		rest.artboards = rest.artboards.map((a) => {
-			if (!a || a.notes === undefined) {
+			if (!a || (a.notes === undefined && !hasGraphNotes(a))) {
 				return a
 			}
 
 			let {notes: gone, ...kept} = a
+
+			if (hasGraphNotes(kept)) {
+				let {notes: goneToo, ...logic} = kept.logic
+
+				kept = {...kept, logic}
+			}
 
 			return kept
 		})

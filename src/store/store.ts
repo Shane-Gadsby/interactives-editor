@@ -527,8 +527,8 @@ export class EditorStore {
     const activeTimelineId = ab?.timelines.some((t) => t.id === s.activeTimelineId) ? s.activeTimelineId : null;
     const focusId = ab && s.focusId && locate(ab, s.focusId) ? s.focusId : null;
     const editingPathId = ab && s.editingPathId && locate(ab, s.editingPathId) ? s.editingPathId : null;
-    // a group can be selected too, not only a node
-    const inGraph = (id: string) => !!ab && (ab.logic.nodes.some((n) => n.id === id) || !!ab.logic.groups?.some((g) => g.id === id));
+    // a group can be selected too, not only a node, and so can a note on the graph
+    const inGraph = (id: string) => !!ab && (ab.logic.nodes.some((n) => n.id === id) || !!ab.logic.groups?.some((g) => g.id === id) || !!ab.logic.notes?.some((n) => n.id === id));
     const logicSelection = s.logicSelection && inGraph(s.logicSelection) ? s.logicSelection : null;
     const logicPicked = s.logicPicked.every(inGraph) ? s.logicPicked : s.logicPicked.filter(inGraph);
     const artboardPicked = s.artboardPicked.every((id) => !!getArtboard(s.project, id)) ? s.artboardPicked : s.artboardPicked.filter((id) => !!getArtboard(s.project, id));

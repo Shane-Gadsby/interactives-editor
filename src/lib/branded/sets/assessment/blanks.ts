@@ -3,6 +3,7 @@ import { addQuestion, partsOf, setQuestionSettings, syncQuestion } from '../../.
 import { brandedPage, brandedProject, button, contentBox, item, text, type LayoutState } from '../../kit';
 import { type Colourway } from '../../looks';
 import { after, bind, brandQuestionFrame, click, goNext, graph, heroPage, kitNode, noteBelow, setVar } from './shared';
+import { questionExtras } from '../../parts';
 
 //A short passage on the water cycle, one sentence a line: the text before a blank, the accepted answers (| between alternatives), and the text after it.
 const SENTENCES: { before: string; answers: string; after: string }[] = [
@@ -29,7 +30,7 @@ export function buildBlanks(colourway: Colourway) {
   const box = contentBox(page);
 
   //The passage is a fill in the blank question: a blank for each sentence, with the accepted answers, marking, part marks and the answers shown at the end all the question kit's own
-  const id = addQuestion(project, page.id, 'blank', { at: { x: box.x, y: box.y } })!;
+  const id = addQuestion(project, page.id, 'blank', { at: { x: box.x, y: box.y }, ...questionExtras(project, {}) })!;
   setQuestionSettings(project, page.id, id, {
     prompt: 'Type the missing word in each gap, then press Check.',
     //one point for each blank, so the score is the number right; three goes, then the ones still wrong are marked and the answers shown

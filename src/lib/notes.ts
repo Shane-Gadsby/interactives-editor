@@ -194,5 +194,5 @@ export function removeNote(id: string): void {
 }
 
 function noteIn(d: Draft<Project>, id: string): Draft<Note> | undefined {
-  return d.notes?.find((n) => n.id === id) ?? d.artboards.flatMap((a) => a.notes ?? []).find((n) => n.id === id);
+  return d.notes?.find((n) => n.id === id) ?? d.artboards.flatMap((a) => a.notes ?? []).find((n) => n.id === id) ?? d.artboards.flatMap((a) => a.logic.notes ?? []).find((n) => n.id === id);
 }

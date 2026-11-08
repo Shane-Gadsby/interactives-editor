@@ -5,6 +5,7 @@ import { addQuestion, setQuestionSettings } from '../../../question-kit';
 import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, darkButton, go, goNext, set } from './common';
+import { extrasChecklist, questionExtras } from '../../parts';
 
 const QUESTIONS = [
   { at: 20, prompt: 'What is the first thing worth reading in an academic article?', options: ['The abstract', 'The reference list', 'The last paragraph'], hint: 'It is a short summary at the start.' },
@@ -72,7 +73,7 @@ function build(colourway: Colourway) {
   //The pop-up questions, over the video, shown one at a time by the "popup" variable
   const frames: ContainerNode[] = [];
   QUESTIONS.forEach((q, i) => {
-    const id = addQuestion(project, watch.id, 'single', { at: { x: box.x, y: box.y } })!;
+    const id = addQuestion(project, watch.id, 'single', { at: { x: box.x, y: box.y }, ...questionExtras(project, { hint: true, tryAgain: true }) })!;
     setQuestionSettings(project, watch.id, id, {
       prompt: q.prompt,
       options: q.options.map((text, k) => ({ id: `o${k + 1}`, text, ...(k === 0 ? { correct: true } : {}) })),
@@ -183,6 +184,7 @@ function build(colourway: Colourway) {
   addNote(watch, { ...below(watch, 456, 440), text: '**Chapters** are the video\'s own, so the list here and the controls in the browser share them. One flow seeks to `chapters[event.index].time`.', colour: 'sky' });
   addNote(hero, { ...below(hero, 0, 440), text: '[ ] **Before you share it** pick your video, then set each cue\'s time to where its question belongs, and write the three questions to match.', colour: 'gold' });
 
+  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist: checklist as TemplateChecklistItem[] };
 }
 

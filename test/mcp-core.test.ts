@@ -553,7 +553,7 @@ describe('JSON-RPC handler', () => {
   it('lists its tools, each with a schema whose required fields exist', async () => {
     const r = await rpc({ id: 5, method: 'tools/list' });
     const tools = r.result.tools as { name: string; description: string; inputSchema: { type: string; properties: Record<string, unknown>; required: string[] } }[];
-    expect(tools.map((t) => t.name)).toEqual(['list_projects', 'join_session', 'get_selection', 'get_overview', 'get_layers', 'get_interactions', 'edit', 'list_notes', 'add_note', 'edit_note', 'remove_note', 'validate', 'read_reference', 'leave_session']);
+    expect(tools.map((t) => t.name)).toEqual(['list_projects', 'join_session', 'get_selection', 'get_overview', 'get_layers', 'get_interactions', 'edit', 'list_notes', 'add_note', 'add_graph_note', 'edit_note', 'remove_note', 'validate', 'read_reference', 'leave_session']);
     expect(new Set(tools.map((t) => t.name)).size).toBe(tools.length);
     for (const t of tools) {
       expect(t.description.length).toBeGreaterThan(10);
@@ -626,6 +626,56 @@ describe('sticky notes', () => {
     expect(() => change(p, [{ op: 'add_note', artboard_id: ab.id, layer_id: 'nope', text: 'x' }])).toThrow(/no layer/);
     expect(() => change(p, [{ op: 'set_note', id: 'nope', text: 'x' }])).toThrow(/no note/);
     expect(() => change(p, [{ op: 'delete_note', id: 'nope' }])).toThrow(/no note/);
+  });
+
+  it('the node reference an agent reads keeps every node\'s full text: the summary and then the details, with what an event gives', () => {
+    const text = mcp.reference('interactions');
+    for (const d of CATALOG) expect(text, d.kind).toContain(d.description);
+    const key = CATALOG.find((d) => d.kind === 'event.key')!;
+    expect(key.details).toBeTruthy();
+    expect(text).toContain('Gives: event.key, event.code');
+  });
+
+  it('graph notes: add_graph_note follows a node or group, set_note moves or lets go, delete_note removes, and list_notes shows them', () => {
+    const p = sample();
+    const ab = p.artboards[0];
+    ab.logic.nodes.push({ id: 'ev', kind: 'event.start', x: 100, y: 300, params: {} });
+    ab.logic.groups = [{ id: 'grp', label: 'Flow', x: 0, y: 500, width: 300, height: 200 }];
+    const out = change(p, [
+      { op: 'add_graph_note', artboard_id: ab.id, node_id: 'ev', text: '**Only if** stops the arrow keys', colour: 'sky', ref: 'g1' },
+      { op: 'add_graph_note', artboard_id: ab.id, node_id: 'grp', text: 'about the group', x: 10, y: 420 },
+      { op: 'add_graph_note', artboard_id: ab.id, text: 'loose', x: 700, y: 20 },
+    ]);
+    const notes = out.project.artboards[0].logic.notes!;
+    expect(notes).toHaveLength(3);
+    expect(notes[0]).toMatchObject({ x: 100, y: 170, colour: 'sky', author: 'Agent (AI)' });
+    expect(notes[0].anchor).toEqual({ layerId: 'ev', lx: 0, ly: -130 });
+    expect(notes[1].anchor).toEqual({ layerId: 'grp', lx: 10, ly: -80 });
+    expect(notes[2].anchor).toBeUndefined();
+    expect(out.created.g1).toBe(notes[0].id);
+    // not mixed up with the canvas or artboard notes
+    expect(out.project.artboards[0].notes).toBeUndefined();
+    expect(out.project.notes).toBeUndefined();
+    const set = change(out.project, [{ op: 'set_note', id: notes[0].id, text: 'Done', anchor_id: null }, { op: 'set_note', id: notes[2].id, anchor_id: 'ev' }]);
+    expect(set.project.artboards[0].logic.notes![0].anchor).toBeUndefined();
+    expect(set.project.artboards[0].logic.notes![0].text).toBe('Done');
+    expect(set.project.artboards[0].logic.notes![2].anchor).toEqual({ layerId: 'ev', lx: 600, ly: -280 });
+    const gone = change(set.project, [{ op: 'delete_note', id: notes[0].id }, { op: 'delete_note', id: notes[1].id }, { op: 'delete_note', id: notes[2].id }]);
+    expect(gone.project.artboards[0].logic.notes).toBeUndefined();
+    expect(() => change(p, [{ op: 'add_graph_note', artboard_id: ab.id, node_id: 'nope', text: 'x' }])).toThrow(/no node or group/);
+    expect(() => change(p, [{ op: 'add_graph_note', artboard_id: 'nope', text: 'x' }])).toThrow(/No artboard/);
+    expect(() => change(out.project, [{ op: 'set_note', id: notes[0].id, anchor_id: 'nope' }])).toThrow(/no node or group/);
+    const text = mcp.notesReport(out.project);
+    expect(text).toContain('on the interaction graph of');
+    expect(text).toContain('follows node or group ev');
+  });
+
+  it('cleans wrong-typed graph notes an agent wrote', () => {
+    const p = sample();
+    (p.artboards[0].logic as unknown as { notes: unknown }).notes = [{ id: 'a', x: 'far', text: 7 }, { nonsense: 1 }];
+    const { project } = change(p, [{ op: 'add_note', text: 'anything' }]);
+    expect(project.artboards[0].logic.notes).toHaveLength(1);
+    expect(project.artboards[0].logic.notes![0]).toMatchObject({ id: 'a', x: 0, text: '' });
   });
 
   it('puts wrong-typed values an agent wrote right (or drops them)', () => {

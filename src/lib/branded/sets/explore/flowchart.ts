@@ -190,7 +190,8 @@ export const flowchartStarter: BrandedStarter = {
       bindings: { x: 'item.x', y: 'item.y', width: 'item.w', height: 'item.h', ariaCurrent: 'item.id == current ? "step" : false' },
     } as never);
     const repeat = (items: string) => ({ items, layout: 'none' as const, gap: 0, columns: 1 });
-    const area = { x: 0, y: 0, width: CHART_W, height: CHART_H, fitContents: false };
+    //(the repeaters' boxes are a point: their layers are placed by the layout, and a box the size of the chart would take the clicks of what is under it)
+    const area = { x: 0, y: 0, width: 1, height: 1, fitContents: false };
     const steps_ = createNode('group', { name: 'Flowchart steps', ...area, repeat: repeat('fc'), children: [step] } as never);
     //An arrow for each link, from the step it leaves to the step it enters, labelled with the answer; the ones the learner has taken are heavier and green
     const taken = 'path.some((id, i) => id == item.from && path[i + 1] == item.to)';

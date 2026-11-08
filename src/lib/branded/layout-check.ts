@@ -7,6 +7,7 @@
  *                  frame, which is that frame's label)
  *   logo-clear     anything but the page's background inside the logo's clear space (`LOGO_CLEAR` of the logo's height all round)
  *   text-overflow  text that runs off the artboard
+ *   control-overflow  a button, input or clickable frame whose box runs off the artboard (a row of buttons wider than its column)
  *   text-chrome    text that runs into the brand's own layers (the accent bar, the web address)
  *   text-text      two text layers whose words overlap (advisory: the estimate below can be a little out)
  *
@@ -18,7 +19,7 @@
 import { REPEAT_SEP, artboardScope, isContainer, pageInfo, prepareNodes, relayoutTree, startingValue, evaluate, textAutoSize, withMaster, type Artboard, type CopySizes, type ExprScope, type Project, type SceneNode, type TextNode } from 'interactives-player';
 import { LOGO_CLEAR, OVERLAY_TAG, type LayoutState } from './kit';
 
-export type ViolationKind = 'button-text' | 'logo-clear' | 'text-overflow' | 'text-chrome' | 'text-text';
+export type ViolationKind = 'button-text' | 'logo-clear' | 'text-overflow' | 'control-overflow' | 'text-chrome' | 'text-text';
 
 export interface LayoutViolation {
   kind: ViolationKind;
@@ -31,7 +32,7 @@ export interface LayoutViolation {
 }
 
 /** The kinds that fail the starter-layout test (text-text is only listed). */
-export const STRICT_KINDS: ViolationKind[] = ['button-text', 'logo-clear', 'text-overflow', 'text-chrome'];
+export const STRICT_KINDS: ViolationKind[] = ['button-text', 'logo-clear', 'text-overflow', 'control-overflow', 'text-chrome'];
 
 // ------------------------------------------------------------------ text estimate
 
@@ -135,7 +136,17 @@ function collect(nodes: SceneNode[], scope: ExprScope, out: Item[], ctx: { dx: n
   for (const n of nodes) {
     if (n.visible === false || n.opacity === 0) continue;
     const master = ctx.master || n.id.startsWith('ixm~');
-    const box = { x: ctx.dx + n.x, y: ctx.dy + n.y, w: n.width, h: n.height };
+    const full = { x: ctx.dx + n.x, y: ctx.dy + n.y, w: n.width, h: n.height };
+    //What a clipping or scrolling frame cuts off (the rows of a list scrolled past its edge) is not seen, so only what is left of a layer is checked, and a layer cut off entirely not at all
+    let box = full;
+    if (ctx.clip) {
+      const x0 = Math.max(full.x, ctx.clip.x);
+      const y0 = Math.max(full.y, ctx.clip.y);
+      const x1 = Math.min(full.x + full.w, ctx.clip.x + ctx.clip.w);
+      const y1 = Math.min(full.y + full.h, ctx.clip.y + ctx.clip.h);
+      if (x1 <= x0 || y1 <= y0) continue;
+      box = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+    }
     const overlay = ctx.overlay || tagged(n);
     const clickable = isClickable(n);
     const item: Item = { node: n, box, path: ctx.path, fromMaster: master, overlay, clipped: ctx.clipped, control: ctx.control };
@@ -144,7 +155,7 @@ function collect(nodes: SceneNode[], scope: ExprScope, out: Item[], ctx: { dx: n
       const text = fill(t.text ?? '', scope);
       item.text = text;
       if (text.trim()) {
-        const ink = inkOf(t, text, box.x, box.y);
+        const ink = inkOf(t, text, full.x, full.y);
         //what a clipping or scrolling frame above it cuts off is not seen
         if (ctx.clip) {
           const x0 = Math.max(ink.x, ctx.clip.x);
@@ -160,11 +171,11 @@ function collect(nodes: SceneNode[], scope: ExprScope, out: Item[], ctx: { dx: n
     if (Array.isArray(kids) && kids.length) {
       const f = n as SceneNode & { clip?: boolean; scroll?: string };
       const cuts = n.type === 'frame' && (f.clip || (!!f.scroll && f.scroll !== 'none'));
-      const mine: Box | null = cuts ? (ctx.clip ? { x: Math.max(box.x, ctx.clip.x), y: Math.max(box.y, ctx.clip.y), w: Math.max(0, Math.min(box.x + box.w, ctx.clip.x + ctx.clip.w) - Math.max(box.x, ctx.clip.x)), h: Math.max(0, Math.min(box.y + box.h, ctx.clip.y + ctx.clip.h) - Math.max(box.y, ctx.clip.y)) } : box) : ctx.clip;
+      const mine: Box | null = cuts ? (ctx.clip ? { x: Math.max(full.x, ctx.clip.x), y: Math.max(full.y, ctx.clip.y), w: Math.max(0, Math.min(full.x + full.w, ctx.clip.x + ctx.clip.w) - Math.max(full.x, ctx.clip.x)), h: Math.max(0, Math.min(full.y + full.h, ctx.clip.y + ctx.clip.h) - Math.max(full.y, ctx.clip.y)) } : full) : ctx.clip;
       collect(kids, scope, out, {
         clip: mine,
-        dx: box.x,
-        dy: box.y,
+        dx: full.x,
+        dy: full.y,
         path: [...ctx.path, n.id],
         overlay,
         clipped: ctx.clipped || f.scroll === 'vertical' || f.scroll === 'horizontal' || f.scroll === 'both',
@@ -289,16 +300,29 @@ function walkNodes(list: SceneNode[], fn: (n: SceneNode, inRepeat: boolean) => v
 }
 
 /** Every violation on one page of a project. */
-export function checkPageLayout(project: Project, page: Artboard, state?: LayoutState): LayoutViolation[] {
+/**
+ * A page the way the player draws it at the start, or in one of a starter's extra `LayoutState`s: its layers with bindings and
+ * repeaters applied, the master's around them and auto layout run, plus the scope the page's expressions read. For checks of how a page
+ * looks (this one, and the contrast check). The layers are the checker's own copies.
+ */
+export function preparedPage(project: Project, page: Artboard, state?: LayoutState): { nodes: SceneNode[]; scope: ExprScope } {
   const vars: Record<string, unknown> = {};
   for (const v of project.variables) vars[v.name] = state && Object.prototype.hasOwnProperty.call(state.vars, v.name) ? state.vars[v.name] : startingValue(v, vars);
   const info = pageInfo(project, page);
-  const scope = {
+  const scope: ExprScope = {
     vars,
     extra: { pageNumber: info.index + 1, pageCount: info.list.length, artboard: artboardScope(page, { index: info.index, count: info.list.length, group: info.group }), quiz: { questions: [], score: 0, points: 0 }, event: {} },
   };
+  return { nodes: drawn(project, page, scope), scope };
+}
+
+/** A text layer's words with its `{expression}` slots filled, the way the layout check reads them. */
+export const filledText = fill;
+
+export function checkPageLayout(project: Project, page: Artboard, state?: LayoutState): LayoutViolation[] {
+  const { nodes, scope } = preparedPage(project, page, state);
   const items: Item[] = [];
-  collect(drawn(project, page, scope), scope, items, { dx: 0, dy: 0, path: [], overlay: false, clipped: false, clip: null, master: false });
+  collect(nodes, scope, items, { dx: 0, dy: 0, path: [], overlay: false, clipped: false, clip: null, master: false });
   const out: LayoutViolation[] = [];
   const add = (kind: ViolationKind, a: Item, b: Item | undefined, detail: string) => out.push({ kind, page: state ? `${page.name} [${state.label}]` : page.name, a: label(a), ...(b ? { b: label(b) } : {}), detail });
   const sheet: Box = { x: 0, y: 0, w: page.width, h: page.height };
@@ -324,8 +348,15 @@ export function checkPageLayout(project: Project, page: Artboard, state?: Layout
     if (k.x < -2 || k.y < -2 || k.x + k.w > sheet.w + 2 || k.y + k.h > sheet.h + 2) add('text-overflow', t, undefined, `words at ${px(k.x)},${px(k.y)} ${px(k.w)}x${px(k.h)} run off the ${sheet.w}x${sheet.h} page`);
   }
 
+  for (const c of controls) {
+    if (c.clipped) continue;
+    const b = c.box;
+    if (b.x < -2 || b.y < -2 || b.x + b.w > sheet.w + 2 || b.y + b.h > sheet.h + 2) add('control-overflow', c, undefined, `${c.node.type === 'frame' || c.node.type === 'group' ? 'clickable frame' : c.node.type} ${px(b.x)},${px(b.y)} ${px(b.w)}x${px(b.h)} runs off the ${sheet.w}x${sheet.h} page`);
+  }
+
   //the brand's own layers: the accent bar and the web address (not the sweeps, which sit under everything, nor the logo, which has its own rule)
-  const chromeBoxes = items.filter((i) => i.fromMaster && isChromeTag(i.node) && (i.node.type === 'rect' || i.node.type === 'text'));
+  //(not the scrim, which is the whole page)
+  const chromeBoxes = items.filter((i) => i.fromMaster && isChromeTag(i.node) && (i.node.type === 'rect' || i.node.type === 'text') && i.box.w * i.box.h < 0.8 * sheet.w * sheet.h);
   for (const c of chromeBoxes) {
     if (c.node.type === 'text' && !c.ink) continue;
     const cb = c.ink ?? c.box;

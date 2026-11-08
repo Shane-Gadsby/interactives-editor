@@ -8,6 +8,7 @@ import { addNote, brandedPage, brandedProject, button, byName, contentBox, item,
 import type { Colourway } from '../../looks';
 import { addVar, after, bind, click, goPrevious, graph } from '../../graph-kit';
 import { dressQuestion, endPage, goNextOn, heroPage, retray } from './shared';
+import { extrasChecklist, questionExtras } from '../../parts';
 
 const GROUPS: { id: string; name: string }[] = [
   { id: 'g1', name: 'Solid' },
@@ -50,7 +51,7 @@ export function sortIntoGroups(colourway: Colourway) {
 
   const misses = addVar(project, 'misses', 'number', 0);
 
-  const id = addQuestion(project, page.id, 'categorise', { at: { x: box.x, y: box.y - 8 } })!;
+  const id = addQuestion(project, page.id, 'categorise', { at: { x: box.x, y: box.y - 8 }, ...questionExtras(project, { hint: true, tryAgain: true }) })!;
   setQuestionSettings(project, page.id, id, {
     prefix: 'sort',
     prompt: 'Drag each card into the group it belongs to.',
@@ -127,5 +128,6 @@ export function sortIntoGroups(colourway: Colourway) {
     item('Try it with the keyboard: Tab to a card, Space, arrow keys, Space, then Check answer', undefined, page),
     item('Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
   ];
+  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }

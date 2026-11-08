@@ -202,6 +202,7 @@ function overview(p: Project, opts: { artboardId?: string; depth?: number }): st
     if (ab.timelines.length) lines.push(`Timelines: ${ab.timelines.map((t) => `${t.name} [${t.id}] ${t.duration}ms ${t.loop}${t.autoplay ? ' autoplay' : ''} (${t.tracks.length} tracks)`).join('; ')}`);
     if (ab.notes?.length) lines.push(`Notes: ${ab.notes.length} (use list_notes)`);
     if (ab.blends?.length) lines.push(`Blends: ${ab.blends.map((b) => `${b.name} [${b.id}] ${b.mode} (${b.entries.length} timelines)`).join('; ')}`);
+    if (ab.logic.notes?.length) lines.push(`Graph notes: ${ab.logic.notes.length} (use list_notes)`);
     if (ab.logic.nodes.length) lines.push(`Interactions: ${ab.logic.nodes.length} nodes, ${ab.logic.edges.length} connections (use get_interactions)`);
     const out: string[] = [];
     outline(ab.children, 0, opts.depth ?? (opts.artboardId ? 8 : 2), out, { n: opts.artboardId ? 600 : 80 });
@@ -271,17 +272,23 @@ function validate(p: Project): string[] {
   return problems;
 }
 
-/** Every note of a project with where it lives (the artboard, or none for the canvas). */
-function listNotes(p: Project): { note: Note; ab: Artboard | null; list: Note[] }[] {
-  return [...(p.notes ?? []).map((note) => ({ note, ab: null as Artboard | null, list: p.notes! })), ...p.artboards.flatMap((ab) => (ab.notes ?? []).map((note) => ({ note, ab: ab as Artboard | null, list: ab.notes! })))];
+/** Every note of a project with where it lives (the artboard, none for the canvas, or `graph` when it is on an artboard's interaction graph). */
+function listNotes(p: Project): { note: Note; ab: Artboard | null; list: Note[]; graph?: boolean }[] {
+  return [
+    ...(p.notes ?? []).map((note) => ({ note, ab: null as Artboard | null, list: p.notes! })),
+    ...p.artboards.flatMap((ab) => (ab.notes ?? []).map((note) => ({ note, ab: ab as Artboard | null, list: ab.notes! }))),
+    ...p.artboards.flatMap((ab) => (ab.logic.notes ?? []).map((note) => ({ note, ab: ab as Artboard | null, list: ab.logic.notes!, graph: true }))),
+  ];
 }
+/** A node or group of an artboard's graph, by id: where its top left corner is. */
+const graphOrigin = (ab: Artboard, id: string): { x: number; y: number } | undefined => ab.logic.nodes.find((n) => n.id === id) ?? ab.logic.groups?.find((g) => g.id === id);
 const findNote = (p: Project, id: string) => listNotes(p).find((x) => x.note.id === id);
 
 function notesReport(p: Project, artboardId?: string): string {
   const rows = listNotes(p).filter((x) => !artboardId || x.ab?.id === artboardId);
   if (!rows.length) return 'No notes.';
   return rows
-    .map(({ note: n, ab }) => `- [${n.id}] ${ab ? `on ${ab.name} [${ab.id}]` : 'on the canvas'} at ${r(n.x)},${r(n.y)} ${r(n.w)}x${r(n.h)} ${n.colour ?? 'gold'}${n.anchor ? ` follows layer ${n.anchor.layerId}` : ''}${n.author ? ` by ${n.author}` : ''}\n${n.text.split('\n').map((l) => `    ${l}`).join('\n')}`)
+    .map(({ note: n, ab, graph }) => `- [${n.id}] ${graph ? `on the interaction graph of ${ab!.name} [${ab!.id}]` : ab ? `on ${ab.name} [${ab.id}]` : 'on the canvas'} at ${r(n.x)},${r(n.y)} ${r(n.w)}x${r(n.h)} ${n.colour ?? 'gold'}${n.anchor ? ` follows ${graph ? 'node or group' : 'layer'} ${n.anchor.layerId}` : ''}${n.author ? ` by ${n.author}` : ''}\n${n.text.split('\n').map((l) => `    ${l}`).join('\n')}`)
     .join('\n');
 }
 
@@ -473,10 +480,35 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
         if (key) created[key] = note.id;
         break;
       }
+      case 'add_graph_note': {
+        // A note on an artboard's interaction graph (x, y in graph coordinates). node_id (a node or a group of that graph) makes it follow it; it is placed above it unless x and y say otherwise
+        const ab = findAb(c.artboard_id);
+        const host = c.node_id ? graphOrigin(ab, ref(c.node_id)) : undefined;
+        if (c.node_id && !host) throw new Error(`${where}: no node or group ${String(c.node_id)} on ${ab.name}`);
+        const at = { x: typeof c.x === 'number' ? c.x : host ? host.x : 0, y: typeof c.y === 'number' ? c.y : host ? host.y - 130 : 0 };
+        const note = makeNote({ ...at, w: typeof c.w === 'number' ? c.w : 220, h: typeof c.h === 'number' ? c.h : 110, text: String(c.text ?? ''), colour: NOTE_COLOURS.includes(c.colour as never) ? (c.colour as Note['colour']) : undefined, author: typeof c.author === 'string' && c.author ? c.author : `${ctx().agent} (AI)`, created: new Date().toISOString() });
+        if (host) note.anchor = { layerId: ref(c.node_id), lx: Math.round((at.x - host.x) * 10) / 10, ly: Math.round((at.y - host.y) * 10) / 10 };
+        (ab.logic.notes ??= []).push(note);
+        if (key) created[key] = note.id;
+        break;
+      }
       case 'set_note': {
         const found = findNote(p, ref(c.id));
         if (!found) throw new Error(`${where}: no note ${String(c.id)}`);
         const n = found.note;
+        if (found.graph) {
+          // a graph note follows a node or group (anchor_id; null lets go)
+          for (const k of ['x', 'y', 'w', 'h'] as const) if (typeof c[k] === 'number') n[k] = c[k] as number;
+          if (typeof c.text === 'string') n.text = c.text;
+          if (NOTE_COLOURS.includes(c.colour as never)) n.colour = c.colour as Note['colour'];
+          if (c.anchor_id === null) delete n.anchor;
+          else if (typeof c.anchor_id === 'string') {
+            const host = graphOrigin(found.ab!, ref(c.anchor_id));
+            if (!host) throw new Error(`${where}: no node or group ${c.anchor_id} on that note's graph`);
+            n.anchor = { layerId: ref(c.anchor_id), lx: Math.round((n.x - host.x) * 10) / 10, ly: Math.round((n.y - host.y) * 10) / 10 };
+          }
+          break;
+        }
         for (const k of ['x', 'y', 'w', 'h'] as const) if (typeof c[k] === 'number') n[k] = c[k] as number;
         if (typeof c.text === 'string') n.text = c.text;
         if (NOTE_COLOURS.includes(c.colour as never)) n.colour = c.colour as Note['colour'];
@@ -493,7 +525,8 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
         if (!found) throw new Error(`${where}: no note ${String(c.id)}`);
         found.list.splice(found.list.indexOf(found.note), 1);
         if (!found.list.length) {
-          if (found.ab) delete found.ab.notes;
+          if (found.graph) delete found.ab!.logic.notes;
+          else if (found.ab) delete found.ab.notes;
           else delete p.notes;
         }
         break;
@@ -509,10 +542,16 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
     else delete p.notes;
   }
   for (const ab of p.artboards) {
-    if (!ab.notes) continue;
-    const list = cleanNotes(ab.notes);
-    if (list) ab.notes = list;
-    else delete ab.notes;
+    if (ab.notes) {
+      const list = cleanNotes(ab.notes);
+      if (list) ab.notes = list;
+      else delete ab.notes;
+    }
+    if (ab.logic.notes) {
+      const list = cleanNotes(ab.logic.notes);
+      if (list) ab.logic.notes = list;
+      else delete ab.logic.notes;
+    }
   }
   return { project: p, created, touched };
 }
@@ -543,7 +582,7 @@ function setPath(obj: Record<string, unknown>, path: string, v: unknown) {
 
 function reference(topic: string): string {
   if (topic === 'interactions') {
-    return CATALOG.map((d) => `### ${d.kind} — ${d.label} (${d.category})\n${d.description}${d.outputs.length > 1 || d.outputs[0]?.label ? `\nOutputs: ${d.outputs.map((o) => o.id).join(', ')}` : ''}\n${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join('|')}` : ''}${pd.default !== undefined ? `, default ${JSON.stringify(pd.default)}` : ''})${pd.help ? `: ${pd.help}` : ''}`).join('\n')}`).join('\n\n');
+    return CATALOG.map((d) => `### ${d.kind} — ${d.label} (${d.category})\n${d.description}${d.gives ? `\nGives: ${d.gives.join(', ')}` : ''}${d.outputs.length > 1 || d.outputs[0]?.label ? `\nOutputs: ${d.outputs.map((o) => o.id).join(', ')}` : ''}\n${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join('|')}` : ''}${pd.default !== undefined ? `, default ${JSON.stringify(pd.default)}` : ''})${pd.help ? `: ${pd.help}` : ''}`).join('\n')}`).join('\n\n');
   }
   if (topic === 'properties') return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join('\n') + '\nOn a progress layer only: ' + layerOwnProps(createNode('progress')).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join('; ') + '\nOn a connector layer only: ' + layerOwnProps(createNode('connector')).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join('; ');
   if (topic === 'layers') {
@@ -657,6 +696,7 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       'add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; ' +
       'add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; ' +
       'add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; ' +
+      'add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; ' +
       'add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). ' +
       'Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
     inputSchema: S({ project_id: str('Project id'), changes: { type: 'array', items: { type: 'object' } }, explain: str('One line saying what this does (shown in the editor log)') }, ['project_id', 'changes']),
@@ -696,10 +736,19 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
     run: async (a) => runEdit(a, [{ op: 'add_note', artboard_id: a.artboard_id, x: a.x, y: a.y, w: a.w, h: a.h, text: a.text, colour: a.colour, layer_id: a.layer_id, ref: 'note' }], 'Add a note'),
   },
   {
+    name: 'add_graph_note',
+    description: 'Leave a sticky note on an artboard\'s interaction graph, for the people reading the flows: what a chain or group does and why, what to change to adapt it, the output that is easy to miss. Give node_id (a node or group id from get_interactions) to attach it so it moves with that node or group; it is placed above it unless x and y (graph coordinates) say otherwise. Keep notes to 1 to 3 lines, with **bold** for the key idea and [ ] for what the author must do. Like every note it never reaches players, exports or share links. Edit or remove it with edit_note and remove_note.',
+    inputSchema: S(
+      { project_id: str('Project id'), artboard_id: str('Artboard id or name'), node_id: str('Node or group id to follow (optional)'), x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number', description: 'Width (default 220)' }, h: { type: 'number', description: 'Height (default 110)' }, text: str('What the note says'), colour: str('gold, orange, green, sky, purple or rose') },
+      ['project_id', 'artboard_id', 'text'],
+    ),
+    run: async (a) => runEdit(a, [{ op: 'add_graph_note', artboard_id: a.artboard_id, node_id: a.node_id, x: a.x, y: a.y, w: a.w, h: a.h, text: a.text, colour: a.colour, ref: 'note' }], 'Add a graph note'),
+  },
+  {
     name: 'edit_note',
-    description: 'Change a note: its text, colour, position or size, or which layer it follows (layer_id null lets go). Use list_notes for ids.',
-    inputSchema: S({ project_id: str('Project id'), id: str('Note id'), text: str('New text'), colour: str('gold, orange, green, sky, purple or rose'), x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' }, layer_id: { type: ['string', 'null'], description: 'Layer to follow, or null to let go' } }, ['project_id', 'id']),
-    run: async (a) => runEdit(a, [{ op: 'set_note', id: a.id, text: a.text, colour: a.colour, x: a.x, y: a.y, w: a.w, h: a.h, ...('layer_id' in a ? { layer_id: a.layer_id } : {}) }], 'Edit a note'),
+    description: 'Change a note: its text, colour, position or size, or which layer it follows (layer_id null lets go), or for a graph note which node or group it follows (anchor_id, null lets go). Use list_notes for ids.',
+    inputSchema: S({ project_id: str('Project id'), id: str('Note id'), text: str('New text'), colour: str('gold, orange, green, sky, purple or rose'), x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' }, anchor_id: { type: ['string', 'null'], description: 'A graph note only: the node or group to follow, or null to let go' }, layer_id: { type: ['string', 'null'], description: 'Layer to follow, or null to let go' } }, ['project_id', 'id']),
+    run: async (a) => runEdit(a, [{ op: 'set_note', id: a.id, text: a.text, colour: a.colour, x: a.x, y: a.y, w: a.w, h: a.h, ...('layer_id' in a ? { layer_id: a.layer_id } : {}), ...('anchor_id' in a ? { anchor_id: a.anchor_id } : {}) }], 'Edit a note'),
   },
   {
     name: 'remove_note',
@@ -804,7 +853,7 @@ function closeContext(c: McpContext) {
 }
 
 // The stdio loop only runs when this file is the server. The tests import the pieces below and drive them directly
-export { TOOLS, applyChanges, closeContext, handle, interactions, locate, overview, reference, respond, sessions, setPath, syncRuns, validate };
+export { TOOLS, applyChanges, closeContext, handle, interactions, locate, notesReport, overview, reference, respond, sessions, setPath, syncRuns, validate };
 
 if (!process.env.INTERACTIVES_MCP_NO_STDIO) {
   let buffer = '';

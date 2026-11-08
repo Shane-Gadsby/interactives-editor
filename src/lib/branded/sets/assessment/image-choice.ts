@@ -78,7 +78,7 @@ export function buildImageChoice(colourway: Colourway) {
   const choices = keyNavList('Choices', 0, 0, box.width, 2 * 150 + GAP, { items: 'options', row: card, mode: 'grid', columns: COLS, gap: GAP, ariaLabel: 'The pictures' });
 
   //Check, Try again and the feedback sit in one row under the cards
-  const check = bind(button(ctx, 'Check button', 'Check', 0, 0, 140), { disabled: 'checked || picked.length == 0' });
+  const check = bind(button(ctx, 'Check button', 'Check answer', 0, 0, 170), { disabled: 'checked || picked.length == 0' });
   const again = bind(button(ctx, 'Try again button', 'Try again', 0, 0, 150, false), { visible: 'checked' });
   const feedback = bind(text(ctx, 'Feedback', '{(outcome == "good" ? "✓ " : outcome == "part" ? "✓ " : "✗ ") + verdict}', 0, 0, 100, { fontSize: 16, lineHeight: 1.3, role: 'region', fontWeight: 600 }), { visible: 'checked', color: `outcome == "good" ? "${L.success}" : outcome == "part" ? "${L.warning}" : "${L.error}"`, ariaLabel: 'verdict' });
   const actions = stack('Actions', 0, 0, box.width, { direction: 'row', gap: 16, align: 'center', children: [check, again, fill(feedback)] });

@@ -81,7 +81,7 @@ function build(colourway: Colourway) {
     const label = text(ctx, 'Transcript label', `${cfg.who} says (transcript):`, box.x + 20, box.y + 144, 340, { fontSize: 13, fontWeight: 700, color: L.muted });
     const line = text(ctx, 'Their line', cfg.line, box.x + 20, box.y + 168, 340, { fontSize: 18, lineHeight: 1.4 });
     //Optional audio slot: the Play sound node in this button's flow has no sound until the author picks one. Hidden until audioLines is true
-    const audio = bind(button(ctx, 'Play their line', 'Play their line', box.x, box.y + 312, 200, false), { visible: 'audioLines' });
+    const audio = bind(button(ctx, 'Play their line', 'Play their line', box.x, box.y + 312, 200, false), { visible: 'audioLines', disabled: 'soundPlaying()', label: 'soundPlaying() ? "Playing…" : "Play their line"' });
     audio.ariaLabel = `Play ${cfg.who}'s line as audio`;
 
     //Their reply, shown back in review once the learner has typed one

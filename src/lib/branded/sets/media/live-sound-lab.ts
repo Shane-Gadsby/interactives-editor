@@ -124,7 +124,7 @@ function build(colourway: Parameters<BrandedStarter['build']>[0]) {
     { fontSize: 28, fontWeight: 700, lineHeight: 1.25, autoSize: 'none', height: 70 },
   );
   //The meter is a native Progress layer (read out as a meter): the track is the layer, the bar its fill, and the level its value
-  const level = bind(createNode('progress', { name: 'Level', x: 0, y: 0, width: W, height: 64, value: 0, max: 1, fill: solid(L.surface), stroke: stroke(L.border, 1.5), barFill: solid(L.muted), cornerRadius: 12, orientation: 'horizontal', semantics: 'meter', ariaLabel: 'Loudness' } as never), { value: `clamp(${LEVEL}, 0, 1)`, 'barFill.color': `zone == "in" || (use == "noise" && zone != "high") ? "${L.button}" : "${L.muted}"` });
+  const level = bind(createNode('progress', { name: 'Level', x: 0, y: 0, width: W, height: 64, value: 0, max: 1, fill: solid(L.surface), stroke: stroke(L.border, 1.5), barFill: solid(L.muted), cornerRadius: 12, orientation: 'horizontal', semantics: 'meter', ariaLabel: 'Loudness' } as never), { value: `clamp(${LEVEL}, 0, 1)`, 'barFill.color': `zone == "in" || (use == "noise" && zone != "high") ? "${L.primary}" : "${L.muted}"` });
   //The target band is an outline, so it shows in every colourway and for a viewer who cannot tell the colours apart
   const band = bind(createNode('frame', { name: 'Target band', x: 0, y: -6, width: 100, height: 76, cornerRadius: 10, fill: null, stroke: stroke(L.text, 3), clip: false, decorative: true }), { x: `bandLo * ${W}`, width: `Math.max(8, (bandHi - bandLo) * ${W})` });
   const gauge = createNode('frame', { name: 'Meter', x: box.x, y: box.y + 84, width: W, height: 64, fill: null, stroke: null, clip: false, role: 'region', children: [level, band] }) as FrameNode;

@@ -206,7 +206,7 @@ function NoteCard({ project, note, owner, x, y, scale, zoom, detached, picked, e
 }
 
 /** What a note says, with its light markdown drawn as elements (a ticked box rewrites the note's text). */
-function NoteText({ note }: { note: Note }) {
+export function NoteText({ note }: { note: Note }) {
   const lines = parseNoteText(note.text);
   if (!note.text.trim()) return <p className="note-empty">Double-click to write</p>;
   return (

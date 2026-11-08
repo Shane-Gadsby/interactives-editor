@@ -848,7 +848,21 @@ function hotspotBody(q: Question): SceneNode {
 /** The default look of the Try again / Next question button for this question. */
 export const resetLabel = (q: Question): string => (q.bank ? RESET_LABELS.next : RESET_LABELS.again);
 //A question that is retaken with the whole set has no Try again of its own: a Retake button elsewhere starts the next round for all of them
-const resetVisible = (q: Question): string => (q.retake || q.hideReset ? 'false' : q.bank ? varName(q, 'locked') : `${varName(q, 'locked')} && !${varName(q, 'correct')}`);
+//A project boolean in front (`allowTryAgain && ...`) is the template's own switch for the button: while it is there the whole set's retake rule no longer hides it
+const resetVisible = (q: Question, gate?: string): string => {
+  if (q.hideReset) return gate ? `${gate} && false` : 'false';
+  const own = q.bank ? varName(q, 'locked') : `${varName(q, 'locked')} && !${varName(q, 'correct')}`;
+  if (gate) return `${gate} && ${own}`;
+  return q.retake ? 'false' : own;
+};
+
+const GATED = /^([A-Za-z_$][\w$]*) && /;
+/** The project boolean a kit part is switched by (the start of its Visible binding), if there is one. */
+function gateOf(d: Project, q: Question, visible: string | undefined): string | undefined {
+  const m = GATED.exec(visible ?? '');
+  //(the question's own variables are what the button shows on already, not a switch of the template's)
+  return m && !m[1].startsWith(`${q.prefix}_`) && d.variables.some((v) => v.name === m[1] && v.type === 'boolean') ? m[1] : undefined;
+}
 
 function bodyFor(q: Question, style: Style, blankVars: string[]): SceneNode {
   if (style === 'blank') return blanksBody(q, blankVars);
@@ -1324,7 +1338,7 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
     if (!before || Boolean(before.bank) !== Boolean(q.bank) || Boolean(before.retake) !== Boolean(q.retake) || Boolean(before.hideReset) !== Boolean(q.hideReset)) {
       const other = before?.bank ? RESET_LABELS.next : RESET_LABELS.again;
       if (reset.label === other || !before) reset.label = resetLabel(q);
-      reset.bindings = { ...(reset.bindings ?? {}), visible: resetVisible(q) };
+      reset.bindings = { ...(reset.bindings ?? {}), visible: resetVisible(q, gateOf(d, q, reset.bindings?.visible)) };
     }
   }
   syncListen(ab, frame as FrameNode, q);
@@ -1378,10 +1392,78 @@ function locateIn(frame: ContainerNode, id: string): { siblings: SceneNode[]; in
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+//Kit options: the wording and place of the standard buttons, for a starter that wants its own
+
+/**
+ * How a starter dresses the question kit's standard buttons. All optional, and leaving them out is the kit as it was. They are
+ * written onto the layers (a plain button label, a plain Visible binding), so a person can change them there afterwards.
+ */
+export interface KitOptions {
+  /** The wording of the Check answer button: "Submit answer" where the answer is final and marked. */
+  checkLabel?: string;
+  /** The wording of the Try again button. */
+  resetLabel?: string;
+  /** `pill`: the Hint button is a small pill at the top right of the card, opposite the prompt, not a full size button in the row. */
+  hint?: 'button' | 'pill';
+  /** The Hint button's wording. */
+  hintLabel?: string;
+  /** A project boolean variable that switches Hint on (the template's one setting, `offerHint`): the button shows only while it is true. */
+  hintWhen?: string;
+  /** A project boolean variable that switches Try again on (`allowTryAgain`): the button shows only while it is true, whatever the retake rule says. */
+  resetWhen?: string;
+}
+
+/** The pill: the look of a secondary action, small enough to sit beside a heading. */
+const PILL = { width: 84, height: 32, cornerRadius: 16, fontSize: 14 };
+
+/** Apply the kit options to a question frame that is already built (a fresh one from addQuestion, or one a starter made earlier). Safe to run again. */
+export function setKitOptions(d: Project, abId: string, frameId: string, o: KitOptions): void {
+  const ab = d.artboards.find((a) => a.id === abId);
+  const frame = ab && locate(ab, frameId)?.node;
+  if (!ab || !frame || frame.type !== 'frame' || !frame.question) return;
+  const q = frame.question;
+  L = lookFor(d.themes);
+  const parts = partsOf(frame);
+  const gate = (name: string | undefined) => {
+    if (name && !d.variables.some((v) => v.name === name && v.type === 'boolean')) throw new Error(`kit option: no boolean variable ${name}`);
+    return name;
+  };
+  const check = parts.check?.[0];
+  if (o.checkLabel && check?.type === 'button') check.label = o.checkLabel;
+  const reset = parts.reset?.[0];
+  if (reset?.type === 'button') {
+    if (o.resetLabel) reset.label = o.resetLabel;
+    const g = gate(o.resetWhen);
+    if (g) reset.bindings = { ...(reset.bindings ?? {}), visible: resetVisible(q, g) };
+  }
+  const hint = parts.hint?.[0];
+  if (hint?.type === 'button') {
+    if (o.hintLabel) hint.label = o.hintLabel;
+    const g = gate(o.hintWhen);
+    if (g) hint.bindings = { ...(hint.bindings ?? {}), visible: `${g} && ${varName(q, 'hintsLeft')} > 0 && !${varName(q, 'locked')}` };
+    if (o.hint === 'pill') {
+      Object.assign(hint, PILL, { fill: solid(L.background), stroke: stroke(L.border), fontWeight: 600 });
+      hint.ariaLabel = 'Show a hint';
+      const at = locateIn(frame, hint.id);
+      const prompt = parts.prompt?.[0];
+      //One row for the heading and the pill, made once: the prompt keeps the room, the pill sits at the right
+      if (at && prompt && !parts.promptRow?.length) {
+        at.siblings.splice(at.index, 1);
+        const here = locateIn(frame, prompt.id)!;
+        prompt.layoutItem = { ...(prompt.layoutItem ?? {}), width: 'fill' };
+        const rowFrame = createNode('frame', { name: 'Prompt row', questionPart: 'promptRow', fill: null, stroke: null, clip: false, layout: { ...row(12), align: 'start' }, children: [prompt, hint] }) as FrameNode;
+        here.siblings.splice(here.index, 1, rowFrame);
+        rowFrame.name = uniqueName(nodeNames(ab), 'Prompt row');
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 //Entry points
 
 /** Add a question of a kind to an artboard (or inside a frame). Returns the new frame's id. */
-export function addQuestion(d: Project, abId: string, kind: QuestionKind, opts: { parentId?: string | null; at?: { x: number; y: number } } = {}): string | null {
+export function addQuestion(d: Project, abId: string, kind: QuestionKind, opts: { parentId?: string | null; at?: { x: number; y: number } } & KitOptions = {}): string | null {
   const ab = d.artboards.find((a) => a.id === abId);
   if (!ab) return null;
   L = lookFor(d.themes);
@@ -1396,6 +1478,7 @@ export function addQuestion(d: Project, abId: string, kind: QuestionKind, opts: 
   if (parent && isContainer(parent)) parent.children.push(frame);
   else ab.children.push(frame);
   ensureGraph(d, ab, frame, q);
+  setKitOptions(d, abId, frame.id, opts);
   return frame.id;
 }
 

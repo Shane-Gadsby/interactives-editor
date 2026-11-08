@@ -6,6 +6,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createNode, createProject, countNotes, readPackage, stripNotes, writePackage, type Project } from 'interactives-player';
 import { EditorStore, setCurrentStore } from '../src/store/store';
+import { addGraphNote } from '../src/lib/graph-notes';
 import { addNote, allNotes, attachNote, findNote, moveNote, noteScale, notePlace, patchNote, removeNote } from '../src/lib/notes';
 import { parseNoteText, plainNoteText, toggleCheck } from '../src/lib/note-text';
 import { NotesLayer } from '../src/canvas/NotesLayer';
@@ -174,6 +175,7 @@ describe('what players and pictures get', () => {
     const { s, ab } = fresh();
     addNote(ab, { x: 5, y: 5, text: `${SECRET} artboard`, layerId: 'r1' });
     addNote(null, { x: -50, y: 5, text: `${SECRET} canvas` });
+    addGraphNote(ab, { x: 10, y: 10, text: `${SECRET} graph` });
     return JSON.parse(JSON.stringify(s.get().project));
   };
 

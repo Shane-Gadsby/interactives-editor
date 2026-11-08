@@ -54,13 +54,14 @@ const POINTER_TYPES = [
   { value: "drag", label: "Dragging" },
   { value: "dragend", label: "Drag ends" }
 ];
-const CATALOG = [
+const SPECS = [
   // ---------------------------------------------------------------- events
   {
     kind: "event.start",
     label: "On start",
     category: "event",
-    description: "When the artboard is shown.",
+    summary: "Runs when the artboard is shown.",
+    group: "Start and load",
     outputs: OUT,
     hasInput: false,
     params: []
@@ -69,7 +70,9 @@ const CATALOG = [
     kind: "event.beforeLoad",
     label: "Before activity loads",
     category: "event",
-    description: "Once, as the activity opens: before anything is shown, and before On activity load and On start. The activity waits for everything this sets off to finish (up to 10 seconds), so a Load user data or Set variable here is in place for the first frame. Remembered progress is already restored. Fires on the artboard the activity opens on.",
+    summary: "Runs once as the activity opens, before anything is shown.",
+    details: "It comes before On activity load and On start. The activity waits for everything this sets off to finish (up to 10 seconds), so a Load user data or Set variable here is in place for the first frame. Remembered progress is already restored. Fires on the artboard the activity opens on.",
+    group: "Start and load",
     outputs: OUT,
     hasInput: false,
     params: []
@@ -78,7 +81,9 @@ const CATALOG = [
     kind: "event.activityLoad",
     label: "On activity load",
     category: "event",
-    description: "Once, when the activity has loaded and is showing, just before the first On start. Unlike On start it does not fire again when another artboard is shown, or after Start over. Fires on the artboard the activity opens on.",
+    summary: "Runs once when the activity has loaded and is showing.",
+    details: "It comes just before the first On start. Unlike On start it does not fire again when another artboard is shown, or after Start over. Fires on the artboard the activity opens on.",
+    group: "Start and load",
     outputs: OUT,
     hasInput: false,
     params: []
@@ -87,7 +92,10 @@ const CATALOG = [
     kind: "event.pointer",
     label: "On pointer",
     category: "event",
-    description: "When a layer is clicked, pressed, hovered or dragged. Moves and drags give event.x / event.y (artboard coordinates) and event.stepX / event.stepY (movement since the last event); drags also give event.dx / event.dy (movement since the press), event.index (the repeated copy the pointer is over now) and event.startIndex (the copy it was pressed on). With a layer picked, event.child is the name of its own layer that was hit and event.childIndex that layer's place in it from 0 (-1 and null when it landed on the layer itself): one flow can serve every item in a set of layers. On a chart layer, event.index is the chart item (bar, slice, point) that was hit, null away from them.",
+    summary: "Runs when a layer is clicked, pressed, hovered or dragged.",
+    details: "Moves and drags give event.x / event.y (artboard coordinates) and event.stepX / event.stepY (movement since the last event); drags also give event.dx / event.dy (movement since the press), event.index (the repeated copy the pointer is over now) and event.startIndex (the copy it was pressed on). With a layer picked, event.child is the name of its own layer that was hit and event.childIndex that layer's place in it from 0 (-1 and null when it landed on the layer itself): one flow can serve every item in a set of layers. On a chart layer, event.index is the chart item (bar, slice, point) that was hit, null away from them.",
+    group: "Pointer and keys",
+    gives: ["event.x", "event.y", "event.stepX", "event.stepY", "event.dx", "event.dy", "event.index", "event.startIndex", "event.child", "event.childIndex"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -100,15 +108,18 @@ const CATALOG = [
     kind: "event.key",
     label: "On key",
     category: "event",
-    description: 'When a keyboard key is pressed or released. Leave the key empty for any key. Modifiers that are ticked must be held. Pick a layer to react only while that layer (or one inside it) has keyboard focus. Keys typed into a text box are ignored unless "Also while typing" is ticked. A key that runs a flow does not also scroll the page, unless "Let the browser act too" is ticked. event.key, event.code and event.shift / ctrl / alt / meta say what was pressed. event.index is the number of the item that has focus when it is a copy of a repeater or in a list with Keyboard navigation. With a layer picked, event.child and event.childIndex say which of its own layers holds the focus.',
+    summary: "Runs when a key is pressed or released.",
+    details: 'Leave the key empty for any key. Modifiers that are ticked must be held. Pick a layer to react only while that layer (or one inside it) has keyboard focus. Keys typed into a text box are ignored unless "Also while typing" is ticked. A key that runs a flow does not also scroll the page, unless "Let the browser act too" is ticked. event.key, event.code and event.shift / ctrl / alt / meta say what was pressed. event.index is the number of the item that has focus when it is a copy of a repeater or in a list with Keyboard navigation. With a layer picked, event.child and event.childIndex say which of its own layers holds the focus.',
+    group: "Pointer and keys",
+    gives: ["event.key", "event.code", "event.shift", "event.ctrl", "event.alt", "event.meta", "event.index", "event.child", "event.childIndex"],
     outputs: OUT,
     hasInput: false,
     params: [
-      { key: "key", label: "Key", type: "text", placeholder: "e.g. ArrowLeft, a, Enter" },
-      { key: "shift", label: "Shift held", type: "boolean", default: false },
-      { key: "ctrl", label: "Ctrl held", type: "boolean", default: false },
-      { key: "alt", label: "Alt held", type: "boolean", default: false },
-      { key: "meta", label: "Meta held", type: "boolean", default: false },
+      { key: "key", label: "Key", type: "text", placeholder: "e.g. ArrowLeft, a, Enter", help: "Leave empty for any key" },
+      { key: "shift", label: "Shift held", type: "boolean", default: false, help: "Must be held when the key is pressed" },
+      { key: "ctrl", label: "Ctrl held", type: "boolean", default: false, help: "Must be held when the key is pressed" },
+      { key: "alt", label: "Alt held", type: "boolean", default: false, help: "Must be held when the key is pressed" },
+      { key: "meta", label: "Meta held", type: "boolean", default: false, help: "Must be held when the key is pressed" },
       { key: "repeat", label: "Fire again while held", type: "boolean", default: false, help: "Key down repeats while the key is held" },
       { key: "typing", label: "Also while typing in a text box", type: "boolean", default: false, help: "Normally keys typed into a text box or text area are left alone, so typing never sets things off. Tick this (with the key Enter and the box picked below) to run the flow when Enter is pressed in the box, like submitting a form" },
       { key: "allowDefault", label: "Let the browser act too", type: "boolean", default: false, help: "Normally when this node runs for an arrow key, Space, Page Up/Down, Home, End, Enter, Backspace or a letter, and it names a key or a layer, the browser is told not to also use it (so the page does not scroll under a game). Tick this to let the key do its usual thing as well" },
@@ -130,7 +141,10 @@ const CATALOG = [
     kind: "event.focus",
     label: "On focus",
     category: "event",
-    description: "When a layer gains or loses keyboard focus (tabbing to it, clicking it, arrowing to it, or the Focus layer node). The layer becomes focusable. event.index is its number when it is a copy of a repeater or in a list with Keyboard navigation. With a layer picked, event.child and event.childIndex say which of its own layers took or lost the focus. For a chart layer it fires as the arrow keys move between its items, with event.index the item.",
+    summary: "Runs when a layer gains or loses keyboard focus.",
+    details: "Tabbing to it, clicking it, arrowing to it and the Focus layer node all count. The layer becomes focusable. event.index is its number when it is a copy of a repeater or in a list with Keyboard navigation. With a layer picked, event.child and event.childIndex say which of its own layers took or lost the focus. For a chart layer it fires as the arrow keys move between its items, with event.index the item.",
+    group: "Pointer and keys",
+    gives: ["event.index", "event.child", "event.childIndex"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -152,7 +166,10 @@ const CATALOG = [
     kind: "event.timer",
     label: "On timer",
     category: "event",
-    description: 'After a delay, optionally repeating. The delay is an expression read again each time round, so it can follow a variable. "Only while" holds the timer back while its condition is false and starts the wait over when it turns true. event.count is how many times it has fired and event.elapsed how many milliseconds it has been running (time held back by "Only while" is not counted).',
+    summary: "Runs after a delay, and can repeat.",
+    details: 'Repeating is optional. The delay is an expression read again each time round, so it can follow a variable. "Only while" holds the timer back while its condition is false and starts the wait over when it turns true. event.count is how many times it has fired and event.elapsed how many milliseconds it has been running (time held back by "Only while" is not counted).',
+    group: "Time and waiting",
+    gives: ["event.count", "event.elapsed"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -166,7 +183,8 @@ const CATALOG = [
     kind: "event.variable",
     label: "On variable change",
     category: "event",
-    description: "When a variable changes value.",
+    summary: "Runs when a variable changes value.",
+    group: "Variables",
     outputs: OUT,
     hasInput: false,
     params: [{ key: "variable", label: "Variable", type: "variable" }]
@@ -175,7 +193,8 @@ const CATALOG = [
     kind: "event.timelineEnd",
     label: "On timeline end",
     category: "event",
-    description: "When a play-once timeline finishes.",
+    summary: "Runs when a play-once timeline finishes.",
+    group: "Timelines and blends",
     outputs: OUT,
     hasInput: false,
     params: [{ key: "timeline", label: "Timeline", type: "timeline" }]
@@ -184,7 +203,10 @@ const CATALOG = [
     kind: "event.timelineMarker",
     label: "On timeline marker",
     category: "event",
-    description: "When playback of a timeline passes a marker, going forwards or backwards, on every lap of a loop. `event.marker` is the marker name, `event.time` its time in ms.",
+    summary: "Runs when a timeline plays past a marker.",
+    details: "It fires when playback passes the marker going forwards or backwards, on every lap of a loop. `event.marker` is the marker name, `event.time` its time in ms.",
+    group: "Timelines and blends",
+    gives: ["event.marker", "event.time"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -196,7 +218,10 @@ const CATALOG = [
     kind: "event.videoCue",
     label: "On video cue",
     category: "event",
-    description: "When a video layer's playback reaches one of its cue points (set in the video layer's Cues). `event.name` is the cue's name, `event.time` its time in seconds, `event.index` its place in the list and `event.layer` the video's name. Only playing across a cue counts: seeking past it (the controls, a chapter, Control video) fires nothing, and seeking back arms it again. A cue marked Pause has already paused the video when this fires, so a question can be asked and Control video can play on afterwards. Bind the video's Hold paused to keep it paused until then.",
+    summary: "Runs when a video layer's playback reaches one of its cue points.",
+    details: "Set the cue points in the video layer's Cues. `event.name` is the cue's name, `event.time` its time in seconds, `event.index` its place in the list and `event.layer` the video's name. Only playing across a cue counts: seeking past it (the controls, a chapter, Control video) fires nothing, and seeking back arms it again. A cue marked Pause has already paused the video when this fires, so a question can be asked and Control video can play on afterwards. Bind the video's Hold paused to keep it paused until then.",
+    group: "Sound and video",
+    gives: ["event.name", "event.time", "event.index", "event.layer"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -208,7 +233,10 @@ const CATALOG = [
     kind: "event.step",
     label: "On step",
     category: "event",
-    description: "In a step-through artboard (Steps in the artboard settings): when a step is chosen (Next, Back, a jump, scrolling), or when its animation has finished playing. `event.step` is the step number from 1, `event.count` the number of steps, `event.title` and `event.caption` its text, `event.from` the step it came from and `event.direction` is 1 going forward and -1 going back.",
+    summary: "Runs when a step is chosen in a step-through artboard, or when its animation has finished.",
+    details: "Turn on Steps in the artboard settings first. A step is chosen by Next, Back, a jump or scrolling, and it fires again when its animation has finished playing. `event.step` is the step number from 1, `event.count` the number of steps, `event.title` and `event.caption` its text, `event.from` the step it came from and `event.direction` is 1 going forward and -1 going back.",
+    group: "Navigation",
+    gives: ["event.step", "event.count", "event.title", "event.caption", "event.from", "event.direction"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -229,7 +257,9 @@ const CATALOG = [
     kind: "event.message",
     label: "On message",
     category: "event",
-    description: "When a message is sent by a script, an Emit node or the host page (player.send).",
+    summary: "Runs when a message arrives from a script, a Send message node or the host page.",
+    details: "The host page sends one with player.send.",
+    group: "Code and messages",
     outputs: OUT,
     hasInput: false,
     params: [{ key: "name", label: "Message", type: "text", placeholder: "e.g. addToCart" }]
@@ -238,7 +268,10 @@ const CATALOG = [
     kind: "event.scroll",
     label: "On scroll",
     category: "event",
-    description: "When a layer scrolls into or out of view, or while a scrollable frame is scrolled (event.scrollTop, event.scrollLeft, event.progress 0-1).",
+    summary: "Runs when a layer scrolls into or out of view, or while a frame scrolls.",
+    details: "A scrollable frame also gives event.scrollTop, event.scrollLeft and event.progress (0 to 1).",
+    group: "Pointer and keys",
+    gives: ["event.scrollTop", "event.scrollLeft", "event.progress"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -261,7 +294,10 @@ const CATALOG = [
     kind: "event.dragStart",
     label: "On drag start",
     category: "event",
-    description: "When a draggable layer is picked up: dragged by the mouse or a finger, or lifted with the keyboard (Space) or a tap. Set up dragging in the layer's Draggable section. `event.layer` is its name, `event.zone` the drop zone it was in (empty if none), `event.tags` its tags, `event.keyboard` true when it was not dragged.",
+    summary: "Runs when a draggable layer is picked up.",
+    details: "It can be dragged by the mouse or a finger, or lifted with the keyboard (Space) or a tap. Set up dragging in the layer's Draggable section. `event.layer` is its name, `event.zone` the drop zone it was in (empty if none), `event.tags` its tags, `event.keyboard` true when it was not dragged.",
+    group: "Dragging",
+    gives: ["event.layer", "event.zone", "event.tags", "event.keyboard"],
     outputs: OUT,
     hasInput: false,
     params: [{ key: "target", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty to fire for every draggable layer" }]
@@ -270,7 +306,10 @@ const CATALOG = [
     kind: "event.dragMove",
     label: "On drag move",
     category: "event",
-    description: "Over and over while a draggable layer is held and moving: dragged by the mouse or a finger, nudged with Shift+arrows, or sent to another zone with the arrow keys. At most once a frame. `event.layerX` and `event.layerY` are where the layer is now, `event.dx` and `event.dy` how far it has come since it was picked up, `event.x` and `event.y` the pointer, `event.zone` the zone it is over (empty if none), `event.keyboard` true when it is not being dragged.",
+    summary: "Runs over and over while a draggable layer is held and moving.",
+    details: "It can be dragged by the mouse or a finger, nudged with Shift+arrows, or sent to another zone with the arrow keys. At most once a frame. `event.layerX` and `event.layerY` are where the layer is now, `event.dx` and `event.dy` how far it has come since it was picked up, `event.x` and `event.y` the pointer, `event.zone` the zone it is over (empty if none), `event.keyboard` true when it is not being dragged.",
+    group: "Dragging",
+    gives: ["event.layerX", "event.layerY", "event.dx", "event.dy", "event.x", "event.y", "event.zone", "event.keyboard"],
     outputs: OUT,
     hasInput: false,
     params: [{ key: "target", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty to fire for every draggable layer" }]
@@ -279,7 +318,10 @@ const CATALOG = [
     kind: "event.dragOver",
     label: "On drag over zone",
     category: "event",
-    description: "When a dragged layer moves over a drop zone, or off it. `event.zone` is the zone, `event.layer` the layer, `event.accepted` whether the zone would take it (right tag, room).",
+    summary: "Runs when a dragged layer moves over a drop zone, or off it.",
+    details: "`event.zone` is the zone, `event.layer` the layer, `event.accepted` whether the zone would take it (right tag, room).",
+    group: "Dragging",
+    gives: ["event.zone", "event.layer", "event.accepted"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -301,7 +343,10 @@ const CATALOG = [
     kind: "event.drop",
     label: "On drop",
     category: "event",
-    description: "When a draggable layer is let go (or dropped with the keyboard or a tap). Pick what to react to: dropped in a zone that took it, dropped on a zone that refused it (wrong tag, or full), or dropped where there is no zone. `event.layer`, `event.zone` (the zone it is in now), `event.from` (where it was), `event.accepted`, `event.reason` (tags or full), `event.swapped` (the layer a swap sent back) and `event.tags` are available.",
+    summary: "Runs when a draggable layer is let go.",
+    details: "A drop with the keyboard or a tap counts too. Pick what to react to: dropped in a zone that took it, dropped on a zone that refused it (wrong tag, or full), or dropped where there is no zone. `event.layer`, `event.zone` (the zone it is in now), `event.from` (where it was), `event.accepted`, `event.reason` (tags or full), `event.swapped` (the layer a swap sent back) and `event.tags` are available.",
+    group: "Dragging",
+    gives: ["event.layer", "event.zone", "event.from", "event.accepted", "event.reason", "event.swapped", "event.tags"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -325,7 +370,10 @@ const CATALOG = [
     kind: "event.dragEnd",
     label: "On drag end",
     category: "event",
-    description: "When a draggable layer is let go, wherever it ends up, or the pick-up is cancelled (Escape). Fires after On drop. `event.result` is accepted, rejected, missed or cancelled; `event.zone` the zone it is in now, `event.dropped` true when a zone took it.",
+    summary: "Runs when a draggable layer is let go anywhere, or the pick-up is cancelled.",
+    details: "Escape cancels a pick-up. Fires after On drop. `event.result` is accepted, rejected, missed or cancelled; `event.zone` the zone it is in now, `event.dropped` true when a zone took it.",
+    group: "Dragging",
+    gives: ["event.result", "event.zone", "event.dropped"],
     outputs: OUT,
     hasInput: false,
     params: [{ key: "target", label: "Draggable layer", type: "node", placeholder: "Any draggable layer", help: "Leave empty to fire for every draggable layer" }]
@@ -334,7 +382,10 @@ const CATALOG = [
     kind: "event.media",
     label: "On microphone or camera",
     category: "event",
-    description: "Something happened with a recording, the camera or a photo: a recording started, a recording is ready (the learner pressed Stop, a length limit was reached, or the device went away; `event.reason` says which), a recording could not start (`event.problem` and `event.message` say why, in plain words), the microphone or camera state changed (including the learner choosing not to use them), a video recording finished playing, or a photo arrived. Needs the microphone, camera or photos ticked in Project > Microphone and camera.",
+    summary: "Runs when something happens with a recording, the camera or a photo.",
+    details: "Something happened with a recording, the camera or a photo: a recording started, a recording is ready (the learner pressed Stop, a length limit was reached, or the device went away; `event.reason` says which), a recording could not start (`event.problem` and `event.message` say why, in plain words), the microphone or camera state changed (including the learner choosing not to use them), a video recording finished playing, or a photo arrived. Needs the microphone, camera or photos ticked in Project > Microphone and camera.",
+    group: "Microphone and camera",
+    gives: ["event.reason", "event.problem", "event.message"],
     outputs: OUT,
     hasInput: false,
     params: [
@@ -360,7 +411,10 @@ const CATALOG = [
     kind: "event.dataLoaded",
     label: "On data loaded",
     category: "event",
-    description: "When a data source finishes loading or refreshing. `event.data` holds the value.",
+    summary: "Runs when a data source finishes loading or refreshing.",
+    details: "`event.data` holds the value.",
+    group: "Results and data",
+    gives: ["event.data"],
     outputs: OUT,
     hasInput: false,
     params: [{ key: "source", label: "Data source", type: "data" }]
@@ -370,7 +424,9 @@ const CATALOG = [
     kind: "action.timeline",
     label: "Control timeline",
     category: "action",
-    description: 'Play, pause, stop, restart, reverse or jump a timeline. "Blend in" fades its pose in over the pose the layers have now, instead of cutting to it (for switching between looks).',
+    summary: "Plays, pauses, stops, restarts, reverses or jumps a timeline.",
+    details: '"Blend in" fades its pose in over the pose the layers have now, instead of cutting to it (for switching between looks).',
+    group: "Timelines and blends",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -399,7 +455,9 @@ const CATALOG = [
     kind: "action.blendPlay",
     label: "Play blend",
     category: "action",
-    description: 'Start a blend: its timelines play together and are mixed by the weights from its number variables, until it is stopped. Does nothing if it is already playing. "Blend in" fades its pose in over the pose the layers have now.',
+    summary: "Starts a blend: its timelines play together, mixed by the weights of its number variables.",
+    details: 'It plays until it is stopped. Does nothing if it is already playing. "Blend in" fades its pose in over the pose the layers have now.',
+    group: "Timelines and blends",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "blend", label: "Blend", type: "blend" }, ...mixParams(null)]
@@ -408,7 +466,9 @@ const CATALOG = [
     kind: "action.blendStop",
     label: "Stop blend",
     category: "action",
-    description: "Stop a blend. The mixed pose stays where it is, except for additive blends, which take their change back out.",
+    summary: "Stops a blend.",
+    details: "The mixed pose stays where it is, except for additive blends, which take their change back out.",
+    group: "Timelines and blends",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "blend", label: "Blend", type: "blend" }]
@@ -417,7 +477,9 @@ const CATALOG = [
     kind: "action.setVariable",
     label: "Set variable",
     category: "action",
-    description: "Set, add to, toggle, reset or change the list of a variable. A live variable (worked out from its formula) cannot be set.",
+    summary: "Sets, adds to, toggles, resets or changes the list of a variable.",
+    details: "A live variable (worked out from its formula) cannot be set.",
+    group: "Variables",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -471,7 +533,9 @@ const CATALOG = [
     kind: "action.resetVariables",
     label: "Reset variables",
     category: "action",
-    description: "Put the chosen variables back to their starting values: the typed value, the value for this course, or their formula worked out again. Live variables are left alone. Unlike Start over, nothing else changes.",
+    summary: "Puts the chosen variables back to their starting values.",
+    details: "That is the typed value, the value for this course, or their formula worked out again. Live variables are left alone. Unlike Start over, nothing else changes.",
+    group: "Variables",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "variables", label: "Variables", type: "variables", help: "The variables to put back" }]
@@ -480,7 +544,8 @@ const CATALOG = [
     kind: "action.setProperty",
     label: "Set property",
     category: "action",
-    description: "Change a layer property instantly.",
+    summary: "Changes a layer property instantly.",
+    group: "Layers and looks",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -493,7 +558,8 @@ const CATALOG = [
     kind: "action.animate",
     label: "Animate property",
     category: "action",
-    description: "Tween a layer property to a value.",
+    summary: "Animates a layer property to a value (a tween).",
+    group: "Layers and looks",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -510,7 +576,8 @@ const CATALOG = [
     kind: "action.visibility",
     label: "Show / hide",
     category: "action",
-    description: "Show, hide or toggle a layer.",
+    summary: "Shows, hides or toggles a layer.",
+    group: "Layers and looks",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -532,7 +599,9 @@ const CATALOG = [
     kind: "action.artboard",
     label: "Go to artboard",
     category: "action",
-    description: "Switch to another artboard: one you pick, the next or previous page, the one the learner came from, or one an expression names. Next and previous follow the artboards in the project's order, inside the artboard's group when it is in one, leaving out the narrow and wide versions of a responsive set and a library component's own copy. pageNumber and pageCount say where the artboard is. Back follows the learner's own path, and Previous follows the project's order. Continues from No artboard when there is nowhere to go (the last page, nothing to go back to, a name that matches nothing). To move through the steps of one artboard use Go to step.",
+    summary: "Switches to another artboard: one you pick, the next or previous page, or one an expression names.",
+    details: "It can also go back to the one the learner came from. Next and previous follow the artboards in the project's order, inside the artboard's group when it is in one, leaving out the narrow and wide versions of a responsive set and a library component's own copy. pageNumber and pageCount say where the artboard is. Back follows the learner's own path, and Previous follows the project's order. Continues from No artboard when there is nowhere to go (the last page, nothing to go back to, a name that matches nothing). To move through the steps of one artboard use Go to step.",
+    group: "Navigation",
     outputs: [
       { id: "out", label: "" },
       { id: "none", label: "No artboard" }
@@ -574,7 +643,8 @@ const CATALOG = [
     kind: "action.url",
     label: "Open URL",
     category: "action",
-    description: "Open a link in a new tab, this frame, the parent frame or the whole page.",
+    summary: "Opens a link in a new tab, this frame, the parent frame or the whole page.",
+    group: "Navigation",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -586,7 +656,9 @@ const CATALOG = [
     kind: "action.reportResult",
     label: "Report result",
     category: "action",
-    description: "Send the learner's result (score, pass or fail, completion) to where the page keeps it: the learner's record on the server when played from a share link in StudyDesk. The score comes from the score variable in Project > Results and progress. Nothing is lost or broken if no record is kept.",
+    summary: "Sends the learner's result (score, pass or fail, completion) to where the page keeps it.",
+    details: "Played from a share link in StudyDesk, that is the learner's record on the server. The score comes from the score variable in Project > Results and progress. Nothing is lost or broken if no record is kept.",
+    group: "Results and data",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -607,7 +679,9 @@ const CATALOG = [
     kind: "action.record",
     label: "Record",
     category: "action",
-    description: "Record that something happened, for Insights: counts of how often each name was recorded, and of each value it carried. Counts only, nobody is named, so do not put anything personal in the name or value. Learners' browsers send it to the page around the project (the StudyDesk learner page, which passes it to the analytics); nothing is sent from an export on its own, or when recording is off in Project > Learner records.",
+    summary: "Records that something happened, for Insights.",
+    details: "It counts how often each name was recorded, and each value it carried. Counts only, nobody is named, so do not put anything personal in the name or value. Learners' browsers send it to the page around the project (the StudyDesk learner page, which passes it to the analytics); nothing is sent from an export on its own, or when recording is off in Project > Learner records.",
+    group: "Results and data",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -619,7 +693,9 @@ const CATALOG = [
     kind: "action.startOver",
     label: "Start over",
     category: "action",
-    description: "Begin again: every variable goes back to its starting value, remembered progress is cleared, it counts as a new attempt and the start artboard shows. Nothing after this node runs.",
+    summary: "Begins again: variables reset, progress is cleared and the start artboard shows.",
+    details: "It counts as a new attempt, and remembered progress is cleared. Nothing after this node runs.",
+    group: "Navigation",
     outputs: OUT,
     hasInput: true,
     params: []
@@ -628,7 +704,9 @@ const CATALOG = [
     kind: "action.cursor",
     label: "Set cursor",
     category: "action",
-    description: "Change the mouse cursor over a layer, or over the whole player when no layer is chosen.",
+    summary: "Changes the mouse cursor over a layer, or over the whole player.",
+    details: "With no layer chosen it changes the whole player.",
+    group: "Layers and looks",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -640,7 +718,9 @@ const CATALOG = [
     kind: "action.saveUserData",
     label: "Save user data",
     category: "action",
-    description: "Saves the chosen variables for the person playing, so Load user data can bring them back on a later visit. On the StudyDesk learner page (Share > Link for StudyDesk) they are kept on the server under the signed-in person and the course; anywhere else (an export, Preview, no sign-in) in the browser. Each save only changes the variables chosen here. Continues when saved.",
+    summary: "Saves the chosen variables for the person playing, so Load user data can restore them later.",
+    details: "On the StudyDesk learner page (Share > Link for StudyDesk) they are kept on the server under the signed-in person and the course; anywhere else (an export, Preview, no sign-in) in the browser. Each save only changes the variables chosen here. Continues when saved.",
+    group: "Results and data",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "variables", label: "Variables", type: "variables", help: "The variables to save" }]
@@ -649,7 +729,9 @@ const CATALOG = [
     kind: "action.loadUserData",
     label: "Load user data",
     category: "action",
-    description: "Sets the chosen variables back to what Save user data last saved for the person playing (same places as Save user data). A variable that was never saved keeps its value. Continues from Loaded when anything came back, and from Nothing saved when nothing did (a first visit, or nowhere to load from).",
+    summary: "Restores the variables that Save user data last saved for the person playing.",
+    details: "Only the chosen variables are set, from the same places Save user data keeps them. A variable that was never saved keeps its value. Continues from Loaded when anything came back, and from Nothing saved when nothing did (a first visit, or nowhere to load from).",
+    group: "Results and data",
     outputs: [
       { id: "out", label: "Loaded" },
       { id: "none", label: "Nothing saved" }
@@ -661,7 +743,9 @@ const CATALOG = [
     kind: "action.loadData",
     label: "Load data",
     category: "action",
-    description: "Reload a data source, optionally from a different URL. Continues when loaded.",
+    summary: "Reloads a data source, optionally from a different URL.",
+    details: "Continues when loaded.",
+    group: "Results and data",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -673,7 +757,9 @@ const CATALOG = [
     kind: "action.clock",
     label: "Countdown / clock",
     category: "action",
-    description: "A countdown (seconds left) or a clock (seconds gone) that writes its variable about four times a second while it runs. Start begins it from the top, Pause holds it, Resume carries on, Reset puts the variable back and stops it. Time up continues when a countdown reaches 0 (or a clock reaches its limit). It holds still when the learner leaves the artboard, and a new Start or Resume takes it up again. One clock per variable.",
+    summary: "Runs a countdown (seconds left) or a clock (seconds gone) and writes it to a variable.",
+    details: "It writes the variable about four times a second while it runs. Start begins it from the top, Pause holds it, Resume carries on, Reset puts the variable back and stops it. Time up continues when a countdown reaches 0 (or a clock reaches its limit). It holds still when the learner leaves the artboard, and a new Start or Resume takes it up again. One clock per variable.",
+    group: "Time and waiting",
     outputs: [
       { id: "out", label: "" },
       { id: "done", label: "Time up" }
@@ -712,7 +798,9 @@ const CATALOG = [
     kind: "action.sound",
     label: "Play sound",
     category: "action",
-    description: 'Play an audio asset, once or on a loop, at a volume and a speed. The sound can be picked here or worked out by an expression (a list item\'s sound, say). Continues from the bottom port, and from Stopped if a Stop sound node (or Stop other sounds first) ends it before it finishes. With Stopped wired, "When it finishes" only continues on a natural end. `soundPlaying()` and `soundsPlaying` say what is playing, for a button that toggles Play and Stop.',
+    summary: "Plays an audio asset, once or on a loop, at a chosen volume and speed.",
+    details: 'The sound can be picked here or worked out by an expression (a list item\'s sound, say). Continues from the bottom port, and from Stopped if a Stop sound node (or Stop other sounds first) ends it before it finishes. With Stopped wired, "When it finishes" only continues on a natural end. `soundPlaying()` and `soundsPlaying` say what is playing, for a button that toggles Play and Stop.',
+    group: "Sound and video",
     outputs: [
       { id: "out", label: "" },
       { id: "stopped", label: "Stopped" }
@@ -733,7 +821,9 @@ const CATALOG = [
     kind: "action.video",
     label: "Control video",
     category: "action",
-    description: "Play, pause, seek, change the speed of or step a frame through a video layer. Frame steps pause the video first. Slow playback keeps the pitch. Does nothing if the layer is not a video that is on the page.",
+    summary: "Plays, pauses, seeks, changes the speed of or steps a frame through a video layer.",
+    details: "Frame steps pause the video first. Slow playback keeps the pitch. Does nothing if the layer is not a video that is on the page.",
+    group: "Sound and video",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -764,7 +854,9 @@ const CATALOG = [
     kind: "action.stopSound",
     label: "Stop sound",
     category: "action",
-    description: "Stop sounds that Play sound started: all of them, or just one. The way to end a looping sound. Timeline audio is not affected.",
+    summary: "Stops sounds that Play sound started: all of them, or just one.",
+    details: "The way to end a looping sound. Timeline audio is not affected.",
+    group: "Sound and video",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -776,7 +868,9 @@ const CATALOG = [
     kind: "action.recordStart",
     label: "Start recording",
     category: "action",
-    description: 'Records from the learner\'s microphone or camera into a named recording. The page around the project asks the learner first (one plain consent screen made from Project > Microphone and camera), starts only after a real tap, and shows a recording bar with the level, a timer and a Stop button that the project cannot hide. It stops at the length limit. Continues from Recording when it has started, or from Could not start (not allowed, no device, the learner said no, or nowhere to ask: see `mediaMessage`). Recordings stay in memory and are gone when the page is left. With "Start or stop" one button does both: pressed while that name is recording it stops and continues from Recorded, and otherwise it starts.',
+    summary: "Starts recording from the learner's microphone or camera into a named recording.",
+    details: 'The page around the project asks the learner first (one plain consent screen made from Project > Microphone and camera), starts only after a real tap, and shows a recording bar with the level, a timer and a Stop button that the project cannot hide. It stops at the length limit. Continues from Recording when it has started, or from Could not start (not allowed, no device, the learner said no, or nowhere to ask: see `mediaMessage`). Recordings stay in memory and are gone when the page is left. With "Start or stop" one button does both: pressed while that name is recording it stops and continues from Recorded, and otherwise it starts.',
+    group: "Microphone and camera",
     outputs: [
       { id: "out", label: "Recording" },
       { id: "recorded", label: "Recorded" },
@@ -822,7 +916,9 @@ const CATALOG = [
     kind: "action.listen",
     label: "Listen live",
     category: "action",
-    description: "Turns live listening on or off. While it is on, the microphone drives numbers you can use anywhere: `micLevel` (how loud, 0 to 1) and `micBands` (a list of 8 numbers from low to high sound, 0 to 1 each, about 25 times a second), and `listening` is true. Nothing is recorded or kept, and only those numbers reach the project. The page around the project asks the learner first (the one consent screen, made from Project > Microphone and camera, which needs Live listening ticked), starts only after a real tap, and shows a Listening bar with a Stop button the project cannot hide. Continues from Listening when it has started (or stopped), or from Could not start (not allowed, no device, the learner said no, or nowhere to ask: see `mediaMessage`). Read the numbers in bindings and text, and give a way to play without the microphone.",
+    summary: "Turns live listening on or off, so the microphone can drive numbers you use anywhere.",
+    details: "While it is on, the microphone drives numbers you can use anywhere: `micLevel` (how loud, 0 to 1) and `micBands` (a list of 8 numbers from low to high sound, 0 to 1 each, about 25 times a second), and `listening` is true. Nothing is recorded or kept, and only those numbers reach the project. The page around the project asks the learner first (the one consent screen, made from Project > Microphone and camera, which needs Live listening ticked), starts only after a real tap, and shows a Listening bar with a Stop button the project cannot hide. Continues from Listening when it has started (or stopped), or from Could not start (not allowed, no device, the learner said no, or nowhere to ask: see `mediaMessage`). Read the numbers in bindings and text, and give a way to play without the microphone.",
+    group: "Microphone and camera",
     outputs: [
       { id: "out", label: "Listening" },
       { id: "failed", label: "Could not start" }
@@ -846,7 +942,9 @@ const CATALOG = [
     kind: "action.recordStop",
     label: "Stop recording",
     category: "action",
-    description: "Stops the recording and continues from Recorded once it is ready to play. The learner can also press Stop on the recording bar, which fires On microphone or camera (A recording is ready) instead. Continues from Nothing to stop when that name was not recording and holds nothing.",
+    summary: "Stops the recording and continues once it is ready to play.",
+    details: "The learner can also press Stop on the recording bar, which fires On microphone or camera (A recording is ready) instead. Continues from Nothing to stop when that name was not recording and holds nothing.",
+    group: "Microphone and camera",
     outputs: [
       { id: "out", label: "Recorded" },
       { id: "failed", label: "Nothing to stop" }
@@ -858,7 +956,9 @@ const CATALOG = [
     kind: "action.recordPlay",
     label: "Play recording",
     category: "action",
-    description: `Plays a finished recording back. A sound recording plays through the project's own sound, so the viewer's sound button and volume apply. A video recording plays in the layer chosen below, from the page around the project. Continues from Nothing recorded when that name holds no recording yet, and from Stopped when a sound recording is stopped before it finishes (with Stopped wired, "When it finishes" only continues on a natural end).`,
+    summary: "Plays a finished recording back.",
+    details: `A sound recording plays through the project's own sound, so the viewer's sound button and volume apply. A video recording plays in the layer chosen below, from the page around the project. Continues from Nothing recorded when that name holds no recording yet, and from Stopped when a sound recording is stopped before it finishes (with Stopped wired, "When it finishes" only continues on a natural end).`,
+    group: "Microphone and camera",
     outputs: [
       { id: "out", label: "" },
       { id: "none", label: "Nothing recorded" },
@@ -886,7 +986,9 @@ const CATALOG = [
     kind: "action.recordDiscard",
     label: "Discard recording",
     category: "action",
-    description: "Throws a recording away (so the learner can record again). Stops it first if it is playing or still recording.",
+    summary: "Throws a recording away so the learner can record again.",
+    details: "Stops it first if it is playing or still recording.",
+    group: "Microphone and camera",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "slot", label: "Recording name", type: "text", default: "recording", help: "A name for this recording. A project can keep several, each under its own name (up to 8)." }]
@@ -895,7 +997,9 @@ const CATALOG = [
     kind: "action.recordDownload",
     label: "Download recording",
     category: "action",
-    description: "Offers the learner a file of the recording to save on their device. The page around the project does it, after a tap. It is the only way a recording leaves memory.",
+    summary: "Offers the learner a file of the recording to save on their device.",
+    details: "The page around the project does it, after a tap. It is the only way a recording leaves memory.",
+    group: "Microphone and camera",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -907,7 +1011,9 @@ const CATALOG = [
     kind: "action.cameraPreview",
     label: "Camera preview",
     category: "action",
-    description: "Shows the learner's camera live in the place of a layer, or takes it down. The page around the project draws the picture, over the project, so the project never sees the camera's pixels (use Take or choose a photo for a still). Asks the learner first, like Start recording. Continues from Could not start when it is not allowed or there is no camera.",
+    summary: "Shows the learner's camera live in the place of a layer, or takes it down.",
+    details: "The page around the project draws the picture, over the project, so the project never sees the camera's pixels (use Take or choose a photo for a still). Asks the learner first, like Start recording. Continues from Could not start when it is not allowed or there is no camera.",
+    group: "Microphone and camera",
     outputs: [
       { id: "out", label: "On" },
       { id: "failed", label: "Could not start" }
@@ -943,7 +1049,9 @@ const CATALOG = [
     kind: "action.photo",
     label: "Take or choose a photo",
     category: "action",
-    description: "Gets a picture and puts it in an image asset, so every image layer that uses that asset shows it. From the device's photo picker (choose a file, or take one with the camera, depending on the device), or a still of the live camera preview. The picture is scaled down so its longer side is at most the size below. Nothing is uploaded. Continues from No photo when the learner backs out or it is not allowed.",
+    summary: "Gets a picture and puts it in an image asset, so every layer that uses the asset shows it.",
+    details: "From the device's photo picker (choose a file, or take one with the camera, depending on the device), or a still of the live camera preview. The picture is scaled down so its longer side is at most the size below. Nothing is uploaded. Continues from No photo when the learner backs out or it is not allowed.",
+    group: "Microphone and camera",
     outputs: [
       { id: "out", label: "Got a photo" },
       { id: "none", label: "No photo" }
@@ -983,7 +1091,9 @@ const CATALOG = [
     kind: "action.saveFile",
     label: "Download a file",
     category: "action",
-    description: "Offers the learner a text file to save (a report of what they did, a CSV, notes). Built here and handed to the page around the project, which saves it after a tap. Works in any project, no microphone or camera needed. Text only, up to 2 MB (a web page with pictures in it, 16 MB).",
+    summary: "Offers the learner a text file to save, such as a report, a CSV or notes.",
+    details: "Built here and handed to the page around the project, which saves it after a tap. Works in any project, no microphone or camera needed. Text only, up to 2 MB (a web page with pictures in it, 16 MB).",
+    group: "Results and data",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1008,7 +1118,9 @@ const CATALOG = [
     kind: "action.sensorsOff",
     label: "Offer: do not use my microphone or camera",
     category: "action",
-    description: 'Asks the learner, in a screen of the page around the project, whether to stop using their microphone and camera from now on. If they say yes it is remembered in their browser, every activity then shows its plain version (`microphone` and `camera` read off), and the project cannot undo it. Only the learner decides. Put it on a button such as "Use the keyboard instead".',
+    summary: "Asks the learner whether to stop using their microphone and camera from now on.",
+    details: 'It asks in a screen of the page around the project. If they say yes it is remembered in their browser, every activity then shows its plain version (`microphone` and `camera` read off), and the project cannot undo it. Only the learner decides. Put it on a button such as "Use the keyboard instead".',
+    group: "Microphone and camera",
     outputs: OUT,
     hasInput: true,
     params: []
@@ -1017,7 +1129,9 @@ const CATALOG = [
     kind: "action.script",
     label: "Run script",
     category: "action",
-    description: "Run a custom JavaScript script. `event` holds what triggered it.",
+    summary: "Runs a custom JavaScript script.",
+    details: "`event` holds what triggered it.",
+    group: "Code and messages",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "script", label: "Script", type: "script" }]
@@ -1026,7 +1140,8 @@ const CATALOG = [
     kind: "action.code",
     label: "Run code",
     category: "action",
-    description: "Run an inline JavaScript snippet with `ix`, `event` and variables in scope.",
+    summary: "Runs an inline JavaScript snippet with ix, event and variables in scope.",
+    group: "Code and messages",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "code", label: "Code", type: "text", default: 'ix.log("hello")' }]
@@ -1035,7 +1150,8 @@ const CATALOG = [
     kind: "action.emit",
     label: "Send message",
     category: "action",
-    description: "Send a named message to scripts, On message nodes and the host page.",
+    summary: "Sends a named message to scripts, On message nodes and the host page.",
+    group: "Code and messages",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1047,7 +1163,9 @@ const CATALOG = [
     kind: "action.steps",
     label: "Go to step",
     category: "action",
-    description: "Move a step-through artboard (Steps in the artboard settings). Next and Back play the animation to the neighbouring step; going to a step further away shows it straight away. Does nothing on an artboard without steps, or past the first or last step.",
+    summary: "Moves a step-through artboard to another step.",
+    details: "Turn on Steps in the artboard settings first. Next and Back play the animation to the neighbouring step; going to a step further away shows it straight away. Does nothing on an artboard without steps, or past the first or last step.",
+    group: "Navigation",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1071,7 +1189,9 @@ const CATALOG = [
     kind: "action.captions",
     label: "Captions and sound",
     category: "action",
-    description: "Change what the viewer has chosen for captions, descriptions of what is on screen, the transcript panel and sound: turn captions or descriptions on or off, make them larger or smaller, open the transcript, mute or unmute. For your own buttons when the built-in ones are hidden in Project settings. The choices are remembered in the viewer's browser.",
+    summary: "Changes the viewer's choices for captions, descriptions, the transcript and sound.",
+    details: "It can turn captions or descriptions of what is on screen on or off, make them larger or smaller, open the transcript, and mute or unmute: whatever the viewer has chosen. For your own buttons when the built-in ones are hidden in Project settings. The choices are remembered in the viewer's browser.",
+    group: "Sound and video",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1104,7 +1224,9 @@ const CATALOG = [
     kind: "action.announce",
     label: "Announce",
     category: "action",
-    description: 'Say something to screen readers ("Correct, 3 of 5") through a live region. Nothing visible changes. Does nothing when accessibility is off in the preferences.',
+    summary: "Says something to screen readers through a live region.",
+    details: 'For example "Correct, 3 of 5". Nothing visible changes. Does nothing when accessibility is off in the preferences.',
+    group: "Speech and screen readers",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1125,7 +1247,9 @@ const CATALOG = [
     kind: "action.speak",
     label: "Read aloud",
     category: "action",
-    description: `Say something with a voice installed on the learner's own device: a text expression, a question with its options, or the feedback after a check. Nothing is recorded or sent anywhere, and with no local voice for the language nothing is said (bind to voiceAvailable to hide what depends on it). It never starts by itself, so put it behind a click or key: iOS only lets the first words start from a tap. The learner's speed choice (0.75 to 1.5, remembered) applies on top of Speed here. A layer's "Say it like" text is what the voice says for that layer. Also: stop, pause, resume, slower, faster, repeat.`,
+    summary: "Says something aloud with a voice installed on the learner's own device.",
+    details: `It can say a text expression, a question with its options, or the feedback after a check. Nothing is recorded or sent anywhere, and with no local voice for the language nothing is said (bind to voiceAvailable to hide what depends on it). It never starts by itself, so put it behind a click or key: iOS only lets the first words start from a tap. The learner's speed choice (0.75 to 1.5, remembered) applies on top of Speed here. A layer's "Say it like" text is what the voice says for that layer. Also: stop, pause, resume, slower, faster, repeat.`,
+    group: "Speech and screen readers",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1173,7 +1297,9 @@ const CATALOG = [
     kind: "action.questionCheck",
     label: "Check answer",
     category: "action",
-    description: 'Check the answer on a question (made with Add question): updates its answered, correct, attempts, score and feedback variables, locks it when it is right or out of tries, and tells screen readers the feedback. Continues from "right" or "wrong", then also from "finished" once the question is locked. For a question bank that is gone through once, "set done" also continues when that was the last question of the run.',
+    summary: "Checks the answer on a question and updates its answered, correct, attempts, score and feedback variables.",
+    details: 'A question is made with Add question. This locks it when it is right or out of tries, and tells screen readers the feedback. Continues from "right" or "wrong", then also from "finished" once the question is locked. For a question bank that is gone through once, "set done" also continues when that was the last question of the run.',
+    group: "Questions",
     outputs: [
       { id: "correct", label: "right" },
       { id: "wrong", label: "wrong" },
@@ -1187,7 +1313,9 @@ const CATALOG = [
     kind: "action.questionReset",
     label: "Reset question",
     category: "action",
-    description: 'Put a question back to the start: no answer, no hints, all tries back, options reshuffled when it shuffles. With a question bank it moves on to the next row. Run it on start to set the question up. A bank that is gone through once ("When the rows run out: finish") continues from "set done" instead of "out" when there is no next row, and can start a new run or a review of the ones missed.',
+    summary: "Puts a question back to the start: no answer, no hints, all tries back.",
+    details: 'Options are reshuffled when the question shuffles. With a question bank it moves on to the next row. Run it on start to set the question up. A bank that is gone through once ("When the rows run out: finish") continues from "set done" instead of "out" when there is no next row, and can start a new run or a review of the ones missed.',
+    group: "Questions",
     outputs: [
       { id: "out", label: "" },
       { id: "done", label: "set done" }
@@ -1216,7 +1344,9 @@ const CATALOG = [
     kind: "action.questionHint",
     label: "Show hint",
     category: "action",
-    description: "Show the next hint of a question and tell screen readers. Does nothing when there are none left or the question is finished.",
+    summary: "Shows the next hint of a question and tells screen readers.",
+    details: "Does nothing when there are none left or the question is finished.",
+    group: "Questions",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "question", label: "Question", type: "node", help: "The question frame" }]
@@ -1225,7 +1355,9 @@ const CATALOG = [
     kind: "action.questionChoose",
     label: "Choose option",
     category: "action",
-    description: "Select an option of a choice question: it swaps the choice for a single answer and toggles it for several. Normally run from a click on the option layer, where event.index is which option was clicked.",
+    summary: "Selects an option of a choice question.",
+    details: "It swaps the choice for a single answer and toggles it for several. Normally run from a click on the option layer, where event.index is which option was clicked.",
+    group: "Questions",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1237,7 +1369,9 @@ const CATALOG = [
     kind: "action.questionMove",
     label: "Move item",
     category: "action",
-    description: "Move an item of an ordering question one place up or down and tell screen readers where it went.",
+    summary: "Moves an item of an ordering question one place up or down.",
+    details: "It tells screen readers where the item went.",
+    group: "Questions",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1259,7 +1393,9 @@ const CATALOG = [
     kind: "action.questionDrop",
     label: "Item dropped in a group",
     category: "action",
-    description: "For a categorise question that gives feedback as each item is dropped: says whether the item that was just dropped (`event.layer`, from an On drop event) is in the group it belongs to. Sets the question's feedback and tells screen readers. It does not check the answer or use a try.",
+    summary: "Says whether the item just dropped is in the group it belongs to, for a categorise question.",
+    details: "Sets the question's feedback and tells screen readers. It does not check the answer or use a try.",
+    group: "Questions",
     outputs: [
       { id: "correct", label: "right" },
       { id: "wrong", label: "wrong" }
@@ -1271,7 +1407,9 @@ const CATALOG = [
     kind: "action.focus",
     label: "Focus layer",
     category: "action",
-    description: "Give a layer keyboard focus, or take focus away from whatever has it. Only tab stops can take focus: layers with an On focus event or a click (with accessibility on), buttons, inputs and links.",
+    summary: "Gives a layer keyboard focus, or takes focus away from whatever has it.",
+    details: "Only tab stops can take focus: layers with an On focus event or a click (with accessibility on), buttons, inputs and links.",
+    group: "Pointer and keys",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1292,7 +1430,9 @@ const CATALOG = [
     kind: "action.dragPlace",
     label: "Put layer in drop zone",
     category: "action",
-    description: "Move a draggable layer into a drop zone as if it had been dropped there (it settles by the zone's snap setting, or goes to the zone's centre). Does nothing if the zone would not take it. Fires no drag events, so it cannot start a loop; it does update the zone variables. Leave the layer empty to send every draggable layer, or pick a container to send everything inside it; a tag keeps only the layers that carry it. They go in one after another until the zone is full.",
+    summary: "Moves a draggable layer into a drop zone as if it had been dropped there.",
+    details: "It settles by the zone's snap setting, or goes to the zone's centre. Does nothing if the zone would not take it. Fires no drag events, so it cannot start a loop; it does update the zone variables. Leave the layer empty to send every draggable layer, or pick a container to send everything inside it; a tag keeps only the layers that carry it. They go in one after another until the zone is full.",
+    group: "Dragging",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1305,7 +1445,9 @@ const CATALOG = [
     kind: "action.dragReset",
     label: "Reset draggable",
     category: "action",
-    description: 'Send a draggable layer back to where it started (and into the zone it started in). Leave the layer empty to reset all of them ("Start again"). Fires no drag events.',
+    summary: "Sends a draggable layer back to where it started.",
+    details: 'Leave the layer empty to reset all of them ("Start again"). Fires no drag events.',
+    group: "Dragging",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "layer", label: "Draggable layer", type: "node", placeholder: "All draggable layers" }]
@@ -1314,7 +1456,9 @@ const CATALOG = [
     kind: "action.dragEnable",
     label: "Allow dragging",
     category: "action",
-    description: "Turn dragging on or off for a draggable layer (to lock an answer after checking it), or turn a drop zone on or off. Leave the layer empty to change every draggable layer, or pick a container to change everything inside it; a tag keeps only the layers that carry it.",
+    summary: "Turns dragging on or off for a draggable layer, or a drop zone on or off.",
+    details: "Use it to lock an answer after checking it. Leave the layer empty to change every draggable layer, or pick a container to change everything inside it; a tag keeps only the layers that carry it.",
+    group: "Dragging",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1349,7 +1493,9 @@ const CATALOG = [
     kind: "action.setTheme",
     label: "Set theme",
     category: "action",
-    description: `Show one of the project's themes (Light, Dark, High contrast ...) by name, or "auto" to follow the viewer's colour scheme and contrast settings again. Layers whose colours are theme tokens change with it.`,
+    summary: "Shows one of the project's themes by name, or follows the viewer's colour scheme again.",
+    details: `Themes are Light, Dark, High contrast and so on. Use "auto" to follow the viewer's colour scheme and contrast settings again. Layers whose colours are theme tokens change with it.`,
+    group: "Layers and looks",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "theme", label: "Theme", type: "expr", default: '"Dark"', help: 'A theme name in quotes, or an expression. "auto" follows the viewer.' }]
@@ -1358,7 +1504,9 @@ const CATALOG = [
     kind: "action.instanceInput",
     label: "Set instance input",
     category: "action",
-    description: "Set a variable inside an instance layer's artboard, by name (the instance's own inputs). Every copy of a repeated instance is set.",
+    summary: "Sets a variable inside an instance layer's artboard, by name.",
+    details: "These are the instance's own inputs. Every copy of a repeated instance is set.",
+    group: "Code and messages",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1371,7 +1519,9 @@ const CATALOG = [
     kind: "action.instanceTrigger",
     label: "Fire instance trigger",
     category: "action",
-    description: "Send a message into an instance layer's artboard only (its On message nodes and scripts hear it, the parent does not). Every copy of a repeated instance receives it.",
+    summary: "Sends a message into an instance layer's artboard only.",
+    details: "Its On message nodes and scripts hear it, the parent does not. Every copy of a repeated instance receives it.",
+    group: "Code and messages",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1384,7 +1534,8 @@ const CATALOG = [
     kind: "action.delay",
     label: "Wait",
     category: "action",
-    description: "Pause this flow for a time.",
+    summary: "Pauses this flow for a time.",
+    group: "Time and waiting",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "ms", label: "Milliseconds", type: "expr", default: "500", help: "A number of milliseconds, or an expression worked out when the wait starts, e.g. pace <= 4 ? 4000 : 8000" }]
@@ -1393,7 +1544,9 @@ const CATALOG = [
     kind: "action.waitBlendIn",
     label: "Wait for blend-in",
     category: "action",
-    description: 'Holds the flow while a timeline or blend is still blending in (see "Blend in" on Control timeline), unless that blend-in is marked "Can be left early". Use it in front of a change that should not cut a blend-in short. With "Give up" the flow just stops there instead of waiting.',
+    summary: "Holds the flow while a timeline or blend is still blending in.",
+    details: 'It holds unless that blend-in is marked "Can be left early" (see "Blend in" on Control timeline). Use it in front of a change that should not cut a blend-in short. With "Give up" the flow just stops there instead of waiting.',
+    group: "Time and waiting",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1406,7 +1559,9 @@ const CATALOG = [
     kind: "action.waitTimeline",
     label: "Wait for time in timeline",
     category: "action",
-    description: "Holds the flow until a timeline has played to a point (an exit time). Carries on at once if it is already past it, and a looping timeline that comes round counts as past. Nothing happens while the timeline is paused short of it.",
+    summary: "Holds the flow until a timeline has played to a point.",
+    details: "Carries on at once if it is already past it, and a looping timeline that comes round counts as past. Nothing happens while the timeline is paused short of it.",
+    group: "Time and waiting",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -1428,7 +1583,8 @@ const CATALOG = [
     kind: "action.log",
     label: "Log",
     category: "action",
-    description: "Write to the browser console (handy while building).",
+    summary: "Writes to the browser console, which is handy while building.",
+    group: "Code and messages",
     outputs: OUT,
     hasInput: true,
     params: [{ key: "message", label: "Message", type: "expr", default: '"clicked"' }]
@@ -1438,7 +1594,8 @@ const CATALOG = [
     kind: "logic.if",
     label: "If",
     category: "logic",
-    description: 'Continue down "true" or "false" depending on a condition.',
+    summary: 'Continues down "true" or "false" depending on a condition.',
+    group: "Branching",
     outputs: [
       { id: "true", label: "true" },
       { id: "false", label: "false" }
@@ -1450,7 +1607,8 @@ const CATALOG = [
     kind: "logic.switch",
     label: "Toggle",
     category: "logic",
-    description: 'Alternate between "a" and "b" each time it runs.',
+    summary: 'Alternates between "a" and "b" each time it runs.',
+    group: "Branching",
     outputs: [
       { id: "a", label: "a" },
       { id: "b", label: "b" }
@@ -1462,7 +1620,9 @@ const CATALOG = [
     kind: "logic.random",
     label: "Random",
     category: "logic",
-    description: 'Continues down one of its outputs, picked at random. "Weights" gives each output its chance (a list, in output order: [1, 3] makes output 2 three times as likely). "Only if" is a list of conditions in the same order; an output whose condition is false cannot be picked. Nothing continues when none can.',
+    summary: "Continues down one of its outputs, picked at random.",
+    details: '"Weights" gives each output its chance (a list, in output order: [1, 3] makes output 2 three times as likely). "Only if" is a list of conditions in the same order; an output whose condition is false cannot be picked. Nothing continues when none can.',
+    group: "Branching",
     outputs: [1, 2, 3, 4, 5, 6].map((n) => ({ id: String(n), label: String(n) })),
     hasInput: true,
     params: [
@@ -1474,7 +1634,8 @@ const CATALOG = [
     kind: "logic.once",
     label: "Once",
     category: "logic",
-    description: "Only lets the flow through the first time.",
+    summary: "Lets the flow through the first time only.",
+    group: "Branching",
     outputs: OUT,
     hasInput: true,
     params: []
@@ -1483,7 +1644,8 @@ const CATALOG = [
     kind: "logic.sequence",
     label: "Sequence",
     category: "logic",
-    description: 'Runs "1", then "2", then "3" in order.',
+    summary: 'Runs "1", then "2", then "3" in order.',
+    group: "Branching",
     outputs: [
       { id: "1", label: "1" },
       { id: "2", label: "2" },
@@ -1493,8 +1655,9 @@ const CATALOG = [
     params: []
   }
 ];
-const ONLY_IF = { key: "onlyIf", label: "Only if", type: "expr", default: "", placeholder: "e.g. running", help: "Optional. The flow runs only when this is true. event is in scope, with whatever this event gives" };
-for (const d of CATALOG) if (d.category === "event") d.params.push(ONLY_IF);
+const ONLY_IF = { key: "onlyIf", label: "Only if", type: "expr", default: "", placeholder: "e.g. running", help: "Runs the flow only when this is true. event is in scope, with what this event gives" };
+for (const d of SPECS) if (d.category === "event") d.params.push(ONLY_IF);
+const CATALOG = SPECS.map((d) => ({ ...d, description: [d.summary, d.details].filter(Boolean).join(" ") }));
 Object.fromEntries(CATALOG.map((d) => [d.kind, d]));
 const SHADER_UNIFORM_TYPES = ["float", "vec2", "vec3", "vec4", "color", "image"];
 const SHADER_BUILTINS = ["u_time", "u_resolution", "u_mouse", "u_frame", "v_uv"];
@@ -1703,24 +1866,24 @@ function defaultModifier(patch = {}) {
   return { unit: "letter", start: 0, end: 100, offset: 0, shape: "square", strength: 100, x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0, blur: 0, ...patch };
 }
 const isNum$3 = (v) => typeof v === "number" && Number.isFinite(v);
-const num$2 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
+const num$4 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeModifier(raw) {
   const r2 = raw && typeof raw === "object" ? raw : {};
   const d = defaultModifier();
   const m = {
     unit: MODIFIER_UNITS.includes(r2.unit) ? r2.unit : d.unit,
-    start: num$2(r2.start, d.start),
-    end: num$2(r2.end, d.end),
-    offset: num$2(r2.offset, d.offset),
+    start: num$4(r2.start, d.start),
+    end: num$4(r2.end, d.end),
+    offset: num$4(r2.offset, d.offset),
     shape: MODIFIER_SHAPES.includes(r2.shape) ? r2.shape : d.shape,
-    strength: num$2(r2.strength, d.strength),
-    x: num$2(r2.x, d.x),
-    y: num$2(r2.y, d.y),
-    rotation: num$2(r2.rotation, d.rotation),
-    scale: num$2(r2.scale, d.scale),
-    opacity: num$2(r2.opacity, d.opacity),
-    letterSpacing: num$2(r2.letterSpacing, d.letterSpacing),
-    blur: num$2(r2.blur, d.blur)
+    strength: num$4(r2.strength, d.strength),
+    x: num$4(r2.x, d.x),
+    y: num$4(r2.y, d.y),
+    rotation: num$4(r2.rotation, d.rotation),
+    scale: num$4(r2.scale, d.scale),
+    opacity: num$4(r2.opacity, d.opacity),
+    letterSpacing: num$4(r2.letterSpacing, d.letterSpacing),
+    blur: num$4(r2.blur, d.blur)
   };
   if (isNum$3(r2.falloffStart)) m.falloffStart = r2.falloffStart;
   if (isNum$3(r2.falloffEnd)) m.falloffEnd = r2.falloffEnd;
@@ -2668,7 +2831,7 @@ function run(ctx2, startPc, startPos, gen) {
 }
 let stackBase = 0;
 const progOf = (re) => compile$1(re.source, re.flags);
-const advance = (s, i, u) => u && i + 1 < s.length && s.codePointAt(i) > 65535 ? i + 2 : i + 1;
+const advance$1 = (s, i, u) => u && i + 1 < s.length && s.codePointAt(i) > 65535 ? i + 2 : i + 1;
 function result(prog, s, caps) {
   const out = [];
   for (let k = 0; k < prog.ncap; k++) out.push(caps[2 * k] < 0 || caps[2 * k + 1] < 0 ? void 0 : s.slice(caps[2 * k], caps[2 * k + 1]));
@@ -2719,7 +2882,7 @@ function linearMatch(re, s) {
     const m = linearExec(re, s);
     if (!m) break;
     out.push(m[0]);
-    if (m[0] === "") re.lastIndex = advance(s, re.lastIndex, prog.u);
+    if (m[0] === "") re.lastIndex = advance$1(s, re.lastIndex, prog.u);
   }
   return out.length ? out : null;
 }
@@ -2733,7 +2896,7 @@ function linearMatchAll(re, s) {
     const m = linearExec(copy, s);
     if (!m) break;
     out.push(m);
-    if (m[0] === "") copy.lastIndex = advance(s, copy.lastIndex, prog.u);
+    if (m[0] === "") copy.lastIndex = advance$1(s, copy.lastIndex, prog.u);
   }
   return out;
 }
@@ -2792,7 +2955,7 @@ function linearReplace(re, s, replacement, all) {
       const m = linearExec(re, s);
       if (!m) break;
       matches.push(m);
-      if (m[0] === "") re.lastIndex = advance(s, re.lastIndex, prog.u);
+      if (m[0] === "") re.lastIndex = advance$1(s, re.lastIndex, prog.u);
     }
   } else {
     const m = linearExec(re, s);
@@ -2826,7 +2989,7 @@ function linearSplit(re, s, limit) {
     if (!caps || caps[0] >= size) break;
     const e = Math.min(caps[1], size);
     if (e === p) {
-      q = advance(s, caps[0], prog.u);
+      q = advance$1(s, caps[0], prog.u);
       continue;
     }
     out.push(s.slice(p, caps[0]));
@@ -2952,12 +3115,12 @@ function opts(texts, right) {
 }
 const isObj$4 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const str$1 = (v, d = "") => typeof v === "string" ? v : d;
-const num$1 = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
+const num$3 = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
 function cleanVoice(raw) {
   if (!isObj$4(raw)) return void 0;
   const out = {};
   if (str$1(raw.voice)) out.voice = str$1(raw.voice).slice(0, 40);
-  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num$1(raw.speed, 1, 0.5, 1.5);
+  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num$3(raw.speed, 1, 0.5, 1.5);
   if (str$1(raw.say).trim()) out.say = str$1(raw.say).slice(0, 200);
   if (str$1(raw.sentence).trim()) out.sentence = str$1(raw.sentence).slice(0, 300);
   if (raw.twice === true) out.twice = true;
@@ -3018,7 +3181,7 @@ function normaliseQuestion(raw) {
     kind,
     prefix: isIdentifier(str$1(raw.prefix)) ? str$1(raw.prefix) : d.prefix,
     prompt: str$1(raw.prompt),
-    points: num$1(raw.points, 1, 0, 1e3),
+    points: num$3(raw.points, 1, 0, 1e3),
     options,
     blanks,
     pairs,
@@ -3028,10 +3191,10 @@ function normaliseQuestion(raw) {
     ...kind === "blank" && raw.answerBy === "drag" ? { answerBy: "drag" } : {},
     shuffle: raw.shuffle === true,
     partial: raw.partial === true,
-    attempts: Math.round(num$1(raw.attempts, 0, 0, 100)),
-    attemptPenalty: num$1(raw.attemptPenalty, 0, 0, 1),
+    attempts: Math.round(num$3(raw.attempts, 0, 0, 100)),
+    attemptPenalty: num$3(raw.attemptPenalty, 0, 0, 1),
     hints: (Array.isArray(raw.hints) ? raw.hints : []).filter((h) => typeof h === "string").slice(0, MAX_HINTS),
-    hintPenalty: num$1(raw.hintPenalty, 0, 0, 1),
+    hintPenalty: num$3(raw.hintPenalty, 0, 0, 1),
     feedbackCorrect: str$1(raw.feedbackCorrect),
     feedbackPartial: str$1(raw.feedbackPartial),
     feedbackIncorrect: str$1(raw.feedbackIncorrect),
@@ -3046,7 +3209,7 @@ function normaliseQuestion(raw) {
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
-    ...isObj$4(raw.retake) ? { retake: { limit: Math.round(num$1(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
+    ...isObj$4(raw.retake) ? { retake: { limit: Math.round(num$3(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
     ...cleanVoice(raw.voice) ? { voice: cleanVoice(raw.voice) } : {},
     ...cleanGuard(raw.guard) ? { guard: cleanGuard(raw.guard) } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
@@ -3125,22 +3288,22 @@ const NOTE_MIN_W = 80;
 const NOTE_MIN_H = 48;
 const NOTE_MAX_TEXT = 4e3;
 const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
-const num = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
+const num$2 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
 function cleanNote(raw) {
   if (!isObj$1(raw) || typeof raw.id !== "string" || !raw.id) return null;
   const n = {
     id: raw.id,
-    x: num(raw.x, 0),
-    y: num(raw.y, 0),
-    w: Math.max(NOTE_MIN_W, num(raw.w, NOTE_DEFAULT_W)),
-    h: Math.max(NOTE_MIN_H, num(raw.h, NOTE_DEFAULT_H)),
+    x: num$2(raw.x, 0),
+    y: num$2(raw.y, 0),
+    w: Math.max(NOTE_MIN_W, num$2(raw.w, NOTE_DEFAULT_W)),
+    h: Math.max(NOTE_MIN_H, num$2(raw.h, NOTE_DEFAULT_H)),
     text: typeof raw.text === "string" ? raw.text.slice(0, NOTE_MAX_TEXT) : ""
   };
   if (NOTE_COLOURS.includes(raw.colour)) n.colour = raw.colour;
   if (typeof raw.author === "string" && raw.author) n.author = raw.author.slice(0, 120);
   if (typeof raw.created === "string") n.created = raw.created.slice(0, 40);
   const a = raw.anchor;
-  if (isObj$1(a) && typeof a.layerId === "string" && a.layerId) n.anchor = { layerId: a.layerId, lx: num(a.lx, 0), ly: num(a.ly, 0) };
+  if (isObj$1(a) && typeof a.layerId === "string" && a.layerId) n.anchor = { layerId: a.layerId, lx: num$2(a.lx, 0), ly: num$2(a.ly, 0) };
   return n;
 }
 function cleanNotes(raw) {
@@ -3229,11 +3392,11 @@ function stringMap(v) {
   return out;
 }
 function sanitizeLayerInPlace(node) {
-  const clean = sanitizeNode(node, /* @__PURE__ */ new Set());
-  if (!clean) return false;
+  const clean2 = sanitizeNode(node, /* @__PURE__ */ new Set());
+  if (!clean2) return false;
   const target = node;
-  for (const k of Object.keys(target)) if (!(k in clean)) delete target[k];
-  for (const [k, v] of Object.entries(clean)) if (!same$1(target[k], v)) target[k] = v;
+  for (const k of Object.keys(target)) if (!(k in clean2)) delete target[k];
+  for (const [k, v] of Object.entries(clean2)) if (!same$1(target[k], v)) target[k] = v;
   return true;
 }
 function same$1(a, b) {
@@ -4397,13 +4560,13 @@ function runsPatch(runs) {
   return { text: runsText(norm), runs: isPlainRuns(norm) ? void 0 : norm };
 }
 const MAX_SIZE = 30;
-const memo = /* @__PURE__ */ new Map();
+const memo$2 = /* @__PURE__ */ new Map();
 function remembered(key, make) {
-  let hit = memo.get(key);
+  let hit = memo$2.get(key);
   if (hit === void 0) {
     hit = JSON.stringify(make());
-    if (memo.size >= 8) memo.delete(memo.keys().next().value);
-    memo.set(key, hit);
+    if (memo$2.size >= 8) memo$2.delete(memo$2.keys().next().value);
+    memo$2.set(key, hit);
   }
   return JSON.parse(hit);
 }
@@ -4490,12 +4653,12 @@ function layoutCrossword(words, size = 10, tries = 400) {
   return remembered("c" + size + ":" + tries + ":" + JSON.stringify(words), () => layOut(words, size, tries));
 }
 function layOut(words, size, tries) {
-  const clean = cleanWords(words, size);
-  if (!clean.length) return [];
+  const clean2 = cleanWords(words, size);
+  if (!clean2.length) return [];
   const rand = prng(20240607);
-  const longestFirst = [...clean].sort((a, b) => b.answer.length - a.answer.length);
-  const orders = clean.map((w) => [w, ...longestFirst.filter((x) => x !== w)]);
-  for (let i = 0; i < tries; i++) orders.push(clean.map((w) => ({ w, r: rand() })).sort((a, b) => a.r - b.r).map((o) => o.w));
+  const longestFirst = [...clean2].sort((a, b) => b.answer.length - a.answer.length);
+  const orders = clean2.map((w) => [w, ...longestFirst.filter((x) => x !== w)]);
+  for (let i = 0; i < tries; i++) orders.push(clean2.map((w) => ({ w, r: rand() })).sort((a, b) => a.r - b.r).map((o) => o.w));
   let best = [];
   let bestScore = -1;
   for (const order of orders) {
@@ -4519,8 +4682,8 @@ function hide(words, size, seed) {
   const rand = prng(seed);
   const grid = Array(size * size).fill("");
   const text = (Array.isArray(words) ? words : []).slice(0, MAX_WORDS).map((w) => typeof w === "string" ? w : w && typeof w === "object" ? String(w.answer ?? w.word ?? "") : "");
-  const clean = text.map((w) => w.toUpperCase().replace(/[^A-Z]/g, "")).filter((w) => w.length >= 2 && w.length <= size);
-  const order = clean.map((w, i) => ({ w, i })).sort((a, b) => b.w.length - a.w.length);
+  const clean2 = text.map((w) => w.toUpperCase().replace(/[^A-Z]/g, "")).filter((w) => w.length >= 2 && w.length <= size);
+  const order = clean2.map((w, i) => ({ w, i })).sort((a, b) => b.w.length - a.w.length);
   for (const { w, i } of order) {
     for (let tries = 0; tries < 400; tries++) {
       const [dr, dc] = DIRECTIONS[(i + Math.floor(tries / 100)) % DIRECTIONS.length];
@@ -4541,6 +4704,469 @@ function hide(words, size, seed) {
   const pool = "EEEEEAAAAIIIOOOUUNNNRRRSSSTTTLLCCDDMMPPHHBGFWYKV";
   for (let i = 0; i < grid.length; i++) if (!grid[i]) grid[i] = pool[Math.floor(rand() * pool.length)];
   return Array.from({ length: size }, (_, r2) => grid.slice(r2 * size, (r2 + 1) * size).join(""));
+}
+const W = {
+  " ": 0.26,
+  a: 0.556,
+  b: 0.612,
+  c: 0.479,
+  d: 0.612,
+  e: 0.562,
+  f: 0.336,
+  g: 0.543,
+  h: 0.613,
+  i: 0.252,
+  j: 0.252,
+  k: 0.525,
+  l: 0.252,
+  m: 0.926,
+  n: 0.613,
+  o: 0.602,
+  p: 0.612,
+  q: 0.612,
+  r: 0.409,
+  s: 0.477,
+  t: 0.356,
+  u: 0.613,
+  v: 0.5,
+  w: 0.775,
+  x: 0.523,
+  y: 0.501,
+  z: 0.469,
+  A: 0.632,
+  B: 0.646,
+  C: 0.63,
+  D: 0.726,
+  E: 0.556,
+  F: 0.516,
+  G: 0.727,
+  H: 0.737,
+  I: 0.279,
+  J: 0.269,
+  K: 0.612,
+  L: 0.522,
+  M: 0.899,
+  N: 0.753,
+  O: 0.778,
+  P: 0.602,
+  Q: 0.778,
+  R: 0.617,
+  S: 0.548,
+  T: 0.551,
+  U: 0.729,
+  V: 0.596,
+  W: 0.923,
+  X: 0.578,
+  Y: 0.559,
+  Z: 0.572,
+  ".": 0.263,
+  ",": 0.259,
+  ":": 0.263,
+  ";": 0.263,
+  "-": 0.322,
+  "–": 0.5,
+  "—": 0.9,
+  "'": 0.219,
+  "’": 0.169,
+  '"': 0.398,
+  "?": 0.432,
+  "!": 0.264,
+  "(": 0.295,
+  ")": 0.295,
+  "/": 0.367,
+  "%": 0.827,
+  "&": 0.729,
+  "+": 0.572,
+  "=": 0.572,
+  "•": 0.376,
+  "·": 0.263,
+  "@": 0.896,
+  "#": 0.646,
+  "$": 0.572,
+  "*": 0.551,
+  "_": 0.438,
+  "|": 0.549
+};
+const advance = (ch) => W[ch] ?? (ch >= "0" && ch <= "9" ? 0.572 : ch.charCodeAt(0) > 8192 ? 1 : 0.56);
+const TEXT_WIDTH_MARGIN = 0.04;
+function textWidth(text, size, weight = 400) {
+  const bold = weight >= 700 ? 1.07 : weight >= 600 ? 1.04 : 1;
+  let em = 0;
+  for (const ch of String(text)) em += advance(ch);
+  return em * size * bold * (1 + TEXT_WIDTH_MARGIN);
+}
+function wrapLines(text, room, size, weight = 400) {
+  const lines = [];
+  let line = "";
+  let widest = 0;
+  const close = () => {
+    widest = Math.max(widest, textWidth(line, size, weight));
+    lines.push(line);
+  };
+  for (const word of String(text).trim().split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && textWidth(next, size, weight) > room) {
+      close();
+      line = word;
+    } else line = next;
+  }
+  close();
+  return { lines, width: widest };
+}
+const FLOOR = 11;
+const HARD_MAX_WORDS = 120;
+const WEIGHT = 600;
+const num$1 = (v, fallback) => {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : fallback;
+};
+const clean = (s) => s.trim().replace(/\s+/g, " ");
+const stripEnds = (s) => s.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+const cloudKey = (text) => clean(String(text ?? "")).toLowerCase();
+function wordBox(text, size) {
+  const padX = Math.max(12, size * 0.3);
+  const padY = Math.max(4, size * 0.16);
+  return { w: Math.ceil(textWidth(text, size, WEIGHT) + 2 * padX), h: Math.ceil(size + 2 * padY) };
+}
+function gather(input, blocked, minCount) {
+  const merged = /* @__PURE__ */ new Map();
+  const rows = Array.isArray(input) ? input : [];
+  for (const raw of rows) {
+    const isObj2 = !!raw && typeof raw === "object" && !Array.isArray(raw);
+    const text = clean(String(isObj2 ? raw.text ?? "" : typeof raw === "string" || typeof raw === "number" ? raw : ""));
+    if (!text) continue;
+    const key = text.toLowerCase();
+    if (blocked.has(key) || key.split(" ").some((t2) => blocked.has(stripEnds(t2)))) continue;
+    const weight = isObj2 ? Math.max(0, num$1(raw.weight, 1)) : 1;
+    const have = merged.get(key);
+    if (have) have.weight += weight;
+    else {
+      const { text: _t, weight: _w, ...extra } = isObj2 ? raw : {};
+      merged.set(key, { key, text, weight, extra });
+    }
+  }
+  return [...merged.values()].filter((r2) => r2.weight >= minCount && r2.weight > 0).sort((a, b) => b.weight - a.weight || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+}
+const GOLDEN = 2.399963229728653;
+function pack(boxes, W2, H, gap) {
+  const placed = [];
+  const out = [];
+  const cx = W2 / 2;
+  const cy = H / 2;
+  const squash = Math.min(1, H / W2);
+  const reach = W2 / 2 + Math.max(...boxes.map((b) => b.w), 0);
+  boxes.forEach((b, i) => {
+    if (b.w > W2 || b.h > H) {
+      out.push(null);
+      return;
+    }
+    const free = (x, y) => {
+      if (x < 0 || y < 0 || x + b.w > W2 || y + b.h > H) return false;
+      for (const r22 of placed) if (x < r22.x + r22.w + gap && x + b.w + gap > r22.x && y < r22.y + r22.h + gap && y + b.h + gap > r22.y) return false;
+      return true;
+    };
+    let theta = i * GOLDEN;
+    let r2 = 0;
+    let found = null;
+    while (r2 <= reach) {
+      const x = Math.round(cx + r2 * Math.cos(theta) - b.w / 2);
+      const y = Math.round(cy + r2 * Math.sin(theta) * squash - b.h / 2);
+      if (free(x, y)) {
+        found = { x, y, w: b.w, h: b.h };
+        break;
+      }
+      theta += Math.min(0.5, 6 / Math.max(r2, 6));
+      r2 += 1.5 * Math.min(0.5, 6 / Math.max(r2, 6));
+    }
+    if (found) placed.push(found);
+    out.push(found);
+  });
+  return out;
+}
+const memo$1 = /* @__PURE__ */ new Map();
+function layoutCloud(input, width, height, options) {
+  const o = options && typeof options === "object" ? options : {};
+  const W2 = Math.min(4e3, Math.max(40, num$1(width, 600)));
+  const H = Math.min(4e3, Math.max(40, num$1(height, 400)));
+  const minSize = Math.max(FLOOR, num$1(o.minSize, 16));
+  const maxSize = Math.max(minSize, num$1(o.maxSize, 64));
+  const gap = Math.max(0, num$1(o.gap, 6));
+  const scale = o.scale === "linear" || o.scale === "log" ? o.scale : "sqrt";
+  const minCount = Math.max(0, num$1(o.minCount, 0));
+  const grow1 = Math.max(1, Math.min(3, num$1(o.grow, 1)));
+  const limit = Math.min(HARD_MAX_WORDS, Math.max(1, Math.round(num$1(o.max, 60))));
+  const blocked = new Set((Array.isArray(o.blocked) ? o.blocked : []).map((b) => stripEnds(cloudKey(b))).filter(Boolean));
+  const key = JSON.stringify([input, W2, H, minSize, maxSize, gap, scale, minCount, limit, grow1, [...blocked]]);
+  const hit = memo$1.get(key);
+  if (hit !== void 0) return JSON.parse(hit);
+  const rows = gather(input, blocked, minCount).slice(0, limit);
+  const top = rows.length ? rows[0].weight : 1;
+  const low = rows.length ? rows[rows.length - 1].weight : 1;
+  const tOf = (w) => top === low ? 0.5 : (w - low) / (top - low);
+  const grow = (t2) => scale === "linear" ? t2 : scale === "log" ? Math.log1p(t2 * 9) / Math.log(10) : Math.sqrt(t2);
+  const sizes = rows.map((r2) => top === low ? (minSize + maxSize) / 2 : minSize + (maxSize - minSize) * grow(tOf(r2.weight)));
+  const area = (k2) => rows.reduce((sum, r2, i) => {
+    const b = wordBox(r2.text, Math.max(FLOOR, Math.round(sizes[i] * k2)));
+    return sum + (b.w + gap) * (b.h + gap);
+  }, 0);
+  let k = Math.min(grow1, Math.sqrt(0.5 * W2 * H / Math.max(1, area(1))));
+  let spots = [];
+  let at = [];
+  for (let attempt2 = 0; attempt2 < 14; attempt2++) {
+    at = rows.map((r2, i) => {
+      const size = Math.max(FLOOR, Math.round(sizes[i] * k));
+      return { size, box: wordBox(r2.text, size) };
+    });
+    spots = pack(at.map((a) => a.box), W2, H, gap);
+    if (spots.every(Boolean) || at.every((a) => a.size <= FLOOR)) break;
+    k *= 0.93;
+  }
+  const result2 = rows.map((r2, i) => {
+    const f2 = top === low ? 0.5 : grow(tOf(r2.weight));
+    const spot = spots[i];
+    return {
+      ...r2.extra,
+      text: r2.text,
+      weight: r2.weight,
+      rank: i,
+      size: at[i].size,
+      tier: f2 >= 0.7 ? 0 : f2 >= 0.4 ? 1 : 2,
+      x: spot ? spot.x : 0,
+      y: spot ? spot.y : 0,
+      w: at[i].box.w,
+      h: at[i].box.h,
+      shown: !!spot
+    };
+  });
+  if (memo$1.size >= 8) memo$1.delete(memo$1.keys().next().value);
+  memo$1.set(key, JSON.stringify(result2));
+  return result2;
+}
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const SHORT$1 = MONTHS.map((m) => m.slice(0, 3));
+const num = (v, fallback) => {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : fallback;
+};
+const daysIn = (y, m) => [31, y % 4 === 0 && y % 100 !== 0 || y % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+function parseDate(v) {
+  if (typeof v === "number") return Number.isFinite(v) && Number.isInteger(v) ? { t: v, tEnd: v + 1, precision: "year", year: v, month: 1, day: 1 } : null;
+  if (typeof v !== "string") return null;
+  const m = /^\s*(-?\d{1,6})(?:-(\d{1,2}))?(?:-(\d{1,2}))?(?:[T ].*)?\s*$/.exec(v);
+  if (!m) return null;
+  const year = Number(m[1]);
+  if (m[2] === void 0) return { t: year, tEnd: year + 1, precision: "year", year, month: 1, day: 1 };
+  const month = Number(m[2]);
+  if (month < 1 || month > 12) return null;
+  if (m[3] === void 0) return { t: year + (month - 1) / 12, tEnd: year + month / 12, precision: "month", year, month, day: 1 };
+  const day = Number(m[3]);
+  if (day < 1 || day > daysIn(year, month)) return null;
+  const t2 = year + (month - 1 + (day - 1) / daysIn(year, month)) / 12;
+  return { t: t2, tEnd: year + (month - 1 + day / daysIn(year, month)) / 12, precision: "day", year, month, day };
+}
+const yearText = (y) => y < 0 ? `${-y} BCE` : String(y);
+function dateText(d) {
+  const y = yearText(d.year);
+  return d.precision === "day" ? `${d.day} ${MONTHS[d.month - 1]} ${y}` : d.precision === "month" ? `${MONTHS[d.month - 1]} ${y}` : y;
+}
+const rowsOf = (v) => Array.isArray(v) ? v.filter((r2) => !!r2 && typeof r2 === "object" && !Array.isArray(r2)) : [];
+const STEPS = [1 / 12, 1 / 4, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4];
+function timeBounds(events, eras, marker) {
+  const points = [];
+  for (const e of rowsOf(events)) {
+    const a = parseDate(e.date);
+    if (!a) continue;
+    points.push(a.t);
+    const b = e.end === void 0 || e.end === null || e.end === "" ? null : parseDate(e.end);
+    if (b) points.push(b.tEnd);
+  }
+  for (const e of rowsOf(eras)) {
+    const a = parseDate(e.from);
+    const b = parseDate(e.to);
+    if (a) points.push(a.t);
+    if (b) points.push(b.t);
+  }
+  const mk = markerDate(marker);
+  if (mk) points.push(mk.t);
+  if (!points.length) return { from: 0, to: 1, span: 1, count: 0 };
+  const lo = Math.min(...points);
+  const hi = Math.max(...points);
+  const room = Math.max(0.5, (hi - lo) * 0.04);
+  let from = Math.floor(lo - room);
+  let to = Math.ceil(hi + room);
+  if (to - from < 2) {
+    from -= 1;
+    to += 1;
+  }
+  return { from, to, span: to - from, count: rowsOf(events).length };
+}
+function markerDate(v) {
+  if (v === "today") {
+    const now2 = /* @__PURE__ */ new Date();
+    return parseDate(`${now2.getFullYear()}-${now2.getMonth() + 1}-${now2.getDate()}`);
+  }
+  return v === void 0 || v === null || v === "" ? null : parseDate(v);
+}
+const memo = /* @__PURE__ */ new Map();
+function timelineLayout(eventsIn, erasIn, fromIn, toIn, options) {
+  const o = options && typeof options === "object" ? options : {};
+  const length = Math.min(2e4, Math.max(40, num(o.length, 880)));
+  const vertical = o.orientation === "vertical";
+  const size = Math.max(8, num(o.labelSize, 14));
+  const lanes = Math.max(1, Math.min(12, Math.round(num(o.lanes, 4))));
+  const maxLabel = Math.max(40, num(o.maxLabel, 170));
+  const column = Math.max(40, num(o.columnWidth, 150));
+  const maxLines = Math.max(1, Math.min(6, Math.round(num(o.maxLines, 2))));
+  const gap = Math.max(0, num(o.gap, 8));
+  const tickSpace = Math.max(20, num(o.tickSpace, 64));
+  const lineH = size * 1.25;
+  const dateLine = o.dateLine === true;
+  const sides = num(o.sides, 2) === 1 ? 1 : 2;
+  const from = num(fromIn, 0);
+  let to = num(toIn, from + 1);
+  if (to <= from) to = from + 1;
+  const key = JSON.stringify([eventsIn, erasIn, from, to, length, vertical, size, lanes, maxLabel, column, maxLines, gap, tickSpace, o.marker === "today" ? (/* @__PURE__ */ new Date()).toDateString() : o.marker, dateLine, sides]);
+  const hit = memo.get(key);
+  if (hit !== void 0) return JSON.parse(hit);
+  const span = to - from;
+  const px = length / span;
+  const at = (t2) => (t2 - from) * px;
+  const problems = [];
+  const eraRows = rowsOf(erasIn).flatMap((e, i) => {
+    const a = parseDate(e.from);
+    const b = parseDate(e.to);
+    if (!a || !b || b.t <= a.t) {
+      problems.push(`Era ${i + 1} ("${String(e.name ?? e.title ?? "")}"): the from and to dates need to be dates, from before to`);
+      return [];
+    }
+    return [{ row: e, a, b, i }];
+  }).sort((x, y) => x.a.t - y.a.t || x.i - y.i);
+  const parsed = rowsOf(eventsIn).flatMap((e, i) => {
+    const a = parseDate(e.date);
+    if (!a) {
+      problems.push(`Event ${i + 1} ("${String(e.title ?? "")}"): the date "${String(e.date ?? "")}" can't be read. Write it as 1969, 1969-07 or 1969-07-20`);
+      return [];
+    }
+    const hasEnd = e.end !== void 0 && e.end !== null && e.end !== "";
+    const b = hasEnd ? parseDate(e.end) : null;
+    if (hasEnd && !b) problems.push(`Event ${i + 1} ("${String(e.title ?? "")}"): the end date "${String(e.end)}" can't be read, so it shows as a single date`);
+    const stop = b && b.tEnd > a.t ? b.tEnd : a.t;
+    return [{ row: e, a, b: b && b.tEnd > a.t ? b : null, stop, i }];
+  }).sort((x, y) => x.a.t - y.a.t || x.i - y.i);
+  const items = parsed.map((p, index) => {
+    const title = String(p.row.title ?? p.row.name ?? "");
+    const range = !!p.b;
+    const text = range ? `${dateText(p.a)} to ${dateText(p.b)}` : dateText(p.a);
+    const eraIdx = eraRows.findIndex((e) => p.a.t >= e.a.t && p.a.t < e.b.t);
+    const inView = p.a.t <= to && p.stop >= from;
+    const wrapped = vertical ? wrapLines(title, column, size, 600) : wrapLines(title, maxLabel, size, 600);
+    const lines = Math.min(maxLines, wrapped.lines.length) + (dateLine ? 1 : 0);
+    const room = vertical ? column : maxLabel;
+    const labelW = Math.ceil(Math.min(room, Math.max(wrapped.width, dateLine ? textWidth(text, size, 600) : 0)));
+    return {
+      ...p.row,
+      index,
+      title,
+      range,
+      start: p.a.t,
+      stop: p.stop,
+      dateText: text,
+      spoken: range ? `from ${text}` : text,
+      eraIndex: eraIdx,
+      eraName: eraIdx >= 0 ? String(eraRows[eraIdx].row.name ?? eraRows[eraIdx].row.title ?? "") : "",
+      inView,
+      pos: round(at(p.a.t)),
+      pos2: round(at(p.stop)),
+      len: Math.max(0, round(at(p.stop) - at(p.a.t))),
+      lane: -1,
+      labelled: false,
+      labelPos: 0,
+      labelW,
+      labelH: Math.ceil(lines * lineH),
+      lines,
+      priority: num(p.row.priority, 0)
+    };
+  });
+  const along = (it) => vertical ? it.labelH : it.labelW;
+  const taken = Array.from({ length: lanes }, () => []);
+  const stems = [];
+  const sideOf = (lane) => sides === 1 ? 0 : lane % 2;
+  const STEM = 4;
+  const order = items.filter((it) => it.inView).sort((x, y) => y.priority - x.priority || x.index - y.index);
+  for (const it of order) {
+    const room = along(it);
+    const start = Math.max(0, Math.min(it.pos, length - room));
+    const a = Math.min(start, it.pos);
+    const b = Math.max(start + room, it.range ? it.pos2 : it.pos);
+    const lane = taken.findIndex((used, k) => {
+      if (!used.every((u) => b + gap <= u.a || a >= u.b + gap)) return false;
+      for (let j = 0; j < k; j++) if (sideOf(j) === sideOf(k) && taken[j].some((u) => it.pos >= u.a - STEM && it.pos <= u.b + STEM)) return false;
+      return !stems.some((st) => st.lane > k && sideOf(st.lane) === sideOf(k) && st.pos >= a - STEM && st.pos <= b + STEM);
+    });
+    if (lane < 0) continue;
+    taken[lane].push({ a, b });
+    stems.push({ pos: it.pos, lane });
+    it.lane = lane;
+    it.labelled = true;
+    it.labelPos = round(start);
+  }
+  const eraOut = eraRows.map((e, n) => {
+    const lo = Math.max(e.a.t, from);
+    const hi = Math.min(e.b.t, to);
+    const shown = hi > lo;
+    return {
+      ...e.row,
+      index: n,
+      name: String(e.row.name ?? e.row.title ?? ""),
+      dateText: `${dateText(e.a)} to ${dateText(e.b)}`,
+      inView: shown,
+      clipStart: shown && e.a.t < from,
+      clipEnd: shown && e.b.t > to,
+      pos: shown ? round(at(lo)) : 0,
+      pos2: shown ? round(at(hi)) : 0,
+      len: shown ? round(at(hi) - at(lo)) : 0
+    };
+  });
+  const step = STEPS.find((s) => s * px >= tickSpace) ?? STEPS[STEPS.length - 1];
+  const ticks = [];
+  if (step < 1) {
+    const months = Math.round(step * 12);
+    for (let m = Math.ceil(from * 12 / months) * months; m / 12 <= to + 1e-9 && ticks.length < 400; m += months) {
+      const yr = Math.floor(m / 12);
+      const mo = m - yr * 12;
+      ticks.push({ value: m / 12, label: mo === 0 ? yearText(yr) : `${SHORT$1[mo]} ${yearText(yr)}`, pos: round(at(m / 12)), major: mo === 0 });
+    }
+  } else {
+    for (let k = Math.ceil(from / step); k * step <= to + 1e-9 && ticks.length < 400; k++) {
+      ticks.push({ value: k * step, label: yearText(k * step), pos: round(at(k * step)), major: k % 5 === 0 });
+    }
+  }
+  const rangeText = span >= 5 ? `${yearText(Math.round(from))} to ${yearText(Math.round(to))}` : `${monthYear(from)} to ${monthYear(to)}`;
+  const mk = markerDate(o.marker);
+  const marker = mk ? { pos: round(at(mk.t)), text: dateText(mk), inView: mk.t >= from && mk.t <= to } : null;
+  const result2 = {
+    from,
+    to,
+    span,
+    length,
+    events: items,
+    eras: eraOut,
+    ticks,
+    rangeText,
+    marker,
+    earlier: items.filter((it) => it.stop < from).length,
+    later: items.filter((it) => it.start > to).length,
+    unlabelled: items.filter((it) => it.inView && !it.labelled).length,
+    problems
+  };
+  if (memo.size >= 8) memo.delete(memo.keys().next().value);
+  memo.set(key, JSON.stringify(result2));
+  return result2;
+}
+const round = (v) => Math.round(v * 10) / 10;
+function monthYear(t2) {
+  const m = Math.min(11, Math.max(0, Math.floor((t2 - Math.floor(t2)) * 12 + 1e-9)));
+  return `${MONTHS[m]} ${yearText(Math.floor(t2 + 1e-9))}`;
 }
 class ExprError extends Error {
 }
@@ -5743,6 +6369,28 @@ const FORMULA_HELPERS = {
   },
   crossword: (words, size = 10) => layoutCrossword(words, size),
   wordSearch: (words, size = 12, seed = 7) => makeWordSearch(words, size, seed),
+  cloud: (words, width, height, options) => layoutCloud(words, width, height, options),
+  //Variables hold text, numbers, true/false and lists, so the timeline is handed over a part at a time, each a list: `part` is "events" (the default), "eras", "ticks", "marker" (no row, or one) or "info" (one row: rangeText, unlabelled, earlier, later, problems)
+  timelineLayout: (events, eras, from, to, options, part = "events") => {
+    const r2 = timelineLayout(events, eras, from, to, options);
+    switch (part) {
+      case "eras":
+        return r2.eras;
+      case "ticks":
+        return r2.ticks;
+      case "marker":
+        return r2.marker ? [r2.marker] : [];
+      case "info":
+        return [{ rangeText: r2.rangeText, unlabelled: r2.unlabelled, earlier: r2.earlier, later: r2.later, problems: r2.problems, from: r2.from, to: r2.to }];
+      default:
+        return r2.events;
+    }
+  },
+  //[from, to, span, count]: the years that hold every event and era, whole years with room at each end
+  timeBounds: (events, eras, marker) => {
+    const b = timeBounds(events, eras, marker);
+    return [b.from, b.to, b.span, b.count];
+  },
   /** How many words a text has (runs of anything but spaces). */
   wordCount: (text) => {
     const t2 = text === void 0 || text === null ? "" : String(text).trim();
@@ -6476,7 +7124,7 @@ Prefer to start from something finished? The **Templates** tab on the projects p
 
 ## Where to get help
 
-Press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search these pages. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
+Press <kbd>F1</kbd> anywhere for the page about what you have selected (with a search box ready), or <kbd>Ctrl</kbd>+<kbd>K</kbd> to search these pages. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
 
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`
   },
@@ -6563,11 +7211,11 @@ From left to right:
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
 - Zoom: **−**, the percentage (click it to fit everything) and **+**.
-- **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**. After you click or tab into a panel, Help opens that panel's own page (its tooltip names the panel); click the canvas or a toolbar and it goes back to the general help.
+- **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**. Help opens the page for whatever you have highlighted, and its tooltip says which ("Help: Chart layer"): the Properties field you are in, the selected layer's type, the selected node in Interactions or key in the Timeline, the tool you picked, a selected artboard or page master, or the panel you last worked in; with none of those it is the general help. See [Using this help](help).
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
-**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)), and the **Media Catalogue** button, which opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image and the Media Catalogue), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)). The **Media Catalogue** button sits in the **Media** group with image and video: it opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). It is an action rather than a tool, so it doesn't stay lit after you use it. There is no Help button on the tool bar: **Help** is in the top bar, and right-clicking the tool bar has **Help for the tools**. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## What the pointer shows
 The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
@@ -6606,7 +7254,7 @@ The **top** area sits under the header and above the canvas and its rulers, acro
 Right-click a tab (or press Shift+F10 on it) for **Dock on the left / right / at the bottom / at the top**, **Float in its own window**, **Help for this panel** and **Reset panel layout** (everything back where it started). The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title), and drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right**, **Dock at the bottom** and **Dock at the top** strips show, labelled for the tools, and the one you are over lights up. Along the bottom or the top it becomes a strip across the page with its groups side by side (at the top it sits under the header, over the top panels). It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is. Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom**, **Dock at the top** or **Floating**. Saved workspaces remember where the tool bar was. The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
-**Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. The **Debug** panel (on by default) shows:
+**Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. Preview sits above everything else in the editor, the help drawer included, and keeps the keyboard focus until it closes; help asked for from inside it opens in a new window (see [Using this help](help)). The **Debug** panel (on by default) shows:
 
 - **Now showing**: the artboard on screen and how many instances it contains.
 - **Timelines**: the ones running, with a progress bar (green dot = playing).
@@ -6783,7 +7431,9 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 ## Help
 | Key | Does |
 |---|---|
-| <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
+| <kbd>F1</kbd> or <kbd>?</kbd> | Open the help for what is highlighted (the Help button), with the caret in its search box; <kbd>?</kbd> again closes it |
+| <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
+| <kbd>Alt</kbd>+<kbd>Left</kbd> / <kbd>Alt</kbd>+<kbd>Right</kbd> | Back and forward through the pages you have read, in the help drawer |
 | <kbd>?</kbd> | Open the help |
 
 ## Text
@@ -6909,6 +7559,9 @@ Select layers and drag them on the canvas. If you let go over a **different artb
     summary: "What the right-hand panel shows for a layer, an artboard and the project, and how to find a property with the search box.",
     keywords: "properties inspector panel right search find filter property fuzzy synonym transparency opacity round corner radius alt description hide visible colour color z-order draw order aria typo did you mean slash ctrl f",
     body: `The **Properties** panel is on the right. It shows the settings of whatever is selected: a layer (or several), an artboard, or, with nothing selected, the artboard's and the project's settings. Each group of settings is a **section** with a title. Click the title to fold it, and the **?** beside it opens that section's page.
+
+## Folding sections
+Click a section's title to fold it or open it. The editor remembers: fold **Accessibility** on one layer and it stays folded on the next layer, and after you reload (it is kept in this browser, and only the sections you changed are kept, so a section you never touched still follows the editor's own default). **Alt**-click a title to open only that section and fold the rest. Right-click a title, or use the arrow button beside the search box, to **fold all** or **unfold all**; the menu also has **Back to the default folds**. Searching still opens every section so nothing is hidden from it, and your folds come back when you clear the box. The **+** buttons open their section so you can see what you added.
 
 ## Searching the properties
 The box at the top of the panel finds a property by what it does or what it is called. Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> while the focus is in the panel (or click the box).
@@ -7189,7 +7842,7 @@ Copyright reporting for a course is run at course level, and this tab does not r
     keywords: "image picture photo svg video audio sound mp3 upload drop paste asset nine slice 9-slice n-slice",
     body: `Drop files on the canvas, paste them, or use the **Image** tool. SVG files become editable vector layers; other images become image layers. Video files become video layers; audio files are stored as assets for the **Play sound** action.
 
-Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Media Catalogue** button on the tool bar finds a photo in the suite's library instead: see [The Media Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
+Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Media Catalogue** button in the tool bar's Media group finds a photo in the suite's library instead: see [The Media Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
 
 ## Image settings
 **Fit** (cover, contain, stretch), corner radius, and:
@@ -7397,7 +8050,8 @@ The grid is never in **Preview**, in exports, in share links or in pictures of t
     group: "Design",
     summary: "Put a photo from the suite's Media Catalogue on an artboard, and how it is saved and exported.",
     keywords: "media catalogue photo photography gallery library insert picture image studydesk",
-    body: `The **Media Catalogue** button on the tool bar (a camera) opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
+    icon: "catalogue",
+    body: `The **Media Catalogue** button, in the tool bar's **Media** group (open the group if it is folded) with the same icon as the catalogue button in StudyDesk's editor, opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
 
 ## How it is stored
 The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
@@ -7630,7 +8284,7 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - Buttons, inputs and links show only the text alternative and description. They already have the right role and keyboard behaviour.
 
 ## What the keyboard does
-- **Tab** and **Shift+Tab** move between tab stops, in layer order unless you set a tab order (below). A visible ring shows where the focus is (only for the keyboard, not after a mouse click).
+- **Tab** and **Shift+Tab** move between tab stops, in layer order unless you set a tab order (below). A visible ring shows where the focus is (only for the keyboard, not after a mouse click). It is two tones, the theme's focus colour with a black or white halo either side of it, so it can be seen on any background.
 - **Enter** clicks the focused layer, **Space** clicks it when released, the same way a real button does. It runs the layer's *On pointer → Click* nodes exactly like a mouse click, with the pointer position at the layer's centre.
 - Only the layer itself is activated. A button or input inside a clickable frame does its own thing, so nothing runs twice.
 - An Enter or Space that clicked a layer, or that was pressed on a button or link, does not also run an *On key* node for the same key, so a game's "press Space" and a button's click can't both fire from one press.
@@ -8155,6 +8809,19 @@ Drag from an output port to the next node's input to connect them. Actions that 
 
 Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Settings that name a variable or a sound also offer **+ Create new variable…** or **+ Add a new sound…** in their dropdown, so you don't have to leave the graph. Each node has a **Note** box for a reminder to yourself, and **Delete node** at the bottom.
 
+## Notes on the graph
+A **graph note** is the same sticky note as on the canvas, but it lives in a graph, for the people reading the flows: what a chain does and why it is built that way, which setting to change to adapt it, the output that is easy to miss. Players never see them, and they never ship (see [Notes](notes)).
+- Add one with the **note button** on the graph's own controls, or right-click: **Add note here** on empty graph, **Add note to this node** on a node, **Add note to this group** on a group. A note added to a node or group sits just above it and **follows it**, so it moves when you move the node or group and when you **Tidy up**. A note added to empty graph stays where you put it, and Tidy up only moves it if it landed on a node.
+- Double-click a note, or press <kbd>Enter</kbd> on it, to type on it (light markdown works: **bold**, *italic*, - lists and [ ] tasks). Drag it to move it, drag its corners to resize it, <kbd>Del</kbd> removes it. Select one and the settings column shows its text, its colour, **Follows** (the node or group it moves with, or nothing) and **Delete note**. Notes undo, and other people editing the project see them as they are written.
+- **Tidy up** leaves room for the notes that follow a node or group, and keeps loose ones off the nodes.
+- The **eye button** that hides the notes on the canvas hides graph notes too, and its count includes them. Copying a node or group copies the notes that follow it.
+
+## The palette, search and the artboard picker
+- The **artboard picker** at the top of the left column says whose graph you are looking at, with its node count (**Word · 12 nodes**, or **no nodes yet**). Open it to switch: the artboards are grouped as in the Layers panel, and page masters are listed apart at the end. With many artboards it has a search box. It is the same thing as selecting the artboard on the canvas or in Layers, so each follows the other, and picking one also brings the canvas to that artboard. <kbd>Alt</kbd>+<kbd>Up</kbd> and <kbd>Alt</kbd>+<kbd>Down</kbd> (or <kbd>Ctrl</kbd>+<kbd>[</kbd> and <kbd>Ctrl</kbd>+<kbd>]</kbd>) step to the previous or next artboard's graph while you are in the Interactions tab. Choosing an artboard changes what you see, never the project, so nobody else editing is disturbed.
+- **Search nodes** finds a node by what it does, not only by its name: *goto*, *navigate* or *page* find **Go to artboard**; *condition* finds **If**; *wait*, *delay* or *pause* find **Wait**; *audio* finds **Play sound**; *tap* finds **On pointer**. Small typos are forgiven. Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> anywhere in the tab to go to it, <kbd>Esc</kbd> to clear it, <kbd>Enter</kbd> to add the best match, or the down arrow to move onto the matches. The menu you get from right-clicking the graph, or from dragging a connection into empty space, searches the same way.
+- The **Events**, **Actions** and **Logic** chips show just that kind, and **Topics** has a chip for each topic (Pointer and keys, Variables, Questions, Dragging and so on). Chips combine with each other and with what you type.
+- Each topic heading folds. Click it (or press <kbd>Enter</kbd> or <kbd>Space</kbd> on it) to fold or open it; a folded one still shows how many nodes it holds. <kbd>Alt</kbd>+click, or right-click and **Only this one open**, leaves just that topic open, and the right-click menu also has **Fold all** and **Open all**. Which are open is remembered in this browser, with the common ones open to begin with. While you search or use a chip, every topic with a hit opens for as long as you do, and your folds come back when you clear it.
+
 ## Selecting, moving around and copying
 - **Drag on empty space** to draw a selection box: the nodes (and groups) entirely inside it are selected. <kbd>Shift</kbd>+drag draws one from anywhere, inside a group too. <kbd>Ctrl</kbd>+click (<kbd>Cmd</kbd>+click on a Mac) adds a node to the selection or takes it out, as many as you like. <kbd>Ctrl</kbd>+<kbd>A</kbd> selects everything.
 - **Pan** by holding <kbd>Space</kbd> and dragging, or dragging with the middle mouse button. The wheel zooms.
@@ -8162,7 +8829,7 @@ Click a node in the palette on the left (or drag it onto the graph) to add it; s
 - <kbd>Ctrl</kbd>+<kbd>C</kbd> copies the selection with the connections between the copied nodes; <kbd>Ctrl</kbd>+<kbd>V</kbd> pastes copies that are wired to each other the same way (never to the originals). A copied group brings the nodes inside it. <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicates, <kbd>Ctrl</kbd>+<kbd>G</kbd> puts the selected nodes in a new group, <kbd>Del</kbd> deletes them.
 
 ## Right-click and shortcuts
-- Right-click empty graph for **Add node** and **Paste**. Start typing to filter the menu down to the nodes whose name (or description) matches, then use the arrow keys and <kbd>Enter</kbd>, or click one. The menu you get by dragging a connection into empty space filters the same way.
+- Right-click empty graph for **Add node** and **Paste**. Start typing to filter the menu down to the nodes that match (by name, other names people know it by, topic or what it does), then use the arrow keys and <kbd>Enter</kbd>, or click one. The menu you get by dragging a connection into empty space filters the same way.
 - Right-click one of several selected nodes for what applies to all of them: **Cut**, **Copy**, **Duplicate**, **Put in a new group**, **Disconnect** (between them, from everything else, or all) and **Delete**.
 - Right-click a node for **Connect to new node**, **Connect to existing node**, **Disconnect**, **Cut**, **Copy** (<kbd>Ctrl</kbd>+<kbd>C</kbd>), **Duplicate** (<kbd>Ctrl</kbd>+<kbd>D</kbd>), **Help for this node** and **Delete** (<kbd>Del</kbd>).
 - In the graph, <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd> copy and paste nodes, not the layers on the artboard.
@@ -8262,10 +8929,9 @@ Everyone should be able to finish the activity, so every drag has two ways that 
 ` + CATALOG.filter((d) => d.category === cat).map((d) => {
         const params = d.params.map((p) => `- **${p.label}**${p.help ? `: ${p.help}` : p.options ? `: ${p.options.map((o) => o.label).join(", ")}` : ""}`).join("\n");
         const outs = d.outputs.filter((o) => o.label).map((o) => o.label);
-        return `### ${d.label}
-${d.description}${outs.length ? ` Outputs: ${outs.join(", ")}.` : ""}
-
-${params}`;
+        const rest = `${d.details ?? ""}${outs.length ? `${d.details ? " " : ""}Outputs: ${outs.join(", ")}.` : ""}`;
+        const gives = d.gives ? `**Gives:** ${d.gives.map((g) => `\`${g}\``).join(", ")}.` : "";
+        return [`### ${d.label}`, d.summary, rest, gives, params].filter(Boolean).join("\n\n");
       }).join("\n\n");
       return [section("Events", "event"), section("Actions", "action"), section("Logic", "logic")].join("\n\n");
     }
@@ -8492,6 +9158,8 @@ So treat it as a strong nudge and a record, not a lock. It works best alongside 
 
 What this does not protect against: a learner who writes down what they hear (that is the test), who runs the audio through speech recognition, or who has your project open in the editor. **Preview** and any file you export still carry the answers.
 
+**Submit, Try again and Hint.** The starter's answer button says **Submit answer**, since the word is marked once and the mark is final, and **Play the word** switches itself off (reading "Playing...") while the word is going, so a second press can't play it over the first. It switches back on when the word ends, is stopped or cannot be loaded. **Try again** and **Hint** are off to begin with, each one project variable you change once for every word: \`allowTryAgain\` (a learner who got a word wrong may clear the box and have another go, for practice, so the first mark still stands) and \`offerHint\` (a small **Hint** pill at the top right of the card, opposite the prompt, which shows the hint typed for the word in **Hints** in the Question section; the hint stays on the server with the answers, and it never holds the word). Set them in the Variables tab: the starter's initial value is what the learner opens with. A word page you copy keeps all of it.
+
 **Tries and retakes.** **Tries** is how many goes at one word (1 for a test). **Retakes** (in the Marking part, set the same on every word) lets the learner go through the whole test again: a round is every word finished once, the server keeps each round, and the score that counts is the **Best round** or the **Latest round**. Choose a set number of retakes, or unlimited. A **Reset question** node with **Retake** on (the starter's **Retake** button) starts the next round for every word at once, and only when the round is finished and a retake is left, so opening a page again never uses one up. Until the last retake the right spelling is not shown after a wrong word, so a learner can't read the answers off one round to use in the next. The question's \`round\`, \`retakesLeft\`, \`kept\` and \`keptMax\` variables say where the learner is and what is on record, for a results page to show.
 
 **Grading in the LMS.** Add the project to a course with the LMS's **Select content** picker (or an external tool link) and, when the LMS has a grade for that link, the server sends the score to it. It sends the kept score with the test's total points once every word is finished in a round, and again only when the kept score changes. It needs the LMS to be registered for LTI 1.3 with grade passback allowed, and the link has to be set up for grades in the course. A learner signed in another way gets everything but the grade. If the LMS refuses a score, the server tries again a moment later and with the learner's next click, and the record shows what was sent.
@@ -8611,6 +9279,9 @@ These work in every expression:
 | \`html(text)\` | Text made safe to put in a web page (a downloaded report): \`<\`, \`>\`, \`&\` and quotes are replaced |
 | \`crossword(words, size)\` | A crossword laid out from a list of \`{answer, clue}\` rows (or plain words), inside a \`size\` by \`size\` grid. Each row comes back with \`row\`, \`col\` (its first letter, from 0 at the top left) and \`down\` added, in reading order. Words that are too long, or that cannot cross the others, are left out. The same words always make the same puzzle. Best used as a variable's [formula](variables) |
 | \`wordSearch(words, size, seed)\` | A \`size\` by \`size\` letter grid hiding the words (across, down, diagonal and backwards), one string per row. The same words and seed always make the same grid |
+| \`cloud(words, width, height, options)\` | A word cloud packed onto a stage \`width\` by \`height\`. \`words\` is plain text (each mention counts once) or rows \`{text, weight, ...}\`; the same word in other capitals is one word and the weights add. It comes back one row per word, the biggest first, each with \`size\` (the font size), \`x\`, \`y\`, \`w\`, \`h\` (its box on the stage, nothing overlapping), \`rank\`, \`tier\` (0 biggest, 2 smallest), \`shown\` (false when it cannot fit even small) and its own other fields. Options: \`minSize\`, \`maxSize\`, \`scale\` ("sqrt", "linear" or "log"), \`gap\`, \`grow\`, \`max\`, \`minCount\` and \`blocked\` (a list of words to leave out). The same words always make the same cloud |
+| \`timelineLayout(events, eras, from, to, options, part)\` | A dated timeline for the years \`from\` to \`to\`. Events are rows \`{date, end, title, ...}\` with dates written 1969, 1969-07 or 1969-07-20 (an \`end\` makes a range, counted to the end of its period); eras are \`{name, from, to}\`. \`part\` picks the list you get back: "events" (the default: each with \`pos\` and \`pos2\` along an axis \`options.length\` px long, \`lane\`, \`labelled\`, \`labelPos\`, \`labelW\`, \`labelH\`, \`dateText\`, \`spoken\`, \`inView\` and \`eraName\`), "eras", "ticks", "marker" (no row or one) or "info" (one row: \`rangeText\`, \`unlabelled\`, \`earlier\`, \`later\`, \`problems\`). Options: \`length\`, \`orientation\`, \`labelSize\`, \`lanes\`, \`sides\`, \`dateLine\`, \`maxLabel\`, \`columnWidth\`, \`maxLines\`, \`gap\`, \`tickSpace\` and \`marker\`. Labels never overlap and a leader line never crosses another label |
+| \`timeBounds(events, eras, marker)\` | \`[from, to, span, count]\`: the whole years that hold every event, era and marker, with room at each end |
 | \`wordCount(text)\` | How many words a text has (runs of anything but spaces). \`wordCount("one two  three")\` is 3 |
 | \`band(value, thresholds, labels)\` | A label for where a value falls. Thresholds go from the highest down and there is one more label than thresholds: \`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\` |
 | \`clock(seconds)\` | Seconds as \`m:ss\` (\`h:mm:ss\` from an hour): \`clock(95)\` is \`1:35\` |
@@ -9010,7 +9681,7 @@ A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, 
 Open the **Themes** tab (bottom panel). A new project already has the starter themes. For one without (an older or imported project), **Add Light, Dark and High contrast** makes the three themes and the starter tokens, in the same look as the StudyDesk toolbox: its greys, and its gold for buttons with black, bolder text.
 - **color/background**, **color/surface** and **color/surface-muted** are the page, a card and a hover or quiet grey. **color/text** and **color/muted** are the copy on them.
 - **color/button** and **color/on-button** are the gold button and its black label. **color/primary** and **color/on-primary** are the accent for selections, which in the toolbox is the same gold. **color/link** is the toolbox's hyperlink blue, used by new Link layers.
-- **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus ring.
+- **color/border** is the outline of controls, **color/divider** a quiet line, and **color/focus** the keyboard focus ring. The ring is two tones: this colour, with a thin black or white halo either side of it (whichever is further from it, worked out for you), so it stays visible on a white page, a gradient and a dark panel alike. You only choose the one colour.
 - **color/success**, **color/error** and **color/warning** each come with a **-surface** tint, for the right, wrong and missed answers.
 
 **Toolbox colours come from the shared StudyDesk palette and stay in step with it.** Light is the toolbox exactly as the toolbox draws itself: each token takes the palette colour the toolbox uses for that job (cards are the palette's grey 1, text grey 7, outlines and quiet text grey 4, buttons the primary button colours, the accent and focus ring the primary gold), read from \`/styles/palette.min.css\`. A token made this way remembers the palette colour it came from, shown by a small link mark beside its colour. Whenever the editor opens the project it refreshes those colours from the live palette, and the player does the same when the page it runs in can reach \`/styles/palette.min.css\`, so a change to the palette reaches published pieces without re-editing them. **Change a colour by hand and that colour stops following the palette.** If the palette can't be reached (an exported file, offline, another host) the last stored colour is used. Dark and High contrast are built for contrast and take their colours from the same palette where it has suitable ones; a few tints and lighter or darker shades are mixed from two palette colours.
@@ -9928,7 +10599,7 @@ In **Share > Share link**, tick **Allow remix**. People who open the **Link for 
       return `A **branded starter pack** is a ready-made activity in the UniSQ look: a gradient title page with the logo, white content pages with a footer line, and sections on deep purple. You write the content; the look is already done, and it stays done.
 
 ## Using one
-Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace. A starter with sound (the **Listening lab**) comes with short placeholder tones in the project's **Assets**, named "(replace)": use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it. **Keep the beat** has no metronome timer to drift: one steady 16 ms clock (held back by its **Only while** until a drill is running) reads \`Date.now()\` against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. Its drills, tempos and how close a tap has to be are the **presets** variable (Variables tab). **Sign practice with self-review** keeps the model clip on one page, **Model clips** (one Video layer whose asset follows the sign in view: each sign in the **signs** variable names its clip, a placeholder tone in **Assets** to swap for the signer's video), and every other page shows it. Its Watch and choose half needs no camera, and its camera half records a short video take that stays on the learner's device. Each page has a phone version that stacks the model above the camera (see [Responsive artboards](responsive)), with the same layer names, so a change to wording or layout on one is made on the other too. It says plainly that it supports practice and is not feedback from a Deaf teacher, so keep that in; you also need the signer's consent and the rights to each clip. The **Live sound lab** uses the microphone as a number and records nothing: a loudness meter with a target band (steady volume, or a noise check worded as a rough guide) and eight frequency bars. Its project is set to listen only, the learner is asked once and sees a Listening bar with Stop, and a slider on each scene makes the same numbers when there is no microphone (see [Microphone, camera and photos](sensors)). Try the real microphone from the Link for StudyDesk, not Preview. Its target band, noise line and band names are variables. The **Photo prompts notebook** has a privacy pledge, about six prompts (each a photo slot, caption, tag and "why this one" box, with retake, delete and skip with a reason), a list or bingo board view (the **bingo** variable) and a hand-in page that downloads one web page with the photos inside it. Photos are only held in the page, so it tells learners to download before leaving. The **prompts** variable holds the prompts; each has a photo and example field naming two image assets, and the example is the way through for a learner with no camera. **Shadow the model** (Speaking and practice) is a few phrase cards: each plays a model clip (with a **Slow** switch that keeps the pitch), the learner records themselves, plays their take or the model then their take back to back, ticks your self-check and rates themselves. It declares the microphone, so open **Project > Microphone and camera** to see the purpose and the 30 second cap, and untick Microphone for a listen-and-repeat version. A learner who says no, has no microphone or chooses "Do not use my microphone or camera" gets the plain version (listen, say it aloud, self-check), so nobody is shut out. The recording stays in their browser, is dropped when they go to the next card and is gone on a reload, and the page says so. Each card is a row of the **cards** variable (phrase, note, sound, checks); the sound is the clip's asset, so replacing a placeholder with the arrow in **Assets** keeps the card pointing at it, and for a new row you type the clip's name in **sound**. The **Difficult conversation** and **Timed talk** rehearsals ship with an optional recording step that is switched off: tick Microphone in the same place and *Record my reply* or *Record this talk* and the play-back buttons appear, only for learners whose microphone works.
+Open **Templates** (on the projects page), then **Built-in**. The **Branded starter packs** section is at the top. Pick a **colourway** (the swatches; your choice is remembered in this browser), find the starter in its set, and press **Use template**. The pictures show the first page in the colourway you chose. You get a checklist of everything to change, like any other [template](templates#use-a-template): the pictures are grey placeholders, and the sample text is yours to replace. A starter with sound (the **Listening lab**) comes with short placeholder tones in the project's **Assets**, named "(replace)": use the arrow beside each one to swap in your own clip, and the **Play sound** nodes follow it. **Keep the beat** has no metronome timer to drift: one steady 16 ms clock (held back by its **Only while** until a drill is running) reads \`Date.now()\` against the start time, so every beat is exactly where it should be, and each tap is scored the moment it arrives. Its drills, tempos and how close a tap has to be are the **presets** variable (Variables tab). **Sign practice with self-review** keeps the model clip on one page, **Model clips** (one Video layer whose asset follows the sign in view: each sign in the **signs** variable names its clip, a placeholder tone in **Assets** to swap for the signer's video), and every other page shows it. Its Watch and choose half needs no camera, and its camera half records a short video take that stays on the learner's device. Each page has a phone version that stacks the model above the camera (see [Responsive artboards](responsive)), with the same layer names, so a change to wording or layout on one is made on the other too. It says plainly that it supports practice and is not feedback from a Deaf teacher, so keep that in; you also need the signer's consent and the rights to each clip. The **Live sound lab** uses the microphone as a number and records nothing: a loudness meter with a target band (steady volume, or a noise check worded as a rough guide) and eight frequency bars. Its project is set to listen only, the learner is asked once and sees a Listening bar with Stop, and a slider on each scene makes the same numbers when there is no microphone (see [Microphone, camera and photos](sensors)). Try the real microphone from the Link for StudyDesk, not Preview. Its target band, noise line and band names are variables. The **Photo prompts notebook** has a privacy pledge, about six prompts (each a photo slot, caption, tag and "why this one" box, with retake, delete and skip with a reason), a list or bingo board view (the **bingo** variable) and a hand-in page that downloads one web page with the photos inside it. Photos are only held in the page, so it tells learners to download before leaving. The **prompts** variable holds the prompts; each has a photo and example field naming two image assets, and the example is the way through for a learner with no camera. **Shadow the model** (Speaking and practice) is a few phrase cards: each plays a model clip (with a **Slow** switch that keeps the pitch), the learner records themselves, plays their take or the model then their take back to back, ticks your self-check and rates themselves. It declares the microphone, so open **Project > Microphone and camera** to see the purpose and the 30 second cap, and untick Microphone for a listen-and-repeat version. A learner who says no, has no microphone or chooses "Do not use my microphone or camera" gets the plain version (listen, say it aloud, self-check), so nobody is shut out. The recording stays in their browser, is dropped when they go to the next card and is gone on a reload, and the page says so. Each card is a row of the **cards** variable (phrase, note, sound, checks); the sound is the clip's asset, so replacing a placeholder with the arrow in **Assets** keeps the card pointing at it, and for a new row you type the clip's name in **sound**. The **Difficult conversation** and **Timed talk** rehearsals ship with an optional recording step that is switched off: tick Microphone in the same place and *Record my reply* or *Record this talk* and the play-back buttons appear, only for learners whose microphone works. The **Word cloud** (Explore and reveal) makes a cloud from a list of words and weights, \`ourWords\` (a text, a weight, and a detail and link for the dialog a word opens), with the **cloud** formula helper: sizes follow weights, nothing overlaps, and the same words always give the same picture. Words are buttons in one Tab stop with the arrow keys moving through them biggest first, and **View as list** is the text alternative with the counts. Its second page lets one learner type words and watch their own cloud grow (kept as user data, with a **blocked** list and a **minCount**). One author setting, **whoSees**, will choose Only me or Everyone in this class: Only me works now, and the class option arrives with shared responses (until then it keeps showing the learner's own words). The **Dated timeline** (Explore and reveal) is a timeline on a real scale: **events** and **eras** are lists with dates, and the **timelineLayout** helper places them for the years in view, lays the labels out in lanes so they never collide and picks the scale (decades, years, then months) as you zoom. Earlier, Later, Zoom and Fit all move the view, Next event and Previous event walk the events and the view follows, a click or Enter opens an event in a dialog, and **View as list** is the text alternative. Its page is the base of a responsive set with a portrait variant under 560 px wide (same layer names, so a change to wording or layout is made on both), and an ordering activity follows it. The simpler **Interactive timeline** is still in Drag, sort and timelines.
 
 ## Colourways
 Every branded project carries all of these as [themes](themes), plus **High contrast**, which a viewer who asks for more contrast gets automatically. Every colour in the project is a theme colour, so switching colourway re-colours the whole thing at once.
@@ -9940,6 +10611,9 @@ Select nothing (or an artboard) and open **Project** in the inspector. The **Col
 
 Tick **Let learners switch colourway** to add a small row of swatches to the top right of the start page. Each one is a button that runs the interaction graph's **Set theme** action, so learners can pick the colour they find easiest to read. The swatches are brand layers: they stay where they are, and unticking the box removes them.
 
+### Contrast
+Every starter, in every colourway and High contrast, meets WCAG 2.2 AA: 4.5:1 for text (3:1 for large text), and 3:1 for the edge of a button, the focus ring, a progress bar against its track and chart marks. A test holds every page of every starter to it, in the states that show feedback and open dialogs too, so a colourway change can't slip under it. Things you may notice: the Orange and Red colourways carry a soft dark scrim over the gradient on the first and last pages (white words reach only 3.6:1 on the bare gradient); a button's edge is an outline in its label colour (gold buttons in Purple have a dark one); and selected outlines, bars and chart marks use the **primary** colour (purple in Purple), keeping the button colour for fills with a label on them. The keyboard focus ring is two tones, so it holds 3:1 everywhere, with nothing to choose: the **color/focus** colour (3 px) with a 2 px halo of black or white either side of it, whichever is further from that colour (white round Purple's and Blue's dark ring, black round a gold one). Whatever is behind a control, one of the two tones stands clear of it: the colour itself on the white pages, the halo on the dark ends of the Blue, Green and Purple gradients and on deep panels. The contrast test checks that on every page, first and last pages and deep panels included, and lists nothing.
+
 ## What is locked, and why
 Branded projects are held to the brand so every activity looks like it came from the same place, whoever writes it.
 
@@ -9950,6 +10624,8 @@ Branded projects are held to the brand so every activity looks like it came from
 The accessibility checks, the [themes](themes) panel and everything else work as they do in any project. A power user can turn the lock off for a session with F9 (the brand kit override), which also lifts the brand kit lock, to fix something in the pack itself. With it on, brand layers show in the Layers panel like any layer: select one there, and press its padlock to unlock it for clicking on the canvas. Nothing is saved with it.
 
 ## The starters
+Question starters share two switches and a look. **Hint** is a small pill at the top right of the question card, so the one full size button is the one that answers. The two optional extras are one project variable each, changed once in the **Variables** tab for every question: \`offerHint\` shows or hides the Hint pill, and \`allowTryAgain\` shows or hides Try again after a wrong answer (the practice starters open with both on, the Spelling test and the multi-page quiz with Try again off). A button says what happens to the answer: **Submit answer** where it is final, **Check answer** where there are tries. A button that starts a sound is disabled and reads "Playing..." until the sound ends, so it can't be pressed over itself.
+
 ${list}
 `;
     }
@@ -10051,6 +10727,8 @@ To hand a project to someone else (you're leaving, or it belongs to another unit
     summary: "Sticky notes for the people making a project: draw them on the canvas, attach them to a layer, and know that players, exports and share links never see them.",
     keywords: "note notes sticky annotation annotate hand-off handoff todo reminder explain template hint hide show colour markdown",
     body: `A **note** is a small sticky note you leave on the canvas for whoever edits the project next, including you next week: "swap this photo before release", "this branch is for the hard version", "change the three red words". Templates use them to explain what each part is for.
+
+The interaction graph has notes too: see **Notes on the graph** in [Interactions](interactions). They are the same notes, hide with the same eye button, and never reach players either.
 
 Notes are not comments. [Review comments](comments) are threaded conversations with reviewers, kept on the server beside the project. A note is part of the project document, so it comes along when the project is copied, saved as a template or remixed, and everyone editing at the same moment sees it appear. It is **never** a layer: it is not in the Layers list, the interactions graph, auto layout or bindings.
 
@@ -10342,13 +11020,16 @@ Check the projects page for an active folder, tag or search (the **Clear filters
     group: "Reference",
     summary: "Search, tooltips and help links.",
     keywords: "help docs search tooltip question",
-    body: `- **Search**: press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere for quick search. Type a few words and press <kbd>Enter</kbd> to open the best match.
-- **Help button**: the **?** at the bottom of the tool bar (it opens the page for the tool you're using), the **?** in the top bar (after you click into a panel it opens that panel's page instead; right-click a panel's tab for **Help for this panel**), the **Help** link on the projects page, or <kbd>?</kbd>.
+    body: `- **Search**: press <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere for quick search, or type in the drawer's **Search help** box. Type a few words and press <kbd>Enter</kbd> to open the best match.
+- **The Help button** (top bar, <kbd>F1</kbd> or <kbd>?</kbd>) opens the page for whatever is highlighted, in this order: the **field** you last clicked in Properties (its section's page, or its own when it has one); the **node** selected in Interactions or the **keyframe** selected in the Timeline, while that is the panel you are working in; the **tool** you picked on the tool bar (not Select or Hand); the **layer type** you selected (Chart, Text, Button, Rectangle...); a selected **artboard** or **page master**; the **panel** you last worked in; then the general help. Its tooltip names what it will open, and the drawer says "Help for Chart layer" at the top with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. <kbd>Ctrl</kbd>+<kbd>K</kbd> is the quick search.
+- **Home, Back and Forward**: the three buttons at the left of the drawer's top. **Home** is the welcome page. **Back** and **Forward** walk through the pages and sections you have visited (links, search results and the Help button all count), and each page comes back scrolled to where you left it. <kbd>Alt</kbd>+<kbd>Left</kbd> and <kbd>Alt</kbd>+<kbd>Right</kbd> do the same while the drawer has the focus, and so do the mouse's back and forward buttons over it. The history is kept when you close the drawer, so Back from a new Help button press returns to what you were reading. The full help page (the **new tab** button) uses the browser's own Back and Forward, since each page has its own address.
+- **While Preview is open**: Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>?</kbd>, a **?** link or <kbd>Ctrl</kbd>+<kbd>K</kbd>) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and Tab stays inside Preview until you close it.
+- **The Help link** is also on the projects page.
 - **Getting started**: the five tutorials start at [Tutorial 1](tutorial-first-animation). Stuck? [Troubleshooting and common questions](troubleshooting).
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
 - **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
-- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
+- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>Ctrl</kbd>+<kbd>K</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
 - **? links**: inspector sections have a **?** that opens their page here. The panels' tabs don't have one: use the top bar's, or right-click the tab.`
   }
 ];
@@ -10479,6 +11160,7 @@ function overview(p, opts2) {
     if (ab.timelines.length) lines.push(`Timelines: ${ab.timelines.map((t2) => `${t2.name} [${t2.id}] ${t2.duration}ms ${t2.loop}${t2.autoplay ? " autoplay" : ""} (${t2.tracks.length} tracks)`).join("; ")}`);
     if (ab.notes?.length) lines.push(`Notes: ${ab.notes.length} (use list_notes)`);
     if (ab.blends?.length) lines.push(`Blends: ${ab.blends.map((b) => `${b.name} [${b.id}] ${b.mode} (${b.entries.length} timelines)`).join("; ")}`);
+    if (ab.logic.notes?.length) lines.push(`Graph notes: ${ab.logic.notes.length} (use list_notes)`);
     if (ab.logic.nodes.length) lines.push(`Interactions: ${ab.logic.nodes.length} nodes, ${ab.logic.edges.length} connections (use get_interactions)`);
     const out = [];
     outline(ab.children, 0, opts2.depth ?? (opts2.artboardId ? 8 : 2), out, { n: opts2.artboardId ? 600 : 80 });
@@ -10544,13 +11226,18 @@ function validate(p) {
   return problems;
 }
 function listNotes(p) {
-  return [...(p.notes ?? []).map((note) => ({ note, ab: null, list: p.notes })), ...p.artboards.flatMap((ab) => (ab.notes ?? []).map((note) => ({ note, ab, list: ab.notes })))];
+  return [
+    ...(p.notes ?? []).map((note) => ({ note, ab: null, list: p.notes })),
+    ...p.artboards.flatMap((ab) => (ab.notes ?? []).map((note) => ({ note, ab, list: ab.notes }))),
+    ...p.artboards.flatMap((ab) => (ab.logic.notes ?? []).map((note) => ({ note, ab, list: ab.logic.notes, graph: true })))
+  ];
 }
+const graphOrigin = (ab, id) => ab.logic.nodes.find((n) => n.id === id) ?? ab.logic.groups?.find((g) => g.id === id);
 const findNote = (p, id) => listNotes(p).find((x) => x.note.id === id);
 function notesReport(p, artboardId) {
   const rows = listNotes(p).filter((x) => !artboardId || x.ab?.id === artboardId);
   if (!rows.length) return "No notes.";
-  return rows.map(({ note: n, ab }) => `- [${n.id}] ${ab ? `on ${ab.name} [${ab.id}]` : "on the canvas"} at ${r(n.x)},${r(n.y)} ${r(n.w)}x${r(n.h)} ${n.colour ?? "gold"}${n.anchor ? ` follows layer ${n.anchor.layerId}` : ""}${n.author ? ` by ${n.author}` : ""}
+  return rows.map(({ note: n, ab, graph }) => `- [${n.id}] ${graph ? `on the interaction graph of ${ab.name} [${ab.id}]` : ab ? `on ${ab.name} [${ab.id}]` : "on the canvas"} at ${r(n.x)},${r(n.y)} ${r(n.w)}x${r(n.h)} ${n.colour ?? "gold"}${n.anchor ? ` follows ${graph ? "node or group" : "layer"} ${n.anchor.layerId}` : ""}${n.author ? ` by ${n.author}` : ""}
 ${n.text.split("\n").map((l) => `    ${l}`).join("\n")}`).join("\n");
 }
 function applyChanges(p0, changes) {
@@ -10732,10 +11419,33 @@ function applyChanges(p0, changes) {
         if (key) created[key] = note.id;
         break;
       }
+      case "add_graph_note": {
+        const ab = findAb(c2.artboard_id);
+        const host = c2.node_id ? graphOrigin(ab, ref(c2.node_id)) : void 0;
+        if (c2.node_id && !host) throw new Error(`${where}: no node or group ${String(c2.node_id)} on ${ab.name}`);
+        const at = { x: typeof c2.x === "number" ? c2.x : host ? host.x : 0, y: typeof c2.y === "number" ? c2.y : host ? host.y - 130 : 0 };
+        const note = makeNote({ ...at, w: typeof c2.w === "number" ? c2.w : 220, h: typeof c2.h === "number" ? c2.h : 110, text: String(c2.text ?? ""), colour: NOTE_COLOURS.includes(c2.colour) ? c2.colour : void 0, author: typeof c2.author === "string" && c2.author ? c2.author : `${ctx().agent} (AI)`, created: (/* @__PURE__ */ new Date()).toISOString() });
+        if (host) note.anchor = { layerId: ref(c2.node_id), lx: Math.round((at.x - host.x) * 10) / 10, ly: Math.round((at.y - host.y) * 10) / 10 };
+        (ab.logic.notes ??= []).push(note);
+        if (key) created[key] = note.id;
+        break;
+      }
       case "set_note": {
         const found = findNote(p, ref(c2.id));
         if (!found) throw new Error(`${where}: no note ${String(c2.id)}`);
         const n = found.note;
+        if (found.graph) {
+          for (const k of ["x", "y", "w", "h"]) if (typeof c2[k] === "number") n[k] = c2[k];
+          if (typeof c2.text === "string") n.text = c2.text;
+          if (NOTE_COLOURS.includes(c2.colour)) n.colour = c2.colour;
+          if (c2.anchor_id === null) delete n.anchor;
+          else if (typeof c2.anchor_id === "string") {
+            const host = graphOrigin(found.ab, ref(c2.anchor_id));
+            if (!host) throw new Error(`${where}: no node or group ${c2.anchor_id} on that note's graph`);
+            n.anchor = { layerId: ref(c2.anchor_id), lx: Math.round((n.x - host.x) * 10) / 10, ly: Math.round((n.y - host.y) * 10) / 10 };
+          }
+          break;
+        }
         for (const k of ["x", "y", "w", "h"]) if (typeof c2[k] === "number") n[k] = c2[k];
         if (typeof c2.text === "string") n.text = c2.text;
         if (NOTE_COLOURS.includes(c2.colour)) n.colour = c2.colour;
@@ -10752,7 +11462,8 @@ function applyChanges(p0, changes) {
         if (!found) throw new Error(`${where}: no note ${String(c2.id)}`);
         found.list.splice(found.list.indexOf(found.note), 1);
         if (!found.list.length) {
-          if (found.ab) delete found.ab.notes;
+          if (found.graph) delete found.ab.logic.notes;
+          else if (found.ab) delete found.ab.notes;
           else delete p.notes;
         }
         break;
@@ -10767,10 +11478,16 @@ function applyChanges(p0, changes) {
     else delete p.notes;
   }
   for (const ab of p.artboards) {
-    if (!ab.notes) continue;
-    const list = cleanNotes(ab.notes);
-    if (list) ab.notes = list;
-    else delete ab.notes;
+    if (ab.notes) {
+      const list = cleanNotes(ab.notes);
+      if (list) ab.notes = list;
+      else delete ab.notes;
+    }
+    if (ab.logic.notes) {
+      const list = cleanNotes(ab.logic.notes);
+      if (list) ab.logic.notes = list;
+      else delete ab.logic.notes;
+    }
   }
   return { project: p, created, touched };
 }
@@ -10796,7 +11513,8 @@ function setPath(obj, path, v) {
 function reference(topic) {
   if (topic === "interactions") {
     return CATALOG.map((d) => `### ${d.kind} — ${d.label} (${d.category})
-${d.description}${d.outputs.length > 1 || d.outputs[0]?.label ? `
+${d.description}${d.gives ? `
+Gives: ${d.gives.join(", ")}` : ""}${d.outputs.length > 1 || d.outputs[0]?.label ? `
 Outputs: ${d.outputs.map((o) => o.id).join(", ")}` : ""}
 ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join("|")}` : ""}${pd.default !== void 0 ? `, default ${JSON.stringify(pd.default)}` : ""})${pd.help ? `: ${pd.help}` : ""}`).join("\n")}`).join("\n\n");
   }
@@ -10818,8 +11536,8 @@ const S = (props, required = []) => ({ type: "object", properties: props, requir
 const str = (description) => ({ type: "string", description });
 const runEdit = (a, changes, explain) => {
   const edit = TOOLS.find((t2) => t2.name === "edit");
-  const clean = changes.map((c2) => Object.fromEntries(Object.entries(c2).filter(([, v]) => v !== void 0)));
-  return edit.run({ project_id: a.project_id, changes: clean, explain });
+  const clean2 = changes.map((c2) => Object.fromEntries(Object.entries(c2).filter(([, v]) => v !== void 0)));
+  return edit.run({ project_id: a.project_id, changes: clean2, explain });
 };
 const TOOLS = [
   {
@@ -10892,7 +11610,7 @@ ${JSON.stringify(loc.node, null, 1)}`);
   },
   {
     name: "edit",
-    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
+    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_graph_note {artboard_id, node_id? (a node or group of its interaction graph to follow), x?, y?, w?, h?, text, colour?, ref?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
     inputSchema: S({ project_id: str("Project id"), changes: { type: "array", items: { type: "object" } }, explain: str("One line saying what this does (shown in the editor log)") }, ["project_id", "changes"]),
     run: async (a) => {
       const s = join(String(a.project_id));
@@ -10933,10 +11651,19 @@ Problems now in the project:
     run: async (a) => runEdit(a, [{ op: "add_note", artboard_id: a.artboard_id, x: a.x, y: a.y, w: a.w, h: a.h, text: a.text, colour: a.colour, layer_id: a.layer_id, ref: "note" }], "Add a note")
   },
   {
+    name: "add_graph_note",
+    description: "Leave a sticky note on an artboard's interaction graph, for the people reading the flows: what a chain or group does and why, what to change to adapt it, the output that is easy to miss. Give node_id (a node or group id from get_interactions) to attach it so it moves with that node or group; it is placed above it unless x and y (graph coordinates) say otherwise. Keep notes to 1 to 3 lines, with **bold** for the key idea and [ ] for what the author must do. Like every note it never reaches players, exports or share links. Edit or remove it with edit_note and remove_note.",
+    inputSchema: S(
+      { project_id: str("Project id"), artboard_id: str("Artboard id or name"), node_id: str("Node or group id to follow (optional)"), x: { type: "number" }, y: { type: "number" }, w: { type: "number", description: "Width (default 220)" }, h: { type: "number", description: "Height (default 110)" }, text: str("What the note says"), colour: str("gold, orange, green, sky, purple or rose") },
+      ["project_id", "artboard_id", "text"]
+    ),
+    run: async (a) => runEdit(a, [{ op: "add_graph_note", artboard_id: a.artboard_id, node_id: a.node_id, x: a.x, y: a.y, w: a.w, h: a.h, text: a.text, colour: a.colour, ref: "note" }], "Add a graph note")
+  },
+  {
     name: "edit_note",
-    description: "Change a note: its text, colour, position or size, or which layer it follows (layer_id null lets go). Use list_notes for ids.",
-    inputSchema: S({ project_id: str("Project id"), id: str("Note id"), text: str("New text"), colour: str("gold, orange, green, sky, purple or rose"), x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, layer_id: { type: ["string", "null"], description: "Layer to follow, or null to let go" } }, ["project_id", "id"]),
-    run: async (a) => runEdit(a, [{ op: "set_note", id: a.id, text: a.text, colour: a.colour, x: a.x, y: a.y, w: a.w, h: a.h, ..."layer_id" in a ? { layer_id: a.layer_id } : {} }], "Edit a note")
+    description: "Change a note: its text, colour, position or size, or which layer it follows (layer_id null lets go), or for a graph note which node or group it follows (anchor_id, null lets go). Use list_notes for ids.",
+    inputSchema: S({ project_id: str("Project id"), id: str("Note id"), text: str("New text"), colour: str("gold, orange, green, sky, purple or rose"), x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, anchor_id: { type: ["string", "null"], description: "A graph note only: the node or group to follow, or null to let go" }, layer_id: { type: ["string", "null"], description: "Layer to follow, or null to let go" } }, ["project_id", "id"]),
+    run: async (a) => runEdit(a, [{ op: "set_note", id: a.id, text: a.text, colour: a.colour, x: a.x, y: a.y, w: a.w, h: a.h, ..."layer_id" in a ? { layer_id: a.layer_id } : {}, ..."anchor_id" in a ? { anchor_id: a.anchor_id } : {} }], "Edit a note")
   },
   {
     name: "remove_note",
@@ -11050,6 +11777,7 @@ export {
   handle,
   interactions,
   locate,
+  notesReport,
   overview,
   reference,
   respond,

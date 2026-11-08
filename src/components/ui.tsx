@@ -7,6 +7,8 @@ import { Icons } from './icons';
 import { TokensTab, tokenSummary, linked, useBrandLocked, useThemeState } from './TokenPicker';
 import { FIELD_TIPS } from './tips';
 import { useRowSearch, useSectionSearch, RowScope, SectionScope } from '../lib/prop-search';
+import { ContextMenu } from './ContextMenu';
+import { isSectionOpen, onlySectionOpen, registerSection, resetSectionFolds, sectionKey, setAllSections, setSectionOpen, useSectionFoldVersion } from '../lib/section-fold';
 
 /** An explicit title, or the standard explanation for a field label. */
 export function tipFor(label: ReactNode, title?: string): string | undefined {
@@ -569,6 +571,7 @@ export function Section({
   collapsible = true,
   defaultOpen = true,
   help,
+  id,
 }: {
   title: ReactNode;
   children: ReactNode;
@@ -577,17 +580,36 @@ export function Section({
   defaultOpen?: boolean;
   /** Help topic id (or "topic#anchor") for the section's "?" link. */
   help?: string;
+  /** What the fold memory keys on when the title isn't plain text (a count in it, say) or two sections share a title. */
+  id?: string;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const key = collapsible ? sectionKey(id, title) : '';
+  useSectionFoldVersion();
+  const open = collapsible ? isSectionOpen(key, defaultOpen) : defaultOpen;
+  const setOpen = (o: boolean) => (collapsible ? setSectionOpen(key, o, defaultOpen) : undefined);
+  useLayoutEffect(() => (key ? registerSection(key, defaultOpen) : undefined), [key, defaultOpen]);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const ps = useSectionSearch(title);
   // While searching every section opens, so its rows are there to be matched; the ones with no match hide
   const shown = open || ps.searching;
   const titleText = typeof title === 'string' ? title : '';
   return (
-    <section className={`section${shown ? '' : ' closed'}${ps.hidden ? ' ps-hide' : ''}${ps.hit ? ' ps-hit' : ''}`} style={ps.searching ? { order: ps.order } : undefined}>
+    <section className={`section${shown ? '' : ' closed'}${ps.hidden ? ' ps-hide' : ''}${ps.hit ? ' ps-hit' : ''}`} style={ps.searching ? { order: ps.order } : undefined} data-section={key || undefined} data-help={help} data-section-title={titleText || undefined}>
       <header className="section-head">
-        <div className="section-title-row" onClick={() => collapsible && setOpen(!open)}>
-          <button className="section-title" aria-expanded={collapsible ? shown : undefined} title={collapsible ? (open ? 'Collapse' : 'Expand') : undefined}>
+        <div
+          className="section-title-row"
+          onClick={(e) => {
+            if (!collapsible) return;
+            if (e.altKey) onlySectionOpen(key);
+            else setOpen(!open);
+          }}
+          onContextMenu={(e) => {
+            if (!collapsible) return;
+            e.preventDefault();
+            setMenu({ x: e.clientX, y: e.clientY });
+          }}
+        >
+          <button className="section-title" aria-expanded={collapsible ? shown : undefined} title={collapsible ? `${open ? 'Collapse' : 'Expand'} (Alt-click: only this one open. Right-click: fold or unfold them all)` : undefined}>
             {/* the chevron says it folds, and which way it is now: pointing down when open, right when closed */}
             {collapsible && <span className="section-chev" aria-hidden="true" />}
             {title}
@@ -599,6 +621,20 @@ export function Section({
           {actions}
         </div>
       </header>
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          items={[
+            { label: 'Fold all sections', onClick: () => setAllSections(false) },
+            { label: 'Unfold all sections', onClick: () => setAllSections(true) },
+            { label: 'Only this one open', hint: 'Alt-click', onClick: () => onlySectionOpen(key) },
+            { separator: true },
+            { label: 'Back to the default folds', onClick: resetSectionFolds },
+          ]}
+        />
+      )}
       {shown && (
         <div className="section-body">
           <SectionScope id={ps.id} title={titleText}>

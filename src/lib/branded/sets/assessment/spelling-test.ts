@@ -8,7 +8,15 @@ import { announce, bind, brandQuestionFrame, click, goNext, graph, heroPage, not
 //Words with an American spelling to accept and a few without. The words only live in each question's accepted spellings: nothing
 //else in the project says them, so the share link (which takes those out and marks on the server) has none of them in the page.
 //The audio comes from the Voice section of each question (a synthesised voice, made while authoring, saved as a sound asset).
-const WORDS: { accept: string[] }[] = [{ accept: ['colour'] }, { accept: ['organise'] }, { accept: ['neighbour'] }, { accept: ['centre'] }, { accept: ['necessary'] }, { accept: ['separate'] }];
+//The hint is what a learner may be told without being given the spelling away (it stays on the server with the answers). Never the word itself.
+const WORDS: { accept: string[]; hint: string }[] = [
+  { accept: ['colour'], hint: 'Six letters. It starts with C.' },
+  { accept: ['organise'], hint: 'Eight letters. It starts with O.' },
+  { accept: ['neighbour'], hint: 'Nine letters. It starts with N.' },
+  { accept: ['centre'], hint: 'Six letters. It starts with C.' },
+  { accept: ['necessary'], hint: 'Nine letters. It has one C and two S.' },
+  { accept: ['separate'], hint: 'Eight letters. The second letter is E.' },
+];
 
 export function buildSpellingTest(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'Spelling test');
@@ -18,6 +26,9 @@ export function buildSpellingTest(colourway: Colourway) {
   //The pass and fail wording the result page picks from. The score and the pass mark come from the quiz itself (`quiz.score`, `quiz.max`, `quiz.passMark`)
   variable(project, 'passMessage', 'string', 'You passed. Well spelled.');
   variable(project, 'failMessage', 'string', 'Not a pass this time. Listen to the words again and have another go.');
+  //The two optional extras, one switch each for every word (see the checklist). Off: a spelling test is one go a word, and the server's retake rounds do the rest
+  variable(project, 'allowTryAgain', 'boolean', false);
+  variable(project, 'offerHint', 'boolean', false);
 
   const { page: hero, start } = heroPage(ctx, 'Spelling test', 'Listen to each word and type it. Every letter counts, and you can play a word as many times as you like.', 'Start the test');
   const pages: Artboard[] = [];
@@ -30,17 +41,23 @@ export function buildSpellingTest(colourway: Colourway) {
     const page = brandedPage(ctx, `Word ${n}`, { footer: 'Word {pageNumber - 1} of {pageCount - 2}' });
     const at = box(page);
     //The play button sits above the question, so the word is the first thing a learner reaches
-    const play = button(ctx, 'Play word button', 'Play the word', 0, 0, 220);
-    play.ariaLabel = `Play word ${n}`;
+    //Playing the word is not a second press away while it is going: the button is disabled and says so until the sound ends (or is stopped)
+    const play = bind(button(ctx, 'Play word button', 'Play the word', 0, 0, 220), {
+      disabled: 'soundPlaying()',
+      label: 'soundPlaying() ? "Playing…" : "Play the word"',
+      ariaLabel: `soundPlaying() ? "Playing word ${n}" : "Play word ${n}"`,
+    });
     plays.push(play);
-    const id = addQuestion(project, page.id, 'blank', { at: { x: at.x, y: at.y + 70 } })!;
+    //Submit, not Check: the answer is final and marked. Hint is a small pill at the top right of the card, Try again is off: both follow one switch each
+    const id = addQuestion(project, page.id, 'blank', { at: { x: at.x, y: at.y + 70 }, checkLabel: 'Submit answer', hint: 'pill', hintWhen: 'offerHint', resetWhen: 'allowTryAgain' })!;
     setQuestionSettings(project, page.id, id, {
       prompt: 'Listen to the word, then type it.',
       points: 1,
       attempts: 1,
       partial: false,
       reveal: true,
-      hints: [],
+      hints: [w.hint],
+      hintPenalty: 0,
       feedbackCorrect: 'Correct.',
       feedbackIncorrect: 'Not correct.',
       feedbackOutOfTries: 'Not correct.',
@@ -51,7 +68,6 @@ export function buildSpellingTest(colourway: Colourway) {
       guard: { mode: 'block', spellcheck: true, paste: true },
       //coming back to a word keeps it as it was (the server says where it stands), and a retake starts the next round from the result page
       keep: true,
-      hideReset: true,
       report: null,
     });
     const frame = page.children.find((c) => c.id === id) as FrameNode;
@@ -148,6 +164,7 @@ export function buildSpellingTest(colourway: Colourway) {
 
   noteBelow(pages[0], { text: '**Guard** Each word is set to block until a spell checker or writing tool is turned off, and to refuse pasting. [ ] Read "Spell checkers and writing tools" in the help before you share it.', colour: 'rose' });
   noteBelow(pages[0], { x: 456, text: '[ ] Press Make the audio with a voice in each word\'s Voice section, or pick your own recording. The word must be nowhere else in the page.', colour: 'gold' });
+  noteBelow(pages[0], { x: 912, text: '**Two switches** `allowTryAgain` and `offerHint` in the Variables tab turn Try again and the Hint pill on for every word. [ ] Type the hints (not the word) under Hints in each word\'s Question section.', colour: 'green' });
   noteBelow(result, { text: '**Quiz totals** The score is `quiz.score` out of `quiz.max`, which is the server\'s record once it has marked, and the tiles are a repeater over `quiz.questions`. Which go it was comes from the retake variables.', colour: 'sky' });
 
   const checklist: TemplateChecklistItem[] = [
@@ -156,6 +173,7 @@ export function buildSpellingTest(colourway: Colourway) {
     item('Make all six at once: under Voice for the word, choose the voice and speed, then Make the audio for all words (words set to My own audio are skipped). Preview a few first. When a word comes out wrong, type how it sounds in Say it like (cull er for colour), which is only used to make the audio and never reaches the page, and make that word again. The server makes the speech once, here: the learner\'s page only has the sound. Listen to every word before you share', frames[0], pages[0]),
     item('Audio made with the voice is a plain wav with no tags, and the share link renames it. For your own audio, use mp3 or wav: the share link cuts out their title and comment tags, but other kinds of audio keep theirs, and the share tells you', plays[0], pages[0]),
     item('American spellings: each word has Also accept American spellings on. The Question section lists the forms it adds, so check them. Turn it off for a test of British or Australian spelling only, or add any form it does not know as its own line', frames[0], pages[0]),
+    item('Try again and Hint are off to begin with, one switch each for every word: in the Variables tab, set allowTryAgain to true to let a learner who got a word wrong clear it and have another go (practice, so the first mark stays), and offerHint to true to show a small Hint pill at the top right of each word. Type the hint for each word in the Hints part of its Question section (it stays on the server with the answers, and must never hold the word), and set a mark taken off for each hint there if you want one', frames[0], pages[0]),
     item('Retakes and score kept: in the Marking part of each word\'s Question section (set them the same on every word). The starter allows 2 retakes and keeps the best round. Choose Unlimited, or Off, and Latest round if the last go should be the mark', frames[0], pages[0]),
     item('To add a word: duplicate a word page and, in its Question section, press Make this one independent. The footer, Back and Next, the total and the result tiles all follow the page order and the questions', undefined, pages[1]),
     item('Spell checkers and writing tools: each word is set to Block until a writing tool is turned off and to refuse paste (the "Spell checkers and writing tools" section of the Question section, set the same on every word). Read the help topic of that name for what it can and cannot see, set an Exemption code for a learner who relies on assistive technology that looks like a writing tool, and tell learners to turn their spell checker off for this site before they start', frames[0], pages[0]),

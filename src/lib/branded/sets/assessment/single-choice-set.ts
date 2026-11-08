@@ -2,7 +2,7 @@ import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'inter
 import { brandedPage, brandedProject, button, byName, contentBox, edge, item, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { stack } from '../../parts';
-import { after, bankQuestion, bind, click, goNext, graph, heroPage, kitNode, noteBelow, scorePage, variable } from './shared';
+import { after, bankQuestion, bind, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, scorePage, variable } from './shared';
 
 //Study skills again, neutral and short: three options each, one right (correct is the place of the right one, counting from 1).
 const QUESTIONS = [
@@ -54,6 +54,8 @@ export function buildSingleChoiceSet(colourway: Colourway) {
   //Right: wait a moment, then the kit's own Next (which goes on to the score page after the last question)
   const wait = after(play, check, 'action.delay', { ms: FLASH_MS }, 'correct');
   play.logic.edges.push(edge(wait, kitNode(play, 'reset:action')));
+  graphNote(play, { anchor: kitNode(play, 'start:event'), colour: 'sky', text: '**The question kit wired Start, Choose option and Next.** The Check answer after Choose option is the starter\'s, so picking an answer marks it. [ ] Change the question in its Question section, not in this graph.' });
+  graphNote(play, { anchor: check, colour: 'sky', text: '**Right** waits a moment, then runs the kit\'s own Next. **Wrong** has no wire, so the question stays put with its explanation and a Next button. [ ] Change how long the tick shows in the Wait.' });
   {
     const gh = graph(hero);
     gh.run(click(gh, start, 'Navigation'), goNext());
@@ -91,9 +93,15 @@ export function buildSingleChoiceSet(colourway: Colourway) {
   });
   {
     const gr = graph(result);
-    gr.run(click(gr, again, 'Try again'), ['action.startOver', {}]);
-    gr.run(click(gr, missedBtn, 'Practise the missed ones'), ['action.questionReset', { question: frame.id, run: 'missed' }], ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
-    gr.run(gr.event('event.start', {}, 'Score page'), ['action.announce', { text: `"You scored " + ${P}_setScore + " out of " + ${P}_setMax + ". " + message`, politeness: 'polite' }]);
+    const againFlow = click(gr, again, 'Try again');
+    gr.run(againFlow, ['action.startOver', {}]);
+    const missedFlow = click(gr, missedBtn, 'Practise the missed ones');
+    gr.run(missedFlow, ['action.questionReset', { question: frame.id, run: 'missed' }], ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
+    const announceFlow = gr.event('event.start', {}, 'Score page');
+    gr.run(announceFlow, ['action.announce', { text: `"You scored " + ${P}_setScore + " out of " + ${P}_setMax + ". " + message`, politeness: 'polite' }]);
+    graphNote(result, { anchor: againFlow, colour: 'sky', text: '**Start over** puts every variable back and shows the first page, so a retry is a fresh attempt, score included.' });
+    graphNote(result, { anchor: missedFlow, colour: 'sky', text: '**Practise the missed ones** runs the question again over only the rows got wrong (`run: missed`), then goes back to the questions.' });
+    graphNote(result, { anchor: announceFlow, colour: 'sky', text: '**Read aloud as the page opens.** It uses `message`, the same live variable as the heading, so a screen reader hears what the screen says.' });
   }
 
   noteBelow(play, { text: '**Question bank** The questions are the rows of the `questions` list, asked once each. Picking an answer checks it. A right one waits a moment (the Wait node, in milliseconds) and moves on by itself.', colour: 'sky' });

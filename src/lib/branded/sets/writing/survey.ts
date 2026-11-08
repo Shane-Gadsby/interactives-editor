@@ -72,7 +72,7 @@ function build(colourway: Colourway) {
       ariaLabel: 'item + " out of 5"',
       ariaChecked: 'rating == item',
       'fill.color': `rating == item ? "${L.button}" : "${L.background}"`,
-      'stroke.paint.color': `rating == item ? "${L.button}" : "${L.border}"`,
+      'stroke.paint.color': `rating == item ? "${L.primary}" : "${L.border}"`,
     },
   );
   const scale = keyNavList('Rating scale', 22, 136, CARD_W - 44, 40, { items: '[1, 2, 3, 4, 5]', row: dot, mode: 'radio', orientation: 'horizontal', gap: 13, ariaLabel: 'How confident are you managing your study time, from 1 not at all to 5 very' });
@@ -98,7 +98,7 @@ function build(colourway: Colourway) {
       cursor: 'pointer',
       children: [bind(text(ctx, 'Choice text', '{item}', 14, 10, CARD_W - 44 - 28, { fontSize: 16, fontWeight: 600, decorative: true, height: 24, autoSize: 'none', wrap: false }), { color: `place == item ? "${L.onButton}" : "${L.text}"` })],
     }) as FrameNode,
-    { ariaLabel: 'item', ariaChecked: 'place == item', 'fill.color': `place == item ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `place == item ? "${L.button}" : "${L.border}"` },
+    { ariaLabel: 'item', ariaChecked: 'place == item', 'fill.color': `place == item ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `place == item ? "${L.primary}" : "${L.border}"` },
   );
   const choices = keyNavList('Place choices', 22, 136, CARD_W - 44, 4 * 54 - 10, { items: 'places', row, mode: 'radio', gap: 10, ariaLabel: 'Where do you usually study' });
   const q2 = question(1, 'REQUIRED', '2. Where do you usually study?', [choices]);

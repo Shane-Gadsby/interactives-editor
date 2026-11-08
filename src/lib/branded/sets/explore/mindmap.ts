@@ -105,7 +105,8 @@ function mapLayers(ctx: BrandedCtx, o: { from: string; focus: Variable; area: { 
     },
   } as never);
   const repeat = { items: o.from, layout: 'none' as const, gap: 0, columns: 1 };
-  const area = { x: 0, y: 0, width: o.area.width, height: o.area.height, fitContents: false };
+  //The repeaters' boxes are a point: their layers are placed by the layout, and a box the size of the map would sit over the ideas and take their clicks
+  const area = { x: 0, y: 0, width: 1, height: 1, fitContents: false };
   const ideas = createNode('group', { name: 'Ideas', ...area, repeat, keyNav: { mode: 'list', orientation: 'both', countHidden: true, indexVariable: o.focus.id }, children: [idea] } as never);
   //A line to each idea from its parent: the connector's ends pick the copy of the idea box by number, so it follows a box wherever the layout puts it
   const line = createNode('connector', {

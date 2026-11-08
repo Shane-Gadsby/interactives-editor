@@ -126,6 +126,7 @@ export function FillSection({ nodes, project }: { nodes: SceneNode[]; project: P
   const rows = list.map((p, i) => ({ p, i })).reverse();
   return (
     <Section
+      id="fill"
       help="fill-stroke"
       title={n.type === 'progress' ? 'Track fill' : n.type === 'connector' ? 'Label background' : 'Fill'}
       actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add fill" onClick={() => write([...list, { type: 'solid', color: list.length ? LIGHT_LOOK.background : LIGHT_LOOK.surfaceMuted }], orderWithAdded(order, 'fill'))} />}

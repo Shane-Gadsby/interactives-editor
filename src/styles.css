@@ -73,6 +73,33 @@
   background: var(--bg);
 }
 
+/* The stacking order of everything that floats, in one place. Low to high: docked panels' floating windows, dropdowns,
+   modals, the help drawer, the quick search, Preview (above all of those, so a drawer never covers its controls), then what
+   can be opened from inside Preview: popovers, context menus, toasts, confirm dialogs and tooltips. The small numbers left in
+   the rules below (1 to 8) only order things inside one canvas or one control. test/overlay-order.test.ts checks this list. */
+:root {
+  --z-canvas-hint: 30;
+  --z-dropdown: 50;
+  --z-float: 60;
+  --z-dropdown-raised: 60;
+  --z-float-front: 61;
+  --z-dock-ghost: 69;
+  --z-dock-edge: 70;
+  --z-dock-drag: 71;
+  --z-dropdown-scrim: 79;
+  --z-dropdown-menu: 80;
+  --z-modal: 100;
+  --z-drawer: 900;
+  --z-quick-search: 1000;
+  --z-preview: 1100;
+  --z-popover: 1200;
+  --z-popover-raised: 1300;
+  --z-menu: 2000;
+  --z-toast: 3000;
+  --z-dialog: 5000;
+  --z-tooltip: 10000;
+}
+
 /* Light theme: Preferences > Theme. "auto" follows the system setting. The palette's own light greys, as the toolbox uses them */
 :root[data-theme='light'] {
   --bg: var(--u-g1);
@@ -461,7 +488,7 @@ progress {
 }
 .palette-pop {
   position: fixed;
-  z-index: 400;
+  z-index: var(--z-popover);
   width: 244px;
   max-height: min(420px, calc(100vh - 16px));
   overflow-y: auto;
@@ -742,7 +769,7 @@ progress {
 }
 .search-pop {
   position: fixed;
-  z-index: 400;
+  z-index: var(--z-popover);
   display: flex;
   flex-direction: column;
   max-height: min(360px, calc(100vh - 16px));
@@ -1171,6 +1198,22 @@ hr.item-sep {
 .project-card {
   min-width: 0;
 }
+/* the project you just came back from (Home opens Projects with it in view) */
+.project-card.just-left {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 3px;
+  animation: just-left-fade 4s ease-out 2s forwards;
+}
+@keyframes just-left-fade {
+  to {
+    outline-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .project-card.just-left {
+    animation: none;
+  }
+}
 .project-info {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -1479,7 +1522,7 @@ body.dock-dragging * {
 }
 .dock-edge {
   position: fixed;
-  z-index: 70;
+  z-index: var(--z-dock-edge);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1502,7 +1545,7 @@ body.dock-dragging * {
 }
 .dock-float-ghost {
   position: fixed;
-  z-index: 69;
+  z-index: var(--z-dock-ghost);
   width: 380px;
   height: 320px;
   border: 2px dashed var(--accent);
@@ -1512,7 +1555,7 @@ body.dock-dragging * {
 }
 .dock-drag-tab {
   position: fixed;
-  z-index: 71;
+  z-index: var(--z-dock-drag);
   padding: 4px 10px;
   border: 1px solid var(--line-2);
   border-radius: 6px;
@@ -1524,7 +1567,7 @@ body.dock-dragging * {
 }
 .dock-float {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-float);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -1535,7 +1578,7 @@ body.dock-dragging * {
   overflow: hidden;
 }
 .dock-float.front {
-  z-index: 61;
+  z-index: var(--z-float-front);
 }
 .dock-float-head {
   flex: none;
@@ -1673,7 +1716,7 @@ body.dock-dragging * {
   position: absolute;
   right: 0;
   top: 32px;
-  z-index: 50;
+  z-index: var(--z-dropdown);
   background: var(--panel-2);
   border: 1px solid var(--line-2);
   border-radius: 8px;
@@ -3041,10 +3084,181 @@ button.twisty:hover {
 
 /* ---------------------------------------------------------------- logic graph */
 
+.logic-root {
+  display: contents;
+}
 .logic-palette {
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   border-right: 1px solid var(--line);
-  padding: 6px;
+}
+.palette-head {
+  flex: none;
+  padding: 6px 6px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.palette-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 6px 6px;
+}
+.artboard-picker {
+  margin-bottom: 6px;
+}
+.ab-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  text-align: left;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.ab-picker-btn:hover,
+.ab-picker-btn.open {
+  border-color: var(--muted);
+}
+.ab-picker-btn svg {
+  width: 12px;
+  flex: none;
+}
+.ab-picker-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ab-picker-count {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.ab-picker-pop {
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+}
+.ab-picker-list {
+  overflow-y: auto;
+  min-height: 0;
+  outline: none;
+}
+.ab-picker-heading {
+  padding: 6px 10px 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.ab-picker-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.ab-picker-row.on {
+  background: var(--panel-2);
+}
+.ab-picker-row.current {
+  font-weight: 700;
+}
+.ab-picker-row.empty .ab-picker-count {
+  font-style: italic;
+}
+.ab-picker-none {
+  padding: 8px 10px;
+}
+.palette-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.palette-search-input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 26px;
+}
+.palette-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.palette-chip {
+  padding: 1px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+.palette-chip:hover {
+  border-color: var(--muted);
+}
+.palette-chip.on {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.palette-status {
+  padding-top: 4px;
+}
+.palette-status:empty {
+  display: none;
+}
+.palette-status .link-btn {
+  padding: 0;
+  color: var(--text);
+  text-decoration: underline;
+}
+.palette-fold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 4px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.palette-fold:hover {
+  background: var(--panel-2);
+}
+.palette-fold:not(.open) .section-chev {
+  transform: rotate(-45deg);
+}
+.palette-fold.static {
+  cursor: default;
+}
+.palette-fold.static:hover {
+  background: none;
+}
+.palette-count {
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 11px;
+}
+.palette-item {
+  padding-left: 18px !important;
 }
 .palette-title {
   font-size: 10.5px;
@@ -3576,7 +3790,7 @@ button.twisty:hover {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  z-index: 100;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3588,6 +3802,9 @@ button.twisty:hover {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
+}
+.modal-backdrop.preview-backdrop {
+  z-index: var(--z-preview);
 }
 .preview-modal {
   width: min(96vw, 1600px);
@@ -3658,7 +3875,7 @@ button.twisty:hover {
   border: 1px solid var(--line-2);
   padding: 8px 14px;
   border-radius: 8px;
-  z-index: 200;
+  z-index: var(--z-toast);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 .toast.error {
@@ -3883,7 +4100,7 @@ button.twisty:hover {
 /* ---------------------------------------------------------------- tooltips */
 .ix-tooltip {
   position: fixed;
-  z-index: 10000;
+  z-index: var(--z-tooltip);
   max-width: 280px;
   padding: 5px 8px;
   border-radius: 5px;
@@ -3934,7 +4151,7 @@ button.twisty:hover {
 }
 .help-drawer {
   position: fixed;
-  z-index: 900;
+  z-index: var(--z-drawer);
   top: 44px;
   right: 0;
   bottom: 0;
@@ -4018,6 +4235,15 @@ button.twisty:hover {
   max-width: 760px;
   font-size: 13.5px;
   line-height: 1.6;
+}
+.help-topic-icon {
+  display: inline-flex;
+  vertical-align: -3px;
+  margin-right: 8px;
+}
+.help-topic-icon svg {
+  width: 26px;
+  height: 26px;
 }
 .help-article h1 {
   margin: 2px 0 4px;
@@ -4176,7 +4402,7 @@ kbd {
   font-size: 15px;
 }
 .quick-help-backdrop {
-  z-index: 1000;
+  z-index: var(--z-quick-search);
   align-items: flex-start;
   padding-top: 12vh;
 }
@@ -4304,7 +4530,7 @@ kbd {
 /* ---------------------------------------------------------------- context menus */
 .ctx-menu {
   position: fixed;
-  z-index: 2000;
+  z-index: var(--z-menu);
   min-width: 190px;
   max-height: calc(100vh - 8px);
   overflow-y: auto;
@@ -4971,7 +5197,7 @@ code {
   position: absolute;
   right: 0;
   top: 100%;
-  z-index: 50;
+  z-index: var(--z-dropdown);
   display: flex;
   flex-direction: column;
   min-width: 130px;
@@ -5094,7 +5320,7 @@ code {
 
 /* ---------------------------------------------------------------- in-app dialogs (confirm / prompt / alert) */
 .dialog-backdrop {
-  z-index: 5000;
+  z-index: var(--z-dialog);
 }
 .modal.dialog {
   width: min(440px, 92vw);
@@ -5822,11 +6048,11 @@ code {
 .q-menu-scrim {
   position: fixed;
   inset: 0;
-  z-index: 79;
+  z-index: var(--z-dropdown-scrim);
 }
 .q-menu {
   position: fixed;
-  z-index: 80;
+  z-index: var(--z-dropdown-menu);
   width: 300px;
   background: var(--panel-2);
   border: 1px solid var(--line-2);
@@ -6056,7 +6282,7 @@ code {
   align-items: flex-start;
   gap: 6px;
   position: absolute;
-  z-index: 30;
+  z-index: var(--z-canvas-hint);
   max-width: 260px;
   padding: 5px 8px;
   border-radius: 5px;
@@ -6085,7 +6311,7 @@ code {
   gap: 10px;
   max-width: min(640px, calc(100vw - 32px));
   border-color: var(--accent, var(--line-2));
-  z-index: 400;
+  z-index: var(--z-toast);
 }
 /* ---------------------------------------------------------------- narration and captions on the timeline */
 .timeline-labels,
@@ -7140,7 +7366,7 @@ code {
 .review-play {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: var(--z-dropdown);
   background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
@@ -7186,7 +7412,7 @@ code {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  z-index: 60;
+  z-index: var(--z-dropdown-raised);
   width: 340px;
   max-height: 60vh;
   overflow: auto;
@@ -7303,7 +7529,7 @@ code {
 }
 .tl-settings-pop {
   position: fixed;
-  z-index: 400;
+  z-index: var(--z-popover);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -7779,7 +8005,7 @@ code {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  z-index: 60;
+  z-index: var(--z-dropdown-raised);
   width: max-content;
   max-width: 340px;
   background: var(--panel, #fff);
@@ -8115,7 +8341,7 @@ code {
 }
 .font-pop {
   position: fixed;
-  z-index: 500;
+  z-index: var(--z-popover-raised);
   display: flex;
   flex-direction: column;
   background: var(--panel-2);
@@ -8824,7 +9050,7 @@ code {
 /* expression suggestions (ExprField): the list under a field; the chosen row is the palette gold with dark text */
 .expr-pop {
   position: fixed;
-  z-index: 400;
+  z-index: var(--z-popover);
   max-height: min(300px, calc(100vh - 16px));
   background: var(--panel-2);
   color: var(--text);
@@ -9278,9 +9504,13 @@ code {
   min-width: 0;
   padding-right: 26px;
 }
+.prop-fold-all {
+  flex: none;
+  margin-left: 4px;
+}
 .prop-search-clear {
   position: absolute;
-  right: 2px;
+  right: 36px;
   width: 22px;
   height: 22px;
   border: none;
@@ -9297,7 +9527,7 @@ code {
 }
 .prop-search-key {
   position: absolute;
-  right: 6px;
+  right: 40px;
   padding: 0 5px;
   border: 1px solid var(--line-2);
   border-radius: 3px;
@@ -9364,4 +9594,66 @@ code {
 }
 .snap-field select {
   font: inherit;
+}
+/* ---------------------------------------------------------------- help history buttons and the context banner */
+.help-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.help-nav-btns .icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.help-context {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-2);
+  border-left: 3px solid var(--primary-bg);
+  border-radius: 4px;
+  background: var(--panel-2);
+  font-size: 12px;
+}
+.help-context .link-btn {
+  padding: 0;
+  color: var(--text);
+  text-decoration: underline;
+  white-space: nowrap;
+}
+.preview-modal:focus {
+  outline: none;
+}
+/* Node summary in the Interactions settings column, with the link on to the reference */
+.node-summary .link-btn {
+  white-space: normal;
+  text-align: left;
+}
+.node-gives code {
+  font-size: 11px;
+}
+
+/* sticky notes on the interaction graph: the canvas notes' paper, as graph nodes */
+.graph-note.note {
+  position: relative;
+  cursor: grab;
+}
+.graph-note .note-body {
+  cursor: inherit;
+}
+.react-flow__node-ixnote {
+  z-index: 2;
+}
+.note-swatches {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.graph-note-form .note-swatch {
+  width: 20px;
+  height: 20px;
 }

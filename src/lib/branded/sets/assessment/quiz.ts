@@ -3,6 +3,7 @@ import { addQuestion, setQuestionSettings } from '../../../question-kit';
 import { brandedPage, brandedProject, button, contentBox, item, solid, stroke, text } from '../../kit';
 import type { Colourway } from '../../looks';
 import { announce, bind, brandQuestionFrame, click, goNext, graph, heroPage, noteBelow, questionNav, scorePage, variable } from './shared';
+import { extrasChecklist, questionExtras } from '../../parts';
 
 interface QuizQuestion {
   kind: QuestionKind;
@@ -101,7 +102,7 @@ export function buildQuiz(colourway: Colourway) {
     //The footer counts the question pages from the page order, so adding a page needs no retyping
     const page = brandedPage(ctx, `Question ${n}`, { footer: 'Question {pageNumber - 1} of {pageCount - 2}' });
     const at = box(page);
-    const id = addQuestion(project, page.id, q.kind, { at: { x: at.x, y: at.y } })!;
+    const id = addQuestion(project, page.id, q.kind, { at: { x: at.x, y: at.y }, ...questionExtras(project, { hint: true }), checkLabel: 'Submit answer' })!;
     //One check per question, kept when the page is come back to, and no Try again: a wrong answer cannot be retried for a mark
     setQuestionSettings(project, page.id, id, { ...q.patch, attempts: 1, points: 1, reveal: true, report: null, keep: true, hideReset: true });
     const frame = page.children.find((c) => c.id === id) as FrameNode;
@@ -200,5 +201,6 @@ export function buildQuiz(colourway: Colourway) {
     item('Change the pass mark: Project > Results and progress > Pass mark. The score page and the score sent to StudyDesk both read it', undefined, result),
     item('Check that the score is sent: Project > Results and progress should show Score from: Total of all questions', undefined, result),
   ];
+  checklist.push(item(extrasChecklist({ hint: true })));
   return { project: ctx.project, checklist };
 }

@@ -68,7 +68,7 @@ function build(colourway: Colourway) {
     stroke: stroke(L.border, 2),
   });
   bind(input, { visible: 'mode != "choose"', 'stroke.paint.color': `answered ? (correct ? "${L.success}" : "${L.error}") : "${L.border}"` });
-  const check = bind(button(ctx, 'Check', 'Check', box.x + 316, box.y + 314, 150, true), { visible: 'mode != "choose"', disabled: 'answered' });
+  const check = bind(button(ctx, 'Check', 'Check answer', box.x + 316, box.y + 314, 170, true), { visible: 'mode != "choose"', disabled: 'answered' });
 
   //Or pick from four options: a grid whose copies are one Tab stop and move with the arrow keys
   const optionText = text(ctx, 'Option text', '{item}', 0, 12, 270, { fontSize: 26, fontWeight: 700, align: 'center', autoSize: 'none', height: 36, decorative: true });

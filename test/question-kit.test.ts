@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Player, createProject, normalizeProject, walk, cloneWithNewIds, type FrameNode, type Project, type QuestionKind, type SceneNode } from 'interactives-player';
 import { EditorStore } from '../src/store/store';
-import { addQuestion, bankSource, makeIndependent, partsOf, questionFrames, setQuestionSettings, sharedPrefix } from '../src/lib/question-kit';
+import { addQuestion, bankSource, makeIndependent, partsOf, questionFrames, setKitOptions, setQuestionSettings, sharedPrefix } from '../src/lib/question-kit';
 
 const KINDS: QuestionKind[] = ['single', 'multiple', 'truefalse', 'blank', 'ordering'];
 
@@ -529,5 +529,77 @@ describe('read aloud and number keys on the kit', () => {
     await click(listen);
     expect(spoken[spoken.length - 1]).toMatch(/Because it is the sensible choice\.$/);
     player.destroy();
+  });
+});
+
+describe('Kit options', () => {
+  const withSwitches = () => {
+    const s = new EditorStore(createProject('Q'));
+    const abId = s.get().project.artboards[0].id;
+    s.update((d) => {
+      d.variables.push({ id: 'v-hint', name: 'offerHint', type: 'boolean', initial: false }, { id: 'v-again', name: 'allowTryAgain', type: 'boolean', initial: false });
+    });
+    return { s, abId };
+  };
+
+  it('word the buttons and gate Hint and Try again on a project switch, written onto plain layers', () => {
+    const { s, abId } = withSwitches();
+    let id = '';
+    s.update((d) => void (id = addQuestion(d as Project, abId, 'single', { checkLabel: 'Submit answer', resetLabel: 'Go again', hintLabel: 'Clue', hintWhen: 'offerHint', resetWhen: 'allowTryAgain' })!));
+    const f = questionFrames(s.get().project.artboards[0])[0];
+    const prefix = f.question!.prefix;
+    expect(part(f, 'check')).toMatchObject({ label: 'Submit answer' });
+    expect(part(f, 'reset')).toMatchObject({ label: 'Go again' });
+    expect(part(f, 'reset').bindings!.visible).toBe(`allowTryAgain && ${prefix}_locked && !${prefix}_correct`);
+    expect(part(f, 'hint')).toMatchObject({ label: 'Clue' });
+    expect(part(f, 'hint').bindings!.visible).toBe(`offerHint && ${prefix}_hintsLeft > 0 && !${prefix}_locked`);
+    expect(id).toBe(f.id);
+  });
+
+  it('keeps the Try again switch when the retake rule or Hide Try again changes, and the retake rule no longer hides it', () => {
+    const { s, abId } = withSwitches();
+    s.update((d) => void addQuestion(d as Project, abId, 'blank', { resetWhen: 'allowTryAgain' }));
+    const frame = () => questionFrames(s.get().project.artboards[0])[0];
+    const id = frame().id;
+    const prefix = frame().question!.prefix;
+    s.update((d) => setQuestionSettings(d as Project, abId, id, { retake: { limit: 2, keep: 'best' } }));
+    expect(part(frame(), 'reset').bindings!.visible).toBe(`allowTryAgain && ${prefix}_locked && !${prefix}_correct`);
+    s.update((d) => setQuestionSettings(d as Project, abId, id, { hideReset: true }));
+    expect(part(frame(), 'reset').bindings!.visible).toBe('allowTryAgain && false');
+    s.update((d) => setQuestionSettings(d as Project, abId, id, { hideReset: false }));
+    expect(part(frame(), 'reset').bindings!.visible).toBe(`allowTryAgain && ${prefix}_locked && !${prefix}_correct`);
+  });
+
+  it('turns the Hint into a pill beside the prompt, once, and keeps it there through settings changes', () => {
+    const { s, abId } = withSwitches();
+    s.update((d) => void addQuestion(d as Project, abId, 'single', { hint: 'pill', hintWhen: 'offerHint' }));
+    const frame = () => questionFrames(s.get().project.artboards[0])[0];
+    const id = frame().id;
+    const row = part(frame(), 'promptRow') as FrameNode;
+    expect(row.children.map((c) => c.questionPart)).toEqual(['prompt', 'hint']);
+    expect(row.layout!.direction).toBe('row');
+    expect(frame().children[0]).toBe(row);
+    s.update((d) => setKitOptions(d as Project, abId, id, { hint: 'pill' }));
+    s.update((d) => setQuestionSettings(d as Project, abId, id, { hints: ['one', 'two'], listen: true }));
+    expect(partsOf(frame()).promptRow).toHaveLength(1);
+    expect(partsOf(frame()).hint).toHaveLength(1);
+    //the Listen button still lands in the row of buttons, and the hint's click still has its wire
+    expect((part(frame(), 'buttons') as FrameNode).children.some((c) => c.questionPart === 'listen')).toBe(true);
+    const ab = s.get().project.artboards[0];
+    expect(ab.logic.nodes.some((n) => n.kit?.slot === 'hint:event' && n.params.target === part(frame(), 'hint').id)).toBe(true);
+  });
+
+  it('refuses a switch that is not a boolean variable of the project', () => {
+    const s = new EditorStore(createProject('Q'));
+    const abId = s.get().project.artboards[0].id;
+    expect(() => s.update((d) => void addQuestion(d as Project, abId, 'single', { hintWhen: 'nope' }))).toThrow(/no boolean variable nope/);
+  });
+
+  it('leaves a question that asks for nothing exactly as it was', () => {
+    const { p, frame } = make('single');
+    expect(part(frame(), 'check')).toMatchObject({ label: 'Check answer' });
+    expect(part(frame(), 'hint')).toMatchObject({ label: 'Hint' });
+    expect(partsOf(frame()).promptRow).toBeUndefined();
+    expect(p().variables.length).toBeGreaterThan(0);
   });
 });
