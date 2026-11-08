@@ -78,14 +78,14 @@ export function LibrariesPanel() {
 
       <PublishSection project={project} onChanged={() => void refresh()} />
 
-      <Section help="libraries" title={`Libraries in this project${used.length ? ` (${used.length})` : ''}`}>
+      <Section id="libraries-used" help="libraries" title={`Libraries in this project${used.length ? ` (${used.length})` : ''}`}>
         {!used.length && <p className="hint">None yet. Add one from the list below, then drag its components onto the canvas.</p>}
         {used.map(({ id, info, use }) => (
           <UsedLibrary key={id} id={id} name={info?.name ?? use?.name ?? 'Library'} info={info} project={project} activeArtboardId={s.activeArtboardId} run={run} onChanged={() => void refresh()} />
         ))}
       </Section>
 
-      <Section help="libraries" title={`Available libraries${available.length ? ` (${available.length})` : ''}`}>
+      <Section id="libraries-available" help="libraries" title={`Available libraries${available.length ? ` (${available.length})` : ''}`}>
         {libs && !available.length && <p className="hint">{libs.length ? 'You are using every library you can see.' : 'No libraries yet. Mark a project as a library and publish it, and it shows up here for you and anyone you share it with.'}</p>}
         {available.map((l) => (
           <div key={l.id} className="lib-row">

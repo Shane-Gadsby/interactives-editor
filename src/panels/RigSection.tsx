@@ -121,7 +121,7 @@ export function SkinSection({ node, abId }: { node: Extract<SceneNode, { type: '
   const setInfl = (list: SkinInfluence[], coalesce?: string) => edit(abId, (a) => setPointWeights(a, node.id, si, pi, list), coalesce);
 
   return (
-    <Section help="bones#skinning" title={isImage ? 'Mesh and skin' : 'Skin'} defaultOpen={!!skin}>
+    <Section id="skin" help="bones#skinning" title={isImage ? 'Mesh and skin' : 'Skin'} defaultOpen={!!skin}>
       {!skin && (
         <>
           <p className="hint">

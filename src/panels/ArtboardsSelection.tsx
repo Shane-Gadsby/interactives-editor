@@ -15,7 +15,7 @@ export function ArtboardsSelection({ ids, project }: { ids: string[]; project: P
     return <IconButton key={title} icon={<I width={16} />} title={title} onClick={fn} disabled={disabled} />;
   };
   return (
-    <Section title={`${ids.length} artboards`} help="artboards">
+    <Section title={`${ids.length} artboards`} id="artboards-selection" help="artboards">
       <p className="hint" title={names.join(', ')}>
         {names.slice(0, 4).join(', ')}
         {names.length > 4 ? ` and ${names.length - 4} more` : ''}. Drag any of their names on the canvas to move them all.

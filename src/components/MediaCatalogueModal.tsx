@@ -71,6 +71,7 @@ export function MediaCatalogueModal({ onClose }: { onClose: () => void }) {
     <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal catalogue-modal" role="dialog" aria-modal="true" aria-label="Media Catalogue">
         <header>
+          <Icons.catalogue />
           <strong>Media Catalogue</strong>
           <HelpLink topic="media-catalogue" />
           <div className="spacer" />

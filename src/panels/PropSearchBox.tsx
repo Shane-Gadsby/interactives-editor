@@ -1,5 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react';
 import { usePropSearchVersion, type PropSearchStore } from '../lib/prop-search';
+import { allSectionsFolded, setAllSections, useSectionFoldVersion } from '../lib/section-fold';
+import { Icons } from '../components/icons';
 
 const FOCUSABLE = 'input:not([type="hidden"]):not(:disabled), select:not(:disabled), textarea:not(:disabled), button:not(.key-btn):not(:disabled)';
 
@@ -34,6 +36,8 @@ export function PropSearchBox({ store, query, setQuery, inputRef }: { store: Pro
     }
   };
   const found = store.count;
+  useSectionFoldVersion();
+  const folded = allSectionsFolded();
   return (
     <div className="prop-search" ref={wrap} role="search">
       <div className="prop-search-box">
@@ -59,6 +63,9 @@ export function PropSearchBox({ store, query, setQuery, inputRef }: { store: Pro
             /
           </kbd>
         )}
+        <button type="button" className="icon-btn prop-fold-all" title={folded ? 'Unfold all sections' : 'Fold all sections'} aria-label={folded ? 'Unfold all sections' : 'Fold all sections'} onClick={() => setAllSections(folded)}>
+          {folded ? <Icons.chevronRight /> : <Icons.chevronDown />}
+        </button>
       </div>
       {query.trim() && (
         <div className="prop-search-status muted small" role="status" aria-live="polite">
