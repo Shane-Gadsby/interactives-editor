@@ -10,7 +10,7 @@ import { createNode, walk, type Artboard, type FrameNode, type SceneNode, type T
 import { addQuestion, partOf, setQuestionSettings } from '../../../question-kit';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, overlay, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
 import { addVar, announce, bind, click, goNext, graph, set, setVar, toggleVar } from '../../graph-kit';
-import { dialogPanel, stack } from '../../parts';
+import { dialogPanel, extrasChecklist, questionExtras, stack } from '../../parts';
 import { dressQuestion, endPage } from '../drag/shared';
 import { heroButtons } from './helpers';
 
@@ -77,6 +77,9 @@ export const DATED_TIMELINE_LAYOUT_STATES: LayoutState[] = [
 
 //The stage, inside its own coordinates
 const AXIS_MARGIN = 24;
+//a label's chip is this much wider than its words on the right, a little less on the left (the leader line comes down beside it), and half as much taller
+const CHIP_PAD = 6;
+const CHIP_LEFT = 4;
 const LANDSCAPE = { stageW: 928, stageH: 352, axisLength: 880, axisY: 170, laneH: 64, dot: 18 };
 const PORTRAIT = { stageW: 384, stageH: 604, axisLength: 556, axisX: 84, colX: 108, colW: 128, colGap: 8, dot: 18 };
 
@@ -199,12 +202,13 @@ function timelinePage(ctx: BrandedCtx, geo: Geo, v: Vars, tl: string, to: { next
   const bars = repeated('Range bars', ev, G.stageW, G.stageH, barNode);
 
   //Labels: the date, then the title in bold, in the lane the layout chose; a click on one opens the event too
-  const labelNode = createNode('text', {
-    name: 'Event label',
+  //(each on a chip of the page colour: the marker line, the bars and the bands all run behind labels, and the words need a plain ground)
+  const labelText = createNode('text', {
+    name: 'Event label text',
     text: '',
     runs: [{ text: '{item.dateText}\n', fontWeight: 400 }, { text: '{item.title}', fontWeight: 700 }],
-    x: 0,
-    y: 0,
+    x: CHIP_LEFT,
+    y: CHIP_PAD / 2,
     width: 100,
     height: 40,
     fontSize: 13,
@@ -214,9 +218,25 @@ function timelinePage(ctx: BrandedCtx, geo: Geo, v: Vars, tl: string, to: { next
     autoSize: 'none',
     wrap: true,
     decorative: true,
+    bindings: { width: 'item.labelW + 4', height: 'item.labelH' },
+  } as never);
+  const chipW = 'item.labelW + 4 + ' + (CHIP_PAD + CHIP_LEFT);
+  const chipH = 'item.labelH + ' + CHIP_PAD;
+  const labelNode = createNode('frame', {
+    name: 'Event label',
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 40,
+    cornerRadius: 6,
+    fill: solid(L.background),
+    stroke: null,
+    clip: false,
+    decorative: true,
     bindings: portrait
-      ? { x: colOf, y: `${M} + item.labelPos`, width: 'item.labelW + 4', height: 'item.labelH', visible: 'item.labelled && item.inView' }
-      : { x: `${M} + item.labelPos + 6`, y: `${TOP} + 12`, width: 'item.labelW + 4', height: 'item.labelH', visible: 'item.labelled && item.inView' },
+      ? { x: `${colOf} - ${CHIP_LEFT}`, y: `${M} + item.labelPos - ${CHIP_PAD / 2}`, width: chipW, height: chipH, visible: 'item.labelled && item.inView' }
+      : { x: `${M} + item.labelPos + 6 - ${CHIP_LEFT}`, y: `${TOP} + 12 - ${CHIP_PAD / 2}`, width: chipW, height: chipH, visible: 'item.labelled && item.inView' },
+    children: [labelText],
   } as never);
   const labels = repeated('Event labels', ev, G.stageW, G.stageH, labelNode);
 
@@ -238,6 +258,8 @@ function timelinePage(ctx: BrandedCtx, geo: Geo, v: Vars, tl: string, to: { next
       ariaLabel: 'item.spoken + ": " + item.title',
       ariaCurrent: 'current == index ? "date" : false',
       'fill.color': `current == index ? ${lit(L.text)} : ${lit(L.background)}`,
+      //the chosen one is solid with a ring of the page colour, so it still stands off the axis it sits on
+      'stroke.paint.color': `current == index ? ${lit(L.background)} : ${lit(L.text)}`,
       scaleX: 'current == index ? 1.3 : 1',
       scaleY: 'current == index ? 1.3 : 1',
     },
@@ -477,7 +499,7 @@ export const datedTimeline: BrandedStarter = {
     const activity = brandedPage(ctx, 'Put these events in order', { name: 'Put in order', footer: 'Dated timeline  ·  Page {pageNumber} of {pageCount}' });
     const results = endPage(ctx, 'Well done', 'You scored {order_score} of 6.', 'Try again');
     const abox = contentBox(activity);
-    const qid = addQuestion(project, activity.id, 'ordering', { at: { x: abox.x, y: abox.y - 8 } })!;
+    const qid = addQuestion(project, activity.id, 'ordering', { at: { x: abox.x, y: abox.y - 8 }, ...questionExtras(project, { hint: true, tryAgain: true }) })!;
     setQuestionSettings(project, activity.id, qid, {
       prefix: 'order',
       prompt: 'Put these events from the timeline in order, earliest first, using the arrows.',
@@ -540,6 +562,7 @@ export const datedTimeline: BrandedStarter = {
       item('Try it with the keyboard: Tab to the events, the arrow keys to move along them, Enter to open one, Esc to close it; Page Up and Page Down pan, plus and minus zoom', land.dots, lp),
       item('Change the footer lines and pick the colourway on the Themes tab', byName(lp, 'Footer text'), lp),
     ];
+    checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
     return { project, checklist };
   },
 };
