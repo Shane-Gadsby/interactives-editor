@@ -7,7 +7,7 @@ import { produce } from 'immer';
 import { isServerMarked, serverMarkingProblem, type Asset, type FrameNode, type Project } from 'interactives-player';
 import { STARTERS } from '../src/lib/branded/sets/assessment';
 import { COLOURWAYS } from '../src/lib/branded/looks';
-import { questionFrames } from '../src/lib/question-kit';
+import { partsOf, questionFrames } from '../src/lib/question-kit';
 import { EditorStore, setCurrentStore, useEditor } from '../src/store/store';
 import { addPlayButton, applyAudio, isWord, partsFor, setPractice, setVoice, soundNodes, speakText, syncPractice, targetNode, wordOf, wordsIn } from '../src/lib/voice';
 import { VoiceSection } from '../src/panels/VoiceSection';
@@ -120,7 +120,10 @@ describe('putting the made audio in the document', () => {
     expect(nodes).toHaveLength(1);
     expect(targetNode(a, questionFrames(a)[0].question!)!.id).toBe(nodes[0].id);
     const click = a.logic.nodes.find((n) => n.kind === 'event.pointer' && a.logic.edges.some((e) => e.from === n.id && e.to === nodes[0].id))!;
-    expect(a.children.some((c) => c.id === click.params.target && c.type === 'button')).toBe(true);
+    //the button goes in the card, in the prompt's row, not above the card
+    const row = partsOf(questionFrames(a)[0]).promptRow[0] as FrameNode;
+    expect(row.children.some((c) => c.id === click.params.target && c.type === 'button')).toBe(true);
+    expect(a.children.some((c) => c.id === click.params.target)).toBe(false);
   });
 
   it('does not guess between two Play sound nodes', () => {

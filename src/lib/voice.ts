@@ -1,6 +1,6 @@
 import { createNode, defaultParams, uid, type Artboard, type Asset, type FrameNode, type LogicNode, type Project, type Question, type QuestionVoice } from 'interactives-player';
 import { locate, nodeNames, uniqueName } from '../store/doc';
-import { questionFrames } from './question-kit';
+import { questionFrames, setKitOptions } from './question-kit';
 import { lookFor } from './themes';
 
 /**
@@ -257,8 +257,8 @@ export function syncPractice(d: Project, abId: string, frameId: string): void {
 }
 
 /**
- * A Play the word button for a word that has none: a button beside the question, and the click that plays a Play sound node (the audio
- * goes into it when it is made). Returns the node's id.
+ * A Play the word button for a word that has none: a button in the question card at the right of the prompt (the kit's prompt row,
+ * ahead of the Hint pill), and the click that plays a Play sound node (the audio goes into it when it is made). Returns the node's id.
  */
 export function addPlayButton(d: Project, abId: string, frameId: string): string | null {
   const ab = d.artboards.find((a) => a.id === abId);
@@ -271,13 +271,17 @@ export function addPlayButton(d: Project, abId: string, frameId: string): string
     label: 'Play the word',
     x: frame.x,
     y: Math.max(0, frame.y - 64),
-    width: 220,
-    height: 48,
+    width: 170,
+    height: 40,
+    cornerRadius: 20,
     fill: { type: 'solid', color: L.surfaceMuted },
     color: L.text,
     ariaLabel: 'Play the word',
   });
-  ab.children.push(button);
+  //In the card beside the prompt, the same place the Spelling test starter puts its own; a frame with no prompt to sit beside
+  //(an odd hand-built one) gets it above instead, as before
+  setKitOptions(d, abId, frameId, { titleControls: [button] });
+  if (!locate(ab, button.id)) ab.children.push(button);
   const y = ab.logic.nodes.length ? Math.max(...ab.logic.nodes.map((n) => n.y)) + 160 : 40;
   const mk = (kind: string, x: number, params: Record<string, unknown>, note?: string): LogicNode => ({ id: uid('l'), kind, x, y, params: { ...defaultParams(kind), ...params }, ...(note ? { note } : {}) });
   const click = mk('event.pointer', 0, { target: button.id, type: 'click' }, 'Say the word');

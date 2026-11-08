@@ -66,13 +66,14 @@ const toggleClip = (g: G, btn: SceneNode, name: string, asset: string, loopExpr:
 const playLabel = (asset: string) => `soundPlaying("${asset}") ? "Stop" : "Play"`;
 
 //A clip: its card with a waveform picture, one Play or Stop button, and its written description (shown when descriptions are on)
+//The Play button is the clip's own, so it sits at the right of the clip's title, the same as Play the word in the spelling test
 function clipCard(ctx: BrandedCtx, page: Artboard, g: G, clip: Clip, x: number, y: number, w: number): { card: SceneNode; play: SceneNode } {
   const { L } = ctx;
-  const title = heading(ctx, `${clip.title} title`, clip.title, 20, 14, w - 40, { fontSize: 20 });
-  const wave = picture(ctx, `${clip.title} waveform`, 20, 48, w - 40, 50);
-  const play = bind(button(ctx, `${clip.title} play button`, 'Play', 20, 108, 160), { label: playLabel(clip.asset), ariaLabel: `soundPlaying("${clip.asset}") ? "Stop ${clip.title}" : "Play ${clip.title}"` });
-  const description = bind(text(ctx, `${clip.title} description`, `Description: ${clip.description}`, 20, 160, w - 40, { fontSize: 14, lineHeight: 1.3, color: L.muted }), { visible: 'showText' });
-  const cardBox = createNode('frame', { name: `${clip.title} card`, x, y, width: w, height: 200, cornerRadius: 16, fill: solid(L.surface), stroke: null, clip: false, role: 'region', ariaLabel: clip.title, children: [title, wave, play, description] }) as FrameNode;
+  const title = heading(ctx, `${clip.title} title`, clip.title, 20, 18, w - 40 - 112, { fontSize: 20 });
+  const play = bind(Object.assign(button(ctx, `${clip.title} play button`, 'Play', w - 20 - 100, 12, 100), { height: 40, cornerRadius: 20, fontSize: 16 }), { label: playLabel(clip.asset), ariaLabel: `soundPlaying("${clip.asset}") ? "Stop ${clip.title}" : "Play ${clip.title}"` });
+  const wave = picture(ctx, `${clip.title} waveform`, 20, 64, w - 40, 50);
+  const description = bind(text(ctx, `${clip.title} description`, `Description: ${clip.description}`, 20, 126, w - 40, { fontSize: 14, lineHeight: 1.3, color: L.muted }), { visible: 'showText' });
+  const cardBox = createNode('frame', { name: `${clip.title} card`, x, y, width: w, height: 200, cornerRadius: 16, fill: solid(L.surface), stroke: null, clip: false, role: 'region', ariaLabel: clip.title, children: [title, play, wave, description] }) as FrameNode;
   page.children.push(cardBox);
   toggleClip(g, play, `Play or stop ${clip.title}`, clip.asset, 'looping', `slow ? ${SLOW} : 1`);
   return { card: cardBox, play };

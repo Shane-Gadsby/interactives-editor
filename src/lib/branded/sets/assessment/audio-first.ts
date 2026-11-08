@@ -1,5 +1,5 @@
 import { createNode, defaultAutoLayout, type FrameNode, type LogicNode, type TemplateChecklistItem } from 'interactives-player';
-import { addQuestion, partsOf, setQuestionSettings, syncQuestion } from '../../../question-kit';
+import { addQuestion, partsOf, setKitOptions, setQuestionSettings, syncQuestion } from '../../../question-kit';
 import { brandedPage, brandedProject, button, byName, contentBox, edge, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { extrasChecklist, extrasShort, questionExtras, stack } from '\.\./\.\./parts';
@@ -127,6 +127,9 @@ export function buildAudioFirstQuiz(colourway: Colourway) {
   const repeat = partsOf(frame).listen[0] as unknown as { label: string; shortcut?: string; bindings?: Record<string, string> };
   Object.assign(repeat, { label: 'Repeat (R)', shortcut: 'r' });
   repeat.bindings = { ...repeat.bindings, visible: 'voiceAvailable && spokenOn' };
+  //Repeat reads this question again, so it is the question's own: up in the card beside the prompt, a pill like the Hint, not down with Next
+  Object.assign(repeat, { width: 110, height: 32, cornerRadius: 16, fontSize: 14 });
+  setKitOptions(project, play.id, id, { titleControls: [partsOf(frame).listen[0]] });
 
   //Live variables: what the row showing says (so the feedback and the speech read it once), and the banded message for the score page
   const rowNow = `questions[Math.max(0, ${P}_bankIndex)]`;

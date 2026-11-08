@@ -2,11 +2,12 @@
 //(and taps), speaks Correct or Not quite with the explanation, moves on by hand, repeats, slows, hints and pauses, speaks the score
 //and goes through the missed questions again; and with no voice, or with spoken prompts off, it is a plain keyboard quiz.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Player, type Artboard, type Project } from 'interactives-player';
+import { Player, type Artboard, type FrameNode, type Project } from 'interactives-player';
 import { STARTERS } from '../src/lib/branded/sets/assessment';
 import { COLOURWAYS } from '../src/lib/branded/looks';
 import { byName } from '../src/lib/branded/kit';
-import { partsOf, questionFrames } from '../src/lib/question-kit';
+import { partsOf, questionFrames, setQuestionSettings } from '../src/lib/question-kit';
+import { projectFromBrandedStarter } from '../src/lib/branded';
 
 const flush = (ms = 8) => new Promise((r) => setTimeout(r, ms));
 const starter = STARTERS.find((s) => s.key === 'assessment/audio-first-quiz')!;
@@ -340,5 +341,24 @@ describe('the Audio-first quiz', () => {
     expect(speaks.length).toBeGreaterThan(3);
     for (const n of speaks) expect(n.params).toMatchObject({ fallback: 'announce', only: 'spokenOn' });
     expect(project.variables.map((x) => x.name)).not.toEqual(expect.arrayContaining(['pos', 'order', 'tally', 'hintShown']));
+  });
+});
+
+describe('the audio-first quiz layout', () => {
+  it('puts Repeat (R) in the card beside the prompt, a pill ahead of the Hint, and keeps it there through a sync', () => {
+    const p = projectFromBrandedStarter(starter, COLOURWAYS[0]);
+    const ab = p.artboards[1];
+    const f = questionFrames(ab)[0];
+    const parts = partsOf(f);
+    const row = parts.promptRow[0] as FrameNode;
+    expect(row.children.map((c) => c.questionPart)).toEqual(['prompt', 'listen', 'hint']);
+    expect(parts.listen).toHaveLength(1);
+    expect(parts.listen[0]).toMatchObject({ label: 'Repeat (R)', height: 32 });
+    expect((parts.buttons[0] as FrameNode).children.some((c) => c.questionPart === 'listen')).toBe(false);
+    //a settings change runs the sync, which must not make a second Listen in the buttons row
+    setQuestionSettings(p, ab.id, f.id, { hintPenalty: 0 });
+    expect(partsOf(f).listen).toHaveLength(1);
+    setQuestionSettings(p, ab.id, f.id, { listen: false });
+    expect(partsOf(f).listen ?? []).toHaveLength(0);
   });
 });
