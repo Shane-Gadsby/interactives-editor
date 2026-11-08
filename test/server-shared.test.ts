@@ -114,7 +114,7 @@ describe('adding and reading', () => {
     const r = await h.call('POST', `/learn/${token}/shared/ds1`, { user: lee, json: { who: 'class', answers: ['x'], username: 'sam', course: 'PHY2000_2026_S1' } });
     expect(r.json.kept).toBe(1);
     expect(rows().find((d: any) => d.username === 'lee')).toMatchObject({ course: 'MAT1000_2026_S1' });
-    expect(rows().find((d: any) => d.username === 'sam').answers.map((a: any) => a.text)).toEqual(['mine']);
+    expect(rows().find((d: any) => d.username === 'sam')!.answers.map((a: any) => a.text)).toEqual(['mine']);
   });
 
   it('says it is not available with no session, and nothing is written', async () => {
@@ -173,7 +173,7 @@ describe('limits', () => {
       if (r.json.value.problem === 'busy') busy++;
     }
     expect(busy).toBeGreaterThan(0);
-    expect(rows().find((d: any) => d.username === 'quick').answers.length).toBeLessThanOrEqual(3);
+    expect(rows().find((d: any) => d.username === 'quick')!.answers.length).toBeLessThanOrEqual(3);
   });
 });
 
@@ -374,6 +374,7 @@ describe('the counting rules', () => {
 
 describe('the learner page passes the player\'s requests on', () => {
   it('turns the player\'s shared messages into the shared routes, with the session id and the source named', async () => {
+    // @ts-expect-error jsdom ships no types here
     const { JSDOM } = await import('jsdom');
     const page = (await h.call('GET', `/play/${token}`)).text;
     const calls: { url: string; method: string; body: any; headers: Record<string, string> }[] = [];
