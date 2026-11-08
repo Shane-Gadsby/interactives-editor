@@ -41,6 +41,7 @@ export const PLAIN_NODE: Record<string, string> = {
   'action.animate': "Animate a layer's setting",
   'action.visibility': 'Show or hide a layer',
   'action.artboard': 'Go to a page',
+  'action.moveView': 'Move the view to a layer',
   'action.url': 'Open a web address',
   'action.cursor': 'Change the mouse pointer',
   'action.saveUserData': 'Save progress',

@@ -100,6 +100,8 @@ ix.timeline('Intro')
   .play() .pause() .stop()
   .restart() .reverse() .seek(ms)
 ix.goTo('Page 2', 'fade')
+await ix.moveView('Panel 2')  // pan and zoom to a layer
+await ix.resetView()           // the whole page again
 ix.report({ completed: true })  // send the result
 ix.result   // {completed, score, percent, passed}
 ix.startOver()

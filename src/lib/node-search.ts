@@ -39,6 +39,7 @@ export const NODE_SYNONYMS: Record<string, string[]> = {
   'action.animate': ['tween', 'ease', 'transition', 'move smoothly', 'fade', 'slide', 'grow', 'animation'],
   'action.visibility': ['show', 'hide', 'visible', 'toggle', 'reveal', 'appear', 'disappear'],
   'action.artboard': ['goto', 'go to', 'navigate', 'page', 'next page', 'previous', 'back', 'screen', 'slide', 'jump', 'link'],
+  'action.moveView': ['camera', 'pan', 'zoom', 'map', 'scroll', 'focus on', 'frame', 'panel', 'comic', 'travel', 'view'],
   'action.url': ['link', 'website', 'open', 'browser', 'navigate', 'external'],
   'action.reportResult': ['score', 'grade', 'lms', 'complete', 'pass', 'fail', 'moodle', 'scorm', 'xapi'],
   'action.record': ['analytics', 'track', 'insights', 'log event', 'count'],
