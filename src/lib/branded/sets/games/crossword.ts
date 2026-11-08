@@ -50,10 +50,6 @@ const WORD_UNDER_SEL = `sel < 0 ? -1 : (entries.findIndex(e => e.down == (dir ==
 const WORD_CELLS = `aw < 0 ? [] : Array.from({length: entries[aw].answer.length}, (_, k) => (entries[aw].row + (entries[aw].down ? k : 0)) * ${SIZE} + entries[aw].col + (entries[aw].down ? 0 : k))`;
 const CLUE_LINE = `aw < 0 ? "Select a square, then type." : (starts.indexOf(entries[aw].row * ${SIZE} + entries[aw].col) + 1) + (entries[aw].down ? " down: " : " across: ") + entries[aw].clue + " (" + entries[aw].answer.length + ")"`;
 const ALL_RIGHT = 'cells.every(c => c.ch == "" || c.t == c.ch)';
-//Arrow keys: from the chosen square on to the next one that has a letter in it, in the key's direction, without leaving its row (or the grid)
-const STEP = `({ArrowLeft: -1, ArrowRight: 1, ArrowUp: -${SIZE}, ArrowDown: ${SIZE}})[event.key]`;
-const LAND_ON = `Array.from({length: ${SIZE}}, (_, k) => sel + ${STEP} * (k + 1)).filter(j => j >= 0 && j < ${SIZE * SIZE} && (Math.abs(${STEP}) == ${SIZE} || Math.floor(j / ${SIZE}) == cells[sel].r)).find(j => cells[j].ch != "") ?? sel`;
-
 function build(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'Crossword');
   const { project, L } = ctx;
@@ -102,8 +98,8 @@ function build(colourway: Colourway) {
     height: CELL,
     cornerRadius: 4,
     clip: false,
-    decorative: true,
-    focusable: false,
+    role: 'button',
+    focusable: true,
     cursor: 'pointer',
     fill: solid(L.background),
     stroke: stroke(L.border, 1.5),
@@ -111,6 +107,7 @@ function build(colourway: Colourway) {
   });
   bind(square, {
     visible: 'item.ch != ""',
+    ariaLabel: '"Row " + (item.r + 1) + ", column " + (item.c + 1) + (item.num > 0 ? ", clue " + item.num : "") + ", " + (item.t == "" ? "empty" : item.t)',
     'fill.color': `index == sel ? "${L.button}" : item.s == "bad" ? "${L.errorSurface}" : item.s == "ok" ? "${L.successSurface}" : item.s == "shown" ? "${L.surfaceMuted}" : wordCells.includes(index) ? "${L.warm}" : "${L.background}"`,
     'stroke.paint.color': `index == sel ? "${L.button}" : item.s == "bad" ? "${L.error}" : item.s == "ok" ? "${L.success}" : "${L.border}"`,
   });
@@ -126,6 +123,8 @@ function build(colourway: Colourway) {
     clip: false,
     role: 'region',
     ariaLabel: 'Crossword grid. Use the arrow keys to move between squares and type a letter to fill one. Backspace clears.',
+    //The squares are one Tab stop, with the arrows between them. Blank squares are hidden but still counted, so a square's number is its place in "cells" and the cursor (sel) is the focused square
+    keyNav: { mode: 'grid', countHidden: true, indexVariable: sel.id },
     repeat: { items: 'cells', layout: 'grid', gap: GAP, columns: SIZE },
     children: [square],
   });
@@ -206,12 +205,8 @@ function build(colourway: Colourway) {
     const onClue = g.click(row, `Choose a ${name} clue`);
     g.run(onClue, set(dir, lit(name)), set(picked, '-1'), set(sel, `${key.name}[event.index].start`), focus(grid));
   }
-  //Tabbing into the grid starts on the first square
-  const onFocus = g.add('event.focus', { target: grid.id, type: 'focus', onlyIf: 'sel < 0' }, null, 'out', { note: 'Tab into the grid' });
-  g.run(onFocus, set(sel, 'cells.findIndex(c => c.ch != "")'));
-
   //Typing a letter fills the square and moves along the word. This one hears every key on the grid (so the page does not scroll under it) and only a letter does anything
-  const onType = g.add('event.key', { key: '', type: 'keydown', target: grid.id }, null, 'out', { note: 'Type a letter' });
+  const onType = g.add('event.key', { key: '', type: 'keydown', target: square.id }, null, 'out', { note: 'Type a letter' });
   const isLetter = g.add('logic.if', { condition: 'sel >= 0 && event.key.length == 1 && !event.ctrl && !event.alt && !event.meta && "abcdefghijklmnopqrstuvwxyz".includes(event.key.toLowerCase())' }, onType);
   g.runFrom(
     isLetter,
@@ -221,18 +216,18 @@ function build(colourway: Colourway) {
     set(sel, 'wordCells.indexOf(sel) >= 0 && wordCells.indexOf(sel) < wordCells.length - 1 ? wordCells[wordCells.indexOf(sel) + 1] : sel'),
   );
   //Backspace clears this square, or steps back and clears the one before
-  const onBack = g.add('event.key', { key: 'Backspace', type: 'keydown', target: grid.id, onlyIf: 'sel >= 0' }, null, 'out', { note: 'Backspace' });
+  const onBack = g.add('event.key', { key: 'Backspace', type: 'keydown', target: square.id, onlyIf: 'sel >= 0' }, null, 'out', { note: 'Backspace' });
   g.run(
     onBack,
     set(sel, 'cells[sel].t != "" || wordCells.indexOf(sel) < 1 ? sel : wordCells[wordCells.indexOf(sel) - 1]'),
     set(cells, 'cells.map((c, j) => j == sel ? {...c, t: "", s: ""} : c)'),
     set(notice, '""'),
   );
-  const onDelete = g.add('event.key', { key: 'Delete', type: 'keydown', target: grid.id, onlyIf: 'sel >= 0' }, null, 'out', { note: 'Delete' });
+  const onDelete = g.add('event.key', { key: 'Delete', type: 'keydown', target: square.id, onlyIf: 'sel >= 0' }, null, 'out', { note: 'Delete' });
   g.run(onDelete, set(cells, 'cells.map((c, j) => j == sel ? {...c, t: "", s: ""} : c)'), set(notice, '""'));
-  //Arrow keys, all four in one flow: on to the next square that has a letter in it, turning the word with the direction
-  const onArrow = g.add('event.key', { key: '', type: 'keydown', target: grid.id, onlyIf: 'sel >= 0 && event.key.startsWith("Arrow")' }, null, 'out', { note: 'Arrow keys' });
-  g.run(onArrow, set(dir, '(event.key == "ArrowUp" || event.key == "ArrowDown") ? "down" : "across"'), set(sel, LAND_ON));
+  //The key navigation moves the cursor (and the focus with it); all this does is turn the word to match the arrow
+  const onArrow = g.add('event.key', { key: '', type: 'keydown', target: square.id, onlyIf: 'sel >= 0 && event.key.startsWith("Arrow")' }, null, 'out', { note: 'Arrow turns the word' });
+  g.run(onArrow, set(dir, '(event.key == "ArrowUp" || event.key == "ArrowDown") ? "down" : "across"'));
 
   //Finishing is said once, when the last letter goes in or the answers are revealed ("status" is live and already says it)
   const onDone = g.add('event.variable', { variable: done.id, onlyIf: 'done' }, null, 'out', { note: 'Crossword finished' });
@@ -268,7 +263,7 @@ function build(colourway: Colourway) {
   //Notes for whoever edits the template, below the page
   const below = (x: number, w: number) => ({ x, y: play.height + 14, w, h: 96 });
   addNote(play, { ...below(0, 440), text: '**Live variables** `entries`, `letters`, `starts`, both clue lists, `aw` (the word under the chosen square), `done` and `status` are worked out from the words and the squares. The flows only change what was typed.', colour: 'sky' });
-  addNote(play, { ...below(456, 440), text: '**One flow for the arrows.** All four keys are one On key with an Only if, rather than four copies. The grid is a single cursor (`sel`) so typing can run on to the next square, which is why it is not a key-navigation list.', colour: 'sky' });
+  addNote(play, { ...below(456, 440), text: '**Key navigation.** The grid is one Tab stop with the arrows between squares, and **Count hidden items** keeps the blanks in the numbering, so `sel` is both the cursor and the focused square. Typing moves `sel` and the focus follows it.', colour: 'sky' });
   addNote(hero.page, { x: 0, y: hero.page.height + 14, w: 440, h: 88, text: '[ ] **Make it yours** in the Variables tab. Write your own words and clues in the `words` variable. The grid is laid out for you, and a word that cannot cross the others is left out.', colour: 'gold' });
 
   return { project, checklist };
