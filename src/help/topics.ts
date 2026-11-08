@@ -1827,6 +1827,19 @@ Drag from an output port to the next node's input to connect them. Actions that 
 
 Click a node in the palette on the left (or drag it onto the graph) to add it; select a node to edit its settings on the right. Settings that name a variable or a sound also offer **+ Create new variable…** or **+ Add a new sound…** in their dropdown, so you don't have to leave the graph. Each node has a **Note** box for a reminder to yourself, and **Delete node** at the bottom.
 
+## Notes on the graph
+A **graph note** is the same sticky note as on the canvas, but it lives in a graph, for the people reading the flows: what a chain does and why it is built that way, which setting to change to adapt it, the output that is easy to miss. Players never see them, and they never ship (see [Notes](notes)).
+- Add one with the **note button** on the graph's own controls, or right-click: **Add note here** on empty graph, **Add note to this node** on a node, **Add note to this group** on a group. A note added to a node or group sits just above it and **follows it**, so it moves when you move the node or group and when you **Tidy up**. A note added to empty graph stays where you put it, and Tidy up only moves it if it landed on a node.
+- Double-click a note, or press <kbd>Enter</kbd> on it, to type on it (light markdown works: **bold**, *italic*, - lists and [ ] tasks). Drag it to move it, drag its corners to resize it, <kbd>Del</kbd> removes it. Select one and the settings column shows its text, its colour, **Follows** (the node or group it moves with, or nothing) and **Delete note**. Notes undo, and other people editing the project see them as they are written.
+- **Tidy up** leaves room for the notes that follow a node or group, and keeps loose ones off the nodes.
+- The **eye button** that hides the notes on the canvas hides graph notes too, and its count includes them. Copying a node or group copies the notes that follow it.
+
+## The palette, search and the artboard picker
+- The **artboard picker** at the top of the left column says whose graph you are looking at, with its node count (**Word · 12 nodes**, or **no nodes yet**). Open it to switch: the artboards are grouped as in the Layers panel, and page masters are listed apart at the end. With many artboards it has a search box. It is the same thing as selecting the artboard on the canvas or in Layers, so each follows the other, and picking one also brings the canvas to that artboard. <kbd>Alt</kbd>+<kbd>Up</kbd> and <kbd>Alt</kbd>+<kbd>Down</kbd> (or <kbd>Ctrl</kbd>+<kbd>[</kbd> and <kbd>Ctrl</kbd>+<kbd>]</kbd>) step to the previous or next artboard's graph while you are in the Interactions tab. Choosing an artboard changes what you see, never the project, so nobody else editing is disturbed.
+- **Search nodes** finds a node by what it does, not only by its name: *goto*, *navigate* or *page* find **Go to artboard**; *condition* finds **If**; *wait*, *delay* or *pause* find **Wait**; *audio* finds **Play sound**; *tap* finds **On pointer**. Small typos are forgiven. Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> anywhere in the tab to go to it, <kbd>Esc</kbd> to clear it, <kbd>Enter</kbd> to add the best match, or the down arrow to move onto the matches. The menu you get from right-clicking the graph, or from dragging a connection into empty space, searches the same way.
+- The **Events**, **Actions** and **Logic** chips show just that kind, and **Topics** has a chip for each topic (Pointer and keys, Variables, Questions, Dragging and so on). Chips combine with each other and with what you type.
+- Each topic heading folds. Click it (or press <kbd>Enter</kbd> or <kbd>Space</kbd> on it) to fold or open it; a folded one still shows how many nodes it holds. <kbd>Alt</kbd>+click, or right-click and **Only this one open**, leaves just that topic open, and the right-click menu also has **Fold all** and **Open all**. Which are open is remembered in this browser, with the common ones open to begin with. While you search or use a chip, every topic with a hit opens for as long as you do, and your folds come back when you clear it.
+
 ## Selecting, moving around and copying
 - **Drag on empty space** to draw a selection box: the nodes (and groups) entirely inside it are selected. <kbd>Shift</kbd>+drag draws one from anywhere, inside a group too. <kbd>Ctrl</kbd>+click (<kbd>Cmd</kbd>+click on a Mac) adds a node to the selection or takes it out, as many as you like. <kbd>Ctrl</kbd>+<kbd>A</kbd> selects everything.
 - **Pan** by holding <kbd>Space</kbd> and dragging, or dragging with the middle mouse button. The wheel zooms.
@@ -1834,7 +1847,7 @@ Click a node in the palette on the left (or drag it onto the graph) to add it; s
 - <kbd>Ctrl</kbd>+<kbd>C</kbd> copies the selection with the connections between the copied nodes; <kbd>Ctrl</kbd>+<kbd>V</kbd> pastes copies that are wired to each other the same way (never to the originals). A copied group brings the nodes inside it. <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicates, <kbd>Ctrl</kbd>+<kbd>G</kbd> puts the selected nodes in a new group, <kbd>Del</kbd> deletes them.
 
 ## Right-click and shortcuts
-- Right-click empty graph for **Add node** and **Paste**. Start typing to filter the menu down to the nodes whose name (or description) matches, then use the arrow keys and <kbd>Enter</kbd>, or click one. The menu you get by dragging a connection into empty space filters the same way.
+- Right-click empty graph for **Add node** and **Paste**. Start typing to filter the menu down to the nodes that match (by name, other names people know it by, topic or what it does), then use the arrow keys and <kbd>Enter</kbd>, or click one. The menu you get by dragging a connection into empty space filters the same way.
 - Right-click one of several selected nodes for what applies to all of them: **Cut**, **Copy**, **Duplicate**, **Put in a new group**, **Disconnect** (between them, from everything else, or all) and **Delete**.
 - Right-click a node for **Connect to new node**, **Connect to existing node**, **Disconnect**, **Cut**, **Copy** (<kbd>Ctrl</kbd>+<kbd>C</kbd>), **Duplicate** (<kbd>Ctrl</kbd>+<kbd>D</kbd>), **Help for this node** and **Delete** (<kbd>Del</kbd>).
 - In the graph, <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd> copy and paste nodes, not the layers on the artboard.
@@ -1937,7 +1950,9 @@ Everyone should be able to finish the activity, so every drag has two ways that 
               .map((p) => `- **${p.label}**${p.help ? `: ${p.help}` : p.options ? `: ${p.options.map((o) => o.label).join(', ')}` : ''}`)
               .join('\n');
             const outs = d.outputs.filter((o) => o.label).map((o) => o.label);
-            return `### ${d.label}\n${d.description}${outs.length ? ` Outputs: ${outs.join(', ')}.` : ''}\n\n${params}`;
+            const rest = `${d.details ?? ''}${outs.length ? `${d.details ? ' ' : ''}Outputs: ${outs.join(', ')}.` : ''}`;
+            const gives = d.gives ? `**Gives:** ${d.gives.map((g) => `\`${g}\``).join(', ')}.` : '';
+            return [`### ${d.label}`, d.summary, rest, gives, params].filter(Boolean).join('\n\n');
           })
           .join('\n\n');
       return [section('Events', 'event'), section('Actions', 'action'), section('Logic', 'logic')].join('\n\n');
@@ -3736,6 +3751,8 @@ To hand a project to someone else (you're leaving, or it belongs to another unit
     summary: 'Sticky notes for the people making a project: draw them on the canvas, attach them to a layer, and know that players, exports and share links never see them.',
     keywords: 'note notes sticky annotation annotate hand-off handoff todo reminder explain template hint hide show colour markdown',
     body: `A **note** is a small sticky note you leave on the canvas for whoever edits the project next, including you next week: "swap this photo before release", "this branch is for the hard version", "change the three red words". Templates use them to explain what each part is for.
+
+The interaction graph has notes too: see **Notes on the graph** in [Interactions](interactions). They are the same notes, hide with the same eye button, and never reach players either.
 
 Notes are not comments. [Review comments](comments) are threaded conversations with reviewers, kept on the server beside the project. A note is part of the project document, so it comes along when the project is copied, saved as a template or remixed, and everyone editing at the same moment sees it appear. It is **never** a layer: it is not in the Layers list, the interactions graph, auto layout or bindings.
 

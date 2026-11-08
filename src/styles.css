@@ -3045,10 +3045,181 @@ button.twisty:hover {
 
 /* ---------------------------------------------------------------- logic graph */
 
+.logic-root {
+  display: contents;
+}
 .logic-palette {
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   border-right: 1px solid var(--line);
-  padding: 6px;
+}
+.palette-head {
+  flex: none;
+  padding: 6px 6px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.palette-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 6px 6px;
+}
+.artboard-picker {
+  margin-bottom: 6px;
+}
+.ab-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  text-align: left;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.ab-picker-btn:hover,
+.ab-picker-btn.open {
+  border-color: var(--muted);
+}
+.ab-picker-btn svg {
+  width: 12px;
+  flex: none;
+}
+.ab-picker-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ab-picker-count {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.ab-picker-pop {
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+}
+.ab-picker-list {
+  overflow-y: auto;
+  min-height: 0;
+  outline: none;
+}
+.ab-picker-heading {
+  padding: 6px 10px 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.ab-picker-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.ab-picker-row.on {
+  background: var(--panel-2);
+}
+.ab-picker-row.current {
+  font-weight: 700;
+}
+.ab-picker-row.empty .ab-picker-count {
+  font-style: italic;
+}
+.ab-picker-none {
+  padding: 8px 10px;
+}
+.palette-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.palette-search-input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 26px;
+}
+.palette-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.palette-chip {
+  padding: 1px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+.palette-chip:hover {
+  border-color: var(--muted);
+}
+.palette-chip.on {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.palette-status {
+  padding-top: 4px;
+}
+.palette-status:empty {
+  display: none;
+}
+.palette-status .link-btn {
+  padding: 0;
+  color: var(--text);
+  text-decoration: underline;
+}
+.palette-fold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 4px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.palette-fold:hover {
+  background: var(--panel-2);
+}
+.palette-fold:not(.open) .section-chev {
+  transform: rotate(-45deg);
+}
+.palette-fold.static {
+  cursor: default;
+}
+.palette-fold.static:hover {
+  background: none;
+}
+.palette-count {
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 11px;
+}
+.palette-item {
+  padding-left: 18px !important;
 }
 .palette-title {
   font-size: 10.5px;
@@ -9417,4 +9588,33 @@ code {
 }
 .preview-modal:focus {
   outline: none;
+}
+/* Node summary in the Interactions settings column, with the link on to the reference */
+.node-summary .link-btn {
+  white-space: normal;
+  text-align: left;
+}
+.node-gives code {
+  font-size: 11px;
+}
+
+/* sticky notes on the interaction graph: the canvas notes' paper, as graph nodes */
+.graph-note.note {
+  position: relative;
+  cursor: grab;
+}
+.graph-note .note-body {
+  cursor: inherit;
+}
+.react-flow__node-ixnote {
+  z-index: 2;
+}
+.note-swatches {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.graph-note-form .note-swatch {
+  width: 20px;
+  height: 20px;
 }
