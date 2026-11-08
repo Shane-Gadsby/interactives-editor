@@ -2031,6 +2031,12 @@ These work in every expression:
 | \`html(text)\` | Text made safe to put in a web page (a downloaded report): \`<\`, \`>\`, \`&\` and quotes are replaced |
 | \`crossword(words, size)\` | A crossword laid out from a list of \`{answer, clue}\` rows (or plain words), inside a \`size\` by \`size\` grid. Each row comes back with \`row\`, \`col\` (its first letter, from 0 at the top left) and \`down\` added, in reading order. Words that are too long, or that cannot cross the others, are left out. The same words always make the same puzzle. Best used as a variable's [formula](variables) |
 | \`wordSearch(words, size, seed)\` | A \`size\` by \`size\` letter grid hiding the words (across, down, diagonal and backwards), one string per row. The same words and seed always make the same grid |
+| \`wordCount(text)\` | How many words a text has (runs of anything but spaces). \`wordCount("one two  three")\` is 3 |
+| \`band(value, thresholds, labels)\` | A label for where a value falls. Thresholds go from the highest down and there is one more label than thresholds: \`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\` |
+| \`clock(seconds)\` | Seconds as \`m:ss\` (\`h:mm:ss\` from an hour): \`clock(95)\` is \`1:35\` |
+| \`shuffle(list, seed)\` | The list in a new order. Give a seed (a number) to get the same order every time |
+| \`randInt(a, b)\` | A whole number from \`a\` to \`b\`, both included. \`randInt(6)\` is 0 to 6 |
+| \`includesAll(list, items)\`, \`includesAny(list, items)\` | Whether the list (or text) has every one of the items, or at least one, ignoring capitals: \`includesAny(answer, ["cat", "kitten"])\` |
 | \`enums.name\` | The options of a choice variable |
 | \`instanceInput(layer, name)\` | The current value of a variable inside an [instance](instances) layer (by name or id) |
 | \`artboard.width\`, \`artboard.height\` | The artboard's size (and \`artboard.name\`), in the same units as a layer's X and Y, whatever size the player is shown at |
@@ -2119,6 +2125,7 @@ Under a binding, the **+ Convert…** menu changes its value before it is set. T
 | Remap range | One range onto another, optionally kept inside it: 0-1 to 0-100 |
 | Look up | A value to anything else. Bound to a **choice** variable, it lists every option for you to fill in. *Otherwise* is used for values not listed |
 | To number / text / true/false | Change the type |
+| Seconds to m:ss | A number of seconds as a clock, \`95\` becomes \`1:35\` |
 | Expression | Any [expression](expressions), with \`value\` as the incoming value |
 
 Anything a converter does can also be written straight into the expression with the helpers (\`fmt\`, \`remap\`, \`lookup\`…), which is what to use in text \`{slots}\`.

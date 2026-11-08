@@ -16,6 +16,7 @@ const KINDS: { value: Converter['type']; label: string }[] = [
   { value: 'toNumber', label: 'To number' },
   { value: 'toText', label: 'To text' },
   { value: 'toBoolean', label: 'To true/false' },
+  { value: 'duration', label: 'Seconds to m:ss' },
   { value: 'expr', label: 'Expression' },
 ];
 
