@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Player, normalizeProject, walk, type Artboard, type Project, type SceneNode } from 'interactives-player';
 import { BRANDED_STARTERS, COLOURWAYS, projectFromBrandedStarter } from '../src/lib/branded';
 import { byName } from '../src/lib/branded/kit';
+import { partsOf, questionFrames } from '../src/lib/question-kit';
 
 const KEYS = ['drag/drag-the-words', 'drag/image-pairing'];
 const NEW = BRANDED_STARTERS.filter((s) => KEYS.includes(s.key));
@@ -18,13 +19,6 @@ const must = (id: string) => {
 const click = async (id: string) => {
   must(id).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
   await flush();
-};
-/** jsdom has no PointerEvent: a mouse event with the pointer fields on it. */
-const ptr = (type: string, x: number, y: number, target: Element | Window = window) => {
-  const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
-  Object.defineProperty(e, 'pointerId', { value: 1 });
-  Object.defineProperty(e, 'pointerType', { value: 'mouse' });
-  target.dispatchEvent(e);
 };
 const key = (el: Element, k: string) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 
@@ -111,6 +105,7 @@ describe('Drag the words', () => {
   const setup = () => {
     const { project, board } = build('drag/drag-the-words');
     const page = board('Activity');
+    const frame = questionFrames(page)[0];
     const player = play(project, page);
     const id = (name: string) => byName(page, name)!.id;
     const place = async (word: string, gap: number) => {
@@ -118,11 +113,14 @@ describe('Drag the words', () => {
       await click(id(`Gap ${gap}`));
       player.step(400);
     };
-    return { project, page, player, id, place };
+    return { project, page, frame, player, id, place };
   };
 
-  it('has six gaps, eight words (two wrong) and keyboard drag works', () => {
-    const { page, player, id } = setup();
+  it('is a fill the blanks question answered by dragging: six gaps, eight words (two wrong), and keyboard drag works', () => {
+    const { page, frame, player, id } = setup();
+    expect(frame.question).toMatchObject({ kind: 'blank', answerBy: 'drag', points: 6 });
+    expect(frame.question!.blanks).toHaveLength(6);
+    expect(frame.question!.extras!.map((x) => x.text)).toEqual(['collusion', 'proofreading']);
     const all: SceneNode[] = [];
     walk(page.children, (n: SceneNode) => void all.push(n));
     expect(all.filter((n) => n.dropZone && n.name.startsWith('Gap '))).toHaveLength(6);
@@ -133,70 +131,68 @@ describe('Drag the words', () => {
     key(word, ' ');
     key(word, 'ArrowRight');
     key(word, ' ');
-    const where = player.dragState().plagiarism;
-    expect(where).toBeTruthy();
-    expect(player.getVariable('gap1')).toEqual(where === 'Gap 1' ? ['plagiarism'] : []);
+    expect(player.dragState().plagiarism).toBeTruthy();
     player.destroy?.();
   });
 
-  it('marks each gap at Check, moving a word clears the marks, a swap sends the old word back', async () => {
-    const { player, id, place } = setup();
+  it('marks each gap at Check with the right word beside a wrong one, and Try again puts the words back', async () => {
+    const { player, frame, id, place } = setup();
+    await flush();
+    //words 2 and 3 are swapped, 4 is a wrong word, 5 and 6 are right, so three gaps are right
     await place('cite', 1);
-    expect(player.getVariable('gap1')).toEqual(['cite']);
-    expect(String(must(id('Progress')).textContent)).toContain('Gaps filled: 1 of 6');
-    //words 2 and 3 are swapped, 4 is a wrong word, 5 and 6 are right, so two gaps are right at most
     await place('quotation marks', 2);
     await place('paraphrasing', 3);
     await place('collusion', 4);
     await place('plagiarism', 5);
     await place('common knowledge', 6);
-    await click(id('Check button'));
+    expect(player.dragState().cite).toBe('Gap 1');
+    const check = partsOf(frame).check[0].id;
+    await click(check);
+    expect(player.getVariable('words_correct')).toBe(false);
+    expect(player.getVariable('words_locked')).toBe(false);
+    expect(String(player.getVariable('words_feedback'))).toContain('Move the words marked wrong');
+    await click(check);
+    await click(check);
+    expect(player.getVariable('words_locked')).toBe(true);
+    const items = player.getVariable('words_items') as { state: string; answer?: string }[];
+    expect(items.map((i) => i.state)).toEqual(['correct', 'wrong', 'wrong', 'wrong', 'correct', 'correct']);
     player.step(100);
-    expect(player.getVariable('checked')).toBe(true);
-    expect(player.getVariable('results')).toEqual([true, false, false, false, true, true]);
-    expect(String(player.getVariable('message'))).toContain('3 of 6');
-    expect(must(id('Gap 1')).getAttribute('aria-description')).toBe('Right');
-    expect(must(id('Gap 2')).getAttribute('aria-description')).toBe('Wrong');
-    expect(must(id('Gap 4')).getAttribute('aria-description')).toBe('Wrong');
-    //dropping a word on a full gap swaps: the new word goes in, the old one leaves the gap
-    await place('reference list', 4);
-    expect(player.getVariable('gap4')).toEqual(['reference list']);
-    expect(player.getVariable('checked')).toBe(false);
-    expect(String(player.getVariable('message'))).toBe('');
-    expect(must(id('Gap 1')).getAttribute('aria-description')).toBe('Filled');
-    //put the two swapped ones right (each is in the other's gap, so a swap sorts them)
-    await place('paraphrasing', 2);
-    expect(player.getVariable('gap2')).toEqual(['paraphrasing']);
-    await place('quotation marks', 3);
-    expect(player.getVariable('gap3')).toEqual(['quotation marks']);
-    await click(id('Check button'));
-    expect(player.getVariable('results')).toEqual([true, true, true, true, true, true]);
-    expect(String(player.getVariable('message'))).toContain('All 6 gaps are right');
-    player.destroy?.();
-  });
-
-  it('shows the answers (locking the words), and Try again puts everything back', async () => {
-    const { player, id, place } = setup();
-    await place('collusion', 1);
-    await click(id('Check button'));
-    expect(player.getVariable('results')).toEqual([false, false, false, false, false, false]);
-    await click(id('Show answers button'));
+    expect(must(id('Gap 1 mark')).textContent).toBe('✓');
+    expect(must(id('Gap 2 mark')).textContent).toBe('✗ paraphrasing');
+    expect(must(id('Gap 4 mark')).textContent).toBe('✗ reference list');
+    expect(player.getVariable('words_score')).toBe(3);
+    await click(id('Try again'));
     player.step(400);
-    ANSWERS.forEach((w, i) => expect(player.dragState()[w]).toBe(`Gap ${i + 1}`));
-    expect(player.getVariable('shown')).toBe(true);
-    expect(player.getVariable('results')).toEqual([true, true, true, true, true, true]);
-    expect(player.getVariable('gap6')).toEqual(['common knowledge']);
-    //the wrong word went back to the bank, and a locked word does not move
-    expect(player.dragState().collusion).not.toMatch(/^Gap/);
-    await click(id('Try again button'));
-    player.step(400);
-    expect(player.getVariable('checked')).toBe(false);
-    expect(player.getVariable('shown')).toBe(false);
-    for (let i = 1; i <= 6; i++) expect(player.getVariable(`gap${i}`)).toEqual([]);
+    expect(player.getVariable('words_locked')).toBe(false);
     expect(Object.values(player.dragState()).every((z) => !z || z === 'Word bank')).toBe(true);
     //words can be placed again
     await place('cite', 1);
-    expect(player.getVariable('gap1')).toEqual(['cite']);
+    expect(player.dragState().cite).toBe('Gap 1');
+    player.destroy?.();
+  });
+
+  it('a word dropped on a full gap swaps: the new word goes in and the old one leaves', async () => {
+    const { player, place } = setup();
+    await flush();
+    await place('cite', 1);
+    await place('paraphrasing', 1);
+    expect(player.dragState().paraphrasing).toBe('Gap 1');
+    expect(player.dragState().cite).not.toBe('Gap 1');
+    player.destroy?.();
+  });
+
+  it('a perfect round scores six and goes on to the results', async () => {
+    const { player, frame, id, place } = setup();
+    await flush();
+    for (let i = 0; i < ANSWERS.length; i++) await place(ANSWERS[i], i + 1);
+    await click(partsOf(frame).check[0].id);
+    expect(player.getVariable('words_correct')).toBe(true);
+    expect(player.getVariable('words_score')).toBe(6);
+    expect(String(player.getVariable('words_feedback'))).toContain('All six gaps are right');
+    await click(id('See results button'));
+    await flush();
+    expect(player.artboard.name).toBe('Results');
+    expect(document.body.textContent).toContain('You filled 6 of 6 gaps with the right word.');
     player.destroy?.();
   });
 });
@@ -205,75 +201,75 @@ describe('Image pairing', () => {
   const setup = () => {
     const { project, board } = build('drag/image-pairing');
     const page = board('Activity');
+    const frame = questionFrames(page)[0];
     const player = play(project, page);
     const id = (name: string) => byName(page, name)!.id;
-    const drop = async (pic: number, partner: number) => {
-      await click(id(`Picture ${pic}`));
+    const drop = async (pic: number | string, partner: number) => {
+      await click(id(typeof pic === 'number' ? `Picture ${pic}` : pic));
       await click(id(`Partner ${partner}`));
       player.step(400);
     };
-    return { project, page, player, id, drop };
+    return { project, page, frame, player, id, drop };
   };
 
-  it('has six pictures and six partner cards, each partner taking only its own picture', () => {
-    const { page } = setup();
+  it('is a matching question: six pictures and a wrong one to drag, six partner cards to drop them on', () => {
+    const { page, frame } = setup();
+    expect(frame.question).toMatchObject({ kind: 'matching', points: 6 });
+    expect(frame.question!.pairs).toHaveLength(6);
+    expect(frame.question!.extras).toHaveLength(1);
     const all: SceneNode[] = [];
     walk(page.children, (n: SceneNode) => void all.push(n));
-    const pics = all.filter((n) => n.draggable);
-    const zones = all.filter((n) => n.dropZone);
-    expect(pics).toHaveLength(6);
-    expect(zones).toHaveLength(6);
-    for (let i = 1; i <= 6; i++) {
-      expect(byName(page, `Picture ${i}`)!.draggable!.tags).toEqual([`pair${i}`]);
-      expect(byName(page, `Partner ${i}`)!.dropZone!.accepts).toEqual([`pair${i}`]);
-    }
+    expect(all.filter((n) => n.draggable)).toHaveLength(7);
+    expect(all.filter((n) => n.dropZone)).toHaveLength(6);
+    //the cards sit two to a row in a grid, and the hand-built count and drop flows are gone
+    expect(partsOf(frame).matches[0].type === 'frame' && (partsOf(frame).matches[0] as { layout: { grid: unknown } }).layout.grid).toBeTruthy();
+    expect(page.logic.nodes.some((n) => n.kind === 'event.drop')).toBe(false);
   });
 
-  it('takes a right match with feedback, refuses a wrong one, counts and finishes', async () => {
-    const { player, id, drop, page } = setup();
-    expect(String(must(id('Count')).textContent)).toBe('Matched 0 of 6');
-    await drop(3, 3);
-    expect(player.getVariable('pair3')).toEqual(['Picture 3']);
-    expect(String(player.getVariable('message'))).toBe('Picture 3 matches its partner. Right.');
-    expect(must(id('Partner 3')).getAttribute('aria-description')).toBe('Matched');
-    expect(String(must(id('Count')).textContent)).toBe('Matched 1 of 6');
-    //a wrong partner refuses it: a real drag, because a tap would not drop it there
-    const pic = byName(page, 'Picture 1')!;
-    const partner = byName(page, 'Partner 2')!;
-    const ax = pic.x + pic.width / 2;
-    const ay = pic.y + pic.height / 2;
-    const el = must(pic.id);
-    ptr('pointerdown', ax, ay, el);
-    for (let i = 1; i <= 4; i++) ptr('pointermove', ax + ((partner.x + 20 - ax) * i) / 4, ay + ((partner.y + 20 - ay) * i) / 4, el);
-    ptr('pointerup', partner.x + 20, partner.y + 20, el);
+  it('marks each pair at Check, names the right picture beside a wrong card, and finishes', async () => {
+    const { player, frame, id, drop } = setup();
     await flush();
-    expect(player.getVariable('misses')).toBe(1);
-    expect(String(player.getVariable('message'))).toContain('Picture 1 is not the partner');
-    expect(player.getVariable('pair2')).toEqual([]);
-    for (const [p, q] of [[1, 1], [2, 2], [4, 4], [5, 5], [6, 6]]) await drop(p, q);
-    expect(String(player.getVariable('message'))).toBe('All 6 pairs matched. Well done!');
-    expect(String(must(id('Count')).textContent)).toBe('Matched 6 of 6');
-    await click(id('Try again button'));
+    for (const [p, q] of [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]]) await drop(p, q);
+    //a wrong picture on the last card
+    await drop('Wrong picture', 6);
+    const check = partsOf(frame).check[0].id;
+    await click(check);
+    expect(player.getVariable('pairs_correct')).toBe(false);
+    expect(String(player.getVariable('pairs_feedback'))).toContain('5 of 6 matched correctly');
+    await click(check);
+    await click(check);
+    expect(player.getVariable('pairs_locked')).toBe(true);
+    player.step(100);
+    expect(must(id('Partner 1 result')).textContent).toContain('Right');
+    expect(must(id('Partner 6 result')).textContent).toContain('Wrong. The answer is a garden after rain');
+    expect(player.getVariable('pairs_score')).toBeLessThan(6);
+    await click(id('Try again'));
     player.step(400);
-    expect(player.getVariable('misses')).toBe(0);
-    expect(player.getVariable('pair3')).toEqual([]);
-    expect(String(must(id('Count')).textContent)).toBe('Matched 0 of 6');
+    expect(player.getVariable('pairs_locked')).toBe(false);
     expect(player.dragState()['Picture 3']).toBeNull();
+    //a perfect round, on to the results
+    for (let i = 1; i <= 6; i++) await drop(i, i);
+    await click(check);
+    expect(player.getVariable('pairs_correct')).toBe(true);
+    expect(player.getVariable('pairs_score')).toBe(6);
+    await click(id('See results button'));
+    await flush();
+    expect(player.artboard.name).toBe('Results');
+    expect(document.body.textContent).toContain('You matched 6 of 6 pictures to their cards.');
     player.destroy?.();
   });
 
   it('works with the keyboard', () => {
-    const { page, player, id } = setup();
+    const { player, id } = setup();
     const p = must(id('Picture 2'));
     expect(p.tabIndex).toBe(0);
-    expect(p.getAttribute('aria-label')).toContain('Picture 2');
+    expect(p.getAttribute('aria-label')).toBeTruthy();
     p.focus();
     key(p, ' ');
     key(p, 'ArrowDown');
     key(p, ' ');
     const placed = player.dragState()['Picture 2'];
     expect(placed === null || /^Partner \d$/.test(String(placed))).toBe(true);
-    expect(page.children.length).toBeGreaterThan(10);
     player.destroy?.();
   });
 });

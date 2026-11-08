@@ -1,7 +1,7 @@
 //The second batch of the explore set (Image sequence, Information wall, Collage, Chart): each builds in every colourway,
 //normalises, paints only with tokens, plays in the player without throwing, and its main interaction works.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Player, normalizeProject, walk, type Project, type SceneNode } from 'interactives-player';
+import { Player, REPEAT_SEP, normalizeProject, walk, type Project, type SceneNode } from 'interactives-player';
 import { STARTERS } from '../src/lib/branded/sets/explore';
 import { projectFromBrandedStarter } from '../src/lib/branded';
 import { COLOURWAYS } from '../src/lib/branded/looks';
@@ -171,7 +171,16 @@ describe('explore starters, second batch', () => {
     //the stage names are keyboard buttons that say where they go
     expect(el(layer(project, 'Stage 3 name').id).getAttribute('role')).toBe('button');
     expect(el(layer(project, 'Stage 3 name').id).getAttribute('aria-label')).toBe('Go to stage 3: A seedling');
-    expect(el(layer(project, 'Stage 6 name').id).getAttribute('aria-description')).toBe('Current stage');
+    expect(el(layer(project, 'Stage 6 name').id).getAttribute('aria-current')).toBe('step');
+    expect(el(layer(project, 'Stage 3 name').id).hasAttribute('aria-current')).toBe(false);
+    //native pieces: one Solo group for the pictures, one flow for the names (event.childIndex), and a live total
+    const images = layer(project, 'Images') as SceneNode & { solo?: { active: string | null }; bindings?: Record<string, string> };
+    expect(images.solo).toBeTruthy();
+    expect(images.bindings!['solo.active']).toBe('"Image " + step');
+    const nameFlows = project.artboards[1].logic.nodes.filter((g) => g.kind === 'event.pointer' && g.params.target === layer(project, 'Stage names').id);
+    expect(nameFlows).toHaveLength(1);
+    expect(nameFlows[0].params.childrenOnly).toBe(true);
+    expect(project.variables.find((v) => v.name === 'total')).toMatchObject({ live: true, formula: 'stages.length' });
     //the slider is in the tab order and has the focus on arrival, so the arrow keys work straight away
     expect(document.activeElement).toBe(slider);
     player.destroy();
@@ -192,12 +201,14 @@ describe('explore starters, second batch', () => {
     expect(player.getVariable('query')).toBe('READ');
     expect(count()).toBe('Showing 4 of 12');
     expect(titles()).toEqual(['Skim before you read', 'Read with a question', 'Take notes in your words', 'Reference as you go']);
-    //a tag on top of the search, and pressing it again lets it go
-    await click(layer(project, 'Tag Writing').id);
+    //a tag on top of the search, and pressing it again lets it go (the topic buttons are one repeated button: Writing is copy 3)
+    const topic = (k: number) => `${layer(project, 'Topic button').id}${REPEAT_SEP}${k}`;
+    await click(topic(3));
     expect(player.getVariable('tag')).toBe('Writing');
     expect(titles()).toEqual(['Take notes in your words', 'Reference as you go']);
-    expect(el(layer(project, 'Tag Writing').id).getAttribute('aria-description')).toBe('Showing this topic');
-    await click(layer(project, 'Tag Writing').id);
+    expect(el(topic(3)).querySelector('button')!.getAttribute('aria-pressed')).toBe('true');
+    expect(el(topic(0)).querySelector('button')!.getAttribute('aria-pressed')).toBe('false');
+    await click(topic(3));
     expect(player.getVariable('tag')).toBe('');
     expect(count()).toBe('Showing 4 of 12');
     //nothing found says so
@@ -214,207 +225,189 @@ describe('explore starters, second batch', () => {
     expect(shown(layer(project, 'Nothing found').id)).toBe(false);
     expect(shown(layer(project, 'Clear button').id)).toBe(false);
     //a tag alone
-    await click(layer(project, 'Tag Writing').id);
+    await click(topic(3));
     expect(count()).toBe('Showing 5 of 12');
-    await click(layer(project, 'Tag All').id);
+    await click(topic(0));
     expect(count()).toBe('Showing 12 of 12');
+    expect(el(topic(0)).querySelector('button')!.getAttribute('aria-pressed')).toBe('true');
+    //native pieces: the shown panels are a live variable, one flow serves every topic button, and Clear is a Reset variables node
+    expect(project.variables.find((v) => v.name === 'shown')).toMatchObject({ live: true });
+    const flows = project.artboards[1].logic.nodes;
+    expect(flows.filter((g) => g.kind === 'event.pointer' && g.params.childrenOnly)).toHaveLength(1);
+    expect(flows.some((g) => g.kind === 'action.resetVariables')).toBe(true);
     player.destroy();
   });
 
   it('collage: the layout variable picks the layout, buttons switch it, and hiding the buttons lifts the pictures', async () => {
     const { project } = starter('explore/collage').build(COLOURWAYS[0]);
     const player = await play(project);
-    const names = ['Layout 1 Grid', 'Layout 2 Banner', 'Layout 3 Feature', 'Layout 4 Columns'];
-    const showing = () => names.map((nm, i) => (shown(layer(project, nm).id) ? i + 1 : 0)).filter(Boolean);
-    expect(showing()).toEqual([1]);
-    for (const nm of names) {
-      const frame = layer(project, nm) as SceneNode & { children: SceneNode[] };
-      //six pictures, each with a caption that reads the shared list
-      expect(frame.children.filter((c) => /picture \d$/.test(c.name))).toHaveLength(6);
-      expect(frame.children.filter((c) => /caption \d$/.test(c.name))).toHaveLength(6);
-    }
-    expect(el(layer(project, 'Grid caption 4').id).textContent).toBe('Labs and studios');
-    expect(el(layer(project, 'Layout 1 button').id).getAttribute('aria-description')).toBe('Current layout');
-    await click(layer(project, 'Layout 3 button').id);
+    const cellId = layer(project, 'Collage cell').id;
+    const cell = (k: number) => el(`${cellId}${REPEAT_SEP}${k}`);
+    const btn = (k: number) => `${layer(project, 'Layout button').id}${REPEAT_SEP}${k}`;
+    const at = (k: number) => {
+      const m = /translate\(([-\d.]+)px, ([-\d.]+)px/.exec(cell(k).style.transform)!;
+      return [Number(m[1]), Number(m[2]), parseFloat(cell(k).style.width), parseFloat(cell(k).style.height)];
+    };
+    const pressed = (k: number) => el(btn(k)).querySelector('button')!.getAttribute('aria-pressed');
+    //one cell repeated for six pictures, whatever the layout, with each caption from the shared list
+    expect(document.querySelectorAll(`[data-ix-id^="${cellId}${REPEAT_SEP}"]`).length).toBeGreaterThanOrEqual(6);
+    expect(cell(5)).toBeTruthy();
+    expect(cell(6)).toBeFalsy();
+    const caption = (k: number) => el(`${layer(project, 'Caption').id}${REPEAT_SEP}${k}`).textContent;
+    expect(caption(3)).toBe('Labs and studios');
+    expect(pressed(0)).toBe('true');
+    expect(pressed(2)).toBe('false');
+    //grid: three across, two down
+    expect(at(0)[2]).toBeCloseTo((928 - 20) / 3, 0);
+    expect(at(3)[1]).toBeGreaterThan(at(0)[1]);
+    await click(btn(2));
     expect(player.getVariable('layout')).toBe(3);
-    expect(showing()).toEqual([3]);
-    expect(el(layer(project, 'Feature caption 4').id).textContent).toBe('Labs and studios');
-    expect(el(layer(project, 'Layout 3 button').id).getAttribute('aria-description')).toBe('Current layout');
-    expect(el(layer(project, 'Layout 1 button').id).getAttribute('aria-description') || '').toBe('');
-    await click(layer(project, 'Layout 4 button').id);
-    expect(showing()).toEqual([4]);
+    expect(pressed(2)).toBe('true');
+    expect(pressed(0)).toBe('false');
+    //feature: the first picture is the big one
+    expect(at(0)[2]).toBe(500);
+    expect(at(0)[3]).toBe(408);
+    expect(caption(3)).toBe('Labs and studios');
+    await click(btn(3));
+    expect(player.getVariable('layout')).toBe(4);
+    //columns: six tall ones side by side
+    expect(at(0)[3]).toBe(408);
+    expect(at(5)[0]).toBeGreaterThan(at(4)[0]);
     //the author picks one with the variable and hides the buttons: no buttons, and the pictures move up
     const top = (id: string) => /translate\(([-\d.]+)px, ([-\d.]+)px/.exec(el(id).style.transform)?.[2];
-    const before = Number(top(layer(project, 'Layout 4 Columns').id));
+    const before = Number(top(layer(project, 'Collage').id));
     player.setVariable('showButtons', false);
     await flush(30);
-    expect(shown(layer(project, 'Layout 4 button').id)).toBe(false);
-    expect(Number(top(layer(project, 'Layout 4 Columns').id))).toBe(before - 52);
+    expect(shown(layer(project, 'Layout bar').id)).toBe(false);
+    expect(Number(top(layer(project, 'Collage').id))).toBe(before - 52);
     //every layout's pictures stay inside the page
-    for (const nm of names) {
-      for (const c of (layer(project, nm) as SceneNode & { children: SceneNode[] }).children) {
-        expect(c.x).toBeGreaterThanOrEqual(0);
-        expect(c.x + c.width).toBeLessThanOrEqual(928.5);
-        expect(c.y + c.height).toBeLessThanOrEqual(408.5);
+    const layouts = player.getVariable('layouts') as number[][][];
+    expect(layouts).toHaveLength(4);
+    for (const rects of layouts) {
+      expect(rects).toHaveLength(6);
+      for (const [x, y, w, h] of rects) {
+        expect(x).toBeGreaterThanOrEqual(0);
+        expect(x + w).toBeLessThanOrEqual(928.5);
+        expect(y + h).toBeLessThanOrEqual(408.5);
       }
     }
+    //native pieces: the cells are a live list, and one flow serves all the buttons
+    expect(project.variables.find((v) => v.name === 'cells')).toMatchObject({ live: true });
+    expect(project.artboards[1].logic.nodes.filter((g) => g.kind === 'event.pointer' && g.params.childrenOnly)).toHaveLength(1);
     player.destroy();
   });
 
-  //Where a layer's centre is on the stage (the stage is unscaled in jsdom): walks up through the parents' positions
-  const centre = (project: Project, name: string) => {
-    let hit: { x: number; y: number } | undefined;
-    const look = (list: SceneNode[], ox: number, oy: number) => {
-      for (const n of list) {
-        if (n.name === name && !hit) hit = { x: ox + n.x + n.width / 2, y: oy + n.y + n.height / 2 };
-        if ('children' in n && Array.isArray(n.children)) look(n.children as SceneNode[], ox + n.x, oy + n.y);
-      }
-    };
-    for (const ab of project.artboards) look(ab.children, 0, 0);
-    return hit!;
-  };
-  //Hover is the DOM's pointerover and pointerout; a move on the pie carries the pointer's position
-  const over = async (id: string) => {
-    el(id).dispatchEvent(new MouseEvent('pointerover', { bubbles: true, relatedTarget: document.getElementById('stage') }));
-    await flush(30);
-  };
-  const out = async (id: string) => {
-    el(id).dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: document.getElementById('stage') }));
-    await flush(30);
-  };
-  const moveOn = async (id: string, x: number, y: number) => {
-    el(id).dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: x, clientY: y }));
-    await flush(30);
-  };
-  const px = (id: string, prop: 'height' | 'width') => parseFloat(el(id).style[prop]);
+  //The marks (bars, slices) of a native chart layer, and what each says: the layer draws them and speaks them itself
+  const marks = (id: string) => [...el(id).querySelectorAll<SVGElement>('[data-ix-point]')];
+  const says = (id: string) => marks(id).map((m) => m.getAttribute('aria-label'));
+  const barH = (id: string, k: number) => Number(marks(id)[k].getAttribute('height'));
+  const copy = (id: string, k: number) => `${id}${REPEAT_SEP}${k}`;
+  const hoverReadout = (id: string) => el(id).querySelector<HTMLElement>('.ix-chart-readout')!;
 
-  it('chart: the bars are sized by the data and redraw when it changes, with the scale following', async () => {
+  it('chart: the bars are a native chart layer on the data, redrawn when it changes, with its own scale and hidden table', async () => {
     const { project } = starter('explore/chart').build(COLOURWAYS[0]);
     const player = await play(project);
-    const bar = (k: number) => layer(project, `Bar ${k}`).id;
-    //normal week: the biggest is 8, so the scale tops out at 8 and a bar is value / 8 of 240
-    expect(px(bar(3), 'height')).toBeCloseTo(240);
-    expect(px(bar(1), 'height')).toBeCloseTo(180);
-    expect(px(bar(6), 'height')).toBeCloseTo(60);
-    expect(el(layer(project, 'Scale 4').id).textContent).toBe('8');
-    expect(el(layer(project, 'Scale 2').id).textContent).toBe('4');
-    expect(el(layer(project, 'Bar 1 label').id).textContent).toBe('Reading');
-    //the bars sit on the baseline: a taller bar starts higher
-    const top = (id: string) => parseFloat(/translate\([-\d.]+px, ([-\d.]+)px/.exec(el(id).style.transform)![1]);
-    expect(top(bar(3))).toBeCloseTo(0);
-    expect(top(bar(1))).toBeCloseTo(60);
-    //the exam week button sets the data and everything redraws, with a new scale (14 rounds up to 16)
-    await click(layer(project, 'Exam week button').id);
+    const chartId = layer(project, 'Bar chart').id;
+    expect((layer(project, 'Bar chart') as SceneNode & { type: string; kind: string; data: string }).type).toBe('chart');
+    expect((layer(project, 'Bar chart') as SceneNode & { kind: string }).kind).toBe('column');
+    expect((layer(project, 'Bar chart') as SceneNode & { data: string }).data).toBe('rows');
+    //normal week: the biggest is 8, so Assignments (8) is a third taller than Reading (6) and the scale tops out at 8
+    expect(marks(chartId)).toHaveLength(6);
+    expect(barH(chartId, 2) / barH(chartId, 0)).toBeCloseTo(8 / 6, 1);
+    expect(says(chartId)[2]).toBe('Assignments: 8 hours');
+    expect(el(chartId).textContent).toContain('Reading');
+    //the layer keeps a hidden table of the same numbers for screen readers
+    expect(el(chartId).querySelector('table')).toBeTruthy();
+    //the exam week button sets the data and everything redraws with a new scale
+    await click(copy(layer(project, 'Data button').id, 1));
     expect((player.getVariable('rows') as { value: number }[])[4].value).toBe(14);
-    expect(el(layer(project, 'Scale 4').id).textContent).toBe('16');
-    expect(px(bar(5), 'height')).toBeCloseTo(210);
-    expect(px(bar(3), 'height')).toBeCloseTo(60);
-    expect(el(layer(project, 'Exam week button').id).getAttribute('aria-description')).toBe('Showing now');
+    expect(says(chartId)[4]).toBe('Revision: 14 hours');
+    expect(barH(chartId, 4) / barH(chartId, 2)).toBeCloseTo(14 / 4, 1);
+    expect(el(copy(layer(project, 'Data button').id, 1)).querySelector('button')!.getAttribute('aria-pressed')).toBe('true');
+    expect(el(copy(layer(project, 'Data button').id, 0)).querySelector('button')!.getAttribute('aria-pressed')).toBe('false');
     //so does setting the list from anywhere else (an author's own numbers, any labels)
     player.setVariable('rows', [{ label: 'A', value: 1 }, { label: 'B', value: 2 }, { label: 'C', value: 3 }, { label: 'D', value: 4 }, { label: 'E', value: 2 }, { label: 'F', value: 1 }]);
     await flush(30);
-    expect(el(layer(project, 'Scale 4').id).textContent).toBe('4');
-    expect(px(bar(4), 'height')).toBeCloseTo(240);
-    expect(el(layer(project, 'Bar 2 label').id).textContent).toBe('B');
-    expect(el(layer(project, 'Bar column 4').id).getAttribute('aria-label')).toBe('D: 4 hours');
+    expect(says(chartId)[3]).toBe('D: 4 hours');
+    expect(barH(chartId, 3) / barH(chartId, 0)).toBeCloseTo(4, 1);
+    //the data buttons and the views are each one repeated button with one flow
+    const flows = project.artboards[1].logic.nodes.filter((g) => g.kind === 'event.pointer' && g.params.childrenOnly);
+    expect(flows).toHaveLength(2);
+    expect(project.variables.find((v) => v.name === 'rowsTotal')).toMatchObject({ live: true });
     player.destroy();
   });
 
-  it('chart: a value shows on hover and on focus, and goes again on leaving and blurring', async () => {
+  it('chart: a value shows on hover and on focus, a click or Enter keeps it in the line below, and the other views clear it', async () => {
     const { project } = starter('explore/chart').build(COLOURWAYS[0]);
     const player = await play(project);
-    const value = (k: number) => shown(layer(project, `Bar ${k} value`).id);
+    const chartId = layer(project, 'Bar chart').id;
     const readout = () => el(layer(project, 'Readout').id).textContent;
     expect(readout()).toContain('Hover over, or Tab to');
-    expect([1, 2, 3, 4, 5, 6].filter(value)).toEqual([]);
-    //hover over the third bar
-    await over(layer(project, 'Bar column 3').id);
+    //the layer's own readout shows on hover and goes on leaving
+    const third = marks(chartId)[2];
+    third.dispatchEvent(new MouseEvent('pointerover', { bubbles: true, relatedTarget: document.getElementById('stage') }));
+    await flush(30);
+    expect(hoverReadout(chartId).style.display).toBe('block');
+    expect(hoverReadout(chartId).textContent).toBe('Assignments: 8 hours');
+    third.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: document.getElementById('stage') }));
+    await flush(30);
+    expect(hoverReadout(chartId).style.display).toBe('none');
+    //a click on a mark gives event.index, which sets the line below with the share
+    third.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flush(30);
     expect(player.getVariable('pick')).toBe(3);
-    expect(value(3)).toBe(true);
-    expect(el(layer(project, 'Bar 3 value').id).textContent).toBe('8');
     expect(readout()).toBe('Assignments: 8 hours (29% of the total)');
-    //the other bars dim
-    expect(parseFloat(el(layer(project, 'Bar 1').id).style.opacity)).toBeCloseTo(0.5);
-    await out(layer(project, 'Bar column 3').id);
-    expect(player.getVariable('pick')).toBe(0);
-    expect(value(3)).toBe(false);
-    expect(parseFloat(el(layer(project, 'Bar 1').id).style.opacity || '1')).toBeCloseTo(1);
-    //focus does the same, and the column says its value out loud
-    const col = el(layer(project, 'Bar column 5').id);
-    expect(col.getAttribute('role')).toBe('img');
-    expect(col.getAttribute('aria-label')).toBe('Revision: 5 hours');
-    expect(col.tabIndex).toBe(0);
-    col.focus();
+    //focus does the same, and each mark says its value out loud and is in the tab order
+    const fifth = marks(chartId)[4];
+    expect(fifth.getAttribute('role')).toBe('img');
+    expect(fifth.getAttribute('aria-label')).toBe('Revision: 5 hours');
+    expect(marks(chartId).some((m) => m.tabIndex === 0)).toBe(true);
+    fifth.focus();
     await flush(30);
     expect(player.getVariable('pick')).toBe(5);
-    expect(readout()).toContain('Revision: 5 hours');
-    col.blur();
-    await flush(30);
+    expect(readout()).toBe('Revision: 5 hours (18% of the total)');
+    expect(hoverReadout(chartId).textContent).toBe('Revision: 5 hours');
+    //changing the view clears it
+    await click(copy(layer(project, 'View button').id, 1));
     expect(player.getVariable('pick')).toBe(0);
+    expect(readout()).toContain('Hover over, or Tab to');
     player.destroy();
   });
 
-  it('chart: the pie is six trimmed outlines that follow the data, the legend and pointer show values, and the table has every number', async () => {
+  it('chart: the pie is a native chart layer that follows the data, and the table has every number', async () => {
     const { project } = starter('explore/chart').build(COLOURWAYS[0]);
     const player = await play(project);
-    expect(shown(layer(project, 'Pie chart').id)).toBe(false);
+    const pieId = layer(project, 'Pie chart').id;
+    const view = (k: number) => copy(layer(project, 'View button').id, k);
+    expect(shown(pieId)).toBe(false);
     expect(shown(layer(project, 'Data table').id)).toBe(false);
-    await click(layer(project, 'Pie chart button').id);
+    expect(el(view(0)).querySelector('button')!.getAttribute('aria-pressed')).toBe('true');
+    await click(view(1));
     expect(player.getVariable('view')).toBe('pie');
-    expect(shown(layer(project, 'Pie chart').id)).toBe(true);
+    expect(el(view(1)).querySelector('button')!.getAttribute('aria-pressed')).toBe('true');
+    expect(shown(pieId)).toBe(true);
     expect(shown(layer(project, 'Bar chart').id)).toBe(false);
-    //each slice draws the part of the way round that is its share (6 of 28 is 21.4 percent, then 4 of 28)
-    const dash = (k: number) => {
-      const path = el(layer(project, `Slice ${k}`).id).querySelector('path[pathLength]');
-      return path ? path.getAttribute('stroke-dasharray')!.split(' ').map(Number) : [];
-    };
-    const off = (k: number) => Number(el(layer(project, `Slice ${k}`).id).querySelector('path[pathLength]')?.getAttribute('stroke-dashoffset'));
-    expect(dash(1)[0]).toBeCloseTo(21.43, 1);
-    expect(dash(2)[0]).toBeCloseTo(14.29, 1);
-    expect(off(2)).toBeCloseTo(-21.43, 1);
-    expect(dash(3)[0]).toBeCloseTo(28.57, 1);
-    //the slices together go all the way round
-    let sum = 0;
-    for (let k = 1; k <= 6; k++) sum += dash(k)[0];
-    expect(sum).toBeCloseTo(100, 0);
-    //the legend says the numbers, and a legend row shows the value on focus
-    expect(el(layer(project, 'Legend 3').id).getAttribute('aria-label')).toBe('Assignments: 8 hours, 29 percent');
-    expect(el(layer(project, 'Legend 3 share').id).textContent).toBe('29%');
-    el(layer(project, 'Legend 4').id).focus();
+    expect((layer(project, 'Pie chart') as SceneNode & { kind: string }).kind).toBe('pie');
+    //each slice says its value and its share, and they are drawn for every item
+    expect(marks(pieId)).toHaveLength(6);
+    expect(says(pieId)[2]).toBe('Assignments: 8 hours (28.6%)');
+    expect(el(pieId).textContent).toContain('Online forums');
+    //a mark picked on the pie sets the line below
+    marks(pieId)[3].dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flush(30);
     expect(player.getVariable('pick')).toBe(4);
     expect(el(layer(project, 'Readout').id).textContent).toBe('Group work: 3 hours (11% of the total)');
-    expect(parseFloat(el(layer(project, 'Slice 1').id).querySelector('path[pathLength]')!.getAttribute('stroke-opacity') ?? '0.4')).toBeLessThan(1);
-    (document.activeElement as HTMLElement).blur();
-    await flush(30);
-    //the pointer on the pie picks the slice under it by its angle round from the top: a point just right of the top is slice 1
-    const pie = layer(project, 'Pie').id;
-    const hit = centre(project, 'Pie');
-    await moveOn(pie, hit.x + 10, hit.y - 100);
-    expect(player.getVariable('pick')).toBe(1);
-    //the slices end at 21, 36, 64, 75, 93 and 100 percent: half way round (the bottom) is in the third
-    await moveOn(pie, hit.x, hit.y + 100);
-    expect(player.getVariable('pick')).toBe(3);
-    //three quarters of the way round is the left, where slice 4 ends, so a little past it is slice 5
-    await moveOn(pie, hit.x - 100, hit.y - 5);
-    expect(player.getVariable('pick')).toBe(5);
-    //outside the disc picks nothing
-    await moveOn(pie, hit.x + 140, hit.y - 140);
-    expect(player.getVariable('pick')).toBe(0);
-    await moveOn(pie, hit.x + 10, hit.y - 100);
-    expect(player.getVariable('pick')).toBe(1);
-    await out(pie);
-    expect(player.getVariable('pick')).toBe(0);
     //new data redraws the pie
-    await click(layer(project, 'Exam week button').id);
-    expect(dash(5)[0]).toBeCloseTo(46.67, 1);
-    //the table
-    await click(layer(project, 'Table button').id);
+    await click(copy(layer(project, 'Data button').id, 1));
+    expect(says(pieId)[4]).toBe('Revision: 14 hours (46.7%)');
+    //the table: a row for each item of the data, repeated, and a total
+    await click(view(2));
     expect(shown(layer(project, 'Data table').id)).toBe(true);
-    expect(shown(layer(project, 'Pie chart').id)).toBe(false);
-    expect(el(layer(project, 'Row 5 category').id).textContent).toBe('Revision');
-    expect(el(layer(project, 'Row 5 value').id).textContent).toBe('14');
-    expect(el(layer(project, 'Row 5 share').id).textContent).toBe('47%');
+    expect(shown(pieId)).toBe(false);
+    const row = (name: string, k: number) => el(copy(layer(project, name).id, k)).textContent;
+    expect(row('Row category', 4)).toBe('Revision');
+    expect(row('Row value', 4)).toBe('14');
+    expect(row('Row share', 4)).toBe('47%');
     expect(el(layer(project, 'Total value').id).textContent).toBe('30');
     expect(shown(layer(project, 'Readout').id)).toBe(false);
     expect(el(layer(project, 'Data table').id).getAttribute('aria-label')).toContain('Table of hours');
@@ -428,50 +421,46 @@ describe('explore starters, second batch', () => {
     await click(layer(project, 'Take a guess button', 1).id, 400);
     expect(player.artboard.name).toBe('Your guess');
     expect(el(gl('Question').id).textContent).toContain('on Reading');
-    //before the reveal: a question mark where the bar is, no real bar, and the value is not spoken
-    expect(shown(gl('Mystery bar').id)).toBe(true);
-    const bar1 = gl('Bar 1').id;
-    expect(shown(bar1)).toBe(false);
-    const col = el(gl('Bar column 1').id);
-    expect(col.getAttribute('aria-label')).toBe('Reading: hidden until you reveal it');
+    //before the reveal: the bar being guessed is a 0 called "? (hidden)", so its value is neither drawn nor spoken, and the guess is the last bar
+    const chartId = gl('Guess chart').id;
+    expect(says(chartId)[0]).toBe('? (hidden): 0 hours');
+    expect(says(chartId)[1]).toBe('Lectures: 4 hours');
+    expect(says(chartId)).toHaveLength(7);
+    expect(barH(chartId, 0)).toBe(0);
+    expect(el(chartId).textContent).not.toContain('Reading');
     expect(JSON.stringify(document.body.innerHTML)).not.toContain('Reading: 6');
-    col.focus();
-    await flush(30);
-    expect(shown(gl('Bar 1 value').id)).toBe(false);
-    //the other bars show their values on focus as usual
-    el(gl('Bar column 2').id).focus();
-    await flush(30);
-    expect(shown(gl('Bar 2 value').id)).toBe(true);
-    //the slider makes the guess bar (20 is the top of the scale, the chart is 200 high)
+    //the slider makes the guess bar (20 is the top of the scale, the chart is 250 high)
     const slider = el(gl('Guess slider').id).querySelector('input')!;
+    expect(slider.max).toBe('20');
     slider.value = '5';
     slider.dispatchEvent(new Event('input', { bubbles: true }));
     await flush(30);
     expect(player.getVariable('guess')).toBe(5);
-    expect(px(gl('Guess bar').id, 'height')).toBeCloseTo(50);
+    expect(says(chartId)[6]).toBe('Your guess: 5 hours');
+    expect(barH(chartId, 6) / barH(chartId, 1)).toBeCloseTo(5 / 4, 1);
     expect(el(gl('Guess readout').id).textContent).toBe('Your guess: 5 hours');
-    //reveal
+    expect(player.getVariable('verdict')).toBe('');
+    //reveal: the live verdict says how it went, the real bar is there, the slider is dimmed and stops
     await click(gl('Reveal button').id);
     expect(player.getVariable('revealed')).toBe(true);
     expect(String(player.getVariable('verdict'))).toBe('You guessed 5 hours. The answer is 6: 1 too low.');
-    expect(shown(bar1)).toBe(true);
-    expect(px(bar1, 'height')).toBeCloseTo(60);
-    expect(shown(gl('Mystery bar').id)).toBe(false);
-    expect(el(gl('Bar column 1').id).getAttribute('aria-label')).toBe('Reading: 6 hours');
+    expect(says(chartId)[0]).toBe('Reading: 6 hours');
+    expect(barH(chartId, 0) / barH(chartId, 1)).toBeCloseTo(6 / 4, 1);
     expect(shown(gl('Reveal button').id)).toBe(false);
     expect(shown(gl('Next category button').id)).toBe(true);
-    //the slider goes, so the guess cannot change after the answer, and the focus moves on to Next
-    expect(shown(gl('Guess slider').id)).toBe(false);
-    await flush(200);
+    expect(slider.disabled).toBe(true);
+    //the focus moves on to Next, now the Reveal button has gone
+    await flush(30);
     expect(document.activeElement?.closest('[data-ix-id]')).toBe(el(gl('Next category button').id));
     //next one: the guess starts again and the next category is hidden
     await click(gl('Next category button').id);
     expect(player.getVariable('target')).toBe(2);
     expect(player.getVariable('guess')).toBe(0);
     expect(player.getVariable('revealed')).toBe(false);
+    expect(slider.disabled).toBe(false);
     expect(el(gl('Question').id).textContent).toContain('on Lectures');
-    expect(shown(gl('Bar 2').id)).toBe(false);
-    expect(shown(bar1)).toBe(true);
+    expect(says(chartId)[1]).toBe('? (hidden): 0 hours');
+    expect(says(chartId)[0]).toBe('Reading: 6 hours');
     //a guess that is spot on, and one that is too high, then the last category offers Start again
     slider.value = '4';
     slider.dispatchEvent(new Event('input', { bubbles: true }));

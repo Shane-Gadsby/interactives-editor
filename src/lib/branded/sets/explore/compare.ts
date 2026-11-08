@@ -1,7 +1,9 @@
 /** Before and after: two pictures stacked, a divider you drag (or move with the arrow keys) that reveals one over the other. */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, byName, contentBox, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
-import { Flow, group, heroButtons, n, onClick, onKey, setVar, small, variable } from './helpers';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addVar, click, graph, join, set } from '../../graph-kit';
+import { stack } from '../../parts';
+import { group, heroButtons, small } from './helpers';
 
 const W = 928;
 const H = 404;
@@ -17,11 +19,11 @@ export const beforeAndAfter: BrandedStarter = {
     const ctx = brandedProject(colourway, 'Before and after');
     const { L } = ctx;
     const hero = brandedPage(ctx, 'Before and after', { kind: 'hero', subtitle: 'Move the divider to compare the two pictures.' });
-    const page = brandedPage(ctx, 'Compare the pictures', { footer: 'Before and after' });
-    heroButtons(ctx, hero, [{ name: 'Start', label: 'Start', to: page }]);
+    const page = brandedPage(ctx, 'Compare the pictures', { footer: 'Before and after  ·  Page {pageNumber} of {pageCount}' });
+    heroButtons(ctx, hero, [{ name: 'Start', label: 'Start', to: 'next' }]);
 
     //Where the divider is, in px from the left edge of the pictures (0 shows only After, the full width only Before)
-    const pos = variable(ctx, 'dividerAt', 'number', W / 2);
+    const pos = addVar(ctx.project, 'dividerAt', 'number', W / 2);
     const box = contentBox(page);
 
     const label = (name: string, words: string, x: number) =>
@@ -78,24 +80,36 @@ export const beforeAndAfter: BrandedStarter = {
       bindings: { x: `${pos.name} - 24`, ariaLabel: `"Divider, showing " + Math.round(${pos.name} / ${W} * 100) + " percent Before"` },
       children: [text(ctx, 'Divider arrows', '‹ ›', 0, 10, 48, { fontSize: 22, fontWeight: 700, align: 'center', color: L.onButton, decorative: true })],
     } as never);
-    const stack = group('Comparison', box.x, box.y, W, H, { cornerRadius: 16, children: [afterPic, afterHint, afterLabel, before, line, handle] });
-    page.children.push(stack);
+    const comparison = group('Comparison', box.x, box.y, W, H, { cornerRadius: 16, children: [afterPic, afterHint, afterLabel, before, line, handle] });
+    page.children.push(comparison);
 
-    const help = text(ctx, 'Instructions', 'Drag the divider, or select it and use the left and right arrow keys.', box.x, box.y + H + 22, 600, { fontSize: 16, color: L.muted });
-    const showBefore = small(button(ctx, 'Show Before', 'Show Before', box.x + W - 160 * 2 - 16, box.y + H + 14, 160, false));
-    const showAfter = small(button(ctx, 'Show After', 'Show After', box.x + W - 160, box.y + H + 14, 160, false));
-    page.children.push(help, showBefore, showAfter);
+    const help = text(ctx, 'Instructions', 'Drag the divider, or select it and use the left and right arrow keys.', 0, 0, 100, { fontSize: 16, color: L.muted });
+    const showBefore = small(button(ctx, 'Show Before', 'Show Before', 0, 0, 160, false));
+    const showAfter = small(button(ctx, 'Show After', 'Show After', 0, 0, 160, false));
+    const jump = stack('Jump buttons', box.x + W - 336, box.y + H + 14, 336, { direction: 'row', gap: 16, children: [showBefore, showAfter] });
+    help.x = box.x;
+    help.y = box.y + H + 22;
+    help.width = 560;
+    page.children.push(help, jump);
 
-    //Dragging anywhere on the pictures moves the divider to the pointer. The keys move it from the handle
-    const flow = new Flow(page);
-    const clamp = (e: string) => `clamp(${e}, 0, ${W})`;
-    flow.join([n('event.pointer', { target: stack.id, type: 'pointerdown' }, 'Divider'), n('event.pointer', { target: stack.id, type: 'drag' }, 'Divider')], [setVar(pos, clamp(`event.x - ${box.x}`))]);
-    flow.chain(onKey('ArrowLeft', handle, 'Divider keys'), setVar(pos, clamp(`${pos.name} - ${STEP}`)));
-    flow.chain(onKey('ArrowRight', handle, 'Divider keys'), setVar(pos, clamp(`${pos.name} + ${STEP}`)));
-    flow.chain(onKey('Home', handle, 'Divider keys'), setVar(pos, '0'));
-    flow.chain(onKey('End', handle, 'Divider keys'), setVar(pos, String(W)));
-    flow.chain(onClick(showBefore, 'Jump'), setVar(pos, String(W)));
-    flow.chain(onClick(showAfter, 'Jump'), setVar(pos, '0'));
+    //Dragging anywhere on the pictures moves the divider to the pointer. One key flow moves it from the handle, and one flow serves both jump buttons
+    {
+      const g = graph(page);
+      const clamp = (e: string) => `clamp(${e}, 0, ${W})`;
+      const move = g.then(g.event('event.pointer', { target: comparison.id, type: 'pointerdown' }, 'Divider'), 'action.setVariable', { variable: pos.id, op: 'set', value: clamp(`event.x - ${box.x}`) });
+      join(page, g.event('event.pointer', { target: comparison.id, type: 'drag' }, 'Divider'), move);
+      const keys = g.event('event.key', { key: '', type: 'keydown', target: handle.id }, 'Divider keys');
+      keys.params.onlyIf = '["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)';
+      g.run(keys, set(pos, clamp(`event.key == "Home" ? 0 : event.key == "End" ? ${W} : ${pos.name} + (event.key == "ArrowRight" ? ${STEP} : -${STEP})`)));
+      const jumps = click(g, jump, 'Jump');
+      jumps.params.childrenOnly = true;
+      g.run(jumps, set(pos, `event.childIndex == 0 ? ${W} : 0`));
+    }
+
+    const below = (x: number) => ({ x, y: page.height + 14, w: 300, h: 100 });
+    addNote(page, { ...below(0), colour: 'sky', text: '**Divider** `dividerAt` is the divider\'s distance from the left of the pictures. The Before layer is clipped to that width, so the pictures need no masking.' });
+    addNote(page, { ...below(316), colour: 'sky', text: '**One flow each** One key node serves the four keys (its Only if holds the list), and Show Before and Show After share one click flow, told apart by `event.childIndex`.' });
+    addNote(page, { ...below(632), colour: 'gold', text: '[ ] Put your own pictures over the grey ones, both the same size, and describe each in its text alternative.' });
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),

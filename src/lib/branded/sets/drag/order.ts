@@ -1,9 +1,19 @@
 /** Put in order: six steps of a process to arrange, made with the question kit's ordering question (up and down buttons, so the keyboard works). */
 import { walk, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partOf, setQuestionSettings } from '../../../question-kit';
-import { brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke } from '../../kit';
-import { BRAND_FONT, type Colourway } from '../../looks';
-import { endPage, goButton, heroPage } from './shared';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, type LayoutState } from '../../kit';
+import type { Colourway } from '../../looks';
+import { bind, click, goPrevious, graph } from '../../graph-kit';
+import { dressQuestion, endPage, goNextOn, heroPage } from './shared';
+
+/** After a wrong check: the longest feedback, with the steps marked, so the card at its tallest is checked against the footer. */
+export const ORDER_LAYOUT_STATES: LayoutState[] = [
+  {
+    label: 'checked, wrong',
+    page: 'Activity',
+    vars: { order_answered: true, order_locked: true, order_feedback: 'Out of tries. The right order is shown.' },
+  },
+];
 
 const STEPS = ['Read and analyse the question', 'Research and take notes', 'Plan an outline', 'Write a first draft', 'Edit and proofread', 'Reference and submit'];
 
@@ -18,7 +28,7 @@ export function putInOrder(colourway: Colourway) {
   const id = addQuestion(project, page.id, 'ordering', { at: { x: box.x, y: box.y - 8 } })!;
   setQuestionSettings(project, page.id, id, {
     prefix: 'order',
-    prompt: 'Put the steps of writing an assignment in order. Use the arrows to move a step up or down.',
+    prompt: 'Put the steps of writing an assignment in order, using the arrows.',
     points: 6,
     shuffle: true,
     attempts: 3,
@@ -30,45 +40,43 @@ export function putInOrder(colourway: Colourway) {
     feedbackOutOfTries: 'Out of tries. The right order is shown.',
   });
   const frame = page.children.find((n) => n.id === id) as FrameNode;
+  frame.name = 'Order question';
 
   //The kit builds it for the plain look; dress it in the brand without changing what it is made of
-  frame.width = box.width;
-  frame.cornerRadius = 16;
-  frame.fill = solid(L.surface);
-  const layout = frame.layout!;
-  layout.padding = { top: 16, right: 24, bottom: 16, left: 24 };
-  layout.gap = 10;
+  dressQuestion(ctx, frame, box.width, { pad: 16, gap: 10 });
   walk(frame.children, (n: SceneNode) => {
-    if (n.type === 'text' || n.type === 'button') n.fontFamily = BRAND_FONT;
-    if (n.type === 'button') {
-      const part = partOf(n);
-      n.cornerRadius = part === 'moveUp' || part === 'moveDown' ? 16 : 22;
-      if (part === 'check') {
-        n.fill = solid(L.button);
-        n.color = L.onButton;
-      } else if (part !== 'moveUp' && part !== 'moveDown') {
-        n.fill = solid(L.background);
-        n.color = L.text;
-        n.stroke = stroke(L.border);
-      }
-      if (part === 'moveUp' || part === 'moveDown') n.height = 30;
+    const part = partOf(n);
+    if (n.type === 'button' && (part === 'moveUp' || part === 'moveDown')) {
+      n.cornerRadius = 16;
+      n.height = 28;
+      n.fill = solid(L.surfaceMuted);
+      n.stroke = null;
     }
-    if (n.type === 'frame' && partOf(n) === 'option') {
-      n.cornerRadius = 22;
-      n.height = 44;
+    if (n.type === 'frame' && part === 'option') {
+      n.cornerRadius = 20;
+      n.height = 40;
       if (n.layout) n.layout.padding = { top: 6, right: 10, bottom: 6, left: 18 };
     }
-    if (n.type === 'text' && partOf(n) === 'prompt') n.fontWeight = 700;
+    if (n.type === 'text' && part === 'prompt') Object.assign(n, { fontWeight: 700, fontSize: 18 });
+    //the kit's gaps are roomy for six steps above a footer
+    if (n.type === 'frame' && part === 'options' && n.layout) n.layout.gap = 6;
   });
 
   //After the question is finished, a way on to the results
-  const next = button(ctx, 'See results button', 'See results', box.x, box.y + box.height - 40, 200);
-  next.bindings = { visible: 'order_locked' };
+  const next = bind(button(ctx, 'See results button', 'See results', 0, 0, 180), { visible: 'order_locked' });
   const buttons = frame.children.find((n) => partOf(n) === 'buttons') as FrameNode;
   buttons.children.push(next);
-  goButton(page, next, results.page, 700);
-  goButton(hero, start, page, 0);
-  goButton(results.page, results.again, page, 0);
+  goNextOn(hero, start, 'Navigation');
+  goNextOn(page, next, 'Navigation');
+  {
+    const g = graph(results.page);
+    g.run(click(g, results.again, 'Try again'), goPrevious());
+  }
+
+  const below = (x: number, w: number) => ({ x, y: page.height + 14, w, h: 96 });
+  addNote(page, { ...below(0, 440), text: '**Ordering question** The steps are listed in their RIGHT order in the Question section; the learner sees them shuffled. The up and down buttons are real buttons, so the keyboard works without drag.', colour: 'sky' });
+  addNote(page, { ...below(456, 440), text: '**Results** The See results button shows once the question is finished (`order_locked`), and the results page reads `order_score`.', colour: 'sky' });
+  addNote(page, { ...below(912, 440), text: '[ ] Write your question and steps, then set the points (the results say "of 6"), the hint and the number of tries.', colour: 'gold' });
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the Start page', byName(hero, 'Page title'), hero),
