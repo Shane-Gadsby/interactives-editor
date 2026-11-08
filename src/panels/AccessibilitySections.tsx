@@ -17,6 +17,7 @@ import {
 } from 'interactives-player';
 import { store } from '../store/store';
 import { IconButton, NumberField, Row, Section, SelectField, TextField } from '../components/ui';
+import { PropRow } from '../lib/prop-search';
 import { usePrefs } from '../lib/prefs';
 
 type RoleChoice = '' | LayerRole | 'decorative';
@@ -218,6 +219,7 @@ export function TabOrderSection({ ab }: { ab: Artboard }) {
   return (
     <Section help="accessibility#tab-order" title="Tab order" defaultOpen={explicit || stops.length > 1}>
       <div className="muted small">The order Tab visits these layers. By default it follows the layer order.</div>
+      <PropRow k="Tab order list" words={['keyboard order', 'focus order', 'earlier', 'later', 'move up', 'move down', 'reorder']}>
       <ol className="tab-order">
         {stops.map((n, i) => (
           <li key={n.id}>
@@ -229,8 +231,9 @@ export function TabOrderSection({ ab }: { ab: Artboard }) {
           </li>
         ))}
       </ol>
+      </PropRow>
       {explicit && (
-        <Row>
+        <Row k="Reset to layer order" words={['tab order', 'default order']}>
           <button className="btn" onClick={reset} title="Go back to following the layer order">
             Reset to layer order
           </button>

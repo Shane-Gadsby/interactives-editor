@@ -6,6 +6,7 @@ import { paletteTip, usePalette } from '../lib/palette';
 import { Icons } from './icons';
 import { TokensTab, tokenSummary, linked, useBrandLocked, useThemeState } from './TokenPicker';
 import { FIELD_TIPS } from './tips';
+import { useRowSearch, useSectionSearch, RowScope, SectionScope } from '../lib/prop-search';
 
 /** An explicit title, or the standard explanation for a field label. */
 export function tipFor(label: ReactNode, title?: string): string | undefined {
@@ -40,6 +41,7 @@ export function NumberField({
   title?: string;
   mixed?: boolean;
 }) {
+  const ps = useRowSearch(label, tipFor(label, title));
   const [text, setText] = useState(fmt(value));
   const focused = useRef(false);
   useEffect(() => {
@@ -70,7 +72,7 @@ export function NumberField({
     el.addEventListener('pointerup', up);
   };
   return (
-    <label className="field number-field" title={tipFor(label, title)}>
+    <label className={`field number-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && (
         <span className="field-label scrub" onPointerDown={scrub}>
           {unbroken(label)}
@@ -128,6 +130,7 @@ export function UnitField({
   mixed?: boolean;
   title?: string;
 }) {
+  const ps = useRowSearch(label, tipFor(label, title));
   const shown = (v: number, u: 'px' | 'percent') => (mixed ? '' : fmt(v) + (u === 'percent' ? '%' : ''));
   const [text, setText] = useState(shown(value, unit));
   const focused = useRef(false);
@@ -154,7 +157,7 @@ export function UnitField({
     onChange(clamp(Math.round(v * 100) / 100), to);
   };
   return (
-    <label className="field number-field unit-field" title={tipFor(label, title)}>
+    <label className={`field number-field unit-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       <input
         value={text}
@@ -240,6 +243,7 @@ export function TextField({
   /** Every keystroke, even with commitOnBlur (for a live warning about text that is not committed yet) */
   onInput?: (v: string) => void;
 }) {
+  const ps = useRowSearch(label, tipFor(label, title));
   const [text, setText] = useState(value);
   const focused = useRef(false);
   useEffect(() => {
@@ -267,7 +271,7 @@ export function TextField({
   // A long label would squeeze its own box to nothing at the inspector's width, so it goes above it, like a text area's
   const stacked = multiline || (typeof label === 'string' && label.length > 14);
   return (
-    <label className={`field text-field${stacked ? ' multiline' : ''}`} title={tipFor(label, title)}>
+    <label className={`field text-field${stacked ? ' multiline' : ''}${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
     </label>
@@ -289,9 +293,10 @@ export function SelectField<T extends string>({
   title?: string;
   disabled?: boolean;
 }) {
+  const ps = useRowSearch(label, tipFor(label, title));
   const opts = (options as (T | { value: T; label: string })[]).map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
   return (
-    <label className="field select-field" title={tipFor(label, title)}>
+    <label className={`field select-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
       <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
         {opts.map((o) => (
@@ -305,8 +310,9 @@ export function SelectField<T extends string>({
 }
 
 export function CheckField({ label, value, onChange, title, disabled }: { label: ReactNode; value: boolean; onChange: (v: boolean) => void; title?: string; disabled?: boolean }) {
+  const ps = useRowSearch(label, tipFor(label, title));
   return (
-    <label className="field check-field" title={tipFor(label, title)}>
+    <label className={`field check-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
       <input type="checkbox" checked={value} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}</span>
     </label>
@@ -438,6 +444,7 @@ export function PaletteButton({ value, onPick, tokenTab, tokensOnly = false }: {
 
 /** Colour swatch + hex/rgba text + opacity. */
 export function ColorField({ label, value, onChange, onCommit, title, tokens = false }: { label?: ReactNode; value: string; onChange: (v: string) => void; onCommit?: () => void; title?: string; tokens?: boolean }) {
+  const ps = useRowSearch(label, tipFor(label, title));
   // With `tokens` the picker has a Tokens tab, and a colour that says `token:<id>` shows as a named chip that follows the theme
   const ts = useThemeState();
   // A layer colour in a branded starter project (lock on) takes theme tokens only: no hex box, no native picker, no palette, no detaching
@@ -452,7 +459,7 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
   const tokenTab = (tokens || locked) && ts ? { ts, onToken: (ref: string) => (onChange(ref), onCommit?.()) } : undefined;
   if (link) {
     return (
-      <div className="field color-field linked">
+      <div className={`field color-field linked${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
         {label !== undefined && (
           <span className="field-label" title={tipFor(label, title)}>
             {label}
@@ -484,7 +491,7 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
   }
   if (locked && tokenTab) {
     return (
-      <div className="field color-field linked">
+      <div className={`field color-field linked${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
         {label !== undefined && (
           <span className="field-label" title={tipFor(label, title)}>
             {label}
@@ -497,7 +504,7 @@ export function ColorField({ label, value, onChange, onCommit, title, tokens = f
     );
   }
   return (
-    <div className="field color-field">
+    <div className={`field color-field${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
       {label !== undefined && (
         <span className="field-label" title={tipFor(label, title)}>
           {label}
@@ -572,11 +579,15 @@ export function Section({
   help?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const ps = useSectionSearch(title);
+  // While searching every section opens, so its rows are there to be matched; the ones with no match hide
+  const shown = open || ps.searching;
+  const titleText = typeof title === 'string' ? title : '';
   return (
-    <section className={`section${open ? '' : ' closed'}`}>
+    <section className={`section${shown ? '' : ' closed'}${ps.hidden ? ' ps-hide' : ''}${ps.hit ? ' ps-hit' : ''}`} style={ps.searching ? { order: ps.order } : undefined}>
       <header className="section-head">
         <div className="section-title-row" onClick={() => collapsible && setOpen(!open)}>
-          <button className="section-title" aria-expanded={collapsible ? open : undefined} title={collapsible ? (open ? 'Collapse' : 'Expand') : undefined}>
+          <button className="section-title" aria-expanded={collapsible ? shown : undefined} title={collapsible ? (open ? 'Collapse' : 'Expand') : undefined}>
             {/* the chevron says it folds, and which way it is now: pointing down when open, right when closed */}
             {collapsible && <span className="section-chev" aria-hidden="true" />}
             {title}
@@ -588,7 +599,13 @@ export function Section({
           {actions}
         </div>
       </header>
-      {open && <div className="section-body">{children}</div>}
+      {shown && (
+        <div className="section-body">
+          <SectionScope id={ps.id} title={titleText}>
+            {children}
+          </SectionScope>
+        </div>
+      )}
     </section>
   );
 }
@@ -601,6 +618,24 @@ export function IconButton({ icon, title, onClick, active, disabled, className, 
   );
 }
 
-export function Row({ children, className }: { children: ReactNode; className?: string }) {
+/** A line of controls. With `k` it is a row of its own in the properties search (for a row of buttons: its name and the words it is looked up by). */
+export function Row({ children, className, k, words }: { children: ReactNode; className?: string; k?: string; words?: string[] }) {
+  if (k)
+    return (
+      <KeyedRow k={k} words={words} className={className}>
+        {children}
+      </KeyedRow>
+    );
   return <div className={`row${className ? ' ' + className : ''}`}>{children}</div>;
+}
+
+function KeyedRow({ k, words, className, children }: { k: string; words?: string[]; className?: string; children: ReactNode }) {
+  const ps = useRowSearch(k, undefined, k, words);
+  return (
+    <div className={`row${className ? ' ' + className : ''}${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop}>
+      <RowScope k={ps.prop} label={k}>
+        {children}
+      </RowScope>
+    </div>
+  );
 }

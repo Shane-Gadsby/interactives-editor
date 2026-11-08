@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Keyb
 import type { FontRef } from 'interactives-player';
 import { Icons } from './icons';
 import { tipFor } from './ui';
+import { useRowSearch } from '../lib/prop-search';
 import { CATEGORIES, filterOptions, firstFamily, fontOptions, fontStack, catalogNow, loadCatalog, previewFonts, type CatalogFont, type FontCategory, type FontOption } from '../lib/font-catalog';
 
 export type FontPick = FontOption;
@@ -290,8 +291,9 @@ function FontRow({ id, o, i, count, on, chosen, label, onHover, onPick }: { id: 
 
 /** A labelled font field for the inspector: the label, then the combobox. */
 export function FontField({ label, title, ...rest }: { label: string; title?: string } & Omit<Parameters<typeof FontPicker>[0], 'ariaLabel' | 'title'>) {
+  const ps = useRowSearch(label, tipFor(label, title));
   return (
-    <div className="field select-field font-field-row" title={tipFor(label, title)}>
+    <div className={`field select-field font-field-row${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
       <span className="field-label">{label}</span>
       <FontPicker ariaLabel={label} {...rest} />
     </div>

@@ -111,7 +111,7 @@ export function ReportingSection({ project }: { project: Project }) {
           : 'Tick Remember on a variable in the Variables tab to keep its value between visits.'}{' '}
         Results are kept for learners who open the project from the Link for StudyDesk in Share link.
       </p>
-      <Row>
+      <Row k="View results" words={['scores', 'who has played', 'analytics', 'learners']}>
         <button className="btn" onClick={() => setResultsOpen(true)} title="Who has played, and how they did">
           View results…
         </button>

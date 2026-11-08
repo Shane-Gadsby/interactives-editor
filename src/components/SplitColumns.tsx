@@ -1,7 +1,10 @@
-import { Children, useState, type ReactNode } from 'react';
+import { Children, useEffect, useRef, useState, type ReactNode } from 'react';
 
 /** A fixed-width column (resizable) or the one flexible column that takes the rest. */
-export type ColumnSpec = { width: number; min?: number; max?: number } | 'flex';
+export type ColumnSpec =
+  // `hideBelow`: an extra column (a reference list, say) that goes away while the columns' box is narrower than this many px
+  | { width: number; min?: number; max?: number; hideBelow?: number }
+  | 'flex';
 
 const load = (id: string): number[] | null => {
   try {
@@ -22,6 +25,20 @@ export function SplitColumns({ id, columns, children, className }: { id: string;
     return columns.map((c, i) => (c === 'flex' ? 0 : (saved?.[i] ?? c.width)));
   });
   const kids = Children.toArray(children);
+  // The box's own width decides which optional columns there is room for (a bottom panel moved into a narrow side area)
+  const box = useRef<HTMLDivElement>(null);
+  const [boxW, setBoxW] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    setBoxW(el.clientWidth);
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => setBoxW(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const shown = columns.map((c, i) => i < kids.length && !(c !== 'flex' && c.hideBelow && boxW > 0 && boxW < c.hideBelow));
+  const lastShown = shown.lastIndexOf(true);
 
   const startDrag = (e: React.PointerEvent, divider: number) => {
     e.preventDefault();
@@ -60,11 +77,11 @@ export function SplitColumns({ id, columns, children, className }: { id: string;
   };
 
   return (
-    <div className={`split-columns${className ? ` ${className}` : ''}`}>
-      {kids.map((child, i) => (
-        <div key={i} className="split-col-wrap" style={columns[i] === 'flex' ? { flex: 1, minWidth: 0 } : { width: widths[i], flex: 'none' }}>
+    <div ref={box} className={`split-columns${className ? ` ${className}` : ''}`}>
+      {kids.map((child, i) => !shown[i] ? null : (
+        <div key={i} className="split-col-wrap" style={columns[i] === 'flex' ? { flex: 1, minWidth: 160 } : { width: widths[i], flex: 'none' }}>
           {child}
-          {i < kids.length - 1 && (
+          {i < lastShown && (
             <div className="split-divider" role="separator" aria-orientation="vertical" title="Drag to resize" onPointerDown={(e) => startDrag(e, i)} />
           )}
         </div>

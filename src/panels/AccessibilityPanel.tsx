@@ -158,7 +158,7 @@ export function AccessibilityPanel() {
                   }}
                 >
                   <span className={`a11y-dot ${f.severity}`} aria-label={SEVERITY.find((s) => s.id === f.severity)!.label} />
-                  <span className="a11y-row-text">
+                  <span className="a11y-row-text" title={`${f.title}${f.nodeName ? ` · ${f.nodeName}` : ''}`}>
                     <strong>{f.title}</strong>
                     {f.nodeName && <span className="muted"> · {f.nodeName}</span>}
                   </span>

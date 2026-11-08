@@ -93,7 +93,7 @@ export function SensorsSection({ project }: { project: Project }) {
           </div>
         </>
       )}
-      <Row>
+      <Row k="Check accessibility" words={['accessibility checker', 'another way to finish', 'alternative']}>
         <button className="btn" onClick={() => store().set({ bottomTab: 'a11y' })} title="Open the Accessibility tab: a project that uses a sensor must have another way to finish, and the checker looks for it">
           Check accessibility
         </button>

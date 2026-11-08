@@ -21,7 +21,7 @@ export function VideoCues({ node, set }: { node: VideoNode; set: (patch: Partial
           ? 'The On video cue event fires when the video plays across a cue, with the cue name and time. Jumping past one fires nothing, and jumping back arms it again. A cue set to pause stops the video there, for a question; play it on with a Control video node.'
           : 'Named points in the video that fire the On video cue event while it plays, such as where a question appears. Mark one to pause the video there.'}
       </p>
-      <Row>
+      <Row k="Add a cue" words={['cue point', 'marker', 'pause', 'event']}>
         <button className="btn small-btn" onClick={addCue}>
           Add a cue
         </button>
@@ -47,7 +47,7 @@ export function VideoCues({ node, set }: { node: VideoNode; set: (patch: Partial
           ? 'Sent to the video as a chapters track, which the controls of browsers that list chapters show. In formulas, self.chapters is the list and the Chapter showing binding says which one the video is in.'
           : 'Named sections of the video. Browsers whose video controls list chapters show them, and formulas can read them.'}
       </p>
-      <Row>
+      <Row k="Add a chapter" words={['section', 'chapters', 'navigation']}>
         <button className="btn small-btn" onClick={addChapter}>
           Add a chapter
         </button>

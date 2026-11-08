@@ -1,4 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
+import { PropRow } from '../lib/prop-search';
 import { FORMULA_HELPERS, assetsEmbedded, type Artboard, type Asset, type Project } from 'interactives-player';
 import { store } from '../store/store';
 import { Section } from '../components/ui';
@@ -52,6 +53,7 @@ export function WeightSection({ ab, project }: { ab: Artboard; project: Project 
         </ul>
       )}
       {weight.artboards.length > 1 && (
+        <PropRow k="Download size of every artboard" words={['weight', 'file size', 'heaviest', 'megabytes']}>
         <ul className="weight-list" aria-label="Download size of every artboard">
           {weight.artboards.map((w) => (
             <li key={w.id} className={w.id === ab.id ? 'current' : undefined}>
@@ -69,6 +71,7 @@ export function WeightSection({ ab, project }: { ab: Artboard; project: Project 
             </li>
           ))}
         </ul>
+        </PropRow>
       )}
       {weight.shared.bytes > 0 && <p className="hint">Not counted: {say(weight.shared.bytes)} of font and data files, which load with every artboard.</p>}
       <p className="hint">

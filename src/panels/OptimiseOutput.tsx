@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Project } from 'interactives-player';
 import { store } from '../store/store';
 import { CheckField } from '../components/ui';
+import { PropRow } from '../lib/prop-search';
 import { LEVELS, optimiseSettings } from '../lib/image-optimise';
 import { prepareOutputs } from '../lib/asset-variants';
 
@@ -30,31 +31,35 @@ export function OptimiseOutputFields({ project }: { project: Project }) {
       />
       {on && (
         <>
-          <div className="field optimise-slider">
-            <div className="optimise-ends">
-              <span>Smaller files</span>
-              <span>Better quality</span>
+          <PropRow k="Optimise quality" words={['smaller files', 'better quality', 'picture size', 'compression']}>
+            <div className="field optimise-slider">
+              <div className="optimise-ends">
+                <span>Smaller files</span>
+                <span>Better quality</span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={5}
+                step={1}
+                value={level}
+                aria-label="Optimise output: from smaller files to better quality"
+                aria-valuetext={LEVELS[level].label}
+                title="Slide towards Smaller files for lighter downloads and shares, towards Better quality for sharper pictures"
+                onChange={(e) => store().update((d) => void ((d as Project).settings.optimiseLevel = Number(e.target.value)), { coalesce: 'optimise-level' })}
+                onPointerUp={() => store().commit()}
+                onKeyUp={() => store().commit()}
+              />
+              <div className="optimise-now">
+                {LEVELS[level].label}: pictures up to {LEVELS[level].maxSide} px on the long side
+              </div>
             </div>
-            <input
-              type="range"
-              min={1}
-              max={5}
-              step={1}
-              value={level}
-              aria-label="Optimise output: from smaller files to better quality"
-              aria-valuetext={LEVELS[level].label}
-              title="Slide towards Smaller files for lighter downloads and shares, towards Better quality for sharper pictures"
-              onChange={(e) => store().update((d) => void ((d as Project).settings.optimiseLevel = Number(e.target.value)), { coalesce: 'optimise-level' })}
-              onPointerUp={() => store().commit()}
-              onKeyUp={() => store().commit()}
-            />
-            <div className="optimise-now">
-              {LEVELS[level].label}: pictures up to {LEVELS[level].maxSide} px on the long side
-            </div>
-          </div>
-          <button className="link-btn" disabled={!!busy} title="Make the optimised copies of every picture now, so the next download or share is quick, and see what they save" onClick={() => void run()}>
-            {busy ?? 'Optimise pictures now'}
-          </button>
+          </PropRow>
+          <PropRow k="Optimise pictures now" words={['compress', 'resize pictures']}>
+            <button className="link-btn" disabled={!!busy} title="Make the optimised copies of every picture now, so the next download or share is quick, and see what they save" onClick={() => void run()}>
+              {busy ?? 'Optimise pictures now'}
+            </button>
+          </PropRow>
         </>
       )}
     </>

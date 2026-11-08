@@ -93,7 +93,8 @@ export function savedWorkspaces(): SavedWorkspace[] {
 export function applyWorkspace(w: Omit<Workspace, 'id' | 'name'>): void {
   setDock(normalise(w.layout));
   setPanelWidths(w.widths);
-  store().set({ bottomHeight: Math.max(140, Math.min(window.innerHeight - 200, w.bottomHeight)) });
+  // no more than half the window, so a short screen keeps room for the canvas and the tool bar
+  store().set({ bottomHeight: Math.max(140, Math.min(window.innerHeight - 200, Math.round(window.innerHeight * 0.5), w.bottomHeight)) });
   // the tool panel that's open now is the one code thinks of as open
   const bottom = getDock().zones.bottom.active;
   if (bottom && !getDock().bottomFolded) store().set({ bottomTab: bottom as never });
