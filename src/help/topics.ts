@@ -3217,11 +3217,26 @@ Test with a keyboard, a screen reader and your own eyes as well.`,
 - **Format**: JSON, CSV or TSV (first row is the column names), or plain text. CSV and TSV become a list of rows, with numbers and true/false converted.
 - **URL**: fetched as soon as you press Enter or leave the field. **Reload** fetches it again.
 - **Refresh** (URLs): fetch again every n seconds; 0 loads once.
-- The preview on the right shows what was loaded, with the field names you can use.
+- The right-hand side shows the file and lets you change it: see **Editing a data file** below. For any source it also lists the field names you can use.
 
 Use a source by its **name** anywhere expressions go: \`{products.length} products\`, a binding \`products[0].price\`, or **Repeat → Items** \`products\`. Scripts read \`ix.data.products\`.
 
 **Load data** reloads a source (optionally from a different URL); **When data has loaded** fires when it arrives. **+ Shared responses** adds a different kind of source, answers the people playing add, counted for the class or kept for each person: see [Shared responses](shared-responses). The host page can push data with \`player.setData('products', [...])\`.
+
+## Editing a data file
+A source **From: Uploaded file** can be edited right there, in two ways, and both change the same text:
+
+- **Table** (CSV and TSV, and JSON that is a list of flat objects) or **Tree** (any other JSON): change a cell or a value by typing in it. Above it, buttons add, copy, delete and move rows and columns (or, in a tree, add inside or next to a row, copy, delete, move, open or close everything), and **Cell holds** (or **Holds**) changes a value between text, number, yes/no, empty, list and group, so 12 and "12" are not the same thing. In a tree, a list of flat objects opens as a table (the **Table / List** switch turns that off), so \`opening\` or \`choices\` inside a bigger file are edited like a spreadsheet.
+- **Raw text**: the file's own text, coloured for its format (JSON, and a colour for each column of a CSV or TSV). A mistake in JSON is marked on its line with the line and column and what is wrong; **Go to this spot** (the line and column link) jumps to it. **Tidy up** lays JSON out again with two-space indents.
+
+A change is saved a moment after you stop typing (or when you leave the box), as a new version of the file, so **Undo** and **Redo** bring the old text back, other people editing see the change, and the canvas, bindings, repeaters and Preview use it at once. JSON that doesn't parse is **not** saved: the interactive keeps using the last good version until it does. CSV and TSV never fail to parse, but a quote that never closes or a row with the wrong number of cells gets a warning.
+
+Things to know:
+- If more than one source reads the same file, a note says so before you edit: the edit changes all of them. **Give it its own copy** makes the file separate for this source.
+- A source **From: URL** can be looked at but not changed here, because the file isn't ours. **Make a copy to edit** saves what the URL gave as an uploaded file and reads that instead (**Undo** goes back to the URL).
+- Long tables show 100 rows at a time (use Next and Previous); the raw text has no limit.
+- In a table, **Tab** goes into and out of the table, the arrow keys move between cells (Left and Right at the ends of the text), **Enter** goes down, **Escape** puts the cell back. In a tree, Up and Down move, Right opens (or goes in), Left closes (or goes out), **Enter** or **F2** edits the row, **Delete** removes it, and **Alt+Up** and **Alt+Down** move it.
+- Each save leaves the earlier file on the server so Undo works; **Remove unused assets** in the Usage tab clears them.
 
 ## The built-in context
 The list always starts with **context**, a read-only source that is there without adding anything: the course and the learner (\`{context.firstName}\`, \`context.courseCode\`). Pick it to see its fields, set sample values to design with, and give different courses different starting values. See [Course and learner context](course-context).
