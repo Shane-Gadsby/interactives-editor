@@ -4,6 +4,7 @@ import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerOwnProps, laye
 import { findArtboardOf, isIdentifier } from '../store/doc';
 import { previewScope } from '../lib/data';
 import { IconButton, Section } from '../components/ui';
+import { ConditionField } from '../components/ConditionField';
 import { ExprField, ExprLocals } from '../components/ExprField';
 import { Icons } from '../components/icons';
 import { SearchPicker, type PickerOption } from '../components/SearchPicker';
@@ -256,7 +257,10 @@ function BindingItem({
             Formula
           </button>
         </div>
-        {formula ? (
+        {formula && kind === 'boolean' ? (
+          // a yes/no property (visible, disabled...) is set by a condition, so it gets the pickers
+          <ConditionField label="Condition" value={expr} title="A condition: when it is true the property is on" placeholder="e.g. lives > 0" onChange={onExpr} />
+        ) : formula ? (
           <ExprField value={expr} commitOnBlur placeholder="e.g. lives > 0" title="A formula of variables; its result sets the property" onChange={onExpr} />
         ) : (
           <SearchPicker

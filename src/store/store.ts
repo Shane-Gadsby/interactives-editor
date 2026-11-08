@@ -224,6 +224,8 @@ export interface EditorState {
    * one of them the settings column shows; it wins when it isn't in this list (something else selected a single node).
    */
   logicPicked: string[];
+  /** The Interactions panel as the node graph, or as the sentences it says (read only, from the same graph). */
+  logicView: 'graph' | 'sentences';
   saveState: 'saved' | 'saving' | 'dirty' | 'error';
   saveError: string | null;
   /** A power user (or brand group member) has switched the brand kit lock off for this session (F9). Nothing is saved with it. */
@@ -307,6 +309,7 @@ export class EditorStore {
       selectedKeys: [],
       logicSelection: null,
       logicPicked: [],
+      logicView: 'graph',
       saveState: 'saved',
       saveError: null,
       brandOverride: false,

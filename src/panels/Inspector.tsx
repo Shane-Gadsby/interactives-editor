@@ -63,6 +63,9 @@ import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { ColourwayRow } from './ColourwayRow';
 import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
+import { openBehaviours } from '../components/BehaviourDialog';
+import { flowSentence, flowsForLayer } from '../lib/flow-describe';
+import { removeFlow, setFlowOff, showInGraph } from '../lib/flow-actions';
 
 /** What a joystick's X and Y expressions see on top of the project's. */
 const POINTER_LOCALS = ['pointer'];
@@ -1666,7 +1669,9 @@ function DrawSection({ nodes }: { nodes: DrawNode[] }) {
 }
 
 function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
-  const events = ab.logic.nodes.filter((l) => l.params.target === node.id);
+  const project = useEditor((st) => st.project);
+  //What this layer does, as sentences, from the graph (lib/flow-describe.ts)
+  const flows = flowsForLayer({ ab, project }, node.id, { limit: 6 });
   const add = (type: string) => {
     const id = `lg${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     const maxY = ab.logic.nodes.reduce((m, l) => Math.max(m, l.y), 0);
@@ -1678,21 +1683,47 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
   };
   return (
     <Section help="interactions" title="Interactions" defaultOpen>
-      {events.length ? (
-        events.map((e) => (
-          <button key={e.id} className="interaction-chip" onClick={() => store().set({ bottomTab: 'logic', logicSelection: e.id })}>
-            {e.kind.replace(/^\w+\./, '')} {String(e.params.type ?? '')}
-          </button>
-        ))
+      {flows.length ? (
+        <ul className="flow-list" aria-label="What this layer does">
+          {flows.map((f) => {
+            const sentence = flowSentence(f);
+            return (
+              <li key={f.event.id} className={`flow-item${f.off ? ' off' : ''}${f.steps.length ? '' : ' empty'}`}>
+                <div className="flow-sentence" title={f.steps.map((s) => s.summary).filter(Boolean).join('\n') || undefined}>
+                  {sentence}.
+                </div>
+                <div className="flow-actions">
+                  <button type="button" className="link-btn" aria-label={`Show in the graph: ${sentence}`} onClick={() => showInGraph(f.event.id)}>
+                    Show in graph
+                  </button>
+                  <button type="button" className="link-btn" aria-label={`${f.off ? 'Turn on' : 'Turn off'}: ${sentence}`} aria-pressed={f.off} title={f.off ? 'It does nothing while it is off. Turn it back on' : 'Stop it doing anything for now, without removing it'} onClick={() => setFlowOff(ab.id, f.event.id, !f.off)}>
+                    {f.off ? 'Turn on' : 'Turn off'}
+                  </button>
+                  <button type="button" className="link-btn danger" aria-label={`Remove: ${sentence}`} onClick={() => removeFlow(ab.id, f.event.id)}>
+                    Remove
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
-        <p className="hint">No interactions on this layer yet.</p>
+        <p className="hint">Nothing happens when this layer is used yet.</p>
       )}
-      <Row k="Add interaction" words={['on click', 'on hover', 'event', 'action', 'trigger', 'click', 'hover']}>
-        <button className="btn" onClick={() => add('click')}>
-          + On click
+      <Row k="Add interaction" words={['on click', 'on hover', 'event', 'action', 'trigger', 'click', 'hover', 'behaviour', 'when', 'show', 'hide', 'page', 'sound', 'counter']}>
+        <button className="btn" title="Choose what happens when this layer is clicked: go to a page, show or hide something, play a sound, count..." onClick={() => openBehaviours({ abId: ab.id, layerId: node.id, trigger: 'click' })}>
+          + When clicked…
         </button>
-        <button className="btn" onClick={() => add('pointerenter')}>
-          + On hover
+        <button className="btn" title="Choose what happens when the pointer moves onto this layer" onClick={() => openBehaviours({ abId: ab.id, layerId: node.id, trigger: 'pointerenter' })}>
+          + When hovered…
+        </button>
+      </Row>
+      <Row k="Add an empty event" words={['empty', 'advanced', 'graph', 'on pointer', 'on click', 'on hover']}>
+        <button className="btn small" title="Add just the On pointer event, with nothing joined to it, and build the rest in the graph" onClick={() => add('click')}>
+          + On click (empty)
+        </button>
+        <button className="btn small" title="Add just the On pointer event, with nothing joined to it, and build the rest in the graph" onClick={() => add('pointerenter')}>
+          + On hover (empty)
         </button>
       </Row>
       <CheckField
@@ -1701,7 +1732,7 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
         value={!!node.interactiveWhenFaded}
         onChange={(v) => store().setProps([node.id], { interactiveWhenFaded: v || undefined })}
       />
-      {shownAmount(node) < 1 && !node.interactiveWhenFaded && (events.length > 0 || !!node.link?.url) ? <p className="hint">This layer is see-through ({Math.round(shownAmount(node) * 100)}%), so it can't be clicked while playing until it's fully showing.</p> : null}
+      {shownAmount(node) < 1 && !node.interactiveWhenFaded && (flows.length > 0 || !!node.link?.url) ? <p className="hint">This layer is see-through ({Math.round(shownAmount(node) * 100)}%), so it can't be clicked while playing until it's fully showing.</p> : null}
       {node.interactiveWhenFaded ? <p className="hint">Ticked: this layer stays clickable (hand cursor, clicks, hovers) even while faded out.</p> : null}
     </Section>
   );

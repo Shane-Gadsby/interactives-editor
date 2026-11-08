@@ -76,6 +76,9 @@ export const PROP_HELP: Record<string, HelpTarget> = {
   trim: { to: 'fill-stroke#trim-path', label: 'Trim path' },
   blend: { to: 'fill-stroke#effects', label: 'Blend' },
   'tab-stop': { to: 'accessibility#tab-order', label: 'Tab stop' },
+  condition: { to: 'interactions#conditions-with-pickers', label: 'Conditions' },
+  'only-if': { to: 'interactions#conditions-with-pickers', label: 'Conditions' },
+  'only-while': { to: 'interactions#conditions-with-pickers', label: 'Conditions' },
 };
 
 export const TIMELINE_KEY_HELP: HelpTarget = { to: 'timelines#adding-keyframes', label: 'Keyframes' };

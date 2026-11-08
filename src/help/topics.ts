@@ -563,7 +563,7 @@ Select layers and drag them on the canvas. If you let go over a **different artb
 - Interactions in the old artboard that used them will need fixing. The [Usage](usage) tab's **Broken** list shows exactly which.
 
 ## Right-click menus
-- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**On click…**, **On hover…**) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
+- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**When clicked…**, **When hovered…**, or an empty **On click** or **On hover** event) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
 - **An artboard**: **New** (a menu of layers to add where you clicked), **Paste**, **Make start artboard**, **Duplicate artboard**, **Zoom to artboard** and **Delete artboard**.
 - **Empty canvas**: **New artboard here**, **Paste**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`,
   },
@@ -1792,7 +1792,7 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
     title: 'Interactions',
     group: 'Interactivity',
     summary: 'The node graph: events start a flow, actions do things, logic chooses the way.',
-    keywords: 'interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing',
+    keywords: 'interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing behaviour recipe when clicked hovered show hide next page sound counter switch sentences read explain condition picker only if turn off remove',
     body: `Open the **Interactions** tab. Each artboard has its own graph.
 
 **See-through layers don't take clicks.** While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
@@ -1864,8 +1864,32 @@ A **group** is a labelled frame around nodes that belong together ("Score", "Int
 - A node is in a group when its middle is inside the frame. Click the group (its title or any empty space inside it) to select it, and drag it the same way to move it with every node in it; drag its edges or corners to resize it. Right-click inside a group for **Add node here** as well as its own settings.
 - Double-click the title to rename it (or **Rename…** in its right-click menu). **Colour** gives it one of a few tints.
 - <kbd>Del</kbd> on a group with nodes inside asks: **Just the group** (the frame goes, the nodes stay where they are) or **Group and N nodes** (everything goes, in one undo step). An empty group just goes. Its right-click menu has **Ungroup (keep the nodes)** and **Delete group and N nodes** too, and **Copy** and **Duplicate** for the group with its nodes.
-- Right-click a *layer* on the canvas, choose **Add interaction**, then **On click…** or **On hover…** to add an **On pointer** event with a **Control timeline** action already joined to it.
-- In the Inspector, a layer's **Interactions** section lists its events and has **+ On click** and **+ On hover**.
+
+## Behaviours: "When this is clicked…"
+The quick way to make a layer do something, with no graph to draw. Select a layer and, in the Inspector's **Interactions** section, press **+ When clicked…** (or **+ When hovered…**), or right-click it and choose **Add interaction**, then **When clicked…**.
+
+A short list asks what should happen:
+- **Go to the next page**, **Go to the previous page**, **Go to a page…** (you pick which).
+- **Show a layer**, **Hide a layer**, **Show or hide a layer**: this layer or another. Showing a layer other than this one also sets it to start hidden, so there is something to show.
+- **Play an animation** (a timeline of this page) and **Play a sound**.
+- **Add 1 to a counter** and **Switch something on or off**: pick a number or an on/off variable you already have, or name a new one in plain words and it is made for you.
+- **Open a link** and **Start over**.
+
+Pick one, answer the question it asks (the line at the bottom reads back what it will do), and press **Add**. It is added in one step, so one undo takes it all back, including a new variable or the layer set to start hidden. A behaviour is just an **On pointer** event joined to an action (and the variable it needs), the same nodes you would have drawn: select the new node in the graph to change anything about it. Nothing special marks them, and nothing hidden runs.
+
+The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
+
+## What a layer does, in sentences
+The Inspector's **Interactions** section lists what the layer does as sentences made from its graph: **When clicked: show Hint text, then wait 2 s, then hide Hint text.** A check reads **check whether score is at least 5 (if so: …; if not: …)**, and a long chain stops with **and 4 more steps**. An event with nothing joined to it says **nothing happens yet**, so a click that does nothing is no longer a mystery. Under each sentence:
+- **Show in graph** opens the Interactions tab with that event picked.
+- **Turn off** stops it without removing it, and **Turn on** brings it back. Turning off puts a \`false\` in front of the event's **Only if**, which the graph shows (a condition that was there stays behind it).
+- **Remove** deletes the event and the steps only it reaches. A step another flow also runs stays.
+
+## Read as sentences
+The **Read as sentences** button over the graph (beside **Graph**) shows the whole artboard as sentences, one block per event, with the steps and the ways a check splits underneath. It is read only and made from the graph each time, so it cannot say something the graph does not. Pick a line to see that node's settings, **Show in graph** to go back to it, or **Copy as text** for all of it. Steps nothing starts are listed at the end as **Not joined to anything, so these never run**. It is the quickest way to understand a template someone else built.
+
+## Conditions with pickers
+Wherever the graph asks for a yes/no condition (**If**'s condition, an event's **Only if**, a timer's **Only while**, and the formula of a yes/no binding such as visible), the field is three pickers: a value (a variable), how to compare it (**is**, **is not**, **is at least**, **is at most**, **is more than**, **is less than**, **contains**, **is empty**, **is not empty**, **is on**, **is off**) and what to compare it with (a number, a piece of text, on or off, or another value). **+ and** and **+ or** add rows. **Edit as formula** shows the formula the pickers write (\`score >= 5 && !done\`) and lets you type it. A formula the pickers cannot show in full, such as one with arithmetic, brackets or a function, simply opens as a formula and is never rewritten. The line under it says what it works out to now.
 
 Test in **Preview**: the event list shows each event as it fires. Every node is listed in [Interaction node reference](interaction-nodes). For a walk-through, see [Tutorial 2](tutorial-first-interaction).
 
@@ -2289,6 +2313,16 @@ Every field that takes an expression suggests as you type: the Formula of a bind
 Type the start of a name, or press the dot after one, and a short list appears with each choice's type and its value right now. It offers your variables, \`context\` (and its fields, such as \`context.firstName\`), your data sources, the names the player supplies (\`reducedMotion\`, \`voiceAvailable\`, \`micLevel\`, \`downloadSize\`...), the helpers below with their arguments, and what the setting itself has (\`event\` in a graph node, \`value\` in a converter, \`self\` in a binding). After a dot it lists what can follow: the fields of an object, \`self.width\`, or the methods of text and lists. Inside \`layer("\` it lists your layers' names.
 
 **Up** and **Down** move through the list, **Enter** or **Tab** puts the choice in, and **Esc** closes it. With no list showing, Enter and Tab do what they always did.
+
+## Checks as you type
+A line under every formula field says what the formula is doing, a moment after you stop typing:
+- **Green**: what it works out to right now, such as *currently true*, *currently 12* or *currently “Hello”*. A formula that depends on what has just happened (it uses \`event\`) says *depends on what happens when it runs*, and one that uses \`Math.random()\`, \`randInt\` or the date says *changes each time it runs*. It is not run to show you a value that would be different the next time.
+- **Red**: what is wrong, in a sentence. *There is no value called scoer. Did you mean score?* comes with a **Use score** button that fixes every use of it in one click. A bracket or quote that is not closed, a symbol missing at the end, a single \`=\` where \`==\` was meant, and a formula that cannot be worked out with today's values are all said in words.
+
+The check uses the same scope as the suggestions, and the values are the project's starting values, as on the canvas.
+
+## Conditions without typing
+A field that asks for a yes/no condition (see [Interactions](interactions)) offers pickers instead of a text box: **[value] [is at least] [5]**, with **+ and** and **+ or** for more rows, and **Edit as formula** for the text. The pickers write an ordinary formula, so anything you built with them can be edited by typing, and a formula they cannot show opens as text.
 
 ## Helpers
 These work in every expression:

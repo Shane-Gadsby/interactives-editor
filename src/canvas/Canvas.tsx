@@ -78,6 +78,7 @@ import { captureDrop } from '../lib/links';
 import { liveSession } from '../lib/live';
 import { bendPaths, hasShapeKeys, nearestSegment, shapeToPaths, type SegmentHit } from '../lib/path-edit';
 import { confirmDialog } from '../components/dialogs';
+import { openBehaviours } from '../components/BehaviourDialog';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
 import { rangeLabel } from '../lib/variants-edit';
 import { boneEndAt, boneFromDrag, boneGlyphs } from '../lib/rig';
@@ -2119,8 +2120,11 @@ export function Canvas() {
               {
                 label: 'Add interaction',
                 items: [
-                  { label: 'On click…', onClick: () => addInteraction(hab, one.id, 'click') },
-                  { label: 'On hover…', onClick: () => addInteraction(hab, one.id, 'pointerenter') },
+                  { label: 'When clicked…', onClick: () => openBehaviours({ abId: hab.id, layerId: one.id, trigger: 'click' }) },
+                  { label: 'When hovered…', onClick: () => openBehaviours({ abId: hab.id, layerId: one.id, trigger: 'pointerenter' }) },
+                  { separator: true },
+                  { label: 'Empty On click event', title: 'Just the On pointer event, with nothing joined to it', onClick: () => addInteraction(hab, one.id, 'click') },
+                  { label: 'Empty On hover event', title: 'Just the On pointer event, with nothing joined to it', onClick: () => addInteraction(hab, one.id, 'pointerenter') },
                 ],
               } as MenuItem,
               ...(one.type === 'text' || one.type === 'button' || one.type === 'link' ? [{ label: 'Edit text', hint: 'Enter', onClick: () => s2.set({ editingTextId: one.id }) } as MenuItem] : []),
@@ -2163,17 +2167,14 @@ export function Canvas() {
     setMenu({ x: e.clientX, y: e.clientY, items });
   }
 
-  /** Add an "On pointer" event for a layer with an action to fill in, and open the Interactions tab on it. */
+  /** Add just an "On pointer" event for a layer, with nothing joined to it (the recipes in the behaviour dialog add the action too), and open the Interactions tab on it. */
   function addInteraction(ab: Artboard, nodeId: string, type: 'click' | 'pointerenter') {
     const ev = { id: uid('lg'), kind: 'event.pointer', x: 40, y: 40 + ab.logic.nodes.length * 30, params: { ...defaultParams('event.pointer'), target: nodeId, type } };
-    const act = { id: uid('lg'), kind: 'action.timeline', x: 300, y: ev.y, params: defaultParams('action.timeline') };
     store().update((d) => {
       const a = d.artboards.find((x) => x.id === ab.id);
-      if (!a) return;
-      a.logic.nodes.push(ev, act);
-      a.logic.edges.push({ id: uid('e'), from: ev.id, fromPort: 'out', to: act.id, toPort: 'in' });
+      a?.logic.nodes.push(ev);
     });
-    store().set({ bottomTab: 'logic', logicSelection: act.id });
+    store().set({ bottomTab: 'logic', logicSelection: ev.id });
   }
 
   function zoomToBox(b: Rect) {

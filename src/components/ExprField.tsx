@@ -4,6 +4,7 @@ import { layerScope, walk, type SceneNode } from 'interactives-player';
 import { maybeStore } from '../store/store';
 import { previewScope } from '../lib/data';
 import { accept, suggest, type SuggestEnv, type Suggestion } from '../lib/suggest';
+import { checkFormula, checkTemplate, type CheckEnv, type FormulaStatus } from '../lib/expr-check';
 import { tipFor, unbroken } from './ui';
 import { useRowSearch } from '../lib/prop-search';
 
@@ -46,6 +47,61 @@ function envFor(locals: string[], self: SceneNode | undefined): SuggestEnv | nul
     locals,
     localValues: self ? { self: layerScope(self) } : undefined,
   };
+}
+
+/** What the formula checker knows about the open project; the scope is only built if the formula gets as far as being worked out. */
+function checkEnvFor(locals: string[], self: SceneNode | undefined): CheckEnv | null {
+  const env = envFor(locals, self);
+  if (!env) return null;
+  return { variables: env.project.variables, dataNames: env.project.dataSources.map((d) => d.name), locals, localValues: env.localValues, scope: env.scope };
+}
+
+/**
+ * What a formula says right now, or what is wrong with it, for the line under a field. Checked a moment after typing stops, and
+ * again when the project's variables or data change, not on every edit to a layer (working a formula out builds the whole scope).
+ */
+export function useFormulaStatus(text: string, locals: string[], self: SceneNode | undefined, template?: boolean): FormulaStatus {
+  const [status, setStatus] = useState<FormulaStatus>({ kind: 'empty' });
+  const st = maybeStore()?.get();
+  const vars = st?.project.variables;
+  const data = st?.project.dataSources;
+  const key = locals.join(',');
+  useEffect(() => {
+    if (!text.trim()) return setStatus((s) => (s.kind === 'empty' ? s : { kind: 'empty' }));
+    const t = setTimeout(() => {
+      const env = checkEnvFor(locals, self);
+      setStatus(env ? (template ? checkTemplate(text, env) : checkFormula(text, env)) : { kind: 'empty' });
+    }, 180);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, vars, data, key, self?.id, template]);
+  return status;
+}
+
+/** The line under a formula field: green with what it works out to, or red with what is wrong and a button for the easy fix. */
+export function FormulaStatusLine({ status, onFix }: { status: FormulaStatus; onFix?: (text: string) => void }) {
+  if (status.kind === 'empty') return null;
+  if (status.kind === 'ok')
+    return (
+      <div className="expr-status ok" role="status" aria-live="polite">
+        <span aria-hidden="true">✓ </span>
+        {status.text}
+      </div>
+    );
+  return (
+    <div className="expr-status err" role="alert">
+      <span aria-hidden="true">⚠ </span>
+      {status.message}
+      {status.fix && onFix ? (
+        <>
+          {' '}
+          <button type="button" className="link-btn" onClick={() => onFix(status.fix!.text)}>
+            {status.fix.label}
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
 }
 
 /**
@@ -163,6 +219,13 @@ export function ExprField({
   };
 
   const shown = commitOnBlur ? text : value;
+  //The easy fix is a real change: it is committed now, even in a field that waits for the blur
+  const fix = (fixed: string) => {
+    if (commitOnBlur) setText(fixed);
+    onChange(fixed);
+    onInput?.(fixed);
+  };
+  const status = useFormulaStatus(shown, names, ctx.self, template);
   const props = {
     ref: el as React.Ref<HTMLInputElement & HTMLTextAreaElement>,
     value: shown,
@@ -209,6 +272,7 @@ export function ExprField({
         {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
         {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
       </label>
+      <FormulaStatusLine status={status} onFix={fix} />
       {open &&
         sug &&
         createPortal(
