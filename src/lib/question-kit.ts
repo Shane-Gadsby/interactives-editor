@@ -209,7 +209,8 @@ function blankRow(q: Question, i: number, variableId: string): SceneNode {
         questionPart: 'blankInput',
         placeholder: 'Your answer',
         ariaLabel: q.blanks[i]?.label || 'Answer',
-        ...(q.blanks[i]?.spelling ? { noAssist: true } : {}),
+        ...(q.blanks[i]?.spelling && q.guard?.spellcheck !== false ? { noAssist: true } : {}),
+        ...(q.blanks[i]?.spelling && q.guard && q.guard.paste !== false ? { noPaste: true } : {}),
         variableId,
         width: 280,
         height: 44,
@@ -1113,8 +1114,12 @@ function syncBlankRows(frame: FrameNode, q: Question, variables: Variable[]): vo
     walk([r], (n) => {
       if (n.type === 'input') {
         n.variableId = varIds[i];
-        //A word to spell gets no red underline, no autocorrect and no capital letter put on it by the browser
-        if (q.blanks[i]?.spelling) n.noAssist = true;
+        //A word to spell gets no red underline, no autocorrect and no capital letter put on it by the browser, and (with a guard) no paste
+        const spell = !!q.blanks[i]?.spelling;
+        if (spell && q.guard?.spellcheck !== false) n.noAssist = true;
+        else if (spell && q.guard) delete n.noAssist;
+        if (spell && q.guard && q.guard.paste !== false) n.noPaste = true;
+        else if (spell) delete n.noPaste;
       }
     });
   });

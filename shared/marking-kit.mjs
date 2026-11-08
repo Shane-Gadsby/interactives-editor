@@ -1,4 +1,4 @@
-/*! built from the player's marking sources c7ac18d2a493da80f486 */
+/*! built from the player's marking sources 7ad5a43f8b34e87789f9 */
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
 const MAX_WORK = 65536;
@@ -1315,7 +1315,18 @@ function cleanVoice(raw) {
   if (raw.twice === true) out.twice = true;
   if (str(raw.node)) out.node = str(raw.node).slice(0, 100);
   if (str(raw.asset)) out.asset = str(raw.asset).slice(0, 100);
+  if (raw.own === true) out.own = true;
+  if (str(raw.ownAsset)) out.ownAsset = str(raw.ownAsset).slice(0, 100);
   if (raw.device === true) out.device = true;
+  return Object.keys(out).length ? out : void 0;
+}
+function cleanGuard(raw) {
+  if (!isObj(raw)) return void 0;
+  const out = {};
+  if (raw.mode === "block" || raw.mode === "warn" || raw.mode === "off") out.mode = raw.mode;
+  if (raw.spellcheck === false) out.spellcheck = false;
+  if (raw.paste === false) out.paste = false;
+  if (typeof raw.exempt === "string" && /^[0-9a-f]{64}$/.test(raw.exempt)) out.exempt = raw.exempt;
   return Object.keys(out).length ? out : void 0;
 }
 function normaliseQuestion(raw) {
@@ -1389,6 +1400,7 @@ function normaliseQuestion(raw) {
     ...raw.serverMarked === true ? { serverMarked: true } : {},
     ...isObj(raw.retake) ? { retake: { limit: Math.round(num(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
     ...cleanVoice(raw.voice) ? { voice: cleanVoice(raw.voice) } : {},
+    ...cleanGuard(raw.guard) ? { guard: cleanGuard(raw.guard) } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
     ...raw.multi === true ? { multi: true } : {},
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}

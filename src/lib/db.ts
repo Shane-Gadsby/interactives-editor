@@ -477,6 +477,8 @@ export interface ResultsRow {
   bestPercent: number | null;
   lastPercent: number | null;
   updated: string | null;
+  /** What the spelling guard found in this learner's browser, or null when it found nothing and no exemption was used. */
+  guard?: { tools: string[]; valueChanges: number; shown: number; exempt: boolean; label: string } | null;
 }
 
 export interface Results {

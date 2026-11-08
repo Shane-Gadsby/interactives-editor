@@ -3537,6 +3537,31 @@ router.post('/learn/:token/report', express.json({limit: '16kb'}), async (req, r
 	res.json({available: true, ok: true})
 })
 
+//What the spelling guard found in the learner's browser (writing tools, answers that changed without typing, the exemption code
+//used), kept on their record for the teacher. Not marked on the server, so it works the same for server-marked projects
+router.post('/learn/:token/guard', express.json({limit: '4kb'}), async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return
+	}
+
+	let who = learnerOf(req)
+
+	if (!who) {
+		return res.json({available: false})
+	}
+
+	let clean = learner.cleanGuard(req.body)
+
+	if (!clean) {
+		return res.status(400).json({error: 'That is not the right shape'})
+	}
+
+	await saveRecord({project: project._id, username: who.username, course: who.course}, (existing) => learner.guardUpdate(existing, clean, who, new Date()))
+	res.json({available: true, ok: true})
+})
+
 //The answer key of a project's server-marked questions, or null when it has none
 const markingOf = (project) => project.marking?.questions && Object.keys(project.marking.questions).length ? project.marking : null
 
@@ -3948,6 +3973,10 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			call('POST', 'check', {question: m.question, action: m.action, answer: m.answer}).then(function (j) {
 				answer(m, {ok: true, available: !!j.available, data: j})
 			}, failed)
+		}
+		else if (m.op === 'guard') {
+			call('POST', 'guard', {guard: m.guard}).catch(function () {
+			})
 		}
 		else if (m.op === 'report') {
 			call('POST', 'report', {result: m.result}).catch(function () {
