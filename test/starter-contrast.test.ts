@@ -30,6 +30,10 @@ describe('colourway token pairs', () => {
 });
 
 describe('starter contrast', () => {
+  it('holds the focus ring on gradient pages and dark panels to the same strictness as everywhere else', () => {
+    expect(STRICT_CONTRAST_KINDS).toContain('focus-brand');
+  });
+
   it('passes on every page of every starter, in every state, under every theme', () => {
     const found: { key: string; f: ContrastFinding }[] = [];
     for (const starter of BRANDED_STARTERS) {
@@ -46,12 +50,12 @@ describe('starter contrast', () => {
       have.worst = Math.min(have.worst, f.ratio);
       lines.set(id, have);
     }
+    //every kind is strict now (the focus ring is two tones, so it clears gradients and dark panels too): nothing is listed
     const listed = [...lines.values()].filter((l) => !STRICT_CONTRAST_KINDS.includes(l.f.kind));
     const text = [...lines.values()].filter((l) => STRICT_CONTRAST_KINDS.includes(l.f.kind)).map((l) => `${l.key} | ${l.f.kind} | ${l.f.page} | ${l.f.layer} | worst ${l.worst}:1 (needs ${l.f.need}:1) in ${[...l.themes].join(', ')} | ${l.f.detail}`);
     if (process.env.STARTER_CONTRAST_REPORT) writeFileSync(process.env.STARTER_CONTRAST_REPORT, `${text.join('\n')}\n`);
     if (process.env.STARTER_CONTRAST_REPORT) writeFileSync(`${process.env.STARTER_CONTRAST_REPORT}.listed.txt`, listed.map((l) => `${l.key} | ${l.f.page} | ${l.f.layer} | worst ${l.worst}:1 in ${[...l.themes].join(', ')}`).join('\n'));
-    //a focus ring on a gradient page or a dark panel is listed, never failed (see contrast-check.ts), but 
-    for (const l of listed) expect(l.f.kind, `${l.key} ${l.f.page}`).toBe('focus-brand');
+    expect(listed.map((l) => `${l.key} | ${l.f.kind} | ${l.f.page} | ${l.f.layer}`)).toEqual([]);
     if (STRICT) expect(text).toEqual([]);
   }, 300_000);
 });
