@@ -3942,7 +3942,6 @@ button.twisty:hover {
   display: inline-flex;
   vertical-align: -3px;
   margin-right: 8px;
-  color: var(--primary-bg);
 }
 .help-topic-icon svg {
   width: 26px;
