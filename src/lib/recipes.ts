@@ -99,6 +99,22 @@ export const RECIPES: Recipe[] = [
     action: (a, ctx) => ({ kind: 'action.visibility', params: { ...defaultParams('action.visibility'), target: layerOf(a, ctx), op: 'toggle' } }),
   },
   {
+    id: 'view-layer',
+    label: 'Move the view to a layer…',
+    hint: 'Pans and zooms the page to frame a layer. The page master stays put.',
+    group: 'Layers',
+    needs: [{ key: 'layer', kind: 'layer', label: 'Which layer' }],
+    action: (a, ctx) => ({ kind: 'action.moveView', params: { ...defaultParams('action.moveView'), to: 'layer', target: layerOf(a, ctx) } }),
+  },
+  {
+    id: 'view-page',
+    label: 'Show the whole page again',
+    hint: 'Pans and zooms back out after the view was moved to a layer.',
+    group: 'Layers',
+    needs: [],
+    action: () => ({ kind: 'action.moveView', params: { ...defaultParams('action.moveView'), to: 'page' } }),
+  },
+  {
     id: 'animation',
     label: 'Play an animation',
     hint: 'Plays one of this page’s timelines.',
@@ -205,7 +221,7 @@ export function defaultAnswers(recipe: Recipe, ctx: RecipeCtx): Answers {
     if (n.kind === 'layer') {
       // showing something: the likeliest layer is one that is hidden already; toggling: one other than this; hiding: this one
       const others = layerChoices(ctx.ab).filter((l) => l.id !== ctx.layerId);
-      const pick = recipe.id === 'show' ? (others.find((l) => l.hidden) ?? others[0]) : recipe.id === 'toggle' ? others[0] : undefined;
+      const pick = recipe.id === 'show' ? (others.find((l) => l.hidden) ?? others[0]) : recipe.id === 'toggle' || recipe.id === 'view-layer' ? others[0] : undefined;
       out[n.key] = pick?.id ?? THIS_LAYER;
     } else if (n.kind === 'page') out[n.key] = first(otherPages(ctx))?.id ?? '';
     else if (n.kind === 'timeline') out[n.key] = first(ctx.ab.timelines)?.id ?? '';

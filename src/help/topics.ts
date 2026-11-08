@@ -1447,6 +1447,43 @@ Nothing is hidden: you get ordinary buttons, text, a progress bar and the clicks
 
 Buttons go on the page itself. A [page master](page-master) can hold the logo and the footer but not buttons, so the master is not where this goes.`,
   },
+  {
+    id: 'moving-the-view',
+    title: 'Moving the view',
+    group: 'Interactivity',
+    summary: 'Pan and zoom a page to frame one of its layers: travel across a map, or read a comic panel by panel. Then go back to the whole page.',
+    keywords: 'move view pan zoom camera frame layer map hub travel comic panel panels reading focus on scroll zoom in zoom out whole page reset move the view to a layer',
+    body: `A page does not have to show everything at once. **Move the view to a layer** (the **Move view** node) pans and zooms the page's layers so one layer fills the screen, then another, and so on. Use it for a map the learner travels across, or to read a comic one panel at a time.
+
+## Quick start
+
+1. Draw the whole thing on one page: the map with a layer for each place, or the comic page with a layer around each panel. Give the layers names you will recognise.
+2. Select a button (or any layer) and press **+ When clicked…** in its **Interactions** section. Choose **Move the view to a layer…** and pick the layer to travel to.
+3. Add a second one on a button that brings the learner back: **Show the whole page again**.
+
+## The settings
+
+- **Move to**: **A layer**, or **The whole page**, which puts everything back as it was drawn.
+- **Layer**: the layer to frame. It is framed as large as fits, in the middle of the page.
+- **Space around it (px)**: clear space left around the layer, in page pixels. 40 by default.
+- **Zoom in no more than (times)**: stops a small layer, such as a pin, filling the whole screen. 4 by default, and 0 means no limit.
+- **Duration** and **Easing**: how long the trip takes and how it speeds up and slows down. A duration of 0 moves at once.
+- **Continue**: the next node runs when the move finishes, part-way through, or straight away.
+
+## What stays put, and what moves
+
+- Everything on the page moves together, so buttons, drags and clicks still land on the right layer, and the learner can still tab to them. A layer you cannot see on screen can still be reached with the keyboard, so keep what must be reachable in view, or move the view when the learner arrives at it.
+- The layers of the [page master](page-master) stay where they are, so a logo, a footer or a score bar that belongs to every page does not slide away. A master cannot hold buttons, so a button that takes the learner back (Back to the map) goes on the page, inside the area being framed, or in each framed area.
+- It frames the layer where it is now. If the layer moves later (a timeline, a drag), move the view again.
+- The view is in page pixels, so resizing the player, or a phone turned on its side, keeps the same layer in frame. If the page changes to a narrow or wide version of itself, the same-named layer is framed on the new one.
+- **Changing page starts the new page on its whole view.** The view does not follow a learner from page to page.
+- An [embedded page](instances) has a view of its own: Move view on the outer page frames the embedded page as one layer.
+- If the learner has asked for less motion (and the project's Reduced motion setting is on), the view jumps to the end instead of travelling.
+
+## In a script
+
+\`await ix.moveView('Panel 2', { padding: 40, maxZoom: 4, duration: 600, ease: 'easeInOut' })\` travels there and finishes when it arrives. \`await ix.resetView({ duration: 400 })\` goes back to the whole page. See [Scripts](scripts).`,
+  },
   // ---------------------------------------------------------------- motion
   {
     id: 'timelines',
@@ -2714,6 +2751,7 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 | \`ix.node('Name')\` | A layer by name or id: \`.get(prop)\`, \`.set(prop, v)\`, \`.show()\`, \`.hide()\`, \`.toggle()\`, \`await .animate(prop, v, {duration, ease})\` |
 | \`ix.timeline('Name')\` | \`.play()\`, \`.pause()\`, \`.stop()\`, \`.restart()\`, \`.reverse()\`, \`.seek(ms)\` |
 | \`ix.goTo('Artboard', 'fade')\` | Go to another artboard |
+| \`await ix.moveView('Layer', {padding, maxZoom, duration, ease})\` / \`ix.resetView({duration, ease})\` | Pan and zoom the page to frame a layer / back to the whole page (see [Moving the view](moving-the-view)) |
 | \`ix.emit(name, data)\` / \`ix.on(name, fn)\` | Send messages to the host page / react to them |
 | \`ix.announce(text, 'polite' | 'assertive')\` | Say something to screen readers (see [Accessibility](accessibility)) |
 | \`ix.soundPlaying(name?)\` / \`ix.soundsPlaying()\` | Is a Play sound sound going (any, or one asset by name or id), and the names of the ones going |

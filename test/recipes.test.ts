@@ -58,6 +58,10 @@ describe('buildBehaviour', () => {
     expect(act('sound', { sound: 'snd' })).toMatchObject({ kind: 'action.sound', params: { asset: 'snd' } });
     expect(act('link', { link: 'https://example.com' }).params).toMatchObject({ url: '"https://example.com"', target: '_blank' });
     expect(act('start-over').kind).toBe('action.startOver');
+    expect(act('view-layer', { layer: f.hint.id })).toMatchObject({ kind: 'action.moveView', params: { to: 'layer', target: f.hint.id, duration: 600 } });
+    expect(act('view-page')).toMatchObject({ kind: 'action.moveView', params: { to: 'page' } });
+    expect(buildBehaviour(ctx, 'view-layer', 'click', { layer: f.hint.id }, mk).sentence).toBe('When clicked: move the view to Hint');
+    expect(buildBehaviour(ctx, 'view-page', 'click', {}, mk).sentence).toBe('When clicked: show the whole page again');
     expect(buildBehaviour(ctx, 'show', 'pointerenter', { layer: f.hint.id }, mk).nodes[0].params.type).toBe('pointerenter');
     expect(buildBehaviour(ctx, 'show', 'pointerenter', { layer: f.hint.id }, mk).sentence).toMatch(/^When hovered over: /);
   });
