@@ -1,4 +1,4 @@
-/*! built from the player's marking sources 0e03a7172dd048bda7d2 */
+/*! built from the player's marking sources c7ac18d2a493da80f486 */
 const MAX_PATTERN = 300;
 const MAX_UNBOUNDED = 3;
 const MAX_WORK = 65536;
@@ -1208,11 +1208,15 @@ const QUESTION_KINDS = [
   { value: "blank", label: "Fill in the blank", hint: "Type the missing word or number" },
   { value: "ordering", label: "Put in order", hint: "Arrange the items into the right order" },
   { value: "matching", label: "Matching (drag and drop)", hint: "Drag each term onto the definition it belongs to" },
+  { value: "categorise", label: "Categorise (drag into groups)", hint: "Drag each item into the group it belongs to" },
   { value: "hotspot", label: "Hotspot (click the right place)", hint: "Click the right place on a picture" }
 ];
 const MAX_OPTIONS = 30;
 const MAX_BLANKS = 8;
 const MAX_PAIRS = 8;
+const MAX_EXTRAS = 8;
+const MAX_GROUPS = 6;
+const MAX_CARDS = 24;
 const MAX_HINTS = 10;
 const IDENT = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const isIdentifier = (s) => IDENT.test(s);
@@ -1227,7 +1231,7 @@ function newQuestion(kind, prefix = "q1") {
     blanks: [],
     pairs: [],
     shuffle: false,
-    partial: kind === "multiple" || kind === "ordering" || kind === "blank" || kind === "matching",
+    partial: kind === "multiple" || kind === "ordering" || kind === "blank" || kind === "matching" || kind === "categorise",
     attempts: 0,
     attemptPenalty: 0,
     hints: [],
@@ -1262,6 +1266,23 @@ function newQuestion(kind, prefix = "q1") {
           { id: "p4", term: "Peru", match: "Lima" }
         ],
         hints: ["The capital of Egypt is on the Nile."]
+      };
+    case "categorise":
+      return {
+        ...base,
+        prompt: "Drag each animal into the group it belongs to.",
+        shuffle: true,
+        groups: [
+          { id: "g1", name: "Mammals" },
+          { id: "g2", name: "Birds" }
+        ],
+        cards: [
+          { id: "c1", text: "Dog", group: "g1" },
+          { id: "c2", text: "Whale", group: "g1" },
+          { id: "c3", text: "Eagle", group: "g2" },
+          { id: "c4", text: "Penguin", group: "g2" }
+        ],
+        hints: ["Penguins cannot fly, but they still lay eggs and have feathers."]
       };
     case "hotspot":
       return {
@@ -1320,7 +1341,20 @@ function normaliseQuestion(raw) {
     ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {}
   }));
   const pairs = list(raw.pairs, MAX_PAIRS).map((pr, i) => ({ id: str(pr.id) || `p${i + 1}`, term: str(pr.term), match: str(pr.match) }));
-  const bank = isObj(raw.bank) && str(raw.bank.items).trim() ? { items: str(raw.bank.items), order: raw.bank.order === "sequence" ? "sequence" : "random" } : null;
+  const extras = list(raw.extras, MAX_EXTRAS).map((x, i) => ({ id: str(x.id) || `x${i + 1}`, text: str(x.text) }));
+  const groups = list(raw.groups, MAX_GROUPS).map((g, i) => ({ id: str(g.id) || `g${i + 1}`, name: str(g.name) }));
+  const cards = list(raw.cards, MAX_CARDS).map((c, i) => ({
+    id: str(c.id) || `c${i + 1}`,
+    text: str(c.text),
+    group: str(c.group),
+    ...str(c.feedback) ? { feedback: str(c.feedback) } : {}
+  }));
+  const bank = isObj(raw.bank) && str(raw.bank.items).trim() ? {
+    items: str(raw.bank.items),
+    order: raw.bank.order === "sequence" ? "sequence" : "random",
+    ...raw.bank.end === "finish" ? { end: "finish" } : {},
+    ...raw.bank.end === "finish" && typeof raw.bank.count === "number" && raw.bank.count >= 1 ? { count: Math.min(1e3, Math.floor(raw.bank.count)) } : {}
+  } : null;
   return {
     kind,
     prefix: isIdentifier(str(raw.prefix)) ? str(raw.prefix) : d.prefix,
@@ -1329,6 +1363,10 @@ function normaliseQuestion(raw) {
     options,
     blanks,
     pairs,
+    ...extras.length ? { extras } : {},
+    ...kind === "categorise" ? { groups, cards } : {},
+    ...kind === "categorise" && raw.dropFeedback === true ? { dropFeedback: true } : {},
+    ...kind === "blank" && raw.answerBy === "drag" ? { answerBy: "drag" } : {},
     shuffle: raw.shuffle === true,
     partial: raw.partial === true,
     attempts: Math.round(num(raw.attempts, 0, 0, 100)),
@@ -1344,6 +1382,8 @@ function normaliseQuestion(raw) {
     ...typeof raw.spoken === "string" && raw.spoken.trim() ? { spoken: raw.spoken.slice(0, 2e3) } : {},
     ...typeof raw.explain === "string" && raw.explain.trim() ? { explain: raw.explain.slice(0, 2e3) } : {},
     ...raw.numberKeys === true ? { numberKeys: true } : {},
+    ...raw.keep === true ? { keep: true } : {},
+    ...raw.hideReset === true ? { hideReset: true } : {},
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
@@ -1370,7 +1410,12 @@ function buildItems(q, random = Math.random) {
     return q.blanks.map((b, i) => ({ id: b.id, text: "", label: b.label, number: i + 1, selected: false, state: "" }));
   }
   if (q.kind === "matching") {
-    return q.pairs.map((p, i) => ({ id: p.id, text: p.term, label: p.match, number: i + 1, selected: false, state: "" }));
+    const rows = q.pairs.map((p, i) => ({ id: p.id, text: p.term, label: p.match, number: i + 1, selected: false, state: "" }));
+    return [...rows, ...(q.extras ?? []).map((x, k) => ({ id: x.id, text: x.text, label: "", number: rows.length + k + 1, selected: false, state: "" }))];
+  }
+  if (q.kind === "categorise") {
+    const groups = new Map((q.groups ?? []).map((g) => [g.id, g.name]));
+    return (q.cards ?? []).map((c, i) => ({ id: c.id, text: c.text, label: groups.get(c.group) ?? "", number: i + 1, selected: false, state: "" }));
   }
   let list = q.options;
   if (q.kind === "ordering") {
@@ -1485,7 +1530,26 @@ function gradeMatching(q, placed) {
     if (ok) hit++;
     states[p.id] = ok ? "correct" : "wrong";
   }
+  let strays = 0;
+  for (const x of q.extras ?? []) {
+    const stray = !!placed[x.id];
+    if (stray) strays++;
+    states[x.id] = stray ? "wrong" : "";
+  }
   const n = q.pairs.length;
+  const correct = n > 0 && hit === n && strays === 0;
+  return { correct, fraction: correct ? 1 : q.partial && n ? Math.max(0, hit - strays) / n : 0, states };
+}
+function gradeCategorise(q, placed) {
+  const states = {};
+  let hit = 0;
+  const cards = q.cards ?? [];
+  for (const c of cards) {
+    const ok = !!c.group && placed[c.id] === c.group;
+    if (ok) hit++;
+    states[c.id] = ok ? "correct" : "wrong";
+  }
+  const n = cards.length;
   const correct = n > 0 && hit === n;
   return { correct, fraction: correct ? 1 : q.partial && n ? hit / n : 0, states };
 }
@@ -1508,7 +1572,8 @@ function scoreFor(q, fraction, attempts, hintsUsed) {
 function nothingToCheck(q, a) {
   if (q.kind === "blank") return (a.values ?? []).some((v) => v.trim()) ? null : "Type an answer first.";
   if (q.kind === "ordering") return null;
-  if (q.kind === "matching") return q.pairs.some((p) => a.placed?.[p.id]) ? null : "Drag at least one item into place first.";
+  if (q.kind === "matching") return [...q.pairs, ...q.extras ?? []].some((p) => a.placed?.[p.id]) ? null : "Drag at least one item into place first.";
+  if (q.kind === "categorise") return (q.cards ?? []).some((c) => a.placed?.[c.id]) ? null : "Drag at least one item into a group first.";
   if (a.selected?.length) return null;
   return q.kind === "hotspot" ? "Click the picture first." : q.kind === "multiple" ? "Choose at least one option first." : "Choose an answer first.";
 }
@@ -1524,6 +1589,10 @@ function markAnswer(q, a, prior) {
     const placed = a.placed ?? {};
     grade = gradeMatching(q, placed);
     placedPairs = q.pairs.filter((p) => placed[p.id] === p.id).length;
+  } else if (q.kind === "categorise") {
+    const placed = a.placed ?? {};
+    grade = gradeCategorise(q, placed);
+    placedPairs = (q.cards ?? []).filter((c) => !!c.group && placed[c.id] === c.group).length;
   } else {
     const selected = a.selected ?? [];
     grade = gradeChoice(q, selected);
@@ -1534,8 +1603,9 @@ function markAnswer(q, a, prior) {
   const locked = grade.correct || outOfTries;
   const part = !grade.correct && grade.fraction > 0 && q.feedbackPartial.trim();
   const generic = grade.correct ? q.feedbackCorrect : outOfTries && q.feedbackOutOfTries.trim() ? q.feedbackOutOfTries : part ? q.feedbackPartial : q.feedbackIncorrect;
-  const extra = chosen.map((o) => o.feedback?.trim()).filter(Boolean)[0] ?? "";
-  const count = q.kind === "matching" && !grade.correct ? `${placedPairs} of ${q.pairs.length} matched correctly.` : "";
+  const wrongCard = q.kind === "categorise" ? (q.cards ?? []).find((c) => grade.states[c.id] === "wrong" && c.feedback?.trim()) : void 0;
+  const extra = wrongCard ? wrongCard.feedback.trim() : chosen.map((o) => o.feedback?.trim()).filter(Boolean)[0] ?? "";
+  const count = q.kind === "matching" && !grade.correct ? `${placedPairs} of ${q.pairs.length} matched correctly.` : q.kind === "categorise" && !grade.correct ? `${placedPairs} of ${(q.cards ?? []).length} in the right group.` : "";
   const reveal = locked && q.reveal && !grade.correct;
   const m = {
     correct: grade.correct,
@@ -1558,11 +1628,17 @@ function markAnswer(q, a, prior) {
       if (grade.states[b.id] === "wrong") m.answers[b.id] = b.answers.find((x) => !/^\/.+\/[a-z]*$/.test(x.trim())) ?? "";
     });
   }
+  if (q.kind === "categorise" && reveal) {
+    m.answers = {};
+    const names = new Map((q.groups ?? []).map((g) => [g.id, g.name]));
+    for (const c of q.cards ?? []) if (grade.states[c.id] === "wrong") m.answers[c.id] = names.get(c.group) ?? "";
+  }
   if (q.kind === "ordering" && reveal) m.order = q.options.map((o) => o.id);
   return m;
 }
 function serverMarkingProblem(q) {
   if (q.kind === "matching") return "Matching questions are marked in the page: which term belongs in which slot is part of how the layers are set up, so it cannot be taken out of what the learner downloads.";
+  if (q.kind === "categorise") return "Categorise questions are marked in the page: which group an item belongs in is part of how the layers are set up, so it cannot be taken out of what the learner downloads.";
   if (q.bank) return "Questions drawn from a data bank are marked in the page: the bank is data the learner downloads with the project.";
   if (q.voice?.device) return "The learner's own device voice reads this word, so the word is in the page and it cannot be kept secret: it is marked in the page, for practice, and sends no grade. Make the audio with the editor's voice instead to mark it on the server.";
   return null;
@@ -1702,7 +1778,8 @@ const viewOf = (q, st, key, states) => ({
   locked: st.locked,
   score: st.score,
   correct: st.correct,
-  answered: st.attempts > 0
+  answered: st.attempts > 0,
+  counted: st.counted ? st.counted.score : -1
 });
 function realAnswer(q, frameId, a, idFor) {
   if (q.kind === "blank") {
