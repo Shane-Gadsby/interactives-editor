@@ -33,3 +33,36 @@ describe('Preview learner record', () => {
     expect(ask('userdata-load', { names: ['circlePos'] })!.data).toEqual({});
   });
 });
+
+describe('Preview and shared responses', () => {
+  beforeEach(() => localStorage.clear());
+  const project = (shared: Record<string, unknown>) => ({ dataSources: [{ id: 'ds1', name: 'responses', kind: 'json', source: 'shared', shared }] }) as unknown as Parameters<typeof answerPreviewProgress>[1];
+  const shared = (doc: ReturnType<typeof project>, op: string, body: Record<string, unknown> = {}) => answerPreviewProgress({ source: 'interactives-progress', op, rid: 'r', project: 'p1', sharedSource: 'ds1', who: 'class', ...body }, doc);
+
+  it('makes the class from the sample answers and what the previewer adds, within the limits and blocklist', () => {
+    const doc = project({ sample: ['sleep', 'sleep', 'focus'], perPerson: 2, blocked: ['spam'], minCount: 1 });
+    expect((shared(doc, 'shared-read')!.data as any).answers.map((a: any) => [a.text, a.count])).toEqual([['sleep', 2], ['focus', 1]]);
+    const added = shared(doc, 'shared-add', { answers: ['Sleep', 'spam', 'new', 'third'] })!;
+    expect(added.data).toMatchObject({ kept: 2, problem: 'full', mine: ['Sleep', 'new'] });
+    expect((added.data as any).answers.map((a: any) => [a.text, a.count])).toEqual([['sleep', 3], ['focus', 1], ['new', 1]]);
+    expect(previewLearnerHas('p1')).toBe(true);
+    expect((shared(doc, 'shared-withdraw', { answers: ['new'] })!.data as any).mine).toEqual(['Sleep']);
+    expect((shared(doc, 'shared-withdraw')!.data as any).mine).toEqual([]);
+  });
+
+  it('keeps Only me to the previewer\'s own answers, and holds a minimum for the class', () => {
+    const doc = project({ sample: ['a', 'b', 'b'], minCount: 2 });
+    expect((shared(doc, 'shared-read')!.data as any).answers.map((a: any) => a.text)).toEqual(['b']);
+    shared(doc, 'shared-add', { who: 'me', answers: ['private'] });
+    const me = shared(doc, 'shared-read', { who: 'me' })!.data as any;
+    expect(me.answers.map((a: any) => a.text)).toEqual(['private']);
+    expect(me.who).toBe('me');
+  });
+
+  it('says there is nothing here for a source the project does not have, and forgets the lot', () => {
+    expect(shared(project({}), 'shared-read', { sharedSource: 'nope' })).toEqual({ ok: true, available: false });
+    shared(project({}), 'shared-add', { answers: ['x'] });
+    forgetPreviewLearner('p1');
+    expect(previewLearnerHas('p1')).toBe(false);
+  });
+});

@@ -5,7 +5,7 @@ import { BRAND_FONT } from '../../looks';
 import { button, stroke, text, type BrandedCtx } from '../../kit';
 import { bind, heroPage } from '../assessment/shared';
 
-export { bind, click, go, graph, setVar, variable } from '../assessment/shared';
+export { bind, click, go, graph, graphNote, setVar, variable } from '../assessment/shared';
 export { addVar, goNext, goPrevious } from '../../graph-kit';
 
 /** True when a text variable has nothing written in it. */

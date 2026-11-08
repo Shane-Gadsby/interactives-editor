@@ -309,7 +309,7 @@ export const mindMapStarter: BrandedStarter = {
       const change = (expr: string): ActionStep[] => [set(picked, 'mine[mineAt].id'), set(mine, expr), set(at, 'mine.findIndex(n => n.id == picked)')];
       const adds = (parent: string): ActionStep[] => [set(picked, 'mindMapNextId(mine)'), set(mine, `mindMapEdit(mine, "add", ${parent}, draft)`), set(at, 'mine.findIndex(n => n.id == picked)'), announce('"Added " + mine[mineAt].label')];
       const onStart = g.event('event.start', {}, 'Coming back: show the selected idea in the box');
-      graphNote(build, { anchor: onStart, colour: 'sky', text: '**Every change goes through `mindMapEdit`.** An idea can move in the list when it is changed, so each flow keeps its id in `picked` and finds it again.' });
+      graphNote(build, { anchor: onStart, colour: 'sky', text: '**Every change goes through mindMapEdit.** An idea can move in the list when it is changed, so each flow keeps its id in `picked` and finds it again.' });
       g.run(onStart, set(draft, 'mineLayout[mineAt].label'));
       g.run(g.event('event.variable', { variable: at.id }, 'A different idea is selected'), set(draft, 'mineLayout[mineAt].label'));
       g.run(g.event('event.pointer', { target: mineLayers.ideas.id, type: 'click', childrenOnly: true }, 'Select an idea'), set(at, 'event.childIndex'));

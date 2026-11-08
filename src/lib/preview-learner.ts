@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { answerKey, cleanAnswer, cleanSharedSettings, isBlockedAnswer, tallyAnswers, type Project, type SharedValue, type SharedWho } from 'interactives-player';
 /**
  * Preview's pretend learner record. The previewed project runs in a sandboxed frame with no storage of its own, so its Save user
  * data and remembered progress used to last one run: the player asked the page around it, nobody answered, and the browser
@@ -16,6 +17,10 @@ interface Ask {
   variables?: unknown;
   names?: unknown;
   data?: unknown;
+  /** Shared responses: the data source's id, who sees it, and the answers. */
+  sharedSource?: unknown;
+  who?: unknown;
+  answers?: unknown;
 }
 
 export interface PreviewReply {
@@ -44,8 +49,43 @@ function write(k: string, value: unknown): boolean {
   }
 }
 
+/**
+ * Shared responses in Preview: the class is the data source's sample answers (each counted as a person of their own) plus whatever the
+ * person previewing adds, which Preview keeps with the rest of its pretend learner. Only me is just their own. The same limits and
+ * blocklist as the server applies.
+ */
+function previewShared(m: Ask, project: Project | undefined, project0: string): PreviewReply {
+  const ds = project?.dataSources.find((d) => d.id === m.sharedSource && d.source === 'shared');
+  if (!ds) return { ok: true, available: false };
+  const s = cleanSharedSettings(ds.shared);
+  const who: SharedWho = m.who === 'me' ? 'me' : 'class';
+  const at = key(project0, `shared:${ds.id}:${who}`);
+  let mine = ((read(at) as string[] | undefined) ?? []).filter((x) => typeof x === 'string');
+  let kept = 0;
+  let problem = '';
+  if (m.op === 'shared-add') {
+    for (const raw of Array.isArray(m.answers) ? m.answers : [m.answers]) {
+      const text = cleanAnswer(raw, s.maxLength);
+      if (!text) continue;
+      if (isBlockedAnswer(text, s.blocked)) problem = 'blocked';
+      else if (mine.some((x) => answerKey(x) === answerKey(text))) continue;
+      else if (mine.length >= s.perPerson) problem = 'full';
+      else (mine.push(text), kept++);
+    }
+    write(at, mine);
+  } else if (m.op === 'shared-withdraw') {
+    const gone = (Array.isArray(m.answers) ? m.answers : []).map((a) => answerKey(String(a)));
+    mine = gone.length ? mine.filter((x) => !gone.includes(answerKey(x))) : [];
+    write(at, mine);
+  }
+  const others = who === 'class' ? s.sample.map((t) => [t]) : [];
+  const answers = tallyAnswers([...others, mine], who === 'class' ? s.minCount : 1, (t) => !isBlockedAnswer(t, s.blocked));
+  const value: SharedValue = { ready: true, who, answers, total: answers.reduce((n, a) => n + a.count, 0), people: others.length + (mine.length ? 1 : 0), mine, left: Math.max(0, s.perPerson - mine.length), limit: s.perPerson, problem };
+  return { ok: true, available: true, data: m.op === 'shared-add' ? { ...value, kept } : value };
+}
+
 /** The answer to one of the player's progress messages, or null when it is not one Preview answers (no reply is sent). */
-export function answerPreviewProgress(m: Ask): PreviewReply | null {
+export function answerPreviewProgress(m: Ask, doc?: Project): PreviewReply | null {
   if (!m || m.source !== 'interactives-progress' || typeof m.op !== 'string') return null;
   const project = typeof m.project === 'string' && m.project ? m.project : 'project';
   switch (m.op) {
@@ -69,6 +109,10 @@ export function answerPreviewProgress(m: Ask): PreviewReply | null {
     case 'context':
     case 'mark':
       return { ok: true, available: false };
+    case 'shared-read':
+    case 'shared-add':
+    case 'shared-withdraw':
+      return previewShared(m, doc, project);
     default:
       return null;
   }
@@ -76,13 +120,29 @@ export function answerPreviewProgress(m: Ask): PreviewReply | null {
 
 /** What Preview has kept for this project (for the Forget button's title), and forgetting it. */
 export function previewLearnerHas(project: string): boolean {
-  return read(key(project, 'user')) !== undefined || read(key(project, 'progress')) !== undefined;
+  return read(key(project, 'user')) !== undefined || read(key(project, 'progress')) !== undefined || sharedKeys(project).length > 0;
+}
+
+/** The keys of the answers Preview kept for shared responses in this project. */
+function sharedKeys(project: string): string[] {
+  const out: string[] = [];
+  try {
+    const prefix = key(project, 'shared:');
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(prefix)) out.push(k);
+    }
+  } catch {
+    /* nothing kept */
+  }
+  return out;
 }
 
 export function forgetPreviewLearner(project: string): void {
   try {
     localStorage.removeItem(key(project, 'user'));
     localStorage.removeItem(key(project, 'progress'));
+    for (const k of sharedKeys(project)) localStorage.removeItem(k);
   } catch {
     /* nothing kept */
   }

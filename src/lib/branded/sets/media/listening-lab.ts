@@ -6,7 +6,7 @@ import { createNode, type Artboard, type FrameNode, type SceneNode, type Templat
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { keyNavList, stack } from '../../parts';
-import { addVar, announce, bind, boxText, click, endPage, goNext, graph, heroPage, resetVars, setVar, toggleVar } from './shared';
+import { addVar, announce, bind, boxText, click, endPage, goNext, graph, graphNote, heroPage, resetVars, setVar, toggleVar } from './shared';
 import { addPlaceholderSound, type Note } from './sounds';
 
 //Three rounds, read from the "rounds" list in the Variables tab: the question, up to three answers, the right one (counting from 0) and why
@@ -52,6 +52,9 @@ interface Clip {
 }
 
 type G = ReturnType<typeof graph>;
+
+//The first node on a page labelled like this (the flows the helpers below build are not handed back, so notes find them by their label)
+const labelled = (page: Artboard, label: RegExp) => page.logic.nodes.find((n) => label.test(n.note ?? ''))!;
 
 //Play when nothing of this clip is going, Stop when it is: the label and the press both read soundPlaying() for the clip's own sound
 const toggleClip = (g: G, btn: SceneNode, name: string, asset: string, loopExpr: string, speedExpr: string): void => {
@@ -125,7 +128,9 @@ function round(ctx: BrandedCtx, page: Artboard, g: G, v: Vars, index: number, o:
   });
   page.children.push(answers, flash);
   //One flow for every answer: the event says which copy was pressed, and a locked round ignores the rest
-  g.run(g.event('event.pointer', { target: answer.id, type: 'click', onlyIf: '!locked' }, 'An answer'), setVar(v.locked, 'true'), setVar(v.choice, 'event.index'), setVar(v.lastRight, `${r}.answer == event.index`), setVar(v.score, 'lastRight ? 1 : 0', 'add'), announce(`(lastRight ? "Correct. " : "Not quite. The right answer was " + ${r}.options[${r}.answer] + ". ") + ${r}.why`));
+  const onAnswer = g.event('event.pointer', { target: answer.id, type: 'click', onlyIf: '!locked' }, 'An answer');
+  graphNote(page, { anchor: onAnswer, colour: 'sky', text: `**One flow serves every answer.** \`event.index\` is the option pressed, *Only if* \`!locked\` ignores any press after the first, and \`lastRight\` compares it with \`rounds[${index}].answer\` before the score takes one for a right answer.` });
+  g.run(onAnswer, setVar(v.locked, 'true'), setVar(v.choice, 'event.index'), setVar(v.lastRight, `${r}.answer == event.index`), setVar(v.score, 'lastRight ? 1 : 0', 'add'), announce(`(lastRight ? "Correct. " : "Not quite. The right answer was " + ${r}.options[${r}.answer] + ". ") + ${r}.why`));
   g.run(click(g, nextBtn, 'Next'), goNext());
   g.run(g.event('event.start', {}, 'Round starts'), resetVars(v.locked, v.choice, v.lastRight));
   return answer;
@@ -199,8 +204,10 @@ function build(colourway: Colourway) {
   {
     const g = graph(check);
     toggleClip(g, testBtn, 'Test tone', sounds.test, 'false', '1');
+    graphNote(check, { anchor: labelled(check, /^Test tone$/), colour: 'sky', text: '**Play and Stop are one button.** The If asks `soundPlaying()` for this clip\'s own sound, so a press stops it when it is going and starts it when it is not. The button\'s label reads the same expression.' });
     g.run(click(g, heard, 'Continue'), goNext());
     g.run(click(g, noSound, 'Without sound'), setVar(v.showText, 'true'), goNext());
+    graphNote(check, { anchor: labelled(check, /^Without sound$/), colour: 'sky', text: '**"I can\'t use sound" only turns showText on** and carries on, so every round that follows can be done from the written descriptions.' });
   }
   checklist.push(item('Check the sound check wording suits your learners, and swap the test tone for your own if you like (the Play sound node on the test button)', tips, check));
 
@@ -210,6 +217,7 @@ function build(colourway: Colourway) {
     const g = graph(identify);
     clipCard(ctx, identify, g, { title: 'Sound 1', asset: sounds.doorbell, description: 'Two soft bell notes, a higher one then a lower one, with a short gap between.' }, b.x, b.y, 448);
     switches(ctx, identify, g, v, b.x, b.y + 212);
+    graphNote(identify, { anchor: labelled(identify, /^Play or stop/), colour: 'sky', text: '**The Play sound nodes read looping and slow as they start**, and Stop other sounds first is on. So the Loop and Slow switches (each just a Toggle) apply from the next press of Play.' });
     round(ctx, identify, g, v, 0, { prompt: { x: b.x + 480, y: b.y, w: 448 }, answers: { x: b.x + 480, y: b.y + 62, w: 448, row: false }, feedback: { x: b.x, y: b.y + 290, w: b.width } });
   }
 
@@ -220,6 +228,7 @@ function build(colourway: Colourway) {
     clipCard(ctx, compare, g, { title: 'Clip A', asset: sounds.steady, description: 'A steady, smooth note that stays the same.' }, b.x, b.y, 448);
     clipCard(ctx, compare, g, { title: 'Clip B', asset: sounds.rough, description: 'The same note, but it wobbles and buzzes.' }, b.x + 480, b.y, 448);
     switches(ctx, compare, g, v, b.x, b.y + 210);
+    graphNote(compare, { anchor: labelled(compare, /^Play or stop Clip A$/), colour: 'sky', text: '**Stop other sounds first** is on in both Play sound nodes, so starting Clip B stops Clip A and only one is ever heard. [ ] Keep it on if you swap in your own clips.' });
     round(ctx, compare, g, v, 1, { prompt: { x: b.x, y: b.y + 266, w: b.width }, answers: { x: b.x, y: b.y + 306, w: b.width, row: true }, feedback: { x: b.x, y: b.y + 366, w: b.width } });
   }
 
@@ -294,6 +303,8 @@ function build(colourway: Colourway) {
     g.run(g.event('event.drop', { result: 'rejected' }, 'Sorting'), setVar(v.misses, '1', 'add'), setVar(v.message, 'event.layer + " does not go in " + event.zone + ". Listen again and try the other group."'), announce('message'));
     g.run(g.event('event.start', {}, 'Round starts'), ['action.dragReset', {}], resetVars(v.misses, v.message));
     g.run(click(g, see, 'Next'), goNext());
+    graphNote(sort, { anchor: ok, colour: 'sky', text: '**A drop is accepted when the sound\'s Tags match the group\'s Takes tags**, so there is no right-answer list here. The live `sorted` reaching the chip count is what says "All sorted", once. A refused drop only counts a miss.' });
+    graphNote(sort, { anchor: labelled(sort, /^Round starts$/), colour: 'sky', text: '**Drag reset puts every chip back** whenever the page opens, along with the misses and the message, so a second go starts clean.' });
   }
 
   //Round 4: what changed (the second clip is the first with one thing different)
@@ -303,6 +314,7 @@ function build(colourway: Colourway) {
     clipCard(ctx, changed, g, { title: 'Before', asset: sounds.before, description: 'Three short beeps, all at the same pitch.' }, b.x, b.y, 448);
     clipCard(ctx, changed, g, { title: 'After', asset: sounds.after, description: 'Three short beeps, all higher than before.' }, b.x + 480, b.y, 448);
     switches(ctx, changed, g, v, b.x, b.y + 210);
+    graphNote(changed, { anchor: labelled(changed, /^Play or stop Before$/), colour: 'sky', text: '**Before and After are the same pair of nodes as the compare round**, so the same switches and the same one-at-a-time rule apply. [ ] The second clip should differ from the first in just one thing.' });
     round(ctx, changed, g, v, 2, { prompt: { x: b.x, y: b.y + 266, w: b.width }, answers: { x: b.x, y: b.y + 306, w: b.width, row: true }, feedback: { x: b.x, y: b.y + 366, w: b.width }, nextLabel: 'See results' });
   }
 

@@ -73,6 +73,8 @@ let port = Number(process.env.PORT) || 3048,
 	templates,
 	userData,
 	activityData,
+	sharedRows,
+	sharedHidden,
 	userLookup,
 	ingest,
 	commentRows,
@@ -102,6 +104,8 @@ let ops = null,
 	records = null,
 	media = null,
 	commentLib = null,
+	responses = null,
+	sharedLimits = {},
 	store = null
 const rooms = new Map(),
 	LOG_KEEP = 2000,
@@ -820,6 +824,8 @@ const purgeProject = async (row) => {
 	await store.dropProject(id)
 	await userData.deleteMany({project: id})
 	await activityData.deleteMany({project: id})
+	await sharedRows.deleteMany({project: id})
+	await sharedHidden.deleteMany({project: id})
 	await commentRows.deleteMany({project: id})
 	await commentNotices.deleteMany({project: id})
 	await libraries.deleteOne({_id: id})
@@ -1948,13 +1954,14 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 
 	let token = doc.share?.token || crypto.randomBytes(18).toString('base64url'),
 		sensors = declaredSensors(html),
-		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(sensors ? {sensors} : {})}
+		shared = responses.declaredShared(html),
+		share = {token, created: doc.share?.created || new Date(), updated: new Date(), by: whoIs(req), remix: !!doc.share?.remix, ...(sensors ? {sensors} : {}), ...(Object.keys(shared).length ? {shared} : {})}
 
 	await fs.promises.mkdir(path.dirname(shareFile(token)), {recursive: true})
 	//An update keeps the page it replaces (one, not a history), so a bad publish can be undone in a click
 	let prevKept = false
 	if (doc.share?.token && await moveIfThere(shareFile(token), sharePrevFile(token))) {
-		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {})}
+		share.previous = {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {})}
 		prevKept = true
 	}
 	await fs.promises.writeFile(shareFile(token), prepared ? prepared.html : html)
@@ -1994,7 +2001,7 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	await fs.promises.rename(sharePrevFile(token), shareFile(token))
 	await fs.promises.rename(swap, sharePrevFile(token))
 
-	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
+	let share = {...doc.share, updated: doc.share.previous.updated, by: doc.share.previous.by, previous: {updated: doc.share.updated || null, by: doc.share.by || null, ...(doc.share.sensors ? {sensors: doc.share.sensors} : {}), ...(doc.share.shared ? {shared: doc.share.shared} : {})}, reverted: {at: new Date(), by: whoIs(req)}},
 		set = {share}, unset = {}
 
 	//The page that came back has the sensors it was shared with
@@ -2003,6 +2010,14 @@ router.post('/api/projects/:id/share/revert', async (req, res) => {
 	}
 	else {
 		delete share.sensors
+	}
+
+	//And the shared responses it declared
+	if (doc.share.previous.shared) {
+		share.shared = doc.share.previous.shared
+	}
+	else {
+		delete share.shared
 	}
 	//The answer keys swap with their pages
 	if (doc.previousMarking) set.marking = doc.previousMarking
@@ -3765,6 +3780,280 @@ router.put('/learn/:token/user-data', express.json({limit: '100kb'}), async (req
 	res.json({available: true, ok: true})
 })
 
+//Shared responses: short answers people add that a whole class sees counted (a word cloud, a poll). A shared page declares its
+//sources when it is shared (share.shared, by data source id: who sees, the limits, the blocklist), and these routes hold to that,
+//never to what a browser sends. Identity is the session's, like user data. Answers a person adds for "Only me" are kept apart
+//(own) from the ones the class sees (answers), so changing a project's setting later never shows anyone what they kept to themselves.
+//Counts come back, never names. A class is a project + course; the unique index on project, source, course and username is what
+//makes one list per person.
+const sharedCache = new Map(),
+	sharedCacheMs = 3000,
+	sharedKeyOf = (project, source, course) => `${project}|${source}|${course}`,
+
+	//The class's lists with no usernames in them, held a few seconds so a room full of players polling is not a room full of queries
+	sharedClass = async (project, source, course) => {
+		let key = sharedKeyOf(project, source, course),
+			hit = sharedCache.get(key)
+
+		if (hit && Date.now() - hit.at < sharedCacheMs) {
+			return hit
+		}
+
+		let docs = await sharedRows.find({project, source, course}, {projection: {username: 0}}).toArray(),
+			hidden = await sharedHidden.findOne({project, source, course}),
+			next = {at: Date.now(), docs: docs.map((d) => ({answers: d.answers || []})), hidden: new Set(hidden?.keys || [])}
+
+		sharedCache.set(key, next)
+
+		if (sharedCache.size > 500) {
+			for (let [k, v] of sharedCache) {
+				if (Date.now() - v.at > sharedCacheMs) {
+					sharedCache.delete(k)
+				}
+			}
+		}
+
+		return next
+	},
+
+	sharedForget = (project, source, course) => sharedCache.delete(sharedKeyOf(project, source, course)),
+
+	//What this person is told: the class's counts or their own list, and their own list and allowance either way
+	sharedValue = async (at, who, problem = '') => {
+		let {project, person, declared, source} = at,
+			row = await sharedRows.findOne({project: project._id, source, course: person.course, username: person.username}),
+			mine = (who === 'me' ? row?.own : row?.answers || []) || [],
+			klass = who === 'me' ? {docs: [], hidden: new Set()} : await sharedClass(project._id, source, person.course)
+
+		return responses.valueFor({declared, who, docs: klass.docs, mine: mine.map((a) => a.text), hidden: klass.hidden, problem})
+	},
+
+	//The project, the person (off the session) and what the owner declared for this source, or the reply already sent
+	sharedAt = async (req, res) => {
+		let project = await sharedProject(req, res)
+
+		if (!project) {
+			return null
+		}
+
+		let person = learnerOf(req)
+
+		if (!person) {
+			res.json({available: false})
+			return null
+		}
+
+		let source = req.params.source,
+			declared = project.share?.shared?.[source]
+
+		if (!declared) {
+			res.status(404).json({error: 'That project has no such shared responses (share it again after adding them)'})
+			return null
+		}
+
+		return {project, person, declared, source}
+	}
+
+router.get('/learn/:token/shared/:source', async (req, res) => {
+	let at = await sharedAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let who = responses.effectiveWho(at.declared, req.query.who)
+
+	if (!sharedLimits.read.hit(`${at.project._id}|${at.person.username}`)) {
+		return res.json({available: true, ok: true, value: null, problem: 'busy'})
+	}
+
+	res.json({available: true, ok: true, value: await sharedValue(at, who)})
+})
+
+router.post('/learn/:token/shared/:source', express.json({limit: '4kb'}), async (req, res) => {
+	let at = await sharedAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let {project, person, declared, source} = at,
+		who = responses.effectiveWho(declared, req.body?.who),
+		busy = !sharedLimits.write.hit(`${project._id}|${person.username}`)
+
+	if (busy) {
+		return res.json({available: true, ok: true, kept: 0, value: {...(await sharedValue(at, who, 'busy'))}})
+	}
+
+	let key = {project: project._id, source, course: person.course, username: person.username},
+		field = who === 'me' ? 'own' : 'answers',
+		plan = null
+
+	let saved = await saveRecord(key, (existing) => {
+		plan = responses.planAdd(existing?.[field] || [], req.body?.answers, declared)
+
+		return plan.kept ? {[field]: plan.list, updated: new Date()} : null
+	}, sharedRows)
+
+	if (saved) {
+		sharedForget(project._id, source, person.course)
+	}
+
+	res.json({available: true, ok: true, kept: saved ? plan.kept : 0, value: await sharedValue(at, who, plan?.problem || '')})
+})
+
+router.post('/learn/:token/shared/:source/withdraw', express.json({limit: '4kb'}), async (req, res) => {
+	let at = await sharedAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let {project, person, declared, source} = at,
+		who = responses.effectiveWho(declared, req.body?.who)
+
+	if (!sharedLimits.write.hit(`${project._id}|${person.username}`)) {
+		return res.json({available: true, ok: true, value: await sharedValue(at, who, 'busy')})
+	}
+
+	let key = {project: project._id, source, course: person.course, username: person.username},
+		field = who === 'me' ? 'own' : 'answers'
+
+	await saveRecord(key, (existing) => existing && existing[field]?.length ? {[field]: responses.planWithdraw(existing[field], req.body?.answers, declared), updated: new Date()} : null, sharedRows)
+	sharedForget(project._id, source, person.course)
+	res.json({available: true, ok: true, value: await sharedValue(at, who)})
+})
+
+//What the owner (or a power user) sees and does about a project's shared responses: every source the shared page declares, and for each
+//course the answers with their counts before the minimum applies. Hiding an answer keeps it but takes it out of what the class
+//sees (and can be undone); removing it takes it out of everyone's lists; clearing empties the course. None of it touches what
+//people keep for themselves under Only me
+const sharedSourceOf = async (req, res) => {
+	let doc = await projectFor(req, res, {ownerOnly: true})
+
+	if (!doc) {
+		return null
+	}
+
+	let source = req.params.source,
+		declared = doc.share?.shared?.[source]
+
+	if (!declared) {
+		res.status(404).json({error: 'That project has no such shared responses. Share it again after adding them'})
+		return null
+	}
+
+	return {doc, source, declared}
+}
+
+const sharedCourse = (req) => typeof req.body?.course === 'string' ? req.body.course : typeof req.query.course === 'string' ? req.query.course : ''
+
+router.get('/api/projects/:id/shared', async (req, res) => {
+	let doc = await projectFor(req, res, {ownerOnly: true})
+
+	if (!doc) {
+		return
+	}
+
+	let out = []
+
+	for (let [source, declared] of Object.entries(doc.share?.shared || {})) {
+		let rows = await sharedRows.find({project: doc._id, source}, {projection: {username: 0, own: 0}}).toArray(),
+			hiddenRows = await sharedHidden.find({project: doc._id, source}).toArray(),
+			courses = new Map()
+
+		for (let row of rows) {
+			let list = courses.get(row.course || '') || []
+
+			list.push({answers: row.answers || []})
+			courses.set(row.course || '', list)
+		}
+
+		for (let h of hiddenRows) {
+			if (!courses.has(h.course || '')) {
+				courses.set(h.course || '', [])
+			}
+		}
+
+		out.push({
+			source,
+			name: declared.name || source,
+			declared: {who: declared.who, byVariable: declared.byVariable, minCount: declared.minCount, perPerson: declared.perPerson, maxLength: declared.maxLength, blocked: declared.blocked},
+			courses: [...courses.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([course, docs]) => ({course, ...responses.moderationView(docs, new Set(hiddenRows.find((h) => (h.course || '') === course)?.keys || []), declared)}))
+		})
+	}
+
+	res.json({sources: out})
+})
+
+router.put('/api/projects/:id/shared/:source/hidden', express.json({limit: '4kb'}), async (req, res) => {
+	let at = await sharedSourceOf(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let course = sharedCourse(req),
+		text = responses.cleanAnswer(req.body?.text, 120),
+		key = responses.answerKey(text)
+
+	if (!key) {
+		return res.status(400).json({error: 'Which answer?'})
+	}
+
+	let where = {project: at.doc._id, source: at.source, course},
+		existing = await sharedHidden.findOne(where),
+		keys = new Set(existing?.keys || [])
+
+	if (req.body?.hidden === false) {
+		keys.delete(key)
+	}
+	else if (keys.size < 1000) {
+		keys.add(key)
+	}
+
+	await sharedHidden.updateOne(where, {$set: {keys: [...keys], updated: new Date()}}, {upsert: true})
+	sharedForget(at.doc._id, at.source, course)
+	audit(req, req.body?.hidden === false ? 'shared-unhide' : 'shared-hide', at.doc, {source: at.source, course})
+	res.json({ok: true, hidden: keys.has(key)})
+})
+
+router.delete('/api/projects/:id/shared/:source/answers', express.json({limit: '4kb'}), async (req, res) => {
+	let at = await sharedSourceOf(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let course = sharedCourse(req),
+		text = responses.cleanAnswer(req.body?.text ?? req.query.text, 120),
+		key = responses.answerKey(text),
+		where = {project: at.doc._id, source: at.source, course}
+
+	//One answer from everyone's list, or (with no text) every answer in the course
+	let removed = 0
+
+	if (key) {
+		for (let row of await sharedRows.find(where).toArray()) {
+			let keep = (row.answers || []).filter((a) => responses.answerKey(a.text) !== key)
+
+			if (keep.length !== (row.answers || []).length) {
+				await sharedRows.updateOne({...where, username: row.username}, {$set: {answers: keep, updated: new Date()}})
+				removed++
+			}
+		}
+	}
+	else {
+		let r = await sharedRows.updateMany(where, {$set: {answers: [], updated: new Date()}})
+		removed = r.modifiedCount ?? r.matchedCount ?? 0
+		await sharedHidden.deleteMany(where)
+	}
+
+	sharedForget(at.doc._id, at.source, course)
+	audit(req, key ? 'shared-removed' : 'shared-cleared', at.doc, {source: at.source, course, people: removed})
+	res.json({ok: true, people: removed})
+})
+
 //The learner page for a share link: the shared project in its sandbox, framed by a small page that does have
 //the session. The project asks it (postMessage) to load, save and report for the learner, and it passes that on to
 //the routes above with the session id, so the sandboxed project never sees a session itself. Embed this in
@@ -3979,6 +4268,21 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 			var names = Array.isArray(m.names) ? m.names.filter(function (n) { return typeof n === 'string' }) : []
 			call('GET', 'user-data?names=' + encodeURIComponent(names.join(','))).then(function (j) {
 				answer(m, {ok: true, available: !!j.available, data: j.variables || null})
+			}, failed)
+		}
+		else if (m.op === 'shared-read') {
+			call('GET', 'shared/' + encodeURIComponent(m.sharedSource) + '?who=' + encodeURIComponent(m.who || '')).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
+		else if (m.op === 'shared-add') {
+			call('POST', 'shared/' + encodeURIComponent(m.sharedSource), {who: m.who, answers: m.answers}).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value ? Object.assign({kept: j.kept || 0}, j.value) : null})
+			}, failed)
+		}
+		else if (m.op === 'shared-withdraw') {
+			call('POST', 'shared/' + encodeURIComponent(m.sharedSource) + '/withdraw', {who: m.who, answers: m.answers}).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
 			}, failed)
 		}
 		else if (m.op === 'mark') {
@@ -4327,6 +4631,8 @@ client.connect()
 		auditLog = db.collection('audit')
 		userData = analyticsDB.collection('interactives-user-data')
 		activityData = analyticsDB.collection('interactives-activity-user-data')
+		sharedRows = db.collection('shared-responses')
+		sharedHidden = db.collection('shared-hidden')
 		ingest = analyticsDB.collection('ingest')
 		userLookup = analyticsDB.collection('user-lookup')
 		fs.mkdirSync(storageDir, {recursive: true})
@@ -4336,9 +4642,9 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod]) => {
 		ops = opsMod
 		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
@@ -4347,6 +4653,7 @@ client.connect()
 		learner = learnerMod
 		marker = markerMod
 		notesLib = notesMod
+		responses = responsesMod
 		markLimiter = markerMod.makeLimiter()
 		records = recordsMod
 		media = mediaMod
@@ -4356,6 +4663,10 @@ client.connect()
 		commentLimits.guestIP = new commentsMod.Limiter(10, 10 * 60 * 1000)
 		commentLimits.guestToken = new commentsMod.Limiter(60, 60 * 60 * 1000)
 		commentLimits.person = new commentsMod.Limiter(60, 10 * 60 * 1000)
+
+		//Shared responses: how often one person may add or take back (per project), and how often they may read
+		sharedLimits.write = new commentsMod.Limiter(30, 60 * 1000)
+		sharedLimits.read = new commentsMod.Limiter(180, 60 * 1000)
 		cacheHeaders.watchEpoch()
 
 		//The bin, now and every 6 hours

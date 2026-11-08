@@ -30,5 +30,7 @@ editor's native features: it edits each `project.json` with the editor's own hel
 tidy for the canvas, the player's layout for the layout demos), applies the per-example changes written in `scripts/examples-upgrade.ts`, and
 gives each example its author notes. The notes (ids starting `note_example_`) sit beside the artboard, never over a layer, are never drawn
 by the player, and are replaced rather than added to on a second run, so running it twice changes nothing (`test/examples.test.ts` checks
-that, plays every example, and keeps the notes off the artboards). When you add an example, add its entry to `UPGRADES` there. Rebuild a
+that, plays every example, and keeps the notes off the artboards). An example whose interaction graph is more than 5 nodes also gets graph notes
+(`graphNotes` in its entry, ids starting `note_example_gn_`, kept in `logic.notes` and anchored to a node so the tidy moves them with it), one or two
+that say what the flow does; the Rive import has one overview note. They are stripped from anything that plays, like the canvas notes. When you add an example, add its entry to `UPGRADES` there. Rebuild a
 `thumb.jpg` whenever an upgrade changes what the first artboard looks like.

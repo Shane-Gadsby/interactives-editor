@@ -2,7 +2,7 @@
 import { createNode, layoutCrossword as layout, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, card, contentBox, item, solid, stroke, text, heading, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, focus, goNext, heroPage, lit, set } from './common';
+import { Graph, addVar, announce, bind, focus, goNext, graphNote, heroPage, lit, set } from './common';
 
 export const SIZE = 10;
 const CELL = 40;
@@ -193,6 +193,7 @@ function build(colourway: Colourway) {
   //The word under the chosen square is a live variable, so all that is left to do when it moves is keep the direction and say where you are
   const onWord = g.add('event.variable', { variable: aw.id, onlyIf: 'aw >= 0' }, null, 'out', { note: 'Keep the direction of the word you are in' });
   g.run(onWord, set(dir, 'entries[aw].down ? "down" : "across"'));
+  graphNote(play, { anchor: onWord, colour: 'sky', text: '**aw, the word under the chosen square, is a live variable.** When it changes this keeps `dir` on that word\'s way, so moving along a clue never flips you across to the other direction.' });
   const onMoved = g.add('event.variable', { variable: sel.id, onlyIf: 'sel >= 0' }, null, 'out', { note: 'Say where the chosen square is' });
   g.run(onMoved, announce('aw < 0 ? "No word here" : current + ". Letter " + (wordCells.indexOf(sel) + 1) + " of " + wordCells.length + (cells[sel].t == "" ? ", empty" : ", " + cells[sel].t)'));
 
@@ -206,6 +207,7 @@ function build(colourway: Colourway) {
     g.run(onClue, set(dir, lit(name)), set(picked, '-1'), set(sel, `${key.name}[event.index].start`), focus(grid));
   }
   //Typing a letter fills the square and moves along the word. This one hears every key on the grid (so the page does not scroll under it) and only a letter does anything
+  graphNote(play, { anchor: onSquare, colour: 'sky', text: '**A second click on the same square turns the word** (`picked` remembers the last click). A clue row jumps to that entry\'s first square, and focus goes to the grid so typing starts at once.' });
   const onType = g.add('event.key', { key: '', type: 'keydown', target: square.id }, null, 'out', { note: 'Type a letter' });
   const isLetter = g.add('logic.if', { condition: 'sel >= 0 && event.key.length == 1 && !event.ctrl && !event.alt && !event.meta && "abcdefghijklmnopqrstuvwxyz".includes(event.key.toLowerCase())' }, onType);
   g.runFrom(
@@ -215,6 +217,7 @@ function build(colourway: Colourway) {
     set(cells, 'cells.map((c, j) => j == sel ? {...c, t: event.key.toUpperCase(), s: ""} : c)'),
     set(sel, 'wordCells.indexOf(sel) >= 0 && wordCells.indexOf(sel) < wordCells.length - 1 ? wordCells[wordCells.indexOf(sel) + 1] : sel'),
   );
+  graphNote(play, { anchor: onType, colour: 'sky', text: '**Typing writes cells and steps along the word.** The If skips anything with Ctrl, Alt or Meta held, so browser shortcuts keep working. Backspace, Delete and the arrows have flows of their own below.' });
   //Backspace clears this square, or steps back and clears the one before
   const onBack = g.add('event.key', { key: 'Backspace', type: 'keydown', target: square.id, onlyIf: 'sel >= 0' }, null, 'out', { note: 'Backspace' });
   g.run(
@@ -233,6 +236,7 @@ function build(colourway: Colourway) {
   const onDone = g.add('event.variable', { variable: done.id, onlyIf: 'done' }, null, 'out', { note: 'Crossword finished' });
   g.run(onDone, announce('status'));
 
+  graphNote(play, { anchor: onDone, colour: 'sky', text: '**done is live**, so it watches every letter against its answer and this fires the moment the last one is right. No Check press is needed to finish.' });
   //Check marks every typed letter right or wrong
   const onCheck = g.click(check, 'Check');
   g.run(
@@ -241,6 +245,7 @@ function build(colourway: Colourway) {
     set(notice, 'cells.filter(c => c.s == "bad").length > 0 ? cells.filter(c => c.s == "bad").length + " letter" + (cells.filter(c => c.s == "bad").length == 1 ? " is" : "s are") + " wrong (marked red)." : cells.filter(c => c.ch != "" && c.t == "").length > 0 ? "No mistakes so far. " + cells.filter(c => c.ch != "" && c.t == "").length + " squares still empty." : "Every letter is right."'),
     announce('status'),
   );
+  graphNote(play, { anchor: onCheck, colour: 'sky', text: '**Check marks, it never reveals.** Each typed letter becomes `ok` or `bad` for the grid to colour, and the red count goes into `notice`, which the live `status` reads aloud.' });
   //Reveal word fills the chosen word, Reveal all fills the grid
   const onRevealWord = g.add('event.pointer', { target: revealWord.id, type: 'click', onlyIf: 'aw >= 0' }, null, 'out', { note: 'Reveal the chosen word' });
   g.run(onRevealWord, set(notice, '"Word revealed."'), set(cells, 'cells.map((c, j) => wordCells.includes(j) ? {...c, t: c.ch, s: "shown"} : c)'), announce('"Word revealed: " + entries[aw].answer'));

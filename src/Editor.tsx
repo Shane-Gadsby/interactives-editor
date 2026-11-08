@@ -1321,10 +1321,10 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
         return;
       }
       //Save user data and remembered progress: kept here per project, like the learner page keeps them in StudyDesk
-      const kept = answerPreviewProgress(e.data);
+      const kept = answerPreviewProgress(e.data, store().get().project as Project);
       if (kept) {
         if (e.data.rid) frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'progress', rid: e.data.rid, ...kept }, '*');
-        if (e.data.op === 'userdata-save' || e.data.op === 'save') setKeptData(true);
+        if (e.data.op === 'userdata-save' || e.data.op === 'save' || e.data.op === 'shared-add') setKeptData(true);
         return;
       }
       if (e.data?.source !== 'interactives') return;

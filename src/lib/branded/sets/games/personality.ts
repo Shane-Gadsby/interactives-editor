@@ -3,7 +3,7 @@ import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, contentBox, heading, item, picture, solid, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { keyNavList, progressBar } from '../../parts';
-import { Graph, addVar, announce, bind, go, goNext, heroPage, set } from './common';
+import { Graph, addVar, announce, bind, go, goNext, graphNote, heroPage, set } from './common';
 
 //The four outcomes, in the order the points below use
 export const OUTCOMES = [
@@ -129,6 +129,7 @@ function build(colourway: Colourway) {
   g.runFrom(more, 'true', set(q, 'q + 1'), announce('"Question " + (q + 1) + " of " + questions.length + ": " + questions[q].q'));
   g.add('action.artboard', { to: 'next', transition: 'fade', duration: 250 }, more, 'false', { dy: 110 });
 
+  graphNote(page, { anchor: onAnswer, colour: 'sky', text: '**Each answer adds its points to scores**, one slot per outcome, and `event.index` says which answer was picked. Nothing here picks a winner: the live `top` does that on the results page. [ ] Keep every answer\'s `points` as long as `outcomes`.' });
   //The result
   const rbox = contentBox(result);
   const pic = picture(ctx, 'Result picture', rbox.x, rbox.y, 360, 300);
