@@ -31,14 +31,22 @@ const IDEAS = [
 ];
 
 const MAP_H = 372;
+//The learner's map is a little shorter, to leave room under it for keeping it (save, download, open, start again)
+const BUILD_H = 330;
 const EDIT_W = 640;
 const NODE_H = 44;
+//What a new learner's map, and Start a new map, begins with
+const FIRST_MAP = { id: 'n1', parent: '', label: 'My topic' };
 
 /** States for the layout check besides the start: the idea dialog open, the outline view, branches folded, and the learner's page with a deep map of long words. */
 export const MINDMAP_LAYOUT_STATES: LayoutState[] = [
   { label: 'idea dialog open', page: 'Explore', vars: { detailOpen: true, focused: 7 } },
   { label: 'outline view', page: 'Explore', vars: { showOutline: true } },
   { label: 'branches folded', page: 'Explore', vars: { folded: ['plan', 'read', 'remember'] } },
+  { label: 'map not kept', page: 'Build your own', vars: { keepMap: false } },
+  { label: 'map saved', page: 'Build your own', vars: { mapSaved: true } },
+  { label: 'new map question', page: 'Build your own', vars: { newMapOpen: true } },
+  { label: 'open a saved map', page: 'Build your own', vars: { openMapOpen: true, openMapMessage: 'That is not a map saved from this page. Open the downloaded file in a text editor and paste all of it.' } },
   {
     label: 'a deep and wide map',
     page: 'Build your own',
@@ -162,7 +170,7 @@ export const mindMapStarter: BrandedStarter = {
   key: 'explore/mind-map',
   set: 'explore',
   name: 'Mind map',
-  description: 'A mind map to explore and one to build. Explore: ideas branching both ways from the middle, each a button that opens its details, branches that fold and unfold, arrow keys that move between ideas, and an outline view as text. Build: the learner adds, renames, deletes, drags and moves in and out their own ideas, saved for next time and downloadable. Drawn from one list of ideas, so you edit data, not shapes.',
+  description: 'A mind map to explore and one to build. Explore: ideas branching both ways from the middle, each a button that opens its details, branches that fold and unfold, arrow keys that move between ideas, and an outline view as text. Build: the learner adds, renames, deletes, drags and moves in and out their own ideas, saved for next time (or not, as the author chooses) and downloadable, with a way to open a download again. Drawn from one list of ideas, so you edit data, not shapes.',
   tags: ['mind map', 'diagram', 'connectors', 'keyboard friendly', 'saved'],
   layoutStates: MINDMAP_LAYOUT_STATES,
   build(colourway) {
@@ -247,15 +255,25 @@ export const mindMapStarter: BrandedStarter = {
 
     // ------------------------------------------------------------------ build your own
     const bbox = contentBox(build);
-    const mine = addVar(project, 'mine', 'list', [{ id: 'n1', parent: '', label: 'My topic' }], { userData: true });
+    //The author's setting: keep the learner's map for next time (true) or only until they leave (false). Change it in the Variables panel.
+    addVar(project, 'keepMap', 'boolean', true);
+    //Set once the saved map has been looked for (nothing is saved before that, or the starting map would overwrite it), and while what is on screen is what was saved
+    const ready = addVar(project, 'mapReady', 'boolean', false);
+    const saved = addVar(project, 'mapSaved', 'boolean', false);
+    const mine = addVar(project, 'mine', 'list', [FIRST_MAP]);
     const at = addVar(project, 'mineAt', 'number', 0);
     const draft = addVar(project, 'draft', 'string', 'My topic');
     //The id of the idea a change is about, kept across it because the change can move the idea in the list
     const picked = addVar(project, 'picked', 'string', '');
-    addVar(project, 'mineLayout', 'list', [], { formula: `mindMap(mine, {width: ${EDIT_W}, height: ${MAP_H}, nodeW: 112, nodeH: ${NODE_H}, gapX: 36})`, live: true });
+    const newOpen = addVar(project, 'newMapOpen', 'boolean', false);
+    const openOpen = addVar(project, 'openMapOpen', 'boolean', false);
+    //What the learner pastes in to open a saved map, and what is said when it is not one
+    const pasted = addVar(project, 'pastedMap', 'string', '');
+    const openMessage = addVar(project, 'openMapMessage', 'string', '');
+    addVar(project, 'mineLayout', 'list', [], { formula: `mindMap(mine, {width: ${EDIT_W}, height: ${BUILD_H}, nodeW: 112, nodeH: ${NODE_H}, gapX: 36})`, live: true });
     addVar(project, 'mineOutline', 'string', '', { formula: 'mindMapOutline(mine)', live: true });
 
-    const mineLayers = mapLayers(ctx, { from: 'mineLayout', focus: at, area: { width: EDIT_W, height: MAP_H }, nodeW: 112, nodeH: NODE_H, ariaLabel: 'Your mind map. Tab to reach the ideas, then use the arrow keys to move between them. Drag an idea onto another to move it there.' });
+    const mineLayers = mapLayers(ctx, { from: 'mineLayout', focus: at, area: { width: EDIT_W, height: BUILD_H }, nodeW: 112, nodeH: NODE_H, ariaLabel: 'Your mind map. Tab to reach the ideas, then use the arrow keys to move between them. Drag an idea onto another to move it there.' });
     build.children.push(Object.assign(mineLayers.map, { x: bbox.x, y: bbox.y }));
 
     const word = createNode('input', {
@@ -291,17 +309,64 @@ export const mindMapStarter: BrandedStarter = {
     const down = cell('Move down button', 'Move down', isRoot);
     const moveIn = cell('Move in button', 'Move in', isRoot);
     const moveOut = cell('Move out button', 'Move out', isRoot);
-    const dlText = cell('Download outline button', 'Download outline');
-    const dlPage = cell('Download page button', 'Download page');
     const pair = (name: string, a: SceneNode, b: SceneNode) => stack(name, 0, 0, 100, { direction: 'row', gap: 10, children: [a, b] });
     fill(word);
     build.children.push(
       stack('Build controls', bbox.x + EDIT_W + 24, bbox.y, bbox.width - EDIT_W - 24, {
         gap: 10,
-        children: [heading(ctx, 'Controls heading', 'Selected idea', 0, 0, 100, { fontSize: 18 }), word, pair('Add row', addIn, addBeside), pair('Rename row', rename, remove), pair('Order row', up, down), pair('Level row', moveIn, moveOut), pair('Download row', dlText, dlPage)],
+        children: [heading(ctx, 'Controls heading', 'Selected idea', 0, 0, 100, { fontSize: 18 }), word, pair('Add row', addIn, addBeside), pair('Rename row', rename, remove), pair('Order row', up, down), pair('Level row', moveIn, moveOut)],
       }),
     );
-    build.children.push(text(ctx, 'Build hint', 'Click an idea or use the arrow keys, type its words, then use the buttons. Drag an idea onto another to move it there. The Delete key removes the idea you have selected.', bbox.x, bbox.y + MAP_H + 12, bbox.width, { fontSize: 15, color: L.muted }));
+    //Where the map is kept, said in words: the author's keepMap setting decides which line shows
+    const keepStatus = text(ctx, 'Keep status', '{keepMap ? (mapSaved ? "Saved for you on this course page." : "Saving...") : "Only until you leave. Download a copy to keep it."}', bbox.x + EDIT_W + 24, bbox.y + BUILD_H - 40, bbox.width - EDIT_W - 24, { fontSize: 15, color: L.muted });
+    build.children.push(keepStatus);
+
+    //Keeping the map, in two rows under it: what stays on the course page, then what leaves it as a file
+    const keepBtn = (name: string, label: string, width: number, primary = false) => {
+      const b = button(ctx, name, label, 0, 0, width, primary);
+      Object.assign(b, { height: 40, cornerRadius: 20, fontSize: 15 });
+      return b;
+    };
+    const saveBtn = bind(keepBtn('Save button', 'Save', 110, true), { label: 'mapSaved ? "Saved" : "Save"', disabled: 'mapSaved', visible: 'keepMap' });
+    const newBtn = keepBtn('New map button', 'Start a new map', 190);
+    const openBtn = keepBtn('Open map button', 'Open a saved map', 200);
+    const dlText = keepBtn('Download outline button', 'Download as text outline', 250);
+    const dlPage = keepBtn('Download page button', 'Download as a picture', 230);
+    const dlCopy = keepBtn('Download copy button', 'Download a copy to open later', 300);
+    const keepY = bbox.y + BUILD_H + 12;
+    build.children.push(
+      stack('Keep row', bbox.x, keepY, bbox.width, { direction: 'row', gap: 12, align: 'start', children: [saveBtn, newBtn, openBtn] }),
+      stack('Download row', bbox.x, keepY + 48, bbox.width, { direction: 'row', gap: 12, align: 'start', children: [dlText, dlPage, dlCopy] }),
+    );
+    build.children.push(text(ctx, 'Build hint', 'Click an idea or use the arrow keys, type its words, then use the buttons. Drag one idea onto another to move it.', bbox.x, keepY + 96, bbox.width, { fontSize: 15, color: L.muted }));
+
+    //Start a new map asks first, and Open a saved map takes the file's words pasted in (there is no file picker in a page like this)
+    const sure = text(ctx, 'New map warning', 'This clears every idea on your map and leaves the one in the middle. If you want to keep this map, download a copy first.', 24, 64, 512, { fontSize: 18, lineHeight: 1.45 });
+    const clearIt = button(ctx, 'Clear map button', 'Clear it and start again', 560 - 24 - 140 - 12 - 250, 260 - 24 - 46, 250, true);
+    const newDialog = dialogPanel(ctx, build, 'New map dialog', newOpen, { x: (build.width - 560) / 2, y: 170, width: 560, height: 260, title: 'Start a new map?', closeLabel: 'Keep my map', children: [sure, clearIt] });
+    overlay(newDialog.frame);
+    const how = text(ctx, 'Open map help', 'Open the file you got from "Download a copy to open later" in any text editor, copy everything in it and paste it here.', 24, 64, 592, { fontSize: 17, lineHeight: 1.45 });
+    const paste = createNode('input', {
+      name: 'Saved map box',
+      ...lookDefaults(project, 'input'),
+      inputType: 'textarea',
+      placeholder: 'Paste the saved map here',
+      ariaLabel: 'The saved map, pasted from its file',
+      bindings: { value: 'pastedMap' },
+      bindingModes: { value: 'both' },
+      x: 24,
+      y: 130,
+      width: 592,
+      height: 130,
+      cornerRadius: 12,
+      fontSize: 15,
+      fontFamily: BRAND_FONT,
+      stroke: stroke(L.border, 2),
+    } as never);
+    const sorry = bind(text(ctx, 'Open map message', '{openMapMessage}', 24, 272, 592, { fontSize: 16, fontWeight: 600, color: L.error }), { visible: 'openMapMessage != ""' });
+    const openIt = button(ctx, 'Open this map button', 'Open this map', 640 - 24 - 140 - 12 - 200, 400 - 24 - 46, 200, true);
+    const openDialog2 = dialogPanel(ctx, build, 'Open map dialog', openOpen, { x: (build.width - 640) / 2, y: 110, width: 640, height: 400, title: 'Open a saved map', closeLabel: 'Cancel', children: [how, paste, sorry, openIt] });
+    overlay(openDialog2.frame);
 
     {
       const g = graph(build);
@@ -338,7 +403,30 @@ export const mindMapStarter: BrandedStarter = {
         g.run(g.event('event.key', { key, type: 'keydown', target: mineLayers.ideas.id }, `${key} goes ${dir}`), set(at, go('mineAt', 'mineLayout', dir)));
       }
       g.run(click(g, dlText, 'Download the outline'), ['action.saveFile', { name: '"my-mind-map"', text: 'mineOutline', mime: 'text/plain' }]);
-      g.run(click(g, dlPage, 'Download a page with the picture'), ['action.saveFile', { name: '"my-mind-map"', text: '"<!doctype html><html lang=\\"en\\"><meta charset=\\"utf-8\\"><title>My mind map</title><body style=\\"font-family:sans-serif\\"><h1>My mind map</h1>" + mindMapSvg(mineLayout, {width: 640, height: 372, title: "My mind map"}) + "<h2>Outline</h2><pre>" + html(mineOutline) + "</pre></body></html>"', mime: 'text/html' }]);
+      g.run(click(g, dlPage, 'Download a page with the picture'), ['action.saveFile', { name: '"my-mind-map"', text: '"<!doctype html><html lang=\\"en\\"><meta charset=\\"utf-8\\"><title>My mind map</title><body style=\\"font-family:sans-serif\\"><h1>My mind map</h1>" + mindMapSvg(mineLayout, {width: 640, height: ' + BUILD_H + ', title: "My mind map"}) + "<h2>Outline</h2><pre>" + html(mineOutline) + "</pre></body></html>"', mime: 'text/html' }]);
+      //A copy that Open a saved map can read back: the ideas, as the list itself
+      g.run(click(g, dlCopy, 'Download a copy to open again'), ['action.saveFile', { name: '"my-mind-map"', text: 'JSON.stringify(mine)', mime: 'application/json' }]);
+
+      //Keeping it: the saved map is looked for as the page opens (when the author keeps it), and every change after that is saved
+      const saveMine: ActionStep = ['action.saveUserData', { variables: [mine.id] }];
+      const looked = g.then(g.then(onStart, 'logic.if', { condition: 'keepMap' }), 'action.loadUserData', { variables: [mine.id] }, 'true');
+      g.run(looked, set(ready, 'true'), set(draft, 'mineLayout[mineAt].label'), set(saved, 'true'));
+      g.then(g.then(looked, 'action.setVariable', { variable: ready.id, op: 'set', value: 'true' }, 'none'), 'action.setVariable', { variable: saved.id, op: 'set', value: 'true' });
+      onlyIf(g.event('event.variable', { variable: mine.id }, 'The map changed'), 'keepMap && mapReady', [set(saved, 'false'), saveMine, set(saved, 'true')]);
+      onlyIf(click(g, saveBtn, 'Save the map now'), 'keepMap', [saveMine, set(saved, 'true'), announce('"Your map is saved"')]);
+
+      //Start a new map, after asking
+      g.run(click(g, newBtn, 'Ask before starting a new map'), set(newOpen, 'true'));
+      g.run(click(g, clearIt, 'Start a new map'), set(mine, `[${JSON.stringify(FIRST_MAP).replace(/"(\w+)":/g, '$1: ')}]`), set(at, '0'), set(draft, '"My topic"'), set(newOpen, 'false'), announce('"A new map: My topic"'));
+
+      //Open a saved map: what was pasted has to be a list of ideas, each with an id and words, and is then trimmed to just those
+      const valid = 'pastedMap.trim().startsWith("[") && JSON.parse(pastedMap).length > 0 && JSON.parse(pastedMap).length <= 80 && JSON.parse(pastedMap).every(n => typeof n.id == "string" && typeof n.label == "string")';
+      g.run(click(g, openBtn, 'Open a saved map'), set(pasted, '""'), set(openMessage, '""'), set(openOpen, 'true'));
+      const opened = g.then(click(g, openIt, 'Open the pasted map'), 'logic.if', { condition: valid });
+      graphNote(build, { anchor: opened, colour: 'sky', text: '**Only a map saved from here opens.** The pasted words must be a list of ideas, each with an `id` and a `label`, or the dialog says so and the map on the page is left alone.' });
+      let last = g.then(opened, 'action.setVariable', { variable: mine.id, op: 'set', value: 'JSON.parse(pastedMap).map(n => ({id: String(n.id), parent: String(n.parent || ""), label: String(n.label)}))' }, 'true');
+      for (const [kind, params] of [set(at, '0'), set(draft, 'mineLayout[mineAt].label'), set(openOpen, 'false'), announce('"Opened your map"')]) last = g.then(last, kind, params);
+      g.then(opened, 'action.setVariable', { variable: openMessage.id, op: 'set', value: '"That is not a map saved from this page. Open the downloaded file in a text editor and paste all of it."' }, 'false');
     }
 
     // ------------------------------------------------------------------ notes and checklist
@@ -347,15 +435,17 @@ export const mindMapStarter: BrandedStarter = {
     addNote(explore, { ...below(explore, 456), text: '**Connectors** Each line joins its parent\'s box to its own box (`item.parentIndex`), so it follows when a branch folds. Lines are decoration: the outline view is the text version.', colour: 'sky' });
     addNote(explore, { ...below(explore, 912), text: '**Arrow keys** `place` says where each arrow goes from every idea (`right`, `left`, `up`, `down`). Pointing away from a folded branch unfolds it first.', colour: 'sky' });
     addNote(explore, { ...below(explore, 1368), text: '[ ] Write your own `ideas`: an empty `parent` is the middle idea, the rest name their parent by id. The order of the list is the order of the branches.', colour: 'gold' });
-    addNote(build, { ...below(build, 0), text: '**Saved** `mine` is saved for each learner (a user data variable), so their map is there when they come back. Every change goes through `mindMapEdit(...)`, which adds, renames, moves and deletes.', colour: 'sky' });
-    addNote(build, { ...below(build, 456), text: '**Without dragging** Move up, down, in and out do what a drag does, from the keyboard. Download writes the outline, or a page with the map as a picture.', colour: 'sky' });
+    addNote(build, { ...below(build, 0), text: '**Saved** `keepMap` is the setting: true saves `mine` for each learner (Save user data after every change, Load user data when the page opens), false keeps it only until they leave. Every change goes through `mindMapEdit(...)`, which adds, renames, moves and deletes.', colour: 'sky' });
+    addNote(build, { ...below(build, 456), text: '**Without dragging** Move up, down, in and out do what a drag does, from the keyboard. Download writes the outline, a page with the map as a picture, or a copy that Open a saved map reads back.', colour: 'sky' });
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
       item('Write your own mind map: the "ideas" variable (Variables panel) is a list with an id, a parent (the id of the idea it hangs from, empty for the one in the middle), a label and a detail for each', layers.idea, explore),
       item('Keep the map to about ten ideas on a side and three levels deep. Larger maps shrink their boxes to fit, and a branch can start folded: put its id in the "folded" variable', layers.ideas, explore),
       item('Change the page title and the footer line on the Explore page', byName(explore, 'Page title'), explore),
-      item('Write what the learner should do on the Build page in the line under the map, and pick the starting idea in the "mine" variable (it is saved for each learner)', byName(build, 'Build hint'), build),
+      item('Decide whether the learner\'s map is kept for next time: the "keepMap" variable is true (kept) or false (only until they leave). The line beside the map and the Save button follow it', byName(build, 'Keep status'), build),
+      item('Write what the learner should do on the Build page in the line under the map, and pick the starting idea in the "mine" variable', byName(build, 'Build hint'), build),
+      item('Try Save, a download, Start a new map and Open a saved map on the Build page: open the file from "Download a copy to open later", copy it and paste it into Open a saved map', byName(build, 'Open map button'), build),
       item('Check the text version: switch to the outline on the Explore page and read it as a learner using a screen reader would. It lists every idea and its detail, so check the details say enough', byName(explore, 'View button'), explore),
       item('Try it with the keyboard: Tab to the map, arrow between ideas, Enter to open one, plus and minus to fold', undefined, explore),
     ];
