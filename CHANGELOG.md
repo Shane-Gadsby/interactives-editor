@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Question cards**: a question's own buttons now sit in the card beside the prompt: Play the word in the Spelling test (and when the Voice section adds one), Repeat in the Audio-first quiz, Play on each Listening lab clip.
 - **More page transitions**: pages can now wipe in four directions, push, open an iris from the clicked layer, or zoom into it, chosen wherever you pick a page change (Go to a page, When clicked, Page navigation and a layer's link). Reduced motion still makes every change instant.
 - **Soundtrack music**: tick **Soundtrack** on a Play sound and the music carries on across pages, goes quiet under narration and Speak, crossfades to a different soundtrack, and fades out at Stop sound or start over. **When clicked…** has *Play music that carries on across pages* and *Stop the music*.
 - **Depth (parallax)**: give a layer a **Depth** (None, Small, Medium, Large, or any percent) and it shifts a little as the viewer moves the pointer, nearer layers more than far ones, for a layered-postcard look. It shows in Preview and the exported player, never on the canvas while editing, and not at all for viewers who ask for less motion. **Project settings** has the **Depth range** and an off-by-default **Tilt moves depth layers** option for phones (iPhones ask permission on the first tap, never on load; a refusal falls back to the pointer).
