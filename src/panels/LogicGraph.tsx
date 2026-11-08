@@ -160,7 +160,7 @@ function GroupNode({ data, selected }: NodeProps<Node<GroupData>>) {
 
 const nodeTypes = { ix: IxNode, ixgroup: GroupNode };
 
-function summarize(n: LogicNode, ab: Artboard, project: Project): string {
+export function summarize(n: LogicNode, ab: Artboard, project: Project): string {
   const def = CATALOG_BY_KIND[n.kind];
   if (!def) return '';
   const parts: string[] = [];
@@ -171,6 +171,17 @@ function summarize(n: LogicNode, ab: Artboard, project: Project): string {
     const v = n.params[p.key];
     if (v === undefined || v === '') continue;
     let text = String(v);
+    //Go to artboard: a chosen one reads as its name, and one worked out by an expression as "computed" (the expression is in the settings)
+    if (n.kind === 'action.artboard' && p.key === 'to' && (v === 'picked' || v === 'expression')) continue;
+    if (n.kind === 'action.artboard' && p.key === 'expr') {
+      parts.push('computed');
+      continue;
+    }
+    //An event's Only if, and a timer's Only while, read as a condition
+    if (p.key === 'onlyIf' || (n.kind === 'event.timer' && p.key === 'while')) {
+      parts.push(`${p.key === 'onlyIf' ? 'if' : 'while'} ${text.trim().replace(/\s+/g, ' ').slice(0, 40)}`);
+      continue;
+    }
     if (p.type === 'node') text = names.get(text) ?? '(missing layer)';
     else if (p.type === 'timeline') text = ab.timelines.find((t) => t.id === v)?.name ?? '(missing timeline)';
     else if (p.type === 'blend') text = ab.blends?.find((b) => b.id === v)?.name ?? '(missing blend)';
