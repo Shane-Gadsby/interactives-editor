@@ -149,7 +149,8 @@ export type Tool =
   | 'draw'
   | 'shader'
   | 'bone'
-  | 'comment';
+  | 'comment'
+  | 'note';
 
 /** Called whenever something sets bottomTab: the dock shows that panel (lib/dock.ts registers it). */
 let panelRequestHandler: ((id: BottomTab | null) => void) | null = null;
@@ -182,6 +183,9 @@ export interface EditorState {
   /** Container the user double-clicked into: clicks select its children. */
   focusId: string | null;
   tool: Tool;
+  /** The sticky note picked on the canvas, and the one being typed into (interface state, never saved). */
+  selectedNote: string | null;
+  editingNote: string | null;
   zoom: number;
   panX: number;
   panY: number;
@@ -276,6 +280,8 @@ export class EditorStore {
       artboardPicked: [],
       focusId: null,
       tool: 'select',
+      selectedNote: null,
+      editingNote: null,
       zoom: 1,
       panX: 80,
       panY: 80,

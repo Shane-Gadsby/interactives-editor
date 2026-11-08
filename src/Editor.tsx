@@ -1,6 +1,6 @@
 import { answerPreviewProgress, forgetPreviewLearner, previewLearnerHas } from './lib/preview-learner';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { PACKAGE_EXTENSION, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
+import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
 import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
@@ -276,6 +276,7 @@ const TOOL_KEYS: Record<string, Tool> = {
   b: 'button',
   j: 'bone',
   c: 'comment',
+  s: 'note',
 };
 
 function useShortcuts() {
@@ -290,7 +291,7 @@ function useShortcuts() {
     window.addEventListener('keydown', onSave, true);
     const onKey = (e: KeyboardEvent) => {
       const t = e.target instanceof HTMLElement ? e.target : null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || t.closest('.cm-editor') || t.closest('.react-flow'))) return;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || t.closest('.cm-editor') || t.closest('.react-flow') || t.closest('.note'))) return;
       const s = store();
       const st = s.get();
       const mod = e.ctrlKey || e.metaKey;
@@ -876,6 +877,7 @@ function helpTopicForTool(tool: Tool): string {
   if (tool === 'shader') return 'shader-layers';
   if (tool === 'bone') return 'bones';
   if (tool === 'comment') return 'comments';
+  if (tool === 'note') return 'notes';
   if (tool === 'text') return 'text';
   if (tool === 'artboard') return 'artboards';
   if (tool === 'frame') return 'groups-frames';
@@ -901,6 +903,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'shader', icon: 'shader', label: 'Shader layer (GPU effects, backdrops)' },
   { tool: 'bone', icon: 'bone', label: 'Bone (drag to draw one; start on a bone tip to continue the chain)', key: 'J' },
   { tool: 'comment', icon: 'comment', label: 'Comment (click where you want to say something; reviewers see these, exports never do)', key: 'C' },
+  { tool: 'note', icon: 'note', label: 'Note (draw a sticky note for the people making this project; players and exports never see it)', key: 'S' },
 ];
 
 const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
@@ -999,6 +1002,19 @@ function useToolGroups(): [Record<string, boolean>, (id: string) => void] {
   return [open, toggle];
 }
 
+/** Show or hide the sticky notes on the canvas (a preference of the person, so a template's explanations can be put away), with how many there are. */
+function NotesToggle() {
+  const { showNotes } = usePrefs();
+  const count = useEditor((st) => countNotes(st.project));
+  const title = `${showNotes ? 'Hide' : 'Show'} notes on the canvas (${count})`;
+  return (
+    <button type="button" className={`icon-btn note-toggle${showNotes ? ' active' : ''}`} title={title} aria-label={title} aria-pressed={showNotes} onClick={() => setPrefs({ showNotes: !showNotes })}>
+      {showNotes ? <Icons.eye /> : <Icons.eyeOff />}
+      {count > 0 && <span className="note-count">{count > 99 ? '99+' : count}</span>}
+    </button>
+  );
+}
+
 export function Toolbar() {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const tool = useEditor((st) => st.tool);
@@ -1065,6 +1081,8 @@ export function Toolbar() {
       <div className="toolbar-fill" />
       <div className="tool-grid">
         {btn('comment')}
+        {btn('note')}
+        <NotesToggle />
         <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
       </div>
     </nav>

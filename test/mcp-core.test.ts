@@ -504,7 +504,7 @@ describe('JSON-RPC handler', () => {
   it('lists its tools, each with a schema whose required fields exist', async () => {
     const r = await rpc({ id: 5, method: 'tools/list' });
     const tools = r.result.tools as { name: string; description: string; inputSchema: { type: string; properties: Record<string, unknown>; required: string[] } }[];
-    expect(tools.map((t) => t.name)).toEqual(['list_projects', 'join_session', 'get_selection', 'get_overview', 'get_layers', 'get_interactions', 'edit', 'validate', 'read_reference', 'leave_session']);
+    expect(tools.map((t) => t.name)).toEqual(['list_projects', 'join_session', 'get_selection', 'get_overview', 'get_layers', 'get_interactions', 'edit', 'list_notes', 'add_note', 'edit_note', 'remove_note', 'validate', 'read_reference', 'leave_session']);
     expect(new Set(tools.map((t) => t.name)).size).toBe(tools.length);
     for (const t of tools) {
       expect(t.description.length).toBeGreaterThan(10);
@@ -542,3 +542,61 @@ describe('JSON-RPC handler', () => {
   });
 });
 
+
+describe('sticky notes', () => {
+  it('add_note puts a note on an artboard or the canvas, set_note changes it, delete_note removes it', () => {
+    const p = sample();
+    const ab = p.artboards[0];
+    const out = change(p, [
+      { op: 'add_note', artboard_id: ab.id, x: 40, y: 50, text: 'Swap the photo', colour: 'sky', ref: 'n1' },
+      { op: 'add_note', text: 'Whole-project hint', x: -300, y: 0 },
+    ]);
+    expect(out.project.artboards[0].notes).toHaveLength(1);
+    expect(out.project.artboards[0].notes![0]).toMatchObject({ x: 40, y: 50, text: 'Swap the photo', colour: 'sky', author: 'Agent (AI)' });
+    expect(out.project.notes![0].text).toBe('Whole-project hint');
+    expect(out.created.n1).toBe(out.project.artboards[0].notes![0].id);
+    const id = out.created.n1;
+    const set = change(out.project, [{ op: 'set_note', id, text: 'Done', colour: 'rose', x: 1, w: 300 }]);
+    expect(set.project.artboards[0].notes![0]).toMatchObject({ text: 'Done', colour: 'rose', x: 1, y: 50, w: 300 });
+    const gone = change(set.project, [{ op: 'delete_note', id }]);
+    expect(gone.project.artboards[0].notes).toBeUndefined();
+    expect(gone.project.notes).toHaveLength(1);
+    // the document it started from is untouched
+    expect(ab.notes).toBeUndefined();
+  });
+
+  it('a note placed against a layer follows it, beside it unless told where', () => {
+    const p = sample();
+    const ab = p.artboards[0];
+    const { project } = change(p, [{ op: 'add_note', artboard_id: ab.id, layer_id: 'r1', text: 'about the box' }]);
+    const n = project.artboards[0].notes![0];
+    expect(n.anchor).toEqual({ layerId: 'r1', lx: 112, ly: 0 });
+    expect(n.x).toBeCloseTo(10.46 + 100 + 12, 1);
+    const moved = change(project, [{ op: 'set_note', id: n.id, layer_id: null }]);
+    expect(moved.project.artboards[0].notes![0].anchor).toBeUndefined();
+    expect(() => change(p, [{ op: 'add_note', artboard_id: ab.id, layer_id: 'nope', text: 'x' }])).toThrow(/no layer/);
+    expect(() => change(p, [{ op: 'set_note', id: 'nope', text: 'x' }])).toThrow(/no note/);
+    expect(() => change(p, [{ op: 'delete_note', id: 'nope' }])).toThrow(/no note/);
+  });
+
+  it('puts wrong-typed values an agent wrote right (or drops them)', () => {
+    const p = sample();
+    const { project } = change(p, [{ op: 'set_artboard', id: p.artboards[0].id, props: { notes: [{ id: 'a', x: 'far', text: 7, colour: 'neon' }, { nonsense: 1 }] } }]);
+    expect(project.artboards[0].notes).toHaveLength(1);
+    expect(project.artboards[0].notes![0]).toMatchObject({ id: 'a', x: 0, text: '' });
+    expect(project.artboards[0].notes![0].colour).toBeUndefined();
+  });
+
+  it('the overview says how many there are, and list_notes reads them out', async () => {
+    const p = sample();
+    const { project } = change(p, [
+      { op: 'add_note', artboard_id: p.artboards[0].id, text: 'one\n- two', x: 1, y: 2 },
+      { op: 'add_note', text: 'canvas', x: 0, y: 0 },
+    ]);
+    const o = mcp.overview(project, {});
+    expect(o).toContain('Notes: 1 (use list_notes)');
+    expect(o).toContain('Notes on the canvas outside any artboard: 1');
+    const tool = mcp.TOOLS.find((t) => t.name === 'list_notes')!;
+    expect(tool).toBeTruthy();
+  });
+});

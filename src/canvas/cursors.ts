@@ -43,6 +43,9 @@ export const BONE_CHAIN_CURSOR = svgCursor(`${edged('M16 3v8M16 21v8M3 16h8M21 1
 /** A speech bubble with the point at its tail (bottom left), where the pin will land. */
 export const COMMENT_CURSOR = svgCursor(`${edged('M4 28V8a3 3 0 013-3h18a3 3 0 013 3v12a3 3 0 01-3 3H12z')}${edged('M10 12h12M10 17h7')}`, 32, 4, 28, 'crosshair');
 
+/** A sticky note with a turned corner, its top left (the corner the note starts from) at the hotspot. */
+export const NOTE_CURSOR = svgCursor(`${edged('M5 5h20v13l-6 7H5z')}${edged('M19 25v-7h6')}${edged('M10 11h10M10 15h6')}`, 32, 5, 5, 'crosshair');
+
 const rotateCache = new Map<number, string>();
 
 /**
@@ -135,6 +138,8 @@ export function toolCursor(tool: string): string {
       return PENCIL_CURSOR;
     case 'comment':
       return COMMENT_CURSOR;
+    case 'note':
+      return NOTE_CURSOR;
     default:
       return 'crosshair';
   }
