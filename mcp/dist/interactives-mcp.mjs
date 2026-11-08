@@ -7998,6 +7998,8 @@ Right-click a tab (or press Shift+F10 on it) for **Dock on the left / right / at
 
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
 
+**Watch it run.** Press **Beside editor** in the top bar and Preview moves up to the right, leaving the canvas and the Interactions graph underneath showing. While you click through it, every node that runs lights up green (with the word *ran*), an event whose **Only if** said no goes grey (*held back*), the wires it followed pulse, and a ring flashes round the layer your click landed on (green when the click started something, red when it started nothing). When a click starts nothing, the Events list says why under **Why did nothing happen?**: nothing listens for a click on that layer, the click landed on empty space, or an **Only if** said no. Click an event's name in the list to select its node in the graph. The lights are only in the editor; exports and shared links never carry them, and with reduced motion on they hold still instead of pulsing.
+
 When the project has [responsive artboards](responsive), a **Page width** slider appears under the top bar. Drag it to resize the page the project runs in; the breakpoints are marked on the track and the player switches artboard as you cross them.`
   },
   {
@@ -9071,14 +9073,37 @@ Reading order is the layer order (rearrange layers to change it). Moving focus a
     title: "Links and cursors",
     group: "Web elements",
     summary: "Make any layer a link, and choose the cursor shown when hovering it.",
-    keywords: "hyperlink url href target new tab cursor pointer hand custom cursor image hotspot",
+    keywords: "hyperlink url href target new tab cursor pointer hand custom cursor image hotspot go to page link button drag arrow route map navigate",
     body: `## Link
 In the **Link** section, give any layer a **URL** and it becomes a real link. **Open in** chooses where: a new tab, the same frame, the parent frame, or the whole page (useful when the interactive is embedded in an iframe). URLs can contain \`{expressions}\`. Links go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses; anything else (such as \`javascript:\`) is ignored.
 
 The **Open URL** action does the same from an interaction.
 
+## Go to a page
+The **Go to page** section links a layer to another page. Choose the page from the list, or drag the round **Go to page** handle that sits on the selected layer on the canvas onto the page you want: the page lights up as you pass over it, and letting go makes the link. Choosing **No page** (or dragging it onto the empty canvas) takes the link away. There is nothing special behind it: the editor writes an **On pointer** click on the layer and a **Go to artboard** node after it, which you can see and change in **Interactions**, and the list follows if you edit them there. A click that has an **Only if**, or one that does something else first, is left as you built it (the link is added after the existing click). Faint arrows between the pages on the canvas show every route the project can take, from these links and from Next and Previous steps; switch them off from the canvas's right-click menu. They are only in the editor.
+
 ## Cursor
 **Cursor on hover** sets the cursor shown while the pointer is over the layer and its children, the way CSS \`:hover { cursor: pointer }\` works. *Automatic* gives links and layers with a click, press or release interaction a pointer. Choose the cursor shown over the layer (pointer, grab, crosshair, text, not-allowed, …) or **Custom image** with a hotspot (the point of the image that clicks). Change it at runtime with **Set cursor** or \`ix.setCursor('grab')\`.`
+  },
+  {
+    id: "page-navigation",
+    title: "Page navigation",
+    group: "Interactivity",
+    summary: "Back, Next, the page number, page dots and a progress bar along the bottom of your pages, in one click.",
+    keywords: "next back previous page number progress bar dots navigation buttons pages 3 of 8 bottom bar go to next artboard generate",
+    body: `Every piece with more than one page needs **Next** and **Back**, and often "Page 3 of 8". Select a page and open **Page navigation** in the properties panel (or select several pages and open it there), pick a style and press **Add to this page**, **Add to these pages** or **Add to all pages**.
+
+- **Back and Next**: Back on the left, Next (the main button) on the right and *Page 3 of 8* between them.
+- **Next only**: just a Next button on the right.
+- **Back, Next and page dots**: a row of dots between them, the current page filled.
+- **Back, Next and a progress bar**: the page number, with a thin bar along the bottom that fills as you go.
+- **Page number only**: *Page 3 of 8* and no buttons.
+
+It all goes along the bottom of the page, in a bottom bar. Back is hidden on the first page and Next on the last, and the number and bar follow the order of your pages (see **Go to artboard** in [Interactions](interactions)), so adding, removing or moving a page needs no rewiring. The colours come from your project's colours, so they follow the theme and a branded project's look, and on a branded page the bar sits inside the content box, clear of the logo and footer.
+
+Nothing is hidden: you get ordinary buttons, text, a progress bar and the clicks and **Go to artboard** nodes in **Interactions**, all of which you can restyle, move or rewire. They are tagged, so adding navigation again with another style swaps the old one for the new (and **Remove** takes it away). A page that already has its own Next or Back button is left alone, and the message says which. Page dots are drawn for the number of pages there are now: press **Add** again after adding or removing pages to refresh them.
+
+Buttons go on the page itself. A [page master](page-master) can hold the logo and the footer but not buttons, so the master is not where this goes.`
   },
   // ---------------------------------------------------------------- motion
   {
@@ -9511,6 +9536,8 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
     summary: "The node graph: events start a flow, actions do things, logic chooses the way.",
     keywords: "interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing",
     body: `Open the **Interactions** tab. Each artboard has its own graph.
+
+**Room for the graph.** The bottom panel is a short strip, so opening **Interactions** (from a layer's **+ On click**, one of its interaction chips, or the tab itself) lifts the panel to a comfortable height, and puts it back when you move to another tab. It only does that when the panel is still at its normal height: one you sized yourself is left alone. Drag the top edge of the panel while the graph is open and that height is remembered for next time (in this browser).
 
 **See-through layers don't take clicks.** While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
 

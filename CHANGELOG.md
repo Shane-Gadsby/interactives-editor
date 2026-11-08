@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **See what ran**: Preview can sit **beside the editor**, and while it plays the nodes that ran light up in the graph, the wire they followed pulses, and the layer you clicked rings green (or red, with **Why did nothing happen?** in the events list). **Link a page by dragging**: a selected layer has a Go to page handle you drag onto a page (or pick from a list), and faint arrows show how pages link. **Page navigation in one click**: Back, Next and a counter, dots or progress bar along the bottom of one page or all of them. The Interactions panel opens taller when you start building, and goes back after.
 - **Shared responses**: a data source that gathers learners' short answers, set to **Only me** or **Everyone in this class**, with counts (never names), blocked words, a minimum before an answer shows, per-person limits and the owner able to hide, remove or clear answers. The **Word cloud** starter's class cloud runs on it (a page shared before this needs sharing again).
 - **Every starter's graphs are annotated**, and the examples' bigger graphs too. Notes draw `code` inside **bold** properly, and a [ ] partway through a line shows as a box.
 - **Graph notes in the starters**: every quiz, drag and explore starter's interaction graphs now carry short notes saying what each chain does, why it's built that way and what to change. **Word cloud** settings: **Pills** on or off and **Word colour** plain or following the colourway. **Folded Properties sections** follow you to any computer you sign in on.
