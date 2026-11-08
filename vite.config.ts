@@ -47,5 +47,5 @@ export default defineConfig({
     },
   },
   build: { target: 'es2020', chunkSizeWarningLimit: 2000 },
-  test: { environment: 'jsdom' },
+  test: { environment: 'jsdom', setupFiles: ['test/setup.ts'] },
 });

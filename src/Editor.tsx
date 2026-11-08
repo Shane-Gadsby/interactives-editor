@@ -26,7 +26,8 @@ import { IconButton } from './components/ui';
 import { PreviewWidth, responsiveSets, widthInside } from './components/PreviewWidth';
 import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
-import { HelpLink, openHelp } from './help/Help';
+import { HelpLink } from './help/Help';
+import { setPreviewOpen, trapFocus } from './lib/overlays';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ContextMenu } from './components/ContextMenu';
 import { DockDragLayer, DockFloats, DockZone, FloatingTools, ToolsHead, openHeaderHelp, useHeaderHelpTitle, toolsMenu, useDockSync, useZoneSizes } from './components/Dock';
@@ -895,23 +896,6 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
   );
 }
 
-/** The help page for whatever tool is in use. */
-function helpTopicForTool(tool: Tool): string {
-  if (['button', 'input', 'link', 'embed', 'video'].includes(tool)) return 'web-elements';
-  if (tool === 'draw') return 'script-layers';
-  if (tool === 'shader') return 'shader-layers';
-  if (tool === 'progress') return 'progress-bars';
-  if (tool === 'chart') return 'charts';
-  if (tool === 'bone') return 'bones';
-  if (tool === 'comment') return 'comments';
-  if (tool === 'note') return 'notes';
-  if (tool === 'text') return 'text';
-  if (tool === 'artboard') return 'artboards';
-  if (tool === 'frame') return 'groups-frames';
-  if (tool === 'select' || tool === 'hand') return 'interface';
-  return 'shapes';
-}
-
 const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'select', icon: 'select', label: 'Select', key: 'V' },
   { tool: 'hand', icon: 'hand', label: 'Hand', key: 'H / Space' },
@@ -1000,7 +984,7 @@ function AddQuestion() {
 
 // The tools column in groups that fold (Shapes and Draw start open), so it fits without scrolling. Select and Hand
 // always show; a folded group still shows its tool when that's the one in use
-const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
+export const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
   { id: 'shapes', label: 'Shapes', tools: ['artboard', 'frame', 'rect', 'ellipse', 'polygon', 'star'], open: true },
   { id: 'draw', label: 'Draw', tools: ['line', 'pen', 'pencil', 'bend'], open: true },
   { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', 'video'], open: false },
@@ -1187,6 +1171,16 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   //Which frame has loaded: a new one stays see-through until its page is in, so the empty frame's white never shows
   const [frameShown, setFrameShown] = useState(-1);
   const frame = useRef<HTMLIFrameElement>(null);
+  //Preview is a modal above everything: focus stays in it, Esc closes it (not the help drawer behind), and help asked for while it is open goes to its own window
+  const modalRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setPreviewOpen(true);
+    const release = modalRef.current ? trapFocus(modalRef.current) : undefined;
+    return () => {
+      setPreviewOpen(false);
+      release?.();
+    };
+  }, []);
   // Responsive sets: the width of the page the preview runs in (null: all the room there is), and how much room that is
   const sets = responsiveSets(project as Project);
   const [pageWidth, setPageWidth] = useState<number | null>(null);
@@ -1285,8 +1279,8 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const ab = getArtboard(project, from === 'current' ? abId : project.settings.startArtboardId);
   const post = (name: string, value: unknown) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'setVariable', name, value }, '*');
   return (
-    <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal preview-modal">
+    <div className="modal-backdrop preview-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal preview-modal" ref={modalRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Preview">
         <header>
           <strong>Preview</strong>
           <select value={from} onChange={(e) => setFrom(e.target.value as 'start' | 'current')}>

@@ -50,6 +50,8 @@ export const Icons = {
   download: P('M12 4v12M7 11l5 5 5-5M4 20h16'),
   upload: P('M12 20V8M7 13l5-5 5 5M4 4h16'),
   preview: P('M5 4l14 8-14 8z'),
+  arrowLeft: P('M19 12H5M11 6l-6 6 6 6'),
+  arrowRight: P('M5 12h14M13 6l6 6-6 6'),
   chevronRight: P('M9 6l6 6-6 6'),
   chevronDown: P('M6 9l6 6 6-6'),
   record: (props: SVGProps<SVGSVGElement>) => (

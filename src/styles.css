@@ -73,6 +73,33 @@
   background: var(--bg);
 }
 
+/* The stacking order of everything that floats, in one place. Low to high: docked panels' floating windows, dropdowns,
+   modals, the help drawer, the quick search, Preview (above all of those, so a drawer never covers its controls), then what
+   can be opened from inside Preview: popovers, context menus, toasts, confirm dialogs and tooltips. The small numbers left in
+   the rules below (1 to 8) only order things inside one canvas or one control. test/overlay-order.test.ts checks this list. */
+:root {
+  --z-canvas-hint: 30;
+  --z-dropdown: 50;
+  --z-float: 60;
+  --z-dropdown-raised: 60;
+  --z-float-front: 61;
+  --z-dock-ghost: 69;
+  --z-dock-edge: 70;
+  --z-dock-drag: 71;
+  --z-dropdown-scrim: 79;
+  --z-dropdown-menu: 80;
+  --z-modal: 100;
+  --z-drawer: 900;
+  --z-quick-search: 1000;
+  --z-preview: 1100;
+  --z-popover: 1200;
+  --z-popover-raised: 1300;
+  --z-menu: 2000;
+  --z-toast: 3000;
+  --z-dialog: 5000;
+  --z-tooltip: 10000;
+}
+
 /* Light theme: Preferences > Theme. "auto" follows the system setting. The palette's own light greys, as the toolbox uses them */
 :root[data-theme='light'] {
   --bg: var(--u-g1);
@@ -461,7 +488,7 @@ progress {
 }
 .palette-pop {
   position: fixed;
-  z-index: 400;
+  z-index: var(--z-popover);
   width: 244px;
   max-height: min(420px, calc(100vh - 16px));
   overflow-y: auto;
@@ -742,7 +769,7 @@ progress {
 }
 .search-pop {
   position: fixed;
-  z-index: 400;
+  z-index: var(--z-popover);
   display: flex;
   flex-direction: column;
   max-height: min(360px, calc(100vh - 16px));
@@ -1454,7 +1481,7 @@ body.dock-dragging * {
 }
 .dock-edge {
   position: fixed;
-  z-index: 70;
+  z-index: var(--z-dock-edge);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1477,7 +1504,7 @@ body.dock-dragging * {
 }
 .dock-float-ghost {
   position: fixed;
-  z-index: 69;
+  z-index: var(--z-dock-ghost);
   width: 380px;
   height: 320px;
   border: 2px dashed var(--accent);
@@ -1487,7 +1514,7 @@ body.dock-dragging * {
 }
 .dock-drag-tab {
   position: fixed;
-  z-index: 71;
+  z-index: var(--z-dock-drag);
   padding: 4px 10px;
   border: 1px solid var(--line-2);
   border-radius: 6px;
@@ -1499,7 +1526,7 @@ body.dock-dragging * {
 }
 .dock-float {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-float);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -1510,7 +1537,7 @@ body.dock-dragging * {
   overflow: hidden;
 }
 .dock-float.front {
-  z-index: 61;
+  z-index: var(--z-float-front);
 }
 .dock-float-head {
   flex: none;
@@ -1648,7 +1675,7 @@ body.dock-dragging * {
   position: absolute;
   right: 0;
   top: 32px;
-  z-index: 50;
+  z-index: var(--z-dropdown);
   background: var(--panel-2);
   border: 1px solid var(--line-2);
   border-radius: 8px;
@@ -3465,7 +3492,7 @@ button.twisty:hover {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  z-index: 100;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3477,6 +3504,9 @@ button.twisty:hover {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
+}
+.modal-backdrop.preview-backdrop {
+  z-index: var(--z-preview);
 }
 .preview-modal {
   width: min(96vw, 1600px);
@@ -3547,7 +3577,7 @@ button.twisty:hover {
   border: 1px solid var(--line-2);
   padding: 8px 14px;
   border-radius: 8px;
-  z-index: 200;
+  z-index: var(--z-toast);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 .toast.error {
@@ -3772,7 +3802,7 @@ button.twisty:hover {
 /* ---------------------------------------------------------------- tooltips */
 .ix-tooltip {
   position: fixed;
-  z-index: 10000;
+  z-index: var(--z-tooltip);
   max-width: 280px;
   padding: 5px 8px;
   border-radius: 5px;
@@ -3823,7 +3853,7 @@ button.twisty:hover {
 }
 .help-drawer {
   position: fixed;
-  z-index: 900;
+  z-index: var(--z-drawer);
   top: 44px;
   right: 0;
   bottom: 0;
@@ -4075,7 +4105,7 @@ kbd {
   font-size: 15px;
 }
 .quick-help-backdrop {
-  z-index: 1000;
+  z-index: var(--z-quick-search);
   align-items: flex-start;
   padding-top: 12vh;
 }
@@ -4203,7 +4233,7 @@ kbd {
 /* ---------------------------------------------------------------- context menus */
 .ctx-menu {
   position: fixed;
-  z-index: 2000;
+  z-index: var(--z-menu);
   min-width: 190px;
   max-height: calc(100vh - 8px);
   overflow-y: auto;
@@ -4870,7 +4900,7 @@ code {
   position: absolute;
   right: 0;
   top: 100%;
-  z-index: 50;
+  z-index: var(--z-dropdown);
   display: flex;
   flex-direction: column;
   min-width: 130px;
@@ -4993,7 +5023,7 @@ code {
 
 /* ---------------------------------------------------------------- in-app dialogs (confirm / prompt / alert) */
 .dialog-backdrop {
-  z-index: 5000;
+  z-index: var(--z-dialog);
 }
 .modal.dialog {
   width: min(440px, 92vw);
@@ -5721,11 +5751,11 @@ code {
 .q-menu-scrim {
   position: fixed;
   inset: 0;
-  z-index: 79;
+  z-index: var(--z-dropdown-scrim);
 }
 .q-menu {
   position: fixed;
-  z-index: 80;
+  z-index: var(--z-dropdown-menu);
   width: 300px;
   background: var(--panel-2);
   border: 1px solid var(--line-2);
@@ -5955,7 +5985,7 @@ code {
   align-items: flex-start;
   gap: 6px;
   position: absolute;
-  z-index: 30;
+  z-index: var(--z-canvas-hint);
   max-width: 260px;
   padding: 5px 8px;
   border-radius: 5px;
@@ -5984,7 +6014,7 @@ code {
   gap: 10px;
   max-width: min(640px, calc(100vw - 32px));
   border-color: var(--accent, var(--line-2));
-  z-index: 400;
+  z-index: var(--z-toast);
 }
 /* ---------------------------------------------------------------- narration and captions on the timeline */
 .timeline-labels,
@@ -7039,7 +7069,7 @@ code {
 .review-play {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: var(--z-dropdown);
   background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
@@ -7085,7 +7115,7 @@ code {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  z-index: 60;
+  z-index: var(--z-dropdown-raised);
   width: 340px;
   max-height: 60vh;
   overflow: auto;
@@ -7202,7 +7232,7 @@ code {
 }
 .tl-settings-pop {
   position: fixed;
-  z-index: 400;
+  z-index: var(--z-popover);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -7678,7 +7708,7 @@ code {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  z-index: 60;
+  z-index: var(--z-dropdown-raised);
   width: max-content;
   max-width: 340px;
   background: var(--panel, #fff);
@@ -8014,7 +8044,7 @@ code {
 }
 .font-pop {
   position: fixed;
-  z-index: 500;
+  z-index: var(--z-popover-raised);
   display: flex;
   flex-direction: column;
   background: var(--panel-2);
@@ -8723,7 +8753,7 @@ code {
 /* expression suggestions (ExprField): the list under a field; the chosen row is the palette gold with dark text */
 .expr-pop {
   position: fixed;
-  z-index: 400;
+  z-index: var(--z-popover);
   max-height: min(300px, calc(100vh - 16px));
   background: var(--panel-2);
   color: var(--text);
@@ -9239,4 +9269,38 @@ code {
 .inspector.ps-on .section:not(.ps-hit) .section-body > :not([data-prop]):not(:has([data-prop]:not(.ps-hide))),
 .inspector.ps-on > :not(.section):not(.prop-search):not(.recording-banner):not(:has(.section)) {
   display: none;
+}
+
+/* ---------------------------------------------------------------- help history buttons and the context banner */
+.help-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.help-nav-btns .icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.help-context {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-2);
+  border-left: 3px solid var(--primary-bg);
+  border-radius: 4px;
+  background: var(--panel-2);
+  font-size: 12px;
+}
+.help-context .link-btn {
+  padding: 0;
+  color: var(--text);
+  text-decoration: underline;
+  white-space: nowrap;
+}
+.preview-modal:focus {
+  outline: none;
 }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { onPanelRequest, store, useEditor, type BottomTab } from '../store/store';
 import { dockFloat, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
 import { Icons, type IconName } from './icons';
-import { openHelp } from '../help/Help';
+import { openHelp, setContextHelp } from '../help/Help';
 import { getTopic } from '../help/topics';
 import { ContextMenu, type MenuItem } from './ContextMenu';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -26,6 +26,9 @@ import { useComments } from '../lib/comments';
 import { countsOf } from '../../shared/comments.mjs';
 import { checklistProgress } from '../lib/templates';
 import { track } from '../lib/analytics';
+import { GENERAL_HELP, helpTooltip, resolveHelp, type HelpFocus, type HelpTarget } from '../help/context';
+import { getArtboard, locate } from '../store/doc';
+import type { NodeType } from 'interactives-player';
 
 // ---------------------------------------------------------------- the panels
 
@@ -59,7 +62,7 @@ const PANELS: Record<PanelId, PanelDef> = {
   a11y: { label: 'Accessibility', icon: 'a11y', help: 'accessibility-checker', tip: 'Check accessibility: contrast, small text, keyboard access, names and descriptions, autoplay and flashing, with what each means and a report for sign-off', tool: true, body: () => <AccessibilityPanel /> },
   insights: { label: 'Insights', icon: 'insights', help: 'insights', tip: 'What learners did: artboards reached, where they clicked, steps, answers to questions and your own records, as counts', tool: true, body: () => <InsightsPanel /> },
   interface: { label: 'Public interface', icon: 'plug', help: 'public-interface', tip: 'What a page that embeds this project can set, read, send and hear: variables as inputs and outputs, messages, with descriptions. Makes the reference page and TypeScript definitions', tool: true, body: () => <InterfacePanel /> },
-  checklist: { label: 'Checklist', icon: 'check', help: 'templates#the-checklist', tip: 'The things to change in a project made from a template: tick them off, click one to find its layer, review before you share', tool: true, body: () => <ChecklistPanel /> },
+  checklist: { label: 'Checklist', icon: 'check', help: 'templates#use-a-template', tip: 'The things to change in a project made from a template: tick them off, click one to find its layer, review before you share', tool: true, body: () => <ChecklistPanel /> },
   themes: { label: 'Themes', icon: 'themes', help: 'themes', tip: 'Colour tokens and the themes that give them values (Light, Dark, High contrast), with a contrast check per theme', tool: true, body: () => <ThemesPanel /> },
   credits: { label: 'Attributions', icon: 'credits', help: 'attributions', tip: 'Where the pictures, sounds, text and data in this project came from, and what it draws on: credits and references, linked to assets, with an optional Credits button for learners', tool: true, body: () => <CreditsPanel /> },
   usage: { label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each artboard, asset, variable, data source, script and timeline is used, and what is unused', tool: true, body: () => <UsagePanel /> },
@@ -332,14 +335,28 @@ const panelHelpTip = (p: PanelId) => {
   return t ? `${t.title}: ${t.summary}` : 'Open the help for this panel';
 };
 
-// The panel the person last worked in, so the header Help button can open that panel's page. Clicking or tabbing into a panel
-// (or one of its tabs) sets it, clicking the canvas or the toolbars clears it, and the header, menus and the help itself leave it alone
+// The panel the person last worked in, and the field they last focused in Properties, so the header Help button can open the
+// page for what they are working on. Clicking or tabbing into a panel (or one of its tabs) sets the panel, clicking the canvas
+// or the toolbars clears it, and the header, menus and the help itself leave it alone. A field is only remembered while its
+// panel is the one worked in, and any click in the panel that isn't on a field forgets it
 let lastPanel: PanelId | null = null;
+let lastField: NonNullable<HelpFocus['field']> | null = null;
+let focusVersion = 0;
 const lastListeners = new Set<() => void>();
+const bumpFocus = () => {
+  focusVersion++;
+  for (const fn of lastListeners) fn();
+};
 const setLastPanel = (p: PanelId | null) => {
   if (p === lastPanel) return;
   lastPanel = p;
-  for (const fn of lastListeners) fn();
+  if (p !== 'inspector') lastField = null;
+  bumpFocus();
+};
+const setLastField = (f: typeof lastField) => {
+  if (f?.prop === lastField?.prop && f?.sectionHelp === lastField?.sectionHelp) return;
+  lastField = f;
+  bumpFocus();
 };
 export const lastPanelWorkedIn = (): PanelId | null => lastPanel;
 export function trackPanelFocus(e: Event): void {
@@ -348,24 +365,57 @@ export function trackPanelFocus(e: Event): void {
   const own = t.closest('[data-panel], [data-dock-tab]');
   if (own) {
     const id = (own.getAttribute('data-panel') ?? own.getAttribute('data-dock-tab')) as PanelId;
-    if (id in PANELS) setLastPanel(id);
+    if (id in PANELS) {
+      setLastPanel(id);
+      if (id === 'inspector') {
+        const row = t.closest('[data-prop]');
+        const sec = t.closest('section.section');
+        setLastField(row && row.getAttribute('data-prop') && !t.closest('.prop-search') ? { prop: row.getAttribute('data-prop')!, label: row.getAttribute('data-prop')!.replace(/-/g, ' '), sectionHelp: sec?.getAttribute('data-help') ?? undefined, sectionTitle: sec?.getAttribute('data-section-title') ?? undefined } : null);
+      }
+    }
     return;
   }
   if (t.closest('.topbar, .help-drawer, .quick-help-backdrop, .ctx-menu, [role="menu"], [role="dialog"]')) return;
   setLastPanel(null);
 }
-/** What the header Help button opens: the last panel's page, else the general help. */
-export function openHeaderHelp(): void {
-  if (lastPanel) openPanelHelp(lastPanel);
-  else openHelp();
+
+/** What the header Help button would open right now, from the selection, the tool, the panel and the focused field. */
+export function currentHelpTarget(): HelpTarget {
+  const st = store().get();
+  const ab = getArtboard(st.project, st.activeArtboardId);
+  const layerTypes = ab ? (st.selection.map((id) => locate(ab, id)?.node.type).filter(Boolean) as NodeType[]) : [];
+  let graphKind: string | undefined;
+  if (ab && st.logicSelection) {
+    const node = ab.logic.nodes.find((n) => n.id === st.logicSelection);
+    if (node) graphKind = node.kind;
+    else if (ab.logic.groups?.some((g) => g.id === st.logicSelection)) graphKind = 'group';
+  }
+  return resolveHelp({
+    field: lastPanel === 'inspector' && lastField ? lastField : undefined,
+    panel: lastPanel ? { id: lastPanel, help: PANELS[lastPanel].help, label: PANELS[lastPanel].label } : null,
+    layerTypes,
+    graphKind,
+    keysSelected: st.selectedKeys.length > 0,
+    tool: st.tool,
+    artboard: !layerTypes.length && st.artboardSelected && ab ? (ab.isMaster ? 'master' : 'artboard') : undefined,
+  });
 }
-/** The header Help button's tooltip, which names the panel when that's where it will go. */
+/** What the header Help button opens: the page for whatever is highlighted (see help/context.ts). */
+export function openHeaderHelp(): void {
+  const t = currentHelpTarget();
+  const [topic, anchor] = t.to.split('#');
+  openHelp(topic, anchor, t === GENERAL_HELP ? undefined : t.label);
+}
+setContextHelp(openHeaderHelp);
+/** The header Help button's tooltip, which says what it will open. */
 export function useHeaderHelpTitle(): string {
-  const p = useSyncExternalStore(
+  useSyncExternalStore(
     (fn) => (lastListeners.add(fn), () => lastListeners.delete(fn)),
-    () => lastPanel,
+    () => focusVersion,
   );
-  return p ? `Help for the ${PANELS[p].label} panel (? to open, F1 or Ctrl+K to search)` : 'Help (? to open, F1 or Ctrl+K to search)';
+  // re-render when what is highlighted changes
+  useEditor((st) => `${st.selection.join(',')}|${st.logicSelection}|${st.selectedKeys.length}|${st.tool}|${st.artboardSelected}|${st.activeArtboardId}|${st.project.artboards.length}`);
+  return helpTooltip(currentHelpTarget());
 }
 
 function tabMenu(p: PanelId, at: { zone: Zone } | { float: string }): MenuItem[] {
