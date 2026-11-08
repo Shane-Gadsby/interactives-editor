@@ -343,7 +343,7 @@ describe('Listening lab', () => {
       const answerEvents = ab.logic.nodes.filter((n) => n.kind === 'event.pointer' && n.params.target === byName(ab, 'Answer')!.id);
       expect(answerEvents).toHaveLength(1);
       expect(answerEvents[0].params.onlyIf).toBe('!locked');
-      expect(byName(ab, 'Answers')!.keyNav).toBeTruthy();
+      expect((byName(ab, 'Answers') as { keyNav?: unknown }).keyNav).toBeTruthy();
     }
     for (const ab of pages) walk(ab.children, (n) => expect(n.name).not.toMatch(/stop button$/));
     const sorted = project.variables.find((v) => v.name === 'sorted')!;
