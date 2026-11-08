@@ -3,7 +3,7 @@ import { addQuestion, setQuestionSettings } from '../../../question-kit';
 import { brandedPage, brandedProject, button, contentBox, item, solid, stroke, text } from '../../kit';
 import { stack } from '../../parts';
 import type { Colourway } from '../../looks';
-import { announce, bind, brandQuestionFrame, click, goNext, graph, heroPage, noteBelow, questionNav, scorePage, variable } from './shared';
+import { announce, bind, brandQuestionFrame, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, questionNav, scorePage, variable } from './shared';
 
 //Words with an American spelling to accept and a few without. The words only live in each question's accepted spellings: nothing
 //else in the project says them, so the share link (which takes those out and marks on the server) has none of them in the page.
@@ -89,6 +89,8 @@ export function buildSpellingTest(colourway: Colourway) {
     //The word: Play sound with no sound picked yet. The question's Voice section fills it (Make the audio with a voice), or the author picks a recording
     const g = graph(page);
     const sound = g.run(click(g, plays[i], 'Say the word'), ['action.sound', { asset: '', volume: 1 }]);
+    graphNote(page, { anchor: kitNode(page, 'start:event'), colour: 'sky', text: '**The question kit wired Start, Check, Enter, Hint and Try again.** Enter in the box checks, and coming back keeps what was typed (`keepAnswer`). Hint and Try again show only when `offerHint` and `allowTryAgain` allow.' });
+    graphNote(page, { anchor: sound, colour: 'sky', text: '**Play sound has no sound yet.** [ ] The word\'s Voice section makes the audio with a voice (spoken twice, a little slowly) and fills it in here, or pick your own recording.' });
     const q = frames[i].question!;
     frames[i].question = { ...q, voice: { voice: 'bf_emma', speed: 0.9, twice: true, node: sound.id } };
   });

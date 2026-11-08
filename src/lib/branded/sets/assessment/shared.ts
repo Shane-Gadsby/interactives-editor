@@ -145,7 +145,8 @@ export function questionNav(ctx: BrandedCtx, page: Artboard, prefix: string) {
   const back = button(ctx, 'Back button', 'Back', page.width - 48 - 170 - 12 - 110, 30, 110, false);
   page.children.push(back, next);
   const g = graph(page);
-  g.run(click(g, next, 'Navigation'), goNext());
+  const nextClick = click(g, next, 'Navigation');
+  g.run(nextClick, goNext());
   g.run(click(g, back, 'Navigation'), goPrevious());
-  return { next, back };
+  return { next, back, nextClick };
 }

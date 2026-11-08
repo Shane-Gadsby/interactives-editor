@@ -3,7 +3,7 @@ import { addQuestion, partsOf, setAreaShape, setQuestionSettings, syncQuestion }
 import { brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text } from '../../kit';
 import { fill, extrasChecklist, questionExtras, stack } from '../../parts';
 import type { Colourway } from '../../looks';
-import { announce, bind, brandQuestionFrame, click, goNext, graph, heroPage, noteBelow, scorePage, setVar, variable } from './shared';
+import { announce, bind, brandQuestionFrame, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, scorePage, setVar, variable } from './shared';
 
 // ------------------------------------------------------------------------------------------------ Find the hotspot
 
@@ -79,6 +79,8 @@ export function buildFindHotspot(colourway: Colourway) {
     const g = graph(hero);
     g.run(click(g, start, 'Navigation'), goNext());
   }
+  graphNote(page, { anchor: kitNode(page, 'spots:event'), colour: 'sky', text: '**One flow for every area.** *Only when a child is hit* is on, so `event.childIndex` says which area of the group was pressed and Choose option takes it as the answer. An area added in the Question section needs no new flow.' });
+  graphNote(page, { anchor: kitNode(page, 'start:event'), colour: 'sky', text: '**The question kit wired Start, Check, Hint and Try again** as well. [ ] Change the right area and the tries in the Question section, not in this graph.' });
 
   noteBelow(page, { text: '**One flow for every area** The areas sit in the "Areas" group and a single click flow hands Choose option the area\'s place, so adding an area in the Question section adds no flow.', colour: 'sky' });
   noteBelow(page, { x: 456, text: '[ ] Put your picture in the grey placeholder, delete the sample labels, then drag each area over its place. Areas are invisible to a learner until picked.', colour: 'gold' });
@@ -214,6 +216,7 @@ export function buildFindHotspots(colourway: Colourway) {
     const g = graph(page);
     //One flow for every area: the copy that was pressed gives event.index, and a find that is already ticked does nothing
     const on = g.event('event.pointer', { target: area.id, type: 'click', onlyIf: '!found.includes(event.index)' }, 'Find an area');
+    graphNote(page, { anchor: on, colour: 'sky', text: '**One flow for every target.** `event.index` is the row of `targets` that was pressed, and *Only if* stops a find that is already ticked from counting twice or re-announcing.' });
     g.run(
       on,
       ['action.setVariable', { variable: found.id, op: 'push', value: 'event.index' }],
@@ -222,6 +225,7 @@ export function buildFindHotspots(colourway: Colourway) {
     );
     //Any other click on the picture is a wrong one, until everything is found
     const miss = g.event('event.pointer', { target: pic.id, type: 'click', onlyIf: '!allFound' }, 'A click on the picture, nowhere that counts');
+    graphNote(page, { anchor: miss, colour: 'sky', text: '**A click on the picture that no area caught is a wrong one.** It stops counting once `allFound` is true, so clicking about after the last find costs nothing.' });
     g.run(miss, setVar(wrong, '1', 'add'), setVar(message, 'wrongMessage'), announce('wrongMessage + " Wrong clicks: " + wrong'));
     g.run(click(g, finish, 'Navigation'), goNext());
   }

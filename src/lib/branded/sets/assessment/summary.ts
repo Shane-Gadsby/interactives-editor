@@ -2,7 +2,7 @@ import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'inter
 import { brandedPage, brandedProject, button, byName, contentBox, item, solid, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { fill, stack } from '../../parts';
-import { bankQuestion, bind, click, goNext, graph, heroPage, noteBelow, variable } from './shared';
+import { bankQuestion, bind, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, variable } from './shared';
 
 //The water cycle, one stage per step. In each step one statement is true (correct is its place, counting from 1): it is the sentence that goes into the summary.
 const STEPS = [
@@ -60,7 +60,7 @@ export function buildSummary(colourway: Colourway) {
   const box = contentBox(play);
 
   //Each step is a row of a question bank: the statements are its options, and a wrong pick can be tried again but costs the point
-  const { frame, P, progressRow } = bankQuestion(ctx, project, play, {
+  const { frame, P, progressRow, check } = bankQuestion(ctx, project, play, {
     kind: 'single',
     name: 'Step question',
     items: 'steps',
@@ -110,6 +110,8 @@ export function buildSummary(colourway: Colourway) {
     const g = graph(hero);
     g.run(click(g, start, 'Navigation'), goNext());
   }
+  graphNote(play, { anchor: kitNode(play, 'start:event'), colour: 'sky', text: '**The question kit wired Start, Choose option and Next.** Next is the kit\'s Try again button relabelled: it deals the next step, and its Done output goes on to the summary page.' });
+  graphNote(play, { anchor: check, colour: 'sky', text: '**Check answer follows Choose option,** so a statement is marked the moment it is picked. A wrong pick can be chosen again, but the second check costs the point.' });
 
   //The result page: the finished summary and how many steps went right first time
   const scoreLabel = text(ctx, 'Score label', 'Right first time', 0, 0, 100, { fontSize: 18, fontWeight: 600, color: L.muted });

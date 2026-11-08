@@ -5,7 +5,7 @@
 import { createNode, uid, type FrameNode, type Keyframe, type SceneNode, type TemplateChecklistItem, type Timeline, type Track } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, stroke, text } from '../../kit';
 import type { Colourway } from '../../looks';
-import { addVar, announce, bind, click, graph, setVar } from '../../graph-kit';
+import { addVar, announce, bind, click, graph, graphNote, setVar } from '../../graph-kit';
 import { goNextOn, heroPage, lit, resetVars } from './shared';
 import { fill, progressBar, stack } from '../../parts';
 
@@ -145,9 +145,14 @@ export function interactiveTimeline(colourway: Colourway) {
   g.run(pick, setVar(current, 'event.childIndex + 1'));
   const focused = g.event('event.focus', { target: markers.id, type: 'focus', childrenOnly: true }, 'Choose an event');
   g.run(focused, setVar(current, 'event.childIndex + 1'));
-  g.run(click(g, next, 'Walk the events'), setVar(current, 'Math.min(total, current + 1)'));
+  graphNote(page, { anchor: pick, colour: 'sky', text: '**One flow serves every marker, by click and by focus.** *Only when a child is hit* is on, so `event.childIndex + 1` is the event (0 means none picked). Tabbing onto a dot picks it too.' });
+  const nextClick = click(g, next, 'Walk the events');
+  graphNote(page, { anchor: nextClick, colour: 'sky', text: '**Next and Previous stop at the ends** with Math.min and Math.max, and the buttons disable there too, so `current` never leaves 1 to `total`.' });
+  g.run(nextClick, setVar(current, 'Math.min(total, current + 1)'));
   g.run(click(g, prev, 'Walk the events'), setVar(current, 'Math.max(1, current - 1)'));
-  g.run(g.event('event.variable', { variable: current.id }, 'Say which one'), announce('current > 0 ? "Event " + current + " of " + total + ": " + events[current - 1]?.title : ""'));
+  const said = g.event('event.variable', { variable: current.id }, 'Say which one');
+  graphNote(page, { anchor: said, colour: 'sky', text: '**The announcement hangs off the variable, not the buttons.** Variable changed fires for a dot, Next, Previous and Start over alike, so one node reads out all of them.' });
+  g.run(said, announce('current > 0 ? "Event " + current + " of " + total + ": " + events[current - 1]?.title : ""'));
   //Opening the page again starts from nothing chosen
   g.run(g.event('event.start', {}, 'Start over'), resetVars(current));
 

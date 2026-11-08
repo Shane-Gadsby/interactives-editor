@@ -3,7 +3,7 @@ import { lookDefaults } from '../../../themes';
 import { BRAND_FONT } from '../../looks';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, stroke, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { announce, bind, click, graph, goNext, goPrevious, heroPage, setVar, variable } from './shared';
+import { announce, bind, click, graph, graphNote, goNext, goPrevious, heroPage, setVar, variable } from './shared';
 import { fill, progressBar, stack } from '../../parts';
 
 //A keyword is a stem matched anywhere in the answer, whatever the case, so "evaporat" catches evaporate, evaporation...
@@ -115,12 +115,18 @@ export function buildEssay(colourway: Colourway) {
   }
   {
     const g = graph(write);
-    g.run(click(g, submit, 'Submit'), announce('"Feedback ready. " + wc + " words. " + foundReq.length + " of " + required.length + " key ideas found."'), goNext());
+    const submitClick = click(g, submit, 'Submit');
+    graphNote(write, { anchor: submitClick, colour: 'sky', text: '**Submit announces the live counts** (`wc`, `foundReq`) before moving on, so a screen reader hears the same numbers as the feedback page. The marking itself is the live variables, not a node.' });
+    g.run(submitClick, announce('"Feedback ready. " + wc + " words. " + foundReq.length + " of " + required.length + " key ideas found."'), goNext());
   }
   {
     const g = graph(feedbackPage);
-    g.run(click(g, reveal, 'Show model answer'), setVar(showModel, 'true'), announce('"Model answer: " + modelAnswer'));
-    g.run(click(g, edit, 'Edit my answer'), setVar(showModel, 'false'), goPrevious());
+    const revealClick = click(g, reveal, 'Show model answer');
+    graphNote(feedbackPage, { anchor: revealClick, colour: 'sky', text: '**`showModel` is what shows the model answer.** The announcement reads `modelAnswer` out too, since text that appears on its own is easy for a screen reader to miss. [ ] Write your own `modelAnswer`.' });
+    g.run(revealClick, setVar(showModel, 'true'), announce('"Model answer: " + modelAnswer'));
+    const editClick = click(g, edit, 'Edit my answer');
+    graphNote(feedbackPage, { anchor: editClick, colour: 'sky', text: '**Edit my answer** hides the model again before going back, so the next visit starts with it closed. `essay` is not touched, so the writing is still there.' });
+    g.run(editClick, setVar(showModel, 'false'), goPrevious());
     g.run(click(g, again, 'Start again'), ['action.startOver', {}]);
   }
 

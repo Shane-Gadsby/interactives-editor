@@ -8,7 +8,7 @@ import { addQuestion, partsOf, setQuestionSettings } from '../../../question-kit
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
-import { dressQuestion, endPage, goNextOn, heroPage, lit } from './shared';
+import { clickOf, dressQuestion, endPage, goNextOn, graphNote, heroPage, kitNode, lit } from './shared';
 import { extrasChecklist, questionExtras } from '../../parts';
 
 //The passage, one sentence a row. A number is a gap (its index in ANSWERS), a string is the text around it
@@ -133,6 +133,8 @@ export function dragTheWords(colourway: Colourway) {
 
   goNextOn(hero, start, 'Navigation');
   goNextOn(page, next, 'Navigation');
+  graphNote(page, { anchor: kitNode(page, 'start:event'), colour: 'sky', text: '**The question kit wired Start, Check, Hint and Try again.** Dropping a word in a gap is the question\'s own behaviour (by drag, tap or keyboard), so there is no node per word. [ ] Change gaps and words in the Question section.' });
+  graphNote(page, { anchor: clickOf(page, next), colour: 'sky', text: '**See results is hidden until `words_locked`,** when every gap is right or the tries run out. Start resets the question when the page opens, so Back from Results finds it fresh.' });
   {
     const g = graph(results.page);
     g.run(click(g, results.again, 'Try again'), goPrevious());

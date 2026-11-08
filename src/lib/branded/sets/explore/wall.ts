@@ -6,7 +6,7 @@ import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import { BRAND_FONT } from '../../looks';
-import { addVar, announce, bind, click, graph, set, type ActionStep } from '../../graph-kit';
+import { addVar, announce, bind, click, graph, graphNote, set, type ActionStep } from '../../graph-kit';
 import { fill, keyNavList, stack } from '../../parts';
 import { heroButtons } from './helpers';
 
@@ -143,10 +143,15 @@ export const informationWall: BrandedStarter = {
     //One flow for all the topic buttons (event.childIndex is the copy that was pressed), Clear puts both back, and a change of the wall is announced
     const g = graph(page);
     const pick = g.event('event.pointer', { target: topics.id, type: 'click', childrenOnly: true }, 'Topic buttons');
+    graphNote(page, { anchor: pick, colour: 'sky', text: '**One flow for every topic button.** The first button, All, or pressing the topic that is already on, clears `tag`; any other press sets it to that topic. Pressing it twice therefore turns it off.' });
     g.run(pick, set(tag, 'event.childIndex == 0 || tag == topics[event.childIndex] ? "" : topics[event.childIndex]'));
     const reset: ActionStep = ['action.resetVariables', { variables: [query.id, tag.id] }];
-    g.run(click(g, clear, 'Clear'), reset);
-    g.run(g.event('event.variable', { variable: shown.id }, 'Say the count'), announce('shown.length + " of " + panels.length + " panels showing"'));
+    const clearClick = click(g, clear, 'Clear');
+    graphNote(page, { anchor: clearClick, colour: 'sky', text: '**Reset variables** puts the search text and the topic back together. The search box is bound to `query`, so it empties itself.' });
+    g.run(clearClick, reset);
+    const said = g.event('event.variable', { variable: shown.id }, 'Say the count');
+    graphNote(page, { anchor: said, colour: 'sky', text: '**The count is said when `shown` changes,** whether the search, a topic or Clear changed it, so a screen reader hears the result of filtering that it cannot see.' });
+    g.run(said, announce('shown.length + " of " + panels.length + " panels showing"'));
 
     //Notes for whoever edits the template, below the page
     const below = (x: number, w: number) => ({ x, y: page.height + 14, w, h: 96 });

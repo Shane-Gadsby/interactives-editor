@@ -7,7 +7,7 @@ import { addQuestion, partsOf, setQuestionSettings } from '../../../question-kit
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
-import { dressQuestion, endPage, goNextOn, heroPage } from './shared';
+import { clickOf, dressQuestion, endPage, goNextOn, graphNote, heroPage, kitNode } from './shared';
 import { extrasChecklist, questionExtras } from '../../parts';
 
 //The pictures: what each should show, then the partner it goes with (a word and a line)
@@ -121,6 +121,8 @@ export function imagePairing(colourway: Colourway) {
 
   goNextOn(hero, start, 'Navigation');
   goNextOn(page, next, 'Navigation');
+  graphNote(page, { anchor: kitNode(page, 'start:event'), colour: 'sky', text: '**The matching question wired Start, Check, Hint and Try again.** Dragging a picture onto a card is the question\'s own behaviour, so no node is needed per picture. [ ] Change the pairs in the Question section.' });
+  graphNote(page, { anchor: clickOf(page, next), colour: 'sky', text: '**See results is hidden until `pairs_locked`,** when every card is matched or the tries run out. Start resets the question when the page opens, so Back from Results finds it fresh.' });
   {
     const g = graph(results.page);
     g.run(click(g, results.again, 'Try again'), goPrevious());

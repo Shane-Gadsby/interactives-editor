@@ -9,9 +9,9 @@
 import { createNode, walk, type Artboard, type FrameNode, type SceneNode, type TemplateChecklistItem, type Variable } from 'interactives-player';
 import { addQuestion, partOf, setQuestionSettings } from '../../../question-kit';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, overlay, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
-import { addVar, announce, bind, click, goNext, graph, set, setVar, toggleVar } from '../../graph-kit';
+import { addVar, announce, bind, click, goNext, graph, graphNote, set, setVar, toggleVar } from '../../graph-kit';
 import { dialogPanel, extrasChecklist, questionExtras, stack } from '../../parts';
-import { dressQuestion, endPage } from '../drag/shared';
+import { clickOf, dressQuestion, endPage, kitNode } from '../drag/shared';
 import { heroButtons } from './helpers';
 
 const EVENTS = [
@@ -418,25 +418,37 @@ function timelinePage(ctx: BrandedCtx, geo: Geo, v: Vars, tl: string, to: { next
   // ------------------------------------------------------------------ the graph
   const g = graph(page);
   //A click on an event, or on its label, or on a row of the list: that event, and its dialog
-  const openOn = (target: SceneNode, note: string) => g.run(g.event('event.pointer', { target: target.id, type: 'click', childrenOnly: true }, note), setVar(v.current, 'event.childIndex'), set(v.open, 'true'));
-  openOn(dots, 'Open an event');
+  const openOn = (target: SceneNode, note: string) => {
+    const press = g.event('event.pointer', { target: target.id, type: 'click', childrenOnly: true }, note);
+    g.run(press, setVar(v.current, 'event.childIndex'), set(v.open, 'true'));
+    return press;
+  };
+  const dotPress = openOn(dots, 'Open an event');
   openOn(labels, 'Open an event');
   openOn(list, 'Open an event');
+  graphNote(page, { anchor: dotPress, colour: 'sky', text: '**The dots, the labels and the list rows each get the same flow.** `event.childIndex` is the event\'s place in the date-sorted list, so one `current` says which the dialog shows, whichever way it was opened.' });
   //Zooming keeps the middle of what you are looking at (or the event you are on) where it is
   const panFor = (spanExpr: string) => `clamp((centreAt - (${spanExpr}) / 2 - bounds[0]) / Math.max(0.001, bounds[2] - (${spanExpr})), 0, 1)`;
-  g.run(click(g, zin, 'Zoom in'), setVar(v.pan, panFor('bounds[2] / 2 ** (zoom + 1)')), setVar(v.zoom, 'zoom + 1'), announce(`"Zoomed in. Showing " + ${tl}Info[0].rangeText`));
+  const zinClick = click(g, zin, 'Zoom in');
+  graphNote(page, { anchor: zinClick, colour: 'sky', text: '**Pan is set before zoom,** because `centreAt` (live) reads the view as it is now: the middle of what you see, or the event you are on. The new pan keeps that point where it was.' });
+  g.run(zinClick, setVar(v.pan, panFor('bounds[2] / 2 ** (zoom + 1)')), setVar(v.zoom, 'zoom + 1'), announce(`"Zoomed in. Showing " + ${tl}Info[0].rangeText`));
   g.run(click(g, zout, 'Zoom out'), setVar(v.pan, panFor('bounds[2] / 2 ** (zoom - 1)')), setVar(v.zoom, 'zoom - 1'), announce(`"Zoomed out. Showing " + ${tl}Info[0].rangeText`));
   g.run(click(g, fit, 'Fit all'), setVar(v.zoom, '0'), setVar(v.pan, '0'), announce(`"Showing everything, " + ${tl}Info[0].rangeText`));
   //Earlier and Later move a quarter of the view
   const shift = (sign: string) => `clamp(pan ${sign} 0.25 * viewSpan / Math.max(0.001, bounds[2] - viewSpan), 0, 1)`;
-  g.run(click(g, earlier, 'Earlier'), setVar(v.pan, shift('-')), announce(`"Showing " + ${tl}Info[0].rangeText`));
+  const earlierClick = click(g, earlier, 'Earlier');
+  graphNote(page, { anchor: earlierClick, colour: 'sky', text: '**Earlier and Later slide the view a quarter of its width,** and clamp `pan` between 0 and 1, so they stop at the ends of the data. `viewSpan` is live and shrinks as the zoom goes up.' });
+  g.run(earlierClick, setVar(v.pan, shift('-')), announce(`"Showing " + ${tl}Info[0].rangeText`));
   g.run(click(g, later, 'Later'), setVar(v.pan, shift('+')), announce(`"Showing " + ${tl}Info[0].rangeText`));
   //Walking the events: the view follows when the one you land on is out of it (the variable flow below), and it is said aloud
   g.run(click(g, next, 'Next event'), setVar(v.current, `Math.min(${ev}.length - 1, current + 1)`));
   g.run(click(g, prev, 'Previous event'), setVar(v.current, 'Math.max(0, current - 1)'));
-  g.run(click(g, step, 'Step through'), setVar(v.zoom, 'Math.min(maxZoom, stepZoom)'), setVar(v.pan, '0'), setVar(v.current, '-1'), setVar(v.current, '0'));
+  const stepClick = click(g, step, 'Step through');
+  graphNote(page, { anchor: stepClick, colour: 'sky', text: '**Step through sets `current` to -1, then 0, on purpose.** Follow the event fires on a change, so going via -1 makes it run even when you were already on the first event. [ ] `stepZoom` is how far in it goes.' });
+  g.run(stepClick, setVar(v.zoom, 'Math.min(maxZoom, stepZoom)'), setVar(v.pan, '0'), setVar(v.current, '-1'), setVar(v.current, '0'));
   g.run(click(g, view2, 'View as list'), toggleVar(v.asList), announce('asList ? "Showing the list, in date order" : "Showing the timeline"'));
   const moved = g.event('event.variable', { variable: v.current.id, onlyIf: `current >= 0 && !!${ev}[current]` }, 'Follow the event');
+  graphNote(page, { anchor: moved, colour: 'sky', text: '**Follow the event runs on any change of `current`** (Next, Previous, a dot, Step through). It pans only if the event is out of view (`inView`), then says it aloud. *Only if* keeps -1, nothing picked, quiet.' });
   g.run(moved, setVar(v.pan, `${ev}[current].inView ? pan : clamp((${ev}[current].start - viewSpan / 2 - bounds[0]) / Math.max(0.001, bounds[2] - viewSpan), 0, 1)`), announce(`${ev}[current].spoken + ": " + ${ev}[current].title + ". Event " + (current + 1) + " of " + ${ev}.length`));
   if (to.next) g.run(click(g, activity, 'Pages'), goNext());
 
@@ -537,6 +549,8 @@ export const datedTimeline: BrandedStarter = {
     {
       const g = graph(activity);
       g.run(click(g, see, 'Pages'), goNext());
+      graphNote(activity, { anchor: kitNode(activity, 'moveUp:event'), colour: 'sky', text: '**One flow for Move up and one for Move down serve every event.** `event.index` is the one whose button was pressed. The question kit wired Start, Check, Hint and Try again as well.' });
+      graphNote(activity, { anchor: clickOf(activity, see), colour: 'sky', text: '**See results shows once `order_locked` is true,** right or out of tries, and goes to the next page in the order.' });
       const g2 = graph(results.page);
       g2.run(click(g2, results.again, 'Try again'), ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
     }

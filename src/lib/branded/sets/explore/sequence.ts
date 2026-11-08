@@ -6,7 +6,7 @@ import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem 
 import { lookDefaults } from '../../../themes';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, text, type BrandedStarter } from '../../kit';
 import { BRAND_FONT } from '../../looks';
-import { addVar, announce, bind, click, focus, graph, set } from '../../graph-kit';
+import { addVar, announce, bind, click, focus, graph, graphNote, set } from '../../graph-kit';
 import { fill, stack } from '../../parts';
 import { heroButtons } from './helpers';
 
@@ -114,11 +114,17 @@ export const imageSequence: BrandedStarter = {
 
     //Moving to a stage says which one. Previous and Next set the same variable the slider is tied to, and the names are one flow for all six
     const g = graph(page);
-    g.run(g.event('event.start', {}, 'Start on the slider'), focus(slider));
-    g.run(click(g, prev, 'Step'), set(step, 'step <= 1 ? 1 : step - 1'));
+    const opened = g.event('event.start', {}, 'Start on the slider');
+    graphNote(page, { anchor: opened, colour: 'sky', text: '**Opening the page puts the keyboard on the slider,** so the arrow keys step through the stages straight away. It is the only node that touches focus.' });
+    g.run(opened, focus(slider));
+    const prevClick = click(g, prev, 'Step');
+    graphNote(page, { anchor: prevClick, colour: 'sky', text: '**Previous and Next stop at the ends** rather than wrapping, and move `step`, the one variable the slider, the names and the pictures all read.' });
+    g.run(prevClick, set(step, 'step <= 1 ? 1 : step - 1'));
     g.run(click(g, next, 'Step'), set(step, 'step >= total ? total : step + 1'));
     g.run(g.event('event.pointer', { target: nameRow.id, type: 'click', childrenOnly: true }, 'Stage names'), set(step, 'event.childIndex + 1'));
-    g.run(g.event('event.variable', { variable: step.id }, 'Say the stage'), announce('"Stage " + step + " of " + total + ": " + stages[step - 1].title'));
+    const said = g.event('event.variable', { variable: step.id }, 'Say the stage');
+    graphNote(page, { anchor: said, colour: 'sky', text: '**One announcement for every way of moving.** Variable changed fires on `step` whether the slider, a name or a button moved it.' });
+    g.run(said, announce('"Stage " + step + " of " + total + ": " + stages[step - 1].title'));
 
     //Notes for whoever edits the template, below the page
     const below = (x: number, w: number) => ({ x, y: page.height + 14, w, h: 84 });

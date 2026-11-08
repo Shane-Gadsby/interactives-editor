@@ -2,7 +2,7 @@ import { defaultAutoLayout, type FrameNode, type SceneNode, type TemplateCheckli
 import { addQuestion, partsOf, setQuestionSettings, syncQuestion } from '../../../question-kit';
 import { brandedPage, brandedProject, button, contentBox, item, text, type LayoutState } from '../../kit';
 import { type Colourway } from '../../looks';
-import { after, bind, brandQuestionFrame, click, goNext, graph, heroPage, kitNode, noteBelow, setVar } from './shared';
+import { after, bind, brandQuestionFrame, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, setVar } from './shared';
 import { questionExtras } from '../../parts';
 
 //A short passage on the water cycle, one sentence a line: the text before a blank, the accepted answers (| between alternatives), and the text after it.
@@ -92,12 +92,16 @@ export function buildBlanks(colourway: Colourway) {
     //Show answers types the first accepted answer into every blank, then checks, and says so
     const feedbackVar = project.variables.find((v) => v.name === `${P}_feedback`)!;
     const blankVars = SENTENCES.map((_, i) => project.variables.find((v) => v.name === `${P}_blank${i + 1}`)!);
-    const filled = g.run(click(g, reveal, 'Show answers'), ...blankVars.map((b, i) => setVar(b, JSON.stringify(SENTENCES[i].answers.split('|')[0]))));
+    const revealClick = click(g, reveal, 'Show answers');
+    const filled = g.run(revealClick, ...blankVars.map((b, i) => setVar(b, JSON.stringify(SENTENCES[i].answers.split('|')[0]))));
     const checked = g.then(filled, 'action.questionCheck', { question: frame.id });
     //Check answer carries on by its own outputs: right, once every blank holds an answer
     g.run(g.then(checked, 'action.setVariable', { variable: feedbackVar.id, op: 'set', value: '"These are the answers. Press Start again to have another go."' }, 'correct'), ['action.announce', { text: '"The answers are filled in."', politeness: 'polite' }]);
     //Start again also puts the cursor back in the first blank
-    after(page, kitNode(page, 'reset:action'), 'action.focus', { op: 'focus', target: inputs[0].id });
+    const refocus = after(page, kitNode(page, 'reset:action'), 'action.focus', { op: 'focus', target: inputs[0].id });
+    graphNote(page, { anchor: kitNode(page, 'start:event'), colour: 'sky', text: '**The question kit wired Start, Check, Enter, Hint and Start again.** Enter in a blank checks too: that key event has `typing` on, which a key event normally ignores. [ ] Edit the blanks in the Question section.' });
+    graphNote(page, { anchor: revealClick, colour: 'sky', text: '**Show answers types the first accepted answer into every blank,** then checks. [ ] If you change an answer in the Question section, change it in these Set variable nodes as well.' });
+    graphNote(page, { anchor: refocus, colour: 'sky', text: '**Start again puts the cursor back in the first blank,** after the kit has cleared them, so a keyboard user can type straight away.' });
   }
   {
     const g = graph(hero);

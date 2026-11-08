@@ -3,7 +3,7 @@ import { addQuestion, partsOf, setQuestionSettings, syncQuestion } from '../../.
 import { brandedPage, brandedProject, button, byName, contentBox, edge, item, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { extrasChecklist, questionExtras, stack } from '../../parts';
-import { after, bind, brandQuestionFrame, click, goNext, graph, heroPage, kitNode, noteBelow, scorePage, variable } from './shared';
+import { after, bind, brandQuestionFrame, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, scorePage, variable } from './shared';
 
 
 //Study skills, kept general. Each row of the question bank: the prompt, an optional `spoken` (what a voice says instead of the prompt), the
@@ -163,23 +163,30 @@ export function buildAudioFirstQuiz(colourway: Colourway) {
     const resetAct = kitNode(play, 'reset:action');
     sayQuestion(resetAct);
     after(play, resetAct, 'action.artboard', { to: 'next', transition: 'fade', duration: 250 }, 'done');
+    graphNote(play, { anchor: kitNode(play, 'start:event'), colour: 'sky', text: '**Opening a question says it:** where it is in the quiz, then the question with its numbered options. Next does the same. *Only when* `spokenOn`, and the fallback announces it where the browser has no voice.' });
     //Picking an option, or its number key, checks it
     const check = after(play, kitNode(play, 'option:action'), 'action.questionCheck', { question: frame.id });
     play.logic.edges.push(edge(kitNode(play, 'numberKeys:action'), check));
     //Once it is checked: note when, say the feedback with the explanation (the right answer too when it was wrong), and with a pace set the next question follows
+    graphNote(play, { anchor: check, colour: 'sky', text: '**A pick and a number key share one Check answer.** Its Finished output runs once, when the question is done.' });
     const when = after(play, check, 'action.setVariable', { variable: answeredAt.id, op: 'set', value: 'Date.now()' }, 'finished');
     const feedback = after(play, when, 'action.speak', say(`${P}_feedback + " " + (${P}_correct ? "" : "The answer was " + rightPlace + ", " + rightText + ". ") + rowExplain`, { wait: true })[1]);
     const pacing = after(play, feedback, 'logic.if', { condition: 'pace > 0' });
     const wait = after(play, pacing, 'action.delay', { ms: 'pace <= 4 ? 4000 : 8000' }, 'true');
+    graphNote(play, { anchor: pacing, colour: 'sky', text: '**The pace is a timer, not a loop.** With `pace` above 0 the Wait runs and the If asks again, so a timer from an earlier answer, or one overtaken by pressing Next, does nothing.' });
     //a stale timer does nothing: it checks the answer is the one it waited for
     const still = after(play, wait, 'logic.if', { condition: `${P}_answered && Date.now() - answeredAt >= pace * 1000 - 100` });
     play.logic.edges.push(edge(still, resetAct, 'true'));
     //The hint is said as well as shown
     after(play, kitNode(play, 'hint:action'), 'action.speak', say(`"Hint. " + ${P}_hint`)[1]);
     //Enter moves on as well as N (the Next button's shortcut), once the question is answered
-    play.logic.edges.push(edge(g.event('event.key', { key: 'Enter', type: 'keydown', onlyIf: `${P}_locked` }, 'Key Enter'), resetAct));
+    const enterKey = g.event('event.key', { key: 'Enter', type: 'keydown', onlyIf: `${P}_locked` }, 'Key Enter');
+    play.logic.edges.push(edge(enterKey, resetAct));
+    graphNote(play, { anchor: enterKey, colour: 'sky', text: '**Enter moves on as well as N,** the Next button\'s own shortcut, and only once the question is finished (`locked`). It runs the kit\'s Next, so the last question goes to the score.' });
     //Slower, one step down for good (remembered with the learner's other choices), and pause or carry on
-    g.run(click(g, slower, 'Slower'), ['action.speak', { op: 'slower' }]);
+    const slowerClick = click(g, slower, 'Slower');
+    graphNote(play, { anchor: slowerClick, colour: 'sky', text: '**Slower steps the speech down for good:** the voice settings are remembered with the learner\'s other choices. Pause toggles, and Spoken prompts toggles `spokenOn` and stops anything mid-sentence.' });
+    g.run(slowerClick, ['action.speak', { op: 'slower' }]);
     g.run(click(g, pause, 'Pause'), ['action.speak', { op: 'toggle' }]);
     //Turn off spoken prompts (and on again)
     g.run(click(g, spoken, 'Spoken prompts'), ['action.setVariable', { variable: spokenOn.id, op: 'toggle' }], ['action.speak', { op: 'stop' }]);
@@ -222,9 +229,13 @@ export function buildAudioFirstQuiz(colourway: Colourway) {
   });
   {
     const g = graph(result);
-    g.run(g.event('event.start', {}, 'Result page'), say(`"You got " + ${P}_setScore + " of " + ${P}_setMax + ". " + message + (${P}_missed.length > 0 ? " You missed " + ${P}_missed.length + (${P}_missed.length == 1 ? " question. Press M to go through it again." : " questions. Press M to go through them again.") : "")`));
+    const arrive = g.event('event.start', {}, 'Result page');
+    graphNote(result, { anchor: arrive, colour: 'sky', text: '**The result is spoken as the page opens,** the score, the message and how to go through the missed ones. With no voice it is announced to a screen reader instead.' });
+    g.run(arrive, say(`"You got " + ${P}_setScore + " of " + ${P}_setMax + ". " + message + (${P}_missed.length > 0 ? " You missed " + ${P}_missed.length + (${P}_missed.length == 1 ? " question. Press M to go through it again." : " questions. Press M to go through them again.") : "")`));
     //The missed questions again: the kit draws a new run from the missed list, and the page before asks the first of them
-    g.run(click(g, review, 'Missed questions'), ['action.questionReset', { question: frame.id, run: 'missed' }], ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
+    const reviewClick = click(g, review, 'Missed questions');
+    graphNote(result, { anchor: reviewClick, colour: 'sky', text: '**Missed questions** deals a new run from only the rows got wrong, then goes back a page, where Start speaks the first of them. The M key does the same.' });
+    g.run(reviewClick, ['action.questionReset', { question: frame.id, run: 'missed' }], ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
     g.run(click(g, again, 'Try again'), ['action.startOver', {}]);
     g.run(click(g, hear, 'Hear it again'), ['action.speak', { op: 'repeat' }]);
   }

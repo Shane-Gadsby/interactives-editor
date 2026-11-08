@@ -1,7 +1,7 @@
 /** Image slider: a carousel of five slides written once in a list, each a picture and a caption, with Previous/Next, dots, arrow keys and optional autoplay. */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
-import { addVar, announce, bind, click, graph, set, toggleVar } from '../../graph-kit';
+import { addVar, announce, bind, click, graph, graphNote, set, toggleVar } from '../../graph-kit';
 import { heroButtons } from './helpers';
 
 //Each slide: its words, an image (an asset id once you have uploaded one, the grey box shows until then) and what the picture shows
@@ -104,12 +104,18 @@ export const imageSlider: BrandedStarter = {
     const wrapPrev = 'slide <= 1 ? slides.length : slide - 1';
     {
       const g = graph(page);
-      g.run(click(g, next, 'Step'), set(playing, 'false'), set(slide, wrapNext));
+      const nextClick = click(g, next, 'Step');
+      graphNote(page, { anchor: nextClick, colour: 'sky', text: '**Moving by hand stops the autoplay first.** Next, Previous and the dots all set `playing` to false, then move `slide`, which wraps round at either end.' });
+      g.run(nextClick, set(playing, 'false'), set(slide, wrapNext));
       g.run(click(g, prev, 'Step'), set(playing, 'false'), set(slide, wrapPrev));
       g.run(click(g, dot, 'Dots'), set(playing, 'false'), set(slide, 'event.index + 1'));
       g.run(click(g, play, 'Autoplay'), toggleVar(playing));
-      g.run(g.event('event.timer', { ms: 5000, repeat: true, while: 'playing && !reducedMotion', steady: true }, 'Autoplay'), set(slide, wrapNext));
-      g.run(g.event('event.variable', { variable: slide.id }, 'Say the slide'), announce('"Slide " + slide + " of " + slides.length'));
+      const tick = g.event('event.timer', { ms: 5000, repeat: true, while: 'playing && !reducedMotion', steady: true }, 'Autoplay');
+      graphNote(page, { anchor: tick, colour: 'sky', text: '**The timer runs only `while` `playing && !reducedMotion`,** so it never starts for someone who has asked for less movement. The Play button just flips `playing`. [ ] Change the 5000 ms for a slower or faster show.' });
+      g.run(tick, set(slide, wrapNext));
+      const said = g.event('event.variable', { variable: slide.id }, 'Say the slide');
+      graphNote(page, { anchor: said, colour: 'sky', text: '**One announcement for every way of moving.** Variable changed fires on `slide` whether a button, a dot or the timer moved it.' });
+      g.run(said, announce('"Slide " + slide + " of " + slides.length'));
     }
 
     const below = (x: number) => ({ x, y: page.height + 14, w: 300, h: 100 });

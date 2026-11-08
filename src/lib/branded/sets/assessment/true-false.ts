@@ -2,7 +2,7 @@ import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'inter
 import { brandedPage, brandedProject, button, byName, contentBox, item, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { stack } from '../../parts';
-import { bankQuestion, bind, click, goNext, graph, heroPage, noteBelow, scorePage, variable } from './shared';
+import { bankQuestion, bind, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, scorePage, variable } from './shared';
 
 //Academic integrity, kept general: nothing here states a particular university's rules.
 //Each row is a question bank row: prompt, correct (true or false) and explain (shown after the answer).
@@ -39,7 +39,7 @@ export function buildTrueFalse(colourway: Colourway) {
 
   //The statements are the rows of a question bank that is gone through once: the question kit keeps the position, the score and the missed list
   const box = contentBox(play);
-  const { frame, P } = bankQuestion(ctx, project, play, {
+  const { frame, P, check } = bankQuestion(ctx, project, play, {
     kind: 'truefalse',
     name: 'Statement question',
     items: 'statements',
@@ -52,6 +52,8 @@ export function buildTrueFalse(colourway: Colourway) {
     const g = graph(hero);
     g.run(click(g, start, 'Navigation'), goNext());
   }
+  graphNote(play, { anchor: kitNode(play, 'start:event'), colour: 'sky', text: '**The question kit wired Start, Choose option and Next.** Next is the kit\'s Try again button, relabelled: it deals the next statement, and its Done output goes on to the result page.' });
+  graphNote(play, { anchor: check, colour: 'sky', text: '**Check answer follows Choose option,** so True or False marks the statement at once. Take that node out and bring the Check button back for a two step answer.' });
 
   //The result page: the score from the run, a message banded from it, and the statements to look at again
   variable(project, 'message', 'string', '', { formula: `band(${P}_setMax > 0 ? ${P}_setScore / ${P}_setMax : 0, [0.75, 0.5], [messageHigh, messageMid, messageLow])`, live: true });
@@ -85,8 +87,12 @@ export function buildTrueFalse(colourway: Colourway) {
     const g = graph(result);
     g.run(click(g, tryAgain, 'Try again'), ['action.startOver', {}]);
     //Only the statements missed are asked again: the kit draws a run from the missed list, and the page before shows the first
-    g.run(click(g, missedBtn, 'Practise the missed ones'), ['action.questionReset', { question: frame.id, run: 'missed' }], ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
-    g.run(g.event('event.start', {}, 'Result page'), ['action.announce', { text: `"You got " + ${P}_setScore + " of " + ${P}_setMax + " right. " + message`, politeness: 'polite' }]);
+    const missedClick = click(g, missedBtn, 'Practise the missed ones');
+    g.run(missedClick, ['action.questionReset', { question: frame.id, run: 'missed' }], ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
+    const arrive = g.event('event.start', {}, 'Result page');
+    g.run(arrive, ['action.announce', { text: `"You got " + ${P}_setScore + " of " + ${P}_setMax + " right. " + message`, politeness: 'polite' }]);
+    graphNote(result, { anchor: missedClick, colour: 'sky', text: '**Practise the missed ones** runs the question again over only the rows got wrong (`run: missed`), then goes back a page to show the first of them.' });
+    graphNote(result, { anchor: arrive, colour: 'sky', text: '**Read aloud as the page opens,** from `message`, the same live variable as the heading, so a screen reader hears what the screen says.' });
   }
 
   noteBelow(play, { text: '**Question bank** The statements are the rows of the `statements` list, asked once each. The question kit keeps the position, the score and the missed list for you (the `q1_set...` variables), so there is no counter to maintain.', colour: 'sky' });

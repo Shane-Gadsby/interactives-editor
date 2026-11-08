@@ -34,7 +34,10 @@ describe('the spelling test starter', () => {
   it('has the word only in the answer key: the served page, with the answers taken out, says none of them', () => {
     const served = JSON.parse(JSON.stringify(project)) as Project;
     //a share carries no author notes, which are the one place a word like colour (the note colour) could turn up
-    for (const ab of served.artboards) delete ab.notes;
+    for (const ab of served.artboards) {
+      delete ab.notes;
+      delete ab.logic.notes;
+    }
     const key = stripProject(served, (f, r) => `${f}-${r}`);
     expect(Object.keys(key.questions)).toHaveLength(6);
     expect(key.skipped).toEqual([]);

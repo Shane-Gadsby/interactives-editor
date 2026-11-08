@@ -2,7 +2,7 @@ import { createNode, defaultAutoLayout, type Artboard, type FrameNode, type Ques
 import { addQuestion, setQuestionSettings } from '../../../question-kit';
 import { brandedPage, brandedProject, button, contentBox, item, solid, stroke, text } from '../../kit';
 import type { Colourway } from '../../looks';
-import { announce, bind, brandQuestionFrame, click, goNext, graph, heroPage, noteBelow, questionNav, scorePage, variable } from './shared';
+import { announce, bind, brandQuestionFrame, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, questionNav, scorePage, variable } from './shared';
 import { extrasChecklist, questionExtras } from '../../parts';
 
 interface QuizQuestion {
@@ -117,7 +117,11 @@ export function buildQuiz(colourway: Colourway) {
   const result = brandedPage(ctx, 'Your result', { footer: 'Study skills quiz' });
 
   //Back and Next sit in the title row on every question page, so they are in the same place each time
-  QUESTIONS.forEach((_, i) => questionNav(ctx, pages[i], `q${i + 1}`));
+  QUESTIONS.forEach((_, i) => {
+    const { nextClick } = questionNav(ctx, pages[i], `q${i + 1}`);
+    graphNote(pages[i], { anchor: kitNode(pages[i], 'start:event'), colour: 'sky', text: '**The question kit wired Start, Choose option, Check, Hint and Try again.** Coming back runs the first with `keepAnswer`, so a finished question is found as it was. [ ] Change the question in its Question section, not here.' });
+    graphNote(pages[i], { anchor: nextClick, colour: 'sky', text: `**Next waits for the question.** The button is disabled until \`q${i + 1}_locked\`, which the kit sets once the question is finished (right, or out of tries). Try again is wired but hidden, so a wrong answer stays wrong.` });
+  });
 
   //Hero: Start goes to question 1
   {

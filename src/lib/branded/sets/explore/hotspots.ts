@@ -1,7 +1,7 @@
 /** Image hotspots: a picture with numbered points; each opens a dialog with a heading, text and an optional picture. */
 import { createNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, overlay, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
-import { addVar, announce, bind, click, goNext, graph, set } from '../../graph-kit';
+import { addVar, announce, bind, click, goNext, graph, graphNote, set } from '../../graph-kit';
 import { dialogPanel, progressBar, stack } from '../../parts';
 import { heroButtons } from './helpers';
 
@@ -101,7 +101,11 @@ export const imageHotspots: BrandedStarter = {
       const press = click(g, points, 'Open a point');
       press.params.childrenOnly = true;
       g.run(press, ['action.setVariable', { variable: seen.id, op: 'setItem', index: 'event.childIndex', value: 'true' }], set(current, 'event.childIndex'), set(open, 'true'));
-      g.run(click(g, finish, 'Pages'), announce('"All " + spots.length + " points explored"'), goNext());
+      graphNote(page, { anchor: press, colour: 'sky', text: '**Pressing a point does three things in order:** `setItem` ticks its place in `seen`, `current` says which entry of `spots` to show, then `open` brings up the dialog. `explored` is live, so the progress bar follows `seen`.' });
+      graphNote(page, { anchor: dialog.closeEvent, colour: 'sky', text: '**Close is the only wire the dialog needs.** Esc and the scrim close it through `open` as well, and focus goes back to the point that opened it.' });
+      const finishClick = click(g, finish, 'Pages');
+      graphNote(page, { anchor: finishClick, colour: 'sky', text: '**Finish announces before it leaves,** so a screen reader hears the count. It goes to the next page in the order, and the button itself only shows once every point is explored.' });
+      g.run(finishClick, announce('"All " + spots.length + " points explored"'), goNext());
     }
 
     const below = (x: number) => ({ x, y: page.height + 14, w: 300, h: 100 });

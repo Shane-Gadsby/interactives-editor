@@ -3,7 +3,7 @@ import { type Colourway } from '../../looks';
 import { BRAND_FONT } from '../../looks';
 import { brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type LayoutState } from '../../kit';
 import { stack } from '../../parts';
-import { bind, click, goNext, graph, heroPage, noteBelow, variable } from './shared';
+import { bind, click, goNext, graph, graphNote, heroPage, noteBelow, variable } from './shared';
 
 //A word between asterisks is one the learner should mark; the asterisks themselves never show.
 const PASSAGE = 'Maya *opened* her laptop, *read* the assignment brief and *planned* her week. She *wrote* a first draft on Monday and *asked* her tutor for feedback.';
@@ -104,8 +104,13 @@ export function buildMarkWords(colourway: Colourway) {
     //Clicking a word toggles its place in the picked list, until the answers are checked
     const onWord = g.event('event.pointer', { target: chip.id, type: 'click', onlyIf: '!checked' }, 'Pick a word');
     g.run(onWord, ['action.setVariable', { variable: picked.id, op: 'toggleItem', value: 'event.index' }]);
-    g.run(click(g, check, 'Check'), ['action.setVariable', { variable: checked.id, op: 'set', value: 'true' }], ['action.announce', { text: '"You found " + found + " of " + totalRight + " right words and marked " + wrong + " wrong. Score " + score + " out of " + totalRight + "."', politeness: 'polite' }]);
-    g.run(click(g, again, 'Try again'), ['action.resetVariables', { variables: [picked.id, checked.id] }]);
+    const checkClick = click(g, check, 'Check');
+    g.run(checkClick, ['action.setVariable', { variable: checked.id, op: 'set', value: 'true' }], ['action.announce', { text: '"You found " + found + " of " + totalRight + " right words and marked " + wrong + " wrong. Score " + score + " out of " + totalRight + "."', politeness: 'polite' }]);
+    const againClick = click(g, again, 'Try again');
+    g.run(againClick, ['action.resetVariables', { variables: [picked.id, checked.id] }]);
+    graphNote(page, { anchor: onWord, colour: 'sky', text: '**One flow serves every word.** `event.index` is the word pressed and `toggleItem` adds or takes it out of `picked`. *Only if* `!checked` stops picking once the answer is marked.' });
+    graphNote(page, { anchor: checkClick, colour: 'sky', text: '**Check only sets `checked`.** The ticks, crosses and the score are live variables worked out from `picked`, so there is no marking in this graph.' });
+    graphNote(page, { anchor: againClick, colour: 'sky', text: '**Reset variables** puts `picked` and `checked` back to their starting values, which clears every chip and the score.' });
   }
   {
     const g = graph(hero);

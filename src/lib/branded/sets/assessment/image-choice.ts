@@ -2,7 +2,7 @@ import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { fill, keyNavList, stack } from '../../parts';
-import { bind, click, goNext, graph, heroPage, noteBelow, variable } from './shared';
+import { bind, click, goNext, graph, graphNote, heroPage, noteBelow, variable } from './shared';
 
 //Six study spaces, each a picture the author swaps. The label and the alt text (what a screen reader says) are one list, with the picture's asset beside them.
 const OPTIONS = [
@@ -88,10 +88,13 @@ export function buildImageChoice(colourway: Colourway) {
     const g = graph(page);
     //One flow for every card: the copy that was pressed gives event.index. Several answers toggle it in the list, one answer swaps it
     const several = g.event('event.pointer', { target: card.id, type: 'click', onlyIf: '!checked && multiple' }, 'Pick a picture');
+    graphNote(page, { anchor: several, colour: 'sky', text: '**One flow per kind of pick.** `multiple` chooses which runs: many pictures toggle in and out of `picked`, one picture replaces it. *Only if* `!checked` freezes both once the answer is marked.' });
     g.run(several, ['action.setVariable', { variable: picked.id, op: 'toggleItem', value: 'event.index' }]);
     const one = g.event('event.pointer', { target: card.id, type: 'click', onlyIf: '!checked && !multiple' }, 'Pick the one picture');
     g.run(one, ['action.setVariable', { variable: picked.id, op: 'set', value: '[event.index]' }]);
-    g.run(click(g, check, 'Check'), ['action.setVariable', { variable: checked.id, op: 'set', value: 'true' }], ['action.announce', { text: 'verdict + " You chose " + nRight + " right and " + nWrong + " wrong, out of " + nTotal + " right answers."', politeness: 'polite' }]);
+    const checkClick = click(g, check, 'Check');
+    g.run(checkClick, ['action.setVariable', { variable: checked.id, op: 'set', value: 'true' }], ['action.announce', { text: 'verdict + " You chose " + nRight + " right and " + nWrong + " wrong, out of " + nTotal + " right answers."', politeness: 'polite' }]);
+    graphNote(page, { anchor: checkClick, colour: 'sky', text: '**Check only sets `checked`.** The ticks, the verdict and the counts are live variables read from `picked`, and the announcement reuses them. There is no marking in this graph.' });
     g.run(click(g, again, 'Try again'), ['action.resetVariables', { variables: [picked.id, checked.id] }]);
   }
   {

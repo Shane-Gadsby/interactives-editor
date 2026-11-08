@@ -7,7 +7,7 @@ import { addQuestion, partsOf, setQuestionSettings } from '../../../question-kit
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { addVar, after, bind, click, goPrevious, graph } from '../../graph-kit';
-import { dressQuestion, endPage, goNextOn, heroPage, retray } from './shared';
+import { dressQuestion, endPage, goNextOn, graphNote, heroPage, kitNode, retray } from './shared';
 import { extrasChecklist, questionExtras } from '../../parts';
 
 const GROUPS: { id: string; name: string }[] = [
@@ -107,11 +107,14 @@ export function sortIntoGroups(colourway: Colourway) {
   }
 
   //A wrong drop is counted, and starting the page (or Try again) puts the count back with the question
-  for (const n of page.logic.nodes.filter((x) => x.kind === 'action.questionDrop')) after(page, n, 'action.setVariable', { variable: misses.id, op: 'add', value: '1' }, 'wrong');
+  const counted = page.logic.nodes.filter((x) => x.kind === 'action.questionDrop').map((n) => after(page, n, 'action.setVariable', { variable: misses.id, op: 'add', value: '1' }, 'wrong'));
   for (const slot of ['start:action', 'reset:action']) {
     const n = page.logic.nodes.find((x) => x.kit?.slot === slot);
     if (n) after(page, n, 'action.resetVariables', { variables: [misses.id] });
   }
+  graphNote(page, { anchor: kitNode(page, 'drop:g1:event'), colour: 'sky', text: '**One drop flow for each group,** wired by the question: Item dropped says right or wrong as the card lands, without using a try. A new group in the Question section gets its own.' });
+  graphNote(page, { anchor: counted[0], colour: 'sky', text: '**Only the Wrong output counts.** It adds 1 to `misses`, and Start and Try again put it back to 0 beside the question\'s own reset, so a retry starts clean.' });
+  graphNote(page, { anchor: kitNode(page, 'start:event'), colour: 'sky', text: '**The question kit wired Start, Check, Hint and Try again.** Check marks every card at once, so a card moved after a drop is still marked where it ended up.' });
 
   const below = (x: number, w: number) => ({ x, y: page.height + 14, w, h: 96 });
   addNote(page, { ...below(0, 440), text: '**Categorise question** The groups, the cards and which group each belongs to are settings of the question (Question section). Add a card or a group there and its layers appear, wired.', colour: 'sky' });

@@ -1,12 +1,20 @@
 /** Small pieces the drag set's starters share: hero and result pages, text in a box, and the pass that dresses a question kit frame in the brand. Variables and the graph builders are in ../../graph-kit.ts (re-exported here). */
-import { walk, type Artboard, type FrameNode, type SceneNode, type TextNode, type Variable } from 'interactives-player';
+import { walk, type Artboard, type FrameNode, type LogicNode, type SceneNode, type TextNode, type Variable } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
 import { partOf } from '../../../question-kit';
 import { BRAND_FONT } from '../../looks';
 import { brandedPage, button, solid, stroke, text, type BrandedCtx } from '../../kit';
 import { click, goNext, graph, type ActionStep } from '../../graph-kit';
 
-export { addVar, goButton, join, put, seq } from '../../graph-kit';
+export { addVar, goButton, graphNote, join, put, seq } from '../../graph-kit';
+export { kitNode } from '../assessment/shared';
+
+/** The click node a page has for a button (to hang a graph note on), whoever wired it. */
+export function clickOf(page: Artboard, target: SceneNode): LogicNode {
+  const n = page.logic.nodes.find((x) => x.kind === 'event.pointer' && x.params.target === target.id);
+  if (!n) throw new Error(`no click node for ${target.name} on ${page.name}`);
+  return n;
+}
 
 /** Text in a fixed box, centred up and down (labels on cards, numbers on spots). */
 export const boxText = (ctx: BrandedCtx, name: string, value: string, x: number, y: number, w: number, h: number, extra: Partial<TextNode> = {}): TextNode =>

@@ -4,7 +4,7 @@ import { addQuestion, partOf, setQuestionSettings } from '../../../question-kit'
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
-import { dressQuestion, endPage, goNextOn, heroPage } from './shared';
+import { clickOf, dressQuestion, endPage, goNextOn, graphNote, heroPage, kitNode } from './shared';
 import { extrasChecklist, questionExtras } from '../../parts';
 
 /** After a wrong check: the longest feedback, with the steps marked, so the card at its tallest is checked against the footer. */
@@ -69,6 +69,9 @@ export function putInOrder(colourway: Colourway) {
   buttons.children.push(next);
   goNextOn(hero, start, 'Navigation');
   goNextOn(page, next, 'Navigation');
+  graphNote(page, { anchor: kitNode(page, 'moveUp:event'), colour: 'sky', text: '**One flow for Move up and one for Move down serve every step.** `event.index` is the step whose button was pressed, and Move step swaps it with its neighbour. This is what makes it work without dragging.' });
+  graphNote(page, { anchor: kitNode(page, 'start:event'), colour: 'sky', text: '**The question kit wired Start, Check, Hint and Try again.** Start puts the question back to its beginning each time the page opens, so going Back from Results finds it fresh.' });
+  graphNote(page, { anchor: clickOf(page, next), colour: 'sky', text: '**See results shows once `order_locked` is true,** right or out of tries. It goes to the next page in the order, so an extra page after the activity needs no rewiring.' });
   {
     const g = graph(results.page);
     g.run(click(g, results.again, 'Try again'), goPrevious());

@@ -8,7 +8,7 @@ import { addQuestion, partsOf, setQuestionSettings } from '../../../question-kit
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, picture, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
-import { boxText, dressQuestion, endPage, goNextOn, heroPage, retray } from './shared';
+import { boxText, clickOf, dressQuestion, endPage, goNextOn, graphNote, heroPage, kitNode, retray } from './shared';
 import { extrasChecklist, questionExtras } from '../../parts';
 
 const LABELS = ['Evaporation', 'Condensation', 'Precipitation', 'Collection', 'Transpiration', 'Runoff'];
@@ -111,6 +111,8 @@ export function labelTheDiagram(colourway: Colourway) {
 
   goNextOn(hero, start, 'Navigation');
   goNextOn(page, next, 'Navigation');
+  graphNote(page, { anchor: kitNode(page, 'start:event'), colour: 'sky', text: '**The matching question wired Start, Check, Hint and Try again.** Dragging a label onto a spot is the question\'s own behaviour, so no node is needed per label. [ ] Change labels and spots in the Question section.' });
+  graphNote(page, { anchor: clickOf(page, next), colour: 'sky', text: '**See results is hidden until `label_locked`,** which the question sets once it is right or out of tries. Start resets the question each time the page opens, so going Back from Results finds it fresh.' });
   {
     const g = graph(results.page);
     g.run(click(g, results.again, 'Try again'), goPrevious());

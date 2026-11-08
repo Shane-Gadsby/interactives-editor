@@ -1,7 +1,7 @@
 /** Before and after: two pictures stacked, a divider you drag (or move with the arrow keys) that reveals one over the other. */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
-import { addVar, click, graph, join, set } from '../../graph-kit';
+import { addVar, click, graph, graphNote, join, set } from '../../graph-kit';
 import { stack } from '../../parts';
 import { group, heroButtons, small } from './helpers';
 
@@ -96,13 +96,17 @@ export const beforeAndAfter: BrandedStarter = {
     {
       const g = graph(page);
       const clamp = (e: string) => `clamp(${e}, 0, ${W})`;
-      const move = g.then(g.event('event.pointer', { target: comparison.id, type: 'pointerdown' }, 'Divider'), 'action.setVariable', { variable: pos.id, op: 'set', value: clamp(`event.x - ${box.x}`) });
+      const down = g.event('event.pointer', { target: comparison.id, type: 'pointerdown' }, 'Divider');
+      graphNote(page, { anchor: down, colour: 'sky', text: '**Press and drag share one Set variable.** `event.x` is the pointer\'s place on the page, so taking off the pictures\' left edge gives the divider, and clamp keeps it inside them.' });
+      const move = g.then(down, 'action.setVariable', { variable: pos.id, op: 'set', value: clamp(`event.x - ${box.x}`) });
       join(page, g.event('event.pointer', { target: comparison.id, type: 'drag' }, 'Divider'), move);
       const keys = g.event('event.key', { key: '', type: 'keydown', target: handle.id }, 'Divider keys');
       keys.params.onlyIf = '["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)';
+      graphNote(page, { anchor: keys, colour: 'sky', text: '**One key node serves four keys.** Its *Only if* holds the list, the key is read as it goes by, and it listens only while the handle has focus, so arrows elsewhere on the page are left alone.' });
       g.run(keys, set(pos, clamp(`event.key == "Home" ? 0 : event.key == "End" ? ${W} : ${pos.name} + (event.key == "ArrowRight" ? ${STEP} : -${STEP})`)));
       const jumps = click(g, jump, 'Jump');
       jumps.params.childrenOnly = true;
+      graphNote(page, { anchor: jumps, colour: 'sky', text: '**Show Before and Show After are one flow.** *Only when a child is hit* is on, so `event.childIndex` 0 (Show Before) sends the divider to the far right and 1 (Show After) to the far left.' });
       g.run(jumps, set(pos, `event.childIndex == 0 ? ${W} : 0`));
     }
 

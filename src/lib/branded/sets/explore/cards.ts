@@ -1,7 +1,7 @@
 /** Flip cards and dialog cards: the same six cards as a grid you flip, and as a stack you step through one at a time. */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, item, solid, stroke, text, type BrandedCtx, type BrandedStarter } from '../../kit';
-import { addVar, announce, bind, click, goNext, goPrevious, graph, join, set } from '../../graph-kit';
+import { addVar, announce, bind, click, goNext, goPrevious, graph, graphNote, join, set } from '../../graph-kit';
 import { fill, progressBar, stack } from '../../parts';
 import { heroButtons, small } from './helpers';
 
@@ -107,7 +107,9 @@ export const flipAndDialogCards: BrandedStarter = {
     grid.children.push(cardGrid, bar);
     {
       const g = graph(grid);
-      g.run(click(g, tile, 'Flip a card'), ['action.setVariable', { variable: flipped.id, op: 'setItem', value: '!flipped[event.index]' }]);
+      const flipClick = click(g, tile, 'Flip a card');
+      graphNote(grid, { anchor: flipClick, colour: 'sky', text: '**One flow flips whichever card was pressed.** `event.index` is the card, and `setItem` writes `!flipped[event.index]` into its place, so a second press turns it back.' });
+      g.run(flipClick, ['action.setVariable', { variable: flipped.id, op: 'setItem', value: '!flipped[event.index]' }]);
       g.run(click(g, reset, 'Turn all back'), ['action.resetVariables', { variables: [flipped.id] }]);
       g.run(click(g, toDialog, 'Pages'), goNext());
     }
@@ -146,12 +148,16 @@ export const flipAndDialogCards: BrandedStarter = {
     {
       const g = graph(dialog);
       g.run(g.event('event.start', {}), ['action.resetVariables', { variables: [cardNo.id, turned.id] }]);
-      const flip = g.then(click(g, dcard, 'Turn'), 'action.setVariable', { variable: turned.id, op: 'toggle' });
+      const dcardClick = click(g, dcard, 'Turn');
+      const flip = g.then(dcardClick, 'action.setVariable', { variable: turned.id, op: 'toggle' });
       join(dialog, click(g, turn, 'Turn'), flip);
+      graphNote(dialog, { anchor: dcardClick, colour: 'sky', text: '**The card and the Turn button share one Toggle.** Pressing either flips `turned`, and Next and Previous set it back to false so every new card shows its front first.' });
       g.run(click(g, next, 'Step'), set(cardNo, 'Math.min(card + 1, cards.length)'), set(turned, 'false'));
       g.run(click(g, prev, 'Step'), set(cardNo, 'Math.max(card - 1, 1)'), set(turned, 'false'));
       //Said once, whichever button or key moved the card or turned it
-      g.run(g.event('event.variable', { variable: cardNo.id }, 'Say the card'), announce('"Card " + card + " of " + cards.length'));
+      const sayCard = g.event('event.variable', { variable: cardNo.id }, 'Say the card');
+      graphNote(dialog, { anchor: sayCard, colour: 'sky', text: '**Said once, whichever button or key moved the card.** Variable changed fires on `card` and on `turned`, so the arrows, the buttons and Start all announce through the same two nodes.' });
+      g.run(sayCard, announce('"Card " + card + " of " + cards.length'));
       const said = g.event('event.variable', { variable: turned.id }, 'Say the other side');
       said.params.onlyIf = 'turned';
       g.run(said, announce('cards[card - 1].back'));
