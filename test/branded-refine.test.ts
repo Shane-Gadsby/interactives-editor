@@ -33,7 +33,10 @@ describe('the Hint pill', () => {
           seen++;
           const row = parts.promptRow?.[0] as FrameNode | undefined;
           expect(row, `${s.key} ${ab.name}`).toBeTruthy();
-          expect(row!.children.map((c) => c.questionPart)).toEqual(['prompt', 'hint']);
+          //the prompt first and the pill last; a starter's own controls for the question (Play the word) sit between them
+          const order = row!.children.map((c) => c.questionPart);
+          expect(order[0]).toBe('prompt');
+          expect(order[order.length - 1]).toBe('hint');
           expect(parts.hint[0], `${s.key} ${ab.name}`).toMatchObject({ height: 32, cornerRadius: 16 });
           expect((parts.buttons[0] as FrameNode).children.some((c) => c.questionPart === 'hint')).toBe(false);
         }

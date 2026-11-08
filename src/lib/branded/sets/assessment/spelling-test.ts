@@ -40,16 +40,16 @@ export function buildSpellingTest(colourway: Colourway) {
     //The footer counts the word pages from the page order
     const page = brandedPage(ctx, `Word ${n}`, { footer: 'Word {pageNumber - 1} of {pageCount - 2}' });
     const at = box(page);
-    //The play button sits above the question, so the word is the first thing a learner reaches
+    //The play button sits in the card at the right of the prompt, so it reads as this word's own and comes straight after the instruction
     //Playing the word is not a second press away while it is going: the button is disabled and says so until the sound ends (or is stopped)
-    const play = bind(button(ctx, 'Play word button', 'Play the word', 0, 0, 220), {
+    const play = bind(Object.assign(button(ctx, 'Play word button', 'Play the word', 0, 0, 170), { height: 40, cornerRadius: 20, fontSize: 16 }), {
       disabled: 'soundPlaying()',
       label: 'soundPlaying() ? "Playing…" : "Play the word"',
       ariaLabel: `soundPlaying() ? "Playing word ${n}" : "Play word ${n}"`,
     });
     plays.push(play);
     //Submit, not Check: the answer is final and marked. Hint is a small pill at the top right of the card, Try again is off: both follow one switch each
-    const id = addQuestion(project, page.id, 'blank', { at: { x: at.x, y: at.y + 70 }, checkLabel: 'Submit answer', hint: 'pill', hintWhen: 'offerHint', resetWhen: 'allowTryAgain' })!;
+    const id = addQuestion(project, page.id, 'blank', { at: { x: at.x, y: at.y + 70 }, checkLabel: 'Submit answer', hint: 'pill', hintWhen: 'offerHint', resetWhen: 'allowTryAgain', titleControls: [play] })!;
     setQuestionSettings(project, page.id, id, {
       prompt: 'Listen to the word, then type it.',
       points: 1,
@@ -76,7 +76,7 @@ export function buildSpellingTest(colourway: Colourway) {
     frame.layout = { ...frame.layout!, padding: { top: 20, right: 24, bottom: 20, left: 24 } };
     brandQuestionFrame(ctx, frame);
     page.children = page.children.filter((c) => c.id !== id);
-    page.children.push(stack('Word body', at.x, at.y, at.width, { gap: 16, align: 'start', children: [play, frame] }));
+    page.children.push(stack('Word body', at.x, at.y, at.width, { gap: 16, align: 'start', children: [frame] }));
     pages.push(page);
     frames.push(frame);
   });

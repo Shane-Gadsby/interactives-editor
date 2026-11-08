@@ -49,7 +49,8 @@ export function panel(ctx: BrandedCtx, name: string, x: number, y: number, width
 export function brandQuestionFrame(ctx: BrandedCtx, frame: FrameNode): void {
   frame.cornerRadius = 16;
   walk(frame.children, (n) => {
-    if (n.type === 'button') {
+    //a starter's own button moved into the card (Play the word in the prompt's row) keeps its own look
+    if (n.type === 'button' && n.questionPart) {
       //a pill (the small hint button) keeps to its own height
       n.cornerRadius = Math.min(22, n.height / 2);
       n.fontWeight = 600;

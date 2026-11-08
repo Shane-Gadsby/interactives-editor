@@ -1346,17 +1346,23 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
   ensureGraph(d, ab, frame as FrameNode, q);
 }
 
-/** The Listen button in the buttons row: there when the question offers read aloud, gone when it does not. It hides itself when the device has no voice. */
+/**
+ * The Listen button, made in the buttons row: there when the question offers read aloud, gone when it does not. It hides itself
+ * when the device has no voice. A starter may have moved it to the prompt's row (`titleControls`), so it is looked for anywhere in the card.
+ */
 function syncListen(ab: Artboard, frame: FrameNode, q: Question): void {
   const row = partsOf(frame).buttons?.[0];
   if (!row || !isContainer(row)) return;
-  const has = row.children.find((c) => c.questionPart === 'listen');
+  const has = partsOf(frame).listen?.[0];
   if (q.listen && !has) {
     const at = Math.min(row.children.length, Math.max(0, row.children.findIndex((c) => c.questionPart === 'hint') + 1));
     const b = button(uniqueName(nodeNames(ab), 'Listen'), 'listen', 'Listen', false, { visible: 'voiceAvailable' });
     b.ariaLabel = 'Listen to the question';
     row.children.splice(at, 0, b);
-  } else if (!q.listen && has) row.children = row.children.filter((c) => c !== has);
+  } else if (!q.listen && has) {
+    const at = locateIn(frame, has.id);
+    if (at) at.siblings.splice(at.index, 1);
+  }
 }
 
 /** "Press 1 to 4 to choose": a small line under the options while the number keys are on. */
@@ -1411,6 +1417,12 @@ export interface KitOptions {
   hintWhen?: string;
   /** A project boolean variable that switches Try again on (`allowTryAgain`): the button shows only while it is true, whatever the retake rule says. */
   resetWhen?: string;
+  /**
+   * The starter's own layers that belong to this one question (Play the word, Play the clip, Replay): they go in the prompt's
+   * row, at the right, ahead of the Hint pill, instead of a row of their own outside the card. Moved, not copied, so their
+   * wiring stays as it is.
+   */
+  titleControls?: SceneNode[];
 }
 
 /** The pill: the look of a secondary action, small enough to sit beside a heading. */
@@ -1445,18 +1457,44 @@ export function setKitOptions(d: Project, abId: string, frameId: string, o: KitO
       Object.assign(hint, PILL, { fill: solid(L.background), stroke: stroke(L.border), fontWeight: 600 });
       hint.ariaLabel = 'Show a hint';
       const at = locateIn(frame, hint.id);
-      const prompt = parts.prompt?.[0];
-      //One row for the heading and the pill, made once: the prompt keeps the room, the pill sits at the right
-      if (at && prompt && !parts.promptRow?.length) {
+      const row = promptRow(ab, frame);
+      if (at && row && !row.children.includes(hint)) {
         at.siblings.splice(at.index, 1);
-        const here = locateIn(frame, prompt.id)!;
-        prompt.layoutItem = { ...(prompt.layoutItem ?? {}), width: 'fill' };
-        const rowFrame = createNode('frame', { name: 'Prompt row', questionPart: 'promptRow', fill: null, stroke: null, clip: false, layout: { ...row(12), align: 'start' }, children: [prompt, hint] }) as FrameNode;
-        here.siblings.splice(here.index, 1, rowFrame);
-        rowFrame.name = uniqueName(nodeNames(ab), 'Prompt row');
+        row.children.push(hint);
       }
     }
   }
+  if (o.titleControls?.length) {
+    const row = promptRow(ab, frame);
+    if (row) {
+      const add = o.titleControls.filter((c) => !row.children.includes(c));
+      //Out of wherever they were first (a starter's own stack, say), then in after the prompt and before the Hint pill
+      for (const c of add) {
+        const was = locate(ab, c.id);
+        if (was) was.siblings.splice(was.index, 1);
+      }
+      const pill = row.children.findIndex((c) => c.questionPart === 'hint');
+      row.children.splice(pill < 0 ? row.children.length : pill, 0, ...add);
+      //a button is taller than one line of heading, so the heading sits level with it rather than at the top
+      row.layout = { ...row.layout!, align: 'center' };
+    }
+  }
+}
+
+//One row for the heading and whatever sits beside it (the Hint pill, the starter's own controls), made once: the prompt keeps the
+//room and the rest sits at the right
+function promptRow(ab: Artboard, frame: ContainerNode): FrameNode | null {
+  const parts = partsOf(frame);
+  const made = parts.promptRow?.[0];
+  if (made?.type === 'frame') return made;
+  const prompt = parts.prompt?.[0];
+  const here = prompt && locateIn(frame, prompt.id);
+  if (!prompt || !here) return null;
+  prompt.layoutItem = { ...(prompt.layoutItem ?? {}), width: 'fill' };
+  const rowFrame = createNode('frame', { name: 'Prompt row', questionPart: 'promptRow', fill: null, stroke: null, clip: false, layout: { ...row(12), align: 'start' }, children: [prompt] }) as FrameNode;
+  here.siblings.splice(here.index, 1, rowFrame);
+  rowFrame.name = uniqueName(nodeNames(ab), 'Prompt row');
+  return rowFrame;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

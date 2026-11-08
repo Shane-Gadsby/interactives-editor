@@ -353,3 +353,26 @@ describe('Listening lab', () => {
     expect(named).toHaveLength(0);
   });
 });
+
+describe('the listening lab clip cards', () => {
+  it('put each clip\'s Play at the right of its title, inside the card, read straight after the title', () => {
+    const s = BRANDED_STARTERS.find((x) => x.key === 'media/listening-lab')!;
+    const p = projectFromBrandedStarter(s, COLOURWAYS[0]);
+    let seen = 0;
+    for (const ab of p.artboards) {
+      for (const name of ['Sound 1', 'Clip A', 'Clip B', 'Before', 'After']) {
+        const card = byName(ab, `${name} card`) as (SceneNode & { width: number; children: SceneNode[] }) | null;
+        if (!card) continue;
+        seen++;
+        const title = byName(ab, `${name} title`) as SceneNode & { x: number; y: number; width: number };
+        const play = byName(ab, `${name} play button`) as SceneNode & { x: number; y: number; width: number; height: number };
+        expect(card.children.slice(0, 2)).toEqual([title, play]);
+        //on the title's line, at the right edge of the card, clear of the title
+        expect(play.y).toBeLessThan(title.y + 20);
+        expect(play.x + play.width).toBe(card.width - 20);
+        expect(title.x + title.width).toBeLessThan(play.x);
+      }
+    }
+    expect(seen).toBe(5);
+  });
+});
