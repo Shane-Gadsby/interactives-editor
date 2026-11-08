@@ -228,9 +228,9 @@ export interface EditorState {
   saveError: string | null;
   /** A power user (or brand group member) has switched the brand kit lock off for this session (F9). Nothing is saved with it. */
   brandOverride: boolean;
-  toast: { text: string; kind: 'info' | 'error' } | null;
+  toast: Toast | null;
   /** A list worth reading (import/export notes), shown in a dialog. */
-  report: { title: string; lines: string[] } | null;
+  report: { title: string; lines: string[]; undo?: { steps: number; tick: number } } | null;
   /** Live editing connection, when there is one. */
   live: { status: 'live' | 'reconnecting' | 'deleted'; color?: string } | null;
   /** Other people in the project right now. */
@@ -243,6 +243,19 @@ interface HistoryEntry {
   activeArtboardId: string;
   /** How many remote batches (of `EditorStore.remoteTotal`) this snapshot has the changes of; the rest are put on when it is used. */
   seen: number;
+}
+
+/** The button on a message: undo (or redo) the `steps` changes it is about, as long as nothing else has changed since. */
+export interface ToastAction {
+  kind: 'undo' | 'redo';
+  steps: number;
+  /** Set once another change has been made, so the button can no longer mean "exactly that change". */
+  stale?: boolean;
+}
+export interface Toast {
+  text: string;
+  kind: 'info' | 'error';
+  action?: ToastAction;
 }
 
 type Listener = () => void;
@@ -265,6 +278,10 @@ export class EditorStore {
   private remoteTotal = 0;
   private lastCoalesce: { key: string; time: number } | null = null;
   private lastLockToast = 0;
+  /** Counts undo steps ever made, so a message can tell which change it is about. */
+  private pushes = 0;
+  /** Counts every change to the history (a step added, an undo, a redo), so a button can tell nothing else happened since. */
+  private ticks = 0;
   /** Bumped on each document change, for autosave. */
   revision = 0;
   /** Live editing hook: called with the document before and after every local change. */
@@ -391,8 +408,10 @@ export class EditorStore {
     const merge = opts.coalesce && this.lastCoalesce && this.lastCoalesce.key === opts.coalesce && t - this.lastCoalesce.time < 1000;
     if (!merge) {
       this.past.push({ project: before, selection: this.state.selection, activeArtboardId: this.state.activeArtboardId, seen: this.remoteTotal });
+      this.pushes++;
       if (this.past.length > HISTORY_LIMIT) this.past.shift();
     }
+    this.staleToastAction();
     this.lastCoalesce = opts.coalesce ? { key: opts.coalesce, time: t } : null;
     if (!merge) track('doc', 'edit');
     this.future = [];
@@ -505,6 +524,7 @@ export class EditorStore {
 
   private restore(h: HistoryEntry): void {
     this.lastCoalesce = null;
+    this.staleToastAction();
     this.revision++;
     const before = this.state.project;
     queueMicrotask(() => this.onLocalChange?.(before, h.project));
@@ -571,12 +591,68 @@ export class EditorStore {
     });
   }
 
-  toast(text: string, kind: 'info' | 'error' = 'info'): void {
-    this.set({ toast: { text, kind } });
+  toast(text: string, kind: 'info' | 'error' = 'info', action?: ToastAction): void {
+    this.set({ toast: { text, kind, action } });
     const current = this.state.toast;
     setTimeout(() => {
       if (this.state.toast === current) this.set({ toast: null });
-    }, kind === 'error' ? 6000 : 2500);
+    }, kind === 'error' ? 6000 : action ? 9000 : 2500);
+  }
+
+  /** Where the undo history is now: take it before a command that ends in `toastUndo`. */
+  historyMark(): number {
+    return this.pushes;
+  }
+
+  /**
+   * A message with an Undo button that takes back exactly what a command just did (every undo step it made since `mark`).
+   * The button turns itself off the moment anything else changes the document, so it can never undo something else.
+   * Nothing changed since `mark` is a plain message.
+   */
+  toastUndo(text: string, mark: number): void {
+    const steps = this.pushes - mark;
+    this.toast(text, 'info', steps > 0 ? { kind: 'undo', steps } : undefined);
+  }
+
+  /** What the button on a message does. Returns false when it was already stale (the message is left to run out). */
+  runToastAction(): boolean {
+    const a = this.state.toast?.action;
+    if (!a || a.stale) return false;
+    const back = a.kind === 'undo';
+    for (let i = 0; i < a.steps; i++) back ? this.undo() : this.redo();
+    // the opposite button, for as many steps as were just taken
+    this.toast(back ? 'Undone' : 'Redone', 'info', { kind: back ? 'redo' : 'undo', steps: a.steps });
+    return true;
+  }
+
+  /**
+   * A report (the dialog after an import that left things out) with an Undo button for the command that made it, or a plain
+   * message when the command changed nothing.
+   */
+  setReportUndo(title: string, lines: string[], mark: number): void {
+    const steps = this.pushes - mark;
+    this.set({ report: { title, lines, undo: steps > 0 ? { steps, tick: this.ticks } : undefined } });
+  }
+
+  /** The Undo button in a report: takes back that command, unless something else has changed since. */
+  undoReport(): boolean {
+    const u = this.state.report?.undo;
+    if (!u) return false;
+    this.set({ report: null });
+    if (u.tick !== this.ticks) {
+      this.toast('Something else has changed since, so Undo here would take back that instead. Ctrl+Z still undoes the latest change.');
+      return false;
+    }
+    for (let i = 0; i < u.steps; i++) this.undo();
+    this.toast('Undone', 'info', { kind: 'redo', steps: u.steps });
+    return true;
+  }
+
+  private staleToastAction(): void {
+    this.ticks++;
+    const t = this.state.toast;
+    if (!t?.action || t.action.stale) return;
+    this.state = { ...this.state, toast: { ...t, action: { ...t.action, stale: true } } };
   }
 
   // ---------------------------------------------------------------- node editing
@@ -913,6 +989,7 @@ export class EditorStore {
     const src = this.artboard();
     if (!src || src.id === targetId) return;
     const moved: string[] = [];
+    const mark = this.historyMark();
     this.update((d) => {
       const sab = getArtboard(d as Project, src.id)!;
       const tab = getArtboard(d as Project, targetId);
@@ -939,7 +1016,7 @@ export class EditorStore {
     if (moved.length) {
       this.set({ activeArtboardId: targetId, selection: moved, activeTimelineId: null });
       const tab = getArtboard(this.state.project, targetId);
-      this.toast(`Moved ${moved.length === 1 ? 'the layer' : `${moved.length} layers`} to “${tab?.name}”.`);
+      this.toastUndo(`Moved ${moved.length === 1 ? 'the layer' : `${moved.length} layers`} to “${tab?.name}”.`, mark);
     }
   }
 
@@ -1199,6 +1276,7 @@ export class EditorStore {
       this.toast('A project needs at least one artboard', 'error');
       return;
     }
+    const mark = this.historyMark();
     this.update((d) => {
       for (const id of gone) {
         // The base of a responsive set goes: its narrowest variant becomes the base of the rest
@@ -1219,6 +1297,7 @@ export class EditorStore {
       pruneGroups(d as Project);
     });
     this.set({ artboardSelected: false, selection: [] });
+    this.toastUndo(gone.size === 1 ? 'Deleted the page.' : `Deleted ${gone.size} pages.`, mark);
   }
 
   /**

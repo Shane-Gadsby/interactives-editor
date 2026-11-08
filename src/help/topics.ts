@@ -431,6 +431,8 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>Escape</kbd> | Stop editing, go up a level, clear the selection, then back to Select |
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | Save now |
 
+After a big change (tidying the artboards, linking colours to tokens, deleting a page, moving layers to another page, replacing a file, importing a file, changing the colourway, applying accessibility fixes, updating from a template) the message at the bottom carries an **Undo** button. It takes back exactly that change, even if it took several steps, and then says **Undone** with a **Redo** button. The moment you change anything else the button greys out, so it can never take back something you did afterwards; <kbd>Ctrl</kbd>+<kbd>Z</kbd> still undoes the latest change as always. The messages go away after a few seconds.
+
 ## View
 | Key | Does |
 |---|---|

@@ -9674,3 +9674,28 @@ code {
   flex: 1;
   min-width: 0;
 }
+
+/* ---------------------------------------------------------------- a message with an Undo or Redo button */
+.toast.with-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(640px, calc(100vw - 32px));
+}
+.toast-action {
+  flex: none;
+  padding: 3px 12px;
+  border: 1px solid var(--primary-bg);
+  border-radius: 5px;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toast-action:disabled {
+  background: transparent;
+  border-color: var(--line-2);
+  color: var(--muted);
+  cursor: default;
+}

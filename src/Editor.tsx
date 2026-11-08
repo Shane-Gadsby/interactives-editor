@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
+import { ToastView } from './components/ToastView';
 import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
@@ -637,8 +638,8 @@ function Workspace({ home }: { home: () => void }) {
       <DockFloats />
       <DockDragLayer />
       {preview && <PreviewModal onClose={() => setPreview(false)} />}
-      {s.toast && <div className={`toast ${s.toast.kind}`}>{s.toast.text}</div>}
-      {s.report && <ReportModal title={s.report.title} lines={s.report.lines} />}
+      {s.toast && <ToastView toast={s.toast} />}
+      {s.report && <ReportModal title={s.report.title} lines={s.report.lines} undo={!!s.report.undo} />}
     </div>
   );
 }
@@ -1529,7 +1530,7 @@ const SIMULATED_MOODLE: Record<string, string> = {
   '--bs-secondary-color': '#495057',
 };
 
-function ReportModal({ title, lines }: { title: string; lines: string[] }) {
+function ReportModal({ title, lines, undo }: { title: string; lines: string[]; undo?: boolean }) {
   const close = () => store().set({ report: null });
   // Like the other dialogs, Escape closes it
   useEffect(() => {
@@ -1543,6 +1544,11 @@ function ReportModal({ title, lines }: { title: string; lines: string[] }) {
         <header>
           <strong>{title}</strong>
           <div className="spacer" />
+          {undo && (
+            <button type="button" className="toast-action" title="Take the whole thing back, as one undo step (Ctrl+Z does the same)" onClick={() => store().undoReport()}>
+              Undo
+            </button>
+          )}
           <IconButton icon={<Icons.close />} title="Close" onClick={close} />
         </header>
         <div className="report-body">

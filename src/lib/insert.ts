@@ -172,6 +172,7 @@ export async function replaceAssetFile(oldId: string, file: File): Promise<boole
   const onTimeline = p.artboards.some((ab) => ab.timelines.some((tl) => tl.audio?.some((t) => t.assetId === oldId)));
   const ms = onTimeline && (now === 'audio' || now === 'video') ? await (await import('./waveform')).fileDuration(file) : 0;
   let fits: ReplacedAudioFit[] = [];
+  const mark = st.historyMark();
   st.update((d) => {
     swapAssetId(d, oldId, asset.id);
     const i = d.assets.findIndex((a) => a.id === asset.id);
@@ -179,7 +180,7 @@ export async function replaceAssetFile(oldId: string, file: File): Promise<boole
     else d.assets.push(asset);
     fits = refreshAudioDuration(d, asset.id, ms);
   });
-  st.toast(old.name === file.name ? `Updated ${file.name}` : `Replaced ${old.name} with ${file.name}`, 'info');
+  st.toastUndo(old.name === file.name ? `Updated ${file.name}` : `Replaced ${old.name} with ${file.name}`, mark);
   if (fits.length) await offerFit(fits, ms);
   return true;
 }

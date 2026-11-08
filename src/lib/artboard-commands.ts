@@ -99,6 +99,8 @@ export function artboardMenuItems(ids: string[], gid?: string): MenuItem[] {
 /** Tidy up exactly these artboards. */
 export function tidyTheseCommand(ids: string[]): void {
   const s = store();
+  const mark = s.historyMark();
   const moved = s.tidyArtboards(ids);
-  s.toast(moved ? `Tidied ${moved} ${moved === 1 ? 'artboard' : 'artboards'} into a grid. Undo (Ctrl+Z) puts them back.` : 'Those artboards are already tidy.', 'info');
+  if (moved) s.toastUndo(`Tidied ${moved} ${moved === 1 ? 'artboard' : 'artboards'} into a grid.`, mark);
+  else s.toast('Those artboards are already tidy.', 'info');
 }
