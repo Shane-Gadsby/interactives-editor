@@ -13,7 +13,7 @@ import { isSectionOpen, onlySectionOpen, registerSection, resetSectionFolds, sec
 /** An explicit title, or the standard explanation for a field label. */
 export function tipFor(label: ReactNode, title?: string): string | undefined {
   if (title) return title;
-  return typeof label === 'string' ? FIELD_TIPS[label] : undefined;
+  return typeof label === 'string' ? FIELD_TIPS[label.replace(/\u00a0/g, ' ')] : undefined;
 }
 
 /** A field label that never breaks after a hyphen ("V-align" would wrap to "V-" and "align" in a tight row). */
@@ -31,6 +31,7 @@ export function NumberField({
   suffix,
   title,
   mixed,
+  scale = 1,
 }: {
   label?: ReactNode;
   value: number;
@@ -42,8 +43,16 @@ export function NumberField({
   suffix?: string;
   title?: string;
   mixed?: boolean;
+  /** What the stored value is multiplied by to show it (100 for an opacity kept as 0 to 1, shown as a percent). `step`, `min` and `max` are in the shown units, and `onChange` still gets the stored value. */
+  scale?: number;
 }) {
   const ps = useRowSearch(label, tipFor(label, title));
+  // shown units from here on; what goes out is turned back into the stored ones
+  const stored = onChange;
+  if (scale !== 1) {
+    value = Math.round(value * scale * 1e6) / 1e6;
+    onChange = (v) => stored(Math.round((v / scale) * 1e6) / 1e6);
+  }
   const [text, setText] = useState(fmt(value));
   const focused = useRef(false);
   useEffect(() => {

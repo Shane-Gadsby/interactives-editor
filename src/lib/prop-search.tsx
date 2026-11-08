@@ -1,6 +1,7 @@
 import { createContext, useContext, useId, useLayoutEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { scoreWord, wordsOf } from '../help/search';
 import { FIELD_TIPS } from '../components/tips';
+import { queryVariants } from './plain-words';
 
 /**
  * Search in the properties panel. Every row in it (a field, or a block wrapped in PropRow) carries a `data-prop` key and is
@@ -19,10 +20,10 @@ const NAMES: Record<string, string> = {
   Y: 'Y position',
   '↻': 'Rotation',
   'α': 'Opacity',
-  Sx: 'Scale x',
-  Sy: 'Scale y',
-  Ox: 'Origin x',
-  Oy: 'Origin y',
+  Sx: 'Scale W',
+  Sy: 'Scale H',
+  Ox: 'Pivot x',
+  Oy: 'Pivot y',
 };
 
 /**
@@ -31,7 +32,12 @@ const NAMES: Record<string, string> = {
  */
 export const PROP_SYNONYMS: Record<string, string[]> = {
   'α': ['transparency', 'transparent', 'alpha', 'fade', 'see through', 'translucent'],
-  Opacity: ['transparency', 'transparent', 'alpha', 'fade', 'see through'],
+  Opacity: ['transparency', 'transparent', 'alpha', 'α', 'fade', 'see through', 'translucent'],
+  'Scale W': ['scale', 'zoom', 'size', 'stretch', 'flip', 'sx', 'scale x', 'scale across', 'resize'],
+  'Scale H': ['scale', 'zoom', 'size', 'stretch', 'flip', 'sy', 'scale y', 'scale down', 'resize'],
+  Pivot: ['origin', 'anchor', 'transform origin', 'centre of rotation', 'center of rotation', 'ox', 'oy'],
+  'Pivot X': ['origin x', 'anchor', 'ox'],
+  'Pivot Y': ['origin y', 'anchor', 'oy'],
   Radius: ['round', 'rounded', 'corners', 'curve', 'border radius', 'roundness'],
   'Top-left': ['round', 'rounded', 'corner', 'corner radius', 'radius'],
   'Top-right': ['round', 'rounded', 'corner', 'corner radius', 'radius'],
@@ -77,6 +83,10 @@ export const PROP_SYNONYMS: Record<string, string[]> = {
   Overflow: ['scroll', 'clip', 'hidden', 'spill'],
   Fit: ['cover', 'contain', 'stretch', 'object fit', 'resize image'],
   Image: ['picture', 'photo', 'asset', 'source'],
+  Crop: ['crop picture', 'reposition', 'move picture', 'focal point', 'focus', 'pan', 'cut off', 'face', 'zoom picture'],
+  Zoom: ['crop', 'magnify', 'scale picture', 'closer'],
+  'Picture X': ['crop', 'move picture', 'pan', 'reposition', 'focal point'],
+  'Picture Y': ['crop', 'move picture', 'pan', 'reposition', 'focal point'],
   Video: ['movie', 'clip', 'asset', 'source'],
   Autoplay: ['start automatically', 'play on show'],
   Loop: ['repeat', 'again'],
@@ -92,7 +102,7 @@ export const PROP_SYNONYMS: Record<string, string[]> = {
   Text: ['copy', 'words', 'content', 'string', 'label'],
   Placeholder: ['hint', 'ghost text', 'empty text'],
   Variable: ['value', 'state', 'binding'],
-  Rotation: ['rotate', 'angle', 'turn', 'spin'],
+  Rotation: ['rotate', 'angle', 'turn', 'spin', 'degrees', '↻'],
   Scale: ['zoom', 'size', 'magnify'],
   Position: ['location', 'place', 'where', 'move'],
   Seed: ['random', 'shuffle'],
@@ -154,11 +164,11 @@ function prepare(e: PropEntry): Prepared {
   let p = prepared.get(e);
   if (!p) {
     const named = e.plain ? undefined : NAMES[e.label];
-    const syn = [...(e.plain ? [] : (normSyn.get(e.label.toLowerCase()) ?? [])), ...(named ? (normSyn.get(named.toLowerCase()) ?? []) : []), ...(e.extra ?? []).map((x) => wordsOf(x).join(' '))];
+    const syn = [...(e.plain ? [] : (normSyn.get(e.label.replace(/\u00a0/g, ' ').toLowerCase()) ?? [])), ...(named ? (normSyn.get(named.toLowerCase()) ?? []) : []), ...(e.extra ?? []).map((x) => wordsOf(x).join(' '))];
     p = {
       label: wordsOf(e.label).join(' '),
       names: [...(named ? [wordsOf(named).join(' ')] : []), ...syn].filter(Boolean),
-      tip: wordsOf(e.tip ?? (e.plain ? '' : FIELD_TIPS[e.label]) ?? '').join(' '),
+      tip: wordsOf(e.tip ?? (e.plain ? '' : FIELD_TIPS[e.label.replace(/\u00a0/g, ' ')]) ?? '').join(' '),
       section: wordsOf(e.section ?? '').join(' '),
     };
     prepared.set(e, p);
@@ -174,6 +184,14 @@ function prepare(e: PropEntry): Prepared {
  * section's title (half) or the tip (a third). Typos and letters-in-order only count against labels and synonyms.
  */
 export function scoreEntry(query: string, entry: PropEntry): number {
+  // "artboard" finds what is worded "page" and the other way round
+  // (the other wording counts for less, so it finds what is only worded that way without crowding what the query says)
+  const [as, other] = queryVariants(query);
+  const direct = scoreOne(as, entry);
+  return other ? Math.max(direct, scoreOne(other, entry) * 0.6) : direct;
+}
+
+function scoreOne(query: string, entry: PropEntry): number {
   const qw = wordsOf(query);
   if (!qw.length) return 0;
   const p = prepare(entry);

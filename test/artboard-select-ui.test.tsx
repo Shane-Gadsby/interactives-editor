@@ -84,11 +84,11 @@ describe('the Layers panel with several artboards', () => {
     click(row('Quiz 1'), { ctrlKey: true });
     rightClick(row('Quiz 1'));
     const labels = menuLabels();
-    expect(labels).toContain('2 artboards');
-    expect(labels.some((l) => l?.startsWith('Group artboards'))).toBe(true);
+    expect(labels).toContain('2 pages');
+    expect(labels.some((l) => l?.startsWith('Group pages'))).toBe(true);
     expect(labels).toContain('Tidy up');
     expect(labels).toContain('Duplicate');
-    expect(labels.some((l) => l?.startsWith('Delete artboards'))).toBe(true);
+    expect(labels.some((l) => l?.startsWith('Delete pages'))).toBe(true);
     //it didn't change the selection
     expect(names(s.pickedArtboards())).toEqual(['Intro', 'Quiz 1']);
   });
@@ -106,7 +106,7 @@ describe('the Layers panel with several artboards', () => {
     click(row('Quiz 1'));
     click(row('Quiz 2'), { ctrlKey: true });
     rightClick(row('Quiz 2'));
-    act(() => menuItem('Group artboards').click());
+    act(() => menuItem('Group pages').click());
     await settle();
     const input = document.querySelector<HTMLInputElement>('[role="dialog"] input')!;
     expect(input.value).toBe('Group');
@@ -165,7 +165,7 @@ describe('the inspector with several artboards', () => {
     mount(<Inspector />);
     expect(host!.textContent).toContain('Background');
     act(() => s.pickArtboards([ids['Intro'], ids['Quiz 1'], ids['Quiz 2']]));
-    expect(host!.textContent).toContain('3 artboards');
+    expect(host!.textContent).toContain('3 pages');
     expect(host!.textContent).not.toContain('Background');
     const titles = [...host!.querySelectorAll('[title]')].map((e) => e.getAttribute('title'));
     expect(titles).toContain('Align left edges');
@@ -244,8 +244,8 @@ describe('the canvas names of artboards', () => {
     press(label('Quiz 1'), { ctrlKey: true });
     rightClick(label('Quiz 1'));
     const labels = menuLabels();
-    expect(labels).toContain('2 artboards');
-    expect(labels.some((l) => l?.startsWith('Group artboards'))).toBe(true);
+    expect(labels).toContain('2 pages');
+    expect(labels.some((l) => l?.startsWith('Group pages'))).toBe(true);
     expect(labels).toContain('Tidy up');
   });
 
@@ -259,10 +259,10 @@ describe('the canvas names of artboards', () => {
     s.pickArtboards([ids['Intro'], ids['Quiz 1']]);
     act(() => deleteSelectionCommand());
     await settle();
-    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Delete 2 artboards?');
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Delete 2 pages?');
     expect(s.get().project.artboards).toHaveLength(5);
     await act(async () => {
-      [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((b) => b.textContent === 'Delete 2 artboards')!.click();
+      [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((b) => b.textContent === 'Delete 2 pages')!.click();
       await new Promise((r) => setTimeout(r, 0));
     });
     expect(s.get().project.artboards.map((a) => a.name)).toEqual(['Home', 'Quiz 2', 'Results']);

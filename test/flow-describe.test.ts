@@ -1,6 +1,7 @@
 //The flow description: what a graph does in plain sentences, from the catalog, for every kind of node.
 import { describe, expect, it } from 'vitest';
 import { CATALOG, createArtboard, createNode, createProject, defaultParams, type Artboard, type LogicEdge, type LogicNode } from 'interactives-player';
+import { nodeLabel } from '../src/lib/plain-words';
 import { buildFlow, describeNode, flowLines, flowSentence, flowsForLayer, flowsOf, isOff, looseNodes, reachable, removableWithEvent, TEMPLATED_KINDS, turnedOff, turnedOn } from '../src/lib/flow-describe';
 
 let n = 0;
@@ -39,7 +40,7 @@ describe('describeNode', () => {
     for (const k of ['event.pointer', 'action.visibility', 'action.setVariable', 'action.artboard', 'action.timeline', 'action.sound', 'action.url', 'action.delay', 'logic.if', 'action.startOver']) expect(TEMPLATED_KINDS).toContain(k);
   });
 
-  it('every other kind says its name and what it is set to, and carries the catalog summary on the line', () => {
+  it('every other kind says its (plain) name and what it is set to, and carries the catalog summary on the line', () => {
     const { p, ab } = setup();
     const flowOf = (kind: string) => {
       const e = node('event.start');
@@ -49,7 +50,7 @@ describe('describeNode', () => {
     for (const d of CATALOG.filter((x) => x.category !== 'event' && !TEMPLATED_KINDS.includes(x.kind))) {
       const f = flowOf(d.kind);
       expect(f.steps[0].summary, d.kind).toBe(d.summary);
-      expect(f.steps[0].text.toLowerCase(), d.kind).toContain(d.label.toLowerCase());
+      expect(f.steps[0].text.toLowerCase(), d.kind).toContain(nodeLabel(d).toLowerCase());
     }
   });
 

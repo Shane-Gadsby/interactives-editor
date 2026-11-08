@@ -14,9 +14,11 @@ export function ColourwayRow({ project }: { project: Project }) {
   const pick = (id: string) => {
     const hit = ways.find((w) => w.way.id === id);
     if (!hit) return;
+    const mark = store().historyMark();
     store().update((d) => void setColourway(d as Project, hit.theme.id));
     //The canvas shows the default theme unless one was picked in its own switch, which would hide this change
     store().set({ canvasTheme: null });
+    store().toastUndo(`Colourway changed to ${hit.way.name ?? hit.theme.name}.`, mark);
   };
   return (
     <div className="colourway-row">

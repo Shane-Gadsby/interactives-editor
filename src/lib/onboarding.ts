@@ -22,7 +22,7 @@ export interface Job {
 }
 
 export const JOBS: Job[] = [
-  { id: 'shape', label: 'Add a shape', hint: 'Pick Rectangle in the tool bar on the left, then drag on the artboard', tutorial: 'tutorial-first-animation' },
+  { id: 'shape', label: 'Add a shape', hint: 'Pick Rectangle in the tool bar on the left, then drag on the page', tutorial: 'tutorial-first-animation' },
   { id: 'move', label: 'Move it', hint: 'Drag the shape with the Select tool, or change its X and Y in the Properties panel', tutorial: 'tutorial-first-animation' },
   { id: 'click', label: 'Make it do something when clicked', hint: 'In the Interactions tab, add a Pointer event for the shape and connect it to an action', tutorial: 'tutorial-first-interaction' },
   { id: 'preview', label: 'Preview it', hint: 'Press Preview at the top to play it the way a learner will', tutorial: 'tutorial-first-interaction' },

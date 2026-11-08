@@ -24,7 +24,7 @@ describe('the top area in the layout', () => {
     expect(l.zones.top).toEqual({ tabs: [], active: null });
     expect(l.topFolded).toBe(false);
     expect(l.topHeight).toBe(TOP_HEIGHT.def);
-    expect(l.zones.left.tabs).toEqual(['layers', 'assets', 'libraries', 'comments']);
+    expect(l.zones.left.tabs).toEqual(['layers', 'assets', 'icons', 'libraries', 'comments']);
   });
 
   it('takes a panel dragged into it as a tab, unfolds it, and the others stay where they were', () => {

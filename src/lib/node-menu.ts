@@ -1,4 +1,5 @@
 import { CATALOG } from 'interactives-player';
+import { nodeAka, nodeLabel, nodeTip } from './plain-words';
 import type { MenuItem } from '../components/ContextMenu';
 import { CATEGORIES } from './graph-palette';
 import { NODE_SYNONYMS } from './node-search';
@@ -11,6 +12,6 @@ export function nodeMenuItems(pick: (kind: string) => void, only?: (kind: string
   return CATEGORIES.map((c) => ({
     label: SINGULAR[c.id],
     color: CAT_COLOR[c.id],
-    items: CATALOG.filter((d) => d.category === c.id && (!only || only(d.kind))).map((d) => ({ label: d.label, title: d.summary, find: NODE_SYNONYMS[d.kind], group: d.group, onClick: () => pick(d.kind) })),
+    items: CATALOG.filter((d) => d.category === c.id && (!only || only(d.kind))).map((d) => ({ label: nodeLabel(d), title: nodeTip(d), find: [...(nodeAka(d) ? [nodeAka(d)!] : []), ...(NODE_SYNONYMS[d.kind] ?? [])], group: d.group, onClick: () => pick(d.kind) })),
   })).filter((g) => g.items.length);
 }

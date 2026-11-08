@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { nodeHeading, nodeLabel } from '../src/lib/plain-words';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { CATALOG, createNode, createProject, type SceneNode } from 'interactives-player';
@@ -129,10 +130,10 @@ describe('the Help button follows what is highlighted', () => {
     //selected in the graph, but the canvas was the last click: the layer
     expect(currentHelpTarget().label).toBe('Rectangle layer');
     press(document.querySelector('[data-dock-tab="logic"]')!);
-    expect(currentHelpTarget().label).toBe(`${kind.label} node`);
+    expect(currentHelpTarget().label).toBe(`${nodeLabel(kind)} node`);
     act(() => document.getElementById('top-help')!.click());
     expect(drawerTitle()).toContain('Interaction node reference');
-    expect(helpHistory.current?.anchor).toBe(slug(kind.label));
+    expect(helpHistory.current?.anchor).toBe(slug(nodeHeading(kind)));
     act(() => closeHelp());
     press(document.querySelector('[data-dock-tab="timeline"]')!);
     expect(currentHelpTarget().label).toBe('Keyframes');

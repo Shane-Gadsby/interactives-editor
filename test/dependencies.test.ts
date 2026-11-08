@@ -87,7 +87,7 @@ describe('analyzeUsage', () => {
     expect(how(v('label'))).toEqual(['text template']);
     expect(how(v('items'))).toEqual(['repeater items']);
     expect(v('mx').usedBy[0].by.type).toBe('joystick');
-    expect(v('cond').usedBy[0].by).toMatchObject({ type: 'logic', name: 'If' });
+    expect(v('cond').usedBy[0].by).toMatchObject({ type: 'logic', name: 'Check a condition' });
     expect(how(v('bound'))).toEqual(['binding on value']);
     expect(how(v('inst'))).toEqual(['instance input']);
     expect(v('shadowed').unused).toBe(true); // escaped braces are literal text
@@ -110,13 +110,13 @@ describe('analyzeUsage', () => {
     home.logic.nodes.push(logic('action.timeline', { timeline: t1.id, op: 'play' }), logic('event.pointer', { target: a.id, type: 'click' }));
     home.joysticks = [{ id: 'j', name: 'J', xTimeline: t2.id, x: '0.5' }];
     const r = analyzeUsage(p);
-    expect(find(r.timelines, 'FromGraph').usedBy[0].by).toMatchObject({ type: 'logic', name: 'Control timeline' });
+    expect(find(r.timelines, 'FromGraph').usedBy[0].by).toMatchObject({ type: 'logic', name: 'Play or stop an animation' });
     expect(how(find(r.timelines, 'FromJoystick'))).toEqual(['joystick x']);
     expect(how(find(r.timelines, 'Auto'))).toEqual(['autoplays']);
     expect(find(r.timelines, 'Orphan').unused).toBe(true);
     // layer A is a constraint target and an event target; B is driven by a track
     const layerA = find(r.layers, 'A');
-    expect(how(layerA).sort()).toEqual(['On pointer', 'copyPosition constraint target'].sort());
+    expect(how(layerA).sort()).toEqual(['When clicked or hovered', 'copyPosition constraint target'].sort());
     expect(how(find(r.layers, 'B'))).toEqual(['track x']);
     expect(r.layers.every((l) => !l.unused)).toBe(true);
   });

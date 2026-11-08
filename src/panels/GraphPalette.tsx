@@ -1,4 +1,5 @@
 import { useMemo, useState, type KeyboardEvent, type RefObject } from 'react';
+import { nodeLabel, nodeTip, useTechnicalWording } from '../lib/plain-words';
 import { NODE_GROUPS, type Category, type NodeGroup } from 'interactives-player';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { ArtboardPicker } from './ArtboardPicker';
@@ -13,6 +14,7 @@ const CAT_COLOR: Record<string, string> = { event: 'var(--event)', action: 'var(
  * it is cleared. `onAdd` puts a node on the graph.
  */
 export function GraphPalette({ onAdd, inputRef }: { onAdd: (kind: string) => void; inputRef: RefObject<HTMLInputElement> }) {
+  const technical = useTechnicalWording();
   const [query, setQuery] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [topics, setTopics] = useState<NodeGroup[]>([]);
@@ -25,7 +27,7 @@ export function GraphPalette({ onAdd, inputRef }: { onAdd: (kind: string) => voi
   };
   const filter = { query, categories, topics };
   const filtering = isFiltering(filter);
-  const { groups, count } = useMemo(() => filterPalette(filter), [query, categories, topics]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { groups, count } = useMemo(() => filterPalette(filter), [query, categories, topics, technical]); // eslint-disable-line react-hooks/exhaustive-deps
   const allKeys = useMemo(() => paletteGroups().map((g) => g.key), []);
   const first = groups[0]?.defs[0];
   const flip = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -178,7 +180,7 @@ export function GraphPalette({ onAdd, inputRef }: { onAdd: (kind: string) => voi
                       key={d.kind}
                       type="button"
                       className="palette-item"
-                      title={d.summary}
+                      title={nodeTip(d, technical)}
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.effectAllowed = 'copy';
@@ -187,7 +189,7 @@ export function GraphPalette({ onAdd, inputRef }: { onAdd: (kind: string) => voi
                       onClick={() => onAdd(d.kind)}
                       onKeyDown={onItemKey}
                     >
-                      {d.label}
+                      {nodeLabel(d, technical)}
                     </button>
                   ))}
                 </div>

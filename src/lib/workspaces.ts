@@ -66,7 +66,7 @@ export const BUILT_IN: { id: string; name: string; about: string; make: () => Om
     name: 'Big canvas',
     about: 'Everything on the right in one column of tabs, and the bottom tools folded away, for the most room to design',
     make: () => {
-      const l = gather(defaultLayout(), 'right', ['inspector', 'layers', 'assets', 'libraries', 'comments']);
+      const l = gather(defaultLayout(), 'right', ['inspector', 'layers', 'assets', 'icons', 'libraries', 'comments']);
       return { layout: { ...l, bottomFolded: true }, widths: { left: PANEL_WIDTH.left.def, right: 400 }, bottomHeight: 260 };
     },
   },

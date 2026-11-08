@@ -271,7 +271,7 @@ export function Layers() {
     if (!pickedArtboardIds(st.get()).includes(ab.id)) st.pickArtboards([ab.id]);
     const ids = pickedArtboardIds(st.get());
     const items = artboardMenuItems(ids);
-    if (ids.length === 1) items.splice(items.findIndex((it) => 'separator' in it) + 1, 0, { label: 'Make start artboard', disabled: s.project.settings.startArtboardId === ab.id, onClick: () => st.update((d) => void (d.settings.startArtboardId = ab.id)) });
+    if (ids.length === 1) items.splice(items.findIndex((it) => 'separator' in it) + 1, 0, { label: 'Make start page', disabled: s.project.settings.startArtboardId === ab.id, onClick: () => st.update((d) => void (d.settings.startArtboardId = ab.id)) });
     setMenu({ x: e.clientX, y: e.clientY, items });
   };
   const groupRow = (group: ArtboardGroup, boards: Artboard[]) => {
@@ -308,10 +308,10 @@ export function Layers() {
           {open ? <Icons.chevronDown width={12} /> : <Icons.chevronRight width={12} />}
         </button>
         <Icons.folder width={14} height={14} />
-        <span className="layer-name" title="Click to select every artboard in the group. Double-click to rename it">
+        <span className="layer-name" title="Click to select every page in the group. Double-click to rename it">
           {group.name}
         </span>
-        <span className="badge" title={`${boards.length} ${boards.length === 1 ? 'artboard' : 'artboards'} in this group`}>
+        <span className="badge" title={`${boards.length} ${boards.length === 1 ? 'page' : 'pages'} in this group`}>
           {boards.length}
         </span>
       </div>
@@ -565,19 +565,19 @@ export function Layers() {
       {flat.slice(first, last).map((r) => (r.kind === 'group' ? groupRow(r.group, r.boards) : r.kind === 'artboard' ? artboardRow(r.ab) : row(r.ab, r.n, r.depth, r.parent)))}
       <div style={{ height: (flat.length - last) * ROW_H }} />
       <button className="link-btn add-artboard" onClick={() => store().addArtboard()}>
-        + Add artboard
+        + Add page
       </button>
       <button
         className="link-btn add-artboard"
-        title={pickedAbs.length > 1 ? 'Lay the selected artboards out in a tidy grid among themselves. One undo step' : 'Lay the artboards out in a tidy grid on the canvas, in the order of this list, with even gaps. A responsive variant stays beside its main artboard, and an artboard group stays together. One undo step'}
+        title={pickedAbs.length > 1 ? 'Lay the selected pages out in a tidy grid among themselves. One undo step' : 'Lay the pages out in a tidy grid on the canvas, in the order of this list, with even gaps. A responsive variant stays beside its main page, and a page group stays together. One undo step'}
         disabled={s.project.artboards.filter((a) => !a.canvasHidden).length < 2}
         onClick={() => (pickedAbs.length > 1 ? tidyTheseCommand(pickedAbs) : tidyArtboardsCommand())}
       >
-        {pickedAbs.length > 1 ? `Tidy up ${pickedAbs.length} selected artboards` : 'Tidy up artboards'}
+        {pickedAbs.length > 1 ? `Tidy up ${pickedAbs.length} selected pages` : 'Tidy up pages'}
       </button>
       <button
         className="link-btn add-artboard"
-        title="Import Lottie, Rive, PSD, AI, PDF, PowerPoint, VectorCraft or PhotoCraft files as artboards in this project"
+        title="Import Lottie, Rive, PSD, AI, PDF, PowerPoint, VectorCraft or PhotoCraft files as pages in this project"
         onClick={async () => {
           const files = await pickFiles(ANIMATION_ACCEPT, true);
           if (!files.length) return;
@@ -586,7 +586,7 @@ export function Layers() {
           for (const file of files) await importAnimationFile(file, linking);
         }}
       >
-        + Import file as artboard
+        + Import file as page
       </button>
     </div>
     {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}

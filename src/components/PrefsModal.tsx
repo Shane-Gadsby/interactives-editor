@@ -109,6 +109,18 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
             onChange={(v) => setPrefs({ showNotes: v })}
           />
           <CheckField
+            label="Technical wording"
+            title="Show the interaction nodes by the names they have in the file (On pointer, Set variable, Control timeline) instead of plain wording (When clicked or hovered, Change a value or counter, Play or stop an animation). Search and help find either name whichever is on screen"
+            value={p.technicalWording}
+            onChange={(v) => setPrefs({ technicalWording: v })}
+          />
+          <CheckField
+            label="Ask what a picture shows"
+            title="When you add a picture or video, a small box on its settings asks what it shows, so it gets a text alternative for screen readers. You can skip it or mark the picture decorative, and it never stops you carrying on. Switch it off if you add a lot of pictures at once"
+            value={p.askPictureDescription}
+            onChange={(v) => setPrefs({ askPictureDescription: v })}
+          />
+          <CheckField
             label="Accessibility features"
             title="Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview. Switch it off to see whether a problem comes from it"
             value={p.accessibility}

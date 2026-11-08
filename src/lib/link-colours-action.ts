@@ -43,7 +43,8 @@ export async function linkColoursCommand(artboardIds?: string[]): Promise<LinkSu
   });
   if (!ok) return null;
   let done: LinkSummary = plan;
+  const mark = s.historyMark();
   s.update((d) => void (done = linkColours(d, opts)));
-  s.toast(`${describeLink(done, 'Linked')}. Undo (Ctrl+Z) takes them back in one step.`, 'info');
+  s.toastUndo(`${describeLink(done, 'Linked')}.`, mark);
   return done;
 }

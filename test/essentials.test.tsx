@@ -233,7 +233,7 @@ describe('Essentials on screen', () => {
     let sizes = { left: -1 } as ReturnType<typeof useZoneSizes>;
     const Probe = () => ((sizes = useZoneSizes({ left: 240, right: 300 })), null);
     setCurrentStore(new EditorStore(createProject('T')));
-    setDock(hideSome(defaultLayout(), ['layers', 'assets', 'libraries', 'comments']));
+    setDock(hideSome(defaultLayout(), ['layers', 'assets', 'icons', 'libraries', 'comments']));
     act(() => root.render(<Probe />));
     expect(sizes.left).toBe(0);
   });

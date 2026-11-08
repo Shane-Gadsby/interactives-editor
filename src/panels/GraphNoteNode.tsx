@@ -1,5 +1,6 @@
 import { NodeResizer, type Node, type NodeProps } from '@xyflow/react';
-import { CATALOG_BY_KIND, NOTE_COLOURS, NOTE_MIN_H, NOTE_MIN_W, type LogicGraph, type Note, type NoteColour } from 'interactives-player';
+import { labelOfKind } from '../lib/plain-words';
+import { NOTE_COLOURS, NOTE_MIN_H, NOTE_MIN_W, type LogicGraph, type Note, type NoteColour } from 'interactives-player';
 import { NoteText } from '../canvas/NotesLayer';
 import { SelectField, TextField } from '../components/ui';
 import { Icons } from '../components/icons';
@@ -81,7 +82,7 @@ export function GraphNoteForm({ note, logic }: { note: Note; logic: Pick<LogicGr
   const hosts = [
     { value: '', label: 'Nothing (stays where it is)' },
     ...(logic.groups ?? []).map((g) => ({ value: g.id, label: `Group: ${g.label || 'Group'}` })),
-    ...logic.nodes.map((n) => ({ value: n.id, label: CATALOG_BY_KIND[n.kind]?.label ?? n.kind })),
+    ...logic.nodes.map((n) => ({ value: n.id, label: labelOfKind(n.kind) })),
   ];
   return (
     <div className="param-form graph-note-form">

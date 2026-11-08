@@ -67,7 +67,11 @@ export function applyGift(d: Project, parse: GiftParse, activeId?: string | null
 }
 
 //importers.ts has the same one, but it drags the exporter (and the built player) in, which a unit test of this file does not want
-const showReport = (title: string, lines: string[]) => (lines.length ? store().set({ report: { title, lines } }) : store().toast(title));
+const showReport = (title: string, lines: string[], mark?: number) => {
+  const s = store();
+  if (mark !== undefined) lines.length ? s.setReportUndo(title, lines, mark) : s.toastUndo(title, mark);
+  else lines.length ? s.set({ report: { title, lines } }) : s.toast(title);
+};
 
 /** The Import questions command: pick a GIFT file, add its questions, and say what was left out. */
 export async function importGiftFile(): Promise<void> {
@@ -88,6 +92,7 @@ export async function importGiftFile(): Promise<void> {
     return;
   }
   let applied: GiftApplied = { artboardIds: [], left: [] };
+  const mark = s.historyMark();
   s.update((d) => void (applied = applyGift(d as Project, parse, s.get().activeArtboardId)));
   track('feature', 'question-import', { thing: 'gift' });
   if (applied.left.length) lines.push(`Only the first ${MAX_IMPORT} questions were added. ${applied.left.length} more in the file were not. Import the rest from a second file.`);
@@ -96,5 +101,5 @@ export async function importGiftFile(): Promise<void> {
     s.set({ activeArtboardId: first, artboardSelected: true, selection: [] });
   }
   const n = applied.artboardIds.length;
-  showReport(`Imported ${n} question${n === 1 ? '' : 's'} from ${file.name}${parse.skipped.length ? `, ${parse.skipped.length} left out` : ''}`, lines);
+  showReport(`Imported ${n} question${n === 1 ? '' : 's'} from ${file.name}${parse.skipped.length ? `, ${parse.skipped.length} left out` : ''}`, lines, mark);
 }
