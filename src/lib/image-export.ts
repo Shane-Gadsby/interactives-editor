@@ -1,4 +1,4 @@
-import { Renderer, createStillShaders, prepareNodes, sampleArtboard, type Artboard, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, createStillShaders, measureCopies, prepareNodes, sampleArtboard, type Artboard, type CopySizes, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { assetBytes } from './db';
 import { download, fileSafe } from './export';
 import { previewScope } from './data';
@@ -190,7 +190,14 @@ export async function artboardSvg(project: Project, ab: Artboard, timeline: Time
     host.appendChild(r.root);
     const vars = previewScope(project, ab);
     const sampled: SceneNode[] = timeline ? sampleArtboard(ab.children, timeline, time) : ab.children;
-    r.render(ab, prepareNodes(sampled, { vars }), { vars });
+    const sizes: CopySizes = new Map();
+    let drawn = prepareNodes(sampled, { vars }, { measured: sizes });
+    r.render(ab, drawn, { vars });
+    // Text in repeated copies is measured, and drawn again at the size it took
+    if (measureCopies(r, drawn, sizes, ab.width)) {
+      drawn = prepareNodes(sampled, { vars }, { measured: sizes });
+      r.render(ab, drawn, { vars });
+    }
     if (r.root.querySelector('iframe, video, [data-ix-embed]')) warnings.push('Embeds and video show as empty boxes in pictures.');
     if (r.root.querySelector('canvas.ix-draw')) warnings.push('Script layers show as empty boxes in pictures.');
     if (r.root.querySelector('canvas.ix-shader')) {

@@ -2580,6 +2580,8 @@ Inside the copies, \`item\` is the current item and \`index\` its position (from
 
 **Layout** places the copies: vertical, horizontal, grid (with columns), or none (when the frame uses [auto layout](auto-layout), which is usually best). A grid has a **Fill** direction: *Rows first* goes across each row and then down (1 2 3 / 4 5 6 / 7), *Columns first* goes down each column and then across (1 4 7 / 2 5 / 3 6), with **Cols** still the number of columns.
 
+**Text in the copies sizes itself.** A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there, so a long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow. There is no need to guess a height from the number of characters. A height or width you bind on the template layer still wins. Only copies whose text changed are measured again.
+
 **Instances in a repeater** can take their [inputs](instances) from the item: select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
 
 Clicks on a copy fire **On pointer** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked.`,
