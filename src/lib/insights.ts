@@ -82,7 +82,7 @@ export function questionRows(project: Project, data: Insights): QuestionRow[] {
         learners: hit?.learners ?? 0,
         rightRate: hit ? pct(hit.correct, hit.checks) : null,
         firstTryRate: hit ? pct(hit.firstTryRight, hit.learners) : null,
-        options: q.kind === 'blank' || q.kind === 'ordering' || q.kind === 'matching' ? [] : q.options.map((o) => ({ id: o.id, text: o.text || o.id, chosen: chosen.get(o.id) ?? 0, correct: !!o.correct })),
+        options: q.kind === 'blank' || q.kind === 'ordering' || q.kind === 'matching' || q.kind === 'categorise' ? [] : q.options.map((o) => ({ id: o.id, text: o.text || o.id, chosen: chosen.get(o.id) ?? 0, correct: !!o.correct })),
       });
     }
   }

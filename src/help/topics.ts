@@ -1766,8 +1766,8 @@ Everyone should be able to finish the activity, so every drag has two ways that 
     id: 'question-kit',
     title: 'Questions and quizzes',
     group: 'Interactivity',
-    summary: 'Add multiple choice, true/false, fill in the blank, ordering, matching (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file.',
-    keywords: 'question quiz test assessment import gift moodle converter multiple choice true false fill blank ordering sequence matching match drag drop pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning',
+    summary: 'Add multiple choice, true/false, fill in the blank (typed or dragged), ordering, matching and categorise (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file.',
+    keywords: 'question quiz test assessment import gift moodle converter multiple choice true false fill blank ordering sequence matching match drag drop categorise sort groups word bank distractor extra pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning',
     body: `Quizzes without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
 
 ## Add one
@@ -1781,7 +1781,8 @@ Click **Add question**, pick a type, and a card appears with a prompt, the answe
 | True or false | picks True or False | it matches the statement |
 | Fill in the blank | types into one or more inputs | each blank matches an accepted answer |
 | Put in order | moves items up and down | every item is in its place |
-| Matching (drag and drop) | drags each term onto its definition | every term is in its own slot |
+| Matching (drag and drop) | drags each term onto its definition | every term is in its own slot (and no extra term is in one) |
+| Categorise (drag into groups) | drags each item into a group box | every item is in the group it belongs to |
 | Hotspot (click the right place) | clicks an area of a picture | the picked area is marked right (or all of the right ones) |
 
 ## What gets built
@@ -1822,6 +1823,12 @@ Two finished ones to play first: **Matching question** and **Hotspot question** 
 **Fill in the blank.** The accepted answers go one per line: \`Paris\`, \`city of light\`. Case and extra spaces are ignored unless you tick **Match case**. A number is compared as a number (\`3\` accepts \`3.0\`), and **± Tolerance** accepts near misses. A line written \`/colou?r/i\` is a pattern. **Add blank** adds another input in the look of the last one. Tick **Spelling: letters must match exactly** for a word to spell (see [Spelling tests](question-kit#spelling-tests)).
 
 **Put in order.** List the items in the **right** order; the learner sees them shuffled (the first deal is never already right). Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
+
+**Extra terms and extra words.** Matching has an **Extra terms** list in the Question section, and fill the blanks a list of **Extra words**. They are dragged like the others but belong nowhere, so the learner has to leave them alone. Left in the pile is right. One dropped into a matching slot is marked wrong and takes that pair's slot, and with part marks each extra in a slot takes one pair's share off.
+
+**Categorise.** Add question, *Categorise (drag into groups)*. The Question section lists the **groups** and the **items**, and each item says which group it belongs in. The learner drags every item into a group box (a box takes any number of items, and an item stays where it is let go), or uses the keyboard as for matching. Every box takes every item, so a wrong drop is allowed and **Check answer** says how it went: right when every item is in its own group, part marks give the share in the right group, and the feedback says how many (*3 of 4 in the right group*). An item can have **Feedback if put in the wrong group**, said with the result. Tick **Say right or wrong as each item is dropped** and each drop answers straight away (*Eagle goes in Birds. Right.*) without using a try, through an *Item dropped in a group* node the kit wires to each box. Categorise questions are marked in the page, not on the server, because which group an item belongs in is part of how the layers are set up. Finished, the items stop moving, and (with **Show the right answer**) the wrong ones are listed with their group.
+
+**Fill the blanks by dragging.** On *Fill in the blank* set **Answer by** to *Dragging words from a word bank*. Each blank becomes a slot, and a bank of word chips appears: the first plain (not a /pattern/) accepted answer of each blank, plus any **Extra words**. Check reads the word in each slot as what was typed, so accepted answers, case, tolerance, part marks and retries all work as for typing. Because only the answer words are in the page (not which blank each fits), a drag the blanks question can still be marked on the server. **Shuffle the word bank** deals the chips again each time it starts.
 
 **Matching.** Add question, *Matching (drag and drop)*. Each pair in the Question section is a term and what it matches (a country and its capital, a word and its meaning, a label and a place on a diagram). The learner drags each term into the slot beside a definition, or uses the keyboard: Tab to a term, Space to pick it up, the arrow keys to choose a slot, Space to drop, Escape to put it back (see [Drag and drop](drag-and-drop)). A slot holds one term; dropping another on it swaps them. **Check answer** is right when every term is in its own slot. With **Part marks** the score is the share of terms in the right place, and the feedback says how many (*2 of 4 matched correctly*). When the question finishes, each slot is marked ✓ Right or ✗ Wrong and (with **Show the right answer**) says which term belongs there; the terms stop moving. **Try again** puts the terms back. **Shuffle** deals the terms to different places each time it starts. Add or remove a pair and the layers follow; a new one takes the look of the others. To match labels to a diagram, move the slots over the picture and restyle the terms: they are ordinary layers.
 
@@ -1897,7 +1904,7 @@ What it does not do:
 
 - The answers are only taken out of the two links. **Preview**, an exported HTML file or package, and anyone who opens your project in the editor still have the answers, and mark in the page as usual.
 - Learners need the **Link for StudyDesk** (and to be signed in to StudyDesk) to have an answer checked. On the plain share link with no session, the question says it can only be checked from StudyDesk.
-- **Matching** and questions taken from a **data bank** can't be marked on the server: which term belongs where is part of how the layers are set up, and a bank is data the learner downloads. They stay marked in the page, and the Question section says so.
+- **Matching**, **Categorise** and questions taken from a **data bank** can't be marked on the server: which term belongs where is part of how the layers are set up, and a bank is data the learner downloads. They stay marked in the page, and the Question section says so. A fill the blanks question answered by dragging words can be marked on the server (it is sent the words in the slots).
 - Unlimited tries can still be used to find an answer slowly. Set **Tries** to limit them.
 - A script or a custom node that holds an answer of its own is not touched.
 - Staff who open the project in the editor, or Remix it from the Link for StudyDesk, see the full project with its answers.

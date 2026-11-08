@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import {
   MAX_BLANKS,
+  MAX_CARDS,
+  MAX_EXTRAS,
+  MAX_GROUPS,
   MAX_HINTS,
   MAX_HOTSPOTS,
   MAX_OPTIONS,
@@ -17,6 +20,9 @@ import {
   type Project,
   type Question,
   type QuestionBlank,
+  type QuestionCard,
+  type QuestionExtra,
+  type QuestionGroup,
   type QuestionKind,
   type QuestionOption,
   type QuestionPair,
@@ -38,6 +44,10 @@ const PART_LABELS: [string, string][] = [
   ['matchDefinition', 'Definition'],
   ['matchZone', 'Slot'],
   ['matchState', 'Pair result'],
+  ['catZone', 'Group box'],
+  ['catCard', 'Item'],
+  ['blankZone', 'Blank slot'],
+  ['blankWord', 'Word'],
   ['picture', 'Picture'],
   ['spots', 'Picture area'],
   ['spot', 'Area'],
@@ -93,6 +103,13 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
     list.splice(i + by, 0, moved);
     apply({ pairs: list });
   };
+  const extras = q.extras ?? [];
+  const setExtra = (i: number, patch: Partial<QuestionExtra>, key?: string) => apply({ extras: extras.map((x, j) => (j === i ? { ...x, ...patch } : x)) }, key ?? `extra-${i}`);
+  const groups = q.groups ?? [];
+  const cards = q.cards ?? [];
+  const setGroup = (i: number, patch: Partial<QuestionGroup>, key?: string) => apply({ groups: groups.map((g, j) => (j === i ? { ...g, ...patch } : g)) }, key ?? `group-${i}`);
+  const setCard = (i: number, patch: Partial<QuestionCard>, key?: string) => apply({ cards: cards.map((c, j) => (j === i ? { ...c, ...patch } : c)) }, key ?? `card-${i}`);
+  const dragWords = q.kind === 'blank' && q.answerBy === 'drag';
   const changeKind = (kind: QuestionKind) => {
     if (kind === q.kind) return;
     //Each kind keeps what it can: the options carry over between the choice kinds and ordering, true/false has its two
@@ -104,16 +121,32 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       const first = options.findIndex((o) => o.correct);
       options = options.map((o, i) => ({ ...o, correct: i === first ? true : undefined }));
     }
+    let groups = q.groups;
+    let cards = q.cards;
+    if (kind === 'categorise' && (!groups || groups.length < 2 || !cards || cards.length < 2)) {
+      const fresh = newQuestion('categorise');
+      groups = fresh.groups;
+      cards = fresh.cards;
+    }
     if (kind === 'blank' && !blanks.length) blanks = [{ id: 'b1', label: 'Answer', answers: [''] }];
     const pairs = kind === 'matching' && q.pairs.length < 2 ? newQuestion('matching').pairs : q.pairs;
     if (kind === 'hotspot') {
       //The options become the areas: at least one, with one right
-      if (!options.length || q.kind === 'blank' || q.kind === 'matching') options = newQuestion('hotspot').options;
+      if (!options.length || q.kind === 'blank' || q.kind === 'matching' || q.kind === 'categorise') options = newQuestion('hotspot').options;
       if (!options.some((o) => o.correct)) options = options.map((o, i) => ({ ...o, correct: i === 0 ? true : undefined }));
       options = options.slice(0, MAX_HOTSPOTS);
     }
-    if (kind !== 'blank' && kind !== 'truefalse' && kind !== 'matching' && kind !== 'hotspot' && options.length < 2) options = [{ id: 'o1', text: 'First', correct: true }, { id: 'o2', text: 'Second' }, { id: 'o3', text: 'Third' }];
-    apply({ kind, options, blanks, pairs, partial: kind === 'multiple' || kind === 'ordering' || kind === 'blank' || kind === 'matching', ...(kind === 'matching' || kind === 'hotspot' ? { bank: null } : {}) });
+    if (kind !== 'blank' && kind !== 'truefalse' && kind !== 'matching' && kind !== 'categorise' && kind !== 'hotspot' && options.length < 2) options = [{ id: 'o1', text: 'First', correct: true }, { id: 'o2', text: 'Second' }, { id: 'o3', text: 'Third' }];
+    apply({
+      kind,
+      options,
+      blanks,
+      pairs,
+      ...(kind === 'categorise' ? { groups, cards } : {}),
+      partial: kind === 'multiple' || kind === 'ordering' || kind === 'blank' || kind === 'matching' || kind === 'categorise',
+      ...(kind === 'matching' || kind === 'categorise' || kind === 'hotspot' ? { bank: null } : {}),
+      ...(kind !== 'blank' && q.answerBy ? { answerBy: undefined } : {}),
+    });
   };
   const select = (id: string) => store().select([id]);
   return (
@@ -212,6 +245,19 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
       )}
 
       {q.kind === 'blank' && (
+        <SelectField<'type' | 'drag'>
+          label="Answer by"
+          title="Type: the learner types into a box. Drag: the learner drags a word from a word bank into each blank. The bank holds the first plain accepted answer of every blank, and the extra words below"
+          value={q.answerBy ?? 'type'}
+          options={[
+            { value: 'type', label: 'Typing' },
+            { value: 'drag', label: 'Dragging words from a word bank' },
+          ]}
+          onChange={(v) => apply({ answerBy: v === 'drag' ? 'drag' : undefined, ...(v === 'drag' ? { bank: null } : {}) })}
+        />
+      )}
+      {dragWords && <ExtrasList label="Extra words" noun="word" extras={extras} setExtra={setExtra} apply={apply} />}
+      {q.kind === 'blank' && (
         <div className="q-list" role="group" aria-label="Blanks">
           {q.blanks.map((b, i) => (
             <div key={b.id} className="q-option">
@@ -283,7 +329,60 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
           <button className="btn" disabled={q.pairs.length >= MAX_PAIRS} onClick={() => apply({ pairs: [...q.pairs, { id: nextId(q.pairs, 'p'), term: '', match: '' }] })}>
             + Add pair
           </button>
+          <ExtrasList label="Extra terms" noun="term" extras={extras} setExtra={setExtra} apply={apply} />
           <div className="muted small">Terms, definitions and slots are ordinary layers: restyle them, or move the slots onto a diagram to match labels to places.</div>
+        </div>
+      )}
+
+      {q.kind === 'categorise' && (
+        <div className="q-list" role="group" aria-label="Groups and items">
+          <div className="muted small">Each group is a box the learner drags items into. A group takes any number of items. Pick the group each item belongs in.</div>
+          {groups.map((g, i) => (
+            <Row key={g.id}>
+              <span className="muted small q-num">{i + 1}.</span>
+              <TextField value={g.name} placeholder={`Group ${i + 1}`} title="The group's name, shown in its box and read out by screen readers" onChange={(v) => setGroup(i, { name: v }, `group-name-${i}`)} />
+              <IconButton
+                icon={<span aria-hidden="true">×</span>}
+                title="Remove this group and the items in it"
+                disabled={groups.length <= 2}
+                onClick={() => apply({ groups: groups.filter((_, j) => j !== i), cards: cards.filter((c) => c.group !== g.id) })}
+              />
+            </Row>
+          ))}
+          <button className="btn" disabled={groups.length >= MAX_GROUPS} onClick={() => apply({ groups: [...groups, { id: nextId(groups, 'g'), name: '' }] })}>
+            + Add group
+          </button>
+          {cards.map((c, i) => (
+            <div key={c.id} className="q-option">
+              <Row>
+                <span className="muted small q-num">{i + 1}.</span>
+                <TextField value={c.text} placeholder={`Item ${i + 1}`} title="The layer the learner drags" onChange={(v) => setCard(i, { text: v }, `card-text-${i}`)} />
+                <IconButton icon={<span aria-hidden="true">×</span>} title="Remove this item" disabled={cards.length <= 2} onClick={() => apply({ cards: cards.filter((_, j) => j !== i) })} />
+              </Row>
+              <SelectField<string>
+                label="Belongs in"
+                title="The group this item is right in"
+                value={groups.some((g) => g.id === c.group) ? c.group : ''}
+                options={[{ value: '', label: 'Choose a group' }, ...groups.map((g, k) => ({ value: g.id, label: g.name || `Group ${k + 1}` }))]}
+                onChange={(v) => setCard(i, { group: v })}
+              />
+              <TextField value={c.feedback ?? ''} placeholder="Feedback if put in the wrong group (optional)" onChange={(v) => setCard(i, { feedback: v || undefined }, `card-fb-${i}`)} />
+            </div>
+          ))}
+          <button
+            className="btn"
+            disabled={cards.length >= MAX_CARDS}
+            onClick={() => apply({ cards: [...cards, { id: nextId(cards, 'c'), text: '', group: groups[0]?.id ?? '' }] })}
+          >
+            + Add item
+          </button>
+          <CheckField
+            label="Say right or wrong as each item is dropped"
+            title="Each drop tells the learner whether the item is in the right group (or the item's own feedback when it is not), without using a try. Check answer still marks the lot. Good for practice; leave it off when the check is the test"
+            value={!!q.dropFeedback}
+            onChange={(v) => apply({ dropFeedback: v || undefined })}
+          />
+          <div className="muted small">Group boxes and items are ordinary layers: restyle them, enlarge a box or move it onto a picture.</div>
         </div>
       )}
 
@@ -361,10 +460,10 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
           <NumberField label="Hint −%" title="Points taken off for each hint shown, as a percentage" value={Math.round(q.hintPenalty * 100)} min={0} max={100} onChange={(v) => apply({ hintPenalty: Math.min(1, Math.max(0, v / 100)) }, 'hintPenalty')} />
         </Row>
       </div>
-      {(q.kind === 'multiple' || q.kind === 'ordering' || q.kind === 'blank' || q.kind === 'matching' || isMultiple(q)) && (
+      {(q.kind === 'multiple' || q.kind === 'ordering' || q.kind === 'blank' || q.kind === 'matching' || q.kind === 'categorise' || isMultiple(q)) && (
         <CheckField label="Part marks" title="Give a share of the points for the parts that are right" value={q.partial} onChange={(v) => apply({ partial: v })} />
       )}
-      {q.kind !== 'truefalse' && q.kind !== 'blank' && q.kind !== 'hotspot' && <CheckField label="Shuffle" title="A different order each time the question starts" value={q.shuffle} onChange={(v) => apply({ shuffle: v })} />}
+      {q.kind !== 'truefalse' && (q.kind !== 'blank' || dragWords) && q.kind !== 'hotspot' && <CheckField label={dragWords ? 'Shuffle the word bank' : 'Shuffle'} title="A different order each time the question starts" value={q.shuffle} onChange={(v) => apply({ shuffle: v })} />}
       <CheckField label="Show the right answer when finished wrong" value={q.reveal} onChange={(v) => apply({ reveal: v })} />
       <CheckField
         label="Mark answers on the server"
@@ -444,7 +543,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         onChange={(v) => apply({ report: v || null })}
       />
 
-      {q.kind !== 'matching' && q.kind !== 'hotspot' && <QuestionBank q={q} project={project} apply={apply} />}
+      {q.kind !== 'matching' && q.kind !== 'categorise' && q.kind !== 'hotspot' && !dragWords && <QuestionBank q={q} project={project} apply={apply} />}
 
       <div className="q-sub">Variables</div>
       <TextField
@@ -482,6 +581,30 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         ))}
       </div>
     </Section>
+  );
+}
+
+/** Wrong choices mixed in on purpose: terms that match nothing, or words in the word bank that fit no blank. */
+function ExtrasList({ label, noun, extras, setExtra, apply }: { label: string; noun: string; extras: QuestionExtra[]; setExtra: (i: number, patch: Partial<QuestionExtra>, key?: string) => void; apply: (patch: Partial<Question>, key?: string) => void }) {
+  const next = () => {
+    let n = extras.length + 1;
+    while (extras.some((x) => x.id === `x${n}`)) n++;
+    return `x${n}`;
+  };
+  return (
+    <div className="q-list" role="group" aria-label={label}>
+      <div className="q-sub">{label}</div>
+      <div className="muted small">Dragged like the others, but they belong nowhere: left in the pile is right, and one dropped in a {noun === 'term' ? 'slot' : 'blank'} is wrong.</div>
+      {extras.map((x, i) => (
+        <Row key={x.id}>
+          <TextField value={x.text} placeholder={`Extra ${noun} ${i + 1}`} onChange={(v) => setExtra(i, { text: v }, `extra-text-${i}`)} />
+          <IconButton icon={<span aria-hidden="true">×</span>} title={`Remove this extra ${noun}`} onClick={() => apply({ extras: extras.filter((_, j) => j !== i) })} />
+        </Row>
+      ))}
+      <button className="btn" disabled={extras.length >= MAX_EXTRAS} onClick={() => apply({ extras: [...extras, { id: next(), text: '' }] })}>
+        + Add extra {noun}
+      </button>
+    </div>
   );
 }
 

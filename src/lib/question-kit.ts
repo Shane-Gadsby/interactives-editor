@@ -5,6 +5,7 @@
 import {
   CATALOG_BY_KIND,
   QUESTION_SUFFIXES,
+  blankWord,
   buildItems,
   createNode,
   defaultAutoLayout,
@@ -42,10 +43,10 @@ const AREA_OK = '#2f6f1740';
 const AREA_BAD = '#b3261e40';
 const AREA_MISS = '#8a520040';
 
-type Style = 'radio' | 'check' | 'blank' | 'order' | 'match' | 'spot';
+type Style = 'radio' | 'check' | 'blank' | 'dragblank' | 'order' | 'match' | 'categorise' | 'spot';
 
-export const bodyStyle = (kind: QuestionKind): Style =>
-  kind === 'multiple' ? 'check' : kind === 'blank' ? 'blank' : kind === 'ordering' ? 'order' : kind === 'matching' ? 'match' : kind === 'hotspot' ? 'spot' : 'radio';
+export const bodyStyle = (kind: QuestionKind, answerBy?: Question['answerBy']): Style =>
+  kind === 'multiple' ? 'check' : kind === 'blank' ? (answerBy === 'drag' ? 'dragblank' : 'blank') : kind === 'ordering' ? 'order' : kind === 'matching' ? 'match' : kind === 'categorise' ? 'categorise' : kind === 'hotspot' ? 'spot' : 'radio';
 
 export const RESET_LABELS = { again: 'Try again', next: 'Next question' };
 
@@ -269,10 +270,34 @@ export function dealOrder(n: number, seed: string): number[] {
   return out;
 }
 
-function matchTerm(q: Question, p: QuestionPair, i: number, slot: number): SceneNode {
+/** A draggable word chip: a matching term or extra, a categorise item, a fill the blanks word. `text` is what it shows. */
+function chip(q: Question, o: { name: string; part: string; id: string; word: string; tag: string; index: number; x: number; y: number; w?: number; h?: number; marks?: boolean }): SceneNode {
+  const at = itemAt(q, o.index);
+  const st = stateFor(at);
+  return createNode('frame', {
+    name: o.name,
+    questionPart: `${o.part}:${o.id}`,
+    x: o.x,
+    y: o.y,
+    width: o.w ?? TERM_W,
+    height: o.h ?? TERM_H,
+    fill: solid(L.background),
+    stroke: stroke(L.border, 2),
+    cornerRadius: 10,
+    clip: false,
+    layout: { ...row(8), padding: { top: 8, right: 12, bottom: 8, left: 12 }, hugHeight: false },
+    ariaLabel: o.word,
+    draggable: { tags: [o.tag], onMiss: 'return', label: o.word },
+    shadow: { x: 0, y: 2, blur: 6, spread: 0, color: 'rgba(0,0,0,0.15)' },
+    bindings: o.marks ? { 'fill.color': st.fill(`"${L.background}"`), 'stroke.paint.color': st.line(`"${L.border}"`) } : undefined,
+    children: [text(`${o.name} text`, `${o.part}Text`, o.marks ? `{${at}?.state == "correct" ? "✓ " : ${at}?.state == "wrong" ? "✗ " : ""}{${at}?.text}` : o.word, { layoutItem: { width: 'fill' }, decorative: true })],
+  });
+}
+
+function matchTerm(q: Question, p: { id: string; term: string }, i: number, slot: number, name = `Term ${i + 1}`): SceneNode {
   const st = stateFor(itemAt(q, i));
   return createNode('frame', {
-    name: `Term ${i + 1}`,
+    name,
     questionPart: `matchTerm:${p.id}`,
     x: 0,
     y: slot * TERM_PITCH,
@@ -341,8 +366,15 @@ function matchRow(q: Question, p: QuestionPair, i: number): SceneNode {
   });
 }
 
+/** Every term the learner drags in a matching question, pairs first and then the extras: its id, text and row in the items. */
+const matchTerms = (q: Question) => [
+  ...q.pairs.map((p, i) => ({ id: p.id, term: p.term, index: i, name: `Term ${i + 1}` })),
+  ...(q.extras ?? []).map((x, k) => ({ id: x.id, term: x.text, index: q.pairs.length + k, name: `Extra ${k + 1}` })),
+];
+
 function matchingBody(q: Question): SceneNode {
-  const n = q.pairs.length;
+  const all = matchTerms(q);
+  const n = all.length;
   const order = dealOrder(n, q.prefix);
   return createNode('frame', {
     name: 'Matching',
@@ -372,10 +404,298 @@ function matchingBody(q: Question): SceneNode {
         stroke: null,
         clip: false,
         layout: null,
-        children: order.map((pi, slot) => matchTerm(q, q.pairs[pi], pi, slot)),
+        children: order.map((pi, slot) => matchTerm(q, { id: all[pi].id, term: all[pi].term }, all[pi].index, slot, all[pi].name)),
       }),
     ],
   });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+//Categorise: a box per group and a chip per item, and fill the blanks by dragging: a slot per blank and a word bank
+
+const CHIP_W = 150;
+const CHIP_H = 44;
+const CHIP_PITCH_X = 162;
+const CHIP_PITCH_Y = 56;
+const CHIP_COLS = 3;
+const GROUP_H = 170;
+
+const catTag = (q: Question) => `${q.prefix}-item`;
+const wordTag = (q: Question) => `${q.prefix}-word`;
+/** Where the k-th chip of a tray sits: three to a row. */
+const chipSpot = (k: number) => ({ x: (k % CHIP_COLS) * CHIP_PITCH_X, y: Math.floor(k / CHIP_COLS) * CHIP_PITCH_Y });
+const trayHeight = (n: number) => Math.max(CHIP_H, Math.ceil(Math.max(1, n) / CHIP_COLS) * CHIP_PITCH_Y - (CHIP_PITCH_Y - CHIP_H));
+
+function catZone(q: Question, g: { id: string; name: string }, i: number): SceneNode {
+  return createNode('frame', {
+    name: g.name || `Group ${i + 1}`,
+    questionPart: `catZone:${g.id}`,
+    height: GROUP_H,
+    layoutItem: { width: 'fill' },
+    fill: solid(L.surface),
+    stroke: { ...stroke(L.border, 2), dash: [8, 5] },
+    cornerRadius: 12,
+    clip: false,
+    layout: null,
+    //Unlimited, and a dropped item stays where it was let go. Every group takes every item: whether it is right is for Check to say
+    dropZone: { accepts: [catTag(q)], snap: 'none', label: g.name },
+    ariaLabel: g.name,
+    children: [text(`Group ${i + 1} heading`, 'catHeading', g.name, { x: 12, y: 10, width: 140, fontWeight: 700, fontSize: 18, decorative: true })],
+  });
+}
+
+function catCard(q: Question, c: { id: string; text: string }, i: number): SceneNode {
+  const spot = chipSpot(i);
+  return chip(q, { name: `Item ${i + 1}`, part: 'catCard', id: c.id, word: c.text, tag: catTag(q), index: i, ...spot, w: CHIP_W, h: CHIP_H, marks: true });
+}
+
+function categoriseBody(q: Question): SceneNode {
+  const groups = q.groups ?? [];
+  const cards = q.cards ?? [];
+  const order = dealOrder(cards.length, q.prefix);
+  const items = varName(q, 'items');
+  return createNode('frame', {
+    name: 'Categorise',
+    questionPart: 'categorise',
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: column(16),
+    children: [
+      createNode('frame', {
+        name: 'Groups',
+        questionPart: 'groups',
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: { ...row(12), align: 'start' as const, hugHeight: true },
+        children: groups.map((g, i) => catZone(q, g, i)),
+      }),
+      //The tray is a frame with no layout, because draggable layers can't sit in an auto layout flow
+      createNode('frame', {
+        name: 'Items',
+        questionPart: 'cardTray',
+        width: CHIP_PITCH_X * CHIP_COLS - 12,
+        height: trayHeight(cards.length),
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: null,
+        children: order.map((ci, slot) => {
+          const made = catCard(q, cards[ci], ci);
+          Object.assign(made, chipSpot(slot));
+          return made;
+        }),
+      }),
+      text('Right groups', 'catAnswer', `{${items}.filter(i => i.answer).map(i => i.text + " goes in " + i.answer).join(". ")}`, {
+        fontSize: 14,
+        fontWeight: 600,
+        color: L.warning,
+        bindings: { visible: `${items}.some(i => i.answer)` },
+      }),
+    ],
+  });
+}
+
+/** Categorise: a box per group and a chip per item, in the settings' order. Added and removed ones change the layers; the rest keep their look. */
+function syncCategories(frame: FrameNode, q: Question, ab: Artboard): void {
+  const groupsBox = partsOf(frame).groups?.[0] as FrameNode | undefined;
+  const tray = partsOf(frame).cardTray?.[0] as FrameNode | undefined;
+  if (!groupsBox || !tray) return;
+  const groups = q.groups ?? [];
+  const cards = q.cards ?? [];
+  const zoneId = (n: SceneNode) => /^catZone:(.+)$/.exec(n.questionPart ?? '')?.[1];
+  const cardId = (n: SceneNode) => /^catCard:(.+)$/.exec(n.questionPart ?? '')?.[1];
+  const gids = new Set(groups.map((g) => g.id));
+  const cids = new Set(cards.map((c) => c.id));
+  groupsBox.children = groupsBox.children.filter((c) => !zoneId(c) || gids.has(zoneId(c)!));
+  const hadCards = tray.children.filter((c) => cardId(c)).length;
+  tray.children = tray.children.filter((c) => !cardId(c) || cids.has(cardId(c)!));
+  const names = nodeNames(ab);
+  groups.forEach((g, i) => {
+    if (!groupsBox.children.some((c) => zoneId(c) === g.id)) {
+      const made = catZone(q, g, i);
+      made.name = uniqueName(names, made.name);
+      groupsBox.children.push(made);
+    }
+  });
+  let changed = hadCards !== tray.children.length;
+  cards.forEach((c, i) => {
+    if (!tray.children.some((x) => cardId(x) === c.id)) {
+      const made = catCard(q, c, i);
+      made.name = uniqueName(names, made.name);
+      tray.children.push(made);
+      changed = true;
+    }
+  });
+  const rank = new Map(groups.map((g, i) => [g.id, i]));
+  groupsBox.children.sort((a, b) => (rank.get(zoneId(a) ?? '') ?? 0) - (rank.get(zoneId(b) ?? '') ?? 0));
+  groups.forEach((g, i) => {
+    const z = groupsBox.children.find((c) => zoneId(c) === g.id)!;
+    if (/^Group \d+$/.test(z.name) || z.name === g.name) z.name = g.name || `Group ${i + 1}`;
+    z.ariaLabel = g.name;
+    if (z.dropZone) {
+      z.dropZone.label = g.name;
+      z.dropZone.accepts = [catTag(q)];
+    }
+    const heading = (partsOf(z as FrameNode).catHeading ?? [])[0];
+    if (heading && heading.type === 'text') {
+      heading.text = g.name;
+      for (const r of heading.runs ?? []) r.text = g.name;
+    }
+  });
+  cards.forEach((c, i) => {
+    const card = tray.children.find((x) => cardId(x) === c.id)!;
+    reindex(card, q, i);
+    if (/^Item \d+$/.test(card.name)) card.name = `Item ${i + 1}`;
+    card.ariaLabel = c.text;
+    if (card.draggable) {
+      card.draggable.label = c.text;
+      card.draggable.tags = [catTag(q)];
+    }
+  });
+  if (changed) {
+    tray.children.forEach((c, k) => Object.assign(c, chipSpot(k)));
+  }
+  tray.height = trayHeight(cards.length);
+}
+
+/** The word chips of a drag the blanks question: one per blank (its first plain answer) and one per extra. */
+const bankWords = (q: Question) => [
+  ...q.blanks.map((b, i) => ({ id: b.id, word: blankWord(b) || b.label || `Word ${i + 1}`, name: `Word ${i + 1}` })),
+  ...(q.extras ?? []).map((x, k) => ({ id: x.id, word: x.text, name: `Extra word ${k + 1}` })),
+];
+
+function dragBlankRow(q: Question, b: { id: string; label: string }, i: number): SceneNode {
+  const at = itemAt(q, i);
+  const st = stateFor(at);
+  return createNode('frame', {
+    name: `Blank ${i + 1}`,
+    questionPart: `blankRow:${b.id}`,
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: { ...column(6), align: 'stretch' as const },
+    children: [
+      text('Blank label', 'blankLabel', b.label, { fontSize: 14, fontWeight: 600, color: L.muted, bindings: { text: `${at}?.label ?? ""` } }),
+      createNode('frame', {
+        name: `Gap ${i + 1}`,
+        questionPart: `blankZone:${b.id}`,
+        width: 200,
+        height: CHIP_H,
+        fill: null,
+        stroke: { ...stroke(L.border, 2), dash: [6, 4] },
+        cornerRadius: 10,
+        clip: false,
+        dropZone: { accepts: [wordTag(q)], capacity: 1, whenFull: 'swap', snap: 'center', label: b.label || `Blank ${i + 1}` },
+        ariaLabel: b.label || `Blank ${i + 1}`,
+        bindings: { 'stroke.paint.color': st.line(`"${L.border}"`), ariaDescription: st.description('"This was the right answer"', `"Wrong. The answer is " + ${at}?.answer`) },
+      }),
+      text('Blank answer', 'blankAnswer', `{${at}?.answer ? "Accepted answer: " + ${at}.answer : ""}`, { fontSize: 13, color: L.warning, bindings: { visible: `!!${at}?.answer` } }),
+    ],
+  });
+}
+
+function wordChip(q: Question, w: { id: string; word: string; name: string }, slot: number): SceneNode {
+  //A word has no row of its own in the items, so it is not coloured by them: the slot it is in says how it went
+  return chip(q, { name: w.name, part: 'blankWord', id: w.id, word: w.word, tag: wordTag(q), index: 0, ...chipSpot(slot), w: CHIP_W, h: CHIP_H });
+}
+
+function dragBlanksBody(q: Question): SceneNode {
+  const words = bankWords(q);
+  const order = dealOrder(words.length, q.prefix);
+  return createNode('frame', {
+    name: 'Fill the blanks',
+    questionPart: 'dragBlanks',
+    fill: null,
+    stroke: null,
+    clip: false,
+    layout: column(16),
+    children: [
+      createNode('frame', {
+        name: 'Blanks',
+        questionPart: 'blanks',
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: column(14),
+        children: q.blanks.map((b, i) => dragBlankRow(q, b, i)),
+      }),
+      text('Word bank label', 'wordBankLabel', 'Word bank', { fontSize: 14, fontWeight: 600, color: L.muted }),
+      createNode('frame', {
+        name: 'Word bank',
+        questionPart: 'wordBank',
+        width: CHIP_PITCH_X * CHIP_COLS - 12,
+        height: trayHeight(words.length),
+        fill: null,
+        stroke: null,
+        clip: false,
+        layout: null,
+        children: order.map((wi, slot) => wordChip(q, words[wi], slot)),
+      }),
+    ],
+  });
+}
+
+/** Fill the blanks by dragging: a slot per blank and a chip per blank's word and per extra. */
+function syncDragBlanks(frame: FrameNode, q: Question, ab: Artboard): void {
+  const blanksBox = partsOf(frame).blanks?.[0] as FrameNode | undefined;
+  const bank = partsOf(frame).wordBank?.[0] as FrameNode | undefined;
+  if (!blanksBox || !bank) return;
+  const rowId = (n: SceneNode) => /^blankRow:(.+)$/.exec(n.questionPart ?? '')?.[1];
+  const wordId = (n: SceneNode) => /^blankWord:(.+)$/.exec(n.questionPart ?? '')?.[1];
+  const words = bankWords(q);
+  const bids = new Set(q.blanks.map((b) => b.id));
+  const wids = new Set(words.map((w) => w.id));
+  blanksBox.children = blanksBox.children.filter((c) => !rowId(c) || bids.has(rowId(c)!));
+  const hadWords = bank.children.filter((c) => wordId(c)).length;
+  bank.children = bank.children.filter((c) => !wordId(c) || wids.has(wordId(c)!));
+  const names = nodeNames(ab);
+  q.blanks.forEach((b, i) => {
+    if (!blanksBox.children.some((c) => rowId(c) === b.id)) {
+      const made = dragBlankRow(q, b, i);
+      made.name = uniqueName(names, made.name);
+      blanksBox.children.push(made);
+    }
+  });
+  let changed = hadWords !== bank.children.length;
+  for (const w of words) {
+    if (!bank.children.some((c) => wordId(c) === w.id)) {
+      const made = wordChip(q, w, bank.children.length);
+      made.name = uniqueName(names, made.name);
+      bank.children.push(made);
+      changed = true;
+    }
+  }
+  const rank = new Map(q.blanks.map((b, i) => [b.id, i]));
+  blanksBox.children.sort((a, b) => (rank.get(rowId(a) ?? '') ?? 0) - (rank.get(rowId(b) ?? '') ?? 0));
+  q.blanks.forEach((b, i) => {
+    const r = blanksBox.children.find((c) => rowId(c) === b.id)!;
+    reindex(r, q, i);
+    if (/^Blank \d+$/.test(r.name)) r.name = `Blank ${i + 1}`;
+    const zone = partWithId(blanksBox, 'blankZone', b.id);
+    if (zone?.dropZone) {
+      zone.dropZone.label = b.label || `Blank ${i + 1}`;
+      zone.dropZone.accepts = [wordTag(q)];
+    }
+  });
+  for (const w of words) {
+    const c = bank.children.find((x) => wordId(x) === w.id)!;
+    if (/^(Extra word|Word) \d+$/.test(c.name)) c.name = w.name;
+    c.ariaLabel = w.word;
+    if (c.draggable) {
+      c.draggable.label = w.word;
+      c.draggable.tags = [wordTag(q)];
+    }
+    walk([c], (n) => {
+      if (n.type === 'text' && n.questionPart === 'blankWordText') {
+        n.text = w.word;
+        for (const r of n.runs ?? []) r.text = w.word;
+      }
+    });
+  }
+  if (changed) bank.children.forEach((c, k) => Object.assign(c, chipSpot(k)));
+  bank.height = trayHeight(words.length);
 }
 
 /** `[n]` of this question's items in a layer's bindings and text, pointed at row `idx`. */
@@ -530,14 +850,16 @@ const resetVisible = (q: Question): string => (q.retake ? 'false' : q.bank ? var
 
 function bodyFor(q: Question, style: Style, blankVars: string[]): SceneNode {
   if (style === 'blank') return blanksBody(q, blankVars);
+  if (style === 'dragblank') return dragBlanksBody(q);
   if (style === 'match') return matchingBody(q);
+  if (style === 'categorise') return categoriseBody(q);
   if (style === 'spot') return hotspotBody(q);
   return optionsBody(q, style);
 }
 
 function frameFor(q: Question, blankVars: string[], at: { x: number; y: number }): FrameNode {
   const p = (s: string) => varName(q, s);
-  const style = bodyStyle(q.kind);
+  const style = bodyStyle(q.kind, q.answerBy);
   const body = bodyFor(q, style, blankVars);
   return createNode('frame', {
     name: 'Question',
@@ -632,8 +954,15 @@ function wantedSlots(d: Project, frame: FrameNode, q: Question): Slot[] {
     const target = id(part);
     if (target) out.push({ eventSlot: `${part}:event`, actionSlot: `${part}:action`, event: { kind: 'event.pointer', params: { target, type: 'click' } }, action: { kind: actionKind, params: { question: frame.id, ...extra } } });
   };
-  const style = bodyStyle(q.kind);
+  const style = bodyStyle(q.kind, q.answerBy);
   if (style === 'radio' || style === 'check') click('option', 'action.questionChoose', { option: 'event.index' });
+  //Categorise with feedback as each item is dropped: one wire per group box
+  if (style === 'categorise' && q.dropFeedback) {
+    for (const g of q.groups ?? []) {
+      const target = partWithId(frame, 'catZone', g.id)?.id;
+      if (target) out.push({ eventSlot: `drop:${g.id}:event`, actionSlot: `drop:${g.id}:action`, event: { kind: 'event.drop', params: { target, result: 'accepted' } }, action: { kind: 'action.questionDrop', params: { question: frame.id } } });
+    }
+  }
   if (style === 'spot') {
     q.options.forEach((o, i) => {
       const target = partWithId(frame, 'spot', o.id)?.id;
@@ -682,7 +1011,7 @@ function ensureGraph(d: Project, ab: Artboard, frame: FrameNode, q: Question): v
       logic.nodes.push(ac);
     }
     //Repoint what the kit owns (the layer or question the node is about) and leave the rest as the person set it
-    const own = w.event.kind === 'event.pointer' || (w.event.kind === 'event.key' && w.event.params.target) ? ['target'] : w.event.kind === 'event.dataLoaded' ? ['source'] : [];
+    const own = w.event.kind === 'event.pointer' || w.event.kind === 'event.drop' || (w.event.kind === 'event.key' && w.event.params.target) ? ['target'] : w.event.kind === 'event.dataLoaded' ? ['source'] : [];
     for (const k of own) ev.params[k] = w.event.params[k];
     ac.params.question = frame.id;
     if (w.option !== undefined) ac.params.option = w.option;
@@ -786,17 +1115,19 @@ function syncBlankRows(frame: FrameNode, q: Question, variables: Variable[]): vo
 }
 
 
-/** Matching: one term, definition and slot per pair, in the settings' order. Added and removed pairs change the layers; the rest keep their look. */
+/** Matching: one term, definition and slot per pair, and a term per extra, in the settings' order. Added and removed ones change the layers; the rest keep their look. */
 function syncPairs(frame: FrameNode, q: Question, ab: Artboard): void {
   const matches = partsOf(frame).matches?.[0] as FrameNode | undefined;
   const terms = partsOf(frame).terms?.[0] as FrameNode | undefined;
   if (!matches || !terms) return;
   const ids = new Set(q.pairs.map((p) => p.id));
+  const all = matchTerms(q);
+  const termIds = new Set(all.map((t) => t.id));
   const rowId = (n: SceneNode) => /^matchRow:(.+)$/.exec(n.questionPart ?? '')?.[1];
   const termId = (n: SceneNode) => /^matchTerm:(.+)$/.exec(n.questionPart ?? '')?.[1];
   const had = terms.children.filter((c) => termId(c)).map((c) => termId(c)!);
   matches.children = matches.children.filter((c) => !rowId(c) || ids.has(rowId(c)!));
-  terms.children = terms.children.filter((c) => !termId(c) || ids.has(termId(c)!));
+  terms.children = terms.children.filter((c) => !termId(c) || termIds.has(termId(c)!));
   const names = nodeNames(ab);
   let changed = had.length !== terms.children.filter((c) => termId(c)).length;
   q.pairs.forEach((p, i) => {
@@ -805,45 +1136,49 @@ function syncPairs(frame: FrameNode, q: Question, ab: Artboard): void {
       made.name = uniqueName(names, made.name);
       matches.children.push(made);
     }
-    if (!terms.children.some((c) => termId(c) === p.id)) {
-      const made = matchTerm(q, p, i, terms.children.length);
+  });
+  for (const t of all) {
+    if (!terms.children.some((c) => termId(c) === t.id)) {
+      const made = matchTerm(q, { id: t.id, term: t.term }, t.index, terms.children.length, t.name);
       made.name = uniqueName(names, made.name);
       terms.children.push(made);
       changed = true;
     }
-  });
+  }
   //The rows follow the settings' order
   const rank = new Map(q.pairs.map((p, i) => [p.id, i]));
   matches.children.sort((a, b) => (rank.get(rowId(a) ?? '') ?? 0) - (rank.get(rowId(b) ?? '') ?? 0));
   q.pairs.forEach((p, i) => {
     const row = matches.children.find((c) => rowId(c) === p.id)!;
-    const term = terms.children.find((c) => termId(c) === p.id)!;
     reindex(row, q, i);
-    reindex(term, q, i);
-    //Names follow the position while they are still the kit's own
     if (/^Match \d+$/.test(row.name)) row.name = `Match ${i + 1}`;
-    if (/^Term \d+$/.test(term.name)) term.name = `Term ${i + 1}`;
     const slot = partWithId(matches, 'matchZone', p.id);
     if (slot && /^Slot \d+$/.test(slot.name)) slot.name = `Slot ${i + 1}`;
-    term.ariaLabel = p.term;
-    if (term.draggable) {
-      term.draggable.label = p.term;
-      term.draggable.tags = [termTag(q)];
-    }
     const zone = partWithId(matches, 'matchZone', p.id);
     if (zone?.dropZone) {
       zone.dropZone.label = p.match;
       zone.dropZone.accepts = [termTag(q)];
     }
   });
-  //A different number of pairs: lay the pile out again, one under the other
+  for (const t of all) {
+    const term = terms.children.find((c) => termId(c) === t.id)!;
+    reindex(term, q, t.index);
+    //Names follow the position while they are still the kit's own
+    if (/^(Term|Extra) \d+$/.test(term.name)) term.name = t.name;
+    term.ariaLabel = t.term;
+    if (term.draggable) {
+      term.draggable.label = t.term;
+      term.draggable.tags = [termTag(q)];
+    }
+  }
+  //A different number of terms: lay the pile out again, one under the other
   if (changed) {
     terms.children.forEach((c, k) => {
       c.x = 0;
       c.y = k * TERM_PITCH;
     });
   }
-  terms.height = Math.max(TERM_H, q.pairs.length * TERM_PITCH - (TERM_PITCH - TERM_H));
+  terms.height = Math.max(TERM_H, all.length * TERM_PITCH - (TERM_PITCH - TERM_H));
 }
 
 /** Hotspot: one area layer per option. New options get a default box on the picture; the rest keep their shape, place and look. */
@@ -934,12 +1269,12 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
     }
   }
   const variables = ensureVariables(d, q);
-  const style = bodyStyle(q.kind);
+  const style = bodyStyle(q.kind, q.answerBy);
   const parts = partsOf(frame);
-  const bodyNow = parts.blanks?.[0] ? 'blank' : parts.matching?.[0] ? 'match' : parts.hotspots?.[0] ? 'spot' : (parts.options?.[0]?.questionPart ?? '').split(':')[1];
+  const bodyNow = parts.dragBlanks?.[0] ? 'dragblank' : parts.blanks?.[0] ? 'blank' : parts.matching?.[0] ? 'match' : parts.categorise?.[0] ? 'categorise' : parts.hotspots?.[0] ? 'spot' : (parts.options?.[0]?.questionPart ?? '').split(':')[1];
   if (bodyNow !== style) {
     //A different kind of answer needs a different answer area
-    const old = parts.blanks?.[0] ?? parts.matching?.[0] ?? parts.hotspots?.[0] ?? parts.options?.[0];
+    const old = parts.dragBlanks?.[0] ?? parts.blanks?.[0] ?? parts.matching?.[0] ?? parts.categorise?.[0] ?? parts.hotspots?.[0] ?? parts.options?.[0];
     const blankVars = q.blanks.map((_, i) => variables.find((v) => v.name === varName(q, `blank${i + 1}`))?.id ?? '');
     const body = bodyFor(q, style, blankVars);
     const names = nodeNames(ab);
@@ -949,7 +1284,9 @@ export function syncQuestion(d: Project, abId: string, frameId: string, before?:
       if (at) at.siblings.splice(at.index, 1, body);
     } else (frame as FrameNode).children.splice(1, 0, body);
   } else if (style === 'blank') syncBlankRows(frame, q, variables);
+  else if (style === 'dragblank') syncDragBlanks(frame as FrameNode, q, ab);
   else if (style === 'match') syncPairs(frame as FrameNode, q, ab);
+  else if (style === 'categorise') syncCategories(frame as FrameNode, q, ab);
   else if (style === 'spot') syncAreas(frame as FrameNode, q, ab);
   //The reset button's wording and when it shows depend on there being a bank. Only the default wording follows.
   const reset = partsOf(frame).reset?.[0];
@@ -982,7 +1319,7 @@ function syncListen(ab: Artboard, frame: FrameNode, q: Question): void {
 function syncKeysHint(frame: FrameNode, q: Question): void {
   const parts = partsOf(frame);
   const has = parts.keysHint?.[0];
-  const want = !!q.numberKeys && (bodyStyle(q.kind) === 'radio' || bodyStyle(q.kind) === 'check');
+  const want = !!q.numberKeys && (bodyStyle(q.kind, q.answerBy) === 'radio' || bodyStyle(q.kind, q.answerBy) === 'check');
   if (want && !has) {
     const body = parts.options?.[0];
     const at = body ? frame.children.findIndex((c) => c === body) : -1;
