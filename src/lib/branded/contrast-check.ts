@@ -137,6 +137,8 @@ interface Entry {
   after: number;
   /** The layer is disabled (or inside something that is), so exempt. */
   exempt: boolean;
+  /** The clipping frames it sits in (a scrolling list, a stage). */
+  clips: Paint1['clips'];
 }
 
 interface Sheet {
@@ -165,7 +167,7 @@ function sheetOf(page: Artboard, nodes: SceneNode[]): Sheet {
       const a = alpha * (typeof n.opacity === 'number' ? n.opacity : 1);
       //(a layer tagged as an overlay sits over others on purpose, so what is behind it is not one thing to be read against)
       const off = exempt || !!(n as { disabled?: boolean }).disabled || ((n as { tags?: string[] }).tags ?? []).includes(OVERLAY_TAG);
-      const entry: Entry = { node: n, m, alpha: a, before: paints.length, after: paints.length, exempt: off };
+      const entry: Entry = { node: n, m, alpha: a, before: paints.length, after: paints.length, exempt: off, clips };
       const own: Paint1[] = [];
       const hole = () => own.push({ inv: invert(m), w: n.width, h: n.height, ellipse: false, spec: NONE, alpha: a, clips, unknown: true });
       if (OPAQUE_THINGS.has(n.type)) hole();
@@ -266,7 +268,21 @@ function checkText(cx: Ctx, sheet: Sheet, e: Entry, shown: string): void {
   }
 }
 
+/**
+ * Whether the middle of a layer is on the page and inside every clipping frame it is in. A row scrolled out of a list, or a marker
+ * outside the stage, is not drawn, so it has no edge or focus ring to read (the points round it would be read against the page's bare white).
+ */
+function drawn(sheet: Sheet, e: Entry): boolean {
+  const mid = apply(e.m, e.node.width / 2, e.node.height / 2);
+  if (mid.x < 0 || mid.y < 0 || mid.x > sheet.w || mid.y > sheet.h) return false;
+  return e.clips.every((c) => {
+    const q = apply(c.inv, mid.x, mid.y);
+    return q.x >= 0 && q.y >= 0 && q.x <= c.w && q.y <= c.h;
+  });
+}
+
 function checkControl(cx: Ctx, sheet: Sheet, e: Entry): void {
+  if (!drawn(sheet, e)) return;
   const n = e.node as SceneNode & { stroke?: { paint: Paint; width: number } | null; strokes?: unknown[] };
   const fillSpec = fillList(n as never).map(specOf).find((s): s is Spec => !!s && s !== 'unknown');
   let strokeSpec = n.stroke && n.stroke.width >= 1 ? specOf(n.stroke.paint) : null;
