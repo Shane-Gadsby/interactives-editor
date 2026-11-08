@@ -33,7 +33,7 @@ export function graphNotePlace(logic: Pick<LogicGraph, 'nodes' | 'groups'>, note
  * kit uses it to size the notes it writes, so a starter's notes open fitted to their words.
  */
 export function noteHeightFor(text: string, w: number): number {
-  const perLine = Math.max(12, Math.floor((w - 16) / 6.2));
+  const perLine = Math.max(12, Math.floor((w - 16) / 7.3));
   let lines = 0;
   for (const raw of text.split('\n')) lines += Math.max(1, Math.ceil(raw.replace(/\*\*|\*|`|^- |^\[[ x]\] /g, '').length / perLine));
   return Math.max(NOTE_MIN_H, 24 + lines * 17.5);

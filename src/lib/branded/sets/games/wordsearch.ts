@@ -3,7 +3,7 @@ import { createNode, makeWordSearch, type TemplateChecklistItem } from 'interact
 import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { keyNavList } from '../../parts';
-import { Graph, addVar, announce, bind, darkButton, emit, go, goNext, heroPage, set } from './common';
+import { Graph, addVar, announce, bind, darkButton, emit, go, goNext, graphNote, heroPage, set } from './common';
 
 export const SIZE = 12;
 const CELL = 36;
@@ -141,6 +141,7 @@ function build(colourway: Colourway) {
   g.run(onAgain, emit('reset'), announce('"Board cleared. Find the " + words.length + " words."'));
 
   //A drag: pressed on the first letter (event.startIndex), the end follows the pointer (event.index), let go to try the word
+  graphNote(page, { anchor: onReset, colour: 'sky', text: '**Opening the page and Start again both send reset**, so putting the board back (and restarting the clock) is written once.' });
   const onDragStart = g.pointer(grid, 'dragstart', 'A drag begins');
   g.run(onDragStart, set(start, 'event.startIndex ?? event.index'), set(end, 'event.index ?? event.startIndex'));
   const onDrag = g.pointer(grid, 'drag', 'Dragging');
@@ -156,6 +157,7 @@ function build(colourway: Colourway) {
   const second = g.add('action.setVariable', { variable: end.id, op: 'set', value: 'event.index' }, first, 'false', { dy: 110 });
   g.run(second, emit('try'));
 
+  graphNote(page, { anchor: onDragStart, colour: 'sky', text: '**Every way of choosing only sets start and end**, then sends `try`. Dragging does it in three events, a first and a second click do it in one flow, and the arrow keys stretch `end` from `cursor`.' });
   //With a start set, the arrow keys stretch the line: the end follows the focused square
   const onMove = g.add('event.variable', { variable: cursor.id, onlyIf: 'start >= 0 && cursor >= 0' }, null, 'out', { note: 'The arrow keys moved' });
   g.run(onMove, set(end, 'cursor'));
@@ -174,6 +176,7 @@ function build(colourway: Colourway) {
   const all = g.add('logic.if', { condition: 'found.length >= words.length && words.length > 0' }, tried);
   g.runFrom(all, 'true', ['action.clock', { variable: seconds.id, op: 'pause' }], set(message, '"You found every word!"'), announce('message'), ['action.delay', { ms: 900 }], goNext());
 
+  graphNote(page, { anchor: onTry, colour: 'sky', text: '**hit is live: it already names the word the line spells**, so the message, the found list and the coloured squares all read it. A crooked line or a non-word falls through and just clears the choice. The last word found pauses the clock.' });
   //Escape drops a half-made choice
   const onEscape = g.key('Escape', grid, 'Start the choice again');
   g.run(onEscape, set(start, '-1'), set(end, '-1'), set(message, '"Selection cleared."'), announce('message'));

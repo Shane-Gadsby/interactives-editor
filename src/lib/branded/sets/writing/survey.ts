@@ -4,7 +4,7 @@ import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, 
 import type { Colourway } from '../../looks';
 import { panel } from '../assessment/shared';
 import { keyNavList } from '../../parts';
-import { addVar, bind, click, goNext, goPrevious, graph, setVar, textBox, writingHero } from './shared';
+import { addVar, bind, click, goNext, goPrevious, graph, graphNote, setVar, textBox, writingHero } from './shared';
 
 const TITLE = 'Study experience survey';
 const CARD_W = 296;
@@ -142,10 +142,13 @@ function build(colourway: Colourway) {
   {
     const g = graph(survey);
     //One flow for the rating and one for the choices: event.index is the button or row that was chosen (an arrow key choosing one is a click too)
-    g.run(click(g, dot, 'Rating'), setVar(rating, 'event.index + 1'));
+    const onRate = click(g, dot, 'Rating');
+    g.run(onRate, setVar(rating, 'event.index + 1'));
     g.run(click(g, row, 'Choice'), setVar(place, 'places[event.index]'));
     const send = click(g, submit, 'Submit');
     //Counts only (no free text) go to Insights, so the author can see how the answers fell
+    graphNote(survey, { anchor: onRate, colour: 'sky', text: '**One flow for the rating and one for the choices.** `event.index` is the dot or row picked (an arrow key picking one is a click too). Both answers are `userData`, so they are saved as they are chosen.' });
+    graphNote(survey, { anchor: send, colour: 'sky', text: '**Submit stays off until the live ready is true.** Then it records only the counts (never the comment) so the author can see how answers fell in Insights, and goes to Thank you.' });
     g.run(send, setVar(submitted, 'true'), ['action.record', { name: 'survey rating', value: 'rating' }], ['action.record', { name: 'survey place', value: 'place' }], goNext());
   }
   {

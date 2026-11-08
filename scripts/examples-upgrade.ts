@@ -12,8 +12,11 @@ import path from 'node:path';
 import { makeNote, prepareNodes, relayoutTree, startingValue, type Artboard, type Note, type NoteColour, type Project, type SceneNode } from 'interactives-player';
 import { applyTidy } from '../src/lib/artboard-tidy';
 import { tidyBoardGraph } from '../src/lib/branded/graph-kit';
+import { noteHeightFor } from '../src/lib/graph-notes-core';
 
 export const EXAMPLE_NOTE_PREFIX = 'note_example_';
+/** Graph notes (on an artboard's interaction graph, in `logic.notes`) carry this after the prefix, so a canvas note's replace never touches them. */
+export const EXAMPLE_GRAPH_NOTE_PREFIX = `${EXAMPLE_NOTE_PREFIX}gn_`;
 
 // ------------------------------------------------------------------ helpers
 
@@ -62,6 +65,37 @@ function noteHeight(text: string, w: number): number {
   const perLine = Math.max(10, Math.floor((w - 28) / 7));
   const lines = text.split('\n').reduce((n, line) => n + Math.max(1, Math.ceil(line.replace(/\*\*|`/g, '').length / perLine)), 0);
   return Math.max(72, 30 + lines * 19);
+}
+
+/** A note on an artboard's interaction graph, following one node (or group) so it moves with it when the graph is tidied. */
+interface GraphNoteSpec {
+  /** Which artboard (by index); default the first. */
+  page?: number;
+  /** The node it sits above (by position in the graph's list, or a function that picks one). */
+  at: number | ((ab: Raw) => Raw);
+  text: string;
+  colour?: NoteColour;
+  w?: number;
+}
+
+/** Replaces this example's graph notes with `specs`: fixed ids, so a second run writes the same thing. Run before the graph tidy, which makes room for them. */
+function setGraphNotes(p: Raw, key: string, specs: GraphNoteSpec[]): void {
+  const prefix = `${EXAMPLE_GRAPH_NOTE_PREFIX}${key.replace(/[^a-z0-9]/g, '_')}_`;
+  for (const ab of p.artboards as Raw[]) {
+    if (!Array.isArray(ab.logic?.notes)) continue;
+    ab.logic.notes = ab.logic.notes.filter((n: Raw) => !String(n.id).startsWith(prefix));
+    if (!ab.logic.notes.length) delete ab.logic.notes;
+  }
+  specs.forEach((spec, i) => {
+    const ab = (p.artboards as Raw[])[spec.page ?? 0];
+    const host = typeof spec.at === 'number' ? ab.logic.nodes[spec.at] : spec.at(ab);
+    if (!host) throw new Error(`no node to put a graph note on in "${ab.name}"`);
+    const w = spec.w ?? 230;
+    const h = noteHeightFor(spec.text, w);
+    const note: Note = makeNote({ id: `${prefix}${i + 1}`, x: host.x, y: host.y - h - 14, w, h, text: spec.text, colour: spec.colour ?? 'sky', author: 'Example' });
+    note.anchor = { layerId: host.id, lx: 0, ly: -h - 14 };
+    (ab.logic.notes ??= []).push(note);
+  });
 }
 
 interface Box {
@@ -123,9 +157,14 @@ interface Upgrade {
   /** Edits to the raw project beyond the tidies. Returns a line for the report. */
   edit?: (p: Raw) => string[];
   notes: NoteSpec[];
+  /** Notes on the interaction graph, for the examples whose graph is more than a few nodes. */
+  graphNotes?: GraphNoteSpec[];
   /** Run the player's own layout over the artboards (the layout demos store positions from before it ran). */
   relayout?: boolean;
 }
+
+/** The first node of a kind on a graph, for a graph note to sit above. */
+const firstOf = (kind: string, pick?: (n: Raw) => boolean) => (ab: Raw) => logicNode(ab, kind, pick);
 
 const UPGRADES: Record<string, Upgrade> = {
   'first-animation': {
@@ -257,6 +296,10 @@ const UPGRADES: Record<string, Upgrade> = {
       { text: '**One of each layer.** Go adds to `score` and plays Intro, the Name field fills `userName`, and the dot toggles `dark` for the card behind it. Everything else is a layer type to try.' },
       { text: '[ ] *Clip* and *Embed* are placeholders: point Clip at a video and Embed at a page.', colour: 'orange' },
     ],
+    graphNotes: [
+      { at: 0, text: '**Go runs two steps in order:** it adds one to `score`, then plays Intro. The dot has its own flow, which flips `dark` for the card to read.' },
+      { at: firstOf('logic.if'), text: '[ ] **Nothing hangs off this If yet.** It checks `score > 10` when the page starts, so wire what should happen at ten on its true output.', colour: 'orange' },
+    ],
   },
 
   'script-and-shader': {
@@ -275,6 +318,7 @@ const UPGRADES: Record<string, Upgrade> = {
       { text: '**Made by Add question.** The *Question 1* frame holds the pairs and the scoring (Question section of the Inspector). *Terms* and *Matches* are plain layers, so restyle them freely.' },
       { text: '**One layer set per pair.** Draggable terms cannot sit in a repeater, so each pair has its own term and slot. The slots are drop zones that accept `q1-term`.', colour: 'sky' },
     ],
+    graphNotes: [{ at: 0, text: '**Add question wired all four of these.** Start and Try again reset *Question 1*, and Check answer and Hint run its own check and hint. The pairs and the scoring are in the Question section, not in this graph.' }],
   },
 
   'hotspot-question': {
@@ -324,6 +368,10 @@ const UPGRADES: Record<string, Upgrade> = {
     notes: [
       { text: '**One flow for every area.** The four Area layers sit in the *Areas* group, and one *On pointer* on it (only when a child is hit) chooses option `event.childIndex`. Area N is option N.' },
       { text: '**Hotspot kind.** The question settings hold the right answer; the areas are invisible layers over the picture. Swap the drawn house for your own image.', colour: 'sky' },
+    ],
+    graphNotes: [
+      { at: 0, text: '**Add question wired these four:** Start and Try again reset *Question 1*, Check answer and Hint run its own check and hint.' },
+      { at: firstOf('action.questionChoose', (n) => n.params.option === 'event.childIndex'), text: '**Choose option reads event.childIndex**, so pressing area N picks option N and Check answer does the marking. A new area is a new layer in the group, in option order.' },
     ],
   },
 
@@ -437,6 +485,7 @@ const UPGRADES: Record<string, Upgrade> = {
   'rive-breathing': {
     //the imported graph is a fixture of the importer tests: only the tidies and a note
     notes: [{ text: '**As the importer made it.** Rive states and transitions became timelines and nodes. Start with *Main Animation Artboard*; the smaller artboards are its parts (buttons, bubbles, panels).', w: 300 }],
+    graphNotes: [{ at: 0, text: '**Written by the importer, not by hand.** The wiring follows the original\'s state machine, so read it as a map: the timelines hold the motion and the nodes say when each one plays. [ ] Leave it alone unless you mean to change the behaviour.', w: 300 }],
   },
 };
 
@@ -494,6 +543,8 @@ export function upgradeExample(dir: string, key: string): UpgradeResult {
   if (spec.relayout) {
     for (const ab of p.artboards as Raw[]) if (relayoutTree(ab.children as SceneNode[])) changes.push(`${ab.name}: stored layer positions brought in line with what the layout engine draws`);
   }
+
+  if (spec.graphNotes) setGraphNotes(p, key, spec.graphNotes);
 
   //graphs: the editor's own tidy (columns from the events, fewest crossings, groups fitted)
   const graphs: UpgradeResult['graphs'] = [];

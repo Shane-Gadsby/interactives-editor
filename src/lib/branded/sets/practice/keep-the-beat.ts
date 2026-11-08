@@ -7,8 +7,9 @@ import { addNote, brandedPage, brandedProject, button, byName, contentBox, headi
 import type { Colourway } from '../../looks';
 import { join } from '../../graph-kit';
 import { fill, stack } from '../../parts';
-import { addVar as variable, announce, bind, boxText, click, go, goNext, goPrevious, graph, heroPage, resetVars, setVar, toggleVar } from '../media/shared';
+import { addVar as variable, announce, bind, boxText, click, go, goNext, goPrevious, graph, graphNote, heroPage, resetVars, setVar, toggleVar } from '../media/shared';
 import { addPlaceholderSound } from '../media/sounds';
+import { labelled } from './recording';
 
 //Beats the learner has to keep going, and so how many markers there are (the layout is built for 16)
 export const KEEP = 16;
@@ -219,6 +220,8 @@ function build(colourway: Colourway) {
     );
     g.run(click(g, stopBtn, 'Stop'), setVar(v.phase, '"idle"'), setVar(v.flash, 'false'), ['action.stopSound', {}]);
 
+    graphNote(drill, { anchor: labelled(drill, /^Start$/), colour: 'sky', text: '**Start sets startAt 700 ms ahead** so the first beat is not on top of the press, and one Reset variables puts every score back (the live ones follow on their own). The lead-in plays first, then the learner keeps the beat.' });
+
     //One steady clock for both jobs, held back (Only while) until a drill is running. It reads Date.now() against the start time. The click plays on each new
     //beat of the lead-in (and on all of them with the guide on), and a beat whose window has gone by without a tap is a miss that ends the streak
     {
@@ -231,6 +234,7 @@ function build(colourway: Colourway) {
       g.then(accent, 'action.sound', { asset: sounds.accent, continue: 'start' }, 'true');
       g.then(accent, 'action.sound', { asset: sounds.click, continue: 'start' }, 'false');
 
+      graphNote(drill, { anchor: tick, colour: 'sky', text: '**One steady clock does the beat and the judging.** Its *Only while* holds it back until a drill runs, and it reads `Date.now()` against `startAt` instead of counting ticks, so a slow frame cannot drift the tempo.' });
       //Judging, off the same clock. After the last beat, the results
       const keeping = g.then(tick, 'logic.if', { condition: 'phase == "keep"' });
       const where = whenTrue(g, keeping, setVar(v.relNow, '(Date.now() - startAt) / period - lead'), setVar(v.closed, 'Math.min(keep - 1, Math.floor(relNow - tol / period))'));
@@ -243,6 +247,7 @@ function build(colourway: Colourway) {
         setVar(v.streak, 'newMiss > 0 ? 0 : streak'),
         setVar(v.judged, 'closed')
       );
+      graphNote(drill, { anchor: keeping, colour: 'sky', text: '**A beat whose window has gone by with no tap is closed as a miss** and ends the streak, so a learner who stops tapping still reaches the results after the last beat.' });
       const over = g.then(marked, 'logic.if', { condition: 'judged >= keep - 1' });
       whenTrue(
         g,
@@ -262,6 +267,7 @@ function build(colourway: Colourway) {
       const space = g.event('event.key', { key: 'Space', type: 'keydown' }, 'Space bar');
       const padKey = click(g, pad, 'Big button, from the keyboard');
       const live = g.then(screen, 'logic.if', { condition: `(phase == "lead" || phase == "keep") && Date.now() - lastTapAt > ${TAP_GAP}` });
+      graphNote(drill, { anchor: screen, colour: 'sky', text: '**The screen, the Space bar and the big button share one If.** A second tap inside 120 ms is dropped as the same press arriving twice (a keyboard press on a focused button is a click too).' });
       join(drill, space, live);
       join(drill, padKey, live);
       //The tap's moment, taken the instant it arrives, then which beat it is nearest to and how far off it was (ms, early is negative)
@@ -276,6 +282,7 @@ function build(colourway: Colourway) {
       );
       //Taps during the lead-in are free practice; only taps from half a beat before the first beat to the last count
       const inPlay = g.then(stamped, 'logic.if', { condition: 'rel > -0.5 && rel < keep - 0.5' });
+      graphNote(drill, { anchor: live, colour: 'sky', text: '**A tap becomes k, the nearest beat, and err, how many ms off** (early is negative), the instant it arrives. [ ] The window either side of a beat is each drill\'s `tol` in `presets`.' });
       const onBeat = g.then(inPlay, 'logic.if', { condition: 'k >= 0 && k < keep && Math.abs(err) <= tol && marks[k] != "hit"' }, 'true');
       whenTrue(
         g,
@@ -315,6 +322,7 @@ function build(colourway: Colourway) {
     g.run(click(g, again, 'Try again'), setVar(v.phase, '"idle"'), goPrevious());
     g.run(click(g, other, 'Pick another drill'), setVar(v.phase, '"idle"'), go(pick));
     g.run(g.event('event.start', {}, 'Results page'), announce('"Accuracy " + accuracy + " percent, best streak " + best + ". " + driftText'));
+    graphNote(results, { anchor: labelled(results, /^Results page$/), colour: 'sky', text: '**The results page reads itself aloud** from the live `accuracy`, `best` and `driftText`, the same ones the screen shows. Try again and Pick another drill both put `phase` back to idle first, so the beat clock stays off.' });
     checklist.push(item('Change the goal: the "goal" variable (Variables tab) is the accuracy in percent that counts as reaching it', acc, results));
   }
 

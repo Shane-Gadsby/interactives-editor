@@ -18,8 +18,8 @@ import { addNote, brandedPage, brandedProject, button, byName, card, contentBox,
 import type { Colourway } from '../../looks';
 import { join } from '../../graph-kit';
 import { progressBar } from '../../parts';
-import { Graph, addVar, announce, bind, clearVar, goNext, goPrevious, heroPage, resetVars, set, setVar, tickList, toggleItem, toggleVar } from '../media/shared';
-import { MIC_READY, dropTakeWhen, playLabel, playToggle, rec, recordLabel, recordStatus, recordToggle, stopTakeWhen } from './recording';
+import { Graph, addVar, announce, bind, clearVar, goNext, goPrevious, graphNote, heroPage, resetVars, set, setVar, tickList, toggleItem, toggleVar } from '../media/shared';
+import { MIC_READY, dropTakeWhen, labelled, playLabel, playToggle, rec, recordLabel, recordStatus, recordToggle, stopTakeWhen } from './recording';
 
 //The bank. type is the label on the card, q the question, model a short model answer and points what a good answer makes (up to four)
 const CARDS = [
@@ -199,6 +199,8 @@ function build(colourway: Colourway) {
   const talkClock = g.add('action.clock', { variable: left.id, op: 'start', mode: 'down', seconds: 'talkSeconds' }, talkTimed, 'true');
   g.run(g.add('action.setVariable', { variable: stage.id, op: 'set', value: '"tally"' }, talkClock, 'done'), announce('"Time is up. Tally how it went."'));
 
+  graphNote(rehearse, { anchor: talkNode, colour: 'sky', text: '**Two ways into the talk, one chain.** The prep clock\'s **Time up** output and Ready early both land here, so the talk stage is written once. The talk clock\'s own **Time up** moves on to the tally.' });
+
   //Draw: a random card from the pool (never one already drawn until the whole bank has been, then a fresh round), then into preparation with its own countdown
   const onDraw = g.click(draw, 'Draw a random card');
   const drawn = g.run(
@@ -210,12 +212,15 @@ function build(colourway: Colourway) {
     set(stage, '"prep"'),
     announce('"Your card: " + cards[current].q + (timersOn ? " You have " + prepSeconds + " seconds to prepare." : " Take as long as you need to prepare.")'),
   );
+  graphNote(rehearse, { anchor: onDraw, colour: 'sky', text: '**A card never repeats until the bank is used up.** The live `pool` leaves out `seen` and the current card, and once every card has been seen `seen` is emptied first so a new round starts. [ ] Add cards to `cards`.' });
   const prepTimed = g.add('logic.if', { condition: 'timersOn' }, drawn);
   const prepClock = g.add('action.clock', { variable: left.id, op: 'start', mode: 'down', seconds: 'prepSeconds' }, prepTimed, 'true');
   //The preparation clock running out starts the talk, the same as Ready early does
   join(rehearse, prepClock, talkNode, 'done');
   g.gap(60);
-  g.run(g.click(timerSwitch, 'Timers on or off'), toggleVar(timersOn), announce('timersOn ? "Timers on." : "Timers off. Take as long as you need."'));
+  const onTimers = g.click(timerSwitch, 'Timers on or off');
+  graphNote(rehearse, { anchor: onTimers, colour: 'sky', text: '**Timers off only flips timersOn.** Both Ifs read it, so neither clock starts and the learner moves on with the buttons. It is there for anyone a strict clock stresses.' });
+  g.run(onTimers, toggleVar(timersOn), announce('timersOn ? "Timers on." : "Timers off. Take as long as you need."'));
   g.run(g.click(toSummary, 'See the summary'), goNext());
 
   //Ready early starts the talk by hand (a new Start on the same clock takes over from the preparation one)
@@ -225,6 +230,7 @@ function build(colourway: Colourway) {
   //The optional recording: one button records and stops, the take ends when the talk stage is left (the clock ran out, or Finished early), plays back on
   //the tally stage (one button, Stop while it plays), and is dropped on the next card
   recordToggle(g, record, 'talk', 'Record this talk, or stop');
+  graphNote(rehearse, { anchor: labelled(rehearse, /^Record this talk, or stop$/), colour: 'sky', text: '**Recording is off as shipped.** These flows only run once Microphone is ticked in Project > Microphone and camera, and the record layers stay hidden until the learner says yes. [ ] Tick it and say what it is for.' });
   stopTakeWhen(g, stage, 'talk', 'stage != "talk"', 'End the take when the talk stage is left');
   playToggle(g, playTalk, 'talk', 'Play or stop my talk');
   dropTakeWhen(g, stage, 'talk', '(stage == "draw" || stage == "prep")', 'Drop the take on the next card');
@@ -237,6 +243,7 @@ function build(colourway: Colourway) {
   bump(fill.minus, fillers, -1, 'Filler words');
   bump(paus.plus, pauses, 1, 'Long pauses');
   bump(paus.minus, pauses, -1, 'Long pauses');
+  graphNote(rehearse, { anchor: labelled(rehearse, /^Filler words more$/), colour: 'sky', text: '**Four tally buttons, one pattern:** plus adds one and minus stops at 0. The tally is the learner\'s own reflection, never a measurement, because nothing here listens.' });
   g.run(g.click(openRow, 'Clear opening'), toggleVar(opening));
   g.run(g.click(closeRow, 'Clear close'), toggleVar(closing));
   g.run(g.click(toModel, 'To the model answer'), set(stage, '"compare"'), announce('"Model answer and points shown. Tick the points you made."'));
@@ -248,6 +255,7 @@ function build(colourway: Colourway) {
   const save = setVar(attempts, '{n: attempts.length + 1, type: cards[current].type, q: cards[current].q, fillers: fillers, pauses: pauses, opening: clearOpening, close: clearClose, made: covered.length, of: cards[current].points.length}', 'push');
   g.run(g.click(saveNext, 'Save this attempt and go on'), save, set(stage, '"draw"'), announce('"Attempt " + attempts.length + " saved. Draw another card when you are ready."'));
   g.run(g.click(saveSummary, 'Save this attempt and see the summary'), save, set(stage, '"draw"'), goNext());
+  graphNote(rehearse, { anchor: labelled(rehearse, /^Save this attempt and go on$/), colour: 'sky', text: '**Both save buttons share one Set variable**, which adds a row to `attempts`. That list is remembered (it survives a reload) and is all the summary page reads.' });
 
   checklist.push(
     item('Write your bank of cards: Project > Variables > "cards". Each card has a type (the label on it), q (the question or topic), model (a short model answer) and points (up to four things a good answer makes). The six samples cover a viva, an interview and a short talk. Delete or replace them', cardQ, rehearse),
@@ -312,6 +320,7 @@ function build(colourway: Colourway) {
   const sg = new Graph(summary);
   sg.run(sg.click(another, 'Draw another card'), goPrevious());
   sg.run(sg.click(clear, 'Clear my history'), clearVar(attempts), clearVar(seen), announce('"History cleared."'));
+  graphNote(summary, { anchor: labelled(summary, /^Draw another card$/), colour: 'sky', text: '**Clear my history empties attempts and seen**, so the card bank starts fresh as well as the table.' });
 
   //Notes for whoever edits the template, below each page
   const below = (page: typeof rehearse, x: number, w: number) => ({ x, y: page.height + 14, w, h: 96 });

@@ -2,7 +2,7 @@
 import { createNode, type Artboard, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, contentBox, item, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, darkButton, focus, go, goNext, groupPages, heroPage, lit, set } from './common';
+import { Graph, addVar, announce, bind, darkButton, focus, go, goNext, graphNote, groupPages, heroPage, lit, set } from './common';
 
 export const STAGES = [
   {
@@ -128,11 +128,13 @@ function build(colourway: Colourway) {
   map.children.push(markerGroup, ...tags);
   const onMarker = mg.add('event.pointer', { target: markerGroup.id, type: 'click', childrenOnly: true, onlyIf: 'done >= event.childIndex' }, null, 'out', { note: 'A marker that is open' });
   mg.run(onMarker, ['action.artboard', { to: 'expression', expr: 'event.childIndex < stages.length ? "Stage " + (event.childIndex + 1) : "Reward"', transition: 'fade', duration: 300 }]);
+  graphNote(map, { anchor: onMarker, colour: 'sky', text: '**One flow serves all six markers.** `event.childIndex` is the marker, and *Only if* `done >= event.childIndex` is the lock: finish stage 3 and `done` is 3, which opens the first four markers. Go to page works out "Stage n" from the same number.' });
   const onLocked = mg.add('event.pointer', { target: markerGroup.id, type: 'click', childrenOnly: true, onlyIf: 'done < event.childIndex' }, null, 'out', { note: 'A marker that is still locked' });
   mg.run(onLocked, set(message, 'event.childIndex >= stages.length ? "The reward unlocks when all five stages are complete." : "Stage " + (event.childIndex + 1) + " is locked. Finish stage " + event.childIndex + " first."'), announce('message'));
   const progress = text(ctx, 'Progress', '{message != "" ? message : done >= stages.length ? "Every stage is complete. Open the star to collect your reward." : "Choose stage " + (done + 1) + ". Each stage unlocks when you finish the one before."}', box.x, box.y + MAP_H + 14, box.width, { fontSize: 18, fontWeight: 600, autoSize: 'none', height: 52, lineHeight: 1.3 });
   map.children.push(progress);
   const onMapStart = mg.start('Back on the map');
+  graphNote(map, { anchor: onLocked, colour: 'sky', text: '**A locked marker explains itself** instead of doing nothing: it sets `message`, which the page shows, and reads it out for a screen reader.' });
   mg.run(onMapStart, ['action.resetVariables', { variables: [message.id] }], announce('done + " of " + stages.length + " stages complete"'));
 
   checklist.push(
@@ -194,6 +196,8 @@ function build(colourway: Colourway) {
     g.run(onFinish, set(done, 'Math.max(done, pageNumber)'), go(map));
     const onBack = g.click(back, 'Back to the map');
     g.run(onBack, go(map));
+    graphNote(page, { anchor: onStart, colour: 'sky', text: '**Each stage sets its own answer** (the right option\'s place) and clears `picked`. The live `right` compares them, so the answer check is the same on every stage page.' });
+    graphNote(page, { anchor: onFinish, colour: 'sky', text: '**Complete stage keeps the furthest stage reached**, so replaying an early one never locks the later markers again. `pageNumber` is the stage because the stages are one page group.' });
     //Focus goes to Complete the stage once it shows
     const onRight = g.add('event.variable', { variable: right.id, onlyIf: 'right' }, null, 'out', { note: 'Right answer' });
     g.run(onRight, focus(finish));

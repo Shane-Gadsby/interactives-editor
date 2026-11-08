@@ -9,7 +9,7 @@ import { addNote, brandedPage, brandedProject, button, contentBox, heading, item
 import { BRAND_FONT, type Colourway } from '../../looks';
 import { fill, stack } from '../../parts';
 import { join } from '../../graph-kit';
-import { Graph, addVar, announce, bind, goNext, goPrevious, heroPage, lit, resetVars, set } from './shared';
+import { Graph, addVar, announce, bind, goNext, goPrevious, graphNote, heroPage, lit, resetVars, set } from './shared';
 
 const CATEGORIES = ['Good questioning', 'Missed cue', 'Clear explanation', 'Risk to safety'];
 
@@ -183,6 +183,7 @@ function build(colourway: Colourway) {
   const tagged = g.add('action.setVariable', { variable: tags.id, op: 'push', value: '{t: Math.round(videoTime * 10) / 10, cat: tagNo, note: noteText.trim()}' }, setNo);
   g.run(tagged, set(note, '""'), announce(`"Tagged " + categories[tagNo - 1] + " at " + ${clock('videoTime')} + ". " + tags.length + " tags so far."`));
   join(watch, keyNo, tagged);
+  graphNote(watch, { anchor: byButton, colour: 'sky', text: '**A tag button and a number key both just say which tag it is** (`tagNo`), then share one Push. The tag is stamped with `videoTime`, which the video keeps current, and the note box is cleared for the next.' });
   g.run(g.click(undo, 'Undo'), set(tags, 'tags.slice(0, -1)'), announce('"Removed the last tag. " + tags.length + " left."'));
   g.run(g.click(finish, 'Compare'), set(vplaying, 'false'), resetVars(pickedExpert, pickedYou), goNext());
 
@@ -257,8 +258,11 @@ function build(colourway: Colourway) {
   const cg = new Graph(compare);
   const onShow = cg.start('Say how it went');
   cg.run(onShow, announce('"You agreed with " + agreed + " of " + expert.length + " expert tags, missed " + missed + ", and made " + extra + " of your own."'));
-  cg.run(cg.click(expertMarker, 'An expert tag'), set(pickedExpert, 'event.index'), set(pickedYou, '-1'));
+  graphNote(compare, { anchor: onShow, colour: 'sky', text: '**The comparison is already worked out.** `agreed`, `missed` and `extra` are live, from `tags` against `expert` within `tolerance` seconds, so this only reads them aloud. [ ] Widen `tolerance` to be kinder about timing.' });
+  const onExpert = cg.click(expertMarker, 'An expert tag');
+  cg.run(onExpert, set(pickedExpert, 'event.index'), set(pickedYou, '-1'));
   cg.run(cg.click(youMarker, 'One of your tags'), set(pickedYou, 'event.index'), set(pickedExpert, '-1'));
+  graphNote(compare, { anchor: onExpert, colour: 'sky', text: '**Picking an expert tag clears your pick, and the other way round**, so the detail box always shows one comment. `pickedExpert` and `pickedYou` are -1 when nothing is picked.' });
   cg.run(cg.click(back, 'Back'), goPrevious());
   cg.run(cg.click(again, 'Again'), reset, goPrevious());
 

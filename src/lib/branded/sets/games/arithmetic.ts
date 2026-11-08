@@ -5,7 +5,7 @@ import type { Colourway } from '../../looks';
 import { BRAND_FONT } from '../../looks';
 import { lookDefaults } from '../../../themes';
 import { keyNavList, progressBar } from '../../parts';
-import { Graph, addVar, announce, bind, darkButton, emit, focus, go, goNext, heroPage, set } from './common';
+import { Graph, addVar, announce, bind, darkButton, emit, focus, go, goNext, graphNote, heroPage, set } from './common';
 
 //The sums, in steps so each can be read: the numbers, then the working, then the four options (shuffle and randInt are the expression helpers)
 const PAIRS = 'Array.from({length: howMany}, (_) => ({a: randInt(lowest, highest), b: randInt(lowest, highest), o: operation == "mixed" ? ["+", "-", "×"][randInt(0, 2)] : operation}))';
@@ -110,6 +110,7 @@ function build(colourway: Colourway) {
   g.run(onStart, set(draft, PAIRS), set(draft, WORKING), set(sums, OPTIONS), ['action.resetVariables', { variables: [q, score, answered, given, typed, warn].map((v) => v.id) }], ['action.clock', { variable: seconds.id, op: 'start', mode: 'up', seconds: '0' }], announce('"Question 1 of " + sums.length + ": " + sums[0].t'));
 
   //Answering: typed (Check, or Enter in the box) or picked (an option); both end up in "given" and mark the same way
+  graphNote(page, { anchor: onStart, colour: 'sky', text: '**A new set every play, built in three passes.** `draft` picks the numbers, then the wording and answer, then the four options per sum, so each pass stays short enough to read. The clock restarts here too.' });
   const onCheck = g.click(check, 'Check the typed answer');
   g.run(onCheck, emit('check'));
   const onEnter = g.enterIn(input, 'Enter in the answer box checks it');
@@ -118,6 +119,7 @@ function build(colourway: Colourway) {
   const canCheck = g.add('logic.if', { condition: 'typed.trim() != ""' }, onAsked);
   g.runFrom(canCheck, 'true', set(warn, 'false'), set(given, 'typed.trim()'), emit('mark'));
   g.runFrom(canCheck, 'false', set(warn, 'true'), announce('feedback'));
+  graphNote(page, { anchor: onAsked, colour: 'sky', text: '**Enter and the button both send check.** An empty box takes the false branch, which only sets `warn` and reads it out, so a stray Enter never counts as a wrong answer.' });
   const onPick = g.add('event.pointer', { target: option.id, type: 'click', onlyIf: '!answered' }, null, 'out', { note: 'Pick an option' });
   g.run(onPick, set(given, 'sums[q].opts[event.index]'), emit('mark'));
   const onMark = g.add('event.message', { name: 'mark', onlyIf: '!answered' }, null, 'out', { note: 'Mark the answer' });
@@ -129,6 +131,7 @@ function build(colourway: Colourway) {
     focus(next),
   );
 
+  graphNote(page, { anchor: onMark, colour: 'sky', text: '**Typing and picking meet at mark.** It scores from the live `correct`, which compares `given` with the answer, so a new way of answering only has to set `given` and send `mark`.' });
   //On to the next question, or the results
   const onNext = g.add('event.pointer', { target: next.id, type: 'click', onlyIf: 'answered' }, null, 'out', { note: 'Next question' });
   const more = g.add('logic.if', { condition: 'q + 1 < sums.length' }, onNext);
@@ -136,6 +139,7 @@ function build(colourway: Colourway) {
   const typing = g.add('logic.if', { condition: 'mode != "choose"' }, stepped);
   g.runFrom(typing, 'true', focus(input));
   g.runFrom(more, 'false', ['action.clock', { variable: seconds.id, op: 'pause' }], goNext());
+  graphNote(page, { anchor: onNext, colour: 'sky', text: '**Next only works once answered.** After the last question the clock is paused (not reset), so the finished page can still show how long the set took.' });
 
   checklist.push(
     item('Choose the kind of sums: Project > Variables > "operation" is + (add), - (subtract), × (multiply), ÷ (divide) or mixed (add, subtract and multiply together)', sum, page),

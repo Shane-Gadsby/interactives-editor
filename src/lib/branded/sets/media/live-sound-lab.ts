@@ -10,7 +10,7 @@ import { createNode, type FrameNode, type TemplateChecklistItem } from 'interact
 import { lookDefaults } from '../../../themes';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import { BRAND_FONT } from '../../looks';
-import { Graph, addVar, announce, bind, go, goNext, goPrevious, heroPage, resetVars, set, toggleVar } from './shared';
+import { Graph, addVar, announce, bind, go, goNext, goPrevious, graphNote, heroPage, resetVars, set, toggleVar } from './shared';
 
 //The meter's width, and the bars' plot height, in page pixels
 const W = 576;
@@ -104,7 +104,9 @@ function build(colourway: Parameters<BrandedStarter['build']>[0]) {
     const msg = small('Microphone message', `{${noMic}}`, rx, y + 54, rw, { autoSize: 'none', height: 52 });
     page.children.push(listen, msg);
     //A start that did not work leaves by Could not start: the slider is right there
-    const going = g.add('logic.if', { condition: 'listening' }, g.click(listen, 'Start or stop listening'));
+    const onListen = g.click(listen, 'Start or stop listening');
+    graphNote(page, { anchor: onListen, colour: 'sky', text: '**One button starts and stops listening.** A start that fails leaves by **Failed**, which points at the slider, and `stopOnLeave` turns the microphone off when the learner leaves the page. Nothing is recorded.' });
+    const going = g.add('logic.if', { condition: 'listening' }, onListen);
     g.add('action.listen', { op: 'stop' }, going, 'true');
     const on = g.add('action.listen', { op: 'start', stopOnLeave: true }, going, 'false', { dy: 70 });
     g.add('action.announce', { text: '"The microphone did not start. " + mediaMessage + " Use the slider instead."', politeness: 'polite' }, on, 'failed');
@@ -167,7 +169,9 @@ function build(colourway: Parameters<BrandedStarter['build']>[0]) {
   g1.run(g1.click(next, 'To the bars'), goNext());
   g1.run(g1.click(back, 'To the start'), go(hero.page));
 
-  g1.run(g1.click(steadyBtn, 'Steady volume'), set(use, '"steady"'), resetVars(steady, best), announce('"Steady volume. Keep the bar inside the outlined band."'));
+  const onSteady = g1.click(steadyBtn, 'Steady volume');
+  graphNote(meter, { anchor: onSteady, colour: 'sky', text: '**Steady volume and Noise check only set use.** The live `bandLo` and `bandHi` read it to move the target band, and the score (`steady`, `best`) starts again.' });
+  g1.run(onSteady, set(use, '"steady"'), resetVars(steady, best), announce('"Steady volume. Keep the bar inside the outlined band."'));
   g1.run(g1.click(noiseBtn, 'Noise check'), set(use, '"noise"'), resetVars(steady, best), announce('"Noise check, as a rough guide. This is not a decibel reading."'));
   g1.run(g1.start('Open on steady volume'), resetVars(use, steady, best));
 
@@ -180,10 +184,12 @@ function build(colourway: Parameters<BrandedStarter['build']>[0]) {
     set(steady, `use == "steady" && zone == "in" && !${IDLE} ? Math.round((steady + 0.25) * 100) / 100 : 0`),
     set(best, 'Math.max(best, steady)'),
   );
+  graphNote(meter, { anchor: tick1, colour: 'sky', text: '**A timer, not a live variable**, because `zone` needs its own last value to give the band edge 0.03 of slack and not flicker. `steady` adds a quarter second per tick inside the band, and `best` keeps the longest.' });
   g1.gap(40);
   //Said once when the zone changes, and only while there is a sound to speak of (the event's Only if, not an If node)
   const changed = g1.add('event.variable', { variable: zone.id, onlyIf: `!${IDLE}` }, null, 'out', { note: 'The zone changed' });
   g1.add('action.announce', { text: 'use == "steady" ? (zone == "in" ? "In the band." : zone == "low" ? "A little louder." : "A little softer.") : (zone == "high" ? "Loud, for a rough guide." : "Comfortable, for a rough guide.")', politeness: 'polite' }, changed);
+  graphNote(meter, { anchor: changed, colour: 'sky', text: '**Spoken once per change of zone**, not every tick. *Only if* skips it in silence (no microphone and the slider at 0), so the page is quiet until there is a sound.' });
   g1.gap(60);
 
   checklist.push(
@@ -245,7 +251,9 @@ function build(colourway: Parameters<BrandedStarter['build']>[0]) {
   const reveal = button(ctx, 'Show or hide', 'Show what to look for', rx, box.y + 410, rw, false);
   bind(reveal, { label: 'shown ? "Show the question again" : "Show what to look for"' });
   bars.children.push(askHead, ask, reveal);
-  g2.run(g2.click(reveal, 'Show or hide the answer'), toggleVar(shown));
+  const onReveal = g2.click(reveal, 'Show or hide the answer');
+  graphNote(bars, { anchor: onReveal, colour: 'sky', text: '**One Toggle on shown** flips the challenge text and the button label together, and Start again clears it. [ ] Write your own question and answer in the text it reads.' });
+  g2.run(onReveal, toggleVar(shown));
 
   const back2 = button(ctx, 'Back to meter', 'Back to the meter', box.x, box.y + box.height - 46, 240, false);
   const again = button(ctx, 'Start again', 'Start again', box.x + 256, box.y + box.height - 46, 200, true);
