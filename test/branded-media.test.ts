@@ -91,7 +91,8 @@ describe('media starters', () => {
       });
 
       it('keeps every content layer on the page and clear of the footer and logo band', () => {
-        const { project } = starter.build(COLOURWAYS[0]);
+        //as a person gets it, with the auto layout frames settled to their real height
+        const project = projectFromBrandedStarter(starter, COLOURWAYS[0]);
         for (const ab of project.artboards) {
           if (!byName(ab, 'Footer text')) continue;
           for (const n of ab.children) {
