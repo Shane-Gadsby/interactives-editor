@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { onPanelRequest, store, useEditor, type BottomTab } from '../store/store';
-import { dockFloat, getDock, isShown, movePanel, resetDock, setDock, showPanel, subscribeDock, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type Zone } from '../lib/dock';
+import { dockFloat, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
 import { Icons, type IconName } from './icons';
 import { HelpLink } from '../help/Help';
 import { ContextMenu, type MenuItem } from './ContextMenu';
@@ -143,6 +143,72 @@ const useDrag = () =>
     () => drag,
   );
 
+/** The tool rail being dragged: where the pointer is and what it would do if let go. Shares the panels' drop highlights. */
+interface ToolsDragState {
+  x: number;
+  y: number;
+  drop: ToolsDrop;
+}
+let toolsDrag: ToolsDragState | null = null;
+const setToolsDrag = (d: ToolsDragState | null) => {
+  toolsDrag = d;
+  for (const fn of dragListeners) fn();
+};
+const useToolsDrag = () =>
+  useSyncExternalStore(
+    (fn) => (dragListeners.add(fn), () => dragListeners.delete(fn)),
+    () => toolsDrag,
+  );
+
+/** What a dragged tool rail is over: one of the edge targets, a panel tab strip, or the open canvas. */
+function toolsDropAt(x: number, y: number): ToolsDrop {
+  for (const el of document.elementsFromPoint(x, y)) {
+    const h = el as HTMLElement;
+    const edge = h.dataset?.dockEdge as Zone | undefined;
+    if (edge) return toolsDropFor({ edge });
+    if (h.closest?.('[data-dock-strip]')) return toolsDropFor({ strip: true });
+  }
+  return toolsDropFor({});
+}
+
+/**
+ * Drag the tool rail by its title bar (docked or floating). `at` says where the rail goes for a pointer position, null
+ * until the pointer has moved far enough to count as a drag. Letting go over an edge target docks it there; anywhere else
+ * it stays where it was dragged to, floating. Escape drops it where it is without docking.
+ */
+function dragTools(e: React.PointerEvent, at: (ev: PointerEvent) => { x: number; y: number } | null) {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  document.body.classList.add('dock-dragging');
+  const move = (ev: PointerEvent) => {
+    const to = at(ev);
+    if (!to) return;
+    setDock((l) => placeTools(l, 'float', to));
+    setToolsDrag({ x: ev.clientX, y: ev.clientY, drop: toolsDropAt(ev.clientX, ev.clientY) });
+  };
+  const end = (ev: PointerEvent | KeyboardEvent) => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', end);
+    window.removeEventListener('keydown', key, true);
+    document.body.classList.remove('dock-dragging');
+    const d = toolsDrag;
+    setToolsDrag(null);
+    if (ev.type === 'pointerup' && d && 'place' in d.drop) {
+      const place = d.drop.place;
+      track('feature', 'dock-move', { thing: `tools-${place}` });
+      setDock((l) => placeTools(l, place));
+    }
+  };
+  const key = (ev: KeyboardEvent) => {
+    if (ev.key !== 'Escape') return;
+    ev.stopPropagation();
+    end(ev);
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', end);
+  window.addEventListener('keydown', key, true);
+}
+
 /** What's under the pointer: a tab strip (and where in it), an edge target, or nowhere (a new window there). */
 function targetAt(x: number, y: number): DropTarget {
   for (const el of document.elementsFromPoint(x, y)) {
@@ -209,31 +275,39 @@ function startTabDrag(e: React.PointerEvent, p: PanelId, onClick: () => void) {
   window.addEventListener('keydown', key, true);
 }
 
-/** While a tab is dragged: what it is, under the pointer, and the edges of the canvas to drop it on to dock it there. */
+/** While a tab or the tool rail is dragged: what it is, under the pointer, and the edges of the canvas to drop it on to dock it there. */
 export function DockDragLayer() {
   const d = useDrag();
-  if (!d) return null;
+  const td = useToolsDrag();
+  if (!d && !td) return null;
   const stage = document.querySelector('.stage')?.getBoundingClientRect();
-  const t = d.target;
+  const t = d?.target;
+  const toolsOver = td && 'place' in td.drop ? td.drop.place : null;
+  const who = td ? 'tools ' : '';
   const edge = (z: Zone, style: React.CSSProperties, label: string) => (
-    <div key={z} className={`dock-edge ${z}${t && 'zone' in t && t.zone === z ? ' over' : ''}`} data-dock-edge={z} style={style}>
+    <div key={z} className={`dock-edge ${z}${(t && 'zone' in t && t.zone === z) || toolsOver === z ? ' over' : ''}`} data-dock-edge={z} style={style}>
       {label}
     </div>
   );
+  const chip = td
+    ? { at: td, name: 'Tools', note: 'place' in td.drop ? `dock ${td.drop.place}` : 'tabs' in td.drop ? "can't be a tab: drop on an edge to dock" : 'floating' }
+    : d && { at: d, name: PANELS[d.panel].label, note: !t ? '' : 'newFloat' in t ? 'new window' : 'zone' in t ? `dock ${t.zone}` : 'into this window' };
   return (
     <>
       {stage && (
         <>
-          {edge('left', { left: stage.left, top: stage.top, width: 64, height: stage.height }, 'Dock left')}
-          {edge('right', { left: stage.right - 64, top: stage.top, width: 64, height: stage.height }, 'Dock right')}
-          {edge('bottom', { left: stage.left + 64, top: stage.bottom - 48, width: Math.max(0, stage.width - 128), height: 48 }, 'Dock at the bottom')}
+          {edge('left', { left: stage.left, top: stage.top, width: 64, height: stage.height }, `Dock ${who}left`)}
+          {edge('right', { left: stage.right - 64, top: stage.top, width: 64, height: stage.height }, `Dock ${who}right`)}
+          {edge('bottom', { left: stage.left + 64, top: stage.bottom - 48, width: Math.max(0, stage.width - 128), height: 48 }, `Dock ${who}at the bottom`)}
         </>
       )}
       {t && 'newFloat' in t && <div className="dock-float-ghost" style={{ left: t.newFloat.x, top: t.newFloat.y }} />}
-      <div className="dock-drag-tab" style={{ left: d.x + 10, top: d.y + 10 }}>
-        {PANELS[d.panel].label}
-        <span className="muted"> {!t ? '' : 'newFloat' in t ? 'new window' : 'zone' in t ? `dock ${t.zone}` : 'into this window'}</span>
-      </div>
+      {chip && (
+        <div className="dock-drag-tab" style={{ left: chip.at.x + 10, top: chip.at.y + 10 }}>
+          {chip.name}
+          <span className="muted"> {chip.note}</span>
+        </div>
+      )}
     </>
   );
 }
@@ -379,7 +453,7 @@ export function DockZone({ zone }: { zone: Zone }) {
 }
 
 /** Grid track sizes for the workspace: an area nobody has docked anything in takes no room. */
-export function useZoneSizes(widths: { left: number; right: number }): { left: number; right: number; bottom: number; tools: 'left' | 'right' | 'float' } {
+export function useZoneSizes(widths: { left: number; right: number }): { left: number; right: number; bottom: number; tools: ToolsPlace } {
   const l = useDock();
   const ok = useAvailable();
   const h = useEditor((st) => st.bottomHeight);
@@ -484,7 +558,15 @@ export function FloatingTools({ children }: { children: ReactNode }) {
   const box = clampWin({ x: l.tools.x, y: l.tools.y, w: size.w, h: size.h });
   return (
     <div ref={ref} className="dock-float dock-tools-float front" style={{ left: box.x, top: box.y }} role="toolbar" aria-label="Tools (floating)">
-      <div className="dock-tools-grip" title="Drag to move the tools. Right-click the tools to dock them again" onPointerDown={(e) => dragBox(e, box, 'move', (b) => setDock((x) => ({ ...x, tools: { ...x.tools, x: b.x, y: b.y } })))}>
+      <div
+        className="dock-tools-grip"
+        title="Drag to move the tools. Drop them on an edge of the canvas to dock them there (left, right or bottom), or right-click for the menu"
+        onPointerDown={(e) => {
+          const x0 = e.clientX;
+          const y0 = e.clientY;
+          dragTools(e, (ev) => clampWin({ x: box.x + ev.clientX - x0, y: box.y + ev.clientY - y0, w: size.w, h: size.h }));
+        }}
+      >
         Tools
       </div>
       {children}
@@ -494,52 +576,38 @@ export function FloatingTools({ children }: { children: ReactNode }) {
 
 /**
  * The docked tool rail's title. Dragging it more than a few pixels lifts the rail out into its own floating window under
- * the pointer, and the same drag carries on moving it (a floated rail has its own title bar, in FloatingTools).
+ * the pointer, and the same drag carries on moving it (a floated rail has its own title bar, in FloatingTools). Dropping it
+ * on an edge target docks it there, the same targets the panels use.
  */
 export function ToolsHead() {
   const l = useDock();
   if (l.tools.place === 'float') return null;
   const down = (e: React.PointerEvent) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
     const x0 = e.clientX;
     const y0 = e.clientY;
     //where in the title it was picked up, so the floated rail stays under the pointer the same way
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const ox = x0 - r.left;
     const oy = y0 - r.top;
-    let lifted = false;
-    document.body.classList.add('dock-dragging');
-    const move = (ev: PointerEvent) => {
-      if (!lifted && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return;
-      lifted = true;
-      const at = clampWin({ x: ev.clientX - ox, y: ev.clientY - oy, w: 74, h: 200 });
-      setDock((x) => ({ ...x, tools: { ...x.tools, place: 'float', x: at.x, y: at.y } }));
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      document.body.classList.remove('dock-dragging');
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
+    dragTools(e, (ev) => (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6 ? null : clampWin({ x: ev.clientX - ox, y: ev.clientY - oy, w: 74, h: 200 })));
   };
+  const horizontal = l.tools.place === 'bottom';
   return (
-    <div className="dock-tools-grip docked" title="Drag out to float the tools. Right-click the tools to move them to the other side" onPointerDown={down}>
+    <div className={`dock-tools-grip docked${horizontal ? ' horizontal' : ''}`} title="Drag to float the tools, or onto an edge of the canvas to dock them there. Right-click the tools for the menu" onPointerDown={down}>
       Tools
     </div>
   );
 }
 
-/** The tool rail's right-click menu: which side it sits on, or floating. */
+/** The tool rail's right-click menu: which side it sits on, along the bottom, or floating. */
 export function toolsMenu(): MenuItem[] {
   const place = getDock().tools.place;
-  const to = (p: 'left' | 'right' | 'float') => () =>
-    setDock((l) => ({ ...l, tools: { ...l.tools, place: p, ...(p === 'float' ? { x: 90, y: 110 } : {}) } }));
+  const to = (p: ToolsPlace) => () => setDock((l) => placeTools(l, p, p === 'float' ? { x: 90, y: 110 } : undefined));
   return [
     { heading: 'Tools' },
-    { label: 'On the left', disabled: place === 'left', onClick: to('left') },
-    { label: 'On the right', disabled: place === 'right', onClick: to('right') },
+    { label: 'Dock on the left', disabled: place === 'left', onClick: to('left') },
+    { label: 'Dock on the right', disabled: place === 'right', onClick: to('right') },
+    { label: 'Dock at the bottom', disabled: place === 'bottom', onClick: to('bottom') },
     { label: 'Floating', disabled: place === 'float', onClick: to('float') },
     { separator: true },
     { label: 'Reset panel layout', onClick: () => (resetDock(), store().set({ bottomTab: 'timeline' })) },

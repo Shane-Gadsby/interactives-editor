@@ -32,10 +32,10 @@ function loadSandboxSource(): Promise<string> {
   return sandboxSource;
 }
 
-/** The project without its links to files on this computer (what an export or a share shouldn't carry). */
+/** The project without its links to files on this computer, and without editor-only settings (an artboard's own grid): what an export or a share shouldn't carry. */
 export function withoutLinks(project: Project): Project {
-  if (!project.artboards.some((a) => a.source)) return project;
-  return { ...project, artboards: project.artboards.map(({ source: _source, ...a }) => a) };
+  if (!project.artboards.some((a) => a.source || a.grid)) return project;
+  return { ...project, artboards: project.artboards.map(({ source: _source, grid: _grid, ...a }) => a) };
 }
 
 /**

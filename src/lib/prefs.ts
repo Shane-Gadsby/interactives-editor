@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { DEFAULT_GRID } from './grid';
 import { installSessionHeader, sessionUser } from './session';
 
 /**
@@ -12,6 +13,14 @@ export interface Prefs {
   tooltips: boolean;
   /** Rulers along the canvas edges (Shift+R). */
   rulers: boolean;
+  /** The grid drawn on the canvas (Shift+G). It never shows in Preview or exports. */
+  showGrid: boolean;
+  /** Moves, resizes, new shapes, pen points and arrow-key nudges land on the grid (Ctrl+'). Ctrl while dragging turns it off. */
+  snapGrid: boolean;
+  /** Grid cell size in artboard pixels. An artboard can override it (`artboard.grid`). */
+  gridSize: number;
+  /** A stronger line every this many cells. */
+  gridSubdivisions: number;
   /** Colour theme; 'auto' follows the system. */
   theme: 'dark' | 'light' | 'auto';
   /** Font family for new text layers and the font every new project includes. */
@@ -32,7 +41,7 @@ export interface Prefs {
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true };
+const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapGrid: false, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 

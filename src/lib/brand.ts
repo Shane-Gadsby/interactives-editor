@@ -33,7 +33,7 @@ export const brandKits = (p: Project) => (p.libraries ?? []).filter((l) => l.bra
 // ---------------------------------------------------------------- locks
 
 /** What the lock leaves alone on any library copy. */
-const FREE_KEYS = new Set(['canvasX', 'canvasY', 'canvasHidden', 'name', 'guides', 'group']);
+const FREE_KEYS = new Set(['canvasX', 'canvasY', 'canvasHidden', 'name', 'guides', 'grid', 'group']);
 
 /** Both lists hold the same layers in the same order, and the only differences are the text of layers marked editable. */
 function onlyEditableText(before: SceneNode[], after: SceneNode[]): boolean {

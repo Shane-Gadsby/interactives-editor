@@ -84,6 +84,14 @@ describe('preferences', () => {
     expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs).toEqual({ wheel: 'ctrl', rulers: false, accessibility: false, screenReader: true, defaultFont: 'Inter' });
   });
 
+  it('keeps the grid preferences when they are in range and drops them when not', async () => {
+    const ok = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { showGrid: true, snapGrid: true, gridSize: 16, gridSubdivisions: 4 } } });
+    expect(ok.json.prefs).toEqual({ showGrid: true, snapGrid: true, gridSize: 16, gridSubdivisions: 4 });
+    const bad = await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { showGrid: 'yes', snapGrid: 1, gridSize: 0, gridSubdivisions: 99 } } });
+    expect(bad.json.prefs).toEqual({});
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { gridSize: 7.5 } } })).json.prefs).toEqual({});
+  });
+
   it('drops a default font that is too long and a body that has no prefs', async () => {
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(120) } } })).json.prefs).toEqual({});
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: {} })).json.prefs).toEqual({});

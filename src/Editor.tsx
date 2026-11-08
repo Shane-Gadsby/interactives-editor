@@ -35,6 +35,9 @@ import { HistoryModal, InviteModal, ShareForReviewModal, ShareModal } from './co
 import { SaveTemplateModal } from './components/TemplateModals';
 import { CHECKLIST_FLAG, hasChecklist } from './lib/templates';
 import { prefs, setPrefs, usePrefs } from './lib/prefs';
+import { useDock } from './lib/dock';
+import { gridFor, gridLabel, nudgeDelta, shiftSteps } from './lib/grid';
+import { gridMenu } from './components/grid-menu';
 import { LinkManager, setLinkManager } from './lib/links';
 import { LinkBanner } from './components/LinkBanner';
 import { LinkChanges } from './components/LinkChanges';
@@ -347,6 +350,16 @@ function useShortcuts() {
         setPrefs({ rulers: !prefs().rulers });
         return;
       }
+      if (e.shiftKey && !mod && !e.altKey && k === 'g') {
+        e.preventDefault();
+        setPrefs({ showGrid: !prefs().showGrid });
+        return;
+      }
+      if (mod && !e.shiftKey && !e.altKey && e.key === "'") {
+        e.preventDefault();
+        setPrefs({ snapGrid: !prefs().snapGrid });
+        return;
+      }
       if (e.shiftKey && (e.code === 'Digit1' || e.code === 'Digit2')) {
         e.preventDefault();
         zoomTo(e.code === 'Digit1' ? 'fit' : 'selection');
@@ -381,8 +394,17 @@ function useShortcuts() {
       if (k.startsWith('arrow') && st.selection.length) {
         e.preventDefault();
         const d = e.shiftKey ? 10 : 1;
-        const dx = k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0;
-        const dy = k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0;
+        let dx = k === 'arrowleft' ? -d : k === 'arrowright' ? d : 0;
+        let dy = k === 'arrowup' ? -d : k === 'arrowdown' ? d : 0;
+        // With the grid on a nudge goes to the next grid line (Shift: a major step), by the selection's edge. Ctrl turns it off
+        const ab = prefs().snapGrid && !mod ? s.artboard() : null;
+        const sb = ab && selectionBounds(ab, st.selection);
+        if (ab && sb) {
+          const g = gridFor(ab, prefs());
+          const steps = e.shiftKey ? shiftSteps(g) : 1;
+          if (dx) dx = nudgeDelta(sb.x, dx < 0 ? -1 : 1, g.size, steps);
+          if (dy) dy = nudgeDelta(sb.y, dy < 0 ? -1 : 1, g.size, steps);
+        }
         const changes = new Map<string, Record<string, unknown>>();
         for (const n of s.selectedNodes()) if (!n.locked) changes.set(n.id, { x: n.x + dx, y: n.y + dy });
         s.setEach(changes, 'nudge');
@@ -1004,6 +1026,14 @@ export function Toolbar() {
   const tool = useEditor((st) => st.tool);
   const showBones = useEditor((st) => st.showBones);
   const [open, toggle] = useToolGroups();
+  const snapPrefs = usePrefs();
+  const horizontal = useDock().tools.place === 'bottom';
+  const [gridMenuAt, setGridMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const gridContext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setGridMenuAt({ x: e.clientX, y: e.clientY });
+  };
   const all = [...TOOLS, ...WEB_TOOLS];
   const btn = (id: Tool) => {
     const t = all.find((x) => x.tool === id);
@@ -1026,13 +1056,15 @@ export function Toolbar() {
   const bones = <IconButton key="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={showBones ? 'Hide bones on the canvas (Shift+J)' : 'Show bones on the canvas (Shift+J)'} onClick={() => store().set({ showBones: !showBones })} />;
   return (
     <nav
-      className="toolbar"
+      className={`toolbar${horizontal ? ' horizontal' : ''}`}
+      aria-orientation={horizontal ? 'horizontal' : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
         setMenu({ x: e.clientX, y: e.clientY });
       }}
     >
       {menu && <ContextMenu x={menu.x} y={menu.y} items={toolsMenu()} onClose={() => setMenu(null)} />}
+      {gridMenuAt && <ContextMenu x={gridMenuAt.x} y={gridMenuAt.y} items={gridMenu()} onClose={() => setGridMenuAt(null)} />}
       <ToolsHead />
       <div className="tool-grid">
         {btn('select')}
@@ -1064,6 +1096,22 @@ export function Toolbar() {
       })}
       <div className="toolbar-fill" />
       <div className="tool-grid">
+        <IconButton
+          icon={<Icons.grid />}
+          title={`${snapPrefs.showGrid ? 'Hide' : 'Show'} the grid (Shift+G). Right-click for the grid size`}
+          active={snapPrefs.showGrid}
+          pressed={snapPrefs.showGrid}
+          onClick={() => setPrefs({ showGrid: !snapPrefs.showGrid })}
+          onContextMenu={gridContext}
+        />
+        <IconButton
+          icon={<Icons.magnet />}
+          title={`Snap to grid is ${snapPrefs.snapGrid ? 'on' : 'off'} (Ctrl+'; ${gridLabel(gridFor(null, snapPrefs))}). Right-click for the grid size. Hold Ctrl while dragging to skip it`}
+          active={snapPrefs.snapGrid}
+          pressed={snapPrefs.snapGrid}
+          onClick={() => setPrefs({ snapGrid: !snapPrefs.snapGrid })}
+          onContextMenu={gridContext}
+        />
         {btn('comment')}
         <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
       </div>

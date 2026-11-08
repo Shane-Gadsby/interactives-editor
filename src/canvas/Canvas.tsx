@@ -50,6 +50,8 @@ import { artboardMenuItems } from '../lib/artboard-commands';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
+import { artboardGridMenu, gridMenu } from '../components/grid-menu';
+import { gridFor, gridLabel, gridLook, snapAxis, snapPoint, type GridSpec } from '../lib/grid';
 import { fontStack } from '../lib/font-catalog';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { selectSameItems } from '../lib/layer-find';
@@ -204,6 +206,8 @@ export function Canvas() {
   const { project, zoom, panX, panY } = s;
   // Library copies that only back instances stay off the canvas (see canvasHidden)
   const onCanvas = useMemo(() => project.artboards.filter((a) => !a.canvasHidden), [project.artboards]);
+  const userPrefs = usePrefs();
+  const showGrid = userPrefs.showGrid;
   const baseActive = getArtboard(project, s.activeArtboardId);
   const timeline = s.timelineShown ? baseActive?.timelines.find((t) => t.id === s.activeTimelineId) ?? null : null;
   // While a timeline is open the canvas shows its frame at the playhead, so outlines and handles follow that frame too.
@@ -234,6 +238,18 @@ export function Canvas() {
     return ab && active && ab.id === active.id ? active : ab;
   };
   const local = (ab: Artboard, w: Pt): Pt => ({ x: w.x - ab.canvasX, y: w.y - ab.canvasY });
+  /** Same, for a point on the bare canvas (the Artboard tool): the person's own grid. */
+  const gridPoint = (w: Pt, e: { ctrlKey: boolean; metaKey: boolean }): Pt => {
+    const g = gridSnapFor(null, e);
+    return g ? snapPoint(w, g) : w;
+  };
+  /** A canvas point put on the artboard's grid, when grid snapping is on for this event (else as it was). */
+  const gridWorld = (ab: Artboard, w: Pt, e: { ctrlKey: boolean; metaKey: boolean }): Pt => {
+    const g = gridSnapFor(ab, e);
+    if (!g) return w;
+    const p = snapPoint(local(ab, w), g);
+    return { x: ab.canvasX + p.x, y: ab.canvasY + p.y };
+  };
   /**
    * The layer under the pointer. The artboard under the pointer goes first; then layers hanging outside their
    * artboard (the open one, or any that doesn't clip), so things moved past the edge can still be picked. So can the faint
@@ -554,7 +570,7 @@ export function Canvas() {
     if (tool === 'pen') {
       const pab = penRef.current ? getArtboard(st.project, penRef.current.abId) : hitAb ?? ab;
       if (!pab) return;
-      const p = local(pab, w);
+      const p = local(pab, gridWorld(pab, w, e));
       const pts = penRef.current?.points ?? [];
       setPen({ abId: pab.id, points: [...pts, { x: p.x, y: p.y }], cursor: p });
       if (!penRef.current) store().set({ activeArtboardId: pab.id, selection: [] });
@@ -586,8 +602,9 @@ export function Canvas() {
     }
 
     if (tool === 'artboard') {
-      drag.current = { kind: 'create', tool, abId: null, start: w, parentId: null };
-      setBox({ abId: null, rect: { x: w.x, y: w.y, width: 0, height: 0 } });
+      const aw = gridPoint(w, e);
+      drag.current = { kind: 'create', tool, abId: null, start: aw, parentId: null };
+      setBox({ abId: null, rect: { x: aw.x, y: aw.y, width: 0, height: 0 } });
       return;
     }
 
@@ -598,8 +615,9 @@ export function Canvas() {
       // Draw into the frame under the pointer, if any.
       const path = hitTest(cab, p.x, p.y);
       const frame = [...path].reverse().find((n) => n.type === 'frame');
-      drag.current = { kind: 'create', tool, abId: cab.id, start: p, parentId: tool === 'frame' ? null : frame?.id ?? null };
-      setBox({ abId: cab.id, rect: { x: p.x, y: p.y, width: 0, height: 0 } });
+      const gp = local(cab, gridWorld(cab, w, e));
+      drag.current = { kind: 'create', tool, abId: cab.id, start: gp, parentId: tool === 'frame' ? null : frame?.id ?? null };
+      setBox({ abId: cab.id, rect: { x: gp.x, y: gp.y, width: 0, height: 0 } });
       if (cab.id !== st.activeArtboardId) store().set({ activeArtboardId: cab.id, selection: [], activeTimelineId: null });
       return;
     }
@@ -698,7 +716,7 @@ export function Canvas() {
       }
       if (st.tool === 'pen' && penRef.current) {
         const pab = getArtboard(st.project, penRef.current.abId);
-        if (pab) setPen({ ...penRef.current, cursor: local(pab, w) });
+        if (pab) setPen({ ...penRef.current, cursor: local(pab, gridWorld(pab, w, e)) });
       }
       return;
     }
@@ -728,7 +746,7 @@ export function Canvas() {
           if (Math.abs(dx) > Math.abs(dy)) dy = 0;
           else dx = 0;
         }
-        const snap = e.ctrlKey || e.metaKey ? { dx: 0, dy: 0, guides: { x: [], y: [] } } : snapMove(mab, d.bounds0, dx, dy, d.items.map((i) => i.id), zoom);
+        const snap = e.ctrlKey || e.metaKey ? { dx: 0, dy: 0, guides: { x: [], y: [] } } : snapMove(mab, d.bounds0, dx, dy, d.items.map((i) => i.id), zoom, gridSnapFor(mab, e));
         dx += snap.dx;
         dy += snap.dy;
         setGuides(snap.guides.x.length || snap.guides.y.length ? { abId: mab.id, ...snap.guides } : null);
@@ -745,7 +763,8 @@ export function Canvas() {
       }
       case 'resize': {
         if (!ab) break;
-        const pp = apply(invert(d.parentM), w.x - ab.canvasX, w.y - ab.canvasY);
+        const gw = gridWorld(ab, w, e);
+        const pp = apply(invert(d.parentM), gw.x - ab.canvasX, gw.y - ab.canvasY);
         const lp = apply(invert(nodeMatrix(d.node0)), pp.x, pp.y);
         // Shift keeps the ratio, and a layer whose W and H are linked keeps it unless Shift is held
         const keep = d.node0.lockRatio ? !e.shiftKey : e.shiftKey;
@@ -775,7 +794,7 @@ export function Canvas() {
       case 'resizeMulti': {
         if (!ab) break;
         const b0 = d.bounds0;
-        const p = local(ab, w);
+        const p = local(ab, gridWorld(ab, w, e));
         // all of them linked: the selection keeps its ratio unless Shift is held
         const linked = d.items.length > 0 && d.items.every((it) => it.node0.lockRatio);
         const nb = resizeBox(b0.width, b0.height, d.handle, p.x - b0.x, p.y - b0.y, linked ? !e.shiftKey : e.shiftKey, e.altKey);
@@ -833,7 +852,8 @@ export function Canvas() {
       }
       case 'resizeAb': {
         const a0 = d.ab0;
-        const nb = resizeBox(a0.width, a0.height, d.handle, w.x - a0.canvasX, w.y - a0.canvasY, e.shiftKey, e.altKey);
+        const gw = gridPoint(w, e);
+        const nb = resizeBox(a0.width, a0.height, d.handle, gw.x - a0.canvasX, gw.y - a0.canvasY, e.shiftKey, e.altKey);
         store().update(
           (dr) => {
             const a = dr.artboards.find((x) => x.id === d.id);
@@ -856,7 +876,7 @@ export function Canvas() {
       }
       case 'create': {
         const cab = d.abId ? getArtboard(st.project, d.abId) : null;
-        const p = cab ? local(cab, w) : w;
+        const p = cab ? local(cab, gridWorld(cab, w, e)) : gridPoint(w, e);
         let x2 = p.x;
         let y2 = p.y;
         if (e.shiftKey && d.tool !== 'line') {
@@ -891,7 +911,7 @@ export function Canvas() {
         if (!pn) break;
         const pab = getArtboard(st.project, pn.abId);
         if (!pab) break;
-        const p = local(pab, w);
+        const p = local(pab, gridWorld(pab, w, e));
         const pts = pn.points.slice();
         const pt = pts[d.index];
         if (!pt) break;
@@ -1331,6 +1351,43 @@ export function Canvas() {
     y: ((ab?.canvasY ?? 0) + p.y) * zoom,
   });
   const toS = (ab: Artboard, p: Pt) => oscreen(ab, p);
+
+  // The grid, under everything else in the overlay. Each artboard has its own cell size (the person's, or its override);
+  // far out the cells fade, then the stronger lines do. Editor only: Preview and every export are built without it
+  if (showGrid && !s.previewPlaying) {
+    for (const ab of onCanvas) {
+      const g = gridFor(ab, userPrefs);
+      const look = gridLook(g, zoom);
+      if (look.minor <= 0 && look.major <= 0) continue;
+      const tl = oscreen(ab, { x: 0, y: 0 });
+      const cell = g.size * zoom;
+      const major = cell * g.subdivisions;
+      const lines = (size: number) => `M ${size} 0 H 0 V ${size}`;
+      overlay.push(
+        <g key={`grid-${ab.id}`} className="canvas-grid" pointerEvents="none">
+          <defs>
+            <pattern id={`gm-${ab.id}`} patternUnits="userSpaceOnUse" x={tl.x} y={tl.y} width={cell} height={cell}>
+              <path d={lines(cell)} className="grid-minor" opacity={g.subdivisions > 1 ? look.minor : 0} />
+            </pattern>
+            <pattern id={`gM-${ab.id}`} patternUnits="userSpaceOnUse" x={tl.x} y={tl.y} width={major} height={major}>
+              <path d={lines(major)} className="grid-major" opacity={look.major} />
+            </pattern>
+            <pattern id={`g1-${ab.id}`} patternUnits="userSpaceOnUse" x={tl.x} y={tl.y} width={cell} height={cell}>
+              <path d={lines(cell)} className="grid-major" opacity={look.minor} />
+            </pattern>
+          </defs>
+          {g.subdivisions > 1 ? (
+            <>
+              {look.minor > 0 && <rect x={tl.x} y={tl.y} width={ab.width * zoom} height={ab.height * zoom} fill={`url(#gm-${ab.id})`} />}
+              <rect x={tl.x} y={tl.y} width={ab.width * zoom} height={ab.height * zoom} fill={`url(#gM-${ab.id})`} />
+            </>
+          ) : (
+            <rect x={tl.x} y={tl.y} width={ab.width * zoom} height={ab.height * zoom} fill={`url(#g1-${ab.id})`} />
+          )}
+        </g>,
+      );
+    }
+  }
 
   // Where learners clicked (Insights > Click heat): one square per grid cell, hotter the more clicks
   if (s.heat) {
@@ -1859,6 +1916,7 @@ export function Canvas() {
           ? [
               { label: 'Make start artboard', disabled: st.project.settings.startArtboardId === hab.id, onClick: () => s2.update((d) => void (d.settings.startArtboardId = hab.id)) } as MenuItem,
               { label: 'Zoom to artboard', onClick: () => zoomToBox({ x: hab.canvasX, y: hab.canvasY, width: hab.width, height: hab.height }) } as MenuItem,
+              artboardGridMenu(hab),
               { separator: true } as MenuItem,
             ]
           : []),
@@ -1872,6 +1930,7 @@ export function Canvas() {
         { label: 'Tidy up artboards', disabled: st.project.artboards.filter((a) => !a.canvasHidden).length < 2, onClick: tidyArtboardsCommand },
         { label: 'Zoom to fit everything', hint: 'Shift+1', onClick: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })) },
         { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: 'Shift+R', onClick: () => setPrefs({ rulers: !prefs().rulers }) },
+        ...gridMenu(),
         { label: 'Help', hint: 'F1', onClick: () => openHelp('canvas') },
       ];
     }
@@ -1947,7 +2006,7 @@ export function Canvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const showRulers = usePrefs().rulers;
+  const showRulers = userPrefs.rulers;
   // Space pans, a drag shows what it is doing, then what a press under the pointer would do, then the tool's own
   const cursor = dragCursorNow ?? (spaceHeld ? 'grab' : s.tool === 'select' || s.tool === 'bend' ? hoverCursor ?? toolCursor(s.tool) : toolCursor(s.tool));
 
@@ -2050,6 +2109,19 @@ export function Canvas() {
             </div>
           );
         })()}
+      {userPrefs.snapGrid && active && (
+        <button
+          type="button"
+          className="canvas-status"
+          title="Snap to grid is on. Click to change the grid size (Ctrl while dragging skips it, Ctrl+' turns it off)"
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            setMenu({ x: r.left, y: r.top - 8, items: gridMenu() });
+          }}
+        >
+          <Icons.grid width={13} /> Snap {gridLabel(gridFor(active, userPrefs))}
+        </button>
+      )}
       <CommentLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} />
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
@@ -2266,8 +2338,8 @@ function isTyping(e: KeyboardEvent): boolean {
   return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || !!t.closest?.('.cm-editor'));
 }
 
-/** Snap a moved selection's edges/centre to the artboard and to other top-level layers. */
-function snapMove(ab: Artboard, b: Rect, dx: number, dy: number, moving: string[], zoom: number): { dx: number; dy: number; guides: { x: number[]; y: number[] } } {
+/** Snap a moved selection's edges/centre to the artboard and to other top-level layers, or (when on) its edges to the grid, whichever is closer. */
+function snapMove(ab: Artboard, b: Rect, dx: number, dy: number, moving: string[], zoom: number, grid: GridSpec | null): { dx: number; dy: number; guides: { x: number[]; y: number[] } } {
   const th = SNAP_PX / zoom;
   const xs = [0, ab.width / 2, ab.width, ...(ab.guides?.x ?? [])];
   const ys = [0, ab.height / 2, ab.height, ...(ab.guides?.y ?? [])];
@@ -2279,26 +2351,19 @@ function snapMove(ab: Artboard, b: Rect, dx: number, dy: number, moving: string[
     xs.push(nb.x, nb.x + nb.width / 2, nb.x + nb.width);
     ys.push(nb.y, nb.y + nb.height / 2, nb.y + nb.height);
   }
-  const best = (cands: number[], targets: number[]) => {
-    let bestD = Infinity;
-    let at = 0;
-    for (const c of cands)
-      for (const t of targets) {
-        const d = t - c;
-        if (Math.abs(d) < Math.abs(bestD)) {
-          bestD = d;
-          at = t;
-        }
-      }
-    return Math.abs(bestD) <= th ? { d: bestD, at } : null;
-  };
   const cx = [b.x + dx, b.x + dx + b.width / 2, b.x + dx + b.width];
   const cy = [b.y + dy, b.y + dy + b.height / 2, b.y + dy + b.height];
-  const sx = best(cx, xs);
-  const sy = best(cy, ys);
-  return { dx: sx?.d ?? 0, dy: sy?.d ?? 0, guides: { x: sx ? [sx.at] : [], y: sy ? [sy.at] : [] } };
+  //the grid only looks at the outer edges, the centre has no business being on a line
+  const sx = snapAxis(cx, xs, th, grid?.size ?? null, [cx[0], cx[2]]);
+  const sy = snapAxis(cy, ys, th, grid?.size ?? null, [cy[0], cy[2]]);
+  return { dx: sx.d, dy: sy.d, guides: { x: sx.at === null ? [] : [sx.at], y: sy.at === null ? [] : [sy.at] } };
 }
 
+/** The grid this pointer event snaps to on an artboard: null when grid snapping is off or Ctrl/Cmd is held. */
+function gridSnapFor(ab: { grid?: Partial<GridSpec> } | null | undefined, e: { ctrlKey: boolean; metaKey: boolean }): GridSpec | null {
+  const p = prefs();
+  return p.snapGrid && !e.ctrlKey && !e.metaKey ? gridFor(ab, p) : null;
+}
 
 /** What a shape will look like while it is being drawn, in screen pixels (the defaults the new layer gets). */
 function shapePreview(tool: Tool, x: number, y: number, w: number, h: number, zoom: number) {

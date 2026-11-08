@@ -45,7 +45,9 @@ export interface FloatWin extends DockGroup {
   h: number;
 }
 
-export type ToolsPlace = 'left' | 'right' | 'float';
+/** Where the tool rail is: any of the docked areas (at the bottom it is a horizontal strip) or floating. */
+export type ToolsPlace = Zone | 'float';
+export const TOOLS_PLACES: ToolsPlace[] = ['left', 'right', 'bottom', 'float'];
 
 export interface DockLayout {
   v: 1;
@@ -115,8 +117,24 @@ export function normalise(raw: unknown): DockLayout {
   }
   for (const p of ALL_PANELS) if (!seen.has(p)) zones[HOME[p]].tabs.push(p);
   for (const z of ZONES) if (!zones[z].active) zones[z].active = zones[z].tabs[0] ?? null;
-  const place = r.tools?.place === 'right' || r.tools?.place === 'float' ? r.tools.place : 'left';
+  // layouts saved before the rail could go to the bottom only ever said left, right or float, and still read the same
+  const place = (TOOLS_PLACES as unknown[]).includes(r.tools?.place) ? (r.tools!.place as ToolsPlace) : 'left';
   return { v: 1, zones, bottomFolded: !!r.bottomFolded, floats, tools: { place, x: num(r.tools?.x, 80), y: num(r.tools?.y, 120) } };
+}
+
+/** What is under a dragged tool rail: an edge to dock it on, the tab strip of a panel group (it can't be a tab), or the open canvas. */
+export type ToolsDrop = { place: Zone } | { tabs: true } | { float: true };
+
+/** Where a dragged rail would go. Edges dock it, tab strips refuse it (it is a rail, not a tab), anywhere else it floats. */
+export function toolsDropFor(hit: { edge?: Zone | null; strip?: boolean }): ToolsDrop {
+  if (hit.edge) return { place: hit.edge };
+  if (hit.strip) return { tabs: true };
+  return { float: true };
+}
+
+/** The rail moved to a docked area or put floating (at a position, when given). */
+export function placeTools(l: DockLayout, place: ToolsPlace, at?: { x: number; y: number }): DockLayout {
+  return { ...l, tools: { place, x: at ? Math.round(at.x) : l.tools.x, y: at ? Math.round(at.y) : l.tools.y } };
 }
 
 /** Where a panel is now. */

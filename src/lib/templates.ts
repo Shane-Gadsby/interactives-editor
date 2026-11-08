@@ -300,7 +300,7 @@ export function applyTemplateUpdate(d: Project, snapshot: Project, keys: string[
       taken.push(ab);
     } else {
       const next = copy(artboardProps(ab as unknown as Record<string, unknown>)) as Record<string, unknown>;
-      for (const k of Object.keys(mine)) if (!['children', 'timelines', 'logic', 'canvasX', 'canvasY', 'canvasHidden', 'guides', 'source'].includes(k) && !(k in next)) delete (mine as unknown as Record<string, unknown>)[k];
+      for (const k of Object.keys(mine)) if (!['children', 'timelines', 'logic', 'canvasX', 'canvasY', 'canvasHidden', 'guides', 'grid', 'source'].includes(k) && !(k in next)) delete (mine as unknown as Record<string, unknown>)[k];
       Object.assign(mine, next);
       taken.push(next);
     }
