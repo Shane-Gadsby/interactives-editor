@@ -11458,6 +11458,7 @@ Every starter has a **Play** button, like the examples. It builds the starter ri
 1. **Templates** > pick a card > **Use template**. The window lists the checklist first, so you see what it expects of you.
 2. Give the project a name and pick a folder, then **Create project**. It opens with the **Checklist** tab already open along the bottom.
 3. Work down the list. **Click an item** and the editor selects the layer it is about and puts it in the middle of the canvas; change it, then **tick the item off**.
+   Each item is one short action. A **Why and how** fold under it holds the detail (which panel, which variable, what to watch for): open it when you need it. Items in templates made before the fold have no detail.
 4. A badge saying **Still the template's** means the layer an item points at has not been changed at all yet, even if you ticked it. **Layer deleted** means it was removed.
 5. **Review** (top of the Checklist tab) before you share: it lists what is not ticked and what is ticked but untouched, each one a link to the layer. **Mark as reviewed** when you are happy. **Remove** takes the checklist away and leaves the project as it is.
 
