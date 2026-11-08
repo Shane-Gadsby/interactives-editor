@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createArtboard, createNode, createProject, type Artboard, type Project } from 'interactives-player';
 import { BRANDED_STARTERS, COLOURWAYS, projectFromBrandedStarter } from '../src/lib/branded';
 import { STARTERS, projectFromStarter } from '../src/lib/template-starters';
-import { TIDY_GAP_VARIANT, TIDY_GAP_X, TIDY_GAP_Y, TIDY_GROUP_PAD, TIDY_GROUP_TOP, applyTidy, tidyCells, tidyColumns } from '../src/lib/artboard-tidy';
+import { TIDY_GAP_VARIANT, TIDY_GAP_X, TIDY_GAP_Y, TIDY_GROUP_PAD, TIDY_GROUP_TOP, applyTidy, boardFootprint, tidyCells, tidyColumns } from '../src/lib/artboard-tidy';
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { brandHeldIds, isBrandHeld, lockBrandChrome } from '../src/lib/branded/lock';
 import { brandedPage, brandedProject, isChrome } from '../src/lib/branded/kit';
@@ -75,10 +75,16 @@ describe('starters come out laid out', () => {
     const ys = [...new Set(p.artboards.map((a) => a.canvasY))].sort((a, b) => a - b);
     expect(xs.length).toBeGreaterThan(1);
     expect(ys.length).toBeGreaterThan(1);
-    const w = p.artboards[0].width;
-    const h = p.artboards[0].height;
-    xs.slice(1).forEach((x, i) => expect(x - xs[i]).toBe(w + TIDY_GAP_X));
-    ys.slice(1).forEach((y, i) => expect(y - ys[i]).toBe(h + TIDY_GAP_Y));
+    //each column and row is as wide or tall as the widest or tallest artboard in it with its notes, then the gap
+    const boxes = p.artboards.map((a) => {
+      const f = boardFootprint(a);
+      return { x0: a.canvasX + f.left, y0: a.canvasY + f.top, x1: a.canvasX + f.left + f.width, y1: a.canvasY + f.top + f.height };
+    });
+    for (const [i, a] of boxes.entries())
+      for (const b of boxes.slice(i + 1)) {
+        const apart = a.x1 + TIDY_GAP_X <= b.x0 || b.x1 + TIDY_GAP_X <= a.x0 || a.y1 + TIDY_GAP_Y <= b.y0 || b.y1 + TIDY_GAP_Y <= a.y0;
+        expect(apart).toBe(true);
+      }
     //reading order is the artboard list order
     expect(pages.map((a) => a.name)).toEqual(['Spelling test', 'Word 1', 'Word 2', 'Word 3', 'Word 4', 'Word 5', 'Word 6', 'Your result']);
     expect(p.artboards[0].canvasX).toBe(0);
@@ -266,5 +272,40 @@ describe('brand layers are truly locked', () => {
     s.set({ brandOverride: true });
     s.setProps([id], { locked: false });
     expect(logoNow().locked).toBe(false);
+  });
+});
+
+describe('notes beside artboards', () => {
+  it('a tidied starter never has a note over another artboard or another artboard\'s notes', () => {
+    for (const s of BRANDED_STARTERS) {
+      const p = projectFromBrandedStarter(s);
+      const on = p.artboards.filter((a) => !a.canvasHidden);
+      const boxes = on.map((a) => {
+        const f = boardFootprint(a);
+        return { name: a.name, x0: a.canvasX + f.left, y0: a.canvasY + f.top, x1: a.canvasX + f.left + f.width, y1: a.canvasY + f.top + f.height };
+      });
+      for (const [i, a] of boxes.entries())
+        for (const b of boxes.slice(i + 1)) {
+          const apart = a.x1 <= b.x0 || b.x1 <= a.x0 || a.y1 <= b.y0 || b.y1 <= a.y0;
+          if (!apart) throw new Error(`${s.key}: "${a.name}" and its notes run into "${b.name}"`);
+        }
+    }
+  });
+});
+
+describe('notes on one artboard', () => {
+  it('never overlap each other, or the artboard itself, in any starter', () => {
+    const bad: string[] = [];
+    for (const s of BRANDED_STARTERS) {
+      const p = projectFromBrandedStarter(s);
+      for (const a of p.artboards) {
+        const ns = a.notes ?? [];
+        for (const [i, n] of ns.entries()) {
+          if (!n.anchor && n.x < a.width && n.x + n.w > 0 && n.y < a.height && n.y + n.h > 0) bad.push(`${s.key} / ${a.name}: a note sits on the artboard`);
+          for (const m of ns.slice(i + 1)) if (n.x < m.x + m.w && m.x < n.x + n.w && n.y < m.y + m.h && m.y < n.y + n.h) bad.push(`${s.key} / ${a.name}: two notes overlap`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
   });
 });

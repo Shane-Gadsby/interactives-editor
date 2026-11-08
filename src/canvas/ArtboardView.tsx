@@ -1,3 +1,4 @@
+import { isChromeNode } from '../lib/branded/lock';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { recordDrawnGeometry } from '../store/doc';
 import { flushSync } from 'react-dom';
@@ -251,7 +252,8 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       lastDraw.current = { renderer: r, resolver, artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };
     }
     // Layers past the edge of an artboard that clips: a faint copy of just those, outside the artboard only
-    const ghost = ghostOutside && artboard.clip ? ghostLayers(shown.filter((n) => !isMasterId(n.id)), artboard.width, artboard.height) : null;
+    // locked brand chrome (a master's sweeps) can't be picked anyway, so its faint overhang is only clutter
+    const ghost = ghostOutside && artboard.clip ? ghostLayers(shown.filter((n) => !isMasterId(n.id) && !(n.locked && isChromeNode(n))), artboard.width, artboard.height) : null;
     setGhostExtent(artboard.id, ghost?.extent ?? null);
     if (ghost && ghostEl.current) {
       if (!ghostR.current) {

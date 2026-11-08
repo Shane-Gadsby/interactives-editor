@@ -67,9 +67,27 @@ export function tidyCells(p: Project): TidyCell[] {
   return cells;
 }
 
+/**
+ * The room an artboard takes on the canvas: itself, plus the author notes that sit beside it (in its own coordinates, so a note
+ * below it has y > height and one to its left a negative x). Without them a tidy would lay the next row over the notes.
+ */
+export function boardFootprint(b: Artboard): { left: number; top: number; width: number; height: number } {
+  let left = 0;
+  let top = 0;
+  let right = b.width;
+  let bottom = b.height;
+  for (const n of b.notes ?? []) {
+    left = Math.min(left, n.x);
+    top = Math.min(top, n.y);
+    right = Math.max(right, n.x + n.w);
+    bottom = Math.max(bottom, n.y + n.h);
+  }
+  return { left, top, width: right - left, height: bottom - top };
+}
+
 const cellSize = (c: TidyCell) => ({
-  width: c.boards.reduce((w, b) => w + b.width, 0) + TIDY_GAP_VARIANT * (c.boards.length - 1),
-  height: Math.max(...c.boards.map((b) => b.height)),
+  width: c.boards.reduce((w, b) => w + boardFootprint(b).width, 0) + TIDY_GAP_VARIANT * (c.boards.length - 1),
+  height: Math.max(...c.boards.map((b) => boardFootprint(b).height)),
 });
 
 /**
@@ -117,8 +135,9 @@ function gridOf(cells: TidyCell[]) {
       let x = ox + colW.slice(0, c).reduce((a, b) => a + b, 0) + TIDY_GAP_X * c;
       const y = oy + rowH.slice(0, r).reduce((a, b) => a + b, 0) + TIDY_GAP_Y * r;
       for (const b of cell.boards) {
-        out.set(b.id, { x: Math.round(x), y: Math.round(y) });
-        x += b.width + TIDY_GAP_VARIANT;
+        const f = boardFootprint(b);
+        out.set(b.id, { x: Math.round(x - f.left), y: Math.round(y - f.top) });
+        x += f.width + TIDY_GAP_VARIANT;
       }
     });
   };

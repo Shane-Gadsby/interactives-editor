@@ -1,4 +1,4 @@
-import { artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type SceneNode } from 'interactives-player';
+import { artboardScope, courseValuesFor, dataPolicyFor, emptySlots, enumOptions, fetchDataSource, initialValue, layerScope, NO_SENSORS, pageInfo, planLive, quizState, runLive, sampleContextFor, sensorsUsed, slotNamesOf, startingValue, stepList, stepsScope, stepsTimeline, walk, type Artboard, type DataPolicy, type DataSource, type Project, type QuizSource, type SceneNode } from 'interactives-player';
 import { assetUrls } from './assets';
 
 /**
@@ -101,6 +101,13 @@ export function previewScope(project: Project, artboard?: Artboard): Record<stri
   const start: Record<string, unknown> = {};
   for (const v of project.variables) {
     start[v.name] = vars[v.name] = perCourse.has(v.id) ? initialValue({ ...v, initial: perCourse.get(v.id)! }) : startingValue(v, start);
+  }
+  // `quiz` (score, max, the list of questions) as the player has it at the start, so a results page doesn't show its raw formula on the canvas.
+  // A variable or data source of that name wins, like in the player
+  if (!('quiz' in vars)) {
+    const sources: QuizSource[] = [];
+    for (const ab of project.artboards) walk(ab.children as SceneNode[], (n) => void (n.type === 'frame' && n.question && sources.push({ question: n.question, page: ab.name })));
+    vars.quiz = quizState(sources, (prefix, suffix) => vars[`${prefix}_${suffix}`], project.settings.reporting?.passMark);
   }
   // Live variables read all of them (the ones below too), so they are worked out once everything else has its value
   const live = planLive(project);

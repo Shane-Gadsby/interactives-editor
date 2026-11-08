@@ -128,10 +128,10 @@ describe('editing notes', () => {
     expect(attachNote(c, 'r1')).toBe(false);
   });
 
-  it('scales with the zoom but stays readable', () => {
+  it('scales with the zoom exactly, like a layer (so it never runs over its neighbours)', () => {
     expect(noteScale(1)).toBe(1);
-    expect(noteScale(0.05)).toBe(0.6);
-    expect(noteScale(8)).toBe(1.6);
+    expect(noteScale(0.05)).toBe(0.05);
+    expect(noteScale(8)).toBe(8);
   });
 });
 

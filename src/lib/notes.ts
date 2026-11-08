@@ -46,8 +46,12 @@ export function notePlace(p: Project, owner: NoteOwner, note: Note): NotePlace {
   return { x: note.x, y: note.y, detached: !!note.anchor };
 }
 
-/** How big a note is drawn at a zoom: it follows the zoom, but stays readable when zoomed far out and doesn't swamp the canvas zoomed in. */
-export const noteScale = (zoom: number): number => Math.min(1.6, Math.max(0.6, zoom));
+/**
+ * How big a note is drawn at a zoom: exactly with the canvas, like a layer. It used to stay at least 0.6 so it was readable
+ * zoomed out, but then a note was drawn bigger than the room it has, and ran over its neighbours and the next row of artboards.
+ * Zoom in to read one.
+ */
+export const noteScale = (zoom: number): number => zoom;
 
 let me = '';
 let asked = false;
