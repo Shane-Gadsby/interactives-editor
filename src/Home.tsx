@@ -11,7 +11,8 @@ import { pickFiles } from './lib/insert';
 import { confirmDialog, promptDialog } from './components/dialogs';
 import { Icons } from './components/icons';
 import { PrefsModal } from './components/PrefsModal';
-import { DEFAULT_FONT, prefs } from './lib/prefs';
+import { DEFAULT_FONT, prefs, usePrefs } from './lib/prefs';
+import { FirstRun } from './components/FirstRun';
 import { ensureGoogleFont, loadCatalog } from './lib/font-catalog';
 import { sessionUser, type SessionUser } from './lib/session';
 import { noteIfStale } from './lib/stale-build';
@@ -184,6 +185,8 @@ export function Home({ open }: { open: (id: string) => void }) {
   const [left] = useState(peekLeft);
   useEffect(() => clearLeft(), []);
   const [tab, setTab] = useState<'projects' | 'templates'>(() => readTab(left));
+  //A new person's empty page asks what they want to make, until they have chosen or looked around
+  const welcomeLeft = !!usePrefs().onboarding?.left;
   const pickTab = (t: 'projects' | 'templates') => {
     setTab(t);
     keep(TAB_KEY, t);
@@ -618,7 +621,15 @@ export function Home({ open }: { open: (id: string) => void }) {
       ) : (
       <main className={`project-grid${view === 'list' ? ' as-list' : ''}`} style={{ '--card-size': `${size}px` } as React.CSSProperties}>
         {list === null && !error && <p className="muted">Loading…</p>}
-        {list?.length === 0 && (
+        {list?.length === 0 && !welcomeLeft && !error && (
+          <FirstRun
+            folder={folderSel.kind === 'folder' ? folderSel.name : null}
+            onBlank={async () => open(await createBlank('Untitled project', folderSel.kind === 'folder' ? folderSel.name : null))}
+            onMade={open}
+            onBrowse={() => pickTab('templates')}
+          />
+        )}
+        {list?.length === 0 && (welcomeLeft || !!error) && (
           <div className="empty-state">
             <h2>No projects yet</h2>
             <p>Interactives builds interactive 2D experiences for the web: vector artboards, web controls, timelines, node-based interactions and your own JavaScript, exported as a single HTML file or a {PACKAGE_EXTENSION} package.</p>

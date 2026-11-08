@@ -474,7 +474,7 @@ fontsProxy.prewarm()
 
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
-const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean'},
+const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', showGrid: 'boolean', snapGrid: 'boolean', snapOn: 'boolean', snapArtboard: 'boolean', snapLayers: 'boolean', snapLayersAll: 'boolean', snapGuides: 'boolean', snapSpacing: 'boolean', snapPixels: 'boolean', snapPoints: 'boolean', snapDistance: {min: 2, max: 24}, gridSize: {min: 1, max: 512}, gridSubdivisions: {min: 1, max: 32}, accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean', gettingStarted: 'boolean'},
 	cleanPrefs = (p) => {
 		let out = {}
 		for (let [k, rule] of Object.entries(PREF_KEYS)) {
@@ -492,6 +492,15 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], to
 				Object.entries(p.sectionFolds)
 					.filter(([k, v]) => k.length > 0 && k.length <= 60 && k !== '__proto__' && typeof v === 'boolean')
 					.slice(0, 300)
+			)
+		}
+		//What the first-run screen and the Getting started strip remember (which jobs are ticked, whether it was put away).
+		//Short keys to booleans, at most 40, same rule as the folds
+		if (p?.onboarding && typeof p.onboarding === 'object' && !Array.isArray(p.onboarding)) {
+			out.onboarding = Object.fromEntries(
+				Object.entries(p.onboarding)
+					.filter(([k, v]) => k.length > 0 && k.length <= 40 && k !== '__proto__' && typeof v === 'boolean')
+					.slice(0, 40)
 			)
 		}
 		//Saved workspaces (panel layouts under a name). The editor checks the layout inside each one itself, so here

@@ -114,6 +114,21 @@ describe('preferences', () => {
     expect((await h.call('GET', '/api/prefs', { user: ann })).json.prefs.sectionFolds).toEqual(kept);
   });
 
+  it('keeps what first-run remembers as short keys to booleans, at most 40, and the strip switch', async () => {
+    const o = { 'job-shape': true, dismissed: false, welcomed: true };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { onboarding: o, gettingStarted: false } } })).json.prefs).toEqual({ onboarding: o, gettingStarted: false });
+    const mixed = { ok: true, text: 'no', n: 1, '': true, ['k'.repeat(41)]: true };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { onboarding: mixed } } })).json.prefs).toEqual({ onboarding: { ok: true } });
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { onboarding: [true], gettingStarted: 'yes' } } })).json.prefs).toEqual({});
+    const many = Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`j${i}`, true]));
+    expect(Object.keys((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { onboarding: many } } })).json.prefs.onboarding)).toHaveLength(40);
+  });
+
+  it('keeps a saved workspace that hides panels', async () => {
+    const w = { id: 'w1', name: 'Mine', layout: { v: 1, zones: {}, hidden: ['scripts'], hiddenTools: ['draw'] } };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { workspaces: [w] } } })).json.prefs.workspaces).toEqual([w]);
+  });
+
   it('drops a default font that is too long and a body that has no prefs', async () => {
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(120) } } })).json.prefs).toEqual({});
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: {} })).json.prefs).toEqual({});

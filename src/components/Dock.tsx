@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { onPanelRequest, store, useEditor, type BottomTab } from '../store/store';
-import { dockFloat, FOLDED_HEIGHT, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, TOP_HEIGHT, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
+import { dockFloat, FOLDED_HEIGHT, showAll, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, TOP_HEIGHT, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
 import { Icons, type IconName } from './icons';
 import { openHelp, setContextHelp } from '../help/Help';
 import { getTopic } from '../help/topics';
@@ -22,6 +23,7 @@ import { ThemesPanel } from '../panels/ThemesPanel';
 import { AccessibilityPanel } from '../panels/AccessibilityPanel';
 import { ChecklistPanel } from '../panels/ChecklistPanel';
 import { jumpToThread } from '../lib/comment-jump';
+import { panelOn, panelsInUse } from '../lib/essentials';
 import { useComments } from '../lib/comments';
 import { countsOf } from '../../shared/comments.mjs';
 import { checklistProgress } from '../lib/templates';
@@ -73,10 +75,21 @@ export const panelHelpTopic = (p: PanelId): string => PANELS[p].help;
 
 export const panelLabel = (p: PanelId): string => PANELS[p].label;
 
-/** Panels that exist for this project (the checklist only for one made from a template). */
+/** The panels the project uses something from, as one string so a panel group only re-renders when that changes. Only worked out while something is put away. */
+function useInUse(): Set<PanelId> {
+  const l = useDock();
+  const has = !!l.hidden?.length;
+  const reviewed = useComments().threads.length > 0;
+  const key = useEditor((st) => (has ? [...panelsInUse(st.project, reviewed)].sort().join(',') : ''));
+  return useMemo(() => new Set(key ? (key.split(',') as PanelId[]) : []), [key]);
+}
+
+/** Panels that exist for this project (the checklist only for one made from a template) and are not put away (Essentials) unless the project uses them. */
 function useAvailable(): (p: PanelId) => boolean {
   const template = useEditor((st) => !!st.project.template);
-  return (p) => p !== 'checklist' || template;
+  const l = useDock();
+  const inUse = useInUse();
+  return (p) => (p !== 'checklist' || template) && panelOn(l, p, inUse);
 }
 
 /** A group's tabs that are there, and the one to show (the active one, or the first that's there). */
@@ -510,6 +523,43 @@ function PanelBody({ p }: { p: PanelId }) {
   );
 }
 
+/**
+ * Under Essentials, the way back to the panels that are put away: one at a time, or all of them (and the tool groups too). Nothing
+ * when nothing is put away.
+ */
+function MorePanels() {
+  const l = useDock();
+  const inUse = useInUse();
+  const [at, setAt] = useState<{ x: number; y: number } | null>(null);
+  const away = (l.hidden ?? []).filter((p) => !inUse.has(p));
+  if (!away.length && !l.hiddenTools?.length) return null;
+  const items: MenuItem[] = [
+    { heading: 'Put away for now' },
+    ...away.map((p): MenuItem => ({ label: PANELS[p].label, title: PANELS[p].tip, onClick: () => activatePanel(p) })),
+    { separator: true },
+    { label: 'Show all panels and tools', title: 'Leave Essentials: every panel and tool group comes back', onClick: () => setDock(showAll) },
+  ];
+  return (
+    <>
+      <button
+        type="button"
+        className="more-panels"
+        aria-haspopup="menu"
+        aria-expanded={!!at}
+        title="Panels and tools that are put away while you start out. Pick one to bring it back, or show them all"
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setAt(at ? null : { x: Math.max(8, r.right - 220), y: Math.max(8, r.top - 30 - items.length * 30) });
+        }}
+      >
+        More panels
+      </button>
+      {/* out in the body: inside the tab strip its buttons would take the tabs' look */}
+      {at && createPortal(<ContextMenu x={at.x} y={at.y} items={items} onClose={() => setAt(null)} />, document.body)}
+    </>
+  );
+}
+
 // ---------------------------------------------------------------- docked areas
 
 /** One of the docked areas around the canvas. Renders nothing when every panel has left it (its grid track is 0). */
@@ -573,10 +623,14 @@ export function DockZone({ zone }: { zone: Zone }) {
         at={{ zone }}
         folded={folded}
         extra={
+          zone === 'bottom' ? (
+            <MorePanels />
+          ) : (
           top && (
             <button type="button" className="icon-btn" title={folded ? 'Unfold the top panels' : 'Fold the top panels down to their tabs'} aria-label={folded ? 'Unfold the top panels' : 'Fold the top panels'} aria-expanded={!folded} onClick={() => setDock((d) => ({ ...d, topFolded: !d.topFolded }))}>
               <Icons.chevronDown width={13} style={{ transform: folded ? 'rotate(-90deg)' : undefined }} />
             </button>
+          )
           )
         }
       />
