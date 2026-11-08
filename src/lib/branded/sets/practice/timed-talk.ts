@@ -4,6 +4,8 @@
 //a remembered variable, so they survive a reload. The timers can be switched off (a variable, and a button for the learner) or lengthened (two
 //variables): an accessibility adjustment, since a strict clock raises anxiety for some learners. By default no microphone: they talk to a friend, a voice memo or the room.
 //The tally is the learner's own reflection and is never presented as measurement; nothing detects fillers or pace.
+//The countdowns are the native Countdown / clock node (its Time up output moves on) with a Progress bar, the card pool is a live variable, and the points are a
+//tick list with one Toggle in list step.
 //
 //OPTIONAL RECORDING (the media bridge): the starter does not declare the microphone, so as shipped it records nothing and the two record layers never show.
 //An author ticks Microphone in Project > Microphone and camera and they appear: "Recording step" on the talk stage (Record, then Stop recording) and
@@ -12,10 +14,12 @@
 //first start asks the learner for the microphone on a consent screen, and a course page that does not allow the microphone would otherwise show a step
 //that cannot work. The take ("talk") is ended when the talk stage is left, kept for the tally and the model answer, and dropped on the next card.
 import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, byName, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, go, heroPage, set, spreadPages } from '../games/common';
-import { MIC_READY, dropTakeWhen, rec, recordStatus, stopTakeWhen, wirePlay, wireRecord } from './recording';
+import { join } from '../../graph-kit';
+import { progressBar } from '../../parts';
+import { Graph, addVar, announce, bind, clearVar, goNext, goPrevious, heroPage, resetVars, set, setVar, tickList, toggleItem, toggleVar } from '../media/shared';
+import { MIC_READY, dropTakeWhen, playLabel, playToggle, rec, recordLabel, recordStatus, recordToggle, stopTakeWhen } from './recording';
 
 //The bank. type is the label on the card, q the question, model a short model answer and points what a good answer makes (up to four)
 const CARDS = [
@@ -73,7 +77,8 @@ function build(colourway: Colourway) {
   addVar(project, 'cards', 'list', CARDS);
   const current = addVar(project, 'current', 'number', -1);
   const seen = addVar(project, 'seen', 'list', []);
-  const pool = addVar(project, 'pool', 'list', []);
+  //Live: the cards still to draw, never the one just drawn. The draw picks from it, so there is no step that works it out
+  addVar(project, 'pool', 'list', [], { formula: 'cards.map((c, i) => i).filter(i => !seen.includes(i) && (cards.length < 2 || i != current))', live: true });
   const fillers = addVar(project, 'fillers', 'number', 0);
   const pauses = addVar(project, 'pauses', 'number', 0);
   const opening = addVar(project, 'clearOpening', 'boolean', false);
@@ -89,7 +94,7 @@ function build(colourway: Colourway) {
   const checklist: TemplateChecklistItem[] = [];
 
   const hg = new Graph(hero.page);
-  hg.run(hg.click(hero.start, 'Begin'), go(rehearse));
+  hg.run(hg.click(hero.start, 'Begin'), goNext());
   checklist.push(item('Write the title and the line under it on the first page. Keep it clear that this is practice and not assessed', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page));
 
   const box = contentBox(rehearse);
@@ -119,19 +124,18 @@ function build(colourway: Colourway) {
   const toSummary = bind(button(ctx, 'See my summary', 'See my summary', 0, 408, 240, false), { visible: 'attempts.length > 0' });
   const drawStage = stageFrame('Draw stage', 'stage == "draw"', [drawHead, drawHelp, draw, timerSwitch, timerHelp, toSummary]);
 
-  //Stages: prepare and talk share a shape: a clock, a bar, a line of help and one button
+  //Stages: prepare and talk share a shape: a clock, a bar, a line of help and one button. The clock itself is a Countdown node in the graph, which writes `left`
   const countdown = (name: string, when: string, title: string, total: string, help: string, label: string, extra: SceneNode[] = []) => {
     const h = heading(ctx, `${name} heading`, title, 0, 0, rw, { fontSize: 24 });
     const clock = text(ctx, `${name} clock`, `{timersOn ? ${CLOCK('left')} : "No timer"}`, 0, 44, rw, { fontSize: 72, fontWeight: 700 });
-    const track = bind(createNode('rect', { name: `${name} track`, x: 0, y: 150, width: rw, height: 10, cornerRadius: 5, fill: solid(L.surfaceMuted), stroke: null, decorative: true }), { visible: 'timersOn' });
-    const bar = bind(createNode('rect', { name: `${name} bar`, x: 0, y: 150, width: rw, height: 10, cornerRadius: 5, fill: solid(L.button), stroke: null, decorative: true }), { visible: 'timersOn', width: `Math.max(1, ${rw} * Math.max(0, left) / Math.max(1, ${total}))` });
+    const bar = bind(progressBar(ctx, `${name} bar`, 0, 150, rw, { value: 'Math.max(0, left)', max: `Math.max(1, ${total})`, decorative: true }), { visible: 'timersOn' });
     const t = text(ctx, `${name} help`, help, 0, 180, rw, { fontSize: 17, lineHeight: 1.4 });
     const b = button(ctx, `${name} button`, label, 0, 408, 300, true);
-    return { frame: stageFrame(`${name} stage`, when, [h, clock, track, bar, t, b, ...extra]), button: b, clock };
+    return { frame: stageFrame(`${name} stage`, when, [h, clock, bar, t, b, ...extra]), button: b, clock };
   };
   const prep = countdown('Prepare', 'stage == "prep"', 'Get ready', 'prepSeconds', 'Jot down two or three points, or say your opening line in your head. Start talking when you are ready, or when the clock runs out.', 'I\'m ready, start the talk');
   //The recording step: optional, there only while the microphone is ready (the author ticks it in Project > Microphone and camera). Record, then Stop recording
-  const record = bind(button(ctx, 'Record this talk', 'Record this talk', 0, 0, 230, false), { label: `${rec('talk').recording} ? "Stop recording" : ${rec('talk').has} ? "Record again" : "Record this talk"` });
+  const record = bind(button(ctx, 'Record this talk', 'Record this talk', 0, 0, 230, false), { label: recordLabel('talk', 'Record this talk') });
   record.ariaDescription = 'Records your voice while you talk. Asks you first, the first time. The recording stays on this device.';
   const recStatus = text(ctx, 'Record status', `{${recordStatus('talk', 'Optional. Not recorded.')}}`, 244, 2, rw - 244, { fontSize: 14, lineHeight: 1.3, color: L.muted, autoSize: 'none', height: 48 });
   const recStep = bind(createNode('frame', { name: 'Recording step', x: 0, y: 340, width: rw, height: 52, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Record this talk', children: [record, recStatus] }) as FrameNode, { visible: MIC_READY });
@@ -165,12 +169,9 @@ function build(colourway: Colourway) {
   const openRow = flag('Clear opening', 'Clear opening: I said what I would talk about', opening, 212);
   const closeRow = flag('Clear close', 'Clear close: I finished on a clear final sentence', closing, 268);
   //The replay step: the learner's recording plays here while they tally, only when there is one
-  const playTalk = button(ctx, 'Play my talk', 'Play my talk', 0, 0, 170, false);
-  playTalk.ariaLabel = 'Play my recording';
-  const stopTalk = button(ctx, 'Stop playing', 'Stop', 180, 0, 100, false);
-  stopTalk.ariaLabel = 'Stop playing my recording';
-  const replayNote = text(ctx, 'Replay note', 'Stays on this device. Dropped when you save and go on.', 292, 2, rw - 292, { fontSize: 13, lineHeight: 1.3, color: L.muted, autoSize: 'none', height: 44 });
-  const replaySlot = bind(createNode('frame', { name: 'Replay step', x: 0, y: 336, width: rw, height: 48, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Play my recording', children: [playTalk, stopTalk, replayNote] }) as FrameNode, { visible: `${MIC_READY} && ${rec('talk').has}` });
+  const playTalk = bind(button(ctx, 'Play my talk', 'Play my talk', 0, 0, 170, false), { label: playLabel('talk', 'Play my talk'), ariaLabel: `${rec('talk').playing} ? "Stop my recording" : "Play my recording"` });
+  const replayNote = text(ctx, 'Replay note', 'Stays on this device. Dropped when you save and go on.', 190, 2, rw - 190, { fontSize: 13, lineHeight: 1.3, color: L.muted, autoSize: 'none', height: 44 });
+  const replaySlot = bind(createNode('frame', { name: 'Replay step', x: 0, y: 336, width: rw, height: 48, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Play my recording', children: [playTalk, replayNote] }) as FrameNode, { visible: `${MIC_READY} && ${rec('talk').has}` });
   const toModel = button(ctx, 'To the model answer', 'Compare with the model answer', 0, 408, 330, true);
   const tallyStage = stageFrame('Tally stage', 'stage == "tally"', [tallyHead, tallyHelp, ...fill.nodes, ...paus.nodes, openRow, closeRow, replaySlot, toModel]);
 
@@ -179,13 +180,7 @@ function build(colourway: Colourway) {
   const modelCard = card(ctx, 'Model panel', 0, 28, rw, 150);
   const model = text(ctx, 'Model answer', `{${ON_SHOW} ? cards[current].model : ""}`, 16, 40, rw - 32, { fontSize: 15, lineHeight: 1.35, autoSize: 'none', height: 130 });
   const pointsHead = heading(ctx, 'Points heading', 'Points a good answer makes. Tick the ones you made.', 0, 188, rw, { fontSize: 17 });
-  const tick = createNode('rect', { name: 'Tick box', x: 6, y: 6, width: 22, height: 22, cornerRadius: 6, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true });
-  bind(tick, { 'fill.color': `covered.includes(index) ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `covered.includes(index) ? "${L.button}" : "${L.border}"` });
-  const tickMark = bind(text(ctx, 'Tick mark', '✓', 10, 5, 18, { fontSize: 16, fontWeight: 700, color: L.onButton, decorative: true }), { visible: 'covered.includes(index)' });
-  const pointText = text(ctx, 'Point', '{item}', 40, 6, rw - 52, { fontSize: 16, decorative: true });
-  const pointRow = createNode('frame', { name: 'Point row', x: 0, y: 0, width: rw, height: 34, cornerRadius: 8, fill: solid(L.background), stroke: null, clip: false, role: 'checkbox', focusable: true, cursor: 'pointer', children: [tick, tickMark, pointText] }) as FrameNode;
-  bind(pointRow, { ariaChecked: 'covered.includes(index)', ariaLabel: 'item', 'fill.color': `covered.includes(index) ? "${L.surface}" : "${L.background}"` });
-  const points = createNode('frame', { name: 'Points', x: 0, y: 214, width: rw, height: 152, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Points a good answer makes', repeat: { items: `${ON_SHOW} ? cards[current].points : []`, layout: 'grid', gap: 4, columns: 1 }, children: [pointRow] }) as FrameNode;
+  const { list: points, row: pointRow } = tickList(ctx, 'Points', 'Point row', 0, 214, rw, { items: `${ON_SHOW} ? cards[current].points : []`, ticked: covered, ariaLabel: 'Points a good answer makes', rows: 4, background: false });
   const madeCount = text(ctx, 'Points made', `Points made: {covered.length} of {${ON_SHOW} ? cards[current].points.length : 0}`, 0, 374, rw, { fontSize: 15, color: L.muted });
   const saveNext = button(ctx, 'Save and next card', 'Save, then next card', 0, 408, (rw - 10) / 2, true);
   const saveSummary = button(ctx, 'Save and see summary', 'Save, see my summary', (rw - 10) / 2 + 10, 408, (rw - 10) / 2, false);
@@ -195,47 +190,43 @@ function build(colourway: Colourway) {
 
   //The wiring
   const g = new Graph(rehearse);
-  g.run(g.start('A fresh start each time the page opens'), set(stage, '"draw"'), set(left, '0'));
+  g.run(g.start('A fresh start each time the page opens'), resetVars(stage, left));
 
-  //Draw: a random card from the bank, never one already drawn until the whole bank has been, then into preparation
+  //The talk stage, from the end of the preparation (its clock ran out, or Ready early): a talk countdown that ends in the tally
+  const talkNode = g.add('action.setVariable', { variable: stage.id, op: 'set', value: '"talk"' });
+  const talkSaid = g.add('action.announce', { text: 'timersOn ? "Time to talk. " + talkSeconds + " seconds." : "Talk now. Press I have finished when you are done."', politeness: 'polite' }, talkNode);
+  const talkTimed = g.add('logic.if', { condition: 'timersOn' }, talkSaid);
+  const talkClock = g.add('action.clock', { variable: left.id, op: 'start', mode: 'down', seconds: 'talkSeconds' }, talkTimed, 'true');
+  g.run(g.add('action.setVariable', { variable: stage.id, op: 'set', value: '"tally"' }, talkClock, 'done'), announce('"Time is up. Tally how it went."'));
+
+  //Draw: a random card from the pool (never one already drawn until the whole bank has been, then a fresh round), then into preparation with its own countdown
   const onDraw = g.click(draw, 'Draw a random card');
-  g.run(
+  const drawn = g.run(
     onDraw,
     set(seen, 'cards.every((c, i) => seen.includes(i)) ? [] : seen'),
-    set(pool, 'cards.map((c, i) => i).filter(i => !seen.includes(i) && (cards.length < 2 || i != current))'),
     set(current, 'pool[Math.floor(Math.random() * pool.length)]'),
-    ['action.setVariable', { variable: seen.id, op: 'push', value: 'current' }],
-    set(fillers, '0'),
-    set(pauses, '0'),
-    set(opening, 'false'),
-    set(closing, 'false'),
-    ['action.setVariable', { variable: covered.id, op: 'clear' }],
-    set(left, 'timersOn ? prepSeconds : 0'),
+    setVar(seen, 'current', 'push'),
+    resetVars(fillers, pauses, opening, closing, covered, left),
     set(stage, '"prep"'),
     announce('"Your card: " + cards[current].q + (timersOn ? " You have " + prepSeconds + " seconds to prepare." : " Take as long as you need to prepare.")'),
   );
-  g.run(g.click(timerSwitch, 'Timers on or off'), set(timersOn, '!timersOn'), announce('timersOn ? "Timers on." : "Timers off. Take as long as you need."'));
-  g.run(g.click(toSummary, 'See the summary'), go(summary));
-
-  //The clock: once a second, only while preparing or talking with timers on. Running out moves on by itself; the buttons move on early
-  const onTick = g.add('event.timer', { ms: 1000, repeat: true }, null, 'out', { note: 'Clock' });
-  const running = g.add('logic.if', { condition: 'timersOn && (stage == "prep" || stage == "talk")' }, onTick);
-  const dec = g.add('action.setVariable', { variable: left.id, op: 'set', value: 'left - 1' }, running, 'true');
-  const out = g.add('logic.if', { condition: 'left <= 0' }, dec);
-  const inPrep = g.add('logic.if', { condition: 'stage == "prep"' }, out, 'true');
-  g.runFrom(inPrep, 'true', set(left, 'talkSeconds'), set(stage, '"talk"'), announce('"Time to talk. " + talkSeconds + " seconds."'));
-  g.runFrom(inPrep, 'false', set(stage, '"tally"'), announce('"Time is up. Tally how it went."'));
+  const prepTimed = g.add('logic.if', { condition: 'timersOn' }, drawn);
+  const prepClock = g.add('action.clock', { variable: left.id, op: 'start', mode: 'down', seconds: 'prepSeconds' }, prepTimed, 'true');
+  //The preparation clock running out starts the talk, the same as Ready early does
+  join(rehearse, prepClock, talkNode, 'done');
   g.gap(60);
+  g.run(g.click(timerSwitch, 'Timers on or off'), toggleVar(timersOn), announce('timersOn ? "Timers on." : "Timers off. Take as long as you need."'));
+  g.run(g.click(toSummary, 'See the summary'), goNext());
 
-  g.run(g.click(prep.button, 'Ready early'), set(left, 'talkSeconds'), set(stage, '"talk"'), announce('timersOn ? "Time to talk. " + talkSeconds + " seconds." : "Talk now. Press I have finished when you are done."'));
-  g.run(g.click(talk.button, 'Finished early'), set(stage, '"tally"'), announce('"Tally how it went."'));
+  //Ready early starts the talk by hand (a new Start on the same clock takes over from the preparation one)
+  join(rehearse, g.click(prep.button, 'Ready early'), talkNode);
+  g.run(g.click(talk.button, 'Finished early'), ['action.clock', { variable: left.id, op: 'reset', mode: 'down', seconds: '0' }], set(stage, '"tally"'), announce('"Tally how it went."'));
 
   //The optional recording: one button records and stops, the take ends when the talk stage is left (the clock ran out, or Finished early), plays back on
-  //the tally stage, and is dropped on the next card
-  wireRecord(g, record, 'talk', 'Record this talk, or stop');
+  //the tally stage (one button, Stop while it plays), and is dropped on the next card
+  recordToggle(g, record, 'talk', 'Record this talk, or stop');
   stopTakeWhen(g, stage, 'talk', 'stage != "talk"', 'End the take when the talk stage is left');
-  wirePlay(g, playTalk, 'talk', 'Play my talk');
-  g.run(g.click(stopTalk, 'Stop playing my talk'), ['action.recordPlay', { op: 'stop', slot: 'talk' }]);
+  playToggle(g, playTalk, 'talk', 'Play or stop my talk');
   dropTakeWhen(g, stage, 'talk', '(stage == "draw" || stage == "prep")', 'Drop the take on the next card');
   g.gap(40);
 
@@ -246,21 +237,17 @@ function build(colourway: Colourway) {
   bump(fill.minus, fillers, -1, 'Filler words');
   bump(paus.plus, pauses, 1, 'Long pauses');
   bump(paus.minus, pauses, -1, 'Long pauses');
-  g.run(g.click(openRow, 'Clear opening'), set(opening, '!clearOpening'));
-  g.run(g.click(closeRow, 'Clear close'), set(closing, '!clearClose'));
+  g.run(g.click(openRow, 'Clear opening'), toggleVar(opening));
+  g.run(g.click(closeRow, 'Clear close'), toggleVar(closing));
   g.run(g.click(toModel, 'To the model answer'), set(stage, '"compare"'), announce('"Model answer and points shown. Tick the points you made."'));
 
   //The points
-  const onPoint = g.click(pointRow, 'Tick or untick a point');
-  const has = g.add('logic.if', { condition: 'covered.includes(event.index)' }, onPoint);
-  g.add('action.setVariable', { variable: covered.id, op: 'remove', value: 'covered.indexOf(event.index)' }, has, 'true');
-  g.add('action.setVariable', { variable: covered.id, op: 'push', value: 'event.index' }, has, 'false', { dy: 70 });
-  g.gap(80);
+  g.run(g.click(pointRow, 'Tick or untick a point'), toggleItem(covered, 'event.index'));
 
   //Saving an attempt: one row in the remembered list. The page then goes back to draw, or to the summary
-  const save = ['action.setVariable', { variable: attempts.id, op: 'set', value: '[...attempts, {n: attempts.length + 1, type: cards[current].type, q: cards[current].q, fillers: fillers, pauses: pauses, opening: clearOpening, close: clearClose, made: covered.length, of: cards[current].points.length}]' }] as [string, Record<string, unknown>];
+  const save = setVar(attempts, '{n: attempts.length + 1, type: cards[current].type, q: cards[current].q, fillers: fillers, pauses: pauses, opening: clearOpening, close: clearClose, made: covered.length, of: cards[current].points.length}', 'push');
   g.run(g.click(saveNext, 'Save this attempt and go on'), save, set(stage, '"draw"'), announce('"Attempt " + attempts.length + " saved. Draw another card when you are ready."'));
-  g.run(g.click(saveSummary, 'Save this attempt and see the summary'), save, set(stage, '"draw"'), go(summary));
+  g.run(g.click(saveSummary, 'Save this attempt and see the summary'), save, set(stage, '"draw"'), goNext());
 
   checklist.push(
     item('Write your bank of cards: Project > Variables > "cards". Each card has a type (the label on it), q (the question or topic), model (a short model answer) and points (up to four things a good answer makes). The six samples cover a viva, an interview and a short talk. Delete or replace them', cardQ, rehearse),
@@ -323,12 +310,23 @@ function build(colourway: Colourway) {
   const clear = bind(button(ctx, 'Clear my history', 'Clear my history', sb.x + 256, sb.y + sb.height - 46, 220, false), { visible: 'attempts.length > 0' });
   summary.children.push(rows, another, clear);
   const sg = new Graph(summary);
-  sg.run(sg.click(another, 'Draw another card'), go(rehearse));
-  sg.run(sg.click(clear, 'Clear my history'), set(attempts, '[]'), set(seen, '[]'), announce('"History cleared."'));
+  sg.run(sg.click(another, 'Draw another card'), goPrevious());
+  sg.run(sg.click(clear, 'Clear my history'), clearVar(attempts), clearVar(seen), announce('"History cleared."'));
 
-  spreadPages(project);
+  //Notes for whoever edits the template, below each page
+  const below = (page: typeof rehearse, x: number, w: number) => ({ x, y: page.height + 14, w, h: 96 });
+  addNote(rehearse, { ...below(rehearse, 0, 440), text: '**Countdowns** are the native Countdown / clock node: its Time up output moves on, so there is no one second timer and no Set step for the clock. The same variable `left` serves both stages.', colour: 'sky' });
+  addNote(rehearse, { ...below(rehearse, 456, 440), text: '**Live variable** `pool` is the cards still to draw, never the one just drawn. [ ] Write your own bank in `cards`.', colour: 'gold' });
+  addNote(summary, { ...below(summary, 0, 440), text: '**Remembered** `attempts` keeps its value across visits (inside StudyDesk it goes with the learner\'s record), so the summary survives a reload.', colour: 'sky' });
   return { project, checklist };
 }
+
+/** States for the layout check: the tally and model stages, and the summary with six attempts. */
+const LAYOUT_STATES: LayoutState[] = [
+  { label: 'tally', page: 'Draw, prepare, talk', vars: { stage: 'tally', current: 0, fillers: 12, pauses: 3, clearOpening: true, clearClose: true } },
+  { label: 'model answer', page: 'Draw, prepare, talk', vars: { stage: 'compare', current: 4, covered: [0, 1] } },
+  { label: 'six attempts', page: 'Your attempts', vars: { attempts: Array.from({ length: 6 }, (_, i) => ({ n: i + 1, type: 'Viva question', q: 'Why did you choose this method?', fillers: 14, pauses: 2, opening: true, close: false, made: 3, of: 4 })) } },
+];
 
 export const timedTalk: BrandedStarter = {
   key: 'practice/timed-talk-rehearsal',
@@ -337,4 +335,5 @@ export const timedTalk: BrandedStarter = {
   description: 'Practise a viva answer, an interview answer or a one-minute talk with no microphone. The learner draws a random card from your bank, gets a preparation countdown and a speaking timer (switch the timers off or lengthen them), tallies their own delivery (fillers, long pauses, a clear opening and close), compares with a model answer and points checklist, and sees a summary across attempts that is remembered. Rehearsal only, nothing is scored.',
   tags: ['speaking', 'viva', 'interview', 'timer', 'rehearsal'],
   build,
+  layoutStates: LAYOUT_STATES,
 };
