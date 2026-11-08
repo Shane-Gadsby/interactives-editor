@@ -11061,6 +11061,7 @@ button.flow-text:focus-visible {
 .share-check-line .link-btn {
   color: inherit;
   text-decoration: underline;
+}
 .icons-item {
   display: flex;
   flex-direction: column;

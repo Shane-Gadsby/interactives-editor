@@ -9991,17 +9991,17 @@ Full details, including what each format does and doesn't carry over, are in [Im
 
 A share link needs no uploading. Anyone with the link can play the project in their browser. They can't edit it.
 
-1. Choose **Share → Share link…** (the **Share** button is next to **Export**).
-2. Press **Create share link**. A link appears.
+1. Choose **Share → Share…** (the **Share** button is next to **Export**). If something looks unfinished (a button that does nothing, sample words, a picture with no description) a short [Before you share](before-you-share) list comes first.
+2. Under **Where will people use it?** choose **Anyone with a link**, and press **Create the link**. The link appears.
 3. Press **Copy** and send it, or **Open** to try it.
 4. The link is a snapshot. When you've changed the project, open the dialog again and press **Update to the latest version**.
-5. To stop sharing, press **Turn off link** and confirm. The link then shows a "turned off" page.
+5. To stop sharing, open **More ways to share**, press **Turn off link** and confirm. The link then shows a "turned off" page.
 
-Under it is the **Link for StudyDesk**. Use that one inside StudyDesk when you want each learner's score and progress kept, or when you want to see [Insights](insights). Tick **Allow remix** if you are happy for staff to copy the project into their own projects.
+To use it inside StudyDesk, choose **In a StudyDesk page, and keep learners' results** instead and copy the code it shows into the page's Source code view: each learner's score and progress are kept, and you can see [Insights](insights). Under **More ways to share**, tick **Allow remix** if you are happy for staff to copy the project into their own projects.
 
 ![The Share menu: Share link, Invite to collaborate, Save as template and Share for review.](help/share-menu.png)
 
-![The Share link dialog: the link with Copy and Open, then Update to the latest version and Turn off link.](help/share-link-dialog.png)
+![The Share dialog: Where will people use it?, the thing to copy, and More ways to share folded underneath.](help/share-where.png)
 
 ## 5. Put it on a page
 
@@ -10141,7 +10141,7 @@ Prefer to start from something finished? The **Templates** tab on the projects p
 
 ## Where to get help
 
-Press <kbd>F1</kbd> (or <kbd>Ctrl</kbd>+<kbd>K</kbd>) anywhere to search these pages, or <kbd>?</kbd> for the page about what you have selected. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
+Press <kbd>F1</kbd> anywhere to search these pages, <kbd>Ctrl</kbd>+<kbd>K</kbd> to find a command and do it (it lists matching help pages too, see [The command palette](command-palette)), or <kbd>?</kbd> for the page about what you have selected. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
 
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`
   },
@@ -10458,9 +10458,9 @@ After a big change (tidying the artboards, linking colours to tokens, deleting a
 ## Help
 | Key | Does |
 |---|---|
-| <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help |
+| <kbd>F1</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
 | <kbd>?</kbd> | Open the help for what is highlighted (the Help button); <kbd>?</kbd> again closes it |
-| <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
+| <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) | The [command palette](command-palette): type what you want to do (add a button, go to a page, turn the grid on, share) and press <kbd>Enter</kbd>. Matching help pages are listed under the commands. While editing text it is the link shortcut instead |
 | <kbd>Alt</kbd>+<kbd>Left</kbd> / <kbd>Alt</kbd>+<kbd>Right</kbd> | Back and forward through the pages you have read, in the help drawer |
 | <kbd>?</kbd> | Open the help |
 
@@ -10723,7 +10723,7 @@ Select some of the text (or just put the caret in a word) and use:
 
 With nothing selected the buttons work on the word the caret is in. Between words there is nothing to style, so they are switched off.
 
-Shortcuts, in the text or in the toolbar (<kbd>Cmd</kbd> on a Mac): <kbd>Ctrl</kbd>+<kbd>B</kbd> bold, <kbd>Ctrl</kbd>+<kbd>I</kbd> italic, <kbd>Ctrl</kbd>+<kbd>U</kbd> underline, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> strikethrough, <kbd>Ctrl</kbd>+<kbd>K</kbd> link (while editing text; <kbd>F1</kbd> still opens the help search), <kbd>Ctrl</kbd>+<kbd>\\</kbd> clear formatting.
+Shortcuts, in the text or in the toolbar (<kbd>Cmd</kbd> on a Mac): <kbd>Ctrl</kbd>+<kbd>B</kbd> bold, <kbd>Ctrl</kbd>+<kbd>I</kbd> italic, <kbd>Ctrl</kbd>+<kbd>U</kbd> underline, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> strikethrough, <kbd>Ctrl</kbd>+<kbd>K</kbd> link (while editing text, where it does not open the command palette; <kbd>F1</kbd> still opens the help search), <kbd>Ctrl</kbd>+<kbd>\\</kbd> clear formatting.
 
 The toolbar works from the keyboard too, and it never takes the focus off the control you are using. <kbd>Tab</kbd> (or <kbd>Alt</kbd>+<kbd>F10</kbd>) goes from the text into the toolbar, <kbd>Tab</kbd> and <kbd>Shift</kbd>+<kbd>Tab</kbd> move between its controls, and the left and right arrows move along the buttons. <kbd>Enter</kbd> or <kbd>Space</kbd> presses a button and the focus stays on it, so you can press the next one. In the size box, type a number and press <kbd>Enter</kbd>, or press <kbd>Up</kbd> and <kbd>Down</kbd> to step it (<kbd>Shift</kbd> steps by ten); the box keeps the focus. In the font box, <kbd>Down</kbd> opens the list, the arrows move through it and <kbd>Enter</kbd> picks. Whichever control you change, the change goes to the characters that were selected when you left the text (they stay highlighted while you are in the toolbar). <kbd>Esc</kbd> goes back to the text with that selection, and so does <kbd>Shift</kbd>+<kbd>Tab</kbd> from the first button, or a click in the text. The toolbar sits above the text box, or below it when there is no room, and stays on the canvas. It works the same for *Auto width*, *Auto height* and *Fixed* text. A button's label is edited in a plain box with no toolbar.
 
@@ -11438,6 +11438,8 @@ Buttons go on the page itself. A [page master](page-master) can hold the logo an
     keywords: "animation animate keyframe key record playhead loop ping pong autoplay speed duration track copy paste snap stagger offset",
     body: `Each artboard can have any number of timelines. A timeline has **tracks**; each track animates one property of one layer through **keyframes**.
 
+For the common cases there is no need to build one: [Animation presets](animation-presets) (Fade in, Slide in, Pop, Pulse, Shake, Fade out) write a timeline and its trigger for you.
+
 ## Adding keyframes
 - Press **Record** (the red dot). A red bar at the top of the Inspector says **Recording keyframes at …**. While recording, every change you make to an animatable property at the playhead becomes a keyframe. Press it again to stop.
 - Or click the diamond next to a field in the inspector to key the value it shows at the playhead (between two keys, that's the in-between value). With several layers selected it keys all of them. The diamond is filled when there's already a key at the playhead, and clicking it then updates that key.
@@ -11517,6 +11519,44 @@ Two more nodes make a state machine out of these:
 - **Wait for time in timeline** holds the flow until a timeline has played to a time in milliseconds or a percentage of its length (an exit time: leave the idle only after it has played half through). It carries on at once if the timeline is already past that time.
 
 Put **Wait for time in timeline** after a condition to leave "no sooner than" a point in the animation, and **Wait for blend-in** just before a change of look that should not interrupt the last one. **Random** (in the [interaction graph](interactions)) picks the next look.`
+  },
+  {
+    id: "animation-presets",
+    title: "Animation presets",
+    group: "Motion",
+    summary: "Fade in, Slide in, Pop, Pulse, Shake and Fade out on any layer, with one click.",
+    keywords: "animate animation preset fade in slide in pop pulse shake fade out entrance appear intro attention wiggle bounce click page opens delay reduced motion",
+    body: `Select a layer and open **Animate** in the Properties panel (or right-click the layer and choose **Animate**). Pick a preset and the layer is animated.
+
+![The Animate section of the Properties panel: the six preset buttons, When, Slide in from, Delay and Length.](help/animation-presets.png)
+
+## The presets
+- **Fade in**: starts clear and fades up to how the layer is now.
+- **Slide in**: glides in from the left, right, top or bottom while it fades up. It travels a fifth of the page (never less than 60 or more than 400 pixels).
+- **Pop**: springs up from half size with a little overshoot.
+- **Pulse**: swells by about a tenth and settles back, to catch the eye.
+- **Shake**: swings side to side and settles, for "not quite".
+- **Fade out**: fades away. The layer stays on the page, just clear.
+
+Every preset ends with the layer as it was (Fade out ends clear), so you can still design the layer as normal.
+
+## When it plays
+**When** picks what starts it: **The page opens**, or **This layer is clicked**. **Delay** waits before it starts and **Length** changes how long it takes (0 uses the preset's own). Your choices are remembered, and the right-click menu uses them too. An entrance preset that starts on a click replays the entrance when the layer is clicked.
+
+## What it writes
+Nothing is hidden. A preset writes:
+- a [timeline](timelines) named for the layer, such as **Title: fade in**, with ordinary keyframes you can move, ease or add to;
+- an **On start** (or **On pointer**, click) event in [Interactions](interactions), joined to a **Control timeline** node set to **Restart**.
+
+Choosing the same preset on the same layer again replaces both rather than stacking another. Different presets on one layer each get their own timeline, and you can change what they do by editing the keyframes or rewiring the nodes.
+
+## Auto layout and repeated layers
+Auto layout (and a repeater) decides where a layer sits, so it would put a sliding layer straight back. On such a layer **Slide in** grows the layer in from a little smaller as it fades, and **Shake** rocks it a few degrees instead of moving it sideways. The message under the presets says when that happened.
+
+## For people who prefer less motion
+The timelines are marked **Skip for less motion** (in the timeline's settings). For someone whose device asks for less motion they jump straight to the last pose instead of playing, so a Fade in just shows the layer and a Fade out hides it. This works however the timeline is started, and does not need the project's **Respect reduced motion** setting.
+
+Text can also be animated letter by letter: see [Text modifiers](text-modifiers).`
   },
   {
     id: "shape-morphing",
@@ -12052,7 +12092,7 @@ Everyone should be able to finish the activity, so every drag has two ways that 
     id: "question-kit",
     title: "Questions and quizzes",
     group: "Interactivity",
-    summary: "Add multiple choice, true/false, fill in the blank (typed or dragged), ordering, matching and categorise (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file.",
+    summary: "Add multiple choice, true/false, fill in the blank (typed or dragged), ordering, matching and categorise (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file or paste them from Word or Excel.",
     keywords: "question quiz test assessment import gift moodle converter multiple choice true false fill blank ordering sequence matching match drag drop categorise sort groups word bank distractor extra pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning",
     body: `Quizzes without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
 
@@ -12123,6 +12163,10 @@ Two finished ones to play first: **Matching question** and **Hotspot question** 
 **Hotspot.** Add question, *Hotspot (click the right place)*. The sample picture is drawn with shapes so the question works straight away: put your own image in its place (delete the shapes in the **Picture** layer, add an image, or give the Picture frame an image fill). The areas sit together in one **Areas** group over the picture, and the question has one click flow for all of them (a *When clicked or hovered* on the group, *Only when a child is hit*, feeding *Choose option* the area's place with \`event.childIndex\`), so adding an area adds no flow. Each **Area** in the Question section is a name, a tick for right, and a shape (rectangle, ellipse or polygon); **Edit on canvas** selects its layer so you can move, resize or reshape it with the usual tools, and **Show all areas** selects every one, since they are invisible until a learner picks one. Tick more than one area as right and the learner has to mark all of them (the areas become checkboxes, and **Part marks** score the share). Clicking an area picks it with a ring and a tint; after the question finishes the right areas are marked and *Right answer: Roof* is written under the picture, so it is not shown by colour alone. If clicks near an area should count, **Grow areas 8 px** makes every area bigger on each side (and **Shrink** the reverse). Each area can have its own feedback, said when it is the one clicked.
 
 ![A hotspot question over a drawn house: the Roof area is selected and shown with its outline.](help/question-hotspot.png)
+
+## Paste questions from Word or Excel
+
+Choose **Paste questions from Word or Excel** in the Add question menu: see [Paste questions](paste-questions), with templates to download.
 
 ## Import questions from a GIFT file
 
@@ -12290,6 +12334,108 @@ The prompt is a heading, the options are a radio group (or checkboxes) with thei
 
 The question frame holds its settings in \`question\`, and each part layer carries a \`questionPart\` marker so the settings can find it again after it is renamed or moved. Both are in the exported file; the player uses the settings and ignores the markers. The nodes are **Check answer**, **Reset question**, **Show hint**, **Choose option** and **Move item** in the [node reference](interaction-nodes). Not yet in the kit: matching (which would use [Drag and drop](drag-and-drop)) and hotspots.
 `
+  },
+  {
+    id: "command-palette",
+    title: "The command palette",
+    group: "Getting started",
+    summary: "Ctrl+K: type what you want to do, and do it, without hunting through menus.",
+    keywords: "command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share",
+    body: `Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
+
+![The command palette searching for timeline: the Open Timeline command, then matching help pages.](help/command-palette.png)
+
+Each row shows its **shortcut** if it has one, or the kind of command it is. A command that cannot run just now (nothing selected, nothing to undo) is greyed and says why. A switch shows **On** or **Off**, and running it flips it. Press <kbd>F1</kbd> inside it to search the help instead. Matching help pages are listed under the commands, labelled **Help**, and <kbd>Enter</kbd> on one opens it.
+
+## What it can do
+- **Add**: a rectangle, ellipse, text, frame, button, input field, link, chart and the other layers, in the middle of the open page; **Add a page**; **Add question** (and [paste questions](paste-questions)).
+- **Pages**: **Go to page: <name>** for every page, make this the start page, duplicate it, tidy the pages, add Back and Next buttons to every page.
+- **Layers**: **Select layer: <name>** for the layers on the open page.
+- **Selection**: duplicate, delete, group, ungroup, the four ordering commands, hide or show, lock, select all.
+- **Animate**: **Fade in**, **Slide in**, **Pop**, **Pulse**, **Shake**, **Fade out** on the selected layers (see [Animation presets](animation-presets)). They use the **When** and **Delay** chosen in the Animate section.
+- **Behaviours**: **When clicked: Go to the next page**, **Show a layer**, **Play a sound** and the other [behaviours](interactions) for the selected layer: it opens the behaviour dialog on that one.
+- **View**: zoom, grid, rulers, notes, bones, snapping and each snap target, page arrows.
+- **Tools**: pick any tool, with its key.
+- **Panels** and **Workspaces**: open any panel (Timeline, Interactions, Accessibility, Usage...) or switch to any workspace, built in or saved.
+- **Project**: Preview, Share, invite people, share for review, save as a template, revision history, Preferences, Save now, undo and redo, and every export.
+
+It only does what the menus and buttons already do, with the same results and the same undo.
+
+## When Ctrl+K does something else
+While you are **typing in a text layer** <kbd>Ctrl</kbd>+<kbd>K</kbd> adds a link, as in any editor. On the projects page, where there is no palette, it searches the help. While Preview is open it searches the help in a new window.`
+  },
+  {
+    id: "before-you-share",
+    title: "Before you share",
+    group: "Import and export",
+    summary: "One list of what is most likely wrong, shown when you press Share or Export, with a way to go and look at each and to fix some.",
+    keywords: "before share check publish export dead button does nothing unreachable page template sample text placeholder alt text description contrast broken link unused file size heavy checklist this is fine share anyway",
+    body: `When you press **Share → Share…**, or **Export → Single HTML file** or **Project package**, and there is something likely to be wrong, a short list opens first: **3 things to look at**. If there is nothing, you go straight through. The Share dialog also carries a line at the top saying the same (**Show me** opens the list).
+
+![The Before you share list: a button that does nothing, template items still to do, sample words, a picture with no description.](help/before-you-share.png)
+
+## What it looks for
+- **Buttons that do nothing when clicked.** A button layer with no click, press or hover on it (or on what holds it), that is not switched off. **Choose what it does** opens the [behaviour chooser](interactions#behaviours-when-this-is-clicked) on it.
+- **Pages nothing leads to.** Pages no button or link can reach from the start page, following **Go to artboard** (and Next and Previous). It stays quiet if a graph picks pages by expression, since that could lead anywhere, and pages another page draws as an [instance](instances) or as a master do not count.
+- **Things from the template still to do.** The [checklist](templates#use-a-template): items not ticked, ticked but the layer is still the template's, or pointing at a layer that is gone. **Open the checklist** opens it.
+- **Sample words.** Text, button and link words that still say "Text" or "Button", "Lorem ipsum", "Your title here", "Replace this", "[Your name]", "TBC" and the like. **Go there** puts the cursor in the text.
+- **Pictures and videos with no description.** Type the description in the list and press **Add it**. See [Accessibility checker](accessibility-checker).
+- **Text that is hard to read.** The checker's colour contrast problems. **Fix them for me** applies the safe fixes in one step (undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>).
+- **Links and references that lead nowhere.** A link layer with no address, or things the [Usage](usage) panel finds pointing at something that is gone.
+- **Files that add up to a lot**, over 25 MB, with the biggest named, and **files nothing uses**. **Remove the files nothing uses…** asks first, like the Usage panel. See [Download size](download-size).
+
+Layers that are locked (the brand's logo and footer) are left out: they are not yours to change.
+
+## Going there, fixing, and "This is fine"
+**Go there** closes the list, takes you to the page, selects the layer and (for words) lets you type. Press Share again when you are ready. Each row has **This is fine** for the ones that are meant to be like that (a decorative button, a picture that is only decoration): it leaves it off the list from then on. The mark is kept in this browser for the project, like the accessibility checker's **reviewed** marks (and a picture's mark is the same one the checker uses), and **Forget what I marked as fine** at the bottom puts them all back.
+
+**Share anyway** (or **Export anyway**) carries on regardless: the list only ever advises.
+
+The same checks are available piece by piece: the [Accessibility](accessibility-checker) and [Usage](usage) tabs, the template checklist's review, and the [Download size](download-size) readout.`
+  },
+  {
+    id: "paste-questions",
+    title: "Paste questions from Word or Excel",
+    group: "Interactivity",
+    summary: "Paste a list or table of questions from Word or a spreadsheet, or open a filled in template, see a preview, and add them as kit questions.",
+    keywords: "paste questions import word docx excel xlsx spreadsheet csv table template list quiz bank bulk multiple choice true false blank matching",
+    body: `If your questions are already in Word or a spreadsheet, you do not have to retype them. Open the **Add question** menu and choose **Paste questions from Word or Excel**, then paste them in (or press **Open a file** to read a filled in template). A preview shows the questions it understood and the lines it did not, and nothing is added until you press **Add**. Each question gets an artboard of its own and is an ordinary [kit question](question-kit) from then on. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type "paste questions" to open it from the command palette.
+
+![The Paste questions dialog: lines pasted on the left, what it understood and what it did not on the right.](help/paste-questions.png)
+
+## Templates to fill in
+Each template has a worked example of every kind of question it reads: multiple choice, multiple answer, true/false, fill in the blank and matching.
+
+- [Word template (.docx)](templates/question-template.docx): a block of lines for each question.
+- [Excel template (.xlsx)](templates/question-template.xlsx): a row for each question, with a second sheet of instructions.
+- [CSV template (.csv)](templates/question-template.csv): the same rows, as a plain file for any spreadsheet.
+
+Delete the examples (or write under them), fill in your own, then copy what you wrote and paste it in, or open the saved file. Headings and grey notes in the Word file are ignored, so it does not matter if you leave the examples in. Only the first sheet of the Excel file is read.
+
+## As lines (Word, email, a text file)
+One question in each block, with a blank line between questions. The first line is the question (a number in front of it, like \`1.\` or \`Q1:\`, is dropped) and every line after it is a choice:
+
+\`\`\`
+Type: Multiple choice
+1. Which planet is closest to the Sun?
+a) Venus
+b) Mercury *
+c) Earth
+Feedback: Mercury orbits closest.
+\`\`\`
+
+- **Right choice**: put a \`*\` after it (or before it), or a tick, \`(correct)\`, \`[x]\`. Or give an **Answer** line with its letter, number or text: \`Answer: B\`. For more than one: \`Answer: A, C\`, or mark each.
+- **Letters and bullets** (\`a)\`, \`A.\`, \`1)\`, \`-\`) in front of a choice are optional, and a plain list pasted from Word works.
+- **True/False**: the question, then \`Answer: True\` or \`Answer: False\`. Choices called True and False with one marked work too.
+- **Fill in the blank**: the question, then \`Answer: H2O | h2o\`, every accepted answer split by \`|\`.
+- **Matching**: a pair on each line, written \`France = Paris\` (or \`->\`), two to 8 pairs.
+- **Type** is optional: Multiple choice, Multiple answer, True/False, Fill in the blank or Matching. Without it the kind is worked out (a question with two or more right choices becomes Multiple answer). **Title** names the artboard. **Feedback** is shown once the question is finished.
+
+## As a table (Excel, Word table, CSV)
+Copy the cells (with the headings) and paste. The headings are matched by their words, in any order: **Type**, **Question**, **Option 1**, **Option 2** and so on (as many as you like), **Correct** and **Feedback**. **Correct** takes the letter or number of the right choice (\`B\` or \`2\`), several as \`A, C\`, or \`True\`/\`False\`. You can also mark the right option with a \`*\` instead. For fill in the blank the option cells are the accepted answers, and for matching each option cell is a pair, \`term = match\`. With no heading row, the first cell of a line is the question and the others are choices.
+
+## What it will not read
+Ordering, categorise and hotspot questions are not pasted (add them from the Add question menu), and nor are pictures, part marks or feedback on individual choices. Every line it cannot use is listed in the preview with its line (or row) number and why, so you can fix it in the box and see it change. At most 100 questions are added at once.`
   },
   {
     id: "variables",
@@ -13637,7 +13783,7 @@ A phone photo can be 5 MB or more, and an export or share link carries every pic
 
 | Share | Gives you |
 |---|---|
-| Share link… | A link that plays the project in the browser (below), and a second one, the **Link for StudyDesk**, that keeps learners' results |
+| Share… | Opens with **Where will people use it?**: in a StudyDesk page (keeping learners' results or not), in the StudyDesk gradebook, anyone with a link, or as a file. It shows the one thing to copy for that, and the link settings are under **More ways to share** (below) |
 | Invite to collaborate… | People who can open and edit the project with you, live, found by name, email or username (see [Collaborating](live-editing#inviting-people)) |
 | Save as template… | A copy other people (or you) start new projects from, with a checklist of what to change (see [Templates](templates#save-as-template)) |
 | Share for review… | A link where reviewers look at the project and leave comments, without editing it (see [Review comments](comments)) |
@@ -13646,10 +13792,25 @@ A phone photo can be 5 MB or more, and an export or share link carries every pic
 
 Export gives you **files**; Share gives you **links and people**. Nothing under Share downloads anything.
 
-## Share link
-**Share → Share link** publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google (a message tells you if a font couldn't be fetched, and that font loads from Google instead). It is a snapshot: press **Update to the latest version** to publish later changes (the page it replaces is kept: if the update was a mistake, **Revert to previous version** puts it back for everyone at once, and pressing it again switches back), or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). The **Link for StudyDesk** is the same link, so it stops too: if learners have results or progress in the project, the confirm lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one. **Copy** copies the link and **Open** opens it in a new tab.
+## Where will people use it?
+**Share → Share…** asks one question first, **Where will people use it?**, and shows the one thing to copy for the answer, with two lines on what to do with it. Your choice is remembered for the project.
 
-![The Share link dialog.](help/share-link-dialog.png)
+| You choose | You copy | Notes |
+|---|---|---|
+| **In a StudyDesk page, and keep learners' results** | The [embed code](export#embed-code) (the Link for StudyDesk in an iframe) | Paste it in the page's **Source code** view. A project that uses the microphone, camera or photos needs this one, and the code already allows them |
+| **In a StudyDesk page, no results needed** | The same iframe, around the plain share link | Nothing is kept for learners. Not offered for a project that uses the microphone, camera or photos, and it says so |
+| **In the StudyDesk gradebook, with a mark** | The project's name, to pick in **Select content** | Needs questions set to **Mark answers on the server**, and says when none are |
+| **Anyone with a link** | The share link | **Open** tries it in a new tab |
+| **As a file to download** | Nothing to copy: buttons download the single HTML file or a project package | Does not keep results |
+
+Until the link exists the dialog offers **Create the link**, and once it does, **Update to the latest version** sits under the thing to copy. Everything else the dialog used to show (both links, the embed code, **Results…**, **Allow remix**, **Revert to previous version**, **Turn off link**) is under **More ways to share, and the settings of the link**, described below. The links themselves have not changed.
+
+At the top of the dialog a line says whether there is anything to look at first: see [Before you share](before-you-share).
+
+## Share link
+**Share → Share…**, under **More ways to share**, publishes the project as it is now to a link that plays it in the browser, like the single HTML file. Anyone with the link can view it (not edit it); links are long and random so they can't be guessed. The project's Google fonts are copied into the page when you publish, so viewers' browsers never call Google (a message tells you if a font couldn't be fetched, and that font loads from Google instead). It is a snapshot: press **Update to the latest version** to publish later changes (the page it replaces is kept: if the update was a mistake, **Revert to previous version** puts it back for everyone at once, and pressing it again switches back), or **Turn off link** to stop it working (after you confirm, the link shows a "turned off" page). The **Link for StudyDesk** is the same link, so it stops too: if learners have results or progress in the project, the confirm lists how many in each course and when each was last active, so you can tell a link a course is using this term from an old one. **Copy** copies the link and **Open** opens it in a new tab.
+
+![The Share dialog: Where will people use it? with the embed code to copy, and More ways to share folded underneath.](help/share-where.png)
 
 A share link carries big pictures as their [optimised copies](export#optimised-pictures) while **Optimise output** is on in the Project settings.
 
@@ -14256,16 +14417,16 @@ Check the projects page for an active folder, tag or search (the **Clear filters
     group: "Reference",
     summary: "Search, tooltips and help links.",
     keywords: "help docs search tooltip question",
-    body: `- **Search**: press <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere for quick search, or type in the drawer's **Search help** box. Type a few words and press <kbd>Enter</kbd> to open the best match.
+    body: `- **Search**: press <kbd>F1</kbd> anywhere for quick search (or <kbd>Ctrl</kbd>+<kbd>K</kbd>, the [command palette](command-palette), which lists help pages under its commands), or type in the drawer's **Search help** box. Type a few words and press <kbd>Enter</kbd> to open the best match.
 - **The Help button** (top bar, or <kbd>?</kbd>) opens the page for whatever is highlighted, in this order: the **field** you last clicked in Properties (its section's page, or its own when it has one); the **node** selected in Interactions or the **keyframe** selected in the Timeline, while that is the panel you are working in; the **tool** you picked on the tool bar (not Select or Hand); the **layer type** you selected (Chart, Text, Button, Rectangle...); a selected **artboard** or **page master**; the **panel** you last worked in; then the general help. Its tooltip names what it will open, and the drawer says "Help for Chart layer" at the top with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. <kbd>Ctrl</kbd>+<kbd>K</kbd> is the quick search.
 - **Home, Back and Forward**: the three buttons at the left of the drawer's top. **Home** is the welcome page. **Back** and **Forward** walk through the pages and sections you have visited (links, search results and the Help button all count), and each page comes back scrolled to where you left it. <kbd>Alt</kbd>+<kbd>Left</kbd> and <kbd>Alt</kbd>+<kbd>Right</kbd> do the same while the drawer has the focus, and so do the mouse's back and forward buttons over it. The history is kept when you close the drawer, so Back from a new Help button press returns to what you were reading. The full help page (the **new tab** button) uses the browser's own Back and Forward, since each page has its own address.
-- **While Preview is open**: Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>?</kbd>, a **?** link or <kbd>Ctrl</kbd>+<kbd>K</kbd>) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and Tab stays inside Preview until you close it.
+- **While Preview is open**: Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>?</kbd>, a **?** link) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and Tab stays inside Preview until you close it.
 - **The Help link** is also on the projects page.
 - **Getting started**: the five tutorials start at [Tutorial 1](tutorial-first-animation). Stuck? [Troubleshooting and common questions](troubleshooting).
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
 - **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
-- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>Ctrl</kbd>+<kbd>K</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
+- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
 - **? links**: inspector sections have a **?** that opens their page here. The panels' tabs don't have one: use the top bar's, or right-click the tab.`
   }
 ];
