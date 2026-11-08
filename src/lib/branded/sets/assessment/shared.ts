@@ -50,7 +50,8 @@ export function brandQuestionFrame(ctx: BrandedCtx, frame: FrameNode): void {
   frame.cornerRadius = 16;
   walk(frame.children, (n) => {
     if (n.type === 'button') {
-      n.cornerRadius = 22;
+      //a pill (the small hint button) keeps to its own height
+      n.cornerRadius = Math.min(22, n.height / 2);
       n.fontWeight = 600;
     }
     //The kit's orange and muted small text on the grey card is too faint
