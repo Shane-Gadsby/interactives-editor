@@ -3,7 +3,7 @@
  * found, per artboard. It reports "checks found", never "compliant": some things it can't see (a photo behind text, what a
  * script does), and those come back as `review` findings so a person looks instead of assuming.
  */
-import { coveredMs, declaresSensors, defaultTheme, sensorsUsed, usesLine, hasTokens, isContainer, isTokenRef, makeColorResolver, overlappingSpeech, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
+import { a11yContext, coveredMs, declaresSensors, isTabStop, parseShortcut, shortcutDuplicates, shortcutId, shortcutKeyEvents, defaultTheme, sensorsUsed, usesLine, hasTokens, isContainer, isTokenRef, makeColorResolver, overlappingSpeech, trackSpan, type Artboard, type ButtonNode, type InputNode, type LogicNode, type Matrix, type Project, type SceneNode, type TextNode, type TextRun } from 'interactives-player';
 import { backdropAt, buildPaintList, samplePoints, textExtent, type ArtboardPaint, type ImageColours, type Target, type TextMeasure } from './backdrop';
 import { contrastRatio, luminance, over, requiredRatio, suggestColour, toRgba, withTokens, type RGB } from './colour';
 import { FLASH_PROPS, maxFlashesPerSecond, trackSignal } from './flash';
@@ -502,7 +502,8 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
         const operable = sem.focusable && OPERABLE_ROLES.has(sem.role);
         const keyDoes = (kind: PointerKind) => {
           const runs = ptr.runs.get(kind) ?? new Set<string>();
-          return operable || [...runs].length === 0 || inter.keys.some((k) => [...runs].some((r) => k.has(r)));
+          // (a shortcut is a key that clicks the layer, so it does the layer's click)
+          return operable || [...runs].length === 0 || (kind === 'click' && !!parseShortcut(n.shortcut)) || inter.keys.some((k) => [...runs].some((r) => k.has(r)));
         };
         const missing = (['click', 'hover', 'drag'] as PointerKind[]).filter((k) => ptr.kinds.has(k) && !keyDoes(k));
         const clickMissing = missing.includes('click');
@@ -526,6 +527,27 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
         } else noName = !sem.label && !hasText(n);
         if (noName) {
           add(ab, n, 'name', placeholderOnly ? 'warning' : 'issue', placeholderOnly ? 'Field named only by its placeholder' : 'No name for a screen reader', placeholderOnly ? `${n.name} has placeholder text ("${(n as InputNode).placeholder}") but no label. Placeholders disappear when you type, and not every screen reader announces them as a name.` : `${n.name} is something people click or use, with no text and no ARIA label, so a screen reader cannot say what it is.${hiddenNote}`, { fix: labelFix(ab, n, 'a label', meaningfulName(n.name)) });
+        }
+      }
+
+      // ---- Dialogs: a name, and something inside the keyboard can reach
+      if (n.type === 'frame' && n.dialog && !sem.decorative) {
+        if (!sem.label) add(ab, n, 'name', 'issue', 'Dialog has no name', `${n.name} is a dialog with no ARIA label, so a screen reader announces just "dialog" when it opens. Name it after what it is for ("Settings", "Delete this note?").${hiddenNote}`, { fix: labelFix(ab, n, 'a name', meaningfulName(n.name)), key: `${n.id}:dialog` });
+        const cx = a11yContext(ab);
+        let reachable = false;
+        walkAll(n.children, (k) => {
+          if (isTabStop(k, cx)) reachable = true;
+        });
+        if (!reachable) add(ab, n, 'keyboard', 'warning', 'Nothing in the dialog can be reached by keyboard', `${n.name} is a dialog, and nothing inside it is a button, link, field or clickable layer a keyboard can reach. Focus lands on the dialog itself and Escape closes it, but people need something to press.${hiddenNote}`, { key: `${n.id}:dialog` });
+      }
+
+      // ---- Shortcuts: a real key, not shared
+      if (n.shortcut && !sem.decorative) {
+        if (!parseShortcut(n.shortcut)) add(ab, n, 'keyboard', 'warning', 'Shortcut is not a key', `${n.name} has the shortcut "${n.shortcut}", which names no key, so it does nothing. Write a key with any of Ctrl, Alt, Shift or Meta before it: r, 1, Ctrl+Enter.${hiddenNote}`, { key: `${n.id}:shortcut` });
+        else {
+          const same = (shortcutDuplicates(ab).get(shortcutId(n.shortcut)!) ?? []).filter((id) => id !== n.id);
+          if (same.length) add(ab, n, 'keyboard', 'warning', 'Two layers use the same shortcut', `${n.name} and ${same.length} other layer${same.length === 1 ? '' : 's'} use the shortcut "${n.shortcut}", and only the first one runs.${hiddenNote}`, { key: `${n.id}:shortcut` });
+          else if (shortcutKeyEvents(ab, n.shortcut).length) add(ab, n, 'keyboard', 'warning', 'A shortcut and an On key event share keys', `${n.name} has the shortcut "${n.shortcut}", and an On key event listens for the same keys, so both run.${hiddenNote}`, { key: `${n.id}:shortcut` });
         }
       }
 

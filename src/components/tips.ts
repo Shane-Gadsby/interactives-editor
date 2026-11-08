@@ -62,7 +62,7 @@ export const FIELD_TIPS: Record<string, string> = {
   Min: 'Smallest allowed value',
   Max: 'Largest allowed value',
   Step: 'How much each step changes the value',
-  Disabled: "Can't be used (greyed out)",
+  Disabled: "Can't be used (dimmed, and skipped by Tab)",
   Link: 'Make this layer a link to a URL',
   URL: 'Web address. {expressions} are allowed',
   'Open in': 'Where the link opens: a new tab, this frame, the parent frame or the whole page',
