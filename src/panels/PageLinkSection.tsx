@@ -1,7 +1,7 @@
-import { PAGE_TRANSITIONS, type Artboard, type Project, type SceneNode } from 'interactives-player';
-import { Section, SelectField } from '../components/ui';
+import { PAGE_TRANSITIONS, TIMED_TRANSITIONS, type Artboard, type Project, type SceneNode } from 'interactives-player';
+import { Section, SelectField, SpeedField } from '../components/ui';
 import { store } from '../store/store';
-import { linkedPage, linkToPage, linkTransition, pageLinksOf, pagesToLinkTo, setLinkTransition } from '../lib/page-link';
+import { linkDuration, linkedPage, linkToPage, linkTransition, pageLinksOf, pagesToLinkTo, setLinkDuration, setLinkTransition } from '../lib/page-link';
 
 /**
  * "Go to page": which page clicking this layer opens, chosen from a list (or by dragging the handle on the canvas onto a page).
@@ -27,6 +27,13 @@ export function PageLinkSection({ node, ab, project }: { node: SceneNode; ab: Ar
 			if (a) setLinkTransition(a, node.id, v);
 		});
 	};
+	const speed = (ms: number) => {
+		store().update((d) => {
+			const a = d.artboards.find((x) => x.id === ab.id);
+			if (a) setLinkDuration(a, node.id, ms);
+		});
+	};
+	const look = linkTransition(ab, node.id);
 	return (
 		<Section help="links-cursors#go-to-a-page" title="Go to page" defaultOpen={!!to || node.type === 'button' || node.type === 'link'}>
 			<SelectField
@@ -40,11 +47,12 @@ export function PageLinkSection({ node, ab, project }: { node: SceneNode; ab: Ar
 				<SelectField
 					label="How the page changes"
 					title="The look of the change: a fade, a slide, a wipe, a push, an iris opening from this layer or a zoom into it. Learners who prefer reduced motion always get an instant change"
-					value={linkTransition(ab, node.id)}
+					value={look}
 					options={PAGE_TRANSITIONS}
 					onChange={how}
 				/>
 			)}
+			{links.length > 0 && TIMED_TRANSITIONS.includes(look) && <SpeedField title="How long the page change takes" value={linkDuration(ab, node.id)} onChange={speed} />}
 			<p className="hint">
 				{to ? <>Clicking it goes to <b>{name(to)}</b>.{links.length > 1 ? ' More than one click here goes to a page: changing it changes them all.' : ''}</> : 'Pick a page, or drag the round handle on the canvas onto one. It is written as a click and a Go to artboard in Interactions.'}
 			</p>

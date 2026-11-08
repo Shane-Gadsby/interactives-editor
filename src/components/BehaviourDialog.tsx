@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { PAGE_TRANSITIONS } from 'interactives-player';
+import { DEFAULT_TRANSITION_MS, PAGE_TRANSITIONS, speedOf, TRANSITION_SPEEDS } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { pickNewAsset } from '../lib/quick-add';
 import { RECIPES, RECIPE_BY_ID, NEW_PREFIX, THIS_LAYER, TRIGGER_WORDS, applyBehaviour, audioAssets, buildBehaviour, counterChoices, defaultAnswers, incomplete, layerChoices, otherPages, switchChoices, unavailable, type Answers, type Need, type Recipe, type RecipeCtx, type Trigger } from '../lib/recipes';
@@ -192,6 +192,36 @@ function BehaviourDialog({ req }: { req: BehaviourRequest }) {
   );
 }
 
+/** Slow, Medium, Fast or Custom for a page change, styled for the dialog. The answer is the milliseconds, as text. */
+function SpeedAnswer({ label, raw, onAnswer }: { label: string; raw: string; onAnswer: (v: string) => void }) {
+  const read = speedOf(raw.trim() === '' ? DEFAULT_TRANSITION_MS : Number(raw));
+  const [custom, setCustom] = useState(read === 'custom');
+  const shown = custom ? 'custom' : read;
+  return (
+    <>
+      <label className="dialog-field">
+        <span>{label}</span>
+        <select
+          value={shown}
+          onChange={(e) => {
+            const preset = TRANSITION_SPEEDS.find((s) => s.value === e.target.value);
+            setCustom(!preset);
+            if (preset) onAnswer(String(preset.ms));
+          }}
+        >
+          {TRANSITION_SPEEDS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+      {shown === 'custom' && <TextField label="Custom speed (ms)" value={raw} onChange={(x) => onAnswer(x.replace(/[^\d]/g, ''))} title="How long the page change takes, in milliseconds. 1000 is one second" />}
+    </>
+  );
+}
+
 function NeedField({ need, ctx, answers, onAnswer }: { need: Need; ctx: RecipeCtx; answers: Answers; onAnswer: (v: string) => void }) {
   const v = answers[need.key] ?? '';
   const sel = (value: string, options: { value: string; label: string }[], onChange: (x: string) => void) => (
@@ -214,6 +244,11 @@ function NeedField({ need, ctx, answers, onAnswer }: { need: Need; ctx: RecipeCt
     }
     case 'transition':
       return sel(v || 'fade', PAGE_TRANSITIONS, onAnswer);
+    case 'speed': {
+      // Instant has no length, so there is nothing to ask
+      if ((answers.transition ?? 'fade') === 'none') return null;
+      return <SpeedAnswer label={need.label} raw={v} onAnswer={onAnswer} />;
+    }
     case 'page':
       return sel(v, otherPages(ctx).map((a) => ({ value: a.id, label: a.name })), onAnswer);
     case 'timeline':

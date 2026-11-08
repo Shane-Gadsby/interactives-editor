@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { formatColor, isTokenRef, parseColor, type Project } from 'interactives-player';
+import { formatColor, isTokenRef, parseColor, speedOf, TRANSITION_SPEEDS, type Project } from 'interactives-player';
 import { HelpLink } from '../help/Help';
 import { paletteTip, usePalette } from '../lib/palette';
 import { Icons } from './icons';
@@ -317,6 +317,34 @@ export function SelectField<T extends string>({
         ))}
       </select>
     </label>
+  );
+}
+
+/**
+ * How fast a page changes: Slow, Medium, Fast or Custom, with the milliseconds under Custom. What is stored is only the number
+ * (`ms`), the choice is read back from it, so a file written before this existed shows the right one. Picking Custom keeps the
+ * number it had (so Medium stays 300 until it is typed over), and that is held here since 300 reads as Medium again by itself.
+ */
+export function SpeedField({ label = 'Speed', value, onChange, title }: { label?: ReactNode; value: number; onChange: (ms: number) => void; title?: string }) {
+  const read = speedOf(value);
+  const [custom, setCustom] = useState(read === 'custom');
+  const shown = custom ? 'custom' : read;
+  const tip = title ?? 'How long the page change takes. Custom lets you type the milliseconds';
+  return (
+    <>
+      <SelectField
+        label={label}
+        title={tip}
+        value={shown}
+        options={[...TRANSITION_SPEEDS.map((s) => ({ value: s.value as string, label: s.label })), { value: 'custom', label: 'Custom' }]}
+        onChange={(v) => {
+          const preset = TRANSITION_SPEEDS.find((s) => s.value === v);
+          setCustom(!preset);
+          if (preset) onChange(preset.ms);
+        }}
+      />
+      {shown === 'custom' && <NumberField label="Milliseconds" title="The length of the page change in milliseconds. 1000 is one second" value={Number(value) || 0} min={0} step={50} suffix="ms" onChange={onChange} />}
+    </>
   );
 }
 

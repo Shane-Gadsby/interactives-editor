@@ -2,6 +2,7 @@
 
 ## Unreleased: Symposium 3
 
+- **Page change speed**: wherever you choose how a page changes (Go to a page, When clicked, Page navigation and a layer's Go to page), a **Speed** of Slow, Medium, Fast or Custom (the milliseconds) sits beside the look, and is left out for Instant. Medium is the 300 ms every page change already had, so nothing in an existing project plays differently; what is stored is still the plain number. The Inspector's sentences say it too, as in "go to the next page (iris, slow)".
 - **Question cards**: a question's own buttons now sit in the card beside the prompt: Play the word in the Spelling test (and when the Voice section adds one), Repeat in the Audio-first quiz, Play on each Listening lab clip.
 - **More page transitions**: pages can now wipe in four directions, push, open an iris from the clicked layer, or zoom into it, chosen wherever you pick a page change (Go to a page, When clicked, Page navigation and a layer's link). Reduced motion still makes every change instant.
 - **Soundtrack music**: tick **Soundtrack** on a Play sound and the music carries on across pages, goes quiet under narration and Speak, crossfades to a different soundtrack, and fades out at Stop sound or start over. **When clicked…** has *Play music that carries on across pages* and *Stop the music*.

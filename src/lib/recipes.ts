@@ -1,4 +1,4 @@
-import { defaultParams, isPageTransition, uid, walk, type Artboard, type LogicEdge, type LogicNode, type Project, type Variable } from 'interactives-player';
+import { defaultParams, DEFAULT_TRANSITION_MS, isPageTransition, uid, walk, type Artboard, type LogicEdge, type LogicNode, type Project, type Variable } from 'interactives-player';
 import { assetKind } from './assets';
 import { buildFlow, flowSentence } from './flow-describe';
 import { writeClickFlow } from './click-flow';
@@ -15,7 +15,7 @@ export type Trigger = 'click' | 'pointerenter';
 
 export const TRIGGER_WORDS: Record<Trigger, string> = { click: 'clicked', pointerenter: 'hovered over' };
 
-export type NeedKind = 'layer' | 'page' | 'timeline' | 'sound' | 'link' | 'counter' | 'switch' | 'transition';
+export type NeedKind = 'layer' | 'page' | 'timeline' | 'sound' | 'link' | 'counter' | 'switch' | 'transition' | 'speed';
 
 export interface Need {
   key: string;
@@ -51,7 +51,14 @@ const first = <T,>(xs: T[]): T | undefined => xs[0];
 
 /** How the page changes: asked for by the page recipes, and always optional (the usual fade when left alone). */
 const HOW: Need = { key: 'transition', kind: 'transition', label: 'How the page changes' };
-const pageParams = (a: Answers, to: Record<string, unknown>) => ({ ...defaultParams('action.artboard'), ...to, ...(isPageTransition(a.transition ?? '') ? { transition: a.transition } : {}) });
+/** How long it takes: asked with the look, and only when there is a look to time (Instant has no length). Answered in ms. */
+const SPEED: Need = { key: 'speed', kind: 'speed', label: 'Speed' };
+const pageParams = (a: Answers, to: Record<string, unknown>) => ({
+  ...defaultParams('action.artboard'),
+  ...to,
+  ...(isPageTransition(a.transition ?? '') ? { transition: a.transition } : {}),
+  ...((a.speed ?? '').trim() !== '' && Number.isFinite(Number(a.speed)) && Number(a.speed) >= 0 ? { duration: Number(a.speed) } : {}),
+});
 
 export const RECIPES: Recipe[] = [
   {
@@ -59,7 +66,7 @@ export const RECIPES: Recipe[] = [
     label: 'Go to the next page',
     hint: 'Moves on to the page after this one.',
     group: 'Pages',
-    needs: [HOW],
+    needs: [HOW, SPEED],
     action: (a) => ({ kind: 'action.artboard', params: pageParams(a, { to: 'next' }) }),
   },
   {
@@ -67,7 +74,7 @@ export const RECIPES: Recipe[] = [
     label: 'Go to the previous page',
     hint: 'Goes back one page.',
     group: 'Pages',
-    needs: [HOW],
+    needs: [HOW, SPEED],
     action: (a) => ({ kind: 'action.artboard', params: pageParams(a, { to: 'previous' }) }),
   },
   {
@@ -75,7 +82,7 @@ export const RECIPES: Recipe[] = [
     label: 'Go to a page…',
     hint: 'Jumps to the page you choose.',
     group: 'Pages',
-    needs: [{ key: 'page', kind: 'page', label: 'Which page' }, HOW],
+    needs: [{ key: 'page', kind: 'page', label: 'Which page' }, HOW, SPEED],
     action: (a) => ({ kind: 'action.artboard', params: pageParams(a, { to: 'picked', artboard: a.page ?? '' }) }),
   },
   {
@@ -233,6 +240,7 @@ export function defaultAnswers(recipe: Recipe, ctx: RecipeCtx): Answers {
     else if (n.kind === 'counter') out[n.key] = first(counterChoices(ctx.project))?.id ?? NEW_PREFIX + NEW_NAME.counter;
     else if (n.kind === 'switch') out[n.key] = first(switchChoices(ctx.project))?.id ?? NEW_PREFIX + NEW_NAME.switch;
     else if (n.kind === 'transition') out[n.key] = 'fade';
+    else if (n.kind === 'speed') out[n.key] = String(DEFAULT_TRANSITION_MS);
     else out[n.key] = '';
   }
   return out;
@@ -242,7 +250,7 @@ export function defaultAnswers(recipe: Recipe, ctx: RecipeCtx): Answers {
 export function incomplete(recipe: Recipe, a: Answers): string | null {
   for (const n of recipe.needs) {
     const v = (a[n.key] ?? '').trim();
-    if (n.kind === 'transition') continue;
+    if (n.kind === 'transition' || n.kind === 'speed') continue;
     if (!v) return `Choose ${n.label.toLowerCase()}.`;
     if ((n.kind === 'counter' || n.kind === 'switch') && v.startsWith(NEW_PREFIX) && !v.slice(NEW_PREFIX.length).trim()) return `Name the ${n.kind}.`;
     if (n.kind === 'link' && !/^(https?:\/\/|mailto:|\/)/i.test(v)) return 'A web address starts with https://';
