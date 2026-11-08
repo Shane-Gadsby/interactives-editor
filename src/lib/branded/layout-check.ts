@@ -135,7 +135,17 @@ function collect(nodes: SceneNode[], scope: ExprScope, out: Item[], ctx: { dx: n
   for (const n of nodes) {
     if (n.visible === false || n.opacity === 0) continue;
     const master = ctx.master || n.id.startsWith('ixm~');
-    const box = { x: ctx.dx + n.x, y: ctx.dy + n.y, w: n.width, h: n.height };
+    const full = { x: ctx.dx + n.x, y: ctx.dy + n.y, w: n.width, h: n.height };
+    //What a clipping or scrolling frame cuts off (the rows of a list scrolled past its edge) is not seen, so only what is left of a layer is checked, and a layer cut off entirely not at all
+    let box = full;
+    if (ctx.clip) {
+      const x0 = Math.max(full.x, ctx.clip.x);
+      const y0 = Math.max(full.y, ctx.clip.y);
+      const x1 = Math.min(full.x + full.w, ctx.clip.x + ctx.clip.w);
+      const y1 = Math.min(full.y + full.h, ctx.clip.y + ctx.clip.h);
+      if (x1 <= x0 || y1 <= y0) continue;
+      box = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+    }
     const overlay = ctx.overlay || tagged(n);
     const clickable = isClickable(n);
     const item: Item = { node: n, box, path: ctx.path, fromMaster: master, overlay, clipped: ctx.clipped, control: ctx.control };
@@ -144,7 +154,7 @@ function collect(nodes: SceneNode[], scope: ExprScope, out: Item[], ctx: { dx: n
       const text = fill(t.text ?? '', scope);
       item.text = text;
       if (text.trim()) {
-        const ink = inkOf(t, text, box.x, box.y);
+        const ink = inkOf(t, text, full.x, full.y);
         //what a clipping or scrolling frame above it cuts off is not seen
         if (ctx.clip) {
           const x0 = Math.max(ink.x, ctx.clip.x);
@@ -160,11 +170,11 @@ function collect(nodes: SceneNode[], scope: ExprScope, out: Item[], ctx: { dx: n
     if (Array.isArray(kids) && kids.length) {
       const f = n as SceneNode & { clip?: boolean; scroll?: string };
       const cuts = n.type === 'frame' && (f.clip || (!!f.scroll && f.scroll !== 'none'));
-      const mine: Box | null = cuts ? (ctx.clip ? { x: Math.max(box.x, ctx.clip.x), y: Math.max(box.y, ctx.clip.y), w: Math.max(0, Math.min(box.x + box.w, ctx.clip.x + ctx.clip.w) - Math.max(box.x, ctx.clip.x)), h: Math.max(0, Math.min(box.y + box.h, ctx.clip.y + ctx.clip.h) - Math.max(box.y, ctx.clip.y)) } : box) : ctx.clip;
+      const mine: Box | null = cuts ? (ctx.clip ? { x: Math.max(full.x, ctx.clip.x), y: Math.max(full.y, ctx.clip.y), w: Math.max(0, Math.min(full.x + full.w, ctx.clip.x + ctx.clip.w) - Math.max(full.x, ctx.clip.x)), h: Math.max(0, Math.min(full.y + full.h, ctx.clip.y + ctx.clip.h) - Math.max(full.y, ctx.clip.y)) } : full) : ctx.clip;
       collect(kids, scope, out, {
         clip: mine,
-        dx: box.x,
-        dy: box.y,
+        dx: full.x,
+        dy: full.y,
         path: [...ctx.path, n.id],
         overlay,
         clipped: ctx.clipped || f.scroll === 'vertical' || f.scroll === 'horizontal' || f.scroll === 'both',
