@@ -10,8 +10,9 @@
  * with the fewest crossings whatever order a starter built it in. `projectFromBrandedStarter` calls it, so a starter never has
  * to compute a position that matters.
  */
-import { CATALOG_BY_KIND, uid, type Artboard, type LogicEdge, type LogicNode, type Project, type SceneNode, type Variable, type VariableType } from 'interactives-player';
-import { tidyGraph, type TidyEdge, type TidyGroup, type TidyNode } from '../graph-tidy';
+import { CATALOG_BY_KIND, makeNote, uid, type Artboard, type LogicEdge, type LogicGroup, type LogicNode, type Note, type Project, type SceneNode, type Variable, type VariableType } from 'interactives-player';
+import { tidyGraph, type TidyEdge, type TidyGroup, type TidyNode, type TidyNote } from '../graph-tidy';
+import { graphNotePlace, noteHeightFor } from '../graph-notes-core';
 import { button, edge, gnode, stroke, type BrandedCtx } from './kit';
 
 // ------------------------------------------------------------------ variables
@@ -313,7 +314,12 @@ export function tidyBoardGraph(ab: Artboard): void {
       return cx >= g.x && cx <= g.x + g.width && cy >= g.y && cy <= g.y + g.height;
     }).map((n) => n.id),
   }));
-  const out = tidyGraph(tn, te, tg);
+  const notes = ab.logic.notes ?? [];
+  const tnotes: TidyNote[] = notes.map((n) => {
+    const at = graphNotePlace(ab.logic, n);
+    return { id: n.id, x: at.x, y: at.y, width: n.w, height: n.h, host: n.anchor && !at.detached ? n.anchor.layerId : undefined };
+  });
+  const out = tidyGraph(tn, te, tg, tnotes);
   for (const n of nodes) {
     const p = out.positions.get(n.id);
     if (p) {
@@ -325,6 +331,41 @@ export function tidyBoardGraph(ab: Artboard): void {
     const b = out.groups.get(g.id);
     if (b) Object.assign(g, { x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height) });
   }
+  // a note keeps its offset from its node or group; the corner it was last drawn at follows
+  for (const n of notes) {
+    const p = out.notes.get(n.id);
+    if (p) {
+      n.x = p.x;
+      n.y = p.y;
+    }
+  }
+}
+
+/** A starter's note on its interaction graph: what a chain does and what to change to adapt it. */
+export interface GraphNoteSpec {
+  /** The note's words: light markdown, **bold** for the key idea, `[ ]` for what the author has to do. */
+  text: string;
+  /** The node or group it follows (above it, to its left edge), or a spot of the graph for a loose note. */
+  anchor?: LogicNode | LogicGroup | { x: number; y: number };
+  w?: number;
+  colour?: Note['colour'];
+}
+
+/**
+ * Leave a note on an artboard's interaction graph. Anchored to a node or group it sits just above it and moves with it when the graph
+ * is tidied (`finishGraphs` makes room for it); with a spot it is a loose note, which the tidy only moves off whatever it landed on.
+ * The text is sized to fit. Notes never ship: players, exports and share links drop them, like the canvas notes (`addNote`).
+ */
+export function graphNote(ab: Artboard, spec: GraphNoteSpec): Note {
+  const w = spec.w ?? 230;
+  const h = noteHeightFor(spec.text, w);
+  const a = spec.anchor;
+  const host = a && 'id' in a ? a : undefined;
+  const at = host ? { x: host.x, y: host.y - h - 14 } : (a ?? { x: 0, y: -h - 14 });
+  const note = makeNote({ x: at.x, y: at.y, w, h, text: spec.text, colour: spec.colour, author: 'Template' });
+  if (host) note.anchor = { layerId: host.id, lx: 0, ly: -h - 14 };
+  (ab.logic.notes ??= []).push(note);
+  return note;
 }
 
 /** Graph tidy on every artboard of a project. */

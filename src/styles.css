@@ -9390,3 +9390,24 @@ code {
 .node-gives code {
   font-size: 11px;
 }
+
+/* sticky notes on the interaction graph: the canvas notes' paper, as graph nodes */
+.graph-note.note {
+  position: relative;
+  cursor: grab;
+}
+.graph-note .note-body {
+  cursor: inherit;
+}
+.react-flow__node-ixnote {
+  z-index: 2;
+}
+.note-swatches {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.graph-note-form .note-swatch {
+  width: 20px;
+  height: 20px;
+}

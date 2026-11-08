@@ -1,4 +1,4 @@
-import { uid, type LogicEdge, type LogicGroup, type LogicNode } from 'interactives-player';
+import { cleanNotes, uid, type LogicEdge, type LogicGroup, type LogicNode, type Note } from 'interactives-player';
 
 /**
  * Copy and paste for interaction graph nodes. Kept apart from the layer clipboard
@@ -14,6 +14,8 @@ export interface LogicFragment {
   nodes: LogicNode[];
   edges: LogicEdge[];
   groups: LogicGroup[];
+  /** Graph notes that go with them: the ones that were chosen, and the ones following a copied node or group. */
+  notes?: Note[];
 }
 
 const EMPTY: LogicFragment = { nodes: [], edges: [], groups: [] };
@@ -24,7 +26,7 @@ let memory: LogicFragment = EMPTY;
  * in it), the chosen groups, and only the connections with both ends among those nodes.
  */
 export function fragmentOf(
-  graph: { nodes: LogicNode[]; edges: LogicEdge[]; groups?: LogicGroup[] },
+  graph: { nodes: LogicNode[]; edges: LogicEdge[]; groups?: LogicGroup[]; notes?: Note[] },
   ids: Iterable<string>,
   membersOf: (g: LogicGroup) => LogicNode[],
 ): LogicFragment {
@@ -34,7 +36,9 @@ export function fragmentOf(
   for (const g of groups) for (const n of membersOf(g)) nodeIds.add(n.id);
   const nodes = graph.nodes.filter((n) => nodeIds.has(n.id));
   const edges = graph.edges.filter((e) => nodeIds.has(e.from) && nodeIds.has(e.to));
-  return { nodes, edges, groups };
+  const groupIds = new Set(groups.map((g) => g.id));
+  const notes = (graph.notes ?? []).filter((n) => want.has(n.id) || (n.anchor && (nodeIds.has(n.anchor.layerId) || groupIds.has(n.anchor.layerId))));
+  return notes.length ? { nodes, edges, groups, notes } : { nodes, edges, groups };
 }
 
 /**
@@ -51,19 +55,33 @@ export function cloneFragment(f: LogicFragment, dx: number, dy: number): LogicFr
   const edges = f.edges
     .filter((e) => ids.has(e.from) && ids.has(e.to))
     .map((e) => ({ ...e, id: uid('e'), from: ids.get(e.from)!, to: ids.get(e.to)! }));
-  const groups = f.groups.map((g) => ({ ...structuredClone(g), id: uid('lgg'), x: Math.round(g.x + dx), y: Math.round(g.y + dy) }));
-  return { nodes, edges, groups };
+  const groups = f.groups.map((g) => {
+    const id = uid('lgg');
+    ids.set(g.id, id);
+    return { ...structuredClone(g), id, x: Math.round(g.x + dx), y: Math.round(g.y + dy) };
+  });
+  // a note follows the copy of what it followed, or (when that wasn't copied) just stays where it was, moved with the rest
+  const notes = (f.notes ?? []).map((n) => {
+    const c = { ...structuredClone(n), id: uid('note_'), x: Math.round(n.x + dx), y: Math.round(n.y + dy) };
+    if (n.anchor) {
+      const to = ids.get(n.anchor.layerId);
+      if (to) c.anchor = { ...n.anchor, layerId: to };
+      else delete c.anchor;
+    }
+    return c;
+  });
+  return notes.length ? { nodes, edges, groups, notes } : { nodes, edges, groups };
 }
 
 /** The top left corner of everything in the fragment (where a paste at a point lines up). */
 export function fragmentOrigin(f: LogicFragment): { x: number; y: number } {
-  const xs = [...f.nodes.map((n) => n.x), ...f.groups.map((g) => g.x)];
-  const ys = [...f.nodes.map((n) => n.y), ...f.groups.map((g) => g.y)];
+  const xs = [...f.nodes.map((n) => n.x), ...f.groups.map((g) => g.x), ...(f.notes ?? []).map((n) => n.x)];
+  const ys = [...f.nodes.map((n) => n.y), ...f.groups.map((g) => g.y), ...(f.notes ?? []).map((n) => n.y)];
   return { x: xs.length ? Math.min(...xs) : 0, y: ys.length ? Math.min(...ys) : 0 };
 }
 
 export function copyLogic(f: LogicFragment): void {
-  if (!f.nodes.length && !f.groups.length) return;
+  if (!f.nodes.length && !f.groups.length && !f.notes?.length) return;
   memory = JSON.parse(JSON.stringify(f));
   void navigator.clipboard?.writeText(JSON.stringify({ [MARKER]: memory })).catch(() => undefined);
 }
@@ -76,7 +94,10 @@ export function logicToPaste(text?: string | null): LogicFragment {
       const v = parsed?.[MARKER];
       // Before connections and groups were copied it was just the list of nodes
       if (Array.isArray(v)) return { nodes: v, edges: [], groups: [] };
-      if (v && Array.isArray(v.nodes)) return { nodes: v.nodes, edges: Array.isArray(v.edges) ? v.edges : [], groups: Array.isArray(v.groups) ? v.groups : [] };
+      if (v && Array.isArray(v.nodes)) {
+        const notes = cleanNotes(v.notes);
+        return { nodes: v.nodes, edges: Array.isArray(v.edges) ? v.edges : [], groups: Array.isArray(v.groups) ? v.groups : [], ...(notes ? { notes } : {}) };
+      }
     } catch {
       /* not ours */
     }

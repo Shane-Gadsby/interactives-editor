@@ -1,7 +1,7 @@
 /** Accordion: one section repeated over a list, each a header button that opens its panel and pushes the rest down (the repeater is an auto layout column, so the copies reflow). */
 import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, byName, contentBox, item, solid, text, type BrandedStarter } from '../../kit';
-import { addVar, click, graph } from '../../graph-kit';
+import { addVar, click, graph, graphNote } from '../../graph-kit';
 import { heroButtons } from './helpers';
 
 const SECTIONS = [
@@ -106,6 +106,7 @@ export const accordion: BrandedStarter = {
       const many = g.then(press, 'logic.if', { condition: 'allowMany' });
       g.then(many, 'action.setVariable', { variable: open.id, op: 'toggleItem', value: 'event.index' }, 'true');
       g.then(many, 'action.setVariable', { variable: open.id, op: 'set', value: 'open.includes(event.index) ? [] : [event.index]' }, 'false');
+      graphNote(page, { anchor: press, colour: 'sky', text: '**One flow serves every header.** `event.index` says which section was pressed. With `allowMany` off, the false branch sets `open` to just that one, which shuts the rest.' });
     }
 
     const below = (x: number) => ({ x, y: page.height + 14, w: 300, h: 100 });

@@ -10,7 +10,7 @@ import { addNote, brandedPage, button, contentBox, solid, stroke, text, type Bra
 import { fill, progressBar, stack } from '../../parts';
 import { after, bind, click, goNext, goPrevious, graph } from '../../graph-kit';
 
-export { addVar as variable, after, announce, bind, clearVar, click, go, goNext, goPrevious, graph, setVar, toggleVar } from '../../graph-kit';
+export { addVar as variable, after, announce, bind, clearVar, click, go, goNext, goPrevious, graph, graphNote, setVar, toggleVar } from '../../graph-kit';
 export { addNote };
 
 /** A sticky note under a page (outside its bounds, so never over content): one to three lines, `**bold**` the key word, `[ ]` for what the author must do. */

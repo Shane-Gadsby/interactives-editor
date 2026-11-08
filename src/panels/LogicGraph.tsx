@@ -21,6 +21,7 @@ import '@xyflow/react/dist/style.css';
 import { silenceFlowAttributionWarning } from '../lib/flow-licence';
 import { cloneFragment, copyLogic, fragmentOf, fragmentOrigin, logicToPaste, type LogicFragment } from '../lib/logic-clipboard';
 import {
+  NOTE_COLOURS,
   ANIMATABLE_PROPS,
   layerOwnProps,
   CURSORS,
@@ -55,7 +56,7 @@ if (import.meta.env.DEV) silenceFlowAttributionWarning();
 import { assetKind } from '../lib/assets';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import { choiceDialog, promptDialog } from '../components/dialogs';
-import { tidyGraph } from '../lib/graph-tidy';
+import { tidyGraph, type TidyNote } from '../lib/graph-tidy';
 import { track } from '../lib/analytics';
 import { Icons } from '../components/icons';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
@@ -65,6 +66,8 @@ import { artboardChoices } from '../lib/variants-edit';
 import { nodeMenuItems } from '../lib/node-menu';
 import { GraphPalette } from './GraphPalette';
 import { stepArtboard, stepKey } from './ArtboardPicker';
+import { GraphNoteForm, GraphNoteNode, resizing as noteResizing, type GraphNoteData } from './GraphNoteNode';
+import { addGraphNote, anchorOrigin, graphNotePlace, patchGraphNote, removeGraphNotes, attachGraphNote } from '../lib/graph-notes';
 
 type IxNodeData = { logic: LogicNode; summary: string };
 
@@ -163,7 +166,7 @@ function GroupNode({ data, selected }: NodeProps<Node<GroupData>>) {
   );
 }
 
-const nodeTypes = { ix: IxNode, ixgroup: GroupNode };
+const nodeTypes = { ix: IxNode, ixgroup: GroupNode, ixnote: GraphNoteNode };
 
 export function summarize(n: LogicNode, ab: Artboard, project: Project): string {
   const def = CATALOG_BY_KIND[n.kind];
@@ -206,7 +209,7 @@ export function summarize(n: LogicNode, ab: Artboard, project: Project): string 
 
 export function LogicGraph() {
   const s = useEditor((st) => ({ project: st.project, abId: st.activeArtboardId, sel: st.logicSelection, picked: st.logicPicked }));
-  const theme = usePrefs().theme;
+  const { theme, showNotes } = usePrefs();
   const ab = getArtboard(s.project, s.abId);
   const rf = useRef<ReactFlowInstance<Node<IxNodeData>, Edge> | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -257,8 +260,26 @@ export function LogicGraph() {
           data: { logic: n, summary: ab ? summarize(n, ab, s.project) : '' },
           selected: chosen.includes(n.id),
         })),
+        // Sticky notes for the people editing the graph (hidden with the canvas notes, and never in the player)
+        ...(showNotes && ab
+          ? (ab.logic.notes ?? []).map((note) => {
+              const at = graphNotePlace(ab.logic, note);
+              const host = note.anchor ? ab.logic.nodes.find((n) => n.id === note.anchor!.layerId) : undefined;
+              const group = note.anchor ? ab.logic.groups?.find((g) => g.id === note.anchor!.layerId) : undefined;
+              return {
+                id: note.id,
+                type: 'ixnote',
+                position: { x: at.x, y: at.y },
+                width: note.w,
+                height: note.h,
+                zIndex: 2,
+                data: { note, detached: at.detached, hostName: host ? (CATALOG_BY_KIND[host.kind]?.label ?? host.kind) : group ? `Group: ${group.label || 'Group'}` : null } satisfies GraphNoteData,
+                selected: chosen.includes(note.id),
+              } as unknown as Node<IxNodeData>;
+            })
+          : []),
       ],
-    [ab, s.project, chosen],
+    [ab, s.project, chosen, showNotes],
   );
   // Selected connections live here (the document only stores the graph), so Delete can remove them
   const [selEdges, setSelEdges] = useState<string[]>([]);
@@ -281,6 +302,7 @@ export function LogicGraph() {
   );
 
   const isGroup = (id: string) => !!ab?.logic.groups?.some((g) => g.id === id);
+  const isNote = (id: string) => !!ab?.logic.notes?.some((n) => n.id === id);
   /** A node's size on screen (it isn't in the document); a typical node's size before it has been measured. */
   const sizeOf = (id: string) => {
     const m = rf.current?.getInternalNode(id)?.measured;
@@ -344,8 +366,13 @@ export function LogicGraph() {
       const moving = new Set(moves.map((c) => c.id));
       updateLogic((a) => {
         const carried = new Set<string>();
+        const noteMoves: typeof moves = [];
         for (const c of moves) {
           const pos = c.position!;
+          if (a.logic.notes?.some((x) => x.id === c.id)) {
+            noteMoves.push(c);
+            continue;
+          }
           const g = a.logic.groups?.find((x) => x.id === c.id);
           if (g) {
             const dx = Math.round(pos.x) - g.x;
@@ -372,8 +399,26 @@ export function LogicGraph() {
             n.y = Math.round(pos.y);
           }
         }
+        //Notes last, so one that is dragged with the node it follows is measured from where that node ends up
+        for (const c of noteMoves) {
+          const note = a.logic.notes!.find((x) => x.id === c.id)!;
+          const x = Math.round(c.position!.x);
+          const y = Math.round(c.position!.y);
+          if (noteResizing.note === note.id) {
+            // Grown to the left or up: the right and bottom edges stay put
+            note.w -= x - note.x;
+            note.h -= y - note.y;
+          }
+          note.x = x;
+          note.y = y;
+          const o = note.anchor ? anchorOrigin(a.logic, note.anchor.layerId) : null;
+          if (o && note.anchor) {
+            note.anchor.lx = x - o.x;
+            note.anchor.ly = y - o.y;
+          }
+        }
       }, `logic-move-${[...moving].sort().join(',')}`);
-      if (moves.every((c) => !c.dragging) && !(resizingGroup && moving.has(resizingGroup))) store().commit();
+      if (moves.every((c) => !c.dragging) && !(resizingGroup && moving.has(resizingGroup)) && !(noteResizing.note && moving.has(noteResizing.note))) store().commit();
     }
     for (const c of changes) {
       if (c.type === 'dimensions' && c.dimensions && c.resizing && isGroup(c.id)) {
@@ -384,6 +429,9 @@ export function LogicGraph() {
           g.width = Math.round(d.width);
           g.height = Math.round(d.height);
         }, `logic-resize-${c.id}`);
+      } else if (c.type === 'dimensions' && c.dimensions && c.resizing && isNote(c.id)) {
+        const d = c.dimensions;
+        patchGraphNote(c.id, { w: d.width, h: d.height }, `logic-resize-${c.id}`);
       } else if (c.type === 'remove') {
         updateLogic((a) => {
           a.logic.nodes = a.logic.nodes.filter((x) => x.id !== c.id);
@@ -470,7 +518,8 @@ export function LogicGraph() {
     const ids = chosenNow();
     const edgeIds = selEdges;
     const groups = (ab.logic.groups ?? []).filter((g) => ids.includes(g.id));
-    const picked = new Set(ids.filter((id) => !isGroup(id)));
+    const noteIds = ids.filter(isNote);
+    const picked = new Set(ids.filter((id) => !isGroup(id) && !isNote(id)));
     const inside = new Set<string>();
     for (const g of groups) for (const n of membersOf(ab, g)) if (!picked.has(n.id)) inside.add(n.id);
     let withInside = false;
@@ -489,13 +538,17 @@ export function LogicGraph() {
     }
     const gone = new Set([...picked, ...(withInside ? inside : [])]);
     const groupIds = new Set(groups.map((g) => g.id));
-    if (!gone.size && !groupIds.size && !edgeIds.length) return;
+    if (!gone.size && !groupIds.size && !edgeIds.length && !noteIds.length) return;
     updateLogic((a) => {
       a.logic.nodes = a.logic.nodes.filter((x) => !gone.has(x.id));
       a.logic.edges = a.logic.edges.filter((e) => !gone.has(e.from) && !gone.has(e.to) && !edgeIds.includes(e.id));
       if (a.logic.groups && groupIds.size) {
         a.logic.groups = a.logic.groups.filter((g) => !groupIds.has(g.id));
         if (!a.logic.groups.length) delete a.logic.groups;
+      }
+      if (a.logic.notes && noteIds.length) {
+        a.logic.notes = a.logic.notes.filter((n) => !noteIds.includes(n.id));
+        if (!a.logic.notes.length) delete a.logic.notes;
       }
     });
     setSelEdges([]);
@@ -508,7 +561,7 @@ export function LogicGraph() {
   //graph the copy sits just off them, so it doesn't land exactly on top, otherwise it keeps the position it was copied
   //from (or goes where the menu was opened)
   const pasteFragment = (f: LogicFragment, at?: { x: number; y: number }) => {
-    if (!ab || (!f.nodes.length && !f.groups.length)) return false;
+    if (!ab || (!f.nodes.length && !f.groups.length && !f.notes?.length)) return false;
     const o = fragmentOrigin(f);
     const here = f.nodes.some((n) => ab.logic.nodes.some((x) => x.id === n.id)) || f.groups.some((g) => ab.logic.groups?.some((x) => x.id === g.id));
     const c = cloneFragment(f, at ? at.x - o.x : here ? 30 : 0, at ? at.y - o.y : here ? 30 : 0);
@@ -516,8 +569,9 @@ export function LogicGraph() {
       a.logic.nodes.push(...c.nodes);
       a.logic.edges.push(...c.edges);
       if (c.groups.length) a.logic.groups = [...(a.logic.groups ?? []), ...c.groups];
+      if (c.notes?.length) a.logic.notes = [...(a.logic.notes ?? []), ...c.notes];
     });
-    select([...c.groups.map((g) => g.id), ...c.nodes.map((n) => n.id)]);
+    select([...c.groups.map((g) => g.id), ...c.nodes.map((n) => n.id), ...(c.notes ?? []).map((n) => n.id)]);
     setSelEdges([]);
     focusGraph();
     return true;
@@ -529,7 +583,12 @@ export function LogicGraph() {
     if (!cut) return;
     const gone = new Set(f.nodes.map((n) => n.id));
     const groupIds = new Set(f.groups.map((g) => g.id));
+    const goneNotes = new Set((f.notes ?? []).map((n) => n.id));
     updateLogic((a) => {
+      if (a.logic.notes && goneNotes.size) {
+        a.logic.notes = a.logic.notes.filter((n) => !goneNotes.has(n.id));
+        if (!a.logic.notes.length) delete a.logic.notes;
+      }
       a.logic.nodes = a.logic.nodes.filter((x) => !gone.has(x.id));
       a.logic.edges = a.logic.edges.filter((e) => !gone.has(e.from) && !gone.has(e.to));
       if (a.logic.groups && groupIds.size) {
@@ -547,9 +606,21 @@ export function LogicGraph() {
     if (!ab || !ab.logic.nodes.length) return;
     const nodes = ab.logic.nodes.map((n) => ({ id: n.id, x: n.x, y: n.y, ...sizeOf(n.id) }));
     const edges = ab.logic.edges.map((e) => ({ from: e.from, to: e.to, port: Math.max(0, CATALOG_BY_KIND[ab.logic.nodes.find((n) => n.id === e.from)?.kind ?? '']?.outputs.findIndex((o) => o.id === e.fromPort) ?? 0) }));
-    const groups = (ab.logic.groups ?? []).map((g) => ({ id: g.id, members: membersOf(ab, g).map((n) => n.id) }));
-    const out = tidyGraph(nodes, edges, groups);
+    const groups = (ab.logic.groups ?? []).map((g) => ({ id: g.id, members: membersOf(ab, g).map((n) => n.id), x: g.x, y: g.y }));
+    const tnotes: TidyNote[] = (ab.logic.notes ?? []).map((n) => {
+      const at = graphNotePlace(ab.logic, n);
+      return { id: n.id, x: at.x, y: at.y, width: n.w, height: n.h, host: n.anchor && !at.detached ? n.anchor.layerId : undefined };
+    });
+    const out = tidyGraph(nodes, edges, groups, tnotes);
     updateLogic((a) => {
+      //A note keeps its offset from the node or group it follows; the corner it was last drawn at follows along
+      for (const n of a.logic.notes ?? []) {
+        const p = out.notes.get(n.id);
+        if (p) {
+          n.x = p.x;
+          n.y = p.y;
+        }
+      }
       for (const n of a.logic.nodes) {
         const p = out.positions.get(n.id);
         if (p) {
@@ -573,6 +644,16 @@ export function LogicGraph() {
     select([id]);
     setSelEdges([]);
     focusGraph();
+    return id;
+  };
+  /** A new note on the graph, where the menu was opened or in the middle of the view; with `anchorId` it follows that node or group. */
+  const addNoteAt = (at?: { x: number; y: number }, anchorId?: string) => {
+    const pos = at ?? rf.current?.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight - 200 }) ?? { x: 40, y: 40 };
+    const id = addGraphNote(s.abId, { x: pos.x, y: pos.y, anchorId });
+    if (!id) return;
+    select([id]);
+    setSelEdges([]);
+    store().set({ editingNote: id });
     return id;
   };
   /** A group around these nodes, with room round them and the title bar above. */
@@ -611,6 +692,7 @@ export function LogicGraph() {
         { label: 'Add node here', items: paletteItems((kind) => add(kind, rf.current?.screenToFlowPosition({ x: e.clientX, y: e.clientY }))) },
         { separator: true },
         { label: 'Rename…', onClick: () => void renameGroup(g) },
+        { label: 'Add note to this group', title: 'A sticky note that moves with this group. Players never see it', onClick: () => void addNoteAt({ x: g.x, y: g.y - 130 }, id) },
         { label: 'Colour', items: GROUP_COLORS.map((c) => ({ label: c.label, color: c.value || 'var(--muted)', onClick: () => updateGroup(g.id, (x) => (c.value ? (x.color = c.value) : delete x.color)) })) },
         { separator: true },
         { label: 'Copy group and its nodes', hint: 'Ctrl+C', onClick: () => copySelection([id]) },
@@ -651,6 +733,7 @@ export function LogicGraph() {
         ...paletteItems((kind) => add(kind, at)),
         { separator: true },
         { label: 'New group here', onClick: () => addGroup({ x: at?.x ?? 0, y: at?.y ?? 0, width: 360, height: 220 }) },
+        { label: 'Add note here', title: 'A sticky note for the people editing this graph. Players never see it', onClick: () => void addNoteAt(at) },
         { label: 'Tidy up', title: 'Lay the graph out in columns from its events, with as few crossing connections as possible, and fit groups to their nodes', onClick: tidy },
         { label: 'Paste', hint: 'Ctrl+V', onClick: () => pasteFromClipboard(at) },
       ],
@@ -708,6 +791,7 @@ export function LogicGraph() {
       { label: 'Copy', hint: 'Ctrl+C', onClick: () => copySelection([id]) },
       { label: 'Duplicate', hint: 'Ctrl+D', onClick: () => duplicate([id]) },
       { label: 'Put in a new group', hint: 'Ctrl+G', title: 'Draw a labelled frame around this node; drag other nodes into it', onClick: () => groupAround([id]) },
+      { label: 'Add note to this node', title: 'A sticky note that moves with this node. Players never see it', onClick: () => void addNoteAt({ x: n.x, y: n.y - 130 }, id) },
       { label: 'Help for this node', onClick: () => openHelp('interaction-nodes', slug(def.label)) },
       { separator: true },
       { label: 'Delete', hint: 'Del', danger: true, onClick: () => removeNodes([id]) },
@@ -718,12 +802,13 @@ export function LogicGraph() {
   /** Right-click on a selection of several nodes and groups: what applies to all of them together. */
   const selectionMenu = (e: React.MouseEvent, ids: string[]) => {
     if (!ab) return;
-    const nodeIds = ids.filter((x) => !isGroup(x));
-    const groupCount = ids.length - nodeIds.length;
+    const nodeIds = ids.filter((x) => !isGroup(x) && !isNote(x));
+    const noteCount = ids.filter(isNote).length;
+    const groupCount = ids.filter(isGroup).length;
     const inside = new Set(nodeIds);
     const between = ab.logic.edges.filter((x) => inside.has(x.from) && inside.has(x.to));
     const touching = ab.logic.edges.filter((x) => inside.has(x.from) || inside.has(x.to));
-    const what = [nodeIds.length && `${nodeIds.length} node${nodeIds.length === 1 ? '' : 's'}`, groupCount && `${groupCount} group${groupCount === 1 ? '' : 's'}`].filter(Boolean).join(' and ');
+    const what = [nodeIds.length && `${nodeIds.length} node${nodeIds.length === 1 ? '' : 's'}`, groupCount && `${groupCount} group${groupCount === 1 ? '' : 's'}`, noteCount && `${noteCount} note${noteCount === 1 ? '' : 's'}`].filter(Boolean).join(' and ');
     const items: MenuItem[] = [
       { heading: `${what} selected` },
       { label: 'Cut', hint: 'Ctrl+X', onClick: () => copySelection(ids, true) },
@@ -742,6 +827,25 @@ export function LogicGraph() {
       });
     items.push({ label: 'Tidy up the graph', onClick: tidy }, { separator: true }, { label: 'Delete', hint: 'Del', danger: true, onClick: () => void deleteSelected() });
     setMenu({ x: e.clientX, y: e.clientY, items });
+  };
+
+  const noteMenu = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    const note = ab?.logic.notes?.find((x) => x.id === id);
+    if (!note || !ab) return;
+    select([id]);
+    setMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { heading: 'Note' },
+        { label: 'Edit text', hint: 'Enter', onClick: () => store().set({ editingNote: id }) },
+        { label: 'Colour', items: NOTE_COLOURS.map((c) => ({ label: { gold: 'Yellow', orange: 'Orange', green: 'Green', sky: 'Blue', purple: 'Purple', rose: 'Pink' }[c], onClick: () => patchGraphNote(id, { colour: c }) })) },
+        ...(note.anchor ? [{ label: 'Stop following', onClick: () => void attachGraphNote(id, null) } as MenuItem] : []),
+        { separator: true },
+        { label: 'Delete note', hint: 'Del', danger: true, onClick: () => removeGraphNotes([id]) },
+      ],
+    });
   };
 
   const edgeMenu = (e: React.MouseEvent, edgeId: string) => {
@@ -809,10 +913,14 @@ export function LogicGraph() {
           if (e.key === 'Delete' || e.key === 'Backspace') {
             e.preventDefault();
             void deleteSelected();
+          } else if ((e.key === 'Enter' || e.key === 'F2') && chosenNow().length === 1 && isNote(chosenNow()[0])) {
+            //Enter on a picked note opens it for typing, like a note on the canvas
+            e.preventDefault();
+            store().set({ editingNote: chosenNow()[0] });
           } else if (mod && k === 'a') {
             e.preventDefault();
-            select([...(ab.logic.groups ?? []).map((g) => g.id), ...ab.logic.nodes.map((n) => n.id)]);
-          } else if (mod && k === 'g' && chosenNow().some((id) => !isGroup(id))) {
+            select([...(ab.logic.groups ?? []).map((g) => g.id), ...ab.logic.nodes.map((n) => n.id), ...(showNotes ? (ab.logic.notes ?? []).map((n) => n.id) : [])]);
+          } else if (mod && k === 'g' && chosenNow().some((id) => !isGroup(id) && !isNote(id))) {
             e.preventDefault();
             groupAround(chosenNow());
           } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
@@ -854,7 +962,7 @@ export function LogicGraph() {
             setSelEdges([]);
           }}
           onPaneContextMenu={paneMenu}
-          onNodeContextMenu={(e, node) => (isGroup(node.id) ? groupMenu(e, node.id) : nodeMenu(e, node.id))}
+          onNodeContextMenu={(e, node) => (isNote(node.id) ? noteMenu(e, node.id) : isGroup(node.id) ? groupMenu(e, node.id) : nodeMenu(e, node.id))}
           onEdgeContextMenu={(e, edge) => edgeMenu(e, edge.id)}
           fitView={ab.logic.nodes.length > 0}
           fitViewOptions={{ maxZoom: 1 }}
@@ -875,6 +983,9 @@ export function LogicGraph() {
         >
           <Background gap={16} />
           <Controls showInteractive={false}>
+            <ControlButton onClick={() => void addNoteAt()} title="Add a note: a sticky note for the people editing this graph (players never see it)" aria-label="Add a note to the graph">
+              <Icons.note width={14} />
+            </ControlButton>
             <ControlButton onClick={tidy} title="Tidy up: lay the graph out in columns from its events, with as few crossing connections as possible (one undo)" aria-label="Tidy up the graph">
               <Icons.distH width={14} />
             </ControlButton>
@@ -894,6 +1005,8 @@ export function LogicGraph() {
           <p className="hint">
             {chosen.length} selected. Drag any of them to move them all. <b>Ctrl+C</b> copies them with the connections between them (pasted copies are wired to each other the same way), <b>Ctrl+D</b> duplicates, <b>Ctrl+G</b> puts them in a new group and <b>Del</b> deletes them. Ctrl+click adds or removes one.
           </p>
+        ) : s.sel && ab.logic.notes?.some((n) => n.id === s.sel) ? (
+          <GraphNoteForm note={ab.logic.notes!.find((n) => n.id === s.sel)!} logic={ab.logic} />
         ) : selected ? <ParamForm node={selected} ab={ab} project={s.project} onChange={(params) => updateLogic((a) => {
           const n = a.logic.nodes.find((x) => x.id === selected.id);
           if (n) n.params = params;

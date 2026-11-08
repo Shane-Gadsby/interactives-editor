@@ -9,7 +9,7 @@ import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, gnode, heading, item, solid, text, type BrandedCtx, type BrandedStarter } from '../../kit';
 import { BRAND_FONT } from '../../looks';
-import { Flow, addVar, announce, bind, click, focus, graph, goNext, goPrevious, set, type ActionStep } from '../../graph-kit';
+import { Flow, addVar, announce, bind, click, focus, graph, graphNote, goNext, goPrevious, set, type ActionStep } from '../../graph-kit';
 import { fill, keyNavList, stack } from '../../parts';
 import { heroButtons } from './helpers';
 
@@ -162,12 +162,20 @@ export const chart: BrandedStarter = {
     const g = new Flow(page);
     const chosen = (): ActionStep => set(pick, 'event.index == null ? 0 : event.index + 1');
     //A click (or Enter) on a bar or slice, and arrowing to one, both give event.index
+    const firstMark: { event?: ReturnType<typeof gnode> } = {};
     for (const c of [barChart, pieChart]) {
-      g.join([gnode('event.pointer', 0, 0, { target: c.id, type: 'click' }, 'Pick a mark'), gnode('event.focus', 0, 0, { target: c.id, type: 'focus' }, 'Pick a mark')], [gnode(chosen()[0], 0, 0, chosen()[1])]);
+      const events = [gnode('event.pointer', 0, 0, { target: c.id, type: 'click' }, 'Pick a mark'), gnode('event.focus', 0, 0, { target: c.id, type: 'focus' }, 'Pick a mark')];
+      firstMark.event ??= events[0];
+      g.join(events, [gnode(chosen()[0], 0, 0, chosen()[1])]);
     }
+    graphNote(page, { anchor: firstMark.event, colour: 'sky', text: '**Click and arrowing both pick a mark.** `event.index` is the bar or slice (null away from them), and the +1 keeps 0 for "nothing picked". The pie has the same pair.' });
     const pg = graph(page);
-    pg.run(pg.event('event.pointer', { target: viewButtons.id, type: 'click', childrenOnly: true }, 'View buttons'), set(view, 'views[event.childIndex].id'), set(pick, '0'), announce('views[event.childIndex].name'));
-    pg.run(pg.event('event.pointer', { target: dataButtons.id, type: 'click', childrenOnly: true }, 'Data buttons'), set(dataset, 'event.childIndex + 1'), set(rows, 'datasets[event.childIndex].rows'), set(pick, '0'), announce('datasets[event.childIndex].name + ": chart updated"'));
+    const viewFlow = pg.event('event.pointer', { target: viewButtons.id, type: 'click', childrenOnly: true }, 'View buttons');
+    pg.run(viewFlow, set(view, 'views[event.childIndex].id'), set(pick, '0'), announce('views[event.childIndex].name'));
+    graphNote(page, { anchor: viewFlow, colour: 'sky', text: '**One flow for all the buttons.** *Only when a child is hit* is on, so `event.childIndex` says which button was pressed and a new entry in `views` needs no new flow.' });
+    const dataFlow = pg.event('event.pointer', { target: dataButtons.id, type: 'click', childrenOnly: true }, 'Data buttons');
+    pg.run(dataFlow, set(dataset, 'event.childIndex + 1'), set(rows, 'datasets[event.childIndex].rows'), set(pick, '0'), announce('datasets[event.childIndex].name + ": chart updated"'));
+    graphNote(page, { anchor: dataFlow, colour: 'sky', text: '**Switching data** copies that dataset into `rows`, then clears the pick so the readout cannot name a mark that is gone. [ ] Add a dataset to `datasets` and it gets a button.' });
     pg.run(click(pg, guessButton, 'Pages'), goNext());
     pg.run(pg.event('event.start', {}, 'Start with nothing picked'), set(pick, '0'));
 
@@ -222,13 +230,19 @@ export const chart: BrandedStarter = {
 
     const gg = graph(guessPage);
     const fresh = ['action.resetVariables', { variables: [target.id, guess.id, revealed.id, pick.id] }] as ActionStep;
-    gg.run(gg.event('event.start', {}, 'Start over'), fresh, focus(slider));
+    const startFlow = gg.event('event.start', {}, 'Start over');
+    gg.run(startFlow, fresh, focus(slider));
+    graphNote(guessPage, { anchor: startFlow, colour: 'sky', text: '**Opening the page starts a fresh round:** Reset variables clears the question, the guess, the reveal and the pick, then focus goes to the slider so a keyboard user can answer straight away.' });
     //The Reveal button goes away when it is pressed, so the focus moves to whichever of Next and Start again shows
-    const shownNext = gg.run(click(gg, reveal, 'Reveal'), set(revealed, 'true'), announce('verdict'));
+    const revealFlow = click(gg, reveal, 'Reveal');
+    const shownNext = gg.run(revealFlow, set(revealed, 'true'), announce('verdict'));
+    graphNote(guessPage, { anchor: revealFlow, colour: 'sky', text: '**`revealed` is what shows the answer.** The `verdict` line is live, so announcing it reads the same words as the screen. The If then moves focus to Next, or to Start again on the last question.' });
     const which = gg.then(shownNext, 'logic.if', { condition: `target < ${N}` });
     gg.then(which, 'action.focus', { op: 'focus', target: nextBtn.id }, 'true');
     gg.then(which, 'action.focus', { op: 'focus', target: again.id }, 'false');
-    gg.run(click(gg, nextBtn, 'Next'), ['action.resetVariables', { variables: [guess.id, revealed.id] }], set(target, 'target + 1'), announce('"Next question: " + rows[target - 1].label'), focus(slider));
+    const nextFlow = click(gg, nextBtn, 'Next');
+    gg.run(nextFlow, ['action.resetVariables', { variables: [guess.id, revealed.id] }], set(target, 'target + 1'), announce('"Next question: " + rows[target - 1].label'), focus(slider));
+    graphNote(guessPage, { anchor: nextFlow, colour: 'sky', text: '**Next clears the guess and `revealed`, and moves `target` on one row.** The new question is announced and focus goes back to the slider. [ ] Add rows to `rows` for more questions to guess.' });
     gg.run(click(gg, again, 'Start again'), fresh, announce('"Starting again"'), focus(slider));
     gg.run(click(gg, back, 'Pages'), goPrevious());
 
