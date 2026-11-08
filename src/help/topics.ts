@@ -1353,11 +1353,14 @@ Reading order is the layer order (rearrange layers to change it). Moving focus a
     title: 'Links and cursors',
     group: 'Web elements',
     summary: 'Make any layer a link, and choose the cursor shown when hovering it.',
-    keywords: 'hyperlink url href target new tab cursor pointer hand custom cursor image hotspot',
+    keywords: 'hyperlink url href target new tab cursor pointer hand custom cursor image hotspot go to page link button drag arrow route map navigate',
     body: `## Link
 In the **Link** section, give any layer a **URL** and it becomes a real link. **Open in** chooses where: a new tab, the same frame, the parent frame, or the whole page (useful when the interactive is embedded in an iframe). URLs can contain \`{expressions}\`. Links go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses; anything else (such as \`javascript:\`) is ignored.
 
 The **Open URL** action does the same from an interaction.
+
+## Go to a page
+The **Go to page** section links a layer to another page. Choose the page from the list, or drag the round **Go to page** handle that sits on the selected layer on the canvas onto the page you want: the page lights up as you pass over it, and letting go makes the link. Choosing **No page** (or dragging it onto the empty canvas) takes the link away. There is nothing special behind it: the editor writes an **On pointer** click on the layer and a **Go to artboard** node after it, which you can see and change in **Interactions**, and the list follows if you edit them there. A click that has an **Only if**, or one that does something else first, is left as you built it (the link is added after the existing click). Faint arrows between the pages on the canvas show every route the project can take, from these links and from Next and Previous steps; switch them off from the canvas's right-click menu. They are only in the editor.
 
 ## Cursor
 **Cursor on hover** sets the cursor shown while the pointer is over the layer and its children, the way CSS \`:hover { cursor: pointer }\` works. *Automatic* gives links and layers with a click, press or release interaction a pointer. Choose the cursor shown over the layer (pointer, grab, crosshair, text, not-allowed, …) or **Custom image** with a hotspot (the point of the image that clicks). Change it at runtime with **Set cursor** or \`ix.setCursor('grab')\`.`,

@@ -96,6 +96,7 @@ import { VideoCues } from './VideoCuesSection';
 import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
 import { MasterSection } from './MasterSection';
+import { PageLinkSection } from './PageLinkSection';
 import { StepsSection } from './StepsSection';
 import { blendExample } from '../lib/blend-example';
 import { BindingsSection as BindingsSectionView } from './BindingsSection';
@@ -869,6 +870,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {sameType && single && 'stroke' in n && !isConn && <PaintOrderSection nodes={nodes} />}
       <EffectsSection nodes={nodes} />
       {single && !isConn && <ConstraintsSection node={n} />}
+      {single && !isConn && <PageLinkSection node={n} ab={ab} project={project} />}
       <LinkCursorSection nodes={nodes} project={project} />
       {single && (n.type === 'group' || n.type === 'frame') && <SoloSection node={n} />}
       {single && (n.type === 'group' || n.type === 'frame') && n.children.length > 1 && <DrawOrderSection node={n} />}
