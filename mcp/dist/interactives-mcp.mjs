@@ -1173,11 +1173,12 @@ const CATALOG = [
     kind: "action.questionCheck",
     label: "Check answer",
     category: "action",
-    description: 'Check the answer on a question (made with Add question): updates its answered, correct, attempts, score and feedback variables, locks it when it is right or out of tries, and tells screen readers the feedback. Continues from "right" or "wrong", then also from "finished" once the question is locked.',
+    description: 'Check the answer on a question (made with Add question): updates its answered, correct, attempts, score and feedback variables, locks it when it is right or out of tries, and tells screen readers the feedback. Continues from "right" or "wrong", then also from "finished" once the question is locked. For a question bank that is gone through once, "set done" also continues when that was the last question of the run.',
     outputs: [
       { id: "correct", label: "right" },
       { id: "wrong", label: "wrong" },
-      { id: "finished", label: "finished" }
+      { id: "finished", label: "finished" },
+      { id: "setDone", label: "set done" }
     ],
     hasInput: true,
     params: [{ key: "question", label: "Question", type: "node", help: "The question frame" }]
@@ -1186,12 +1187,28 @@ const CATALOG = [
     kind: "action.questionReset",
     label: "Reset question",
     category: "action",
-    description: "Put a question back to the start: no answer, no hints, all tries back, options reshuffled when it shuffles. With a question bank it moves on to the next row. Run it on start to set the question up.",
-    outputs: OUT,
+    description: 'Put a question back to the start: no answer, no hints, all tries back, options reshuffled when it shuffles. With a question bank it moves on to the next row. Run it on start to set the question up. A bank that is gone through once ("When the rows run out: finish") continues from "set done" instead of "out" when there is no next row, and can start a new run or a review of the ones missed.',
+    outputs: [
+      { id: "out", label: "" },
+      { id: "done", label: "set done" }
+    ],
     hasInput: true,
     params: [
       { key: "question", label: "Question", type: "node", help: "The question frame" },
       { key: "next", label: "Next from the bank", type: "boolean", default: true, help: "With a question bank: draw the next row. Off keeps the row showing and only clears the answer." },
+      { key: "keepAnswer", label: "Keep the answer", type: "boolean", default: false, help: "Do nothing when the question has already started this visit, so the answer is still there when the learner comes back to the page. The start of a question set to keep its answer uses this; a Try again button must have it off." },
+      {
+        key: "run",
+        label: "Bank run",
+        type: "select",
+        options: [
+          { value: "next", label: "Carry on with the run" },
+          { value: "again", label: "Start a new run" },
+          { value: "missed", label: "Review the missed ones" }
+        ],
+        default: "next",
+        help: "For a bank that is gone through once: carry on, draw a new run from the rows, or run only the questions the last run got wrong."
+      },
       { key: "retake", label: "Retake", type: "boolean", default: false, help: "For questions that have Retakes (a test marked on the server): start the next go at the whole set, once every question is finished and a go is left. Without it a finished question only comes back showing how it finished." }
     ]
   },
@@ -1239,6 +1256,18 @@ const CATALOG = [
     ]
   },
   {
+    kind: "action.questionDrop",
+    label: "Item dropped in a group",
+    category: "action",
+    description: "For a categorise question that gives feedback as each item is dropped: says whether the item that was just dropped (`event.layer`, from an On drop event) is in the group it belongs to. Sets the question's feedback and tells screen readers. It does not check the answer or use a try.",
+    outputs: [
+      { id: "correct", label: "right" },
+      { id: "wrong", label: "wrong" }
+    ],
+    hasInput: true,
+    params: [{ key: "question", label: "Question", type: "node", help: "The question frame" }]
+  },
+  {
     kind: "action.focus",
     label: "Focus layer",
     category: "action",
@@ -1263,12 +1292,13 @@ const CATALOG = [
     kind: "action.dragPlace",
     label: "Put layer in drop zone",
     category: "action",
-    description: "Move a draggable layer into a drop zone as if it had been dropped there (it settles by the zone's snap setting, or goes to the zone's centre). Does nothing if the zone would not take it. Fires no drag events, so it cannot start a loop; it does update the zone variables.",
+    description: "Move a draggable layer into a drop zone as if it had been dropped there (it settles by the zone's snap setting, or goes to the zone's centre). Does nothing if the zone would not take it. Fires no drag events, so it cannot start a loop; it does update the zone variables. Leave the layer empty to send every draggable layer, or pick a container to send everything inside it; a tag keeps only the layers that carry it. They go in one after another until the zone is full.",
     outputs: OUT,
     hasInput: true,
     params: [
-      { key: "layer", label: "Draggable layer", type: "node" },
-      { key: "zone", label: "Drop zone", type: "node" }
+      { key: "layer", label: "Draggable layer", type: "node", placeholder: "All draggable layers", help: "A draggable layer, or a container to send everything inside it" },
+      { key: "zone", label: "Drop zone", type: "node" },
+      { key: "tag", label: "Only tagged", type: "text", placeholder: "Any tag", help: "When sending several, only layers with this tag" }
     ]
   },
   {
@@ -1284,11 +1314,24 @@ const CATALOG = [
     kind: "action.dragEnable",
     label: "Allow dragging",
     category: "action",
-    description: "Turn dragging on or off for a draggable layer (to lock an answer after checking it), or turn a drop zone on or off.",
+    description: "Turn dragging on or off for a draggable layer (to lock an answer after checking it), or turn a drop zone on or off. Leave the layer empty to change every draggable layer, or pick a container to change everything inside it; a tag keeps only the layers that carry it.",
     outputs: OUT,
     hasInput: true,
     params: [
-      { key: "target", label: "Layer", type: "node", help: "A draggable layer or a drop zone" },
+      { key: "target", label: "Layer", type: "node", placeholder: "All draggable layers", help: "A draggable layer or a drop zone, or a container to change everything inside it" },
+      { key: "tag", label: "Only tagged", type: "text", placeholder: "Any tag", help: "When changing several, only layers with this tag (zones: ones that accept it)" },
+      {
+        key: "what",
+        label: "Changes",
+        type: "select",
+        options: [
+          { value: "layers", label: "Draggable layers" },
+          { value: "zones", label: "Drop zones" },
+          { value: "both", label: "Both" }
+        ],
+        default: "layers",
+        help: "When changing several at once"
+      },
       {
         key: "op",
         label: "Do",
@@ -2806,11 +2849,15 @@ const QUESTION_KINDS = [
   { value: "blank", label: "Fill in the blank", hint: "Type the missing word or number" },
   { value: "ordering", label: "Put in order", hint: "Arrange the items into the right order" },
   { value: "matching", label: "Matching (drag and drop)", hint: "Drag each term onto the definition it belongs to" },
+  { value: "categorise", label: "Categorise (drag into groups)", hint: "Drag each item into the group it belongs to" },
   { value: "hotspot", label: "Hotspot (click the right place)", hint: "Click the right place on a picture" }
 ];
 const MAX_OPTIONS = 30;
 const MAX_BLANKS = 8;
 const MAX_PAIRS = 8;
+const MAX_EXTRAS = 8;
+const MAX_GROUPS = 6;
+const MAX_CARDS = 24;
 const MAX_HINTS = 10;
 const IDENT = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const isIdentifier = (s) => IDENT.test(s);
@@ -2824,7 +2871,7 @@ function newQuestion(kind, prefix = "q1") {
     blanks: [],
     pairs: [],
     shuffle: false,
-    partial: kind === "multiple" || kind === "ordering" || kind === "blank" || kind === "matching",
+    partial: kind === "multiple" || kind === "ordering" || kind === "blank" || kind === "matching" || kind === "categorise",
     attempts: 0,
     attemptPenalty: 0,
     hints: [],
@@ -2859,6 +2906,23 @@ function newQuestion(kind, prefix = "q1") {
           { id: "p4", term: "Peru", match: "Lima" }
         ],
         hints: ["The capital of Egypt is on the Nile."]
+      };
+    case "categorise":
+      return {
+        ...base2,
+        prompt: "Drag each animal into the group it belongs to.",
+        shuffle: true,
+        groups: [
+          { id: "g1", name: "Mammals" },
+          { id: "g2", name: "Birds" }
+        ],
+        cards: [
+          { id: "c1", text: "Dog", group: "g1" },
+          { id: "c2", text: "Whale", group: "g1" },
+          { id: "c3", text: "Eagle", group: "g2" },
+          { id: "c4", text: "Penguin", group: "g2" }
+        ],
+        hints: ["Penguins cannot fly, but they still lay eggs and have feathers."]
       };
     case "hotspot":
       return {
@@ -2917,7 +2981,20 @@ function normaliseQuestion(raw) {
     ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {}
   }));
   const pairs = list(raw.pairs, MAX_PAIRS).map((pr, i) => ({ id: str$1(pr.id) || `p${i + 1}`, term: str$1(pr.term), match: str$1(pr.match) }));
-  const bank = isObj$3(raw.bank) && str$1(raw.bank.items).trim() ? { items: str$1(raw.bank.items), order: raw.bank.order === "sequence" ? "sequence" : "random" } : null;
+  const extras = list(raw.extras, MAX_EXTRAS).map((x, i) => ({ id: str$1(x.id) || `x${i + 1}`, text: str$1(x.text) }));
+  const groups = list(raw.groups, MAX_GROUPS).map((g, i) => ({ id: str$1(g.id) || `g${i + 1}`, name: str$1(g.name) }));
+  const cards = list(raw.cards, MAX_CARDS).map((c2, i) => ({
+    id: str$1(c2.id) || `c${i + 1}`,
+    text: str$1(c2.text),
+    group: str$1(c2.group),
+    ...str$1(c2.feedback) ? { feedback: str$1(c2.feedback) } : {}
+  }));
+  const bank = isObj$3(raw.bank) && str$1(raw.bank.items).trim() ? {
+    items: str$1(raw.bank.items),
+    order: raw.bank.order === "sequence" ? "sequence" : "random",
+    ...raw.bank.end === "finish" ? { end: "finish" } : {},
+    ...raw.bank.end === "finish" && typeof raw.bank.count === "number" && raw.bank.count >= 1 ? { count: Math.min(1e3, Math.floor(raw.bank.count)) } : {}
+  } : null;
   return {
     kind,
     prefix: isIdentifier(str$1(raw.prefix)) ? str$1(raw.prefix) : d.prefix,
@@ -2926,6 +3003,10 @@ function normaliseQuestion(raw) {
     options,
     blanks,
     pairs,
+    ...extras.length ? { extras } : {},
+    ...kind === "categorise" ? { groups, cards } : {},
+    ...kind === "categorise" && raw.dropFeedback === true ? { dropFeedback: true } : {},
+    ...kind === "blank" && raw.answerBy === "drag" ? { answerBy: "drag" } : {},
     shuffle: raw.shuffle === true,
     partial: raw.partial === true,
     attempts: Math.round(num(raw.attempts, 0, 0, 100)),
@@ -2941,6 +3022,8 @@ function normaliseQuestion(raw) {
     ...typeof raw.spoken === "string" && raw.spoken.trim() ? { spoken: raw.spoken.slice(0, 2e3) } : {},
     ...typeof raw.explain === "string" && raw.explain.trim() ? { explain: raw.explain.slice(0, 2e3) } : {},
     ...raw.numberKeys === true ? { numberKeys: true } : {},
+    ...raw.keep === true ? { keep: true } : {},
+    ...raw.hideReset === true ? { hideReset: true } : {},
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
@@ -5638,6 +5721,7 @@ const PLAYER_SCOPE_HINTS = {
   mediaMessage: { type: "text", hint: "The last microphone or camera problem, in words" },
   userData: { type: "object", hint: "userData.loaded: saved variables have been looked for; userData.restored: how many came back" },
   context: { type: "object", hint: "The course and the learner (context.firstName...)" },
+  quiz: { type: "object", hint: "All the questions together: quiz.score, max, percent, passed, passMark, count, finished, right, done and quiz.questions (one entry each: prefix, page, score, points, correct, locked)" },
   data: { type: "object", hint: "Every data source by name" },
   enums: { type: "object", hint: "The options of each choice variable" },
   artboard: { type: "object", hint: "The artboard's name, width, height, and its index (from 0), count and group among the pages" },
@@ -7893,8 +7977,9 @@ Two buckets, four cards. Dropping a card in the right bucket keeps it there; dro
 - **On drag move** fires over and over while a layer is held and moving (dragged, nudged with Shift+arrows, or sent between zones with the arrow keys), at most once a frame. \`event.layerX\`/\`event.layerY\` say where the layer is, \`event.dx\`/\`event.dy\` how far it has come since it was picked up: set a variable from them to drive a gauge, move another layer along, or play a sound as it crosses a line.
 - Their \`event\` holds \`layer\` (the draggable layer's name), \`zone\` (the zone it is in now), \`from\` (where it was), \`accepted\`, \`reason\` (\`tags\` or \`full\`), \`swapped\`, \`tags\`, \`result\` (accepted, rejected, missed or cancelled) and \`keyboard\` (true when it was not dragged).
 - **Put layer in drop zone** moves a layer into a zone as if it had been dropped there; **Reset draggable** sends one (or all of them, for *Start again*) back to where it started; **Allow dragging** switches a draggable layer or a drop zone on and off. None of them fires the drag events, so they cannot start a loop.
+- **Allow dragging** and **Put layer in drop zone** also work in bulk: leave the layer empty for every draggable layer, or pick a container (a group or frame) to change everything inside it, and fill **Only tagged** to keep just the layers that carry that tag. **Changes** on Allow dragging adds the drop zones (or only them). One Allow dragging node with the layer empty locks every answer at once; scripts do the same with \`ix.drag.enable(undefined, false)\` and \`{ tag, what }\` as a third argument.
 - The older **On pointer → Dragging** events still work for scripted drags. Use the draggable settings when the point is to move a layer and drop it somewhere.
-- Scripts have \`ix.drag.zoneOf('Dog')\`, \`ix.drag.contents('Mammals')\`, \`ix.drag.state()\` (every layer and its zone), \`ix.drag.put(layer, zone)\`, \`ix.drag.reset(layer?)\` and \`ix.drag.enable(layer, on)\`. The page that holds the player can read \`player.dragState()\`.
+- Scripts have \`ix.drag.zoneOf('Dog')\`, \`ix.drag.contents('Mammals')\`, \`ix.drag.state()\` (every layer and its zone), \`ix.drag.put(layer, zone)\`, \`ix.drag.reset(layer?)\` and \`ix.drag.enable(layer, on, { tag, what }?)\` (no layer: all of them, or everything inside a container). The page that holds the player can read \`player.dragState()\`.
 
 ## Keyboard, touch and screen readers
 Everyone should be able to finish the activity, so every drag has two ways that need no dragging.
@@ -7936,8 +8021,8 @@ ${params}`;
     id: "question-kit",
     title: "Questions and quizzes",
     group: "Interactivity",
-    summary: "Add multiple choice, true/false, fill in the blank, ordering, matching (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file.",
-    keywords: "question quiz test assessment import gift moodle converter multiple choice true false fill blank ordering sequence matching match drag drop pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning",
+    summary: "Add multiple choice, true/false, fill in the blank (typed or dragged), ordering, matching and categorise (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file.",
+    keywords: "question quiz test assessment import gift moodle converter multiple choice true false fill blank ordering sequence matching match drag drop categorise sort groups word bank distractor extra pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning",
     body: `Quizzes without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
 
 ## Add one
@@ -7951,7 +8036,8 @@ Click **Add question**, pick a type, and a card appears with a prompt, the answe
 | True or false | picks True or False | it matches the statement |
 | Fill in the blank | types into one or more inputs | each blank matches an accepted answer |
 | Put in order | moves items up and down | every item is in its place |
-| Matching (drag and drop) | drags each term onto its definition | every term is in its own slot |
+| Matching (drag and drop) | drags each term onto its definition | every term is in its own slot (and no extra term is in one) |
+| Categorise (drag into groups) | drags each item into a group box | every item is in the group it belongs to |
 | Hotspot (click the right place) | clicks an area of a picture | the picked area is marked right (or all of the right ones) |
 
 ## What gets built
@@ -7993,6 +8079,12 @@ Two finished ones to play first: **Matching question** and **Hotspot question** 
 
 **Put in order.** List the items in the **right** order; the learner sees them shuffled (the first deal is never already right). Part marks give the share of items in the right place. When the question finishes wrong, the items snap to the right order and the ones that were out of place are marked.
 
+**Extra terms and extra words.** Matching has an **Extra terms** list in the Question section, and fill the blanks a list of **Extra words**. They are dragged like the others but belong nowhere, so the learner has to leave them alone. Left in the pile is right. One dropped into a matching slot is marked wrong and takes that pair's slot, and with part marks each extra in a slot takes one pair's share off.
+
+**Categorise.** Add question, *Categorise (drag into groups)*. The Question section lists the **groups** and the **items**, and each item says which group it belongs in. The learner drags every item into a group box (a box takes any number of items, and an item stays where it is let go), or uses the keyboard as for matching. Every box takes every item, so a wrong drop is allowed and **Check answer** says how it went: right when every item is in its own group, part marks give the share in the right group, and the feedback says how many (*3 of 4 in the right group*). An item can have **Feedback if put in the wrong group**, said with the result. Tick **Say right or wrong as each item is dropped** and each drop answers straight away (*Eagle goes in Birds. Right.*) without using a try, through an *Item dropped in a group* node the kit wires to each box. Categorise questions are marked in the page, not on the server, because which group an item belongs in is part of how the layers are set up. Finished, the items stop moving, and (with **Show the right answer**) the wrong ones are listed with their group.
+
+**Fill the blanks by dragging.** On *Fill in the blank* set **Answer by** to *Dragging words from a word bank*. Each blank becomes a slot, and a bank of word chips appears: the first plain (not a /pattern/) accepted answer of each blank, plus any **Extra words**. Check reads the word in each slot as what was typed, so accepted answers, case, tolerance, part marks and retries all work as for typing. Because only the answer words are in the page (not which blank each fits), a drag the blanks question can still be marked on the server. **Shuffle the word bank** deals the chips again each time it starts.
+
 **Matching.** Add question, *Matching (drag and drop)*. Each pair in the Question section is a term and what it matches (a country and its capital, a word and its meaning, a label and a place on a diagram). The learner drags each term into the slot beside a definition, or uses the keyboard: Tab to a term, Space to pick it up, the arrow keys to choose a slot, Space to drop, Escape to put it back (see [Drag and drop](drag-and-drop)). A slot holds one term; dropping another on it swaps them. **Check answer** is right when every term is in its own slot. With **Part marks** the score is the share of terms in the right place, and the feedback says how many (*2 of 4 matched correctly*). When the question finishes, each slot is marked ✓ Right or ✗ Wrong and (with **Show the right answer**) says which term belongs there; the terms stop moving. **Try again** puts the terms back. **Shuffle** deals the terms to different places each time it starts. Add or remove a pair and the layers follow; a new one takes the look of the others. To match labels to a diagram, move the slots over the picture and restyle the terms: they are ordinary layers.
 
 ![A matching question: four country names to drag onto their capitals, with dashed slots on the right.](help/question-matching.png)
@@ -8029,11 +8121,41 @@ Moodle XML files are not read yet.
 
 **Shuffle** deals the options (or ordering items, or a matching question's terms) in a new order every time the question starts or resets. In a multiple choice, tick **Stays in place when shuffled** on an option such as "None of these". Feedback and marking follow the option, not its place.
 
+## The whole quiz
+
+Every project has a built-in \`quiz\` that adds up its questions, for a results page that needs no wiring per question:
+
+| Name | Holds |
+|---|---|
+| \`quiz.score\`, \`quiz.max\`, \`quiz.percent\` | points earned, the most all the questions can score, and the share (two places) |
+| \`quiz.passed\`, \`quiz.passMark\` | at or over the pass mark from [Results and progress](results) (false and empty when there is none) |
+| \`quiz.count\`, \`quiz.finished\`, \`quiz.right\`, \`quiz.done\` | how many questions, how many are finished, how many of those are right, and whether all are finished |
+| \`quiz.questions\` | one entry for each question: \`prefix\`, \`page\` (its artboard's name), \`score\`, \`points\`, \`correct\`, \`locked\` |
+
+Use \`quiz.questions\` as a repeater's items to show a row for each question: \`{item.page}: {item.score} of {item.points}\`. Adding a question to the quiz adds a row, and a question's own settings are all there is to wire. A bank gone through once counts as one question with the run's score and points. A variable or data source called \`quiz\` takes the name over, as for any built-in. In Results and progress, **Score from: Total of all questions** makes the project's reported score this total.
+
+Two settings in the Question section help a quiz of several pages: **Keep the answer when the page is revisited** (coming back to the page in the same visit finds the question as it was left, rather than set up again; a drag question puts its layers back where the last check found them) and **Hide Try again** (leaves out the button, for a test that is marked once).
+
 ## Question banks from data
 
 Banks work with the choice, true/false, fill in the blank and ordering types. A matching or hotspot question is built from layers you place, so it takes only the prompt, hints, feedback and points from a row.
 
 Tick **Take the question from data** and give the name of a [data source](data-sources) (or part of one, like \`quiz.questions\`). Each row is a question; what a row leaves out stays as set in the Question section (except hints, which come only from the row). With a bank the card's Try again button becomes **Next question**, which draws the next row (**Random** shows every row once before any repeats; **In order** goes round).
+
+The rows can also be a **list variable** (pick one under **Or a list variable**): a list of objects with the same columns, such as questions the project builds itself.
+
+### Going through the rows once
+
+By default a bank loops for ever. Set **When the rows run out** to *Finish after one go through* and it is a **run**: the learner is asked each row once, then it is done. **Questions to draw** asks that many rows, picked at random (or the first ones for *In order*); 0 asks them all. The question keeps the run in these variables (with its own prefix, here \`q1\`):
+
+| Variable | Holds |
+|---|---|
+| \`q1_setPos\`, \`q1_setCount\`, \`q1_setLeft\` | which question of the run this is, how many it has, how many are not finished |
+| \`q1_setScore\`, \`q1_setMax\` | points earned so far, and the most the run can score (each row's own \`points\`, else the question's) |
+| \`q1_setDone\` | true once every question is finished |
+| \`q1_missed\` | the rows (counting from 0) that finished wrong, in this run |
+
+**Check answer** has a **set done** output that fires when the question just checked was the last of the run, and **Reset question** has one that fires when there is no next question, so a Next question button can go straight to a results page. Moving on from a question without finishing it counts it as missed. On Reset question, **Bank run** set to *Start a new run* draws a fresh run with clean totals, and *Review the missed ones* runs only the rows in \`q1_missed\` (with nothing missed it is done at once).
 
 Columns a row can have:
 
@@ -8067,7 +8189,7 @@ What it does not do:
 
 - The answers are only taken out of the two links. **Preview**, an exported HTML file or package, and anyone who opens your project in the editor still have the answers, and mark in the page as usual.
 - Learners need the **Link for StudyDesk** (and to be signed in to StudyDesk) to have an answer checked. On the plain share link with no session, the question says it can only be checked from StudyDesk.
-- **Matching** and questions taken from a **data bank** can't be marked on the server: which term belongs where is part of how the layers are set up, and a bank is data the learner downloads. They stay marked in the page, and the Question section says so.
+- **Matching**, **Categorise** and questions taken from a **data bank** can't be marked on the server: which term belongs where is part of how the layers are set up, and a bank is data the learner downloads. They stay marked in the page, and the Question section says so. A fill the blanks question answered by dragging words can be marked on the server (it is sent the words in the slots).
 - Unlimited tries can still be used to find an answer slowly. Set **Tries** to limit them.
 - A script or a custom node that holds an answer of its own is not touched.
 - Staff who open the project in the editor, or Remix it from the Link for StudyDesk, see the full project with its answers.
@@ -8784,6 +8906,7 @@ Open **Results and progress** in the Project section of the Inspector (click an 
 
 | Setting | Meaning |
 |---|---|
+| Score from | **A score variable** (the default) or **Total of all questions**. The total adds up every question's points, out of the most they can score, so adding a question needs nothing else here (see [the whole quiz](question-kit#the-whole-quiz)). It shows only when the project has questions |
 | Score variable | The number variable that holds the score |
 | Top score | The score that counts as 100% (the default is 100). A score above it is reported as 100% |
 | Pass mark | Tick it and give a percentage to report pass or fail as well as the score |
@@ -8791,6 +8914,8 @@ Open **Results and progress** in the Project section of the Inspector (click an 
 | Resume on the same artboard | A returning learner opens on the artboard they left |
 
 Then tick **Remember** on each variable that should keep its value between visits (the Variables tab).
+
+With **Total of all questions** there is no score variable or top score: the pass mark is a percentage of the questions' points, and Report result with its Score empty sends the total (the kit's own Report result nodes do that for you). A question marked on the server counts the mark the server keeps (its first go; with retakes the best or latest round, as set), so a practice go afterwards changes nothing.
 
 ## Report result and Start over
 - **Report result** (action node) sends the result: *Complete* marks this attempt complete, *Score so far* reports the score without completing. Leave **Score** empty to use the score variable, or give an expression such as \`correct * 10\`. In scripts: \`ix.report({ completed: true, score: 7 })\`.
