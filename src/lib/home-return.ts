@@ -5,9 +5,11 @@ export function rememberLeft(id: string) {
 	left = id;
 }
 
-/** Read once: the project just left, or null when Home is being opened fresh. */
-export function takeLeft(): string | null {
-	const id = left;
+/** The project just left, or null when Home is being opened fresh. Read without clearing: a render can run twice (StrictMode), so the page clears it once it has mounted. */
+export function peekLeft(): string | null {
+	return left;
+}
+
+export function clearLeft() {
 	left = null;
-	return id;
 }

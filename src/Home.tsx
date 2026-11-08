@@ -18,7 +18,7 @@ import { noteIfStale } from './lib/stale-build';
 import { NoticeBell } from './components/NoticeBell';
 import { TemplatesTab } from './components/TemplatesTab';
 import { NewProjectModal } from './components/NewProjectModal';
-import { takeLeft } from './lib/home-return';
+import { clearLeft, peekLeft } from './lib/home-return';
 
 declare global {
   interface Window {
@@ -181,7 +181,8 @@ function scrollIntoViewOnce(el: HTMLElement | null) {
 }
 
 export function Home({ open }: { open: (id: string) => void }) {
-  const [left] = useState(takeLeft);
+  const [left] = useState(peekLeft);
+  useEffect(() => clearLeft(), []);
   const [tab, setTab] = useState<'projects' | 'templates'>(() => readTab(left));
   const pickTab = (t: 'projects' | 'templates') => {
     setTab(t);

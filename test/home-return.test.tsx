@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act } from 'react';
+import { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 vi.mock('../src/lib/db', async (orig) => ({
@@ -55,7 +55,7 @@ afterEach(() => {
 describe('Home after a project', () => {
   it('opens Projects with the project just left in view, even when Templates was the last tab', async () => {
     localStorage.setItem('ix.home.tab', 'templates');
-    await act(async () => root.render(<App />));
+    await act(async () => root.render(<StrictMode><App /></StrictMode>));
     await flush();
     expect(selected()).toBe('Templates');
     //"Use template" lands in the new project...
@@ -71,7 +71,7 @@ describe('Home after a project', () => {
 
   it('does the same for the browser Back button', async () => {
     localStorage.setItem('ix.home.tab', 'templates');
-    await act(async () => root.render(<App />));
+    await act(async () => root.render(<StrictMode><App /></StrictMode>));
     await flush();
     await go('#/p/pnew');
     await go('#/');
@@ -82,7 +82,7 @@ describe('Home after a project', () => {
 
   it('a fresh visit still opens the remembered tab, with nothing highlighted', async () => {
     localStorage.setItem('ix.home.tab', 'templates');
-    await act(async () => root.render(<App />));
+    await act(async () => root.render(<StrictMode><App /></StrictMode>));
     await flush();
     expect(selected()).toBe('Templates');
     expect(host.querySelector('.just-left')).toBeNull();
