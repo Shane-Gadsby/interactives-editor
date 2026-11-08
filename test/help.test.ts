@@ -12,8 +12,13 @@ const publicDir = resolve(process.cwd(), 'public') + '/';
 /** Every [text](target) in a topic that isn't an address or a picture. */
 function topicLinks(body: string): string[] {
   const out: string[] = [];
-  for (const m of body.replace(/```[\s\S]*?```/g, '').matchAll(/(?<!!)\[[^\]]+\]\(([^)\s]+)\)/g)) if (!/^https?:/.test(m[1])) out.push(m[1]);
+  for (const m of body.replace(/```[\s\S]*?```/g, '').matchAll(/(?<!!)\[[^\]]+\]\(([^)\s]+)\)/g)) if (!/^https?:/.test(m[1]) && !/^templates\//.test(m[1])) out.push(m[1]);
   return out;
+}
+
+/** The files a topic links to that the editor serves (public/templates), for the test that they exist. */
+function fileLinks(body: string): string[] {
+  return [...body.matchAll(/(?<!!)\[[^\]]+\]\((templates\/[^)\s]+)\)/g)].map((m) => m[1]);
 }
 
 /** The anchors a topic offers: one per heading. */
@@ -34,6 +39,13 @@ describe('help topics', () => {
       expect(t.summary.length, `${t.id} summary`).toBeGreaterThan(10);
       expect(topicBody(t).length, `${t.id} body`).toBeGreaterThan(40);
     }
+  });
+
+  it('every downloadable file a topic links to is in public/', () => {
+    const missing: string[] = [];
+    for (const t of TOPICS) for (const f of fileLinks(topicBody(t))) if (!existsSync(publicDir + f)) missing.push(`${t.id} -> ${f}`);
+    expect(missing).toEqual([]);
+    expect(TOPICS.some((t) => fileLinks(topicBody(t)).length)).toBe(true);
   });
 
   it('every topic link points at a topic that exists, and every #anchor at a real heading', () => {

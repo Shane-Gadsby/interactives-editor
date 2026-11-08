@@ -14,7 +14,6 @@ function setup() {
   return { p, ab, title };
 }
 const tl = (ab: Artboard, name: string) => ab.timelines.find((t) => t.name === name)!;
-const endOf = (t: ReturnType<typeof tl>, prop: string) => t.tracks.find((k) => k.prop === prop)?.keys.at(-1)?.value;
 
 describe('animation presets', () => {
   it('each ends in the layer\'s own state, except Fade out which ends clear', () => {

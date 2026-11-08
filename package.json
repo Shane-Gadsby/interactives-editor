@@ -18,7 +18,8 @@
     "build:mcp": "vite build -c vite.mcp.config.ts",
     "build:marking": "vite build -c vite.marking.config.ts",
     "build:media": "vite build -c vite.media.config.ts",
-    "examples:upgrade": "node scripts/upgrade-examples.mjs"
+    "examples:upgrade": "node scripts/upgrade-examples.mjs",
+    "templates:questions": "node scripts/question-templates.mjs"
   },
   "dependencies": {
     "express": "^5.3.0"

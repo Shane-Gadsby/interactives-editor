@@ -2029,7 +2029,7 @@ Everyone should be able to finish the activity, so every drag has two ways that 
     id: 'question-kit',
     title: 'Questions and quizzes',
     group: 'Interactivity',
-    summary: 'Add multiple choice, true/false, fill in the blank (typed or dragged), ordering, matching and categorise (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file.',
+    summary: 'Add multiple choice, true/false, fill in the blank (typed or dragged), ordering, matching and categorise (drag and drop) and hotspot (click the right place) questions that check themselves, with hints, tries, score, shuffle and question banks, or bring in questions from a GIFT file or paste them from Word or Excel.',
     keywords: 'question quiz test assessment import gift moodle converter multiple choice true false fill blank ordering sequence matching match drag drop categorise sort groups word bank distractor extra pairs terms definitions hotspot click picture image diagram area region answer correct feedback hint attempts score shuffle bank random self check learning',
     body: `Quizzes without wiring every button by hand. **Add question** (in the **Web** group of the tool bar, which starts folded: click **Web** to open it) builds a question on the open artboard out of ordinary layers, the variables it keeps and a few interaction nodes. Then the **Question** section in the Inspector changes the wording, answers, tries, hints and feedback whenever you like, without touching how it looks.
 
@@ -2100,6 +2100,10 @@ Two finished ones to play first: **Matching question** and **Hotspot question** 
 **Hotspot.** Add question, *Hotspot (click the right place)*. The sample picture is drawn with shapes so the question works straight away: put your own image in its place (delete the shapes in the **Picture** layer, add an image, or give the Picture frame an image fill). The areas sit together in one **Areas** group over the picture, and the question has one click flow for all of them (an *On pointer* on the group, *Only when a child is hit*, feeding *Choose option* the area's place with \`event.childIndex\`), so adding an area adds no flow. Each **Area** in the Question section is a name, a tick for right, and a shape (rectangle, ellipse or polygon); **Edit on canvas** selects its layer so you can move, resize or reshape it with the usual tools, and **Show all areas** selects every one, since they are invisible until a learner picks one. Tick more than one area as right and the learner has to mark all of them (the areas become checkboxes, and **Part marks** score the share). Clicking an area picks it with a ring and a tint; after the question finishes the right areas are marked and *Right answer: Roof* is written under the picture, so it is not shown by colour alone. If clicks near an area should count, **Grow areas 8 px** makes every area bigger on each side (and **Shrink** the reverse). Each area can have its own feedback, said when it is the one clicked.
 
 ![A hotspot question over a drawn house: the Roof area is selected and shown with its outline.](help/question-hotspot.png)
+
+## Paste questions from Word or Excel
+
+Choose **Paste questions from Word or Excel** in the Add question menu: see [Paste questions](paste-questions), with templates to download.
 
 ## Import questions from a GIFT file
 
@@ -2267,6 +2271,48 @@ The prompt is a heading, the options are a radio group (or checkboxes) with thei
 
 The question frame holds its settings in \`question\`, and each part layer carries a \`questionPart\` marker so the settings can find it again after it is renamed or moved. Both are in the exported file; the player uses the settings and ignores the markers. The nodes are **Check answer**, **Reset question**, **Show hint**, **Choose option** and **Move item** in the [node reference](interaction-nodes). Not yet in the kit: matching (which would use [Drag and drop](drag-and-drop)) and hotspots.
 `,
+  },
+  {
+    id: 'paste-questions',
+    title: 'Paste questions from Word or Excel',
+    group: 'Interactivity',
+    summary: 'Paste a list or table of questions from Word or a spreadsheet, or open a filled in template, see a preview, and add them as kit questions.',
+    keywords: 'paste questions import word docx excel xlsx spreadsheet csv table template list quiz bank bulk multiple choice true false blank matching',
+    body: `If your questions are already in Word or a spreadsheet, you do not have to retype them. Open the **Add question** menu and choose **Paste questions from Word or Excel**, then paste them in (or press **Open a file** to read a filled in template). A preview shows the questions it understood and the lines it did not, and nothing is added until you press **Add**. Each question gets an artboard of its own and is an ordinary [kit question](question-kit) from then on. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> and type "paste questions" to open it from the command palette.
+
+## Templates to fill in
+Each template has a worked example of every kind of question it reads: multiple choice, multiple answer, true/false, fill in the blank and matching.
+
+- [Word template (.docx)](templates/question-template.docx): a block of lines for each question.
+- [Excel template (.xlsx)](templates/question-template.xlsx): a row for each question, with a second sheet of instructions.
+- [CSV template (.csv)](templates/question-template.csv): the same rows, as a plain file for any spreadsheet.
+
+Delete the examples (or write under them), fill in your own, then copy what you wrote and paste it in, or open the saved file. Headings and grey notes in the Word file are ignored, so it does not matter if you leave the examples in. Only the first sheet of the Excel file is read.
+
+## As lines (Word, email, a text file)
+One question in each block, with a blank line between questions. The first line is the question (a number in front of it, like \`1.\` or \`Q1:\`, is dropped) and every line after it is a choice:
+
+\`\`\`
+Type: Multiple choice
+1. Which planet is closest to the Sun?
+a) Venus
+b) Mercury *
+c) Earth
+Feedback: Mercury orbits closest.
+\`\`\`
+
+- **Right choice**: put a \`*\` after it (or before it), or a tick, \`(correct)\`, \`[x]\`. Or give an **Answer** line with its letter, number or text: \`Answer: B\`. For more than one: \`Answer: A, C\`, or mark each.
+- **Letters and bullets** (\`a)\`, \`A.\`, \`1)\`, \`-\`) in front of a choice are optional, and a plain list pasted from Word works.
+- **True/False**: the question, then \`Answer: True\` or \`Answer: False\`. Choices called True and False with one marked work too.
+- **Fill in the blank**: the question, then \`Answer: H2O | h2o\`, every accepted answer split by \`|\`.
+- **Matching**: a pair on each line, written \`France = Paris\` (or \`->\`), two to 8 pairs.
+- **Type** is optional: Multiple choice, Multiple answer, True/False, Fill in the blank or Matching. Without it the kind is worked out (a question with two or more right choices becomes Multiple answer). **Title** names the artboard. **Feedback** is shown once the question is finished.
+
+## As a table (Excel, Word table, CSV)
+Copy the cells (with the headings) and paste. The headings are matched by their words, in any order: **Type**, **Question**, **Option 1**, **Option 2** and so on (as many as you like), **Correct** and **Feedback**. **Correct** takes the letter or number of the right choice (\`B\` or \`2\`), several as \`A, C\`, or \`True\`/\`False\`. You can also mark the right option with a \`*\` instead. For fill in the blank the option cells are the accepted answers, and for matching each option cell is a pair, \`term = match\`. With no heading row, the first cell of a line is the question and the others are choices.
+
+## What it will not read
+Ordering, categorise and hotspot questions are not pasted (add them from the Add question menu), and nor are pictures, part marks or feedback on individual choices. Every line it cannot use is listed in the preview with its line (or row) number and why, so you can fix it in the box and see it change. At most 100 questions are added at once.`,
   },
   {
     id: 'variables',

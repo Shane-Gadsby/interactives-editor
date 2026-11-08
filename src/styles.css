@@ -9917,3 +9917,122 @@ body.page-link-dragging * {
 .modal-backdrop.preview-backdrop.peek .preview-size {
   white-space: nowrap;
 }
+
+/* Paste questions */
+.paste-modal {
+  width: min(980px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+}
+.paste-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  min-height: 0;
+  overflow: hidden;
+}
+.paste-body p {
+  margin: 0;
+}
+.paste-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  min-height: 0;
+}
+.paste-in,
+.paste-out {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  min-width: 0;
+}
+.paste-in textarea {
+  min-height: 300px;
+  flex: 1;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  background: var(--canvas);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+.paste-files {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.paste-error {
+  color: var(--danger-text);
+}
+.paste-out {
+  overflow-y: auto;
+  max-height: 52vh;
+  padding-right: 4px;
+}
+.paste-count {
+  font-weight: 600;
+}
+.paste-list {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.paste-list ul,
+.paste-skipped ul {
+  margin: 2px 0 0;
+  padding-left: 18px;
+}
+.paste-list li > ul > li.right {
+  color: var(--ok-text);
+  font-weight: 600;
+}
+.paste-kind {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 7px;
+  margin-right: 6px;
+  border-radius: 10px;
+  background: var(--pill-bg);
+  color: var(--pill-fg);
+}
+.paste-prompt {
+  font-weight: 600;
+}
+.paste-skipped {
+  background: var(--banner-warn-bg);
+  color: var(--banner-warn-fg);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 12.5px;
+}
+.paste-skipped .muted {
+  color: inherit;
+  opacity: 0.8;
+}
+.paste-templates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-2);
+}
+.paste-templates a.btn {
+  text-decoration: none;
+}
+.paste-actions {
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 760px) {
+  .paste-grid {
+    grid-template-columns: 1fr;
+  }
+}

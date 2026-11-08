@@ -164,6 +164,8 @@ function inline(s: string, onLink: (href: string) => void): ReactNode {
     if (p.startsWith('<kbd>')) return <kbd key={i}>{p.slice(5, -6)}</kbd>;
     if (p.startsWith('[')) {
       const m = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(p)!;
+      //A file the editor serves (the question templates) downloads instead of opening a help page
+      if (/^templates\/[\w.-]+\.(docx|xlsx|csv)$/.test(m[2])) return <a key={i} href={typeof document === 'undefined' ? m[2] : new URL(m[2], document.baseURI).href} download>{m[1]}</a>;
       const external = /^https?:/.test(m[2]);
       return (
         <a

@@ -69,16 +69,40 @@ export function applyGift(d: Project, parse: GiftParse, activeId?: string | null
 //importers.ts has the same one, but it drags the exporter (and the built player) in, which a unit test of this file does not want
 const showReport = (title: string, lines: string[]) => (lines.length ? store().set({ report: { title, lines } }) : store().toast(title));
 
+/**
+ * Put a parse into the open project (on artboards, as kit questions) and say what happened. Shared by the GIFT file command and
+ * Paste questions; `source` is what the report calls where they came from, `thing` what analytics records.
+ */
+export function addParsed(parse: GiftParse, source: string, thing: string): number {
+  const s = store();
+  const lines = giftReportLines(parse);
+  if (!parse.questions.length) {
+    track('feature', 'question-import', { thing: `${thing}-empty` });
+    showReport(`No questions found in ${source}`, lines.length ? lines : ['Nothing in it was a question.']);
+    return 0;
+  }
+  let applied: GiftApplied = { artboardIds: [], left: [] };
+  s.update((d) => void (applied = applyGift(d as Project, parse, s.get().activeArtboardId)));
+  track('feature', 'question-import', { thing });
+  if (applied.left.length) lines.push(`Only the first ${MAX_IMPORT} questions were added. ${applied.left.length} more were not. Add the rest separately.`);
+  const first = applied.artboardIds[0];
+  if (first) {
+    s.set({ activeArtboardId: first, artboardSelected: true, selection: [] });
+  }
+  const n = applied.artboardIds.length;
+  showReport(`Imported ${n} question${n === 1 ? '' : 's'} from ${source}${parse.skipped.length ? `, ${parse.skipped.length} left out` : ''}`, lines);
+  return n;
+}
+
 /** The Import questions command: pick a GIFT file, add its questions, and say what was left out. */
 export async function importGiftFile(): Promise<void> {
   const [file] = await pickFiles(GIFT_ACCEPT, false);
   if (!file) return;
-  const s = store();
   let parse: GiftParse;
   try {
     parse = parseGift(await file.text());
   } catch {
-    s.toast('That file could not be read as GIFT.', 'error');
+    store().toast('That file could not be read as GIFT.', 'error');
     return;
   }
   const lines = giftReportLines(parse);
@@ -87,14 +111,5 @@ export async function importGiftFile(): Promise<void> {
     showReport(`No questions found in ${file.name}`, lines.length ? lines : ['The file has no GIFT questions in it.']);
     return;
   }
-  let applied: GiftApplied = { artboardIds: [], left: [] };
-  s.update((d) => void (applied = applyGift(d as Project, parse, s.get().activeArtboardId)));
-  track('feature', 'question-import', { thing: 'gift' });
-  if (applied.left.length) lines.push(`Only the first ${MAX_IMPORT} questions were added. ${applied.left.length} more in the file were not. Import the rest from a second file.`);
-  const first = applied.artboardIds[0];
-  if (first) {
-    s.set({ activeArtboardId: first, artboardSelected: true, selection: [] });
-  }
-  const n = applied.artboardIds.length;
-  showReport(`Imported ${n} question${n === 1 ? '' : 's'} from ${file.name}${parse.skipped.length ? `, ${parse.skipped.length} left out` : ''}`, lines);
+  addParsed(parse, file.name, 'gift');
 }

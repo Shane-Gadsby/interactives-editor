@@ -11,6 +11,7 @@ import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, 
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
 import { importGiftFile } from './lib/gift-import';
+import { PasteQuestionsModal } from './components/PasteQuestionsModal';
 import { copySelection, pasteNodes } from './lib/clipboard';
 import { copySelectedKeys, isKeyClipText, keyContext, keysCopiedLast, pasteKeys, watchKeyContext } from './lib/key-edit';
 import { Canvas } from './canvas/Canvas';
@@ -939,6 +940,12 @@ const WEB_TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] =
 /** The Add question button: a menu of question types; picking one builds the question on the open artboard and selects it. */
 function AddQuestion() {
   const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  useEffect(() => {
+    const open = () => setPasteOpen(true);
+    window.addEventListener('ix-paste-questions', open);
+    return () => window.removeEventListener('ix-paste-questions', open);
+  }, []);
   const add = (kind: QuestionKind) => {
     const s = store();
     const ab = s.artboard();
@@ -951,6 +958,7 @@ function AddQuestion() {
   };
   return (
     <>
+      {pasteOpen && <PasteQuestionsModal onClose={() => setPasteOpen(false)} />}
       <IconButton
         icon={<Icons.question />}
         title="Add question: multiple choice, true/false, fill in the blank, ordering, matching, hotspot"
@@ -974,6 +982,16 @@ function AddQuestion() {
               </button>
             ))}
             <div className="q-menu-title">Import</div>
+            <button
+              role="menuitem"
+              onClick={() => {
+                setAt(null);
+                setPasteOpen(true);
+              }}
+            >
+              Paste questions from Word or Excel
+              <span className="muted small">A table, a list or lines, with a preview and templates to fill in</span>
+            </button>
             <button
               role="menuitem"
               onClick={() => {
