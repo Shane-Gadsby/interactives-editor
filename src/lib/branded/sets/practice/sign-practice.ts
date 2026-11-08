@@ -67,6 +67,10 @@ interface Pages {
   summary: Artboard;
 }
 
+//A formula only runs at the start, so every step that changes current sets choices again with this
+const SPOT = 'current % (signs[current].wrong.length + 1)';
+const CHOICES = `signs[current] ? signs[current].wrong.slice(0, ${SPOT}).concat([signs[current].meaning], signs[current].wrong.slice(${SPOT})) : []`;
+
 function build(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'Sign practice');
   const { project, L } = ctx;
@@ -85,8 +89,7 @@ function build(colourway: Colourway) {
   add('rightCount', 'number', 0);
   add('answeredCount', 'number', 0);
   //The three choices for the sign in view, with the right one moved to a different place each time
-  const spot = 'current % (signs[current].wrong.length + 1)';
-  add('choices', 'list', [], `signs[current] ? signs[current].wrong.slice(0, ${spot}).concat([signs[current].meaning], signs[current].wrong.slice(${spot})) : []`);
+  add('choices', 'list', [], CHOICES);
   add('stage', 'string', 'off');
   add('ticked', 'list', []);
   add('practised', 'list', []);
@@ -456,8 +459,8 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
   const { hero, about, watch, tryIt, review, summary } = n;
 
   //Start a fresh walk through the signs
-  const rewind = [set(v.current, '0'), set(v.answered, 'false'), set(v.picked, '""'), set(v.clipPlaying, 'false'), set(v.clipTime, '0'), set(v.stage, '"off"')] as [string, Record<string, unknown>][];
-  const nextSign = [set(v.current, 'current + 1'), set(v.answered, 'false'), set(v.picked, '""'), set(v.clipPlaying, 'false'), set(v.clipTime, '0'), set(v.stage, '"off"')] as [string, Record<string, unknown>][];
+  const rewind = [set(v.current, '0'), set(v.choices, CHOICES), set(v.answered, 'false'), set(v.picked, '""'), set(v.clipPlaying, 'false'), set(v.clipTime, '0'), set(v.stage, '"off"')] as [string, Record<string, unknown>][];
+  const nextSign = [set(v.current, 'current + 1'), set(v.choices, CHOICES), set(v.answered, 'false'), set(v.picked, '""'), set(v.clipPlaying, 'false'), set(v.clipTime, '0'), set(v.stage, '"off"')] as [string, Record<string, unknown>][];
   const cameraDown = (): [string, Record<string, unknown>] => ['action.cameraPreview', { op: 'off' }];
 
   const hg = new Graph(hero.page);
@@ -496,7 +499,7 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
   const more = wg.add('logic.if', { condition: 'current + 1 < signs.length' }, onNext);
   wg.runFrom(more, 'true', ...nextSign, announce('"Sign " + (current + 1) + " of " + signs.length + "."'));
   const last = wg.add('action.setVariable', { variable: v.current.id, op: 'set', value: '0' }, more, 'false', { dy: 90 });
-  wg.run(last, set(v.answered, 'false'), set(v.picked, '""'), set(v.clipPlaying, 'false'), set(v.clipTime, '0'), set(v.stage, '"off"'), go(T.tryIt));
+  wg.run(last, set(v.choices, CHOICES), set(v.answered, 'false'), set(v.picked, '""'), set(v.clipPlaying, 'false'), set(v.clipTime, '0'), set(v.stage, '"off"'), go(T.tryIt));
   wg.gap(60);
   wg.run(wg.click(watch.finish, 'Finish here'), set(v.clipPlaying, 'false'), go(T.summary));
   wg.run(wg.click(watch.skip, 'Skip to signing'), ...rewind, go(T.tryIt));
@@ -551,7 +554,7 @@ function wirePages(v: Vars, n: ReturnType<typeof makePages>, T: Pages): void {
     set(v.clipTime, '0'),
   );
   const more2 = rg.add('logic.if', { condition: 'current + 1 < signs.length' }, logged);
-  rg.runFrom(more2, 'true', set(v.current, 'current + 1'), set(v.stage, '"off"'), announce('"Sign " + (current + 1) + " of " + signs.length + "."'), go(T.tryIt));
+  rg.runFrom(more2, 'true', set(v.current, 'current + 1'), set(v.choices, CHOICES), set(v.stage, '"off"'), announce('"Sign " + (current + 1) + " of " + signs.length + "."'), go(T.tryIt));
   rg.add('action.artboard', { artboard: T.summary.id, transition: 'fade', duration: 250 }, more2, 'false', { dy: 90 });
 
   // ---- summary

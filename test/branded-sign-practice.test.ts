@@ -190,9 +190,15 @@ describe('sign practice', { timeout: 30000 }, () => {
         const meaning = (player.getVariable('signs') as { meaning: string }[])[i].meaning;
         expect(choices).toHaveLength(3);
         expect(new Set(choices).size).toBe(3);
+        //The sign in view's own meaning is always one of them (choices once stayed on sign 1's)
+        expect(choices).toContain(meaning);
         seen.add(choices.indexOf(meaning));
-        player.setVariable('current', i + 1 < 5 ? i + 1 : 0);
-        await settle(player, 50);
+        if (i + 1 < 5) {
+          await click(`${layer(p, W, 'Choice').id}~0`);
+          await click(layer(p, W, 'Next').id, 300);
+          await settle(player, 50);
+          expect(player.getVariable('current')).toBe(i + 1);
+        }
       }
       expect(seen.size).toBeGreaterThan(1);
       player.destroy();
