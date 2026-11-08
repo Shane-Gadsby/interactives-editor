@@ -87,7 +87,7 @@ const CATALOG = [
     kind: "event.pointer",
     label: "On pointer",
     category: "event",
-    description: "When a layer is clicked, pressed, hovered or dragged. Moves and drags give event.x / event.y (artboard coordinates) and event.stepX / event.stepY (movement since the last event); drags also give event.dx / event.dy (movement since the press), event.index (the repeated copy the pointer is over now) and event.startIndex (the copy it was pressed on). With a layer picked, event.child is the name of its own layer that was hit and event.childIndex that layer's place in it from 0 (-1 and null when it landed on the layer itself): one flow can serve every item in a set of layers.",
+    description: "When a layer is clicked, pressed, hovered or dragged. Moves and drags give event.x / event.y (artboard coordinates) and event.stepX / event.stepY (movement since the last event); drags also give event.dx / event.dy (movement since the press), event.index (the repeated copy the pointer is over now) and event.startIndex (the copy it was pressed on). With a layer picked, event.child is the name of its own layer that was hit and event.childIndex that layer's place in it from 0 (-1 and null when it landed on the layer itself): one flow can serve every item in a set of layers. On a chart layer, event.index is the chart item (bar, slice, point) that was hit, null away from them.",
     outputs: OUT,
     hasInput: false,
     params: [
@@ -130,7 +130,7 @@ const CATALOG = [
     kind: "event.focus",
     label: "On focus",
     category: "event",
-    description: "When a layer gains or loses keyboard focus (tabbing to it, clicking it, arrowing to it, or the Focus layer node). The layer becomes focusable. event.index is its number when it is a copy of a repeater or in a list with Keyboard navigation. With a layer picked, event.child and event.childIndex say which of its own layers took or lost the focus.",
+    description: "When a layer gains or loses keyboard focus (tabbing to it, clicking it, arrowing to it, or the Focus layer node). The layer becomes focusable. event.index is its number when it is a copy of a repeater or in a list with Keyboard navigation. With a layer picked, event.child and event.childIndex say which of its own layers took or lost the focus. For a chart layer it fires as the arrow keys move between its items, with event.index the item.",
     outputs: OUT,
     hasInput: false,
     params: [
@@ -1653,6 +1653,7 @@ const ANIMATABLE_PROPS = [
   { prop: "shadow.color", label: "Shadow colour", kind: "color" },
   { prop: "text", label: "Text", kind: "string" },
   { prop: "innerRatio", label: "Star inner ratio", kind: "number" },
+  { prop: "barFill.color", label: "Progress bar colour", kind: "color" },
   { prop: "cursor", label: "Cursor", kind: "string" },
   { prop: "link.url", label: "Link URL", kind: "string" },
   { prop: "label", label: "Button label", kind: "string" },
@@ -1689,30 +1690,37 @@ const ANIMATABLE_PROPS = [
   { prop: "modifiers.0.letterSpacing", label: "Text modifier letter spacing", kind: "number" },
   { prop: "modifiers.0.blur", label: "Text modifier blur", kind: "number" }
 ];
+function layerOwnProps(node) {
+  if (node?.type !== "progress") return [];
+  return [
+    { prop: "value", label: "Progress value", kind: "number" },
+    { prop: "max", label: "Progress maximum", kind: "number" }
+  ];
+}
 const MODIFIER_UNITS = ["letter", "word", "line"];
 const MODIFIER_SHAPES = ["square", "ramp-up", "ramp-down", "triangle", "round", "smooth", "falloff"];
 function defaultModifier(patch = {}) {
   return { unit: "letter", start: 0, end: 100, offset: 0, shape: "square", strength: 100, x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0, blur: 0, ...patch };
 }
 const isNum$3 = (v) => typeof v === "number" && Number.isFinite(v);
-const num$1 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
+const num$2 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeModifier(raw) {
   const r2 = raw && typeof raw === "object" ? raw : {};
   const d = defaultModifier();
   const m = {
     unit: MODIFIER_UNITS.includes(r2.unit) ? r2.unit : d.unit,
-    start: num$1(r2.start, d.start),
-    end: num$1(r2.end, d.end),
-    offset: num$1(r2.offset, d.offset),
+    start: num$2(r2.start, d.start),
+    end: num$2(r2.end, d.end),
+    offset: num$2(r2.offset, d.offset),
     shape: MODIFIER_SHAPES.includes(r2.shape) ? r2.shape : d.shape,
-    strength: num$1(r2.strength, d.strength),
-    x: num$1(r2.x, d.x),
-    y: num$1(r2.y, d.y),
-    rotation: num$1(r2.rotation, d.rotation),
-    scale: num$1(r2.scale, d.scale),
-    opacity: num$1(r2.opacity, d.opacity),
-    letterSpacing: num$1(r2.letterSpacing, d.letterSpacing),
-    blur: num$1(r2.blur, d.blur)
+    strength: num$2(r2.strength, d.strength),
+    x: num$2(r2.x, d.x),
+    y: num$2(r2.y, d.y),
+    rotation: num$2(r2.rotation, d.rotation),
+    scale: num$2(r2.scale, d.scale),
+    opacity: num$2(r2.opacity, d.opacity),
+    letterSpacing: num$2(r2.letterSpacing, d.letterSpacing),
+    blur: num$2(r2.blur, d.blur)
   };
   if (isNum$3(r2.falloffStart)) m.falloffStart = r2.falloffStart;
   if (isNum$3(r2.falloffEnd)) m.falloffEnd = r2.falloffEnd;
@@ -2942,14 +2950,14 @@ function newQuestion(kind, prefix = "q1") {
 function opts(texts, right) {
   return texts.map((text2, i) => ({ id: `o${i + 1}`, text: text2, ...right.includes(i) ? { correct: true } : {} }));
 }
-const isObj$3 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isObj$4 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const str$1 = (v, d = "") => typeof v === "string" ? v : d;
-const num = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
+const num$1 = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
 function cleanVoice(raw) {
-  if (!isObj$3(raw)) return void 0;
+  if (!isObj$4(raw)) return void 0;
   const out = {};
   if (str$1(raw.voice)) out.voice = str$1(raw.voice).slice(0, 40);
-  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num(raw.speed, 1, 0.5, 1.5);
+  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num$1(raw.speed, 1, 0.5, 1.5);
   if (str$1(raw.say).trim()) out.say = str$1(raw.say).slice(0, 200);
   if (str$1(raw.sentence).trim()) out.sentence = str$1(raw.sentence).slice(0, 300);
   if (raw.twice === true) out.twice = true;
@@ -2959,11 +2967,11 @@ function cleanVoice(raw) {
   return Object.keys(out).length ? out : void 0;
 }
 function normaliseQuestion(raw) {
-  if (!isObj$3(raw)) return null;
+  if (!isObj$4(raw)) return null;
   const kind = QUESTION_KINDS.some((k) => k.value === raw.kind) ? raw.kind : null;
   if (!kind) return null;
   const d = newQuestion(kind);
-  const list = (v, max) => Array.isArray(v) ? v.filter(isObj$3).slice(0, max) : [];
+  const list = (v, max) => Array.isArray(v) ? v.filter(isObj$4).slice(0, max) : [];
   const options = list(raw.options, MAX_OPTIONS).map((o, i) => ({
     id: str$1(o.id) || `o${i + 1}`,
     text: str$1(o.text),
@@ -2989,7 +2997,7 @@ function normaliseQuestion(raw) {
     group: str$1(c2.group),
     ...str$1(c2.feedback) ? { feedback: str$1(c2.feedback) } : {}
   }));
-  const bank = isObj$3(raw.bank) && str$1(raw.bank.items).trim() ? {
+  const bank = isObj$4(raw.bank) && str$1(raw.bank.items).trim() ? {
     items: str$1(raw.bank.items),
     order: raw.bank.order === "sequence" ? "sequence" : "random",
     ...raw.bank.end === "finish" ? { end: "finish" } : {},
@@ -2999,7 +3007,7 @@ function normaliseQuestion(raw) {
     kind,
     prefix: isIdentifier(str$1(raw.prefix)) ? str$1(raw.prefix) : d.prefix,
     prompt: str$1(raw.prompt),
-    points: num(raw.points, 1, 0, 1e3),
+    points: num$1(raw.points, 1, 0, 1e3),
     options,
     blanks,
     pairs,
@@ -3009,10 +3017,10 @@ function normaliseQuestion(raw) {
     ...kind === "blank" && raw.answerBy === "drag" ? { answerBy: "drag" } : {},
     shuffle: raw.shuffle === true,
     partial: raw.partial === true,
-    attempts: Math.round(num(raw.attempts, 0, 0, 100)),
-    attemptPenalty: num(raw.attemptPenalty, 0, 0, 1),
+    attempts: Math.round(num$1(raw.attempts, 0, 0, 100)),
+    attemptPenalty: num$1(raw.attemptPenalty, 0, 0, 1),
     hints: (Array.isArray(raw.hints) ? raw.hints : []).filter((h) => typeof h === "string").slice(0, MAX_HINTS),
-    hintPenalty: num(raw.hintPenalty, 0, 0, 1),
+    hintPenalty: num$1(raw.hintPenalty, 0, 0, 1),
     feedbackCorrect: str$1(raw.feedbackCorrect),
     feedbackPartial: str$1(raw.feedbackPartial),
     feedbackIncorrect: str$1(raw.feedbackIncorrect),
@@ -3027,21 +3035,21 @@ function normaliseQuestion(raw) {
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
-    ...isObj$3(raw.retake) ? { retake: { limit: Math.round(num(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
+    ...isObj$4(raw.retake) ? { retake: { limit: Math.round(num$1(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
     ...cleanVoice(raw.voice) ? { voice: cleanVoice(raw.voice) } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
     ...raw.multi === true ? { multi: true } : {},
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
   };
 }
-const isObj$2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isObj$3 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isNum$2 = (v) => typeof v === "number" && Number.isFinite(v);
 function cleanCues(v) {
   if (!Array.isArray(v)) return [];
   const seen = /* @__PURE__ */ new Set();
   const out = [];
   for (const raw of v) {
-    if (!isObj$2(raw) || typeof raw.text !== "string" || !isNum$2(raw.start)) continue;
+    if (!isObj$3(raw) || typeof raw.text !== "string" || !isNum$2(raw.start)) continue;
     const start = Math.max(0, raw.start);
     const end = isNum$2(raw.end) && raw.end > start ? raw.end : start + 1e3;
     let id = typeof raw.id === "string" && raw.id && !seen.has(raw.id) ? raw.id : uid("cu");
@@ -3051,14 +3059,14 @@ function cleanCues(v) {
   }
   return out;
 }
-const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isObj$2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isNum$1 = (v) => typeof v === "number" && Number.isFinite(v);
 function cleanVideoCues(v) {
   if (!Array.isArray(v)) return [];
   const seen = /* @__PURE__ */ new Set();
   const out = [];
   for (const raw of v) {
-    if (!isObj$1(raw) || !isNum$1(raw.time) || typeof raw.name !== "string") continue;
+    if (!isObj$2(raw) || !isNum$1(raw.time) || typeof raw.name !== "string") continue;
     let id = typeof raw.id === "string" && raw.id ? raw.id : uid("vc");
     while (seen.has(id)) id = uid("vc");
     seen.add(id);
@@ -3071,7 +3079,7 @@ function cleanVideoChapters(v) {
   const seen = /* @__PURE__ */ new Set();
   const out = [];
   for (const raw of v) {
-    if (!isObj$1(raw) || !isNum$1(raw.time) || typeof raw.title !== "string") continue;
+    if (!isObj$2(raw) || !isNum$1(raw.time) || typeof raw.title !== "string") continue;
     let id = typeof raw.id === "string" && raw.id ? raw.id : uid("vh");
     while (seen.has(id)) id = uid("vh");
     seen.add(id);
@@ -3097,6 +3105,51 @@ function resolveSpec(spec, vars) {
     return toHex(ca.map((x, i) => x * p + cb[i] * (1 - p)));
   }
   return /^--[\w-]+$/.test(s) ? vars[s] : void 0;
+}
+const NOTE_COLOURS = ["gold", "orange", "green", "sky", "purple", "rose"];
+const NOTE_DEFAULT_W = 200;
+const NOTE_DEFAULT_H = 120;
+const NOTE_MIN_W = 80;
+const NOTE_MIN_H = 48;
+const NOTE_MAX_TEXT = 4e3;
+const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const num = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
+function cleanNote(raw) {
+  if (!isObj$1(raw) || typeof raw.id !== "string" || !raw.id) return null;
+  const n = {
+    id: raw.id,
+    x: num(raw.x, 0),
+    y: num(raw.y, 0),
+    w: Math.max(NOTE_MIN_W, num(raw.w, NOTE_DEFAULT_W)),
+    h: Math.max(NOTE_MIN_H, num(raw.h, NOTE_DEFAULT_H)),
+    text: typeof raw.text === "string" ? raw.text.slice(0, NOTE_MAX_TEXT) : ""
+  };
+  if (NOTE_COLOURS.includes(raw.colour)) n.colour = raw.colour;
+  if (typeof raw.author === "string" && raw.author) n.author = raw.author.slice(0, 120);
+  if (typeof raw.created === "string") n.created = raw.created.slice(0, 40);
+  const a = raw.anchor;
+  if (isObj$1(a) && typeof a.layerId === "string" && a.layerId) n.anchor = { layerId: a.layerId, lx: num(a.lx, 0), ly: num(a.ly, 0) };
+  return n;
+}
+function cleanNotes(raw) {
+  if (!Array.isArray(raw)) return void 0;
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const r2 of raw) {
+    const n = cleanNote(r2);
+    if (!n || seen.has(n.id)) continue;
+    seen.add(n.id);
+    out.push(n);
+  }
+  return out.length ? out : void 0;
+}
+function makeNote(partial) {
+  const n = { id: partial.id ?? uid("note_"), x: partial.x, y: partial.y, w: partial.w ?? NOTE_DEFAULT_W, h: partial.h ?? NOTE_DEFAULT_H, text: partial.text ?? "" };
+  if (partial.colour) n.colour = partial.colour;
+  if (partial.author) n.author = partial.author;
+  if (partial.created) n.created = partial.created;
+  if (partial.anchor) n.anchor = partial.anchor;
+  return cleanNote(n);
 }
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isStr = (v) => typeof v === "string";
@@ -3198,6 +3251,20 @@ function sanitizeNode(raw, seen) {
     n.pixelRatio = isNum(raw.pixelRatio) && raw.pixelRatio > 0 ? Math.min(3, raw.pixelRatio) : "auto";
     n.uniforms = usableUniforms(raw.uniforms);
   }
+  if (raw.type === "progress") {
+    if (n.orientation !== "horizontal" && n.orientation !== "vertical") n.orientation = "horizontal";
+    if (n.semantics !== "none" && n.semantics !== "progressbar" && n.semantics !== "meter") n.semantics = "progressbar";
+    if ("reverse" in n && typeof n.reverse !== "boolean") delete n.reverse;
+    if ("valueText" in n && !isStr(n.valueText)) delete n.valueText;
+  }
+  if (raw.type === "chart") {
+    if (!["column", "bar", "line", "pie", "donut"].includes(n.kind)) n.kind = "column";
+    n.colors = arr(n.colors, isStr).slice(0, 40);
+    for (const k of ["min", "max", "decimals"]) if (n[k] !== null && !isNum(n[k])) n[k] = null;
+    if (!isNum(n.fontSize) || n.fontSize < 4) n.fontSize = 13;
+    if (!isNum(n.hole)) n.hole = 0.6;
+    else n.hole = Math.min(0.95, Math.max(0.1, n.hole));
+  }
   if (raw.type === "image" && "shaderFilter" in n) {
     const f2 = n.shaderFilter;
     if (isObj(f2) && isStr(f2.code)) {
@@ -3285,6 +3352,7 @@ function sanitizeNode(raw, seen) {
     return out;
   };
   if ("fill" in n) n.fill = paint(n.fill);
+  if ("barFill" in n) n.barFill = paint(n.barFill);
   if ("stroke" in n) n.stroke = stroke(n.stroke);
   for (const k of ["strokes", "fills"]) {
     if (!(k in n)) continue;
@@ -3308,7 +3376,9 @@ function sanitizeNode(raw, seen) {
     else delete n.runs;
   }
   if ("options" in n && !isStr(n.options)) delete n.options;
-  for (const k of ["min", "max", "step"]) if (k in n && !isNum(n[k])) delete n[k];
+  if (raw.type !== "chart") {
+    for (const k of ["min", "max", "step"]) if (k in n && !isNum(n[k])) delete n[k];
+  }
   if ("cursorImage" in n && n.cursorImage !== null && !isStr(n.cursorImage)) delete n.cursorImage;
   if ("cursorHotspot" in n && !(isObj(n.cursorHotspot) && isNum(n.cursorHotspot.x) && isNum(n.cursorHotspot.y))) delete n.cursorHotspot;
   if ("disabled" in n && typeof n.disabled !== "boolean") delete n.disabled;
@@ -4068,6 +4138,8 @@ const NAMES$1 = {
   instance: "Instance",
   draw: "Script layer",
   shader: "Shader layer",
+  progress: "Progress bar",
+  chart: "Chart",
   bone: "Bone"
 };
 function base(type) {
@@ -4105,6 +4177,7 @@ const DEFAULT_TEXT_STYLE = {
 };
 const DEFAULT_DRAW_CODE = DRAW_TEMPLATES[0].code;
 const GREY = () => ({ type: "solid", color: LIGHT_LOOK.surfaceMuted });
+const CHART_COLORS = () => [LIGHT_LOOK.button, LIGHT_LOOK.link, LIGHT_LOOK.success, LIGHT_LOOK.warning, LIGHT_LOOK.error, LIGHT_LOOK.muted];
 const FACTORIES = {
   rect: () => ({ fill: GREY(), stroke: null, cornerRadius: 0 }),
   ellipse: () => ({ fill: GREY(), stroke: null }),
@@ -4193,6 +4266,43 @@ const FACTORIES = {
     runInEditor: true,
     width: 320,
     height: 200
+  }),
+  progress: () => ({
+    value: 40,
+    max: 100,
+    fill: GREY(),
+    stroke: null,
+    barFill: { type: "solid", color: LIGHT_LOOK.button },
+    cornerRadius: 6,
+    orientation: "horizontal",
+    semantics: "progressbar",
+    width: 240,
+    height: 12
+  }),
+  chart: () => ({
+    kind: "column",
+    data: '[{label: "A", value: 4}, {label: "B", value: 7}, {label: "C", value: 3}, {label: "D", value: 5}]',
+    labelKey: "label",
+    valueKey: "value",
+    colors: CHART_COLORS(),
+    varyColors: false,
+    color: LIGHT_LOOK.text,
+    fontFamily: DEFAULT_TEXT_STYLE.fontFamily,
+    fontSize: 13,
+    min: null,
+    max: null,
+    gridlines: true,
+    axisLabels: true,
+    valueLabels: false,
+    legend: false,
+    hole: 0.6,
+    animate: true,
+    table: true,
+    decimals: null,
+    prefix: "",
+    suffix: "",
+    width: 360,
+    height: 240
   }),
   shader: () => ({
     code: DEFAULT_SHADER.code,
@@ -6444,7 +6554,7 @@ From left to right:
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
-**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)), and the **Media Catalogue** button, which opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## What the pointer shows
 The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
@@ -6478,7 +6588,7 @@ Every panel can go anywhere: the left, right or bottom area, or a window of its 
 
 A floating window moves by its title bar and resizes from its bottom-right corner. Its **×** closes it and sends its panels back to where they started. An area nothing is docked in takes no room.
 
-Right-click a tab for **Dock on the left / right / at the bottom**, **Float in its own window** and **Reset panel layout** (everything back where it started). Right-click the tool bar to put it **On the left**, **On the right** or **Floating**, or drag its **Tools** title out onto the page to float it there (a floating tool bar moves by the same title). The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
+Right-click a tab for **Dock on the left / right / at the bottom**, **Float in its own window** and **Reset panel layout** (everything back where it started). The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title), and drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right** and **Dock at the bottom** strips show, labelled for the tools, and the one you are over lights up. Along the bottom it becomes a strip across the page with its groups side by side, above the bottom panels. It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is. Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom** or **Floating**. Saved workspaces remember where the tool bar was. The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
 **Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. The **Debug** panel (on by default) shows:
@@ -6519,7 +6629,7 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     id: "preferences",
     title: "Preferences",
     group: "Getting started",
-    summary: "Your own editor settings: wheel, theme, default font, rulers, tooltips, layers outside clipped artboards.",
+    summary: "Your own editor settings: wheel, theme, default font, rulers, grid and snapping, tooltips, layers outside clipped artboards.",
     keywords: "settings options wheel tooltips",
     body: `![The Preferences dialog.](help/preferences.png)
 
@@ -6529,7 +6639,7 @@ Open **Preferences** from the gear in the top bar (or on the projects page). The
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette (the same colours as the rest of the Toolbox): its greys, its blue for selection and focus, and UniSQ gold on primary buttons, the open tab and the line under the top bar. In Light, the palette's grey for secondary text is a little under the usual contrast guideline (4.4:1 on panels, 4.1:1 on the background, against 4.5:1); it is left as the palette has it so the editor matches the Toolbox.
 - **Workspace** (in the editor only): switch every panel's place in one go. **Standard** is where everything starts; **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
 - **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. It is Open Sans unless you change it. Click the box and type to search every Google font (the chips narrow it by Sans, Serif, Display, Handwriting or Mono), then pick one with <kbd>Enter</kbd> or a click; <kbd>Esc</kbd> closes the list. A name that isn't on the list can be used as typed. It applies to projects and text you make from now on, not to ones that exist.
-- **Show rulers**: rulers and guides on the canvas (also <kbd>Shift</kbd>+<kbd>R</kbd>).
+- **Canvas**: **Show rulers** (rulers and guides on the canvas, also <kbd>Shift</kbd>+<kbd>R</kbd>), **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>), **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), **Grid size** (1 to 512 px, with presets under it) and **Stronger line every** (cells, 1 to 32). See [The grid and snapping](grid). These follow you with your account like the rest.
 - **Show layers outside clipped artboards**: on by default. When an artboard has **Clip content to artboard** on, the parts of layers that hang outside it are drawn faintly, in diagonal stripes, beside it on the canvas, so you can still see them and click them to select. It is only how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
 - **Show tooltips**: explanations when you hover buttons and fields.
 - **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
@@ -6627,6 +6737,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>T</kbd> | Text |
 | <kbd>B</kbd> | Button |
 | <kbd>C</kbd> | Comment (pin a review note where you click) |
+| <kbd>S</kbd> | Note (draw a sticky note for the people editing; players never see it, see [Notes](notes)) |
 
 ## Editing
 | Key | Does |
@@ -6637,7 +6748,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> | Group / ungroup |
 | <kbd>Ctrl</kbd>+<kbd>A</kbd> | Select all on the artboard |
 | <kbd>Delete</kbd> / <kbd>Backspace</kbd> | Delete the selection (or the selected keyframes) |
-| Arrow keys (<kbd>Shift</kbd> for 10px) | Nudge |
+| Arrow keys (<kbd>Shift</kbd> for 10px) | Nudge. With Snap to grid on they step to the next grid line instead (<kbd>Shift</kbd>: a stronger line), and <kbd>Ctrl</kbd> + arrow nudges by 1px or 10px as usual |
 | <kbd>Alt</kbd>+arrow keys | Move the selected layer in the Layers list: up or down past a neighbour, right into the group above, left out of its group |
 | <kbd>]</kbd> / <kbd>[</kbd> | Bring forward / send backward (<kbd>Ctrl</kbd> for front / back) |
 | <kbd>Enter</kbd> | Go into a group or frame, edit a path's points, or edit text |
@@ -6651,6 +6762,8 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>Shift</kbd>+<kbd>2</kbd> | Zoom to selection |
 | <kbd>Ctrl</kbd>+<kbd>1</kbd> | 100% |
 | <kbd>Shift</kbd>+<kbd>R</kbd> | Show or hide rulers |
+| <kbd>Shift</kbd>+<kbd>G</kbd> | Show or hide the grid |
+| <kbd>Ctrl</kbd>+<kbd>'</kbd> | Turn Snap to grid on or off |
 
 ## Help
 | Key | Does |
@@ -6682,7 +6795,9 @@ Double-click a text layer to edit it. Select some of the text, then:
 | Do this | To |
 |---|---|
 | Hold <kbd>Alt</kbd> while drawing or resizing | Work from the centre |
-| Hold <kbd>Ctrl</kbd> while dragging | Move without snapping |
+| Hold <kbd>Ctrl</kbd> while dragging | Move, resize or draw without snapping (to the grid or to other layers) |
+| Right-click the grid or snap button on the tool bar | Pick the grid size and how often a stronger line shows |
+| Drag the **Tools** title over an edge of the canvas | Dock the tool bar there (left, right or a strip along the bottom) |
 | <kbd>Alt</kbd>-click a path point | Switch it between curve and corner |
 | <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Add it to the selection, or take it out (it picks the deepest layer inside groups, so you can gather layers from different groups) |
 | Double-click a group | Select inside it |
@@ -7037,7 +7152,7 @@ Copyright reporting for a course is run at course level, and this tab does not r
     keywords: "image picture photo svg video audio sound mp3 upload drop paste asset nine slice 9-slice n-slice",
     body: `Drop files on the canvas, paste them, or use the **Image** tool. SVG files become editable vector layers; other images become image layers. Video files become video layers; audio files are stored as assets for the **Play sound** action.
 
-Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
+Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Media Catalogue** button on the tool bar finds a photo in the suite's library instead: see [The Media Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
 
 ## Image settings
 **Fit** (cover, contain, stretch), corner radius, and:
@@ -7187,13 +7302,61 @@ Turn on **Animate changes** in the frame's Auto layout section and, while the pr
 With several layers selected, the bar at the top of the inspector aligns their edges or centres, and distributes three or more evenly. With one layer selected it aligns to the parent.
 
 ## Snapping
-Layers snap to other layers' edges and centres while you drag; guide lines show what snapped. Hold <kbd>Ctrl</kbd> to drag without snapping. Rulers (<kbd>Shift</kbd>+<kbd>R</kbd>) show positions, and dragging from a ruler makes a guide that layers snap to. Drag a guide back onto the ruler to remove it.
+Layers snap to other layers' edges and centres while you drag; guide lines show what snapped. Hold <kbd>Ctrl</kbd> to drag without snapping. Turn on **Snap to grid** to land on a grid as well, see [The grid and snapping](grid). Rulers (<kbd>Shift</kbd>+<kbd>R</kbd>) show positions, and dragging from a ruler makes a guide that layers snap to. Drag a guide back onto the ruler to remove it.
 
 ## Order
 <kbd>]</kbd> and <kbd>[</kbd> move a layer up and down; add <kbd>Ctrl</kbd> to go to the top or bottom. Or drag in the Layers panel.
 
 ## Boolean operations
 Select two or more shapes and press **Union**, **Subtract**, **Intersect** or **Exclude** in the Inspector (the four buttons in the shape section), or right-click and choose **Combine shapes**. *Subtract* takes the other shapes away from the bottom-most one. The result is a single path; the originals are replaced.`
+  },
+  {
+    id: "grid",
+    title: "The grid and snapping",
+    group: "Design",
+    summary: "Show grid, Snap to grid, grid size and stronger lines, a grid of one artboard's own, and what snaps.",
+    keywords: "grid snap snapping size subdivisions cells pixels nudge align magnet guides override",
+    body: `The grid is a set of lines measured from each artboard's top left corner. **Show grid** draws it on the canvas, and **Snap to grid** makes things land on it. They are separate: snapping works whether or not the grid is showing.
+
+## Turning it on
+- The **Show grid** and **Snap to grid** buttons on the tool bar (beside Comment). Each is gold while it is on.
+- <kbd>Shift</kbd>+<kbd>G</kbd> shows or hides the grid, <kbd>Ctrl</kbd>+<kbd>'</kbd> turns snapping on or off.
+- Right-click an empty part of the canvas for **Show grid**, **Snap to grid** and **Grid size**, or open **Preferences**, which has a **Canvas** block with the same settings.
+- While snapping is on a gold chip in the corner of the canvas says so with the size; click it to change the size.
+
+## Size and stronger lines
+**Grid size** is the width of one cell in pixels: pick 1, 2, 4, 5, 8, 10, 12, 16, 20, 24, 32, 48, 50 or 64, or choose **Custom…** for anything from 1 to 512. **Stronger line every** draws every Nth line heavier (4 by default; 1 draws them all alike). They are yours, kept with your account, and the size shows in the chip while snapping is on.
+
+## A grid for one artboard
+A 1920 wide slide and a 375 wide phone page want different grids. Right-click an artboard (its empty area) and open **Grid for this artboard** to give it its own size and stronger line, or **My default** to go back to yours. It is saved in the project, so people editing with you see it, and it is never exported.
+
+## What snaps
+Moving layers, resizing them, drawing new shapes (and artboards), placing pen points, and the arrow keys. A moved or resized layer's edges (a rotated layer's outer bounds) land on a grid line. **Smart guides still work**: if another layer's edge or centre or a ruler guide is as close as the grid line, or closer, that wins and shows its guide line. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) while dragging to skip all snapping.
+
+The arrow keys step to the next grid line in that direction (a layer that is off the grid goes to its nearest line first). <kbd>Shift</kbd> + arrow goes a stronger line at a time, or ten cells when stronger lines are off. <kbd>Ctrl</kbd> + arrow nudges by 1 px or 10 px as usual.
+
+## What it doesn't do
+The grid is never in **Preview**, in exports, in share links or in pictures of the artboard: it is only on the editor's canvas. Moving a layer's individual path points with the node editor is not snapped.`
+  },
+  {
+    id: "media-catalogue",
+    title: "The Media Catalogue",
+    group: "Design",
+    summary: "Put a photo from the suite's Media Catalogue on an artboard, and how it is saved and exported.",
+    keywords: "media catalogue photo photography gallery library insert picture image studydesk",
+    body: `The **Media Catalogue** button on the tool bar (a camera) opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
+
+## How it is stored
+The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
+
+## Exporting
+Files that must work without a network fetch the picture when they are made and put it inside:
+- **Download** the single-file page: the picture is embedded as data, and the address and where it was found in the catalogue are left out.
+- **Download** the package (\`.ixp\`): the picture is stored under \`assets/\` with the others.
+
+If the catalogue can't be reached or doesn't answer when one of these is made, a message lists which pictures and why. The file is still made, **without** those pictures (their layers show nothing) rather than with a link that might not work for whoever opens it. Fix the connection and export again. The JSON export keeps the links as they are.
+
+Photos in the catalogue have their own terms of use. Check them before you publish a project that uses one, and credit them in [Attributions and references](attributions) where they ask for it.`
   },
   {
     id: "responsive",
@@ -7247,6 +7410,41 @@ A page has a **Score** variable, a bar chart that grows on a timeline called **I
 - Only small things are lost on a switch, but a viewer part-way through dragging a card or typing in a field can notice it. Breakpoints between 600 and 900 px are the ones people cross by turning a tablet.
 - The **Fit width** setting in Project settings suits a set: each artboard fills the width of the page and the page height follows the artboard that is showing.
 - A host page can listen for the switch: \`player.on('variantchange', ({ from, to, set, width }) => ...)\`, or \`ix-variant\` on the \`<interactives-player>\` element. \`player.resize()\` makes the player re-measure its box if the page changes its size without the browser reporting it.`
+  },
+  {
+    id: "page-master",
+    title: "Page masters",
+    group: "Design",
+    summary: "One artboard holds what every page shares (logo, accent bar, footer); pages draw it under their own layers. Change it once and every page follows.",
+    keywords: "master page template chrome logo footer header shared background brand repeat layers slide master text slot hide",
+    body: `Pages in a deck repeat the same things: a logo, an accent bar, a footer line. Copying them onto every page makes every project bigger, and a change means editing every page. A **page master** is an artboard that holds those layers once. A page that uses it draws the master's layers under its own, in the same renderer (it is not an [instance](instances), so there is no nested player). Edit the master and every page changes at once, while you work and in the player.
+
+## Quick start
+1. Build an artboard with the shared layers: the logo, the bar, the footer. It does not need a background; the page keeps its own.
+2. Right-click it in the Layers panel and choose **Make this a master** (or **Make this a master** in its **Page master** section).
+3. Select a page, open **Page master** in the Inspector and pick the master. Or select the master and choose **Use as master for…**, or **Use for all other pages**.
+4. To change the shared layers, click **Edit master** on any page. The master's own layers are read-only on a page: clicking where one is selects the page, not the master's layer.
+
+## On a page
+- **Master**: the artboard drawn under this page, or **None**.
+- **Show these master layers on this page**: untick a layer to leave it off this page only (matched by the layer's name, at any depth). Name the layers clearly in the master.
+- **Text slots**: put \`{pageTitle}\` (any name) in a text layer of the master and the page's **Text slots** list gets a field for it. What you type is what that page says. A slot with nothing typed shows the project variable of that name, if there is one. What you type can use \`{variable}\` itself.
+- **Detach** copies the master's layers into the page as ordinary, editable layers and stops using the master.
+
+## On the master
+- **Draw over the pages**: tick the top-level layers that should sit over the pages' own layers (a corner fold, a footer bar). Everything else goes under.
+- The list of pages that use it. A master that pages use can't be turned back into an ordinary artboard until they stop. Deleting a master takes it off its pages (Undo brings it back).
+- A master can't have a master of its own, and a page that is a master can't use one.
+
+## What a master layer is
+- **Read-only and decorative.** Master layers are hidden from screen readers, are never tab stops, and the pointer goes through them to the page. A layer with a **Role** or an **Accessible name** (a logo with alt text) stays in the reading order. The master's layers come first (under) or last (over) in a page's reading order.
+- **Shapes, paths, text, pictures, groups and frames only.** Buttons, inputs, links, video, embeds, instances, script layers and shaders are left out. A master has no interactions or timelines of its own that run on a page, so **On click** on a master layer does nothing: put interactive things on the page.
+- **Bindings still work**, so a progress bar or a title bound to a variable is fine in a master.
+- **Names and ids never clash.** The master's layers can't be targeted from a page's graph, timeline or script, and a page layer with the same name is never confused with one.
+- **Responsive sets**: every member is an artboard of its own, so give each its own master of the right size. A master is drawn at its own coordinates.
+
+## Everywhere else
+Pictures (PNG, SVG, PDF, animated GIF), thumbnails, the single-file export, \`.ixp\` packages and the player all draw the master. A **Lottie** export flattens it into the animation. A library component that uses a master brings the master along (as an inner artboard). In a project made from a branded starter, the master's brand layers are locked like any other brand layer, and a page can't leave them off or drop its master.`
   },
   {
     id: "instances",
@@ -8606,6 +8804,77 @@ If the shader doesn't compile, the layer shows a placeholder and the inspector l
 An **image** layer can draw itself through a shader: **+** in **Effects**, then **Shader filter**. It has the same code editor, uniforms and settings, and \`u_image\` (the layer's own picture, with its fit applied) and \`u_image_size\` are ready to use. The plain picture shows until the shader has drawn, and again if it fails. This works for **image layers only** (not with a 9-slice); other layers can't be filtered this way. To run a shader over something else, make it a **Shader layer** with an image uniform.`
   },
   {
+    id: "progress-bars",
+    title: "Progress bars",
+    group: "Interactivity",
+    summary: "A bar that fills to a value: scores, steps and timers, with a screen reader role and spoken value.",
+    keywords: "progress bar meter gauge value max fill track percent score steps timer aria progressbar",
+    body: `A **Progress bar** layer is a track with a bar that fills it up to a **value** out of a **max**. Use it for a score, the step someone is on, a countdown, or how much of a list is done. It replaces the pair of rectangles and the width formula that bars used to be made from, and unlike them it can tell a screen reader what it is.
+
+Pick the **Progress bar** tool (in the **Data** group of the tool bar, which starts folded) and drag a box, or right-click the canvas and choose **New**, **Progress bar**. It starts at 40 of 100.
+
+## Value and max
+
+- **Value** and **Max** in the *Progress bar* section are the numbers. A value past either end is held at it: 150 of 100 is a full bar, below zero is an empty one.
+- To make the bar follow something, open **Bindings**, add *Value* and write an expression: \`score\`, \`step / 5 * 100\`, \`timeLeft\`. *Max* can be bound too, so \`questions.length\` can be the whole bar.
+- **Value** can be keyed on a [timeline](timelines) (the **◆** beside it), set by a **Set property** or **Animate property** node (pick *Progress value* in the list), or by a script with \`ix.node('Bar').set('value', 60)\`. Animate it from 0 to 100 over a few seconds and you have a countdown.
+
+## Look
+
+- The **track** is the layer's own **Fill** (shown as *Track fill*) and **Stroke**: any colour, gradient, token or several paints, a stroke around it, a shadow. The **bar** is the **Bar** paint in the progress section. Both can use [theme tokens](themes), so a bar restyles with the theme and the colourway.
+- **Direction** is *Across* (it grows from the left) or *Up* (from the bottom). **From the far end** grows it from the right, or the top, instead.
+- **Radius** rounds the track, and the bar is clipped to it. A gradient bar is laid over the whole track and uncovered as the bar grows, so a green-to-red meter shows red only when it is nearly full.
+
+## For screen readers
+
+**Tells screen readers** chooses what the layer is: a **progress bar** (work towards a goal), a **meter** (a measurement in a range, like volume) or nothing. The first two put \`role\` and \`aria-valuenow\`, \`aria-valuemin\` (0), \`aria-valuemax\` and \`aria-valuetext\` on the layer, kept up to date as the value changes. Give the layer a **text alternative** in *Accessibility* ("Course progress"): the [checker](accessibility-checker) asks for one. A layer marked **Decorative** is hidden from screen readers whatever this says.
+
+**Spoken value** is what is read out for the number. Blank says the percentage ("40%"). Write your own with \`{value}\`, \`{max}\`, \`{percent}\` and any variable: \`Step {step} of 5\`. A max of 0 or less makes the bar indeterminate: it has no value to announce.
+
+## Where it works
+
+Progress bars draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard. They are **not** part of a Lottie export (the export lists them as left out).`
+  },
+  {
+    id: "charts",
+    title: "Charts",
+    group: "Interactivity",
+    summary: "Column, bar, line, pie and donut charts drawn from a list, with an axis, a legend, a hover readout, keyboard reading and a table for screen readers.",
+    keywords: "chart graph bar column line pie donut data visualisation axis legend gridlines tooltip readout colours table accessible event index",
+    body: `A **Chart** layer draws a chart from a list: sales by month, a quiz score breakdown, answers from a poll. It scales its axis to the data, restyles with the theme, can be read with the keyboard, and gives a screen reader the numbers as a table.
+
+Pick the **Chart** tool (in the **Data** group of the tool bar, which starts folded) and drag a box, or right-click the canvas and choose **New**, **Chart**. It starts as a column chart of four made-up items so there is something to look at.
+
+## The data
+
+**Data** is an expression that gives the list: a [list variable](variables) (\`scores\`), a [data source](data-sources) (\`sales\`), or one written out (\`[3, 5, 2]\`). Items can be:
+
+- **numbers**: \`[3, 5, 2]\`, labelled 1, 2, 3;
+- **objects**: \`[{label: "Mon", value: 4}, ...]\`. **Label key** and **Value key** say which fields to use; left blank the chart looks for \`label\`, \`name\`, \`title\` or the first text, and \`value\`, \`y\`, \`count\` or the first number;
+- **pairs**: \`[["Mon", 4], ["Tue", 8]]\`;
+- **one object**: \`{Mon: 4, Tue: 8}\`.
+
+Anything that is not a number counts as 0. A chart draws up to 200 items. Under the expression, a **preview** shows the first few items as the chart reads them (and what is wrong when it can't), using the project's variables at their starting values and the loaded data. The chart redraws when a variable or data source it reads changes.
+
+## Kinds and look
+
+- **Column** (vertical bars), **Bar** (sideways), **Line** (one point per item, joined), **Pie** and **Donut** (shares of the total; negative values count as 0; **Hole** sizes the donut's).
+- The axis runs from zero (or lower, for negative values) to a round number above the biggest value. **Axis min** and **Axis max** fix either end.
+- **Gridlines**, **Axis labels**, **Value labels** (the number on each mark) and **Legend** (when each item has its own colour) switch on and off. **Decimals**, **Prefix** and **Suffix** control how numbers are written (\`$\`, \`kg\`, \`%\`). Crowded labels are shortened or thinned out.
+- **Colours** is a list of colours or [theme tokens](themes) handed out in turn. With one colour every bar and the line use it; **A colour for each item** gives each item the next colour (pie and donut charts always do). **Text colour**, **Font** and **Size** style the labels and axes. Using tokens, a chart changes with the theme and the colourway like everything else.
+
+## Reading it
+
+- **Hover** a bar, slice or point to see a readout with its name and value. **Tab** moves into the chart and the **arrow keys**, **Home** and **End** move between items, with the same readout. **Enter** or **Space** clicks the item.
+- Clicks, presses and hovers on a mark run **On pointer** nodes on the chart layer with \`event.index\`: the item's place in the list, from 0 (\`event.index\` is null away from the marks). **Pointer moves over it** gives it for each item you cross; **Hover start** only for the item you first entered. Arrowing between items fires **On focus** nodes with \`event.index\` too. So \`scores[event.index].name\` is the item that was clicked.
+- A **Table for screen readers** (on by default) puts the same numbers in a table that only a screen reader finds, with a share column for pie and donut charts. Give the chart a **text alternative** in *Accessibility* that says what it shows ("Sales by month, 2026"): the [checker](accessibility-checker) asks for one. A chart marked **Decorative** is hidden from screen readers.
+- **Grow in** makes columns and bars rise, slices and points pop, and a line draw itself, the first time the chart appears. Viewers whose device asks for less motion just get the chart (the project's *reduced motion* setting turns it on for you, as it does for animations).
+
+## Where it works
+
+Charts draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard (as they look when fully grown, without the readout). They are **not** part of a Lottie export. There is no 3D, stacking or mixing of kinds. For anything else, a [Script layer](script-layers) can draw whatever you like.`
+  },
+  {
     id: "usage",
     title: "Usage: what uses what",
     group: "Reference",
@@ -8886,6 +9155,8 @@ Only the course, the learner's first name and display name, and whether they are
 Inside the copies, \`item\` is the current item and \`index\` its position (from 0): \`{index + 1}. {item.name} - {item.price}\`.
 
 **Layout** places the copies: vertical, horizontal, grid (with columns), or none (when the frame uses [auto layout](auto-layout), which is usually best). A grid has a **Fill** direction: *Rows first* goes across each row and then down (1 2 3 / 4 5 6 / 7), *Columns first* goes down each column and then across (1 4 7 / 2 5 / 3 6), with **Cols** still the number of columns.
+
+**Text in the copies sizes itself.** A text layer in the template set to *Auto height* or *Auto width* is measured in every copy, with the item's own words, the font and the width it has there, so a long item gets a tall row and a short one a short row. Frames that hug their content (an [auto layout](auto-layout) repeater, or a card with its own layout) follow. There is no need to guess a height from the number of characters. A height or width you bind on the template layer still wins. Only copies whose text changed are measured again.
 
 **Instances in a repeater** can take their [inputs](instances) from the item: select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
 
@@ -9529,7 +9800,7 @@ Open a project and choose **Share > Save as template**.
 - **Title** and **Description** are what the card shows. Say what the template is for.
 - **Everyone can use this template** (off: only you see it). People who use it get their own copy; yours is never changed.
 - **Checklist**: one line for each thing to change ("Replace the question text"). Select a layer first and press **Link** on an item to point it at that layer, or **Add for the selected layers** for one item per layer. Clicking an item later selects the layer. Reword the items for the person who will use it, not for you.
-- The picture on the card is the project's own thumbnail, and the whole project (artboards, pictures, fonts, variables, interactions) goes with it. Review comments and results do not.
+- The picture on the card is the project's own thumbnail, and the whole project (artboards, pictures, fonts, variables, interactions and [notes](notes), which are the right place to explain each part) goes with it. Review comments and results do not.
 - Saving again from the same project, choosing **The next version of ...**, makes **version 2**, **3** and so on. Saving with nothing changed only updates the title, description, checklist and visibility.
 
 ![The Save as template window: title, description, who can use it, and a checklist whose first item points at the selected layer.](help/templates-save.png)
@@ -9688,6 +9959,52 @@ If the project was saved from another tab, or by someone else without live editi
 Only staff who have used the StudyDesk Toolbox before can be found by name, and students are never listed. Someone who isn't found can still be invited by typing their exact username. Collaborators can edit, comment, export and share it; only the owner can delete the project, clear its results or change who's invited (a collaborator can take themselves off the list).
 
 To hand a project to someone else (you're leaving, or it belongs to another unit now), invite them first, then press **Make owner** beside their name. They become the owner and you stay on as a collaborator. The project keeps its id, so its share link, the **Link for StudyDesk** in every course page and a library published from it carry on working. A power user can do this for anyone's project, which is how a project is moved on when its owner has already left. To let someone look and comment without editing, use **Share for review** instead ([Review comments](comments)).`
+  },
+  {
+    id: "notes",
+    title: "Notes",
+    group: "Working together",
+    summary: "Sticky notes for the people making a project: draw them on the canvas, attach them to a layer, and know that players, exports and share links never see them.",
+    keywords: "note notes sticky annotation annotate hand-off handoff todo reminder explain template hint hide show colour markdown",
+    body: `A **note** is a small sticky note you leave on the canvas for whoever edits the project next, including you next week: "swap this photo before release", "this branch is for the hard version", "change the three red words". Templates use them to explain what each part is for.
+
+Notes are not comments. [Review comments](comments) are threaded conversations with reviewers, kept on the server beside the project. A note is part of the project document, so it comes along when the project is copied, saved as a template or remixed, and everyone editing at the same moment sees it appear. It is **never** a layer: it is not in the Layers list, the interactions graph, auto layout or bindings.
+
+## Players never see notes
+A note is never drawn when the project is played, in **Preview**, in the **Single HTML file**, a **share link**, a **Link for StudyDesk**, an embed, the review page, or a **PNG**, **SVG**, **Lottie** or **GIF** picture of an artboard. The text is also taken out of the project data those pages carry, and the server takes it out again when a page is shared, so it is not in anything that plays. The **project package (.ixp)** and the **project JSON** are for editing, so they keep notes.
+
+## Add a note
+Pick the **Note** tool (<kbd>S</kbd>, in the tools bar next to **Comment**) and click, or drag out the size you want. A note drawn on an artboard belongs to that artboard and moves with it (it can hang outside the artboard's edge). A note drawn on empty canvas belongs to the canvas itself. Type straight away; <kbd>Esc</kbd> or a click elsewhere finishes, and a note left empty goes away.
+
+- **Move** it by dragging it, **resize** it from its bottom right corner.
+- **Double-click** it, or press <kbd>Enter</kbd> with it focused, to change the text.
+- With a note picked, a small bar above it sets the **colour** (yellow, orange, green, blue, purple or pink), **attaches** it to the layer you have selected on the same artboard, and **deletes** it. <kbd>Delete</kbd> removes a picked note too.
+- Notes are small on purpose. They grow with the zoom but never get tiny or huge, and a picked note has a gold outline.
+
+Keyboard: <kbd>Tab</kbd> reaches every note on the canvas. With one focused, the arrow keys move it (<kbd>Shift</kbd> for 10), <kbd>Alt</kbd>+arrows resize it, <kbd>Enter</kbd> edits it, <kbd>Delete</kbd> removes it and <kbd>Esc</kbd> lets go. Every button on the bar has a label for a screen reader.
+
+## Attach a note to a layer
+Select a layer, pick a note on the same artboard and press **Attach to the selected layer**. The note now follows that layer when it moves, scales or rotates, and its header says which layer it is on. Dragging the note changes how far it sits from the layer. Delete the layer and the note stays where it was (its outline turns dashed). **Detach** lets go. Canvas notes cannot be attached.
+
+## What a note can say
+Plain text with a little markdown:
+
+| Write | Shows |
+|---|---|
+| \`**bold**\`, \`*italic*\`, \`code\` | **bold**, *italic*, \`code\` |
+| \`- an item\` | a bullet |
+| \`[ ] a task\` and \`[x] a done task\` | a tick box you can click on the canvas, which rewrites the text |
+
+Nothing in a note is ever treated as markup.
+
+## Show and hide notes
+The eye button beside the **Note** tool shows or hides every note on your canvas, and its badge counts them. It is your own preference (also under **Preferences > Show notes on the canvas**), so putting a template's explanations away changes nothing for anyone else. Notes are never drawn while you Preview.
+
+## Notes and templates
+A project made from a template starts with the template's notes, so the explanations arrive on the canvas next to the parts they are about. **Save as template** keeps your notes. **Update from template** leaves your notes alone. Hide them with the eye button once you have read them, or delete them.
+
+## Working together and undo
+Adding, typing in, moving, recolouring and deleting a note are ordinary edits: they undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>, save with the project, and appear live for the other people in the project (and for an AI agent, which can list, add, edit and remove notes).`
   },
   {
     id: "comments",
@@ -10051,6 +10368,8 @@ function outline(list, depth, maxDepth, out, limit) {
     if (n.type === "instance") extra.push(`artboard=${n.artboardId}`);
     if (n.type === "draw") extra.push(`script layer${n.fps ? ` ${n.fps}fps` : ""}, ${n.code.split("\n").length} lines`);
     if (n.type === "shader") extra.push(`shader layer, ${n.code.split("\n").length} lines, uniforms: ${(n.uniforms ?? []).map((u) => `${u.name}:${u.type}`).join(",") || "none"}`);
+    if (n.type === "progress") extra.push(`progress ${n.value}/${n.max}, ${n.orientation}, ${n.semantics}`);
+    if (n.type === "chart") extra.push(`${n.kind} chart of ${JSON.stringify(n.data.slice(0, 40))}`);
     if (n.type === "image" && n.shaderFilter) extra.push(`shader filter, ${n.shaderFilter.code.split("\n").length} lines`);
     if (!n.visible) extra.push("hidden");
     if (n.locked) extra.push("locked");
@@ -10069,13 +10388,19 @@ function overview(p, opts2) {
   for (const ab of p.artboards) {
     if (opts2.artboardId && ab.id !== opts2.artboardId) continue;
     lines.push(`## Artboard ${ab.name} [${ab.id}] ${ab.width}x${ab.height}`);
+    const master = ab.master ? p.artboards.find((a) => a.id === ab.master) : null;
+    if (master) lines.push(`Page master: ${master.name} [${master.id}]${ab.masterHide?.length ? `, leaves out ${ab.masterHide.join(", ")}` : ""}${ab.masterSlots ? `, text slots ${JSON.stringify(ab.masterSlots)}` : ""} (its layers are drawn on this page, read only: edit them on the master)`);
+    const users = p.artboards.filter((a) => a.master === ab.id).length;
+    if (users) lines.push(`Used as a page master by ${users} page${users === 1 ? "" : "s"}${ab.masterOver?.length ? `; drawn over the pages: ${ab.masterOver.join(", ")}` : ""}`);
     if (ab.timelines.length) lines.push(`Timelines: ${ab.timelines.map((t2) => `${t2.name} [${t2.id}] ${t2.duration}ms ${t2.loop}${t2.autoplay ? " autoplay" : ""} (${t2.tracks.length} tracks)`).join("; ")}`);
+    if (ab.notes?.length) lines.push(`Notes: ${ab.notes.length} (use list_notes)`);
     if (ab.blends?.length) lines.push(`Blends: ${ab.blends.map((b) => `${b.name} [${b.id}] ${b.mode} (${b.entries.length} timelines)`).join("; ")}`);
     if (ab.logic.nodes.length) lines.push(`Interactions: ${ab.logic.nodes.length} nodes, ${ab.logic.edges.length} connections (use get_interactions)`);
     const out = [];
     outline(ab.children, 0, opts2.depth ?? (opts2.artboardId ? 8 : 2), out, { n: opts2.artboardId ? 600 : 80 });
     lines.push(...out, "");
   }
+  if (p.notes?.length) lines.push(`Notes on the canvas outside any artboard: ${p.notes.length} (use list_notes)`, "");
   if (p.variables.length) lines.push("## Variables", ...p.variables.map((v) => `- ${v.name} [${v.id}] ${v.type} = ${JSON.stringify(v.initial)}${v.shared ? " shared" : ""}${v.formula ? ` formula=${JSON.stringify(v.formula)}` : ""}${v.live ? " live" : ""}${v.userData ? " userData" : ""}${v.options ? ` options=${v.options.join("|")}` : ""}`), "");
   if (p.dataSources.length) lines.push("## Data sources", ...p.dataSources.map((d) => `- ${d.name} [${d.id}] ${d.kind} from ${d.source === "url" ? d.url : `asset ${d.assetId}`}`), "");
   if (p.scripts.length) lines.push("## Scripts", ...p.scripts.map((sc) => `- ${sc.name} [${sc.id}]${sc.runOnStart ? " runs on start" : ""} (${sc.code.split("\n").length} lines)`), "");
@@ -10133,6 +10458,16 @@ function validate(p) {
   }
   problems.push(...liveProblems(p));
   return problems;
+}
+function listNotes(p) {
+  return [...(p.notes ?? []).map((note) => ({ note, ab: null, list: p.notes })), ...p.artboards.flatMap((ab) => (ab.notes ?? []).map((note) => ({ note, ab, list: ab.notes })))];
+}
+const findNote = (p, id) => listNotes(p).find((x) => x.note.id === id);
+function notesReport(p, artboardId) {
+  const rows = listNotes(p).filter((x) => !artboardId || x.ab?.id === artboardId);
+  if (!rows.length) return "No notes.";
+  return rows.map(({ note: n, ab }) => `- [${n.id}] ${ab ? `on ${ab.name} [${ab.id}]` : "on the canvas"} at ${r(n.x)},${r(n.y)} ${r(n.w)}x${r(n.h)} ${n.colour ?? "gold"}${n.anchor ? ` follows layer ${n.anchor.layerId}` : ""}${n.author ? ` by ${n.author}` : ""}
+${n.text.split("\n").map((l) => `    ${l}`).join("\n")}`).join("\n");
 }
 function applyChanges(p0, changes) {
   const p = structuredClone(p0);
@@ -10213,7 +10548,11 @@ function applyChanges(p0, changes) {
       }
       case "set_artboard": {
         const ab = findAb(c2.id);
-        for (const [k, v] of Object.entries(resolveRefs(c2.props ?? {}))) if (!["id", "children", "timelines", "logic"].includes(k)) ab[k] = v;
+        for (const [k, v] of Object.entries(resolveRefs(c2.props ?? {}))) {
+          if (["id", "children", "timelines", "logic"].includes(k)) continue;
+          if (k === "master" && typeof v === "string") ab[k] = p.artboards.find((a) => a.id === v || a.name === v)?.id ?? v;
+          else ab[k] = v;
+        }
         break;
       }
       case "add_variable": {
@@ -10297,9 +10636,57 @@ function applyChanges(p0, changes) {
         if (typeof c2.run_on_start === "boolean") sc.runOnStart = c2.run_on_start;
         break;
       }
+      case "add_note": {
+        const ab = c2.artboard_id ? findAb(c2.artboard_id) : null;
+        const layer = c2.layer_id && ab ? locate(p, ref(c2.layer_id)) : null;
+        if (c2.layer_id && (!layer || layer.ab !== ab)) throw new Error(`${where}: no layer ${String(c2.layer_id)} on that artboard`);
+        const at = { x: typeof c2.x === "number" ? c2.x : layer ? layer.node.x + layer.node.width + 12 : 0, y: typeof c2.y === "number" ? c2.y : layer ? layer.node.y : 0 };
+        const note = makeNote({ ...at, w: typeof c2.w === "number" ? c2.w : void 0, h: typeof c2.h === "number" ? c2.h : void 0, text: String(c2.text ?? ""), colour: NOTE_COLOURS.includes(c2.colour) ? c2.colour : void 0, author: typeof c2.author === "string" && c2.author ? c2.author : `${ctx().agent} (AI)`, created: (/* @__PURE__ */ new Date()).toISOString() });
+        if (layer) note.anchor = { layerId: layer.node.id, lx: Math.round((at.x - layer.node.x) * 10) / 10, ly: Math.round((at.y - layer.node.y) * 10) / 10 };
+        if (ab) (ab.notes ??= []).push(note);
+        else (p.notes ??= []).push(note);
+        if (key) created[key] = note.id;
+        break;
+      }
+      case "set_note": {
+        const found = findNote(p, ref(c2.id));
+        if (!found) throw new Error(`${where}: no note ${String(c2.id)}`);
+        const n = found.note;
+        for (const k of ["x", "y", "w", "h"]) if (typeof c2[k] === "number") n[k] = c2[k];
+        if (typeof c2.text === "string") n.text = c2.text;
+        if (NOTE_COLOURS.includes(c2.colour)) n.colour = c2.colour;
+        if (c2.layer_id === null) delete n.anchor;
+        else if (typeof c2.layer_id === "string") {
+          const layer = locate(p, ref(c2.layer_id));
+          if (!layer || layer.ab !== found.ab) throw new Error(`${where}: no layer ${c2.layer_id} on that note's artboard`);
+          n.anchor = { layerId: layer.node.id, lx: Math.round((n.x - layer.node.x) * 10) / 10, ly: Math.round((n.y - layer.node.y) * 10) / 10 };
+        }
+        break;
+      }
+      case "delete_note": {
+        const found = findNote(p, ref(c2.id));
+        if (!found) throw new Error(`${where}: no note ${String(c2.id)}`);
+        found.list.splice(found.list.indexOf(found.note), 1);
+        if (!found.list.length) {
+          if (found.ab) delete found.ab.notes;
+          else delete p.notes;
+        }
+        break;
+      }
       default:
         throw new Error(`${where}: unknown op "${c2.op}"`);
     }
+  }
+  if (p.notes) {
+    const list = cleanNotes(p.notes);
+    if (list) p.notes = list;
+    else delete p.notes;
+  }
+  for (const ab of p.artboards) {
+    if (!ab.notes) continue;
+    const list = cleanNotes(ab.notes);
+    if (list) ab.notes = list;
+    else delete ab.notes;
   }
   return { project: p, created, touched };
 }
@@ -10329,12 +10716,12 @@ ${d.description}${d.outputs.length > 1 || d.outputs[0]?.label ? `
 Outputs: ${d.outputs.map((o) => o.id).join(", ")}` : ""}
 ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join("|")}` : ""}${pd.default !== void 0 ? `, default ${JSON.stringify(pd.default)}` : ""})${pd.help ? `: ${pd.help}` : ""}`).join("\n")}`).join("\n\n");
   }
-  if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n");
+  if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n") + "\nOn a progress layer only: " + layerOwnProps(createNode("progress")).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join("; ");
   if (topic === "layers") {
-    const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "bone"];
+    const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "progress", "chart", "bone"];
     return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, ariaExpanded, ariaPressed (a toggle button: true/false), ariaCurrent (true, or page|step|location|date|time: the current tab, page or step), decorative (hide from assistive tech), focusable (tab stop override), tabOrder, shortcut (a key that clicks the layer, e.g. "r", "1", "Ctrl+Enter"), className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it). Buttons and inputs take disabled (bindable) and disabledOpacity (0-1, default 0.5, how dimmed they look while disabled). A frame can be a dialog: dialog {modal (default true), scrim (a solid paint over the artboard behind it), closeOnEscape (default true), closeOnOutsideClick, initialFocus (layer id), returnFocus (default true), openVariable (variable id: the frame shows while it is on, Escape turns it off)}. A frame or group can carry keyNav {mode: list|grid|radio, orientation: vertical|horizontal|both, columns (grid on a container; a grid repeater uses its own), wrap, indexVariable (variable id, number from 0)}: one item is the Tab stop and the arrows, Home and End move between a repeater\'s copies or a container\'s children; radio mode also selects (clicks) the item it lands on.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
-Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t22) => `- ${t22}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t22)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
+Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nProgress bars (type "progress"): a track with a bar filling it. Fields: value, max (both take bindings; value is animatable, so a timeline track or Animate property can fill it), fill/stroke (the track, any paints), barFill (the bar\'s paint), cornerRadius, orientation (horizontal | vertical), reverse (grow from the right or the top), semantics (progressbar | meter | none: the role and aria-valuenow/min/max/valuetext it carries; bars made for a screen reader need ariaLabel), valueText (a text template: {value}, {max}, {percent} and variables). Colours may be theme token references.\nCharts (type "chart"): a column | bar | line | pie | donut chart drawn from data, an expression for a list: numbers, objects (label from labelKey, number from valueKey; blank guesses), [label, value] pairs, or one object. Fields: kind, data, labelKey, valueKey, colors (tokens or colours handed out in turn; varyColors for one each on bar, column and line), color (labels and axes), fontFamily, fontSize, min/max (fixed axis ends, null fits the data), gridlines, axisLabels, valueLabels, legend, hole (donut, 0.1-0.95), animate, table (a hidden data table for screen readers), decimals, prefix, suffix. Clicks, presses, hovers and focus on a mark give event.index (the item\'s position) to On pointer and On focus nodes. Give it an ariaLabel.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t22) => `- ${t22}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t22)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
   const t2 = TOPICS.find((x) => x.id === topic);
   if (t2) return `# ${t2.title}
@@ -10345,6 +10732,11 @@ ${topicBody(t2)}`;
 }
 const S = (props, required = []) => ({ type: "object", properties: props, required });
 const str = (description) => ({ type: "string", description });
+const runEdit = (a, changes, explain) => {
+  const edit = TOOLS.find((t2) => t2.name === "edit");
+  const clean = changes.map((c2) => Object.fromEntries(Object.entries(c2).filter(([, v]) => v !== void 0)));
+  return edit.run({ project_id: a.project_id, changes: clean, explain });
+};
 const TOOLS = [
   {
     name: "list_projects",
@@ -10416,7 +10808,7 @@ ${JSON.stringify(loc.node, null, 1)}`);
   },
   {
     name: "edit",
-    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props}; add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}. Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
+    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props} (props include master (id or name of a page master artboard), masterHide [layer names], masterSlots {slot: text}, masterOver [layer ids, on the master], isMaster); add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
     inputSchema: S({ project_id: str("Project id"), changes: { type: "array", items: { type: "object" } }, explain: str("One line saying what this does (shown in the editor log)") }, ["project_id", "changes"]),
     run: async (a) => {
       const s = join(String(a.project_id));
@@ -10435,6 +10827,38 @@ Created: ${JSON.stringify(created)}` : ""}${problems.length ? `
 Problems now in the project:
 - ${problems.slice(0, 30).join("\n- ")}` : ""}`;
     }
+  },
+  {
+    name: "list_notes",
+    description: `The sticky notes in a project (or one artboard): id, where, colour, the layer it follows, who wrote it, and its text. Notes are the authors' own annotations ("swap this photo before release", what a template's parts are for); the player, exports and share links never carry them. Read them before changing a project you did not make.`,
+    inputSchema: S({ project_id: str("Project id"), artboard_id: str("Optional: only the notes on this artboard (id or name)") }, ["project_id"]),
+    run: async (a) => {
+      const p = await loadProject(String(a.project_id));
+      const ab = a.artboard_id ? p.artboards.find((x) => x.id === a.artboard_id || x.name === a.artboard_id) : void 0;
+      if (a.artboard_id && !ab) throw new Error(`No artboard ${String(a.artboard_id)}`);
+      return notesReport(p, ab?.id);
+    }
+  },
+  {
+    name: "add_note",
+    description: 'Leave a sticky note for the people editing this project, on an artboard (x, y in the artboard\'s pixels; the note can sit outside it) or on the canvas (leave artboard_id out). Give layer_id to attach it to a layer so it follows that layer (it is placed beside the layer unless x and y say otherwise). Text takes light markdown: **bold**, *italic*, `code`, "- " bullets, "[ ]" and "[x]" tasks. Players never see notes.',
+    inputSchema: S(
+      { project_id: str("Project id"), artboard_id: str("Artboard id or name (omit for a note on the canvas)"), x: { type: "number" }, y: { type: "number" }, w: { type: "number", description: "Width in note pixels (default 200)" }, h: { type: "number", description: "Height (default 120)" }, text: str("What the note says"), colour: str("gold, orange, green, sky, purple or rose"), layer_id: str("A layer on that artboard for the note to follow") },
+      ["project_id", "text"]
+    ),
+    run: async (a) => runEdit(a, [{ op: "add_note", artboard_id: a.artboard_id, x: a.x, y: a.y, w: a.w, h: a.h, text: a.text, colour: a.colour, layer_id: a.layer_id, ref: "note" }], "Add a note")
+  },
+  {
+    name: "edit_note",
+    description: "Change a note: its text, colour, position or size, or which layer it follows (layer_id null lets go). Use list_notes for ids.",
+    inputSchema: S({ project_id: str("Project id"), id: str("Note id"), text: str("New text"), colour: str("gold, orange, green, sky, purple or rose"), x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" }, layer_id: { type: ["string", "null"], description: "Layer to follow, or null to let go" } }, ["project_id", "id"]),
+    run: async (a) => runEdit(a, [{ op: "set_note", id: a.id, text: a.text, colour: a.colour, x: a.x, y: a.y, w: a.w, h: a.h, ..."layer_id" in a ? { layer_id: a.layer_id } : {} }], "Edit a note")
+  },
+  {
+    name: "remove_note",
+    description: "Delete a sticky note.",
+    inputSchema: S({ project_id: str("Project id"), id: str("Note id") }, ["project_id", "id"]),
+    run: async (a) => runEdit(a, [{ op: "delete_note", id: a.id }], "Remove a note")
   },
   {
     name: "validate",

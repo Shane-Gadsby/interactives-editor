@@ -9023,6 +9023,7 @@ code {
   .note {
     transition: box-shadow 0.12s;
   }
+}
 /* ---------------------------------------------------------------- snap grid (lib/grid.ts) */
 .canvas-grid .grid-minor,
 .canvas-grid .grid-major {
