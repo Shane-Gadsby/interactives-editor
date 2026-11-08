@@ -1,4 +1,4 @@
-import { answerPreviewProgress, forgetPreviewLearner, previewLearnerHas } from './lib/preview-learner';
+import { answerPreviewProgress, forgetPreviewCourse, forgetPreviewLearner, previewCourseHas, previewLearnerHas, usesCourseCollections } from './lib/preview-learner';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName, tokenValue, defaultTheme, declaresSensors, FAKE_BEHAVIOURS, QUESTION_KINDS, sampleContextFor, setMembers, walk, type FakeBehaviour, type Project, type QuestionKind } from 'interactives-player';
 import { syncProjectWithPalette } from './lib/palette-look';
@@ -1328,6 +1328,9 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   // The pretend microphone and camera: what they do in the running preview (a real one cannot be had in a sandboxed preview)
   const [mediaSim, setMediaSim] = useState<FakeBehaviour>('works');
   const [keptData, setKeptData] = useState(() => previewLearnerHas((project as Project).id));
+  //Course collections have no course in Preview: they are this browser's, and the toolbar says so while the project uses them
+  const [usesCourse] = useState(() => usesCourseCollections(project as Project));
+  const [keptCourse, setKeptCourse] = useState(() => previewCourseHas());
   const simulateMedia = (b: FakeBehaviour) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'simulateMedia', behaviour: b }, '*');
   const applyTheme = (t = theme, v = viewer, h = host) => {
     const w = frame.current?.contentWindow;
@@ -1386,6 +1389,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
       if (kept) {
         if (e.data.rid) frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'progress', rid: e.data.rid, ...kept }, '*');
         if (e.data.op === 'userdata-save' || e.data.op === 'save' || e.data.op === 'shared-add') setKeptData(true);
+        if (e.data.op === 'course-add') setKeptCourse(true);
         return;
       }
       if (e.data?.source !== 'interactives') return;
@@ -1467,6 +1471,26 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               onClick={() => (forgetPreviewLearner((project as Project).id), setKeptData(false), setNonce((n) => n + 1))}
             >
               Forget saved data
+            </button>
+          )}
+          {usesCourse && (
+            <span
+              className="muted small"
+              style={{ whiteSpace: 'nowrap' }}
+              role="status"
+              title="Course collections are shared by every interactive in a StudyDesk course. Preview has no course, so its collections are kept in this browser only, under their names, and shared by the projects you preview here"
+            >
+              Collections: this browser only
+            </span>
+          )}
+          {keptCourse && (
+            <button
+              type="button"
+              className="btn"
+              title="Forget every course collection Preview has kept in this browser (all projects), to start as a learner with an empty passport"
+              onClick={() => (forgetPreviewCourse(), setKeptCourse(false), setNonce((n) => n + 1))}
+            >
+              Forget collections
             </button>
           )}
           {declaresSensors((project as Project).settings.sensors) && (

@@ -3935,6 +3935,8 @@ button.twisty:hover {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  row-gap: 6px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
 }

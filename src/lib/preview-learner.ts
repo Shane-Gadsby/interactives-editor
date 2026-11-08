@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { answerKey, cleanAnswer, cleanSharedSettings, isBlockedAnswer, tallyAnswers, type Project, type SharedValue, type SharedWho } from 'interactives-player';
+import { answerKey, applyCoursePlan, cleanAnswer, cleanCollection, cleanSharedSettings, courseChanged, planCourseAdd, isBlockedAnswer, tallyAnswers, type Project, type SharedValue, type SharedWho } from 'interactives-player';
 /**
  * Preview's pretend learner record. The previewed project runs in a sandboxed frame with no storage of its own, so its Save user
  * data and remembered progress used to last one run: the player asked the page around it, nobody answered, and the browser
@@ -8,6 +8,8 @@ import { answerKey, cleanAnswer, cleanSharedSettings, isBlockedAnswer, tallyAnsw
  */
 
 const PREFIX = 'ix-preview-learner:';
+//Course collections are not a project's: every project with the same collection name shares it, as it would in a course
+const COURSE_PREFIX = 'ix-preview-course:';
 
 interface Ask {
   source?: string;
@@ -21,6 +23,10 @@ interface Ask {
   sharedSource?: unknown;
   who?: unknown;
   answers?: unknown;
+  /** Course collections: the collection's name and what to add. */
+  collection?: unknown;
+  stamps?: unknown;
+  counts?: unknown;
 }
 
 export interface PreviewReply {
@@ -84,6 +90,55 @@ function previewShared(m: Ask, project: Project | undefined, project0: string): 
   return { ok: true, available: true, data: m.op === 'shared-add' ? { ...value, kept } : value };
 }
 
+/**
+ * Course collections in Preview: there is no course here, so a collection is this browser's, shared by every project previewed in it
+ * under the same name. The reply says course: false, which is how the project (and the toolbar) can tell it is not the real thing.
+ */
+function previewCourse(m: Ask): PreviewReply {
+  const name = cleanCollection(m.collection);
+  if (!name) return { ok: true, available: false };
+  const at = `${COURSE_PREFIX}${name}`;
+  const have = (read(at) as { stamps?: unknown; counts?: unknown } | undefined) ?? {};
+  const base = applyCoursePlan(have, { stamps: [], counts: {}, problem: '' });
+  if (m.op !== 'course-add') return { ok: true, available: true, data: { ...base, course: false } };
+  const plan = planCourseAdd(base, { stamps: m.stamps, counts: m.counts });
+  const next = applyCoursePlan(base, plan);
+  if (courseChanged(plan)) write(at, next);
+  return { ok: true, available: true, data: { ...next, course: false, changed: courseChanged(plan), problem: plan.problem } };
+}
+
+/** Whether a project has anything that uses course collections (the nodes, or a script calling ix.course). */
+export function usesCourseCollections(project: Project): boolean {
+  for (const ab of project.artboards) {
+    if (ab.logic?.nodes?.some((n) => n.kind.startsWith('action.course'))) return true;
+  }
+  return project.scripts.some((s) => s.code.includes('.course.'));
+}
+
+function courseKeys(): string[] {
+  const out: string[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(COURSE_PREFIX)) out.push(k);
+    }
+  } catch {
+    /* nothing kept */
+  }
+  return out;
+}
+
+/** Whether Preview holds any course collection in this browser. */
+export const previewCourseHas = (): boolean => courseKeys().length > 0;
+
+export function forgetPreviewCourse(): void {
+  try {
+    for (const k of courseKeys()) localStorage.removeItem(k);
+  } catch {
+    /* nothing kept */
+  }
+}
+
 /** The answer to one of the player's progress messages, or null when it is not one Preview answers (no reply is sent). */
 export function answerPreviewProgress(m: Ask, doc?: Project): PreviewReply | null {
   if (!m || m.source !== 'interactives-progress' || typeof m.op !== 'string') return null;
@@ -113,6 +168,9 @@ export function answerPreviewProgress(m: Ask, doc?: Project): PreviewReply | nul
     case 'shared-add':
     case 'shared-withdraw':
       return previewShared(m, doc, project);
+    case 'course-read':
+    case 'course-add':
+      return previewCourse(m);
     default:
       return null;
   }

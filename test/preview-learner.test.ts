@@ -1,6 +1,6 @@
 //Preview answers the player's progress messages, so Save user data and remembered progress last between Preview runs
 import { beforeEach, describe, expect, it } from 'vitest';
-import { answerPreviewProgress, forgetPreviewLearner, previewLearnerHas } from '../src/lib/preview-learner';
+import { answerPreviewProgress, forgetPreviewCourse, forgetPreviewLearner, previewCourseHas, previewLearnerHas, usesCourseCollections } from '../src/lib/preview-learner';
 
 const ask = (op: string, body: Record<string, unknown> = {}) => answerPreviewProgress({ source: 'interactives-progress', op, rid: 'r1', project: 'p1', ...body });
 
@@ -64,5 +64,39 @@ describe('Preview and shared responses', () => {
     shared(project({}), 'shared-add', { answers: ['x'] });
     forgetPreviewLearner('p1');
     expect(previewLearnerHas('p1')).toBe(false);
+  });
+});
+
+describe('Preview and course collections', () => {
+  beforeEach(() => localStorage.clear());
+  const course = (op: string, body: Record<string, unknown> = {}, project = 'p1') => answerPreviewProgress({ source: 'interactives-progress', op, rid: 'r', project, collection: 'Passport', ...body });
+
+  it('keeps a collection in this browser, says it is not the course\'s, and merges like the server', () => {
+    expect(course('course-read')).toEqual({ ok: true, available: true, data: { stamps: [], counts: {}, course: false } });
+    expect(course('course-add', { stamps: ['Gold star', 'gold star'], counts: { quizzes: 3 } })!.data).toMatchObject({ stamps: ['Gold star'], counts: { quizzes: 3 }, course: false, changed: 2 });
+    expect(course('course-add', { stamps: ['GOLD STAR'], counts: { quizzes: 1 } })!.data).toMatchObject({ changed: 0, counts: { quizzes: 3 } });
+    expect(previewCourseHas()).toBe(true);
+  });
+
+  it('is shared by every project previewed here that uses the name, and has none for no name', () => {
+    course('course-add', { stamps: ['One'] }, 'p1');
+    expect((course('course-read', {}, 'p2')!.data as { stamps: string[] }).stamps).toEqual(['One']);
+    expect(course('course-read', { collection: '$$' })).toEqual({ ok: true, available: false });
+  });
+
+  it('is forgotten on its own, apart from a project\'s saved data', () => {
+    ask('userdata-save', { variables: { a: 1 } });
+    course('course-add', { stamps: ['x'] });
+    forgetPreviewCourse();
+    expect(previewCourseHas()).toBe(false);
+    expect(previewLearnerHas('p1')).toBe(true);
+    expect((course('course-read')!.data as { stamps: string[] }).stamps).toEqual([]);
+  });
+
+  it('knows whether a project uses collections, by a node or a script', () => {
+    const base = { artboards: [{ logic: { nodes: [{ kind: 'action.emit' }] } }], scripts: [] };
+    expect(usesCourseCollections(base as never)).toBe(false);
+    expect(usesCourseCollections({ ...base, artboards: [{ logic: { nodes: [{ kind: 'action.courseCheck' }] } }] } as never)).toBe(true);
+    expect(usesCourseCollections({ ...base, scripts: [{ code: "await ix.course.stamp('p', 'x')" }] } as never)).toBe(true);
   });
 });
