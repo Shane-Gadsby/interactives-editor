@@ -92,7 +92,7 @@ function Moderation({ source }: { source: DataSource }) {
       </div>
       {error && <p className="error small">{error}</p>}
       {info === undefined && !error && <p className="muted small">Loading…</p>}
-      {info === null && !error && <p className="hint">Nothing to moderate yet. Answers are collected through the StudyDesk learner page, and only after the project is shared with this data source in it (Share, then update the link).</p>}
+      {info === null && !error && <p className="hint">Nothing to moderate yet. Answers are collected through the StudyDesk learner page, and only after the project is shared with this data source in it (Share dialog, Update to the latest version).</p>}
       {info && !courses.length && <p className="hint">Nobody has added anything yet.</p>}
       {here && (
         <>
