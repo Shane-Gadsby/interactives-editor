@@ -874,6 +874,8 @@ function helpTopicForTool(tool: Tool): string {
   if (['button', 'input', 'link', 'embed', 'video'].includes(tool)) return 'web-elements';
   if (tool === 'draw') return 'script-layers';
   if (tool === 'shader') return 'shader-layers';
+  if (tool === 'progress') return 'progress-bars';
+  if (tool === 'chart') return 'charts';
   if (tool === 'bone') return 'bones';
   if (tool === 'comment') return 'comments';
   if (tool === 'text') return 'text';
@@ -899,6 +901,8 @@ const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'text', icon: 'text', label: 'Text', key: 'T' },
   { tool: 'draw', icon: 'draw', label: 'Script layer (generative art, charts)' },
   { tool: 'shader', icon: 'shader', label: 'Shader layer (GPU effects, backdrops)' },
+  { tool: 'progress', icon: 'progress', label: 'Progress bar (a bar that fills to a value, for scores, steps and timers)' },
+  { tool: 'chart', icon: 'chart', label: 'Chart (bar, column, line, pie and donut charts from a list)' },
   { tool: 'bone', icon: 'bone', label: 'Bone (drag to draw one; start on a bone tip to continue the chain)', key: 'J' },
   { tool: 'comment', icon: 'comment', label: 'Comment (click where you want to say something; reviewers see these, exports never do)', key: 'C' },
 ];
@@ -972,6 +976,7 @@ const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[]
   { id: 'shapes', label: 'Shapes', tools: ['artboard', 'frame', 'rect', 'ellipse', 'polygon', 'star'], open: true },
   { id: 'draw', label: 'Draw', tools: ['line', 'pen', 'pencil', 'bend'], open: true },
   { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', 'video'], open: false },
+  { id: 'data', label: 'Data', tools: ['progress', 'chart'], open: false },
   { id: 'web', label: 'Web', tools: ['button', 'input', 'link', 'embed'], open: false },
   { id: 'rig', label: 'Rig', tools: ['bone'], open: false },
 ];

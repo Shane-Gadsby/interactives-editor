@@ -29,6 +29,8 @@ export const Icons = {
   video: P('M3 6h13v12H3zM16 10l5-3v10l-5-3'),
   draw: P('M3 4h18v14H3zM7 14l3-4 3 3 2-3 3 4M8 21h8'),
   shader: P('M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2zM19 3v4M17 5h4'),
+  progress: P('M3 9h18v6H3zM3 9h9v6H3z'),
+  chart: P('M4 4v16h16M8 16v-4M12 16V8M16 16v-6'),
   undo: P('M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3'),
   redo: P('M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3'),
   play: P('M7 4l13 8-13 8z'),

@@ -21,6 +21,8 @@ import {
   type DrawNode,
   type ImageNode,
   type ShaderNode,
+  type ProgressNode,
+  type ChartNode,
   DRAW_API,
   DRAW_TEMPLATES,
   type DrawTemplate,
@@ -98,6 +100,7 @@ import { confirmDialog } from '../components/dialogs';
 import { detach as detachFromLibrary } from '../lib/library-actions';
 import { ShaderFilterFields, ShaderSection } from './ShaderInspector';
 import { FillSection, PaintOrderSection, StrokeSection } from './PaintLayers';
+import { ChartSection, ProgressSection } from './DataLayerInspectors';
 import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
 import { BindSelectionSection, BonesArtboardSection, BoneSection, SkinSection } from './RigSection';
 import { skinnable } from '../lib/rig';
@@ -153,7 +156,7 @@ export function useShown(node: SceneNode) {
 /** Keys the property at the playhead, for every layer in `ids` (the selection the field edits; just `node` without it). */
 export function KeyButton({ node, prop, ids }: { node: SceneNode; prop: string; ids?: string[] }) {
   const s = useEditor((st) => ({ timelineShown: st.timelineShown, tl: st.activeTimelineId, playhead: st.playhead, project: st.project }));
-  if (!s.timelineShown || !animatableProp(prop)) return null;
+  if (!s.timelineShown || !animatableProp(prop, node)) return null;
   const ab = store().artboard();
   const tl = ab?.timelines.find((t) => t.id === s.tl);
   const track = tl?.tracks.find((t) => t.nodeId === node.id && t.prop === prop);
@@ -1476,6 +1479,10 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return <BoneSection node={n} abId={store().get().activeArtboardId} />;
     case 'draw':
       return <DrawSection nodes={nodes as DrawNode[]} />;
+    case 'progress':
+      return <ProgressSection nodes={nodes as ProgressNode[]} project={project} />;
+    case 'chart':
+      return <ChartSection nodes={nodes as ChartNode[]} project={project} ab={store().artboard()} />;
     case 'shader':
       return nodes.length === 1 ? <ShaderSection node={n as ShaderNode} project={project} /> : <p className="hint">Select one shader layer to edit its code and uniforms.</p>;
     case 'group':

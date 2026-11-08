@@ -22,6 +22,7 @@ import { silenceFlowAttributionWarning } from '../lib/flow-licence';
 import { cloneFragment, copyLogic, fragmentOf, fragmentOrigin, logicToPaste, type LogicFragment } from '../lib/logic-clipboard';
 import {
   ANIMATABLE_PROPS,
+  layerOwnProps,
   CATALOG,
   CURSORS,
   CATALOG_BY_KIND,
@@ -35,6 +36,7 @@ import {
   type LogicNode,
   type ParamDef,
   type Project,
+  type SceneNode,
 } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { openHelp } from '../help/Help';
@@ -957,8 +959,14 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
         return pick(project.dataSources.map((d) => ({ value: d.id, label: d.name })), project.dataSources.length ? 'Choose data source…' : 'No data sources yet');
       case 'cursor':
         return <SelectField key={p.key} label={p.label} value={String(v ?? 'pointer')} options={[...CURSORS]} onChange={(x) => set(p.key, x)} />;
-      case 'prop':
-        return <SelectField key={p.key} label={p.label} value={String(v ?? '')} options={ANIMATABLE_PROPS.map((a) => ({ value: a.prop, label: a.label }))} onChange={(x) => set(p.key, x)} />;
+      case 'prop': {
+        // The layer this node acts on can have settings of its own (a progress layer's value)
+        let target: SceneNode | undefined;
+        walk(ab.children, (x) => {
+          if (x.id === node.params.target) target = x;
+        });
+        return <SelectField key={p.key} label={p.label} value={String(v ?? '')} options={[...ANIMATABLE_PROPS, ...layerOwnProps(target)].map((a) => ({ value: a.prop, label: a.label }))} onChange={(x) => set(p.key, x)} />;
+      }
       case 'select':
         return <SelectField key={p.key} label={p.label} value={String(v ?? '')} options={p.options ?? []} onChange={(x) => set(p.key, x)} />;
       case 'easing':

@@ -75,6 +75,8 @@ const TYPE_ICON: Record<string, IconName> = {
   video: 'video',
   draw: 'draw',
   shader: 'shader',
+  progress: 'progress',
+  chart: 'chart',
   instance: 'copy',
   bone: 'bone',
 };

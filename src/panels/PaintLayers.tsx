@@ -126,7 +126,7 @@ export function FillSection({ nodes, project }: { nodes: SceneNode[]; project: P
   return (
     <Section
       help="fill-stroke"
-      title="Fill"
+      title={n.type === 'progress' ? 'Track fill' : 'Fill'}
       actions={!(simple && list.length) && <IconButton icon={<Icons.plus />} title="Add fill" onClick={() => write([...list, { type: 'solid', color: list.length ? LIGHT_LOOK.background : LIGHT_LOOK.surfaceMuted }], orderWithAdded(order, 'fill'))} />}
     >
       {rows.map(({ p, i }) => {
