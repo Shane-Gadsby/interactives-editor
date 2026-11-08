@@ -71,6 +71,7 @@ import { formatTracks, parseTracks } from '../lib/grid-tracks';
 import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-add';
 import { CodeEditor } from '../components/CodeEditor';
 import { AccessibilitySection, TabOrderSection } from './AccessibilitySections';
+import { DialogSection, KeyNavSection } from './FrameA11ySections';
 import { DragDropSections } from './DragDropSections';
 import { QuestionPartNote, QuestionSection } from './QuestionSection';
 import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
@@ -825,6 +826,8 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {single && (n.type === 'group' || n.type === 'frame') && <SoloSection node={n} />}
       {single && (n.type === 'group' || n.type === 'frame') && n.children.length > 1 && <DrawOrderSection node={n} />}
       {single && (n.type === 'group' || n.type === 'frame') && <RepeatSection node={n} project={project} />}
+      {single && (n.type === 'group' || n.type === 'frame') && <KeyNavSection node={n} project={project} />}
+      {single && n.type === 'frame' && <DialogSection node={n} ab={ab} project={project} />}
       {single && <BindingsSectionView node={n} project={project} set={set} />}
       {single && <InteractionsSection node={n} ab={ab} />}
       <DragDropSections nodes={nodes} ab={ab} project={project} />
@@ -1353,6 +1356,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           {nodes.length === 1 && <ExprField label="Label" template mono={false} value={n.label} onChange={(v) => set({ label: v }, `label-${n.id}`)} />}
           {radius}
           <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
+          <NumberField label="Disabled look" title="How opaque the button looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={n.disabledOpacity ?? 0.5} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
           <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           <p className="hint">Add a click interaction to make it do something.</p>
@@ -1390,6 +1394,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             <CheckField label="No browser help" title="Turns off the spellcheck underline, autocorrect, automatic capitals and autofill in this box. For a spelling test, so the browser does not mark or fix the word" value={!!n.noAssist} onChange={(v) => set({ noAssist: v || undefined })} />
           )}
           {radius}
+          <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
+          <NumberField label="Disabled look" title="How opaque the input looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={n.disabledOpacity ?? 0.5} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           {!project.variables.length && <p className="hint">Create a variable in the Variables tab to bind this input to.</p>}
         </Section>

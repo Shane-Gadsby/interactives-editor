@@ -1134,7 +1134,7 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
     keywords: 'button input text field checkbox slider range select dropdown link embed iframe html video aria accessibility',
     body: `Web elements are real HTML controls, so they work with keyboards, screen readers and forms.
 
-- **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react. Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)).
+- **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react. Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)). **Disabled** (also bindable, for a Next button that waits for an answer) greys it out and takes it out of the Tab sequence, and a disabled button or input looks dimmed by itself: **Disabled look** sets how opaque it is (0.5 by default, 1 for no dimming). A layer whose Opacity is bound keeps doing its own dimming.
 - **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test. To do something when Enter is pressed in a text box, use an **On key** node set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions)).
 - **Link**: text that opens a URL. **Fit text to box** works here too.
 - **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
@@ -1158,6 +1158,8 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - **Say it like**: what [read aloud](read-aloud) says for the layer instead of its text, for an abbreviation, a formula or a name a voice gets wrong. It is not shown and screen readers ignore it.
 - **Tab stop**: *Automatic* (a layer is reachable when it has an *On pointer → Click*, an *On focus*, or a button or checkbox role), *Always*, or *Never*. The line underneath says what you get.
 - A **Checkbox** role needs its state told: bind **Checked (checkbox role)** in Data bindings to the variable that holds it (see [Bindings](bindings)).
+- **Pressed state** and **Current**: see [Pressed and current](accessibility#pressed-and-current).
+- **Shortcut**: a key that clicks the layer, see [Shortcuts](accessibility#shortcuts).
 - Buttons, inputs and links show only the text alternative and description. They already have the right role and keyboard behaviour.
 
 ## What the keyboard does
@@ -1167,6 +1169,30 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - An Enter or Space that clicked a layer, or that was pressed on a button or link, does not also run an *On key* node for the same key, so a game's "press Space" and a button's click can't both fire from one press.
 - A key an *On key* node handled does not also scroll the page, so a crossword or word search can use the arrows and Space without the course page moving behind it. Pick the grid in the node's **Only while this layer has focus** and the arrows (and, with an any-key node, Space and typing) belong to the activity only while the grid has focus; everywhere else the page scrolls as normal. Tab is never taken, so keyboard users can always leave. See [Interactions](interactions).
 - Only *On pointer → Click* can be done from a keyboard. Hover, press, release and the older drag events can't, so give those layers a click alternative. Layers made [draggable](drag-and-drop) get a keyboard way (Space, arrows, Space) of their own.
+
+## Pressed and current
+A button that is on or off (a toggle, a segmented control, a filter chip) should say so. On a **Button** layer, or a layer with the *Button* role, set **Pressed state** to *Not pressed* or *Pressed* and a screen reader says "toggle button, pressed" (aria-pressed). Bind **Pressed (button, toggle)** in Data bindings to the variable that holds it, such as \`mode == "list"\`. *Not a toggle* says nothing.
+
+**Current** marks the one layer of a set that is where you are: the open tab, the current page in a list, the step you are on. *Yes* is aria-current true, and *Current page*, *Current step* and *Current location* say which kind. It works on any layer, buttons and links included. Bind **Current (true, or page, step, location)** in Data bindings, for example \`tab == 2\`, or an expression that gives \`"page"\` for the current one and false for the rest. Use it instead of describing the state in the text alternative ("Showing now").
+
+## Shortcuts
+A layer's **Shortcut** is a key, or a key with modifiers (\`r\`, \`1\`, \`Ctrl+Enter\`, \`Alt+N\`, \`Shift+/\`), that clicks the layer from anywhere on the page: it runs the layer's *On pointer → Click* flows, presses a button or follows a link, the way Enter on the layer does. It follows the same rules as an *On key* node: keys typed into a text box are left alone (unless the shortcut holds Ctrl, Alt or Meta, so Ctrl+Enter can submit from a text area), holding a key does not repeat it, and an extra Ctrl, Alt or Meta means a browser shortcut, so it is ignored. A hidden or disabled layer ignores its shortcut, and while a modal [dialog](accessibility#dialogs) is open the layers behind it do too. A layer that repeats uses its first copy. Screen readers are told the key (aria-keyshortcuts); show it in the label too, such as "Replay (R)". The field warns when two layers use the same keys, or when an *On key* node listens for them as well. Shortcuts count as the key way to a clickable shape for the [Accessibility checker](accessibility-checker).
+
+## Dialogs
+Select a **frame** and tick **This frame is a dialog** in its *Dialog* section. The player then announces it as a dialog (role dialog, with aria-modal when **Modal**, and the frame's **Text alternative** as its name, so give it one). The dialog is **open while the frame is visible**, so show it however you like: bind its Visible to a variable, use a *Show / hide* node, or pick an **Open variable** and the frame shows while that variable is on (true, not 0, not empty).
+
+When it opens, focus moves inside: to the **Initial focus** layer if you picked one, otherwise the first button, field or clickable layer in it, otherwise the dialog itself. While a **modal** dialog is open, Tab and Shift+Tab stay inside it, focus that slips behind it is brought back, and clicks on the rest of the artboard are ignored (tick **Close on click outside** to make them close it instead). **Escape** closes the dialog on top: it turns the Open variable off (false, 0 or empty) or, with no variable, hides the frame. When it closes, **Return focus** puts focus back on the layer that had it when the dialog opened. A dialog that is showing from the start does not take focus. A **Scrim** paints a colour over the rest of the artboard behind the dialog (it is drawn as a shadow, so it follows the frame and goes when the frame hides).
+
+A dialog works inside an iframe or a page that embeds the player: the trap, Escape and focus use the player's own document. Keep the dialog at the top level of the artboard, not inside a clipping frame, so the scrim and the "outside" are the whole artboard. The [checker](accessibility-checker) flags a dialog with no name or nothing inside it a keyboard can reach.
+
+## Keyboard navigation
+A list of options is one Tab stop, not one per option. Select a **repeater**, or a group or frame whose layers are the options, and tick **Arrow keys move between the items** in *Keyboard navigation*. One item is the Tab stop (the one last focused), and the arrow keys, Home and End move focus between the rest, so a keyboard user Tabs past the whole list.
+
+- **List**: Up and Down for a column (Left and Right for a repeater laid out as a row, or choose under **Arrows**). **Wrap round** goes from the last to the first.
+- **Grid**: all four arrows move by row and column, using the repeater's columns (and its *Columns first* order), or the **Columns** you set on a container. Home and End go to the ends of the row, Ctrl+Home and Ctrl+End to the ends of the grid.
+- **Radio buttons**: the radio-group pattern. All four arrows move and wrap, and **moving also selects**: the item it lands on is clicked, so the *On pointer → Click* flows that choose an option run. The group is a radio group and the items radio buttons for screen readers, with aria-checked following the focus, unless your items set their own **Checked** (bound to your selection variable), which then wins.
+
+**Focused item** writes the focused item's number (from 0) to a number variable, and setting that variable moves the Tab stop. The number also arrives as \`event.index\` in *On focus*, *On pointer* and *On key* events for the items (as it already does for a repeater's copies). Keys typed into a text box and the arrows of a [draggable](drag-and-drop) item are left alone, and **an *On key* node you wired for an arrow wins**: the navigation does nothing for a key that one of your nodes names, so nothing fires twice.
 
 ## Tab order
 With nothing selected, the **Tab order** section in the inspector lists every tab stop on the artboard in the order Tab visits them. Use the arrows to move a layer earlier or later, or click its name to select it. **Reset to layer order** goes back to the default. The order only applies within the player; stops you haven't placed follow the others in layer order.
@@ -2615,7 +2641,9 @@ Inside the copies, \`item\` is the current item and \`index\` its position (from
 
 **Instances in a repeater** can take their [inputs](instances) from the item: select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
 
-Clicks on a copy fire **On pointer** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked.`,
+Clicks on a copy fire **On pointer** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked.
+
+For lists a keyboard user moves through, tick **Keyboard navigation** under the repeater: one copy is the Tab stop and the arrow keys move between the rest (see [Accessibility](accessibility#keyboard-navigation)).`,
   },
   {
     id: 'results',
