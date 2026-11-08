@@ -9,6 +9,7 @@ import { addNote, brandedPage, brandedProject, button, byName, contentBox, item,
 import type { Colourway } from '../../looks';
 import { bind, click, goPrevious, graph } from '../../graph-kit';
 import { boxText, dressQuestion, endPage, goNextOn, heroPage, retray } from './shared';
+import { extrasChecklist, questionExtras } from '../../parts';
 
 const LABELS = ['Evaporation', 'Condensation', 'Precipitation', 'Collection', 'Transpiration', 'Runoff'];
 //A label that fits no spot, mixed in on purpose
@@ -42,7 +43,7 @@ export function labelTheDiagram(colourway: Colourway) {
   const results = endPage(ctx, 'Well done', 'You put {label_score} of ' + N + ' labels on the right spot.', 'Try again');
   const box = contentBox(page);
 
-  const id = addQuestion(project, page.id, 'matching', { at: { x: box.x, y: box.y - 8 } })!;
+  const id = addQuestion(project, page.id, 'matching', { at: { x: box.x, y: box.y - 8 }, ...questionExtras(project, { tryAgain: true }) })!;
   setQuestionSettings(project, page.id, id, {
     prefix: 'label',
     prompt: 'Drag each label onto the right place on the picture.',
@@ -130,5 +131,6 @@ export function labelTheDiagram(colourway: Colourway) {
     item('Change the results page text', results.result, results.page),
     item('Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
   ];
+  checklist.push(item(extrasChecklist({ tryAgain: true })));
   return { project, checklist };
 }

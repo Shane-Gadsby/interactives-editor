@@ -179,10 +179,10 @@ function build(colourway: Colourway) {
   const clueLine = text(ctx, 'Current clue', '{current}', colX + 14, bannerY + 6, colW * 2 - 12, { fontSize: 16, fontWeight: 600, autoSize: 'none', height: 44, verticalAlign: 'middle' });
   const message = bind(text(ctx, 'Status', '{status}', colX, bannerY + 62, colW * 2 + 16, { fontSize: 15, fontWeight: 600, autoSize: 'none', height: 22 }), { color: `done ? "${L.success}" : "${L.text}"` });
   const buttonsY = box.y + box.height - 46;
-  const check = button(ctx, 'Check', 'Check', colX, buttonsY, 100, true);
-  const revealWord = button(ctx, 'Reveal word', 'Reveal word', colX + 108, buttonsY, 140, false);
-  const revealAll = button(ctx, 'Reveal all', 'Reveal all', colX + 256, buttonsY, 120, false);
-  const clear = button(ctx, 'Clear', 'Clear', colX + 384, buttonsY, 100, false);
+  const check = button(ctx, 'Check', 'Check letters', colX, buttonsY, 128, true);
+  const revealWord = button(ctx, 'Reveal word', 'Reveal word', colX + 136, buttonsY, 128, false);
+  const revealAll = button(ctx, 'Reveal all', 'Reveal all', colX + 272, buttonsY, 108, false);
+  const clear = button(ctx, 'Clear', 'Clear', colX + 388, buttonsY, 92, false);
   play.children.push(grid, acrossHead, acrossList, downHead, downList, banner, clueLine, message, check, revealWord, revealAll, clear);
 
   //Setting the puzzle up: the squares go back to their formula, the rest to where it started

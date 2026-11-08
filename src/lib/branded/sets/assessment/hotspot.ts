@@ -1,7 +1,7 @@
 import { createNode, defaultAutoLayout, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partsOf, setAreaShape, setQuestionSettings, syncQuestion } from '../../../question-kit';
 import { brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text } from '../../kit';
-import { fill, stack } from '../../parts';
+import { fill, extrasChecklist, questionExtras, stack } from '../../parts';
 import type { Colourway } from '../../looks';
 import { announce, bind, brandQuestionFrame, click, goNext, graph, heroPage, noteBelow, scorePage, setVar, variable } from './shared';
 
@@ -23,7 +23,7 @@ export function buildFindHotspot(colourway: Colourway) {
   const page = brandedPage(ctx, 'Find the spot', { footer: 'Find the hotspot' });
   const box = contentBox(page);
 
-  const id = addQuestion(project, page.id, 'hotspot', { at: { x: box.x, y: box.y } })!;
+  const id = addQuestion(project, page.id, 'hotspot', { at: { x: box.x, y: box.y }, ...questionExtras(project, { hint: true, tryAgain: true }) })!;
   setQuestionSettings(project, page.id, id, {
     prompt: 'Click the item on the desk that helps you plan your week.',
     options: AREAS.map((a) => ({ id: a.id, text: a.text, ...(a.id === 'o1' ? { correct: true, feedback: 'Yes, the planner is where you lay out your week.' } : { feedback: `Not the ${a.text.toLowerCase()}. Look for something you would write plans in.` }) })),
@@ -92,6 +92,7 @@ export function buildFindHotspot(colourway: Colourway) {
     item('Change how many tries a learner gets (Question section, Tries) and keep the "Tries left" text on the right in step', tries, page),
     item('Try it with the keyboard: Tab to an area, Enter to select it, then Check answer', undefined, page),
   ];
+  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }
 

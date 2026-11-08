@@ -2,7 +2,7 @@ import { createNode, defaultAutoLayout, type FrameNode, type LogicNode, type Tem
 import { addQuestion, partsOf, setQuestionSettings, syncQuestion } from '../../../question-kit';
 import { brandedPage, brandedProject, button, byName, contentBox, edge, item, text, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { stack } from '../../parts';
+import { extrasChecklist, questionExtras, stack } from '../../parts';
 import { after, bind, brandQuestionFrame, click, goNext, graph, heroPage, kitNode, noteBelow, scorePage, variable } from './shared';
 
 
@@ -87,7 +87,7 @@ export function buildAudioFirstQuiz(colourway: Colourway) {
 
   //The questions are the rows of a bank gone through once. The kit's number keys choose an option, its Listen button reads the question and is the Repeat button, and the options sit two to a row
   const box = contentBox(play);
-  const id = addQuestion(project, play.id, 'single', { at: { x: box.x, y: box.y } })!;
+  const id = addQuestion(project, play.id, 'single', { at: { x: box.x, y: box.y }, ...questionExtras(project, { hint: true }) })!;
   setQuestionSettings(project, play.id, id, {
     prompt: QUESTIONS[0].prompt,
     options: QUESTIONS[0].options.map((t, i) => ({ id: `o${i + 1}`, text: t, ...(i + 1 === QUESTIONS[0].correct ? { correct: true } : {}) })),
@@ -246,5 +246,6 @@ export function buildAudioFirstQuiz(colourway: Colourway) {
     item('Do not offer it as the route for a screen reader user: they already have a reader, and two voices at once is worse. "Spoken prompts" turns the voice off, and the feedback is then announced to the reader instead', spoken, play),
     item('Change the colours for the whole piece with the Themes tab: the colourways are already set up', undefined, play),
   ];
+  checklist.push(item(extrasChecklist({ hint: true })));
   return { project, checklist };
 }

@@ -90,7 +90,7 @@ export function buildMarkWords(colourway: Colourway) {
     children: [chip],
   } as never) as FrameNode;
 
-  const check = bind(button(ctx, 'Check button', 'Check', 0, 0, 140), { disabled: 'checked' });
+  const check = bind(button(ctx, 'Check button', 'Check answer', 0, 0, 170), { disabled: 'checked' });
   const again = bind(button(ctx, 'Try again button', 'Try again', 0, 0, 160, false), { visible: 'checked' });
   const actions = stack('Actions', 0, 0, box.width, { direction: 'row', gap: 14, align: 'center', children: [check, again] });
   const scoreText = text(ctx, 'Score', 'Score: {score} out of {totalRight}', 0, 0, 100, { fontSize: 24, fontWeight: 700 });

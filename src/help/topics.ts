@@ -3595,6 +3595,9 @@ Select nothing (or an artboard) and open **Project** in the inspector. The **Col
 
 Tick **Let learners switch colourway** to add a small row of swatches to the top right of the start page. Each one is a button that runs the interaction graph's **Set theme** action, so learners can pick the colour they find easiest to read. The swatches are brand layers: they stay where they are, and unticking the box removes them.
 
+### Contrast
+Every starter, in every colourway and High contrast, meets WCAG 2.2 AA: 4.5:1 for text (3:1 for large text), and 3:1 for the edge of a button, the focus ring, a progress bar against its track and chart marks. A test holds every page of every starter to it, in the states that show feedback and open dialogs too, so a colourway change can't slip under it. Things you may notice: the Orange and Red colourways carry a soft dark scrim over the gradient on the first and last pages (white words reach only 3.6:1 on the bare gradient); a button's edge is an outline in its label colour (gold buttons in Purple have a dark one); and selected outlines, bars and chart marks use the **primary** colour (purple in Purple), keeping the button colour for fills with a label on them. The one thing no colour can do is give the keyboard focus ring 3:1 on both the white pages and the dark ends of the Blue, Green and Purple gradients, so the ring on a first or last page or a deep panel is the one place it can fall under.
+
 ## What is locked, and why
 Branded projects are held to the brand so every activity looks like it came from the same place, whoever writes it.
 
@@ -3605,6 +3608,8 @@ Branded projects are held to the brand so every activity looks like it came from
 The accessibility checks, the [themes](themes) panel and everything else work as they do in any project. A power user can turn the lock off for a session with F9 (the brand kit override), which also lifts the brand kit lock, to fix something in the pack itself. With it on, brand layers show in the Layers panel like any layer: select one there, and press its padlock to unlock it for clicking on the canvas. Nothing is saved with it.
 
 ## The starters
+Question starters share two switches and a look. **Hint** is a small pill at the top right of the question card, so the one full size button is the one that answers. The two optional extras are one project variable each, changed once in the **Variables** tab for every question: \`offerHint\` shows or hides the Hint pill, and \`allowTryAgain\` shows or hides Try again after a wrong answer (the practice starters open with both on, the Spelling test and the multi-page quiz with Try again off). A button says what happens to the answer: **Submit answer** where it is final, **Check answer** where there are tries. A button that starts a sound is disabled and reads "Playing..." until the sound ends, so it can't be pressed over itself.
+
 ${list}
 `;
     },

@@ -4,6 +4,7 @@ import { addQuestion, setQuestionSettings } from '../../../question-kit';
 import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, picture, text, type BrandedCtx, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, goNext, goPrevious } from './common';
+import { extrasChecklist, questionExtras } from '../../parts';
 
 type Tone = 'light' | 'gradient' | 'deep';
 
@@ -105,7 +106,7 @@ function build(colourway: Colourway) {
   let questionLayer: SceneNode;
   {
     const box = contentBox(quiz);
-    const id = addQuestion(project, quiz.id, 'single', { at: { x: box.x, y: box.y } })!;
+    const id = addQuestion(project, quiz.id, 'single', { at: { x: box.x, y: box.y }, ...questionExtras(project, { hint: true, tryAgain: true }) })!;
     setQuestionSettings(project, quiz.id, id, {
       prompt: 'What is the best first step when an assignment is released?',
       options: [
@@ -145,6 +146,7 @@ function build(colourway: Colourway) {
   addNote(slideA, { ...below(slideA, 456, 440), text: '[ ] Write your own points, and swap the grey picture box for yours.', colour: 'gold' });
   addNote(quiz, { ...below(quiz, 0, 440), text: '**Question kit** The question is the kit\'s own frame, so its prompt, options, hint and feedback are all in the Question section of the inspector. Next is always there, so a learner can move on.', colour: 'sky' });
 
+  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }
 

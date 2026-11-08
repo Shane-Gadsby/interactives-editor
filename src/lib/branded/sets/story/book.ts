@@ -4,7 +4,7 @@ import { addQuestion, setQuestionSettings, syncQuestion } from '../../../questio
 import { addNote, brandedPage, brandedProject, button, contentBox, item, picture, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { after, announce, bind, brandQuestionFrame, click, go, graph, panel } from '../assessment/shared';
-import { progressBar } from '../../parts';
+import { progressBar, extrasChecklist, questionExtras } from '../../parts';
 import { addVar, groupPages } from './common';
 
 const TITLE = 'A short guide to academic integrity';
@@ -234,7 +234,7 @@ function build(colourway: Colourway) {
       //Body: text and a picture, or a question with a note and a picture beside it
       if (def.question) {
         //The question takes the whole width: its feedback and buttons grow it downwards, and wide options stay on one line
-        const id = addQuestion(project, page.id, def.question.kind, { at: { x: box.x, y: BODY_Y } })!;
+        const id = addQuestion(project, page.id, def.question.kind, { at: { x: box.x, y: BODY_Y }, ...questionExtras(project, { hint: true, tryAgain: true }) })!;
         setQuestionSettings(project, page.id, id, { ...def.question.patch, attempts: 2, points: 1, reveal: true, report: null });
         const frame = page.children.find((x) => x.id === id) as FrameNode;
         frame.width = box.width;
@@ -322,6 +322,7 @@ function build(colourway: Colourway) {
   addNote(chapterPages[0][2], { ...below(chapterPages[0][2], 0, 440), text: '**Question result** A set-item node after Check answer keeps the first result in this chapter\'s slot of `results`. The score on the summary is a live variable that adds the slots up.', colour: 'sky' });
 
   project.settings.reporting = { scoreVariable: score.id, maxScore: OUT_OF, completion: 'artboard', completionArtboard: summary.id, resumeArtboard: true };
+  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }
 
