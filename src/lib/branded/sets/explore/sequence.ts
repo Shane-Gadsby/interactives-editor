@@ -2,11 +2,13 @@
  * Image sequence: six pictures shown one at a time as a slider moves through them (a process or growth over time), with a
  * caption for each, Previous and Next, clickable stage names under the slider, and the keyboard arrows on the slider.
  */
-import { createNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
+import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, text, type BrandedStarter } from '../../kit';
 import { BRAND_FONT } from '../../looks';
-import { Flow, announce, focusOn, heroButtons, n, onClick, setVar, variable, wait } from './helpers';
+import { addVar, announce, bind, click, focus, graph, set } from '../../graph-kit';
+import { fill, stack } from '../../parts';
+import { heroButtons } from './helpers';
 
 const STAGES = [
   { short: 'Seed', title: 'A dry seed', caption: 'A bean seed holds a tiny plant and a store of food. It waits until it has warmth and water.' },
@@ -31,50 +33,49 @@ export const imageSequence: BrandedStarter = {
     const { L, project } = ctx;
     const hero = brandedPage(ctx, 'The life of a bean plant', { kind: 'hero', subtitle: 'Move the slider through six stages of growth, from seed to seed.' });
     const page = brandedPage(ctx, 'From seed to seed', { footer: 'Plant life cycles' });
-    heroButtons(ctx, hero, [{ name: 'Start', label: 'Start', to: page }]);
+    heroButtons(ctx, hero, [{ name: 'Start', label: 'Start', to: 'next' }]);
 
-    const step = variable(ctx, 'step', 'number', 1);
-    variable(ctx, 'total', 'number', N);
-    variable(ctx, 'stages', 'list', JSON.stringify(STAGES.map((s) => ({ title: s.title, caption: s.caption })), null, 1));
+    const step = addVar(project, 'step', 'number', 1);
+    addVar(project, 'stages', 'list', STAGES.map((s) => ({ title: s.title, caption: s.caption })));
+    //Live: the number of stages follows the list, so the count, the ends of Previous and Next and the slider's top need no editing
+    addVar(project, 'total', 'number', N, { formula: 'stages.length', live: true });
 
     const box = contentBox(page);
-    //One frame for each picture, only the current one showing
-    const frames: SceneNode[] = [];
+    //One frame for each picture. The Solo group shows only the child named for the current stage
     const pics: SceneNode[] = [];
-    STAGES.forEach((s, i) => {
+    const frames = STAGES.map((s, i) => {
       const pic = picture(ctx, `Image ${i + 1} picture`, 0, 0, PIC_W, PIC_H);
       const hint = text(ctx, `Image ${i + 1} picture hint`, 'Replace with your picture', 0, PIC_H / 2 - 12, PIC_W, { align: 'center', color: L.muted, fontSize: 16, decorative: true });
-      const f = createNode('frame', {
-        name: `Image ${i + 1}`,
-        x: box.x,
-        y: box.y,
-        width: PIC_W,
-        height: PIC_H,
-        fill: null,
-        stroke: null,
-        clip: false,
-        role: 'region',
-        ariaLabel: `Image ${i + 1} of ${N}: ${s.title}`,
-        bindings: { visible: `step == ${i + 1}` },
-        children: [pic, hint],
-      } as never);
-      frames.push(f);
       pics.push(pic);
-      page.children.push(f);
+      return createNode('frame', { name: `Image ${i + 1}`, x: 0, y: 0, width: PIC_W, height: PIC_H, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: `Image ${i + 1} of ${N}: ${s.title}`, children: [pic, hint] } as never);
     });
+    const images = createNode('frame', {
+      name: 'Images',
+      x: box.x,
+      y: box.y,
+      width: PIC_W,
+      height: PIC_H,
+      fill: null,
+      stroke: null,
+      clip: false,
+      solo: { active: null },
+      bindings: { 'solo.active': '"Image " + step' },
+      children: frames,
+    } as never) as FrameNode;
+    page.children.push(images);
 
-    //The caption beside the picture follows the stage
+    //The text beside the picture, one column so a long caption pushes Previous and Next down instead of landing on them
     const colX = box.x + PIC_W + 32;
     const colW = box.width - PIC_W - 32;
-    const kicker = text(ctx, 'Stage count', 'Stage {step} of {total}', colX, box.y, colW, { fontSize: 15, fontWeight: 700, color: L.muted });
-    const title = heading(ctx, 'Stage title', '{stages[step - 1].title}', colX, box.y + 26, colW, { fontSize: 26 });
-    const caption = text(ctx, 'Stage caption', '{stages[step - 1].caption}', colX, box.y + 74, colW, { fontSize: 18, lineHeight: 1.45 });
-    const prev = button(ctx, 'Previous', 'Previous', colX, box.y + 236, 160, false);
-    const next = button(ctx, 'Next', 'Next', colX + colW - 160, box.y + 236, 160, true);
-    Object.assign(prev, { bindings: { disabled: 'step <= 1' } });
-    Object.assign(next, { bindings: { disabled: 'step >= total' } });
-    const help = text(ctx, 'Keyboard help', 'Drag the slider, or use the left and right arrow keys. Home and End go to the first and last stage.', colX, box.y + 296, colW, { fontSize: 14, color: L.muted, lineHeight: 1.4 });
-    page.children.push(kicker, title, caption, prev, next, help);
+    const kicker = text(ctx, 'Stage count', 'Stage {step} of {total}', 0, 0, 100, { fontSize: 15, fontWeight: 700, color: L.muted });
+    const title = heading(ctx, 'Stage title', '{stages[step - 1].title}', 0, 0, 100, { fontSize: 26 });
+    const caption = text(ctx, 'Stage caption', '{stages[step - 1].caption}', 0, 0, 100, { fontSize: 18, lineHeight: 1.45 });
+    const prev = bind(button(ctx, 'Previous', 'Previous', 0, 0, 160, false), { disabled: 'step <= 1' });
+    const next = bind(button(ctx, 'Next', 'Next', 0, 0, 160, true), { disabled: 'step >= total' });
+    const buttons = stack('Stage buttons', 0, 0, colW, { direction: 'row', justify: 'space-between', children: [prev, next] });
+    const help = text(ctx, 'Keyboard help', 'Drag the slider, or use the left and right arrow keys. Home and End go to the first and last stage.', 0, 0, 100, { fontSize: 14, color: L.muted, lineHeight: 1.4 });
+    const side = stack('Stage text', colX, box.y, colW, { gap: 14, children: [kicker, title, caption, fill(buttons, 'width'), help] });
+    page.children.push(side);
 
     //The slider, with the stage names under it
     const sy = box.y + PIC_H + 24;
@@ -94,36 +95,43 @@ export const imageSequence: BrandedStarter = {
       fontFamily: BRAND_FONT,
       color: L.button,
       ariaLabel: 'Stage',
-      bindings: { ariaDescription: '"Stage " + step + " of " + total + ": " + stages[step - 1].title' },
+      bindings: { max: 'total', ariaDescription: '"Stage " + step + " of " + total + ": " + stages[step - 1].title' },
     } as never);
     page.children.push(slider);
     //(a range's thumb runs from half a thumb in to half a thumb short of each end)
     const span = PIC_W - 16;
     const names: SceneNode[] = STAGES.map((s, i) =>
-      text(ctx, `Stage ${i + 1} name`, s.short, box.x + 8 + (i * span) / (N - 1) - 46, sy + 40, 92, {
+      text(ctx, `Stage ${i + 1} name`, s.short, 8 + (i * span) / (N - 1) - 46, 0, 92, {
         fontSize: 13,
         align: 'center',
         role: 'button',
         ariaLabel: `Go to stage ${i + 1}: ${s.title}`,
-        bindings: { fontWeight: `step == ${i + 1} ? 700 : 400`, color: `step == ${i + 1} ? ${JSON.stringify(L.text)} : ${JSON.stringify(L.muted)}`, ariaDescription: `step == ${i + 1} ? "Current stage" : ""` },
+        bindings: { fontWeight: `step == ${i + 1} ? 700 : 400`, color: `step == ${i + 1} ? ${JSON.stringify(L.text)} : ${JSON.stringify(L.muted)}`, ariaCurrent: `step == ${i + 1} ? "step" : false` },
       })
     );
-    page.children.push(...names);
+    const nameRow = createNode('frame', { name: 'Stage names', x: box.x, y: sy + 40, width: PIC_W, height: 20, fill: null, stroke: null, clip: false, children: names } as never);
+    page.children.push(nameRow);
 
-    //Moving to a stage says which one. Previous, Next and the names set the same variable the slider is tied to
-    const flow = new Flow(page);
-    flow.chain(n('event.start'), wait(80), focusOn(slider));
-    flow.chain(onClick(prev, 'Step'), setVar(step, 'step <= 1 ? 1 : step - 1'));
-    flow.chain(onClick(next, 'Step'), setVar(step, 'step >= total ? total : step + 1'));
-    names.forEach((nm, i) => flow.chain(onClick(nm, 'Stage names'), setVar(step, String(i + 1))));
-    flow.chain(n('event.variable', { variable: step.id }, 'Say the stage'), announce('"Stage " + step + " of " + total + ": " + stages[step - 1].title'));
+    //Moving to a stage says which one. Previous and Next set the same variable the slider is tied to, and the names are one flow for all six
+    const g = graph(page);
+    g.run(g.event('event.start', {}, 'Start on the slider'), focus(slider));
+    g.run(click(g, prev, 'Step'), set(step, 'step <= 1 ? 1 : step - 1'));
+    g.run(click(g, next, 'Step'), set(step, 'step >= total ? total : step + 1'));
+    g.run(g.event('event.pointer', { target: nameRow.id, type: 'click', childrenOnly: true }, 'Stage names'), set(step, 'event.childIndex + 1'));
+    g.run(g.event('event.variable', { variable: step.id }, 'Say the stage'), announce('"Stage " + step + " of " + total + ": " + stages[step - 1].title'));
+
+    //Notes for whoever edits the template, below the page
+    const below = (x: number, w: number) => ({ x, y: page.height + 14, w, h: 84 });
+    addNote(page, { ...below(0, 440), text: '**Solo group** `Images` shows only the child named "Image {step}". To add a stage: duplicate an Image frame, rename it with the next number and add a line to `stages`.', colour: 'sky' });
+    addNote(page, { ...below(456, 440), text: '**Stage names** are one flow for all six: the click gives `event.childIndex`, the name\'s place in the row. `total` is live, so the count and the Next button follow the `stages` list.', colour: 'sky' });
+    addNote(page, { ...below(912, 380), text: '[ ] Swap each grey picture for your own and say what it shows in its text alternative.', colour: 'gold' });
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),
-      item('Replace each grey picture with your own, and give it a text alternative that says what it shows. The pictures are in the Image 1 to Image 6 frames, one on top of the other', pics[0], page),
+      item('Replace each grey picture with your own, and give it a text alternative that says what it shows. The pictures are in the Image 1 to Image 6 frames inside the Images group, which shows one at a time', pics[0], page),
       item('Write each stage\'s title and caption in the "stages" list variable (Variables panel), in order', caption, page),
       item('Rename the stage names under the slider to match (and their Text alternative)', names[0], page),
-      item('To change the number of stages: duplicate an Image frame and a stage name, bind them to the next number, add an entry to "stages", then raise "total" and the slider\'s Max (Inspector)', slider, page),
+      item('To change the number of stages: duplicate an Image frame (name it with the next number) and a stage name, add an entry to "stages", and space the names along the slider. "total" and the slider\'s top follow the list by themselves', images, page),
       item('Change the footer line', byName(page, 'Footer text'), page),
       item('Try it with the keyboard: Tab to the slider, then the arrow keys, Home and End', slider, page),
     ];

@@ -18,22 +18,6 @@ const click = async (id: string) => {
   must(id).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
   await flush();
 };
-/** jsdom has no PointerEvent: a mouse event with the pointer fields on it. */
-const ptr = (type: string, x: number, y: number, target: Element | Window = window) => {
-  const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
-  Object.defineProperty(e, 'pointerId', { value: 1 });
-  Object.defineProperty(e, 'pointerType', { value: 'mouse' });
-  target.dispatchEvent(e);
-};
-/** Drag a layer by its centre onto another layer's centre. */
-const dragOnto = (from: { x: number; y: number; width: number; height: number }, id: string, to: { x: number; y: number; width: number; height: number }) => {
-  const a: [number, number] = [from.x + from.width / 2, from.y + from.height / 2];
-  const b: [number, number] = [to.x + to.width / 2, to.y + to.height / 2];
-  const el = must(id);
-  ptr('pointerdown', a[0], a[1], el);
-  for (let i = 1; i <= 4; i++) ptr('pointermove', a[0] + ((b[0] - a[0]) * i) / 4, a[1] + ((b[1] - a[1]) * i) / 4, el);
-  ptr('pointerup', b[0], b[1], el);
-};
 const key = (el: Element, k: string) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 
 const build = (key: string, way = COLOURWAYS[0]) => {
@@ -117,81 +101,101 @@ describe('the drag set', () => {
 });
 
 describe('Label the diagram', () => {
+  const WORDS = ['Evaporation', 'Condensation', 'Precipitation', 'Collection', 'Transpiration', 'Runoff'];
   const setup = () => {
     const { project, board } = build('drag/label-the-diagram');
     const page = board('Activity');
+    const frame = questionFrames(page)[0];
     const player = play(project, page);
     const id = (name: string) => byName(page, name)!.id;
-    const place = async (label: number, spot: number) => {
-      await click(id(`Label ${label}`));
+    const place = async (word: string, spot: number) => {
+      await click(id(word));
       await click(id(`Spot ${spot}`));
       player.step(400);
     };
-    return { project, page, player, id, place };
+    return { project, page, frame, player, id, place };
   };
 
-  it('has six spots, six draggable labels, and keyboard drag works', () => {
-    const { page, player, id } = setup();
+  it('is a matching question: six spots on the picture, six labels and a wrong one, and keyboard drag works', () => {
+    const { page, frame, player, id } = setup();
+    expect(frame.question).toMatchObject({ kind: 'matching', points: 6 });
+    expect(frame.question!.pairs).toHaveLength(6);
+    expect(frame.question!.extras).toHaveLength(1);
     const all: SceneNode[] = [];
     walk(page.children, (n: SceneNode) => void all.push(n));
     expect(all.filter((n) => n.dropZone)).toHaveLength(6);
-    expect(all.filter((n) => n.draggable)).toHaveLength(6);
-    const label = must(id('Label 2'));
+    expect(all.filter((n) => n.draggable)).toHaveLength(7);
+    //the spots sit on the picture, not in a list of definitions
+    expect(partsOf(frame).matchDefinition ?? []).toHaveLength(0);
+    const label = must(id('Condensation'));
     expect(label.tabIndex).toBe(0);
     label.focus();
     key(label, ' ');
     key(label, 'ArrowRight');
     key(label, ' ');
     expect(Object.values(player.dragState()).filter(Boolean)).toHaveLength(1);
-    expect(player.dragState()['Label 2']).toMatch(/^Spot \d$/);
-    expect(player.getVariable('label2Spot')).toBe(player.dragState()['Label 2']);
+    expect(player.dragState().Condensation).toMatch(/^Spot \d$/);
     player.destroy?.();
   });
 
-  it('counts a placed label, marks right and wrong at Check, shows the answers and starts again', async () => {
-    const { player, id, place } = setup();
-    await place(1, 1);
-    expect(player.getVariable('label1Spot')).toBe('Spot 1');
-    await place(2, 3);
-    await place(3, 2);
-    await place(4, 4);
-    await place(5, 5);
-    await place(6, 6);
-    expect(player.dragState()['Label 4']).toBe('Spot 4');
-    await click(id('Check button'));
+  it('marks right and wrong at Check, says what belongs on a wrong spot, and starts again', async () => {
+    const { player, frame, id, place } = setup();
+    await flush();
+    //Precipitation and Condensation are swapped, and the wrong label sits on Spot 6
+    await place('Evaporation', 1);
+    await place('Condensation', 3);
+    await place('Precipitation', 2);
+    await place('Collection', 4);
+    await place('Transpiration', 5);
+    await place('Infiltration', 6);
+    expect(player.dragState().Infiltration).toBe('Spot 6');
+    const check = partsOf(frame).check[0].id;
+    await click(check);
+    expect(player.getVariable('label_correct')).toBe(false);
+    expect(player.getVariable('label_locked')).toBe(false);
+    await click(check);
+    await click(check);
+    expect(player.getVariable('label_locked')).toBe(true);
+    const items = player.getVariable('label_items') as { state: string; answer?: string }[];
+    //the last row is the wrong label, which counts against the spot it was put on
+    expect(items.map((i) => i.state)).toEqual(['correct', 'wrong', 'wrong', 'correct', 'correct', 'wrong', 'wrong']);
+    expect(items[5].answer).toBe('Runoff');
     player.step(100);
-    //labels 2 and 3 are swapped: four right
-    expect(player.getVariable('checked')).toBe(true);
-    expect(player.getVariable('score')).toBe(4);
-    expect(String(player.getVariable('message'))).toContain('4 of 6');
-    //the labels are locked once checked
-    expect(must(id('Label 1')).getAttribute('aria-description')).toBe('Right');
-    expect(must(id('Label 2')).getAttribute('aria-description')).toBe('Wrong');
-    await click(id('Show answers button'));
+    expect(must(id('Spot 1 result')).textContent).toContain('Right');
+    expect(must(id('Spot 2 result')).textContent).toContain('Wrong. The answer is Condensation');
+    expect(player.getVariable('label_score')).toBeLessThan(6);
+    await click(id('Try again'));
     player.step(400);
-    expect(player.dragState()['Label 2']).toBe('Spot 2');
-    expect(player.dragState()['Label 3']).toBe('Spot 3');
-    expect(player.getVariable('shown')).toBe(true);
-    await click(id('Try again button'));
-    player.step(400);
-    expect(player.getVariable('checked')).toBe(false);
-    expect(player.getVariable('score')).toBe(0);
+    expect(player.getVariable('label_locked')).toBe(false);
     expect(Object.values(player.dragState()).every((z) => !z)).toBe(true);
-    expect(player.getVariable('label2Spot')).toBe('');
-    //and a perfect round
-    for (let i = 1; i <= 6; i++) await place(i, i);
-    await click(id('Check button'));
-    expect(player.getVariable('score')).toBe(6);
-    expect(String(player.getVariable('message'))).toContain('All 6');
+    //and a perfect round, on to the results
+    for (let i = 0; i < 6; i++) await place(WORDS[i], i + 1);
+    await click(check);
+    expect(player.getVariable('label_correct')).toBe(true);
+    expect(player.getVariable('label_score')).toBe(6);
+    expect(String(player.getVariable('label_feedback'))).toContain('Every label');
+    await click(id('See results button'));
+    await flush();
+    expect(player.artboard.name).toBe('Results');
+    expect(document.body.textContent).toContain('You put 6 of 6 labels on the right spot.');
     player.destroy?.();
   });
 });
 
 describe('Sort into groups', () => {
-  it('counts right drops, refuses wrong ones with feedback, finishes on a results page and tries again', async () => {
+  it('is a categorise question: a drop says right or wrong, wrong ones are counted, Check marks the lot, and the results and Try again follow', async () => {
     const { project, board } = build('drag/sort-into-groups');
     const page = board('Activity');
+    const frame = questionFrames(page)[0];
+    expect(frame.question).toMatchObject({ kind: 'categorise', dropFeedback: true, points: 8 });
+    expect(frame.question!.groups).toHaveLength(3);
+    expect(frame.question!.cards).toHaveLength(8);
+    //the hand-built zones, cards and count of drops are gone: the kit's parts are what is dragged
+    expect(partsOf(frame).catCard).toHaveLength(8);
+    expect(partsOf(frame).catZone).toHaveLength(3);
+    expect(project.variables.some((v) => v.name === 'solidCards')).toBe(false);
     const player = play(project, page);
+    await flush();
     const id = (name: string) => byName(page, name)!.id;
     const drop = async (card: string, group: string) => {
       await click(id(card));
@@ -199,29 +203,58 @@ describe('Sort into groups', () => {
       player.step(400);
     };
     await drop('Ice cube', 'Solid');
-    expect(player.getVariable('solidCards')).toEqual(['Ice cube']);
-    expect(String(player.getVariable('message'))).toBe('Ice cube goes in Solid. Right.');
-    const honey = byName(page, 'Honey')!;
-    dragOnto(honey, honey.id, byName(page, 'Solid')!);
-    await flush();
+    expect(String(player.getVariable('sort_feedback'))).toBe('Ice cube goes in Solid. Right.');
+    expect(player.getVariable('misses')).toBe(0);
+    //a wrong drop does not use a try, and is counted
+    await drop('Honey', 'Solid');
     expect(player.getVariable('misses')).toBe(1);
-    expect(String(player.getVariable('message'))).toContain('Honey does not go in Solid');
-    expect(player.dragState().Honey).toBeNull();
-    expect(player.getVariable('liquidCards')).toEqual([]);
+    expect(String(player.getVariable('sort_feedback'))).toContain('Honey does not go in Solid');
+    expect(player.getVariable('sort_attempts')).toBe(0);
+    expect(document.body.textContent).toContain('Wrong drops: 1');
     const cards: [string, string][] = [['Brick', 'Solid'], ['Wooden chair', 'Solid'], ['Honey', 'Liquid'], ['Orange juice', 'Liquid'], ['Water vapour', 'Gas'], ['Oxygen', 'Gas'], ['Helium', 'Gas']];
     for (const [c, g] of cards) await drop(c, g);
-    expect(String(player.getVariable('message'))).toBe('All 8 sorted. Well done!');
-    expect(String((player.getVariable('solidCards') as unknown[]).length + (player.getVariable('liquidCards') as unknown[]).length + (player.getVariable('gasCards') as unknown[]).length)).toBe('8');
+    await click(partsOf(frame).check[0].id);
+    expect(player.getVariable('sort_correct')).toBe(true);
+    expect(player.getVariable('sort_score')).toBe(8);
+    expect(player.getVariable('sort_locked')).toBe(true);
     await click(id('See results button'));
     await flush();
     expect(player.artboard.name).toBe('Results');
-    expect(document.body.textContent).toContain('1 wrong drop.');
+    expect(document.body.textContent).toContain('8 of 8 cards in the right group, with 1 wrong drop on the way.');
     await click(byName(board('Results'), 'Try again button')!.id);
     await flush();
     expect(player.artboard.name).toBe('Activity');
     expect(player.getVariable('misses')).toBe(0);
-    expect(player.getVariable('solidCards')).toEqual([]);
+    expect(player.getVariable('sort_locked')).toBe(false);
     expect(player.dragState()['Ice cube']).toBeNull();
+    player.destroy?.();
+  });
+
+  it('Check marks a card in the wrong group and says where it goes', async () => {
+    const { project, board } = build('drag/sort-into-groups');
+    const page = board('Activity');
+    const frame = questionFrames(page)[0];
+    const player = play(project, page);
+    await flush();
+    const id = (name: string) => byName(page, name)!.id;
+    //everything in Solid: the solid things are right, the rest are not
+    for (const c of ['Brick', 'Ice cube', 'Wooden chair', 'Honey', 'Orange juice', 'Water vapour', 'Oxygen', 'Helium']) {
+      await click(id(c));
+      await click(id('Solid'));
+      player.step(400);
+    }
+    await click(partsOf(frame).check[0].id);
+    expect(player.getVariable('sort_correct')).toBe(false);
+    expect(player.getVariable('sort_locked')).toBe(false);
+    expect(String(player.getVariable('sort_feedback'))).toContain('3 of 8');
+    //three tries, then it is finished and says where each card goes
+    await click(partsOf(frame).check[0].id);
+    await click(partsOf(frame).check[0].id);
+    expect(player.getVariable('sort_locked')).toBe(true);
+    const items = player.getVariable('sort_items') as { text: string; state: string; answer?: string }[];
+    expect(items.find((i) => i.text === 'Honey')).toMatchObject({ state: 'wrong', answer: 'Liquid' });
+    expect(items.find((i) => i.text === 'Ice cube')!.state).toBe('correct');
+    expect(player.getVariable('sort_score')).toBe(3);
     player.destroy?.();
   });
 });
@@ -282,10 +315,24 @@ describe('Interactive timeline', () => {
     expect(page.timelines).toHaveLength(1);
     expect(page.timelines[0]).toMatchObject({ name: 'Intro', autoplay: true, loop: 'once' });
     const line = byName(page, 'Timeline line')!;
+    //the line is a Progress layer, drawn from the left
+    expect(line.type).toBe('progress');
     expect(page.timelines[0].tracks.some((t) => t.nodeId === line.id && t.prop === 'scaleX')).toBe(true);
     expect(project.settings.reducedMotion).toBe(true);
-    const dots = page.children.filter((n) => /^Event \d dot$/.test(n.name));
-    expect(dots).toHaveLength(7);
+  });
+
+  it('is one repeated marker over the events list, with one click flow and one focus flow for every dot', () => {
+    const { project, board } = build('drag/interactive-timeline');
+    const page = board('Timeline');
+    const markers = byName(page, 'Event markers') as SceneNode & { repeat: { items: string } };
+    expect(markers.repeat.items).toBe('events');
+    expect(project.variables.find((v) => v.name === 'events')!.initial).toContain('Apollo 11');
+    //the total is a live variable on the list
+    expect(project.variables.find((v) => v.name === 'total')).toMatchObject({ formula: 'events.length', live: true });
+    const flows = page.logic.nodes.filter((n) => (n.kind === 'event.pointer' || n.kind === 'event.focus') && n.params.target === markers.id);
+    expect(flows.map((n) => n.kind).sort()).toEqual(['event.focus', 'event.pointer']);
+    expect(flows.every((n) => n.params.childrenOnly === true)).toBe(true);
+    expect(page.children.filter((n) => /^Event \d dot$/.test(n.name))).toHaveLength(0);
   });
 
   it('opens an event on a click or when tabbed to, and Previous and Next walk along', async () => {
@@ -295,29 +342,39 @@ describe('Interactive timeline', () => {
     player.step(4000);
     await flush();
     const id = (name: string) => byName(page, name)!.id;
-    const shown = (name: string) => {
-      const el = elOf(id(name));
-      return !!el && el.style.display !== 'none';
-    };
+    const dot = (i: number) => `${id('Event dot')}~${i}`;
     expect(player.getVariable('current')).toBe(0);
-    await click(id('Event 3 dot'));
+    expect(player.getVariable('total')).toBe(7);
+    //every event has its marker, with its caption
+    expect(document.body.textContent).toContain('Moon landing');
+    expect(document.body.textContent).toContain('Curiosity on Mars');
+    await click(dot(2));
     expect(player.getVariable('current')).toBe(3);
     player.step(50);
-    //the detail panel for 3 is showing, and the others are not
-    expect(shown('Event 3 details')).toBe(true);
-    expect(shown('Event 2 details')).toBe(false);
-    expect(elOf(id('Event 3 details'))!.textContent).toContain('Apollo 11');
+    //the detail card shows event 3, and says which dot is current
+    const details = elOf(id('Event details'))!;
+    expect(details.style.display).not.toBe('none');
+    expect(details.textContent).toContain('Apollo 11');
+    const control = (i: number) => must(dot(i)).querySelector('button') ?? must(dot(i));
+    expect(control(2).getAttribute('aria-current')).toBe('step');
+    expect(control(1).getAttribute('aria-current')).toBeNull();
     await click(id('Next button'));
     expect(player.getVariable('current')).toBe(4);
     await click(id('Previous button'));
     await click(id('Previous button'));
     expect(player.getVariable('current')).toBe(2);
-    (must(id('Event 6 dot')).querySelector('button') ?? must(id('Event 6 dot'))).focus();
+    (must(dot(5)).querySelector('button') ?? must(dot(5))).focus();
     await flush();
     expect(player.getVariable('current')).toBe(6);
     player.step(50);
-    expect(shown('Event 5 details')).toBe(false);
-    expect(elOf(id('Event 6 details'))!.textContent).toContain('International Space Station');
+    expect(elOf(id('Event details'))!.textContent).toContain('International Space Station');
+    //Next stops at the last event, and opening the page again starts from nothing chosen
+    for (let i = 0; i < 4; i++) await click(id('Next button'));
+    expect(player.getVariable('current')).toBe(7);
+    player.goTo(board('Start').id);
+    player.goTo(page.id);
+    await flush();
+    expect(player.getVariable('current')).toBe(0);
     player.destroy?.();
   });
 });

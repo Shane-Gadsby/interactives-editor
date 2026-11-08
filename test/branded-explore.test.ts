@@ -1,7 +1,7 @@
 //The explore set of branded starters: each builds in every colourway, normalises, paints only with tokens, plays in the
 //player without throwing, and its main interaction works.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Player, normalizeProject, walk, type Project, type SceneNode } from 'interactives-player';
+import { Player, normalizeProject, walk, type FrameNode, type Project, type SceneNode } from 'interactives-player';
 import { STARTERS } from '../src/lib/branded/sets/explore';
 import { projectFromBrandedStarter } from '../src/lib/branded';
 import { COLOURWAYS } from '../src/lib/branded/looks';
@@ -98,35 +98,49 @@ describe('explore starters', () => {
     project.settings.startArtboardId = project.artboards.find((a) => a.name === name)!.id;
   };
 
-  it('image hotspots: a point opens its panel, marks it explored, counts it, and Esc or Close shuts it', async () => {
+  it('image hotspots: one flow opens the point pressed in the dialog, marks it explored, counts it, and Esc or Close shuts it', async () => {
     const { project } = STARTERS[0].build(COLOURWAYS[0]);
     start(project, 'Explore the water cycle');
+    //one click flow for all five points, off their parent frame (not five copies)
+    const page = project.artboards.find((a) => a.name === 'Explore the water cycle')!;
+    const presses = page.logic.nodes.filter((g) => g.kind === 'event.pointer' && g.params.childrenOnly);
+    expect(presses).toHaveLength(1);
+    expect(page.logic.nodes.filter((g) => g.kind === 'event.key')).toHaveLength(0);
     const player = await play(project);
-    expect(player.getVariable('open')).toBe(0);
-    const panel = layer(project, 'Panel 2');
-    expect(el(panel.id)?.style.display ?? 'none').toBe('none');
-    //click the second point
-    el(layer(project, 'Hotspot 2').id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(player.getVariable('open')).toBe(false);
+    const dialog = layer(project, 'Point dialog');
+    expect((dialog as FrameNode).dialog?.openVariable).toBe(project.variables.find((v) => v.name === 'open')!.id);
+    expect(el(dialog.id)?.style.display ?? 'none').toBe('none');
+    //click the second point (a real press puts the focus on it first, and the dialog hands the focus back there)
+    el(layer(project, 'Point 2').id).focus();
+    el(layer(project, 'Point 2').id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flush(150);
-    expect(player.getVariable('open')).toBe(2);
-    expect(player.getVariable('seen2')).toBe(true);
+    expect(player.getVariable('open')).toBe(true);
+    expect(player.getVariable('current')).toBe(1);
+    expect(player.getVariable('seen')).toEqual([false, true, false, false, false]);
     expect(player.getVariable('explored')).toBe(1);
-    expect(el(panel.id).style.display).not.toBe('none');
-    expect(document.activeElement).toBe(el(layer(project, 'Panel 2 heading').id));
-    //Esc closes it and puts the focus back on the point
+    expect(el(dialog.id).style.display).not.toBe('none');
+    expect(el(layer(project, 'Point dialog title').id).textContent).toBe('2. Condensation');
+    expect(el(layer(project, 'Dialog text').id).textContent).toContain('High in the air');
+    expect(el(layer(project, 'Point dialog close button').id).contains(document.activeElement)).toBe(true);
+    //Esc closes it (the dialog does that itself) and puts the focus back on the point
     key(document.activeElement!, 'Escape');
     await flush(150);
-    expect(player.getVariable('open')).toBe(0);
-    expect(document.activeElement).toBe(el(layer(project, 'Hotspot 2').id));
+    expect(player.getVariable('open')).toBe(false);
+    expect(document.activeElement).toBe(el(layer(project, 'Point 2').id));
     //opening it again does not count twice; the Close button shuts it
-    el(layer(project, 'Hotspot 2').id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    el(layer(project, 'Point 2').id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flush(150);
     expect(player.getVariable('explored')).toBe(1);
-    el(layer(project, 'Panel 2 close').id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    el(layer(project, 'Point dialog close button').id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flush(150);
-    expect(player.getVariable('open')).toBe(0);
-    //the count text
-    expect(document.body.textContent).toContain('1 of 5 explored');
+    expect(player.getVariable('open')).toBe(false);
+    //another point, then the count text, bar and Finish once every point is open
+    el(layer(project, 'Point 5').id).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flush(150);
+    expect(player.getVariable('current')).toBe(4);
+    expect(el(layer(project, 'Point dialog title').id).textContent).toBe('5. Infiltration');
+    expect(document.body.textContent).toContain('2 of 5 explored');
     player.destroy();
   });
 
@@ -139,16 +153,20 @@ describe('explore starters', () => {
   it('accordion: a header opens its panel, the sections below move down, the others close, and aria-expanded follows', async () => {
     const { project } = STARTERS[1].build(COLOURWAYS[0]);
     project.settings.startArtboardId = project.artboards[1].id;
+    //the headers only say which section they are, then share one run (an If and two Set nodes), instead of five copies of it
+    const page = project.artboards[1];
+    expect(page.logic.nodes.filter((g) => g.kind === 'logic.if')).toHaveLength(1);
+    expect(project.variables.some((v) => v.name === 'open2')).toBe(false);
     const player = await play(project);
     const h = (i: number) => layer(project, `Section ${i} header`);
     const sec = (i: number) => layer(project, `Section ${i}`);
     expect(el(h(1).id).getAttribute('role')).toBe('button');
     expect(el(h(1).id).getAttribute('aria-expanded')).toBe('true');
     expect(el(h(2).id).getAttribute('aria-expanded')).toBe('false');
+    expect(player.getVariable('open')).toEqual([0]);
     const top3Before = Number(top(sec(3).id));
     await click(h(2).id);
-    expect(player.getVariable('open1')).toBe(false);
-    expect(player.getVariable('open2')).toBe(true);
+    expect(player.getVariable('open')).toEqual([1]);
     expect(el(h(2).id).getAttribute('aria-expanded')).toBe('true');
     expect(el(h(1).id).getAttribute('aria-expanded')).toBe('false');
     //section 1 shut, so section 2 moved up, and its open panel pushes section 3 down below it
@@ -159,45 +177,55 @@ describe('explore starters', () => {
     expect(h2).toBeGreaterThan(100);
     //clicking the open header closes it
     await click(h(2).id);
-    expect(player.getVariable('open2')).toBe(false);
+    expect(player.getVariable('open')).toEqual([]);
     expect(parseFloat(el(sec(2).id).style.height)).toBeLessThan(70);
     //enter on a header acts like a click
     el(h(4).id).focus();
     el(h(4).id).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
     el(h(4).id).dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
     await flush(30);
-    expect(player.getVariable('open4')).toBe(true);
-    //with allowMany on, a second one stays open next to it
+    expect(player.getVariable('open')).toEqual([3]);
+    //with allowMany on, a second one stays open next to it, and pressing one again takes it out of the list
     player.setVariable('allowMany', true);
     await click(h(5).id);
-    expect(player.getVariable('open4')).toBe(true);
-    expect(player.getVariable('open5')).toBe(true);
+    expect(player.getVariable('open')).toEqual([3, 4]);
+    await click(h(4).id);
+    expect(player.getVariable('open')).toEqual([4]);
     player.destroy();
   });
 
-  it('flip cards: a card flips on click and on Enter, showing the back text from the shared list, and all turn back', async () => {
+  //A repeated layer's copies are its id and the copy's place, joined with ~
+  const copyOf = (project: Project, name: string, i: number) => `${layer(project, name).id}~${i}`;
+
+  it('flip cards: one flow flips the card pressed, on click and on Enter, showing the back text from the shared list, and all turn back', async () => {
     const { project } = STARTERS[2].build(COLOURWAYS[0]);
     project.settings.startArtboardId = project.artboards[1].id;
+    //the six cards are one repeated layer: one click flow, not six
+    expect(project.artboards[1].logic.nodes.filter((g) => g.kind === 'event.pointer' && g.params.target === layer(project, 'Card').id)).toHaveLength(1);
     const player = await play(project);
-    const card = layer(project, 'Card 3');
-    expect(el(card.id).getAttribute('role')).toBe('button');
-    expect(el(card.id).textContent).toContain('Citation');
-    await click(card.id);
-    expect(player.getVariable('flipped3')).toBe(true);
-    expect(el(card.id).textContent).toContain('A short note in your text');
+    const card = copyOf(project, 'Card', 2);
+    expect(el(card).getAttribute('role')).toBe('button');
+    expect(el(card).getAttribute('aria-pressed')).toBe('false');
+    expect(el(card).textContent).toContain('Citation');
+    await click(card);
+    expect(player.getVariable('flipped')).toEqual([false, false, true, false, false, false]);
+    expect(el(card).getAttribute('aria-pressed')).toBe('true');
+    expect(el(card).textContent).toContain('A short note in your text');
     //the front face is gone (display none, so out of the accessibility tree too) and the back is showing
-    expect(el(layer(project, 'Card 3 front').id).style.display).toBe('none');
-    expect(el(layer(project, 'Card 3 back').id).style.display).not.toBe('none');
+    expect(el(copyOf(project, 'Card front', 2)).style.display).toBe('none');
+    expect(el(copyOf(project, 'Card back', 2)).style.display).not.toBe('none');
     //Enter flips another one
-    const other = layer(project, 'Card 5');
-    el(other.id).focus();
-    el(other.id).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
-    el(other.id).dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
+    const other = copyOf(project, 'Card', 4);
+    el(other).focus();
+    el(other).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
+    el(other).dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
     await flush(30);
-    expect(player.getVariable('flipped5')).toBe(true);
+    expect(player.getVariable('flipped')).toEqual([false, false, true, false, true, false]);
+    //pressing a flipped card turns it back
+    await click(card);
+    expect(player.getVariable('flipped')).toEqual([false, false, false, false, true, false]);
     await click(layer(project, 'Turn all back').id);
-    expect(player.getVariable('flipped3')).toBe(false);
-    expect(player.getVariable('flipped5')).toBe(false);
+    expect(player.getVariable('flipped')).toEqual([false, false, false, false, false, false]);
     player.destroy();
   });
 
@@ -245,23 +273,35 @@ describe('explore starters', () => {
     const { project } = STARTERS[3].build(COLOURWAYS[0]);
     project.settings.startArtboardId = project.artboards[1].id;
     const player = await play(project);
-    const shown = () => [1, 2, 3, 4, 5].filter((i) => el(layer(project, `Slide ${i}`).id).style.display !== 'none');
-    expect(shown()).toEqual([1]);
+    //one slide is drawn, for the slide showing, and its words come from the list
+    const heading = () => el(`${layer(project, 'Slide caption heading').id}~0`).textContent;
+    expect(document.querySelectorAll(`[data-ix-id^="${layer(project, 'Slide').id}~"]`)).toHaveLength(1);
+    expect(heading()).toBe('Choose a topic');
+    //the arrows are the Previous and Next buttons' own shortcuts, not key flows
+    expect(layer(project, 'Next')).toMatchObject({ shortcut: 'ArrowRight' });
+    expect(layer(project, 'Previous')).toMatchObject({ shortcut: 'ArrowLeft' });
+    expect(project.artboards[1].logic.nodes.filter((g) => g.kind === 'event.key')).toHaveLength(0);
     await click(layer(project, 'Next').id);
     expect(player.getVariable('slide')).toBe(2);
-    expect(shown()).toEqual([2]);
+    expect(heading()).toBe('Find sources');
     key(document.body, 'ArrowRight');
     await flush(30);
-    expect(shown()).toEqual([3]);
-    key(document.body, 'ArrowLeft');
-    key(document.body, 'ArrowLeft');
+    expect(heading()).toBe('Read and take notes');
     key(document.body, 'ArrowLeft');
     await flush(30);
-    expect(shown()).toEqual([5]);
-    await click(layer(project, 'Dot 2').id);
-    expect(shown()).toEqual([2]);
-    expect(el(layer(project, 'Dot 2').id).getAttribute('role')).toBe('button');
-    expect(el(layer(project, 'Dot 2').id).getAttribute('aria-label')).toBe('Go to slide 2');
+    key(document.body, 'ArrowLeft');
+    await flush(30);
+    key(document.body, 'ArrowLeft');
+    await flush(30);
+    expect(player.getVariable('slide')).toBe(5);
+    expect(heading()).toBe('Review and reference');
+    const dot = (i: number) => `${layer(project, 'Dot').id}~${i - 1}`;
+    await click(dot(2));
+    expect(player.getVariable('slide')).toBe(2);
+    expect(el(dot(2)).getAttribute('role')).toBe('button');
+    expect(el(dot(2)).getAttribute('aria-label')).toBe('Go to slide 2');
+    expect(el(dot(2)).getAttribute('aria-current')).toBe('true');
+    expect(el(dot(3)).getAttribute('aria-current')).not.toBe('true');
     await click(layer(project, 'Previous').id);
     await click(layer(project, 'Previous').id);
     expect(player.getVariable('slide')).toBe(5);
@@ -300,6 +340,10 @@ describe('explore starters', () => {
     const { project } = STARTERS[4].build(COLOURWAYS[0]);
     project.settings.startArtboardId = project.artboards[1].id;
     const player = await play(project);
+    //one key node serves the four keys, and one click flow serves both jump buttons (told apart by event.childIndex)
+    const page = project.artboards[1];
+    expect(page.logic.nodes.filter((g) => g.kind === 'event.key')).toHaveLength(1);
+    expect(page.logic.nodes.filter((g) => g.kind === 'event.pointer' && g.params.childrenOnly)).toHaveLength(1);
     const handle = el(layer(project, 'Divider handle').id);
     const reveal = () => parseFloat(el(layer(project, 'Before reveal').id).style.width);
     expect(player.getVariable('dividerAt')).toBe(464);
