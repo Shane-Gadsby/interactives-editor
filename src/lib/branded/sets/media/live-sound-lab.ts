@@ -8,7 +8,7 @@
 //No pitch tracking: the bars show where the sound is, not which note it is.
 import { createNode, type FrameNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, byName, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import { BRAND_FONT } from '../../looks';
 import { Graph, addVar, announce, bind, go, goNext, goPrevious, graphNote, heroPage, resetVars, set, toggleVar } from './shared';
 
@@ -163,8 +163,8 @@ function build(colourway: Parameters<BrandedStarter['build']>[0]) {
   const simRead = bind(small('Practice readout', 'Practice loudness: {Math.round(simLevel * 100)}', rx, box.y + 340, rw), { visible: '!listening' });
   meter.children.push(simHead, levelSlider, simRead);
 
-  const next = button(ctx, 'Next scene', 'Next: sound bars', box.x, box.y + box.height - 46, 240, true);
-  const back = button(ctx, 'Back to start', 'Back to the start', box.x + 256, box.y + box.height - 46, 220, false);
+  const next = button(ctx, 'Next scene', 'Next: sound bars', box.x, barY(box), 240, true);
+  const back = button(ctx, 'Back to start', 'Back to the start', box.x + 256, barY(box), 220, false);
   meter.children.push(next, back);
   g1.run(g1.click(next, 'To the bars'), goNext());
   g1.run(g1.click(back, 'To the start'), go(hero.page));
@@ -255,8 +255,8 @@ function build(colourway: Parameters<BrandedStarter['build']>[0]) {
   graphNote(bars, { anchor: onReveal, colour: 'sky', text: '**One Toggle on shown** flips the challenge text and the button label together, and Start again clears it. [ ] Write your own question and answer in the text it reads.' });
   g2.run(onReveal, toggleVar(shown));
 
-  const back2 = button(ctx, 'Back to meter', 'Back to the meter', box.x, box.y + box.height - 46, 240, false);
-  const again = button(ctx, 'Start again', 'Start again', box.x + 256, box.y + box.height - 46, 200, true);
+  const back2 = button(ctx, 'Back to meter', 'Back to the meter', box.x, barY(box), 240, false);
+  const again = button(ctx, 'Start again', 'Start again', box.x + 256, barY(box), 200, true);
   bars.children.push(back2, again);
   g2.run(g2.click(back2, 'Back to the meter'), goPrevious());
   g2.run(g2.click(again, 'Start again'), resetVars(shown), go(hero.page));

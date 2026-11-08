@@ -8,7 +8,7 @@
  */
 import { createNode, walk, type Artboard, type FrameNode, type SceneNode, type TemplateChecklistItem, type Variable } from 'interactives-player';
 import { addQuestion, partOf, setQuestionSettings } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, overlay, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, navBarY, overlay, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
 import { addVar, announce, bind, click, goNext, graph, graphNote, set, setVar, toggleVar } from '../../graph-kit';
 import { dialogPanel, extrasChecklist, questionExtras, stack } from '../../parts';
 import { clickOf, dressQuestion, endPage, kitNode } from '../drag/shared';
@@ -378,7 +378,7 @@ function timelinePage(ctx: BrandedCtx, geo: Geo, v: Vars, tl: string, to: { next
     zout = bind(pill('Zoom out button', 'Zoom out', box.x + 328, y1, 118, { shortcut: '-' }), { disabled: noScale });
     fit = bind(pill('Fit all button', 'Fit all', box.x + 456, y1, 90), { disabled: noScale });
     view2 = bind(pill('View button', 'View as list', box.x + box.width - 164, y1, 164), { label: 'asList ? "View as timeline" : "View as list"' });
-    const y2 = box.y + 48 + LANDSCAPE.stageH + 12;
+    const y2 = navBarY(page);
     prev = bind(pill('Previous event button', 'Previous event', box.x, y2, 160), { disabled: `current <= 0` });
     next = bind(pill('Next event button', 'Next event', box.x + 170, y2, 140), { disabled: `current >= ${ev}.length - 1` });
     step = pill('Step through button', 'Step through', box.x + 320, y2, 150, {}, false);

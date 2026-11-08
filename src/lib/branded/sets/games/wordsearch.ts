@@ -1,6 +1,6 @@
 //Word search: a 12 by 12 letter grid, made from the word list each time it plays (and in the editor preview), with eight hidden words, picked by dragging across them or by choosing the first and last letter (click or keyboard).
 import { createNode, makeWordSearch, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { keyNavList } from '../../parts';
 import { Graph, addVar, announce, bind, darkButton, emit, go, goNext, graphNote, heroPage, set } from './common';
@@ -128,7 +128,7 @@ function build(colourway: Colourway) {
   });
   const counts = text(ctx, 'Counts', 'Found {found.length} of {words.length}{showTimer ? "     Time " + clock(seconds) : ""}', colX, box.y + 232, colW, { fontSize: 18, fontWeight: 700 });
   const say = bind(text(ctx, 'Message', '{message}', colX, box.y + 268, colW, { fontSize: 17, lineHeight: 1.3, autoSize: 'none', height: 70 }), { color: `found.length >= words.length || message.startsWith("Found") ? "${L.success}" : "${L.text}"` });
-  const again = button(ctx, 'Start again', 'Start again', colX, box.y + box.height - 46, 170, false);
+  const again = button(ctx, 'Start again', 'Start again', colX, barY(box), 170, false);
   page.children.push(panel, grid, head, how, wordList, counts, say, again);
 
   //Setting up and starting again: one Reset variables puts the board back, and the clock counts up from now

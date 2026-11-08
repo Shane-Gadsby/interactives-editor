@@ -4,7 +4,7 @@
 //The transcript is one variable shown on every version, so the three never drift apart. Audio only and Text only load no video, and Text only loads no media at all.
 //The remembered version is a user data variable (no save and load steps), the audio version is a Video layer with a sound and a poster picture, and an empty video says so itself.
 import { createNode, uid, type Artboard, type CaptionCue, type FrameNode, type SceneNode, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { pillButton, stack } from '../../parts';
 import { addVar, announce, bind, click, endPage, go, graph, graphNote, heroPage, placeholderPicture, resetVars, toggleVar } from './shared';
@@ -42,8 +42,8 @@ const sizeLine = (board: string) => `downloadSize("${board}") == 0 ? "Nothing to
 //The bottom row every version has: back to the chooser, and finish (the same page for all three, so the completion is the same)
 function footerRow(ctx: BrandedCtx, page: Artboard, done: Artboard, choose: Artboard): void {
   const b = contentBox(page);
-  const change = button(ctx, 'Change version button', 'Change version', b.x, b.y + b.height - 46, 200, false);
-  const finish = button(ctx, 'Finish button', 'Finish the lesson', b.x + b.width - 230, b.y + b.height - 46, 230);
+  const change = button(ctx, 'Change version button', 'Change version', b.x, barY(b), 200, false);
+  const finish = button(ctx, 'Finish button', 'Finish the lesson', b.x + b.width - 230, barY(b), 230);
   page.children.push(change, finish);
   const g = graph(page);
   g.run(click(g, change, 'Change version'), go(choose));

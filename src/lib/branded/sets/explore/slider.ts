@@ -1,6 +1,6 @@
 /** Image slider: a carousel of five slides written once in a list, each a picture and a caption, with Previous/Next, dots, arrow keys and optional autoplay. */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, navBarY, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
 import { addVar, announce, bind, click, graph, graphNote, set, toggleVar } from '../../graph-kit';
 import { heroButtons } from './helpers';
 
@@ -71,7 +71,7 @@ export const imageSlider: BrandedStarter = {
     page.children.push(slidesFrame);
 
     //Controls: Previous, the dots, Play/Pause, Next
-    const cy = box.y + SLIDE_H + 12;
+    const cy = navBarY(page);
     const prev = button(ctx, 'Previous', 'Previous', box.x, cy, 140, false);
     const next = button(ctx, 'Next', 'Next', box.x + box.width - 140, cy, 140, true);
     //The arrow keys press them from anywhere on the page

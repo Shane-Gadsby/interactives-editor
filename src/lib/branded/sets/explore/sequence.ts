@@ -4,10 +4,10 @@
  */
 import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, navBarY, picture, text, type BrandedStarter } from '../../kit';
 import { BRAND_FONT } from '../../looks';
 import { addVar, announce, bind, click, focus, graph, graphNote, set } from '../../graph-kit';
-import { fill, stack } from '../../parts';
+import { stack } from '../../parts';
 import { heroButtons } from './helpers';
 
 const STAGES = [
@@ -64,17 +64,17 @@ export const imageSequence: BrandedStarter = {
     } as never) as FrameNode;
     page.children.push(images);
 
-    //The text beside the picture, one column so a long caption pushes Previous and Next down instead of landing on them
+    //The text beside the picture, one column so a long caption pushes the keyboard help down instead of landing on it
     const colX = box.x + PIC_W + 32;
     const colW = box.width - PIC_W - 32;
     const kicker = text(ctx, 'Stage count', 'Stage {step} of {total}', 0, 0, 100, { fontSize: 15, fontWeight: 700, color: L.muted });
     const title = heading(ctx, 'Stage title', '{stages[step - 1].title}', 0, 0, 100, { fontSize: 26 });
     const caption = text(ctx, 'Stage caption', '{stages[step - 1].caption}', 0, 0, 100, { fontSize: 18, lineHeight: 1.45 });
-    const prev = bind(button(ctx, 'Previous', 'Previous', 0, 0, 160, false), { disabled: 'step <= 1' });
-    const next = bind(button(ctx, 'Next', 'Next', 0, 0, 160, true), { disabled: 'step >= total' });
-    const buttons = stack('Stage buttons', 0, 0, colW, { direction: 'row', justify: 'space-between', children: [prev, next] });
+    //Previous and Next are on the bottom bar, like every starter's page buttons
+    const prev = bind(button(ctx, 'Previous', 'Previous', box.x, navBarY(page), 160, false), { disabled: 'step <= 1' });
+    const next = bind(button(ctx, 'Next', 'Next', box.x + box.width - 160, navBarY(page), 160, true), { disabled: 'step >= total' });
     const help = text(ctx, 'Keyboard help', 'Drag the slider, or use the left and right arrow keys. Home and End go to the first and last stage.', 0, 0, 100, { fontSize: 14, color: L.muted, lineHeight: 1.4 });
-    const side = stack('Stage text', colX, box.y, colW, { gap: 14, children: [kicker, title, caption, fill(buttons, 'width'), help] });
+    const side = stack('Stage text', colX, box.y, colW, { gap: 14, children: [kicker, title, caption, help] });
     page.children.push(side);
 
     //The slider, with the stage names under it
@@ -110,7 +110,7 @@ export const imageSequence: BrandedStarter = {
       })
     );
     const nameRow = createNode('frame', { name: 'Stage names', x: box.x, y: sy + 40, width: PIC_W, height: 20, fill: null, stroke: null, clip: false, children: names } as never);
-    page.children.push(nameRow);
+    page.children.push(nameRow, prev, next);
 
     //Moving to a stage says which one. Previous and Next set the same variable the slider is tied to, and the names are one flow for all six
     const g = graph(page);

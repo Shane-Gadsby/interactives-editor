@@ -3,7 +3,7 @@
 //switches on two variables). The one button per clip is Play and Stop in one: its label reads soundPlaying() and a press stops the clip when it is going.
 //The sounds are placeholder tones the author swaps; each clip also has a written description, the way in for anyone who cannot or would rather not listen.
 import { createNode, type Artboard, type FrameNode, type SceneNode, type TemplateChecklistItem, type Variable } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, navBarY, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { keyNavList, stack } from '../../parts';
 import { addVar, announce, bind, boxText, click, endPage, goNext, graph, graphNote, heroPage, resetVars, setVar, toggleVar } from './shared';
@@ -294,7 +294,7 @@ function build(colourway: Colourway) {
     firstChip = chips[0];
     const feedback = text(ctx, 'Feedback', '{message}', sortBox.x, sortBox.y + 372, 700, { fontSize: 19, fontWeight: 600, bindings: { visible: 'message != ""' } });
     const keys = text(ctx, 'Keyboard help', 'With the keyboard: Tab to a sound, press Space to pick it up, use the arrow keys to choose a group and Space to drop it.', sortBox.x + 8, sortBox.y + 420, 640, { fontSize: 13, color: L.muted });
-    const see = bind(button(ctx, 'See next button', 'Next', sortBox.x + sortBox.width - 190, sortBox.y + 372, 190), { visible: `sorted == ${CHIPS.length}` });
+    const see = bind(button(ctx, 'See next button', 'Next', sortBox.x + sortBox.width - 190, navBarY(sort), 190), { visible: `sorted == ${CHIPS.length}` });
     sort.children.push(feedback, keys, see);
     //A sound taken by a group (and the finish said once they are all in), and one a group refused
     const ok = g.event('event.drop', { result: 'accepted' }, 'Sorting');

@@ -14,7 +14,7 @@
 //first start asks the learner for the microphone on a consent screen, and a course page that does not allow the microphone would otherwise show a step
 //that cannot work. The take ("talk") is ended when the talk stage is left, kept for the tally and the model answer, and dropped on the next card.
 import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { join } from '../../graph-kit';
 import { progressBar } from '../../parts';
@@ -314,8 +314,8 @@ function build(colourway: Colourway) {
   bind(rowFrame, { ariaLabel: '"Attempt " + item.n + ": " + item.fillers + " filler words, " + item.pauses + " long pauses, opening " + (item.opening ? "clear" : "not clear") + ", close " + (item.close ? "clear" : "not clear") + ", " + item.made + " of " + item.of + " points"' });
   rowFrame.role = 'region';
   const rows = createNode('frame', { name: 'Attempts', x: sb.x, y: headY + 26, width: sb.width, height: 248, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your last six attempts', repeat: { items: 'attempts.slice(-6)', layout: 'grid', gap: 4, columns: 1 }, children: [rowFrame] }) as FrameNode;
-  const another = button(ctx, 'Draw another card', 'Draw another card', sb.x, sb.y + sb.height - 46, 240, true);
-  const clear = bind(button(ctx, 'Clear my history', 'Clear my history', sb.x + 256, sb.y + sb.height - 46, 220, false), { visible: 'attempts.length > 0' });
+  const another = button(ctx, 'Draw another card', 'Draw another card', sb.x, barY(sb), 240, true);
+  const clear = bind(button(ctx, 'Clear my history', 'Clear my history', sb.x + 256, barY(sb), 220, false), { visible: 'attempts.length > 0' });
   summary.children.push(rows, another, clear);
   const sg = new Graph(summary);
   sg.run(sg.click(another, 'Draw another card'), goPrevious());

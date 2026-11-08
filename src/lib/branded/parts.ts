@@ -14,7 +14,7 @@
  * adds its layers and wires, and returns what the starter needs to refer to afterwards.
  */
 import { createNode, defaultAutoLayout, type AutoLayout, type Artboard, type ButtonNode, type FrameNode, type KeyNav, type LogicNode, type ProgressNode, type SceneNode, type TextNode, type Project, type Variable } from 'interactives-player';
-import { addNote, button, contentBox, heading, solid, stroke, text, type BrandedCtx } from './kit';
+import { addNote, button, contentBox, heading, navBarY, solid, stroke, text, type BrandedCtx } from './kit';
 import { addVar, bind, click, goNext, goPrevious, graph, set } from './graph-kit';
 import type { KitOptions } from '../question-kit';
 
@@ -101,7 +101,7 @@ export interface PageNav {
 export function pageNav(ctx: BrandedCtx, page: Artboard, opts: { y?: number; prevLabel?: string; nextLabel?: string; counter?: boolean; of?: string; width?: number } = {}): PageNav {
   const box = contentBox(page);
   const w = opts.width ?? 150;
-  const y = opts.y ?? box.y + box.height - 46;
+  const y = opts.y ?? navBarY(page);
   const prev = bind(button(ctx, 'Back button', opts.prevLabel ?? 'Back', box.x, y, w, false), { visible: 'pageNumber > 1' });
   const next = bind(button(ctx, 'Next button', opts.nextLabel ?? 'Next', box.x + box.width - w, y, w), { visible: 'pageNumber < pageCount' });
   const of = (opts.of ?? 'Page {n} of {total}').replace('{n}', '{pageNumber}').replace('{total}', '{pageCount}');

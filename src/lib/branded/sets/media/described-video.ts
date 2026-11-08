@@ -3,7 +3,7 @@
 //the video is turned down; the Transcript lists the captions and the descriptions together in one reading order, which works with no voice. A last
 //page is the author's checklist on describing well, to delete before publishing. A cheaper aid, never a recorded described version.
 import { createNode, uid, type CaptionCue, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, heading, item, solid, text, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, contentBox, heading, item, solid, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { fill, stack } from '../../parts';
 import { Graph, goNext, goPrevious, heroPage } from './shared';
@@ -113,7 +113,7 @@ function build(colourway: Colourway) {
   const columns = stack('Describing columns', nbox.x, nbox.y, nbox.width, { direction: 'row', gap: 32, align: 'start', children: [fill(list), limits] });
   const back = button(ctx, 'Back to the video', 'Back to the video', 0, 0, 220, true);
   const reminder = text(ctx, 'Delete reminder', 'Delete this page, and the Author checklist button on the video page, before you publish.', 0, 0, nbox.width - 244, { fontSize: 15, color: L.muted });
-  const endRow = stack('Back row', nbox.x, nbox.y + nbox.height - 46, nbox.width, { direction: 'row', gap: 24, align: 'center', children: [back, fill(reminder)] });
+  const endRow = stack('Back row', nbox.x, barY(nbox), nbox.width, { direction: 'row', gap: 24, align: 'center', children: [back, fill(reminder)] });
   notes.children.push(columns, endRow);
   checklist.push(item('Read the Describing well page, then delete it and the Author checklist button before you publish', list, notes));
   checklist.push(item('Need a formally recorded described version? Record it: these descriptions do not replace one', limitsText, notes));

@@ -18,7 +18,7 @@
 //The three answers to the question are a live variable of the sign in view, and the self-review is a tick list with one Toggle in list step.
 //Every page has a portrait variant (a responsive set, shown under 560 px wide) with the same layer names, so a phone stacks the model above the camera.
 import { createArtboard, createNode, type Artboard, type FrameNode, type InstanceNode, type SceneNode, type TemplateChecklistItem, type TextNode, type VideoNode } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, solid, stroke, text, type BrandedCtx, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, solid, stroke, text, type BrandedCtx, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, darkButton, go, goNext, goPrevious, graphNote, resetVars, set, setVar, tickList, toggleItem, toggleVar } from '../media/shared';
 import { addPlaceholderSound } from '../media/sounds';
@@ -412,7 +412,7 @@ function makePages(ctx: BrandedCtx, geo: Geo, clips: Artboard, v: Vars) {
   const rowFrame = createNode('frame', { name: 'Practice row', x: 0, y: 0, width: sb.width, height: 36, cornerRadius: 10, fill: solid(L.surface), stroke: null, clip: false, role: 'region', children: COLS.map(([label, value, x, w]) => cell(label, value, x, w)) }) as FrameNode;
   bind(rowFrame, { ariaLabel: '"Sign " + item.n + ", " + item.sign + ": " + item.ticked + " of " + item.of + " self-review lines ticked, " + (item.take ? "a take recorded" : "no recording")' });
   const rows = createNode('frame', { name: 'Practice rows', x: sb.x, y: tableTop + 24, width: sb.width, height: 4 * 40, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your last four signs', repeat: { items: 'reviewLog.slice(-4)', layout: 'grid', gap: 4, columns: 1 }, children: [rowFrame] }) as FrameNode;
-  const btnsY = P ? tableTop + 24 + 4 * 40 + 12 : sb.y + sb.height - 46;
+  const btnsY = P ? tableTop + 24 + 4 * 40 + 12 : barY(sb);
   const notes = button(ctx, 'Download my practice notes', 'Download my practice notes', sb.x, btnsY, P ? sb.width : 320, true);
   const redo = button(ctx, 'Practise again', 'Practise again', P ? sb.x : sb.x + 332, P ? btnsY + 56 : btnsY, P ? sb.width : 220, false);
   summary.children.push(headline, tutor, rows, notes, redo);

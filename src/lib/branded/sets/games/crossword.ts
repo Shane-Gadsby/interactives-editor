@@ -1,6 +1,6 @@
 //Crossword: a 10 by 10 grid laid out from a list of words and clues each time it plays (and in the editor preview), cells typed into from the keyboard, clues you can click, Check and Reveal.
 import { createNode, layoutCrossword as layout, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, card, contentBox, item, solid, stroke, text, heading, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, focus, goNext, graphNote, heroPage, lit, set } from './common';
 
@@ -178,7 +178,7 @@ function build(colourway: Colourway) {
   const banner = card(ctx, 'Clue banner', colX, bannerY, colW * 2 + 16, 56);
   const clueLine = text(ctx, 'Current clue', '{current}', colX + 14, bannerY + 6, colW * 2 - 12, { fontSize: 16, fontWeight: 600, autoSize: 'none', height: 44, verticalAlign: 'middle' });
   const message = bind(text(ctx, 'Status', '{status}', colX, bannerY + 62, colW * 2 + 16, { fontSize: 15, fontWeight: 600, autoSize: 'none', height: 22 }), { color: `done ? "${L.success}" : "${L.text}"` });
-  const buttonsY = box.y + box.height - 46;
+  const buttonsY = barY(box);
   const check = button(ctx, 'Check', 'Check letters', colX, buttonsY, 128, true);
   const revealWord = button(ctx, 'Reveal word', 'Reveal word', colX + 136, buttonsY, 128, false);
   const revealAll = button(ctx, 'Reveal all', 'Reveal all', colX + 272, buttonsY, 108, false);

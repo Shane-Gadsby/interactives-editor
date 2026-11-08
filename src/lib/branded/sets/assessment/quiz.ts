@@ -116,7 +116,7 @@ export function buildQuiz(colourway: Colourway) {
 
   const result = brandedPage(ctx, 'Your result', { footer: 'Study skills quiz' });
 
-  //Back and Next sit in the title row on every question page, so they are in the same place each time
+  //Back and Next sit on the bottom bar of every question page, so they are in the same place each time
   QUESTIONS.forEach((_, i) => {
     const { nextClick } = questionNav(ctx, pages[i], `q${i + 1}`);
     graphNote(pages[i], { anchor: kitNode(pages[i], 'start:event'), colour: 'sky', text: '**The question kit wired Start, Choose option, Check, Hint and Try again.** Coming back runs the first with `keepAnswer`, so a finished question is found as it was. [ ] Change the question in its Question section, not here.' });

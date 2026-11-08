@@ -1,6 +1,6 @@
 /** Flip cards and dialog cards: the same six cards as a grid you flip, and as a stack you step through one at a time. */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, item, solid, stroke, text, type BrandedCtx, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, navBarY, item, solid, stroke, text, type BrandedCtx, type BrandedStarter } from '../../kit';
 import { addVar, announce, bind, click, goNext, goPrevious, graph, graphNote, join, set } from '../../graph-kit';
 import { fill, progressBar, stack } from '../../parts';
 import { heroButtons, small } from './helpers';
@@ -135,7 +135,7 @@ export const flipAndDialogCards: BrandedStarter = {
     } as never);
     const progress = text(ctx, 'Progress', 'Card {card} of {cards.length}', dx, dbox.y + DH + 20, DW, { fontSize: 16, fontWeight: 600, align: 'center', color: L.muted });
     const line = progressBar(ctx, 'Cards progress', dx, dbox.y + DH + 52, DW, { value: 'card', max: 'cards.length', decorative: true, height: 8 });
-    const by = dbox.y + DH + 76;
+    const by = navBarY(dialog);
     const prev = bind(button(ctx, 'Previous', 'Previous', dx, by, 160, false), { disabled: 'card <= 1' });
     const turn = button(ctx, 'Turn', 'Turn the card', dx + (DW - 200) / 2, by, 200, true);
     const next = bind(button(ctx, 'Next', 'Next', dx + DW - 160, by, 160, false), { disabled: 'card >= cards.length' });

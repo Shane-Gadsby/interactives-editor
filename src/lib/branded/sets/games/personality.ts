@@ -1,6 +1,6 @@
 //Personality quiz: six questions whose answers add points to four outcomes (study styles), a results page with the top outcome, its description, a picture and the scores, and Retake.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, heading, item, picture, solid, text, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, contentBox, heading, item, picture, solid, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { keyNavList, progressBar } from '../../parts';
 import { Graph, addVar, announce, bind, go, goNext, graphNote, heroPage, set } from './common';
@@ -158,7 +158,7 @@ function build(colourway: Colourway) {
     repeat: { items: 'outcomes.map((o, i) => ({name: o.name, pct: Math.round(100 * scores[i] / Math.max(1, scores.reduce((a, b) => a + b, 0))), top: i == top}))', layout: 'vertical', gap: 6, columns: 1 },
     children: [row],
   } as never);
-  const retake = button(ctx, 'Retake', 'Retake the quiz', rbox.x, rbox.y + rbox.height - 46, 220, true);
+  const retake = button(ctx, 'Retake', 'Retake the quiz', rbox.x, barY(rbox), 220, true);
   result.children.push(pic, kicker, name, about, rows, retake);
   const rg = new Graph(result);
   rg.run(rg.click(retake, 'Retake'), go(page));

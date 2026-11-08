@@ -12,7 +12,7 @@
 //does not allow it, or the learner chose not to use it) the page shows the plain version: listen, say it aloud, then the same self-check. That is the
 //way to finish without a microphone that the accessibility check looks for, and it is the whole activity for anyone who cannot or would rather not record.
 import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, overlay, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, overlay, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { stack } from '../../parts';
 import { Graph, addVar, announce, bind, goNext, graphNote, heroPage, resetVars, set, setVar, tickList, toggleItem } from '../media/shared';
@@ -297,7 +297,7 @@ function build(colourway: Colourway) {
   }) as FrameNode;
   bind(row, { ariaLabel: `"Card " + item.n + ": " + item.phrase + ". " + (item.rating >= 0 ? ${JSON.stringify(RATINGS)}[item.rating] : "Not rated") + ", " + item.made + " of " + item.of + " ticked"` });
   const table = createNode('frame', { name: 'Results', x: eb.x, y: headY + 26, width: eb.width, height: 252, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your cards', repeat: { items: 'results.slice(-6)', layout: 'grid', gap: 4, columns: 1 }, children: [row] }) as FrameNode;
-  const again = button(ctx, 'Start again', 'Start again', eb.x, eb.y + eb.height - 46, 200, true);
+  const again = button(ctx, 'Start again', 'Start again', eb.x, barY(eb), 200, true);
   end.children.push(table, again);
 
   const eg = new Graph(end);

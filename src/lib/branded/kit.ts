@@ -314,6 +314,17 @@ export function contentBox(page: Artboard): { x: number; y: number; width: numbe
   return { x: SIDE, y: TOP + 74, width: page.width - SIDE * 2, height: page.height - TOP - 74 - FOOTER - 16 };
 }
 
+/** How tall the buttons in a page's bottom bar are (the kit's own button height). */
+export const NAV_HEIGHT = 46;
+
+/**
+ * The top of the bottom bar every starter puts its Back and Next buttons on: the last row of the content box, a little clear of the
+ * footer and the logo. Back goes at the left edge of the box, Next (the primary one) at the right, and a page counter between them.
+ * 524 on a 1024 by 640 page. `barY(box)` is the same for a box that is not the page's own content box.
+ */
+export const barY = (box: { y: number; height: number }): number => box.y + box.height - NAV_HEIGHT - 10;
+export const navBarY = (page: Artboard): number => barY(contentBox(page));
+
 // ------------------------------------------------------------------ small builders, all colours from the colourway
 
 export const solid = (color: string) => ({ type: 'solid' as const, color });

@@ -1,6 +1,6 @@
 //Game map: a map page with five stage markers that unlock in order, a small activity page behind each, ticks for the ones done, and a reward page at the end.
 import { createNode, type Artboard, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, item, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, contentBox, item, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, darkButton, focus, go, goNext, graphNote, groupPages, heroPage, lit, set } from './common';
 
@@ -183,8 +183,8 @@ function build(colourway: Colourway) {
     const feedbackY = sb.y + 104 + s.options.length * 76 + 4;
     const feedback = text(ctx, 'Feedback', `{picked < 0 ? "" : right ? "That is right. " + ${lit(s.why)} : "Not quite. Have another look and try again."}`, sb.x, feedbackY, 620, { fontSize: 18, fontWeight: 600, lineHeight: 1.3, autoSize: 'none', height: 60 });
     bind(feedback, { color: `right ? "${L.success}" : picked >= 0 ? "${L.error}" : "${L.text}"` });
-    const finish = bind(button(ctx, 'Complete the stage', 'Complete the stage', sb.x, sb.y + sb.height - 46, 240, true), { visible: 'right' });
-    const back = button(ctx, 'Back to the map', 'Back to the map', sb.x + 256, sb.y + sb.height - 46, 200, false);
+    const finish = bind(button(ctx, 'Complete the stage', 'Complete the stage', sb.x, barY(sb), 240, true), { visible: 'right' });
+    const back = button(ctx, 'Back to the map', 'Back to the map', sb.x + 256, barY(sb), 200, false);
     page.children.push(prompt, pic, optionGroup, feedback, finish, back);
 
     const g = new Graph(page);

@@ -7,7 +7,7 @@
 //before leaving.
 import { createNode, type FrameNode, type ImageNode, type InputNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import { BRAND_FONT, type Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, go, goNext, goPrevious, graphNote, heroPage, lit, placeholderPicture as placeholder, resetVars, set, setItem, textBox, tickList, toggleItem, toggleVar } from './shared';
 
@@ -93,7 +93,7 @@ function build(colourway: Colourway) {
   const { list: rows, row } = tickList(ctx, 'Pledges', 'Pledge row', pb.x, pb.y + 44, pb.width, { items: 'pledges', ticked: agreed, ariaLabel: 'Things you agree to before you start', rows: 4, rowHeight: 48, gap: 8 });
   const privacyCard = card(ctx, 'Privacy note panel', pb.x, pb.y + 44 + 4 * 48 + 3 * 8 + 18, pb.width, 86);
   const privacyNote = text(ctx, 'Privacy note', 'Your photos are not uploaded anywhere by this page. They stay on your device, in this page, until you download your notebook and hand it in. If you close or reload the page they are gone, so download before you leave. No camera? Every prompt has an example picture you can use instead.', pb.x + 20, pb.y + 44 + 4 * 48 + 3 * 8 + 28, pb.width - 40, { fontSize: 15, lineHeight: 1.35, autoSize: 'none', height: 66 });
-  const pContinue = button(ctx, 'Continue', 'I agree, start', pb.x, pb.y + pb.height - 46, 240, true);
+  const pContinue = button(ctx, 'Continue', 'I agree, start', pb.x, barY(pb), 240, true);
   bind(pContinue, { disabled: 'agreed.length < pledges.length', opacity: 'agreed.length < pledges.length ? 0.5 : 1' });
   const pLeft = text(ctx, 'Pledges left', '', pb.x + 256, pb.y + pb.height - 36, 500, { fontSize: 15, color: L.muted, bindings: { text: 'agreed.length < pledges.length ? "Tick all " + pledges.length + " lines to start." : ""' } } as never);
   privacy.children.push(intro, rows, privacyCard, privacyNote, pContinue, pLeft);
@@ -319,7 +319,7 @@ function build(colourway: Colourway) {
   const board = createNode('frame', { name: 'Bingo board', x: nb.x, y: gridY, width: nb.width, height: 2 * SH + 14, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your bingo board', repeat: { items: 'rows', layout: 'grid', gap: 14, columns: BINGO_COLUMNS }, children: [square] }) as FrameNode;
   bind(board, { visible: 'bingo' });
 
-  const nbY = nb.y + nb.height - 46;
+  const nbY = barY(nb);
   const handBtn = button(ctx, 'Hand in my notebook', 'Hand in my notebook', nb.x, nbY, 260, true);
   const backBtn = button(ctx, 'Back to the prompts', 'Back to the prompts', nb.x + 272, nbY, 230, false);
   const nbWarn = text(ctx, 'Notebook download note', 'Your photos live only in this page. Download before you leave.', nb.x + 520, nbY + 2, nb.width - 520, { fontSize: 14, color: L.muted, lineHeight: 1.3, autoSize: 'none', height: 42 });

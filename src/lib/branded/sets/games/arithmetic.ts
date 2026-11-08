@@ -1,6 +1,6 @@
 //Arithmetic quiz: ten sums made fresh every play (the operation and the range are variables), answered by typing or by picking from four options, with a score, an optional clock and Play again.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { BRAND_FONT } from '../../looks';
 import { lookDefaults } from '../../../themes';
@@ -101,7 +101,7 @@ function build(colourway: Colourway) {
   const bar = progressBar(ctx, 'Progress bar', sideX, box.y + 44, sideW, { value: 'q + (answered ? 1 : 0)', max: 'Math.max(1, sums.length)', label: 'Quiz progress', valueText: '{value} of {max} answered' });
   const tally = text(ctx, 'Tally', 'Score: {score}{showTimer ? "     Time: " + clock(seconds) : ""}', sideX, box.y + 72, sideW, { fontSize: 19, fontWeight: 700 });
   const verdict = bind(text(ctx, 'Feedback', '{feedback}', sideX, box.y + 126, sideW, { fontSize: 22, fontWeight: 700, lineHeight: 1.3, autoSize: 'none', height: 110 }), { color: `answered ? (correct ? "${L.success}" : "${L.error}") : "${L.text}"` });
-  const next = bind(button(ctx, 'Next', 'Next question', sideX, box.y + box.height - 46, 220, true), { disabled: '!answered', label: 'q + 1 >= sums.length ? "See results" : "Next question"' });
+  const next = bind(button(ctx, 'Next', 'Next question', sideX, barY(box), 220, true), { disabled: '!answered', label: 'q + 1 >= sums.length ? "See results" : "Next question"' });
   page.children.push(panel, askText, sum, input, check, options, where, bar, tally, verdict, next);
 
   //Making the sums, each time the page opens (the clock counts up from the same moment)
