@@ -2,7 +2,7 @@
 //The questions are cues on the video (each one pauses it as it is reached), the chapters are the video's own, and the video is held paused while a question is open.
 import { createNode, uid, type ContainerNode, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
 import { addQuestion, setQuestionSettings } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, darkButton, go, goNext, set } from './common';
 
@@ -181,10 +181,13 @@ function build(colourway: Colourway) {
   const below = (p: typeof watch, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });
   addNote(watch, { ...below(watch, 0, 440), text: '**Video cues** Each question is a cue on the Video layer that pauses it. **On video cue** shows the question, and **Hold paused** is bound to `popup > 0`, so the controls cannot start the video behind it. Seeking past a cue asks nothing.', colour: 'sky' });
   addNote(watch, { ...below(watch, 456, 440), text: '**Chapters** are the video\'s own, so the list here and the controls in the browser share them. One flow seeks to `chapters[event.index].time`.', colour: 'sky' });
-  addNote(watch, { ...below(watch, 912, 440), text: '[ ] Pick your video, then set each cue\'s time to where its question belongs, and write the three questions to match.', colour: 'gold' });
+  addNote(hero, { ...below(hero, 0, 440), text: '[ ] **Before you share it** pick your video, then set each cue\'s time to where its question belongs, and write the three questions to match.', colour: 'gold' });
 
   return { project, checklist: checklist as TemplateChecklistItem[] };
 }
+
+/** Each question open over the video. */
+const VIDEO_LAYOUT_STATES: LayoutState[] = QUESTIONS.map((_, i) => ({ label: `question ${i + 1} open`, page: 'Watch and answer', vars: { popup: i + 1 } }));
 
 export const videoQuestions: BrandedStarter = {
   key: 'story/video-questions',
@@ -193,4 +196,5 @@ export const videoQuestions: BrandedStarter = {
   description: 'A video that pauses at set times for a question, then carries on. A chapter list that jumps around the video, and a summary with the score. Choose your video in the inspector; until then a note says so.',
   tags: ['video', 'question kit', 'chapters'],
   build,
+  layoutStates: VIDEO_LAYOUT_STATES,
 };

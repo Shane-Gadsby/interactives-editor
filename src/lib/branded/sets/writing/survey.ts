@@ -1,6 +1,6 @@
 //Questionnaire: one page with a rating scale, a multiple choice and an open text question. The answers are learner user data (kept as they are given), and Submit shows a thank-you with (optionally) a summary of what was answered.
 import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { panel } from '../assessment/shared';
 import { keyNavList } from '../../parts';
@@ -169,10 +169,16 @@ function build(colourway: Colourway) {
   const below = (p: typeof survey, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });
   addNote(survey, { ...below(survey, 0, 440), text: '**User data** The four answer variables are ticked Save as user data, so they are kept as they change and put back before the page opens. There is no Save or Load node to maintain, and `returning` is live from `userData.restored`.', colour: 'sky' });
   addNote(survey, { ...below(survey, 456, 440), text: '**Radio keyNav** The scale and the choices are radio groups: one Tab stop, the arrow keys move and choose, and one On pointer flow serves every button through `event.index`.', colour: 'sky' });
-  addNote(survey, { ...below(survey, 912, 440), text: '[ ] Change the choices in the `places` variable. A new question needs its own variable ticked **Save as user data**.', colour: 'gold' });
+  addNote(hero, { ...below(hero, 0, 440), text: '[ ] **Make it yours** in the Variables tab. Change the choices in the `places` variable. A new question needs its own variable ticked **Save as user data**.', colour: 'gold' });
 
   return { project, checklist };
 }
+
+/** The thank-you page with a long answer in (the summary cuts it short), and the survey with a rating and a choice made. */
+const SURVEY_LAYOUT_STATES: LayoutState[] = [
+  { label: 'long answer', page: 'Thank you', vars: { rating: 4, place: OPTIONS[1], comment: `${Array.from({ length: 70 }, () => 'quiet').join(' ')} room` } },
+  { label: 'answered', page: 'Survey', vars: { rating: 3, place: OPTIONS[1] } },
+];
 
 export const questionnaire: BrandedStarter = {
   key: 'writing/questionnaire',
@@ -181,4 +187,5 @@ export const questionnaire: BrandedStarter = {
   description: 'A short survey on one page: a rating scale, a multiple choice and an open text question. Submit shows a thank-you with an optional summary of the answers. Answers are saved as learner user data, and counts go to Insights.',
   tags: ['survey', 'rating', 'multiple choice', 'user data'],
   build,
+  layoutStates: SURVEY_LAYOUT_STATES,
 };

@@ -1,7 +1,7 @@
 //Memory game: twelve face-down cards in a repeater (one card layer, one click handler), dealt in a new order every play. The cards are a key-navigation grid and what is face up, matched and busy is worked out from the cards themselves.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { keyNavList } from '../../parts';
-import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, darkButton, go, goNext, set } from './common';
 
@@ -118,10 +118,13 @@ function build(colourway: Colourway) {
   const below = (p: typeof play, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });
   addNote(play, { ...below(play, 0, 440), text: '**Live variables** `ups`, `matched` and `busy` are worked out from the cards, so a click only turns one card up. Nothing keeps a count or a lock by hand, and a new deal clears them by itself.', colour: 'sky' });
   addNote(play, { ...below(play, 456, 440), text: '**Shuffle** The deal uses `shuffle(list)`. The cards are a key-navigation grid: one Tab stop, arrow keys between cards, Enter turns one.', colour: 'sky' });
-  addNote(play, { ...below(play, 912, 440), text: '[ ] Put your own pairs in the `pairs` variable (term and what it matches). Six pairs fill the grid of twelve.', colour: 'gold' });
+  addNote(hero, { ...below(hero, 0, 440), text: '[ ] **Make it yours** in the Variables tab. Put your own pairs in the `pairs` variable (term and what it matches). Six pairs fill the grid of twelve.', colour: 'gold' });
 
   return { project, checklist };
 }
+
+/** The board with every card face up, so the longest term and definition are checked on the cards. */
+const MEMORY_LAYOUT_STATES: LayoutState[] = [{ label: 'all cards face up', page: 'Find the matching pairs', vars: { cards: [...PAIRS.map((p, i) => ({ text: p.term, pair: i, state: 'up' })), ...PAIRS.map((p, i) => ({ text: p.match, pair: i, state: 'matched' }))] } }];
 
 export const memory: BrandedStarter = {
   key: 'story/memory-game',
@@ -130,4 +133,5 @@ export const memory: BrandedStarter = {
   description: 'Twelve face-down cards, six pairs of term and definition. Cards flip on a click or Enter, matched pairs stay up, a miss flips back after a moment, with a moves counter and a finished page. Dealt in a new order every play.',
   tags: ['game', 'revision', 'variables'],
   build,
+  layoutStates: MEMORY_LAYOUT_STATES,
 };

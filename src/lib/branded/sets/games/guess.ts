@@ -1,6 +1,6 @@
 //Guess the answer: a picture and a question on a card, the learner thinks, then turns the card to see the answer, across a set of five.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, item, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { stack } from '../../parts';
 import { Graph, addVar, announce, bind, darkButton, emit, focus, go, goNext, heroPage, set } from './common';
@@ -144,6 +144,9 @@ function build(colourway: Colourway) {
   return { project, checklist };
 }
 
+/** The card turned over, to check the answer face. */
+const GUESS_LAYOUT_STATES: LayoutState[] = [{ label: 'card turned', page: 'Think, then turn the card', vars: { turned: true } }];
+
 export const guessTheAnswer: BrandedStarter = {
   key: 'games/guess-the-answer',
   set: 'games',
@@ -151,4 +154,5 @@ export const guessTheAnswer: BrandedStarter = {
   description: 'Five question cards, each with a picture placeholder. Think first, then turn the card over to see the answer and a line of why, and say whether you knew it. Turns on a click, Enter or the Turn the card button; ends with how many you knew.',
   tags: ['game', 'self-check', 'cards', 'variables'],
   build,
+  layoutStates: GUESS_LAYOUT_STATES,
 };

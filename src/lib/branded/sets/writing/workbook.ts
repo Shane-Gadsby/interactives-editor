@@ -1,9 +1,9 @@
-//Guided writing workbook: a goals page, three steps with a prompt and a text box each, a progress list on every page, and an export page that puts everything on one page to copy or email. Saved as learner user data.
-import type { Artboard, SceneNode, TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, contentBox, item, text, type BrandedStarter } from '../../kit';
+//Guided writing workbook: a goals page, three steps with a prompt and a text box each, a progress list on every page, and an export page that puts everything on one page to copy or email. The writing is learner user data, kept as it is written.
+import { createNode, type Artboard, type FrameNode, type TemplateChecklistItem } from 'interactives-player';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { spreadPages } from '../story/common';
-import { click, continueChain, empty, go, graph, loadOnOpen, mailExpr, navRow, reportExpr, saveData, setVar, textBox, variable, words, writingHero } from './shared';
+import { groupPages } from '../story/common';
+import { addVar, bind, click, empty, goNext, goPrevious, graph, mailExpr, reportExpr, setVar, textBox, writingHero } from './shared';
 import { panel } from '../assessment/shared';
 
 const TITLE = 'Study plan workbook';
@@ -59,17 +59,19 @@ function build(colourway: Colourway) {
   const ctx = brandedProject(colourway, TITLE);
   const { project, L } = ctx;
 
-  //What the learner writes, and the few things the pages say about it
-  const goals = variable(project, 'goals', 'string', '');
-  const step1 = variable(project, 'step1', 'string', '');
-  const step2 = variable(project, 'step2', 'string', '');
-  const step3 = variable(project, 'step3', 'string', '');
-  const exported = variable(project, 'exported', 'boolean', false);
-  const returning = variable(project, 'returning', 'boolean', false);
-  const status = variable(project, 'status', 'string', '');
-  const report = variable(project, 'report', 'string', '');
+  //What the learner writes: user data, so it is kept as it is written and put back before the workbook opens
+  const goals = addVar(project, 'goals', 'string', '', { userData: true });
+  const step1 = addVar(project, 'step1', 'string', '', { userData: true });
+  const step2 = addVar(project, 'step2', 'string', '', { userData: true });
+  const step3 = addVar(project, 'step3', 'string', '', { userData: true });
+  const exported = addVar(project, 'exported', 'boolean', false, { userData: true });
+  const report = addVar(project, 'report', 'string', '');
   const written = [goals, step1, step2, step3];
-  const saved = [...written, exported];
+  //Live: somebody coming back, the progress list (a label, the page it goes to and whether it is written, for each part and the export), how many parts are written, and the first part still empty
+  const returning = addVar(project, 'returning', 'boolean', false, { formula: 'userData.restored > 0', live: true });
+  addVar(project, 'parts', 'list', [], { formula: `[${PARTS.map((p) => `{label: ${JSON.stringify(p.label)}, page: ${JSON.stringify(p.label)}, done: !(${empty(p.key)})}`).join(', ')}, {label: "Export", page: "Export", done: exported}]`, live: true });
+  addVar(project, 'writtenCount', 'number', 0, { formula: 'parts.slice(0, 4).filter(p => p.done).length', live: true });
+  addVar(project, 'resumeAt', 'string', '', { formula: `${PARTS.map((p) => `${empty(p.key)} ? ${JSON.stringify(p.label)} : `).join('')}"Export"`, live: true });
 
   const { page: hero, start, resume } = writingHero(
     ctx,
@@ -82,62 +84,66 @@ function build(colourway: Colourway) {
   const pages: Artboard[] = PARTS.map((p) => brandedPage(ctx, p.title, { name: p.label, footer: TITLE }));
   const exportPage = brandedPage(ctx, 'My study plan', { name: 'Export', footer: TITLE });
   const everyPage = [...pages, exportPage];
+  //The parts and the export are one group, so Next and Back follow their order (and the first Back and the last Next leave through the No artboard output)
+  groupPages(project, 'Workbook', everyPage);
   const checklist: TemplateChecklistItem[] = [];
 
-  //Before the activity opens: bring back what was saved
-  loadOnOpen(hero, saved, returning);
   {
     const g = graph(hero);
-    g.then(click(g, start, 'Begin'), ...go(pages[0]));
-    continueChain(hero, resume, [[goals, pages[0]], [step1, pages[1]], [step2, pages[2]], [step3, pages[3]]], exportPage);
+    g.then(click(g, start, 'Begin'), ...goNext());
+    //Continue goes to the first part still empty, or the export: its name is the live "resumeAt"
+    g.then(click(g, resume, 'Continue'), 'action.artboard', { to: 'expression', expr: 'resumeAt', transition: 'fade', duration: 250 });
   }
 
-  //The progress list, on every page: a tick for what is written, the page you are on in the button colour, each row a button that saves and goes there
-  const progressList = (page: Artboard, current: number) => {
-    const rows: SceneNode[] = [];
+  //The progress list, on every page: one row layer repeated over the live "parts" list, a tick for what is written, the page you are on in the button colour, and each row goes to its page
+  const progressList = (page: Artboard) => {
+    const label = bind(text(ctx, 'Row label', '{item.done ? "✓" : "○"}  {item.label}', 14, 11, LIST_W - 32 - 24, { fontSize: 16, fontWeight: 600, decorative: true, wrap: false, height: 22, autoSize: 'none' }), { color: `artboard.name == item.page ? "${L.onButton}" : "${L.text}"`, fontWeight: 'artboard.name == item.page ? 700 : 600' });
+    const row = bind(
+      createNode('frame', { name: 'Progress row', x: 0, y: 0, width: LIST_W - 32, height: 44, cornerRadius: 10, fill: solid(L.background), stroke: stroke(L.border, 1.5), clip: false, role: 'button', focusable: true, cursor: 'pointer', children: [label] }) as FrameNode,
+      {
+        ariaLabel: 'item.label + ": " + (item.done ? "written" : "not written yet")',
+        'fill.color': `artboard.name == item.page ? "${L.button}" : "${L.background}"`,
+        'stroke.paint.color': `artboard.name == item.page ? "${L.button}" : "${L.border}"`,
+      },
+    );
     const heading = text(ctx, 'Progress heading', 'Progress', 16, 14, LIST_W - 32, { fontSize: 14, fontWeight: 700, color: L.muted, role: 'heading', headingLevel: 2 });
-    PARTS.forEach((p, i) => rows.push(navRow(ctx, `Progress: ${p.label}`, p.label, 16, 44 + i * 52, LIST_W - 32, 44, { done: `!${empty(p.key)}`, current: current === i, ariaLabel: p.label })));
-    rows.push(navRow(ctx, 'Progress: Export', 'Export', 16, 44 + 4 * 52, LIST_W - 32, 44, { done: 'exported', current: current === 4, ariaLabel: 'Export' }));
-    const count = text(ctx, 'Progress count', `{${written.map((v) => `(${empty(v.name)} ? 0 : 1)`).join(' + ')}} of 4 parts written`, 16, 44 + 5 * 52 + 4, LIST_W - 32, { fontSize: 15, color: L.muted });
+    const rows = createNode('frame', { name: 'Progress rows', x: 16, y: 44, width: LIST_W - 32, height: 5 * 52 - 8, fill: null, stroke: null, clip: false, repeat: { items: 'parts', layout: 'vertical', gap: 8, columns: 1 }, children: [row] } as never);
+    const count = text(ctx, 'Progress count', '{writtenCount} of 4 parts written', 16, 44 + 5 * 52 + 4, LIST_W - 32, { fontSize: 15, color: L.muted });
     const box = contentBox(page);
-    const list = panel(ctx, 'Progress list', box.x, box.y, LIST_W, 44 + 5 * 52 + 44, [heading, ...rows, count], { role: 'region', ariaLabel: 'Your progress' });
+    const list = panel(ctx, 'Progress list', box.x, box.y, LIST_W, 44 + 5 * 52 + 44, [heading, rows, count], { role: 'region', ariaLabel: 'Your progress' });
     page.children.push(list);
-    //Each row saves, then goes to its page (the one you are on does nothing)
+    //One flow: a row goes to its page (the row for the page you are on does nothing)
     const g = graph(page);
-    rows.forEach((row, i) => {
-      if (i === current) return;
-      g.run(click(g, row, 'Progress list'), saveData(saved), go(everyPage[i]));
-    });
+    const onRow = g.event('event.pointer', { target: row.id, type: 'click', onlyIf: 'parts[event.index].page != artboard.name' }, 'A progress row');
+    g.then(onRow, 'action.artboard', { to: 'expression', expr: 'parts[event.index].page', transition: 'fade', duration: 250 });
     return list;
   };
 
-  //The three steps and the goals page share a shape: a prompt, a text box, a word count, Back, Save and Next
+  //The three steps and the goals page share a shape: a prompt, a text box, a word count, Back and Next (what is written is kept as it is typed)
   PARTS.forEach((p, i) => {
     const page = pages[i];
     const box = contentBox(page);
     const v = written[i];
-    progressList(page, i);
+    progressList(page);
     const guide = text(ctx, 'Prompt', p.guide, COL_X, box.y, COL_W, { fontSize: 17, lineHeight: 1.45 });
     const field = textBox(ctx, 'Text box', v, COL_X, box.y + 100, COL_W, 250, p.placeholder, p.heading);
-    const count = text(ctx, 'Word count', `{${words(v.name)}} words`, COL_X, box.y + 362, 200, { fontSize: 15, color: L.muted });
-    const state = text(ctx, 'Saved note', '{status}', COL_X + 220, box.y + 362, COL_W - 220, { fontSize: 15, color: L.muted, align: 'right' });
+    const count = text(ctx, 'Word count', `{wordCount(${v.name})} words`, COL_X, box.y + 362, 200, { fontSize: 15, color: L.muted });
+    const state = text(ctx, 'Saved note', 'Saved as you write.', COL_X + 220, box.y + 362, COL_W - 220, { fontSize: 15, color: L.muted, align: 'right' });
     const back = button(ctx, 'Back button', i === 0 ? 'Back to the start' : 'Back', COL_X, 524, i === 0 ? 170 : 130, false);
-    const save = button(ctx, 'Save button', 'Save', COL_X + (i === 0 ? 186 : 146), 524, 120, false);
     const next = button(ctx, 'Next button', i === PARTS.length - 1 ? 'See my workbook' : 'Next step', 976 - 200, 524, 200);
-    page.children.push(guide, field, count, state, back, save, next);
+    page.children.push(guide, field, count, state, back, next);
     const g = graph(page);
-    g.run(click(g, back, 'Back'), saveData(saved), go(i === 0 ? hero : pages[i - 1]));
-    g.run(click(g, save, 'Save'), saveData(saved), setVar(status, '"Saved."'));
-    g.run(click(g, next, 'Next'), saveData(saved), go(i === PARTS.length - 1 ? exportPage : pages[i + 1]));
-    //Typing again takes the "Saved." note away, since what is on screen is no longer what was saved
-    g.run(g.event('event.variable', { variable: v.id }, 'Edited'), setVar(status, '""'));
+    //Back and Next follow the group's order; Back from the first part leaves through No artboard, to the first page
+    const goBack = g.then(click(g, back, 'Back'), ...goPrevious());
+    if (i === 0) g.then(goBack, 'action.artboard', { artboard: hero.id, transition: 'fade', duration: 250 }, 'none');
+    g.then(click(g, next, 'Next'), ...goNext());
     checklist.push(item(i === 0 ? 'Write your own goals prompt, and the placeholder in its text box' : `Step ${i}: write your own prompt, the placeholder in the text box and the page title`, guide, page));
   });
 
   //Export: everything the learner wrote, on one page, in a box they can copy from or email
   {
     const box = contentBox(exportPage);
-    progressList(exportPage, 4);
+    progressList(exportPage);
     const intro = text(ctx, 'Intro', 'Everything you wrote is below, in one piece. Click in the box, press Ctrl+A (Cmd+A on a Mac) to select it all and Ctrl+C to copy it, or email it to yourself. You can still edit it here before you copy.', COL_X, box.y, COL_W, { fontSize: 17, lineHeight: 1.45 });
     const field = textBox(ctx, 'Whole workbook', report, COL_X, box.y + 100, COL_W, 250, '', 'Your whole workbook, ready to copy');
     const missing = text(ctx, 'Missing note', '{(' + written.map((v) => empty(v.name)).join(' || ') + ') ? "Some parts are still empty. Use the progress list to go back and finish them." : "Everything is written. Copy it or email it to yourself."}', COL_X, box.y + 362, COL_W, { fontSize: 15, color: L.muted });
@@ -146,8 +152,8 @@ function build(colourway: Colourway) {
     exportPage.children.push(intro, field, missing, back, mail);
     const g = graph(exportPage);
     const arrive = g.event('event.start', {}, 'Put it all together');
-    g.run(arrive, setVar(report, reportExpr('My study plan', PARTS.map((p, i) => [p.heading, written[i]] as [string, typeof goals]), '(Not written yet)')), setVar(exported, 'true'), saveData([exported]));
-    g.run(click(g, back, 'Back'), go(pages[PARTS.length - 1]));
+    g.run(arrive, setVar(report, reportExpr('My study plan', PARTS.map((p, i) => [p.heading, written[i]] as [string, typeof goals]), '(Not written yet)')), setVar(exported, 'true'));
+    g.run(click(g, back, 'Back'), goPrevious());
     g.run(click(g, mail, 'Email'), ['action.url', { url: mailExpr('My study plan', 'report'), target: '_self' }]);
     checklist.push(
       item('Change the export: the Set variable node after "Put it all together" (Interactions tab) lists each part with its heading, so reword the headings there, and the title line at the top', field, exportPage),
@@ -157,13 +163,19 @@ function build(colourway: Colourway) {
 
   checklist.unshift(item('Write the title and the line under it on the first page', hero.children.find((n) => n.name === 'Subtitle'), hero));
   checklist.push(
-    item('The progress list is repeated on every page: if you rename a step, change its label in the list on each page (and its page name)', undefined, pages[1]),
-    item('Writing is saved by Save user data nodes (Back, Save, Next and the progress list) and brought back by the Load user data node in "Before activity loads" on the first page. To add a step, duplicate a step page, add a text variable for it and tick it in every Save user data and Load user data node', undefined, hero),
+    item('The progress list on every page is one row layer repeated over the live "parts" variable (Variables tab): if you rename a step, change its label and its page name there, and rename the page to match. A row goes to the page it names', undefined, pages[1]),
+    item('Writing is kept as it is written: the four text variables and "exported" are ticked Save as user data (Variables tab), so there is no Save or Load node to maintain. To add a step, duplicate a step page into the Workbook group, add a text variable for it ticked Save as user data, and add its row to "parts" and "resumeAt"', undefined, hero),
     item('Check where it is saved: on the Link for StudyDesk each learner\'s writing is kept under their StudyDesk session, anywhere else it stays in their browser (Share)', undefined, hero),
   );
 
   project.settings.reporting = { completion: 'artboard', completionArtboard: exportPage.id };
-  spreadPages(project);
+  //Notes for whoever edits the template, below the pages
+  const below = (p: Artboard, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });
+  addNote(pages[0], { ...below(pages[0], 0, 440), text: '**User data** The four text variables and `exported` are ticked Save as user data. They are kept as they change and put back before the workbook opens, so there are no Save or Load nodes, and `returning` is live from `userData.restored`.', colour: 'sky' });
+  addNote(pages[0], { ...below(pages[0], 456, 440), text: '**Page groups** The parts and the export are one group called Workbook, so Next and Back follow the page order. The progress rows go to a page by name with an expression, from the live `parts` list.', colour: 'sky' });
+  addNote(hero, { ...below(hero, 0, 440), text: '[ ] **Make it yours** in the Variables tab. Write your own prompts. Adding a step means a new page in the group, a new text variable and a row in `parts` and `resumeAt`.', colour: 'gold' });
+  addNote(exportPage, { ...below(exportPage, 0, 440), text: '[ ] The email button opens a mail with the text in it. Download as a file needs the project to declare a sensor, so it is not used here.', colour: 'gold' });
+
   return { project, checklist };
 }
 

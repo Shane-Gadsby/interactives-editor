@@ -1,11 +1,11 @@
-//Reflection journal: four structured prompts in the order of a Gibbs-style reflection (what happened, how I felt, what I learnt, what I will do next), a text box and word count on each, saved and resumable, and a last page that shows the whole reflection.
-import type { Artboard, SceneNode, TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, contentBox, item, solid, text, type BrandedStarter } from '../../kit';
+//Reflection journal: four structured prompts in the order of a Gibbs-style reflection (what happened, how I felt, what I learnt, what I will do next), a text box and word count on each, kept as it is written and resumable, and a last page that shows the whole reflection.
+import { createNode, type Artboard, type FrameNode, type TemplateChecklistItem } from 'interactives-player';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { createNode } from 'interactives-player';
+import { progressBar } from '../../parts';
 import { panel } from '../assessment/shared';
-import { spreadPages } from '../story/common';
-import { bind, click, continueChain, empty, go, graph, loadOnOpen, mailExpr, navRow, reportExpr, saveData, setVar, textBox, variable, words, writingHero } from './shared';
+import { groupPages } from '../story/common';
+import { addVar, bind, click, empty, goNext, goPrevious, graph, mailExpr, reportExpr, setVar, textBox, writingHero } from './shared';
 
 const TITLE = 'Reflection journal';
 const CARD_W = 330;
@@ -20,6 +20,8 @@ interface Prompt {
   questions: string[];
   placeholder: string;
 }
+
+const pageName = (i: number) => `Part ${i + 1}: ${PROMPTS[i].short}`;
 
 const PROMPTS: Prompt[] = [
   {
@@ -60,12 +62,16 @@ function build(colourway: Colourway) {
   const ctx = brandedProject(colourway, TITLE);
   const { project, L } = ctx;
 
-  const vars = PROMPTS.map((p) => variable(project, p.key, 'string', ''));
-  const reflection = variable(project, 'reflection', 'string', '');
-  const returning = variable(project, 'returning', 'boolean', false);
-  const status = variable(project, 'status', 'string', '');
+  //What the learner writes is user data: kept as it is written and put back before the journal opens
+  const vars = PROMPTS.map((p) => addVar(project, p.key, 'string', '', { userData: true }));
+  const reflection = addVar(project, 'reflection', 'string', '');
   //Words the count line asks for; the author can change it
-  variable(project, 'aim', 'number', 50);
+  addVar(project, 'aim', 'number', 50);
+  //Live: somebody coming back, the four parts (number, short name, the page it goes to, whether it is written), the total words, and the first part still empty
+  const returning = addVar(project, 'returning', 'boolean', false, { formula: 'userData.restored > 0', live: true });
+  addVar(project, 'parts', 'list', [], { formula: `[${PROMPTS.map((p, i) => `{n: ${i + 1}, short: ${JSON.stringify(p.short)}, page: ${JSON.stringify(pageName(i))}, done: !(${empty(p.key)})}`).join(', ')}]`, live: true });
+  addVar(project, 'totalWords', 'number', 0, { formula: PROMPTS.map((p) => `wordCount(${p.key})`).join(' + '), live: true });
+  addVar(project, 'resumeAt', 'string', '', { formula: `${PROMPTS.map((p, i) => `${empty(p.key)} ? ${JSON.stringify(pageName(i))} : `).join('')}"My reflection"`, live: true });
 
   const { page: hero, start, resume } = writingHero(
     ctx,
@@ -75,27 +81,37 @@ function build(colourway: Colourway) {
     'Welcome back. Your reflection from last time is saved.',
     returning,
   );
-  const pages: Artboard[] = PROMPTS.map((p) => brandedPage(ctx, p.title, { name: `Part ${PROMPTS.indexOf(p) + 1}: ${p.short}`, footer: TITLE }));
+  const pages: Artboard[] = PROMPTS.map((p, i) => brandedPage(ctx, p.title, { name: pageName(i), footer: TITLE }));
   const whole = brandedPage(ctx, 'My reflection', { footer: TITLE });
+  //The four parts and the whole reflection are one group: Next and Back follow its order (the first Back leaves through No artboard, to the first page)
+  groupPages(project, 'Journal', [...pages, whole]);
   const checklist: TemplateChecklistItem[] = [];
 
-  loadOnOpen(hero, vars, returning);
   {
     const g = graph(hero);
-    g.then(click(g, start, 'Begin'), ...go(pages[0]));
-    continueChain(hero, resume, PROMPTS.map((_, i) => [vars[i], pages[i]] as [typeof reflection, Artboard]), whole);
+    g.then(click(g, start, 'Begin'), ...goNext());
+    //Continue goes to the first part still empty, or the whole reflection: its name is the live "resumeAt"
+    g.then(click(g, resume, 'Continue'), 'action.artboard', { to: 'expression', expr: 'resumeAt', transition: 'fade', duration: 250 });
   }
 
   PROMPTS.forEach((p, i) => {
     const page = pages[i];
     const box = contentBox(page);
     const v = vars[i];
-    const everyPage = [...pages, whole];
 
-    //The four parts as pills across the top, a tick on each one that is written, each a button that saves and goes there
+    //The four parts as pills across the top (one pill repeated over the live "parts" list): a tick on each one that is written, the part you are on in the button colour, each one a button that goes there
     const pillW = (box.width - 3 * 12) / 4;
-    const pills = PROMPTS.map((q, j) => navRow(ctx, `Part ${j + 1} pill`, `${j + 1}. ${q.short}`, box.x + j * (pillW + 12), box.y - 4, pillW, 42, { done: `!${empty(vars[j].name)}`, current: j === i, ariaLabel: `Part ${j + 1}: ${q.short}`, fontSize: 15 }));
-    page.children.push(...pills);
+    const pillLabel = bind(text(ctx, 'Pill label', '{item.done ? "✓" : "○"}  {item.n}. {item.short}', 14, 10, pillW - 24, { fontSize: 15, fontWeight: 600, decorative: true, wrap: false, height: 22, autoSize: 'none' }), { color: `artboard.name == item.page ? "${L.onButton}" : "${L.text}"`, fontWeight: 'artboard.name == item.page ? 700 : 600' });
+    const pill = bind(
+      createNode('frame', { name: 'Part pill', x: 0, y: 0, width: pillW, height: 42, cornerRadius: 10, fill: solid(L.background), stroke: stroke(L.border, 1.5), clip: false, role: 'button', focusable: true, cursor: 'pointer', children: [pillLabel] }) as FrameNode,
+      {
+        ariaLabel: '"Part " + item.n + ": " + item.short + ": " + (item.done ? "written" : "not written yet")',
+        'fill.color': `artboard.name == item.page ? "${L.button}" : "${L.background}"`,
+        'stroke.paint.color': `artboard.name == item.page ? "${L.button}" : "${L.border}"`,
+      },
+    );
+    const pills = createNode('frame', { name: 'Part pills', x: box.x, y: box.y - 4, width: box.width, height: 42, fill: null, stroke: null, clip: false, repeat: { items: 'parts', layout: 'horizontal', gap: 12, columns: 1 }, children: [pill] } as never);
+    page.children.push(pills);
 
     //The prompt card: the lead line and three things to think about
     const lead = text(ctx, 'Prompt lead', p.lead, 20, 20, CARD_W - 40, { fontSize: 18, fontWeight: 700, lineHeight: 1.35, role: 'heading', headingLevel: 2 });
@@ -103,36 +119,38 @@ function build(colourway: Colourway) {
     const card = panel(ctx, 'Prompt card', box.x, box.y + 58, CARD_W, 340, [lead, think], { role: 'region', ariaLabel: 'Prompts for this part' });
 
     const field = textBox(ctx, 'Text box', v, FIELD_X, box.y + 58, FIELD_W, 270, p.placeholder, p.title.replace(/^Part \d: /, ''));
-    const count = text(ctx, 'Word count', `{${words(v.name)}} words{${words(v.name)} >= aim ? "  ✓ a good length" : "  (aim for about " + aim + ")"}`, FIELD_X, box.y + 340, 320, { fontSize: 15, color: L.muted });
-    //A thin bar that fills as the writing reaches the aim
+    const count = text(ctx, 'Word count', `{wordCount(${v.name})} words{wordCount(${v.name}) >= aim ? "  ✓ a good length" : "  (aim for about " + aim + ")"}`, FIELD_X, box.y + 340, 320, { fontSize: 15, color: L.muted });
+    //A thin Progress bar that fills as the writing reaches the aim
     const trackW = 160;
-    const track = createNode('rect', { name: 'Length track', x: FIELD_X + FIELD_W - trackW, y: box.y + 346, width: trackW, height: 8, cornerRadius: 4, fill: solid(L.surfaceMuted), stroke: null, decorative: true });
-    const fill = bind(createNode('rect', { name: 'Length bar', x: FIELD_X + FIELD_W - trackW, y: box.y + 346, width: 0, height: 8, cornerRadius: 4, fill: solid(L.button), stroke: null, decorative: true }), { width: `${trackW} * Math.min(1, ${words(v.name)} / aim)` });
-    const note = text(ctx, 'Saved note', '{status}', FIELD_X, box.y + 366, FIELD_W, { fontSize: 15, color: L.muted });
+    const bar = progressBar(ctx, 'Length bar', FIELD_X + FIELD_W - trackW, box.y + 346, trackW, { value: `wordCount(${v.name})`, max: 'Math.max(1, aim)', label: 'Length', valueText: '{value} of {max} words', height: 8 });
+    const note = text(ctx, 'Saved note', 'Saved as you write.', FIELD_X, box.y + 366, FIELD_W, { fontSize: 15, color: L.muted });
 
     const back = button(ctx, 'Back button', i === 0 ? 'Back to the start' : 'Back', box.x, 524, i === 0 ? 170 : 130, false);
-    const save = button(ctx, 'Save button', 'Save', FIELD_X, 524, 120, false);
     const next = button(ctx, 'Next button', i === PROMPTS.length - 1 ? 'See my reflection' : 'Next part', 976 - 200, 524, 200);
-    page.children.push(card, field, count, track, fill, note, back, save, next);
+    page.children.push(card, field, count, bar, note, back, next);
 
     const g = graph(page);
-    pills.forEach((pill, j) => {
-      if (j !== i) g.run(click(g, pill, 'Parts'), saveData(vars), go(everyPage[j]));
-    });
-    g.run(click(g, back, 'Back'), saveData(vars), go(i === 0 ? hero : pages[i - 1]));
-    g.run(click(g, save, 'Save'), saveData(vars), setVar(status, '"Saved."'));
-    g.run(click(g, next, 'Next'), saveData(vars), go(i === PROMPTS.length - 1 ? whole : pages[i + 1]));
-    g.run(g.event('event.variable', { variable: v.id }, 'Edited'), setVar(status, '""'));
+    //One flow for the pills: a pill goes to its part's page (the pill for the page you are on does nothing)
+    const onPill = g.event('event.pointer', { target: pill.id, type: 'click', onlyIf: 'parts[event.index].page != artboard.name' }, 'A part pill');
+    g.then(onPill, 'action.artboard', { to: 'expression', expr: 'parts[event.index].page', transition: 'fade', duration: 250 });
+    const goBack = g.then(click(g, back, 'Back'), ...goPrevious());
+    if (i === 0) g.then(goBack, 'action.artboard', { artboard: hero.id, transition: 'fade', duration: 250 }, 'none');
+    g.then(click(g, next, 'Next'), ...goNext());
     checklist.push(item(`Part ${i + 1}: write your own lead line, the three things to think about and the placeholder`, lead, page));
   });
 
-  //The whole reflection: each part with its word count (a button back to it) beside everything in one box
+  //The whole reflection: each part with its tick (a button back to it) beside everything in one box
   {
     const box = contentBox(whole);
-    const rows: SceneNode[] = PROMPTS.map((p, i) => navRow(ctx, `Part ${i + 1} row`, p.short, 16, 48 + i * 52, 268, 44, { done: `!${empty(vars[i].name)}`, current: false, ariaLabel: `Edit part ${i + 1}: ${p.short}` }));
+    const rowText = text(ctx, 'Row label', '{item.done ? "✓" : "○"}  {item.short}', 14, 11, 268 - 24, { fontSize: 16, fontWeight: 600, decorative: true, wrap: false, height: 22, autoSize: 'none' });
+    const row = bind(
+      createNode('frame', { name: 'Part row', x: 0, y: 0, width: 268, height: 44, cornerRadius: 10, fill: solid(L.background), stroke: stroke(L.border, 1.5), clip: false, role: 'button', focusable: true, cursor: 'pointer', children: [rowText] }) as FrameNode,
+      { ariaLabel: '"Edit part " + item.n + ": " + item.short + ": " + (item.done ? "written" : "not written yet")' },
+    );
+    const rows = createNode('frame', { name: 'Part rows', x: 16, y: 48, width: 268, height: 4 * 52 - 8, fill: null, stroke: null, clip: false, repeat: { items: 'parts', layout: 'vertical', gap: 8, columns: 1 }, children: [row] } as never);
     const heading = text(ctx, 'Parts heading', 'Your four parts', 16, 14, 268, { fontSize: 14, fontWeight: 700, color: L.muted, role: 'heading', headingLevel: 2 });
-    const total = text(ctx, 'Total words', `{${vars.map((v) => words(v.name)).join(' + ')}} words in all. Press a part to go back and change it.`, 16, 48 + 4 * 52 + 4, 268, { fontSize: 15, color: L.muted, lineHeight: 1.4 });
-    const list = panel(ctx, 'Parts list', box.x, box.y, 300, 48 + 4 * 52 + 80, [heading, ...rows, total], { role: 'region', ariaLabel: 'The four parts of your reflection' });
+    const total = text(ctx, 'Total words', '{totalWords} words in all. Press a part to go back and change it.', 16, 48 + 4 * 52 + 4, 268, { fontSize: 15, color: L.muted, lineHeight: 1.4 });
+    const list = panel(ctx, 'Parts list', box.x, box.y, 300, 48 + 4 * 52 + 80, [heading, rows, total], { role: 'region', ariaLabel: 'The four parts of your reflection' });
     const all = textBox(ctx, 'Whole reflection', reflection, box.x + 324, box.y, box.width - 324, 320, '', 'Your whole reflection, ready to copy');
     const hint = text(ctx, 'Copy hint', 'Click in the box, press Ctrl+A (Cmd+A on a Mac) to select it all and Ctrl+C to copy it, or email it to yourself. To change what you wrote, use the parts on the left.', box.x + 324, box.y + 332, box.width - 324, { fontSize: 15, color: L.muted, lineHeight: 1.4 });
     const back = button(ctx, 'Back button', 'Back', box.x, 524, 130, false);
@@ -142,8 +160,8 @@ function build(colourway: Colourway) {
     const g = graph(whole);
     const arrive = g.event('event.start', {}, 'Put it all together');
     g.run(arrive, setVar(reflection, reportExpr('My reflection', PROMPTS.map((p, i) => [p.short, vars[i]] as [string, typeof reflection]), '(Not written yet)')));
-    rows.forEach((row, i) => g.run(click(g, row, 'Parts'), go(pages[i])));
-    g.run(click(g, back, 'Back'), go(pages[PROMPTS.length - 1]));
+    g.then(g.event('event.pointer', { target: row.id, type: 'click' }, 'A part row'), 'action.artboard', { to: 'expression', expr: 'parts[event.index].page', transition: 'fade', duration: 250 });
+    g.run(click(g, back, 'Back'), goPrevious());
     g.run(click(g, mail, 'Email'), ['action.url', { url: mailExpr('My reflection', 'reflection'), target: '_self' }]);
     checklist.push(
       item('Change the headings the whole reflection uses: the Set variable node after "Put it all together" (Interactions tab) lists each part with its heading', all, whole),
@@ -154,13 +172,18 @@ function build(colourway: Colourway) {
   checklist.unshift(item('Write the title and the line under it on the first page', hero.children.find((n) => n.name === 'Subtitle'), hero));
   checklist.push(
     item('Change how many words the count line asks for: the "aim" variable (Variables tab)', undefined, pages[0]),
-    item('The four pills are repeated on every part page: if you rename a part, change its pill on each page', undefined, pages[1]),
-    item('Writing is saved by Save user data nodes (Back, Save, Next and the pills) and brought back by the Load user data node in "Before activity loads" on the first page. To add a part, duplicate a part page, add a text variable for it and tick it in every Save and Load user data node', undefined, hero),
+    item('The four pills are one layer repeated over the live "parts" variable (Variables tab): if you rename a part, change its name and page name there and rename the page to match. A pill goes to the page it names', undefined, pages[1]),
+    item('Writing is kept as it is written: the four text variables are ticked Save as user data (Variables tab), so there is no Save or Load node to maintain. To add a part, duplicate a part page into the Journal group, add a text variable for it ticked Save as user data, and add it to "parts", "totalWords" and "resumeAt"', undefined, hero),
     item('Check where it is saved: on the Link for StudyDesk each learner\'s reflection is kept under their StudyDesk session, anywhere else it stays in their browser (Share)', undefined, hero),
   );
 
   project.settings.reporting = { completion: 'artboard', completionArtboard: whole.id };
-  spreadPages(project);
+  //Notes for whoever edits the template, below the pages
+  const below = (p: Artboard, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });
+  addNote(pages[0], { ...below(pages[0], 0, 440), text: '**User data** The four text variables are ticked Save as user data: kept as they change and put back before the journal opens. There are no Save or Load nodes, and `returning` is live from `userData.restored`.', colour: 'sky' });
+  addNote(pages[0], { ...below(pages[0], 456, 440), text: '**One pill, four parts.** The pills and the rows on the last page are one layer repeated over the live `parts` list, and one flow goes to `parts[event.index].page` by name.', colour: 'sky' });
+  addNote(hero, { ...below(hero, 0, 440), text: '[ ] **Make it yours** in the Variables tab. Write your own prompts. The word count and the length bar both read `aim`, in the Variables tab.', colour: 'gold' });
+
   return { project, checklist };
 }
 

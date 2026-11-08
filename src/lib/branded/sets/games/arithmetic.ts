@@ -159,7 +159,7 @@ function build(colourway: Colourway) {
   const below = (p: typeof page, x: number, w: number) => ({ x, y: p.height + 14, w, h: 84 });
   addNote(page, { ...below(page, 0, 440), text: '**Countdown / clock** One node counts the seconds up into `seconds` and stops when the last answer is in. It holds still if the learner leaves the page, with no timer or running flag to keep.', colour: 'sky' });
   addNote(page, { ...below(page, 456, 440), text: '**Live variables** `correct` and `feedback` are worked out from `given`, so a flow only sets what was given and the marking, the colours and the words follow.', colour: 'sky' });
-  addNote(page, { ...below(page, 912, 440), text: '[ ] Change `operation`, `lowest`, `highest` and `howMany` in the Variables tab. The sums use `randInt` and the wrong options use `shuffle`, so every play is a new set.', colour: 'gold' });
+  addNote(hero.page, { ...below(hero.page, 0, 440), text: '[ ] **Set the quiz up** in the Variables tab. Change `operation`, `lowest`, `highest` and `howMany` in the Variables tab. The sums use `randInt` and the wrong options use `shuffle`, so every play is a new set.', colour: 'gold' });
 
   return { project, checklist };
 }

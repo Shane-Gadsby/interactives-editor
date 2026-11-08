@@ -199,7 +199,7 @@ function build(colourway: Colourway) {
   const below = (p: typeof page, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });
   addNote(page, { ...below(page, 0, 440), text: '**Key navigation** The grid is one Tab stop and the arrow keys move between its squares, writing the square to `cursor`. Enter on a square is a click, so keyboard and mouse share one flow.', colour: 'sky' });
   addNote(page, { ...below(page, 456, 440), text: '**Drag events** One drag flow reads `event.startIndex` and `event.index` (the square under the pointer), so there is no pointer maths to redo if the grid moves or changes size.', colour: 'sky' });
-  addNote(page, { ...below(page, 912, 440), text: '[ ] Put your own words in the `words` variable. `line` and `hit` are live variables, so they follow whatever picked the first and last letter.', colour: 'gold' });
+  addNote(hero.page, { ...below(hero.page, 0, 440), text: '[ ] **Make it yours** in the Variables tab. Put your own words in the `words` variable. `line` and `hit` are live variables, so they follow whatever picked the first and last letter.', colour: 'gold' });
 
   return { project, checklist };
 }

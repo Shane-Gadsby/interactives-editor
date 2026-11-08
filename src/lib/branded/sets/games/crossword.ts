@@ -269,7 +269,7 @@ function build(colourway: Colourway) {
   const below = (x: number, w: number) => ({ x, y: play.height + 14, w, h: 96 });
   addNote(play, { ...below(0, 440), text: '**Live variables** `entries`, `letters`, `starts`, both clue lists, `aw` (the word under the chosen square), `done` and `status` are worked out from the words and the squares. The flows only change what was typed.', colour: 'sky' });
   addNote(play, { ...below(456, 440), text: '**One flow for the arrows.** All four keys are one On key with an Only if, rather than four copies. The grid is a single cursor (`sel`) so typing can run on to the next square, which is why it is not a key-navigation list.', colour: 'sky' });
-  addNote(play, { ...below(912, 440), text: '[ ] Write your own words and clues in the `words` variable. The grid is laid out for you, and a word that cannot cross the others is left out.', colour: 'gold' });
+  addNote(hero.page, { x: 0, y: hero.page.height + 14, w: 440, h: 88, text: '[ ] **Make it yours** in the Variables tab. Write your own words and clues in the `words` variable. The grid is laid out for you, and a word that cannot cross the others is left out.', colour: 'gold' });
 
   return { project, checklist };
 }

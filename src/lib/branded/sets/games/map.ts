@@ -1,6 +1,6 @@
 //Game map: a map page with five stage markers that unlock in order, a small activity page behind each, ticks for the ones done, and a reward page at the end.
 import { createNode, type Artboard, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, darkButton, focus, go, goNext, groupPages, heroPage, lit, set } from './common';
 
@@ -217,6 +217,13 @@ function build(colourway: Colourway) {
   return { project, checklist };
 }
 
+/** The map with every stage done, and each stage page with an answer picked (so its feedback shows). */
+const MAP_LAYOUT_STATES: LayoutState[] = [
+  { label: 'all stages done', page: 'Map', vars: { done: 5 } },
+  { label: 'right option picked', page: STAGES.map((_, i) => `Stage ${i + 1}`), vars: { picked: 0, answer: 0 } },
+  { label: 'wrong option picked', page: STAGES.map((_, i) => `Stage ${i + 1}`), vars: { picked: 1, answer: 0 } },
+];
+
 export const gameMap: BrandedStarter = {
   key: 'games/game-map',
   set: 'games',
@@ -224,4 +231,5 @@ export const gameMap: BrandedStarter = {
   description: 'A map with five stage markers on a path. Stages unlock one after another, each opens its own activity page (a question to answer), finished stages get a tick, and finishing all five opens a reward page. Markers work with the keyboard and say whether they are locked.',
   tags: ['game', 'map', 'multi-page', 'variables'],
   build,
+  layoutStates: MAP_LAYOUT_STATES,
 };

@@ -329,17 +329,18 @@ describe('branded writing starters and the interactive book', () => {
     it('has a goals page, three steps, an export page and a progress list on each of them', () => {
       const p = project();
       expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual([HERO, 'My goals', 'Step 1: Where I am', 'Step 2: One change', 'Step 3: My plan', 'Export']);
-      for (const name of ['My goals', 'Step 1: Where I am', 'Step 2: One change', 'Step 3: My plan', 'Export']) {
-        const list = layer(p, name, 'Progress list') as unknown as { children: SceneNode[] };
-        expect(list.children.filter((c) => c.name.startsWith('Progress: '))).toHaveLength(5);
-      }
+      //the parts and the export are one page group, and each page's progress list is one row repeated over the "parts" list
+      expect(p.artboardGroups).toHaveLength(1);
+      expect(p.artboards.filter((a) => !a.isMaster && a.group).map((a) => a.name)).toEqual(['My goals', 'Step 1: Where I am', 'Step 2: One change', 'Step 3: My plan', 'Export']);
+      expect(p.variables.filter((v) => v.userData).map((v) => v.name)).toEqual(['goals', 'step1', 'step2', 'step3', 'exported']);
+      expect(p.artboards.flatMap((a) => a.logic.nodes).filter((n) => n.kind === 'action.saveUserData' || n.kind === 'action.loadUserData')).toHaveLength(0);
       for (const name of ['My goals', 'Step 1: Where I am', 'Step 2: One change', 'Step 3: My plan']) {
         expect(layer(p, name, 'Prompt')).toBeTruthy();
         expect(layer(p, name, 'Text box').type).toBe('input');
       }
     });
 
-    it('typing sets the variable and a live word count, and Save says it is saved until more is typed', async () => {
+    it('typing sets the variable and a live word count, and the note says it is saved as you write', async () => {
       const p = project();
       const player = await open(p);
       await click(layer(p, HERO, 'Start button').id);
@@ -351,12 +352,7 @@ describe('branded writing starters and the interactive book', () => {
       await settle(player, 100);
       expect(textOf(layer(p, 'My goals', 'Word count').id)).toBe('9 words');
       expect(textOf(layer(p, 'My goals', 'Progress count').id)).toBe('1 of 4 parts written');
-      await click(layer(p, 'My goals', 'Save button').id);
-      await settle(player, 100);
-      expect(textOf(layer(p, 'My goals', 'Saved note').id)).toBe('Saved.');
-      await type(layer(p, 'My goals', 'Text box').id, 'I want to finish the readings before each tutorial, and keep up.');
-      await settle(player, 100);
-      expect(textOf(layer(p, 'My goals', 'Saved note').id)).toBe('');
+      expect(textOf(layer(p, 'My goals', 'Saved note').id)).toBe('Saved as you write.');
       player.destroy();
     });
 
@@ -369,18 +365,19 @@ describe('branded writing starters and the interactive book', () => {
       await click(layer(p, 'My goals', 'Next button').id);
       await settle(player);
       expect(player.artboard.name).toBe('Step 1: Where I am');
-      expect(textOf(layer(p, 'Step 1: Where I am', 'Progress: My goals').id)).toContain('✓');
-      expect(textOf(layer(p, 'Step 1: Where I am', 'Progress: Step 1: Where I am').id)).toContain('○');
-      expect(el(layer(p, 'Step 1: Where I am', 'Progress: Step 1: Where I am').id).getAttribute('aria-label')).toBe('Step 1: Where I am: not written yet');
-      expect(el(layer(p, 'Step 1: Where I am', 'Progress: My goals').id).getAttribute('aria-label')).toBe('My goals: written');
-      await click(layer(p, 'Step 1: Where I am', 'Progress: Step 3: My plan').id);
+      const row = (page: string, n: number) => `${layer(p, page, 'Progress row').id}~${n}`;
+      expect(textOf(`${layer(p, 'Step 1: Where I am', 'Row label').id}~0`)).toContain('✓');
+      expect(textOf(`${layer(p, 'Step 1: Where I am', 'Row label').id}~1`)).toContain('○');
+      expect(el(row('Step 1: Where I am', 1)).getAttribute('aria-label')).toBe('Step 1: Where I am: not written yet');
+      expect(el(row('Step 1: Where I am', 0)).getAttribute('aria-label')).toBe('My goals: written');
+      await click(row('Step 1: Where I am', 3));
       await settle(player);
       expect(player.artboard.name).toBe('Step 3: My plan');
       await click(layer(p, 'Step 3: My plan', 'Back button').id);
       await settle(player);
       expect(player.artboard.name).toBe('Step 2: One change');
       expect(boxValue(layer(p, 'Step 2: One change', 'Text box').id)).toBe('');
-      await click(layer(p, 'Step 2: One change', 'Progress: My goals').id);
+      await click(`${layer(p, 'Step 2: One change', 'Progress row').id}~0`);
       await settle(player);
       expect(boxValue(layer(p, 'My goals', 'Text box').id)).toBe('Goal text here');
       player.destroy();
@@ -405,7 +402,7 @@ describe('branded writing starters and the interactive book', () => {
       player.goTo('Export');
       await settle(player, 100);
       expect(textOf(layer(p, 'Export', 'Missing note').id)).toContain('Everything is written');
-      expect(textOf(layer(p, 'Export', 'Progress: Export').id)).toContain('✓');
+      expect(textOf(`${layer(p, 'Export', 'Row label').id}~4`)).toContain('✓');
       player.destroy();
     });
 
@@ -456,7 +453,7 @@ describe('branded writing starters and the interactive book', () => {
       await settle(b);
       expect(b.artboard.name).toBe('Step 2: One change');
       //Go back to the goals and the text is in the box
-      await click(layer(p, 'Step 2: One change', 'Progress: My goals').id);
+      await click(`${layer(p, 'Step 2: One change', 'Progress row').id}~0`);
       await settle(b);
       expect(boxValue(layer(p, 'My goals', 'Text box').id)).toBe('Goals that persist');
       b.destroy();
@@ -512,15 +509,17 @@ describe('branded writing starters and the interactive book', () => {
       const count = layer(p, PARTS[0], 'Word count').id;
       const bar = layer(p, PARTS[0], 'Length bar').id;
       expect(textOf(count)).toBe('0 words  (aim for about 50)');
-      expect(parseFloat(el(bar).style.width)).toBe(0);
+      //the Progress layer's bar is a share of its 160 px track: this gives it back in pixels
+      const fill = () => (parseFloat((el(bar).querySelector('.ix-bar') as HTMLElement).style.width) * 160) / 100;
+      expect(fill()).toBe(0);
       await type(layer(p, PARTS[0], 'Text box').id, 'We ran the practice presentation twice  with the group.');
       await settle(player, 100);
       expect(textOf(count)).toBe('9 words  (aim for about 50)');
-      expect(parseFloat(el(bar).style.width)).toBeCloseTo((160 * 9) / 50, 1);
+      expect(fill()).toBeCloseTo((160 * 9) / 50, 1);
       await type(layer(p, PARTS[0], 'Text box').id, 'word '.repeat(60));
       await settle(player, 100);
       expect(textOf(count)).toBe('60 words  ✓ a good length');
-      expect(parseFloat(el(bar).style.width)).toBe(160);
+      expect(fill()).toBe(160);
       //the aim is a variable the author can change
       player.setVariable('aim', 100);
       await settle(player, 100);
@@ -540,10 +539,12 @@ describe('branded writing starters and the interactive book', () => {
       await click(layer(p, PARTS[0], 'Next button').id);
       await settle(player);
       expect(player.artboard.name).toBe(PARTS[1]);
+      //moving to another page saves straight away
       expect(saved.what).toBe('The group met on Tuesday.');
-      expect(textOf(layer(p, PARTS[1], 'Part 1 pill').id)).toContain('✓');
-      expect(textOf(layer(p, PARTS[1], 'Part 3 pill').id)).toContain('○');
-      await click(layer(p, PARTS[1], 'Part 4 pill').id);
+      const pill = (page: string, n: number) => `${layer(p, page, 'Part pill').id}~${n - 1}`;
+      expect(textOf(`${layer(p, PARTS[1], 'Pill label').id}~0`)).toContain('✓');
+      expect(textOf(`${layer(p, PARTS[1], 'Pill label').id}~2`)).toContain('○');
+      await click(pill(PARTS[1], 4));
       await settle(player);
       expect(player.artboard.name).toBe(PARTS[3]);
       expect(layer(p, PARTS[3], 'Next button')).toBeTruthy();
@@ -567,8 +568,8 @@ describe('branded writing starters and the interactive book', () => {
       expect(whole).toBe('MY REFLECTION\n\nWHAT HAPPENED\nWe met on Tuesday.\n\nHOW I FELT\nNervous at first.\n\nWHAT I LEARNT\nAgree the plan early.\n\nWHAT I WILL DO NEXT\nBook a check-in.');
       expect(boxValue(layer(p, 'My reflection', 'Whole reflection').id)).toBe(whole);
       expect(textOf(layer(p, 'My reflection', 'Total words').id)).toContain('14 words in all');
-      expect(textOf(layer(p, 'My reflection', 'Part 3 row').id)).toContain('✓');
-      await click(layer(p, 'My reflection', 'Part 3 row').id);
+      expect(textOf(`${layer(p, 'My reflection', 'Row label').id}~2`)).toContain('✓');
+      await click(`${layer(p, 'My reflection', 'Part row').id}~2`);
       await settle(player);
       expect(player.artboard.name).toBe(PARTS[2]);
       expect(boxValue(layer(p, PARTS[2], 'Text box').id)).toBe('Agree the plan early.');
@@ -595,7 +596,7 @@ describe('branded writing starters and the interactive book', () => {
       await click(layer(p, HERO, 'Continue button').id);
       await settle(b);
       expect(b.artboard.name).toBe(PARTS[2]);
-      await click(layer(p, PARTS[2], 'Part 1 pill').id);
+      await click(`${layer(p, PARTS[2], 'Part pill').id}~0`);
       await settle(b);
       expect(boxValue(layer(p, PARTS[0], 'Text box').id)).toBe('It happened on Tuesday.');
       b.destroy();
