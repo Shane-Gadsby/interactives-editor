@@ -4,6 +4,7 @@ import { store } from '../store/store';
 import { assetKind, assetUrls, imageSize, storeFile, swapAssetId, videoSize } from './assets';
 import { refreshAudioDuration, type ReplacedAudioFit } from './captions-edit';
 import { importSvg } from './svg-import';
+import { askAboutPictures } from './alt-prompt';
 import { acceptsDesignFiles, isDesignFile, pickWithHandles } from './links';
 
 /** Upload files as assets. Images and videos are placed on the artboard at `at` (artboard coordinates). */
@@ -88,7 +89,10 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
     }
   }
   if (!added.length) {
-    if (nodes.length && artboardId) st.addNodes(nodes, { artboardId });
+    if (nodes.length && artboardId) {
+      st.addNodes(nodes, { artboardId });
+      askAboutPictures(projectId, nodes.map((node) => ({ node })));
+    }
     return added;
   }
   st.update((d) => {
@@ -100,7 +104,10 @@ export async function insertFiles(files: File[], artboardId: string | null, at: 
       }
     }
   });
-  if (nodes.length && artboardId) st.addNodes(nodes, { artboardId });
+  if (nodes.length && artboardId) {
+    st.addNodes(nodes, { artboardId });
+    askAboutPictures(projectId, nodes.map((node) => ({ node })));
+  }
   const fonts = added.filter((a) => assetKind(a.mime, a.name) === 'font').length;
   if (fonts) st.toast(`Added ${fonts} font${fonts > 1 ? 's' : ''}; pick ${fonts > 1 ? 'them' : 'it'} in a text layer's font list`);
   return added;

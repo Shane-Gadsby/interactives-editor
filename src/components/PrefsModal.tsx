@@ -108,6 +108,12 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
             onChange={(v) => setPrefs({ showNotes: v })}
           />
           <CheckField
+            label="Ask what a picture shows"
+            title="When you add a picture or video, a small box on its settings asks what it shows, so it gets a text alternative for screen readers. You can skip it or mark the picture decorative, and it never stops you carrying on. Switch it off if you add a lot of pictures at once"
+            value={p.askPictureDescription}
+            onChange={(v) => setPrefs({ askPictureDescription: v })}
+          />
+          <CheckField
             label="Accessibility features"
             title="Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview. Switch it off to see whether a problem comes from it"
             value={p.accessibility}

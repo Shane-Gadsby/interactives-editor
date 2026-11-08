@@ -76,6 +76,12 @@ export const PROP_HELP: Record<string, HelpTarget> = {
   trim: { to: 'fill-stroke#trim-path', label: 'Trim path' },
   blend: { to: 'fill-stroke#effects', label: 'Blend' },
   'tab-stop': { to: 'accessibility#tab-order', label: 'Tab stop' },
+  opacity: { to: 'fill-stroke#effects', label: 'Opacity' },
+  'scale-w': { to: 'fill-stroke#effects', label: 'Scale' },
+  'scale-h': { to: 'fill-stroke#effects', label: 'Scale' },
+  pivot: { to: 'fill-stroke#effects', label: 'Pivot' },
+  'pivot-x': { to: 'fill-stroke#effects', label: 'Pivot' },
+  'pivot-y': { to: 'fill-stroke#effects', label: 'Pivot' },
 };
 
 export const TIMELINE_KEY_HELP: HelpTarget = { to: 'timelines#adding-keyframes', label: 'Keyframes' };

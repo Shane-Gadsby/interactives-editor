@@ -9699,3 +9699,51 @@ code {
   color: var(--muted);
   cursor: default;
 }
+
+/* ---------------------------------------------------------------- "What is this a picture of?" on a layer just added */
+.alt-prompt {
+  margin: 8px 10px;
+  padding: 10px;
+  border: 1px solid var(--primary-bg);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+.alt-prompt-q {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.alt-prompt .hint {
+  margin: 0 0 6px;
+}
+.alt-prompt-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.alt-prompt-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.alt-prompt-actions button {
+  padding: 3px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.alt-prompt-actions button:hover {
+  background: var(--panel);
+}
+.alt-prompt-actions .alt-prompt-save {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+  font-weight: 600;
+}
+.alt-prompt-actions .alt-prompt-save:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

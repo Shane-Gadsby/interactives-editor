@@ -318,6 +318,7 @@ Open **Preferences** from the gear in the top bar (or on the projects page). The
 - **Show layers outside clipped artboards**: on by default. When an artboard has **Clip content to artboard** on, the parts of layers that hang outside it are drawn faintly, in diagonal stripes, beside it on the canvas, so you can still see them and click them to select. It is only how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
 - **Show tooltips**: explanations when you hover buttons and fields.
 - **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
+- **Ask what a picture shows**: on by default. When you add a picture or video, a small box at the top of its settings asks what it shows. See [Describing a picture as you add it](accessibility#describing-a-picture-as-you-add-it). Switch it off if you add a lot of pictures at once.
 - **Recording**: there is none to set. See [What the editor records](what-is-recorded).
 - **Screen reader strip**: off by default. A strip under Preview that shows what a screen reader would be told by Announce nodes, as it is spoken. It only shows while Accessibility features is on. The same switch is in the Preview header, next to Accessibility.
 
@@ -1303,6 +1304,13 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - **Pressed state** and **Current**: see [Pressed and current](accessibility#pressed-and-current).
 - **Shortcut**: a key that clicks the layer, see [Shortcuts](accessibility#shortcuts).
 - Buttons, inputs and links show only the text alternative and description. They already have the right role and keyboard behaviour.
+
+## Describing a picture as you add it
+Add a picture or a video (dropped, pasted, from the **Image** tool or the **Media Catalogue**) and the top of its settings shows a small box: **What is this a picture of?**. A few words is enough. **Save** (or <kbd>Enter</kbd>) writes them as the layer's **Text alternative**, which a screen reader reads in place of the picture. **Decorative** marks a picture that only decorates the page, so a screen reader skips it. **Skip** (or <kbd>Escape</kbd>) puts the box away for that layer.
+
+The box never stops you doing anything else. Its example text comes from the file's name, or from the Media Catalogue's own description of the photo, and is never saved unless you type it. A picture you skip or answer is not asked about again, and the list of pictures still waiting is kept per project in your browser. The [Accessibility checker](accessibility-checker) still lists any picture with no description until it has one.
+
+Turn the box off in [Preferences](preferences) (**Ask what a picture shows**) if you add many pictures at once and would rather describe them later from the checker.
 
 ## What the keyboard does
 - **Tab** and **Shift+Tab** move between tab stops, in layer order unless you set a tab order (below). A visible ring shows where the focus is (only for the keyboard, not after a mouse click). It is two tones, the theme's focus colour with a black or white halo either side of it, so it can be seen on any background.

@@ -85,6 +85,7 @@ import { ChildOrder } from '../components/ChildOrder';
 import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
 import { GridAlignFields } from '../components/GridAlignFields';
 import { PivotFields } from '../components/PivotFields';
+import { AltPromptCard } from './AltPromptCard';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
 import { OptimiseOutputFields } from './OptimiseOutput';
@@ -792,6 +793,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
   const isConn = sameType && n.type === 'connector';
   return (
     <>
+      {single && (n.type === 'image' || n.type === 'video') && <AltPromptCard node={n} projectId={project.id} />}
       <AlignBar count={nodes.length} shapes={nodes.filter((x) => !(x.type === 'group' || x.type === 'text' || x.type === 'link')).length} />
       {/* the layer's type heads its own section further down (Path, Text, ...), so this one is just "Layer" */}
       <Section id="layer-selection" help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
