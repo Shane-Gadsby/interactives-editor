@@ -9,6 +9,7 @@ import { ensureGoogleFont } from '../lib/font-catalog';
 import { lookFor } from '../lib/themes';
 import { previewScope } from '../lib/data';
 import { Color, Num, PaintField, useSetter } from './Inspector';
+import { PropRow } from '../lib/prop-search';
 
 /** A progress layer: the value it shows, how it grows, its bar, and what assistive tech is told. The track is the Fill and Stroke sections. */
 export function ProgressSection({ nodes, project }: { nodes: ProgressNode[]; project: Project }) {
@@ -36,7 +37,9 @@ export function ProgressSection({ nodes, project }: { nodes: ProgressNode[]; pro
       </Row>
       <Num node={n} ids={ids} prop="cornerRadius" label="Radius" min={0} />
       <div className="field-label block">Bar</div>
-      <PaintField paint={n.barFill} allowNone={false} project={project} box={{ w: n.width, h: n.height }} onChange={(p) => set({ barFill: p })} />
+      <PropRow k="Bar fill" words={['bar colour', 'progress colour', 'fill']}>
+        <PaintField paint={n.barFill} allowNone={false} project={project} box={{ w: n.width, h: n.height }} onChange={(p) => set({ barFill: p })} />
+      </PropRow>
       <SelectField<'progressbar' | 'meter' | 'none'>
         label="Tells screen readers"
         title="What it is to assistive technology: a progress bar (work towards a goal), a meter (a measurement in a range), or nothing at all. Name it in Accessibility"
@@ -175,14 +178,16 @@ export function ChartSection({ nodes, project, ab }: { nodes: ChartNode[]; proje
       )}
       <div className="field-label block">Colours</div>
       {colors.map((c, i) => (
-        <Row key={i} className="stop-row">
+        <Row key={i} className="stop-row" k={`Chart colour ${i + 1}`} words={["chart colours", "series colour"]}>
           <ColorField tokens value={c} onChange={(x) => set({ colors: colors.map((y, j) => (j === i ? x : y)) }, `chart-colors-${ids.join(',')}`)} onCommit={() => store().commit()} />
           <IconButton icon={<Icons.trash />} title="Remove this colour" disabled={colors.length <= 1} onClick={() => setColors(colors.filter((_, j) => j !== i))} />
         </Row>
       ))}
-      <button className="link-btn" onClick={() => setColors([...colors, palette[colors.length % palette.length]])}>
-        + Add colour
-      </button>
+      <Row k="Chart colours" words={['add colour', 'palette', 'series colour']}>
+        <button className="link-btn" onClick={() => setColors([...colors, palette[colors.length % palette.length]])}>
+          + Add colour
+        </button>
+      </Row>
       {!circle && <CheckField label="A colour for each item" title="Give each item the next colour in the list, instead of all of them the first" value={!!n.varyColors} onChange={(v) => set({ varyColors: v })} />}
       <Row>
         <Color node={n} ids={ids} prop="color" label="Text colour" />

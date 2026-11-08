@@ -26,7 +26,7 @@ afterEach(() => {
   host.remove();
 });
 
-const TYPES: NodeType[] = ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'draw', 'shader', 'bone'];
+const TYPES: NodeType[] = ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'draw', 'shader', 'bone', 'progress', 'chart'];
 
 interface Scene {
   s: EditorStore;

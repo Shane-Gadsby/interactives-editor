@@ -28,7 +28,7 @@ export function MasterSection({ ab, project }: { ab: Artboard; project: Project 
           options={[{ value: '', label: choices.length ? 'None' : 'No masters yet' }, ...choices.map((a) => ({ value: a.id, label: a.name }))]}
           onChange={(v) => v && store().setMasterOf([ab.id], v)}
         />
-        <Row>
+        <Row k="Make master" words={["page master", "template page"]}>
           <button className="btn" title="Keep this artboard as a page master. Then choose it as the master of other pages" onClick={() => store().markAsMaster(ab.id, true)}>
             Make this a master
           </button>
@@ -50,7 +50,7 @@ export function MasterSection({ ab, project }: { ab: Artboard; project: Project 
         options={[{ value: '', label: 'None' }, ...choices.map((a) => ({ value: a.id, label: a.name }))]}
         onChange={(v) => store().setMasterOf([ab.id], v || null)}
       />
-      <Row>
+      <Row k="Edit master" words={["master", "detach"]}>
         <button className="btn" title="Select the master to change the layers every page shares" onClick={() => store().editMasterOf(ab.id)}>
           Edit master
         </button>
@@ -111,7 +111,7 @@ function MasterOfPages({ ab, project, used }: { ab: Artboard; project: Project; 
         />
       )}
       {candidates.length > 1 && (
-        <Row>
+        <Row k="Use master for pages" words={["master", "pages"]}>
           <button className="btn" title="Every artboard that has no master of its own draws this one" onClick={() => store().setMasterOf(candidates.map((a) => a.id), ab.id)}>
             Use for all other pages
           </button>
@@ -130,7 +130,7 @@ function MasterOfPages({ ab, project, used }: { ab: Artboard; project: Project; 
         </>
       )}
       {used.length === 0 && (
-        <Row>
+        <Row k="Not a page master" words={["master"]}>
           <button className="btn" onClick={() => store().markAsMaster(ab.id, false)}>
             Not a page master
           </button>
