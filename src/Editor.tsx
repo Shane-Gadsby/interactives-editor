@@ -4,6 +4,7 @@ import { PACKAGE_EXTENSION, countNotes, pickTheme, readViewerPrefs, tokenByName,
 import { syncProjectWithPalette } from './lib/palette-look';
 import { EditorStore, setCurrentStore, store, useEditor, type Tool } from './store/store';
 import { ToastView } from './components/ToastView';
+import { canCrop } from './lib/crop';
 import { ApiError, ConflictError, liveSeqOf, loadProjectRecord, saveProject, session } from './lib/db';
 import { LIVE_FALLBACK_EVENT, LiveSession, liveSession, setLiveSession } from './lib/live';
 import { assetUrls } from './lib/assets';
@@ -378,7 +379,8 @@ function useShortcuts() {
         return;
       }
       if (k === 'escape') {
-        if (st.editingTextId) s.set({ editingTextId: null });
+        if (st.croppingId) s.set({ croppingId: null });
+        else if (st.editingTextId) s.set({ editingTextId: null });
         else if (st.focusId) s.set({ selection: [st.focusId], focusId: null }); else if (st.selection.length || st.artboardSelected) s.set({ selection: [], artboardSelected: false });
         else s.set({ tool: 'select' });
         return;
@@ -388,6 +390,7 @@ function useShortcuts() {
         if (n?.type === 'group' || n?.type === 'frame') s.set({ focusId: n.id, selection: n.children.map((c) => c.id).slice(-1) });
         else if (n?.type === 'path') s.set({ editingPathId: n.id });
         else if (n?.type === 'text' || n?.type === 'button' || n?.type === 'link') s.set({ editingTextId: n.id });
+        else if (n?.type === 'image' && canCrop(n)) s.set({ croppingId: n.id });
         return;
       }
       if (e.altKey && !mod && k.startsWith('arrow') && st.selection.length === 1) {

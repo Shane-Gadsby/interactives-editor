@@ -64,6 +64,8 @@ import { copySelection, pasteNodes } from '../lib/clipboard';
 import { inGhostExtent } from './ghost';
 import { openContextHelp } from '../help/Help';
 import { Rulers } from './Rulers';
+import { CropOverlay } from './CropOverlay';
+import { canCrop } from '../lib/crop';
 import { Icons } from '../components/icons';
 import { freehandToPath } from './freehand';
 import { ArtboardView, holdView, whenViewDrawn } from './ArtboardView';
@@ -151,6 +153,7 @@ export function Canvas() {
     panY: st.panY,
     editingPathId: st.editingPathId,
     editingTextId: st.editingTextId,
+    croppingId: st.croppingId,
     focusId: st.focusId,
     showBones: st.showBones,
     timelineShown: st.timelineShown,
@@ -387,6 +390,10 @@ export function Canvas() {
       window.removeEventListener('keyup', up);
     };
   });
+  // Picking another layer (or nothing) ends crop mode
+  useEffect(() => {
+    if (s.croppingId && (s.selection.length !== 1 || s.selection[0] !== s.croppingId)) store().set({ croppingId: null });
+  }, [s.croppingId, s.selection]);
   const selPointRef = useRef(selPoint);
   selPointRef.current = selPoint;
 
@@ -1283,6 +1290,10 @@ export function Canvas() {
       setSelPoint(null);
       return;
     }
+    if (picked.type === 'image' && canCrop(picked)) {
+      store().set({ croppingId: picked.id, selection: [picked.id] });
+      return;
+    }
     if (picked.type === 'text' || picked.type === 'button' || picked.type === 'link') {
       store().set({ editingTextId: picked.id, selection: [picked.id] });
     }
@@ -2124,6 +2135,7 @@ export function Canvas() {
                 ],
               } as MenuItem,
               ...(one.type === 'text' || one.type === 'button' || one.type === 'link' ? [{ label: 'Edit text', hint: 'Enter', onClick: () => s2.set({ editingTextId: one.id }) } as MenuItem] : []),
+              ...(one.type === 'image' && canCrop(one) ? [{ label: 'Crop picture', hint: 'Enter', onClick: () => s2.set({ croppingId: one.id }) } as MenuItem] : []),
             ]
           : []),
         { separator: true },
@@ -2357,6 +2369,7 @@ export function Canvas() {
       <NotesLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} passive={s.tool === 'hand' || spaceHeld} />
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
+      {s.croppingId && active && <CropOverlay ab={active} id={s.croppingId} zoom={zoom} panX={panX} panY={panY} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} bounds={{ width: vp.current?.clientWidth ?? 2000, height: vp.current?.clientHeight ?? 1200 }} />}
       {toolHint && (
         <div className="tool-hint" role="status" style={{ left: toolHint.x + 18, top: toolHint.y + 20 }}>

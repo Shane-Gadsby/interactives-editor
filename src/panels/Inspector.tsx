@@ -86,6 +86,8 @@ import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
 import { GridAlignFields } from '../components/GridAlignFields';
 import { PivotFields } from '../components/PivotFields';
 import { AltPromptCard } from './AltPromptCard';
+import { CropFields } from '../components/CropFields';
+import { canCrop } from '../lib/crop';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
 import { OptimiseOutputFields } from './OptimiseOutput';
@@ -1430,6 +1432,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           />
           {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
           <SelectField label="Fit" value={n.fit} options={['cover', 'contain', 'fill'] as const} onChange={(v) => set({ fit: v })} />
+          {nodes.length === 1 && canCrop(n) && <CropFields node={n} />}
           {radius}
           <CheckField
             label="9-slice scaling"

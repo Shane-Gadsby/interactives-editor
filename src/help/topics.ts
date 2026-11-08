@@ -858,14 +858,24 @@ Copyright reporting for a course is run at course level, and this tab does not r
     id: 'images-media',
     title: 'Images, video and audio',
     group: 'Design',
-    summary: 'Adding files, the Assets panel, and 9-slice scaling for images.',
-    keywords: 'image picture photo svg video audio sound mp3 upload drop paste asset nine slice 9-slice n-slice',
+    summary: 'Adding files, the Assets panel, cropping a picture in its frame, and 9-slice scaling for images.',
+    keywords: 'image picture photo svg video audio sound mp3 upload drop paste asset nine slice 9-slice n-slice crop reposition zoom focal point face frame',
     body: `Drop files on the canvas, paste them, or use the **Image** tool. SVG files become editable vector layers; other images become image layers. Video files become video layers; audio files are stored as assets for the **Play sound** action.
 
 Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Media Catalogue** button in the tool bar's Media group finds a photo in the suite's library instead: see [The Media Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
 
 ## Image settings
 **Fit** (cover, contain, stretch), corner radius, and:
+
+### Cropping a picture
+Put a photo in a 300 by 200 frame and the face may be cut off. **Crop** moves and zooms the picture inside its frame without touching the file (the original stays in Assets), so **Fit** still decides how it starts out.
+
+- **Double-click** the picture, press <kbd>Enter</kbd> on it, use **Crop picture…** in its settings, or right-click and choose **Crop picture**.
+- **Drag** inside the frame to move the picture. **Scroll** over it to zoom under the pointer, or pull a corner, or press <kbd>+</kbd> and <kbd>-</kbd>. The arrow keys nudge (<kbd>Shift</kbd> for 10 pixels).
+- <kbd>Enter</kbd>, <kbd>Escape</kbd>, **Done**, or a click outside the frame finishes. **Reset** (or <kbd>0</kbd>) puts the picture back as **Fit** draws it. Each drag is one undo step.
+- The settings have the same three numbers: **Zoom** (100% is as **Fit** draws it, 200% shows the middle quarter) and **Picture X** and **Picture Y**, how far it is moved as percents of the frame. The picture always keeps covering the frame, so no empty edge shows.
+
+The crop is stored on the layer as \`crop\`: \`{x, y, zoom}\`, where \`x\` and \`y\` are fractions of the frame's width and height (0.1 is a tenth to the right) and \`zoom\` is 1 to 20. It is drawn scaled about the middle of the frame and then moved, and the frame (with its corner radius) clips the rest. A 9-slice or a mesh ignores it, a shader filter reads it, and the Lottie export shows the whole picture (it lists that in its notes). Older files and players show the picture uncropped.
 
 ### 9-slice scaling
 Turn on **9-slice** and set the four insets (in image pixels). The corners keep their size and the edges and middle stretch, so a rounded panel or button image can be resized without distortion. **Fill edges** chooses between *Stretch* and *Tile*: with *Tile* the edges and middle repeat the picture at its own size instead of stretching.

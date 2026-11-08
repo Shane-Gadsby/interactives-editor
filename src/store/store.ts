@@ -197,6 +197,8 @@ export interface EditorState {
   panY: number;
   editingPathId: string | null;
   editingTextId: string | null;
+  /** The picture layer being cropped on the canvas (drag it inside its frame, scroll to zoom). Interface state, never saved. */
+  croppingId: string | null;
   /** Draw bone glyphs on the canvas (they are never drawn in the player). */
   showBones: boolean;
   /** The selected range (UTF-16 offsets into the layer's text) while editing text on the canvas; style changes apply to it. */
@@ -310,6 +312,7 @@ export class EditorStore {
       panY: 80,
       editingPathId: null,
       editingTextId: null,
+      croppingId: null,
       showBones: true,
       textSelection: null,
       bottomTab: 'timeline',
@@ -547,6 +550,7 @@ export class EditorStore {
     const activeTimelineId = ab?.timelines.some((t) => t.id === s.activeTimelineId) ? s.activeTimelineId : null;
     const focusId = ab && s.focusId && locate(ab, s.focusId) ? s.focusId : null;
     const editingPathId = ab && s.editingPathId && locate(ab, s.editingPathId) ? s.editingPathId : null;
+    const croppingId = ab && s.croppingId && locate(ab, s.croppingId)?.node.type === 'image' ? s.croppingId : null;
     // a group can be selected too, not only a node, and so can a note on the graph
     const inGraph = (id: string) => !!ab && (ab.logic.nodes.some((n) => n.id === id) || !!ab.logic.groups?.some((g) => g.id === id) || !!ab.logic.notes?.some((n) => n.id === id));
     const logicSelection = s.logicSelection && inGraph(s.logicSelection) ? s.logicSelection : null;
@@ -559,10 +563,11 @@ export class EditorStore {
       activeTimelineId !== s.activeTimelineId ||
       focusId !== s.focusId ||
       editingPathId !== s.editingPathId ||
+      croppingId !== s.croppingId ||
       logicSelection !== s.logicSelection ||
       logicPicked !== s.logicPicked
     ) {
-      this.state = { ...s, activeArtboardId, selection, activeTimelineId, focusId, editingPathId, logicSelection, logicPicked, artboardPicked };
+      this.state = { ...s, activeArtboardId, selection, activeTimelineId, focusId, editingPathId, croppingId, logicSelection, logicPicked, artboardPicked };
     }
   }
 
