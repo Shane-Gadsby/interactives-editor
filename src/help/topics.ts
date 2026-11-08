@@ -638,8 +638,8 @@ Boolean operations (union, subtract, intersect, exclude) turn several shapes int
     id: 'fill-stroke',
     title: 'Fill, stroke and effects',
     group: 'Design',
-    summary: 'Solid, gradient and image fills; several fills and strokes per shape; strokes, dashes and trim; feather and drop shadows; shadow, blur and blend modes.',
-    keywords: 'colour color palette swatch preset toolbox brand gradient linear radial image fill stroke border dash cap join align inside outside shadow blur blend opacity trim path layers several multiple feather glow drop shadow eye hide reorder',
+    summary: 'Solid, gradient and image fills; several fills and strokes per shape; strokes, dashes and trim; feather and drop shadows; shadow, blur and blend modes; parallax depth.',
+    keywords: 'parallax depth tilt layered postcard pointer shift colour color palette swatch preset toolbox brand gradient linear radial image fill stroke border dash cap join align inside outside shadow blur blend opacity trim path layers several multiple feather glow drop shadow eye hide reorder',
     body: `## Fill
 Choose the type from the dropdown at the top of a fill: **None** (removes it), **Solid**, **Linear gradient**, **Radial gradient** or **Image** (cover, contain or fill). For a gradient, set the colour and position of each stop, press **+ Add stop** for more, and set the **Angle** of a linear one. Colours accept hex, \`rgb()\`, \`hsl()\` and names; the number box beside a colour is its opacity.
 
@@ -694,6 +694,16 @@ Two related settings are in the **Layer** section at the top of the Inspector, w
 - **Scale W** and **Scale H** are the layer's scale as percents of its drawn size (100% is as drawn, -100% flips it). The chain between them keeps the shape. The file keeps them as 1 = 100% (\`scaleX\`, \`scaleY\`, called Sx and Sy in older notes).
 - **Pivot** is the point the layer turns and scales around. Pick one of the nine dots, or type a percent across and down for anywhere between. The file keeps it as \`originX\` and \`originY\` (0 to 1, called Ox and Oy in older notes).
 - **Blend** is how the layer mixes with what is under it: *Normal*, *Dissolve*, *Darken*, *Multiply*, *Colour burn*, *Lighten*, *Screen*, *Colour dodge*, *Add (linear dodge)*, *Overlay*, *Soft light*, *Hard light*, *Difference*, *Exclusion*, *Hue*, *Saturation*, *Colour* or *Luminosity*. **Dissolve** draws each pixel either solid or not at all, with the layer's opacity as the odds: at 40% opacity, 40% of the pixels show at full strength, scattered, instead of everything fading. Animate the opacity for a speckled fade in or out. A single fill or stroke (in the paint list) can use every mode except Dissolve.
+
+## Depth (parallax)
+The **Depth** section gives a layer a depth, so it shifts as the viewer moves the pointer across the page, or tilts their phone, for a layered-postcard look. Pick **Small**, **Medium** or **Large**, or type your own **Amount** as a percent. A nearer layer (a bigger amount) moves further than a far one, so a background might be Small and the foreground Large. A negative amount moves the other way, with the pointer. Everything inside a frame or group goes with it.
+
+- **How far:** 100% is the project's **Depth range** (40 px unless you change it in the Project settings). A layer at 50% moves half that.
+- **Only when playing:** the canvas stays still while you edit, and the shift shows in Preview and the exported player. Clicks and hovers land where the layer is drawn.
+- **Reduced motion:** nothing moves for a viewer whose device asks for less motion, whatever the project settings say.
+- **Tilt:** turn on **Tilt moves depth layers** in the Project settings (off by default). On an iPhone or iPad the viewer's first tap asks permission for the motion sensor, never before; if they say no, or the device has no sensor, the layers follow the pointer only.
+- **Draggable layers** hold still, so they don't slide about under a finger, and a connector joining two moving layers does not follow the shift.
+- The file keeps it as \`depth\` on the layer (-100 to 100) and \`parallax: {range, tilt}\` in the project settings.
 
 Most of these can be animated: look for the diamond next to a field. See [Animatable properties](animatable-properties).`,
   },

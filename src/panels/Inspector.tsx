@@ -744,6 +744,21 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
           value={!!project.settings.reducedMotion}
           onChange={(v) => setProject((p) => (p.settings.reducedMotion = v))}
         />
+        <NumberField
+          label="Depth range"
+          title="How far in pixels a layer with a depth of 100% moves as the pointer goes from the middle to an edge of the window. Layers are set up in their own Depth section"
+          value={project.settings.parallax?.range ?? 40}
+          min={0}
+          max={400}
+          suffix="px"
+          onChange={(v) => setProject((p) => (p.settings.parallax = { ...p.settings.parallax, range: v === 40 ? undefined : v }), 'project-parallax-range')}
+        />
+        <CheckField
+          label="Tilt moves depth layers"
+          title="Phones and tablets: layers with a depth follow how the device is tilted, as well as the pointer. Off by default. On iPhones and iPads the viewer's first tap asks permission for the motion sensor; if they refuse (or there is no sensor) the layers follow the pointer only. Nothing moves for viewers who ask for less motion"
+          value={!!project.settings.parallax?.tilt}
+          onChange={(v) => setProject((p) => (p.settings.parallax = { ...p.settings.parallax, tilt: v ? true : undefined }))}
+        />
         <OptimiseOutputFields project={project} />
       </Section>
       <CaptionsSection project={project} />
@@ -889,6 +904,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
       {sameType && single && 'stroke' in n && !isConn && <PaintOrderSection nodes={nodes} />}
       <EffectsSection nodes={nodes} />
+      {!isConn && <DepthSection nodes={nodes} project={project} />}
       {single && !isConn && <ConstraintsSection node={n} />}
       {single && !isConn && <PageLinkSection node={n} ab={ab} project={project} />}
       {!isConn && nodes.every((x) => x.type !== 'bone') && <AnimateSection nodes={nodes} />}
@@ -1776,6 +1792,49 @@ const CURSOR_LABELS: Record<string, string> = {
   'zoom-out': 'zoom-out',
   none: 'none (hidden)',
 };
+
+const DEPTH_PRESETS: { value: string; label: string; amount: number }[] = [
+  { value: 'small', label: 'Small (20%)', amount: 20 },
+  { value: 'medium', label: 'Medium (50%)', amount: 50 },
+  { value: 'large', label: 'Large (100%)', amount: 100 },
+];
+
+/** Parallax: how far this layer shifts as the viewer moves the pointer (or tilts the phone), for a layered-postcard look. */
+export function DepthSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
+  const n = nodes[0];
+  const set = useSetter(nodes.map((x) => x.id));
+  const depth = n.depth ?? 0;
+  const preset = depth === 0 ? 'none' : DEPTH_PRESETS.find((p) => p.amount === Math.abs(depth) && depth > 0)?.value ?? 'custom';
+  const dragged = !!n.draggable && n.draggable.enabled !== false;
+  return (
+    <Section help="fill-stroke#depth-parallax" title="Depth" defaultOpen={!!n.depth}>
+      <SelectField
+        label="Depth"
+        title="How far this layer shifts as the viewer moves the pointer (or tilts a phone, if the project allows it). Nearer layers move more than far ones, which gives a layered-postcard look. Only in Preview and the exported player, never on the canvas"
+        value={preset}
+        options={[{ value: 'none', label: 'None (stays still)' }, ...DEPTH_PRESETS, ...(preset === 'custom' ? [{ value: 'custom', label: 'Custom' }] : [])]}
+        onChange={(v) => set({ depth: v === 'none' ? undefined : DEPTH_PRESETS.find((p) => p.value === v)?.amount ?? depth })}
+      />
+      <NumberField
+        label="Amount"
+        title="Percent of the project's depth range (see Project settings). Positive layers are nearer and move against the pointer, negative ones move with it"
+        value={depth}
+        min={-100}
+        max={100}
+        suffix="%"
+        onChange={(v) => set({ depth: v ? v : undefined }, 'depth')}
+      />
+      {n.depth ? (
+        <p className="hint">
+          Moves up to {Math.round((Math.abs(depth) / 100) * (project.settings.parallax?.range ?? 40))} px{depth < 0 ? ', with the pointer' : ', against the pointer'}. Everything inside the layer goes with it.
+          {dragged ? ' A layer people can drag holds still.' : ''} Nothing moves for viewers who ask for less motion.
+        </p>
+      ) : (
+        <p className="hint">Give a background a small depth and the foreground a large one. Set the range, and whether phones tilt, in Project settings.</p>
+      )}
+    </Section>
+  );
+}
 
 function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
   const n = nodes[0];
