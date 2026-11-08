@@ -144,7 +144,7 @@ Prefer to start from something finished? The **Templates** tab on the projects p
 
 ## Where to get help
 
-Press <kbd>F1</kbd> (or <kbd>Ctrl</kbd>+<kbd>K</kbd>) anywhere to search these pages, or <kbd>?</kbd> for the page about what you have selected. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
+Press <kbd>F1</kbd> anywhere to search these pages, <kbd>Ctrl</kbd>+<kbd>K</kbd> to find a command and do it (it lists matching help pages too, see [The command palette](command-palette)), or <kbd>?</kbd> for the page about what you have selected. The **?** beside an Inspector section opens its page, and hovering a button or field shows a short explanation. The small **(i)** icon beside **Help** shows the version you are running when you hover it, and copies it when you click it: include it when you report a problem. See [Using this help](help).
 
 > Everything saves automatically. The label next to the project name says **Saved**, **Saving…** or **Unsaved**.`,
   },
@@ -457,9 +457,9 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 ## Help
 | Key | Does |
 |---|---|
-| <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help |
+| <kbd>F1</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
 | <kbd>?</kbd> | Open the help for what is highlighted (the Help button); <kbd>?</kbd> again closes it |
-| <kbd>Ctrl</kbd>+<kbd>K</kbd> | Search the help (<kbd>↑</kbd> <kbd>↓</kbd> to choose, <kbd>Enter</kbd> to open) |
+| <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) | The [command palette](command-palette): type what you want to do (add a button, go to a page, turn the grid on, share) and press <kbd>Enter</kbd>. Matching help pages are listed under the commands. While editing text it is the link shortcut instead |
 | <kbd>Alt</kbd>+<kbd>Left</kbd> / <kbd>Alt</kbd>+<kbd>Right</kbd> | Back and forward through the pages you have read, in the help drawer |
 | <kbd>?</kbd> | Open the help |
 
@@ -721,7 +721,7 @@ Select some of the text (or just put the caret in a word) and use:
 
 With nothing selected the buttons work on the word the caret is in. Between words there is nothing to style, so they are switched off.
 
-Shortcuts, in the text or in the toolbar (<kbd>Cmd</kbd> on a Mac): <kbd>Ctrl</kbd>+<kbd>B</kbd> bold, <kbd>Ctrl</kbd>+<kbd>I</kbd> italic, <kbd>Ctrl</kbd>+<kbd>U</kbd> underline, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> strikethrough, <kbd>Ctrl</kbd>+<kbd>K</kbd> link (while editing text; <kbd>F1</kbd> still opens the help search), <kbd>Ctrl</kbd>+<kbd>\\</kbd> clear formatting.
+Shortcuts, in the text or in the toolbar (<kbd>Cmd</kbd> on a Mac): <kbd>Ctrl</kbd>+<kbd>B</kbd> bold, <kbd>Ctrl</kbd>+<kbd>I</kbd> italic, <kbd>Ctrl</kbd>+<kbd>U</kbd> underline, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> strikethrough, <kbd>Ctrl</kbd>+<kbd>K</kbd> link (while editing text, where it does not open the command palette; <kbd>F1</kbd> still opens the help search), <kbd>Ctrl</kbd>+<kbd>\\</kbd> clear formatting.
 
 The toolbar works from the keyboard too, and it never takes the focus off the control you are using. <kbd>Tab</kbd> (or <kbd>Alt</kbd>+<kbd>F10</kbd>) goes from the text into the toolbar, <kbd>Tab</kbd> and <kbd>Shift</kbd>+<kbd>Tab</kbd> move between its controls, and the left and right arrows move along the buttons. <kbd>Enter</kbd> or <kbd>Space</kbd> presses a button and the focus stays on it, so you can press the next one. In the size box, type a number and press <kbd>Enter</kbd>, or press <kbd>Up</kbd> and <kbd>Down</kbd> to step it (<kbd>Shift</kbd> steps by ten); the box keeps the focus. In the font box, <kbd>Down</kbd> opens the list, the arrows move through it and <kbd>Enter</kbd> picks. Whichever control you change, the change goes to the characters that were selected when you left the text (they stay highlighted while you are in the toolbar). <kbd>Esc</kbd> goes back to the text with that selection, and so does <kbd>Shift</kbd>+<kbd>Tab</kbd> from the first button, or a click in the text. The toolbar sits above the text box, or below it when there is no room, and stays on the canvas. It works the same for *Auto width*, *Auto height* and *Fixed* text. A button's label is edited in a plain box with no toolbar.
 
@@ -2306,6 +2306,33 @@ The prompt is a heading, the options are a radio group (or checkboxes) with thei
 
 The question frame holds its settings in \`question\`, and each part layer carries a \`questionPart\` marker so the settings can find it again after it is renamed or moved. Both are in the exported file; the player uses the settings and ignores the markers. The nodes are **Check answer**, **Reset question**, **Show hint**, **Choose option** and **Move item** in the [node reference](interaction-nodes). Not yet in the kit: matching (which would use [Drag and drop](drag-and-drop)) and hotspots.
 `,
+  },
+  {
+    id: 'command-palette',
+    title: 'The command palette',
+    group: 'Getting started',
+    summary: 'Ctrl+K: type what you want to do, and do it, without hunting through menus.',
+    keywords: 'command palette ctrl k quick actions search commands shortcuts add layer go to page toggle grid snapping panels workspaces export share',
+    body: `Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>Cmd</kbd>+<kbd>K</kbd> on a Mac) anywhere in the editor. Type a few words for what you want to do, such as "add a button", "go to page 3", "grid", "share" or "fade in", use <kbd>↑</kbd> <kbd>↓</kbd> to choose and press <kbd>Enter</kbd>. <kbd>Esc</kbd> closes it. Before you type anything it shows the commands you used lately.
+
+Each row shows its **shortcut** if it has one, or the kind of command it is. A command that cannot run just now (nothing selected, nothing to undo) is greyed and says why. A switch shows **On** or **Off**, and running it flips it. Press <kbd>F1</kbd> inside it to search the help instead. Matching help pages are listed under the commands, labelled **Help**, and <kbd>Enter</kbd> on one opens it.
+
+## What it can do
+- **Add**: a rectangle, ellipse, text, frame, button, input field, link, chart and the other layers, in the middle of the open page; **Add a page**; **Add question** (and [paste questions](paste-questions)).
+- **Pages**: **Go to page: <name>** for every page, make this the start page, duplicate it, tidy the pages, add Back and Next buttons to every page.
+- **Layers**: **Select layer: <name>** for the layers on the open page.
+- **Selection**: duplicate, delete, group, ungroup, the four ordering commands, hide or show, lock, select all.
+- **Animate**: **Fade in**, **Slide in**, **Pop**, **Pulse**, **Shake**, **Fade out** on the selected layers (see [Animation presets](animation-presets)). They use the **When** and **Delay** chosen in the Animate section.
+- **Behaviours**: **When clicked: Go to the next page**, **Show a layer**, **Play a sound** and the other [behaviours](interactions) for the selected layer: it opens the behaviour dialog on that one.
+- **View**: zoom, grid, rulers, notes, bones, snapping and each snap target, page arrows.
+- **Tools**: pick any tool, with its key.
+- **Panels** and **Workspaces**: open any panel (Timeline, Interactions, Accessibility, Usage...) or switch to any workspace, built in or saved.
+- **Project**: Preview, Share, invite people, share for review, save as a template, revision history, Preferences, Save now, undo and redo, and every export.
+
+It only does what the menus and buttons already do, with the same results and the same undo.
+
+## When Ctrl+K does something else
+While you are **typing in a text layer** <kbd>Ctrl</kbd>+<kbd>K</kbd> adds a link, as in any editor. On the projects page, where there is no palette, it searches the help. While Preview is open it searches the help in a new window.`,
   },
   {
     id: 'paste-questions',
@@ -4325,16 +4352,16 @@ Check the projects page for an active folder, tag or search (the **Clear filters
     group: 'Reference',
     summary: 'Search, tooltips and help links.',
     keywords: 'help docs search tooltip question',
-    body: `- **Search**: press <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere for quick search, or type in the drawer's **Search help** box. Type a few words and press <kbd>Enter</kbd> to open the best match.
+    body: `- **Search**: press <kbd>F1</kbd> anywhere for quick search (or <kbd>Ctrl</kbd>+<kbd>K</kbd>, the [command palette](command-palette), which lists help pages under its commands), or type in the drawer's **Search help** box. Type a few words and press <kbd>Enter</kbd> to open the best match.
 - **The Help button** (top bar, or <kbd>?</kbd>) opens the page for whatever is highlighted, in this order: the **field** you last clicked in Properties (its section's page, or its own when it has one); the **node** selected in Interactions or the **keyframe** selected in the Timeline, while that is the panel you are working in; the **tool** you picked on the tool bar (not Select or Hand); the **layer type** you selected (Chart, Text, Button, Rectangle...); a selected **artboard** or **page master**; the **panel** you last worked in; then the general help. Its tooltip names what it will open, and the drawer says "Help for Chart layer" at the top with a **Back to general help** link. Only selection and focus count, not what the pointer is over. The tool bar has no Help button of its own: right-click it for **Help for the tools**. <kbd>Ctrl</kbd>+<kbd>K</kbd> is the quick search.
 - **Home, Back and Forward**: the three buttons at the left of the drawer's top. **Home** is the welcome page. **Back** and **Forward** walk through the pages and sections you have visited (links, search results and the Help button all count), and each page comes back scrolled to where you left it. <kbd>Alt</kbd>+<kbd>Left</kbd> and <kbd>Alt</kbd>+<kbd>Right</kbd> do the same while the drawer has the focus, and so do the mouse's back and forward buttons over it. The history is kept when you close the drawer, so Back from a new Help button press returns to what you were reading. The full help page (the **new tab** button) uses the browser's own Back and Forward, since each page has its own address.
-- **While Preview is open**: Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>?</kbd>, a **?** link or <kbd>Ctrl</kbd>+<kbd>K</kbd>) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and Tab stays inside Preview until you close it.
+- **While Preview is open**: Preview sits above the help drawer so it never covers its controls. Asking for help then (the Help button, <kbd>F1</kbd>, <kbd>?</kbd>, a **?** link) opens the help in a new window instead. <kbd>Esc</kbd> closes Preview, not a drawer behind it, and Tab stays inside Preview until you close it.
 - **The Help link** is also on the projects page.
 - **Getting started**: the five tutorials start at [Tutorial 1](tutorial-first-animation). Stuck? [Troubleshooting and common questions](troubleshooting).
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
 - **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
-- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>Ctrl</kbd>+<kbd>K</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
+- **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
 - **? links**: inspector sections have a **?** that opens their page here. The panels' tabs don't have one: use the top bar's, or right-click the tab.`,
   },
 ];

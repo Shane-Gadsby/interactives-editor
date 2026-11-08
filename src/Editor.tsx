@@ -11,6 +11,10 @@ import { download, downloadJson, downloadPackage, downloadStandalone, fileSafe, 
 import { insertFiles, pickFiles } from './lib/insert';
 import { addQuestion } from './lib/question-kit';
 import { importGiftFile } from './lib/gift-import';
+import { TOOL_KEYS } from './lib/tool-keys';
+import { CommandPalette } from './components/CommandPalette';
+import { openPalette } from './lib/command-palette';
+import { APP_ACTION_EVENT, type AppAction } from './lib/app-actions';
 import { PasteQuestionsModal } from './components/PasteQuestionsModal';
 import { copySelection, pasteNodes } from './lib/clipboard';
 import { copySelectedKeys, isKeyClipText, keyContext, keysCopiedLast, pasteKeys, watchKeyContext } from './lib/key-edit';
@@ -277,24 +281,6 @@ function useAutosave() {
 
 // ---------------------------------------------------------------- shortcuts
 
-const TOOL_KEYS: Record<string, Tool> = {
-  v: 'select',
-  h: 'hand',
-  a: 'artboard',
-  f: 'frame',
-  r: 'rect',
-  o: 'ellipse',
-  l: 'line',
-  p: 'pen',
-  n: 'pencil',
-  k: 'connector',
-  w: 'bend',
-  t: 'text',
-  b: 'button',
-  j: 'bone',
-  c: 'comment',
-  s: 'note',
-};
 
 function useShortcuts() {
   useEffect(() => {
@@ -651,6 +637,7 @@ function Workspace({ home }: { home: () => void }) {
       <DockFloats />
       <DockDragLayer />
       {preview && <PreviewModal onClose={() => setPreview(false)} />}
+      <CommandPalette />
       {s.toast && <div className={`toast ${s.toast.kind}`}>{s.toast.text}</div>}
       {s.report && <ReportModal title={s.report.title} lines={s.report.lines} />}
     </div>
@@ -768,6 +755,25 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
       st.toast(err instanceof Error ? err.message : String(err), 'error');
     }
   };
+  //What the command palette (and anything else) asks the top bar to do, by name: the same calls the buttons make
+  const doAction = useRef<(a: AppAction) => void>(() => undefined);
+  doAction.current = (a) => {
+    const file = a === 'export-html' ? checked(() => downloadStandalone(st.get().project)) : a === 'export-package' ? checked(() => downloadPackage(st.get().project)) : a === 'export-json' ? checked(() => downloadJson(st.get().project)) : a === 'export-png' ? () => exportPicture('png', 2) : a === 'export-svg' ? () => exportPicture('svg', 1) : a === 'export-lottie' ? () => exportActiveAsLottie('json') : null;
+    if (file) return void run(file);
+    if (a === 'preview') onPreview();
+    else if (a === 'share') setShareOpen(true);
+    else if (a === 'invite') setInviteOpen(true);
+    else if (a === 'template') setTemplateOpen(true);
+    else if (a === 'history') setHistoryOpen(true);
+    else if (a === 'prefs') setPrefsOpen(true);
+    else if (a === 'motion') setMotionOpen(true);
+    else if (a === 'reference') setReferenceOpen(true);
+  };
+  useEffect(() => {
+    const on = (e: Event) => doAction.current((e as CustomEvent<AppAction>).detail);
+    window.addEventListener(APP_ACTION_EVENT, on);
+    return () => window.removeEventListener(APP_ACTION_EVENT, on);
+  }, []);
   return (
     <header className="topbar">
       <IconButton icon={<Icons.home />} title="All projects" onClick={home} />
@@ -820,6 +826,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         <button onClick={() => st.set({ zoom: Math.min(32, s.zoom * 1.25) })}>+</button>
       </div>
       <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)} />
+      <IconButton icon={<Icons.search />} title="Find a command and do it: add a layer, go to a page, turn the grid on, share... (Ctrl+K)" onClick={() => void openPalette(false)} />
       <IconButton icon={<Icons.help />} title={helpTitle} onClick={openHeaderHelp} />
       {prefsOpen && <PrefsModal workspace onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}

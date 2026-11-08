@@ -15,6 +15,8 @@ export interface BehaviourRequest {
   abId: string;
   layerId: string;
   trigger: Trigger;
+  /** Start with this recipe picked (the command palette asks for one by name). */
+  recipe?: string;
 }
 
 let request: BehaviourRequest | null = null;
@@ -52,8 +54,8 @@ function BehaviourDialog({ req }: { req: BehaviourRequest }) {
   const ab = project.artboards.find((a) => a.id === req.abId);
   const layer = ab ? layerChoices(ab).find((l) => l.id === req.layerId) : undefined;
   const ctx: RecipeCtx | null = ab ? { project, ab, layerId: req.layerId } : null;
-  const [recipeId, setRecipeId] = useState('page-next');
-  const [answers, setAnswers] = useState<Answers>(() => (ctx ? defaultAnswers(RECIPE_BY_ID['page-next'], ctx) : {}));
+  const [recipeId, setRecipeId] = useState(req.recipe && RECIPE_BY_ID[req.recipe] ? req.recipe : 'page-next');
+  const [answers, setAnswers] = useState<Answers>(() => (ctx ? defaultAnswers(RECIPE_BY_ID[req.recipe && RECIPE_BY_ID[req.recipe] ? req.recipe : 'page-next'], ctx) : {}));
   const box = useRef<HTMLDivElement>(null);
   const titleId = 'behaviour-title';
 

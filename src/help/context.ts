@@ -141,4 +141,4 @@ export function resolveHelp(f: HelpFocus): HelpTarget {
   return GENERAL_HELP;
 }
 
-export const helpTooltip = (t: HelpTarget): string => (t === GENERAL_HELP ? 'Help (? to open, F1 or Ctrl+K to search)' : `Help: ${t.label} (? to open, F1 or Ctrl+K to search)`);
+export const helpTooltip = (t: HelpTarget): string => (t === GENERAL_HELP ? 'Help (? to open, F1 to search)' : `Help: ${t.label} (? to open, F1 to search)`);

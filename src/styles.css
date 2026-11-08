@@ -10523,3 +10523,56 @@ button.flow-text:focus-visible {
   margin-top: 4px;
   text-align: center;
 }
+
+/* Command palette (Ctrl/Cmd+K) */
+.command-palette li.cmd {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.command-palette .cmd-title {
+  flex: 1;
+  min-width: 0;
+}
+.command-palette .cmd-group,
+.command-palette .cmd-why,
+.command-palette .cmd-state {
+  font-size: 12px;
+  color: var(--muted);
+}
+.command-palette .cmd-state {
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--pill-bg);
+  color: var(--pill-fg);
+}
+.command-palette li.active .cmd-group,
+.command-palette li.active .cmd-why {
+  color: var(--primary-fg);
+}
+.command-palette li.off:not(.active) .cmd-title {
+  color: var(--muted);
+}
+.command-palette li.cmd-head,
+.command-palette .cmd-section {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.command-palette li.cmd-head {
+  cursor: default;
+  padding: 4px 10px;
+}
+.command-palette .cmd-section {
+  flex-basis: 100%;
+  margin-top: -2px;
+}
+.command-palette kbd {
+  font-size: 11px;
+}
+.command-palette li.cmd-empty {
+  cursor: default;
+  padding: 12px;
+}

@@ -446,7 +446,7 @@ export function Home({ open }: { open: (id: string) => void }) {
             <Icons.gear width={16} />
           </button>
           {prefsOpen && <PrefsModal onClose={() => setPrefsOpen(false)} />}
-          <a className="btn" href="#/help" title="How to use Interactives (Ctrl+K to search)">
+          <a className="btn" href="#/help" title="How to use Interactives (F1 to search)">
             <Icons.help width={14} /> Help
           </a>
           <VersionInfo />

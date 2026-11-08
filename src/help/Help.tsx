@@ -8,6 +8,7 @@ import './branded-help';
 import { Icons } from '../components/icons';
 import { HelpHistory, type HelpEntry } from './history';
 import { isPreviewOpen } from '../lib/overlays';
+import { closePalette, openPalette, paletteIsOpen } from '../lib/command-palette';
 
 // ---------------------------------------------------------------- opening help from anywhere
 
@@ -96,7 +97,7 @@ const isTyping = (e: KeyboardEvent) => {
   return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable || !!t.closest('.cm-editor'));
 };
 
-/** Mounted once by the app: the help drawer, quick search and their shortcuts (F1, Ctrl/Cmd+K, ?). */
+/** Mounted once by the app: the help drawer, quick search and their shortcuts (F1, ?, and Ctrl/Cmd+K where there is no command palette). */
 export function HelpHost() {
   const s = useHelpState();
   const drawerRef = useRef<HTMLElement>(null);
@@ -129,14 +130,17 @@ export function HelpHost() {
   }, [open]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      //F1 is the quick search, as it always was; Ctrl/Cmd+K does the same, except while editing text where it's the link shortcut.
+      //F1 is the help quick search. Ctrl/Cmd+K is the command palette (which lists help results too), except while editing text
+      //where it's the link shortcut; where there is no palette (the home page) it falls back to the help search.
       //The Help button and ? open the page for what is highlighted
       if (e.key === 'F1') {
         e.preventDefault();
+        if (paletteIsOpen()) closePalette();
         openHelpSearch();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !(e.target instanceof HTMLElement && e.target.closest('.text-editor, .text-toolbar'))) {
+      } else if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k' && !(e.target instanceof HTMLElement && e.target.closest('.text-editor, .text-toolbar'))) {
         e.preventDefault();
-        openHelpSearch();
+        if (isPreviewOpen()) openHelpSearch();
+        else if (!openPalette()) openHelpSearch();
       } else if (e.key === '?' && !isTyping(e) && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         if (state.drawer) closeHelp();
@@ -346,7 +350,7 @@ function SearchResults({ hits, query, onPick }: { hits: HelpHit[]; query: string
   );
 }
 
-/** Ctrl/Cmd+K or F1: type, arrow to a result, Enter to open it. */
+/** F1 (and Ctrl/Cmd+K where there is no command palette): type, arrow to a result, Enter to open it. */
 function QuickSearch({ onPick, onClose }: { onPick: (h: HelpHit) => void; onClose: () => void }) {
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(0);

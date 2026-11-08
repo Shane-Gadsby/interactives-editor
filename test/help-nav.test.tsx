@@ -149,7 +149,7 @@ describe('the drawer', () => {
     expect(document.querySelector('.help-context')).toBeNull();
   });
 
-  it('? opens the context help; F1 and Ctrl+K open the search', async () => {
+  it('? opens the context help; F1 opens the search, and so does Ctrl+K where there is no command palette', async () => {
     const { setContextHelp } = await import('../src/help/Help');
     setContextHelp(() => openHelp('charts', undefined, 'Chart layer'));
     act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true, cancelable: true })));
