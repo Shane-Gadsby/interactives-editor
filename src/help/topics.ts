@@ -259,7 +259,7 @@ All artboards side by side. See [Moving around the canvas](canvas). Right-click 
 Settings for the selection. The search box at the top finds a property by name or by what it does ([The Properties panel](properties-panel)). A layer's settings start with **Layer** (name, position, size, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard and its **Responsive**, **Steps**, **Joysticks**, **Blends** and **Bones** sections, then the **Project** settings and the **Fonts**. The chain between **W** and **H** (and between **Sx** and **Sy**, and on an artboard's size) links the two: linked, changing one changes the other and keeps their ratio, and the canvas's resize handles keep it too (hold <kbd>Shift</kbd> to resize freely). Each layer remembers its own. The Inspector starts 320 px wide. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
 
 ## Bottom panel
-**Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility**, **Insights**, **Public interface**, **Themes** and **Usage**. A project made from a template also has a **Checklist** tab. Click a tab to open it, click the open one again to fold the bottom panel down to its tabs, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker), [Insights](insights), [Public interface](public-interface), [Themes](themes), [Usage](usage) and [Templates](templates#use-a-template).
+**Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility**, **Insights**, **Public interface**, **Themes** and **Usage**. A project made from a template also has a **Checklist** tab, and one made from a starter a **Fill in** tab (the content as a plain form, see [Fill in this starter](fill-in-starter)). Click a tab to open it, click the open one again to fold the bottom panel down to its tabs, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker), [Insights](insights), [Public interface](public-interface), [Themes](themes), [Usage](usage) and [Templates](templates#use-a-template).
 
 ## Arranging the panels
 Every panel can go anywhere: the left, right, bottom or top area, or a window of its own floating over the canvas. Drag a panel by its tab.
@@ -3722,6 +3722,36 @@ A library can be published as a **brand kit**: the same thing, but what a projec
 - Only the latest version is kept on the server, so you cannot go back to an older one (undo works right after an update, and the [revision history](live-editing#revision-history) goes further back).`,
   },
   {
+    id: 'fill-in-starter',
+    title: 'Fill in this starter',
+    group: 'Working together',
+    summary: 'Write the words, questions, lists and pictures of a starter in a plain form: type into fields, tick the right answer, add a row, pick a picture. Nothing to hunt for in Variables, layer names or the question panel.',
+    keywords: 'fill in form fields starter template content questions answers words list rows picture asset toggle hint try again pills checklist variables without',
+    body: `A project made from a starter has a **Fill in** tab next to the **Checklist** along the bottom. It is the starter's content as a form: the title and the line under it, each question and its answers, the words of a crossword, the cards of a flip set, the events of a timeline, the pictures, and the switches such as **Offer a Hint** or **Offer Try again**. You write there instead of hunting for the right variable, layer or step.
+
+![The Fill in tab open along the bottom on the Multi-page quiz: the sections on the left, the answers of question 2 with the right one ticked, then its hints.](help/fill-in-starter.png)
+
+## What you can do in it
+- **Type** in a box. The change goes straight onto the page, and the canvas shows it as you type.
+- **Lists** (questions, words, cards, events) are a row for each. Press **+ Add** for a new one, use the arrows to move a row, and the cross to remove it. A list whose rows are tied to things on the page (the points on a picture, the six pictures of a collage) has its rows fixed: you change what they say, and the page has the places.
+- **Right answers** are a tick (one at a time for a single choice question) or a **Right answer** choice that says which of the answers is the right one.
+- **Pictures, videos and sounds** are picked from the project's files, or **+ Add a new picture…** uploads one. A grey placeholder becomes your picture, and its "Replace with your picture" words go away.
+- **Switches and numbers** such as the pass mark, how many tries, how long a right answer stays on screen.
+- The small arrow beside a field takes the editor to the layer it is about.
+
+## How it relates to the checklist
+Most checklist items now point at a field: press **Fill in** beside the item to open the form at the right place. Items about looks and layout (move a spot onto its part of the diagram, restyle a card, set up the sound) stay on the checklist and are done on the page.
+
+## It is the same data
+Every field edits ordinary parts of the project, so **Undo** and **Redo** work, other people editing live see it, and nothing is hidden: the **Variables** tab shows the list you typed, **Layers** the text, the **Question** section the answers. Use whichever is easier. The form only knows where things are, so if you delete a layer or a variable a field was about, the field says so and the rest of the form carries on.
+
+## Good to know
+- The form is made for the starters, and it goes with the project, so **Save as template** carries it: a project made from your template has the same form.
+- A starter that works something out for you (a crossword's grid, a word search's letters) asks you only for the words. The grid is laid out for you.
+- Two layers that share a name (the three questions of a survey) are one field each, in the order they sit on the page.
+- Press **Help** in the tab for this page.`
+  },
+  {
     id: 'templates',
     title: 'Templates, examples and remix',
     group: 'Working together',
@@ -3744,7 +3774,7 @@ Every starter has a **Play** button, like the examples. It builds the starter ri
 
 ## Use a template
 1. **Templates** > pick a card > **Use template**. The window lists the checklist first, so you see what it expects of you.
-2. Give the project a name and pick a folder, then **Create project**. It opens with the **Checklist** tab already open along the bottom.
+2. Give the project a name and pick a folder, then **Create project**. It opens with the **Checklist** tab already open along the bottom, and, for a starter, a **Fill in** tab beside it: a plain form for the words, questions and pictures (see [Fill in this starter](fill-in-starter)).
 3. Work down the list. **Click an item** and the editor selects the layer it is about and puts it in the middle of the canvas; change it, then **tick the item off**.
    Each item is one short action. A **Why and how** fold under it holds the detail (which panel, which variable, what to watch for): open it when you need it. Items in templates made before the fold have no detail.
 4. A badge saying **Still the template's** means the layer an item points at has not been changed at all yet, even if you ticked it. **Layer deleted** means it was removed.

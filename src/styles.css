@@ -10404,3 +10404,204 @@ button.flow-text:focus-visible {
   margin-top: 4px;
   text-align: center;
 }
+
+/* Fill in this starter: the content of a starter as a plain form */
+.fillin {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  container-type: inline-size;
+}
+.fillin-side {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-right: 1px solid var(--line);
+  overflow: auto;
+}
+.fillin-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 6px;
+}
+.fillin-nav .chip {
+  text-align: left;
+}
+.fillin-nav .chip.on {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.fillin-body {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 0 16px 28px;
+}
+.fillin-body > section {
+  max-width: 760px;
+}
+@container (max-width: 560px) {
+  .fillin {
+    flex-direction: column;
+  }
+  .fillin-side {
+    flex: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    max-height: 40%;
+  }
+  .fillin-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+.fillin h3 {
+  margin: 18px 0 2px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.fillin h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.fillin-hint {
+  margin: 2px 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.fillin-field {
+  margin: 8px 0;
+  border-radius: var(--radius);
+  scroll-margin-top: 8px;
+}
+.fillin-field.flash {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 3px;
+}
+.fillin-single {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.fillin-single > .field {
+  flex: 1;
+}
+.fillin-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: space-between;
+}
+.fillin .field {
+  margin: 0;
+}
+.fillin .field.multiline {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+.fillin .field textarea,
+.fillin .field input[type='text'],
+.fillin .field select {
+  width: 100%;
+  box-sizing: border-box;
+}
+.fillin .field textarea {
+  resize: vertical;
+}
+.fillin-missing {
+  margin: 4px 0;
+  font-size: 12px;
+  color: var(--danger);
+}
+.fillin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+.fillin-row {
+  align-self: stretch;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+.fillin-row > summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  list-style-position: inside;
+}
+.fillin-row-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fillin-row-actions {
+  display: flex;
+  flex: none;
+}
+.fillin-row-actions .icon-btn {
+  width: 22px;
+  height: 22px;
+}
+.fillin-cells {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 8px 10px;
+}
+.fillin-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+}
+.fillin-inline .field {
+  flex: 0 1 auto;
+}
+.fillin-inline .select-field {
+  flex: 1 1 140px;
+}
+.fillin-show {
+  flex: none;
+}
+.fillin-line {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fillin-line > .field:first-of-type {
+  flex: 1 1 auto;
+}
+.fillin-line .check-field,
+.fillin-line .select-field,
+.fillin-line .number-field {
+  flex: 0 0 auto;
+}
+.fillin-line .select-field {
+  max-width: 200px;
+}
+.fillin-num {
+  flex: none;
+  width: 22px;
+  text-align: right;
+  color: var(--muted);
+  font-size: 12px;
+}

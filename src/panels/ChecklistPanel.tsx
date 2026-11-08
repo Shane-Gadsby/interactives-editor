@@ -5,6 +5,7 @@ import { checklistProgress, detachTemplate, findLayer, itemState, setItemDone, u
 import { confirmDialog } from '../components/dialogs';
 import { ReviewModal, UpdateFromTemplateModal } from '../components/TemplateModals';
 import { Icons } from '../components/icons';
+import { fieldById, openFormField } from '../lib/content-form';
 
 /** Take the editor to the layer an item is about: its artboard, the layer selected and in the middle of the canvas. */
 export function revealLayer(nodeId: string, artboardId?: string): boolean {
@@ -108,6 +109,11 @@ export function ChecklistPanel() {
                     </details>
                   )}
                 </div>
+                {item.field && fieldById(project.contentForm, item.field) && (
+                  <button className="btn small" title="Open the form at the place where you write this" onClick={() => openFormField(item.field!)}>
+                    Fill in
+                  </button>
+                )}
                 {label && (
                   <span className={`badge${st === 'missing' ? ' usage-flag bad' : ''}`} title={label[1]}>
                     {label[0]}

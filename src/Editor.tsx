@@ -39,6 +39,7 @@ import { SaveTemplateModal } from './components/TemplateModals';
 import { CHECKLIST_FLAG, hasChecklist } from './lib/templates';
 import { prefs, setPrefs, usePrefs } from './lib/prefs';
 import { hideSome, setDock, useDock } from './lib/dock';
+import { showFillIn } from './lib/content-form';
 import { toolGroupsInUse } from './lib/essentials';
 import { GettingStarted } from './components/GettingStarted';
 import { watchGettingStarted } from './lib/onboarding';
@@ -119,6 +120,8 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
           if (sessionStorage.getItem(CHECKLIST_FLAG) === p.id) {
             sessionStorage.removeItem(CHECKLIST_FLAG);
             if (hasChecklist(p)) s.set({ bottomTab: 'checklist' });
+            //a starter with a form opens it beside the page too: writing the content is the first job
+            if (p.contentForm?.sections.length) showFillIn();
           }
         } catch {
           /* no session storage */

@@ -9,7 +9,7 @@ import { hideSome, type DockLayout, type PanelId } from './dock';
  */
 
 /** Tabs and panels that stay: layers, assets and properties, the timeline, interactions, variables, and the checklist of a template. */
-export const ESSENTIAL_PANELS: PanelId[] = ['layers', 'assets', 'inspector', 'timeline', 'logic', 'variables', 'checklist'];
+export const ESSENTIAL_PANELS: PanelId[] = ['layers', 'assets', 'inspector', 'timeline', 'logic', 'variables', 'checklist', 'content'];
 
 /** Put away in Essentials. */
 export const HIDDEN_PANELS: PanelId[] = ['libraries', 'comments', 'scripts', 'data', 'a11y', 'insights', 'interface', 'themes', 'usage', 'credits'];

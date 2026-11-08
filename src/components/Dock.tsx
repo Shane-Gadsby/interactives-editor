@@ -22,6 +22,8 @@ import { InterfacePanel } from '../panels/InterfacePanel';
 import { ThemesPanel } from '../panels/ThemesPanel';
 import { AccessibilityPanel } from '../panels/AccessibilityPanel';
 import { ChecklistPanel } from '../panels/ChecklistPanel';
+import { ContentFormPanel } from '../panels/ContentFormPanel';
+import { showFillIn } from '../lib/content-form';
 import { jumpToThread } from '../lib/comment-jump';
 import { panelOn, panelsInUse } from '../lib/essentials';
 import { useComments } from '../lib/comments';
@@ -65,6 +67,7 @@ const PANELS: Record<PanelId, PanelDef> = {
   insights: { label: 'Insights', icon: 'insights', help: 'insights', tip: 'What learners did: artboards reached, where they clicked, steps, answers to questions and your own records, as counts', tool: true, body: () => <InsightsPanel /> },
   interface: { label: 'Public interface', icon: 'plug', help: 'public-interface', tip: 'What a page that embeds this project can set, read, send and hear: variables as inputs and outputs, messages, with descriptions. Makes the reference page and TypeScript definitions', tool: true, body: () => <InterfacePanel /> },
   checklist: { label: 'Checklist', icon: 'check', help: 'templates#use-a-template', tip: 'The things to change in a project made from a template: tick them off, click one to find its layer, review before you share', tool: true, body: () => <ChecklistPanel /> },
+  content: { label: 'Fill in', icon: 'form', help: 'fill-in-starter', tip: 'Fill in this starter: the words, questions, lists and pictures of a project made from a starter, as a plain form. What you type goes into the project, and the other panels show it', body: () => <ContentFormPanel /> },
   themes: { label: 'Themes', icon: 'themes', help: 'themes', tip: 'Colour tokens and the themes that give them values (Light, Dark, High contrast), with a contrast check per theme', tool: true, body: () => <ThemesPanel /> },
   credits: { label: 'Attributions', icon: 'credits', help: 'attributions', tip: 'Where the pictures, sounds, text and data in this project came from, and what it draws on: credits and references, linked to assets, with an optional Credits button for learners', tool: true, body: () => <CreditsPanel /> },
   usage: { label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each artboard, asset, variable, data source, script and timeline is used, and what is unused', tool: true, body: () => <UsagePanel /> },
@@ -87,9 +90,10 @@ function useInUse(): Set<PanelId> {
 /** Panels that exist for this project (the checklist only for one made from a template) and are not put away (Essentials) unless the project uses them. */
 function useAvailable(): (p: PanelId) => boolean {
   const template = useEditor((st) => !!st.project.template);
+  const form = useEditor((st) => !!st.project.contentForm?.sections.length);
   const l = useDock();
   const inUse = useInUse();
-  return (p) => (p !== 'checklist' || template) && panelOn(l, p, inUse);
+  return (p) => (p !== 'checklist' || template) && (p !== 'content' || form) && panelOn(l, p, inUse);
 }
 
 /** A group's tabs that are there, and the one to show (the active one, or the first that's there). */
@@ -120,6 +124,7 @@ function TabBadge({ p }: { p: PanelId }) {
 export function activatePanel(p: PanelId): void {
   track('panel', 'open', { thing: p });
   if (PANELS[p].tool) store().set({ bottomTab: p as BottomTab, previewPlaying: false });
+  else if (p === 'content') showFillIn();
   else setDock((l) => showPanel(l, p));
 }
 
