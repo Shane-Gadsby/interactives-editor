@@ -1,7 +1,7 @@
 //Link a layer to a page without opening the graph. A link is the ordinary thing the graph would hold: an On pointer click on the
 //layer wired to a Go to artboard node that names the page. These helpers find that pair, change the page it names (or add it, or
 //take it away), and read every page-to-page route in a project for the arrows drawn between pages on the canvas.
-import { neighbourPage, pageInfo, setBase, type Artboard, type LogicNode, type Project } from 'interactives-player';
+import { DEFAULT_TRANSITION_MS, neighbourPage, pageInfo, setBase, type Artboard, type LogicNode, type Project } from 'interactives-player';
 import { appendStep, writeClickFlow } from './click-flow';
 
 type Logic = Pick<Artboard, 'logic'>;
@@ -43,6 +43,19 @@ export function setLinkTransition(ab: Logic, layerId: string, transition: string
 	for (const l of links) {
 		const node = ab.logic.nodes.find((n) => n.id === l.go.id);
 		if (node) node.params = { ...node.params, transition };
+	}
+	return links.length > 0;
+}
+
+/** How long the page change of a layer's link takes, in ms (a link written without one is Medium). The first link's, when there are several. */
+export const linkDuration = (ab: Logic, layerId: string): number => Number(pageLinksOf(ab, layerId)[0]?.go.params.duration ?? DEFAULT_TRANSITION_MS);
+
+/** Set how long every link on the layer takes to change page. Returns whether there was a link to set it on. */
+export function setLinkDuration(ab: Logic, layerId: string, duration: number): boolean {
+	const links = pageLinksOf(ab, layerId);
+	for (const l of links) {
+		const node = ab.logic.nodes.find((n) => n.id === l.go.id);
+		if (node) node.params = { ...node.params, duration };
 	}
 	return links.length > 0;
 }

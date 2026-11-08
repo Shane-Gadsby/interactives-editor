@@ -7,11 +7,12 @@ import { CATALOG_BY_KIND, PAGE_TRANSITIONS, Player, createArtboard, createNode, 
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { RECIPE_BY_ID, THIS_LAYER, buildBehaviour, defaultAnswers, incomplete, type RecipeCtx } from '../src/lib/recipes';
 import { addPageNavigation } from '../src/lib/page-nav';
-import { linkToPage, linkTransition, setLinkTransition } from '../src/lib/page-link';
+import { linkDuration, linkToPage, linkTransition, setLinkDuration, setLinkTransition } from '../src/lib/page-link';
 import { describeNode } from '../src/lib/flow-describe';
 import { standaloneHtml } from '../src/lib/export';
 import { PageLinkSection } from '../src/panels/PageLinkSection';
 import { PageNavSection } from '../src/panels/PageNavSection';
+import { ParamForm } from '../src/panels/LogicGraph';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -179,5 +180,161 @@ describe('Preview and the single file export', () => {
     const p = book();
     const html = await standaloneHtml(p);
     for (const look of NEW) expect(html, look).toContain(look);
+  });
+});
+
+describe('the speed of a page change', () => {
+  let host: HTMLElement;
+  let root: Root;
+  beforeEach(() => {
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+  });
+  afterEach(() => {
+    act(() => root.unmount());
+    host.remove();
+  });
+  const field = (label: string) => [...host.querySelectorAll('label')].find((l) => l.textContent?.includes(label));
+  const choose = (label: string, value: string) => {
+    const sel = field(label)?.querySelector('select');
+    expect(sel, label).toBeTruthy();
+    act(() => {
+      sel!.value = value;
+      sel!.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  };
+  const type = (label: string, text: string) => {
+    const input = field(label)?.querySelector('input');
+    expect(input, label).toBeTruthy();
+    act(() => {
+      input!.focus();
+      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      set.call(input, text);
+      input!.dispatchEvent(new Event('input', { bubbles: true }));
+      input!.blur();
+    });
+  };
+  const goNode = (params: Record<string, unknown>) => ({ id: 'g', kind: 'action.artboard', x: 0, y: 0, params: { ...defaultParams('action.artboard'), ...params } });
+
+  it('the Go to a page form offers Slow, Medium, Fast and Custom, and the number only under Custom', () => {
+    const p = book();
+    let params: Record<string, unknown> = goNode({ to: 'next', transition: 'iris' }).params;
+    const render = () => act(() => root.render(<ParamForm node={{ ...goNode({}), params }} ab={p.artboards[0]} project={p} onChange={(x) => { params = x; render(); }} onNote={() => {}} />));
+    setCurrentStore(new EditorStore(p));
+    render();
+    const sel = field('Speed')!.querySelector('select')!;
+    expect([...sel.options].map((o) => o.textContent)).toEqual(['Fast', 'Medium', 'Slow', 'Custom']);
+    expect(sel.value).toBe('medium');
+    expect(field('Milliseconds')).toBeUndefined();
+    choose('Speed', 'slow');
+    expect(params.duration).toBe(600);
+    choose('Speed', 'fast');
+    expect(params.duration).toBe(150);
+    //Custom keeps the number it had and reveals it
+    choose('Speed', 'custom');
+    expect(params.duration).toBe(150);
+    expect(field('Milliseconds')).toBeTruthy();
+    type('Milliseconds', '1200');
+    expect(params.duration).toBe(1200);
+    expect(field('Speed')!.querySelector('select')!.value).toBe('custom');
+    //an instant change has no speed to ask for, a fade does
+    params = { ...params, transition: 'none' };
+    render();
+    expect(field('Speed')).toBeUndefined();
+    params = { ...params, transition: 'fade' };
+    render();
+    expect(field('Speed')).toBeTruthy();
+  });
+
+  it('a number that is not a preset opens as Custom, and a preset number as that preset (existing projects)', () => {
+    const p = book();
+    setCurrentStore(new EditorStore(p));
+    const show = (duration: number) => {
+      act(() => root.render(<ParamForm node={goNode({ transition: 'wipeLeft', duration })} ab={p.artboards[0]} project={p} onChange={() => {}} onNote={() => {}} />));
+      return field('Speed')!.querySelector('select')!.value;
+    };
+    expect(show(300)).toBe('medium');
+    expect(show(600)).toBe('slow');
+    expect(show(150)).toBe('fast');
+    expect(show(250)).toBe('custom');
+    expect(field('Milliseconds')!.querySelector('input')!.value).toBe('250');
+  });
+
+  it('the layer link reads and sets the speed of every link, and only shows it for a look with a length', () => {
+    const st = new EditorStore(book());
+    setCurrentStore(st);
+    st.update((d) => {
+      linkToPage(d.artboards[0], 'btn', 'b');
+    });
+    expect(linkDuration(st.get().project.artboards[0], 'btn')).toBe(300);
+    const render = () => {
+      const pr = st.get().project;
+      act(() => root.render(<PageLinkSection node={pr.artboards[0].children[0]} ab={pr.artboards[0]} project={pr} />));
+    };
+    render();
+    choose('Speed', 'slow');
+    expect(linkDuration(st.get().project.artboards[0], 'btn')).toBe(600);
+    //still the page it was
+    expect(st.get().project.artboards[0].logic.nodes.find((x) => x.kind === 'action.artboard')?.params).toMatchObject({ artboard: 'b', duration: 600 });
+    choose('How the page changes', 'none');
+    render();
+    expect(field('Speed')).toBeUndefined();
+    choose('How the page changes', 'iris');
+    render();
+    expect(field('Speed')).toBeTruthy();
+    expect(setLinkDuration(book().artboards[0], 'btn', 200)).toBe(false);
+  });
+
+  it('page navigation writes the chosen speed, Medium by default', () => {
+    const st = new EditorStore(book());
+    setCurrentStore(st);
+    act(() => root.render(<PageNavSection ids={['a']} project={st.get().project} />));
+    const gos = () => st.get().project.artboards[0].logic.nodes.filter((x) => x.kind === 'action.artboard');
+    const add = () => act(() => [...host.querySelectorAll('button')].find((b) => /Add to this page/.test(b.textContent ?? ''))!.click());
+    add();
+    expect(gos().every((g) => g.params.duration === 300)).toBe(true);
+    choose('Speed', 'slow');
+    add();
+    expect(gos().length).toBeGreaterThan(0);
+    expect(gos().every((g) => g.params.duration === 600)).toBe(true);
+    choose('How the page changes', 'none');
+    expect(field('Speed')).toBeUndefined();
+  });
+
+  it('When clicked... asks for a speed with the look, writes it, and leaves it out for Instant', () => {
+    const p = book();
+    const ctx: RecipeCtx = { project: p, ab: p.artboards[0], layerId: 'btn' };
+    let n = 0;
+    const mk = (x: string) => `${x}${++n}`;
+    for (const id of ['page-next', 'page-previous', 'page-pick']) {
+      const r = RECIPE_BY_ID[id];
+      expect(r.needs.some((x) => x.kind === 'speed'), id).toBe(true);
+      expect(defaultAnswers(r, ctx).speed, id).toBe('300');
+      expect(incomplete(r, { page: 'b' }), id).toBeNull();
+    }
+    const go = (a: Record<string, string>) => buildBehaviour(ctx, 'page-next', 'click', a, mk).nodes[1].params;
+    expect(go({ transition: 'iris', speed: '600' })).toMatchObject({ transition: 'iris', duration: 600 });
+    expect(go({ transition: 'wipeUp', speed: '1200' })).toMatchObject({ duration: 1200 });
+    expect(go({})).toMatchObject({ duration: 300 });
+    expect(go({ speed: '' })).toMatchObject({ duration: 300 });
+    expect(go({ speed: 'quick' })).toMatchObject({ duration: 300 });
+    expect(buildBehaviour(ctx, 'page-next', 'click', { transition: 'fade', speed: '150' }, mk).sentence).toContain('fade, fast');
+  });
+
+  it('the sentences name the speed in plain words, except Medium', () => {
+    const p = book();
+    const say = (params: Record<string, unknown>) => describeNode(goNode({ to: 'next', ...params }), p.artboards[0], p);
+    expect(say({ transition: 'iris', duration: 600 })).toBe('go to the next page (iris, slow)');
+    expect(say({ transition: 'wipeLeft', duration: 150 })).toBe('go to the next page (wipe left, fast)');
+    expect(say({ transition: 'iris', duration: 300 })).toBe('go to the next page (iris)');
+    expect(say({ transition: 'pushUp', duration: 1200 })).toBe('go to the next page (push up, 1.2 s)');
+    //a fade is only mentioned when its speed is not the usual
+    expect(say({ transition: 'fade', duration: 300 })).toBe('go to the next page');
+    expect(say({ transition: 'fade', duration: 600 })).toBe('go to the next page (fade, slow)');
+    //Instant has no speed to say
+    expect(say({ transition: 'none', duration: 600 })).toBe('go to the next page (instant)');
+    //a node saved without a duration is Medium
+    expect(describeNode({ id: 'g', kind: 'action.artboard', x: 0, y: 0, params: { to: 'next', transition: 'zoom' } }, p.artboards[0], p)).toBe('go to the next page (zoom in)');
   });
 });

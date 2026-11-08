@@ -187,6 +187,28 @@ describe('BehaviourDialog', () => {
     expect(q('[role=dialog]')!.getAttribute('aria-modal')).toBe('true');
   });
 
+  it('Go to the next page also asks the speed: Medium, Slow, Fast or Custom, hidden for Instant, written as the number', () => {
+    const sc = open();
+    const speed = () => qa('.behaviour-dialog select').find((x) => [...(x as HTMLSelectElement).options].some((o) => o.value === 'custom')) as HTMLSelectElement | undefined;
+    const how = qa('.behaviour-dialog select').find((x) => [...(x as HTMLSelectElement).options].some((o) => o.value === 'iris')) as HTMLSelectElement;
+    expect(speed()!.value).toBe('medium');
+    expect([...speed()!.options].map((o) => o.textContent)).toEqual(['Fast', 'Medium', 'Slow', 'Custom']);
+    set(how, 'iris');
+    set(speed()!, 'slow');
+    expect(q('.behaviour-preview')!.textContent).toBe('It will do this: When clicked: go to the next page (iris, slow).');
+    set(speed()!, 'custom');
+    const ms = qa('.behaviour-dialog input').find((i) => (i as HTMLInputElement).value === '600') as HTMLInputElement;
+    expect(ms).toBeTruthy();
+    set(ms, '1200');
+    expect(q('.behaviour-preview')!.textContent).toBe('It will do this: When clicked: go to the next page (iris, 1.2 s).');
+    set(how, 'none');
+    expect(speed()).toBeUndefined();
+    set(how, 'wipeUp');
+    expect(speed()!.value).toBe('custom');
+    click(byText('Add'));
+    expect(sc.s.get().project.artboards[0].logic.nodes.find((n) => n.kind === 'action.artboard')?.params).toMatchObject({ to: 'next', transition: 'wipeUp', duration: 1200 });
+  });
+
   it('Go to the next page asks how the page changes, and the sentence and node follow it', () => {
     const sc = open();
     const how = qa('.behaviour-dialog select').find((x) => [...(x as HTMLSelectElement).options].some((o) => o.value === 'iris')) as HTMLSelectElement;

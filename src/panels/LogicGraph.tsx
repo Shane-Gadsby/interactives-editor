@@ -23,6 +23,7 @@ import { cloneFragment, copyLogic, fragmentOf, fragmentOrigin, logicToPaste, typ
 import {
   NOTE_COLOURS,
   ANIMATABLE_PROPS,
+  TRANSITION_SPEEDS,
   layerOwnProps,
   CURSORS,
   CATALOG_BY_KIND,
@@ -43,7 +44,7 @@ import { store, useEditor } from '../store/store';
 import { openHelp } from '../help/Help';
 import { slug } from '../help/markdown';
 import { getArtboard } from '../store/doc';
-import { CheckField, NumberField, SelectField, TextField } from '../components/ui';
+import { CheckField, NumberField, SelectField, SpeedField, TextField } from '../components/ui';
 import { ConditionField } from '../components/ConditionField';
 import { ExprField } from '../components/ExprField';
 
@@ -213,6 +214,7 @@ export function summarize(n: LogicNode, ab: Artboard, project: Project): string 
     else if (p.type === 'script') text = project.scripts.find((x) => x.id === v)?.name ?? '(missing script)';
     else if (p.type === 'data') text = project.dataSources.find((x) => x.id === v)?.name ?? '(missing data)';
     else if (p.type === 'asset') text = project.assets.find((x) => x.id === v)?.name ?? '(missing sound)';
+    else if (p.widget === 'speed') text = TRANSITION_SPEEDS.find((x) => x.ms === Number(v))?.label ?? `${text} ms`;
     else if (p.type === 'select') text = pw(p.options?.find((o) => o.value === v) ? optionLabel(n.kind, p.key, p.options.find((o) => o.value === v)!) : text);
     else if (p.type === 'boolean') text = v ? p.label : '';
     else if (p.type === 'text' && n.kind === 'action.code') text = text.split('\n')[0].slice(0, 40);
@@ -1083,7 +1085,7 @@ function NodeGives({ def }: { def: { kind: string; label: string; gives?: string
   );
 }
 
-function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; ab: Artboard; project: Project; onChange: (p: Record<string, unknown>) => void; onNote: (n: string) => void }) {
+export function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; ab: Artboard; project: Project; onChange: (p: Record<string, unknown>) => void; onNote: (n: string) => void }) {
   const technical = useTechnicalWording();
   const def = CATALOG_BY_KIND[node.kind];
   if (!def) return null;
@@ -1187,6 +1189,7 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
       case 'easing':
         return <SelectField key={p.key} label={p.label} title={p.help} value={String(v ?? 'easeInOut')} options={[...EASING_NAMES]} onChange={(x) => set(p.key, x)} />;
       case 'number':
+        if (p.widget === 'speed') return <SpeedField key={`${node.id}:${p.key}`} label={p.label} title={p.help} value={Number(v ?? 0)} onChange={(x) => set(p.key, x)} />;
         return <NumberField key={p.key} label={p.label} title={p.help} value={Number(v ?? 0)} onChange={(x) => set(p.key, x)} />;
       case 'boolean':
         return <CheckField key={p.key} label={p.label} title={p.help} value={!!v} onChange={(x) => set(p.key, x)} />;

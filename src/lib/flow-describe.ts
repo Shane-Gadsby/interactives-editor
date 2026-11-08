@@ -1,4 +1,4 @@
-import { ANIMATABLE_PROPS, CATALOG_BY_KIND, defaultParams, PAGE_TRANSITIONS, walk, type Artboard, type LogicEdge, type LogicNode, type Project } from 'interactives-player';
+import { ANIMATABLE_PROPS, CATALOG_BY_KIND, defaultParams, PAGE_TRANSITIONS, speedOf, TIMED_TRANSITIONS, TRANSITION_SPEEDS, walk, type Artboard, type LogicEdge, type LogicNode, type Project } from 'interactives-player';
 import { conditionWords } from './condition';
 import { nodeLabel, optionLabel, pw } from './plain-words';
 
@@ -244,9 +244,12 @@ const ACTION: Record<string, (p: P, c: Names) => string> = {
     return p.op === 'show' ? `show ${t}` : p.op === 'hide' ? `hide ${t}` : `show or hide ${t}`;
   },
   'action.artboard': (p, c) => {
-    //a plain fade (or none given) is the usual, so only the others are mentioned
-    const look = PAGE_TRANSITIONS.find((t) => t.value === p.transition && t.value !== 'fade');
-    const how = look ? ` (${look.label.replace(/ \(.*\)$/, '').toLowerCase()})` : '';
+    //a plain fade at the usual speed (or none given) is the usual, so only the others are mentioned. An instant change has no speed
+    const kind = String(p.transition ?? 'fade');
+    const speed = p.duration === undefined ? 'medium' : speedOf(p.duration);
+    const said = !TIMED_TRANSITIONS.includes(kind) || speed === 'medium' ? '' : speed === 'custom' ? secs(p.duration) : TRANSITION_SPEEDS.find((t) => t.value === speed)!.label.toLowerCase();
+    const look = PAGE_TRANSITIONS.find((t) => t.value === kind && (t.value !== 'fade' || said));
+    const how = look ? ` (${[look.label.replace(/ \(.*\)$/, '').toLowerCase(), said].filter(Boolean).join(', ')})` : '';
     switch (String(p.to ?? 'picked')) {
       case 'next':
         return `go to the next page${how}`;

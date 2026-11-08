@@ -20,15 +20,17 @@ describe('summary on the face of a node', () => {
 
   it('Go to artboard keeps reading as the artboard\'s name for a project saved before "to"', async () => {
     const sum = await summaries();
-    expect(sum(node('a', 'action.artboard', { artboard: 'res', transition: 'fade', duration: 300 }))).toBe('Results · Fade · 300');
-    expect(sum(node('a', 'action.artboard', { to: 'picked', artboard: 'res', transition: 'none', duration: 0 }))).toBe('Results · Instant · 0');
+    expect(sum(node('a', 'action.artboard', { artboard: 'res', transition: 'fade', duration: 300 }))).toBe('Results · Fade · Medium');
+    expect(sum(node('a', 'action.artboard', { to: 'picked', artboard: 'res', transition: 'none', duration: 0 }))).toBe('Results · Instant');
   });
 
   it('Go to artboard says what it follows, and "computed" when an expression picks the target', async () => {
     const sum = await summaries();
-    expect(sum(node('a', 'action.artboard', { to: 'next', transition: 'fade', duration: 300 }))).toBe('Next page · Fade · 300');
-    expect(sum(node('a', 'action.artboard', { to: 'back', transition: 'none', duration: 300 }))).toBe('Back (where the learner came from) · Instant · 300');
-    expect(sum(node('a', 'action.artboard', { to: 'expression', expr: 'nextPage', transition: 'fade', duration: 300 }))).toBe('computed · Fade · 300');
+    expect(sum(node('a', 'action.artboard', { to: 'next', transition: 'fade', duration: 300 }))).toBe('Next page · Fade · Medium');
+    expect(sum(node('a', 'action.artboard', { to: 'back', transition: 'none', duration: 300 }))).toBe('Back (where the learner came from) · Instant');
+    expect(sum(node('a', 'action.artboard', { to: 'next', transition: 'iris', duration: 600 }))).toBe('Next page · Iris (a circle opens) · Slow');
+    expect(sum(node('a', 'action.artboard', { to: 'next', transition: 'wipeLeft', duration: 250 }))).toBe('Next page · Wipe left · 250 ms');
+    expect(sum(node('a', 'action.artboard', { to: 'expression', expr: 'nextPage', transition: 'fade', duration: 300 }))).toBe('computed · Fade · Medium');
   });
 
   it('shows an event\'s Only if on its face, and a timer\'s Only while', async () => {
