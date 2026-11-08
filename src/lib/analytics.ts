@@ -199,11 +199,26 @@ function bucketKey(area: string, action: string, thing: string | undefined, proj
     .join(',')}`;
 }
 
+const tapped = new Set<(area: string, action: string, thing: string | undefined) => void>();
+
+/** Hear about every event as it is noted (the Getting started strip ticks its jobs off this). Never sees details or numbers. Returns the cleanup. */
+export function onTrack(f: (area: string, action: string, thing: string | undefined) => void): () => void {
+  tapped.add(f);
+  return () => tapped.delete(f);
+}
+
 /** Note that something happened. Added up with the same thing in the window and sent as one row. Never throws. */
 export function track(area: Area, action: string, f: Fields = {}): void {
   try {
     const act = token(action);
     if (!act) return;
+    for (const hear of tapped) {
+      try {
+        hear(area, act, f.thing === undefined ? undefined : token(f.thing));
+      } catch {
+        // a listener's trouble is its own
+      }
+    }
     const now = Date.now();
     events++;
     lastActive = now;

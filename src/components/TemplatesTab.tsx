@@ -5,6 +5,9 @@ import { changeTemplate, createProjectRecord, deleteTemplate, putAsset, exampleA
 import { standaloneHtml } from '../lib/export';
 import { STARTERS, projectFromStarter, type Starter } from '../lib/template-starters';
 import { BRANDED_STARTERS, projectFromBrandedStarter, takeInlineAssets, type BrandedStarter, type Colourway } from '../lib/branded';
+import { GOALS, goalsOf, plainTags, starterMatches, type Goal } from '../lib/starter-goals';
+import { starterPlayHtml, type StarterPick } from '../lib/starter-pick';
+import { STARTER_FINDER_HELP } from '../help/context';
 import { CHECKLIST_FLAG, type TemplateInfo } from '../lib/templates';
 import { noteIfStale } from '../lib/stale-build';
 import { confirmDialog } from './dialogs';
@@ -162,31 +165,39 @@ function UseModal({ pick, folder: initialFolder, folders, onClose, onMade }: { p
   );
 }
 
-/** Plays an example the way a share link would (the single-file build in a sandbox), without opening anything of yours. */
-function PlayModal({ e, onClose, onCopy }: { e: ExampleInfo; onClose: () => void; onCopy: () => void }) {
+/** What a Play window can run: an example (fetched from the server) or a starter (built right here, never saved). */
+export type Playing = { kind: 'example'; e: ExampleInfo } | { kind: 'starter'; pick: StarterPick };
+
+/** Plays something the way a share link would (the single-file build in a sandbox), without opening or saving anything of yours. */
+export function PlayModal({ playing, onClose, onUse }: { playing: Playing; onClose: () => void; onUse: () => void }) {
   const progressHost = useNoProgressHost();
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const isExample = playing.kind === 'example';
+  const name = playing.kind === 'example' ? playing.e.title : playing.pick.s.name;
+  const description = playing.kind === 'example' ? playing.e.description : playing.pick.s.description;
+  const key = playing.kind === 'example' ? `e:${playing.e.key}` : `s:${playing.pick.s.key}:${playing.pick.kind === 'branded' ? playing.pick.way.id : ''}`;
   useEffect(() => {
     let live = true;
-    getExample(e.key)
-      .then(({ project }) => standaloneHtml(project, { bytesFor: (a) => exampleAssetBytes(e.key, a.id) }))
-      .then((h) => live && setHtml(h))
-      .catch((err) => live && setError(err instanceof Error ? err.message : String(err)));
+    setHtml(null);
+    setError(null);
+    const build = playing.kind === 'example' ? getExample(playing.e.key).then(({ project }) => standaloneHtml(project, { bytesFor: (a) => exampleAssetBytes((playing as { e: ExampleInfo }).e.key, a.id) })) : starterPlayHtml(playing.pick);
+    build.then((h) => live && setHtml(h)).catch((err) => live && setError(err instanceof Error ? err.message : String(err)));
     return () => {
       live = false;
     };
-  }, [e.key]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
   return (
-    <Modal title={`Example: ${e.title}`} help="templates#examples" onClose={onClose} className="preview-modal example-play">
+    <Modal title={isExample ? `Example: ${name}` : `Try it: ${name}`} help={isExample ? 'templates#examples' : STARTER_FINDER_HELP.to} onClose={onClose} className="preview-modal example-play">
       <div className="preview-body">
-        {html ? <iframe ref={progressHost} title={e.title} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : error ? <div className="center-msg">Could not play it: {error}</div> : <div className="center-msg muted">Building…</div>}
+        {html ? <iframe ref={progressHost} title={name} sandbox="allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox" allow="autoplay" srcDoc={html} /> : error ? <div className="center-msg">Could not play it: {error}</div> : <div className="center-msg muted">Building…</div>}
       </div>
       <div className="row example-bar">
-        <span className="muted small">{e.description}</span>
+        <span className="muted small">{isExample ? description : `${description} Nothing is saved until you use it.`}</span>
         <span className="spacer" />
-        <button className="btn primary" onClick={onCopy} title="Get your own copy of this example to change">
-          Make my copy
+        <button className="btn primary" onClick={onUse} title={isExample ? 'Get your own copy of this example to change' : 'Make a new project from this starter, with a checklist of what to change'}>
+          {isExample ? 'Make my copy' : 'Use this template'}
         </button>
       </div>
     </Modal>
@@ -255,7 +266,9 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
   const [pick, setPick] = useState<Pick | null>(null);
   const [editing, setEditing] = useState<TemplateInfo | null>(null);
   const [examples, setExamples] = useState<ExampleInfo[] | null>(null);
-  const [playing, setPlaying] = useState<ExampleInfo | null>(null);
+  const [playing, setPlaying] = useState<Playing | null>(null);
+  const [query, setQuery] = useState('');
+  const [goal, setGoal] = useState<Goal | null>(null);
   useEffect(() => {
     listExamples().then(setExamples, () => setExamples([]));
   }, []);
@@ -287,6 +300,12 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
     }
   };
   const saved = shown === 'mine' ? mine : shown === 'shared' ? shared : [];
+  // The built-in starters the search and the goal chip leave. Each chip's count is what it would show with the same search
+  const fits = (s: { key: string; name: string; description: string; tags: string[] }, g: Goal | null) => (!g || goalsOf(s.key).includes(g)) && starterMatches(query, s);
+  const plain = STARTERS.filter((s) => fits(s, goal));
+  const branded = BRANDED_STARTERS.filter((s) => fits(s, goal));
+  const total = plain.length + branded.length;
+  const countFor = (g: Goal | null) => STARTERS.filter((s) => fits(s, g)).length + BRANDED_STARTERS.filter((s) => fits(s, g)).length;
   return (
     <div className="templates-tab">
       <div className="templates-head">
@@ -307,16 +326,42 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
         <span className="muted small">{folder ? `New projects go in "${folder}".` : 'Use a template to start a project from it.'}</span>
       </div>
       {error && <div className="error-banner">{error}</div>}
-      {shown === 'builtin' && BRANDED_STARTERS.length > 0 && (
+      {shown === 'builtin' && (
+        <div className="templates-find" role="search">
+          <input type="search" className="home-search starter-search" value={query} aria-label="Search the built-in starters" placeholder="Search the starters: quiz, timeline, hotspots, flip cards…" title="Show only the starters whose name, description or tags contain every word you type" onChange={(e) => setQuery(e.target.value)} />
+          <div className="goal-chips" role="group" aria-label="What do you want to make?">
+            <button type="button" className={`tag-chip${goal === null ? ' active' : ''}`} aria-pressed={goal === null} onClick={() => setGoal(null)} title="Every starter">
+              Everything <span className="tag-n">{countFor(null)}</span>
+            </button>
+            {GOALS.map((g) => (
+              <button key={g.id} type="button" className={`tag-chip${goal === g.id ? ' active' : ''}`} aria-pressed={goal === g.id} onClick={() => setGoal(goal === g.id ? null : g.id)} title={`${g.want}: ${g.about}`}>
+                {g.chip} <span className="tag-n">{countFor(g.id)}</span>
+              </button>
+            ))}
+          </div>
+          <span className="sr-only" role="status">
+            {total} {total === 1 ? 'starter' : 'starters'}
+          </span>
+        </div>
+      )}
+      {shown === 'builtin' && total === 0 && (
+        <div className="empty-state">
+          <p>No starter matches{query.trim() ? ` "${query.trim()}"` : ''}{goal ? ` for ${GOALS.find((g) => g.id === goal)?.chip.toLowerCase()}` : ''}.</p>
+          <button className="btn" onClick={() => (setQuery(''), setGoal(null))}>
+            Clear search
+          </button>
+        </div>
+      )}
+      {shown === 'builtin' && branded.length > 0 && (
         <>
-          <BrandedPacks onPick={(s, way) => setPick({ kind: 'branded', s, way })} />
-          <h2 className="branded-packs-title">Starters</h2>
+          <BrandedPacks starters={branded} onPick={(s, way) => setPick({ kind: 'branded', s, way })} onPlay={(s, way) => setPlaying({ kind: 'starter', pick: { kind: 'branded', s, way } })} />
+          {plain.length > 0 && <h2 className="branded-packs-title">Starters</h2>}
         </>
       )}
       <div className="project-grid templates-grid" style={{ '--card-size': '260px' } as React.CSSProperties}>
         {(shown === 'examples' ? examples === null : list === null) && <p className="muted">Loading…</p>}
         {shown === 'builtin' &&
-          STARTERS.map((s) => (
+          plain.map((s) => (
             <article key={s.key} className="project-card template-card">
               <button className="project-thumb" onClick={() => setPick({ kind: 'builtin', s })} aria-label={`Use the ${s.name} starter`}>
                 <StarterPicture starter={s} />
@@ -325,7 +370,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
                 <div className="project-name">{s.name}</div>
                 <div className="muted small template-desc">{s.description}</div>
                 <div className="card-tags">
-                  {s.tags.map((t) => (
+                  {plainTags(s.tags, s.key).map((t) => (
                     <span key={t} className="tag-chip static">
                       <span className="tag-label">{t}</span>
                     </span>
@@ -333,7 +378,9 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
                 </div>
               </div>
               <div className="project-actions">
-                <span className="muted small">Starter</span>
+                <button className="btn" onClick={() => setPlaying({ kind: 'starter', pick: { kind: 'builtin', s } })} title="Play it here to see how it works. Nothing is saved until you use it" aria-label={`Play the ${s.name} starter`}>
+                  Play
+                </button>
                 <span className="spacer" />
                 <button className="btn primary" onClick={() => setPick({ kind: 'builtin', s })} title="Make a new project from this starter, with a checklist of what to change">
                   Use template
@@ -349,7 +396,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
               <div className="project-grid templates-grid" style={{ '--card-size': '260px' } as React.CSSProperties}>
                 {items.map((e) => (
                   <article key={e.key} className="project-card template-card example-card">
-                    <button className="project-thumb" onClick={() => setPlaying(e)} aria-label={`Play ${e.title}`}>
+                    <button className="project-thumb" onClick={() => setPlaying({ kind: 'example', e })} aria-label={`Play ${e.title}`}>
                       <img className="thumb-board thumb-img" src={exampleThumbUrl(e.key)} alt="" loading="lazy" style={e.preview ? { aspectRatio: `${e.preview.width} / ${e.preview.height}` } : undefined} onError={(ev) => ((ev.target as HTMLImageElement).style.visibility = 'hidden')} />
                     </button>
                     <div className="project-info">
@@ -364,7 +411,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
                       </div>
                     </div>
                     <div className="project-actions">
-                      <button className="btn" onClick={() => setPlaying(e)} title="Play it here. Nothing of yours is touched">
+                      <button className="btn" onClick={() => setPlaying({ kind: 'example', e })} title="Play it here. Nothing of yours is touched">
                         Play
                       </button>
                       <span className="spacer" />
@@ -435,7 +482,7 @@ export function TemplatesTab({ folder, folders, open }: { folder: string | null;
           </article>
         ))}
       </div>
-      {playing && <PlayModal e={playing} onClose={() => setPlaying(null)} onCopy={() => (setPick({ kind: 'example', e: playing }), setPlaying(null))} />}
+      {playing && <PlayModal playing={playing} onClose={() => setPlaying(null)} onUse={() => (setPick(playing.kind === 'example' ? { kind: 'example', e: playing.e } : playing.pick), setPlaying(null))} />}
       {pick && <UseModal pick={pick} folder={folder} folders={folders} onClose={() => setPick(null)} onMade={open} />}
       {editing && <EditModal t={editing} onClose={() => setEditing(null)} onSaved={(next) => setList((l) => l && l.map((x) => (x.id === next.id ? { ...x, ...next } : x)))} />}
     </div>

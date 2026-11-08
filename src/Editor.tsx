@@ -38,7 +38,11 @@ import { HistoryModal, InviteModal, ShareForReviewModal, ShareModal } from './co
 import { SaveTemplateModal } from './components/TemplateModals';
 import { CHECKLIST_FLAG, hasChecklist } from './lib/templates';
 import { prefs, setPrefs, usePrefs } from './lib/prefs';
-import { useDock } from './lib/dock';
+import { hideSome, setDock, useDock } from './lib/dock';
+import { toolGroupsInUse } from './lib/essentials';
+import { GettingStarted } from './components/GettingStarted';
+import { watchGettingStarted } from './lib/onboarding';
+import { applyNewcomerEssentials } from './lib/workspaces';
 import { gridFor, nudgeDelta, shiftSteps } from './lib/grid';
 import { snapAny, snapSettings, toggleSnap } from './lib/snapping';
 import { SnapMenu } from './components/SnapMenu';
@@ -120,7 +124,9 @@ export function Editor({ projectId, home }: { projectId: string; home: () => voi
           /* no session storage */
         }
         setProject(p.id);
-        stopWatching = observeStore(s);
+        const stopUse = observeStore(s);
+        const stopJobs = watchGettingStarted(s);
+        stopWatching = () => (stopUse(), stopJobs());
         track('project', 'open', { ms: Date.now() - openedAt, sum: { artboards: p.artboards.length, assets: p.assets.length } });
         setReady(s);
       } catch (err) {
@@ -590,6 +596,8 @@ function Workspace({ home }: { home: () => void }) {
   useDockSync();
   const z = useZoneSizes(widths);
   const [preview, setPreview] = useState(false);
+  // Someone new (they saw the first-run screen) opens their first project in Essentials, once. A template's checklist stays the tab that is open
+  useEffect(() => void applyNewcomerEssentials(), []);
   // Fitted before the first paint (the canvas opens at its final zoom, not at 100% for a frame), and again a frame later in
   // case the panels settled the canvas to a different size
   useLayoutEffect(() => {
@@ -619,6 +627,7 @@ function Workspace({ home }: { home: () => void }) {
         {s.brandOverride && <div className="power-banner">Power user mode: the brand lock is off for this session. Edits to brand kit items, and to the logo, colours and fonts of a branded starter project, are yours to make (F9 to turn it back on).</div>}
         <LinkBanner />
         <LinkChanges />
+        <GettingStarted />
       </div>
       <DockZone zone="top" />
       {z.tools === 'float' ? (
@@ -1044,7 +1053,12 @@ export function Toolbar() {
   const showBones = useEditor((st) => st.showBones);
   const [open, toggle] = useToolGroups();
   const snapPrefs = usePrefs();
-  const place = useDock().tools.place;
+  const dock = useDock();
+  const place = dock.tools.place;
+  // Essentials puts some groups away: they come back when the project already has layers from them or one of their tools is in use
+  const away = dock.hiddenTools ?? [];
+  const usedAway = useEditor((st) => (away.length ? toolGroupsInUse(st.project) : '')).split(',');
+  const putAway = (g: { id: string; tools: Tool[] }) => away.includes(g.id) && !usedAway.includes(g.id) && !g.tools.includes(tool);
   const horizontal = place === 'bottom' || place === 'top';
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [gridMenuAt, setGridMenuAt] = useState<{ x: number; y: number } | null>(null);
@@ -1094,7 +1108,7 @@ export function Toolbar() {
         {btn('select')}
         {btn('hand')}
       </div>
-      {TOOL_GROUPS.map((g) => {
+      {TOOL_GROUPS.filter((g) => !putAway(g)).map((g) => {
         const isOpen = !!open[g.id];
         const activeHere = g.tools.includes(tool);
         return (
@@ -1119,6 +1133,11 @@ export function Toolbar() {
           </div>
         );
       })}
+      {TOOL_GROUPS.some(putAway) && (
+        <button type="button" className="tool-group-head more-tools" title={`More tools: ${TOOL_GROUPS.filter(putAway).map((g) => g.label).join(', ')}`} onClick={() => setDock((l) => hideSome(l, l.hidden ?? [], []))}>
+          More tools
+        </button>
+      )}
       <div className="toolbar-fill" />
       <div className="tool-grid">
         <IconButton

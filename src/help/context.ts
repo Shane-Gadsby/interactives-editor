@@ -88,6 +88,10 @@ export const ARTBOARD_HELP: HelpTarget = { to: 'artboards', label: 'Artboard' };
 export const MASTER_HELP: HelpTarget = { to: 'page-master', label: 'Page master' };
 export const MANY_LAYERS_HELP: HelpTarget = { to: 'layers-panel', label: 'Selected layers' };
 export const GENERAL_HELP: HelpTarget = { to: 'welcome', label: 'Help' };
+/** The Getting started strip, the first-run screen and the Essentials workspace. */
+export const GETTING_STARTED_HELP: HelpTarget = { to: 'welcome#your-first-five-minutes', label: 'Getting started' };
+/** The search, goal chips and Play on the Templates tab's built-in starters. */
+export const STARTER_FINDER_HELP: HelpTarget = { to: 'templates#find-and-try-a-starter', label: 'Finding and trying a starter' };
 
 /** The help for an interaction node kind: its entry in the generated node reference. Null for a kind the catalog doesn't know. */
 export function nodeHelp(kind: string): HelpTarget | null {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BRANDED_STARTERS, COLOURWAYS, SETS, SET_NAMES, type BrandedStarter, type Colourway } from '../lib/branded';
+import { plainTags } from '../lib/starter-goals';
 import { ColourwaySwatches } from './ColourwaySwatches';
 
 const WAY_KEY = 'ix.branded.colourway';
@@ -52,15 +53,15 @@ export function BrandedPicture({ starter, way }: { starter: BrandedStarter; way:
  * The branded starter packs on the Templates page: a colourway picker (kept in this browser), then the starters by set with a
  * picture of the first page in that colourway. Nothing at all while no starter is registered; sets with none are left out.
  */
-export function BrandedPacks({ onPick }: { onPick: (s: BrandedStarter, way: Colourway) => void }) {
+export function BrandedPacks({ starters = BRANDED_STARTERS, onPick, onPlay }: { starters?: BrandedStarter[]; onPick: (s: BrandedStarter, way: Colourway) => void; onPlay?: (s: BrandedStarter, way: Colourway) => void }) {
   const [wayId, setWayId] = useState(remembered);
   const way = COLOURWAYS.find((c) => c.id === wayId) ?? COLOURWAYS[0];
-  if (!BRANDED_STARTERS.length) return null;
+  if (!starters.length) return null;
   const choose = (id: string) => {
     setWayId(id);
     remember(id);
   };
-  const sets = SETS.filter((set) => BRANDED_STARTERS.some((s) => s.set === set));
+  const sets = SETS.filter((set) => starters.some((s) => s.set === set));
   return (
     <section className="branded-packs" aria-labelledby="branded-packs-title">
       <div className="branded-packs-head">
@@ -78,7 +79,7 @@ export function BrandedPacks({ onPick }: { onPick: (s: BrandedStarter, way: Colo
         <section key={set} className="example-group" aria-label={SET_NAMES[set]}>
           <h3>{SET_NAMES[set]}</h3>
           <div className="project-grid templates-grid" style={{ '--card-size': '260px' } as React.CSSProperties}>
-            {BRANDED_STARTERS.filter((s) => s.set === set).map((s) => (
+            {starters.filter((s) => s.set === set).map((s) => (
               <article key={s.key} className="project-card template-card branded-card">
                 <button className="project-thumb" onClick={() => onPick(s, way)} aria-label={`Use the ${s.name} starter in ${way.name}`}>
                   <BrandedPicture starter={s} way={way} />
@@ -87,7 +88,7 @@ export function BrandedPacks({ onPick }: { onPick: (s: BrandedStarter, way: Colo
                   <div className="project-name">{s.name}</div>
                   <div className="muted small template-desc">{s.description}</div>
                   <div className="card-tags">
-                    {s.tags.map((t) => (
+                    {plainTags(s.tags, s.key).map((t) => (
                       <span key={t} className="tag-chip static">
                         <span className="tag-label">{t}</span>
                       </span>
@@ -95,7 +96,13 @@ export function BrandedPacks({ onPick }: { onPick: (s: BrandedStarter, way: Colo
                   </div>
                 </div>
                 <div className="project-actions">
-                  <span className="muted small">Branded</span>
+                  {onPlay ? (
+                    <button className="btn" onClick={() => onPlay(s, way)} title={`Play it here in ${way.name} to see how it works. Nothing is saved until you use it`} aria-label={`Play the ${s.name} starter in ${way.name}`}>
+                      Play
+                    </button>
+                  ) : (
+                    <span className="muted small">Branded</span>
+                  )}
                   <span className="spacer" />
                   <button className="btn primary" onClick={() => onPick(s, way)} title="Make a new project from this starter in the chosen colourway, with a checklist of what to change">
                     Use template

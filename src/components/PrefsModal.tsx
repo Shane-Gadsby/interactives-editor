@@ -9,6 +9,7 @@ import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
 import { BUILT_IN, applyWorkspace, deleteWorkspace, renameWorkspace, saveWorkspace, savedWorkspaces, MAX_SAVED } from '../lib/workspaces';
 import { confirmDialog, promptDialog } from './dialogs';
+import { restartTips, stripShown } from '../lib/onboarding';
 
 /** Personal preferences, kept in this browser. */
 export function PrefsModal({ onClose, workspace = false }: { onClose: () => void; workspace?: boolean }) {
@@ -126,6 +127,12 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
             onChange={(v) => setPrefs({ commentNotices: v })}
           />
           <CheckField label="Show tooltips" title="Explanations when you hover buttons and field names" value={p.tooltips} onChange={(v) => setPrefs({ tooltips: v })} />
+          <CheckField
+            label="Getting started strip"
+            title="The five jobs along the top of the editor (add a shape, move it, make it do something when clicked, preview, share) that tick themselves as you do them. It puts itself away for good once all five are done"
+            value={stripShown(p)}
+            onChange={(v) => (v ? restartTips() : setPrefs({ gettingStarted: false }))}
+          />
           {workspace && <WorkspaceSection />}
           <p className="hint">These settings are yours: they follow you to any browser you sign in on.</p>
         </div>
