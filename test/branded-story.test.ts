@@ -29,7 +29,8 @@ describe('branded story starters', () => {
     await flush();
   };
   const press = async (key: string) => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    //a browser's key event has a code as well as a key (layer shortcuts match on it)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key, code: key, bubbles: true, cancelable: true }));
     await flush();
   };
   const settle = async (player: Player, ms = 400) => {
@@ -77,6 +78,8 @@ describe('branded story starters', () => {
 
   describe('branching scenario', () => {
     const project = () => projectFromBrandedStarter(STORY[0], COLOURWAYS[0]);
+    //the choices are a repeater, so a choice is the copy of the Choice button at its place
+    const choose = (p: Project, page: string, i: number) => click(`${layer(p, page, 'Choice').id}~${i}`);
 
     it('a choice goes to its consequence, which offers choices of its own, and the ending comes from the score', async () => {
       const p = project();
@@ -88,14 +91,14 @@ describe('branded story starters', () => {
       expect(player.artboard.name).toBe('Tuesday: a quiet group');
       expect(textOf(layer(p, 'Tuesday: a quiet group', 'Path so far').id)).toContain('just starting');
       //choice 1 (ask Sam) is three points and goes to Sam's reply
-      await click(layer(p, 'Tuesday: a quiet group', 'Choice 1').id);
+      await choose(p, 'Tuesday: a quiet group', 0);
       await settle(player);
       expect(player.artboard.name).toBe('Sam replies');
       expect(player.getVariable('score')).toBe(3);
       expect(textOf(layer(p, 'Sam replies', 'Path so far').id)).toContain('Asked Sam');
       //the consequence page has two choices of its own
-      expect(byName(board(p, 'Sam replies'), 'Choice 2')).toBeTruthy();
-      await click(layer(p, 'Sam replies', 'Choice 1').id);
+      expect(document.querySelectorAll(`[data-ix-id^="${layer(p, 'Sam replies', 'Choice').id}~"]`)).toHaveLength(2);
+      await choose(p, 'Sam replies', 0);
       await settle(player);
       expect(player.getVariable('score')).toBe(6);
       expect(player.getVariable('path')).toBe('Asked Sam > Set a checkpoint');
@@ -115,15 +118,15 @@ describe('branded story starters', () => {
       const p = project();
       const player = play(p);
       await settle(player, 100);
-      player.goTo('Tuesday: a quiet group');
+      player.goTo(board(p, 'Tuesday: a quiet group').id);
       await settle(player);
-      await click(layer(p, 'Tuesday: a quiet group', 'Choice 2').id);
+      await choose(p, 'Tuesday: a quiet group', 1);
       await settle(player);
       expect(player.artboard.name).toBe('Wednesday night');
-      await click(layer(p, 'Wednesday night', 'Choice 2').id);
+      await choose(p, 'Wednesday night', 1);
       await settle(player);
       expect(player.artboard.name).toBe('Thursday: the contribution statement');
-      await click(layer(p, 'Thursday: the contribution statement', 'Choice 2').id);
+      await choose(p, 'Thursday: the contribution statement', 1);
       await settle(player);
       expect(player.artboard.name).toBe('Ending: learning moment');
       expect(player.getVariable('score')).toBe(0);
@@ -138,7 +141,7 @@ describe('branded story starters', () => {
       const p = project();
       expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['Slide 1: Title', 'Slide 2: Acknowledgement of Country', 'Slide 3: Section', 'Slide 4: Content', 'Slide 5: Content', 'Slide 6: Question', 'Slide 7: Summary', 'Slide 8: End']);
       p.artboards.filter((a) => !a.isMaster).forEach((a, i) => {
-        expect((byName(a, 'Slide counter') as TextNode).text).toBe(`Slide ${i + 1} of 8`);
+        expect((byName(a, 'Slide counter') as TextNode).text).toBe('Slide {pageNumber} of {pageCount}');
         expect(!!byName(a, 'Back')).toBe(i > 0);
       });
       expect((byName(p.artboards[1], 'Acknowledgement text') as TextNode).text).toContain('Traditional Custodians');
@@ -305,7 +308,13 @@ describe('branded story starters', () => {
       const e = el(`${card}~3`);
       expect(e.getAttribute('role')).toBe('button');
       expect(e.getAttribute('aria-label')).toBe('Card 4, face down');
-      expect(e.tabIndex).toBeGreaterThanOrEqual(0);
+      //the cards are one tab stop with the arrow keys between them
+      const stops = [...document.querySelectorAll<HTMLElement>(`[data-ix-id^="${card}~"]`)].filter((c) => c.tabIndex >= 0);
+      expect(stops).toHaveLength(1);
+      stops[0].focus();
+      stops[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+      await settle(player, 50);
+      expect(document.activeElement).toBe(el(`${card}~1`));
       e.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
       await settle(player, 100);
       expect(cardsOf(player)[3].state).toBe('up');
@@ -356,11 +365,12 @@ describe('branded story starters', () => {
 
     it('says to choose a video until one is chosen, then the note goes away', async () => {
       const a = await open();
-      expect(shown(layer(a.p, 'Watch and answer', 'Video placeholder').id)).toBe(true);
-      expect(textOf(layer(a.p, 'Watch and answer', 'Placeholder title').id)).toBe('Choose a video');
+      //the video says so itself (its empty text), and stops once there is a source
+      const empty = (a2: typeof a) => el(layer(a2.p, 'Watch and answer', 'Video').id).querySelector('.ix-video-empty');
+      expect(empty(a)!.textContent).toContain('Choose a video');
       a.player.destroy();
       const b = await open('https://example.com/lecture.mp4');
-      expect(shown(layer(b.p, 'Watch and answer', 'Video placeholder').id)).toBe(false);
+      expect(empty(b)).toBeNull();
       b.player.destroy();
     });
 
@@ -402,8 +412,10 @@ describe('branded story starters', () => {
       expect(shown(carry.id)).toBe(true);
       await click(carry.id);
       await settle(player, 50);
+      await new Promise((r) => setTimeout(r, 80));
+      await settle(player, 100);
       expect(player.getVariable('popup')).toBe(0);
-      expect(player.getVariable('asked')).toBe(1);
+      expect(player.getVariable('answered')).toBe(1);
       expect(state.paused).toBe(false);
       expect(shown(frames[0].id)).toBe(false);
       //the second question comes at its own time
@@ -424,14 +436,22 @@ describe('branded story starters', () => {
       player.step(16);
       await settle(player, 50);
       expect(state.t).toBe(50);
+      await new Promise((r) => setTimeout(r, 80));
+      await settle(player, 100);
       expect(state.paused).toBe(false);
-      expect(player.getVariable('asked')).toBe(2);
+      //jumping past the first two questions asks neither of them
+      state.t = 50.2;
+      player.step(16);
+      expect(player.getVariable('popup')).toBe(0);
       expect(el(`${chapter}~2`).getAttribute('aria-label')).toContain('Read closely');
-      //back to the start re-arms them all
+      //back to the start arms them all again: the first one is asked when the video reaches it
       await click(`${chapter}~0`);
       player.step(16);
       expect(state.t).toBe(0);
-      expect(player.getVariable('asked')).toBe(0);
+      state.t = 20.4;
+      player.step(16);
+      await settle(player, 50);
+      expect(player.getVariable('popup')).toBe(1);
       player.destroy();
     });
 
@@ -447,7 +467,7 @@ describe('branded story starters', () => {
       await click(layer(p, 'Summary', 'Watch again').id);
       await settle(player);
       expect(player.artboard.name).toBe('Watch and answer');
-      expect(player.getVariable('asked')).toBe(0);
+      expect(player.getVariable('popup')).toBe(0);
       player.destroy();
     });
   });

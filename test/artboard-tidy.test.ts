@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createArtboard, createNode, createProject, type Artboard, type Project } from 'interactives-player';
 import { BRANDED_STARTERS, COLOURWAYS, projectFromBrandedStarter } from '../src/lib/branded';
 import { STARTERS, projectFromStarter } from '../src/lib/template-starters';
-import { TIDY_GAP_VARIANT, TIDY_GAP_X, TIDY_GAP_Y, applyTidy, tidyCells, tidyColumns } from '../src/lib/artboard-tidy';
+import { TIDY_GAP_VARIANT, TIDY_GAP_X, TIDY_GAP_Y, TIDY_GROUP_PAD, TIDY_GROUP_TOP, applyTidy, tidyCells, tidyColumns } from '../src/lib/artboard-tidy';
 import { EditorStore, setCurrentStore } from '../src/store/store';
 import { brandHeldIds, isBrandHeld, lockBrandChrome } from '../src/lib/branded/lock';
 import { brandedPage, brandedProject, isChrome } from '../src/lib/branded/kit';
@@ -23,11 +23,22 @@ function checkLaidOut(key: string, p: Project) {
   //reading order: the cells of the grid, left to right then down, are the tidy order
   const cells = tidyCells(p);
   const lead = cells.map((c) => c.boards[0]);
+  //the artboards of a group are a block that sits in the grid as one cell, so between groups (and ungrouped pages) the order is the blocks' top left corners, and inside a group it is the pages' own
+  const known = new Set((p.artboardGroups ?? []).map((g) => g.id));
+  const unitOf = (a: Artboard) => (a.group && known.has(a.group) ? on.filter((m) => m.group === a.group) : [a]);
+  //(a group's block starts a frame's padding up and left of its first page)
+  const corner = (a: Artboard) => {
+    const grouped = !!a.group && known.has(a.group);
+    return { x: Math.min(...unitOf(a).map((m) => m.canvasX)) - (grouped ? TIDY_GROUP_PAD : 0), y: Math.min(...unitOf(a).map((m) => m.canvasY)) - (grouped ? TIDY_GROUP_TOP : 0) };
+  };
   for (let i = 1; i < lead.length; i++) {
     const a = lead[i - 1];
     const b = lead[i];
-    const sameRow = Math.abs(a.canvasY - b.canvasY) < 1;
-    expect(sameRow ? b.canvasX > a.canvasX : b.canvasY > a.canvasY, `${key}: "${b.name}" is out of order after "${a.name}"`).toBe(true);
+    const same = !!a.group && a.group === b.group;
+    const pa = same ? { x: a.canvasX, y: a.canvasY } : corner(a);
+    const pb = same ? { x: b.canvasX, y: b.canvasY } : corner(b);
+    const sameRow = Math.abs(pa.y - pb.y) < 1;
+    expect(sameRow ? pb.x > pa.x : pb.y > pa.y, `${key}: "${b.name}" is out of order after "${a.name}"`).toBe(true);
   }
   //the start page leads (top left), and a variant sits right beside its main page
   const start = p.artboards.find((a) => a.id === p.settings.startArtboardId);

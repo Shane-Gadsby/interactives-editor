@@ -1,15 +1,15 @@
-//Course presentation: eight slides like the PowerPoint template, with a slide bar (Back, Next, slide n of 8, arrow keys) done with page navigation.
+//Course presentation: eight slides like the PowerPoint template, with a slide bar (Back, Next, slide n of N, arrow keys) done with page navigation.
 import type { Artboard, SceneNode, TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, setQuestionSettings } from '../../../question-kit';
-import { brandedPage, brandedProject, button, card, contentBox, heading, item, picture, text, type BrandedCtx, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, picture, text, type BrandedCtx, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, go, spreadPages } from './common';
+import { Graph, goNext, goPrevious } from './common';
 
 type Tone = 'light' | 'gradient' | 'deep';
 
 const BAR_Y = 592;
 
-/** Back, "Slide n of N" and Next along the bottom of a slide, wired to the neighbouring slides, with the arrow keys doing the same. */
+/** Back, "Slide n of N" and Next along the bottom of a slide. They go to the previous and next page in the project's order, with the left and right arrow keys as shortcuts on the buttons, so a slide can be added or moved with no rewiring. */
 function slideBar(ctx: BrandedCtx, pages: Artboard[], i: number, tone: Tone): SceneNode[] {
   const { L } = ctx;
   const page = pages[i];
@@ -32,18 +32,18 @@ function slideBar(ctx: BrandedCtx, pages: Artboard[], i: number, tone: Tone): Sc
   if (hasBack) {
     const back = style(button(ctx, 'Back', 'Back', 330, BAR_Y, 110, false), false);
     back.ariaLabel = 'Previous slide';
+    back.shortcut = 'Left';
     made.push(back);
-    g.run(g.click(back, 'Slide bar'), go(pages[i - 1], 'slideRight'));
-    g.run(g.key('ArrowLeft', 'Slide bar: left arrow'), go(pages[i - 1], 'slideRight'));
+    g.run(g.click(back, 'Slide bar'), goPrevious('slideRight'));
   }
-  const counter = text(ctx, 'Slide counter', `Slide ${i + 1} of ${total}`, 450, BAR_Y + 10, 124, { fontSize: 14, align: 'center', color: tone === 'light' ? L.muted : tone === 'deep' ? L.onDeep : L.onGradient });
+  const counter = text(ctx, 'Slide counter', 'Slide {pageNumber} of {pageCount}', 450, BAR_Y + 10, 124, { fontSize: 14, align: 'center', color: tone === 'light' ? L.muted : tone === 'deep' ? L.onDeep : L.onGradient });
   made.push(counter);
   if (!last) {
     const next = style(button(ctx, 'Next', i === 0 ? 'Start' : 'Next', 584, BAR_Y, 110, true), true);
     next.ariaLabel = i === 0 ? 'Start the presentation' : 'Next slide';
+    next.shortcut = 'Right';
     made.push(next);
-    g.run(g.click(next, 'Slide bar'), go(pages[i + 1], 'slideLeft'));
-    g.run(g.key('ArrowRight', 'Slide bar: right arrow'), go(pages[i + 1], 'slideLeft'));
+    g.run(g.click(next, 'Slide bar'), goNext('slideLeft'));
   } else {
     const again = style(button(ctx, 'Start again', 'Start again', 584, BAR_Y, 130, true), true);
     made.push(again);
@@ -137,9 +137,14 @@ function build(colourway: Colourway) {
     const tone: Tone = page === title || page === end ? 'gradient' : page === section ? 'deep' : 'light';
     page.children.push(...slideBar(ctx, pages, i, tone));
   });
-  checklist.push(item('If you add or remove a slide, rewire Back and Next on its neighbours (Interactions tab) and retype "Slide n of 8" on each slide', title.children.find((n) => n.name === 'Next'), title));
+  checklist.push(item('To add a slide, duplicate one from the middle of the deck and drag it into place in the page list. Back, Next and "Slide n of N" follow the page order, so nothing needs rewiring. Only the first and last slides are different: Start on the first and Start again on the last', title.children.find((n) => n.name === 'Next'), title));
 
-  spreadPages(project);
+  //Notes for whoever edits the template, below the slides
+  const below = (p: Artboard, x: number, w: number) => ({ x, y: p.height + 14, w, h: 84 });
+  addNote(slideA, { ...below(slideA, 0, 440), text: '**Page navigation** Back and Next are Go to artboard (previous and next), and **Slide {pageNumber} of {pageCount}** counts the pages. The arrow keys are the shortcuts Left and Right on the two buttons.', colour: 'sky' });
+  addNote(slideA, { ...below(slideA, 456, 440), text: '[ ] Write your own points, and swap the grey picture box for yours.', colour: 'gold' });
+  addNote(quiz, { ...below(quiz, 0, 440), text: '**Question kit** The question is the kit\'s own frame, so its prompt, options, hint and feedback are all in the Question section of the inspector. Next is always there, so a learner can move on.', colour: 'sky' });
+
   return { project, checklist };
 }
 

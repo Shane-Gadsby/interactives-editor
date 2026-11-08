@@ -1,10 +1,10 @@
 //Video with questions: a video layer that stops at set times for a question from the question kit, a chapter list that seeks, and a summary page.
-//The video is tied to variables (position and playing both ways, length and ended out), so pausing and seeking are just Set variable nodes.
-import { createNode, type ContainerNode, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
+//The questions are cues on the video (each one pauses it as it is reached), the chapters are the video's own, and the video is held paused while a question is open.
+import { createNode, uid, type ContainerNode, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
 import { addQuestion, setQuestionSettings } from '../../../question-kit';
-import { brandedPage, brandedProject, button, card, contentBox, heading, item, solid, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, darkButton, go, set, spreadPages } from './common';
+import { Graph, addVar, darkButton, go, goNext, set } from './common';
 
 const QUESTIONS = [
   { at: 20, prompt: 'What is the first thing worth reading in an academic article?', options: ['The abstract', 'The reference list', 'The last paragraph'], hint: 'It is a short summary at the start.' },
@@ -13,10 +13,10 @@ const QUESTIONS = [
 ];
 
 const CHAPTERS = [
-  { n: 0, title: 'Why read this way', time: 0 },
-  { n: 1, title: 'Skim first', time: 25 },
-  { n: 2, title: 'Read closely', time: 50 },
-  { n: 3, title: 'Make notes', time: 75 },
+  { title: 'Why read this way', time: 0 },
+  { title: 'Skim first', time: 25 },
+  { title: 'Read closely', time: 50 },
+  { title: 'Make notes', time: 75 },
 ];
 
 const VIDEO_W = 616;
@@ -25,14 +25,13 @@ const VIDEO_H = 347;
 function build(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'Video with questions');
   const { project, L } = ctx;
-  const vtime = addVar(project, 'videoTime', 'number', 0);
-  const vplaying = addVar(project, 'videoPlaying', 'boolean', false);
-  addVar(project, 'videoLength', 'number', 0);
+  //The video tells these: whether it has ended, and which chapter it is in (the position, length and playing are the video's own business now)
   const vended = addVar(project, 'videoEnded', 'boolean', false);
-  const asked = addVar(project, 'asked', 'number', 0);
+  addVar(project, 'chapterNow', 'number', 0);
+  //How many questions the video has (its cues), kept for the summary page, which has no video of its own
+  const questionCount = addVar(project, 'questionCount', 'number', QUESTIONS.length);
+  //Which question is open (0 for none); the video is held paused while one is
   const popup = addVar(project, 'popup', 'number', 0);
-  addVar(project, 'questionTimes', 'list', QUESTIONS.map((q) => q.at));
-  addVar(project, 'chapters', 'list', CHAPTERS);
 
   const hero = brandedPage(ctx, 'Learn from video', { kind: 'hero', subtitle: 'Watch, and answer a few questions as you go. The video waits for you.' });
   const watch = brandedPage(ctx, 'Watch and answer', { footer: 'Video with questions' });
@@ -43,7 +42,7 @@ function build(colourway: Colourway) {
   const start = darkButton(ctx, 'Start', 'Start', 48, 450, 180);
   hero.children.push(start);
   const hg = new Graph(hero);
-  hg.run(hg.click(start, 'Begin'), go(watch));
+  hg.run(hg.click(start, 'Begin'), goNext());
   checklist.push(item('Write the title and the line under it on the first page', hero.children.find((n) => n.name === 'Subtitle'), hero));
 
   //The video and what shows until there is one
@@ -58,31 +57,17 @@ function build(colourway: Colourway) {
     autoplay: false,
     controls: true,
     ariaLabel: 'Video',
-    bindings: { 'media.time': 'videoTime', 'media.playing': 'videoPlaying', 'media.duration': 'videoLength', 'media.ended': 'videoEnded' },
-    bindingModes: { 'media.time': 'both', 'media.playing': 'both', 'media.duration': 'out', 'media.ended': 'out' },
+    emptyText: 'Choose a video: select this layer and pick a video file, or paste a link, in the inspector.',
+    //The questions are cues that pause the video where they are reached. Seeking past one never fires it and seeking back arms it again, so nothing counts which were asked
+    cues: QUESTIONS.map((q, i) => ({ id: uid('vc'), time: q.at, name: `Question ${i + 1}`, pause: true })),
+    chapters: CHAPTERS.map((c) => ({ id: uid('vh'), time: c.time, title: c.title })),
+    bindings: { 'media.hold': 'popup > 0', 'media.ended': 'videoEnded', 'media.chapter': 'chapterNow' },
+    bindingModes: { 'media.ended': 'out', 'media.chapter': 'out' },
   } as Partial<VideoNode>);
-  const holder = createNode('frame', {
-    name: 'Video placeholder',
-    x: box.x,
-    y: box.y,
-    width: VIDEO_W,
-    height: VIDEO_H,
-    cornerRadius: 12,
-    clip: true,
-    fill: solid(L.surfaceMuted),
-    stroke: null,
-    role: 'region',
-    ariaLabel: 'No video chosen yet',
-    bindings: { visible: '!layer("Video").src && !layer("Video").assetId' },
-    children: [
-      heading(ctx, 'Placeholder title', 'Choose a video', 40, 120, VIDEO_W - 80, { align: 'center', fontSize: 28 }),
-      text(ctx, 'Placeholder text', 'Select the Video layer, then pick a video file (or paste a link) in the inspector. This note hides itself once a video is chosen.', 60, 168, VIDEO_W - 120, { align: 'center', fontSize: 17, color: L.muted, lineHeight: 1.4 }),
-    ],
-  });
   //Behind the questions, so a short one never lets the video show underneath it
   const cover = createNode('rect', { name: 'Question cover', x: box.x, y: box.y, width: VIDEO_W, height: VIDEO_H, cornerRadius: 12, fill: solid(L.surface), stroke: null, decorative: true, bindings: { visible: 'popup > 0' } });
-  watch.children.push(video, holder, cover);
-  checklist.push(item('Choose your video: select the Video layer and pick a file in the inspector. The grey note on top of it goes away by itself', video, watch));
+  watch.children.push(video, cover);
+  checklist.push(item('Choose your video: select the Video layer and pick a file in the inspector. Until you do, the video says so itself (its empty text)', video, watch));
 
   //The pop-up questions, over the video, shown one at a time by the "popup" variable
   const frames: ContainerNode[] = [];
@@ -109,9 +94,11 @@ function build(colourway: Colourway) {
     row.children.push(carryOn);
     frames.push(frame);
   });
-  checklist.push(item('Write your own three questions (select a question, then the Question section in the inspector), and set the second each one appears at: Project > Variables > "questionTimes"', frames[0], watch));
+  //Live: how many questions are finished, from the question kit's own locked flags
+  addVar(project, 'answered', 'number', 0, { formula: `[${frames.map((f) => `${(f as unknown as { question: { prefix: string } }).question.prefix}_locked`).join(', ')}].filter(x => x).length`, live: true });
+  checklist.push(item('Write your own three questions (select a question, then the Question section in the inspector), and set the second each one appears at: select the Video layer and change its Cues (each cue is a question, in order, and is ticked to pause the video)', frames[0], watch));
 
-  //Beside the video: the chapters and a status
+  //Beside the video: the chapters (the video's own list) and a status
   const chapHead = heading(ctx, 'Chapters heading', 'Chapters', box.x + 640, box.y, 288, { fontSize: 22 });
   const chapter = createNode('frame', {
     name: 'Chapter',
@@ -127,11 +114,11 @@ function build(colourway: Colourway) {
     stroke: null,
     bindings: {
       ariaLabel: '"Go to " + item.title + ", " + Math.floor(item.time / 60) + " minutes " + item.time % 60 + " seconds"',
-      'fill.color': `chapters.filter(c => c.time <= videoTime).length == item.n + 1 ? "${L.surfaceMuted}" : "${L.surface}"`,
+      'fill.color': `chapterNow == index + 1 ? "${L.surfaceMuted}" : "${L.surface}"`,
     },
     children: [
       text(ctx, 'Chapter title', '{item.title}', 16, 14, 190, { fontSize: 17, fontWeight: 600, decorative: true }),
-      text(ctx, 'Chapter time', '{Math.floor(item.time / 60)}:{String(item.time % 60).padStart(2, "0")}', 206, 15, 66, { fontSize: 15, align: 'right', color: L.muted, decorative: true }),
+      text(ctx, 'Chapter time', '{clock(item.time)}', 206, 15, 66, { fontSize: 15, align: 'right', color: L.muted, decorative: true }),
     ],
   });
   const chapters = createNode('frame', {
@@ -145,64 +132,62 @@ function build(colourway: Colourway) {
     clip: false,
     role: 'region',
     ariaLabel: 'Chapters',
-    repeat: { items: 'chapters', layout: 'vertical', gap: 8, columns: 1 },
+    repeat: { items: 'layer("Video").chapters', layout: 'vertical', gap: 8, columns: 1 },
     children: [chapter],
   });
-  const status = text(ctx, 'Status', 'Questions answered: {asked} of {questionTimes.length}', box.x + 640, box.y + 300, 288, { fontSize: 17, fontWeight: 600 });
+  const status = text(ctx, 'Status', 'Questions answered: {answered} of {layer("Video").cues.length}', box.x + 640, box.y + 300, 288, { fontSize: 17, fontWeight: 600 });
   const hint = text(ctx, 'Hint', 'Press play. The video stops for each question and carries on when you press Continue.', box.x + 640, box.y + 332, 288, { fontSize: 14, color: L.muted, lineHeight: 1.4 });
   const toSummary = button(ctx, 'Go to summary', 'Go to the summary', box.x + 640, box.y + 400, 288, false);
   watch.children.push(chapHead, chapters, status, hint, toSummary);
-  checklist.push(item('Rename the chapters and set where each one starts: Project > Variables > "chapters" (title and time in seconds)', chapters, watch));
+  checklist.push(item('Rename the chapters and set where each one starts: select the Video layer and change its Chapters (title and time). The list here, the video\'s own controls and the highlight all read them', chapters, watch));
 
   //The wiring
   const g = new Graph(watch);
   const onStart = g.add('event.start', {}, null, 'out', { note: 'Start from the beginning' });
-  g.run(onStart, set(asked, '0'), set(popup, '0'), set(vplaying, 'false'), set(vtime, '0'));
+  g.run(onStart, ['action.resetVariables', { variables: [popup.id] }], set(questionCount, 'layer("Video").cues.length'), ['action.video', { target: video.id, op: 'seek', seconds: '0' }]);
 
-  //Reaching the next question time: pause and show it
-  const onTime = g.add('event.variable', { variable: vtime.id }, null, 'out', { note: 'A question is due' });
-  const due = g.add('logic.if', { condition: 'popup == 0 && asked < questionTimes.length && videoTime >= questionTimes[asked]' }, onTime);
-  g.runFrom(due, 'true', set(popup, 'asked + 1'), set(vplaying, 'false'), ['action.announce', { text: '"Question " + popup + " of " + questionTimes.length + ". The video is paused."' }]);
-  g.gap(40);
+  //A question cue: the video has already paused, so show the question
+  const onCue = g.add('event.videoCue', { target: video.id }, null, 'out', { note: 'A question is due' });
+  g.run(onCue, set(popup, 'event.index + 1'), ['action.announce', { text: '"Question " + popup + " of " + layer("Video").cues.length + ". The video is paused."' }]);
 
-  //Someone pressing play on the video's own controls while a question is open
-  const onPlay = g.add('event.variable', { variable: vplaying.id }, null, 'out', { note: 'Keep it paused behind a question' });
-  const sneaky = g.add('logic.if', { condition: 'popup > 0 && videoPlaying' }, onPlay);
-  //(the short wait lets the player see the video start before the variable says stop, or the change is swallowed in the same frame)
-  g.runFrom(sneaky, 'true', ['action.delay', { ms: 40 }], set(vplaying, 'false'));
-
-  //Continue after a question
+  //Continue after a question: let go of the hold, then play on (the hold lets go on the next frame)
   frames.forEach((frame) => {
     const btn = (frame.children.find((c) => (c as { questionPart?: string }).questionPart === 'buttons') as ContainerNode).children.find((c) => c.name === 'Continue')!;
-    g.run(g.click(btn, 'Carry on'), set(popup, '0'), ['action.setVariable', { variable: asked.id, op: 'add', value: '1' }], set(vplaying, 'true'));
+    g.run(g.click(btn, 'Carry on'), ['action.resetVariables', { variables: [popup.id] }], ['action.delay', { ms: 40 }], ['action.video', { target: video.id, op: 'play' }]);
   });
 
-  //A chapter: seek, and re-arm the questions after that point
+  //A chapter: seek there and play. One flow for every chapter in the list
   const onChapter = g.click(chapter, 'Chapter list');
-  g.run(onChapter, set(vtime, 'chapters[event.index].time'), set(asked, 'questionTimes.filter(t => t <= chapters[event.index].time).length'), set(popup, '0'), set(vplaying, 'true'));
+  g.run(onChapter, ['action.resetVariables', { variables: [popup.id] }], ['action.video', { target: video.id, op: 'seek', seconds: 'layer("Video").chapters[event.index].time' }], ['action.delay', { ms: 40 }], ['action.video', { target: video.id, op: 'play' }]);
 
   //The end of the video, or the button
-  const onEnd = g.add('event.variable', { variable: vended.id }, null, 'out', { note: 'Finished watching' });
-  const ended = g.add('logic.if', { condition: 'videoEnded' }, onEnd);
-  g.runFrom(ended, 'true', go(summary));
-  g.run(g.click(toSummary, 'Summary'), go(summary));
+  const onEnd = g.add('event.variable', { variable: vended.id, onlyIf: 'videoEnded' }, null, 'out', { note: 'Finished watching' });
+  g.run(onEnd, goNext());
+  g.run(g.click(toSummary, 'Summary'), goNext());
 
   //Summary
   const sbox = contentBox(summary);
   const points = text(ctx, 'Summary text', '•  Read the abstract first.\n\n•  Skim the headings to see the structure.\n\n•  Make notes in your own words.', sbox.x, sbox.y, 520, { fontSize: 21, lineHeight: 1.4 });
   const panel = card(ctx, 'Score panel', sbox.x + 570, sbox.y, sbox.width - 570, 190);
   const label = text(ctx, 'Score label', 'Questions answered correctly', sbox.x + 594, sbox.y + 24, sbox.width - 618, { fontSize: 17, color: L.muted });
-  const sum = QUESTIONS.map((_, i) => `${(frames[i] as unknown as { question: { prefix: string } }).question.prefix}_score`).join(' + ');
-  const score = text(ctx, 'Score', `{${sum}} of {questionTimes.length}`, sbox.x + 594, sbox.y + 70, sbox.width - 618, { fontSize: 48, fontWeight: 700 });
+  const score = text(ctx, 'Score', `{${QUESTIONS.map((_, i) => `${(frames[i] as unknown as { question: { prefix: string } }).question.prefix}_score`).join(' + ')}} of {questionCount}`, sbox.x + 594, sbox.y + 70, sbox.width - 618, { fontSize: 48, fontWeight: 700 });
   const again = button(ctx, 'Watch again', 'Watch again', sbox.x, sbox.y + 300, 200, true);
   summary.children.push(points, panel, label, score, again);
   const sg = new Graph(summary);
   sg.run(sg.click(again, 'Watch again'), go(watch));
   checklist.push(item('Write the summary points', points, summary));
 
-  spreadPages(project);
+  //Notes for whoever edits the template, below the pages
+  const below = (p: typeof watch, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });
+  addNote(watch, { ...below(watch, 0, 440), text: '**Video cues** Each question is a cue on the Video layer that pauses it. **On video cue** shows the question, and **Hold paused** is bound to `popup > 0`, so the controls cannot start the video behind it. Seeking past a cue asks nothing.', colour: 'sky' });
+  addNote(watch, { ...below(watch, 456, 440), text: '**Chapters** are the video\'s own, so the list here and the controls in the browser share them. One flow seeks to `chapters[event.index].time`.', colour: 'sky' });
+  addNote(hero, { ...below(hero, 0, 440), text: '[ ] **Before you share it** pick your video, then set each cue\'s time to where its question belongs, and write the three questions to match.', colour: 'gold' });
+
   return { project, checklist: checklist as TemplateChecklistItem[] };
 }
+
+/** Each question open over the video. */
+const VIDEO_LAYOUT_STATES: LayoutState[] = QUESTIONS.map((_, i) => ({ label: `question ${i + 1} open`, page: 'Watch and answer', vars: { popup: i + 1 } }));
 
 export const videoQuestions: BrandedStarter = {
   key: 'story/video-questions',
@@ -211,4 +196,5 @@ export const videoQuestions: BrandedStarter = {
   description: 'A video that pauses at set times for a question, then carries on. A chapter list that jumps around the video, and a summary with the score. Choose your video in the inspector; until then a note says so.',
   tags: ['video', 'question kit', 'chapters'],
   build,
+  layoutStates: VIDEO_LAYOUT_STATES,
 };

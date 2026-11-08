@@ -1,8 +1,9 @@
 //Personality quiz: six questions whose answers add points to four outcomes (study styles), a results page with the top outcome, its description, a picture and the scores, and Retake.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, contentBox, heading, item, picture, solid, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, heading, item, picture, solid, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, go, heroPage, set, spreadPages } from './common';
+import { keyNavList, progressBar } from '../../parts';
+import { Graph, addVar, announce, bind, go, goNext, heroPage, set } from './common';
 
 //The four outcomes, in the order the points below use
 export const OUTCOMES = [
@@ -81,7 +82,8 @@ function build(colourway: Colourway) {
   addVar(project, 'questions', 'list', QUESTIONS);
   const q = addVar(project, 'q', 'number', 0);
   const scores = addVar(project, 'scores', 'list', OUTCOMES.map(() => 0));
-  const top = addVar(project, 'top', 'number', 0);
+  //Live: the outcome with the most points (the first one on a tie), so the answer flow only has to add the points up
+  addVar(project, 'top', 'number', 0, { formula: 'scores.reduce((m, s, i) => s > scores[m] ? i : m, 0)', live: true });
 
   const hero = heroPage(ctx, 'What is your study style?', 'Six quick questions about how you like to learn. There are no wrong answers.');
   const page = brandedPage(ctx, 'Pick the answer that sounds most like you', { name: 'Questions', footer: 'Study style quiz' });
@@ -89,15 +91,13 @@ function build(colourway: Colourway) {
   const checklist: TemplateChecklistItem[] = [];
 
   const hg = new Graph(hero.page);
-  hg.run(hg.click(hero.start, 'Begin'), go(page));
+  hg.run(hg.click(hero.start, 'Begin'), goNext());
   checklist.push(item('Write the title and the line under it on the first page', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page));
 
   //The question and its four answers
   const box = contentBox(page);
   const where = text(ctx, 'Where', 'Question {q + 1} of {questions.length}', box.x, box.y, 400, { fontSize: 17, fontWeight: 600, color: L.muted });
-  const track = createNode('rect', { name: 'Progress track', x: box.x, y: box.y + 30, width: box.width, height: 8, cornerRadius: 4, fill: solid(L.surfaceMuted), stroke: null, decorative: true });
-  const bar = createNode('rect', { name: 'Progress bar', x: box.x, y: box.y + 30, width: 8, height: 8, cornerRadius: 4, fill: solid(L.button), stroke: null, decorative: true });
-  bind(bar, { width: `Math.max(8, ${box.width} * q / Math.max(1, questions.length))` });
+  const bar = progressBar(ctx, 'Progress bar', box.x, box.y + 30, box.width, { value: 'q', max: 'Math.max(1, questions.length)', label: 'Quiz progress', valueText: '{value} of {max} answered', height: 8 });
   const ask = heading(ctx, 'Question', QUESTIONS[0].q, box.x, box.y + 58, box.width, { fontSize: 28, autoSize: 'none', height: 80, bindings: { text: 'questions[q].q' } } as never);
   const answerText = text(ctx, 'Answer text', '{item.text}', 20, 12, ANSWER_W - 40, { fontSize: 20, lineHeight: 1.3, autoSize: 'none', height: ANSWER_H - 24, verticalAlign: 'middle', decorative: true });
   const answer = createNode('frame', {
@@ -115,32 +115,19 @@ function build(colourway: Colourway) {
     children: [answerText],
     bindings: { ariaLabel: '"Answer " + (index + 1) + ": " + item.text' },
   } as never);
-  const answers = createNode('frame', {
-    name: 'Answers',
-    x: box.x,
-    y: box.y + 150,
-    width: ANSWER_W * 2 + 16,
-    height: ANSWER_H * 2 + 16,
-    fill: null,
-    stroke: null,
-    clip: false,
-    role: 'region',
-    ariaLabel: 'Answers',
-    repeat: { items: 'questions.length > 0 ? questions[q].answers : []', layout: 'grid', gap: 16, columns: 2 },
-    children: [answer],
-  } as never);
-  page.children.push(where, track, bar, ask, answers);
+  //A grid of four that is one Tab stop: the arrow keys move between the answers
+  const answers = keyNavList('Answers', box.x, box.y + 150, ANSWER_W * 2 + 16, ANSWER_H * 2 + 16, { items: 'questions.length > 0 ? questions[q].answers : []', row: answer, mode: 'grid', columns: 2, gap: 16, ariaLabel: 'Answers' });
+  page.children.push(where, bar, ask, answers);
 
   const g = new Graph(page);
   const onStart = g.start('Back to the first question');
-  g.run(onStart, set(q, '0'), set(scores, '[0, 0, 0, 0]'), set(top, '0'), announce('"Question 1 of " + questions.length + ": " + questions[0].q'));
+  g.run(onStart, ['action.resetVariables', { variables: [q, scores].map((v) => v.id) }], announce('"Question 1 of " + questions.length + ": " + questions[0].q'));
   //One click handler for every answer: event.index says which one
   const onAnswer = g.click(answer, 'Choose an answer');
   const scored = g.add('action.setVariable', { variable: scores.id, op: 'set', value: 'scores.map((s, i) => s + questions[q].answers[event.index].points[i])' }, onAnswer);
   const more = g.add('logic.if', { condition: 'q + 1 < questions.length' }, scored);
   g.runFrom(more, 'true', set(q, 'q + 1'), announce('"Question " + (q + 1) + " of " + questions.length + ": " + questions[q].q'));
-  const last = g.add('action.setVariable', { variable: top.id, op: 'set', value: 'scores.reduce((m, s, i) => s > scores[m] ? i : m, 0)' }, more, 'false', { dy: 110 });
-  g.run(last, go(result));
+  g.add('action.artboard', { to: 'next', transition: 'fade', duration: 250 }, more, 'false', { dy: 110 });
 
   //The result
   const rbox = contentBox(result);
@@ -152,10 +139,10 @@ function build(colourway: Colourway) {
   const about = text(ctx, 'Result description', OUTCOMES[0].text, rx, rbox.y + 92, rw, { fontSize: 18, lineHeight: 1.4, autoSize: 'none', height: 170, bindings: { text: 'outcomes[top].text' } } as never);
   //How the four compared
   const rowName = text(ctx, 'Score name', '{item.name}', 0, 3, 150, { fontSize: 15, fontWeight: 600, autoSize: 'none', height: 22, decorative: true });
-  const rowTrack = createNode('rect', { name: 'Score track', x: 160, y: 7, width: 280, height: 14, cornerRadius: 7, fill: solid(L.surfaceMuted), stroke: null, decorative: true });
-  const rowBar = bind(createNode('rect', { name: 'Score bar', x: 160, y: 7, width: 8, height: 14, cornerRadius: 7, fill: solid(L.button), stroke: null, decorative: true }), { width: 'Math.max(8, item.pct * 2.8)', 'fill.color': `item.top ? "${L.button}" : "${L.border}"` });
+  //Each row's bar is a Progress layer (the percent is its value), the top style's in the button colour and the others in the border grey
+  const rowBar = bind(progressBar(ctx, 'Score bar', 160, 7, 280, { value: 'item.pct', max: 100, height: 14, decorative: true }), { 'barFill.color': `item.top ? "${L.button}" : "${L.border}"` });
   const rowPct = text(ctx, 'Score percent', '{item.pct}%', 452, 3, 60, { fontSize: 15, color: L.muted, autoSize: 'none', height: 22, decorative: true });
-  const row = createNode('frame', { name: 'Score', x: 0, y: 0, width: rw, height: 28, fill: null, stroke: null, clip: false, children: [rowName, rowTrack, rowBar, rowPct], bindings: { ariaLabel: 'item.name + ", " + item.pct + " percent"' } } as never);
+  const row = createNode('frame', { name: 'Score', x: 0, y: 0, width: rw, height: 28, fill: null, stroke: null, clip: false, children: [rowName, rowBar, rowPct], bindings: { ariaLabel: 'item.name + ", " + item.pct + " percent"' } } as never);
   const rows = createNode('frame', {
     name: 'Scores',
     x: rx,
@@ -184,7 +171,12 @@ function build(colourway: Colourway) {
     item('Ties go to the outcome that comes first in the list. To change that, edit the Choose an answer flow: the node that sets "top"', answers, page),
   );
 
-  spreadPages(project);
+  //Notes for whoever edits the template, below the pages
+  const below = (p: typeof page, x: number, w: number) => ({ x, y: p.height + 14, w, h: 84 });
+  addNote(page, { ...below(page, 0, 440), text: '**Live variable** `top` is the outcome with the most points, worked out from `scores` as they change. Nothing sets it, so the last answer only adds up and moves on.', colour: 'sky' });
+  addNote(page, { ...below(page, 456, 440), text: '[ ] Keep four answers on every question, each with a points list in the same order as `outcomes`. The four answers are one key-navigation grid, so the arrow keys move between them.', colour: 'gold' });
+  addNote(result, { ...below(result, 0, 440), text: '**Progress layers** The score bars are Progress layers inside a repeater. Each copy reads its own `item.pct`, and the top style is coloured with a binding on the bar colour.', colour: 'sky' });
+
   return { project, checklist };
 }
 
