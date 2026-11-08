@@ -1,8 +1,9 @@
 //Guess the answer: a picture and a question on a card, the learner thinks, then turns the card to see the answer, across a set of five.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, byName, contentBox, gradient, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, darkButton, emit, focus, go, heroPage, set, spreadPages } from './common';
+import { stack } from '../../parts';
+import { Graph, addVar, announce, bind, darkButton, emit, focus, go, goNext, heroPage, set } from './common';
 
 const CARDS = [
   { q: 'Which planet is known as the Red Planet?', a: 'Mars', note: 'Iron oxide, a kind of rust, in its soil gives it the red colour.' },
@@ -30,7 +31,7 @@ function build(colourway: Colourway) {
   const checklist: TemplateChecklistItem[] = [];
 
   const hg = new Graph(hero.page);
-  hg.run(hg.click(hero.start, 'Begin'), go(page));
+  hg.run(hg.click(hero.start, 'Begin'), goNext());
   checklist.push(item('Write the title and the line under it on the first page', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page));
 
   //The card: a question face and an answer face, which turns over
@@ -82,43 +83,39 @@ function build(colourway: Colourway) {
   } as never);
   const by = box.y + CARD_H + 18;
   const reveal = bind(button(ctx, 'Turn the card', 'Turn the card', box.x, by, 220, true), { visible: '!turned' });
-  const knewIt = bind(button(ctx, 'I knew it', 'I knew it', box.x, by, 200, true), { visible: 'turned' });
-  const learning = bind(button(ctx, 'Still learning', 'Still learning', box.x + 216, by, 200, false), { visible: 'turned' });
+  reveal.shortcut = 't';
+  //The two ratings are the children of one row, so one flow below serves both (event.childIndex says which was pressed)
+  const knewIt = button(ctx, 'I knew it', 'I knew it', 0, 0, 200, true);
+  const learning = button(ctx, 'Still learning', 'Still learning', 0, 0, 200, false);
+  const rating = bind(stack('Rating buttons', box.x, by, 416, { direction: 'row', gap: 16, children: [knewIt, learning] }), { visible: 'turned' });
   const progress = text(ctx, 'Progress', 'Card {card + 1} of {cards.length}', box.x + box.width - 300, by + 10, 300, { fontSize: 18, fontWeight: 600, align: 'right', color: L.muted });
-  page.children.push(deck, reveal, knewIt, learning, progress);
+  page.children.push(deck, reveal, rating, progress);
 
   const g = new Graph(page);
   const onStart = g.start('Back to the first card');
-  g.run(onStart, set(card, '0'), set(turned, 'false'), set(knew, '0'), ['action.setProperty', { target: deck.id, prop: 'scaleX', value: '1' }], announce('"Card 1 of " + cards.length + ": " + cards[0].q'));
+  g.run(onStart, ['action.resetVariables', { variables: [card, turned, knew].map((v) => v.id) }], ['action.setProperty', { target: deck.id, prop: 'scaleX', value: '1' }], announce('"Card 1 of " + cards.length + ": " + cards[0].q'));
 
-  //Turning: the card squashes edge on, swaps faces, and opens again
+  //Turning: the card squashes edge on, swaps faces, and opens again. The card, its button and the T key all send the same message, held back once it is turned
   const onCard = g.click(deck, 'Turn the card');
   g.run(onCard, emit('turn'));
   const onReveal = g.click(reveal, 'Turn the card');
   g.run(onReveal, emit('turn'));
-  const onTurn = g.message('turn', 'Turn the card over');
-  const fresh = g.add('logic.if', { condition: '!turned' }, onTurn);
-  g.runFrom(
-    fresh,
-    'true',
+  const onTurn = g.add('event.message', { name: 'turn', onlyIf: '!turned' }, null, 'out', { note: 'Turn the card over' });
+  g.run(
+    onTurn,
     ['action.animate', { target: deck.id, prop: 'scaleX', to: '0', duration: TURN_MS, ease: 'easeIn', continue: 'end' }],
     set(turned, 'true'),
     ['action.animate', { target: deck.id, prop: 'scaleX', to: '1', duration: TURN_MS, ease: 'easeOut', continue: 'end' }],
     announce('"Answer: " + cards[card].a + ". " + cards[card].note'),
-    ['action.delay', { ms: 60 }],
     focus(knewIt),
   );
 
-  //Rating the guess moves to the next card, or to the end
-  const onKnew = g.click(knewIt, 'I knew it');
-  const counted = g.add('action.setVariable', { variable: knew.id, op: 'add', value: '1' }, onKnew);
-  g.add('action.emit', { name: 'next' }, counted);
-  const onLearning = g.click(learning, 'Still learning');
-  g.run(onLearning, emit('next'));
-  const onNext = g.message('next', 'On to the next card');
-  const more = g.add('logic.if', { condition: 'card + 1 < cards.length' }, onNext);
-  g.runFrom(more, 'true', set(card, 'card + 1'), set(turned, 'false'), ['action.setProperty', { target: deck.id, prop: 'scaleX', value: '1' }], announce('"Card " + (card + 1) + " of " + cards.length + ": " + cards[card].q'), ['action.delay', { ms: 60 }], focus(deck));
-  g.add('action.artboard', { artboard: done.id, transition: 'fade', duration: 250 }, more, 'false', { dy: 110 });
+  //Rating the guess moves to the next card, or to the end: one flow for both buttons
+  const onRate = g.add('event.pointer', { target: rating.id, type: 'click', childrenOnly: true }, null, 'out', { note: 'I knew it / Still learning' });
+  const counted = g.add('action.setVariable', { variable: knew.id, op: 'add', value: 'event.childIndex == 0 ? 1 : 0' }, onRate);
+  const more = g.add('logic.if', { condition: 'card + 1 < cards.length' }, counted);
+  g.runFrom(more, 'true', set(card, 'card + 1'), ['action.resetVariables', { variables: [turned.id] }], ['action.setProperty', { target: deck.id, prop: 'scaleX', value: '1' }], announce('"Card " + (card + 1) + " of " + cards.length + ": " + cards[card].q'), focus(deck));
+  g.add('action.artboard', { to: 'next', transition: 'fade', duration: 250 }, more, 'false', { dy: 110 });
 
   checklist.push(
     item('Write your own five cards: Project > Variables > "cards", a question (q), its answer (a) and a line of why (note) for each. The card, the counter and the finished page follow the list', deck, page),
@@ -127,6 +124,7 @@ function build(colourway: Colourway) {
     item('Add or remove cards by adding or removing rows in "cards": "Card 3 of 5" and the last-card check follow the length of the list', progress, page),
     item('Change the two rating buttons, or what they count: the "knew" variable adds one for I knew it, and the finished page shows it', knewIt, page),
     item('Change how fast the card turns: the two Animate property nodes in the Turn the card over flow (Interactions tab), 160 ms each', deck, page),
+    item('Add a third rating ("Nearly"): duplicate a button in the Rating buttons row. One flow serves every button in the row, so you only change what event.childIndex does there', rating, page),
     item('Reword the finished page and its three ratings', done.children.find((n) => n.name === 'Result note'), done),
   );
 
@@ -138,7 +136,11 @@ function build(colourway: Colourway) {
   const dg = new Graph(done);
   dg.run(dg.click(replay, 'Go again'), go(page));
 
-  spreadPages(project);
+  //Notes for whoever edits the template, below the pages
+  const below = (x: number, w: number) => ({ x, y: page.height + 14, w, h: 84 });
+  addNote(page, { ...below(0, 440), text: '**One flow for two buttons.** I knew it and Still learning are children of the Rating buttons row. One On pointer on the row reads `event.childIndex` (0 is the first button), so a third rating needs no new wiring.', colour: 'sky' });
+  addNote(page, { ...below(456, 440), text: '[ ] Put your own cards in the `cards` variable (question, answer, a line of why). Swap the two grey picture boxes on the card. The card turns on a click, Enter or the T key.', colour: 'gold' });
+
   return { project, checklist };
 }
 

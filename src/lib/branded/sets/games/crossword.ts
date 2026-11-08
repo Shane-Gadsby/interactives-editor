@@ -1,8 +1,8 @@
 //Crossword: a 10 by 10 grid laid out from a list of words and clues each time it plays (and in the editor preview), cells typed into from the keyboard, clues you can click, Check and Reveal.
 import { createNode, layoutCrossword as layout, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, card, contentBox, item, solid, stroke, text, heading, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, card, contentBox, item, solid, stroke, text, heading, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, emit, focus, go, heroPage, lit, set, spreadPages } from './common';
+import { Graph, addVar, announce, bind, focus, goNext, heroPage, lit, set } from './common';
 
 export const SIZE = 10;
 const CELL = 40;
@@ -50,26 +50,34 @@ const WORD_UNDER_SEL = `sel < 0 ? -1 : (entries.findIndex(e => e.down == (dir ==
 const WORD_CELLS = `aw < 0 ? [] : Array.from({length: entries[aw].answer.length}, (_, k) => (entries[aw].row + (entries[aw].down ? k : 0)) * ${SIZE} + entries[aw].col + (entries[aw].down ? 0 : k))`;
 const CLUE_LINE = `aw < 0 ? "Select a square, then type." : (starts.indexOf(entries[aw].row * ${SIZE} + entries[aw].col) + 1) + (entries[aw].down ? " down: " : " across: ") + entries[aw].clue + " (" + entries[aw].answer.length + ")"`;
 const ALL_RIGHT = 'cells.every(c => c.ch == "" || c.t == c.ch)';
-const LAND_ON = (step: number, room: string) => `Array.from({length: ${room}}, (_, k) => sel + ${step} * (k + 1)).find(j => cells[j].ch != "") ?? sel`;
+//Arrow keys: from the chosen square on to the next one that has a letter in it, in the key's direction, without leaving its row (or the grid)
+const STEP = `({ArrowLeft: -1, ArrowRight: 1, ArrowUp: -${SIZE}, ArrowDown: ${SIZE}})[event.key]`;
+const LAND_ON = `Array.from({length: ${SIZE}}, (_, k) => sel + ${STEP} * (k + 1)).filter(j => j >= 0 && j < ${SIZE * SIZE} && (Math.abs(${STEP}) == ${SIZE} || Math.floor(j / ${SIZE}) == cells[sel].r)).find(j => cells[j].ch != "") ?? sel`;
 
 function build(colourway: Colourway) {
   const ctx = brandedProject(colourway, 'Crossword');
   const { project, L } = ctx;
   //The author's list is just words and clues. "entries" is worked out from it by a formula (the player lays the words out), and so is everything built from the entries, so the canvas preview and the play both follow the list. The typed value of "entries" is only the fallback
   addVar(project, 'words', 'list', WORDS);
-  addVar(project, 'entries', 'list', layoutCrossword(WORDS), `crossword(words, ${SIZE})`);
-  const letters = addVar(project, 'letters', 'list', [], LETTERS);
-  const starts = addVar(project, 'starts', 'list', [], STARTS);
+  addVar(project, 'entries', 'list', layoutCrossword(WORDS), { formula: `crossword(words, ${SIZE})`, live: true });
+  //Live variables: all worked out from the entries, so the grid, the numbers and both clue lists follow the words list with no flow to keep them current
+  addVar(project, 'letters', 'list', [], { formula: LETTERS, live: true });
+  addVar(project, 'starts', 'list', [], { formula: STARTS, live: true });
+  //The squares hold what was typed, so this one is state: it starts from its formula and Start puts it back
   const cells = addVar(project, 'cells', 'list', [], CELLS);
-  const across = addVar(project, 'acrossClues', 'list', [], clueList(false));
-  const down = addVar(project, 'downClues', 'list', [], clueList(true));
+  const across = addVar(project, 'acrossClues', 'list', [], { formula: clueList(false), live: true });
+  const down = addVar(project, 'downClues', 'list', [], { formula: clueList(true), live: true });
   const sel = addVar(project, 'sel', 'number', -1);
   const dir = addVar(project, 'dir', 'string', 'across');
-  const aw = addVar(project, 'aw', 'number', -1);
-  const wordCells = addVar(project, 'wordCells', 'list', []);
-  const current = addVar(project, 'current', 'string', '');
-  const status = addVar(project, 'status', 'string', '');
-  const done = addVar(project, 'done', 'boolean', false);
+  //The square last clicked, so a second click on it (or Enter) turns the word
+  const picked = addVar(project, 'picked', 'number', -1);
+  //Live too: the word under the chosen square, its squares and its clue
+  const aw = addVar(project, 'aw', 'number', -1, { formula: WORD_UNDER_SEL, live: true });
+  addVar(project, 'wordCells', 'list', [], { formula: WORD_CELLS, live: true });
+  addVar(project, 'current', 'string', '', { formula: CLUE_LINE, live: true });
+  const notice = addVar(project, 'notice', 'string', '');
+  const done = addVar(project, 'done', 'boolean', false, { formula: ALL_RIGHT, live: true });
+  addVar(project, 'status', 'string', '', { formula: 'notice != "" ? notice : done ? "Crossword complete. Well done!" : ""', live: true });
 
   const hero = heroPage(ctx, 'Study words crossword', 'Fill the grid from the clues. Type into a square, use the arrow keys to move, and check as you go.');
   const play = brandedPage(ctx, 'Crossword', { footer: '{cells.filter(c => c.ch != "" && c.t != "").length} of {cells.filter(c => c.ch != "").length} letters filled' });
@@ -77,7 +85,7 @@ function build(colourway: Colourway) {
 
   //Hero
   const hg = new Graph(hero.page);
-  hg.run(hg.click(hero.start, 'Begin'), go(play));
+  hg.run(hg.click(hero.start, 'Begin'), goNext());
   checklist.push(item('Write the title and the line under it on the first page', hero.page.children.find((n) => n.name === 'Subtitle'), hero.page));
 
   //The grid: one repeated square, so restyling one restyles them all
@@ -178,114 +186,75 @@ function build(colourway: Colourway) {
   const clear = button(ctx, 'Clear', 'Clear', colX + 384, buttonsY, 100, false);
   play.children.push(grid, acrossHead, acrossList, downHead, downList, banner, clueLine, message, check, revealWord, revealAll, clear);
 
-  //Setting the puzzle up
+  //Setting the puzzle up: the squares go back to their formula, the rest to where it started
   const g = new Graph(play);
   const onStart = g.start('Clear the puzzle (the entries come from the words list)');
-  g.run(
-    onStart,
-    set(letters, LETTERS),
-    set(starts, STARTS),
-    set(cells, CELLS),
-    set(across, clueList(false)),
-    set(down, clueList(true)),
-    set(sel, '-1'),
-    set(dir, '"across"'),
-    set(aw, '-1'),
-    set(wordCells, '[]'),
-    set(current, '"Select a square, then type."'),
-    set(status, '""'),
-    set(done, 'false'),
-  );
+  g.run(onStart, ['action.resetVariables', { variables: [cells, sel, dir, picked, notice].map((v) => v.id) }]);
 
-  //Whenever the chosen square or direction changes: which word it is in, its squares, its clue
-  const onPick = g.message('pick', 'Work out the word under the chosen square');
-  g.run(
-    onPick,
-    set(aw, WORD_UNDER_SEL),
-    set(dir, 'aw >= 0 ? (entries[aw].down ? "down" : "across") : dir'),
-    set(wordCells, WORD_CELLS),
-    set(current, CLUE_LINE),
-    announce('aw < 0 ? "No word here" : current + ". Letter " + (wordCells.indexOf(sel) + 1) + " of " + wordCells.length + (cells[sel].t == "" ? ", empty" : ", " + cells[sel].t)'),
-  );
+  //The word under the chosen square is a live variable, so all that is left to do when it moves is keep the direction and say where you are
+  const onWord = g.add('event.variable', { variable: aw.id, onlyIf: 'aw >= 0' }, null, 'out', { note: 'Keep the direction of the word you are in' });
+  g.run(onWord, set(dir, 'entries[aw].down ? "down" : "across"'));
+  const onMoved = g.add('event.variable', { variable: sel.id, onlyIf: 'sel >= 0' }, null, 'out', { note: 'Say where the chosen square is' });
+  g.run(onMoved, announce('aw < 0 ? "No word here" : current + ". Letter " + (wordCells.indexOf(sel) + 1) + " of " + wordCells.length + (cells[sel].t == "" ? ", empty" : ", " + cells[sel].t)'));
 
   //Clicking a square: the same one again turns the word the other way
   const onSquare = g.click(square, 'Choose a square');
-  g.run(onSquare, set(dir, 'sel == event.index ? (dir == "across" ? "down" : "across") : dir'), set(sel, 'event.index'), emit('pick'), focus(grid));
+  g.run(onSquare, set(dir, 'picked == event.index ? (dir == "across" ? "down" : "across") : dir'), set(picked, 'event.index'), set(sel, 'event.index'), focus(grid));
   //Clicking a clue
   for (const [list, name, key] of [[acrossList, 'across', across], [downList, 'down', down]] as const) {
     const row = list.children?.[0] ?? list;
     const onClue = g.click(row, `Choose a ${name} clue`);
-    g.run(onClue, set(dir, lit(name)), set(sel, `${key.name}[event.index].start`), emit('pick'), focus(grid));
+    g.run(onClue, set(dir, lit(name)), set(picked, '-1'), set(sel, `${key.name}[event.index].start`), focus(grid));
   }
   //Tabbing into the grid starts on the first square
-  const onFocus = g.add('event.focus', { target: grid.id, type: 'focus' }, null, 'out', { note: 'Tab into the grid' });
-  const lone = g.add('logic.if', { condition: 'sel < 0' }, onFocus);
-  g.runFrom(lone, 'true', set(sel, 'cells.findIndex(c => c.ch != "")'), emit('pick'));
+  const onFocus = g.add('event.focus', { target: grid.id, type: 'focus', onlyIf: 'sel < 0' }, null, 'out', { note: 'Tab into the grid' });
+  g.run(onFocus, set(sel, 'cells.findIndex(c => c.ch != "")'));
 
-  //Typing a letter fills the square and moves along the word
-  const onType = g.key('', grid, 'Type a letter');
+  //Typing a letter fills the square and moves along the word. This one hears every key on the grid (so the page does not scroll under it) and only a letter does anything
+  const onType = g.add('event.key', { key: '', type: 'keydown', target: grid.id }, null, 'out', { note: 'Type a letter' });
   const isLetter = g.add('logic.if', { condition: 'sel >= 0 && event.key.length == 1 && !event.ctrl && !event.alt && !event.meta && "abcdefghijklmnopqrstuvwxyz".includes(event.key.toLowerCase())' }, onType);
   g.runFrom(
     isLetter,
     'true',
+    set(notice, '""'),
     set(cells, 'cells.map((c, j) => j == sel ? {...c, t: event.key.toUpperCase(), s: ""} : c)'),
-    set(status, '""'),
-    set(done, ALL_RIGHT),
     set(sel, 'wordCells.indexOf(sel) >= 0 && wordCells.indexOf(sel) < wordCells.length - 1 ? wordCells[wordCells.indexOf(sel) + 1] : sel'),
-    emit('pick'),
   );
   //Backspace clears this square, or steps back and clears the one before
-  const onBack = g.key('Backspace', grid, 'Backspace');
-  const canBack = g.add('logic.if', { condition: 'sel >= 0' }, onBack);
-  g.runFrom(
-    canBack,
-    'true',
+  const onBack = g.add('event.key', { key: 'Backspace', type: 'keydown', target: grid.id, onlyIf: 'sel >= 0' }, null, 'out', { note: 'Backspace' });
+  g.run(
+    onBack,
     set(sel, 'cells[sel].t != "" || wordCells.indexOf(sel) < 1 ? sel : wordCells[wordCells.indexOf(sel) - 1]'),
     set(cells, 'cells.map((c, j) => j == sel ? {...c, t: "", s: ""} : c)'),
-    set(done, 'false'),
-    set(status, '""'),
-    emit('pick'),
+    set(notice, '""'),
   );
-  const onDelete = g.key('Delete', grid, 'Delete');
-  const canDelete = g.add('logic.if', { condition: 'sel >= 0' }, onDelete);
-  g.runFrom(canDelete, 'true', set(cells, 'cells.map((c, j) => j == sel ? {...c, t: "", s: ""} : c)'), set(done, 'false'), set(status, '""'), emit('pick'));
-  //Arrow keys: on to the next square that has a letter in it
-  const arrows: [string, string, string, string][] = [
-    ['ArrowLeft', 'across', LAND_ON(-1, 'cells[sel].c'), 'Left'],
-    ['ArrowRight', 'across', LAND_ON(1, `${SIZE - 1} - cells[sel].c`), 'Right'],
-    ['ArrowUp', 'down', LAND_ON(-SIZE, 'cells[sel].r'), 'Up'],
-    ['ArrowDown', 'down', LAND_ON(SIZE, `${SIZE - 1} - cells[sel].r`), 'Down'],
-  ];
-  for (const [key, way, land, note] of arrows) {
-    const k = g.key(key, grid, `Move ${note.toLowerCase()}`);
-    const can = g.add('logic.if', { condition: 'sel >= 0' }, k);
-    g.runFrom(can, 'true', set(dir, lit(way)), set(sel, land), emit('pick'));
-  }
+  const onDelete = g.add('event.key', { key: 'Delete', type: 'keydown', target: grid.id, onlyIf: 'sel >= 0' }, null, 'out', { note: 'Delete' });
+  g.run(onDelete, set(cells, 'cells.map((c, j) => j == sel ? {...c, t: "", s: ""} : c)'), set(notice, '""'));
+  //Arrow keys, all four in one flow: on to the next square that has a letter in it, turning the word with the direction
+  const onArrow = g.add('event.key', { key: '', type: 'keydown', target: grid.id, onlyIf: 'sel >= 0 && event.key.startsWith("Arrow")' }, null, 'out', { note: 'Arrow keys' });
+  g.run(onArrow, set(dir, '(event.key == "ArrowUp" || event.key == "ArrowDown") ? "down" : "across"'), set(sel, LAND_ON));
 
-  //Finishing: said once, when the last letter goes in or the answers are revealed
-  const onDone = g.add('event.variable', { variable: done.id }, null, 'out', { note: 'Crossword finished' });
-  const isDone = g.add('logic.if', { condition: 'done' }, onDone);
-  g.runFrom(isDone, 'true', ['action.setVariable', { variable: status.id, op: 'set', value: 'status == "" ? "Crossword complete. Well done!" : status' }], announce('status'));
+  //Finishing is said once, when the last letter goes in or the answers are revealed ("status" is live and already says it)
+  const onDone = g.add('event.variable', { variable: done.id, onlyIf: 'done' }, null, 'out', { note: 'Crossword finished' });
+  g.run(onDone, announce('status'));
 
   //Check marks every typed letter right or wrong
   const onCheck = g.click(check, 'Check');
   g.run(
     onCheck,
     set(cells, 'cells.map(c => c.ch != "" && c.t != "" && c.s != "shown" ? {...c, s: c.t == c.ch ? "ok" : "bad"} : c)'),
-    set(status, 'cells.filter(c => c.s == "bad").length > 0 ? cells.filter(c => c.s == "bad").length + " letter" + (cells.filter(c => c.s == "bad").length == 1 ? " is" : "s are") + " wrong (marked red)." : cells.filter(c => c.ch != "" && c.t == "").length > 0 ? "No mistakes so far. " + cells.filter(c => c.ch != "" && c.t == "").length + " squares still empty." : "Every letter is right."'),
-    set(done, ALL_RIGHT),
+    set(notice, 'cells.filter(c => c.s == "bad").length > 0 ? cells.filter(c => c.s == "bad").length + " letter" + (cells.filter(c => c.s == "bad").length == 1 ? " is" : "s are") + " wrong (marked red)." : cells.filter(c => c.ch != "" && c.t == "").length > 0 ? "No mistakes so far. " + cells.filter(c => c.ch != "" && c.t == "").length + " squares still empty." : "Every letter is right."'),
     announce('status'),
   );
   //Reveal word fills the chosen word, Reveal all fills the grid
-  const onRevealWord = g.click(revealWord, 'Reveal the chosen word');
-  const hasWord = g.add('logic.if', { condition: 'aw >= 0' }, onRevealWord);
-  g.runFrom(hasWord, 'true', set(cells, 'cells.map((c, j) => wordCells.includes(j) ? {...c, t: c.ch, s: "shown"} : c)'), set(status, '"Word revealed."'), set(done, ALL_RIGHT), announce('"Word revealed: " + entries[aw].answer'));
-  const noWord = g.add('action.setVariable', { variable: status.id, op: 'set', value: '"Select a square first."' }, hasWord, 'false', { dy: 110 });
-  g.run(noWord, announce('status'));
+  const onRevealWord = g.add('event.pointer', { target: revealWord.id, type: 'click', onlyIf: 'aw >= 0' }, null, 'out', { note: 'Reveal the chosen word' });
+  g.run(onRevealWord, set(notice, '"Word revealed."'), set(cells, 'cells.map((c, j) => wordCells.includes(j) ? {...c, t: c.ch, s: "shown"} : c)'), announce('"Word revealed: " + entries[aw].answer'));
+  const onRevealNone = g.add('event.pointer', { target: revealWord.id, type: 'click', onlyIf: 'aw < 0' }, null, 'out', { note: 'Nothing chosen yet' });
+  g.run(onRevealNone, set(notice, '"Select a square first."'), announce('status'));
   const onRevealAll = g.click(revealAll, 'Reveal everything');
-  g.run(onRevealAll, set(cells, 'cells.map(c => c.ch != "" ? {...c, t: c.ch, s: "shown"} : c)'), set(status, '"All the answers are showing."'), set(done, 'true'));
+  g.run(onRevealAll, set(notice, '"All the answers are showing."'), set(cells, 'cells.map(c => c.ch != "" ? {...c, t: c.ch, s: "shown"} : c)'));
   const onClear = g.click(clear, 'Clear');
-  g.run(onClear, set(cells, 'cells.map(c => ({...c, t: "", s: ""}))'), set(done, 'false'), set(status, '""'), announce('"Grid cleared"'));
+  g.run(onClear, set(notice, '""'), set(cells, 'cells.map(c => ({...c, t: "", s: ""}))'), announce('"Grid cleared"'));
 
   checklist.push(
     item('Write your own words and clues: Project > Variables > "words". Each row is {"answer": "PARAPHRASE", "clue": "Put someone else\'s idea into your own words"}, the answer in letters only (capitals or not, spaces and dashes are dropped). That is all you do: the grid, the numbers and both clue lists are laid out from it, in the canvas preview and every time the puzzle plays', grid, play),
@@ -296,7 +265,12 @@ function build(colourway: Colourway) {
     item('Change the completion message ("Crossword complete. Well done!"): the Crossword finished flow in the Interactions tab', message, play),
   );
 
-  spreadPages(project);
+  //Notes for whoever edits the template, below the page
+  const below = (x: number, w: number) => ({ x, y: play.height + 14, w, h: 96 });
+  addNote(play, { ...below(0, 440), text: '**Live variables** `entries`, `letters`, `starts`, both clue lists, `aw` (the word under the chosen square), `done` and `status` are worked out from the words and the squares. The flows only change what was typed.', colour: 'sky' });
+  addNote(play, { ...below(456, 440), text: '**One flow for the arrows.** All four keys are one On key with an Only if, rather than four copies. The grid is a single cursor (`sel`) so typing can run on to the next square, which is why it is not a key-navigation list.', colour: 'sky' });
+  addNote(play, { ...below(912, 440), text: '[ ] Write your own words and clues in the `words` variable. The grid is laid out for you, and a word that cannot cross the others is left out.', colour: 'gold' });
+
   return { project, checklist };
 }
 

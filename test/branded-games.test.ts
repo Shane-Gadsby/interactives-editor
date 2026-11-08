@@ -374,6 +374,14 @@ describe('games starters', () => {
       expect(player.artboard.name).toBe('Find the words');
       const grid = layer(p, 'Find the words', 'Grid').id;
       const rows = player.getVariable('rows') as string[];
+      //jsdom has no hit testing, so the square under a point is worked out from where the grid sits (what a browser's elementsFromPoint says)
+      const squareId = layer(p, 'Find the words', 'Letter square').id;
+      (document as unknown as { elementsFromPoint: (x: number, y: number) => Element[] }).elementsFromPoint = (x, y) => {
+        const c = Math.floor((x - GX) / 36);
+        const r = Math.floor((y - GY) / 36);
+        const hit = c >= 0 && c < N && r >= 0 && r < N ? el(`${squareId}~${r * N + c}`) : null;
+        return hit ? [hit] : [];
+      };
       const pointer = async (type: string, i: number) => {
         el(grid).dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, ...xy(i) }));
         await settle(player, 50);
@@ -394,13 +402,26 @@ describe('games starters', () => {
         window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, ...xy(b) }));
         await settle(player, 50);
       };
+      //the squares are buttons in the grid's key navigation: a click is how a tap, a mouse click and Enter all arrive
+      const square = layer(p, 'Find the words', 'Letter square').id;
+      const tap = async (i: number) => {
+        await click(`${square}~${i}`);
+        await settle(player, 50);
+      };
+      //a key goes to the square that has the focus
       const key = async (k: string, code = k) => {
-        el(grid).focus();
-        el(grid).dispatchEvent(new KeyboardEvent('keydown', { key: k, code, bubbles: true, cancelable: true }));
+        const at = document.activeElement as HTMLElement;
+        at.dispatchEvent(new KeyboardEvent('keydown', { key: k, code, bubbles: true, cancelable: true }));
+        //Space clicks a button when it is let go, as it does in a browser
+        if (k === ' ') at.dispatchEvent(new KeyboardEvent('keyup', { key: k, code, bubbles: true, cancelable: true }));
+        await settle(player, 50);
+      };
+      const focusSquare = async (i: number) => {
+        el(`${square}~${i}`).focus();
         await settle(player, 50);
       };
       const say = () => textOf(layer(p, 'Find the words', 'Message').id);
-      return { p, player, grid, rows, pointer, span, drag, key, say };
+      return { p, player, grid, rows, pointer, span, drag, key, say, tap, focusSquare, square };
     };
 
     it('hides every word in the 12 by 12 grid, in several directions, and the same words make the same grid', () => {
@@ -425,7 +446,8 @@ describe('games starters', () => {
       const { p, player } = await start();
       expect(player.getVariable('words')).toEqual(SEARCH_WORDS);
       expect(player.getVariable('found')).toEqual([]);
-      expect(player.getVariable('running')).toBe(true);
+      await flush(1100);
+      expect(player.getVariable('seconds')).toBeGreaterThanOrEqual(1);
       expect(document.querySelectorAll(`[data-ix-id^="${layer(p, 'Find the words', 'Letter square').id}~"]`)).toHaveLength(144);
       expect(document.querySelectorAll(`[data-ix-id^="${layer(p, 'Find the words', 'Word').id}~"]`)).toHaveLength(8);
       expect(textOf(layer(p, 'Find the words', 'Counts').id)).toContain('Found 0 of 8');
@@ -490,34 +512,31 @@ describe('games starters', () => {
     });
 
     it('works with two clicks: the first letter, then the last', async () => {
-      const { player, span, pointer, say } = await start();
+      const { player, span, tap, say } = await start();
       const [a, b] = span('QUOTE');
-      await pointer('pointerdown', a);
-      await pointer('pointerup', a);
+      await tap(a);
       expect(player.getVariable('start')).toBe(a);
       expect(say()).toContain('Start set');
-      await pointer('pointerdown', b);
-      await pointer('pointerup', b);
+      await tap(b);
       expect(player.getVariable('found')).toEqual([5]);
       expect(say()).toBe('Found QUOTE!');
       //clicking the same letter twice just clears the choice
-      await pointer('pointerdown', 0);
-      await pointer('pointerup', 0);
-      await pointer('pointerdown', 0);
-      await pointer('pointerup', 0);
+      await tap(0);
+      await tap(0);
       expect(player.getVariable('start')).toBe(-1);
       expect(say()).toContain('Selection cleared');
       player.destroy();
     });
 
     it('works from the keyboard: arrows move, Enter marks the first and last letter, Escape starts again', async () => {
-      const { p, player, grid, span, key, say } = await start();
-      expect(el(grid).tabIndex).toBeGreaterThanOrEqual(0);
+      const { p, player, grid, span, key, say, focusSquare, square } = await start();
+      //the grid is one tab stop: one square holds the tabindex and the arrow keys move between them
+      expect(el(grid).tabIndex).toBeLessThan(0);
       expect(el(grid).getAttribute('aria-label')).toContain('arrow keys');
-      el(grid).focus();
-      await settle(player, 50);
+      const stops = [...document.querySelectorAll<HTMLElement>(`[data-ix-id^="${square}~"]`)].filter((e) => e.tabIndex >= 0);
+      expect(stops).toHaveLength(1);
+      await focusSquare(0);
       expect(player.getVariable('cursor')).toBe(0);
-      expect(player.getVariable('showCursor')).toBe(true);
       await key('ArrowLeft');
       await key('ArrowUp');
       expect(player.getVariable('cursor')).toBe(0);
@@ -531,9 +550,14 @@ describe('games starters', () => {
       };
       await go(a);
       expect(player.getVariable('cursor')).toBe(a);
+      expect(document.activeElement).toBe(el(`${square}~${a}`));
+      expect(document.activeElement!.getAttribute('aria-label')).toContain('Row');
       await key('Enter');
       expect(player.getVariable('start')).toBe(a);
+      //the line follows the arrow keys once there is a start
       await go(b);
+      expect(player.getVariable('end')).toBe(b);
+      expect((player.getVariable('line') as number[]).length).toBeGreaterThan(1);
       await key(' ', 'Space');
       expect(player.getVariable('found')).toEqual([6]);
       expect(say()).toBe('Found SOURCE!');
@@ -568,12 +592,15 @@ describe('games starters', () => {
       await settle(player, 200);
       expect(player.artboard.name).toBe('Finished');
       expect(textOf(layer(p, 'Finished', 'Result').id)).toMatch(/^You found all 8 words in 0:\d\d\.$/);
-      expect(player.getVariable('running')).toBe(false);
+      //the clock stopped with the last word
+      const stopped = player.getVariable('seconds');
+      await flush(1100);
+      expect(player.getVariable('seconds')).toBe(stopped);
       await click(layer(p, 'Finished', 'Play again').id);
       await settle(player);
       expect(player.artboard.name).toBe('Find the words');
       expect(player.getVariable('found')).toEqual([]);
-      expect(player.getVariable('running')).toBe(true);
+      expect(player.getVariable('seconds')).toBe(0);
       player.destroy();
     });
 
@@ -751,7 +778,10 @@ describe('games starters', () => {
         await settle(player, 100);
       }
       expect(player.artboard.name).toBe('Finished');
-      expect(player.getVariable('running')).toBe(false);
+      //the clock stopped when the last answer went in
+      const stopped = player.getVariable('seconds');
+      await flush(1100);
+      expect(player.getVariable('seconds')).toBe(stopped);
       expect(textOf(layer(p, 'Finished', 'Result').id)).toBe('You scored 2 out of 4');
       expect(textOf(layer(p, 'Finished', 'Result note').id)).toContain('Good effort');
       await click(layer(p, 'Finished', 'Play again').id);
@@ -787,7 +817,7 @@ describe('games starters', () => {
 
     it('the progress bar grows with the questions answered', async () => {
       const { player, sums, typeIn, on } = await start({ mode: 'type', howMany: 5 });
-      const w = () => parseFloat(el(on('Progress bar')).style.width);
+      const w = () => parseFloat((el(on('Progress bar')).querySelector('.ix-bar') as HTMLElement).style.width);
       const before = w();
       await typeIn(String(sums()[0].ans));
       await click(on('Check'));
@@ -822,7 +852,7 @@ describe('games starters', () => {
       expect(textOf(on('Question text'))).toBe(cards[0].q);
       expect(textOf(on('Progress'))).toBe('Card 1 of 5');
       expect(shown(on('Turn the card'))).toBe(true);
-      expect(shown(on('I knew it'))).toBe(false);
+      expect(shown(on('Rating buttons'))).toBe(false);
       expect(el(on('Question picture'))).toBeTruthy();
       player.destroy();
     });
@@ -836,8 +866,8 @@ describe('games starters', () => {
       expect(shown(on('Answer face'))).toBe(true);
       expect(textOf(on('Answer text'))).toBe(cards[0].a);
       expect(textOf(on('Answer note'))).toBe(cards[0].note);
-      expect(shown(on('I knew it'))).toBe(true);
-      expect(shown(on('Still learning'))).toBe(true);
+      expect(shown(on('Rating buttons'))).toBe(true);
+      expect(shown(on('Rating buttons'))).toBe(true);
       expect(shown(on('Turn the card'))).toBe(false);
       expect(el(on('Card')).getAttribute('aria-label')).toContain(`Answer: ${cards[0].a}`);
       //the card is open again at full width after the turn
@@ -946,7 +976,7 @@ describe('games starters', () => {
       expect(first.getAttribute('role')).toBe('button');
       expect(first.tabIndex).toBeGreaterThanOrEqual(0);
       expect(first.getAttribute('aria-label')).toBe(`Answer 1: ${QUESTIONS[0].answers[0].text}`);
-      const w0 = parseFloat(el(on('Progress bar')).style.width);
+      const w0 = parseFloat((el(on('Progress bar')).querySelector('.ix-bar') as HTMLElement).style.width);
       expect(player.getVariable('scores')).toEqual([0, 0, 0, 0]);
       //an answer adds its points and moves to the next question
       await click(`${answer}~0`);
@@ -956,7 +986,7 @@ describe('games starters', () => {
       expect(textOf(on('Question'))).toBe(QUESTIONS[1].q);
       expect(textOf(on('Where'))).toBe('Question 2 of 6');
       expect(el(`${answer}~0`).textContent).toBe(QUESTIONS[1].answers[0].text);
-      expect(parseFloat(el(on('Progress bar')).style.width)).toBeGreaterThan(w0);
+      expect(parseFloat((el(on('Progress bar')).querySelector('.ix-bar') as HTMLElement).style.width)).toBeGreaterThan(w0);
       player.destroy();
     });
 
@@ -1054,7 +1084,7 @@ describe('games starters', () => {
       await settle(player);
       expect(player.artboard.name).toBe(MAP);
       const marker = (i: number) => layer(p, MAP, i === 5 ? 'Reward marker' : `Stage ${i + 1} marker`).id;
-      const page = (i: number) => `Stage ${i + 1}: ${STAGES[i].name}`;
+      const page = (i: number) => `Stage ${i + 1}`;
       const on = (pageName: string, name: string) => layer(p, pageName, name).id;
       //Does the whole stage: the wrong option first, then the right one, then Complete the stage
       const complete = async (i: number) => {
@@ -1076,7 +1106,7 @@ describe('games starters', () => {
 
     it('has the map, five stage pages and a reward, with the first stage ready and the rest locked', async () => {
       const { p, player, marker } = await start();
-      expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['The research journey', 'Map', ...STAGES.map((s, i) => `Stage ${i + 1}: ${s.name}`), 'Reward']);
+      expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['The research journey', 'Map', ...STAGES.map((_, i) => `Stage ${i + 1}`), 'Reward']);
       expect(player.getVariable('done')).toBe(0);
       expect(label(marker(0))).toContain('ready');
       for (let i = 1; i < 5; i++) expect(label(marker(i))).toContain('locked');
@@ -1285,10 +1315,11 @@ describe('games starters', () => {
 
     it('the word search grid keeps its arrows and Space from the page too', async () => {
       const { p, player } = await startGame('games/word-search', 'Word search');
-      const grid = el(layer(p, 'Find the words', 'Grid').id);
-      grid.focus();
-      for (const k of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' ']) expect(press(grid, k).defaultPrevented, k).toBe(true);
-      expect(press(grid, 'Tab').defaultPrevented).toBe(false);
+      //keys land on the focused square, inside the grid
+      const square = el(`${layer(p, 'Find the words', 'Letter square').id}~0`);
+      square.focus();
+      for (const k of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' ']) expect(press(square, k).defaultPrevented, k).toBe(true);
+      expect(press(square, 'Tab').defaultPrevented).toBe(false);
       expect(press(document.body, 'ArrowDown').defaultPrevented).toBe(false);
       player.destroy();
     });
