@@ -1,4 +1,5 @@
 import { Fragment, useState } from 'react';
+import { PropRow } from '../lib/prop-search';
 import { ANIMATABLE_PROPS, MEDIA_ATTRIBUTES, animatableProp, layerScope, applyConverters, evaluate, instanceInputProps, nodeUniformProps, parseList, type BindingMode, type Converter, type Project, type SceneNode, type Variable } from 'interactives-player';
 import { findArtboardOf, isIdentifier } from '../store/doc';
 import { previewScope } from '../lib/data';
@@ -150,7 +151,7 @@ export function BindingsSection({ node, project, set }: { node: SceneNode; proje
       ))}
       </ExprLocals.Provider>
       {entries.length > 0 && <hr className="item-sep" />}
-      {addPicker(false)}
+      <PropRow k="Add binding" words={['bind', 'variable', 'data', 'connect']}>{addPicker(false)}</PropRow>
       {project.variables.some((v) => !isIdentifier(v.name)) && <p className="hint">Some variable names are not valid identifiers and can't be used in formulas.</p>}
     </Section>
   );

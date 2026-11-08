@@ -45,6 +45,11 @@
   --primary-bg: var(--u-gold);
   --primary-bg-hover: var(--u-gold-dark);
   --primary-fg: var(--u-g7);
+  /* Count pills and small badges: the palette's dark grey text on a light grey pill in both themes, and on a pale wash
+     of white where the pill sits on the gold of a chosen row */
+  --pill-bg: var(--u-g3);
+  --pill-fg: var(--u-g7);
+  --pill-on-gold: color-mix(in srgb, var(--u-white) 75%, transparent);
   /* Every panel resize bar, while hovered, focused or dragged: a 3px line, 2px into a 7px strip, the same on all of them */
   --resizer: var(--u-gold);
   /* Text colours for notes and toasts that sit on a pale tint or the panel colour */
@@ -1026,13 +1031,17 @@ hr.item-sep {
 }
 .tag-n {
   font-size: 9.5px;
+  font-weight: 600;
   padding: 0 5px;
   border-radius: 8px;
-  background: var(--line-2);
-  color: var(--muted);
+  background: var(--pill-bg);
+  color: var(--pill-fg);
 }
-.tag-chip.active .tag-n {
-  color: var(--text);
+.tag-chip.active .tag-n,
+.folder-item.active .tag-n,
+.folder-row.active .tag-n {
+  background: var(--pill-on-gold);
+  color: var(--pill-fg);
 }
 .home-body {
   display: flex;
@@ -2160,9 +2169,8 @@ div.text-editor {
   color: var(--primary-fg);
 }
 .artboard-row.selected .badge {
-  color: var(--primary-fg);
-  border-color: color-mix(in srgb, var(--primary-fg) 45%, transparent);
-  background: transparent;
+  color: var(--pill-fg);
+  background: var(--pill-on-gold);
 }
 .artboard-row.selected .twisty,
 .artboard-row.selected svg {
@@ -2279,8 +2287,8 @@ button.twisty:hover {
   font-size: 9.5px;
   padding: 1px 5px;
   border-radius: 8px;
-  background: var(--line-2);
-  color: var(--muted);
+  background: var(--pill-bg);
+  color: var(--pill-fg);
   font-weight: 500;
 }
 .add-artboard {
@@ -3045,11 +3053,12 @@ button.twisty:hover {
   border-color: var(--primary-bg);
 }
 .badge.usage-flag {
-  background: var(--warn);
-  color: var(--bg);
+  background: var(--u-gold);
+  color: var(--pill-fg);
 }
 .badge.usage-flag.bad {
   background: var(--danger);
+  color: var(--pill-fg);
 }
 .usage-only {
   display: inline-flex;
@@ -3492,7 +3501,8 @@ button.twisty:hover {
   flex: 1;
 }
 .badge.ok {
-  color: var(--accent);
+  background: color-mix(in srgb, var(--u-green) 35%, var(--u-g3));
+  color: var(--pill-fg);
 }
 
 
@@ -3633,6 +3643,8 @@ button.twisty:hover {
   display: flex;
   height: 100%;
   min-height: 0;
+  /* a box too narrow for its columns scrolls, instead of the middle one being squeezed out of sight */
+  overflow-x: auto;
 }
 .split-col-wrap {
   position: relative;
@@ -5171,8 +5183,8 @@ code {
 /* Libraries panel and library badges */
 .library-badge {
   margin-left: 6px;
-  background: color-mix(in srgb, var(--logic) 22%, var(--panel-2));
-  color: var(--logic);
+  background: color-mix(in srgb, var(--u-purple) 30%, var(--u-g3));
+  color: var(--pill-fg);
   vertical-align: middle;
 }
 .libraries-panel {
@@ -6938,7 +6950,7 @@ code {
   padding: 0 4px;
   border-radius: 8px;
   background: var(--danger);
-  color: #fff;
+  color: var(--pill-fg);
   font: 600 10px/15px system-ui, sans-serif;
 }
 .notice-list {
@@ -7283,7 +7295,8 @@ code {
   font-weight: 600;
 }
 .templates-head .seg button.on .tag-n {
-  color: var(--primary-fg);
+  background: var(--pill-on-gold);
+  color: var(--pill-fg);
 }
 .template-card .project-thumb {
   height: calc(var(--card-size, 220px) * 0.62);
@@ -8645,7 +8658,7 @@ code {
   background-color: rgba(60, 130, 246, 0.35);
 }
 .themes-way-pick {
-  max-width: 150px;
+  max-width: 100%;
   height: 24px;
   font-size: 12px;
 }
@@ -8686,4 +8699,89 @@ code {
   position: absolute;
   inset: 0;
   z-index: 1;
+}
+
+/* ---------------------------------------------------------------- properties search
+   The box is pinned over the scrolling panel. While a search is on every section opens and anything that doesn't match
+   hides (ps-hide); a section with nothing in it goes with it, and the sections sort best match first. */
+.inspector:focus {
+  outline: none;
+}
+.prop-search {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  order: -100000;
+  padding: 6px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.prop-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.prop-search-input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 26px;
+}
+.prop-search-clear {
+  position: absolute;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.prop-search-clear:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+.prop-search-key {
+  position: absolute;
+  right: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  pointer-events: none;
+}
+.prop-search-status {
+  padding-top: 4px;
+}
+.prop-search-status .link-btn {
+  padding: 0;
+  color: var(--text);
+  text-decoration: underline;
+}
+.inspector.ps-on {
+  display: flex;
+  flex-direction: column;
+}
+.inspector.ps-on > * {
+  flex: none;
+}
+.ps-hide {
+  display: none !important;
+}
+.prop-row {
+  display: contents;
+}
+/* what's left of a pair when one half is hidden, and the plain text between fields */
+.keyed:has(> .ps-hide),
+.row:has(> .ps-hide) > .link-toggle,
+.row:has(> .keyed > .ps-hide) > .link-toggle {
+  display: none;
+}
+.inspector.ps-on .row:not([data-prop]):not(:has([data-prop]:not(.ps-hide))),
+.inspector.ps-on .section:not(.ps-hit) .section-body > :not([data-prop]):not(:has([data-prop]:not(.ps-hide))),
+.inspector.ps-on > :not(.section):not(.prop-search):not(.recording-banner):not(:has(.section)) {
+  display: none;
 }

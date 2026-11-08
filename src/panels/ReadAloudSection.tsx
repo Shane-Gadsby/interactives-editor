@@ -1,4 +1,5 @@
 import type { Project, ReadAloudSettings } from 'interactives-player';
+import { PropRow } from '../lib/prop-search';
 import { store } from '../store/store';
 import { CheckField, Row, Section, SelectField, TextField } from '../components/ui';
 import { addListenButton } from '../lib/listen-button';
@@ -65,9 +66,11 @@ export function ReadAloudSection({ project }: { project: Project }) {
         </>
       )}
       <p className="hint">Prefer your own button? Add a Listen button layer to this artboard, or use the Read aloud node in the Interactions tab.</p>
+      <PropRow k="Add a Listen button" words={['read aloud', 'speech', 'text to speech', 'audio']}>
       <button className="btn" onClick={addLayer} title="Adds a Listen button layer to the open artboard, wired to read the artboard aloud">
         Add a Listen button to this artboard
       </button>
+      </PropRow>
     </Section>
   );
 }

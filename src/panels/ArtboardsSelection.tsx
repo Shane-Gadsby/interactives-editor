@@ -2,6 +2,7 @@ import type { Project } from 'interactives-player';
 import { store } from '../store/store';
 import { Icons } from '../components/icons';
 import { IconButton, Row, Section } from '../components/ui';
+import { PropRow } from '../lib/prop-search';
 import { deleteArtboardsCommand, groupArtboardsCommand, selectionGroupInfo, tidyTheseCommand } from '../lib/artboard-commands';
 
 /** What the inspector shows when several artboards are selected: what can be done to all of them at once. */
@@ -19,6 +20,7 @@ export function ArtboardsSelection({ ids, project }: { ids: string[]; project: P
         {names.slice(0, 4).join(', ')}
         {names.length > 4 ? ` and ${names.length - 4} more` : ''}. Drag any of their names on the canvas to move them all.
       </p>
+      <PropRow k="Align artboards" words={['align', 'distribute', 'left', 'right', 'centre', 'center', 'top', 'bottom']}>
       <div className="align-bar">
         {b('alignLeft', 'Align left edges', () => st.alignArtboards(ids, 'left'))}
         {b('alignHCenter', 'Align horizontal centres', () => st.alignArtboards(ids, 'center'))}
@@ -29,7 +31,8 @@ export function ArtboardsSelection({ ids, project }: { ids: string[]; project: P
         {b('distH', 'Distribute horizontally (3 or more)', () => st.distributeArtboards(ids, 'x'), ids.length < 3)}
         {b('distV', 'Distribute vertically (3 or more)', () => st.distributeArtboards(ids, 'y'), ids.length < 3)}
       </div>
-      <Row>
+      </PropRow>
+      <Row k="Group artboards" words={['ungroup', 'folder', 'collect']}>
         <button className="btn" title="Put these artboards in a named group: listed together in the Layers panel and framed on the canvas" onClick={() => void groupArtboardsCommand(ids)}>
           Group artboards…
         </button>
@@ -37,7 +40,7 @@ export function ArtboardsSelection({ ids, project }: { ids: string[]; project: P
           Ungroup
         </button>
       </Row>
-      <Row>
+      <Row k="Tidy up artboards" words={['grid', 'arrange', 'duplicate', 'delete', 'copy']}>
         <button className="btn" title="Lay these artboards out in a grid among themselves" onClick={() => tidyTheseCommand(ids)}>
           Tidy up
         </button>

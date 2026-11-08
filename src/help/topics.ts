@@ -221,7 +221,7 @@ From left to right:
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
 - Zoom: **−**, the percentage (click it to fit everything) and **+**.
-- **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**.
+- **Preferences** (the gear, with the version **(i)** icon in its title bar) and **Help**. After you click or tab into a panel, Help opens that panel's own page (its tooltip names the panel); click the canvas or a toolbar and it goes back to the general help.
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
@@ -246,7 +246,7 @@ Drag the left and right panels' inner edges (beside the canvas) to make them wid
 All artboards side by side. See [Moving around the canvas](canvas). Right-click for menus: see [Layers, hidden and locked layers](layers-panel#right-click-menus).
 
 ## Inspector (right)
-Settings for the selection. A layer's settings start with **Layer** (name, position, size, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard and its **Responsive**, **Steps**, **Joysticks**, **Blends** and **Bones** sections, then the **Project** settings and the **Fonts**. The chain between **W** and **H** (and between **Sx** and **Sy**, and on an artboard's size) links the two: linked, changing one changes the other and keeps their ratio, and the canvas's resize handles keep it too (hold <kbd>Shift</kbd> to resize freely). Each layer remembers its own. The Inspector starts 320 px wide. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
+Settings for the selection. The search box at the top finds a property by name or by what it does ([The Properties panel](properties-panel)). A layer's settings start with **Layer** (name, position, size, visibility, blend), then a section named after its kind (**Path**, **Text**, **Image**...) with what only that kind has. Click a section's title to fold it away or open it again; the arrow beside the title points down when it's open and right when it's folded. With several layers selected, the bar of align buttons at the top lines them up. With nothing selected, or just an artboard, it shows the artboard and its **Responsive**, **Steps**, **Joysticks**, **Blends** and **Bones** sections, then the **Project** settings and the **Fonts**. The chain between **W** and **H** (and between **Sx** and **Sy**, and on an artboard's size) links the two: linked, changing one changes the other and keeps their ratio, and the canvas's resize handles keep it too (hold <kbd>Shift</kbd> to resize freely). Each layer remembers its own. The Inspector starts 320 px wide. Section titles with a **?** link to the page in these docs, and the diamonds beside fields key them on the timeline.
 
 ## Bottom panel
 **Timeline**, **Interactions**, **Scripts**, **Variables**, **Data**, **Accessibility**, **Insights**, **Public interface**, **Themes** and **Usage**. A project made from a template also has a **Checklist** tab. Click a tab to open it, click the open one again to fold the bottom panel down to its tabs, and drag the top edge to resize. Each has its own page: [Timelines](timelines), [Interactions](interactions), [Scripts](scripts), [Variables](variables), [Data sources](data-sources), [Accessibility checker](accessibility-checker), [Insights](insights), [Public interface](public-interface), [Themes](themes), [Usage](usage) and [Templates](templates#use-a-template).
@@ -259,7 +259,7 @@ Every panel can go anywhere: the left, right or bottom area, or a window of its 
 
 A floating window moves by its title bar and resizes from its bottom-right corner. Its **×** closes it and sends its panels back to where they started. An area nothing is docked in takes no room.
 
-Right-click a tab for **Dock on the left / right / at the bottom**, **Float in its own window** and **Reset panel layout** (everything back where it started). Right-click the tool bar to put it **On the left**, **On the right** or **Floating**, or drag its **Tools** title out onto the page to float it there (a floating tool bar moves by the same title). The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
+Right-click a tab (or press Shift+F10 on it) for **Dock on the left / right / at the bottom**, **Float in its own window**, **Help for this panel** and **Reset panel layout** (everything back where it started). Right-click the tool bar to put it **On the left**, **On the right** or **Floating**, or drag its **Tools** title out onto the page to float it there (a floating tool bar moves by the same title). The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
 **Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. The **Debug** panel (on by default) shows:
@@ -552,6 +552,27 @@ Select layers and drag them on the canvas. If you let go over a **different artb
 - **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**On click…**, **On hover…**) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
 - **An artboard**: **New** (a menu of layers to add where you clicked), **Paste**, **Make start artboard**, **Duplicate artboard**, **Zoom to artboard** and **Delete artboard**.
 - **Empty canvas**: **New artboard here**, **Paste**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`,
+  },
+  {
+    id: 'properties-panel',
+    title: 'The Properties panel and its search',
+    group: 'Design',
+    summary: 'What the right-hand panel shows for a layer, an artboard and the project, and how to find a property with the search box.',
+    keywords: 'properties inspector panel right search find filter property fuzzy synonym transparency opacity round corner radius alt description hide visible colour color z-order draw order aria typo did you mean slash ctrl f',
+    body: `The **Properties** panel is on the right. It shows the settings of whatever is selected: a layer (or several), an artboard, or, with nothing selected, the artboard's and the project's settings. Each group of settings is a **section** with a title. Click the title to fold it, and the **?** beside it opens that section's page.
+
+## Searching the properties
+The box at the top of the panel finds a property by what it does or what it is called. Press <kbd>/</kbd> or <kbd>Ctrl</kbd>+<kbd>F</kbd> while the focus is in the panel (or click the box).
+
+- It matches the label, the tooltip, the section title and other names people use. Try *transparency* (finds **Opacity**), *round* (**Corner radius**), *alt* or *aria* (**Description** and **Text alternative**), *hide* (**Visible**), *colour* or *color* (the colours), *font size* (**Size**), *z-order* (**Draw order**) or *width* (**W**).
+- Small typos are fine (*opacty*, *blnd*), and the order of the words doesn't matter (*radius corner*). Every word you type has to match something.
+- The best matches win: a property named exactly what you typed beats one that starts with it, which beats one with a word that starts with it, which beats a looser guess. Weaker guesses are left out when there are good matches.
+- The panel shows only the matching rows. Sections that start folded open, sections with nothing in them go away, and the section with the best match comes first. A line under the box says how many properties it found.
+- If nothing matches it says so and offers the closest name (*Did you mean Opacity?*); click it to use it.
+- The down arrow (or <kbd>Enter</kbd>) in the box moves to the first match. <kbd>Esc</kbd> clears the search, and the panel goes back to how it was.
+- Found fields work as they always do: type in them, drag their labels, key them with the diamond. The search stays while you pick other layers, so you can look at one property across several layers.
+
+The search works for a layer, several layers, an artboard, several artboards and the project settings.`,
   },
   {
     id: 'shapes',
@@ -3746,13 +3767,13 @@ Check the projects page for an active folder, tag or search (the **Clear filters
     summary: 'Search, tooltips and help links.',
     keywords: 'help docs search tooltip question',
     body: `- **Search**: press <kbd>F1</kbd> or <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere for quick search. Type a few words and press <kbd>Enter</kbd> to open the best match.
-- **Help button**: the **?** at the bottom of the tool bar (it opens the page for the tool you're using), the **?** in the top bar, the **Help** link on the projects page, or <kbd>?</kbd>.
+- **Help button**: the **?** at the bottom of the tool bar (it opens the page for the tool you're using), the **?** in the top bar (after you click into a panel it opens that panel's page instead; right-click a panel's tab for **Help for this panel**), the **Help** link on the projects page, or <kbd>?</kbd>.
 - **Getting started**: the five tutorials start at [Tutorial 1](tutorial-first-animation). Stuck? [Troubleshooting and common questions](troubleshooting).
 - **Contents**: the list on the left groups every page. In the narrow drawer, the button at its top left shows and hides it. **Previous** and **next** links at the bottom of each page walk through them in order.
 - **Pictures and clips**: click a picture to open it full size. Clips play on a loop without sound, and have controls if you want to pause.
 - **Tooltips**: hover a button or a field's name for a short explanation. Turn them off in [Preferences](preferences).
 - **Version**: the small **(i)** icon beside **Help** (and in the help drawer, the <kbd>F1</kbd> quick search and Preferences) shows the version you are running when you hover it, and copies it when you click it. Include it when you report a problem: see [Getting started as a beta tester](welcome#getting-started-as-a-beta-tester).
-- **? links**: inspector sections have a **?** that opens their page here.`,
+- **? links**: inspector sections have a **?** that opens their page here. The panels' tabs don't have one: use the top bar's, or right-click the tab.`,
   },
 ];
 

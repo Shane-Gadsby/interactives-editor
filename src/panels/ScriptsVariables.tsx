@@ -37,7 +37,7 @@ export function ScriptsPanel() {
     setActiveId(sc.id);
   };
   return (
-    <SplitColumns id="scripts" columns={[{ width: 180, min: 120, max: 420 }, 'flex', { width: 260, min: 180, max: 520 }]} className="scripts">
+    <SplitColumns id="scripts" columns={[{ width: 180, min: 120, max: 420 }, 'flex', { width: 260, min: 180, max: 520, hideBelow: 700 }]} className="scripts">
       <div className="script-list">
         {s.scripts.map((sc) => (
           <button key={sc.id} className={`list-item${sc.id === active?.id ? ' active' : ''}`} onClick={() => setActiveId(sc.id)}>

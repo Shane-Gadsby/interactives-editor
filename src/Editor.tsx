@@ -29,7 +29,7 @@ import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink, openHelp } from './help/Help';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ContextMenu } from './components/ContextMenu';
-import { DockDragLayer, DockFloats, DockZone, FloatingTools, ToolsHead, toolsMenu, useDockSync, useZoneSizes } from './components/Dock';
+import { DockDragLayer, DockFloats, DockZone, FloatingTools, ToolsHead, openHeaderHelp, useHeaderHelpTitle, toolsMenu, useDockSync, useZoneSizes } from './components/Dock';
 import { PrefsModal } from './components/PrefsModal';
 import { HistoryModal, InviteModal, ShareForReviewModal, ShareModal } from './components/ProjectModals';
 import { SaveTemplateModal } from './components/TemplateModals';
@@ -665,6 +665,7 @@ function ThemeSwitch() {
 }
 
 function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }) {
+  const helpTitle = useHeaderHelpTitle();
   const s = useEditor((st) => ({ name: st.project.name, saveState: st.saveState, saveError: st.saveError, zoom: st.zoom, rev: st.project.updated, live: st.live, peers: st.peers }));
   const [menu, setMenu] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
@@ -775,7 +776,7 @@ function TopBar({ home, onPreview }: { home: () => void; onPreview: () => void }
         <button onClick={() => st.set({ zoom: Math.min(32, s.zoom * 1.25) })}>+</button>
       </div>
       <IconButton icon={<Icons.gear />} title="Preferences (mouse wheel, tooltips)" onClick={() => setPrefsOpen(true)} />
-      <IconButton icon={<Icons.help />} title="Help (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp()} />
+      <IconButton icon={<Icons.help />} title={helpTitle} onClick={openHeaderHelp} />
       {prefsOpen && <PrefsModal workspace onClose={() => setPrefsOpen(false)} />}
       {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}

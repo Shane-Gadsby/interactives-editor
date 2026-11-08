@@ -1,4 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
+import { PropSearchBox } from './PropSearchBox';
 import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
 import {
   LIGHT_LOOK,
@@ -122,17 +124,42 @@ export function Inspector() {
     playhead: st.playhead,
     recording: st.recording,
   }));
+  // The search lives here (not in the box) so it survives clicking from layer to layer
+  const [store] = useState(() => new PropSearchStore());
+  const [query, setQueryState] = useState('');
+  const box = useRef<HTMLInputElement>(null);
+  const setQuery = (q: string) => {
+    setQueryState(q);
+    store.setQuery(q.trim());
+  };
   const ab = getArtboard(s.project, s.activeArtboardId);
   if (!ab) return <aside className="inspector" />;
   const nodes = s.selection.map((id) => locate(ab, id)?.node).filter(Boolean) as SceneNode[];
   const pickedAbs = pickedArtboardIds(s);
+  // "/" or Ctrl+F anywhere in the panel (outside a field you're typing in) goes to the search; Esc clears it
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    const t = e.target as HTMLElement;
+    const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t.isContentEditable;
+    if ((e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f')) {
+      e.preventDefault();
+      e.stopPropagation();
+      box.current?.focus();
+      box.current?.select();
+    } else if (e.key === 'Escape' && query && !e.defaultPrevented) {
+      e.preventDefault();
+      setQuery('');
+    }
+  };
   return (
-    <aside className="inspector">
-      {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
-      {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : (
-        // several artboards selected: what applies to all of them, instead of the active one's own settings
-        pickedAbs.length > 1 ? <ArtboardsSelection ids={pickedAbs} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />
-      )}
+    <aside className={`inspector${query.trim() ? ' ps-on' : ''}`} tabIndex={-1} onKeyDown={onKeyDown}>
+      <PropSearchProvider value={store}>
+        <PropSearchBox store={store} query={query} setQuery={setQuery} inputRef={box} />
+        {s.recording && s.timelineShown && <div className="recording-banner">Recording keyframes at {Math.round(s.playhead)} ms</div>}
+        {nodes.length ? <NodeInspector nodes={nodes} ab={ab} project={s.project} /> : (
+          // several artboards selected: what applies to all of them, instead of the active one's own settings
+          pickedAbs.length > 1 ? <ArtboardsSelection ids={pickedAbs} project={s.project} /> : <ArtboardInspector ab={ab} project={s.project} />
+        )}
+      </PropSearchProvider>
     </aside>
   );
 }
@@ -584,8 +611,10 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             { value: '800x600', label: '800 × 600' },
           ]}
         />
+        <PropRow k="Background" words={['colour', 'color', 'fill', 'backdrop', 'gradient', 'paint']}>
         <div className="field-label block">Background</div>
         <PaintField paint={ab.background} project={project} box={{ w: ab.width, h: ab.height }} onChange={(p) => setAb((a) => (a.background = p), `ab-bg-${ab.id}`)} />
+        </PropRow>
         <CheckField label="Clip content to artboard" title="Preview and exports cut off whatever hangs outside the artboard. On the canvas it still shows faintly there (Preferences: Show layers outside clipped artboards)" value={ab.clip} onChange={(v) => setAb((a) => (a.clip = v))} />
         {project.settings.library && !ab.library && (
           <CheckField
@@ -613,7 +642,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             onChange={(v) => setAb((a) => (v ? (a.brandPlace = v as BrandPlace) : delete a.brandPlace))}
           />
         )}
-        <Row>
+        <Row k="Start artboard" words={['make start artboard', 'first page', 'home page', 'entry', 'duplicate artboard', 'copy', 'clone']}>
           <button className="btn" disabled={project.settings.startArtboardId === ab.id} onClick={() => setProject((p) => (p.settings.startArtboardId = ab.id))}>
             {project.settings.startArtboardId === ab.id ? 'Start artboard' : 'Make start artboard'}
           </button>
@@ -706,7 +735,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <Section help="attributions" title="Credits" defaultOpen={false}>
         <CreditsSettingsFields />
         <p className="hint">The entries themselves are in the Attributions tab. They are your own record unless you turn the button on.</p>
-        <Row>
+        <Row k="Open Attributions" words={['credits', 'references', 'sources']}>
           <button className="btn" onClick={() => store().set({ bottomTab: 'credits', previewPlaying: false })} title="Open the Attributions tab">
             Open Attributions
           </button>
@@ -714,7 +743,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       </Section>
       <Section help="text" title="Fonts">
         {project.fonts.map((f, i) => (
-          <Row key={i} className="font-row">
+          <Row key={i} className="font-row" k="Project fonts" words={[f.family, 'remove font', 'typeface']}>
             <span className="font-name" style={{ fontFamily: f.family }}>
               {f.family}
             </span>
@@ -722,6 +751,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             <IconButton icon={<Icons.trash />} title="Remove font" onClick={() => setProject((p) => p.fonts.splice(i, 1))} />
           </Row>
         ))}
+        <PropRow k="Add a font" words={['google fonts', 'typeface', 'upload font', 'font family']}>
         <FontPicker
           ariaLabel="Add a font"
           title="Search every Google font and add it to this project (the player loads it). Fonts you upload in Assets show here too"
@@ -734,6 +764,7 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
             if (o.kind !== 'system') setProject((p) => void ensureGoogleFont(p.fonts, o.family, [400, 600, 700], { force: true }));
           }}
         />
+        </PropRow>
         <p className="hint">Upload .woff2/.ttf files in Assets to use your own fonts.</p>
       </Section>
     </>
@@ -993,6 +1024,7 @@ function RunsEditor({ node: n }: { node: Extract<SceneNode, { type: 'text' }> })
     else clear(i, key);
   };
   return (
+    <PropRow k="Text runs" words={['rich text', 'styled stretch', 'bold part', 'mixed styles', 'inline style']}>
     <div className="runs">
       <button className="btn" onClick={() => setOpen(!open)} title="Every differently styled stretch of the text, one by one. The normal way: double-click the text on the canvas, select some of it and use the toolbar.">
         {open ? 'Hide text runs' : rich ? `Text runs (${runs.length})` : 'Text runs…'}
@@ -1043,6 +1075,7 @@ function RunsEditor({ node: n }: { node: Extract<SceneNode, { type: 'text' }> })
         </>
       )}
     </div>
+    </PropRow>
   );
 }
 
@@ -1134,7 +1167,7 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
 /** Rect, ellipse, polygon and star become a path (same outline) so their points can be edited, bent and keyed. */
 function ConvertToPath({ node }: { node: SceneNode }) {
   return (
-    <Row>
+    <Row k="Convert to path" words={['outline', 'vector', 'edit points', 'editable']}>
       <button className="btn" title="Turn this shape into a path with the same outline, so its points can be edited, bent and keyed" onClick={() => store().convertToPath(node.id)}>
         Convert to path
       </button>
@@ -1151,7 +1184,7 @@ function ShapeKeys({ node }: { node: SceneNode }) {
   const onKey = tracks.some((t) => t.keys.some((k) => Math.abs(k.t - at) < 1));
   return (
     <>
-      <Row>
+      <Row k="Key shape" words={['keyframe', 'morph', 'animate points', 'clear shape keys']}>
         <button
           className={`btn key-btn${tracks.length ? ' tracked' : ''}${onKey ? ' on-key' : ''}`}
           title={tl ? `Key the whole shape (every point and handle) at ${at} ms. Key it at one time, move the playhead, edit the points with recording on, and the shape morphs` : 'Key the whole shape at the playhead (creates a timeline)'}
@@ -1426,10 +1459,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />
           ) : (
             nodes.length === 1 && (
+              <PropRow k="HTML" words={['embed code', 'iframe', 'markup', 'source', 'code']}>
               <div className="code-field">
                 <div className="field-label block">HTML (scripts run in the published player, not on the canvas)</div>
                 <CodeEditor language="html" value={n.html} onChange={(v) => set({ html: v }, `html-${n.id}`)} height={200} />
               </div>
+              </PropRow>
             )
           )}
           {radius}
@@ -1520,12 +1555,14 @@ function DrawSection({ nodes }: { nodes: DrawNode[] }) {
         onChange={(id) => id && applyDrawTemplate(nodes.map((x) => x.id), id)}
       />
       {nodes.length === 1 && (
+        <PropRow k="Draw script" words={['code', 'javascript', 'canvas', 'draw function']}>
         <div className="code-field">
           <div className="field-label block">
             Draw script: <code>function draw(g, t, dt)</code>
           </div>
           <CodeEditor value={n.code} onChange={(v) => set({ code: v }, `code-${n.id}`)} height={280} />
         </div>
+        </PropRow>
       )}
       {problem && <p className={problem.kind === 'error' ? 'hint error' : 'hint'}>{problem.kind === 'error' ? `Script error, the layer stopped: ${problem.message}` : problem.message}</p>}
       <Row>
@@ -1580,7 +1617,7 @@ function InteractionsSection({ node, ab }: { node: SceneNode; ab: Artboard }) {
       ) : (
         <p className="hint">No interactions on this layer yet.</p>
       )}
-      <Row>
+      <Row k="Add interaction" words={['on click', 'on hover', 'event', 'action', 'trigger', 'click', 'hover']}>
         <button className="btn" onClick={() => add('click')}>
           + On click
         </button>
@@ -1642,9 +1679,9 @@ function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Pr
     <Section help="links-cursors#cursor" title="Cursor on hover" defaultOpen={!!(n.cursor || n.cursorImage)}>
       <SelectField
         label="Cursor"
-        title="The mouse cursor shown while the pointer is over this layer (and its children), like CSS :hover { cursor }"
+        title="The mouse cursor shown while the pointer is over this layer (and its children), like CSS :hover { cursor }. Automatic shows a pointer if the layer is a link or clickable"
         value={n.cursor ?? ''}
-        options={[{ value: '', label: 'Automatic: pointer if it is a link or clickable' }, ...CURSORS.map((c) => ({ value: c, label: CURSOR_LABELS[c] ?? c }))]}
+        options={[{ value: '', label: 'Automatic' }, ...CURSORS.map((c) => ({ value: c, label: CURSOR_LABELS[c] ?? c }))]}
         onChange={(v) => set({ cursor: v || undefined })}
       />
       <SelectField
@@ -1777,6 +1814,7 @@ function AlignBar({ count, shapes }: { count: number; shapes: number }) {
     return <IconButton key={title} icon={<I width={16} />} title={title} onClick={fn} disabled={disabled} />;
   };
   return (
+    <PropRow k="Align and boolean" words={['align', 'distribute', 'left', 'right', 'centre', 'center', 'top', 'bottom', 'union', 'subtract', 'intersect', 'exclude', 'combine shapes', 'boolean']}>
     <div className="align-bar">
       {b('alignLeft', 'Align left', () => st.align('left'))}
       {b('alignHCenter', 'Align horizontal centres', () => st.align('hcenter'))}
@@ -1796,6 +1834,7 @@ function AlignBar({ count, shapes }: { count: number; shapes: number }) {
         </>
       )}
     </div>
+    </PropRow>
   );
 }
 
@@ -1902,7 +1941,7 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
           </Row>
           {L.wrap && !L.grid && lineGapField('Line gap', 'The space between wrapped rows (or columns). Empty uses Gap')}
           <LayoutAnimateFields value={L.animate} onChange={(animate) => update({ animate })} />
-          <Row>
+          <Row k="Remove auto layout" words={['delete layout', 'stop stacking']}>
             <button className="btn" onClick={() => set({ layout: null })}>
               Remove auto layout
             </button>
@@ -1939,7 +1978,7 @@ function InstanceSection({ node, project }: { node: InstanceNode; project: Proje
         onChange={(v) => set({ fit: v })}
       />
       {target && (
-        <Row>
+        <Row k="Reset size" words={['edit artboard', 'match artboard', 'original size']}>
           <button className="btn" onClick={() => set({ width: target.width, height: target.height })}>
             Reset size
           </button>
@@ -2011,7 +2050,7 @@ function TextModifiersSection({ node }: { node: Extract<SceneNode, { type: 'text
       defaultOpen={list.length > 0}
       actions={<IconButton icon={<Icons.plus />} title="Add a text modifier: animate letters, words or lines one after another" onClick={() => store().addTextModifier(node.id)} />}
     >
-      <Row>
+      <Row k="Text animation presets" words={['presets', 'animate letters', 'typewriter', 'wave', 'fade in']}>
         <span className="field-label" title="Ready-made animations: each adds a modifier and a timeline for it">
           Presets
         </span>
@@ -2314,6 +2353,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
     >
       {!list.length && <p className="hint">Mix several timelines by a number: blend idle, walk and run by speed, or layer a lean on top of a loop. Start one with a Play blend node.</p>}
       {!list.length && (
+        <PropRow k="Build a blend example" words={['example', 'demo', 'pose', 'blend']}>
         <button
           className="link-btn"
           title="Add a circle, two pose timelines, a 0 to 1 variable with a labelled slider ('Drag me: blend weight') on the artboard, and a blend between the poses. Then open Preview and drag that slider"
@@ -2332,6 +2372,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
         >
           Build an example to try
         </button>
+        </PropRow>
       )}
       {list.map((b, i) => {
         const oneD = b.mode === '1d';

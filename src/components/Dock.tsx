@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { onPanelRequest, store, useEditor, type BottomTab } from '../store/store';
 import { dockFloat, getDock, isShown, movePanel, resetDock, setDock, showPanel, subscribeDock, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type Zone } from '../lib/dock';
 import { Icons, type IconName } from './icons';
-import { HelpLink } from '../help/Help';
+import { openHelp } from '../help/Help';
+import { getTopic } from '../help/topics';
 import { ContextMenu, type MenuItem } from './ContextMenu';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Layers, Assets } from '../panels/LeftPanel';
@@ -45,11 +46,11 @@ function CommentsBody() {
 }
 
 const PANELS: Record<PanelId, PanelDef> = {
-  layers: { label: 'Layers', help: 'layers', tip: 'The artboards and the layers on them', body: () => <Layers /> },
+  layers: { label: 'Layers', help: 'layers-panel', tip: 'The artboards and the layers on them', body: () => <Layers /> },
   assets: { label: 'Assets', help: 'assets', tip: 'Every file in the project: pictures, video, sound, fonts, data and design files', body: () => <Assets /> },
   libraries: { label: 'Libraries', help: 'libraries', tip: 'Share components and styles between projects', body: () => <LibrariesPanel /> },
   comments: { label: 'Comments', help: 'comments', tip: 'Review comments: notes pinned on the canvas by you and by reviewers, with replies, resolve and assignees', body: () => <CommentsBody /> },
-  inspector: { label: 'Properties', help: 'inspector', tip: 'The settings of the selected layers, or of the artboard and project', body: () => <Inspector /> },
+  inspector: { label: 'Properties', help: 'properties-panel', tip: 'The settings of the selected layers, or of the artboard and project', body: () => <Inspector /> },
   timeline: { label: 'Timeline', icon: 'timeline', help: 'timelines', tip: 'Animate properties with keyframes', tool: true, body: () => <TimelinePanel /> },
   logic: { label: 'Interactions', icon: 'logic', help: 'interactions', tip: 'Events, actions and logic as a node graph', tool: true, body: () => <LogicGraph /> },
   scripts: { label: 'Scripts', icon: 'code', help: 'scripts', tip: 'JavaScript with the ix API', tool: true, body: () => <ScriptsPanel /> },
@@ -63,6 +64,9 @@ const PANELS: Record<PanelId, PanelDef> = {
   credits: { label: 'Attributions', icon: 'credits', help: 'attributions', tip: 'Where the pictures, sounds, text and data in this project came from, and what it draws on: credits and references, linked to assets, with an optional Credits button for learners', tool: true, body: () => <CreditsPanel /> },
   usage: { label: 'Usage', icon: 'usage', help: 'usage', tip: 'What uses what: where each artboard, asset, variable, data source, script and timeline is used, and what is unused', tool: true, body: () => <UsagePanel /> },
 };
+
+/** The help topic (with an optional #anchor) a panel's help opens. */
+export const panelHelpTopic = (p: PanelId): string => PANELS[p].help;
 
 export const panelLabel = (p: PanelId): string => PANELS[p].label;
 
@@ -113,12 +117,16 @@ export function useDockSync(): void {
     };
     sync();
     const stop = subscribeDock(sync);
+    document.addEventListener('pointerdown', trackPanelFocus, true);
+    document.addEventListener('focusin', trackPanelFocus, true);
     // Whatever the project opens on (the checklist for a template) shows on first paint
     const first = store().get().bottomTab;
     if (first) setDock((l) => showPanel(l, first));
     return () => {
       onPanelRequest(null);
       stop();
+      document.removeEventListener('pointerdown', trackPanelFocus, true);
+      document.removeEventListener('focusin', trackPanelFocus, true);
     };
   }, []);
 }
@@ -240,6 +248,52 @@ export function DockDragLayer() {
 
 // ---------------------------------------------------------------- a group of tabs (docked or floating)
 
+/** Open a panel's own help page (the tab row has no ? of its own any more: this, the tab's right-click menu and the header Help button reach it). */
+export function openPanelHelp(p: PanelId): void {
+  const [topic, anchor] = PANELS[p].help.split('#');
+  openHelp(topic, anchor);
+}
+const panelHelpTip = (p: PanelId) => {
+  const t = getTopic(PANELS[p].help.split('#')[0]);
+  return t ? `${t.title}: ${t.summary}` : 'Open the help for this panel';
+};
+
+// The panel the person last worked in, so the header Help button can open that panel's page. Clicking or tabbing into a panel
+// (or one of its tabs) sets it, clicking the canvas or the toolbars clears it, and the header, menus and the help itself leave it alone
+let lastPanel: PanelId | null = null;
+const lastListeners = new Set<() => void>();
+const setLastPanel = (p: PanelId | null) => {
+  if (p === lastPanel) return;
+  lastPanel = p;
+  for (const fn of lastListeners) fn();
+};
+export const lastPanelWorkedIn = (): PanelId | null => lastPanel;
+export function trackPanelFocus(e: Event): void {
+  const t = e.target instanceof Element ? e.target : null;
+  if (!t) return;
+  const own = t.closest('[data-panel], [data-dock-tab]');
+  if (own) {
+    const id = (own.getAttribute('data-panel') ?? own.getAttribute('data-dock-tab')) as PanelId;
+    if (id in PANELS) setLastPanel(id);
+    return;
+  }
+  if (t.closest('.topbar, .help-drawer, .quick-help-backdrop, .ctx-menu, [role="menu"], [role="dialog"]')) return;
+  setLastPanel(null);
+}
+/** What the header Help button opens: the last panel's page, else the general help. */
+export function openHeaderHelp(): void {
+  if (lastPanel) openPanelHelp(lastPanel);
+  else openHelp();
+}
+/** The header Help button's tooltip, which names the panel when that's where it will go. */
+export function useHeaderHelpTitle(): string {
+  const p = useSyncExternalStore(
+    (fn) => (lastListeners.add(fn), () => lastListeners.delete(fn)),
+    () => lastPanel,
+  );
+  return p ? `Help for the ${PANELS[p].label} panel (? to open, F1 or Ctrl+K to search)` : 'Help (? to open, F1 or Ctrl+K to search)';
+}
+
 function tabMenu(p: PanelId, at: { zone: Zone } | { float: string }): MenuItem[] {
   const here = 'zone' in at ? at.zone : null;
   const moveTo = (z: Zone, label: string): MenuItem => ({ label, disabled: here === z, onClick: () => (setDock((l) => movePanel(l, p, { zone: z, index: l.zones[z].tabs.length })), PANELS[p].tool && store().set({ bottomTab: p as BottomTab })) });
@@ -250,6 +304,7 @@ function tabMenu(p: PanelId, at: { zone: Zone } | { float: string }): MenuItem[]
     moveTo('bottom', 'Dock at the bottom'),
     { label: 'Float in its own window', disabled: !here, onClick: () => setDock((l) => movePanel(l, p, { newFloat: { x: Math.round(window.innerWidth / 2 - 190), y: 120 } })) },
     { separator: true },
+    { label: 'Help for this panel', title: panelHelpTip(p), onClick: () => openPanelHelp(p) },
     { label: 'Reset panel layout', title: 'Put every panel back where it started', onClick: () => (resetDock(), store().set({ bottomTab: 'timeline' })) },
   ];
 }
@@ -261,7 +316,6 @@ function DockTabs({ group, at, folded, extra }: { group: DockGroup; at: { zone: 
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const t = d?.target;
   const over = !!t && (('zone' in at && 'zone' in t && t.zone === at.zone) || ('float' in at && 'float' in t && t.float === at.float));
-  const def = active ? PANELS[active] : null;
   return (
     <div
       className={`tabs dock-tabs${over ? ' drop-over' : ''}`}
@@ -308,7 +362,6 @@ function DockTabs({ group, at, folded, extra }: { group: DockGroup; at: { zone: 
       })}
       {over && t && 'index' in t && t.index >= group.tabs.length && <span className="drop-end" />}
       <div className="spacer" />
-      {def && !folded && <HelpLink topic={def.help.split('#')[0]} anchor={def.help.split('#')[1]} />}
       {extra}
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
     </div>
@@ -318,7 +371,7 @@ function DockTabs({ group, at, folded, extra }: { group: DockGroup; at: { zone: 
 function PanelBody({ p }: { p: PanelId }) {
   const project = useEditor((st) => st.project);
   return (
-    <div className={`dock-body bottom-body dock-${p}`}>
+    <div className={`dock-body bottom-body dock-${p}`} data-panel={p}>
       <ErrorBoundary name={`panel-${p}`} message="This panel couldn't be shown." resetKey={project}>
         {PANELS[p].body()}
       </ErrorBoundary>

@@ -5,6 +5,7 @@ import { maybeStore } from '../store/store';
 import { previewScope } from '../lib/data';
 import { accept, suggest, type SuggestEnv, type Suggestion } from '../lib/suggest';
 import { tipFor, unbroken } from './ui';
+import { useRowSearch } from '../lib/prop-search';
 
 /**
  * Names an expression field sees only here, given once by whatever holds the fields: a binding's layer is `self`
@@ -85,6 +86,7 @@ export function ExprField({
   ariaLabel?: string;
 }) {
   const ctx = useContext(ExprLocals);
+  const ps = useRowSearch(label ?? ariaLabel, tipFor(label, title));
   const [text, setText] = useState(value);
   const focused = useRef(false);
   const el = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
@@ -203,7 +205,7 @@ export function ExprField({
 
   return (
     <>
-      <label className={`field text-field${multiline ? ' multiline' : ''}`} title={tipFor(label, title)}>
+      <label className={`field text-field${multiline ? ' multiline' : ''}${ps.hide ? ' ps-hide' : ''}`} data-prop={ps.prop} title={tipFor(label, title)}>
         {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
         {multiline ? <textarea rows={rows ?? 3} {...props} /> : <input {...props} />}
       </label>

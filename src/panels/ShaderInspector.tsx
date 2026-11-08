@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PropRow } from '../lib/prop-search';
 import {
   SHADER_PRESETS,
   SHADER_UNIFORM_TYPES,
@@ -75,12 +76,14 @@ function ShaderFields({ node, target, prefix, project, onPatch }: { node: SceneN
         ]}
         onChange={(id) => id && applyShaderPreset(node.id, prefix, id)}
       />
+      <PropRow k="Fragment shader" words={['code', 'glsl', 'shader code', 'webgl', 'effect']}>
       <div className="code-field">
         <div className="field-label block">
           Fragment shader: <code>void mainImage(out vec4 fragColor, in vec2 fragCoord)</code>
         </div>
         <CodeEditor language="glsl" value={target.code} errorLines={lines} onChange={(v) => onPatch({ code: v }, `code-${node.id}`)} height={280} />
       </div>
+      </PropRow>
       {problem && (
         <div className={problem.kind === 'error' ? 'hint error' : 'hint'} role="alert">
           {problem.kind === 'error' ? 'The shader did not compile, so the layer shows a placeholder:' : problem.message}
@@ -166,14 +169,16 @@ function UniformList({ node, uniforms, prefix, project, onPatch }: { node: Scene
           </div>
         );
       })}
-      <SelectField
-        value={adding}
-        options={[{ value: '', label: '+ Add a uniform…' }, ...SHADER_UNIFORM_TYPES.map((t) => ({ value: t as string, label: TYPE_LABEL[t] }))]}
-        onChange={(t) => {
-          setAdding('');
-          if (t) addUniform(node.id, prefix, t as ShaderUniform['type']);
-        }}
-      />
+      <PropRow k="Add a uniform" words={['shader input', 'parameter', 'variable', 'number', 'colour', 'image']}>
+        <SelectField
+          value={adding}
+          options={[{ value: '', label: '+ Add a uniform…' }, ...SHADER_UNIFORM_TYPES.map((t) => ({ value: t as string, label: TYPE_LABEL[t] }))]}
+          onChange={(t) => {
+            setAdding('');
+            if (t) addUniform(node.id, prefix, t as ShaderUniform['type']);
+          }}
+        />
+      </PropRow>
     </div>
   );
 }

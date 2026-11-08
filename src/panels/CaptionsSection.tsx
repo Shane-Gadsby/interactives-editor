@@ -131,7 +131,7 @@ export function VideoCaptions({ node, set }: { node: VideoNode; set: (patch: Par
     <>
       <div className="field-label block">Captions</div>
       <p className="hint">{cues.length ? `${cues.length} caption${cues.length === 1 ? '' : 's'}, timed from the start of the video. The viewer's captions button turns them on and off.` : 'Import a WebVTT or SRT file made for this video. Without captions, the accessibility check asks you to confirm the video has them.'}</p>
-      <Row>
+      <Row k="Import captions" words={['webvtt', 'srt', 'subtitles', 'export', 'transcript']}>
         <button className="btn small-btn" onClick={importFile}>
           Import…
         </button>
@@ -185,7 +185,7 @@ export function VideoDescriptions({ node, set }: { node: VideoNode; set: (patch:
           ? `${cues.length} description${cues.length === 1 ? '' : 's'}, timed from the start of the video. They are not drawn. With the viewer's Descriptions button on, a voice on their device reads each one while the video plays and the video is turned down. They are in the transcript too. This is a cheaper aid, not a recorded described version.`
           : 'Short sentences saying what the picture shows when it matters, placed in the gaps between speech. Read aloud by the viewer\'s own voice if they turn it on, and listed in the transcript. A cheaper aid, not a recorded described version.'}
       </p>
-      <Row>
+      <Row k="Add a description" words={['audio description', 'describe', 'what is on screen', 'import']}>
         <button className="btn small-btn" onClick={add}>
           Add one
         </button>
