@@ -7,7 +7,7 @@
 //before leaving.
 import { createNode, type FrameNode, type ImageNode, type InputNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, stroke, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import { BRAND_FONT, type Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, go, goNext, goPrevious, graphNote, heroPage, lit, placeholderPicture as placeholder, resetVars, set, setItem, textBox, tickList, toggleItem, toggleVar } from './shared';
 
@@ -93,7 +93,7 @@ function build(colourway: Colourway) {
   const { list: rows, row } = tickList(ctx, 'Pledges', 'Pledge row', pb.x, pb.y + 44, pb.width, { items: 'pledges', ticked: agreed, ariaLabel: 'Things you agree to before you start', rows: 4, rowHeight: 48, gap: 8 });
   const privacyCard = card(ctx, 'Privacy note panel', pb.x, pb.y + 44 + 4 * 48 + 3 * 8 + 18, pb.width, 86);
   const privacyNote = text(ctx, 'Privacy note', 'Your photos are not uploaded anywhere by this page. They stay on your device, in this page, until you download your notebook and hand it in. If you close or reload the page they are gone, so download before you leave. No camera? Every prompt has an example picture you can use instead.', pb.x + 20, pb.y + 44 + 4 * 48 + 3 * 8 + 28, pb.width - 40, { fontSize: 15, lineHeight: 1.35, autoSize: 'none', height: 66 });
-  const pContinue = button(ctx, 'Continue', 'I agree, start', pb.x, pb.y + pb.height - 46, 240, true);
+  const pContinue = button(ctx, 'Continue', 'I agree, start', pb.x, barY(pb), 240, true);
   bind(pContinue, { disabled: 'agreed.length < pledges.length', opacity: 'agreed.length < pledges.length ? 0.5 : 1' });
   const pLeft = text(ctx, 'Pledges left', '', pb.x + 256, pb.y + pb.height - 36, 500, { fontSize: 15, color: L.muted, bindings: { text: 'agreed.length < pledges.length ? "Tick all " + pledges.length + " lines to start." : ""' } } as never);
   privacy.children.push(intro, rows, privacyCard, privacyNote, pContinue, pLeft);
@@ -102,7 +102,7 @@ function build(colourway: Colourway) {
   //The button is disabled until then, and the event's Only if checks too, so a click that gets past a disabled button still goes nowhere
   const start2 = pg.add('event.pointer', { target: pContinue.id, type: 'click', onlyIf: 'agreed.length >= pledges.length' }, null, 'out', { note: 'Start the prompts' });
   pg.run(start2, goNext());
-  checklist.push(item('Read the four lines on the privacy page and make them fit your task (Project > Variables > "pledges"). Have your privacy office read them, and say plainly who may be photographed, if anyone', rows, privacy));
+  checklist.push(todo('Make the four privacy lines fit your task', 'Read the four lines on the privacy page and make them fit your task (Project > Variables > "pledges"). Have your privacy office read them, and say plainly who may be photographed, if anyone', rows, privacy));
 
   // ---------------------------------------------------------------- prompt page
   const b = contentBox(prompt);
@@ -219,9 +219,9 @@ function build(colourway: Colourway) {
   const bookBtn = button(ctx, 'My notebook', 'My notebook', RX + 304, row2, RW - 304, true);
   prompt.children.push(counter, title, hint, photoFrame, badge, takeBtn, exampleBtn, deleteBtn, skipBtn, capLabel, capBox, tagLabel, tagBox, whyLabel, whyBox, skipLabel, skipBox, confirmSkip, cancelSkip, warnCard, warn, prevBtn, nextBtn, bookBtn);
 
-  checklist.push(item('Write your prompts: Project > Variables > "prompts" (title, hint, and exampleAlt, which describes the example picture for a screen reader). Six prompts fit; fewer, delete rows from the end. For more, add image assets and put their ids in a new row\'s photo and example fields', title, prompt));
-  checklist.push(item('Replace the six "Example picture" assets in the Assets panel with your own example for each prompt, a picture you may use with its attribution, and write what it shows in "exampleAlt". The example is how a learner without a camera finishes', exampleBtn, prompt));
-  checklist.push(item('Choose the tags learners can pick from: select the Tag layer and change its options (keep "No tag" first)', tagBox, prompt));
+  checklist.push(todo('Write your prompts', 'Write your prompts: Project > Variables > "prompts" (title, hint, and exampleAlt, which describes the example picture for a screen reader). Six prompts fit; fewer, delete rows from the end. For more, add image assets and put their ids in a new row\'s photo and example fields', title, prompt));
+  checklist.push(todo('Replace the six example pictures with your own', 'Replace the six "Example picture" assets in the Assets panel with your own example for each prompt, a picture you may use with its attribution, and write what it shows in "exampleAlt". The example is how a learner without a camera finishes', exampleBtn, prompt));
+  checklist.push(todo('Choose the tags learners can pick from', 'Choose the tags learners can pick from: select the Tag layer and change its options (keep "No tag" first)', tagBox, prompt));
 
   const g = new Graph(prompt);
   const onTake = g.click(takeBtn, 'Take or choose a photo');
@@ -319,7 +319,7 @@ function build(colourway: Colourway) {
   const board = createNode('frame', { name: 'Bingo board', x: nb.x, y: gridY, width: nb.width, height: 2 * SH + 14, fill: null, stroke: null, clip: false, role: 'region', ariaLabel: 'Your bingo board', repeat: { items: 'rows', layout: 'grid', gap: 14, columns: BINGO_COLUMNS }, children: [square] }) as FrameNode;
   bind(board, { visible: 'bingo' });
 
-  const nbY = nb.y + nb.height - 46;
+  const nbY = barY(nb);
   const handBtn = button(ctx, 'Hand in my notebook', 'Hand in my notebook', nb.x, nbY, 260, true);
   const backBtn = button(ctx, 'Back to the prompts', 'Back to the prompts', nb.x + 272, nbY, 230, false);
   const nbWarn = text(ctx, 'Notebook download note', 'Your photos live only in this page. Download before you leave.', nb.x + 520, nbY + 2, nb.width - 520, { fontSize: 14, color: L.muted, lineHeight: 1.3, autoSize: 'none', height: 42 });
@@ -333,7 +333,7 @@ function build(colourway: Colourway) {
   ng.run(ng.click(square, 'Open a prompt from the board'), ...open('event.index'), go(prompt));
   ng.run(ng.click(backBtn, 'Back to the prompts'), goPrevious());
   ng.run(ng.click(handBtn, 'Hand in'), goNext());
-  checklist.push(item('Choose the layout learners open in: Project > Variables > "bingo" (true is the bingo board, false the list). They can switch with the button either way. The board has rows of three, so six prompts make two lines', viewToggle, notebook));
+  checklist.push(todo('Choose the layout learners open in', 'Choose the layout learners open in: Project > Variables > "bingo" (true is the bingo board, false the list). They can switch with the button either way. The board has rows of three, so six prompts make two lines', viewToggle, notebook));
 
   // ---------------------------------------------------------------- hand-in page
   const hb = contentBox(handin);
@@ -359,7 +359,7 @@ function build(colourway: Colourway) {
   const again = button(ctx, 'Back to my notebook', 'Back to my notebook', hb.x + 312, hb.y + 284, 260, false);
   const saved = text(ctx, 'Download result', 'The file is called photo-notebook.html. Look in your downloads folder, and keep it until your mark is back.', hb.x, hb.y + 346, hb.width, { fontSize: 15, color: L.muted, lineHeight: 1.35, autoSize: 'none', height: 44 });
   handin.children.push(stepsText, warnPanel, warnText, count, saveBtn, again, saved);
-  checklist.push(item('Name your assignment in the hand-in steps (and tell learners which file type it accepts: an .html file). Check the assignment allows file uploads of that size, a notebook with six photos is a few megabytes', stepsText, handin));
+  checklist.push(todo('Name your assignment in the hand-in steps', 'Name your assignment in the hand-in steps (and tell learners which file type it accepts: an .html file). Check the assignment allows file uploads of that size, a notebook with six photos is a few megabytes', stepsText, handin));
 
   //The report: one web page, the photos inside it. [[image:id]] is replaced by the picture when the page saves; html() makes what the learner typed safe.
   const nl = (e: string) => `html(${e}).split("\\n").join("<br>")`;
@@ -373,8 +373,8 @@ function build(colourway: Colourway) {
   const hg2 = new Graph(handin);
   hg2.run(hg2.click(saveBtn, 'Download the notebook'), ['action.saveFile', { name: lit('photo-notebook'), mime: 'text/html', text: report }], announce('"Your notebook was saved to your device. Upload it to your assignment."'));
   hg2.run(hg2.click(again, 'Back to the notebook'), goPrevious());
-  checklist.push(item('Check the report: open the file the Download button gives you and read it. Photos are inside the file as pictures, so it works offline and uploads as one file', saveBtn, handin));
-  checklist.push(item('Turn on photos for the share link: Project settings > Microphone and camera has "photos" ticked already. Update the link for StudyDesk after any change, and test on a phone and a laptop with no camera (the file chooser then opens instead)', start, hero));
+  checklist.push(todo('Check the report file the Download button gives', 'Check the report: open the file the Download button gives you and read it. Photos are inside the file as pictures, so it works offline and uploads as one file', saveBtn, handin));
+  checklist.push(todo('Update the share link and test photos on a phone', 'Turn on photos for the share link: Project settings > Microphone and camera has "photos" ticked already. Update the link for StudyDesk after any change, and test on a phone and a laptop with no camera (the file chooser then opens instead)', start, hero));
 
   //Notes for whoever edits the template, below each page
   const below = (page: typeof prompt, x: number, w: number) => ({ x, y: page.height + 14, w, h: 96 });

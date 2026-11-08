@@ -1,9 +1,9 @@
 import { createNode, defaultAutoLayout, type Artboard, type FrameNode, type Question, type QuestionKind, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, setQuestionSettings } from '../../../question-kit';
-import { brandedPage, brandedProject, button, contentBox, item, solid, stroke, text } from '../../kit';
+import { brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, todo } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { announce, bind, brandQuestionFrame, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, questionNav, scorePage, variable } from './shared';
-import { extrasChecklist, questionExtras } from '../../parts';
+import { extrasChecklist, extrasShort, questionExtras } from '\.\./\.\./parts';
 
 interface QuizQuestion {
   kind: QuestionKind;
@@ -116,7 +116,7 @@ export function buildQuiz(colourway: Colourway) {
 
   const result = brandedPage(ctx, 'Your result', { footer: 'Study skills quiz' });
 
-  //Back and Next sit in the title row on every question page, so they are in the same place each time
+  //Back and Next sit on the bottom bar of every question page, so they are in the same place each time
   QUESTIONS.forEach((_, i) => {
     const { nextClick } = questionNav(ctx, pages[i], `q${i + 1}`);
     graphNote(pages[i], { anchor: kitNode(pages[i], 'start:event'), colour: 'sky', text: '**The question kit wired Start, Choose option, Check, Hint and Try again.** Coming back runs the first with `keepAnswer`, so a finished question is found as it was. [ ] Change the question in its Question section, not here.' });
@@ -198,13 +198,13 @@ export function buildQuiz(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the quiz title and the line under it on the first page', hero.children.find((c) => c.name === 'Page title'), hero),
-    ...frames.map((f, i) => item(`Question ${i + 1}: write your own question, options and feedback (Question section in the inspector)`, f, pages[i])),
-    item('Mark the right options in each question, and add or remove hints (Question section)', frames[0], pages[0]),
-    item('To add a question: duplicate a question page and, in its Question section, press Make this one independent so it keeps its own score. The footer, Back and Next, the total and the tiles on the score page all follow the page order and the questions', undefined, pages[1]),
-    item('Reword the pass and fail messages: the passMessage and failMessage variables (Variables tab)', message, result),
-    item('Change the pass mark: Project > Results and progress > Pass mark. The score page and the score sent to StudyDesk both read it', undefined, result),
-    item('Check that the score is sent: Project > Results and progress should show Score from: Total of all questions', undefined, result),
+    ...frames.map((f, i) => todo(`Question ${i + 1}: write the question and its options`, `Question ${i + 1}: write your own question, options and feedback (Question section in the inspector)`, f, pages[i])),
+    todo('Mark the right options and add any hints', 'Mark the right options in each question, and add or remove hints (Question section)', frames[0], pages[0]),
+    todo('To add a question, copy a question page', 'To add a question: duplicate a question page and, in its Question section, press Make this one independent so it keeps its own score. The footer, Back and Next, the total and the tiles on the score page all follow the page order and the questions', undefined, pages[1]),
+    todo('Reword the pass and fail messages', 'Reword the pass and fail messages: the passMessage and failMessage variables (Variables tab)', message, result),
+    todo('Change the pass mark', 'Change the pass mark: Project > Results and progress > Pass mark. The score page and the score sent to StudyDesk both read it', undefined, result),
+    todo('Check the score is sent to StudyDesk', 'Check that the score is sent: Project > Results and progress should show Score from: Total of all questions', undefined, result),
   ];
-  checklist.push(item(extrasChecklist({ hint: true })));
+  checklist.push(todo(extrasShort({ hint: true }), extrasChecklist({ hint: true })));
   return { project: ctx.project, checklist };
 }

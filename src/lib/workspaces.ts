@@ -2,6 +2,8 @@ import { defaultLayout, getDock, movePanel, normalise, setDock, showPanel, type 
 import { getPanelWidths, PANEL_WIDTH, setPanelWidths } from '../components/PanelResize';
 import { prefs, setPrefs } from './prefs';
 import { store } from '../store/store';
+import { essentialsLayout } from './essentials';
+import { noteEssentialsApplied, wantsEssentials } from './onboarding';
 
 /**
  * Workspaces: whole panel arrangements to switch between (Preferences > Workspace). One is the dock layout (lib/dock.ts),
@@ -36,6 +38,12 @@ export const BUILT_IN: { id: string; name: string; about: string; make: () => Om
     name: 'Standard',
     about: 'Layers on the left, properties on the right, the timeline and the other tools underneath',
     make: () => ({ layout: defaultLayout(), widths: def(), bottomHeight: 260 }),
+  },
+  {
+    id: 'essentials',
+    name: 'Essentials',
+    about: 'Only what a first project needs: Timeline, Interactions, Variables and the checklist along the bottom, and the Shapes, Text, Media and Web tools. Everything else is one click away under More panels',
+    make: () => ({ layout: essentialsLayout(defaultLayout()), widths: def(), bottomHeight: 260 }),
   },
   {
     id: 'animate',
@@ -98,6 +106,19 @@ export function applyWorkspace(w: Omit<Workspace, 'id' | 'name'>): void {
   // the tool panel that's open now is the one code thinks of as open
   const bottom = getDock().zones.bottom.active;
   if (bottom && !getDock().bottomFolded) store().set({ bottomTab: bottom as never });
+}
+
+/**
+ * Someone new (they saw the first-run screen) opens their first project in Essentials, once. Whatever tab the project asked for
+ * (a template's Checklist) stays the one that is open. Returns whether it did anything.
+ */
+export function applyNewcomerEssentials(): boolean {
+  if (!wantsEssentials()) return false;
+  const asked = store().get().bottomTab;
+  applyWorkspace(BUILT_IN.find((w) => w.id === 'essentials')!.make());
+  if (asked) store().set({ bottomTab: asked });
+  noteEssentialsApplied();
+  return true;
 }
 
 /** The current arrangement, to save. */

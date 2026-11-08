@@ -66,6 +66,13 @@ export interface DockLayout {
   topHeight: number;
   floats: FloatWin[];
   tools: { place: ToolsPlace; x: number; y: number };
+  /**
+   * Panels put away until wanted (the Essentials workspace). A hidden panel still has its place in a group, it just has no tab
+   * until something asks for it (`showPanel`), the project uses what it is for (lib/essentials.ts), or the person shows all.
+   */
+  hidden?: PanelId[];
+  /** Tool rail groups (`TOOL_GROUPS` ids) put away the same way. The one holding the tool in use always shows. */
+  hiddenTools?: string[];
 }
 
 /** Where a tab can be dropped: a docked area or a floating window (at a position in its tabs), or a new window. */
@@ -131,7 +138,36 @@ export function normalise(raw: unknown): DockLayout {
   const place = (TOOLS_PLACES as unknown[]).includes(r.tools?.place) ? (r.tools!.place as ToolsPlace) : 'left';
   // layouts saved before the top area had no top group, and read as an empty one
   const topHeight = Math.max(TOP_HEIGHT.min, Math.min(TOP_HEIGHT.max, Math.round(num(r.topHeight, TOP_HEIGHT.def))));
-  return { v: 1, zones, bottomFolded: !!r.bottomFolded, topFolded: !!r.topFolded, topHeight, floats, tools: { place, x: num(r.tools?.x, 80), y: num(r.tools?.y, 120) } };
+  const out: DockLayout = { v: 1, zones, bottomFolded: !!r.bottomFolded, topFolded: !!r.topFolded, topHeight, floats, tools: { place, x: num(r.tools?.x, 80), y: num(r.tools?.y, 120) } };
+  // only written when something is put away, so a layout that hides nothing reads the same as it always did
+  const hidden = Array.isArray(r.hidden) ? [...new Set(r.hidden.filter(isPanel))] : [];
+  if (hidden.length) out.hidden = hidden;
+  const hiddenTools = Array.isArray(r.hiddenTools) ? [...new Set(r.hiddenTools.filter((g): g is string => typeof g === 'string' && g.length > 0 && g.length < 30))].slice(0, 20) : [];
+  if (hiddenTools.length) out.hiddenTools = hiddenTools;
+  return out;
+}
+
+/** Is the panel put away (and nothing has asked for it)? */
+export const isHidden = (l: DockLayout, p: PanelId): boolean => !!l.hidden?.includes(p);
+
+/** The layout with these panels put away (and, optionally, these tool groups). */
+export function hideSome(l: DockLayout, panels: PanelId[], tools: string[] = []): DockLayout {
+  const next: DockLayout = { ...l };
+  if (panels.length) next.hidden = [...new Set(panels)];
+  else delete next.hidden;
+  if (tools.length) next.hiddenTools = [...new Set(tools)];
+  else delete next.hiddenTools;
+  return next;
+}
+
+/** Bring a panel back (and make it the one showing). */
+export function unhidePanel(l: DockLayout, p: PanelId): DockLayout {
+  return showPanel(l, p);
+}
+
+/** Show every panel and tool group again. */
+export function showAll(l: DockLayout): DockLayout {
+  return hideSome(l, [], []);
 }
 
 /** What is under a dragged tool rail: an edge to dock it on, the tab strip of a panel group (it can't be a tab), or the open canvas. */
@@ -204,6 +240,8 @@ export function movePanel(l: DockLayout, p: PanelId, to: DropTarget): DockLayout
 
 /** Make a panel the active tab of its group, unfolding the bottom or top area or bringing its window to the front. */
 export function showPanel(l: DockLayout, p: PanelId): DockLayout {
+  // asking for a panel is wanting it: it comes out of the put-away list first
+  if (l.hidden?.includes(p)) l = hideSome(l, l.hidden.filter((x) => x !== p), l.hiddenTools ?? []);
   const at = locatePanel(l, p);
   if ('zone' in at) {
     const z = at.zone;
@@ -232,6 +270,15 @@ function load(): DockLayout {
     return normalise(JSON.parse(localStorage.getItem(KEY) ?? 'null'));
   } catch {
     return defaultLayout();
+  }
+}
+
+/** Has this browser ever kept an arrangement of the panels (so a person who set theirs up is not handed a different one)? */
+export function hasSavedLayout(): boolean {
+  try {
+    return localStorage.getItem(KEY) !== null;
+  } catch {
+    return false;
   }
 }
 

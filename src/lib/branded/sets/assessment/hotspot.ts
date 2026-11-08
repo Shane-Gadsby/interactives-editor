@@ -1,7 +1,7 @@
 import { createNode, defaultAutoLayout, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partsOf, setAreaShape, setQuestionSettings, syncQuestion } from '../../../question-kit';
-import { brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text } from '../../kit';
-import { fill, extrasChecklist, questionExtras, stack } from '../../parts';
+import { brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, todo } from '\.\./\.\./kit';
+import { extrasChecklist, extrasShort, fill, questionExtras, stack } from '\.\./\.\./parts';
 import type { Colourway } from '../../looks';
 import { announce, bind, brandQuestionFrame, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, scorePage, setVar, variable } from './shared';
 
@@ -87,14 +87,14 @@ export function buildFindHotspot(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-    item('Swap the grey picture for your own: select the "Picture" layer inside the question and put your image in it, and write what it shows in its text alternative', pic, page),
-    item('Delete the grey "Sample label" texts on the picture once your own picture is in', pic.children[0], page),
-    item('Move and resize each "Area" layer over the right place on your picture (they are invisible when playing, so a learner sees nothing until they pick one). Use the Question section to rename an area, set the right one and write the feedback for each', areas[0], page),
-    item('Write your question, the hint and the three feedback messages in the Question section of the inspector', frame, page),
-    item('Change how many tries a learner gets (Question section, Tries) and keep the "Tries left" text on the right in step', tries, page),
-    item('Try it with the keyboard: Tab to an area, Enter to select it, then Check answer', undefined, page),
+    todo('Swap the grey picture for your own', 'Swap the grey picture for your own: select the "Picture" layer inside the question and put your image in it, and write what it shows in its text alternative', pic, page),
+    todo('Delete the grey sample labels', 'Delete the grey "Sample label" texts on the picture once your own picture is in', pic.children[0], page),
+    todo('Place each area over the right spot on your picture', 'Move and resize each "Area" layer over the right place on your picture (they are invisible when playing, so a learner sees nothing until they pick one). Use the Question section to rename an area, set the right one and write the feedback for each', areas[0], page),
+    todo('Write your question, hint and feedback messages', 'Write your question, the hint and the three feedback messages in the Question section of the inspector', frame, page),
+    todo('Set how many tries a learner gets', 'Change how many tries a learner gets (Question section, Tries) and keep the "Tries left" text on the right in step', tries, page),
+    todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to an area, Enter to select it, then Check answer', undefined, page),
   ];
-  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
+  checklist.push(todo(extrasShort({ hint: true, tryAgain: true }), extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }
 
@@ -255,13 +255,13 @@ export function buildFindHotspots(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-    item('Swap the grey picture for your own and write what it shows in its text alternative', pic, page),
-    item('Turn the grey sample labels off once your own picture is in: the "showSampleLabels" variable (Variables tab)', area, page),
-    item('Write what to find, what to say when it is found and where it is: the "targets" variable (Variables tab) is a list with name, feedback and the area\'s x, y, w and h in pixels from the picture\'s top left. The areas move on the canvas as you edit them', area, page),
-    item('Check the areas in the Preview: they are invisible until found, so move them over the thing they name until the outline sits right', area, page),
-    item(`To add a target: add an entry to "targets" (there are ${N} now). The area, the list and the counts follow it`, undefined, page),
-    item('Reword the message for a wrong click and the three result messages: the wrongMessage, messageGood, messageOk and messageLow variables (Variables tab)', byName(result, 'Result message'), result),
-    item('Check the right-hand list: it follows the "targets" variable, so a longer list needs more room', list, page),
+    todo('Swap the grey picture for your own', 'Swap the grey picture for your own and write what it shows in its text alternative', pic, page),
+    todo('Turn the grey sample labels off', 'Turn the grey sample labels off once your own picture is in: the "showSampleLabels" variable (Variables tab)', area, page),
+    todo('Write what to find and where it is', 'Write what to find, what to say when it is found and where it is: the "targets" variable (Variables tab) is a list with name, feedback and the area\'s x, y, w and h in pixels from the picture\'s top left. The areas move on the canvas as you edit them', area, page),
+    todo('Check the hidden areas in the Preview', 'Check the areas in the Preview: they are invisible until found, so move them over the thing they name until the outline sits right', area, page),
+    todo('To add a target, add it to the list', `To add a target: add an entry to "targets" (there are ${N} now). The area, the list and the counts follow it`, undefined, page),
+    todo('Reword the wrong click and result messages', 'Reword the message for a wrong click and the three result messages: the wrongMessage, messageGood, messageOk and messageLow variables (Variables tab)', byName(result, 'Result message'), result),
+    todo('Check the list on the right has room', 'Check the right-hand list: it follows the "targets" variable, so a longer list needs more room', list, page),
   ];
   return { project, checklist };
 }

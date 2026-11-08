@@ -6,6 +6,8 @@ import type { Project, SceneNode } from 'interactives-player';
 export interface DraftItem {
   id?: string;
   text: string;
+  /** The longer how and why kept with an item (a starter's); the editor keeps it, it does not write it. */
+  detail?: string;
   artboardId?: string;
   nodeId?: string;
 }

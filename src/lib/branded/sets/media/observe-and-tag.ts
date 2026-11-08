@@ -5,7 +5,7 @@
 //(the video's captions), and the tag keys are one On key event.
 import { createNode, uid, type CaptionCue, type ContainerNode, type FrameNode, type InputNode, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { addNote, brandedPage, brandedProject, button, contentBox, heading, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, heading, item, solid, stroke, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import { BRAND_FONT, type Colourway } from '../../looks';
 import { fill, stack } from '../../parts';
 import { join } from '../../graph-kit';
@@ -105,9 +105,9 @@ function build(colourway: Colourway) {
     bindings: { 'media.time': 'videoTime', 'media.playing': 'videoPlaying', 'media.duration': 'videoLength', 'media.ended': 'videoEnded' },
     bindingModes: { 'media.time': 'both', 'media.playing': 'both', 'media.duration': 'out', 'media.ended': 'out' },
   } as Partial<VideoNode>);
-  checklist.push(item('Choose your recording: select the Video layer and pick a file in the inspector. Check you have consent from everyone in it. Until you do, the layer says so itself', video, watch));
-  checklist.push(item('Audio only? Put the audio file in the Video layer too and give it a Poster picture (with a description). A sound file shows its poster the whole time. Write a full transcript as captions', video, watch));
-  checklist.push(item('Write the captions on the Video layer (Captions in the inspector). They are also the Transcript button the viewer gets, so give every line, not just the speech. The six sample lines are placeholders for the example recording', video, watch));
+  checklist.push(todo('Choose your recording and check consent', 'Choose your recording: select the Video layer and pick a file in the inspector. Check you have consent from everyone in it. Until you do, the layer says so itself', video, watch));
+  checklist.push(todo('Use audio only with a poster picture if you want', 'Audio only? Put the audio file in the Video layer too and give it a Poster picture (with a description). A sound file shows its poster the whole time. Write a full transcript as captions', video, watch));
+  checklist.push(todo('Write the captions for the recording', 'Write the captions on the Video layer (Captions in the inspector). They are also the Transcript button the viewer gets, so give every line, not just the speech. The six sample lines are placeholders for the example recording', video, watch));
 
   const status = text(ctx, 'Status', '', 0, 0, VIDEO_W, { fontSize: 15, color: L.muted, autoSize: 'none', height: 24, bindings: { text: `videoEnded ? "The recording has finished. Press Finish to compare." : "At " + ${clock('videoTime')} + (videoLength > 0 ? " of " + ${clock('videoLength')} : "")` } } as never);
   const noteBox = createNode('input', {
@@ -171,7 +171,7 @@ function build(colourway: Colourway) {
     children: [recentRow],
   });
   watch.children.push(stack('Tag column', colX, box.y, colW, { gap: 10, children: [tagHead, tagHint, tagButtons, tagsHead, recent] }));
-  checklist.push(item('Name your tags: Project > Variables > "categories" (one name per line of the list, up to nine; each gets the number key that matches its place)', tagButtons, watch));
+  checklist.push(todo('Name your tags', 'Name your tags: Project > Variables > "categories" (one name per line of the list, up to nine; each gets the number key that matches its place)', tagButtons, watch));
 
   //The wiring. A tag from a button and a tag from a number key run the same steps, so the button and the key each just say which tag it is
   const g = new Graph(watch);
@@ -190,7 +190,7 @@ function build(colourway: Colourway) {
   // ---------------------------------------------------------------- compare page
   const cb = contentBox(compare);
   const framing = text(ctx, 'Framing', 'This is about agreement, not exactness. Tagging is a judgement call, so one of your tags agrees with the expert\'s when it is the same kind of moment and within {tolerance} seconds of it. A tag the expert did not make is not a mistake: it is something worth talking about.', 0, 0, cb.width, { fontSize: 15, lineHeight: 1.35, autoSize: 'none', height: 62 });
-  checklist.push(item('Read the framing text on the compare page and make it suit your group. Change the window of seconds in Project > Variables > "tolerance"', framing, compare));
+  checklist.push(todo('Read the framing text and set the time window', 'Read the framing text on the compare page and make it suit your group. Change the window of seconds in Project > Variables > "tolerance"', framing, compare));
 
   const stats: [string, string, string][] = [
     ['Agreed with the expert', '{agreed} of {expert.length}', 'Agreed'],
@@ -241,7 +241,7 @@ function build(colourway: Colourway) {
   const endLabel = text(ctx, 'End time', '', AXIS_LEFT + AXIS_W - 80, 58, 80, { fontSize: 12, color: L.muted, align: 'right', autoSize: 'none', height: 16, decorative: true, bindings: { text: clock('stripLength') } } as never);
   const legend = text(ctx, 'Strip legend', 'Top row: the expert\'s tags (square). Bottom row: yours (round). The number is the tag. Filled green: agreed. Hollow with a red edge: you missed it. Select any tag to read about it.', 14, 104, AXIS_W, { fontSize: 13, color: L.muted, lineHeight: 1.35, autoSize: 'none', height: 34 });
   const strip = createNode('frame', { name: 'Strip panel', x: 0, y: 0, width: STRIP_W, height: 144, cornerRadius: 16, fill: solid(L.surface), stroke: null, clip: false, children: [axis, startLabel, endLabel, expertRow, youRow, legend] } as never) as FrameNode;
-  checklist.push(item('Set the expert tags: Project > Variables > "expert" (t is the second in the recording, cat is the tag\'s number, comment is what the learner reads)', expertRow, compare));
+  checklist.push(todo('Set the expert tags', 'Set the expert tags: Project > Variables > "expert" (t is the second in the recording, cat is the tag\'s number, comment is what the learner reads)', expertRow, compare));
 
   //What was picked
   const pickText =

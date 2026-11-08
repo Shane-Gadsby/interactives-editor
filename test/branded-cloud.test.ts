@@ -285,15 +285,13 @@ describe('Word cloud starter', () => {
       const project = projectFromBrandedStarter(S, COLOURWAYS[0]);
       const states = ['no pills', 'colourway words', 'colourway words, no pills'];
       expect(S.layoutStates!.map((l) => l.label)).toEqual(expect.arrayContaining(states));
-      //the words fade in from nothing, and both checkers skip a layer that starts at 0 opacity, so they would not see a single word. Read them at the end of the fade
-      for (const ab of project.artboards) walk(ab.children, (n: SceneNode) => void (n.name === 'Cloud words' && (n.opacity = 1)));
+      //the words fade in from nothing: both checkers read them at the end of the fade (checks-fade-in), not at 0
       expect(checkProjectContrast(project, S.layoutStates)).toEqual([]);
       expect(checkProjectLayout(project, S.layoutStates)).toEqual([]);
     });
 
     it('is read by the contrast check at all: a word colour that fails is caught', () => {
       const project = projectFromBrandedStarter(S, COLOURWAYS[0]);
-      for (const ab of project.artboards) walk(ab.children, (n: SceneNode) => void (n.name === 'Cloud words' && (n.opacity = 1)));
       const surface = tokenRef(project, 'color/surface');
       for (const ab of project.artboards) walk(ab.children, (n: SceneNode) => void (n.name === 'Word label' && ((n as { bindings: Record<string, string> }).bindings.color = JSON.stringify(surface))));
       expect(checkProjectContrast(project, S.layoutStates).filter((f) => f.kind === 'text' && f.layer.startsWith('Word label')).length).toBeGreaterThan(0);

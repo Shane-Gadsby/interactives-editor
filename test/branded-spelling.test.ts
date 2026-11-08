@@ -129,7 +129,7 @@ describe('the spelling test starter', () => {
 
   it('keeps the checklist honest about the audio, the retakes and the share', () => {
     const b = starter.build(COLOURWAYS[2]);
-    const all = b.checklist.map((c) => c.text).join('\n');
+    const all = b.checklist.map((c) => `${c.text} ${c.detail ?? ''}`).join('\n');
     expect(all).toMatch(/mp3 or wav/);
     expect(all).toMatch(/Retakes/);
     expect(all).toMatch(/transcript/);

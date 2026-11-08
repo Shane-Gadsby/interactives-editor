@@ -1,6 +1,6 @@
 /** Before and after: two pictures stacked, a divider you drag (or move with the arrow keys) that reveals one over the other. */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, picture, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, picture, solid, stroke, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import { addVar, click, graph, graphNote, join, set } from '../../graph-kit';
 import { stack } from '../../parts';
 import { group, heroButtons, small } from './helpers';
@@ -117,9 +117,9 @@ export const beforeAndAfter: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),
-      item('Replace the grey "Before" picture with your own, the same size as the After one so they line up', beforePic, page),
-      item('Replace the grey "After" picture with your own, and update the text alternative of both so they say what each shows', afterPic, page),
-      item('Change the labels if "Before" and "After" are not the words you want (for example "2015" and "Today")', afterLabel, page),
+      todo('Replace the grey Before picture with your own', 'Replace the grey "Before" picture with your own, the same size as the After one so they line up', beforePic, page),
+      todo('Replace the grey After picture and describe both', 'Replace the grey "After" picture with your own, and update the text alternative of both so they say what each shows', afterPic, page),
+      todo('Change the Before and After labels if you like', 'Change the labels if "Before" and "After" are not the words you want (for example "2015" and "Today")', afterLabel, page),
       item('Change the instruction line under the pictures', help, page),
       item('Change the footer line', byName(page, 'Footer text'), page),
     ];

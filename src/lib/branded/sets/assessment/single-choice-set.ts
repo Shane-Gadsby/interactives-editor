@@ -1,5 +1,5 @@
 import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, byName, contentBox, edge, item, text, type LayoutState } from '../../kit';
+import { brandedPage, brandedProject, button, byName, contentBox, edge, item, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { stack } from '../../parts';
 import { after, bankQuestion, bind, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, scorePage, variable } from './shared';
@@ -110,11 +110,11 @@ export function buildSingleChoiceSet(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-    item('Write your own questions: the "questions" variable (Variables tab) is a list with, for each, a prompt that is the question text, options (three answers), correct (the number of the right one, counting from 1) and explain (the explanation shown after a wrong answer). Keep those four names in each entry', frame, play),
-    item(`Add or remove questions in that list: the progress bar, the "Question n of ${N}" footer, the score and the result all follow its length`, undefined, play),
-    item('Change how long a right answer stays on screen before it moves on: the Wait node (Interactions tab) after Check answer\'s "right" output, in milliseconds', undefined, play),
-    item('Reword the three score messages: the messageHigh, messageMid and messageLow variables (Variables tab)', byName(result, 'Result message'), result),
-    item('Try it with the keyboard: Tab to an answer and press Enter', undefined, play),
+    todo('Write your own questions and answers', 'Write your own questions: the "questions" variable (Variables tab) is a list with, for each, a prompt that is the question text, options (three answers), correct (the number of the right one, counting from 1) and explain (the explanation shown after a wrong answer). Keep those four names in each entry', frame, play),
+    todo('Add or remove questions as you need', `Add or remove questions in that list: the progress bar, the "Question n of ${N}" footer, the score and the result all follow its length`, undefined, play),
+    todo('Change how long a right answer stays on screen', 'Change how long a right answer stays on screen before it moves on: the Wait node (Interactions tab) after Check answer\'s "right" output, in milliseconds', undefined, play),
+    todo('Reword the three score messages', 'Reword the three score messages: the messageHigh, messageMid and messageLow variables (Variables tab)', byName(result, 'Result message'), result),
+    todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to an answer and press Enter', undefined, play),
   ];
   return { project, checklist };
 }

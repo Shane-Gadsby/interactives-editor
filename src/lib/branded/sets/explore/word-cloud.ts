@@ -10,7 +10,7 @@
 import { createNode, uid, type FrameNode, type Keyframe, type LogicNode, type SceneNode, type Timeline, type TemplateChecklistItem, type Variable } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
 import { BRAND_FONT } from '../../looks';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, overlay, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, overlay, solid, stroke, text, todo, type BrandedCtx, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import { addVar, announce, bind, click, goNext, goPrevious, graph, graphNote, join, set, setVar, toggleVar } from '../../graph-kit';
 import { dialogPanel, progressBar, stack } from '../../parts';
 import { heroButtons } from './helpers';
@@ -442,16 +442,16 @@ export const wordCloud: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-      item('Write your own words: the "ourWords" list variable (Variables tab) has a text, a weight (the bigger, the bigger the word), a detail that shows when the word is opened and, if you want one, a link', our.word, ours),
-      item('Choose how big the words are: "minSize" and "maxSize" (px). When there are many words, every size shrinks together until they fit. To change the size of the cloud, change "ourWidth" and "ourHeight" (the stage follows them)', our.stage, ours),
-      item('Choose the look of the words: "pills" is on to put a soft grey chip behind each word or off for plain words, and "wordColour" is Plain (the theme text colour) or Colourway (the biggest words fill with the button colour when there are pills, and big words take the primary colour). Both clouds follow them', our.stage, ours),
-      item('Check the colours in each colourway and in High contrast: every word colour is a theme token, so nothing is set by hand', our.stage, ours),
-      item('The learner page keeps what people type as user data. Add words you do not want to the "blocked" list, and set "minCount" if only words said more than once should show', byName(mine, 'Word box'), mine),
-      item('Choose who sees the learner cloud: the "whoSees" variable is Only me (each learner sees only their own words, kept as user data) or Everyone in this class (everyone in the same course sees every word, counted and with no names, once the page runs on the StudyDesk learner page: Share, Link for StudyDesk). Anywhere else the class option quietly shows the learner\'s own words', byName(mine, 'Word box'), mine),
-      item('For the class cloud, open the "responses" data source (Data tab): set Blocked words and Show at to match the words and "minCount" above, how many words each person may add, and the sample answers the canvas shows. After learners have added some, the same place lists them by course so you can hide, remove or clear words', byName(mine, 'Word box'), mine),
-      item('If you only want your own cloud, delete the "My cloud" page: the button on the first cloud page hides itself', next, ours),
-      item('Make sure learners can read it without the picture: View as list shows every word with its count. Keep it, and say what the cloud shows in the page title', view1, ours),
-      item('Try it with the keyboard: Tab into the cloud, the arrow keys to move between words, Enter to open one, Esc to close it', our.words, ours),
+      todo('Write your own words and their weights', 'Write your own words: the "ourWords" list variable (Variables tab) has a text, a weight (the bigger, the bigger the word), a detail that shows when the word is opened and, if you want one, a link', our.word, ours),
+      todo('Choose how big the words are and the cloud size', 'Choose how big the words are: "minSize" and "maxSize" (px). When there are many words, every size shrinks together until they fit. To change the size of the cloud, change "ourWidth" and "ourHeight" (the stage follows them)', our.stage, ours),
+      todo('Choose the look of the words', 'Choose the look of the words: "pills" is on to put a soft grey chip behind each word or off for plain words, and "wordColour" is Plain (the theme text colour) or Colourway (the biggest words fill with the button colour when there are pills, and big words take the primary colour). Both clouds follow them', our.stage, ours),
+      todo('Check the colours in every colourway', 'Check the colours in each colourway and in High contrast: every word colour is a theme token, so nothing is set by hand', our.stage, ours),
+      todo('Block words and set a minimum count', 'The learner page keeps what people type as user data. Add words you do not want to the "blocked" list, and set "minCount" if only words said more than once should show', byName(mine, 'Word box'), mine),
+      todo('Choose who sees the learner cloud', 'Choose who sees the learner cloud: the "whoSees" variable is Only me (each learner sees only their own words, kept as user data) or Everyone in this class (everyone in the same course sees every word, counted and with no names, once the page runs on the StudyDesk learner page: Share, Link for StudyDesk). Anywhere else the class option quietly shows the learner\'s own words', byName(mine, 'Word box'), mine),
+      todo('Set up the class cloud responses', 'For the class cloud, open the "responses" data source (Data tab): set Blocked words and Show at to match the words and "minCount" above, how many words each person may add, and the sample answers the canvas shows. After learners have added some, the same place lists them by course so you can hide, remove or clear words', byName(mine, 'Word box'), mine),
+      todo('Delete the My cloud page if you do not want it', 'If you only want your own cloud, delete the "My cloud" page: the button on the first cloud page hides itself', next, ours),
+      todo('Keep View as list so the cloud can be read without the picture', 'Make sure learners can read it without the picture: View as list shows every word with its count. Keep it, and say what the cloud shows in the page title', view1, ours),
+      todo('Try it with the keyboard only', 'Try it with the keyboard: Tab into the cloud, the arrow keys to move between words, Enter to open one, Esc to close it', our.words, ours),
       item('Change the footer lines', byName(ours, 'Footer text'), ours),
     ];
     return { project, checklist };

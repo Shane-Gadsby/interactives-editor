@@ -6,7 +6,7 @@ import { createNode, walk, type Artboard, type FrameNode, type LogicNode, type N
 import { addQuestion, partsOf, setQuestionSettings, syncQuestion } from '../../../question-kit';
 import { lookDefaults } from '../../../themes';
 import { BRAND_FONT } from '../../looks';
-import { addNote, brandedPage, button, contentBox, solid, stroke, text, type BrandedCtx } from '../../kit';
+import { addNote, brandedPage, button, contentBox, navBarY, solid, stroke, text, type BrandedCtx } from '../../kit';
 import { fill, progressBar, stack } from '../../parts';
 import { after, bind, click, goNext, goPrevious, graph } from '../../graph-kit';
 
@@ -137,12 +137,16 @@ export function bankQuestion(ctx: BrandedCtx, project: Project, play: Artboard, 
 }
 
 /**
- * Back and Next in the title row of a question page, the same place on every page. Next goes to the next page in the page order and waits
- * for the question (`prefix`) to be finished, and reads "See my score" on the page before the last; Back goes to the page before.
+ * Back and Next on the bottom bar of a question page (Back at the left of the content box, Next at the right), the same place on every
+ * page. Next goes to the next page in the page order and waits for the question (`prefix`) to be finished, and reads "See my score" on
+ * the page before the last; Back goes to the page before. They are the last layers on the page, so the tab order is the question, then
+ * Back, then Next.
  */
 export function questionNav(ctx: BrandedCtx, page: Artboard, prefix: string) {
-  const next = bind(button(ctx, 'Next button', 'Next', page.width - 48 - 170, 30, 170), { disabled: `!${prefix}_locked`, label: 'pageNumber == pageCount - 1 ? "See my score" : "Next"' });
-  const back = button(ctx, 'Back button', 'Back', page.width - 48 - 170 - 12 - 110, 30, 110, false);
+  const box = contentBox(page);
+  const y = navBarY(page);
+  const next = bind(button(ctx, 'Next button', 'Next', box.x + box.width - 170, y, 170), { disabled: `!${prefix}_locked`, label: 'pageNumber == pageCount - 1 ? "See my score" : "Next"' });
+  const back = button(ctx, 'Back button', 'Back', box.x, y, 110, false);
   page.children.push(back, next);
   const g = graph(page);
   const nextClick = click(g, next, 'Navigation');

@@ -109,7 +109,7 @@ describe('choosing where the word audio comes from', () => {
 
 describe('the checklist and labels of the starter', () => {
   it('say how to use either kind of audio', () => {
-    const text = starter.build(COLOURWAYS[0]).checklist.map((c) => c.text).join('\n');
+    const text = starter.build(COLOURWAYS[0]).checklist.map((c) => `${c.text} ${c.detail ?? ''}`).join('\n');
     expect(text).toMatch(/Word audio/);
     expect(text).toMatch(/Made with a voice/);
     expect(text).toMatch(/My own audio/);

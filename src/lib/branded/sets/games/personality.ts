@@ -1,6 +1,6 @@
 //Personality quiz: six questions whose answers add points to four outcomes (study styles), a results page with the top outcome, its description, a picture and the scores, and Retake.
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, heading, item, picture, solid, text, type BrandedStarter } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, contentBox, heading, item, picture, solid, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { keyNavList, progressBar } from '../../parts';
 import { Graph, addVar, announce, bind, go, goNext, graphNote, heroPage, set } from './common';
@@ -158,18 +158,18 @@ function build(colourway: Colourway) {
     repeat: { items: 'outcomes.map((o, i) => ({name: o.name, pct: Math.round(100 * scores[i] / Math.max(1, scores.reduce((a, b) => a + b, 0))), top: i == top}))', layout: 'vertical', gap: 6, columns: 1 },
     children: [row],
   } as never);
-  const retake = button(ctx, 'Retake', 'Retake the quiz', rbox.x, rbox.y + rbox.height - 46, 220, true);
+  const retake = button(ctx, 'Retake', 'Retake the quiz', rbox.x, barY(rbox), 220, true);
   result.children.push(pic, kicker, name, about, rows, retake);
   const rg = new Graph(result);
   rg.run(rg.click(retake, 'Retake'), go(page));
 
   checklist.push(
-    item('Write your own outcomes: Project > Variables > "outcomes", a name and a description for each of the four. The result page shows the one with the most points', name, result),
-    item('Write your own questions: Project > Variables > "questions", a question (q) and its answers, each with its text and a points list. The points go to the four outcomes in the order of the outcomes list, for example [2, 0, 0, 1] gives two to the first outcome and one to the fourth', ask, page),
-    item('Keep the four points in every answer, and give each outcome a fair chance: every outcome should be the best fit for about as many answers as the others, or one will always win', answers, page),
-    item('Each question has four answers (the layout is two by two). Add or remove whole questions freely: the counter and the progress bar follow the list', answers, page),
-    item('Swap the grey picture on the result page for your own. For a picture per outcome, put one picture per outcome on top and bind each one\'s visibility to top == 0, top == 1 and so on', pic, result),
-    item('Ties go to the outcome that comes first in the list. To change that, edit the Choose an answer flow: the node that sets "top"', answers, page),
+    todo('Write your four outcomes', 'Write your own outcomes: Project > Variables > "outcomes", a name and a description for each of the four. The result page shows the one with the most points', name, result),
+    todo('Write your questions and their points', 'Write your own questions: Project > Variables > "questions", a question (q) and its answers, each with its text and a points list. The points go to the four outcomes in the order of the outcomes list, for example [2, 0, 0, 1] gives two to the first outcome and one to the fourth', ask, page),
+    todo('Give each outcome a fair chance of winning', 'Keep the four points in every answer, and give each outcome a fair chance: every outcome should be the best fit for about as many answers as the others, or one will always win', answers, page),
+    todo('Add or remove whole questions as you need', 'Each question has four answers (the layout is two by two). Add or remove whole questions freely: the counter and the progress bar follow the list', answers, page),
+    todo('Swap the grey result picture for your own', 'Swap the grey picture on the result page for your own. For a picture per outcome, put one picture per outcome on top and bind each one\'s visibility to top == 0, top == 1 and so on', pic, result),
+    todo('Change how ties are broken', 'Ties go to the outcome that comes first in the list. To change that, edit the Choose an answer flow: the node that sets "top"', answers, page),
   );
 
   //Notes for whoever edits the template, below the pages

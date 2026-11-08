@@ -4,7 +4,7 @@
 //The transcript is one variable shown on every version, so the three never drift apart. Audio only and Text only load no video, and Text only loads no media at all.
 //The remembered version is a user data variable (no save and load steps), the audio version is a Video layer with a sound and a poster picture, and an empty video says so itself.
 import { createNode, uid, type Artboard, type CaptionCue, type FrameNode, type SceneNode, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, heading, item, picture, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, byName, contentBox, heading, picture, solid, stroke, text, todo, type BrandedCtx, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { pillButton, stack } from '../../parts';
 import { addVar, announce, bind, click, endPage, go, graph, graphNote, heroPage, placeholderPicture, resetVars, toggleVar } from './shared';
@@ -42,8 +42,8 @@ const sizeLine = (board: string) => `downloadSize("${board}") == 0 ? "Nothing to
 //The bottom row every version has: back to the chooser, and finish (the same page for all three, so the completion is the same)
 function footerRow(ctx: BrandedCtx, page: Artboard, done: Artboard, choose: Artboard): void {
   const b = contentBox(page);
-  const change = button(ctx, 'Change version button', 'Change version', b.x, b.y + b.height - 46, 200, false);
-  const finish = button(ctx, 'Finish button', 'Finish the lesson', b.x + b.width - 230, b.y + b.height - 46, 230);
+  const change = button(ctx, 'Change version button', 'Change version', b.x, barY(b), 200, false);
+  const finish = button(ctx, 'Finish button', 'Finish the lesson', b.x + b.width - 230, barY(b), 230);
   page.children.push(change, finish);
   const g = graph(page);
   g.run(click(g, change, 'Change version'), go(choose));
@@ -79,7 +79,7 @@ function build(colourway: Colourway) {
     //One Go to artboard names the page the remembered version sits on; nothing remembered (or a version that is not one of the three) leaves by No artboard to the chooser
     const open = g.run(click(g, start, 'Begin'), ['action.artboard', { to: 'expression', expr: CARDS.map((c) => `version == "${c.id}" ? "${c.board}" : `).join('') + '""', transition: 'fade', duration: 250 }]);
     g.then(open, 'action.artboard', { to: 'next', transition: 'fade', duration: 250 }, 'none');
-    checklist.push(item('Write the title and the line under it on the first page. A learner who has already chosen a version goes straight to it from here, and "Change version" on each lesson page brings the chooser back', hero.children.find((n) => n.name === 'Subtitle'), hero));
+    checklist.push(todo('Write the title and the line under it', 'Write the title and the line under it on the first page. A learner who has already chosen a version goes straight to it from here, and "Change version" on each lesson page brings the chooser back', hero.children.find((n) => n.name === 'Subtitle'), hero));
   }
 
   // ---------------------------------------------------------------- choose
@@ -115,8 +115,8 @@ function build(colourway: Colourway) {
     graphNote(choose, { anchor: onMark, colour: 'sky', text: '**The suggestion is only a mark on a card**, never a choice made for them. A data saver or a 2G link points at text, a low bandwidth at audio, otherwise video. [ ] Change the rule in this Set variable.' });
     g.run(onMark, ['action.setVariable', { variable: project.variables.find((x) => x.name === 'suggested')!.id, op: 'set', value: 'saveData || connectionType == "slow-2g" || connectionType == "2g" ? "text" : lowBandwidth ? "audio" : "video"' }]);
     checklist.push(
-      item('Check the three cards. The sizes are read from the files on each version\'s artboard (downloadSize in the text), so they fill in by themselves when you add your video, sound and pictures. If you rename an artboard (Video lesson, Audio only lesson, Text only lesson) change its name in the size line too', byName(choose, 'Video size'), choose),
-      item('Change the line under "Choose a version" if you want to say more about when to use each. The marked card only shows when the browser reports a slow connection or Data Saver; it never picks for the learner', intro, choose),
+      todo('Check the three version cards', 'Check the three cards. The sizes are read from the files on each version\'s artboard (downloadSize in the text), so they fill in by themselves when you add your video, sound and pictures. If you rename an artboard (Video lesson, Audio only lesson, Text only lesson) change its name in the size line too', byName(choose, 'Video size'), choose),
+      todo('Say more about when to use each version', 'Change the line under "Choose a version" if you want to say more about when to use each. The marked card only shows when the browser reports a slow connection or Data Saver; it never picks for the learner', intro, choose),
     );
   }
 
@@ -149,7 +149,7 @@ function build(colourway: Colourway) {
     g.run(onTranscript, toggleVar(showText), announce('showText ? "Transcript shown" : "Transcript hidden"'));
     g.run(g.event('event.start', {}, 'Transcript starts hidden'), resetVars(showText));
     footerRow(ctx, video, done.page, choose);
-    checklist.push(item('Video version: select the Video layer and pick your video in the inspector. Until you do, the layer says no video has been chosen. Add captions to it there too', clip, video));
+    checklist.push(todo('Video version: choose your video and add captions', 'Video version: select the Video layer and pick your video in the inspector. Until you do, the layer says no video has been chosen. Add captions to it there too', clip, video));
   }
 
   // ---------------------------------------------------------------- audio only version
@@ -180,8 +180,8 @@ function build(colourway: Colourway) {
     audio.children.push(stack('Listen column', b.x, b.y, 440, { gap: 14, children: [player, aside] }), words);
     footerRow(ctx, audio, done.page, choose);
     checklist.push(
-      item('Audio only version: replace the placeholder "Soundtrack (replace)" in the Assets panel with your audio (the arrow beside it). It should make sense with no picture: "as you can see here" does not work for someone who is only listening, so re-record or reword those lines', player, audio),
-      item('Replace the grey poster picture on the Soundtrack layer (Poster in the inspector) with a still from the lesson and write what it shows in the layer\'s description. It shows the whole time a sound plays', player, audio),
+      todo('Audio only version: replace the placeholder soundtrack', 'Audio only version: replace the placeholder "Soundtrack (replace)" in the Assets panel with your audio (the arrow beside it). It should make sense with no picture: "as you can see here" does not work for someone who is only listening, so re-record or reword those lines', player, audio),
+      todo('Replace the grey poster picture and describe it', 'Replace the grey poster picture on the Soundtrack layer (Poster in the inspector) with a still from the lesson and write what it shows in the layer\'s description. It shows the whole time a sound plays', player, audio),
     );
   }
 
@@ -198,8 +198,8 @@ function build(colourway: Colourway) {
     plain.children.push(words, stack('Key images', b.x + 560, b.y, 368, { gap: 6, children: [one, oneCaption, two, twoCaption] }));
     footerRow(ctx, plain, done.page, choose);
     checklist.push(
-      item('Text only version: replace the two grey key images with the pictures that carry the lesson, and write the captions under them. Keep them small: this version is for weak connections. It loads no video or sound', one, plain),
-      item('The transcript is one variable, "transcript" in the Variables tab, shown on all three versions. Replace the sample text with what your lesson says, so the versions stay in step', byName(plain, 'Transcript text'), plain),
+      todo('Text only version: replace the key images and captions', 'Text only version: replace the two grey key images with the pictures that carry the lesson, and write the captions under them. Keep them small: this version is for weak connections. It loads no video or sound', one, plain),
+      todo('Replace the sample transcript with your lesson\'s', 'The transcript is one variable, "transcript" in the Variables tab, shown on all three versions. Replace the sample text with what your lesson says, so the versions stay in step', byName(plain, 'Transcript text'), plain),
     );
   }
 
@@ -208,7 +208,7 @@ function build(colourway: Colourway) {
     const g = graph(done.page);
     g.run(click(g, done.again, 'Choose again'), go(choose));
     g.run(g.event('event.start', {}, 'Done'), announce('"Lesson complete."'));
-    checklist.push(item('Change the closing line. Every version finishes on this page, and this page is the completion point, so the result is recorded the same whichever version was used', done.result, done.page));
+    checklist.push(todo('Change the closing line', 'Change the closing line. Every version finishes on this page, and this page is the completion point, so the result is recorded the same whichever version was used', done.result, done.page));
   }
 
   //One completion record for all three versions

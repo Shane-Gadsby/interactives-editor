@@ -1,6 +1,6 @@
 //Reflection journal: four structured prompts in the order of a Gibbs-style reflection (what happened, how I felt, what I learnt, what I will do next), a text box and word count on each, kept as it is written and resumable, and a last page that shows the whole reflection.
 import { createNode, type Artboard, type FrameNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { progressBar } from '../../parts';
 import { panel } from '../assessment/shared';
@@ -139,7 +139,7 @@ function build(colourway: Colourway) {
     g.then(click(g, next, 'Next'), ...goNext());
     if (i === 0) graphNote(page, { anchor: onPill, colour: 'sky', text: '**One flow serves every part pill.** `event.index` picks the part from the live `parts` list, and *Only if* leaves the pill for the page you are on alone. [ ] A new part is a new prompt plus a page named to match.' });
     graphNote(page, { anchor: onBack, colour: 'sky', text: i === 0 ? '**Back from the first part has no page before it**, so the **No artboard** output goes to the start page. Each part is `userData`, kept as it is typed, so leaving loses nothing.' : '**Back and Next follow the page order**, so adding a part needs no wiring. What is written is kept as it is typed (`userData`), so leaving a part loses nothing.' });
-    checklist.push(item(`Part ${i + 1}: write your own lead line, the three things to think about and the placeholder`, lead, page));
+    checklist.push(todo(`Part ${i + 1}: write its lead line, prompts and placeholder`, `Part ${i + 1}: write your own lead line, the three things to think about and the placeholder`, lead, page));
   });
 
   //The whole reflection: each part with its tick (a button back to it) beside everything in one box
@@ -170,17 +170,17 @@ function build(colourway: Colourway) {
     g.run(click(g, back, 'Back'), goPrevious());
     g.run(click(g, save, 'Download'), ['action.saveFile', { name: '"my-reflection"', text: 'reflection', mime: 'text/plain' }]);
     checklist.push(
-      item('Change the headings the whole reflection uses: the Set variable node after "Put it all together" (Interactions tab) lists each part with its heading', all, whole),
-      item('Change the file name the learner gets in the Download a file node on this page (it saves the whole reflection as a .txt)', save, whole),
+      todo('Change the headings the whole reflection uses', 'Change the headings the whole reflection uses: the Set variable node after "Put it all together" (Interactions tab) lists each part with its heading', all, whole),
+      todo('Change the file name of the download', 'Change the file name the learner gets in the Download a file node on this page (it saves the whole reflection as a .txt)', save, whole),
     );
   }
 
   checklist.unshift(item('Write the title and the line under it on the first page', hero.children.find((n) => n.name === 'Subtitle'), hero));
   checklist.push(
-    item('Change how many words the count line asks for: the "aim" variable (Variables tab)', undefined, pages[0]),
-    item('The four pills are one layer repeated over the live "parts" variable (Variables tab): if you rename a part, change its name and page name there and rename the page to match. A pill goes to the page it names', undefined, pages[1]),
-    item('Writing is kept as it is written: the four text variables are ticked Save as user data (Variables tab), so there is no Save or Load node to maintain. To add a part, duplicate a part page into the Journal group, add a text variable for it ticked Save as user data, and add it to "parts", "totalWords" and "resumeAt"', undefined, hero),
-    item('Check where it is saved: on the Link for StudyDesk each learner\'s reflection is kept under their StudyDesk session, anywhere else it stays in their browser (Share)', undefined, hero),
+    todo('Change how many words the count line asks for', 'Change how many words the count line asks for: the "aim" variable (Variables tab)', undefined, pages[0]),
+    todo('If you rename a part, rename its page to match', 'The four pills are one layer repeated over the live "parts" variable (Variables tab): if you rename a part, change its name and page name there and rename the page to match. A pill goes to the page it names', undefined, pages[1]),
+    todo('To add a part, copy a part page', 'Writing is kept as it is written: the four text variables are ticked Save as user data (Variables tab), so there is no Save or Load node to maintain. To add a part, duplicate a part page into the Journal group, add a text variable for it ticked Save as user data, and add it to "parts", "totalWords" and "resumeAt"', undefined, hero),
+    todo('Check where the writing is saved', 'Check where it is saved: on the Link for StudyDesk each learner\'s reflection is kept under their StudyDesk session, anywhere else it stays in their browser (Share)', undefined, hero),
   );
 
   project.settings.reporting = { completion: 'artboard', completionArtboard: whole.id };

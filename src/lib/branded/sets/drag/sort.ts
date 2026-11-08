@@ -4,11 +4,11 @@
  */
 import { walk, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, partsOf, setQuestionSettings } from '../../../question-kit';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, text, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { addVar, after, bind, click, goPrevious, graph } from '../../graph-kit';
 import { dressQuestion, endPage, goNextOn, graphNote, heroPage, kitNode, retray } from './shared';
-import { extrasChecklist, questionExtras } from '../../parts';
+import { extrasChecklist, extrasShort, questionExtras } from '\.\./\.\./parts';
 
 const GROUPS: { id: string; name: string }[] = [
   { id: 'g1', name: 'Solid' },
@@ -124,13 +124,13 @@ export function sortIntoGroups(colourway: Colourway) {
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the Start page', byName(hero, 'Page title'), hero),
     item('Change the page title and the footer text', byName(page, 'Page title'), page),
-    item('Write your groups and cards: the Question section of the inspector lists each group and each card with the group it belongs in. The layers follow what you type', frame, page),
-    item('Write the hint, the feedback messages, the number of tries and the points (the results page says "of 8", so change it with the points)', frame, page),
-    item('Rewrite what a wrong drop says: the card\'s own feedback line in the Question section', parts.catCard[0], page),
+    todo('Write your groups and cards', 'Write your groups and cards: the Question section of the inspector lists each group and each card with the group it belongs in. The layers follow what you type', frame, page),
+    todo('Write the hint, feedback, tries and points', 'Write the hint, the feedback messages, the number of tries and the points (the results page says "of 8", so change it with the points)', frame, page),
+    todo('Rewrite what a wrong drop says', 'Rewrite what a wrong drop says: the card\'s own feedback line in the Question section', parts.catCard[0], page),
     item('Change the results page text', results.result, results.page),
-    item('Try it with the keyboard: Tab to a card, Space, arrow keys, Space, then Check answer', undefined, page),
-    item('Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
+    todo('Try it with the keyboard only', 'Try it with the keyboard: Tab to a card, Space, arrow keys, Space, then Check answer', undefined, page),
+    todo('Pick a colourway (the brand parts are locked)', 'Pick the colourway on the Themes tab. The brand parts are locked', undefined, page),
   ];
-  checklist.push(item(extrasChecklist({ hint: true, tryAgain: true })));
+  checklist.push(todo(extrasShort({ hint: true, tryAgain: true }), extrasChecklist({ hint: true, tryAgain: true })));
   return { project, checklist };
 }

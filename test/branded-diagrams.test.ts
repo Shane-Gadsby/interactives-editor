@@ -386,10 +386,11 @@ describe('mind map: build your own', () => {
     return { project, player, id, copy, labels, type };
   };
 
-  it('starts with one idea, saved as learner data, and lays it out in the middle', async () => {
+  it('starts with one idea, kept by the author\'s keepMap setting, and lays it out in the middle', async () => {
     const { project, player, labels } = await setup();
     expect(labels()).toEqual(['My topic']);
-    expect(project.variables.find((v) => v.name === 'mine')).toMatchObject({ userData: true, type: 'list' });
+    expect(project.variables.find((v) => v.name === 'mine')).toMatchObject({ type: 'list' });
+    expect(project.variables.find((v) => v.name === 'keepMap')).toMatchObject({ type: 'boolean', initial: true });
     expect(player.getVariable('draft')).toBe('My topic');
     //the buttons that need an idea to hang from are off for the idea in the middle
     for (const name of ['Add beside button', 'Delete button', 'Move up button', 'Move down button', 'Move in button', 'Move out button']) expect(must(id2(project, name)).querySelector('button')?.disabled ?? must(id2(project, name)).hasAttribute('disabled')).toBe(true);
@@ -538,7 +539,7 @@ describe('mind map: build your own', () => {
   it('downloads the outline as text and a page with the picture in it, from the learner\'s own map', () => {
     const project = build('explore/mind-map');
     const files = project.artboards.find((a) => a.name === 'Build your own')!.logic.nodes.filter((n) => n.kind === 'action.saveFile');
-    expect(files.map((f) => f.params.mime)).toEqual(['text/plain', 'text/html']);
+    expect(files.map((f) => f.params.mime)).toEqual(['text/plain', 'text/html', 'application/json']);
     const mine = [{ id: 'n1', parent: '', label: 'Topic <b>' }, { id: 'n2', parent: 'n1', label: 'Branch' }];
     const vars = { mine, mineOutline: 'Topic <b>\n  - Branch', mineLayout: mindMap(mine, { width: 640, height: 372 }) };
     expect(evaluate(String(files[0].params.text), { vars })).toBe('Topic <b>\n  - Branch');
@@ -547,6 +548,132 @@ describe('mind map: build your own', () => {
     expect(page).toContain('Topic &lt;b&gt;');
     expect(page).not.toContain('<b>');
     expect(page.startsWith('<!doctype html>')).toBe(true);
+  });
+});
+
+describe('mind map: keeping the learner\'s map', () => {
+  //a progress store that keeps user data in memory, so what was saved can be looked at
+  const store = (kept: Record<string, unknown> = {}) => {
+    const saves: Record<string, unknown>[] = [];
+    return {
+      kept,
+      saves,
+      load: () => null,
+      save: () => undefined,
+      saveUserData: async (values: Record<string, unknown>) => {
+        saves.push(JSON.parse(JSON.stringify(values)));
+        Object.assign(kept, JSON.parse(JSON.stringify(values)));
+      },
+      loadUserData: async (names: string[]) => {
+        const got: Record<string, unknown> = {};
+        for (const n of names) if (n in kept) got[n] = kept[n];
+        return Object.keys(got).length ? got : null;
+      },
+    };
+  };
+  const open = async (opts: { keep?: boolean; kept?: Record<string, unknown> } = {}) => {
+    const project = build('explore/mind-map');
+    if (opts.keep === false) project.variables.find((v) => v.name === 'keepMap')!.initial = false;
+    const progress = store(opts.kept);
+    project.settings.startArtboardId = project.artboards.find((a) => a.name === 'Build your own')!.id;
+    const player = (current = new Player(document.getElementById('stage')!, project, { loadData: false, progress }));
+    await flush(30);
+    const id = (name: string) => layer(project, name, 'Build your own').id;
+    const type = async (value: string) => {
+      const input = must(id('Idea text box')).querySelector('input')!;
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await flush(10);
+    };
+    const labels = () => (player.getVariable('mine') as { label: string }[]).map((n) => n.label);
+    return { project, player, progress, id, type, labels };
+  };
+
+  it('puts the map back from what was saved when the page opens, and says it is saved', async () => {
+    const { player, labels } = await open({ kept: { mine: [{ id: 'n1', parent: '', label: 'Kept topic' }, { id: 'n2', parent: 'n1', label: 'Kept branch' }] } });
+    expect(labels()).toEqual(['Kept topic', 'Kept branch']);
+    expect(player.getVariable('draft')).toBe('Kept topic');
+    expect(player.getVariable('mapSaved')).toBe(true);
+    player.destroy();
+  });
+
+  it('saves every change when the author keeps the map, and the Save button reads Saved once it has', async () => {
+    const { player, progress, id, type, labels } = await open();
+    expect(progress.saves).toEqual([]);
+    await type('Sleep');
+    await click(id('Add inside button'));
+    await flush(20);
+    expect(labels()).toEqual(['My topic', 'Sleep']);
+    expect((progress.kept.mine as { label: string }[]).map((n) => n.label)).toEqual(['My topic', 'Sleep']);
+    expect(player.getVariable('mapSaved')).toBe(true);
+    expect(must(id('Save button')).textContent).toContain('Saved');
+    expect(must(id('Keep status')).textContent).toContain('Saved for you on this course page');
+    player.destroy();
+  });
+
+  it('keeps nothing when the author does not keep it, and says so, and hides the Save button', async () => {
+    const { player, progress, id, type, labels } = await open({ keep: false, kept: { mine: [{ id: 'n1', parent: '', label: 'An old save' }] } });
+    //(an old save is not read back either)
+    expect(labels()).toEqual(['My topic']);
+    await type('Sleep');
+    await click(id('Add inside button'));
+    await flush(20);
+    expect(labels()).toEqual(['My topic', 'Sleep']);
+    expect(progress.saves).toEqual([]);
+    expect(must(id('Keep status')).textContent).toContain('Only until you leave');
+    expect(shown(id('Save button'))).toBe(false);
+    player.destroy();
+  });
+
+  it('starts a new map only after asking', async () => {
+    const { player, progress, id, type, labels } = await open();
+    await type('Sleep');
+    await click(id('Add inside button'));
+    expect(labels()).toHaveLength(2);
+    await click(id('New map button'));
+    expect(player.getVariable('newMapOpen')).toBe(true);
+    //asking changes nothing, and keeping the map closes the question
+    expect(labels()).toHaveLength(2);
+    await click(id('New map dialog close button'));
+    expect(player.getVariable('newMapOpen')).toBe(false);
+    expect(labels()).toHaveLength(2);
+    await click(id('New map button'));
+    await click(id('Clear map button'));
+    await flush(20);
+    expect(labels()).toEqual(['My topic']);
+    expect(player.getVariable('mineAt')).toBe(0);
+    expect(player.getVariable('newMapOpen')).toBe(false);
+    expect((progress.kept.mine as unknown[]).length).toBe(1);
+    player.destroy();
+  });
+
+  it('opens a map saved by Download a copy, and refuses anything that is not one', async () => {
+    const { project, player, id, labels } = await open();
+    //the copy the download button writes
+    const dl = project.artboards.find((a) => a.name === 'Build your own')!.logic.nodes.find((n) => n.kind === 'action.saveFile' && n.params.mime === 'application/json')!;
+    const mine = [{ id: 'n1', parent: '', label: 'Topic' }, { id: 'n2', parent: 'n1', label: 'Branch <b>' }];
+    const copy = String(evaluate(String(dl.params.text), { vars: { mine } }));
+    expect(JSON.parse(copy)).toEqual(mine);
+    const paste = async (text: string) => {
+      await click(id('Open map button'));
+      expect(player.getVariable('openMapOpen')).toBe(true);
+      player.setVariable('pastedMap', text);
+      await click(id('Open this map button'));
+      await flush(20);
+    };
+    for (const bad of ['', 'not json', '[oops', '{"id":"a"}', '[]', '[{"id":1,"label":"x"}]', '[{"id":"a"}]']) {
+      await paste(bad);
+      expect(player.getVariable('openMapOpen')).toBe(true);
+      expect(player.getVariable('openMapMessage')).toContain('not a map saved from this page');
+      expect(labels()).toEqual(['My topic']);
+    }
+    //only the fields a map uses are kept, whatever else the pasted words carry
+    await paste(JSON.stringify([{ id: 'n1', parent: '', label: 'Topic', extra: 'x' }, { id: 'n2', parent: 'n1', label: 'Branch <b>' }]));
+    expect(player.getVariable('openMapOpen')).toBe(false);
+    expect(player.getVariable('mine')).toEqual(mine);
+    expect(player.getVariable('mineAt')).toBe(0);
+    expect(player.getVariable('draft')).toBe('Topic');
+    player.destroy();
   });
 });
 

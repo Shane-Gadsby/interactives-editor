@@ -128,7 +128,7 @@ describe('practice starters', () => {
       //the record layers are there but only show while the microphone is ready, which it never is in a project that declares nothing
       it.skipIf(['practice/keep-the-beat', 'practice/shadow-the-model', 'practice/sign-practice'].includes(starter.key))('has an optional recording step that is off as shipped, and a checklist item that says how to switch it on', () => {
         const { project, checklist } = starter.build(COLOURWAYS[0]);
-        expect(checklist.some((c) => /OPTIONAL RECORDING/.test(c.text) && /Microphone and camera/.test(c.text) && /dropped/.test(c.text))).toBe(true);
+        expect(checklist.some((c) => /OPTIONAL RECORDING/.test(c.detail ?? c.text) && /Microphone and camera/.test(c.detail ?? c.text) && /dropped/.test(c.detail ?? c.text))).toBe(true);
         expect(project.settings.sensors).toBeUndefined();
         const steps: SceneNode[] = [];
         for (const ab of project.artboards) walk(ab.children, (n) => /^(Recording|Replay) step$/.test(n.name) && steps.push(n));

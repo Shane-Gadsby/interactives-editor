@@ -1,5 +1,5 @@
 import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'interactives-player';
-import { brandedPage, brandedProject, button, byName, contentBox, item, text, type LayoutState } from '../../kit';
+import { brandedPage, brandedProject, button, byName, contentBox, item, text, todo, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { stack } from '../../parts';
 import { bankQuestion, bind, click, goNext, graph, graphNote, heroPage, kitNode, noteBelow, scorePage, variable } from './shared';
@@ -101,11 +101,11 @@ export function buildTrueFalse(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
-    item('Write your own statements: the "statements" variable (Variables tab) is a list, one entry per statement, with its prompt, correct (true or false) and the explanation shown afterwards. Keep those three names in each entry', frame, play),
-    item(`Add or remove statements in that list: the progress bar, the "Statement n of ${N}" footer, the tally and the result all follow its length`, undefined, play),
-    item('Reword the three result messages: the messageHigh, messageMid and messageLow variables (Variables tab)', byName(result, 'Result message'), result),
-    item('Ask only some of them, in a random order: select the question and, under Take the question from data, set Questions to draw and Random', frame, play),
-    item('Change the colours for the whole piece with the Themes tab: the colourways are already set up', undefined, play),
+    todo('Write your own statements and explanations', 'Write your own statements: the "statements" variable (Variables tab) is a list, one entry per statement, with its prompt, correct (true or false) and the explanation shown afterwards. Keep those three names in each entry', frame, play),
+    todo('Add or remove statements as you need', `Add or remove statements in that list: the progress bar, the "Statement n of ${N}" footer, the tally and the result all follow its length`, undefined, play),
+    todo('Reword the three result messages', 'Reword the three result messages: the messageHigh, messageMid and messageLow variables (Variables tab)', byName(result, 'Result message'), result),
+    todo('Ask only some statements, in a random order', 'Ask only some of them, in a random order: select the question and, under Take the question from data, set Questions to draw and Random', frame, play),
+    todo('Pick a colourway for the whole piece', 'Change the colours for the whole piece with the Themes tab: the colourways are already set up', undefined, play),
   ];
   return { project, checklist };
 }

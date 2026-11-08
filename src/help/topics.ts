@@ -41,6 +41,14 @@ export const TOPICS: HelpTopic[] = [
 
 ![The editor: tools down the left edge, then Layers, Assets, Libraries and Comments, the artboards in the middle, the Inspector on the right, and the Timeline, Interactions, Scripts, Variables, Data and other tabs along the bottom. Share and Export are at the top right.](help/editor-overview.png)
 
+## Your first five minutes
+
+On a new account the projects page opens with **What do you want to make?**: *Test what learners know*, *Explain something step by step*, *Practise a skill*, *Tell a story or show a picture with clickable spots*, or *Start from nothing*. A goal suggests one starter, with two others to pick instead. Press **Try it first** to play it (nothing is saved), then **Start with ...** to make your own project from it. **See all the starters** goes to the Templates tab, and **I'll look around by myself** puts the question away.
+
+Your first project opens in the **Essentials** workspace: only Timeline, Interactions, Variables and (for a starter) the Checklist along the bottom, and the Shapes, Media and Web tools on the left. **More panels** at the right of the bottom tabs and **More tools** under the tool groups bring back what is put away; anything your project already uses (scripts, data sources, a public interface, attributions, libraries, review comments, charts, bones) shows its tab anyway. **Show all panels and tools** leaves Essentials, and **Preferences > Workspace** switches between it and the others at any time.
+
+Under the top bar, the **Getting started** strip lists five jobs that tick themselves as you do them: **Add a shape**, **Move it**, **Make it do something when clicked**, **Preview it** and **Share it**. Each one opens its two-minute tutorial. Put the strip away with the **x**, or turn it off under **Preferences > Getting started strip**; it also goes for good once all five are ticked. The ticks are kept in your preferences, so they follow you between browsers.
+
 ## Getting started as a beta tester
 
 Thank you for trying Interactives 0.5. It is a beta: the main parts work, a few edges are rough, and what you find now decides what gets fixed next. You don't need to read anything first. Follow the list below, and open the help page it links to when you want the detail.
@@ -261,6 +269,8 @@ Every panel can go anywhere: the left, right, bottom or top area, or a window of
 
 A floating window moves by its title bar and resizes from its bottom-right corner. Its **×** closes it and sends its panels back to where they started. An area nothing is docked in takes no room.
 
+The **Essentials** workspace (Preferences > Workspace) goes a step further: it puts panels and tool groups away until they are wanted, with **More panels** at the right of the bottom tabs and **More tools** in the tool bar to bring them back, and **Show all panels and tools** to leave it. A panel your project already uses keeps its tab. See [Your first five minutes](welcome#your-first-five-minutes).
+
 The **top** area sits under the header and above the canvas and its rulers, across the page, and takes no height until a panel is docked in it (so nothing looks different until you use it). Drag its bottom edge (or focus the edge and use the arrow keys) to resize it, double-click the edge to reset its height, click the open tab or the arrow at the end of its tabs to fold it down to its tabs, and click a tab to open it again. Its height and whether it is folded are kept with the layout, so saved workspaces carry them too. Old layouts and workspaces open the same as before, with an empty top area. The canvas gets whatever room is left, and the rulers stay on the canvas.
 
 Right-click a tab (or press Shift+F10 on it) for **Dock on the left / right / at the bottom / at the top**, **Float in its own window**, **Help for this panel** and **Reset panel layout** (everything back where it started). The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title), and drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right**, **Dock at the bottom** and **Dock at the top** strips show, labelled for the tools, and the one you are over lights up. Along the bottom or the top it becomes a strip across the page with its groups side by side (at the top it sits under the header, over the top panels). It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is. Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom**, **Dock at the top** or **Floating**. Saved workspaces remember where the tool bar was. The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
@@ -314,11 +324,12 @@ Open **Preferences** from the gear in the top bar (or on the projects page). The
 
 - **Mouse wheel**: *Zoom (Shift+wheel pans)* or *Pan (Ctrl+wheel zooms)*. See [Moving around the canvas](canvas).
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette (the same colours as the rest of the Toolbox): its greys, its blue for selection and focus, and UniSQ gold on primary buttons, the open tab and the line under the top bar. In Light, the palette's grey for secondary text is a little under the usual contrast guideline (4.4:1 on panels, 4.1:1 on the background, against 4.5:1); it is left as the palette has it so the editor matches the Toolbox.
-- **Workspace** (in the editor only): switch every panel's place in one go. **Standard** is where everything starts; **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
+- **Workspace** (in the editor only): switch every panel's place in one go. **Standard** is where everything starts; **Essentials** puts away every panel and tool group a first project does not need (see [Your first five minutes](welcome#your-first-five-minutes)); **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
 - **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. It is Open Sans unless you change it. Click the box and type to search every Google font (the chips narrow it by Sans, Serif, Display, Handwriting or Mono), then pick one with <kbd>Enter</kbd> or a click; <kbd>Esc</kbd> closes the list. A name that isn't on the list can be used as typed. It applies to projects and text you make from now on, not to ones that exist.
 - **Canvas**: **Show rulers** (rulers and guides on the canvas, also <kbd>Shift</kbd>+<kbd>R</kbd>), **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>), **Snapping** and a switch for each target (**Snap to grid** is <kbd>Ctrl</kbd>+<kbd>'</kbd>; the others are artboard, layers, guides, spacing, pixels and points), **Snap distance**, **Grid size** (1 to 512 px, with presets under it) and **Stronger line every** (cells, 1 to 32). See [The grid and snapping](grid). These follow you with your account like the rest.
 - **Show layers outside clipped artboards**: on by default. When an artboard has **Clip content to artboard** on, the parts of layers that hang outside it are drawn faintly, in diagonal stripes, beside it on the canvas, so you can still see them and click them to select. It is only how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
 - **Show tooltips**: explanations when you hover buttons and fields.
+- **Getting started strip**: the five jobs along the top of the editor that tick themselves. On until you put it away or tick all five; turning it on again brings it back (with the ticks kept, or cleared if all five were done). See [Your first five minutes](welcome#your-first-five-minutes).
 - **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
 - **Recording**: there is none to set. See [What the editor records](what-is-recorded).
 - **Screen reader strip**: off by default. A strip under Preview that shows what a screen reader would be told by Announce nodes, as it is spoken. It only shows while Accessibility features is on. The same switch is in the Preview header, next to Accessibility.
@@ -565,7 +576,7 @@ Select layers and drag them on the canvas. If you let go over a **different artb
 - Interactions in the old artboard that used them will need fixing. The [Usage](usage) tab's **Broken** list shows exactly which.
 
 ## Right-click menus
-- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**On click…**, **On hover…**) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
+- **A layer**: **Cut**, **Copy**, **Paste**, **Duplicate**, **Delete**, **Order** (**Bring to front**, **Bring forward**, **Send backward**, **Send to back**), **Group**, **Ungroup**, **Combine shapes** (union, subtract, intersect, exclude), **Hide** or **Show**, **Lock**, **Select same fill**, **Select same font**, **Add interaction** (**When clicked…**, **When hovered…**, or an empty **On click** or **On hover** event) and, for text, buttons and links, **Edit text**. The shortcuts are shown beside each item.
 - **An artboard**: **New** (a menu of layers to add where you clicked), **Paste**, **Make start artboard**, **Duplicate artboard**, **Zoom to artboard** and **Delete artboard**.
 - **Empty canvas**: **New artboard here**, **Paste**, **Zoom to fit everything**, **Show rulers** or **Hide rulers**, and **Help**.`,
   },
@@ -1855,7 +1866,7 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
     title: 'Interactions',
     group: 'Interactivity',
     summary: 'The node graph: events start a flow, actions do things, logic chooses the way.',
-    keywords: 'interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing',
+    keywords: 'interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing behaviour recipe when clicked hovered show hide next page sound counter switch sentences read explain condition picker only if turn off remove',
     body: `Open the **Interactions** tab. Each artboard has its own graph.
 
 **Room for the graph.** The bottom panel is a short strip, so opening **Interactions** (from a layer's **+ On click**, one of its interaction chips, or the tab itself) lifts the panel to a comfortable height, and puts it back when you move to another tab. It only does that when the panel is still at its normal height: one you sized yourself is left alone. Drag the top edge of the panel while the graph is open and that height is remembered for next time (in this browser).
@@ -1929,8 +1940,32 @@ A **group** is a labelled frame around nodes that belong together ("Score", "Int
 - A node is in a group when its middle is inside the frame. Click the group (its title or any empty space inside it) to select it, and drag it the same way to move it with every node in it; drag its edges or corners to resize it. Right-click inside a group for **Add node here** as well as its own settings.
 - Double-click the title to rename it (or **Rename…** in its right-click menu). **Colour** gives it one of a few tints.
 - <kbd>Del</kbd> on a group with nodes inside asks: **Just the group** (the frame goes, the nodes stay where they are) or **Group and N nodes** (everything goes, in one undo step). An empty group just goes. Its right-click menu has **Ungroup (keep the nodes)** and **Delete group and N nodes** too, and **Copy** and **Duplicate** for the group with its nodes.
-- Right-click a *layer* on the canvas, choose **Add interaction**, then **On click…** or **On hover…** to add an **On pointer** event with a **Control timeline** action already joined to it.
-- In the Inspector, a layer's **Interactions** section lists its events and has **+ On click** and **+ On hover**.
+
+## Behaviours: "When this is clicked…"
+The quick way to make a layer do something, with no graph to draw. Select a layer and, in the Inspector's **Interactions** section, press **+ When clicked…** (or **+ When hovered…**), or right-click it and choose **Add interaction**, then **When clicked…**.
+
+A short list asks what should happen:
+- **Go to the next page**, **Go to the previous page**, **Go to a page…** (you pick which).
+- **Show a layer**, **Hide a layer**, **Show or hide a layer**: this layer or another. Showing a layer other than this one also sets it to start hidden, so there is something to show.
+- **Play an animation** (a timeline of this page) and **Play a sound**.
+- **Add 1 to a counter** and **Switch something on or off**: pick a number or an on/off variable you already have, or name a new one in plain words and it is made for you.
+- **Open a link** and **Start over**.
+
+Pick one, answer the question it asks (the line at the bottom reads back what it will do), and press **Add**. It is added in one step, so one undo takes it all back, including a new variable or the layer set to start hidden. A behaviour is just an **On pointer** event joined to an action (and the variable it needs), the same nodes you would have drawn: select the new node in the graph to change anything about it. Nothing special marks them, and nothing hidden runs.
+
+The empty **+ On click (empty)** and **+ On hover (empty)** buttons add only the event, for building the flow by hand in the graph.
+
+## What a layer does, in sentences
+The Inspector's **Interactions** section lists what the layer does as sentences made from its graph: **When clicked: show Hint text, then wait 2 s, then hide Hint text.** A check reads **check whether score is at least 5 (if so: …; if not: …)**, and a long chain stops with **and 4 more steps**. An event with nothing joined to it says **nothing happens yet**, so a click that does nothing is no longer a mystery. Under each sentence:
+- **Show in graph** opens the Interactions tab with that event picked.
+- **Turn off** stops it without removing it, and **Turn on** brings it back. Turning off puts a \`false\` in front of the event's **Only if**, which the graph shows (a condition that was there stays behind it).
+- **Remove** deletes the event and the steps only it reaches. A step another flow also runs stays.
+
+## Read as sentences
+The **Read as sentences** button over the graph (beside **Graph**) shows the whole artboard as sentences, one block per event, with the steps and the ways a check splits underneath. It is read only and made from the graph each time, so it cannot say something the graph does not. Pick a line to see that node's settings, **Show in graph** to go back to it, or **Copy as text** for all of it. Steps nothing starts are listed at the end as **Not joined to anything, so these never run**. It is the quickest way to understand a template someone else built.
+
+## Conditions with pickers
+Wherever the graph asks for a yes/no condition (**If**'s condition, an event's **Only if**, a timer's **Only while**, and the formula of a yes/no binding such as visible), the field is three pickers: a value (a variable), how to compare it (**is**, **is not**, **is at least**, **is at most**, **is more than**, **is less than**, **contains**, **is empty**, **is not empty**, **is on**, **is off**) and what to compare it with (a number, a piece of text, on or off, or another value). **+ and** and **+ or** add rows. **Edit as formula** shows the formula the pickers write (\`score >= 5 && !done\`) and lets you type it. A formula the pickers cannot show in full, such as one with arithmetic, brackets or a function, simply opens as a formula and is never rewritten. The line under it says what it works out to now.
 
 Test in **Preview**: the event list shows each event as it fires. Every node is listed in [Interaction node reference](interaction-nodes). For a walk-through, see [Tutorial 2](tutorial-first-interaction).
 
@@ -2400,6 +2435,16 @@ Every field that takes an expression suggests as you type: the Formula of a bind
 Type the start of a name, or press the dot after one, and a short list appears with each choice's type and its value right now. It offers your variables, \`context\` (and its fields, such as \`context.firstName\`), your data sources, the names the player supplies (\`reducedMotion\`, \`voiceAvailable\`, \`micLevel\`, \`downloadSize\`...), the helpers below with their arguments, and what the setting itself has (\`event\` in a graph node, \`value\` in a converter, \`self\` in a binding). After a dot it lists what can follow: the fields of an object, \`self.width\`, or the methods of text and lists. Inside \`layer("\` it lists your layers' names.
 
 **Up** and **Down** move through the list, **Enter** or **Tab** puts the choice in, and **Esc** closes it. With no list showing, Enter and Tab do what they always did.
+
+## Checks as you type
+A line under every formula field says what the formula is doing, a moment after you stop typing:
+- **Green**: what it works out to right now, such as *currently true*, *currently 12* or *currently “Hello”*. A formula that depends on what has just happened (it uses \`event\`) says *depends on what happens when it runs*, and one that uses \`Math.random()\`, \`randInt\` or the date says *changes each time it runs*. It is not run to show you a value that would be different the next time.
+- **Red**: what is wrong, in a sentence. *There is no value called scoer. Did you mean score?* comes with a **Use score** button that fixes every use of it in one click. A bracket or quote that is not closed, a symbol missing at the end, a single \`=\` where \`==\` was meant, and a formula that cannot be worked out with today's values are all said in words.
+
+The check uses the same scope as the suggestions, and the values are the project's starting values, as on the canvas.
+
+## Conditions without typing
+A field that asks for a yes/no condition (see [Interactions](interactions)) offers pickers instead of a text box: **[value] [is at least] [5]**, with **+ and** and **+ or** for more rows, and **Edit as formula** for the text. The pickers write an ordinary formula, so anything you built with them can be edited by typing, and a formula they cannot show opens as text.
 
 ## Helpers
 These work in every expression:
@@ -3776,10 +3821,16 @@ A library can be published as a **brand kit**: the same thing, but what a projec
 - **New project** on the **Projects** tab opens **Start a new project**, which offers the same templates and examples as one of its choices (**Copy a project or template**, **Built-in template**, **Copy an example**) next to **Blank project**, without leaving the projects page. It makes the project the same way as **Use template** and **Make my copy** do, so a template still opens with its checklist.
 - On your own templates, the pencil changes the title, description, checklist and who can use it; the bin deletes it (projects already made from it keep their content).
 
+## Find and try a starter
+The **Built-in** tab has a search box and a row of goal chips: **Everything**, **Quiz**, **Explain**, **Practise**, **Story** and **Media**, each with how many starters it holds. Type words and every one of them has to match the starter's name, description, tags or goal, so "quiz pictures" finds the picture quizzes. A chip narrows the list to what it is for (a starter can belong to more than one), and the numbers on the other chips follow your search. The tags on the cards are in plain words; the tool's own words ("question kit", "variables") are not shown but still searchable.
+
+Every starter has a **Play** button, like the examples. It builds the starter right there and runs it the way a share link would. Nothing is saved and no project is made until you press **Use this template** in the Play window (or **Use template** on the card). Branded starters play in the colourway chosen above them.
+
 ## Use a template
 1. **Templates** > pick a card > **Use template**. The window lists the checklist first, so you see what it expects of you.
 2. Give the project a name and pick a folder, then **Create project**. It opens with the **Checklist** tab already open along the bottom.
 3. Work down the list. **Click an item** and the editor selects the layer it is about and puts it in the middle of the canvas; change it, then **tick the item off**.
+   Each item is one short action. A **Why and how** fold under it holds the detail (which panel, which variable, what to watch for): open it when you need it. Items in templates made before the fold have no detail.
 4. A badge saying **Still the template's** means the layer an item points at has not been changed at all yet, even if you ticked it. **Layer deleted** means it was removed.
 5. **Review** (top of the Checklist tab) before you share: it lists what is not ticked and what is ticked but untouched, each one a link to the layer. **Mark as reviewed** when you are happy. **Remove** takes the checklist away and leaves the project as it is.
 

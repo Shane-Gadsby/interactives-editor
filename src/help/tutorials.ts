@@ -91,29 +91,35 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 1. Press <kbd>B</kbd> for the **Button** tool and drag a button below the box.
 2. In the Inspector, change **Label** to **Slide the box**. The label is the text on the button. Change **Name** to **Slide button** so it is easy to find later.
 
-## 3. Add the event
+## 3. Say what should happen
 
-1. With the button selected, scroll the Inspector to its **Interactions** section and press **+ On click**.
-2. The bottom panel switches to the **Interactions** tab and an **On pointer** node appears. Its settings on the right say **Layer: Slide button** and **Event: Click / tap**. That reads as "when Slide button is clicked".
+1. With the button selected, scroll the Inspector to its **Interactions** section and press **+ When clicked…**.
+2. A short list of things that can happen opens. Choose **Play an animation**, then pick your timeline under **Which animation**. The line at the bottom reads back what it will do: *When clicked: play “Timeline”*.
+3. Press **Add**. The section now says it in a sentence: **When clicked: play “Timeline”.**
 
-> A shortcut for later: right-click a layer, choose **Add interaction**, then **On click…**. It adds an **On pointer** node and a **Control timeline** node, already joined.
+That is the whole interaction. The same list can go to another page, show or hide a layer, play a sound, open a link, add 1 to a counter or switch something on or off. Every one is added to the **Interactions** graph as ordinary nodes, so you can always take it further.
 
-## 4. Add the action by dragging
+> A shortcut: right-click a layer, choose **Add interaction**, then **When clicked…**.
 
-1. Find the small dot on the right edge of the **On pointer** node. That is its output.
-2. Drag from the dot into empty space and let go.
-3. A menu called **ADD AND CONNECT** opens. It lists only the nodes that make sense there. Choose **Action**, then **Control timeline**.
-4. The new node appears where you let go, already connected.
+## 4. See what it made
 
-![Dragging a connection into empty space: let go, pick a node, and it is added and joined for you.](help/drag-to-connect.mp4)
-
-## 5. Choose what it does
-
-1. Click the **Control timeline** node. Its settings show on the right.
-2. Set **Timeline** to **Timeline** (the one you made), and **Do** to **Play**.
-3. Leave **Continue** on **When it finishes**. That setting decides when the *next* node would run. It matters once you chain more actions after this one.
+1. Under the sentence press **Show in graph**. The bottom panel switches to **Interactions** and picks the new node.
+2. There are two nodes, joined: an **On pointer** event (its settings say **Layer: Slide button** and **Event: Click / tap**) and a **Control timeline** action. The Inspector's sentence is made from exactly these.
+3. The **Read as sentences** button above the graph shows the whole page this way. Use it to read a graph somebody else built.
 
 ![The Interactions tab: the node palette on the left, the graph in the middle and the selected node's settings on the right.](help/interactions-panel.png)
+
+## 5. Build the same thing by hand
+
+The graph can do much more than the list, and it helps to have drawn one flow yourself. Remove the sentence (**Remove** under it), then:
+
+1. Press **+ On click (empty)** in the Interactions section. An **On pointer** node appears with nothing joined to it.
+2. Find the small dot on the right edge of the **On pointer** node. That is its output. Drag from the dot into empty space and let go.
+3. A menu called **ADD AND CONNECT** opens. It lists only the nodes that make sense there. Choose **Action**, then **Control timeline**. The new node appears where you let go, already connected.
+4. Click the **Control timeline** node. Set **Timeline** to **Timeline** (the one you made), and **Do** to **Play**.
+5. Leave **Continue** on **When it finishes**. That setting decides when the *next* node would run. It matters once you chain more actions after this one.
+
+![Dragging a connection into empty space: let go, pick a node, and it is added and joined for you.](help/drag-to-connect.mp4)
 
 ## 6. Try it
 
@@ -124,14 +130,14 @@ Press the **Play preview** triangle in the Timeline bar. The box slides across. 
 ## Go further
 
 - **Toggle.** Add a **Toggle** node after the event. Join its **a** output to **Control timeline: Play** and its **b** output to **Control timeline: Play in reverse**. Each click now alternates.
-- **Hover.** Use **+ On hover** in the Inspector for a hover effect. Choose **Show / hide** or **Animate property** actions.
+- **Hover.** Use **+ When hovered…** in the Inspector for a hover effect, such as **Show a layer**. For more control, **+ On hover (empty)** and the **Show / hide** or **Animate property** actions.
 - **Wait.** A **Wait** node pauses a flow for some milliseconds before the next node.
 - **Log.** A **Log** node writes to your browser's console, which is handy when you're not sure a flow ran. The Preview's event list also shows every event as it fires.
 
 ## What you learned
 
 - **Events** (green) start flows, **actions** (blue) do things, **logic** (purple) chooses the way.
-- You can drag from an output into empty space to add and join a node in one move.
+- **+ When clicked…** writes the nodes for you, and **Show in graph** shows them. You can also drag from an output into empty space to add and join a node in one move.
 - The **Preview** and its event list are the quickest way to test.
 
 **Next:** [Tutorial 3: A state machine with variables](tutorial-state-machine). More on the graph: [Interactions](interactions) and [Interaction node reference](interaction-nodes).`,
@@ -182,13 +188,11 @@ That says: if \`lit\` is true the colour is yellow, otherwise it is grey. The fi
 
 ## 4. Add the interaction
 
-1. Select the **Switch** button. In its **Interactions** section press **+ On click**.
-2. Drag from the **On pointer** node's output dot into empty space. Choose **Action**, then **Set variable**.
-3. In the settings, set **Variable** to **lit** and **Do** to **Toggle (boolean)**.
-4. Drag from the new node's output into empty space again. Choose **Action**, then **Set variable**.
-5. Set **Variable** to **taps**, **Do** to **Add**, and **Value** to \`1\`.
+1. Select the **Switch** button. In its **Interactions** section press **+ When clicked…**.
+2. Choose **Switch something on or off** and, under **Which switch**, pick **lit**. Press **Add**.
+3. Press **+ When clicked…** again. Choose **Add 1 to a counter** and pick **taps**. Press **Add**.
 
-You now have: click → flip \`lit\` → add 1 to \`taps\`.
+The section now reads: **When clicked: switch lit on or off** and **When clicked: add 1 to taps**. Two flows start from the same click, and both run. (In the graph they are an **On pointer** joined to a **Set variable** each, with **Do** on **Toggle** and on **Add**.)
 
 ## 5. Try it
 

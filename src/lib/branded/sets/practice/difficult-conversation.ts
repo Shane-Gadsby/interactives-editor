@@ -12,7 +12,7 @@
 //does not allow it would show a step that cannot work. One recording name ("reply") serves every scene: it is dropped when the next scene or a retry opens.
 import { createNode, type Artboard, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, picture, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, picture, stroke, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import { BRAND_FONT, type Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, darkButton, go, goNext, graphNote, heroPage, resetVars, set, setVar, tickList, toggleItem } from '../media/shared';
 import { MIC_READY, dropTakeWhen, labelled, playLabel, playToggle, rec, recordLabel, recordStatus, recordToggle } from './recording';
@@ -61,7 +61,7 @@ function build(colourway: Colourway) {
   const intro = hero.page.children.find((n) => n.name === 'Subtitle')!;
   const hg = new Graph(hero.page);
   hg.run(hg.click(hero.start, 'Begin'), goNext());
-  checklist.push(item('Write the title and the line under it on the first page. Keep it clear that this is practice and not assessed', intro, hero.page));
+  checklist.push(todo('Write the title and say it is practice, not assessed', 'Write the title and the line under it on the first page. Keep it clear that this is practice and not assessed', intro, hero.page));
 
   /** The reply, review and branch stages on one page. Returns the layers the checklist points at. */
   const scene = (page: Artboard, cfg: SceneCfg) => {
@@ -200,15 +200,15 @@ function build(colourway: Colourway) {
   });
 
   checklist.push(
-    item('Write each scene: who the other person is (picture, name, role and mood on the left of every scene page) and what they say in "Their line". That text is the transcript, so keep it even if you add audio', a.line, first),
-    item('Swap the grey Character picture for your own, on every scene page, and give it a short description in the inspector', a.pic, first),
-    item('Optional audio: add a recording of the line as a sound, pick it in the "Play sound" node after "Play their line" (Interactions tab), then set Project > Variables > "audioLines" to true. The button is hidden until then', a.audio, first),
-    item('Write the framework learners tick: Project > Variables > "framework" (one point per line, up to five). The sample has four. For a clinical handover use ISBAR: Identify, Situation, Background, Assessment, Recommendation', a.rows, first),
-    item('Write the expert reply on each scene page ("Expert reply"). Say it the way you would want to hear it, not as the only right answer', a.expert, first),
-    item('Set where each answer goes: the two buttons on the review stage ("It calms them down" and "It makes it tenser") each end in a Go to page node. Add a scene by duplicating a scene page and pointing a button at it, or send both to the Ending', a.calmBtn, first),
-    item('Write what the three outcomes on the Ending page say (settled, mixed, still tense). They read how many scenes calmed and how many got tenser', byName(ending, 'Outcome'), ending),
-    item('Keep it rehearsal: the starter scores nothing and says so. Do not turn the ticks into a mark, and keep scenario wording free of real people\'s names and details (the "Reply help" text says so)', a.rows, first),
-    item('OPTIONAL RECORDING: it is off as shipped, so nothing is recorded and the "Recording step" layer on each scene page never shows. To offer it, tick Microphone in Project > Microphone and camera and write the one-sentence purpose that fills in "It is used to ...". Then every scene gets Record my reply and Play mine under the typed reply box, and Play my recording beside the expert reply, for learners whose microphone works. Anyone who says no, has no microphone or chooses "Do not use my microphone or camera" rehearses as before. The recording stays in the learner\'s browser, is dropped when the next scene or a retry opens, and is never sent', a.slot, first),
+    todo('Write each scene: the other person and what they say', 'Write each scene: who the other person is (picture, name, role and mood on the left of every scene page) and what they say in "Their line". That text is the transcript, so keep it even if you add audio', a.line, first),
+    todo('Swap the grey character picture for your own', 'Swap the grey Character picture for your own, on every scene page, and give it a short description in the inspector', a.pic, first),
+    todo('Add audio for each line if you want it', 'Optional audio: add a recording of the line as a sound, pick it in the "Play sound" node after "Play their line" (Interactions tab), then set Project > Variables > "audioLines" to true. The button is hidden until then', a.audio, first),
+    todo('Write the framework learners tick', 'Write the framework learners tick: Project > Variables > "framework" (one point per line, up to five). The sample has four. For a clinical handover use ISBAR: Identify, Situation, Background, Assessment, Recommendation', a.rows, first),
+    todo('Write the expert reply on each scene page', 'Write the expert reply on each scene page ("Expert reply"). Say it the way you would want to hear it, not as the only right answer', a.expert, first),
+    todo('Set where each answer goes', 'Set where each answer goes: the two buttons on the review stage ("It calms them down" and "It makes it tenser") each end in a Go to page node. Add a scene by duplicating a scene page and pointing a button at it, or send both to the Ending', a.calmBtn, first),
+    todo('Write what the three endings say', 'Write what the three outcomes on the Ending page say (settled, mixed, still tense). They read how many scenes calmed and how many got tenser', byName(ending, 'Outcome'), ending),
+    todo('Keep it rehearsal: no marks, no real names', 'Keep it rehearsal: the starter scores nothing and says so. Do not turn the ticks into a mark, and keep scenario wording free of real people\'s names and details (the "Reply help" text says so)', a.rows, first),
+    todo('Decide whether to offer recording', 'OPTIONAL RECORDING: it is off as shipped, so nothing is recorded and the "Recording step" layer on each scene page never shows. To offer it, tick Microphone in Project > Microphone and camera and write the one-sentence purpose that fills in "It is used to ...". Then every scene gets Record my reply and Play mine under the typed reply box, and Play my recording beside the expert reply, for learners whose microphone works. Anyone who says no, has no microphone or chooses "Do not use my microphone or camera" rehearses as before. The recording stays in the learner\'s browser, is dropped when the next scene or a retry opens, and is never sent', a.slot, first),
   );
 
   //The ending

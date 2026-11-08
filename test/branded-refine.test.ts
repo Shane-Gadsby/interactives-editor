@@ -72,7 +72,7 @@ describe('Hint and Try again as one setting each', () => {
           if (w.again && parts.reset?.[0]) expect(parts.reset[0].bindings!.visible).toMatch(/^allowTryAgain && /);
         }
       //and the checklist tells the author where they are
-      const text = projectFromBrandedStarter(BRANDED_STARTERS.find((s) => s.key === key)!, COLOURWAYS[0]).template!.checklist.map((c) => c.text).join('\n');
+      const text = projectFromBrandedStarter(BRANDED_STARTERS.find((s) => s.key === key)!, COLOURWAYS[0]).template!.checklist.map((c) => `${c.text} ${c.detail ?? ''}`).join('\n');
       expect(text).toMatch(/Optional extras, one switch each/);
     });
   }

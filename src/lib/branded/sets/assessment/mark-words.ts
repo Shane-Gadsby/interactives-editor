@@ -1,7 +1,7 @@
 import { createNode, defaultAutoLayout, type FrameNode, type TemplateChecklistItem } from 'interactives-player';
 import { type Colourway } from '../../looks';
 import { BRAND_FONT } from '../../looks';
-import { brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type LayoutState } from '../../kit';
+import { brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, todo, type LayoutState } from '\.\./\.\./kit';
 import { stack } from '../../parts';
 import { bind, click, goNext, graph, graphNote, heroPage, noteBelow, variable } from './shared';
 
@@ -122,11 +122,11 @@ export function buildMarkWords(colourway: Colourway) {
 
   const checklist: TemplateChecklistItem[] = [
     item('Change the title and the line under it on the first page', hero.children.find((c) => c.name === 'Page title'), hero),
-    item('Write your own passage: the "passage" variable (Variables tab). Put an asterisk on each side of every word the learner should mark, like *opened*. The asterisks never show. Separate words with single spaces, and any punctuation stuck to a word counts as part of that word', passage, page),
-    item('Say what to mark: the "rule" variable (Variables tab), for example "Click every noun in the passage."', rule, page),
-    item('Check the Preview: the words wrap into lines by themselves and each chip fits its word, so a longer or shorter passage needs no other change (the passage panel grows with it)', passage, page),
-    item('Change how a wrong word is scored: the "score" variable (Variables tab) is a live formula that takes the wrong words off the found ones', scoreText, page),
-    item('Reword the legend that explains the ✓, ✗ and ← marks if you change what they mean', legend, page),
+    todo('Write your passage and star the words to mark', 'Write your own passage: the "passage" variable (Variables tab). Put an asterisk on each side of every word the learner should mark, like *opened*. The asterisks never show. Separate words with single spaces, and any punctuation stuck to a word counts as part of that word', passage, page),
+    todo('Say what the learner should mark', 'Say what to mark: the "rule" variable (Variables tab), for example "Click every noun in the passage."', rule, page),
+    todo('Preview it: check a longer or shorter passage still fits', 'Check the Preview: the words wrap into lines by themselves and each chip fits its word, so a longer or shorter passage needs no other change (the passage panel grows with it)', passage, page),
+    todo('Change how a wrong word is scored', 'Change how a wrong word is scored: the "score" variable (Variables tab) is a live formula that takes the wrong words off the found ones', scoreText, page),
+    todo('Reword the legend if the marks mean something else', 'Reword the legend that explains the ✓, ✗ and ← marks if you change what they mean', legend, page),
   ];
   return { project, checklist };
 }

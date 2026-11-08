@@ -8012,6 +8012,32 @@ code {
   color: var(--muted);
   text-decoration: line-through;
 }
+.checklist li {
+  align-items: flex-start;
+}
+.checklist li > input[type='checkbox'] {
+  margin-top: 5px;
+}
+.checklist-body {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.checklist-detail {
+  margin: 0 0 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.checklist-detail summary {
+  cursor: pointer;
+  width: fit-content;
+  padding: 1px 0;
+}
+.checklist-detail p {
+  margin: 2px 0 4px;
+  max-width: 70ch;
+  line-height: 1.45;
+  color: var(--text);
+}
 .checklist-text {
   text-align: left;
   color: var(--text);
@@ -10035,4 +10061,465 @@ body.page-link-dragging * {
   .paste-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------------------------------------------------------------- no-code interactions: what a layer does, behaviours, conditions, formula lines */
+
+/* the line under a formula field: what it works out to now, or what is wrong */
+.expr-status {
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 2px 0 6px;
+}
+.expr-status.ok {
+  color: var(--ok-text);
+}
+.expr-status.err {
+  color: var(--danger-text);
+}
+.expr-status .link-btn {
+  padding: 0;
+  font-size: inherit;
+}
+
+/* a layer's interactions as sentences, in the Inspector */
+.flow-list {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+}
+.flow-item {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--event);
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 4px 0;
+}
+.flow-item.empty {
+  border-left-color: var(--warn);
+}
+.flow-item.off .flow-sentence {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.flow-sentence {
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.flow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 2px;
+}
+.flow-actions .link-btn {
+  padding: 2px 0;
+  font-size: 11px;
+}
+.flow-actions .link-btn.danger {
+  color: var(--danger-text);
+}
+
+/* the Interactions tab read as sentences */
+.logic-view-toggle {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 5;
+  background: var(--panel);
+}
+.logic-view-toggle .seg-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+.flow-sentences {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 36px 12px 12px;
+}
+.flow-sentences-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.flow-block {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--event);
+  border-radius: 4px;
+  padding: 4px 0;
+  margin: 0 0 8px;
+}
+.flow-block.off .flow-line.event .flow-text {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.flow-block.loose {
+  border-left-color: var(--warn);
+}
+.flow-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-right: 8px;
+}
+.flow-line.event .flow-text {
+  font-weight: 600;
+}
+.flow-line.branch .flow-text,
+.flow-line.more .flow-text {
+  color: var(--muted);
+  font-style: italic;
+}
+.flow-line.picked {
+  background: color-mix(in srgb, var(--primary-bg) 22%, transparent);
+}
+button.flow-text {
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  overflow-wrap: anywhere;
+}
+button.flow-text:hover {
+  text-decoration: underline;
+}
+button.flow-text:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* the behaviour chooser */
+.modal.dialog.behaviour-dialog {
+  width: min(560px, 94vw);
+}
+.recipe-list,
+.recipe-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+/* the groups sit two across, so the list, the question it asks and the answer all fit without scrolling */
+.recipe-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+}
+.recipe-group {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 6px 0 3px;
+}
+.recipe-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 9px;
+  margin: 2px 0;
+  cursor: pointer;
+}
+.recipe-opt:hover:not(.off):not(.on) {
+  border-color: var(--btn-hover-border);
+  background: var(--btn-hover-bg);
+}
+.recipe-opt.on {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.recipe-opt.off {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.recipe-opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.recipe-name {
+  font-weight: 600;
+}
+.recipe-hint {
+  font-size: 11px;
+}
+.recipe-detail {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.behaviour-preview {
+  margin: 2px 0 8px;
+  min-height: 1.4em;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.behaviour-dialog .dialog-field select {
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+
+/* the condition picker */
+.cond {
+  margin: 4px 0;
+}
+.cond-block {
+  margin: 4px 0;
+}
+.cond-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.cond-row select,
+.cond-row input {
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 3px 6px;
+  height: 26px;
+}
+.cond-row input.cond-val {
+  width: 90px;
+}
+.cond-join {
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  height: 22px;
+  font-size: 11px;
+}
+.cond-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 6px;
+}
+.cond-actions .btn {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.cond-formula {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 0;
+}
+.cond-text .link-btn {
+  font-size: 11px;
+}
+
+/* two lines in a narrow settings column: the value and how to compare it, then what to compare it with */
+.cond-row .cond-left {
+  flex: 1 1 42%;
+  min-width: 100px;
+}
+.cond-row .cond-op {
+  flex: 1 1 42%;
+}
+.cond-row .cond-kind,
+.cond-row .cond-val {
+  flex: 1 1 80px;
+}
+.cond-row .cond-left .search-picker-hint {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- first run, the Getting started strip, finding a starter, Essentials */
+.first-run {
+  grid-column: 1 / -1;
+  max-width: 780px;
+  margin: 48px auto;
+  padding: 0 16px;
+  text-align: center;
+}
+.first-run h2 {
+  margin: 0 0 6px;
+  font-size: 26px;
+}
+.first-run h2:focus {
+  outline: none;
+}
+.fr-goals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 20px 0 12px;
+  text-align: left;
+}
+.fr-goal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.fr-goal:hover:not(:disabled) {
+  border-color: var(--primary-bg);
+}
+.fr-goal:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.fr-goal span {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.fr-blank {
+  border-style: dashed;
+}
+.first-run.suggest {
+  max-width: 900px;
+  text-align: left;
+}
+.fr-suggest {
+  display: grid;
+  grid-template-columns: minmax(220px, 360px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.fr-picture {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 10;
+  background: var(--canvas);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.fr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+@media (max-width: 700px) {
+  .fr-suggest {
+    grid-template-columns: 1fr;
+  }
+}
+
+.getting-started {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 6px 24px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line-2);
+  color: var(--text);
+  font-size: 12px;
+}
+.gs-jobs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gs-job {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 4px;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.gs-job:hover {
+  border-color: var(--accent);
+}
+.gs-job:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.gs-tick {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-2);
+}
+.gs-jobs .done .gs-job {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.gs-jobs .done .gs-tick {
+  background: var(--primary-fg);
+  border-color: var(--primary-fg);
+  color: var(--primary-bg);
+}
+
+.templates-find {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 24px 0;
+}
+.templates-find .starter-search {
+  flex: 0 1 320px;
+  max-width: 100%;
+}
+.goal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.goal-chips .tag-chip {
+  padding: 3px 10px;
+  font-size: 12px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.more-panels {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 0 10px;
+}
+.more-panels:hover,
+.more-panels:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+.more-tools {
+  margin-top: 4px;
+  text-align: center;
 }

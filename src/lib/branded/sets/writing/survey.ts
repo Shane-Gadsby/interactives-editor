@@ -1,6 +1,6 @@
 //Questionnaire: one page with a rating scale, a multiple choice and an open text question. The answers are learner user data (kept as they are given), and Submit shows a thank-you with (optionally) a summary of what was answered.
 import { createNode, type FrameNode, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { panel } from '../assessment/shared';
 import { keyNavList } from '../../parts';
@@ -158,13 +158,13 @@ function build(colourway: Colourway) {
 
   checklist.push(
     item('Write the survey title and the line under it on the first page', hero.children.find((n) => n.name === 'Subtitle'), hero),
-    item('Question 1: write your own rating question, and the labels at each end of the scale (the scale is one radio group of five round buttons made from one copy, so the arrow keys choose and one flow sets "rating")', q1, survey),
-    item('Question 2: change the choices in the "places" variable (Variables tab), one row for each. The rows are one layer repeated, and one flow sets the "place" variable to the row chosen', q2, survey),
-    item('Question 3: write your own open question. Its box is tied to the "comment" variable', q3, survey),
-    item('Decide which questions are required: Submit stays off until the live "ready" variable is true (it is rating > 0 && place != "", in the Variables tab)', submit, survey),
-    item('Write your own thank-you message, and turn the answers summary off if you do not want it: set the "showSummary" variable to false (Variables tab)', message, thanks),
-    item('The Record nodes after Submit send counts of the rating and the choice to Insights, with no names and no free text. Change or remove them (Interactions tab), and turn recording off in Project > Learner records if you do not want any', submit, survey),
-    item('Answers are learner user data: on the Link for StudyDesk they are kept under the learner\'s StudyDesk session, anywhere else in their browser, saved as they change and put back before the survey opens. A question you add needs its variable ticked Save as user data (Variables tab)', undefined, hero),
+    todo('Question 1: write your rating question and scale labels', 'Question 1: write your own rating question, and the labels at each end of the scale (the scale is one radio group of five round buttons made from one copy, so the arrow keys choose and one flow sets "rating")', q1, survey),
+    todo('Question 2: change the choices', 'Question 2: change the choices in the "places" variable (Variables tab), one row for each. The rows are one layer repeated, and one flow sets the "place" variable to the row chosen', q2, survey),
+    todo('Question 3: write your open question', 'Question 3: write your own open question. Its box is tied to the "comment" variable', q3, survey),
+    todo('Decide which questions are required', 'Decide which questions are required: Submit stays off until the live "ready" variable is true (it is rating > 0 && place != "", in the Variables tab)', submit, survey),
+    todo('Write your thank-you message', 'Write your own thank-you message, and turn the answers summary off if you do not want it: set the "showSummary" variable to false (Variables tab)', message, thanks),
+    todo('Change or remove what is sent to Insights', 'The Record nodes after Submit send counts of the rating and the choice to Insights, with no names and no free text. Change or remove them (Interactions tab), and turn recording off in Project > Learner records if you do not want any', submit, survey),
+    todo('Check where the answers are kept', 'Answers are learner user data: on the Link for StudyDesk they are kept under the learner\'s StudyDesk session, anywhere else in their browser, saved as they change and put back before the survey opens. A question you add needs its variable ticked Save as user data (Variables tab)', undefined, hero),
   );
 
   project.settings.reporting = { completion: 'artboard', completionArtboard: thanks.id };

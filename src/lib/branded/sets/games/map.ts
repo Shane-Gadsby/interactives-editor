@@ -1,6 +1,6 @@
 //Game map: a map page with five stage markers that unlock in order, a small activity page behind each, ticks for the ones done, and a reward page at the end.
 import { createNode, type Artboard, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
-import { addNote, brandedPage, brandedProject, button, contentBox, item, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
+import { addNote, barY, brandedPage, brandedProject, button, contentBox, item, picture, solid, stroke, text, todo, type BrandedStarter, type LayoutState } from '\.\./\.\./kit';
 import type { Colourway } from '../../looks';
 import { Graph, addVar, announce, bind, darkButton, focus, go, goNext, graphNote, groupPages, heroPage, lit, set } from './common';
 
@@ -138,12 +138,12 @@ function build(colourway: Colourway) {
   mg.run(onMapStart, ['action.resetVariables', { variables: [message.id] }], announce('done + " of " + stages.length + " stages complete"'));
 
   checklist.push(
-    item('Swap the grey picture on the map for your own artwork, then drag the markers onto it. The path behind them is a plain line you can redraw or delete', mapPic, map),
-    item('Rename the stages: Project > Variables > "stages". The map labels and the stage headings follow it (the page names in the page list are separate)', markers[0], map),
-    item('Write each stage\'s activity: open the stage pages and change the prompt, the options, and the feedback line. Each stage is its own page, so a stage can be a different kind of task', stagePages[0].children.find((n) => n.name === 'Prompt'), stagePages[0]),
-    item('Say which option is right on each stage page: the first step of its On start flow in the Interactions tab sets "answer" (0 is the first option, 1 the second). "right" is a live variable that follows from it', stagePages[0].children.find((n) => n.name === 'Option 1'), stagePages[0]),
-    item('Stages unlock in order by the "done" count. To open them in any order, change the Only if on the open marker flow and the locked one (they read done and event.childIndex)', markers[1], map),
-    item('Change the reward: the picture, the words and what happens next', reward.children.find((n) => n.name === 'Reward text'), reward),
+    todo('Swap the grey map picture for your own artwork', 'Swap the grey picture on the map for your own artwork, then drag the markers onto it. The path behind them is a plain line you can redraw or delete', mapPic, map),
+    todo('Rename the stages', 'Rename the stages: Project > Variables > "stages". The map labels and the stage headings follow it (the page names in the page list are separate)', markers[0], map),
+    todo('Write each stage\'s activity', 'Write each stage\'s activity: open the stage pages and change the prompt, the options, and the feedback line. Each stage is its own page, so a stage can be a different kind of task', stagePages[0].children.find((n) => n.name === 'Prompt'), stagePages[0]),
+    todo('Say which option is right on each stage', 'Say which option is right on each stage page: the first step of its On start flow in the Interactions tab sets "answer" (0 is the first option, 1 the second). "right" is a live variable that follows from it', stagePages[0].children.find((n) => n.name === 'Option 1'), stagePages[0]),
+    todo('Change the order the stages unlock in', 'Stages unlock in order by the "done" count. To open them in any order, change the Only if on the open marker flow and the locked one (they read done and event.childIndex)', markers[1], map),
+    todo('Change the reward', 'Change the reward: the picture, the words and what happens next', reward.children.find((n) => n.name === 'Reward text'), reward),
   );
 
   //The five stage pages: a prompt, the options, feedback, then Complete the stage
@@ -183,8 +183,8 @@ function build(colourway: Colourway) {
     const feedbackY = sb.y + 104 + s.options.length * 76 + 4;
     const feedback = text(ctx, 'Feedback', `{picked < 0 ? "" : right ? "That is right. " + ${lit(s.why)} : "Not quite. Have another look and try again."}`, sb.x, feedbackY, 620, { fontSize: 18, fontWeight: 600, lineHeight: 1.3, autoSize: 'none', height: 60 });
     bind(feedback, { color: `right ? "${L.success}" : picked >= 0 ? "${L.error}" : "${L.text}"` });
-    const finish = bind(button(ctx, 'Complete the stage', 'Complete the stage', sb.x, sb.y + sb.height - 46, 240, true), { visible: 'right' });
-    const back = button(ctx, 'Back to the map', 'Back to the map', sb.x + 256, sb.y + sb.height - 46, 200, false);
+    const finish = bind(button(ctx, 'Complete the stage', 'Complete the stage', sb.x, barY(sb), 240, true), { visible: 'right' });
+    const back = button(ctx, 'Back to the map', 'Back to the map', sb.x + 256, barY(sb), 200, false);
     page.children.push(prompt, pic, optionGroup, feedback, finish, back);
 
     const g = new Graph(page);

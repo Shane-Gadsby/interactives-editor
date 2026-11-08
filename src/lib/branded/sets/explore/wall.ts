@@ -4,7 +4,7 @@
  */
 import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
-import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
+import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, solid, stroke, text, todo, type BrandedStarter } from '\.\./\.\./kit';
 import { BRAND_FONT } from '../../looks';
 import { addVar, announce, bind, click, graph, graphNote, set, type ActionStep } from '../../graph-kit';
 import { fill, keyNavList, stack } from '../../parts';
@@ -161,12 +161,12 @@ export const informationWall: BrandedStarter = {
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),
-      item('Write your twelve panels in the "panels" list variable (Variables panel): a title, a line of text, a list of tags and an image for each. The wall, the search and the count all follow it', wall, page),
-      item('Keep the text short, about 60 characters: a tile has room for two lines. For longer text, make the tile taller and the wall frame to match (and mind the logo bottom left)', byName(page, 'Count'), page),
-      item('To give a panel its own picture, upload the image and put its asset id in that entry\'s "image" (the grey box shows until you do)', wall, page),
-      item('Restyle the tile once (the layers inside the Wall frame): every panel is the same layer, repeated', tile, page),
-      item('Change the topic buttons by editing the "topics" list (Variables panel), with All first. Tags in "panels" must be spelled the same way as the topics', topics, page),
-      item('To add or remove a panel, add or remove an entry in "panels". For more than twelve, make the Wall frame taller and mind the footer', wall, page),
+      todo('Write your panels: title, text, tags and picture', 'Write your twelve panels in the "panels" list variable (Variables panel): a title, a line of text, a list of tags and an image for each. The wall, the search and the count all follow it', wall, page),
+      todo('Keep each panel\'s text short', 'Keep the text short, about 60 characters: a tile has room for two lines. For longer text, make the tile taller and the wall frame to match (and mind the logo bottom left)', byName(page, 'Count'), page),
+      todo('Give a panel its own picture', 'To give a panel its own picture, upload the image and put its asset id in that entry\'s "image" (the grey box shows until you do)', wall, page),
+      todo('Restyle the tile once for every panel', 'Restyle the tile once (the layers inside the Wall frame): every panel is the same layer, repeated', tile, page),
+      todo('Change the topic buttons and match the tags', 'Change the topic buttons by editing the "topics" list (Variables panel), with All first. Tags in "panels" must be spelled the same way as the topics', topics, page),
+      todo('To add or remove a panel, change the list', 'To add or remove a panel, add or remove an entry in "panels". For more than twelve, make the Wall frame taller and mind the footer', wall, page),
       item('Change the footer line', byName(page, 'Footer text'), page),
     ];
     return { project, checklist };

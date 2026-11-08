@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CATALOG } from 'interactives-player';
-import { ARTBOARD_HELP, GENERAL_HELP, GRAPH_GROUP_HELP, LAYER_HELP, MANY_LAYERS_HELP, MASTER_HELP, PROP_HELP, TIMELINE_KEY_HELP, TOOL_HELP, helpTooltip, nodeHelp, resolveHelp, type HelpFocus, type HelpTarget } from '../src/help/context';
+import { ARTBOARD_HELP, GENERAL_HELP, GETTING_STARTED_HELP, GRAPH_GROUP_HELP, LAYER_HELP, MANY_LAYERS_HELP, MASTER_HELP, PROP_HELP, STARTER_FINDER_HELP, TIMELINE_KEY_HELP, TOOL_HELP, helpTooltip, nodeHelp, resolveHelp, type HelpFocus, type HelpTarget } from '../src/help/context';
 import { TOPICS, getTopic, topicBody } from '../src/help/topics';
 import { slug } from '../src/help/markdown';
 import { panelHelpTopic } from '../src/components/Dock';
@@ -49,7 +49,7 @@ describe('the help mapping covers everything', () => {
     }
   });
   it('the fixed targets and field overrides exist', () => {
-    for (const t of [...Object.values(PROP_HELP), TIMELINE_KEY_HELP, GRAPH_GROUP_HELP, ARTBOARD_HELP, MASTER_HELP, MANY_LAYERS_HELP, GENERAL_HELP]) expect(problem(t.to), t.label).toBeNull();
+    for (const t of [...Object.values(PROP_HELP), TIMELINE_KEY_HELP, GRAPH_GROUP_HELP, ARTBOARD_HELP, MASTER_HELP, MANY_LAYERS_HELP, GENERAL_HELP, GETTING_STARTED_HELP, STARTER_FINDER_HELP]) expect(problem(t.to), t.label).toBeNull();
   });
   it('has no two topics with the same id', () => expect(new Set(TOPICS.map((t) => t.id)).size).toBe(TOPICS.length));
 });
