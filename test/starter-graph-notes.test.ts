@@ -1,3 +1,4 @@
+import { parseNoteText } from '../src/lib/note-text';
 //Every branded starter's interaction graph is annotated: a graph with more than a handful of nodes has at least one graph note that
 //says what it does, the notes sit clear of the nodes once the graph is tidied, and none of it ships.
 import { describe, expect, it } from 'vitest';
@@ -54,11 +55,11 @@ describe('starter graph notes', () => {
         }
   });
 
-  it('no note has code marks inside bold (the note shows the backticks as they are), and a note is tall enough for its words', () => {
+  it('a note is tall enough for its words, and none shows a raw backtick (code inside bold is drawn as code)', () => {
     for (const b of built)
       for (const a of b.project.artboards)
         for (const n of a.logic.notes ?? []) {
-          for (const m of n.text.matchAll(/\*\*([^*]+)\*\*/g)) expect(m[1], `${b.starter.key}: ${n.text}`).not.toContain('`');
+          for (const l of parseNoteText(n.text)) for (const sp of l.spans) if (sp.kind !== 'code') expect(sp.text, `${b.starter.key}: ${n.text}`).not.toContain('`');
           expect(n.h, `${b.starter.key}: ${n.text}`).toBeGreaterThanOrEqual(noteHeightFor(n.text, n.w));
         }
   });

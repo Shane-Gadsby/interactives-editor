@@ -406,3 +406,21 @@ describe('help', () => {
     expect(topicBody(getTopic('shortcuts')!)).toContain('(notes)');
   });
 });
+
+describe('note text: code inside bold, and boxes partway through a line', () => {
+  it('draws `code` inside **bold** as bold code, not backticks', async () => {
+    const { inlineSpans } = await import('../src/lib/note-text');
+    expect(inlineSpans('**Check sets `checked` only.** then')).toEqual([
+      { kind: 'bold', text: 'Check sets ' },
+      { kind: 'code', text: 'checked', strong: true },
+      { kind: 'bold', text: ' only.' },
+      { kind: 'text', text: ' then' },
+    ]);
+  });
+  it('shows a [ ] or [x] partway through a line as a box', async () => {
+    const { parseNoteText } = await import('../src/lib/note-text');
+    const [l] = parseNoteText('Then [ ] swap the clip, [x] done');
+    expect(l.kind).toBe('paragraph');
+    expect(l.spans.map((s) => s.text).join('')).toBe('Then ☐ swap the clip, ☑ done');
+  });
+});

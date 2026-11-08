@@ -5,6 +5,8 @@
 export interface NoteSpan {
   kind: 'text' | 'bold' | 'italic' | 'code';
   text: string;
+  /** Code inside **bold**, drawn bold as well. */
+  strong?: boolean;
 }
 
 export interface NoteLine {
@@ -22,15 +24,22 @@ export function inlineSpans(s: string): NoteSpan[] {
   let at = 0;
   for (const m of s.matchAll(INLINE)) {
     const i = m.index ?? 0;
-    if (i > at) out.push({ kind: 'text', text: s.slice(at, i) });
-    if (m[2] !== undefined) out.push({ kind: 'bold', text: m[2] });
+    if (i > at) out.push({ kind: 'text', text: boxes(s.slice(at, i)) });
+    //code marks inside bold are code, still bold, not backticks shown as they are
+    if (m[2] !== undefined)
+      for (const [j, part] of m[2].split('`').entries()) {
+        if (part) out.push(j % 2 ? { kind: 'code', text: part, strong: true } : { kind: 'bold', text: part });
+      }
     else if (m[3] !== undefined) out.push({ kind: 'italic', text: m[3] });
     else out.push({ kind: 'code', text: m[4] });
     at = i + m[0].length;
   }
-  if (at < s.length) out.push({ kind: 'text', text: s.slice(at) });
+  if (at < s.length) out.push({ kind: 'text', text: boxes(s.slice(at)) });
   return out;
 }
+
+//a [ ] or [x] partway through a line can't be ticked (only one starting a line is a checkbox), but it still reads as a box, not brackets
+const boxes = (t: string): string => t.replace(/\[ \]/g, '\u2610').replace(/\[[xX]\]/g, '\u2611');
 
 const CHECK = /^\s*(?:[-*]\s+)?\[( |x|X)\]\s?(.*)$/;
 const BULLET = /^\s*[-*]\s+(.*)$/;
