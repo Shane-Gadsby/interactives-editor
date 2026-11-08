@@ -188,6 +188,18 @@ const CATALOG = [
     ]
   },
   {
+    kind: "event.videoCue",
+    label: "On video cue",
+    category: "event",
+    description: "When a video layer's playback reaches one of its cue points (set in the video layer's Cues). `event.name` is the cue's name, `event.time` its time in seconds, `event.index` its place in the list and `event.layer` the video's name. Only playing across a cue counts: seeking past it (the controls, a chapter, Control video) fires nothing, and seeking back arms it again. A cue marked Pause has already paused the video when this fires, so a question can be asked and Control video can play on afterwards. Bind the video's Hold paused to keep it paused until then.",
+    outputs: OUT,
+    hasInput: false,
+    params: [
+      { key: "target", label: "Video layer", type: "node", placeholder: "Any video layer", help: "Leave empty to fire for every video layer's cues" },
+      { key: "name", label: "Cue name", type: "text", placeholder: "Any cue", help: "Leave empty to fire for every cue on the video" }
+    ]
+  },
+  {
     kind: "event.step",
     label: "On step",
     category: "event",
@@ -400,7 +412,7 @@ const CATALOG = [
     kind: "action.setVariable",
     label: "Set variable",
     category: "action",
-    description: "Set, add to, toggle or change the list of a variable.",
+    description: "Set, add to, toggle, reset or change the list of a variable. A live variable (worked out from its formula) cannot be set.",
     outputs: OUT,
     hasInput: true,
     params: [
@@ -415,19 +427,49 @@ const CATALOG = [
           { value: "toggle", label: "Toggle (boolean)" },
           { value: "push", label: "Append to list" },
           { value: "remove", label: "Remove from list (position)" },
-          { value: "clear", label: "Empty (list, number or text)" }
+          { value: "clear", label: "Empty (list, number or text)" },
+          { value: "reset", label: "Back to its starting value" },
+          { value: "toggleItem", label: "Add to list, or take out if there (value)" },
+          { value: "removeValue", label: "Remove from list (value)" },
+          { value: "setItem", label: "Change one list item" }
         ],
         default: "set"
+      },
+      {
+        key: "index",
+        label: "Item position",
+        type: "expr",
+        default: "",
+        placeholder: "event.index",
+        showIf: { key: "op", values: ["setItem"] },
+        help: "Which item to change (0 is the first). Left empty it is event.index, the item the event came from (a repeater copy that was clicked, a drag that landed on one)."
+      },
+      {
+        key: "field",
+        label: "Field",
+        type: "text",
+        default: "",
+        showIf: { key: "op", values: ["setItem"] },
+        help: "Optional. Change only this field of the item and keep the rest (for items that are objects). Empty replaces the whole item."
       },
       {
         key: "value",
         label: "Value",
         type: "expr",
         default: "0",
-        showIf: { key: "op", values: ["set", "add", "push", "remove"] },
-        help: 'Expression, e.g. 1, "hi", score * 2. For a list: the item to append ({name: "Ann"}) or the position to remove (0 is the first).'
+        showIf: { key: "op", values: ["set", "add", "push", "remove", "toggleItem", "removeValue", "setItem"] },
+        help: 'Expression, e.g. 1, "hi", score * 2. For a list: the item to append ({name: "Ann"}), the position to remove (0 is the first), the value to add or take out, or what to put in the item (item and index are available: item.count + 1).'
       }
     ]
+  },
+  {
+    kind: "action.resetVariables",
+    label: "Reset variables",
+    category: "action",
+    description: "Put the chosen variables back to their starting values: the typed value, the value for this course, or their formula worked out again. Live variables are left alone. Unlike Start over, nothing else changes.",
+    outputs: OUT,
+    hasInput: true,
+    params: [{ key: "variables", label: "Variables", type: "variables", help: "The variables to put back" }]
   },
   {
     kind: "action.setProperty",
@@ -609,8 +651,11 @@ const CATALOG = [
     kind: "action.sound",
     label: "Play sound",
     category: "action",
-    description: "Play an audio asset, once or on a loop, at a volume and a speed. The sound can be picked here or worked out by an expression (a list item's sound, say).",
-    outputs: OUT,
+    description: 'Play an audio asset, once or on a loop, at a volume and a speed. The sound can be picked here or worked out by an expression (a list item\'s sound, say). Continues from the bottom port, and from Stopped if a Stop sound node (or Stop other sounds first) ends it before it finishes. With Stopped wired, "When it finishes" only continues on a natural end. `soundPlaying()` and `soundsPlaying` say what is playing, for a button that toggles Play and Stop.',
+    outputs: [
+      { id: "out", label: "" },
+      { id: "stopped", label: "Stopped" }
+    ],
     hasInput: true,
     params: [
       { key: "asset", label: "Sound", type: "asset" },
@@ -670,13 +715,33 @@ const CATALOG = [
     kind: "action.recordStart",
     label: "Start recording",
     category: "action",
-    description: "Records from the learner's microphone or camera into a named recording. The page around the project asks the learner first (one plain consent screen made from Project > Microphone and camera), starts only after a real tap, and shows a recording bar with the level, a timer and a Stop button that the project cannot hide. It stops at the length limit. Continues from Recording when it has started, or from Could not start (not allowed, no device, the learner said no, or nowhere to ask: see `mediaMessage`). Recordings stay in memory and are gone when the page is left.",
+    description: 'Records from the learner\'s microphone or camera into a named recording. The page around the project asks the learner first (one plain consent screen made from Project > Microphone and camera), starts only after a real tap, and shows a recording bar with the level, a timer and a Stop button that the project cannot hide. It stops at the length limit. Continues from Recording when it has started, or from Could not start (not allowed, no device, the learner said no, or nowhere to ask: see `mediaMessage`). Recordings stay in memory and are gone when the page is left. With "Start or stop" one button does both: pressed while that name is recording it stops and continues from Recorded, and otherwise it starts.',
     outputs: [
       { id: "out", label: "Recording" },
+      { id: "recorded", label: "Recorded" },
       { id: "failed", label: "Could not start" }
     ],
     hasInput: true,
     params: [
+      {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "start", label: "Start recording" },
+          { value: "toggle", label: "Start or stop" }
+        ],
+        default: "start",
+        help: "Start or stop makes one button the record and stop button: it stops if this recording is going, and starts otherwise"
+      },
+      {
+        key: "quiet",
+        label: "Quiet other sounds first",
+        type: "boolean",
+        default: true,
+        help: "Stop every sound, recording playback and spoken voice before the microphone opens, so the model answer does not leak into the recording",
+        showIf: { key: "op", values: ["toggle"] }
+      },
       { key: "slot", label: "Recording name", type: "text", default: "recording", help: "A name for this recording. A project can keep several, each under its own name (up to 8)." },
       {
         key: "source",
@@ -732,10 +797,11 @@ const CATALOG = [
     kind: "action.recordPlay",
     label: "Play recording",
     category: "action",
-    description: "Plays a finished recording back. A sound recording plays through the project's own sound, so the viewer's sound button and volume apply. A video recording plays in the layer chosen below, from the page around the project. Continues from Nothing recorded when that name holds no recording yet.",
+    description: `Plays a finished recording back. A sound recording plays through the project's own sound, so the viewer's sound button and volume apply. A video recording plays in the layer chosen below, from the page around the project. Continues from Nothing recorded when that name holds no recording yet, and from Stopped when a sound recording is stopped before it finishes (with Stopped wired, "When it finishes" only continues on a natural end).`,
     outputs: [
       { id: "out", label: "" },
-      { id: "none", label: "Nothing recorded" }
+      { id: "none", label: "Nothing recorded" },
+      { id: "stopped", label: "Stopped" }
     ],
     hasInput: true,
     params: [
@@ -1026,7 +1092,20 @@ const CATALOG = [
       { key: "question", label: "Question", type: "node", help: "The question frame (made with Add question)", showIf: { key: "op", values: ["question", "feedback", "auto"] } },
       { key: "lang", label: "Language", type: "text", placeholder: "e.g. en, fr-CA. Empty: the project's", help: "Only a voice on the device for this language is used. Words in another language read with the wrong sounds, so none is used then", showIf: { key: "op", values: SPEAK_SAYS } },
       { key: "rate", label: "Speed", type: "number", default: 1, help: "A multiplier for this reading, 1 is normal. The learner's own speed choice is applied on top", showIf: { key: "op", values: SPEAK_SAYS } },
-      { key: "wait", label: "Continue when it finishes", type: "boolean", default: false, help: "Hold the next node until the words have been said (or stopped, or there is no voice)", showIf: { key: "op", values: SPEAK_SAYS } }
+      { key: "wait", label: "Continue when it finishes", type: "boolean", default: false, help: "Hold the next node until the words have been said (or stopped, or there is no voice)", showIf: { key: "op", values: SPEAK_SAYS } },
+      {
+        key: "fallback",
+        label: "With no voice",
+        type: "select",
+        options: [
+          { value: "none", label: "Say nothing" },
+          { value: "announce", label: "Announce the same words to screen readers" }
+        ],
+        default: "none",
+        help: "When no voice on the device can read this language (or Only speak when is false), send the words to the live region instead, so a screen reader user does not miss the feedback",
+        showIf: { key: "op", values: SPEAK_SAYS }
+      },
+      { key: "only", label: "Only speak when", type: "expr", default: "", placeholder: "spokenOn", help: 'Optional. A condition such as a "spoken prompts" variable. While it is false the voice stays quiet (and Announce is used if chosen above). Empty: always.', showIf: { key: "op", values: SPEAK_SAYS } }
     ]
   },
   {
@@ -1204,7 +1283,7 @@ const CATALOG = [
     description: "Pause this flow for a time.",
     outputs: OUT,
     hasInput: true,
-    params: [{ key: "ms", label: "Milliseconds", type: "number", default: 500 }]
+    params: [{ key: "ms", label: "Milliseconds", type: "expr", default: "500", help: "A number of milliseconds, or an expression worked out when the wait starts, e.g. pace <= 4 ? 4000 : 8000" }]
   },
   {
     kind: "action.waitBlendIn",
@@ -1506,8 +1585,8 @@ const MODIFIER_SHAPES = ["square", "ramp-up", "ramp-down", "triangle", "round", 
 function defaultModifier(patch = {}) {
   return { unit: "letter", start: 0, end: 100, offset: 0, shape: "square", strength: 100, x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0, blur: 0, ...patch };
 }
-const isNum$2 = (v) => typeof v === "number" && Number.isFinite(v);
-const num$1 = (v, d) => isNum$2(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
+const isNum$3 = (v) => typeof v === "number" && Number.isFinite(v);
+const num$1 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeModifier(raw) {
   const r2 = raw && typeof raw === "object" ? raw : {};
   const d = defaultModifier();
@@ -1526,13 +1605,13 @@ function normalizeModifier(raw) {
     letterSpacing: num$1(r2.letterSpacing, d.letterSpacing),
     blur: num$1(r2.blur, d.blur)
   };
-  if (isNum$2(r2.falloffStart)) m.falloffStart = r2.falloffStart;
-  if (isNum$2(r2.falloffEnd)) m.falloffEnd = r2.falloffEnd;
+  if (isNum$3(r2.falloffStart)) m.falloffStart = r2.falloffStart;
+  if (isNum$3(r2.falloffEnd)) m.falloffEnd = r2.falloffEnd;
   if (typeof r2.name === "string") m.name = r2.name;
   if (typeof r2.color === "string" && r2.color) m.color = r2.color;
   if (r2.ease !== void 0 && r2.ease !== null) m.ease = r2.ease;
   if (r2.randomize === true) m.randomize = true;
-  if (isNum$2(r2.seed)) m.seed = r2.seed;
+  if (isNum$3(r2.seed)) m.seed = r2.seed;
   return m;
 }
 const MAX_PATTERN = 300;
@@ -1596,13 +1675,13 @@ function checkPattern(src, flags = "") {
   let cur = newGroup();
   let unbounded = 0;
   const nestedClasses = flags.includes("v");
-  const fold = flags.includes("i") ? (ch) => ch.toUpperCase().toLowerCase() : (ch) => ch;
+  const fold2 = flags.includes("i") ? (ch) => ch.toUpperCase().toLowerCase() : (ch) => ch;
   let last;
   const noteAtom = (ch, text) => {
     const atom = { src: text };
     let first;
     if (cur.atBranchStart) {
-      cur.firsts.push(ch === null ? "" : fold(ch));
+      cur.firsts.push(ch === null ? "" : fold2(ch));
       first = cur.firsts.length - 1;
       cur.atBranchStart = false;
       cur.starts.push(atom);
@@ -2733,11 +2812,11 @@ function newQuestion(kind, prefix = "q1") {
 function opts(texts, right) {
   return texts.map((text2, i) => ({ id: `o${i + 1}`, text: text2, ...right.includes(i) ? { correct: true } : {} }));
 }
-const isObj$2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isObj$3 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const str$1 = (v, d = "") => typeof v === "string" ? v : d;
 const num = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
 function cleanVoice(raw) {
-  if (!isObj$2(raw)) return void 0;
+  if (!isObj$3(raw)) return void 0;
   const out = {};
   if (str$1(raw.voice)) out.voice = str$1(raw.voice).slice(0, 40);
   if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num(raw.speed, 1, 0.5, 1.5);
@@ -2750,11 +2829,11 @@ function cleanVoice(raw) {
   return Object.keys(out).length ? out : void 0;
 }
 function normaliseQuestion(raw) {
-  if (!isObj$2(raw)) return null;
+  if (!isObj$3(raw)) return null;
   const kind = QUESTION_KINDS.some((k) => k.value === raw.kind) ? raw.kind : null;
   if (!kind) return null;
   const d = newQuestion(kind);
-  const list = (v, max) => Array.isArray(v) ? v.filter(isObj$2).slice(0, max) : [];
+  const list = (v, max) => Array.isArray(v) ? v.filter(isObj$3).slice(0, max) : [];
   const options = list(raw.options, MAX_OPTIONS).map((o, i) => ({
     id: str$1(o.id) || `o${i + 1}`,
     text: str$1(o.text),
@@ -2772,7 +2851,7 @@ function normaliseQuestion(raw) {
     ...typeof b.tolerance === "number" && Number.isFinite(b.tolerance) && b.tolerance > 0 ? { tolerance: b.tolerance } : {}
   }));
   const pairs = list(raw.pairs, MAX_PAIRS).map((pr, i) => ({ id: str$1(pr.id) || `p${i + 1}`, term: str$1(pr.term), match: str$1(pr.match) }));
-  const bank = isObj$2(raw.bank) && str$1(raw.bank.items).trim() ? { items: str$1(raw.bank.items), order: raw.bank.order === "sequence" ? "sequence" : "random" } : null;
+  const bank = isObj$3(raw.bank) && str$1(raw.bank.items).trim() ? { items: str$1(raw.bank.items), order: raw.bank.order === "sequence" ? "sequence" : "random" } : null;
   return {
     kind,
     prefix: isIdentifier(str$1(raw.prefix)) ? str$1(raw.prefix) : d.prefix,
@@ -2799,29 +2878,57 @@ function normaliseQuestion(raw) {
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
-    ...isObj$2(raw.retake) ? { retake: { limit: Math.round(num(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
+    ...isObj$3(raw.retake) ? { retake: { limit: Math.round(num(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
     ...cleanVoice(raw.voice) ? { voice: cleanVoice(raw.voice) } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
     ...raw.multi === true ? { multi: true } : {},
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
   };
 }
-const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
-const isNum$1 = (v) => typeof v === "number" && Number.isFinite(v);
+const isObj$2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isNum$2 = (v) => typeof v === "number" && Number.isFinite(v);
 function cleanCues(v) {
   if (!Array.isArray(v)) return [];
   const seen = /* @__PURE__ */ new Set();
   const out = [];
   for (const raw of v) {
-    if (!isObj$1(raw) || typeof raw.text !== "string" || !isNum$1(raw.start)) continue;
+    if (!isObj$2(raw) || typeof raw.text !== "string" || !isNum$2(raw.start)) continue;
     const start = Math.max(0, raw.start);
-    const end = isNum$1(raw.end) && raw.end > start ? raw.end : start + 1e3;
+    const end = isNum$2(raw.end) && raw.end > start ? raw.end : start + 1e3;
     let id = typeof raw.id === "string" && raw.id && !seen.has(raw.id) ? raw.id : uid("cu");
     while (seen.has(id)) id = uid("cu");
     seen.add(id);
     out.push({ id, start, end, text: raw.text, ...typeof raw.speaker === "string" && raw.speaker ? { speaker: raw.speaker } : {} });
   }
   return out;
+}
+const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isNum$1 = (v) => typeof v === "number" && Number.isFinite(v);
+function cleanVideoCues(v) {
+  if (!Array.isArray(v)) return [];
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const raw of v) {
+    if (!isObj$1(raw) || !isNum$1(raw.time) || typeof raw.name !== "string") continue;
+    let id = typeof raw.id === "string" && raw.id ? raw.id : uid("vc");
+    while (seen.has(id)) id = uid("vc");
+    seen.add(id);
+    out.push({ id, time: Math.max(0, raw.time), name: raw.name, ...raw.pause === true ? { pause: true } : {} });
+  }
+  return out.sort((a, b) => a.time - b.time);
+}
+function cleanVideoChapters(v) {
+  if (!Array.isArray(v)) return [];
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const raw of v) {
+    if (!isObj$1(raw) || !isNum$1(raw.time) || typeof raw.title !== "string") continue;
+    let id = typeof raw.id === "string" && raw.id ? raw.id : uid("vh");
+    while (seen.has(id)) id = uid("vh");
+    seen.add(id);
+    out.push({ id, time: Math.max(0, raw.time), title: raw.title });
+  }
+  return out.sort((a, b) => a.time - b.time);
 }
 function toRgb(hex) {
   const n = parseInt(hex.slice(1, 7), 16);
@@ -3047,6 +3154,18 @@ function sanitizeNode(raw, seen) {
       else delete n.descriptions;
     }
     if ("descriptionLang" in n && !isStr(n.descriptionLang)) delete n.descriptionLang;
+    if ("cues" in n) {
+      const cues = cleanVideoCues(n.cues);
+      if (cues.length) n.cues = cues;
+      else delete n.cues;
+    }
+    if ("chapters" in n) {
+      const chapters = cleanVideoChapters(n.chapters);
+      if (chapters.length) n.chapters = chapters;
+      else delete n.chapters;
+    }
+    if ("posterAssetId" in n && n.posterAssetId !== null && !isStr(n.posterAssetId)) delete n.posterAssetId;
+    if ("emptyText" in n && !isStr(n.emptyText)) delete n.emptyText;
     if ("playbackRate" in n && !(isNum(n.playbackRate) && n.playbackRate > 0)) delete n.playbackRate;
     if ("frameRate" in n && !(isNum(n.frameRate) && n.frameRate > 0)) delete n.frameRate;
     for (const k of ["speedControl", "frameStepControl"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
@@ -3757,7 +3876,7 @@ function refreshLook() {
 }
 refreshLook();
 onPaletteChange(refreshLook);
-const NAMES = {
+const NAMES$1 = {
   rect: "Rectangle",
   ellipse: "Ellipse",
   polygon: "Polygon",
@@ -3781,7 +3900,7 @@ function base(type) {
   return {
     id: uid("n"),
     type,
-    name: NAMES[type],
+    name: NAMES$1[type],
     x: 0,
     y: 0,
     width: 100,
@@ -4243,6 +4362,7 @@ class Parser {
     this.src = src;
     this.pos = 0;
     this.depth = 0;
+    this.names = /* @__PURE__ */ new Set();
     this.advance();
   }
   fail(msg, at = this.tok?.start ?? this.pos) {
@@ -4360,6 +4480,7 @@ class Parser {
     if (this.src.length > MAX_SOURCE) this.fail("Expression is too long", 0);
     const e = this.sequence();
     if (this.tok.t !== "end") this.fail(`Unexpected "${this.tok.v}"`);
+    NAMES.set(e, this.names);
     return e;
   }
   nest(f2) {
@@ -4641,6 +4762,7 @@ class Parser {
       this.fail(`"${name}" is not supported in expressions`);
     }
     this.advance();
+    this.names.add(name);
     const ev = (env) => {
       const f2 = find(env, name);
       if (!f2.found) throw new ExprError(`${name} is not defined`);
@@ -4654,6 +4776,7 @@ class Parser {
     if (this.tok.t !== "id" || RESERVED.has(this.tok.v)) this.fail("Expected a name after new");
     const name = this.tok.v;
     this.advance();
+    this.names.add(name);
     const args = this.is("(") ? this.args() : [];
     return (env) => {
       const f2 = find(env, name);
@@ -4824,6 +4947,7 @@ function find(env, name) {
   return { found: false };
 }
 const IDENT_NAME = /* @__PURE__ */ new WeakMap();
+const NAMES = /* @__PURE__ */ new WeakMap();
 const MEMBER_INFO = /* @__PURE__ */ new WeakMap();
 const SPREAD = /* @__PURE__ */ new WeakSet();
 function markSpread(e) {
@@ -5276,6 +5400,18 @@ function makeBinary(op, a, b) {
       throw new ExprError(`Unsupported operator ${op}`);
   }
 }
+const fold = (v) => typeof v === "string" ? v.toLowerCase() : v;
+function hasEach(list, items, all) {
+  const wanted = (Array.isArray(items) ? items : [items]).map(fold);
+  if (typeof list === "string") {
+    const text = list.toLowerCase();
+    const has2 = (w) => text.includes(String(w));
+    return all ? wanted.every(has2) : wanted.some(has2);
+  }
+  const have = (Array.isArray(list) ? list : []).map(fold);
+  const has = (w) => have.some((h) => Object.is(h, w) || h === w);
+  return all ? wanted.every(has) : wanted.some(has);
+}
 const FORMULA_HELPERS = {
   fmt(n, decimals = 0, thousands = false) {
     const d = Math.max(0, Math.min(20, Math.round(decimals)));
@@ -5309,7 +5445,54 @@ const FORMULA_HELPERS = {
     return String(n).padStart(width, "0");
   },
   crossword: (words, size = 10) => layoutCrossword(words, size),
-  wordSearch: (words, size = 12, seed = 7) => makeWordSearch(words, size, seed)
+  wordSearch: (words, size = 12, seed = 7) => makeWordSearch(words, size, seed),
+  /** How many words a text has (runs of anything but spaces). */
+  wordCount: (text) => {
+    const t2 = text === void 0 || text === null ? "" : String(text).trim();
+    return t2 ? t2.split(/\s+/).length : 0;
+  },
+  /** A label for where a value falls: thresholds from the highest down, one more label than thresholds. */
+  band(value, thresholds, labels) {
+    const t2 = Array.isArray(thresholds) ? thresholds : [];
+    const l = Array.isArray(labels) ? labels : [];
+    const v = Number(value);
+    for (let i = 0; i < t2.length; i++) if (v >= Number(t2[i])) return l[i];
+    return l[t2.length] ?? l[l.length - 1];
+  },
+  /** Seconds as m:ss (h:mm:ss from an hour). */
+  clock: (seconds) => {
+    const total = Number(seconds);
+    const s = Number.isFinite(total) && total > 0 ? Math.floor(total) : 0;
+    const h = Math.floor(s / 3600);
+    const sec = String(s % 60).padStart(2, "0");
+    return h > 0 ? `${h}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}:${sec}` : `${Math.floor(s / 60)}:${sec}`;
+  },
+  /** The list in a new order. With a seed the order is the same every time. */
+  shuffle(list, seed) {
+    const out = Array.isArray(list) ? list.slice() : typeof list === "string" ? Array.from(list) : [];
+    let a = typeof seed === "number" && Number.isFinite(seed) ? (seed | 0) >>> 0 : 0;
+    const rnd = typeof seed === "number" ? () => (a = a + 1831565813 >>> 0, (Math.imul(a ^ a >>> 15, 1 | a) ^ a >>> 7) >>> 0) / 4294967296 : Math.random;
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  },
+  /** A whole number from a to b, both included (one argument: from 0 to it). */
+  randInt(a, b) {
+    let lo = Number(a);
+    let hi = b === void 0 ? 0 : Number(b);
+    if (b === void 0) [lo, hi] = [0, lo];
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) return 0;
+    if (lo > hi) [lo, hi] = [hi, lo];
+    lo = Math.ceil(lo);
+    hi = Math.floor(hi);
+    return hi < lo ? lo : lo + Math.floor(Math.random() * (hi - lo + 1));
+  },
+  /** Whether a list (or text) has every one of the items, ignoring capitals. */
+  includesAll: (list, items) => hasEach(list, items, true),
+  /** Whether a list (or text) has at least one of the items, ignoring capitals. */
+  includesAny: (list, items) => hasEach(list, items, false)
 };
 const cache = /* @__PURE__ */ new Map();
 function compile(src) {
@@ -5326,9 +5509,134 @@ function compile(src) {
   if (hit instanceof ExprError) throw new ExprError(`Cannot parse expression: ${src.trim()} - ${hit.message}`);
   return hit;
 }
+function exprNames(src) {
+  const t2 = src.trim();
+  if (!t2) return [];
+  try {
+    return [...NAMES.get(compile(t2)) ?? []];
+  } catch {
+    return [];
+  }
+}
 function checkExpression(src) {
   const t2 = src.trim();
   if (t2) compile(t2);
+}
+const PLAYER_SCOPE_HINTS = {
+  reducedMotion: { type: "true/false", hint: "The viewer's device asks for less motion" },
+  voiceAvailable: { type: "true/false", hint: "A voice on this device can read the project aloud" },
+  speaking: { type: "true/false", hint: "A voice is reading right now" },
+  readRate: { type: "number", hint: "The learner's chosen reading speed" },
+  soundPlaying: { type: "function", hint: 'A Play sound sound is going: soundPlaying() for any, soundPlaying("Ding") for one' },
+  soundsPlaying: { type: "list", hint: "The names of the Play sound sounds going now" },
+  downloadSize: { type: "function", hint: "Bytes the named artboards' files weigh" },
+  saveData: { type: "true/false", hint: "The browser asks to save data" },
+  connectionType: { type: "text", hint: "The browser's connection guess, like 4g (empty if unknown)" },
+  lowBandwidth: { type: "true/false", hint: "A slow or data-saving connection" },
+  assetsEmbedded: { type: "true/false", hint: "The files travel inside the page" },
+  instanceInput: { type: "function", hint: "A variable inside an instance layer" },
+  microphone: { type: "text", hint: "Microphone state: unavailable, ready, listening..." },
+  camera: { type: "text", hint: "Camera state: unavailable, ready..." },
+  photos: { type: "text", hint: "Photo picker state" },
+  micLevel: { type: "number", hint: "Microphone loudness, 0 to 1" },
+  micBands: { type: "list", hint: "Microphone loudness per pitch band" },
+  listening: { type: "true/false", hint: "The microphone is listening" },
+  recording: { type: "true/false", hint: "A recording is going" },
+  recordingSeconds: { type: "number", hint: "Seconds recorded so far" },
+  recordings: { type: "object", hint: "The recording slots, by name" },
+  mediaMessage: { type: "text", hint: "The last microphone or camera problem, in words" },
+  userData: { type: "object", hint: "userData.loaded: saved variables have been looked for; userData.restored: how many came back" },
+  context: { type: "object", hint: "The course and the learner (context.firstName...)" },
+  data: { type: "object", hint: "Every data source by name" },
+  enums: { type: "object", hint: "The options of each choice variable" },
+  artboard: { type: "object", hint: "The artboard's name, width and height" },
+  layer: { type: "function", hint: 'Any layer by name or id: layer("Knob").width' },
+  steps: { type: "list", hint: "One entry per step, for a step bar's dots" }
+};
+const AMBIENT = new Set(Object.keys(PLAYER_SCOPE_HINTS).filter((n) => n !== "enums"));
+const isLive = (v) => !!v.live && !!v.formula?.trim();
+function planLive(project) {
+  const live = project.variables.filter(isLive);
+  const names = new Set(project.variables.map((v) => v.name));
+  const data = new Set(project.dataSources.map((d) => d.name));
+  const deps = /* @__PURE__ */ new Map();
+  const ambient = /* @__PURE__ */ new Set();
+  for (const v of live) {
+    const read = exprNames(v.formula);
+    deps.set(v.id, new Set(read.filter((n) => names.has(n))));
+    if (read.some((n) => !names.has(n) && (AMBIENT.has(n) || data.has(n)))) ambient.add(v.id);
+  }
+  const byName = new Map(live.map((v) => [v.name, v]));
+  const index = /* @__PURE__ */ new Map();
+  const low = /* @__PURE__ */ new Map();
+  const onStack = /* @__PURE__ */ new Set();
+  const stack2 = [];
+  const cyclic = /* @__PURE__ */ new Set();
+  let counter = 0;
+  const visit = (v) => {
+    index.set(v.id, counter);
+    low.set(v.id, counter++);
+    stack2.push(v);
+    onStack.add(v.id);
+    for (const n of deps.get(v.id)) {
+      const w = byName.get(n);
+      if (!w) continue;
+      if (w === v) cyclic.add(v.id);
+      else if (!index.has(w.id)) {
+        visit(w);
+        low.set(v.id, Math.min(low.get(v.id), low.get(w.id)));
+      } else if (onStack.has(w.id)) low.set(v.id, Math.min(low.get(v.id), index.get(w.id)));
+    }
+    if (low.get(v.id) === index.get(v.id)) {
+      const group = [];
+      let w;
+      do {
+        w = stack2.pop();
+        onStack.delete(w.id);
+        group.push(w);
+      } while (w !== v);
+      if (group.length > 1) for (const g of group) cyclic.add(g.id);
+    }
+  };
+  for (const v of live) if (!index.has(v.id)) visit(v);
+  const order = [];
+  const done = /* @__PURE__ */ new Set();
+  const place = (v) => {
+    if (done.has(v.id) || cyclic.has(v.id)) return;
+    done.add(v.id);
+    for (const n of deps.get(v.id)) {
+      const w = byName.get(n);
+      if (w && w !== v) place(w);
+    }
+    order.push(v);
+  };
+  for (const v of live) place(v);
+  const readers = /* @__PURE__ */ new Map();
+  for (const v of order) for (const n of deps.get(v.id)) readers.set(n, [...readers.get(n) ?? [], v]);
+  return { order, deps, readers, ambient, cyclic: live.filter((v) => cyclic.has(v.id)) };
+}
+function liveWriters(project) {
+  const live = new Map(project.variables.filter(isLive).map((v) => [v.id, v]));
+  const out = [];
+  if (!live.size) return out;
+  for (const ab of project.artboards) {
+    for (const n of ab.logic.nodes) {
+      const ids = n.kind === "action.setVariable" ? [n.params.variable] : n.kind === "action.resetVariables" && Array.isArray(n.params.variables) ? n.params.variables : [];
+      for (const id of ids) {
+        const variable = live.get(String(id));
+        if (variable) out.push({ artboardId: ab.id, artboardName: ab.name, nodeId: n.id, label: n.kind === "action.setVariable" ? "Set variable" : "Reset variables", variable });
+      }
+    }
+  }
+  return out;
+}
+function liveProblems(project) {
+  const out = [];
+  if (!project.variables.some(isLive)) return out;
+  const plan = planLive(project);
+  if (plan.cyclic.length) out.push(`Live variables ${plan.cyclic.map((v) => v.name).join(", ")} read each other in a circle, so they stay at their starting value`);
+  for (const w of liveWriters(project)) out.push(`${w.artboardName}: "${w.label}" (${w.nodeId}) writes ${w.variable.name}, a live variable that is worked out from its formula and cannot be set`);
+  return out;
 }
 const isIdArray = (a) => Array.isArray(a) && a.length > 0 && a.every((e) => e && typeof e === "object" && typeof e.id === "string");
 const same = (a, b) => {
@@ -6475,7 +6783,7 @@ A unit halfway into the range gets half of each change. Several modifiers stack,
 - Design files (\`.psd\`, \`.ai\`, \`.pdf\`, \`.dxf\`) aren't stored as assets: they become new artboards. They are listed under **Design files** at the top of the panel, each with **Update…** to bring in a new version. See [Updating a design file](import#updating-a-design-file).
 
 ## Replacing a file
-The **↑** button on an asset (beside the bin) replaces its file with a new version of the same kind: a new picture, sound, video, font or data file. Everything that uses it (layers, fills, **Play sound** actions, timeline audio, fonts, data sources) shows the new file, and one undo puts the old one back. An image or video layer's inspector has **Replace file…** for the same thing.
+The **↑** button on an asset (beside the bin) replaces its file with a new version of the same kind: a new picture, sound, video, font or data file. Everything that uses it (layers, fills, **Play sound** actions, timeline audio, fonts, data sources) shows the new file, and one undo puts the old one back. An image or video layer's inspector has **Replace file…** for the same thing. A sound on a timeline gets the new file's length, and if the timeline was exactly as long as the old sound (or the new one runs past its end) you are asked whether to set the timeline to match, so a swapped soundtrack does not leave silence or cut off the end.
 
 ## Looking at them
 - **Thumbnails** shows a picture for each asset. Drag the slider beside it to make the thumbnails bigger or smaller.
@@ -6563,13 +6871,19 @@ Turn on **9-slice** and set the four insets (in image pixels). The corners keep 
 ## Video
 Autoplay, loop, muted, controls and fit. Most browsers only autoplay muted video.
 
+### Poster, and a video with nothing to play
+**Poster** is a picture shown before the video plays. It also stays up the whole time when the file is sound only (choose a sound in the **Video** list and the layer becomes a player with the browser's own controls, speed and captions), under the controls. It counts in the download size and goes with exports. A video with no file or address shows a grey **Choose a video** panel while you edit; learners see a plain grey box, or the words in **Text when empty**. The accessibility check warns about a video with nothing to play, so it gets filled in or deleted before you share.
+
+### Cue points and chapters
+**Add a cue** puts a named point on the video, in seconds. When the video plays across it the **On video cue** event fires (\`event.name\`, \`event.time\`, \`event.index\`), and a cue ticked **Pause the video here** has already paused it, so a question can appear. Play on with a **Control video** node when it is answered, or bind the layer's **Hold paused** to something like \`!answered\` to keep the video paused until then (the controls cannot start it). Jumping past a cue (dragging the bar, a chapter, a **Control video** seek) fires nothing, and jumping back arms it again, so you never need to keep count of which questions were asked. **Chapters** are named sections: the video's own controls list them in browsers that show chapters, \`self.chapters\` and \`layer("Clip").chapters\` give the list to formulas, and the **Chapter showing** binding says which one the video is in (1 is the first, 0 before it).
+
 ### Speed and frame step
 **Speed** sets how fast the video plays: 1 is normal, 0.5 is half speed, 2 is double. The pitch stays where it was, so slowed speech still sounds like the speaker. Tick **Speed buttons** to put Slower, a speed readout (press it to go back to normal) and Faster over the video for the viewer, and **Frame step** for Back and Forward one frame (the video pauses first). Set **Frames per second** to the video's own rate (most are 24, 25 or 30) so a step is one real frame. Everything is a real button, so Tab and Enter or Space work, and with focus on the video or the buttons, <kbd>,</kbd> and <kbd>.</kbd> step a frame and <kbd>&lt;</kbd> and <kbd>&gt;</kbd> change the speed.
 
 To drive it from the project, use a **Playback speed** [data binding](bindings) (it goes both ways, so a variable shows the speed the viewer chose and can set it too), or the **Control video** [node](interaction-nodes): play, pause, play or pause, go to a time, skip forward or back, step a frame, set the speed, or move to the next speed up or down. In an expression, \`layer("Clip").rate\` is the speed it is playing at right now.
 
 ## Video playback in variables
-Add a [data binding](bindings) on the video layer: **Playback position (s)**, **Playing**, **Playback speed**, **Length (s)** or **Ended**, and pick which way it goes. **Out** keeps a variable up to date with the video (show the time in text, \`{videoTime} s\`, or bind a progress bar's width to \`videoTime / videoLength\`). **Both** lets the variable drive the video too: set the position variable from a slider, a **Set variable** node or a script and the video jumps there; set **Playing** to false and it pauses. **In** drives it from a formula: to scrub the video with a dragged knob, bind the knob's **X** out to \`knobX\`, **Length (s)** out to \`videoLength\`, and **Playback position (s)** in to \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, videoLength, true)\`. For the position as a percentage, use \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, 100, true)\` (in a text layer, or another binding). Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`
+Add a [data binding](bindings) on the video layer: **Playback position (s)**, **Playing**, **Playback speed**, **Length (s)**, **Ended**, **Chapter showing** (read only) or **Hold paused** (while true the video cannot play), and pick which way it goes. **Out** keeps a variable up to date with the video (show the time in text, \`{videoTime} s\`, or bind a progress bar's width to \`videoTime / videoLength\`). **Both** lets the variable drive the video too: set the position variable from a slider, a **Set variable** node or a script and the video jumps there; set **Playing** to false and it pauses. **In** drives it from a formula: to scrub the video with a dragged knob, bind the knob's **X** out to \`knobX\`, **Length (s)** out to \`videoLength\`, and **Playback position (s)** in to \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, videoLength, true)\`. For the position as a percentage, use \`remap(knobX, 0, artboard.width - layer('Knob').width, 0, 100, true)\` (in a text layer, or another binding). Positions are to the hundredth of a second. They work in Preview and in exports, not on the editing canvas, where the video doesn't play.`
   },
   {
     id: "groups-frames",
@@ -7224,6 +7538,7 @@ Pick a frame under **Scroll to scrub** and scrolling it moves the timeline: the 
 - **Speed and pitch.** At another speed a clip keeps its pitch (it is time-stretched, like a browser's own audio player does it), so a voice at 1.25x sounds quicker, not higher. Untick **Keep pitch at other speeds** in the clip's settings for the record-player effect instead: faster is higher, slower is lower.
 - **Play sound, with options.** The **Play sound** node has a **Volume** (0 to 1), a **Speed** (0.25 to 4, 1 is as recorded) and a **Loop**. Each one takes a plain value or an expression, so a variable can drive them (a speed slider, a "looping" toggle). **Keep the pitch when the speed changes** is on by default, so a slowed clip stays at its own pitch where the browser allows it. **Stop other sounds first** is for comparing two clips: only one is heard at a time. Leave all of these alone and the node plays the sound once at full volume, as it always did.
 - **Which sound.** Pick it in **Sound**, or fill **Sound from expression** to work it out while the project runs: a list item's sound field (an asset's name or id), say, so one button and one node can play any clip in a repeater. When the expression is filled it wins, and an empty answer plays nothing.
+- **Stopped, and what is playing.** **Play sound** and **Play recording** have a **Stopped** output. Wire it and **When it finishes** only continues when the sound really ends; if a **Stop sound** node (or another sound with **Stop other sounds first**) cuts it short, the flow goes out of **Stopped** instead. With the next node set to run straight away, or a loop, **Stopped** still fires later when it is stopped. Leave it unwired and nothing changes from before. In formulas, \`soundPlaying()\` is true while any Play sound sound is going (\`soundPlaying("Ding")\` for one asset by name), and \`soundsPlaying\` lists their names, so one button can read "Stop" while its sound plays. Scripts have \`ix.soundPlaying()\` and \`ix.soundsPlaying()\`.
 - **Stopping a loop.** A looping sound plays until a **Stop sound** node ends it (all of them, or just one sound), or until the viewer leaves the page, pauses the project or the tab goes to the background. A loop never finishes, so the next node runs straight away. **Stop sound** also cuts a sound that is still playing once. It does not touch timeline audio, which follows its timeline.
 - **Media keys don't touch it.** Sound plays through the browser's Web Audio, not an audio player of its own, so the keyboard's play/pause key, headphone buttons and the system's media controls don't stop it behind the project's back. Only the project (its timelines and **Play sound**) decides what sounds.
 - **When the browser says no.** Browsers will not start sound until the viewer has clicked, tapped or pressed a key. Then the player shows **Sound is waiting. Press to start it**, and any click or key press on the page starts it too. That includes a **Play sound** that runs before anyone has clicked (from **On start** or a timer): it waits and plays at that first press. If several are waiting, only the latest plays, so a run of hover sounds doesn't all go off at once. Put a **Start** button in front of an autoplaying narration if the first seconds matter.
@@ -7316,7 +7631,7 @@ Reading **while the video waits** (it pauses itself for a description that does 
 ## Three ways to use it
 - **Project setting.** In Project settings open **Read aloud** and tick **Offer read-aloud**. Every artboard gets one **Listen** button, a pause and a speed choice in the same corner. It reads the text layers that show, in layer order. Set **Language** (such as *en* or *fr-CA*) so only a voice for that language is used.
 - **A Listen button layer.** Press **Add a Listen button to this artboard** in the same section. It is an ordinary button with two nodes behind it (one reads the artboard, one stops it), and a line that shows when the device has no voice. Restyle and move it as you like.
-- **The Read aloud node.** In the Interactions tab, **Read aloud** says a text expression, a question and its options, the feedback after a check, or the whole artboard. The same node can **stop**, **pause**, **carry on**, say the **last thing again**, and make the learner's speed **slower** or **faster**. **Continue when it finishes** holds the next node until the words are said.
+- **The Read aloud node.** In the Interactions tab, **Read aloud** says a text expression, a question and its options, the feedback after a check, or the whole artboard. The same node can **stop**, **pause**, **carry on**, say the **last thing again**, and make the learner's speed **slower** or **faster**. **Continue when it finishes** holds the next node until the words are said. **With no voice** set to *Announce the same words to screen readers* sends the words to the live region when the device has no voice for the language, so nobody misses feedback; **Only speak when** takes a condition (a "spoken prompts" variable, say) and while it is false the voice stays quiet and the words are announced instead if that choice is on.
 
 ## What the learner gets
 **Listen** starts it, the same button pauses and carries on, and a speed menu offers 0.75, 1, 1.25 and 1.5. The speed is remembered in their browser with their caption and sound choices. Reading never starts by itself: iOS only lets the first words start from a tap, and a voice starting uninvited clashes with a screen reader. Speech stops when the learner moves to another artboard.
@@ -7355,7 +7670,7 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
 ![The Interactions section of a layer whose opacity is 50%: the note says it can't be clicked while playing until it is fully showing, and the Clickable while see-through tick overrides that.](help/see-through-toggle.png)
 
 - **Events** (green) start a flow: a click, a key, a timer, a variable changing, a timeline ending, a message from the host page, scrolling, data loading, the artboard starting, or the activity loading.
-- **Actions** (blue) do something and continue: **Control timeline**, **Play blend**, **Wait for blend-in**, **Wait for time in timeline**, **Set variable**, **Set property**, **Animate property**, **Show / hide**, **Go to artboard**, **Open URL**, **Play sound**, **Control video**, **Run script**, **Send message**, **Wait** and more.
+- **Actions** (blue) do something and continue: **Control timeline**, **Play blend**, **Wait** (milliseconds, or an expression such as \`pace <= 4 ? 4000 : 8000\`, worked out when the wait starts), **Wait for blend-in**, **Wait for time in timeline**, **Set variable**, **Reset variables**, **Set property**, **Animate property**, **Show / hide**, **Go to artboard**, **Open URL**, **Play sound**, **Control video**, **Run script**, **Send message**, **Wait** and more.
 - **Logic** (purple) chooses where to go: **If** (a **true** and a **false** output), **Toggle** (alternates between **a** and **b**), **Once**, **Sequence** (runs **1**, then **2**, then **3**) and **Random** (continues down one of up to six outputs, picked at random; *Weights* is a list that sets each output's chance, [1, 3] making the second three times as likely, and *Only if* is a list of conditions, so an output whose condition is false is never picked).
 
 ![The Interactions tab: the node palette, the graph and the settings of the selected node.](help/interactions-panel.png)
@@ -7694,10 +8009,24 @@ Add them in the **Variables** tab. Each has a name, a type and a starting value.
 Choice variables show as a dropdown wherever you set them, so you can't type a value that isn't on the list. In expressions, \`enums.difficulty\` is the list of that choice's options, so \`enums.difficulty.indexOf(difficulty)\` is its position. A solo group's **active child** can be bound straight to a choice whose options are the children's names.
 
 ## Lists
-A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Set variable**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. In scripts assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
+A list variable holds the items a [repeater](repeaters) draws: put its name in **Repeat → Items**, and \`item\`/\`index\` are the current one. The starting items are JSON text in the Variables tab. Change the list while it runs with **Set variable**: *Append to list* adds an item (\`{name: "Cy"}\`), *Remove from list* takes out the item at a position (0 is the first), *Empty* clears it, and *Set to* replaces it. The other list ops are *Add to list, or take out if there* (a tick-list: adds the value, or removes it when it is already in), *Remove from list (value)* (every item equal to the value, objects compared by what they hold) and *Change one list item*: give the item's position (left empty it is \`event.index\`, the item the event came from), an optional **Field** to change only that field of an object item, and the new value, which can read \`item\` (what is there now) and \`index\` (\`item.count + 1\`). A position that is not in the list changes nothing. In scripts use \`ix.toggleItem('picked', 'b')\`, \`ix.removeValue('picked', 'b')\` and \`ix.setItem('cards', 2, 'down', 'state')\`, or assign a new array: \`ix.vars.people = [...ix.vars.people, {name: 'Cy'}]\`. Text that is not a JSON array makes an empty list.
 
 ## Worked out from a formula
 Instead of typing a starting value, give a variable a **formula** (the line under its value in the Variables tab): an [expression](expressions) over the variables above it in the list. The player works it out each time the project starts (and after **Start over**), and the canvas preview works it out too, so what you see while editing follows the variables it depends on. The typed value is only what it falls back to if the formula fails. It is still an ordinary variable once it plays, so Set variable can change it. The branded Crossword and Word search starters use this: you edit a plain list of words (and clues) and the grid is laid out from it, with \`crossword(words, 10)\` and \`wordSearch(words, 12)\` (see [Expressions](expressions)). Clear the formula to type or lay the value out yourself.
+
+## Live variables
+Tick **Keep up to date** under a variable's formula and it becomes *live*: the formula is worked out again whenever a variable it reads changes (and, for a formula that reads layers, data or the microphone, whenever something moves), not just at the start. Use one for anything you would otherwise paste the same long expression for in several places: a word count (\`wordCount(essay)\`), whether the score passes (\`score / total >= 0.5\`), a band (\`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\`), a list filtered by another variable. Layers then just show \`{wordsLeft}\`.
+
+- A live variable is **read only**. *Set variable*, scripts, inputs and the page cannot change it (they are told so in the console), and the Usage tab lists a *Set variable* or *Reset variables* node that names one under **Broken**. Untick it to set it by hand again.
+- Live variables can read each other, in any order in the list. If they read each other in a circle (or one reads itself) they stay at their starting value and the Variables tab and **Usage** say so.
+- **On variable change** fires when a live variable's value changes, like any other, and a script's \`ix.get\` always sees the current value.
+- The typed value is what it falls back to when the formula fails (data not loaded yet, say). The canvas preview shows live variables worked out too.
+
+## Save as user data
+Tick **Save as user data** on a variable and the player looks after the rest. Its saved value is put back **before the project starts**, so the first thing a returning learner sees is their own work; it is saved a moment after it changes (a burst of typing is one save), and straight away when they move to another artboard or leave the page. It goes to the same place as the *Save user data* and *Load user data* nodes (see [Results and resume](results)), so you no longer need a *Save user data* node before every Next and Back. In expressions, \`userData.loaded\` is true once the saved values have been looked for (for a "Welcome back" panel that should not flash on a first visit) and \`userData.restored\` is how many variables came back. A live variable cannot be saved. Instances inside a page keep nothing: tick it in the main project.
+
+## Putting variables back
+*Set variable → Back to its starting value* puts one variable back, and the **Reset variables** node puts several back in one go (tick them in the node's list, or **All**). A starting value is the one for this course if there is one, else the typed value, else the formula worked out again (so a formula that shuffles gives a fresh order). Live variables are left alone. This is lighter than **Start over**, which also leaves the page. Scripts: \`ix.reset('score', 'answers')\`.
 
 ## Different values for different courses
 One project can start with different values in different courses (a due date, a unit name, a week count). In the **Data** tab, pick **context** and add a row under **Per-course values**: a course label such as \`MAT1000_*\`, and the variables it changes. See [Course and learner context](course-context).
@@ -7705,7 +8034,7 @@ One project can start with different values in different courses (a due date, a 
 ## Using variables
 - In text: \`Score: {score}\`.
 - In [bindings](bindings): drive any property from a variable.
-- In interactions: **Set variable** (set, add, toggle), **On variable change**.
+- In interactions: **Set variable** (set, add, toggle, list changes, reset), **Reset variables**, **On variable change**.
 - On inputs: bind a text field, checkbox or slider to a variable.
 - In scripts: \`ix.vars.score += 1\`.
 - From the host page: \`player.setVariable('score', 10)\`.
@@ -7758,6 +8087,12 @@ These work in every expression:
 | \`html(text)\` | Text made safe to put in a web page (a downloaded report): \`<\`, \`>\`, \`&\` and quotes are replaced |
 | \`crossword(words, size)\` | A crossword laid out from a list of \`{answer, clue}\` rows (or plain words), inside a \`size\` by \`size\` grid. Each row comes back with \`row\`, \`col\` (its first letter, from 0 at the top left) and \`down\` added, in reading order. Words that are too long, or that cannot cross the others, are left out. The same words always make the same puzzle. Best used as a variable's [formula](variables) |
 | \`wordSearch(words, size, seed)\` | A \`size\` by \`size\` letter grid hiding the words (across, down, diagonal and backwards), one string per row. The same words and seed always make the same grid |
+| \`wordCount(text)\` | How many words a text has (runs of anything but spaces). \`wordCount("one two  three")\` is 3 |
+| \`band(value, thresholds, labels)\` | A label for where a value falls. Thresholds go from the highest down and there is one more label than thresholds: \`band(score / total, [0.75, 0.5], ["Great", "Good", "Keep going"])\` |
+| \`clock(seconds)\` | Seconds as \`m:ss\` (\`h:mm:ss\` from an hour): \`clock(95)\` is \`1:35\` |
+| \`shuffle(list, seed)\` | The list in a new order. Give a seed (a number) to get the same order every time |
+| \`randInt(a, b)\` | A whole number from \`a\` to \`b\`, both included. \`randInt(6)\` is 0 to 6 |
+| \`includesAll(list, items)\`, \`includesAny(list, items)\` | Whether the list (or text) has every one of the items, or at least one, ignoring capitals: \`includesAny(answer, ["cat", "kitten"])\` |
 | \`enums.name\` | The options of a choice variable |
 | \`instanceInput(layer, name)\` | The current value of a variable inside an [instance](instances) layer (by name or id) |
 | \`artboard.width\`, \`artboard.height\` | The artboard's size (and \`artboard.name\`), in the same units as a layer's X and Y, whatever size the player is shown at |
@@ -7846,6 +8181,7 @@ Under a binding, the **+ Convert…** menu changes its value before it is set. T
 | Remap range | One range onto another, optionally kept inside it: 0-1 to 0-100 |
 | Look up | A value to anything else. Bound to a **choice** variable, it lists every option for you to fill in. *Otherwise* is used for values not listed |
 | To number / text / true/false | Change the type |
+| Seconds to m:ss | A number of seconds as a clock, \`95\` becomes \`1:35\` |
 | Expression | Any [expression](expressions), with \`value\` as the incoming value |
 
 Anything a converter does can also be written straight into the expression with the helpers (\`fmt\`, \`remap\`, \`lookup\`…), which is what to use in text \`{slots}\`.
@@ -7870,12 +8206,15 @@ await ix.node('Title').animate('opacity', 1, { duration: 600, ease: 'easeOut' })
 ## The ix API
 | Call | Does |
 |---|---|
-| \`ix.vars.name\`, \`ix.get(name)\`, \`ix.set(name, v)\` | Read and write variables |
+| \`ix.vars.name\`, \`ix.get(name)\`, \`ix.set(name, v)\` | Read and write variables (not a live one: those are worked out from their formula and read only) |
+| \`ix.reset(name, ...)\` | Put variables back to their starting values |
+| \`ix.toggleItem(name, v)\`, \`ix.removeValue(name, v)\`, \`ix.setItem(name, index, v, field?)\` | Change a list variable: add or take out a value, take out every match, or replace one item (or one field of it) |
 | \`ix.node('Name')\` | A layer by name or id: \`.get(prop)\`, \`.set(prop, v)\`, \`.show()\`, \`.hide()\`, \`.toggle()\`, \`await .animate(prop, v, {duration, ease})\` |
 | \`ix.timeline('Name')\` | \`.play()\`, \`.pause()\`, \`.stop()\`, \`.restart()\`, \`.reverse()\`, \`.seek(ms)\` |
 | \`ix.goTo('Artboard', 'fade')\` | Go to another artboard |
 | \`ix.emit(name, data)\` / \`ix.on(name, fn)\` | Send messages to the host page / react to them |
 | \`ix.announce(text, 'polite' | 'assertive')\` | Say something to screen readers (see [Accessibility](accessibility)) |
+| \`ix.soundPlaying(name?)\` / \`ix.soundsPlaying()\` | Is a Play sound sound going (any, or one asset by name or id), and the names of the ones going |
 | \`ix.setTheme(name)\` / \`ix.getTheme()\` / \`ix.themes()\` | Show a [theme](themes) by name (\`'auto'\` follows the viewer), read the one showing, list them |
 | \`ix.record(name, value?)\` | Count that something happened, for [Insights](insights) (a name up to 60 characters, a short value) |
 | \`ix.setInstanceInput(layer, name, v)\` / \`ix.getInstanceInput(layer, name)\` / \`ix.fireInstanceTrigger(layer, name, data)\` | Set or read a variable inside an [instance](instances), or send a message into it only |
@@ -8054,11 +8393,13 @@ The **Broken** group lists references that point at something that has been dele
     title: "Themes and colour tokens",
     group: "Design",
     summary: "Name a colour once, give it a value for Light, Dark and High contrast, and let layers follow it.",
-    keywords: "theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast",
+    keywords: "link colours to tokens fixed plain colours switch does nothing theme themes token tokens colour color dark mode light high contrast prefers-color-scheme prefers-contrast forced colours moodle css variables bs-primary setTheme style styles palette contrast",
     body: `![The Themes tab: the starter tokens down the side with their Light, Dark and High contrast colours, and the contrast check.](help/themes-panel.png)
 
 A **token** is a name for a colour, like \`color/primary\`. A **theme** (Light, Dark, High contrast) is a column of values for those names. A fill, stroke, gradient stop, shadow, text or rich text colour that **uses a token** changes when the theme does. A colour that is just a colour never changes. A **new project** starts with the three themes and the starter tokens already in it, the artboard on the Light background, and every layer you add follows the tokens, so it looks right in Dark and High contrast without you picking anything. Projects made before this, and imported ones, have none until you add them in the Themes tab, and behave exactly as before.
 
+
+**The UniSQ colourways.** **+ Colourway…** in the Themes tab adds any of the branded starter packs' colourways (Gold, Purple, Blue, Green, Orange, Red) to this project as a theme: the starter tokens get its colours and its brand tokens (the gradient, deep, accent and logo colours) are added, so layers that use them follow it. A project with no themes yet can start from one. High contrast is the one every project already has.
 
 **While it loads.** When a project has to wait before its first page shows (remembered progress or saved data coming from StudyDesk, a **Before activity loads** flow, the first page's fonts), a spinner appears after a quarter of a second, in the project's own colours: the **color/primary** token (or **color/button**) for the ring and **color/background** behind it, from the theme the viewer gets. A viewer who asks for less motion sees it pulse instead of spin. A quick start never shows it.
 ## The Themes panel
@@ -8077,10 +8418,17 @@ Dark and High contrast are the same names with values made for them. Then:
 - **Showing** (and the theme box in the top bar) picks the theme the canvas draws while you edit. It is not saved with the project. Pictures, SVG and PNG exports, and Lottie, write the colours of the theme being shown.
 - **Convert colour styles to tokens** makes a token from every colour style, with its colour in every theme to start with. Layers that follow a style keep following it, now through the token. Styles from a library convert too, and a library update keeps the link.
 - **Update starter colours** shows on a project made before this look that still has the old starter tokens. It gives the tokens you never edited the new values and adds the ones the project lacks. Layers that follow those tokens change with them; plain colours and tokens you edited do not. Nothing changes until you press it.
-- The count at the top says how many plain colours are **not following a theme**.
+- The count at the top says how many plain colours are **not following a theme**, with a **Link colours to tokens** button beside it (see below).
 
 ## Using a token
 In any colour picker in the inspector, open the arrow beside the swatch and choose the **Tokens** tab. Pick a token and the swatch shows a ring and link badge, and a one-line named chip replaces the hex box. Hover the chip to read the token's value in each theme. The **x** on the chip **detaches** it: the colour as it is now stays, as a plain colour. Choosing any other colour does the same.
+
+## When switching the theme changes nothing
+A theme can only change a colour that follows a token. A project built with plain colours (an imported file, or one made before the themes were added) has nothing to change, so the Light, Dark and High contrast switches, on the canvas, in Preview and in the Themes tab, all look the same. When that is the case you see a line, **Nothing here follows the theme: these colours are fixed**, with a **Link colours to tokens** button.
+
+**Link colours to tokens** (also in the Themes tab, and in the right-click menu of an artboard, where it covers just the selected artboards) goes through artboard backgrounds, layer fills, strokes, text and rich text colours, button, input and link colours, shadows and gradient stops. A plain colour that is exactly the colour of a token in the default theme (same alpha, \`#fff\` and \`#ffffff\` are alike) becomes that token. Before anything changes it says what it will do, like "Link 7 colours: 3 backgrounds, 2 fills, 2 text", and lists the colours that match no token. Those stay as they are: link them by hand from the picker's Tokens tab, or add a token with that colour and run it again. Undo (Ctrl+Z) takes the whole thing back in one step.
+
+When two tokens have the same colour (the button and the primary, say) the layer's job decides: artboard backgrounds prefer \`color/background\` then \`color/surface\`, text prefers \`color/text\`, button fills \`color/button\`, button text \`color/on-button\`, strokes \`color/border\`. Anything else takes the first of them in the Themes tab. Layers that follow a colour style are left to the style (use **Convert colour styles to tokens**), library artboards are read-only, and the brand layers of a branded starter are skipped unless the power user override is on. Colours written inside a binding expression are not touched.
 
 ## New layers, questions and starters
 A new button is gold with black, bolder text, an input has a grey outline, a shape is a neutral grey, text is the toolbox black. In a project that has the starter tokens, new layers, the [question kit](question-kit) and the step bar follow those tokens instead, so a new layer looks right in Dark and High contrast without you picking anything. In a project with no tokens they get the same colours as plain ones. The built-in [starters](templates) come with the themes and use the tokens.
@@ -8326,7 +8674,7 @@ Inside StudyDesk, give learners the **Link for StudyDesk** from [Share link](exp
 ## Save user data and Load user data
 **Remember** keeps a variable's value all the time, on its own. When you'd rather choose the moment, use the two action nodes instead: **Save user data** keeps the variables you tick, as they are right then (say, when the learner presses *Submit*), and **Load user data** puts them back on a later visit. Put the load in **Before activity loads** so the values are in place before anything shows. *Load user data* goes on from **Loaded** when anything came back, and from **Nothing saved** on a first visit, so you can set up a fresh start there.
 
-They go to the same places as remembered progress: on the **Link for StudyDesk**, one record per learner per course, kept by their StudyDesk session; with no session or in an export, in the browser. **Preview** keeps them too, for that project in this browser, so closing and reopening Preview is like a learner coming back; **Forget saved data** in Preview's bar starts you again as a new learner. Each save only changes the variables it names. User data is kept apart from remembered progress and from results, so **Clear results** and **Start over** leave it alone; it goes when the project goes for good (30 days after it's deleted, or straight away with **Delete forever**).
+Most of the time you do not need the nodes: tick **Save as user data** on a variable in the [Variables](variables) tab and it is loaded before the project starts and saved as it changes. They go to the same places as remembered progress: on the **Link for StudyDesk**, one record per learner per course, kept by their StudyDesk session; with no session or in an export, in the browser. **Preview** keeps them too, for that project in this browser, so closing and reopening Preview is like a learner coming back; **Forget saved data** in Preview's bar starts you again as a new learner. Each save only changes the variables it names. User data is kept apart from remembered progress and from results, so **Clear results** and **Start over** leave it alone; it goes when the project goes for good (30 days after it's deleted, or straight away with **Delete forever**).
 
 ## See the results
 **View results…** in this section, or **Results…** in Share link, shows learners, the percentage who completed and passed, the average best score and attempts, and a row per learner. The owner and people invited to collaborate can see it. **Export CSV** downloads every learner's record as a spreadsheet: username, name, course, completed, passed, attempts, best and last score and percentage, and when they were last active (the list in the dialog shows the latest 200). **Clear results** deletes every record for the project (handy after testing); only the owner can use it (collaborators see it greyed out), since it can't be undone.
@@ -8412,7 +8760,7 @@ Tick **Live listening** under Microphone (and **Only ever listen, never record**
 ## Nodes
 All are in the Interactions palette, and described there.
 - **Listen live** (start or stop, stop when the learner leaves this page) continues from **Listening** or **Could not start**.
-- **Start recording** (a name for the recording, sound or video, a longest time) continues from **Recording** or **Could not start**. A project can keep several recordings, each under its own name.
+- **Start recording** (a name for the recording, sound or video, a longest time) continues from **Recording** or **Could not start**. A project can keep several recordings, each under its own name. Set **Do** to *Start or stop* and one button does both: pressed while that recording is going it stops it and continues from **Recorded**, otherwise it starts. **Quiet other sounds first** (on) stops Play sound sounds, recording playback and the voice before the microphone opens, so a model answer does not leak into the take.
 - **Stop recording**, **Discard recording**, **Play recording** (sound plays through the project's own sound, so the viewer's sound button applies; video plays in the layer you choose) and **Download recording** (offers a file, after a tap: it is the only way a recording leaves memory).
 - **Camera preview** shows the camera live in a layer's place. The page draws it over the project, so the project never sees the camera's pixels.
 - **Take or choose a photo** puts a picture, scaled to at most 1600 px on the long side, into an image asset. Every image layer that uses the asset shows it. From the device's photo picker (with the front or back camera if the device offers it) or a still from the live preview. To fill a different asset for each item of a list, give **Or the asset from an expression** an asset's id or name (such as \`prompts[current].photo\`); it wins over the asset picked. Set **Do** to **Throw the photo away** to put the asset's own picture back and forget the photo.
@@ -9472,7 +9820,7 @@ function overview(p, opts2) {
     outline(ab.children, 0, opts2.depth ?? (opts2.artboardId ? 8 : 2), out, { n: opts2.artboardId ? 600 : 80 });
     lines.push(...out, "");
   }
-  if (p.variables.length) lines.push("## Variables", ...p.variables.map((v) => `- ${v.name} [${v.id}] ${v.type} = ${JSON.stringify(v.initial)}${v.shared ? " shared" : ""}${v.options ? ` options=${v.options.join("|")}` : ""}`), "");
+  if (p.variables.length) lines.push("## Variables", ...p.variables.map((v) => `- ${v.name} [${v.id}] ${v.type} = ${JSON.stringify(v.initial)}${v.shared ? " shared" : ""}${v.formula ? ` formula=${JSON.stringify(v.formula)}` : ""}${v.live ? " live" : ""}${v.userData ? " userData" : ""}${v.options ? ` options=${v.options.join("|")}` : ""}`), "");
   if (p.dataSources.length) lines.push("## Data sources", ...p.dataSources.map((d) => `- ${d.name} [${d.id}] ${d.kind} from ${d.source === "url" ? d.url : `asset ${d.assetId}`}`), "");
   if (p.scripts.length) lines.push("## Scripts", ...p.scripts.map((sc) => `- ${sc.name} [${sc.id}]${sc.runOnStart ? " runs on start" : ""} (${sc.code.split("\n").length} lines)`), "");
   if (p.assets.length) lines.push("## Assets", ...p.assets.map((a) => `- ${a.name} [${a.id}] ${a.mime}`));
@@ -9527,6 +9875,7 @@ function validate(p) {
     }
     for (const e of ab.logic.edges) if (!ab.logic.nodes.some((n) => n.id === e.to) || !ab.logic.nodes.some((n) => n.id === e.from)) problems.push(`${ab.name}: a connection points at a missing node (${e.id})`);
   }
+  problems.push(...liveProblems(p));
   return problems;
 }
 function applyChanges(p0, changes) {
@@ -9615,6 +9964,10 @@ function applyChanges(p0, changes) {
         const v = { id: uid("v"), name: String(c2.name), type: c2.type ?? "number", initial: c2.initial ?? 0 };
         if (Array.isArray(c2.options)) v.options = c2.options.map(String);
         if (c2.shared) v.shared = true;
+        if (typeof c2.formula === "string" && c2.formula.trim()) v.formula = c2.formula;
+        if (c2.live && v.formula) v.live = true;
+        if (c2.user_data && !v.live) v.userData = true;
+        if (c2.persist) v.persist = true;
         if (p.variables.some((x) => x.name === v.name)) throw new Error(`${where}: a variable called ${v.name} already exists`);
         p.variables.push(v);
         if (key) created[key] = v.id;
@@ -9723,7 +10076,7 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n");
   if (topic === "layers") {
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "bone"];
-    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, decorative (hide from assistive tech), focusable (tab stop override), tabOrder, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it).\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, decorative (hide from assistive tech), focusable (tab stop override), tabOrder, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it).\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
 Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t22) => `- ${t22}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t22)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
@@ -9807,7 +10160,7 @@ ${JSON.stringify(loc.node, null, 1)}`);
   },
   {
     name: "edit",
-    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props}; add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, ref?}; set_variable {id or name, props}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}. Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
+    description: 'Change the project. Changes apply in order as one batch and reach everyone in the live session immediately (the server keeps revision history, so a person can roll back). Each change is {op, ...}: set_props {id, props: {path: value}} (paths like "fill.color", "stroke.width", "bindings.width"); add_layer {artboard_id, type, props?, parent_id?, index?, ref?}; delete {id}; move {id, parent_id?, artboard_id?, index?}; add_artboard {name, width, height, ref?}; set_artboard {id, props}; add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}. Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
     inputSchema: S({ project_id: str("Project id"), changes: { type: "array", items: { type: "object" } }, explain: str("One line saying what this does (shown in the editor log)") }, ["project_id", "changes"]),
     run: async (a) => {
       const s = join(String(a.project_id));
