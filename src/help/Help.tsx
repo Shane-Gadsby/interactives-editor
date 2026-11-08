@@ -173,7 +173,10 @@ export function HelpView({ id, anchor, onNavigate, compact, onClose, focusKey }:
           ) : (
             <article className="help-article">
               <div className="help-crumb">{topic.group}</div>
-              <h1>{topic.title}</h1>
+              <h1>
+                {topic.icon && topic.icon in Icons && <span className="help-topic-icon">{(Icons[topic.icon as keyof typeof Icons] as () => JSX.Element)()}</span>}
+                {topic.title}
+              </h1>
               <p className="help-summary">{topic.summary}</p>
               <Markdown text={topicBody(topic)} onLink={go} />
               <footer className="help-pager">

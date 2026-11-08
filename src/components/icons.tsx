@@ -90,7 +90,16 @@ export const Icons = {
   exclude: P('M4 4h10v6h-4v4H4zM20 20H10v-6h4v-4h6z'),
   grid: P('M4 4h16v16H4zM4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16'),
   magnet: P('M5 3h4v8a3 3 0 006 0V3h4v8a7 7 0 01-14 0zM5 7h4M15 7h4'),
-  catalogue: P('M3 7a1 1 0 011-1h3l1.5-2h7L17 6h3a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1zM12 16.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z'),
+  // The Media Catalogue's own icon: tiny_usqilartoolbox's pix/media-catalogue-icon.svg (the TinyMCE button in StudyDesk), as
+  // si-manager's manual-mode.js inlines it. Same shapes, filled with currentColor instead of the toolbox blue so it follows the
+  // theme and the gold on state.
+  catalogue: (props: SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true" focusable="false" {...props}>
+      <path d="M14,2H6L5,4H2C1.4,4,1,4.4,1,5v8c0,0.6,0.4,1,1,1h12c0.6,0,1-0.4,1-1V3C15,2.4,14.6,2,14,2z M13,12H3V6h2.6l1-2H13V12z" />
+      <circle cx="10.6" cy="7.6" r="1.1" />
+      <polygon points="4,11 6.4,7.8 8,10 9.3,8.6 11.4,11" />
+    </svg>
+  ),
   table: P('M4 5h16v14H4zM4 10h16M4 15h16M10 5v14'),
   folder: P('M3 6a1 1 0 011-1h5l2 2h9a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1z'),
   tag: P('M3 12V4h8l10 10-8 8zM8 8h.01'),

@@ -523,7 +523,7 @@ function LibraryArtboardSection({ ab, project }: { ab: Artboard; project: Projec
   const override = useEditor((st) => st.brandOverride);
   const locked = !!link.brand && !override;
   return (
-    <Section help={link.brand ? 'brand-kits' : 'libraries'} title={link.brand ? 'Brand kit' : 'Library'}>
+    <Section id="library-link" help={link.brand ? 'brand-kits' : 'libraries'} title={link.brand ? 'Brand kit' : 'Library'}>
       <p className="hint">
         {link.internal ? 'Used inside a library component. ' : ''}From <strong>{name}</strong>, version {link.version}. It is read-only here: its layers, timelines and interactions come from the library and are replaced when you update it. Instances of it in your own artboards, their inputs and your variables are yours.
         {link.brand && ' It is part of a brand kit, so it stays linked and locked. You can move it, and change the text the kit marks as editable. Instances of it keep its proportions and can be scaled between half and double its size.'}
@@ -788,7 +788,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
     <>
       <AlignBar count={nodes.length} shapes={nodes.filter((x) => !(x.type === 'group' || x.type === 'text' || x.type === 'link')).length} />
       {/* the layer's type heads its own section further down (Path, Text, ...), so this one is just "Layer" */}
-      <Section help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
+      <Section id="layer-selection" help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
         {single && <TextField label="Name" value={n.name} onChange={(v) => set({ name: v }, `name-${n.id}`)} />}
         <Row className="aligned-pair">
           <Num node={n} ids={ids} prop="x" label="X" />

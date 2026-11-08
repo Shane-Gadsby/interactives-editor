@@ -663,6 +663,7 @@ export function toolsMenu(): MenuItem[] {
     { label: 'Dock at the bottom', disabled: place === 'bottom', onClick: to('bottom') },
     { label: 'Floating', disabled: place === 'float', onClick: to('float') },
     { separator: true },
+    { label: 'Help for the tools', title: 'The tool bar and what each tool does', onClick: () => openHelp('interface', 'tool-bar-left-edge-unless-you-move-it') },
     { label: 'Reset panel layout', onClick: () => (resetDock(), store().set({ bottomTab: 'timeline' })) },
   ];
 }

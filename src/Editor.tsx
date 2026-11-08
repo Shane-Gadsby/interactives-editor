@@ -1078,6 +1078,7 @@ export function Toolbar() {
       }}
     />
   );
+  //an action, not a tool mode: it opens the modal and never stays lit
   const catalogue = <IconButton key="catalogue" icon={<Icons.catalogue />} title="Media Catalogue: find a photo and put it on the artboard as a picture" onClick={() => setCatalogueOpen(true)} />;
   const bones = <IconButton key="bones" icon={showBones ? <Icons.eye /> : <Icons.eyeOff />} title={showBones ? 'Hide bones on the canvas (Shift+J)' : 'Show bones on the canvas (Shift+J)'} onClick={() => store().set({ showBones: !showBones })} />;
   return (
@@ -1140,11 +1141,9 @@ export function Toolbar() {
           onClick={() => setPrefs({ snapGrid: !snapPrefs.snapGrid })}
           onContextMenu={gridContext}
         />
-        {catalogue}
         {btn('comment')}
         {btn('note')}
         <NotesToggle />
-        <IconButton icon={<Icons.help />} title="Help and docs (? to open, F1 or Ctrl+K to search)" onClick={() => openHelp(helpTopicForTool(tool))} />
       </div>
     </nav>
   );

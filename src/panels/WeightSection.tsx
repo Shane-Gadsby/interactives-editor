@@ -33,7 +33,7 @@ export function WeightSection({ ab, project }: { ab: Artboard; project: Project 
   const embedded = assetsEmbedded(project);
   const shown = mine.files.slice(0, 5);
   return (
-    <Section help="download-size" title={`Download size: ${say(mine.bytes)}`} defaultOpen={false}>
+    <Section id="download-size" help="download-size" title={`Download size: ${say(mine.bytes)}`} defaultOpen={false}>
       <p className="hint">
         {mine.files.length
           ? `This artboard needs ${mine.files.length} file${mine.files.length === 1 ? '' : 's'}: ${kindSummary(mine.byKind, say)}. A learner downloads them when they get here, not before.`
