@@ -26,8 +26,8 @@ describe('live sound lab', () => {
     document.body.innerHTML = '<div id="stage" style="width:1024px;height:640px"></div>';
     vi.stubGlobal('requestAnimationFrame', () => 0);
     vi.stubGlobal('cancelAnimationFrame', () => undefined);
-    //The timers are the player's own and the pretend microphone's, so they are the ones faked and stepped by hand
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] });
+    //The timers are the player's own and the pretend microphone's, so they are the ones faked and stepped by hand (and the clock, which a steady timer keeps time by)
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'Date', 'performance'] });
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -84,15 +84,38 @@ describe('live sound lab', () => {
     player.destroy();
   });
 
+  it('works the band edges and the loudest band out as live variables, so no timer polls for the peak and no step sets them', () => {
+    const p = projectFromBrandedStarter(starter, COLOURWAYS[0]);
+    const live = new Set(p.variables.filter((v) => v.live).map((v) => v.name));
+    for (const name of ['bandLo', 'bandHi', 'peak']) expect(live.has(name), name).toBe(true);
+    const ids = new Set(p.variables.filter((v) => v.live).map((v) => v.id));
+    for (const ab of p.artboards) for (const n of ab.logic.nodes) if (n.kind === 'action.setVariable') expect(ids.has((n.params as { variable: string }).variable)).toBe(false);
+    //the bars page has no timer at all; the meter page's one keeps time (steady)
+    expect(board(p, BARS).logic.nodes.filter((n) => n.kind === 'event.timer')).toHaveLength(0);
+    expect(board(p, METER).logic.nodes.filter((n) => n.kind === 'event.timer').map((n) => n.params.steady)).toEqual([true]);
+  });
+
+  it('the chosen mode is a pressed button', async () => {
+    const { p, player, click } = await open('denied');
+    const pressed = (name: string) => (el(layer(p, METER, name).id).querySelector('[aria-pressed]') ?? el(layer(p, METER, name).id)).getAttribute('aria-pressed');
+    expect(pressed('Steady volume')).toBe('true');
+    expect(pressed('Noise check')).toBe('false');
+    await click(layer(p, METER, 'Noise check').id);
+    expect(pressed('Noise check')).toBe('true');
+    expect(pressed('Steady volume')).toBe('false');
+    player.destroy();
+  });
+
   describe('the loudness meter', () => {
     it('follows the slider with no microphone: the bar grows, and says in the band, too quiet or too loud', async () => {
       const { p, player, settle } = await open('denied');
-      const fill = layer(p, METER, 'Meter fill').id;
+      const level = layer(p, METER, 'Level').id;
       const status = layer(p, METER, 'Status').id;
       expect(textOf(status)).toContain('Start listening, or move the slider');
       player.setVariable('simLevel', 0.2);
       await settle(600);
-      expect(parseFloat(el(fill).style.width)).toBeCloseTo(0.2 * 576, 0);
+      expect(el(level).getAttribute('role')).toBe('meter');
+      expect(parseFloat((el(level).firstElementChild as HTMLElement).style.width)).toBeCloseTo(20, 0);
       expect(textOf(status)).toContain('A little louder');
       player.setVariable('simLevel', 0.5);
       await settle(600);
@@ -137,20 +160,19 @@ describe('live sound lab', () => {
 
     it('listens with the microphone: the bar follows micLevel and the slider steps aside, and Stop puts it back', async () => {
       const { p, host, player, settle, click } = await open();
-      const start = layer(p, METER, 'Start listening').id;
-      const stop = layer(p, METER, 'Stop listening').id;
+      //Start and Stop are one button
+      const listen = layer(p, METER, 'Listen button').id;
       const slider = layer(p, METER, 'Practice level slider').id;
-      expect(el(start).style.display).not.toBe('none');
-      expect(el(stop).style.display).toBe('none');
-      await click(start);
+      expect(el(listen).style.display).not.toBe('none');
+      expect(textOf(listen)).toBe('Start listening');
+      await click(listen);
       expect(host.listening).toBe(true);
       await settle(400);
-      const fill = layer(p, METER, 'Meter fill').id;
-      expect(parseFloat(el(fill).style.width)).toBeGreaterThan(1);
+      const level = layer(p, METER, 'Level').id;
+      expect(parseFloat((el(level).firstElementChild as HTMLElement).style.width)).toBeGreaterThan(0.5);
       expect(el(slider).style.display).toBe('none');
-      expect(el(stop).style.display).not.toBe('none');
-      expect(el(start).style.display).toBe('none');
-      await click(stop);
+      expect(textOf(listen)).toBe('Stop listening');
+      await click(listen);
       await settle(200);
       expect(host.listening).toBe(false);
       expect(el(slider).style.display).not.toBe('none');
@@ -159,7 +181,7 @@ describe('live sound lab', () => {
 
     it('a microphone that will not start leaves by Could not start, says why, and the slider still works', async () => {
       const { p, host, player, settle, click } = await open('denied');
-      await click(layer(p, METER, 'Start listening').id);
+      await click(layer(p, METER, 'Listen button').id);
       expect(host.listening).toBe(false);
       expect(textOf(layer(p, METER, 'Microphone message').id)).toContain('Use the slider instead');
       player.setVariable('simLevel', 0.5);
@@ -170,7 +192,7 @@ describe('live sound lab', () => {
 
     it('hides Start when the learner chose not to use the microphone, and still has the slider', async () => {
       const { p, player } = await open('off');
-      expect(el(layer(p, METER, 'Start listening').id).style.display).toBe('none');
+      expect(el(layer(p, METER, 'Listen button').id).style.display).toBe('none');
       expect(el(layer(p, METER, 'Practice level slider').id).style.display).not.toBe('none');
       expect(textOf(layer(p, METER, 'Microphone message').id)).toContain('Use the slider instead');
       player.destroy();
@@ -178,7 +200,7 @@ describe('live sound lab', () => {
 
     it('the microphone is let go when the learner leaves the scene', async () => {
       const { p, host, player, settle, click } = await open();
-      await click(layer(p, METER, 'Start listening').id);
+      await click(layer(p, METER, 'Listen button').id);
       expect(host.listening).toBe(true);
       await click(layer(p, METER, 'Next scene').id);
       await settle();
@@ -231,7 +253,7 @@ describe('live sound lab', () => {
       const o = await open();
       await o.click(layer(o.p, METER, 'Next scene').id);
       await o.settle();
-      await o.click(layer(o.p, BARS, 'Start listening').id);
+      await o.click(layer(o.p, BARS, 'Listen button').id);
       expect(o.host.listening).toBe(true);
       await o.settle(500);
       const h = barHeights(layer(o.p, BARS, 'Bar').id);
