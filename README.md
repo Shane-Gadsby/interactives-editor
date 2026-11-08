@@ -107,7 +107,7 @@ The server is an Express 5 app mounted at `/interactives` on port 3048. It follo
 |---|---|
 | `GET /api/session` | who the session is, and whether they're a power user |
 | `POST/DELETE /mcp` (`GET` is 405) | the MCP server for AI agents over HTTP, see [MCP server](#mcp-server-mcp) |
-| `GET/PUT /api/prefs` | the person's own preferences (`{prefs}`, whitelisted keys: wheel, theme, default font, rulers, showGrid, snapGrid, gridSize (1 to 512), gridSubdivisions (1 to 32), tooltips, accessibility, comment notices and so on), kept by username in `prefs` (`guest` with no session) |
+| `GET/PUT /api/prefs` | the person's own preferences (`{prefs}`, whitelisted keys: wheel, theme, default font, rulers, showGrid, snapOn and the snap targets (snapGrid, snapArtboard, snapLayers, snapLayersAll, snapGuides, snapSpacing, snapPixels, snapPoints, `lib/snapping.ts`), snapDistance (2 to 24), gridSize (1 to 512), gridSubdivisions (1 to 32), tooltips, accessibility, comment notices and so on), kept by username in `prefs` (`guest` with no session) |
 | `GET /api/people?q=` | people to invite, by name, email or username (2 characters or more, at most 8 back): the suite's `lti-analytics.user-lookup`, staff only (students are never listed). 401 for no session once `SUITE_SESSION_ENFORCE=1` |
 | `GET /api/projects` | your projects: the ones you own or were invited to. `?all=1` returns everyone's, honoured only for admins and power users, and only sent by the projects page while power user mode (F9) is on. With no session it lists only projects nobody owns |
 | `GET /api/admin/projects` (power users) | every project for the admin page: owner, sizes (`docSize` recorded on save, files from the sidecars), links, library, learners, open comments; and the bin count |

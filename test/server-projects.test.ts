@@ -92,6 +92,13 @@ describe('preferences', () => {
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { gridSize: 7.5 } } })).json.prefs).toEqual({});
   });
 
+  it('keeps the snapping choices: switches as booleans, the distance as a whole number from 2 to 24', async () => {
+    const snap = { snapOn: false, snapGrid: true, snapArtboard: false, snapLayers: true, snapLayersAll: true, snapGuides: false, snapSpacing: true, snapPixels: false, snapPoints: true, snapDistance: 12 };
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: snap } })).json.prefs).toEqual(snap);
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { snapDistance: 1 } } })).json.prefs).toEqual({});
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { snapDistance: 25, snapOn: 'yes', snapPoints: 1 } } })).json.prefs).toEqual({});
+  });
+
   it('drops a default font that is too long and a body that has no prefs', async () => {
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { defaultFont: 'x'.repeat(120) } } })).json.prefs).toEqual({});
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: {} })).json.prefs).toEqual({});
