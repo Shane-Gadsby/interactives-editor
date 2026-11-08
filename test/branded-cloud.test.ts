@@ -1,7 +1,7 @@
 //The Word cloud starter: builds in every colourway, the clouds are live variables over lists, contrast holds in every colourway,
 //a learner can add, undo, remove and clear words, the blocklist refuses, and the class setting is ready for shared responses.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Player, normalizeProject, walk, type Artboard, type Project, type SceneNode } from 'interactives-player';
+import { Player, normalizeProject, tallyAnswers, walk, type Artboard, type Project, type ProgressStore, type SceneNode } from 'interactives-player';
 import { BRANDED_STARTERS, COLOURWAYS, HIGH_CONTRAST, projectFromBrandedStarter } from '../src/lib/branded';
 import { byName } from '../src/lib/branded/kit';
 
@@ -272,29 +272,212 @@ describe('Word cloud starter', () => {
     });
   });
 
-  it('has one author setting for who sees the cloud, whole for Only me and ready to be switched over to a shared source', () => {
+  it('has one author setting for who sees the cloud, and the page falls back to the learner\'s own words until a class answers', () => {
     const { project, board } = build();
     const who = variable(project, 'whoSees');
     expect(who).toMatchObject({ type: 'enum', initial: 'Only me', options: ['Only me', 'Everyone in this class'] });
+    //the shared responses source hangs on that same setting
+    expect(project.dataSources).toHaveLength(1);
+    expect(project.dataSources[0]).toMatchObject({ name: 'responses', source: 'shared', shared: { whoVariable: who.id, who: 'class' } });
+    //no store behind it (the browser alone): the class option quietly shows their own words
     const player = play(project, board('My cloud'));
     player.setVariable('answers', ['mine', 'mine']);
-    player.setVariable('sharedAnswers', ['theirs']);
     player.step(20);
     expect((player.getVariable('myCloud') as { text: string }[]).map((w) => w.text)).toEqual(['mine']);
-    //the class option keeps showing their own words until shared responses are wired (sharedReady)
     player.setVariable('whoSees', 'Everyone in this class');
     player.step(20);
+    expect(player.getVariable('sharedReady')).toBe(false);
     expect(player.getVariable('cloudShared')).toBe(false);
     expect((player.getVariable('myCloud') as { text: string }[]).map((w) => w.text)).toEqual(['mine']);
-    player.setVariable('sharedReady', true);
-    player.step(20);
-    expect(player.getVariable('cloudShared')).toBe(true);
-    expect((player.getVariable('myCloud') as { text: string }[]).map((w) => w.text)).toEqual(['theirs']);
-    expect(must(byName(board('My cloud'), 'Footer text')!.id).textContent).toContain('Shared with everyone in this class');
+    expect(must(byName(board('My cloud'), 'Footer text')!.id).textContent).toContain('Only you can see this cloud');
     player.destroy?.();
     const notes = board('My cloud').notes!.map((n) => n.text).join('\n');
-    expect(notes).toMatch(/shared responses/i);
+    expect(notes).toMatch(/shared responses|responses/i);
     expect(JSON.stringify(S.build(COLOURWAYS[0]).checklist)).toMatch(/whoSees/);
+    expect(JSON.stringify(S.build(COLOURWAYS[0]).checklist)).toMatch(/responses/);
+  });
+
+  describe('the class cloud, against a fake class', () => {
+    interface Room {
+      people: Record<string, string[]>;
+      me: string;
+      adds: string[][];
+      withdraws: (string[] | undefined)[];
+      who: string[];
+      limit: number;
+    }
+    const fakeClass = (room: Room): ProgressStore => {
+      const value = (who: 'me' | 'class', problem = '') => {
+        const pool = who === 'me' ? { [room.me]: room.people[room.me] ?? [] } : room.people;
+        const answers = tallyAnswers(Object.values(pool));
+        const mine = room.people[room.me] ?? [];
+        return { ready: true, answers, total: answers.reduce((n, a) => n + a.count, 0), people: Object.keys(pool).length, mine, left: room.limit - mine.length, limit: room.limit, problem };
+      };
+      return {
+        load: () => null,
+        save: () => undefined,
+        sharedRead: (req) => (room.who.push(req.who), value(req.who)),
+        sharedAdd: (req) => {
+          room.adds.push(req.answers);
+          const mine = (room.people[room.me] ??= []);
+          let kept = 0;
+          let problem = '';
+          for (const a of req.answers) {
+            if (/spam/i.test(a)) problem = 'blocked';
+            else if (mine.length >= room.limit) problem = 'full';
+            else if (!mine.some((m) => m.toLowerCase() === a.toLowerCase())) (mine.push(a), kept++);
+          }
+          return { ...value(req.who, problem), kept };
+        },
+        sharedWithdraw: (req) => {
+          room.withdraws.push(req.answers);
+          const gone = (req.answers ?? []).map((a) => a.toLowerCase());
+          room.people[room.me] = (room.people[room.me] ?? []).filter((m) => gone.length > 0 && !gone.includes(m.toLowerCase()));
+          return value(req.who);
+        },
+      };
+    };
+    const setup = async (whoSees = 'Everyone in this class', over: Partial<Room> = {}) => {
+      const room: Room = { people: { ann: ['practice'], bob: ['practice', 'sleep'], cat: ['sleep', 'focus'] }, me: 'ann', adds: [], withdraws: [], who: [], limit: 10, ...over };
+      const { project, board } = build();
+      project.variables.find((v) => v.name === 'whoSees')!.initial = whoSees;
+      const page = board('My cloud');
+      const player = new Player(document.getElementById('stage')!, project, { progress: fakeClass(room) });
+      player.goTo(page.id);
+      await flush();
+      await flush();
+      player.step(50);
+      const id = (name: string) => byName(page, name)!.id;
+      const add = async (word: string) => {
+        player.setVariable('draft', word);
+        player.step(10);
+        await click(id('Add button'));
+        await flush();
+      };
+      return { room, project, page, player, id, add };
+    };
+    const words = (player: Player) => (player.getVariable('myCloud') as { text: string; weight: number }[]).map((w) => [w.text, w.weight]);
+
+    it('shows what the class said, counted, once the class answers, and says so in the footer', async () => {
+      const { room, player, page } = await setup();
+      expect(player.getVariable('sharedReady')).toBe(true);
+      expect(player.getVariable('cloudShared')).toBe(true);
+      expect(words(player)).toEqual([['practice', 2], ['sleep', 2], ['focus', 1]]);
+      expect(must(byName(page, 'Footer text')!.id).textContent).toContain('Shared with everyone in this class');
+      expect(room.who).toContain('class');
+      player.destroy?.();
+    });
+
+    it('Only me never asks the class, and shows only the learner\'s own words', async () => {
+      const { room, player, add } = await setup('Only me');
+      expect(player.getVariable('cloudShared')).toBe(false);
+      expect(room.who.every((w) => w === 'me')).toBe(true);
+      await add('mine only');
+      expect(room.adds).toEqual([]);
+      expect(words(player)).toEqual([['mine only', 1]]);
+      player.destroy?.();
+    });
+
+    it('switching the one setting switches the page, with the same words kept', async () => {
+      const { player } = await setup('Only me');
+      expect(words(player)).toEqual([]);
+      player.setVariable('answers', ['kept']);
+      player.step(20);
+      expect(words(player)).toEqual([['kept', 1]]);
+      player.setVariable('whoSees', 'Everyone in this class');
+      await player.loadData('responses');
+      player.step(20);
+      expect(player.getVariable('cloudShared')).toBe(true);
+      expect(words(player)).toEqual([['practice', 2], ['sleep', 2], ['focus', 1]]);
+      player.setVariable('whoSees', 'Only me');
+      player.step(20);
+      expect(words(player)).toEqual([['kept', 1]]);
+      player.destroy?.();
+    });
+
+    it('Add sends the word to the class as well as keeping it, and the cloud grows by one', async () => {
+      const { room, player, add } = await setup();
+      await add('  Deep  sleep ');
+      expect(room.adds).toEqual([['Deep sleep']]);
+      expect(player.getVariable('answers')).toEqual(['Deep sleep']);
+      expect(words(player)).toContainEqual(['Deep sleep', 1]);
+      await add('Sleep');
+      expect(words(player).find((w) => w[0] === 'sleep' || w[0] === 'Sleep')![1]).toBe(3);
+      expect(player.getVariable('draft')).toBe('');
+      player.destroy?.();
+    });
+
+    it('a word only the server refuses leaves the learner told so, not just announced as added', async () => {
+      const { player, id } = await setup();
+      player.setVariable('draft', 'spammy');
+      player.step(10);
+      //the page's own blocklist matches whole words, so "spammy" gets through it and only the server's rule can say no
+      expect(player.getVariable('draftState')).toBe('ok');
+      await click(id('Add button'));
+      await flush();
+      expect(player.getVariable('sharedProblem')).toBe('blocked');
+      player.destroy?.();
+    });
+
+    it('Undo, Remove and Clear all take this learner\'s words back from the class too, and only theirs', async () => {
+      const { room, player, id, add, page } = await setup();
+      await add('one');
+      await add('two');
+      await click(id('Undo button'));
+      expect(room.withdraws.at(-1)).toEqual(['two']);
+      expect(player.getVariable('answers')).toEqual(['one']);
+      expect(room.people.ann).toEqual(['practice', 'one']);
+      //a word the learner added opens with a Remove button
+      const idx = (player.getVariable('myCloud') as { text: string }[]).findIndex((w) => w.text === 'one');
+      await click(`${byName(page, 'Cloud word')!.id}~${idx}`);
+      player.step(100);
+      expect(must(id('Word dialog')).textContent).toContain('1 person has added this');
+      expect(must(id('Remove word button')).style.display).not.toBe('none');
+      await click(id('Remove word button'));
+      expect(room.withdraws.at(-1)).toEqual(['one']);
+      expect(room.people.ann).toEqual(['practice']);
+      player.step(100);
+      await click(id('Clear button'));
+      player.step(100);
+      await click(id('Clear all words button'));
+      expect(room.withdraws.at(-1)).toEqual([]);
+      expect(room.people.ann).toEqual([]);
+      //everyone else's words are still there
+      expect(words(player)).toEqual([['sleep', 2], ['focus', 1], ['practice', 1]]);
+      player.destroy?.();
+    });
+
+    it('Remove is not offered on a word only other people said', async () => {
+      const { player, id, page } = await setup();
+      const idx = (player.getVariable('myCloud') as { text: string }[]).findIndex((w) => w.text === 'focus');
+      await click(`${byName(page, 'Cloud word')!.id}~${idx}`);
+      player.step(100);
+      expect(must(id('Word dialog')).textContent).toContain('1 person has added this');
+      expect(must(id('Remove word button')).style.display).toBe('none');
+      player.destroy?.();
+    });
+
+    it('stops Add when the learner has used all their words, and says so', async () => {
+      const { player, id } = await setup('Everyone in this class', { limit: 1 });
+      player.setVariable('draft', 'another');
+      player.step(10);
+      expect(player.getVariable('sharedLeft')).toBe(0);
+      expect(player.getVariable('draftState')).toBe('full');
+      expect(must(id('Add button')).querySelector('button')!.disabled).toBe(true);
+      expect(must(id('Word note')).textContent).toContain('used all your words');
+      player.destroy?.();
+    });
+
+    it('says people, not times, in the list and the empty line, for a class with nobody in it', async () => {
+      const { player, id, page } = await setup('Everyone in this class', { people: {} });
+      expect(must(id('Empty cloud text')).textContent).toContain('Nobody in your class');
+      const { player: p2 } = await setup('Everyone in this class');
+      p2.setVariable('asList', true);
+      p2.step(20);
+      expect(must(byName(page, 'Cloud list')!.id).getAttribute('aria-label')).toBe('Words with their people, biggest first');
+      player.destroy?.();
+      p2.destroy?.();
+    });
   });
 
   it('has author notes beside the pages, in the template voice', () => {

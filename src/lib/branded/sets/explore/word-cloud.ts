@@ -3,9 +3,11 @@
  * words they type (kept as user data). Both are drawn the same way: a live variable runs the list through `cloud(...)`, which sizes each
  * word from its weight and packs them with no overlaps, and one layer repeated over the result puts each word where it says. A list
  * view with the counts is the text alternative. The learner's cloud counts a plain list of what they typed (`answers`), and nothing on
- * its page cares where that list comes from, so a class-wide cloud can slot in by filling the same list from a shared store.
+ * its page cares where that list comes from: Only me counts `answers`, and Everyone in this class counts the shared responses data
+ * source (`responses`), which the same `whoSees` setting switches. The page reads the class through `sharedAnswers` and friends, live
+ * variables over `responses`, so it still lays out with no server (they fall back to empty, and the layout check sets them itself).
  */
-import { createNode, uid, type FrameNode, type Keyframe, type SceneNode, type Timeline, type TemplateChecklistItem, type Variable } from 'interactives-player';
+import { createNode, uid, type FrameNode, type Keyframe, type LogicNode, type SceneNode, type Timeline, type TemplateChecklistItem, type Variable } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
 import { BRAND_FONT } from '../../looks';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, overlay, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
@@ -39,6 +41,9 @@ const OUR_WORDS = [
 const MANY = 'practice sleep notes testing spacing focus breaks feedback planning questions reading review groups deadlines coffee music stress apps habit memory recall exam essay lecture library tutorial group-work revision timetable motivation reading-list summary quiz'.split(' ');
 const crowd = [...MANY, ...MANY.slice(0, 18), ...MANY.slice(0, 9), ...MANY.slice(0, 4), 'a longer phrase to fit in', 'another quite long phrase'];
 
+//What the class might have said, counted (the shape the shared responses give back), for the class states
+const classCounts = MANY.map((text, i) => ({ text, weight: MANY.length - i, count: MANY.length - i }));
+
 /** The states the layout check adds to how the pages start: a word's dialog open, the list view, and a learner's crowded cloud. */
 export const WORD_CLOUD_LAYOUT_STATES: LayoutState[] = [
   { label: 'word open', page: 'Our cloud', vars: { ourOpen: true, ourPicked: 0 } },
@@ -47,6 +52,13 @@ export const WORD_CLOUD_LAYOUT_STATES: LayoutState[] = [
   { label: 'word open, learner', page: 'My cloud', vars: { answers: crowd, myOpen: true, myPicked: 0 } },
   { label: 'clear dialog', page: 'My cloud', vars: { answers: crowd, clearOpen: true } },
   { label: 'refused word', page: 'My cloud', vars: { draft: 'a very long phrase that goes well past the limit for one word' } },
+  { label: 'class cloud', page: 'My cloud', vars: { whoSees: 'Everyone in this class', sharedReady: true, sharedAnswers: classCounts, sharedMine: ['practice'] } },
+  { label: 'class list view', page: 'My cloud', vars: { whoSees: 'Everyone in this class', sharedReady: true, sharedAnswers: classCounts, asList: true } },
+  { label: 'class word open', page: 'My cloud', vars: { whoSees: 'Everyone in this class', sharedReady: true, sharedAnswers: classCounts, sharedMine: ['practice'], myOpen: true, myPicked: 0 } },
+  { label: 'class word open, not mine', page: 'My cloud', vars: { whoSees: 'Everyone in this class', sharedReady: true, sharedAnswers: classCounts, myOpen: true, myPicked: 3 } },
+  { label: 'class empty', page: 'My cloud', vars: { whoSees: 'Everyone in this class', sharedReady: true, sharedAnswers: [] } },
+  { label: 'class words used up', page: 'My cloud', vars: { whoSees: 'Everyone in this class', sharedReady: true, sharedAnswers: classCounts, sharedLeft: 0, draft: 'one more' } },
+  { label: 'class clear dialog', page: 'My cloud', vars: { whoSees: 'Everyone in this class', sharedReady: true, sharedAnswers: classCounts, clearOpen: true } },
 ];
 
 const STAGE_GAP = 16;
@@ -67,9 +79,11 @@ interface Stage {
  * line saying what to do when there are none yet. `unit` is how a count is said ("weight" for the author's, "times" for a learner's).
  * Words are buttons in the order of the list, the biggest first, so Tab lands once and the arrow keys walk through them.
  */
-function cloudStage(ctx: BrandedCtx, page: ReturnType<typeof brandedPage>, o: { prefix: 'our' | 'my'; x: number; y: number; width: number; height: number; unit: string; newest?: boolean; empty: string }): Stage {
+function cloudStage(ctx: BrandedCtx, page: ReturnType<typeof brandedPage>, o: { prefix: 'our' | 'my'; x: number; y: number; width: number; height: number; unit: string; unitExpr?: string; newest?: boolean; empty: string; emptyExpr?: string }): Stage {
   const { L, project } = ctx;
   const p = o.prefix;
+  //How a count is said: a fixed word, or an expression when the page can switch (a learner's own cloud says times, the class's says people)
+  const say = o.unitExpr ?? JSON.stringify(o.unit);
   const cloudVar = `${p}Cloud`;
   const W = `${p}Width`;
   const H = `${p}Height`;
@@ -103,7 +117,7 @@ function cloudStage(ctx: BrandedCtx, page: ReturnType<typeof brandedPage>, o: { 
       visible: 'item.shown',
       'fill.color': tier(L.button, L.surfaceMuted, L.surface),
       color: tier(L.onButton, L.text, L.text),
-      ariaLabel: `item.text + ", ${o.unit} " + item.weight`,
+      ariaLabel: `item.text + ", " + (${say}) + " " + item.weight`,
       ...(o.newest ? { 'stroke.width': 'item.text.toLowerCase() == lastAdded ? 3 : 0' } : {}),
     },
   } as never);
@@ -140,7 +154,7 @@ function cloudStage(ctx: BrandedCtx, page: ReturnType<typeof brandedPage>, o: { 
     stroke: null,
     clip: false,
     role: 'button',
-    bindings: { width: W, ariaLabel: `item.text + ", ${o.unit} " + item.weight` },
+    bindings: { width: W, ariaLabel: `item.text + ", " + (${say}) + " " + item.weight` },
     children: [rowWord, bar, count],
   } as never);
   const list = createNode('frame', {
@@ -157,13 +171,13 @@ function cloudStage(ctx: BrandedCtx, page: ReturnType<typeof brandedPage>, o: { 
     ariaLabel: `Words with their ${o.unit}, biggest first`,
     repeat: { items: cloudVar, layout: 'vertical', gap: 6, columns: 1 },
     keyNav: { mode: 'list', orientation: 'vertical' },
-    bindings: { width: W, height: H, visible: 'asList' },
+    bindings: { width: W, height: H, visible: 'asList', ...(o.unitExpr ? { ariaLabel: `"Words with their " + (${say}) + ", biggest first"` } : {}) },
     children: [row],
   } as never) as FrameNode;
 
   //Nothing to show yet
   const none = text(ctx, 'Empty cloud text', o.empty, 0, 0, o.width - 80, { fontSize: 20, align: 'center', color: L.text, autoSize: 'none', verticalAlign: 'middle', height: 60 } as never);
-  bind(none, { visible: `${cloudVar}.length == 0`, x: `(${W} + 32 - (${W} - 80)) / 2`, y: `(${H} + 32 - 60) / 2`, width: `${W} - 80` });
+  bind(none, { ...(o.emptyExpr ? { text: o.emptyExpr } : {}), visible: `${cloudVar}.length == 0`, x: `(${W} + 32 - (${W} - 80)) / 2`, y: `(${H} + 32 - 60) / 2`, width: `${W} - 80` });
 
   const stage = createNode('frame', {
     name: 'Cloud stage',
@@ -243,19 +257,34 @@ export const wordCloud: BrandedStarter = {
     const answers = addVar(project, 'answers', 'list', [], { userData: true });
     //Who sees it, one author setting. "Only me" is whole today. The class option reads `sharedAnswers`, which a shared data source will fill
     //when shared responses exist; until `sharedReady` is true the page quietly keeps showing the learner's own words
-    addVar(project, 'whoSees', 'enum', 'Only me', { options: ['Only me', 'Everyone in this class'] });
-    addVar(project, 'sharedAnswers', 'list', []);
-    addVar(project, 'sharedReady', 'boolean', false);
+    const whoSees = addVar(project, 'whoSees', 'enum', 'Only me', { options: ['Only me', 'Everyone in this class'] });
+    //The class's side: live variables over the shared responses data source below. Whatever it has not got yet falls back to these
+    //defaults (the layout check and a page with no server both see them), so the page never meets an empty store
+    addVar(project, 'sharedAnswers', 'list', [], { formula: 'responses.answers', live: true });
+    addVar(project, 'sharedReady', 'boolean', false, { formula: 'responses.ready', live: true });
+    addVar(project, 'sharedMine', 'list', [], { formula: 'responses.mine', live: true });
+    addVar(project, 'sharedLeft', 'number', 10, { formula: 'responses.left', live: true });
+    addVar(project, 'sharedProblem', 'string', '', { formula: 'responses.problem', live: true });
     addVar(project, 'cloudShared', 'boolean', false, { formula: 'whoSees == "Everyone in this class" && sharedReady', live: true });
     addVar(project, 'cloudSource', 'list', [], { formula: 'cloudShared ? sharedAnswers : answers', live: true });
     const draft = addVar(project, 'draft', 'string', '');
     const lastAdded = addVar(project, 'lastAdded', 'string', '');
+    //The shared responses data source: the class's words, counted on the server per course (StudyDesk learner page only). `whoSees`
+    //switches it between the class and Only me. Its blocklist, minimum and length are the server's own rules, so keep them in step
+    //with `blocked`, `minCount` and `maxLength` above (those shape the picture, these decide what is kept and shown)
+    project.dataSources.push({
+      id: 'ds_responses',
+      name: 'responses',
+      kind: 'json',
+      source: 'shared',
+      shared: { who: 'class', whoVariable: whoSees.id, maxLength: 40, perPerson: 10, minCount: 1, blocked: ['spam'], refresh: 10, sample: ['practice', 'sleep', 'sleep', 'notes', 'focus', 'focus', 'focus', 'breaks', 'reading', 'reading'] },
+    });
     addVar(project, 'maxLength', 'number', 40);
     addVar(project, 'myWidth', 'number', 896);
     addVar(project, 'myHeight', 'number', 328);
     addVar(project, 'draftText', 'string', '', { formula: 'draft.trim().split(" ").filter(w => w != "").join(" ")', live: true });
-    addVar(project, 'draftState', 'string', 'empty', { formula: 'draftText == "" ? "empty" : draftText.length > maxLength ? "long" : includesAny(blocked, draftText.split(" ")) ? "blocked" : "ok"', live: true });
-    addVar(project, 'draftNote', 'string', '', { formula: 'lookup(draftState, {empty: "Type a word or a short phrase, then press Enter or Add.", long: "That is too long. Keep it to " + maxLength + " characters.", blocked: "That word is not allowed in this cloud.", ok: "Press Enter or Add to put it in your cloud."})', live: true });
+    addVar(project, 'draftState', 'string', 'empty', { formula: 'draftText == "" ? "empty" : draftText.length > maxLength ? "long" : includesAny(blocked, draftText.split(" ")) ? "blocked" : cloudShared && sharedLeft <= 0 ? "full" : "ok"', live: true });
+    addVar(project, 'draftNote', 'string', '', { formula: 'lookup(draftState, {empty: cloudShared ? "Words you add are shown to everyone in your class." : "Type a word or a short phrase, then press Enter or Add.", long: "That is too long. Keep it to " + maxLength + " characters.", blocked: "That word is not allowed in this cloud.", full: "You have used all your words. Undo one to add another.", ok: cloudShared ? "Press Enter or Add. Your class will see it." : "Press Enter or Add to put it in your cloud."})', live: true });
     addVar(project, 'myCloud', 'list', [], { formula: `cloud(cloudSource, myWidth, myHeight, ${opts})`, live: true });
     addVar(project, 'myHidden', 'number', 0, { formula: 'myCloud.filter(w => !w.shown).length', live: true });
     const clearOpen = addVar(project, 'clearOpen', 'boolean', false);
@@ -301,7 +330,7 @@ export const wordCloud: BrandedStarter = {
       fontFamily: BRAND_FONT,
       stroke: stroke(L.border, 2),
     } as never);
-    bind(input, { ariaDescription: 'lookup(draftState, {empty: "", long: "Too long.", blocked: "That word is not allowed.", ok: ""}, "")' });
+    bind(input, { ariaDescription: 'lookup(draftState, {empty: "", long: "Too long.", blocked: "That word is not allowed.", full: "You have used all your words.", ok: ""}, "")' });
     const add = bind(button(ctx, 'Add button', 'Add', box.x + 516, box.y, 104), { disabled: 'draftState != "ok"' });
     const undo = bind(button(ctx, 'Undo button', 'Undo last', box.x + 636, box.y, 132, false), { disabled: 'answers.length == 0' });
     const clear = bind(button(ctx, 'Clear button', 'Clear all', box.x + 784, box.y, 144, false), { disabled: 'answers.length == 0' });
@@ -311,10 +340,12 @@ export const wordCloud: BrandedStarter = {
     const view2 = bind(button(ctx, 'View button', 'View as list', 592, box.y + 54, 170, false), { label: 'asList ? "View as cloud" : "View as list"' });
     const back = button(ctx, 'Back button', 'Our cloud', 778, box.y + 54, 198, false);
     mine.children.push(input, add, undo, clear, note, view2, back);
-    const my = cloudStage(ctx, mine, { prefix: 'my', x: box.x, y: box.y + 106, width: 896, height: 328, unit: 'times', newest: true, empty: 'Your cloud is empty. Type a word above and press Add.' });
+    const my = cloudStage(ctx, mine, { prefix: 'my', x: box.x, y: box.y + 106, width: 896, height: 328, unit: 'times', unitExpr: 'cloudShared ? "people" : "times"', newest: true, empty: 'Your cloud is empty. Type a word above and press Add.', emptyExpr: 'cloudShared ? "Nobody in your class has added a word yet. Be the first: type one above and press Add." : "Your cloud is empty. Type a word above and press Add."' });
 
-    const body2 = text(ctx, 'Word times', 'You added this {myCloud[myPicked]?.weight == 1 ? "once" : myCloud[myPicked]?.weight + " times"}.', 0, 0, 100, { fontSize: 18, lineHeight: 1.4, layoutItem: { width: 'fill' } } as never);
+    const body2 = text(ctx, 'Word times', '{cloudShared ? myCloud[myPicked]?.weight + (myCloud[myPicked]?.weight == 1 ? " person has" : " people have") + " added this." : "You added this " + (myCloud[myPicked]?.weight == 1 ? "once" : myCloud[myPicked]?.weight + " times") + "."}', 0, 0, 100, { fontSize: 18, lineHeight: 1.4, layoutItem: { width: 'fill' } } as never);
     const removeWord = button(ctx, 'Remove word button', 'Remove this word', 0, 0, 220, false);
+    //In the class's cloud a word can be someone else's: only a word this learner added can be taken back
+    bind(removeWord, { visible: '!cloudShared || sharedMine.some(a => a.toLowerCase() == myCloud[myPicked]?.text?.toLowerCase())' });
     const removeRow = stack('Remove row', 0, 0, 552, { direction: 'row', align: 'start', children: [removeWord] });
     const d2 = stack('Learner word body', 24, 64, 552, { gap: 14, children: [body2, removeRow] });
     const dialog2 = dialogPanel(ctx, mine, 'Word dialog', my.open, { x: 212, y: 200, width: 600, height: 240, title: 'Word', children: [d2] });
@@ -323,7 +354,7 @@ export const wordCloud: BrandedStarter = {
     overlay(dialog2.frame);
 
     //Clearing everything asks first
-    const sure = text(ctx, 'Clear question', 'This takes every word out of your cloud. You cannot get them back.', 24, 64, 552, { fontSize: 18, lineHeight: 1.4 });
+    const sure = bind(text(ctx, 'Clear question', 'This takes every word out of your cloud. You cannot get them back.', 24, 64, 552, { fontSize: 18, lineHeight: 1.4 }), { text: 'cloudShared ? "Every word you added comes out of the class cloud too. You cannot get them back." : "This takes every word out of your cloud. You cannot get them back."' });
     const wipe = button(ctx, 'Clear all words button', 'Clear all words', 600 - 24 - 140 - 16 - 180, 220 - 24 - 46, 180, true);
     const dialog3 = dialogPanel(ctx, mine, 'Clear dialog', clearOpen, { x: 212, y: 210, width: 600, height: 220, title: 'Clear your cloud?', closeLabel: 'Keep them', children: [sure, wipe] });
     overlay(dialog3.frame);
@@ -331,16 +362,40 @@ export const wordCloud: BrandedStarter = {
     {
       wirePicks(mine, my);
       const g = graph(mine);
-      //Add, from the button or from Enter in the box: push the word, mark it as the newest, say so, empty the box
+      //In the class's cloud (cloudShared) a step also reaches the shared responses: after the local change, one If sends the word on or takes it back
+      const toClass = (from: LogicNode, kind: 'action.sharedAdd' | 'action.sharedWithdraw', value: string) => {
+        const gate = g.then(from, 'logic.if', { condition: 'cloudShared' });
+        return { gate, send: g.then(gate, kind, { source: 'ds_responses', text: value }, 'true') };
+      };
+      //Add, from the button or from Enter in the box: push the word, mark it as the newest, then the class or just this learner, say so, empty the box
       const addEv = click(g, add, 'Add a word');
-      g.run(addEv, ['action.setVariable', { variable: answers.id, op: 'push', value: 'draftText' }], setVar(lastAdded, 'draftText.toLowerCase()'), announce('draftText + " added. " + (answers.length) + " words in your cloud."'), ['action.setVariable', { variable: draft.id, op: 'clear' }]);
+      const marked = g.run(addEv, ['action.setVariable', { variable: answers.id, op: 'push', value: 'draftText' }], setVar(lastAdded, 'draftText.toLowerCase()'));
       const first = mine.logic.edges.find((e) => e.from === addEv.id)!;
+      const addGate = toClass(marked, 'action.sharedAdd', 'draftText');
+      const saidClass = g.then(addGate.send, ...announce('sharedProblem == "blocked" ? "That word is not allowed." : sharedProblem == "full" ? "You have used all your words." : draftText + " added to the class cloud."'));
+      join(mine, addGate.send, saidClass, 'none');
+      const saidMine = g.then(addGate.gate, ...announce('draftText + " added. " + (answers.length) + " words in your cloud."'), 'false');
+      const emptied = g.then(saidMine, 'action.setVariable', { variable: draft.id, op: 'clear' });
+      join(mine, saidClass, emptied);
       const enter = g.event('event.key', { key: 'Enter', type: 'keydown', typing: true, target: input.id, onlyIf: 'draftState == "ok"' }, 'Add a word');
       join(mine, enter, mine.logic.nodes.find((n) => n.id === first.to)!);
-      g.run(click(g, undo, 'Undo the last word'), setVar(answers, 'answers.slice(0, -1)'), setVar(lastAdded, '""'), announce('"Took the last word out. " + answers.length + " left."'));
+      //Undo takes the last word back from the class too (only ever this learner's own)
+      const undoEv = click(g, undo, 'Undo the last word');
+      const undoGate = toClass(undoEv, 'action.sharedWithdraw', 'answers[answers.length - 1]');
+      const undone = g.then(undoGate.gate, ...setVar(answers, 'answers.slice(0, -1)'), 'false');
+      join(mine, undoGate.send, undone);
+      g.run(undone, setVar(lastAdded, '""'), announce('"Took the last word out. " + answers.length + " left."'));
       g.run(click(g, clear, 'Clear all'), set(clearOpen, 'true'));
-      g.run(click(g, wipe, 'Clear all'), setVar(answers, '[]'), setVar(lastAdded, '""'), set(clearOpen, 'false'), announce('"Your cloud is empty."'));
-      g.run(click(g, removeWord, 'Remove a word'), setVar(answers, 'answers.filter(a => a.toLowerCase() != myCloud[myPicked].text.toLowerCase())'), set(my.open, 'false'), announce('"Word removed."'));
+      const wipeEv = click(g, wipe, 'Clear all');
+      const wipeGate = toClass(wipeEv, 'action.sharedWithdraw', '""');
+      const wiped = g.then(wipeGate.gate, ...setVar(answers, '[]'), 'false');
+      join(mine, wipeGate.send, wiped);
+      g.run(wiped, setVar(lastAdded, '""'), set(clearOpen, 'false'), announce('"Your cloud is empty."'));
+      const removeEv = click(g, removeWord, 'Remove a word');
+      const removeGate = toClass(removeEv, 'action.sharedWithdraw', 'myCloud[myPicked].text');
+      const removed = g.then(removeGate.gate, ...setVar(answers, 'answers.filter(a => a.toLowerCase() != myCloud[myPicked].text.toLowerCase())'), 'false');
+      join(mine, removeGate.send, removed);
+      g.run(removed, set(my.open, 'false'), announce('"Word removed."'));
       g.run(click(g, view2, 'View as a list'), toggleVar(asList), announce('asList ? "Showing the list, biggest first" : "Showing the cloud"'));
       g.run(click(g, back, 'Pages'), goPrevious());
     }
@@ -350,9 +405,9 @@ export const wordCloud: BrandedStarter = {
     addNote(ours, { ...below(ours, 0), colour: 'sky', text: '**Layout** `ourCloud` is a live variable, `cloud(ourWords, ...)`. It sizes each word from its weight and packs them with no overlaps, the same way every time, so the canvas and the player agree and the picture never jumps. Words that cannot fit are left out of the picture but stay in the list.' });
     addNote(ours, { ...below(ours, 316), colour: 'sky', text: '**Text alternative** View as list is the same words as rows with a bar and the count, so size is never the only cue. The words are one Tab stop in the picture: the arrow keys walk through them, biggest first, and Enter opens one.' });
     addNote(ours, { ...below(ours, 632), colour: 'gold', text: '[ ] Write your words in `ourWords` (Variables tab): text, weight, and a detail and link if you want them. Change `minSize`, `maxSize` and the cloud area (`ourWidth`, `ourHeight`) there too, not by resizing the stage.' });
-    addNote(mine, { ...below(mine, 0), colour: 'sky', text: '**User data** `answers` keeps what the learner typed, one entry a time, and puts it back next visit. `myCloud` counts that list (the same word in other capitals is one word), so there are no counters to keep in step.' });
-    addNote(mine, { ...below(mine, 316), colour: 'purple', text: '**Who sees it** `whoSees` is the one setting: Only me (works now) or Everyone in this class. The class option arrives with shared responses: it will fill `sharedAnswers` and set `sharedReady`, and `cloudSource` then switches the whole page over. Hang the send step after Add. Until then the page keeps showing the learner\'s own words.' });
-    addNote(mine, { ...below(mine, 632), colour: 'gold', text: '[ ] Add words you do not want to the `blocked` list (a phrase goes if any one word is on it), and set `minCount` to 2 or more to show only words said more than once. A blocked word cannot be added at all.' });
+    addNote(mine, { ...below(mine, 0), colour: 'sky', text: '**User data** `answers` keeps what the learner typed, one entry a time, and puts it back next visit. `myCloud` counts that list (the same word in other capitals is one word), so there are no counters to keep in step. For the class, the server counts: one person saying a word twice is still one.' });
+    addNote(mine, { ...below(mine, 316), colour: 'purple', text: '**Who sees it** `whoSees` is the one setting: Only me, or Everyone in this class. The `responses` data source (Data tab) hangs on it, so the same page switches: `sharedAnswers`, `sharedReady`, `sharedMine`, `sharedLeft` and `sharedProblem` are live variables over it, and `cloudSource` swaps the whole page over once the class answers (the StudyDesk learner page, after you share the link). Add, Undo, Clear and Remove send the same step on to the class.' });
+    addNote(mine, { ...below(mine, 632), colour: 'gold', text: '[ ] Add words you do not want to the `blocked` list (a phrase goes if any one word is on it), and set `minCount` to 2 or more to show only words said more than once. A blocked word cannot be added at all. For the class, put the same words in the `responses` data source (Blocked words, Show at), since the server applies those, and use its Class answers list to hide or clear words.' });
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
@@ -360,7 +415,8 @@ export const wordCloud: BrandedStarter = {
       item('Choose how big the words are: "minSize" and "maxSize" (px). When there are many words, every size shrinks together until they fit. To change the size of the cloud, change "ourWidth" and "ourHeight" (the stage follows them)', our.stage, ours),
       item('Check the colours in each colourway: the biggest words are filled in the button colour, the middle ones in soft grey and the smallest are plain, all from the theme', our.stage, ours),
       item('The learner page keeps what people type as user data. Add words you do not want to the "blocked" list, and set "minCount" if only words said more than once should show', byName(mine, 'Word box'), mine),
-      item('Choose who sees the learner cloud: the "whoSees" variable is Only me (each learner sees only their own words, kept as user data) or Everyone in this class. The class option arrives with shared responses: until then it keeps showing the learner\'s own words, so leave it on Only me', byName(mine, 'Word box'), mine),
+      item('Choose who sees the learner cloud: the "whoSees" variable is Only me (each learner sees only their own words, kept as user data) or Everyone in this class (everyone in the same course sees every word, counted and with no names, once the page runs on the StudyDesk learner page: Share, Link for StudyDesk). Anywhere else the class option quietly shows the learner\'s own words', byName(mine, 'Word box'), mine),
+      item('For the class cloud, open the "responses" data source (Data tab): set Blocked words and Show at to match the words and "minCount" above, how many words each person may add, and the sample answers the canvas shows. After learners have added some, the same place lists them by course so you can hide, remove or clear words', byName(mine, 'Word box'), mine),
       item('If you only want your own cloud, delete the "My cloud" page: the button on the first cloud page hides itself', next, ours),
       item('Make sure learners can read it without the picture: View as list shows every word with its count. Keep it, and say what the cloud shows in the page title', view1, ours),
       item('Try it with the keyboard: Tab into the cloud, the arrow keys to move between words, Enter to open one, Esc to close it', our.words, ours),
