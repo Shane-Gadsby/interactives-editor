@@ -547,6 +547,11 @@ function runChecks(project: Project, opts: CheckOptions, run: ThemeRun): A11yRep
       }
       if (n.type === 'embed' && n.mode === 'html') add(ab, n, 'description', 'review', 'Embedded HTML is not checked', `${n.name} runs your own HTML, which this checker does not read. Test it with a keyboard and a screen reader.`);
 
+      // ---- A video with nothing to play (the player draws a grey box, or the layer's own text, in its place)
+      if (n.type === 'video' && !n.assetId && !n.src?.trim() && !n.bindings?.src && !n.bindings?.assetId) {
+        add(ab, n, 'description', 'warning', 'Video has nothing to play', `${n.name} has no video file or address, so learners see ${n.emptyText?.trim() ? `its own text ("${n.emptyText.trim()}")` : 'an empty grey box'} where the video goes. Choose a video in the layer's settings, or delete the layer.${hiddenNote}`);
+      }
+
       // ---- Video: autoplay and captions
       if (n.type === 'video' && (n.assetId || n.src)) {
         if (n.autoplay) {

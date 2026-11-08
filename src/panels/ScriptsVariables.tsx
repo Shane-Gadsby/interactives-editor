@@ -101,6 +101,8 @@ ix.record('chose B', 'route') // count it in Insights
 ix.emit('done', data)  // to host page
 ix.setInstanceInput('Badge', 'level', 3)
 ix.fireInstanceTrigger('Badge', 'ping')
+ix.soundPlaying('Ding')  // a Play sound sound is going
+ix.soundsPlaying()   // the names of the ones going
 ix.on('reset', fn)     // messages
 ix.onFrame((dt, t) => {})
 ix.pointer  // {x, y, down}

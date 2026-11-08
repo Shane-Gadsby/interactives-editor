@@ -85,6 +85,7 @@ import { RecordsSection } from './RecordsSection';
 import { SensorsSection } from './SensorsSection';
 import { CreditsSettingsFields } from './CreditsPanel';
 import { CaptionsSection, VideoCaptions, VideoDescriptions } from './CaptionsSection';
+import { VideoCues } from './VideoCuesSection';
 import { ReadAloudSection } from './ReadAloudSection';
 import { VariantsSection } from './VariantsSection';
 import { StepsSection } from './StepsSection';
@@ -1173,6 +1174,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
   const varOptions = [{ value: '', label: 'Not bound' }, ...project.variables.map((v) => ({ value: v.id, label: `${v.name} (${v.type})` }))];
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
   const videos = project.assets.filter((a) => assetKind(a.mime, a.name) === 'video');
+  const sounds = project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio');
   const radius = 'cornerRadius' in n ? <Num node={n} ids={ids} prop="cornerRadius" label="Radius" min={0} /> : null;
   switch (n.type) {
     case 'rect':
@@ -1434,7 +1436,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             label="Video"
             value={n.assetId ?? ''}
             onChange={withQuickAdd((v) => set({ assetId: v || null }), { asset: 'video' })}
-            options={[{ value: '', label: 'Use a URL' }, ...videos.map((a) => ({ value: a.id, label: a.name })), addAssetOption('video')]}
+            options={[{ value: '', label: 'Use a URL' }, ...videos.map((a) => ({ value: a.id, label: a.name })), ...sounds.map((a) => ({ value: a.id, label: `${a.name} (sound only: shows the poster)` })), addAssetOption('video')]}
           />
           {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
           {!n.assetId && <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />}
@@ -1454,7 +1456,16 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           </Row>
           {n.frameStepControl && <NumberField label="Frames per second" title="What one frame is. Most video is 24, 25 or 30; 30 if you leave it" value={n.frameRate ?? 30} step={1} min={1} max={240} onChange={(v) => set({ frameRate: v > 0 ? v : undefined }, `fps-${n.id}`)} onCommit={() => store().commit()} />}
           {radius}
-          <p className="hint">To use where the video is, whether it's playing or how long it is, add a <strong>Data binding</strong> below (Playback position, Playing, Playback speed, Length) and pick which way it goes.</p>
+          <SelectField
+            label="Poster"
+            title="A picture shown before the video plays, and the whole time for a sound-only file. It sits under the video's own controls"
+            value={n.posterAssetId ?? ''}
+            onChange={withQuickAdd((v) => set({ posterAssetId: v || undefined }), { asset: 'image' })}
+            options={[{ value: '', label: 'None' }, ...images.map((a) => ({ value: a.id, label: a.name })), addAssetOption('image')]}
+          />
+          <TextField label="Text when empty" title="What a video with no source says while playing. Empty draws a plain grey box. The editor always shows Choose a video" value={n.emptyText ?? ''} commitOnBlur onChange={(v) => set({ emptyText: v.trim() ? v : undefined })} />
+          <p className="hint">To use where the video is, whether it's playing, how long it is or which chapter it is in, add a <strong>Data binding</strong> below (Playback position, Playing, Playback speed, Length, Chapter showing, Hold paused) and pick which way it goes.</p>
+          <VideoCues node={n} set={(patch) => set(patch)} />
           <VideoCaptions node={n} set={(patch) => set(patch)} />
           <VideoDescriptions node={n} set={(patch) => set(patch)} />
         </Section>

@@ -17,6 +17,45 @@ export function narrationSpan(tl: Pick<Timeline, 'audio'>): { start: number; end
   return null;
 }
 
+/** A timeline that holds the sound of a replaced file, and what the swap does to it. */
+export interface ReplacedAudioFit {
+  timelineId: string;
+  timeline: string;
+  /** The timeline's length now, and the length that holds the new sound (ms). */
+  was: number;
+  to: number;
+}
+
+/**
+ * The file behind a sound was replaced and the new one is `ms` long: every track using the asset (`assetId` is the new id,
+ * already swapped in) gets the new length. Returns the timelines worth offering to fit: the ones that were exactly as long as
+ * the old sound ended (they were fitted to it), and the ones the new sound now runs past. Nothing changes for an unknown length.
+ */
+export function refreshAudioDuration(project: Pick<Project, 'artboards'>, assetId: string, ms: number): ReplacedAudioFit[] {
+  const fits: ReplacedAudioFit[] = [];
+  if (!(Number.isFinite(ms) && ms > 0)) return fits;
+  for (const ab of project.artboards) {
+    for (const tl of ab.timelines) {
+      let fitted = false;
+      let runsPast = false;
+      let end = 0;
+      for (const t of tl.audio ?? []) {
+        if (t.assetId !== assetId) continue;
+        const oldEnd = t.offset + trackSpan(t);
+        if (Number.isFinite(oldEnd) && Math.abs(oldEnd - tl.duration) <= 50) fitted = true;
+        t.duration = Math.round(ms);
+        const newEnd = t.offset + trackSpan(t);
+        if (Number.isFinite(newEnd)) {
+          end = Math.max(end, newEnd);
+          if (newEnd > tl.duration + 50) runsPast = true;
+        }
+      }
+      if (end > 0 && (fitted || runsPast) && Math.abs(end - tl.duration) > 50) fits.push({ timelineId: tl.id, timeline: tl.name, was: tl.duration, to: Math.round(end) });
+    }
+  }
+  return fits;
+}
+
 /** Add a sound to a timeline at `offset`. The timeline grows to hold it. Returns the new track. */
 export function addAudioTrack(tl: Timeline, asset: { id: string; name: string }, durationMs: number, offset: number, role: AudioRole = 'narration'): AudioTrack {
   const name = asset.name.replace(/\.[^.]+$/, '') || 'Sound';

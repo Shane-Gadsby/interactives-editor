@@ -110,11 +110,9 @@ export function forgetWaveform(assetId: string): void {
   cache.delete(assetId);
 }
 
-/** How long an audio asset is, in ms, from its metadata (the decode is the fallback). Zero when it cannot be told. */
-export async function audioDuration(assetId: string): Promise<number> {
-  const url = assetUrls.resolve(assetId);
-  if (!url) return 0;
-  const fromMeta = await new Promise<number>((resolve) => {
+/** How long the sound at an address is, in ms, from the browser's metadata. Zero when it cannot be told. */
+function metaDuration(url: string): Promise<number> {
+  return new Promise<number>((resolve) => {
     const a = document.createElement('audio');
     const done = (ms: number) => {
       a.removeAttribute('src');
@@ -126,7 +124,24 @@ export async function audioDuration(assetId: string): Promise<number> {
     setTimeout(() => done(0), 4000);
     a.src = url;
   });
+}
+
+/** How long an audio asset is, in ms, from its metadata (the decode is the fallback). Zero when it cannot be told. */
+export async function audioDuration(assetId: string): Promise<number> {
+  const url = assetUrls.resolve(assetId);
+  if (!url) return 0;
+  const fromMeta = await metaDuration(url);
   if (fromMeta > 0) return fromMeta;
   const w = await loadWaveform(assetId);
   return w ? Math.round(w.duration) : 0;
+}
+
+/** How long a sound (or video) file is, in ms, before it is part of the project. Zero when it cannot be told. */
+export async function fileDuration(file: File): Promise<number> {
+  const url = URL.createObjectURL(file);
+  try {
+    return await metaDuration(url);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }

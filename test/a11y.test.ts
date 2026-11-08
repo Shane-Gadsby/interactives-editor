@@ -385,6 +385,17 @@ describe('pictures, videos and frames', () => {
     const fs = of(scene([v, f, h, d]).p, 'description');
     expect(fs.map((x) => [x.nodeType, x.severity])).toEqual([['video', 'warning'], ['embed', 'warning'], ['embed', 'review'], ['draw', 'review']]);
   });
+  it('flags a video with nothing to play, unless a binding supplies it', () => {
+    const empty = createNode('video', { src: '', assetId: null, ariaLabel: 'Intro' } as never);
+    const [f] = of(scene([empty]).p, 'description');
+    expect(f).toMatchObject({ severity: 'warning', title: 'Video has nothing to play', nodeType: 'video' });
+    const worded = createNode('video', { src: '', assetId: null, ariaLabel: 'Intro', emptyText: 'Coming soon' } as never);
+    expect(of(scene([worded]).p, 'description')[0].detail).toContain('Coming soon');
+    const bound = createNode('video', { src: '', assetId: null, ariaLabel: 'Intro', bindings: { src: 'clip' } } as never);
+    expect(of(scene([bound]).p, 'description')).toEqual([]);
+    const filled = createNode('video', { src: 'x.mp4', assetId: null, ariaLabel: 'Intro' } as never);
+    expect(of(scene([filled]).p, 'description')).toEqual([]);
+  });
   it('always asks a person about a video captions', () => {
     const v = createNode('video', { src: 'x.mp4', controls: true, ariaLabel: 'Intro' });
     const [c] = of(scene([v]).p, 'captions');
