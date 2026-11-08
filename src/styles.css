@@ -4088,6 +4088,256 @@ button.twisty:hover {
 .data-raw {
   white-space: pre-wrap;
 }
+/* Editing a data file: raw text, a table, or a tree */
+.data-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+.data-file {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+}
+.data-file-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.data-file-head .seg-btn,
+.data-grid-bar .seg-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+.data-file .btn.small,
+.data-grid-bar .btn.small,
+.data-tree .btn.small,
+.data-grid-pager .btn.small {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.data-file-status {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+.data-file-status.bad {
+  color: var(--danger);
+}
+.data-file-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--banner-warn-bg);
+  color: var(--banner-warn-fg);
+  font-size: 11.5px;
+}
+.data-file-banner > span {
+  flex: 1;
+  min-width: 160px;
+}
+.data-file-problems {
+  list-style: none;
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--banner-error-bg);
+  font-size: 11.5px;
+}
+.data-file-problems li.error {
+  color: var(--banner-error-fg);
+}
+.data-file-problems li.warn {
+  color: var(--banner-warn-fg);
+}
+.data-file-problems .link-btn {
+  display: inline;
+  padding: 0;
+  text-decoration: underline;
+  color: inherit;
+}
+.data-file-body {
+  flex: 1;
+  min-height: 200px;
+  overflow: auto;
+}
+.data-file-body.raw {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  min-height: 260px;
+}
+.data-raw-editor {
+  height: 100%;
+  min-height: 260px;
+}
+.data-raw-editor .cm-editor {
+  height: 100%;
+}
+.data-raw-editor .cm-scroller {
+  overflow: auto;
+}
+.data-grid-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 4px 0 6px;
+}
+.data-grid-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.data-grid-group select {
+  font-size: 11px;
+}
+.data-grid-scroll {
+  overflow: auto;
+  max-width: 100%;
+}
+.data-grid {
+  width: max-content;
+  min-width: 100%;
+}
+.data-grid td,
+.data-grid th {
+  padding: 0;
+  max-width: none;
+  overflow: visible;
+}
+.data-grid th.data-grid-num {
+  padding: 3px 6px;
+  min-width: 28px;
+  text-align: right;
+  font-weight: 400;
+}
+.data-grid tr.on th.data-grid-num {
+  color: var(--text);
+}
+.data-cell {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 90px;
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  border-radius: 0;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 11.5px;
+}
+textarea.data-cell {
+  resize: vertical;
+}
+.data-cell.head {
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.data-cell.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.data-cell:focus-visible {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: -2px;
+  background: var(--panel-2);
+}
+.data-cell::placeholder {
+  color: var(--muted);
+  font-style: italic;
+}
+.data-cell[readonly] {
+  cursor: default;
+}
+.data-grid-pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.data-tree {
+  font-size: 11.5px;
+}
+.tree-item {
+  outline: none;
+}
+.tree-item:focus-visible > .tree-line {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: -2px;
+}
+.tree-item.on > .tree-line {
+  background: var(--panel-2);
+}
+.tree-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  border-radius: 3px;
+}
+.tree-twist {
+  width: 16px;
+  flex: none;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+.tree-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 600;
+}
+.tree-key.index {
+  color: var(--muted);
+  font-weight: 400;
+}
+.tree-line .data-cell {
+  width: auto;
+  min-width: 60px;
+  flex: 0 1 auto;
+  border-radius: 3px;
+}
+.tree-line .data-cell.head {
+  width: 130px;
+  flex: none;
+}
+.tree-line .tree-value,
+.tree-line textarea.data-cell,
+.tree-line input.data-cell:not(.head) {
+  flex: 1 1 140px;
+  min-width: 80px;
+}
+.tree-line .data-cell.number {
+  text-align: left;
+}
+.tree-kind {
+  flex: none;
+  min-width: 44px;
+}
+.tree-count {
+  flex: none;
+}
+.tree-as {
+  margin-left: auto;
+  flex: none;
+}
+.tree-table {
+  margin: 2px 0 6px;
+  padding-left: 4px;
+  border-left: 2px solid var(--line);
+}
 .dot {
   width: 7px;
   height: 7px;
@@ -11320,4 +11570,8 @@ button.flow-text:focus-visible {
   text-align: right;
   color: var(--muted);
   font-size: 12px;
+}
+.data-grid tbody th {
+  position: static;
+  background: transparent;
 }

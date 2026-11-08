@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { cleanSharedSettings, dataKindOf, uid, type DataKind, type DataSource } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { isIdentifier, uniqueIdentifier } from '../store/doc';
@@ -11,6 +11,7 @@ import { assetKind } from '../lib/assets';
 import { addAssetOption, withQuickAdd } from '../lib/quick-add';
 import { CONTEXT_ID, ContextPanel } from './ContextPanel';
 import { SharedForm } from './SharedForm';
+import { DataFileEditor } from './DataFileEditor';
 
 const KINDS: { value: DataKind; label: string }[] = [
   { value: 'json', label: 'JSON' },
@@ -70,6 +71,9 @@ export function DataPanel() {
     });
     if (sources[0]) setActiveId(sources[0].id);
   };
+
+  // The canvas keeps the sources loaded, but the panel can be open without it (and a saved edit points at a new file)
+  useEffect(() => dataCache.sync(store().get().project), [s.sources, s.assets]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dataAssets = s.assets.filter((a) => assetKind(a.mime, a.name) === 'data');
   const loaded = active ? dataCache.get(active.id) : undefined;
@@ -173,10 +177,19 @@ export function DataPanel() {
               Use it by name in bindings, text slots (<code>{`{${active.name}.length}`}</code>), Repeat on a group or frame, and scripts (<code>ix.data.{active.name}</code>, <code>ix.loadData</code>).
             </p>
           </div>
-          <div className="data-preview">
-            {loaded?.loading && <p className="muted">Loading…</p>}
-            {loaded?.error && <p className="error">{loaded.error}</p>}
-            {loaded && 'value' in loaded && <Preview value={loaded.value} />}
+          <div className="data-preview data-editor">
+            {active.source === 'shared' ? (
+              <>
+                {loaded?.loading && <p className="muted">Loading…</p>}
+                {loaded?.error && <p className="error">{loaded.error}</p>}
+                {loaded && 'value' in loaded && <Preview value={loaded.value} />}
+              </>
+            ) : (
+              <>
+                {loaded && 'value' in loaded && <Fields value={loaded.value} />}
+                <DataFileEditor key={active.id} source={active} />
+              </>
+            )}
           </div>
         </SplitColumns>
       ) : (
@@ -190,6 +203,17 @@ export function DataPanel() {
         </div>
       )}
     </SplitColumns>
+  );
+}
+
+/** The field names a list of rows has, so people know what to write in an expression. */
+function Fields({ value }: { value: unknown }) {
+  if (!Array.isArray(value) || !value.length || !value.every((r) => r && typeof r === 'object' && !Array.isArray(r))) return null;
+  const cols = [...new Set(value.slice(0, 200).flatMap((r) => Object.keys(r as object)))];
+  return (
+    <div className="muted small">
+      {value.length} rows · item fields: {cols.join(', ')}
+    </div>
   );
 }
 
