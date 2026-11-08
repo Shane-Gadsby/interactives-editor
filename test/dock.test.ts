@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_PANELS, defaultLayout, dockFloat, isShown, locatePanel, movePanel, normalise, showPanel } from '../src/lib/dock';
+import { ALL_PANELS, defaultLayout, dockFloat, isShown, locatePanel, movePanel, normalise, placeTools, showPanel, toolsDropFor } from '../src/lib/dock';
 
 const everywhere = (l: ReturnType<typeof defaultLayout>) => [...Object.values(l.zones).flatMap((g) => g.tabs), ...l.floats.flatMap((f) => f.tabs)];
 
@@ -70,5 +70,40 @@ describe('dock layout', () => {
     expect(everywhere(l).sort()).toEqual([...ALL_PANELS].sort());
     expect(l.tools.place).toBe('left');
     expect(normalise('garbage')).toEqual(defaultLayout());
+  });
+});
+
+describe('the tool rail can dock anywhere', () => {
+  it('reads every place it has ever been saved at, and anything else as the left', () => {
+    for (const place of ['left', 'right', 'bottom', 'float'] as const) {
+      expect(normalise({ ...defaultLayout(), tools: { place, x: 5, y: 6 } }).tools).toEqual({ place, x: 5, y: 6 });
+    }
+    expect(normalise({ ...defaultLayout(), tools: { place: 'diagonal' } }).tools.place).toBe('left');
+    expect(normalise({ v: 1, zones: {}, floats: [] }).tools).toEqual({ place: 'left', x: 80, y: 120 });
+  });
+
+  it('a layout stored before the bottom existed loads as it was', () => {
+    const old = { v: 1, zones: defaultLayout().zones, bottomFolded: false, floats: [], tools: { place: 'right', x: 10, y: 20 } };
+    expect(normalise(JSON.parse(JSON.stringify(old))).tools).toEqual({ place: 'right', x: 10, y: 20 });
+  });
+
+  it('turns what is under a dragged rail into a drop: edges dock it, tab strips refuse, the open canvas floats it', () => {
+    expect(toolsDropFor({ edge: 'bottom' })).toEqual({ place: 'bottom' });
+    expect(toolsDropFor({ edge: 'left', strip: true })).toEqual({ place: 'left' });
+    expect(toolsDropFor({ strip: true })).toEqual({ tabs: true });
+    expect(toolsDropFor({})).toEqual({ float: true });
+    expect(toolsDropFor({ edge: null })).toEqual({ float: true });
+  });
+
+  it('moves the rail to a zone or floats it at a position, leaving the panels alone', () => {
+    let l = defaultLayout();
+    l = placeTools(l, 'bottom');
+    expect(l.tools).toEqual({ place: 'bottom', x: 80, y: 120 });
+    l = placeTools(l, 'float', { x: 200.4, y: 99.6 });
+    expect(l.tools).toEqual({ place: 'float', x: 200, y: 100 });
+    // docking again keeps where it last floated, for the menu's Floating
+    l = placeTools(l, 'right');
+    expect(l.tools).toEqual({ place: 'right', x: 200, y: 100 });
+    expect(l.zones).toEqual(defaultLayout().zones);
   });
 });

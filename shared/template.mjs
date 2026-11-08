@@ -81,7 +81,7 @@ export const contentHash = (project) => {
 }
 
 //Where an artboard sits and which design file it came from is not part of what it holds
-const ARTBOARD_LOCAL = ['canvasX', 'canvasY', 'canvasHidden', 'guides', 'source', 'children', 'timelines', 'logic', 'notes']
+const ARTBOARD_LOCAL = ['canvasX', 'canvasY', 'canvasHidden', 'guides', 'grid', 'source', 'children', 'timelines', 'logic', 'notes']
 
 export const artboardProps = (ab) => Object.fromEntries(Object.entries(ab).filter(([k]) => !ARTBOARD_LOCAL.includes(k)))
 export const nodeProps = (node) => {

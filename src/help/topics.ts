@@ -225,7 +225,7 @@ From left to right:
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
-**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)), and the **Media Catalogue** button, which opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## What the pointer shows
 The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
@@ -259,7 +259,7 @@ Every panel can go anywhere: the left, right or bottom area, or a window of its 
 
 A floating window moves by its title bar and resizes from its bottom-right corner. Its **×** closes it and sends its panels back to where they started. An area nothing is docked in takes no room.
 
-Right-click a tab for **Dock on the left / right / at the bottom**, **Float in its own window** and **Reset panel layout** (everything back where it started). Right-click the tool bar to put it **On the left**, **On the right** or **Floating**, or drag its **Tools** title out onto the page to float it there (a floating tool bar moves by the same title). The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
+Right-click a tab for **Dock on the left / right / at the bottom**, **Float in its own window** and **Reset panel layout** (everything back where it started). The tool bar docks the same way. Drag its **Tools** title out onto the page to float it (a floating tool bar moves by the same title), and drag it over an edge of the canvas to dock it there: the same **Dock left**, **Dock right** and **Dock at the bottom** strips show, labelled for the tools, and the one you are over lights up. Along the bottom it becomes a strip across the page with its groups side by side, above the bottom panels. It is a bar, not a tab, so it can't join a panel's tabs (the drag says so over them). <kbd>Esc</kbd> while dragging leaves it floating where it is. Right-click the tool bar for **Dock on the left**, **Dock on the right**, **Dock at the bottom** or **Floating**. Saved workspaces remember where the tool bar was. The layout is remembered in this browser. Whatever opens a panel for you (choosing a timeline, **Edit** on an interaction) shows it wherever it is, and the timeline's keyframing follows whether the Timeline panel is on screen.
 
 ## Preview
 **Preview** runs the project exactly as the exported file will, from the start artboard or the one you're on (the dropdown at the top). **Restart** starts again, and <kbd>Esc</kbd> closes it. The **Debug** panel (on by default) shows:
@@ -300,7 +300,7 @@ If you'd rather the wheel scrolled the canvas, open **Preferences** (the gear in
     id: 'preferences',
     title: 'Preferences',
     group: 'Getting started',
-    summary: 'Your own editor settings: wheel, theme, default font, rulers, tooltips, layers outside clipped artboards.',
+    summary: 'Your own editor settings: wheel, theme, default font, rulers, grid and snapping, tooltips, layers outside clipped artboards.',
     keywords: 'settings options wheel tooltips',
     body: `![The Preferences dialog.](help/preferences.png)
 
@@ -310,7 +310,7 @@ Open **Preferences** from the gear in the top bar (or on the projects page). The
 - **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette (the same colours as the rest of the Toolbox): its greys, its blue for selection and focus, and UniSQ gold on primary buttons, the open tab and the line under the top bar. In Light, the palette's grey for secondary text is a little under the usual contrast guideline (4.4:1 on panels, 4.1:1 on the background, against 4.5:1); it is left as the palette has it so the editor matches the Toolbox.
 - **Workspace** (in the editor only): switch every panel's place in one go. **Standard** is where everything starts; **Animate** has a tall timeline; **Interactions** has a big interaction graph with Variables and Scripts beside the properties; **Big canvas** puts all the panels in one column on the right and folds the bottom away; **Review** opens Comments and the accessibility checker. **Save current layout as…** keeps the way you've arranged things (see [Arranging the panels](interface#arranging-the-panels)) under a name of your own, up to 12, with rename and delete beside each. Saved workspaces follow you to any browser you sign in on.
 - **Default font**: the font for new text, buttons, inputs and links, added to every new project you create. It is Open Sans unless you change it. Click the box and type to search every Google font (the chips narrow it by Sans, Serif, Display, Handwriting or Mono), then pick one with <kbd>Enter</kbd> or a click; <kbd>Esc</kbd> closes the list. A name that isn't on the list can be used as typed. It applies to projects and text you make from now on, not to ones that exist.
-- **Show rulers**: rulers and guides on the canvas (also <kbd>Shift</kbd>+<kbd>R</kbd>).
+- **Canvas**: **Show rulers** (rulers and guides on the canvas, also <kbd>Shift</kbd>+<kbd>R</kbd>), **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>), **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), **Grid size** (1 to 512 px, with presets under it) and **Stronger line every** (cells, 1 to 32). See [The grid and snapping](grid). These follow you with your account like the rest.
 - **Show layers outside clipped artboards**: on by default. When an artboard has **Clip content to artboard** on, the parts of layers that hang outside it are drawn faintly, in diagonal stripes, beside it on the canvas, so you can still see them and click them to select. It is only how the canvas looks: Preview and exports still clip. Switch it off if the faint shapes get in the way.
 - **Show tooltips**: explanations when you hover buttons and fields.
 - **Accessibility features**: on by default. Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview (and in the exports you make, which always keep them on). Switch it off to check whether a problem comes from it. See [Accessibility](accessibility).
@@ -419,7 +419,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> | Group / ungroup |
 | <kbd>Ctrl</kbd>+<kbd>A</kbd> | Select all on the artboard |
 | <kbd>Delete</kbd> / <kbd>Backspace</kbd> | Delete the selection (or the selected keyframes) |
-| Arrow keys (<kbd>Shift</kbd> for 10px) | Nudge |
+| Arrow keys (<kbd>Shift</kbd> for 10px) | Nudge. With Snap to grid on they step to the next grid line instead (<kbd>Shift</kbd>: a stronger line), and <kbd>Ctrl</kbd> + arrow nudges by 1px or 10px as usual |
 | <kbd>Alt</kbd>+arrow keys | Move the selected layer in the Layers list: up or down past a neighbour, right into the group above, left out of its group |
 | <kbd>]</kbd> / <kbd>[</kbd> | Bring forward / send backward (<kbd>Ctrl</kbd> for front / back) |
 | <kbd>Enter</kbd> | Go into a group or frame, edit a path's points, or edit text |
@@ -433,6 +433,8 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>Shift</kbd>+<kbd>2</kbd> | Zoom to selection |
 | <kbd>Ctrl</kbd>+<kbd>1</kbd> | 100% |
 | <kbd>Shift</kbd>+<kbd>R</kbd> | Show or hide rulers |
+| <kbd>Shift</kbd>+<kbd>G</kbd> | Show or hide the grid |
+| <kbd>Ctrl</kbd>+<kbd>'</kbd> | Turn Snap to grid on or off |
 
 ## Help
 | Key | Does |
@@ -464,7 +466,9 @@ Double-click a text layer to edit it. Select some of the text, then:
 | Do this | To |
 |---|---|
 | Hold <kbd>Alt</kbd> while drawing or resizing | Work from the centre |
-| Hold <kbd>Ctrl</kbd> while dragging | Move without snapping |
+| Hold <kbd>Ctrl</kbd> while dragging | Move, resize or draw without snapping (to the grid or to other layers) |
+| Right-click the grid or snap button on the tool bar | Pick the grid size and how often a stronger line shows |
+| Drag the **Tools** title over an edge of the canvas | Dock the tool bar there (left, right or a strip along the bottom) |
 | <kbd>Alt</kbd>-click a path point | Switch it between curve and corner |
 | <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Add it to the selection, or take it out (it picks the deepest layer inside groups, so you can gather layers from different groups) |
 | Double-click a group | Select inside it |
@@ -820,7 +824,7 @@ Copyright reporting for a course is run at course level, and this tab does not r
     keywords: 'image picture photo svg video audio sound mp3 upload drop paste asset nine slice 9-slice n-slice',
     body: `Drop files on the canvas, paste them, or use the **Image** tool. SVG files become editable vector layers; other images become image layers. Video files become video layers; audio files are stored as assets for the **Play sound** action.
 
-Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
+Pictures dropped or pasted onto an artboard are scaled to fit (up to 600 px for images and 640 px for video) and centred where you dropped them. The **Media Catalogue** button on the tool bar finds a photo in the suite's library instead: see [The Media Catalogue](media-catalogue). Every file is also kept in the project's **Assets** panel: see [The Assets panel](assets) for thumbnails, details, checking several at once and deleting.
 
 ## Image settings
 **Fit** (cover, contain, stretch), corner radius, and:
@@ -970,13 +974,61 @@ Turn on **Animate changes** in the frame's Auto layout section and, while the pr
 With several layers selected, the bar at the top of the inspector aligns their edges or centres, and distributes three or more evenly. With one layer selected it aligns to the parent.
 
 ## Snapping
-Layers snap to other layers' edges and centres while you drag; guide lines show what snapped. Hold <kbd>Ctrl</kbd> to drag without snapping. Rulers (<kbd>Shift</kbd>+<kbd>R</kbd>) show positions, and dragging from a ruler makes a guide that layers snap to. Drag a guide back onto the ruler to remove it.
+Layers snap to other layers' edges and centres while you drag; guide lines show what snapped. Hold <kbd>Ctrl</kbd> to drag without snapping. Turn on **Snap to grid** to land on a grid as well, see [The grid and snapping](grid). Rulers (<kbd>Shift</kbd>+<kbd>R</kbd>) show positions, and dragging from a ruler makes a guide that layers snap to. Drag a guide back onto the ruler to remove it.
 
 ## Order
 <kbd>]</kbd> and <kbd>[</kbd> move a layer up and down; add <kbd>Ctrl</kbd> to go to the top or bottom. Or drag in the Layers panel.
 
 ## Boolean operations
 Select two or more shapes and press **Union**, **Subtract**, **Intersect** or **Exclude** in the Inspector (the four buttons in the shape section), or right-click and choose **Combine shapes**. *Subtract* takes the other shapes away from the bottom-most one. The result is a single path; the originals are replaced.`,
+  },
+  {
+    id: 'grid',
+    title: 'The grid and snapping',
+    group: 'Design',
+    summary: 'Show grid, Snap to grid, grid size and stronger lines, a grid of one artboard\'s own, and what snaps.',
+    keywords: 'grid snap snapping size subdivisions cells pixels nudge align magnet guides override',
+    body: `The grid is a set of lines measured from each artboard's top left corner. **Show grid** draws it on the canvas, and **Snap to grid** makes things land on it. They are separate: snapping works whether or not the grid is showing.
+
+## Turning it on
+- The **Show grid** and **Snap to grid** buttons on the tool bar (beside Comment). Each is gold while it is on.
+- <kbd>Shift</kbd>+<kbd>G</kbd> shows or hides the grid, <kbd>Ctrl</kbd>+<kbd>'</kbd> turns snapping on or off.
+- Right-click an empty part of the canvas for **Show grid**, **Snap to grid** and **Grid size**, or open **Preferences**, which has a **Canvas** block with the same settings.
+- While snapping is on a gold chip in the corner of the canvas says so with the size; click it to change the size.
+
+## Size and stronger lines
+**Grid size** is the width of one cell in pixels: pick 1, 2, 4, 5, 8, 10, 12, 16, 20, 24, 32, 48, 50 or 64, or choose **Custom…** for anything from 1 to 512. **Stronger line every** draws every Nth line heavier (4 by default; 1 draws them all alike). They are yours, kept with your account, and the size shows in the chip while snapping is on.
+
+## A grid for one artboard
+A 1920 wide slide and a 375 wide phone page want different grids. Right-click an artboard (its empty area) and open **Grid for this artboard** to give it its own size and stronger line, or **My default** to go back to yours. It is saved in the project, so people editing with you see it, and it is never exported.
+
+## What snaps
+Moving layers, resizing them, drawing new shapes (and artboards), placing pen points, and the arrow keys. A moved or resized layer's edges (a rotated layer's outer bounds) land on a grid line. **Smart guides still work**: if another layer's edge or centre or a ruler guide is as close as the grid line, or closer, that wins and shows its guide line. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) while dragging to skip all snapping.
+
+The arrow keys step to the next grid line in that direction (a layer that is off the grid goes to its nearest line first). <kbd>Shift</kbd> + arrow goes a stronger line at a time, or ten cells when stronger lines are off. <kbd>Ctrl</kbd> + arrow nudges by 1 px or 10 px as usual.
+
+## What it doesn't do
+The grid is never in **Preview**, in exports, in share links or in pictures of the artboard: it is only on the editor's canvas. Moving a layer's individual path points with the node editor is not snapped.`,
+  },
+  {
+    id: 'media-catalogue',
+    title: 'The Media Catalogue',
+    group: 'Design',
+    summary: 'Put a photo from the suite\'s Media Catalogue on an artboard, and how it is saved and exported.',
+    keywords: 'media catalogue photo photography gallery library insert picture image studydesk',
+    body: `The **Media Catalogue** button on the tool bar (a camera) opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
+
+## How it is stored
+The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
+
+## Exporting
+Files that must work without a network fetch the picture when they are made and put it inside:
+- **Download** the single-file page: the picture is embedded as data, and the address and where it was found in the catalogue are left out.
+- **Download** the package (\`.ixp\`): the picture is stored under \`assets/\` with the others.
+
+If the catalogue can't be reached or doesn't answer when one of these is made, a message lists which pictures and why. The file is still made, **without** those pictures (their layers show nothing) rather than with a link that might not work for whoever opens it. Fix the connection and export again. The JSON export keeps the links as they are.
+
+Photos in the catalogue have their own terms of use. Check them before you publish a project that uses one, and credit them in [Attributions and references](attributions) where they ask for it.`,
   },
   {
     id: 'responsive',

@@ -1328,6 +1328,52 @@ hr.item-sep {
     'bottom bottom bottom';
 }
 
+/* The tool rail docked along the bottom: a horizontal strip between the canvas and the bottom panels */
+.workspace.tools-bottom {
+  grid-template-columns: var(--left-w, 300px) 1fr var(--right-w, 320px);
+  grid-template-rows: 44px auto 1fr auto var(--bottom-h);
+  grid-template-areas:
+    'top top top'
+    'banner banner banner'
+    'left stage right'
+    'tools tools tools'
+    'bottom bottom bottom';
+}
+.toolbar.horizontal {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-right: 0;
+  border-top: 1px solid var(--line);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.toolbar.horizontal .tool-grid {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-template-rows: 28px;
+}
+.toolbar.horizontal .tool-group {
+  flex-direction: row;
+  width: auto;
+  border-top: 0;
+  border-left: 1px solid var(--line);
+  padding: 0 0 0 4px;
+  margin: 0 0 0 2px;
+  flex: none;
+}
+.toolbar.horizontal .tool-group-head {
+  width: auto;
+}
+.toolbar.horizontal .toolbar-fill {
+  flex: 1;
+  min-width: 8px;
+}
+.toolbar.horizontal > .tool-grid {
+  flex: none;
+}
+
 /* ---------------------------------------------------------------- docking (components/Dock.tsx) */
 .dock-zone {
   min-width: 0;
@@ -1495,6 +1541,16 @@ body.dock-dragging * {
 }
 .dock-tools-grip:hover {
   color: var(--text);
+}
+/* Along the bottom it's the left end of the strip */
+.dock-tools-grip.docked.horizontal {
+  align-self: stretch;
+  position: static;
+  margin: -3px 4px -3px -8px;
+  display: flex;
+  align-items: center;
+  border-bottom: 0;
+  border-right: 1px solid var(--line);
 }
 /* Docked, it's the top of the rail: out to the rail's edges, over its top padding */
 .dock-tools-grip.docked {
@@ -8967,4 +9023,72 @@ code {
   .note {
     transition: box-shadow 0.12s;
   }
+/* ---------------------------------------------------------------- snap grid (lib/grid.ts) */
+.canvas-grid .grid-minor,
+.canvas-grid .grid-major {
+  fill: none;
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.canvas-grid .grid-minor {
+  stroke: var(--text);
+  stroke-opacity: 0.11;
+}
+.canvas-grid .grid-major {
+  stroke: var(--text);
+  stroke-opacity: 0.24;
+}
+.canvas-status {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: var(--primary-bg);
+  color: var(--primary-fg, #111);
+  cursor: pointer;
+}
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.chip.on {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.prefs-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+/* ---------------------------------------------------------------- Media Catalogue modal */
+.catalogue-modal {
+  width: min(1000px, 96vw);
+  height: 90vh;
+  overflow: hidden;
+}
+.catalogue-modal header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.catalogue-frame {
+  flex: 1;
+  min-height: 0;
+  border: 0;
+  background: #fff;
 }

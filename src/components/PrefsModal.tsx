@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { VersionInfo } from './VersionInfo';
 import { DEFAULT_FONT, setPrefs, usePrefs } from '../lib/prefs';
 import { FontField } from './FontPicker';
-import { IconButton, SelectField, CheckField } from './ui';
+import { IconButton, SelectField, CheckField, NumberField } from './ui';
+import { cleanGrid, GRID_PRESETS, GRID_SIZE_RANGE, GRID_SUBDIV_RANGE } from '../lib/grid';
 import { Icons } from './icons';
 import { HelpLink } from '../help/Help';
 import { BUILT_IN, applyWorkspace, deleteWorkspace, renameWorkspace, saveWorkspace, savedWorkspaces, MAX_SAVED } from '../lib/workspaces';
@@ -57,7 +58,37 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
             typedLabel={(name) => `Use “${name}” (not in the list)`}
             onPick={(o) => setPrefs({ defaultFont: o.family.trim() || DEFAULT_FONT })}
           />
-          <CheckField label="Show rulers" title="Rulers along the canvas edges; drag from them to make guides (Shift+R)" value={p.rulers} onChange={(v) => setPrefs({ rulers: v })} />
+          <section className="prefs-canvas" aria-label="Canvas">
+            <div className="field-label block">Canvas</div>
+            <CheckField label="Show rulers" title="Rulers along the canvas edges; drag from them to make guides (Shift+R)" value={p.rulers} onChange={(v) => setPrefs({ rulers: v })} />
+            <CheckField label="Show grid" title="Draws the grid on the artboards. Only the canvas shows it: Preview and exports never do (Shift+G)" value={p.showGrid} onChange={(v) => setPrefs({ showGrid: v })} />
+            <CheckField label="Snap to grid" title="Moves, resizes, new shapes, pen points and arrow-key nudges land on the grid, whether or not it is showing. Hold Ctrl while dragging to skip it (Ctrl+')" value={p.snapGrid} onChange={(v) => setPrefs({ snapGrid: v })} />
+            <NumberField
+              label="Grid size"
+              title="The width and height of one grid cell in pixels, measured from the artboard's top left corner. An artboard can have its own (right-click the artboard)"
+              value={p.gridSize}
+              min={GRID_SIZE_RANGE.min}
+              max={GRID_SIZE_RANGE.max}
+              suffix="px"
+              onChange={(v) => setPrefs({ gridSize: cleanGrid({ size: v }).size })}
+            />
+            <div className="chip-row" role="group" aria-label="Grid size presets">
+              {GRID_PRESETS.map((n) => (
+                <button key={n} type="button" className={`chip${p.gridSize === n ? ' on' : ''}`} aria-pressed={p.gridSize === n} onClick={() => setPrefs({ gridSize: n })}>
+                  {n}
+                </button>
+              ))}
+            </div>
+            <NumberField
+              label="Stronger line every"
+              title="Every this many cells the grid line is drawn stronger. 1 draws them all the same. Shift+arrow nudges by this many cells"
+              value={p.gridSubdivisions}
+              min={GRID_SUBDIV_RANGE.min}
+              max={GRID_SUBDIV_RANGE.max}
+              suffix="cells"
+              onChange={(v) => setPrefs({ gridSubdivisions: cleanGrid({ subdivisions: v }).subdivisions })}
+            />
+          </section>
           <CheckField
             label="Show layers outside clipped artboards"
             title="Draws the parts of layers that hang outside an artboard that clips faintly beside it, so you can still see and pick them. Preview and exports still clip"
