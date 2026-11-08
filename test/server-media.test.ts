@@ -47,6 +47,16 @@ describe('what a share link records', () => {
     expect((await share(project('prmedia001', 'microphone'))).sensors).toBeUndefined();
   });
 
+  it('keeps an empty declaration for a project that only offers a download, so its learner page has the bridge', async () => {
+    const p = project('prmedia001');
+    (p.artboards[0] as any).logic = { nodes: [{ id: 'n1', kind: 'action.saveFile', x: 0, y: 0, params: {} }], edges: [] };
+    const s = await share(p);
+    expect(s.sensors).toEqual({});
+    const r = await play(s.token);
+    expect(r.text).toContain('import {startBridge} from "/interactives/media-bridge.mjs"');
+    expect(r.text).toContain('declaration: {}');
+  });
+
   it('follows the page: updating without sensors drops them, and a revert brings back the ones the old page had', async () => {
     await share(project('prmedia001', { camera: true }));
     const s2 = await share(project('prmedia001'));

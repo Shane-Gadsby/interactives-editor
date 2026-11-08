@@ -414,6 +414,17 @@ describe('explore starters, second batch', () => {
     player.destroy();
   });
 
+  it('chart: the unit is one variable, and every chart (the guess chart too) reads its suffix from it', async () => {
+    const { project } = starter('explore/chart').build(COLOURWAYS[0]);
+    for (const c of ['Bar chart', 'Pie chart', 'Guess chart']) expect((layer(project, c, c === 'Guess chart' ? 2 : 1) as SceneNode & { suffix: string }).suffix).toBe(' {unit}');
+    const player = await play(project);
+    expect(says(layer(project, 'Bar chart').id)[0]).toBe('Reading: 6 hours');
+    player.setVariable('unit', 'minutes');
+    await flush(30);
+    expect(says(layer(project, 'Bar chart').id)[0]).toBe('Reading: 6 minutes');
+    player.destroy();
+  });
+
   it('chart: a guess is made before the reveal, the answer is hidden until then, and Next moves on', async () => {
     const { project } = starter('explore/chart').build(COLOURWAYS[0]);
     const player = await play(project);
@@ -421,13 +432,17 @@ describe('explore starters, second batch', () => {
     await click(layer(project, 'Take a guess button', 1).id, 400);
     expect(player.artboard.name).toBe('Your guess');
     expect(el(gl('Question').id).textContent).toContain('on Reading');
-    //before the reveal: the bar being guessed is a 0 called "? (hidden)", so its value is neither drawn nor spoken, and the guess is the last bar
+    //before the reveal: the bar being guessed is a hidden item (a dashed "?" outline, read out as hidden, never as 0 hours or its real value), and the guess is the last bar
     const chartId = gl('Guess chart').id;
-    expect(says(chartId)[0]).toBe('? (hidden): 0 hours');
+    expect(says(chartId)[0]).toBe('Reading: hidden');
     expect(says(chartId)[1]).toBe('Lectures: 4 hours');
     expect(says(chartId)).toHaveLength(7);
-    expect(barH(chartId, 0)).toBe(0);
-    expect(el(chartId).textContent).not.toContain('Reading');
+    expect(marks(chartId)[0].getAttribute('stroke-dasharray')).toBeTruthy();
+    expect(marks(chartId)[0].getAttribute('fill')).toBe('none');
+    expect(marks(chartId)[1].getAttribute('stroke-dasharray')).toBeNull();
+    expect(el(chartId).textContent).toContain('?');
+    //the table for screen readers says hidden too
+    expect(el(chartId).textContent).toContain('Readinghidden');
     expect(JSON.stringify(document.body.innerHTML)).not.toContain('Reading: 6');
     //the slider makes the guess bar (20 is the top of the scale, the chart is 250 high)
     const slider = el(gl('Guess slider').id).querySelector('input')!;
@@ -459,7 +474,7 @@ describe('explore starters, second batch', () => {
     expect(player.getVariable('revealed')).toBe(false);
     expect(slider.disabled).toBe(false);
     expect(el(gl('Question').id).textContent).toContain('on Lectures');
-    expect(says(chartId)[1]).toBe('? (hidden): 0 hours');
+    expect(says(chartId)[1]).toBe('Lectures: hidden');
     expect(says(chartId)[0]).toBe('Reading: 6 hours');
     //a guess that is spot on, and one that is too high, then the last category offers Start again
     slider.value = '4';

@@ -169,6 +169,12 @@ export function KeyNavSection({ node, project }: { node: Container; project: Pro
             options={[{ value: NONE, label: 'None' }, ...numberVars.map((v) => ({ value: v.id, label: v.name })), addVariableOption()]}
             onChange={withQuickAdd((v) => update({ indexVariable: v || undefined }), { variableType: 'number', variableName: `${node.name.replace(/\W+/g, '')}Focus` || 'focusedItem' })}
           />
+          <CheckField
+            label="Count hidden items"
+            title="Every copy keeps its number even when it is hidden (a square whose Visible is bound to false), so the numbers do not shift. A hidden item is never focused, and in a grid the arrows step over it to the next shown item in the row or column"
+            value={!!k.countHidden}
+            onChange={(v) => update({ countHidden: v ? true : undefined })}
+          />
           {k.mode === 'radio' && <div className="muted small">Moving to an item clicks it, so the flows that choose an option run. Bind the items' “Checked” to show the choice yourself, or leave it and aria-checked follows the focus.</div>}
           {!rep && <div className="muted small">The items are this {node.type}'s layers that a keyboard can reach.</div>}
         </>

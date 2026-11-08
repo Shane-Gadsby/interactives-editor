@@ -172,7 +172,9 @@ describe('games starters', () => {
       const entries = player.getVariable('entries') as Entry[];
       const cells = () => player.getVariable('cells') as Cell[];
       const key = async (k: string, extra: KeyboardEventInit = {}) => {
-        const target = el(grid.id);
+        //keys land on the square that has focus (the picked square takes it), the way a keyboard user's do
+        const at = document.activeElement as HTMLElement | null;
+        const target = at && el(grid.id).contains(at) ? at : el(`${square}~${Math.max(0, Number(player.getVariable('sel')))}`);
         target.focus();
         target.dispatchEvent(new KeyboardEvent('keydown', { key: k, code: k, bubbles: true, cancelable: true, ...extra }));
         await settle(player, 50);
@@ -335,20 +337,45 @@ describe('games starters', () => {
       await settle(player, 50);
       expect(player.getVariable('sel')).toBe(down[0].start);
       expect(player.getVariable('dir')).toBe('down');
-      expect(document.activeElement).toBe(el(grid.id));
-      //the grid itself is one tab stop and has a name
-      expect(el(grid.id).tabIndex).toBeGreaterThanOrEqual(0);
+      //the focus goes to the picked word's first square
+      expect(document.activeElement).toBe(el(`${layer(p, 'Crossword', 'Square').id}~${down[0].start}`));
       expect(el(grid.id).getAttribute('aria-label')).toContain('arrow keys');
-      //squares are not tab stops (100 of them would bury the page)
-      expect(el(`${layer(p, 'Crossword', 'Square').id}~0`).tabIndex).toBeLessThan(0);
+      //the squares are one tab stop between them, not one per square (100 of them would bury the page), and the grid adds none
+      const stops = [...document.querySelectorAll<HTMLElement>(`[data-ix-id^="${layer(p, 'Crossword', 'Square').id}~"]`)].filter((e) => e.tabIndex >= 0 && e.style.display !== 'none');
+      expect(stops).toHaveLength(1);
+      expect(stops[0]).toBe(el(`${layer(p, 'Crossword', 'Square').id}~${down[0].start}`));
+      expect(el(grid.id).tabIndex).toBeLessThan(0);
       player.destroy();
     });
 
-    it('tabbing into the grid starts on the first square', async () => {
-      const { player, grid, cells } = await start();
-      el(grid.id).focus();
+    it('tabbing into the grid lands on the first square with a letter, and the focus follows the cursor as you type', async () => {
+      const { player, square, cells, key } = await start();
+      const first = cells().findIndex((c) => c.ch !== '');
+      const stop = [...document.querySelectorAll<HTMLElement>(`[data-ix-id^="${square}~"]`)].find((e) => e.tabIndex === 0)!;
+      expect(stop).toBe(el(`${square}~${first}`));
+      stop.focus();
       await settle(player, 50);
-      expect(player.getVariable('sel')).toBe(cells().findIndex((c) => c.ch !== ''));
+      expect(player.getVariable('sel')).toBe(first);
+      //typing moves the cursor along the word, and the keyboard focus is on the square it moved to
+      await key('a');
+      await settle(player, 50);
+      const at = Number(player.getVariable('sel'));
+      expect(at).not.toBe(first);
+      expect(document.activeElement).toBe(el(`${square}~${at}`));
+      player.destroy();
+    });
+
+    it('gives each square a name for a screen reader, and the arrows carry the focus over the blanks', async () => {
+      const { player, square, entries, key, pick } = await start();
+      const e = entries.find((x) => !x.down)!;
+      await pick(e.row, e.col);
+      const at = e.row * SIZE + e.col;
+      expect(el(`${square}~${at}`).getAttribute('aria-label')).toContain(`Row ${e.row + 1}, column ${e.col + 1}`);
+      expect(el(`${square}~${at}`).getAttribute('aria-label')).toContain('empty');
+      await key('ArrowRight');
+      expect(document.activeElement).toBe(el(`${square}~${at + 1}`));
+      await key('ArrowLeft');
+      expect(document.activeElement).toBe(el(`${square}~${at}`));
       player.destroy();
     });
   });
@@ -1302,7 +1329,8 @@ describe('games starters', () => {
 
     it('the crossword grid keeps arrows, Space and letters from the page, but not Tab or shortcuts', async () => {
       const { p, player } = await startGame('games/crossword', 'Study words crossword');
-      const grid = el(layer(p, 'Crossword', 'Grid').id);
+      //keys land on the focused square, inside the grid (the one square that is the tab stop)
+      const grid = [...document.querySelectorAll<HTMLElement>(`[data-ix-id^="${layer(p, 'Crossword', 'Square').id}~"]`)].find((e) => e.tabIndex === 0 && e.style.display !== 'none')!;
       grid.focus();
       for (const k of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'a']) expect(press(grid, k).defaultPrevented, k).toBe(true);
       expect(press(grid, 'Tab').defaultPrevented).toBe(false);

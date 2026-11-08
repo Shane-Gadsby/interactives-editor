@@ -49,7 +49,8 @@ function chartLayer(ctx: BrandedCtx, name: string, x: number, y: number, w: numb
     color: ctx.L.text,
     fontFamily: BRAND_FONT,
     fontSize: 14,
-    suffix: ' hours',
+    //The unit is one variable: every chart's numbers read it
+    suffix: ' {unit}',
     gridlines: true,
     axisLabels: true,
     table: true,
@@ -177,11 +178,10 @@ export const chart: BrandedStarter = {
     guessPage.children.push(stack('Guess header', gbox.x, gbox.y - 4, gbox.width, { direction: 'row', gap: 24, align: 'start', children: [fill(prompt), back] }));
 
     const GY = gbox.y + 56;
-    //The guess chart: the same columns, with the one being guessed held at 0 and called "?" until it is revealed, and the learner's guess as a last bar
-    const hide = '!revealed && i == target - 1';
+    //The guess chart: the same columns, with the one being guessed a hidden item (a dashed "?" with no value, so the scale cannot give it away) until it is revealed, and the learner's guess as a last bar
     const gchart = chartLayer(ctx, 'Guess chart', gbox.x, GY, gbox.width, 250, {
       kind: 'column',
-      data: `rows.map((r, i) => ({label: ${hide} ? "? (hidden)" : r.label, value: ${hide} ? 0 : r.value})).concat([{label: "Your guess", value: guess}])`,
+      data: 'rows.map((r, i) => !revealed && i == target - 1 ? {label: r.label, hidden: true} : {label: r.label, value: r.value}).concat([{label: "Your guess", value: guess}])',
       labelKey: 'label',
       valueKey: 'value',
       colors: [...Array.from({ length: N }, () => L.button), L.warning],
@@ -236,15 +236,15 @@ export const chart: BrandedStarter = {
     const below = (p: typeof page, x: number, w: number) => ({ x, y: p.height + 14, w, h: 96 });
     addNote(page, { ...below(page, 0, 440), text: '**Chart layers** The bar and pie charts both read `rows`. Scale, hover and focus readout, arrow keys and a hidden table for screen readers are native, so there is nothing to size by hand.', colour: 'sky' });
     addNote(page, { ...below(page, 456, 440), text: '**Live variables** `rowsTotal`, `readout` and `verdict` are worked out from `rows`, `pick` and the guess. A click or Enter on a mark gives `event.index`, which sets `pick`.', colour: 'sky' });
-    addNote(page, { ...below(page, 912, 380), text: '[ ] Put your numbers in `rows` and `datasets`. Change `unit` and each chart\'s Suffix together.', colour: 'gold' });
-    addNote(guessPage, { ...below(guessPage, 0, 440), text: '**One chart for the guess.** The hidden bar is a 0 called "? (hidden)" until Reveal, and your guess is the last bar. Both come from the chart\'s Data expression.', colour: 'sky' });
+    addNote(page, { ...below(page, 912, 380), text: '[ ] Put your numbers in `rows` and `datasets`. Change `unit` and every chart\'s suffix follows (it reads `{unit}`).', colour: 'gold' });
+    addNote(guessPage, { ...below(guessPage, 0, 440), text: '**One chart for the guess.** The bar being guessed is a hidden item (`hidden: true`, no value): a dashed "?" that is read out as hidden, until Reveal. Your guess is the last bar. Both come from the chart\'s Data expression.', colour: 'sky' });
     addNote(guessPage, { ...below(guessPage, 456, 440), text: '[ ] Set `guessMax` a little above your biggest value. The slider and the chart scale both follow it.', colour: 'gold' });
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),
       item('Put your own numbers in the "rows" list variable (Variables panel): a label and a value for each item. The bar chart, the pie, the table and the guess page all follow it, and redraw as soon as it changes', barChart, page),
       item('The two data buttons set "rows" from the "datasets" list (a name and its rows each). Change that list, or delete the buttons if you have one data set (a script, a data source or an Interactions node can set "rows" too)', dataButtons, page),
-      item('Change the unit ("unit" variable, hours) and the Suffix of each chart layer (Chart section) together, plus the chart title and the table headings', subtitle, page),
+      item('Change the unit ("unit" variable, hours): every chart\'s Suffix reads it as {unit}, so it is the one place to change. Then the chart title and the table headings', subtitle, page),
       item('The charts take any number of items. Pie slice colours come from the colourway through six tokens (Colours in the Chart section); the table has a row for each item and grows with the list, so mind the room under it', pieChart, page),
       item('On the guess page, set the top of the scale: the "guessMax" variable (the slider and the chart both follow it), to a bit more than your biggest value', slider, guessPage),
       item('Rewrite the question and the answer message (the Question text, and the live "verdict" variable in the Variables panel)', prompt, guessPage),

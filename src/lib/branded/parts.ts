@@ -171,7 +171,7 @@ export const openDialog = (open: Variable): [string, Record<string, unknown>] =>
  *
  *   keyNavList(ctx, 'Options', 48, 140, 400, 280, { items: 'options', row: optionRow, indexVariable: focused });
  */
-export function keyNavList(name: string, x: number, y: number, width: number, height: number, opts: { items: string; row: SceneNode; mode?: KeyNav['mode']; orientation?: KeyNav['orientation']; columns?: number; gap?: number; wrap?: boolean; indexVariable?: Variable; ariaLabel?: string }): FrameNode {
+export function keyNavList(name: string, x: number, y: number, width: number, height: number, opts: { items: string; row: SceneNode; mode?: KeyNav['mode']; orientation?: KeyNav['orientation']; columns?: number; gap?: number; wrap?: boolean; countHidden?: boolean; indexVariable?: Variable; ariaLabel?: string }): FrameNode {
   const mode = opts.mode ?? 'list';
   const horizontal = opts.orientation === 'horizontal';
   const grid = mode === 'grid' || (opts.columns ?? 0) > 1;
@@ -187,7 +187,7 @@ export function keyNavList(name: string, x: number, y: number, width: number, he
     ...(mode === 'radio' ? { role: 'radiogroup' } : {}),
     ...(opts.ariaLabel ? { ariaLabel: opts.ariaLabel } : {}),
     repeat: { items: opts.items, layout: grid ? 'grid' : horizontal ? 'horizontal' : 'vertical', gap: opts.gap ?? 12, columns: opts.columns ?? 1 },
-    keyNav: { mode, ...(opts.orientation ? { orientation: opts.orientation } : {}), ...(grid && opts.columns ? { columns: opts.columns } : {}), ...(opts.wrap ? { wrap: true } : {}), ...(opts.indexVariable ? { indexVariable: opts.indexVariable.id } : {}) },
+    keyNav: { mode, ...(opts.orientation ? { orientation: opts.orientation } : {}), ...(grid && opts.columns ? { columns: opts.columns } : {}), ...(opts.wrap ? { wrap: true } : {}), ...(opts.countHidden ? { countHidden: true } : {}), ...(opts.indexVariable ? { indexVariable: opts.indexVariable.id } : {}) },
     children: [opts.row],
   } as never) as FrameNode;
 }

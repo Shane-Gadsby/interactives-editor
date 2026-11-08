@@ -1,7 +1,7 @@
-/** Accordion: five sections whose words are one list, each a header button that opens its panel and pushes the rest down (auto layout reflows them). */
-import { createNode, defaultAutoLayout, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
+/** Accordion: one section repeated over a list, each a header button that opens its panel and pushes the rest down (the repeater is an auto layout column, so the copies reflow). */
+import { createNode, defaultAutoLayout, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, byName, contentBox, item, solid, text, type BrandedStarter } from '../../kit';
-import { addVar, click, graph, join, put } from '../../graph-kit';
+import { addVar, click, graph } from '../../graph-kit';
 import { heroButtons } from './helpers';
 
 const SECTIONS = [
@@ -18,7 +18,7 @@ export const accordion: BrandedStarter = {
   key: 'explore/accordion',
   set: 'explore',
   name: 'Accordion',
-  description: 'Five sections, their words in one list, each a header button that opens or closes its panel while the sections below move up or down. One section is open at a time, or set the "allowMany" variable to let several stay open. Headers are real buttons that say whether they are expanded.',
+  description: 'Five sections, one repeated layer over a list of words, each a header button that opens or closes its panel while the sections below move up or down. One section is open at a time, or set the "allowMany" variable to let several stay open. Headers are real buttons that say whether they are expanded.',
   tags: ['reveal', 'auto layout', 'keyboard friendly', 'text'],
   build(colourway) {
     const ctx = brandedProject(colourway, 'Accordion');
@@ -31,65 +31,56 @@ export const accordion: BrandedStarter = {
     //The places of the sections that are open (from 0): the first starts open
     const open = addVar(project, 'open', 'list', [0]);
     addVar(project, 'allowMany', 'boolean', false);
-    const which = addVar(project, 'which', 'number', 0);
 
     const box = contentBox(page);
     const W = box.width - 8;
 
-    //The sections: a header button over a panel that only takes room while its section is open. Words come from the list by place
-    const sections: SceneNode[] = [];
-    const headers: SceneNode[] = [];
-    const bodies: SceneNode[] = [];
-    SECTIONS.forEach((_, i) => {
-      const isOpen = `open.includes(${i})`;
-      const marker = createNode('rect', { name: `Section ${i + 1} open marker`, x: 10, y: 12, width: 5, height: 32, cornerRadius: 3, fill: solid(L.accent), stroke: null, decorative: true, bindings: { visible: isOpen } } as never);
-      const title = text(ctx, `Section ${i + 1} title`, `{sections[${i}].title}`, 28, 15, 780, { fontSize: 20, fontWeight: 600, lineHeight: 1.3 });
-      const sign = text(ctx, `Section ${i + 1} sign`, '+', 868, 10, 32, { fontSize: 28, fontWeight: 600, align: 'center', color: L.deep, decorative: true, bindings: { text: `${isOpen} ? "–" : "+"` } });
-      const header = createNode('frame', {
-        name: `Section ${i + 1} header`,
-        x: 0,
-        y: 0,
-        width: W,
-        height: HEADER,
-        fill: null,
-        stroke: null,
-        clip: false,
-        cornerRadius: 14,
-        role: 'button',
-        bindings: { ariaExpanded: isOpen },
-        children: [marker, title, sign],
-      } as never);
-      const body = text(ctx, `Section ${i + 1} text`, `{sections[${i}].body}`, 0, 0, 100, { fontSize: 17, lineHeight: 1.45, layoutItem: { width: 'fill' } } as never);
-      const panel = createNode('frame', {
-        name: `Section ${i + 1} panel`,
-        x: 0,
-        y: HEADER,
-        width: W,
-        height: 80,
-        fill: null,
-        stroke: null,
-        layout: { ...defaultAutoLayout('column'), gap: 0, padding: { top: 0, right: 28, bottom: 22, left: 28 }, align: 'stretch', hugHeight: true },
-        bindings: { visible: isOpen },
-        children: [body],
-      } as never);
-      sections.push(
-        createNode('frame', {
-          name: `Section ${i + 1}`,
-          x: 0,
-          y: 0,
-          width: W,
-          height: HEADER,
-          cornerRadius: 14,
-          fill: solid(L.surface),
-          stroke: null,
-          clip: false,
-          layout: { ...defaultAutoLayout('column'), gap: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: 'stretch', hugHeight: true },
-          children: [header, panel],
-        } as never)
-      );
-      headers.push(header);
-      bodies.push(body);
-    });
+    //One section, repeated over the list: a header button over a panel that only takes room while its section is open. Words come from the item
+    const isOpen = 'open.includes(index)';
+    const marker = createNode('rect', { name: 'Open marker', x: 10, y: 12, width: 5, height: 32, cornerRadius: 3, fill: solid(L.accent), stroke: null, decorative: true, bindings: { visible: isOpen } } as never);
+    const title = text(ctx, 'Section title', '{item.title}', 28, 15, 780, { fontSize: 20, fontWeight: 600, lineHeight: 1.3 });
+    const sign = text(ctx, 'Section sign', '+', 868, 10, 32, { fontSize: 28, fontWeight: 600, align: 'center', color: L.deep, decorative: true, bindings: { text: `${isOpen} ? "–" : "+"` } });
+    const header = createNode('frame', {
+      name: 'Section header',
+      x: 0,
+      y: 0,
+      width: W,
+      height: HEADER,
+      fill: null,
+      stroke: null,
+      clip: false,
+      cornerRadius: 14,
+      role: 'button',
+      bindings: { ariaExpanded: isOpen },
+      children: [marker, title, sign],
+    } as never);
+    const body = text(ctx, 'Section text', '{item.body}', 0, 0, 100, { fontSize: 17, lineHeight: 1.45, layoutItem: { width: 'fill' } } as never);
+    const panel = createNode('frame', {
+      name: 'Section panel',
+      x: 0,
+      y: HEADER,
+      width: W,
+      height: 80,
+      fill: null,
+      stroke: null,
+      layout: { ...defaultAutoLayout('column'), gap: 0, padding: { top: 0, right: 28, bottom: 22, left: 28 }, align: 'stretch', hugHeight: true },
+      bindings: { visible: isOpen },
+      children: [body],
+    } as never);
+    const section = createNode('frame', {
+      name: 'Section',
+      x: 0,
+      y: 0,
+      width: W,
+      height: HEADER,
+      cornerRadius: 14,
+      fill: solid(L.surface),
+      stroke: null,
+      clip: false,
+      layout: { ...defaultAutoLayout('column'), gap: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 }, align: 'stretch', hugHeight: true },
+      children: [header, panel],
+    } as never);
+    //The repeater is itself an auto layout column, so the copies reflow when one opens or closes
     const list = createNode('frame', {
       name: 'Accordion',
       x: box.x,
@@ -103,35 +94,31 @@ export const accordion: BrandedStarter = {
       role: 'region',
       ariaLabel: 'Study habits',
       layout: { ...defaultAutoLayout('column'), gap: 10, padding: { top: 4, right: 4, bottom: 4, left: 4 }, align: 'stretch', hugHeight: false },
-      children: sections,
+      repeat: { items: 'sections', layout: 'vertical', gap: 10, columns: 1 },
+      children: [section],
     } as never);
     page.children.push(list);
 
-    //Pressing a header says which section it was, and one shared run does the rest: toggle it, or (without allowMany) shut the others
+    //One flow for every header: toggle the section pressed (event.index), or without allowMany shut the others
     {
       const g = graph(page);
-      const many = put(page, 'logic.if', 0, 0, { condition: 'allowMany' });
-      const toggle = put(page, 'action.setVariable', 0, 0, { variable: open.id, op: 'toggleItem', value: 'which' });
-      const only = put(page, 'action.setVariable', 0, 0, { variable: open.id, op: 'set', value: 'open.includes(which) ? [] : [which]' });
-      join(page, many, toggle, 'true');
-      join(page, many, only, 'false');
-      headers.forEach((h, i) => {
-        const press = click(g, h, i === 0 ? 'Open or close a section' : undefined);
-        join(page, g.then(press, 'action.setVariable', { variable: which.id, op: 'set', value: String(i) }), many);
-      });
+      const press = click(g, header, 'Open or close a section');
+      const many = g.then(press, 'logic.if', { condition: 'allowMany' });
+      g.then(many, 'action.setVariable', { variable: open.id, op: 'toggleItem', value: 'event.index' }, 'true');
+      g.then(many, 'action.setVariable', { variable: open.id, op: 'set', value: 'open.includes(event.index) ? [] : [event.index]' }, 'false');
     }
 
     const below = (x: number) => ({ x, y: page.height + 14, w: 300, h: 100 });
-    addNote(page, { ...below(0), colour: 'sky', text: '**One shared run** Each header only says which section it is (`which`). The If and the two Set nodes after them do the opening, so a change to how it behaves is made once.' });
-    addNote(page, { ...below(316), colour: 'sky', text: '**Auto layout** The sections are a column, so an open panel pushes the rest down and a closed one takes no room. `open` is a list of the places that are open, and `toggleItem` adds or takes one out.' });
+    addNote(page, { ...below(0), colour: 'sky', text: '**One section, repeated** All five are the same layers over the `sections` list, and one flow serves every header (`event.index` says which was pressed), so a change to how it behaves is made once.' });
+    addNote(page, { ...below(316), colour: 'sky', text: '**Auto layout** The repeater is a column, so an open panel pushes the copies below it down and a closed one takes no room. `open` is a list of the places that are open, and `toggleItem` adds or takes one out.' });
     addNote(page, { ...below(632), colour: 'gold', text: '[ ] Write the five entries in `sections`. Set `allowMany` to true to let several stay open, and `open` to choose what starts open.' });
 
     const checklist: TemplateChecklistItem[] = [
       item('Change the title and the introduction on the first page', byName(hero, 'Page title'), hero),
-      item('Write each section: the "sections" list variable (Variables panel) has a title and a text for each, in the order of the Section layers. The sections below move to make room', bodies[0], page),
+      item('Write each section: the "sections" list variable (Variables panel) has a title and a text for each. The sections below move to make room', body, page),
       item('To let several sections stay open at once, set the variable "allowMany" to true (Variables panel)', undefined, page),
       item('Choose which sections start open: the "open" list variable holds their places, from 0 (the first is [0])', undefined, page),
-      item('To add a section: add an entry to "sections", duplicate a Section, point its three "sections[n]" and "open.includes(n)" expressions at the new place, and give its header a flow that sets "which" to n and joins the shared If (Interactions tab)', sections[0], page),
+      item('To add a section, add an entry to "sections" (a title and a text). The repeater makes the layers, and the header flow already covers it', section, page),
       item('Change the footer line', byName(page, 'Footer text'), page),
     ];
     return { project: ctx.project, checklist };

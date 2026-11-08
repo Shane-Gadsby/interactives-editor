@@ -1,4 +1,4 @@
-//Pieces the writing starters share: text boxes bound to variables, the hero with its Start and Continue buttons, the report text and the mail link. (What the learner writes is user data on the variables themselves, so there is no save and load to share.)
+//Pieces the writing starters share: text boxes bound to variables, the hero with its Start and Continue buttons and the report text. (What the learner writes is user data on the variables themselves, so there is no save and load to share.)
 import { createNode, type InputNode, type Variable } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
 import { BRAND_FONT } from '../../looks';
@@ -49,6 +49,3 @@ export function reportExpr(title: string, parts: [string, Variable][], missing: 
   const body = parts.map(([head, v]) => `${JSON.stringify(`\n\n${head.toUpperCase()}\n`)} + (${v.name}.trim() || ${JSON.stringify(missing)})`).join(' + ');
   return `${JSON.stringify(title.toUpperCase())} + ${body}`;
 }
-
-/** A mailto link carrying the whole text: the one way the player can hand written work to somebody (it cannot write files or the clipboard). */
-export const mailExpr = (subject: string, bodyVar: string) => `"mailto:?subject=" + encodeURIComponent(${JSON.stringify(subject)}) + "&body=" + encodeURIComponent(${bodyVar})`;

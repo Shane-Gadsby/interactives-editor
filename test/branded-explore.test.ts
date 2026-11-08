@@ -153,13 +153,17 @@ describe('explore starters', () => {
   it('accordion: a header opens its panel, the sections below move down, the others close, and aria-expanded follows', async () => {
     const { project } = STARTERS[1].build(COLOURWAYS[0]);
     project.settings.startArtboardId = project.artboards[1].id;
-    //the headers only say which section they are, then share one run (an If and two Set nodes), instead of five copies of it
+    //the five sections are one repeated layer, and one click flow (an If and two Set nodes) serves every header
     const page = project.artboards[1];
     expect(page.logic.nodes.filter((g) => g.kind === 'logic.if')).toHaveLength(1);
-    expect(project.variables.some((v) => v.name === 'open2')).toBe(false);
+    expect(page.logic.nodes.filter((g) => g.kind === 'event.pointer')).toHaveLength(1);
+    expect(project.variables.some((v) => v.name === 'open2' || v.name === 'which')).toBe(false);
+    expect(project.artboards[1].children.some((c) => c.name === 'Section 2')).toBe(false);
     const player = await play(project);
-    const h = (i: number) => layer(project, `Section ${i} header`);
-    const sec = (i: number) => layer(project, `Section ${i}`);
+    const h = (i: number) => ({ id: `${layer(project, 'Section header').id}~${i - 1}` });
+    const sec = (i: number) => ({ id: `${layer(project, 'Section').id}~${i - 1}` });
+    expect(document.querySelectorAll(`[data-ix-id^="${layer(project, 'Section').id}~"]`)).toHaveLength(5);
+    expect(el(sec(2).id).textContent).toContain('Study in short blocks');
     expect(el(h(1).id).getAttribute('role')).toBe('button');
     expect(el(h(1).id).getAttribute('aria-expanded')).toBe('true');
     expect(el(h(2).id).getAttribute('aria-expanded')).toBe('false');

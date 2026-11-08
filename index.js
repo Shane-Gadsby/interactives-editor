@@ -1855,9 +1855,13 @@ const prepareMarkedShare = (html, oldSalt) => {
 
 //What the project says it uses of the learner's device (Project > Microphone and camera), read out of the page being shared the same way and
 //kept on the share record. The learner page builds its consent screen and its limits from this copy, so what a project asks for over
-//postMessage is held to what the owner declared when they shared it, never to what the project says now. Null when it declares nothing
+//postMessage is held to what the owner declared when they shared it, never to what the project says now. Null when it declares nothing.
+//A project that offers a download (Download a file) with no sensor gets an empty declaration: the learner page still needs the bridge,
+//since the project's frame is sandboxed and can't save a file itself
 const declaredSensors = (html) => {
-	if (!html.includes('"sensors":')) {
+	let saves = html.includes('"kind":"action.saveFile"')
+
+	if (!saves && !html.includes('"sensors":')) {
 		return null
 	}
 
@@ -1872,7 +1876,7 @@ const declaredSensors = (html) => {
 	try {
 		let sensors = media.cleanSensors(JSON.parse(html.slice(start, end)).settings?.sensors)
 
-		return sensors && media.declaresSensors(sensors) ? sensors : null
+		return sensors && media.declaresSensors(sensors) ? sensors : saves ? {} : null
 	}
 	catch (err) {
 		return null
