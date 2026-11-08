@@ -18,6 +18,7 @@ import { noteIfStale } from './lib/stale-build';
 import { NoticeBell } from './components/NoticeBell';
 import { TemplatesTab } from './components/TemplatesTab';
 import { NewProjectModal } from './components/NewProjectModal';
+import { takeLeft } from './lib/home-return';
 
 declare global {
   interface Window {
@@ -161,7 +162,9 @@ function BinView({ bin, busy, onRestore, onForget }: { bin: BinnedProject[]; bus
   );
 }
 
-function readTab(): 'projects' | 'templates' {
+function readTab(left: string | null): 'projects' | 'templates' {
+  //coming back from a project always lands on Projects, whatever tab it was opened from; the remembered tab is for a fresh visit
+  if (left) return 'projects';
   try {
     return localStorage.getItem(TAB_KEY) === 'templates' ? 'templates' : 'projects';
   } catch {
@@ -169,8 +172,17 @@ function readTab(): 'projects' | 'templates' {
   }
 }
 
+//the project just left scrolls into view once, and the highlight fades on its own
+function scrollIntoViewOnce(el: HTMLElement | null) {
+  if (el && !el.dataset.seen) {
+    el.dataset.seen = '1';
+    el.scrollIntoView?.({ block: 'center' });
+  }
+}
+
 export function Home({ open }: { open: (id: string) => void }) {
-  const [tab, setTab] = useState<'projects' | 'templates'>(readTab);
+  const [left] = useState(takeLeft);
+  const [tab, setTab] = useState<'projects' | 'templates'>(() => readTab(left));
   const pickTab = (t: 'projects' | 'templates') => {
     setTab(t);
     keep(TAB_KEY, t);
@@ -649,7 +661,7 @@ export function Home({ open }: { open: (id: string) => void }) {
           </div>
         )}
         {shown.map((p) => (
-          <article key={p.id} className="project-card">
+          <article key={p.id} className={`project-card${p.id === left ? ' just-left' : ''}`} data-project-id={p.id} ref={p.id === left ? scrollIntoViewOnce : undefined}>
             <button className="project-thumb" onClick={() => open(p.id)} aria-label={`Open ${p.name}`}>
               {p.thumb ? (
                 <img className="thumb-board thumb-img" src={`api/projects/${p.id}/thumbnail?v=${p.thumb}`} alt="" loading="lazy" style={p.preview ? { aspectRatio: `${p.preview.width} / ${p.preview.height}` } : undefined} />

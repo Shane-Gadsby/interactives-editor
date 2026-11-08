@@ -1171,6 +1171,22 @@ hr.item-sep {
 .project-card {
   min-width: 0;
 }
+/* the project you just came back from (Home opens Projects with it in view) */
+.project-card.just-left {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 3px;
+  animation: just-left-fade 4s ease-out 2s forwards;
+}
+@keyframes just-left-fade {
+  to {
+    outline-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .project-card.just-left {
+    animation: none;
+  }
+}
 .project-info {
   min-width: 0;
   overflow-wrap: anywhere;
