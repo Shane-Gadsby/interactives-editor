@@ -1395,6 +1395,8 @@ Buttons go on the page itself. A [page master](page-master) can hold the logo an
     keywords: 'animation animate keyframe key record playhead loop ping pong autoplay speed duration track copy paste snap stagger offset',
     body: `Each artboard can have any number of timelines. A timeline has **tracks**; each track animates one property of one layer through **keyframes**.
 
+For the common cases there is no need to build one: [Animation presets](animation-presets) (Fade in, Slide in, Pop, Pulse, Shake, Fade out) write a timeline and its trigger for you.
+
 ## Adding keyframes
 - Press **Record** (the red dot). A red bar at the top of the Inspector says **Recording keyframes at …**. While recording, every change you make to an animatable property at the playhead becomes a keyframe. Press it again to stop.
 - Or click the diamond next to a field in the inspector to key the value it shows at the playhead (between two keys, that's the in-between value). With several layers selected it keys all of them. The diamond is filled when there's already a key at the playhead, and clicking it then updates that key.
@@ -1474,6 +1476,42 @@ Two more nodes make a state machine out of these:
 - **Wait for time in timeline** holds the flow until a timeline has played to a time in milliseconds or a percentage of its length (an exit time: leave the idle only after it has played half through). It carries on at once if the timeline is already past that time.
 
 Put **Wait for time in timeline** after a condition to leave "no sooner than" a point in the animation, and **Wait for blend-in** just before a change of look that should not interrupt the last one. **Random** (in the [interaction graph](interactions)) picks the next look.`,
+  },
+  {
+    id: 'animation-presets',
+    title: 'Animation presets',
+    group: 'Motion',
+    summary: 'Fade in, Slide in, Pop, Pulse, Shake and Fade out on any layer, with one click.',
+    keywords: 'animate animation preset fade in slide in pop pulse shake fade out entrance appear intro attention wiggle bounce click page opens delay reduced motion',
+    body: `Select a layer and open **Animate** in the Properties panel (or right-click the layer and choose **Animate**). Pick a preset and the layer is animated.
+
+## The presets
+- **Fade in**: starts clear and fades up to how the layer is now.
+- **Slide in**: glides in from the left, right, top or bottom while it fades up. It travels a fifth of the page (never less than 60 or more than 400 pixels).
+- **Pop**: springs up from half size with a little overshoot.
+- **Pulse**: swells by about a tenth and settles back, to catch the eye.
+- **Shake**: swings side to side and settles, for "not quite".
+- **Fade out**: fades away. The layer stays on the page, just clear.
+
+Every preset ends with the layer as it was (Fade out ends clear), so you can still design the layer as normal.
+
+## When it plays
+**When** picks what starts it: **The page opens**, or **This layer is clicked**. **Delay** waits before it starts and **Length** changes how long it takes (0 uses the preset's own). Your choices are remembered, and the right-click menu uses them too. An entrance preset that starts on a click replays the entrance when the layer is clicked.
+
+## What it writes
+Nothing is hidden. A preset writes:
+- a [timeline](timelines) named for the layer, such as **Title: fade in**, with ordinary keyframes you can move, ease or add to;
+- an **On start** (or **On pointer**, click) event in [Interactions](interactions), joined to a **Control timeline** node set to **Restart**.
+
+Choosing the same preset on the same layer again replaces both rather than stacking another. Different presets on one layer each get their own timeline, and you can change what they do by editing the keyframes or rewiring the nodes.
+
+## Auto layout and repeated layers
+Auto layout (and a repeater) decides where a layer sits, so it would put a sliding layer straight back. On such a layer **Slide in** grows the layer in from a little smaller as it fades, and **Shake** rocks it a few degrees instead of moving it sideways. The message under the presets says when that happened.
+
+## For people who prefer less motion
+The timelines are marked **Skip for less motion** (in the timeline's settings). For someone whose device asks for less motion they jump straight to the last pose instead of playing, so a Fade in just shows the layer and a Fade out hides it. This works however the timeline is started, and does not need the project's **Respect reduced motion** setting.
+
+Text can also be animated letter by letter: see [Text modifiers](text-modifiers).`,
   },
   {
     id: 'shape-morphing',

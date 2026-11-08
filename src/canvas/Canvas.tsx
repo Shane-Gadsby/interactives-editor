@@ -83,6 +83,7 @@ import { bendPaths, hasShapeKeys, nearestSegment, shapeToPaths, type SegmentHit 
 import { confirmDialog } from '../components/dialogs';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
 import { rangeLabel } from '../lib/variants-edit';
+import { ANIM_PRESETS, animOptions } from '../lib/animate-presets';
 import { boneEndAt, boneFromDrag, boneGlyphs } from '../lib/rig';
 import { newConnector, pickEnd, pickedFromEnd, previewPath, sideMid, type Picked } from './connect';
 
@@ -2116,6 +2117,18 @@ export function Canvas() {
         { separator: true },
         { label: one?.visible === false ? 'Show' : 'Hide', onClick: () => s2.setProps(sel.map((n) => n.id), { visible: one?.visible === false }) },
         { label: 'Lock', onClick: () => s2.setProps(sel.map((n) => n.id), { locked: true }) },
+        ...(sel.every((n) => n.type !== 'bone')
+          ? [
+              {
+                label: 'Animate',
+                items: ANIM_PRESETS.map((pr) => ({
+                  label: pr.label,
+                  title: `${pr.tip}. Uses the When and Delay in the Animate section`,
+                  onClick: () => s2.applyAnimation(sel.map((n) => n.id), pr.id, animOptions()),
+                })),
+              } as MenuItem,
+            ]
+          : []),
         ...(one ? [{ separator: true } as MenuItem, ...selectSameItems(hab, one)] : []),
         ...(one
           ? [

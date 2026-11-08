@@ -40,6 +40,7 @@ import { clampBrandInstances, hasBrandArtboards } from '../lib/brand';
 import { brandLookViolation, isBrandLocked, lockBrandChrome, snapToBrand } from '../lib/branded/lock';
 import { applyTidy } from '../lib/artboard-tidy';
 import { alignBoards, distributeBoards, freshGroupName, leaveGroups, makeGroup, pickedArtboardIds, pruneGroups, removeGroup, withSets, type AlignMode } from '../lib/artboard-groups';
+import { applyAnimation, type AnimOptions, type AnimPresetId, type AnimResult } from '../lib/animate-presets';
 import { addModifier, applyPreset, removeModifier, type TextPresetId } from '../lib/text-modifiers';
 import { booleanPath, type BooleanOp } from '../lib/boolean';
 import { insertPoint, keyTimes, pointParts, POINT_PARTS, pointTracks, posedPaths, remapPointTracks, shapeToPaths } from '../lib/path-edit';
@@ -1509,6 +1510,26 @@ export class EditorStore {
       tlId = applyPreset(d as Project, ab.id, nodeId, preset);
     });
     if (tlId) this.set({ activeTimelineId: tlId, playhead: 0, bottomTab: 'timeline' });
+  }
+
+  /**
+   * An animation preset (Fade in, Pop...) on each layer: a timeline named for the layer and the event that starts it, in one undo
+   * step. The last layer's timeline becomes the open one. Returns what it wrote, one entry per layer it could animate.
+   */
+  applyAnimation(nodeIds: string[], preset: AnimPresetId, opts: AnimOptions = {}): AnimResult[] {
+    track('feature', 'animation-preset', { thing: preset });
+    const ab = this.artboard();
+    if (!ab) return [];
+    const made: AnimResult[] = [];
+    this.update((d) => {
+      for (const id of nodeIds) {
+        const r = applyAnimation(d as Project, ab.id, id, preset, opts);
+        if (r) made.push(r);
+      }
+    });
+    const last = made[made.length - 1];
+    if (last) this.set({ activeTimelineId: last.timelineId, playhead: 0 });
+    return made;
   }
 
   // ---------------------------------------------------------------- timelines

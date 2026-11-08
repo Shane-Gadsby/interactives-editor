@@ -492,6 +492,7 @@ export function TimelinePanel() {
           onChange={(v) => setTl((d) => (d.loop = v))}
         />
           <CheckField label="Autoplay" title="Start when the artboard is shown" value={tl.autoplay} onChange={(v) => setTl((d) => (d.autoplay = v))} />
+          <CheckField label="Skip for less motion" title="For viewers whose device asks for less motion: jump to the last pose instead of playing (the animation presets turn this on)" value={!!tl.calm} onChange={(v) => setTl((d) => void (v ? (d.calm = true) : delete d.calm))} />
           <NumberField label="Speed" value={tl.speed} step={0.1} min={0.1} onChange={(v) => setTl((d) => (d.speed = v), 'tl-speed')} />
           <NumberField
           label="Frame rate"
