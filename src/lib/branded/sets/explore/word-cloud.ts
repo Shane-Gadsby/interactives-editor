@@ -5,11 +5,11 @@
  * view with the counts is the text alternative. The learner's cloud counts a plain list of what they typed (`answers`), and nothing on
  * its page cares where that list comes from, so a class-wide cloud can slot in by filling the same list from a shared store.
  */
-import { createNode, uid, type FrameNode, type Keyframe, type SceneNode, type Timeline, type TemplateChecklistItem, type Variable } from 'interactives-player';
+import { createNode, uid, type FrameNode, type Keyframe, type LogicNode, type SceneNode, type Timeline, type TemplateChecklistItem, type Variable } from 'interactives-player';
 import { lookDefaults } from '../../../themes';
 import { BRAND_FONT } from '../../looks';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, item, overlay, solid, stroke, text, type BrandedCtx, type BrandedStarter, type LayoutState } from '../../kit';
-import { addVar, announce, bind, click, goNext, goPrevious, graph, join, set, setVar, toggleVar } from '../../graph-kit';
+import { addVar, announce, bind, click, goNext, goPrevious, graph, graphNote, join, set, setVar, toggleVar } from '../../graph-kit';
 import { dialogPanel, progressBar, stack } from '../../parts';
 import { heroButtons } from './helpers';
 
@@ -47,6 +47,11 @@ export const WORD_CLOUD_LAYOUT_STATES: LayoutState[] = [
   { label: 'word open, learner', page: 'My cloud', vars: { answers: crowd, myOpen: true, myPicked: 0 } },
   { label: 'clear dialog', page: 'My cloud', vars: { answers: crowd, clearOpen: true } },
   { label: 'refused word', page: 'My cloud', vars: { draft: 'a very long phrase that goes well past the limit for one word' } },
+  //the looks the author settings make (pills on or off, word colour plain or the colourway), with the learner's crowded cloud and its newest word ringed
+  { label: 'no pills', page: ['Our cloud', 'My cloud'], vars: { pills: false, answers: crowd, lastAdded: 'practice' } },
+  { label: 'colourway words', page: ['Our cloud', 'My cloud'], vars: { wordColour: 'Colourway', answers: crowd, lastAdded: 'practice' } },
+  { label: 'colourway words, no pills', page: ['Our cloud', 'My cloud'], vars: { pills: false, wordColour: 'Colourway', answers: crowd, lastAdded: 'practice' } },
+  { label: 'colourway words, word open', page: 'Our cloud', vars: { pills: false, wordColour: 'Colourway', ourOpen: true, ourPicked: 0 } },
 ];
 
 const STAGE_GAP = 16;
@@ -76,36 +81,43 @@ function cloudStage(ctx: BrandedCtx, page: ReturnType<typeof brandedPage>, o: { 
   const picked = addVar(project, `${p}Picked`, 'number', -1);
   const open = addVar(project, `${p}Open`, 'boolean', false);
 
-  //Each word is a button on the page: the size, place and colour come from its row of the layout; the biggest ones are filled in the button colour, the middle ones in the soft grey, the smallest are plain words
-  const tier = (a: string, b: string, c: string) => `item.tier == 0 ? ${JSON.stringify(a)} : item.tier == 1 ? ${JSON.stringify(b)} : ${JSON.stringify(c)}`;
-  const word = createNode('button', {
+  //Each word is a button on the page: the size and place come from its row of the layout. The two author settings pick the look: `pills` draws a chip behind each word
+  //(off, the chip takes the stage's own colour), and `wordColour` is Plain (the theme's text colour) or Colourway. In the colourway the biggest words sit in the
+  //button colour when there are pills, and every word big enough to count as large text takes the primary colour (a small one stays plain, because primary on its own
+  //is just under 4.5:1 in one colourway). Everything is a token, so High contrast and a dark theme change it without a thing to edit
+  const tint = 'wordColour == "Colourway"';
+  const fillExpr = `pills ? (${tint} && item.tier == 0 ? ${JSON.stringify(L.button)} : ${JSON.stringify(L.surfaceMuted)}) : ${JSON.stringify(L.surface)}`;
+  const colourExpr = `pills && ${tint} && item.tier == 0 ? ${JSON.stringify(L.onButton)} : ${tint} && item.size >= 24 ? ${JSON.stringify(L.primary)} : ${JSON.stringify(L.text)}`;
+  //A word is a clickable frame (a chip with its text inside) rather than a button: a chip that is only a soft grey on the card has no 3:1 edge of its own to be
+  //checked as a button's, and with pills off it has no paint at all. The words say it is there, which is what a clickable frame is held to
+  const label = text(ctx, 'Word label', '{item.text}', 0, 0, 120, { fontSize: 20, fontWeight: WORD_FONT, align: 'center', color: L.text, autoSize: 'none', verticalAlign: 'middle', height: 40, decorative: true } as never);
+  bind(label, { width: 'item.w', height: 'item.h', fontSize: 'item.size', color: colourExpr });
+  const word = createNode('frame', {
     name: 'Cloud word',
-    label: '{item.text}',
     x: 0,
     y: 0,
     width: 120,
     height: 40,
     cornerRadius: 20,
     fill: solid(L.surfaceMuted),
-    stroke: o.newest ? stroke(L.text, 3) : null,
-    color: L.text,
-    fontSize: 20,
-    fontWeight: WORD_FONT,
-    fontFamily: BRAND_FONT,
-    align: 'center',
+    stroke: stroke(L.border, 1.5),
+    clip: false,
+    role: 'button',
     bindings: {
       x: 'item.x',
       y: 'item.y',
       width: 'item.w',
       height: 'item.h',
       cornerRadius: 'item.h / 2',
-      fontSize: 'item.size',
       visible: 'item.shown',
-      'fill.color': tier(L.button, L.surfaceMuted, L.surface),
-      color: tier(L.onButton, L.text, L.text),
+      'fill.color': fillExpr,
       ariaLabel: `item.text + ", ${o.unit} " + item.weight`,
-      ...(o.newest ? { 'stroke.width': 'item.text.toLowerCase() == lastAdded ? 3 : 0' } : {}),
+      //a chip has a thin edge in the border colour (none without pills), and the learner's newest word is ringed in the text colour
+      ...(o.newest
+        ? { 'stroke.width': 'item.text.toLowerCase() == lastAdded ? 3 : pills ? 1.5 : 0', 'stroke.color': `item.text.toLowerCase() == lastAdded ? ${JSON.stringify(L.text)} : ${JSON.stringify(L.border)}` }
+        : { 'stroke.width': 'pills ? 1.5 : 0' }),
     },
+    children: [label],
   } as never);
   const words = createNode('frame', {
     name: 'Cloud words',
@@ -196,21 +208,23 @@ function cloudStage(ctx: BrandedCtx, page: ReturnType<typeof brandedPage>, o: { 
 }
 
 /** The pick flows: a word (or a row of the list) opens its dialog. One flow serves every copy (event.childIndex). */
-function wirePicks(page: ReturnType<typeof brandedPage>, s: Stage): void {
+function wirePicks(page: ReturnType<typeof brandedPage>, s: Stage): LogicNode {
   const g = graph(page);
   const open = (target: FrameNode, note: string) => {
     const ev = g.event('event.pointer', { target: target.id, type: 'click', childrenOnly: true }, note);
-    return g.run(ev, setVar(s.picked, 'event.childIndex'), set(s.open, 'true'));
+    g.run(ev, setVar(s.picked, 'event.childIndex'), set(s.open, 'true'));
+    return ev;
   };
-  open(s.words, 'Open a word');
+  const first = open(s.words, 'Open a word');
   open(s.list, 'Open a word');
+  return first;
 }
 
 export const wordCloud: BrandedStarter = {
   key: 'explore/word-cloud',
   set: 'explore',
   name: 'Word cloud',
-  description: 'A word cloud made from a list of words and weights, packed with no overlaps and sized by weight, where a word opens its details; and a page where a learner types words and watches their own cloud grow (kept as user data, with a word blocklist). A list view with the counts is the text alternative, and the words are one Tab stop with the arrow keys moving between them. A class-wide cloud can use the same layers, waiting on a shared store.',
+  description: 'A word cloud made from a list of words and weights, packed with no overlaps and sized by weight, where a word opens its details (chips behind the words and the words\' colour are author settings); and a page where a learner types words and watches their own cloud grow (kept as user data, with a word blocklist). A list view with the counts is the text alternative, and the words are one Tab stop with the arrow keys moving between them. A class-wide cloud can use the same layers, waiting on a shared store.',
   tags: ['word cloud', 'tag cloud', 'keyboard friendly', 'user data', 'explore'],
   layoutStates: WORD_CLOUD_LAYOUT_STATES,
   build(colourway) {
@@ -230,6 +244,9 @@ export const wordCloud: BrandedStarter = {
     addVar(project, 'minCount', 'number', 1);
     addVar(project, 'blocked', 'list', ['spam']);
     const asList = addVar(project, 'asList', 'boolean', false);
+    //How the words look, for both clouds: a chip behind each word or not, and the words in the theme's text colour or following the colourway
+    addVar(project, 'pills', 'boolean', true);
+    addVar(project, 'wordColour', 'enum', 'Plain', { options: ['Plain', 'Colourway'] });
     const opts = '{minSize: minSize, maxSize: maxSize, grow: 1.4, blocked: blocked, minCount: minCount}';
 
     //The author's cloud: words and weights, written in a list. The size of the cloud area is a pair of variables
@@ -277,9 +294,12 @@ export const wordCloud: BrandedStarter = {
     bind(dialog1.frame, { ariaLabel: 'ourCloud[ourPicked]?.text' });
     overlay(dialog1.frame);
     {
-      wirePicks(ours, our);
+      const pick = wirePicks(ours, our);
       const g = graph(ours);
-      g.run(click(g, view1, 'View as a list'), toggleVar(asList), announce('asList ? "Showing the list, biggest first" : "Showing the cloud"'));
+      const swap = click(g, view1, 'View as a list');
+      g.run(swap, toggleVar(asList), announce('asList ? "Showing the list, biggest first" : "Showing the cloud"'));
+      graphNote(ours, { anchor: pick, colour: 'sky', text: '**One flow per view serves every word.** *Only when a child is hit* is on, so `event.childIndex` says which copy was clicked and the dialog reads that word from `ourCloud`. The list has its own copy of the flow for its rows.' });
+      graphNote(ours, { anchor: swap, colour: 'sky', text: '**One switch, `asList`.** The cloud shows while it is false and the list while it is true, so the picture and its text alternative are never out of step.' });
       g.run(click(g, next, 'Pages'), goNext());
       g.run(click(g, more, 'Read more'), ['action.url', { url: 'ourCloud[ourPicked].link' }]);
     }
@@ -329,7 +349,7 @@ export const wordCloud: BrandedStarter = {
     overlay(dialog3.frame);
 
     {
-      wirePicks(mine, my);
+      const pick2 = wirePicks(mine, my);
       const g = graph(mine);
       //Add, from the button or from Enter in the box: push the word, mark it as the newest, say so, empty the box
       const addEv = click(g, add, 'Add a word');
@@ -337,6 +357,8 @@ export const wordCloud: BrandedStarter = {
       const first = mine.logic.edges.find((e) => e.from === addEv.id)!;
       const enter = g.event('event.key', { key: 'Enter', type: 'keydown', typing: true, target: input.id, onlyIf: 'draftState == "ok"' }, 'Add a word');
       join(mine, enter, mine.logic.nodes.find((n) => n.id === first.to)!);
+      graphNote(mine, { anchor: addEv, colour: 'sky', text: '**Add and Enter share one chain.** The word is pushed onto `answers`, remembered in `lastAdded` (the ringed word), announced, and the box emptied. Enter only joins in while `draftState` is "ok", so a refused word is never added.' });
+      graphNote(mine, { anchor: pick2, colour: 'sky', text: '**A word opens a small dialog** with its count and Remove. Remove filters `answers` by the word, whatever its capitals, so the cloud has no counter to keep in step.' });
       g.run(click(g, undo, 'Undo the last word'), setVar(answers, 'answers.slice(0, -1)'), setVar(lastAdded, '""'), announce('"Took the last word out. " + answers.length + " left."'));
       g.run(click(g, clear, 'Clear all'), set(clearOpen, 'true'));
       g.run(click(g, wipe, 'Clear all'), setVar(answers, '[]'), setVar(lastAdded, '""'), set(clearOpen, 'false'), announce('"Your cloud is empty."'));
@@ -350,6 +372,7 @@ export const wordCloud: BrandedStarter = {
     addNote(ours, { ...below(ours, 0), colour: 'sky', text: '**Layout** `ourCloud` is a live variable, `cloud(ourWords, ...)`. It sizes each word from its weight and packs them with no overlaps, the same way every time, so the canvas and the player agree and the picture never jumps. Words that cannot fit are left out of the picture but stay in the list.' });
     addNote(ours, { ...below(ours, 316), colour: 'sky', text: '**Text alternative** View as list is the same words as rows with a bar and the count, so size is never the only cue. The words are one Tab stop in the picture: the arrow keys walk through them, biggest first, and Enter opens one.' });
     addNote(ours, { ...below(ours, 632), colour: 'gold', text: '[ ] Write your words in `ourWords` (Variables tab): text, weight, and a detail and link if you want them. Change `minSize`, `maxSize` and the cloud area (`ourWidth`, `ourHeight`) there too, not by resizing the stage.' });
+    addNote(ours, { x: 0, y: ours.height + 160, w: 300, h: 130, colour: 'gold', text: '[ ] Choose the look in the Variables tab: `pills` (on or off) and `wordColour` (Plain or Colourway). Both clouds follow them. Plain words use the theme text colour, so they read in High contrast and on dark themes too. In the colourway the biggest words fill with the button colour when pills are on.' });
     addNote(mine, { ...below(mine, 0), colour: 'sky', text: '**User data** `answers` keeps what the learner typed, one entry a time, and puts it back next visit. `myCloud` counts that list (the same word in other capitals is one word), so there are no counters to keep in step.' });
     addNote(mine, { ...below(mine, 316), colour: 'purple', text: '**Who sees it** `whoSees` is the one setting: Only me (works now) or Everyone in this class. The class option arrives with shared responses: it will fill `sharedAnswers` and set `sharedReady`, and `cloudSource` then switches the whole page over. Hang the send step after Add. Until then the page keeps showing the learner\'s own words.' });
     addNote(mine, { ...below(mine, 632), colour: 'gold', text: '[ ] Add words you do not want to the `blocked` list (a phrase goes if any one word is on it), and set `minCount` to 2 or more to show only words said more than once. A blocked word cannot be added at all.' });
@@ -358,7 +381,8 @@ export const wordCloud: BrandedStarter = {
       item('Change the title and the line under it on the first page', byName(hero, 'Page title'), hero),
       item('Write your own words: the "ourWords" list variable (Variables tab) has a text, a weight (the bigger, the bigger the word), a detail that shows when the word is opened and, if you want one, a link', our.word, ours),
       item('Choose how big the words are: "minSize" and "maxSize" (px). When there are many words, every size shrinks together until they fit. To change the size of the cloud, change "ourWidth" and "ourHeight" (the stage follows them)', our.stage, ours),
-      item('Check the colours in each colourway: the biggest words are filled in the button colour, the middle ones in soft grey and the smallest are plain, all from the theme', our.stage, ours),
+      item('Choose the look of the words: "pills" is on to put a soft grey chip behind each word or off for plain words, and "wordColour" is Plain (the theme text colour) or Colourway (the biggest words fill with the button colour when there are pills, and big words take the primary colour). Both clouds follow them', our.stage, ours),
+      item('Check the colours in each colourway and in High contrast: every word colour is a theme token, so nothing is set by hand', our.stage, ours),
       item('The learner page keeps what people type as user data. Add words you do not want to the "blocked" list, and set "minCount" if only words said more than once should show', byName(mine, 'Word box'), mine),
       item('Choose who sees the learner cloud: the "whoSees" variable is Only me (each learner sees only their own words, kept as user data) or Everyone in this class. The class option arrives with shared responses: until then it keeps showing the learner\'s own words, so leave it on Only me', byName(mine, 'Word box'), mine),
       item('If you only want your own cloud, delete the "My cloud" page: the button on the first cloud page hides itself', next, ours),

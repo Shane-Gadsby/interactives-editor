@@ -1,20 +1,31 @@
 import { useSyncExternalStore } from 'react';
+import { onPrefsLoaded, prefs, prefsUser, setPrefs } from './prefs';
 
 /**
  * Which inspector sections the person has folded or opened, by a stable section key (the Section's `id`, else its title). One
- * state per key across every layer, kept in this browser. Only what differs from the section's own default is stored, so a
- * default that changes in a later version still reaches everyone who never touched that section.
+ * state per key across every layer. Only what differs from the section's own default is stored, so a default that changes in a
+ * later version still reaches everyone who never touched that section.
+ *
+ * A signed in person's folds live in their preferences (`sectionFolds`, saved to the server with the rest, so they follow the
+ * person between machines). The localStorage copy is what guests keep, what any fold made before the server's preferences have
+ * arrived goes to, and the old per-browser value that is moved into the preferences, once, when they do.
  */
 const KEY = 'ix-section-folds';
 
+const clean = (v: unknown): Record<string, boolean> =>
+  v && typeof v === 'object' && !Array.isArray(v) ? (Object.fromEntries(Object.entries(v).filter(([k, o]) => k && typeof o === 'boolean')) as Record<string, boolean>) : {};
+
 function load(): Record<string, boolean> {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Record<string, unknown>;
-    return Object.fromEntries(Object.entries(v).filter(([, o]) => typeof o === 'boolean')) as Record<string, boolean>;
+    return clean(JSON.parse(localStorage.getItem(KEY) ?? '{}'));
   } catch {
     return {};
   }
 }
+
+// the server's preferences have answered (or couldn't be reached), so a signed in person's folds are in them
+let ready = false;
+const inPrefs = () => ready && prefsUser() !== 'guest';
 
 let saved = load();
 let version = 0;
@@ -24,6 +35,8 @@ const mounted = new Map<number, { key: string; def: boolean }>();
 let nextId = 1;
 
 const persist = () => {
+  // setPrefs keeps its own copy in this browser and debounces the save to the server
+  if (inPrefs()) return setPrefs({ sectionFolds: { ...saved } });
   try {
     localStorage.setItem(KEY, JSON.stringify(saved));
   } catch {
@@ -102,9 +115,38 @@ export function useSectionFoldVersion(): number {
   );
 }
 
-/** Test hook: read the store again from storage and clear the mounted list. */
+const same = (a: Record<string, boolean>, b: Record<string, boolean>) => Object.keys(a).length === Object.keys(b).length && Object.keys(a).every((k) => a[k] === b[k]);
+
+// Once the preferences are in: a guest carries on from localStorage; a signed in person takes the preferences' folds, with an
+// old per-browser value added under them (what's on the server wins) and then cleared. Offline, the cached copy is used and
+// the old value is left where it is for the next time.
+onPrefsLoaded((ok) => {
+  ready = true;
+  if (prefsUser() === 'guest') {
+    saved = load();
+    return emit();
+  }
+  const mine = clean(prefs().sectionFolds);
+  const old = load();
+  if (!ok) {
+    if (Object.keys(mine).length) saved = mine;
+    return emit();
+  }
+  saved = { ...old, ...mine };
+  if (Object.keys(old).length) {
+    if (!same(saved, mine)) setPrefs({ sectionFolds: { ...saved } });
+    try {
+      localStorage.removeItem(KEY);
+    } catch {
+      /* storage unavailable */
+    }
+  }
+  emit();
+});
+
+/** Test hook: read the store again from where it lives and clear the mounted list. */
 export function reloadSectionFolds(): void {
-  saved = load();
+  saved = inPrefs() ? clean(prefs().sectionFolds) : load();
   mounted.clear();
   emit();
 }

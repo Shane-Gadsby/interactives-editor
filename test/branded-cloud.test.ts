@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Player, normalizeProject, walk, type Artboard, type Project, type SceneNode } from 'interactives-player';
 import { BRANDED_STARTERS, COLOURWAYS, HIGH_CONTRAST, projectFromBrandedStarter } from '../src/lib/branded';
 import { byName } from '../src/lib/branded/kit';
+import { checkProjectContrast } from '../src/lib/branded/contrast-check';
+import { checkProjectLayout, preparedPage } from '../src/lib/branded/layout-check';
 
 const S = BRANDED_STARTERS.find((s) => s.key === 'explore/word-cloud')!;
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -180,6 +182,122 @@ describe('Word cloud starter', () => {
     expect(player.getVariable('ourHidden')).toBeGreaterThan(0);
     expect((player.getVariable('ourCloud') as unknown[]).length).toBe(30);
     player.destroy?.();
+  });
+
+  describe('the pills and word colour settings', () => {
+    const tokenRef = (project: Project, name: string) => `token:${project.themes!.tokens.find((t) => t.name === name)!.id}`;
+    //a word is a clickable chip (a frame) with its text inside: the chip's fill and the text's colour and size are what the settings change
+    type Word = { fill: { color?: string } | null; color: string; fontSize: number };
+    const cloudWords = (nodes: SceneNode[]): Word[] => {
+      const out: Word[] = [];
+      walk(nodes, (n: SceneNode) => {
+        if (n.name !== 'Cloud word') return;
+        const label = (n as unknown as { children: (SceneNode & Word)[] }).children[0];
+        out.push({ fill: (n as unknown as Word).fill, color: label.color, fontSize: label.fontSize });
+      });
+      return out;
+    };
+    //the first few words of a cloud as the page draws them under a combination of the two settings
+    const look = (pills: boolean, wordColour: string, pageName = 'Our cloud') => {
+      const { project, board } = build();
+      const state = { label: 'x', page: pageName, vars: { pills, wordColour } };
+      const { nodes } = preparedPage(project, board(pageName), state);
+      const words = cloudWords(nodes);
+      const tok = (n: string) => tokenRef(project, n);
+      return { words, tok, project };
+    };
+
+    it('start as pills on and plain words, and say so as variables with those values', () => {
+      const { project } = build();
+      expect(variable(project, 'pills')).toMatchObject({ type: 'boolean' });
+      expect(String(variable(project, 'pills').initial)).toBe('true');
+      expect(variable(project, 'wordColour')).toMatchObject({ type: 'enum', options: ['Plain', 'Colourway'] });
+      expect(String(variable(project, 'wordColour').initial)).toBe('Plain');
+    });
+
+    it('pills on, plain: a grey chip behind every word, in the theme text colour', () => {
+      const { words, tok } = look(true, 'Plain');
+      expect(words.length).toBeGreaterThan(10);
+      for (const w of words) {
+        expect(w.fill?.color).toBe(tok('color/surface-muted'));
+        expect(w.color).toBe(tok('color/text'));
+      }
+    });
+
+    it('pills off, plain: the chip takes the stage colour and every word is in the theme text colour', () => {
+      const { words, tok } = look(false, 'Plain');
+      for (const w of words) {
+        expect(w.fill?.color).toBe(tok('color/surface'));
+        expect(w.color).toBe(tok('color/text'));
+      }
+    });
+
+    it('colourway with pills: the biggest words in the button colour, large words in primary, the rest plain', () => {
+      const { words, tok } = look(true, 'Colourway');
+      const big = words.filter((w) => w.fill?.color === tok('color/button'));
+      expect(big.length).toBeGreaterThan(0);
+      for (const w of big) expect(w.color).toBe(tok('color/on-button'));
+      const rest = words.filter((w) => w.fill?.color !== tok('color/button'));
+      for (const w of rest) {
+        expect(w.fill?.color).toBe(tok('color/surface-muted'));
+        expect([tok('color/primary'), tok('color/text')]).toContain(w.color);
+      }
+      expect(rest.some((w) => w.color === tok('color/primary'))).toBe(true);
+    });
+
+    it('colourway without pills: no chip, large words in primary and small ones plain, never the button colour', () => {
+      const { words, tok } = look(false, 'Colourway');
+      expect(words.some((w) => w.color === tok('color/primary'))).toBe(true);
+      for (const w of words) {
+        expect(w.fill?.color).toBe(tok('color/surface'));
+        expect([tok('color/primary'), tok('color/text')]).toContain(w.color);
+        expect(w.color === tok('color/primary')).toBe(w.fontSize >= 24);
+      }
+    });
+
+    it('keeps every word a labelled button in the one keyboard group (one Tab stop), under every setting', () => {
+      for (const [pills, wordColour] of [[true, 'Plain'], [false, 'Plain'], [true, 'Colourway'], [false, 'Colourway']] as const) {
+        const { project, board } = build();
+        const page = board('Our cloud');
+        const player = play(project, page);
+        player.setVariable('pills', pills);
+        player.setVariable('wordColour', wordColour);
+        player.step(50);
+        const id = byName(page, 'Cloud word')!.id;
+        const els = [0, 1, 2, 3].map((i) => must(`${id}~${i}`));
+        for (const el of els) expect(el.getAttribute('role')).toBe('button');
+        expect(els[0].getAttribute('aria-label')).toBe('practice, weight 14');
+        expect(els.filter((el) => el.getAttribute('tabindex') === '0')).toHaveLength(1);
+        player.destroy?.();
+      }
+    });
+
+    it('applies to the learner cloud too', () => {
+      const { project, board } = build();
+      const state = { label: 'x', page: 'My cloud', vars: { pills: false, wordColour: 'Colourway', answers: ['practice', 'practice', 'sleep', 'notes'] } };
+      const { nodes } = preparedPage(project, board('My cloud'), state);
+      const words = cloudWords(nodes);
+      expect(words.length).toBe(3);
+      expect(words[0].color).toBe(tokenRef(project, 'color/primary'));
+    });
+
+    it('holds the layout and every contrast in every colourway and High contrast, for all four combinations on both pages', () => {
+      const project = projectFromBrandedStarter(S, COLOURWAYS[0]);
+      const states = ['no pills', 'colourway words', 'colourway words, no pills'];
+      expect(S.layoutStates!.map((l) => l.label)).toEqual(expect.arrayContaining(states));
+      //the words fade in from nothing, and both checkers skip a layer that starts at 0 opacity, so they would not see a single word. Read them at the end of the fade
+      for (const ab of project.artboards) walk(ab.children, (n: SceneNode) => void (n.name === 'Cloud words' && (n.opacity = 1)));
+      expect(checkProjectContrast(project, S.layoutStates)).toEqual([]);
+      expect(checkProjectLayout(project, S.layoutStates)).toEqual([]);
+    });
+
+    it('is read by the contrast check at all: a word colour that fails is caught', () => {
+      const project = projectFromBrandedStarter(S, COLOURWAYS[0]);
+      for (const ab of project.artboards) walk(ab.children, (n: SceneNode) => void (n.name === 'Cloud words' && (n.opacity = 1)));
+      const surface = tokenRef(project, 'color/surface');
+      for (const ab of project.artboards) walk(ab.children, (n: SceneNode) => void (n.name === 'Word label' && ((n as { bindings: Record<string, string> }).bindings.color = JSON.stringify(surface))));
+      expect(checkProjectContrast(project, S.layoutStates).filter((f) => f.kind === 'text' && f.layer.startsWith('Word label')).length).toBeGreaterThan(0);
+    });
   });
 
   describe('the learner cloud', () => {

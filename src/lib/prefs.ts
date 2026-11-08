@@ -56,6 +56,8 @@ export interface Prefs {
   ghostOutside: boolean;
   /** Draw the sticky notes authors leave on the canvas (never part of the player or an export). On by default; templates carry their own explanations as notes, so this is how they are put away. */
   showNotes: boolean;
+  /** Inspector sections the person folded or opened, by section key, only where that differs from the section's own default (lib/section-fold.ts). */
+  sectionFolds?: Record<string, boolean>;
   /** Panel arrangements saved under a name (lib/workspaces.ts checks each one before using it). */
   workspaces?: unknown[];
 }
@@ -95,6 +97,17 @@ export function prefs(): Prefs {
   return current;
 }
 
+/** Who these preferences belong to ('guest' when there is no session, which is also the user the server shares between everyone without one). */
+export const prefsUser = (): string => user;
+
+const loadedHooks = new Set<(ok: boolean) => void>();
+/** Run when the server's copy has arrived (ok), or when it could not be reached (not ok). Returns the cleanup. */
+export function onPrefsLoaded(f: (ok: boolean) => void): () => void {
+  loadedHooks.add(f);
+  return () => loadedHooks.delete(f);
+}
+const loaded = (ok: boolean) => loadedHooks.forEach((f) => f(ok));
+
 /** Put the theme on <html> so the stylesheet can switch colours. */
 export function applyTheme(): void {
   if (typeof document !== 'undefined') document.documentElement.dataset.theme = current.theme;
@@ -133,6 +146,7 @@ export async function loadUserPrefs(): Promise<void> {
     const res = await fetch(API, { credentials: 'same-origin' });
     if (!res.ok) {
       early = null;
+      loaded(false);
       return;
     }
     const body = (await res.json()) as { user: string; prefs: Partial<Prefs> };
@@ -149,8 +163,10 @@ export async function loadUserPrefs(): Promise<void> {
     applyTheme();
     notify();
     if ((first && Object.keys(local).length) || Object.keys(changed).length) save();
+    loaded(true);
   } catch {
     early = null;
+    loaded(false);
     /* offline: keep the cached copy */
   }
 }

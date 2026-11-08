@@ -481,6 +481,15 @@ const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], to
 			}
 			else if (Array.isArray(rule) ? rule.includes(v) : rule === 'string' ? typeof v === 'string' && v.length < 120 : typeof v === rule) out[k] = v
 		}
+		//Which inspector sections are folded or opened, against each section's own default. An object of short keys to
+		//booleans, kept to 300 entries, and anything that isn't a short key with a true/false is dropped
+		if (p?.sectionFolds && typeof p.sectionFolds === 'object' && !Array.isArray(p.sectionFolds)) {
+			out.sectionFolds = Object.fromEntries(
+				Object.entries(p.sectionFolds)
+					.filter(([k, v]) => k.length > 0 && k.length <= 60 && k !== '__proto__' && typeof v === 'boolean')
+					.slice(0, 300)
+			)
+		}
 		//Saved workspaces (panel layouts under a name). The editor checks the layout inside each one itself, so here
 		//it's only the shape and the size: at most 12, each with an id and a name and no bigger than 8 KB
 		if (Array.isArray(p?.workspaces)) {

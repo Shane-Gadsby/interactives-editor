@@ -14,7 +14,6 @@ const BIG = 5;
  * on it but already has a note on every big graph fails the test, so the list only ever shrinks.
  */
 const NOT_ANNOTATED_YET = [
-  'explore/word-cloud',
   'story/course-presentation',
   'story/memory-game',
   'story/video-questions',
