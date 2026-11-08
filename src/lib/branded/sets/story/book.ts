@@ -1,9 +1,9 @@
 //Interactive book: a cover, a contents page, three chapters of two or three pages (text, a picture, and a check your understanding question at the end of each chapter), a progress bar per chapter, a Contents button on every page and a summary of chapters completed and questions right.
-import { createNode, type Artboard, type FrameNode, type Question, type QuestionKind, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
+import { createNode, type Artboard, type FrameNode, type LogicNode, type Question, type QuestionKind, type SceneNode, type TemplateChecklistItem } from 'interactives-player';
 import { addQuestion, setQuestionSettings, syncQuestion } from '../../../question-kit';
 import { addNote, brandedPage, brandedProject, button, contentBox, item, picture, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { after, announce, bind, brandQuestionFrame, click, go, graph, panel } from '../assessment/shared';
+import { after, announce, bind, brandQuestionFrame, click, go, graph, graphNote, panel } from '../assessment/shared';
 import { progressBar, extrasChecklist, questionExtras } from '../../parts';
 import { addVar, groupPages } from './common';
 
@@ -208,7 +208,9 @@ function build(colourway: Colourway) {
     contents.children.push(cards, tally, finish);
     const g = graph(contents);
     //One flow for every chapter's button: event.index is the card, and the chapters list says which page it opens
-    g.run(click(g, open, 'Open the chapter'), ['action.artboard', { to: 'expression', expr: 'chapters[event.index].first', transition: 'fade', duration: 250 }]);
+    const onOpen = click(g, open, 'Open the chapter');
+    g.run(onOpen, ['action.artboard', { to: 'expression', expr: 'chapters[event.index].first', transition: 'fade', duration: 250 }]);
+    graphNote(contents, { anchor: onOpen, colour: 'sky', text: '**One flow serves every chapter card.** `event.index` is the card, and Go to page reads that chapter\'s `first` page name from `chapters`. [ ] When you rename or move a chapter\'s first page, update `first` there.' });
     g.run(click(g, finish, 'Summary'), go(summary));
     checklist.push(item('Rename the chapters and rewrite what each card says: Project > Variables > "chapters" (name, blurb, the number of pages, and the name of its first page). The cards, the strip on each page and the summary all read it', name, contents));
   }
@@ -222,7 +224,8 @@ function build(colourway: Colourway) {
       const g0 = graph(page);
 
       //Reading a page counts it towards the chapter (never takes progress back): pageNumber is the page within the chapter
-      g0.run(g0.event('event.start', {}, 'Count this page'), ['action.setVariable', { variable: reached.id, op: 'setItem', index: String(c), value: `Math.max(reached[${c}], pageNumber)` }]);
+      const countStart = g0.event('event.start', {}, 'Count this page');
+      g0.run(countStart, ['action.setVariable', { variable: reached.id, op: 'setItem', index: String(c), value: `Math.max(reached[${c}], pageNumber)` }]);
 
       //The chapter strip: its name and a bar of how far through it you are
       const strip = text(ctx, 'Chapter strip', `Chapter ${n}: ${ch.name}`, 48, 102, 600, { fontSize: 14, fontWeight: 600, color: L.muted, bindings: { text: `"Chapter ${n}: " + chapters[${c}].name` } } as never);
@@ -231,6 +234,7 @@ function build(colourway: Colourway) {
       page.children.push(strip, bar, amount);
       menuButton(page);
 
+      let check: LogicNode | undefined;
       //Body: text and a picture, or a question with a note and a picture beside it
       if (def.question) {
         //The question takes the whole width: its feedback and buttons grow it downwards, and wide options stay on one line
@@ -244,7 +248,7 @@ function build(colourway: Colourway) {
         brandQuestionFrame(ctx, frame);
         const prefix = frame.question!.prefix;
         //When the question is finished keep its first result: the chapter's entry in "results" (the book's score is live, from that list)
-        const check = page.logic.nodes.find((x) => x.kit?.slot === 'check:action')!;
+        check = page.logic.nodes.find((x) => x.kit?.slot === 'check:action')!;
         after(page, check, 'action.setVariable', { variable: results.id, op: 'setItem', index: String(c), value: `results[${c}] < 0 ? ${prefix}_score : results[${c}]` }, 'finished');
         checklist.push(item(`Chapter ${n} question: write your own question and answers (Question section in the inspector). Its result is kept in the chapter's entry of the "results" variable by the Set variable node after Check answer`, frame, page));
       } else {
@@ -268,10 +272,14 @@ function build(colourway: Colourway) {
       page.children.push(prev, count, next);
       const g = graph(page);
       //Next and Previous stop at the ends of the chapter: the No artboard output goes on to the next chapter (or the summary), and back to the chapter before (or the contents from the first page of the book)
-      const goNext = g.run(click(g, next, 'Next'), ['action.artboard', { to: 'next', transition: 'fade', duration: 250 }]);
+      const onNext = click(g, next, 'Next');
+      const goNext = g.run(onNext, ['action.artboard', { to: 'next', transition: 'fade', duration: 250 }]);
       g.then(goNext, 'action.artboard', { artboard: (c === CHAPTERS.length - 1 ? summary : chapterPages[c + 1][0]).id, transition: 'fade', duration: 250 }, 'none');
       const goPrev = g.run(click(g, prev, 'Previous'), ['action.artboard', { to: 'previous', transition: 'fade', duration: 250 }]);
       g.then(goPrev, 'action.artboard', { artboard: (c === 0 ? contents : chapterPages[c - 1][CHAPTERS[c - 1].pages.length - 1]).id, transition: 'fade', duration: 250 }, 'none');
+      graphNote(page, { anchor: onNext, colour: 'sky', text: `**Next stays inside the chapter.** Go to page has nothing after the last page, so its **No artboard** output goes on to ${c === CHAPTERS.length - 1 ? 'the summary' : 'the next chapter'}, and Previous does the same the other way. [ ] A new page needs no wiring.` });
+      if (i === 0) graphNote(page, { anchor: countStart, colour: 'sky', text: `**Reading a page counts it.** \`reached\` keeps the furthest page of chapter ${n} (never less), and the live \`progress\` turns that, plus the question, into the bar, the contents ticks and the summary.` });
+      if (check) graphNote(page, { anchor: check, colour: 'sky', text: '**When the question is finished**, its first score is kept in the chapter\'s entry of `results`, and the live `score` adds those up for the summary. The kit\'s own flows handle everything before that.' });
     });
   });
 
@@ -302,8 +310,12 @@ function build(colourway: Colourway) {
     summary.children.push(left, right, back, again);
     const g = graph(summary);
     g.run(click(g, back, 'Contents'), go(contents));
-    g.run(click(g, again, 'Start again'), ['action.startOver', {}]);
-    g.run(g.event('event.start', {}, 'Summary'), announce(`"You have completed " + chaptersDone + " of " + progress.length + " chapters and got " + Math.round(score * 10) / 10 + " of ${OUT_OF} questions right."`));
+    const onAgain = click(g, again, 'Start again');
+    g.run(onAgain, ['action.startOver', {}]);
+    const onSummary = g.event('event.start', {}, 'Summary');
+    g.run(onSummary, announce(`"You have completed " + chaptersDone + " of " + progress.length + " chapters and got " + Math.round(score * 10) / 10 + " of ${OUT_OF} questions right."`));
+    graphNote(summary, { anchor: onSummary, colour: 'sky', text: '**The summary reads itself out** from the same live `chaptersDone` and `score` the screen shows. `reached` and `results` are remembered between visits, so a returning reader starts where they left off.' });
+    graphNote(summary, { anchor: onAgain, colour: 'sky', text: '**Start over clears that memory too**: variables reset, progress is forgotten and the cover shows. Nothing after that node runs. [ ] Remove the button if readers should keep their progress.' });
     checklist.push(item('Check the summary: it reads the chapters, reached and results variables (Variables tab) and the verdict wording in the Score message', right, summary));
   }
 

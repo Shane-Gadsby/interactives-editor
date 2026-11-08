@@ -1,7 +1,7 @@
 //Record and replay, shared by the practice starters that offer it (Shadow the model, and the optional step in the two rehearsals). Nothing in here opens a
 //device: it is the media bridge's own nodes (Start recording, Play recording, Discard recording) wired the way every one of them wants them, plus the words
 //that go with them. Each starter keeps its own layout and just asks for the pieces.
-import type { SceneNode } from 'interactives-player';
+import type { Artboard, SceneNode } from 'interactives-player';
 import { type Graph } from '../../graph-kit';
 
 /** True when the microphone can be asked for (declared in Project > Microphone and camera, and not off, denied or missing). The record layers show only then. */
@@ -58,3 +58,10 @@ export function stopTakeWhen(g: Graph, watch: { id: string }, slot: string, cond
   const changed = g.add('event.variable', { variable: watch.id, onlyIf: `${condition} && ${rec(slot).recording}` }, null, 'out', { note });
   g.add('action.recordStop', { slot }, changed);
 }
+
+/** The first node on a page labelled like this (flows built by helpers are not handed back, so a note finds them by their label). */
+export const labelled = (page: Artboard, label: RegExp) => {
+  const n = page.logic.nodes.find((x) => label.test(x.note ?? ''));
+  if (!n) throw new Error(`no node labelled ${label} on ${page.name}`);
+  return n;
+};

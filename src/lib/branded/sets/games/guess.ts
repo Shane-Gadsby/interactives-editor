@@ -3,7 +3,7 @@ import { createNode, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, byName, contentBox, gradient, item, scrimOver, picture, solid, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
 import { stack } from '../../parts';
-import { Graph, addVar, announce, bind, darkButton, emit, focus, go, goNext, heroPage, set } from './common';
+import { Graph, addVar, announce, bind, darkButton, emit, focus, go, goNext, graphNote, heroPage, set } from './common';
 
 const CARDS = [
   { q: 'Which planet is known as the Red Planet?', a: 'Mars', note: 'Iron oxide, a kind of rust, in its soil gives it the red colour.' },
@@ -97,6 +97,7 @@ function build(colourway: Colourway) {
 
   //Turning: the card squashes edge on, swaps faces, and opens again. The card, its button and the T key all send the same message, held back once it is turned
   const onCard = g.click(deck, 'Turn the card');
+  graphNote(page, { anchor: onStart, colour: 'sky', text: '**Opening the page deals the first card.** The reset puts `card`, `turned` and `knew` back, and `scaleX` is set to 1 in case the card was left edge on when the learner went back.' });
   g.run(onCard, emit('turn'));
   const onReveal = g.click(reveal, 'Turn the card');
   g.run(onReveal, emit('turn'));
@@ -110,12 +111,14 @@ function build(colourway: Colourway) {
     focus(knewIt),
   );
 
+  graphNote(page, { anchor: onTurn, colour: 'sky', text: '**The card, its button and the T key all send turn.** *Only if* `!turned` stops a second flip halfway through. Each Animate waits for its end, so the card is edge on exactly when the face swaps.' });
   //Rating the guess moves to the next card, or to the end: one flow for both buttons
   const onRate = g.add('event.pointer', { target: rating.id, type: 'click', childrenOnly: true }, null, 'out', { note: 'I knew it / Still learning' });
   const counted = g.add('action.setVariable', { variable: knew.id, op: 'add', value: 'event.childIndex == 0 ? 1 : 0' }, onRate);
   const more = g.add('logic.if', { condition: 'card + 1 < cards.length' }, counted);
   g.runFrom(more, 'true', set(card, 'card + 1'), ['action.resetVariables', { variables: [turned.id] }], ['action.setProperty', { target: deck.id, prop: 'scaleX', value: '1' }], announce('"Card " + (card + 1) + " of " + cards.length + ": " + cards[card].q'), focus(deck));
   g.add('action.artboard', { to: 'next', transition: 'fade', duration: 250 }, more, 'false', { dy: 110 });
+  graphNote(page, { anchor: onRate, colour: 'sky', text: '**One flow serves both buttons.** *Only when a child is hit* is on, so `event.childIndex` is 0 for I knew it (counts one in `knew`) and 1 for Still learning. The last card goes to the next page instead of dealing another.' });
 
   checklist.push(
     item('Write your own five cards: Project > Variables > "cards", a question (q), its answer (a) and a line of why (note) for each. The card, the counter and the finished page follow the list', deck, page),

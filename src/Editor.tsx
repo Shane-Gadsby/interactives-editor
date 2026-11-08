@@ -28,6 +28,8 @@ import { getArtboard, selectionBounds } from './store/doc';
 import { exportActiveAsLottie } from './lib/importers';
 import { HelpLink } from './help/Help';
 import { setPreviewOpen, trapFocus } from './lib/overlays';
+import { installInteractionsRoom } from './lib/interactions-room';
+import { clearFlow, lastQuietHit, pushFlow, useFlowVersion } from './lib/run-flow';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ContextMenu } from './components/ContextMenu';
 import { DockDragLayer, DockFloats, DockZone, FloatingTools, ToolsHead, openHeaderHelp, useHeaderHelpTitle, toolsMenu, useDockSync, useZoneSizes } from './components/Dock';
@@ -594,6 +596,8 @@ function Workspace({ home }: { home: () => void }) {
     zoomTo('fit');
     requestAnimationFrame(() => zoomTo('fit'));
   }, []);
+  //The Interactions tab lifts the bottom panel while it is open (only from the default height)
+  useEffect(() => installInteractionsRoom(), []);
   // Tell the others what is selected (and on which artboard)
   useEffect(() => {
     let last = '';
@@ -1167,7 +1171,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const eventsBox = useRef<HTMLElement>(null);
   const [vars, setVars] = useState<Record<string, unknown> | null>(null);
   type DebugState = { artboard: string; timelines: { name: string; playing: boolean; time: number; duration: number }[]; instances: number; variant?: { set: string; width: number } };
-  type Trace = { artboard: string; event: string; target?: string; then: string[]; note?: string; depth: number; at: number };
+  type Trace = { artboard: string; artboardId?: string; id?: string; event: string; target?: string; then: string[]; note?: string; depth: number; at: number };
   const [dbg, setDbg] = useState<DebugState | null>(null);
   const [traces, setTraces] = useState<Trace[]>([]);
   // Script layers that failed or hit a limit, as the player reports them (newest last)
@@ -1186,14 +1190,52 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
   //Preview is a modal above everything: focus stays in it, Esc closes it (not the help drawer behind), and help asked for while it is open goes to its own window
   const modalRef = useRef<HTMLDivElement>(null);
+  //"Beside the editor": Preview moves up to the right so the canvas and the Interactions graph underneath show while it runs, which is
+  //where the nodes light up and the layer that was clicked pulses. The focus trap and the click-outside close are off in that mode.
+  const [peek, setPeek] = useState(false);
+  const peekRef = useRef(false);
+  peekRef.current = peek;
   useEffect(() => {
     setPreviewOpen(true);
-    const release = modalRef.current ? trapFocus(modalRef.current) : undefined;
     return () => {
       setPreviewOpen(false);
-      release?.();
+      clearFlow();
     };
   }, []);
+  useEffect(() => {
+    const release = !peek && modalRef.current ? trapFocus(modalRef.current) : undefined;
+    return () => release?.();
+  }, [peek]);
+  //Its height is whatever is left above the bottom panels
+  useLayoutEffect(() => {
+    const box = modalRef.current;
+    if (!peek || !box) return;
+    const fit = () => {
+      const bottom = document.querySelector<HTMLElement>('.bottom-dock');
+      const top = bottom ? bottom.getBoundingClientRect().top : window.innerHeight * 0.65;
+      box.style.height = `${Math.max(240, top - 16)}px`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
+    const dock = document.querySelector('.bottom-dock');
+    if (ro && dock) ro.observe(dock);
+    return () => {
+      window.removeEventListener('resize', fit);
+      ro?.disconnect();
+      box.style.height = '';
+    };
+  }, [peek]);
+  //Select a line of the events list's node in the Interactions graph (and bring the graph into view beside Preview)
+  const showNode = (artboardId: string | undefined, id: string | undefined) => {
+    if (!id) return;
+    const st = store();
+    const ab = artboardId ? st.get().project.artboards.find((a) => a.id === artboardId) : undefined;
+    setPeek(true);
+    st.set({ ...(ab ? { activeArtboardId: ab.id, artboardSelected: false } : {}), selection: [], bottomTab: 'logic', logicSelection: id });
+  };
+  useFlowVersion();
+  const quiet = lastQuietHit();
   // Responsive sets: the width of the page the preview runs in (null: all the room there is), and how much room that is
   const sets = responsiveSets(project as Project);
   const [pageWidth, setPageWidth] = useState<number | null>(null);
@@ -1264,16 +1306,25 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
       if (e.data?.source === 'interactives-debug') {
         if (e.data.vars) setVars(e.data.vars);
         if (e.data.state) setDbg(e.data.state);
+        if (Array.isArray(e.data.flow)) {
+          pushFlow(e.data.flow);
+          //Watching beside the editor, the graph shown follows the page that is running
+          if (peekRef.current) {
+            const st = store();
+            const on = (e.data.flow as { a?: string }[]).find((f) => f.a && f.a !== st.get().activeArtboardId && st.get().project.artboards.some((a) => a.id === f.a && !a.canvasHidden));
+            if (on?.a) st.set({ activeArtboardId: on.a, artboardSelected: false });
+          }
+        }
         if (e.data.trace) setTraces((l) => [...l.slice(-199), { ...e.data.trace, at: performance.now() - t0.current }]);
         if (e.data.scripterror) setScriptErrors((l) => [...l.slice(-49), e.data.scripterror]);
         if (e.data.announce) setSaid((l) => [...l.slice(-2), e.data.announce]);
         return;
       }
       //Save user data and remembered progress: kept here per project, like the learner page keeps them in StudyDesk
-      const kept = answerPreviewProgress(e.data);
+      const kept = answerPreviewProgress(e.data, store().get().project as Project);
       if (kept) {
         if (e.data.rid) frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'progress', rid: e.data.rid, ...kept }, '*');
-        if (e.data.op === 'userdata-save' || e.data.op === 'save') setKeptData(true);
+        if (e.data.op === 'userdata-save' || e.data.op === 'save' || e.data.op === 'shared-add') setKeptData(true);
         return;
       }
       if (e.data?.source !== 'interactives') return;
@@ -1292,7 +1343,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
   const ab = getArtboard(project, from === 'current' ? abId : project.settings.startArtboardId);
   const post = (name: string, value: unknown) => frame.current?.contentWindow?.postMessage({ target: 'interactives', type: 'setVariable', name, value }, '*');
   return (
-    <div className="modal-backdrop preview-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className={`modal-backdrop preview-backdrop${peek ? ' peek' : ''}`} onPointerDown={(e) => !peek && e.target === e.currentTarget && onClose()}>
       <div className="modal preview-modal" ref={modalRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Preview">
         <header>
           <strong>Preview</strong>
@@ -1300,7 +1351,7 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
             <option value="start">From the start artboard</option>
             <option value="current">From this artboard</option>
           </select>
-          <span className="muted small">{ab ? `${ab.width} × ${ab.height}` : ''} · runs exactly like the exported file</span>
+          <span className="muted small preview-size">{ab ? `${ab.width} × ${ab.height}` : ''}{peek ? '' : ' · runs exactly like the exported file'}</span>
           <button
             className={`btn${accessibility ? ' active' : ''}`}
             onClick={() => setPrefs({ accessibility: !accessibility })}
@@ -1394,11 +1445,20 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
               setScriptErrors([]);
               setSaid([]);
               setDbg(null);
+              clearFlow();
               t0.current = performance.now();
             }}
             title="Start again from the beginning (timelines, variables and all)"
           >
             Restart
+          </button>
+          <button
+            className={`btn${peek ? ' active' : ''}`}
+            aria-pressed={peek}
+            onClick={() => setPeek(!peek)}
+            title="Move Preview to the side so you can watch the Interactions graph and the canvas while it runs: the nodes that run light up, and the layer you click shows a ring"
+          >
+            Beside editor
           </button>
           <button className={`btn${showVars ? ' active' : ''}`} onClick={() => setShowVars(!showVars)} title="Debug: what's showing, running timelines, variables (editable) and the events that fire">
             Debug
@@ -1502,10 +1562,21 @@ export function PreviewModal({ onClose }: { onClose: () => void }) {
                 {x.source === 'shader' ? 'Shader layer' : 'Script layer'} “{x.layer}” {x.kind === 'error' ? 'stopped' : 'warning'}: {x.message}
               </div>
             ))}
+            {quiet && (
+              <div className="trace why-nothing" role="status">
+                <strong>Why did nothing happen?</strong> {quiet.reason}
+              </div>
+            )}
             {traces.map((t, i) => (
               <div key={i} className="trace" title={t.note}>
                 <span className="muted">{(t.at / 1000).toFixed(2)}s</span> {t.depth ? <span className="muted">[{t.artboard}] </span> : null}
-                <strong>{t.event}</strong>
+                {t.id ? (
+                  <button type="button" className="link-btn trace-node" onClick={() => showNode(t.artboardId, t.id)} title="Show this node in the Interactions graph" aria-label={`${t.event}: show this node in the Interactions graph`}>
+                    <strong>{t.event}</strong>
+                  </button>
+                ) : (
+                  <strong>{t.event}</strong>
+                )}
                 {t.target ? ` (${t.target})` : ''} → {t.then.length ? t.then.join(', ') : <span className="muted">nothing connected</span>}
               </div>
             ))}

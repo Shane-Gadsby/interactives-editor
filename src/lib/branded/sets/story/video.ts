@@ -1,10 +1,10 @@
 //Video with questions: a video layer that stops at set times for a question from the question kit, a chapter list that seeks, and a summary page.
 //The questions are cues on the video (each one pauses it as it is reached), the chapters are the video's own, and the video is held paused while a question is open.
-import { createNode, uid, type ContainerNode, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
+import { createNode, uid, type ContainerNode, type LogicNode, type TemplateChecklistItem, type VideoNode } from 'interactives-player';
 import { addQuestion, setQuestionSettings } from '../../../question-kit';
 import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, solid, text, type BrandedStarter, type LayoutState } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, addVar, darkButton, go, goNext, set } from './common';
+import { Graph, addVar, darkButton, go, goNext, graphNote, set } from './common';
 import { extrasChecklist, questionExtras } from '../../parts';
 
 const QUESTIONS = [
@@ -147,20 +147,29 @@ function build(colourway: Colourway) {
   const onStart = g.add('event.start', {}, null, 'out', { note: 'Start from the beginning' });
   g.run(onStart, ['action.resetVariables', { variables: [popup.id] }], set(questionCount, 'layer("Video").cues.length'), ['action.video', { target: video.id, op: 'seek', seconds: '0' }]);
 
+  const kitStart = watch.logic.nodes.find((n) => n.kit);
+  if (kitStart) graphNote(watch, { anchor: kitStart, colour: 'sky', text: '**The three short rows of question nodes are the question kit\'s**: choose, check, hint and Try again for each question. They never touch the video. [ ] Change a question in the inspector, and its time on the Video layer\'s cues.' });
+  graphNote(watch, { anchor: onStart, colour: 'sky', text: '**Opening the page rewinds the video** and clears `popup`. `questionCount` is read from the video\'s own cue list, so adding a cue adds a question to the count.' });
   //A question cue: the video has already paused, so show the question
   const onCue = g.add('event.videoCue', { target: video.id }, null, 'out', { note: 'A question is due' });
   g.run(onCue, set(popup, 'event.index + 1'), ['action.announce', { text: '"Question " + popup + " of " + layer("Video").cues.length + ". The video is paused."' }]);
 
   //Continue after a question: let go of the hold, then play on (the hold lets go on the next frame)
+  const carryOns: LogicNode[] = [];
   frames.forEach((frame) => {
     const btn = (frame.children.find((c) => (c as { questionPart?: string }).questionPart === 'buttons') as ContainerNode).children.find((c) => c.name === 'Continue')!;
-    g.run(g.click(btn, 'Carry on'), ['action.resetVariables', { variables: [popup.id] }], ['action.delay', { ms: 40 }], ['action.video', { target: video.id, op: 'play' }]);
+    const onContinue = g.click(btn, 'Carry on');
+    carryOns.push(onContinue);
+    g.run(onContinue, ['action.resetVariables', { variables: [popup.id] }], ['action.delay', { ms: 40 }], ['action.video', { target: video.id, op: 'play' }]);
   });
 
+  graphNote(watch, { anchor: onCue, colour: 'sky', text: '**The video has already paused itself** when the cue fires. This only sets `popup` to the question\'s number (`event.index + 1`), and each question\'s frame shows when `popup` is its own number.' });
+  graphNote(watch, { anchor: carryOns[0], colour: 'sky', text: '**Continue clears popup, waits 40 ms, then plays.** The Hold paused binding lets go on the next frame, so a Play sent any sooner would be ignored.' });
   //A chapter: seek there and play. One flow for every chapter in the list
   const onChapter = g.click(chapter, 'Chapter list');
   g.run(onChapter, ['action.resetVariables', { variables: [popup.id] }], ['action.video', { target: video.id, op: 'seek', seconds: 'layer("Video").chapters[event.index].time' }], ['action.delay', { ms: 40 }], ['action.video', { target: video.id, op: 'play' }]);
 
+  graphNote(watch, { anchor: onChapter, colour: 'sky', text: '**One flow serves every chapter.** `event.index` picks the chapter from the Video layer\'s own list, so a new chapter there needs no new wiring. It clears any open question first.' });
   //The end of the video, or the button
   const onEnd = g.add('event.variable', { variable: vended.id, onlyIf: 'videoEnded' }, null, 'out', { note: 'Finished watching' });
   g.run(onEnd, goNext());

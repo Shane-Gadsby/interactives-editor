@@ -69,6 +69,7 @@ import { GraphPalette } from './GraphPalette';
 import { FlowSentences } from './FlowSentences';
 import { stepArtboard, stepKey } from './ArtboardPicker';
 import { GraphNoteForm, GraphNoteNode, resizing as noteResizing, type GraphNoteData } from './GraphNoteNode';
+import { flashOf, useFlowVersion, wireClass } from '../lib/run-flow';
 import { addGraphNote, anchorOrigin, graphNotePlace, patchGraphNote, removeGraphNotes, attachGraphNote } from '../lib/graph-notes';
 
 type IxNodeData = { logic: LogicNode; summary: string };
@@ -77,13 +78,22 @@ const CAT_COLOR: Record<string, string> = { event: 'var(--event)', action: 'var(
 
 function IxNode({ data, selected }: NodeProps<Node<IxNodeData>>) {
   const def = CATALOG_BY_KIND[data.logic.kind];
+  //Lit while Preview runs it: green when it ran, grey when an event's "Only if" said no (the word is there for anyone who can't tell the colours apart)
+  useFlowVersion();
+  const lit = flashOf(data.logic.id);
   if (!def) return <div className="ix-graph-node unknown">Unknown node {data.logic.kind}</div>;
+  const flash = lit && lit.kind !== 'wire' ? lit : null;
   return (
-    <div className={`ix-graph-node${selected ? ' selected' : ''}`} style={{ ['--cat' as string]: CAT_COLOR[def.category] }}>
+    <div className={`ix-graph-node${selected ? ' selected' : ''}${flash ? ` flash-${flash.kind} flash-${flash.n % 2}` : ''}`} style={{ ['--cat' as string]: CAT_COLOR[def.category] }}>
       {def.hasInput && <Handle type="target" position={Position.Left} id="in" />}
       <div className="gn-head">
         <span className="gn-cat">{def.category}</span>
         {def.label}
+        {flash && (
+          <span className="gn-ran" role="status">
+            {flash.kind === 'ran' ? 'ran' : 'held back'}
+          </span>
+        )}
       </div>
       <div className="gn-body">{data.summary || <span className="muted">{def.summary}</span>}</div>
       <div className="gn-outs">
@@ -290,9 +300,15 @@ export function LogicGraph() {
   // Selected connections live here (the document only stores the graph), so Delete can remove them
   const [selEdges, setSelEdges] = useState<string[]>([]);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[]; search?: string } | null>(null);
+  const flowVersion = useFlowVersion();
   const edges: Edge[] = useMemo(
-    () => (ab?.logic.edges ?? []).map((e) => ({ id: e.id, source: e.from, sourceHandle: e.fromPort, target: e.to, targetHandle: e.toPort, animated: false, selected: selEdges.includes(e.id) })),
-    [ab, selEdges],
+    () =>
+      (ab?.logic.edges ?? []).map((e) => {
+        const lit = wireClass(e.id);
+        return { id: e.id, source: e.from, sourceHandle: e.fromPort, target: e.to, targetHandle: e.toPort, animated: false, selected: selEdges.includes(e.id), ...(lit ? { className: lit } : {}) };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ab, selEdges, flowVersion],
   );
 
   const updateLogic = useCallback(
@@ -1146,8 +1162,12 @@ function ParamForm({ node, ab, project, onChange, onNote }: { node: LogicNode; a
         return pick(project.scripts.map((x) => ({ value: x.id, label: x.name })), project.scripts.length ? 'Choose script…' : 'No scripts yet');
       case 'asset':
         return pick(project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio').map((a) => ({ value: a.id, label: a.name })), 'Choose sound…', [addAssetOption('audio')], { asset: 'audio' });
-      case 'data':
-        return pick(project.dataSources.map((d) => ({ value: d.id, label: d.name })), project.dataSources.length ? 'Choose data source…' : 'No data sources yet');
+      case 'data': {
+        // The shared responses nodes work on shared sources only
+        const shared = node.kind.startsWith('action.shared');
+        const list = project.dataSources.filter((d) => !shared || d.source === 'shared');
+        return pick(list.map((d) => ({ value: d.id, label: d.name })), list.length ? 'Choose data source…' : shared ? 'No shared responses yet (Data tab)' : 'No data sources yet');
+      }
       case 'cursor':
         return <SelectField key={p.key} label={p.label} title={p.help} value={String(v ?? 'pointer')} options={[...CURSORS]} onChange={(x) => set(p.key, x)} />;
       case 'prop': {

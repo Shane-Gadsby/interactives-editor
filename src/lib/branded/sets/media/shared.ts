@@ -7,7 +7,7 @@ import { BRAND_FONT } from '../../looks';
 import { brandedPage, button, solid, stroke, text, type BrandedCtx } from '../../kit';
 import { darkButton, type ActionStep } from '../../graph-kit';
 
-export { Graph, addVar, announce, bind, clearVar, click, darkButton, go, goNext, goPrevious, graph, lit, set, setVar, toggleVar } from '../../graph-kit';
+export { Graph, addVar, announce, bind, clearVar, click, darkButton, go, goNext, goPrevious, graph, graphNote, lit, set, setVar, toggleVar } from '../../graph-kit';
 export type { ActionStep } from '../../graph-kit';
 
 /** The hero page every starter opens with: title, one line and a Start button (wired by the caller). */

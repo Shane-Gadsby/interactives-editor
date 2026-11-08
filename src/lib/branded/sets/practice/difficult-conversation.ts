@@ -14,8 +14,8 @@ import { createNode, type Artboard, type FrameNode, type SceneNode, type Templat
 import { lookDefaults } from '../../../themes';
 import { addNote, brandedPage, brandedProject, button, byName, card, contentBox, heading, item, picture, stroke, text, type BrandedStarter, type LayoutState } from '../../kit';
 import { BRAND_FONT, type Colourway } from '../../looks';
-import { Graph, addVar, announce, bind, darkButton, go, goNext, heroPage, resetVars, set, setVar, tickList, toggleItem } from '../media/shared';
-import { MIC_READY, dropTakeWhen, playLabel, playToggle, rec, recordLabel, recordStatus, recordToggle } from './recording';
+import { Graph, addVar, announce, bind, darkButton, go, goNext, graphNote, heroPage, resetVars, set, setVar, tickList, toggleItem } from '../media/shared';
+import { MIC_READY, dropTakeWhen, labelled, playLabel, playToggle, rec, recordLabel, recordStatus, recordToggle } from './recording';
 
 //The framework the learner ticks against: a simple four point one for the sample, ISBAR (identify, situation, background, assessment, recommendation) fits a handover
 const FRAMEWORK = ['Acknowledged how they feel before anything else', 'Checked what is actually going on', 'Said clearly what you can and cannot do', 'Agreed a next step with a date'];
@@ -164,6 +164,10 @@ function build(colourway: Colourway) {
       g.run(g.click(btn, note), setVar(counter, '1', 'add'), set(path, `path ? path + " > ${word}" : "${word}"`), go(to === 'ending' ? ending : to));
     branch(calmBtn, 'It calms them down', calm, 'calmer', cfg.calmTo);
     branch(tenseBtn, 'It makes it tenser', tense, 'tenser', cfg.tenseTo);
+    graphNote(page, { anchor: labelled(page, /^A fresh scene$/), colour: 'sky', text: '**A scene opens and a retry resets the same way:** one Reset variables clears the stage, the typed reply and the ticks. Retry also adds to `tries`, which the ending reads.' });
+    graphNote(page, { anchor: labelled(page, /^Play their line/), colour: 'sky', text: '[ ] **Pick the sound for this line** in the Play sound node after this button. Then set `audioLines` to true, which is what shows the button.' });
+    graphNote(page, { anchor: labelled(page, /^Record my reply, or stop$/), colour: 'sky', text: '**Recording is off as shipped:** it needs Microphone ticked in Project > Microphone and camera. One recording name serves every scene, and the last flow drops the take when the next scene or a retry opens.' });
+    graphNote(page, { anchor: labelled(page, /^It calms them down$/), colour: 'sky', text: '**A branch counts and leaves a trail:** `calm` or `tense` goes up and `path` grows by "calmer" or "tenser". The live `verdict` on the ending compares the two. [ ] Where each branch goes is set per scene.' });
     return { pic, who, line, expert, rows, slot, calmBtn, audio };
   };
 

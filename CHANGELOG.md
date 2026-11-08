@@ -2,6 +2,8 @@
 
 ## Unreleased: Symposium 3
 
+- **Shared responses**: a data source that gathers learners' short answers, set to **Only me** or **Everyone in this class**, with counts (never names), blocked words, a minimum before an answer shows, per-person limits and the owner able to hide, remove or clear answers. The **Word cloud** starter's class cloud runs on it (a page shared before this needs sharing again).
+- **Every starter's graphs are annotated**, and the examples' bigger graphs too. Notes draw `code` inside **bold** properly, and a [ ] partway through a line shows as a box.
 - **Graph notes in the starters**: every quiz, drag and explore starter's interaction graphs now carry short notes saying what each chain does, why it's built that way and what to change. **Word cloud** settings: **Pills** on or off and **Word colour** plain or following the colourway. **Folded Properties sections** follow you to any computer you sign in on.
 - **F1 searches the help again** (as does Ctrl+K); **?** and the Help button open the page for what you're working on. The **Media Catalogue** button shows the catalogue's iris icon.
 - **Connectors**: a **Connector** tool (K) draws a line or arrow from one layer to another that follows them when they move: straight, elbow (it routes around both boxes) or curved, with arrowheads or dots and an optional label. Connectors can join copies of a repeated layer from a list of links, and redraw in the player, Preview and every export.

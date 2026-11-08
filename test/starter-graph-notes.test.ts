@@ -1,9 +1,11 @@
+import { parseNoteText } from '../src/lib/note-text';
 //Every branded starter's interaction graph is annotated: a graph with more than a handful of nodes has at least one graph note that
 //says what it does, the notes sit clear of the nodes once the graph is tidied, and none of it ships.
 import { describe, expect, it } from 'vitest';
 import { stripNotes } from 'interactives-player';
 import { BRANDED_STARTERS, COLOURWAYS, projectFromBrandedStarter } from '../src/lib/branded';
 import { nodeSizeGuess } from '../src/lib/branded/graph-kit';
+import { noteHeightFor } from '../src/lib/graph-notes-core';
 import { graphNotePlace } from '../src/lib/graph-notes';
 
 /** Graphs with more nodes than this need a note. */
@@ -13,30 +15,7 @@ const BIG = 5;
  * The starters whose graphs have not been annotated yet (the template sweep takes them off this list as it goes). A starter that is
  * on it but already has a note on every big graph fails the test, so the list only ever shrinks.
  */
-const NOT_ANNOTATED_YET = [
-  'story/course-presentation',
-  'story/memory-game',
-  'story/video-questions',
-  'story/interactive-book',
-  'games/crossword',
-  'games/word-search',
-  'games/arithmetic-quiz',
-  'games/guess-the-answer',
-  'games/personality-quiz',
-  'games/game-map',
-  'writing/questionnaire',
-  'writing/documentation-tool',
-  'writing/reflection-journal',
-  'practice/difficult-conversation',
-  'practice/timed-talk-rehearsal',
-  'practice/keep-the-beat',
-  'practice/sign-practice',
-  'practice/shadow-the-model',
-  'media/observe-and-tag',
-  'media/listening-lab',
-  'media/lite-lesson',
-  'media/live-sound-lab',
-  'media/photo-notebook',
+const NOT_ANNOTATED_YET: string[] = [
 ];
 
 const built = BRANDED_STARTERS.map((starter) => ({ starter, project: projectFromBrandedStarter(starter, COLOURWAYS[0]) }));
@@ -73,6 +52,15 @@ describe('starter graph notes', () => {
           expect(n.text, b.starter.key).toMatch(/\*\*[^*]+\*\*/);
           expect(n.text, b.starter.key).not.toMatch(/—/);
           expect(n.text.split('\n').length, b.starter.key).toBeLessThanOrEqual(3);
+        }
+  });
+
+  it('a note is tall enough for its words, and none shows a raw backtick (code inside bold is drawn as code)', () => {
+    for (const b of built)
+      for (const a of b.project.artboards)
+        for (const n of a.logic.notes ?? []) {
+          for (const l of parseNoteText(n.text)) for (const sp of l.spans) if (sp.kind !== 'code') expect(sp.text, `${b.starter.key}: ${n.text}`).not.toContain('`');
+          expect(n.h, `${b.starter.key}: ${n.text}`).toBeGreaterThanOrEqual(noteHeightFor(n.text, n.w));
         }
   });
 

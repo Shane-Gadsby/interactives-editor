@@ -42,6 +42,9 @@ import { paintRuns, readRuns, selectionOffsets, setSelectionOffsets } from '../l
 import { store, useEditor, type Tool } from '../store/store';
 import { CommentLayer } from './CommentLayer';
 import { NotesLayer } from './NotesLayer';
+import { HitPulse } from './HitPulse';
+import { PageLinkLayer } from './PageLinkLayer';
+import { setShowRoutes, showRoutes } from '../lib/page-routes-pref';
 import { addNote, leaveNote, noteScale } from '../lib/notes';
 import { NOTE_DEFAULT_H, NOTE_DEFAULT_W } from 'interactives-player';
 import { anchorAt } from '../lib/comment-anchor';
@@ -2157,6 +2160,7 @@ export function Canvas() {
         { label: 'New artboard here', onClick: () => s2.addArtboard({ canvasX: round(w.x), canvasY: round(w.y) }) },
         paste,
         { separator: true },
+        { label: showRoutes() ? 'Hide page arrows' : 'Show page arrows', title: 'The faint arrows between pages that show where Go to page, Next and Previous lead (editor only)', onClick: () => setShowRoutes(!showRoutes()) },
         { label: 'Tidy up artboards', disabled: st.project.artboards.filter((a) => !a.canvasHidden).length < 2, onClick: tidyArtboardsCommand },
         { label: 'Zoom to fit everything', hint: 'Shift+1', onClick: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '!', code: 'Digit1', shiftKey: true })) },
         { label: prefs().rulers ? 'Hide rulers' : 'Show rulers', hint: 'Shift+R', onClick: () => setPrefs({ rulers: !prefs().rulers }) },
@@ -2356,6 +2360,8 @@ export function Canvas() {
       )}
       <CommentLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} />
       <NotesLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} passive={s.tool === 'hand' || spaceHeld} />
+      <PageLinkLayer project={project} zoom={zoom} panX={panX} panY={panY} active={active} selection={s.selection} tool={s.tool} hidden={s.previewPlaying} />
+      <HitPulse project={project} zoom={zoom} panX={panX} panY={panY} />
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} bounds={{ width: vp.current?.clientWidth ?? 2000, height: vp.current?.clientHeight ?? 1200 }} />}

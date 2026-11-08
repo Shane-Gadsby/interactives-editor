@@ -275,6 +275,8 @@ Right-click a tab (or press Shift+F10 on it) for **Dock on the left / right / at
 
 ![The Preview with the Debug panel: live variables on the left and the Events list underneath.](help/preview-debug.png)
 
+**Watch it run.** Press **Beside editor** in the top bar and Preview moves up to the right, leaving the canvas and the Interactions graph underneath showing. While you click through it, every node that runs lights up green (with the word *ran*), an event whose **Only if** said no goes grey (*held back*), the wires it followed pulse, and a ring flashes round the layer your click landed on (green when the click started something, red when it started nothing). When a click starts nothing, the Events list says why under **Why did nothing happen?**: nothing listens for a click on that layer, the click landed on empty space, or an **Only if** said no. Click an event's name in the list to select its node in the graph. The lights are only in the editor; exports and shared links never carry them, and with reduced motion on they hold still instead of pulsing.
+
 When the project has [responsive artboards](responsive), a **Page width** slider appears under the top bar. Drag it to resize the page the project runs in; the breakpoints are marked on the track and the player switches artboard as you cross them.`,
   },
   {
@@ -1351,16 +1353,39 @@ Reading order is the layer order (rearrange layers to change it). Moving focus a
     title: 'Links and cursors',
     group: 'Web elements',
     summary: 'Make any layer a link, and choose the cursor shown when hovering it.',
-    keywords: 'hyperlink url href target new tab cursor pointer hand custom cursor image hotspot',
+    keywords: 'hyperlink url href target new tab cursor pointer hand custom cursor image hotspot go to page link button drag arrow route map navigate',
     body: `## Link
 In the **Link** section, give any layer a **URL** and it becomes a real link. **Open in** chooses where: a new tab, the same frame, the parent frame, or the whole page (useful when the interactive is embedded in an iframe). URLs can contain \`{expressions}\`. Links go to \`http(s)\`, \`mailto\`, \`tel\` or relative addresses; anything else (such as \`javascript:\`) is ignored.
 
 The **Open URL** action does the same from an interaction.
 
+## Go to a page
+The **Go to page** section links a layer to another page. Choose the page from the list, or drag the round **Go to page** handle that sits on the selected layer on the canvas onto the page you want: the page lights up as you pass over it, and letting go makes the link. Choosing **No page** (or dragging it onto the empty canvas) takes the link away. There is nothing special behind it: the editor writes an **On pointer** click on the layer and a **Go to artboard** node after it, which you can see and change in **Interactions**, and the list follows if you edit them there. A click that has an **Only if**, or one that does something else first, is left as you built it (the link is added after the existing click). Faint arrows between the pages on the canvas show every route the project can take, from these links and from Next and Previous steps; switch them off from the canvas's right-click menu. They are only in the editor.
+
 ## Cursor
 **Cursor on hover** sets the cursor shown while the pointer is over the layer and its children, the way CSS \`:hover { cursor: pointer }\` works. *Automatic* gives links and layers with a click, press or release interaction a pointer. Choose the cursor shown over the layer (pointer, grab, crosshair, text, not-allowed, …) or **Custom image** with a hotspot (the point of the image that clicks). Change it at runtime with **Set cursor** or \`ix.setCursor('grab')\`.`,
   },
 
+  {
+    id: 'page-navigation',
+    title: 'Page navigation',
+    group: 'Interactivity',
+    summary: 'Back, Next, the page number, page dots and a progress bar along the bottom of your pages, in one click.',
+    keywords: 'next back previous page number progress bar dots navigation buttons pages 3 of 8 bottom bar go to next artboard generate',
+    body: `Every piece with more than one page needs **Next** and **Back**, and often "Page 3 of 8". Select a page and open **Page navigation** in the properties panel (or select several pages and open it there), pick a style and press **Add to this page**, **Add to these pages** or **Add to all pages**.
+
+- **Back and Next**: Back on the left, Next (the main button) on the right and *Page 3 of 8* between them.
+- **Next only**: just a Next button on the right.
+- **Back, Next and page dots**: a row of dots between them, the current page filled.
+- **Back, Next and a progress bar**: the page number, with a thin bar along the bottom that fills as you go.
+- **Page number only**: *Page 3 of 8* and no buttons.
+
+It all goes along the bottom of the page, in a bottom bar. Back is hidden on the first page and Next on the last, and the number and bar follow the order of your pages (see **Go to artboard** in [Interactions](interactions)), so adding, removing or moving a page needs no rewiring. The colours come from your project's colours, so they follow the theme and a branded project's look, and on a branded page the bar sits inside the content box, clear of the logo and footer.
+
+Nothing is hidden: you get ordinary buttons, text, a progress bar and the clicks and **Go to artboard** nodes in **Interactions**, all of which you can restyle, move or rewire. They are tagged, so adding navigation again with another style swaps the old one for the new (and **Remove** takes it away). A page that already has its own Next or Back button is left alone, and the message says which. Page dots are drawn for the number of pages there are now: press **Add** again after adding or removing pages to refresh them.
+
+Buttons go on the page itself. A [page master](page-master) can hold the logo and the footer but not buttons, so the master is not where this goes.`,
+  },
   // ---------------------------------------------------------------- motion
   {
     id: 'timelines',
@@ -1794,6 +1819,8 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
     summary: 'The node graph: events start a flow, actions do things, logic chooses the way.',
     keywords: 'interaction graph node event action logic state machine wire edge connect flow group frame label organise comment box tidy clean up auto layout arrange align crossing behaviour recipe when clicked hovered show hide next page sound counter switch sentences read explain condition picker only if turn off remove',
     body: `Open the **Interactions** tab. Each artboard has its own graph.
+
+**Room for the graph.** The bottom panel is a short strip, so opening **Interactions** (from a layer's **+ On click**, one of its interaction chips, or the tab itself) lifts the panel to a comfortable height, and puts it back when you move to another tab. It only does that when the panel is still at its normal height: one you sized yourself is left alone. Drag the top edge of the panel while the graph is open and that height is remembered for next time (in this browser).
 
 **See-through layers don't take clicks.** While the project plays, a layer that is partly see-through (its opacity under 100%, or a shape whose fill and stroke are all under 100%, say from a tween on *fill.opacity*) lets the pointer through to whatever is underneath: its link, hand cursor, clicks and hovers are off, for it and every layer inside it, until it is fully showing again (a fade-in finishes, for example). Hidden layers never take the pointer. To keep a faded layer clickable, tick **Clickable while see-through** in its **Interactions** section. Paths, polygons and stars also only take the pointer where they're painted, not across their whole box.
 
@@ -2938,7 +2965,7 @@ Test with a keyboard, a screen reader and your own eyes as well.`,
 
 Use a source by its **name** anywhere expressions go: \`{products.length} products\`, a binding \`products[0].price\`, or **Repeat → Items** \`products\`. Scripts read \`ix.data.products\`.
 
-**Load data** reloads a source (optionally from a different URL); **On data loaded** fires when it arrives. The host page can push data with \`player.setData('products', [...])\`.
+**Load data** reloads a source (optionally from a different URL); **On data loaded** fires when it arrives. **+ Shared responses** adds a different kind of source, answers the people playing add, counted for the class or kept for each person: see [Shared responses](shared-responses). The host page can push data with \`player.setData('products', [...])\`.
 
 ## The built-in context
 The list always starts with **context**, a read-only source that is there without adding anything: the course and the learner (\`{context.firstName}\`, \`context.courseCode\`). Pick it to see its fields, set sample values to design with, and give different courses different starting values. See [Course and learner context](course-context).
@@ -2954,6 +2981,57 @@ Every data request, from a source, the **Load data** node or \`ix.loadData(name,
 A refused request loads nothing and writes a warning to the console; in a script, \`ix.loadData\` throws.
 
 > URLs must allow cross-origin requests (CORS) from wherever the interactive is published.`,
+  },
+  {
+    id: 'shared-responses',
+    title: 'Shared responses',
+    group: 'Data',
+    summary: 'Short answers people add, counted for a whole class (a word cloud, a poll) or kept for each person, switched by one setting.',
+    keywords: 'shared responses class poll word cloud answers moderation blocklist blocked hide remove clear only me everyone anonymous counts course studydesk learner page add to shared responses take back',
+    body: `A **Shared responses** data source holds short answers that the people playing add: the words in a word cloud, the votes in a poll, a list the whole class builds. The answers are **counted** and **anonymous**: a page gets how many people gave each answer, never who.
+
+## Adding one
+In the **Data** tab choose **+ Shared responses**. It is a data source like any other, in scope by its name (\`responses\`), so its answers can fill a list, a repeat, a chart or a [word cloud](expressions).
+
+| In expressions | What it is |
+|---|---|
+| \`responses.answers\` | The counted answers, most given first: \`text\`, \`count\` and \`weight\` (the same number, so the list goes straight into \`cloud(...)\`) |
+| \`responses.ready\` | True once there is somewhere that keeps the answers. Show the person's own words until then |
+| \`responses.mine\` | What this person added, in order |
+| \`responses.left\`, \`responses.limit\` | How many more this person may add, and the most they may |
+| \`responses.people\`, \`responses.total\` | How many people have added something, and how many answers there are in all |
+| \`responses.problem\` | \`blocked\` or \`full\` after an add that was refused, or empty |
+
+Put answers in with the **Add to shared responses** node (the answer is an expression: text, or a list of texts), or \`await ix.shared.add('responses', 'sleep')\` in a script. **Take back shared responses** and \`ix.shared.withdraw(name, answer)\` take this person's own answers out again (the one named, or all of theirs); they never touch anyone else's. **Add to shared responses** continues from **Added** when something was kept and from **Not added** when nothing was (blocked, already there, over the limit, or nowhere to keep it).
+
+## Who sees it
+- **Everyone in this class**: everyone in the same course sees every answer, counted. A class is the project plus the StudyDesk course the person came from.
+- **Only me**: each person only ever sees their own answers.
+
+This is one setting on the data source, **Who sees it**. To let the same project run either way, set **Switch with** to a text variable (a choice variable named \`whoSees\` with the options *Only me* and *Everyone in this class*, say): it takes who sees from the variable's value, so one setting in the project, or a button the learner presses, flips the whole page. A variable that says Only me, alone or private keeps answers private; one that says everyone, class or shared shows them to the class. Answers kept for Only me are stored apart from the class's, so switching a project to the class later never shows anyone what they kept to themselves.
+
+## Where it runs
+The class lives on the server, and the server only knows who someone is on the **StudyDesk learner page** (**Share**, then **Link for StudyDesk**, see [Share link](export#share-link)). There each person's answers are kept under their signed-in account and course, and what the class sees is read every few seconds while the page is open. Anywhere else (an exported file, an ordinary share link, the page open on its own) there is no class: **Only me** still works, keeping the person's own answers in their browser, and **Everyone in this class** answers \`ready: false\` so the page can quietly show their own words. **Preview** pretends: the class is your sample answers plus whatever you add in the preview.
+
+The rules are fixed when the project is shared. After you add or change a shared source, **Update to the latest version** in the Share dialog or the learner page will not know about it.
+
+## The settings
+- **Longest answer** and **Answers each**: how long an answer may be (up to 120 characters) and how many different answers one person may have in (up to 50). The same answer twice from one person counts once.
+- **Show at**: an answer waits until this many people have given it, so one person's odd answer does not show on its own.
+- **Blocked words**: words and phrases nobody may add. Whole words only, so blocking *ass* leaves *class* alone. Words already in stop showing as soon as they are blocked and you share again.
+- **Look again**: how often the page asks what the class has added while it is open (at least 2 seconds, 0 reads once).
+- **Sample answers**: for you only. The canvas and Preview show them as a class, so a page can be laid out with nobody in it. Learners never see them.
+
+## Moderating
+Below the settings, **What the class has said** lists every answer by course, with how many people gave it and why one may not be showing (hidden by you, a blocked word, or still waiting for enough people). **Hide** keeps an answer but takes it away from the class, and **Show** brings it back. **Remove** takes it out of everyone's list (they can add it again). **Clear this course** empties the course. Only the project's **owner or a power user** sees this, since it is other people's answers; collaborators do not. It shows what the server holds, so it needs the project to be shared and to have had some answers.
+
+## What is kept
+One list of answers per person, per shared source, per project and per course, with the account that added them (never sent to anyone's page), kept until the project is deleted for good (the Bin's **Delete forever**, or after 30 days there). **Clear results** does not touch them; the moderation list does. Nothing about the person comes back in a count.
+
+## Limits and safety
+Answers are cut to the length, stripped of control and invisible characters, and a person who adds too fast is slowed (the page is told it is busy). Everything is held to what was declared when the project was shared, never to what a browser sends, and who someone is comes from their StudyDesk session.
+
+See the **Word cloud** starter for the class cloud wired up: the same page for Only me and for the class.`,
   },
   {
     id: 'course-context',

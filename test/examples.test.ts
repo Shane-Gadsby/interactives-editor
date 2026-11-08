@@ -8,8 +8,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Player, countNotes, normalizeProject, sanitizeProject, stripNotes, type Project, type SceneNode } from 'interactives-player';
+import { nodeSizeGuess } from '../src/lib/branded/graph-kit';
 import { STRICT_KINDS, checkProjectLayout } from '../src/lib/branded/layout-check';
-import { EXAMPLE_NOTE_PREFIX, upgradeAll } from '../scripts/examples-upgrade';
+import { graphNotePlace } from '../src/lib/graph-notes';
+import { EXAMPLE_GRAPH_NOTE_PREFIX, EXAMPLE_NOTE_PREFIX, upgradeAll } from '../scripts/examples-upgrade';
 
 const dir = path.resolve(__dirname, '..', 'examples');
 const index = JSON.parse(readFileSync(path.join(dir, 'index.json'), 'utf8')) as { key: string; artboards: number }[];
@@ -64,10 +66,12 @@ describe('examples', () => {
         const unexpected = errors.mock.calls.filter((c) => !/sandbox bundle is not loaded|WebGL is not available/.test(String(c[1] ?? c[0])));
         expect(unexpected).toEqual([]);
 
-        const count = countNotes(p);
+        //the canvas notes (beside the artboards) are one to three; the graph notes are counted separately below
+        const graphNotes = p.artboards.reduce((n, a) => n + (a.logic.notes?.length ?? 0), 0);
+        const count = countNotes(p) - graphNotes;
         expect(count).toBeGreaterThanOrEqual(1);
         expect(count).toBeLessThanOrEqual(3);
-        const texts = p.artboards.flatMap((a) => a.notes ?? []).map((n) => n.text.replace(/\*\*|`|\[ \] /g, ''));
+        const texts = p.artboards.flatMap((a) => [...(a.notes ?? []), ...(a.logic.notes ?? [])]).map((n) => n.text.replace(/\*\*|`|\[ \] /g, ''));
         expect(texts.every((t) => t.trim().length > 20)).toBe(true);
         const shown = stage.textContent ?? '';
         for (const t of texts) expect(shown).not.toContain(t.slice(0, 24));
@@ -94,6 +98,33 @@ describe('examples', () => {
           expect(notes.filter((m) => m !== n && hit(n, m)).map((m) => m.what), n.what).toEqual([]);
         }
         expect(p.artboards.flatMap((a) => a.notes ?? []).every((n) => n.id.startsWith(EXAMPLE_NOTE_PREFIX))).toBe(true);
+      });
+
+      it('annotates its interaction graph: a note on every graph of more than 5 nodes (one overview for the imported Rive graph), written in the register, anchored, clear of the nodes, never shipped', () => {
+        const p = load(key);
+        const big = p.artboards.filter((a) => a.logic.nodes.length > 5);
+        const noted = (a: (typeof p.artboards)[number]) => (a.logic.notes ?? []).length > 0;
+        //the Rive importer's own graph is a fixture of the importer tests: one note on the main page says what it is
+        if (key === 'rive-breathing') expect(big.some(noted), 'an overview note on the imported graph').toBe(true);
+        else expect(big.filter((a) => !noted(a)).map((a) => a.name), 'graphs over 5 nodes with no graph note').toEqual([]);
+
+        for (const ab of p.artboards)
+          for (const n of ab.logic.notes ?? []) {
+            expect(n.id.startsWith(EXAMPLE_GRAPH_NOTE_PREFIX), n.id).toBe(true);
+            expect(n.author).toBe('Example');
+            expect(n.text.length, n.text).toBeLessThanOrEqual(420);
+            expect(n.text).toMatch(/\*\*[^*]+\*\*/);
+            expect(n.text).not.toMatch(/—/);
+            for (const m of n.text.matchAll(/\*\*([^*]+)\*\*/g)) expect(m[1], 'code marks show as backticks inside bold').not.toContain('`');
+            expect(n.text.split('\n').length).toBeLessThanOrEqual(3);
+            expect(ab.logic.nodes.some((x) => x.id === n.anchor?.layerId), `${n.id} follows a node`).toBe(true);
+            const at = graphNotePlace(ab.logic, n);
+            const r = { x: at.x, y: at.y, w: n.w, h: n.h };
+            const hit = (b: { x: number; y: number; width: number; height: number }) => r.x < b.x + b.width && b.x < r.x + r.w && r.y < b.y + b.height && b.y < r.y + r.h;
+            expect(ab.logic.nodes.filter((x) => hit({ x: x.x, y: x.y, ...nodeSizeGuess(x) })).map((x) => x.id), `${n.id} sits over a node`).toEqual([]);
+          }
+        //none of it reaches a player: the stripped project has no graph notes, and the project still plays
+        expect(stripNotes(p).artboards.some((a) => a.logic.notes)).toBe(false);
       });
 
       it('has no button over words, and no words off the page', () => {

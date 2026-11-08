@@ -3,7 +3,7 @@ import type { Artboard, SceneNode, TemplateChecklistItem } from 'interactives-pl
 import { addQuestion, setQuestionSettings } from '../../../question-kit';
 import { addNote, brandedPage, brandedProject, button, card, contentBox, heading, item, picture, text, type BrandedCtx, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
-import { Graph, goNext, goPrevious } from './common';
+import { Graph, goNext, goPrevious, graphNote } from './common';
 import { extrasChecklist, questionExtras } from '../../parts';
 
 type Tone = 'light' | 'gradient' | 'deep';
@@ -136,8 +136,16 @@ function build(colourway: Colourway) {
   //The slide bar on every slide
   pages.forEach((page, i) => {
     const tone: Tone = page === title || page === end ? 'gradient' : page === section ? 'deep' : 'light';
-    page.children.push(...slideBar(ctx, pages, i, tone));
+    const bar = slideBar(ctx, pages, i, tone);
+    page.children.push(...bar);
+    //One note on the slide bar, on the first slide that has both buttons
+    const nextBtn = bar.find((n) => n.name === 'Next');
+    const onNext = nextBtn && page.logic.nodes.find((n) => n.kind === 'event.pointer' && n.params.target === nextBtn.id);
+    if (i === 1 && onNext) graphNote(page, { anchor: onNext, colour: 'sky', text: '**Back and Next follow the page order**, with the arrow keys as their shortcuts, and `pageNumber` and `pageCount` fill the counter. A new slide needs no rewiring. The first and last slides are the only different ones.' });
   });
+  //The kit wired the question, so this slide's graph is its flows plus the slide bar
+  const kitStart = quiz.logic.nodes.find((n) => n.kit);
+  if (kitStart) graphNote(quiz, { anchor: kitStart, colour: 'sky', text: '**The question kit made every flow here**: choose, check, hint and Try again, and the extras ticked in its settings. Edit the question in the inspector\'s Question section, not in this graph.' });
   checklist.push(item('To add a slide, duplicate one from the middle of the deck and drag it into place in the page list. Back, Next and "Slide n of N" follow the page order, so nothing needs rewiring. Only the first and last slides are different: Start on the first and Start again on the last', title.children.find((n) => n.name === 'Next'), title));
 
   //Notes for whoever edits the template, below the slides

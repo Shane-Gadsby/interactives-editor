@@ -3,7 +3,7 @@ import { createNode, type Artboard, type FrameNode, type TemplateChecklistItem }
 import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { groupPages } from '../story/common';
-import { addVar, bind, click, empty, goNext, goPrevious, graph, reportExpr, setVar, textBox, writingHero } from './shared';
+import { addVar, bind, click, empty, goNext, goPrevious, graph, graphNote, reportExpr, setVar, textBox, writingHero } from './shared';
 import { panel } from '../assessment/shared';
 
 const TITLE = 'Study plan workbook';
@@ -116,6 +116,7 @@ function build(colourway: Colourway) {
     const g = graph(page);
     const onRow = g.event('event.pointer', { target: row.id, type: 'click', onlyIf: 'parts[event.index].page != artboard.name' }, 'A progress row');
     g.then(onRow, 'action.artboard', { to: 'expression', expr: 'parts[event.index].page', transition: 'fade', duration: 250 });
+    if (page === pages[0] || page === exportPage) graphNote(page, { anchor: onRow, colour: 'sky', text: '**One flow serves every progress row.** `event.index` picks the row from the live `parts` list, and *Only if* leaves the row for the page you are already on alone. [ ] A new part is a new entry in `parts` with a page of the same name.' });
     return list;
   };
 
@@ -134,9 +135,11 @@ function build(colourway: Colourway) {
     page.children.push(guide, field, count, state, back, next);
     const g = graph(page);
     //Back and Next follow the group's order; Back from the first part leaves through No artboard, to the first page
-    const goBack = g.then(click(g, back, 'Back'), ...goPrevious());
+    const onBack = click(g, back, 'Back');
+    const goBack = g.then(onBack, ...goPrevious());
     if (i === 0) g.then(goBack, 'action.artboard', { artboard: hero.id, transition: 'fade', duration: 250 }, 'none');
     g.then(click(g, next, 'Next'), ...goNext());
+    graphNote(page, { anchor: onBack, colour: 'sky', text: i === 0 ? '**Back from the first part has no page before it in the group**, so its **No artboard** output goes to the start page instead. Writing is kept as it is typed, so leaving loses nothing.' : '**Back and Next follow the page order** of the group, so a new part needs no wiring. What is written is kept as it is typed (`userData`), so leaving a page loses nothing.' });
     checklist.push(item(i === 0 ? 'Write your own goals prompt, and the placeholder in its text box' : `Step ${i}: write your own prompt, the placeholder in the text box and the page title`, guide, page));
   });
 
@@ -154,7 +157,10 @@ function build(colourway: Colourway) {
     const arrive = g.event('event.start', {}, 'Put it all together');
     g.run(arrive, setVar(report, reportExpr('My study plan', PARTS.map((p, i) => [p.heading, written[i]] as [string, typeof goals]), '(Not written yet)')), setVar(exported, 'true'));
     g.run(click(g, back, 'Back'), goPrevious());
-    g.run(click(g, save, 'Download'), ['action.saveFile', { name: '"my-study-plan"', text: 'report', mime: 'text/plain' }]);
+    const onSave = click(g, save, 'Download');
+    graphNote(exportPage, { anchor: arrive, colour: 'sky', text: '**Arriving builds the whole text** into `report`, each part under its heading with "(Not written yet)" for gaps, and marks `exported` so the progress list ticks it. [ ] Reword the headings in this Set variable.' });
+    graphNote(exportPage, { anchor: onSave, colour: 'sky', text: '**Download saves report as plain text.** [ ] Change the file name `my-study-plan` in the node.' });
+    g.run(onSave, ['action.saveFile', { name: '"my-study-plan"', text: 'report', mime: 'text/plain' }]);
     checklist.push(
       item('Change the export: the Set variable node after "Put it all together" (Interactions tab) lists each part with its heading, so reword the headings there, and the title line at the top', field, exportPage),
       item('Change the file name the learner gets in the Download a file node on the export page (it saves the whole text as a .txt)', save, exportPage),

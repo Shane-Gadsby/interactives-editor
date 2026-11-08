@@ -213,7 +213,7 @@ export function NoteText({ note }: { note: Note }) {
     <>
       {lines.map((l) => {
         if (l.kind === 'blank') return <div key={l.line} className="note-gap" />;
-        const spans = l.spans.map((sp, i) => (sp.kind === 'bold' ? <strong key={i}>{sp.text}</strong> : sp.kind === 'italic' ? <em key={i}>{sp.text}</em> : sp.kind === 'code' ? <code key={i}>{sp.text}</code> : <span key={i}>{sp.text}</span>));
+        const spans = l.spans.map((sp, i) => (sp.kind === 'bold' ? <strong key={i}>{sp.text}</strong> : sp.kind === 'italic' ? <em key={i}>{sp.text}</em> : sp.kind === 'code' ? (sp.strong ? <strong key={i}><code>{sp.text}</code></strong> : <code key={i}>{sp.text}</code>) : <span key={i}>{sp.text}</span>));
         if (l.kind === 'check')
           return (
             <div key={l.line} className="note-line check">

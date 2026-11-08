@@ -236,13 +236,13 @@ export const chart: BrandedStarter = {
     //The Reveal button goes away when it is pressed, so the focus moves to whichever of Next and Start again shows
     const revealFlow = click(gg, reveal, 'Reveal');
     const shownNext = gg.run(revealFlow, set(revealed, 'true'), announce('verdict'));
-    graphNote(guessPage, { anchor: revealFlow, colour: 'sky', text: '**`revealed` is what shows the answer.** The `verdict` line is live, so announcing it reads the same words as the screen. The If then moves focus to Next, or to Start again on the last question.' });
+    graphNote(guessPage, { anchor: revealFlow, colour: 'sky', text: '**revealed is what shows the answer.** The `verdict` line is live, so announcing it reads the same words as the screen. The If then moves focus to Next, or to Start again on the last question.' });
     const which = gg.then(shownNext, 'logic.if', { condition: `target < ${N}` });
     gg.then(which, 'action.focus', { op: 'focus', target: nextBtn.id }, 'true');
     gg.then(which, 'action.focus', { op: 'focus', target: again.id }, 'false');
     const nextFlow = click(gg, nextBtn, 'Next');
     gg.run(nextFlow, ['action.resetVariables', { variables: [guess.id, revealed.id] }], set(target, 'target + 1'), announce('"Next question: " + rows[target - 1].label'), focus(slider));
-    graphNote(guessPage, { anchor: nextFlow, colour: 'sky', text: '**Next clears the guess and `revealed`, and moves `target` on one row.** The new question is announced and focus goes back to the slider. [ ] Add rows to `rows` for more questions to guess.' });
+    graphNote(guessPage, { anchor: nextFlow, colour: 'sky', text: '**Next clears the guess and revealed, and moves target on one row.** The new question is announced and focus goes back to the slider. [ ] Add rows to `rows` for more questions to guess.' });
     gg.run(click(gg, again, 'Start again'), fresh, announce('"Starting again"'), focus(slider));
     gg.run(click(gg, back, 'Pages'), goPrevious());
 
