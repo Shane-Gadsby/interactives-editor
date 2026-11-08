@@ -14,7 +14,7 @@ const BIG = 5;
  * The starters whose graphs have not been annotated yet (the template sweep takes them off this list as it goes). A starter that is
  * on it but already has a note on every big graph fails the test, so the list only ever shrinks.
  */
-const NOT_ANNOTATED_YET = [
+const NOT_ANNOTATED_YET: string[] = [
 ];
 
 const built = BRANDED_STARTERS.map((starter) => ({ starter, project: projectFromBrandedStarter(starter, COLOURWAYS[0]) }));
