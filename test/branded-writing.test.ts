@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Player, normalizeProject, walk, type Artboard, type PlayerOptions, type Project, type SceneNode, type TextNode } from 'interactives-player';
+import { FakeMediaHost, Player, normalizeProject, walk, type Artboard, type PlayerOptions, type Project, type SceneNode, type TextNode } from 'interactives-player';
 import { COLOURWAYS } from '../src/lib/branded/looks';
 import { BRANDED_STARTERS, projectFromBrandedStarter } from '../src/lib/branded';
 import { byName } from '../src/lib/branded/kit';
@@ -406,24 +406,20 @@ describe('branded writing starters and the interactive book', () => {
       player.destroy();
     });
 
-    it('the email button opens a mailto with the whole text in it', async () => {
+    it('the download button saves the whole text as a file, and the project declares no sensor', async () => {
       const p = project();
-      const player = await open(p);
+      expect(p.settings.sensors).toBeUndefined();
+      const host = new FakeMediaHost({ declaration: undefined });
+      const player = await open(p, { media: host });
       player.setVariable('goals', 'Read before class & keep notes.');
       player.goTo('Export');
       await settle(player, 100);
-      const hrefs: string[] = [];
-      //_self navigates the frame: watch the location rather than navigating jsdom
-      const loc = Object.getOwnPropertyDescriptor(window, 'location');
-      Object.defineProperty(window, 'location', { configurable: true, value: { set href(v: string) { hrefs.push(v); } } });
-      try {
-        await click(layer(p, 'Export', 'Email button').id);
-      } finally {
-        Object.defineProperty(window, 'location', loc!);
-      }
-      expect(hrefs).toHaveLength(1);
-      expect(hrefs[0].startsWith('mailto:?subject=My%20study%20plan&body=')).toBe(true);
-      expect(decodeURIComponent(hrefs[0].split('&body=')[1])).toContain('Read before class & keep notes.');
+      await click(layer(p, 'Export', 'Download button').id);
+      await settle(player, 50);
+      const saved = host.calls.find((c) => c.op === 'save');
+      expect(saved?.args).toMatchObject({ name: 'my-study-plan', mime: 'text/plain' });
+      expect(String(saved?.args.text).startsWith('MY STUDY PLAN')).toBe(true);
+      expect(String(saved?.args.text)).toContain('Read before class & keep notes.');
       player.destroy();
     });
 
@@ -573,6 +569,22 @@ describe('branded writing starters and the interactive book', () => {
       await settle(player);
       expect(player.artboard.name).toBe(PARTS[2]);
       expect(boxValue(layer(p, PARTS[2], 'Text box').id)).toBe('Agree the plan early.');
+      player.destroy();
+    });
+
+    it('the download button saves the whole reflection as a file, and the project declares no sensor', async () => {
+      const p = project();
+      expect(p.settings.sensors).toBeUndefined();
+      const host = new FakeMediaHost({ declaration: undefined });
+      const player = await open(p, { media: host });
+      player.setVariable('what', 'We met on Tuesday.');
+      player.goTo('My reflection');
+      await settle(player, 100);
+      await click(layer(p, 'My reflection', 'Download button').id);
+      await settle(player, 50);
+      const saved = host.calls.find((c) => c.op === 'save');
+      expect(saved?.args).toMatchObject({ name: 'my-reflection', mime: 'text/plain' });
+      expect(String(saved?.args.text)).toContain('We met on Tuesday.');
       player.destroy();
     });
 

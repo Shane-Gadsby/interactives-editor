@@ -1,9 +1,9 @@
-//Guided writing workbook: a goals page, three steps with a prompt and a text box each, a progress list on every page, and an export page that puts everything on one page to copy or email. The writing is learner user data, kept as it is written.
+//Guided writing workbook: a goals page, three steps with a prompt and a text box each, a progress list on every page, and an export page that puts everything on one page to copy or download. The writing is learner user data, kept as it is written.
 import { createNode, type Artboard, type FrameNode, type TemplateChecklistItem } from 'interactives-player';
 import { addNote, brandedPage, brandedProject, button, contentBox, item, solid, stroke, text, type BrandedStarter } from '../../kit';
 import type { Colourway } from '../../looks';
 import { groupPages } from '../story/common';
-import { addVar, bind, click, empty, goNext, goPrevious, graph, mailExpr, reportExpr, setVar, textBox, writingHero } from './shared';
+import { addVar, bind, click, empty, goNext, goPrevious, graph, reportExpr, setVar, textBox, writingHero } from './shared';
 import { panel } from '../assessment/shared';
 
 const TITLE = 'Study plan workbook';
@@ -140,24 +140,24 @@ function build(colourway: Colourway) {
     checklist.push(item(i === 0 ? 'Write your own goals prompt, and the placeholder in its text box' : `Step ${i}: write your own prompt, the placeholder in the text box and the page title`, guide, page));
   });
 
-  //Export: everything the learner wrote, on one page, in a box they can copy from or email
+  //Export: everything the learner wrote, on one page, in a box they can copy from or download
   {
     const box = contentBox(exportPage);
     progressList(exportPage);
-    const intro = text(ctx, 'Intro', 'Everything you wrote is below, in one piece. Click in the box, press Ctrl+A (Cmd+A on a Mac) to select it all and Ctrl+C to copy it, or email it to yourself. You can still edit it here before you copy.', COL_X, box.y, COL_W, { fontSize: 17, lineHeight: 1.45 });
+    const intro = text(ctx, 'Intro', 'Everything you wrote is below, in one piece. Click in the box, press Ctrl+A (Cmd+A on a Mac) to select it all and Ctrl+C to copy it, or download it as a text file. You can still edit it here before you copy.', COL_X, box.y, COL_W, { fontSize: 17, lineHeight: 1.45 });
     const field = textBox(ctx, 'Whole workbook', report, COL_X, box.y + 100, COL_W, 250, '', 'Your whole workbook, ready to copy');
-    const missing = text(ctx, 'Missing note', '{(' + written.map((v) => empty(v.name)).join(' || ') + ') ? "Some parts are still empty. Use the progress list to go back and finish them." : "Everything is written. Copy it or email it to yourself."}', COL_X, box.y + 362, COL_W, { fontSize: 15, color: L.muted });
+    const missing = text(ctx, 'Missing note', '{(' + written.map((v) => empty(v.name)).join(' || ') + ') ? "Some parts are still empty. Use the progress list to go back and finish them." : "Everything is written. Copy it or download it as a text file."}', COL_X, box.y + 362, COL_W, { fontSize: 15, color: L.muted });
     const back = button(ctx, 'Back button', 'Back to editing', COL_X, 524, 190, false);
-    const mail = button(ctx, 'Email button', 'Email it to myself', 976 - 230, 524, 230);
-    exportPage.children.push(intro, field, missing, back, mail);
+    const save = button(ctx, 'Download button', 'Download as a file', 976 - 230, 524, 230);
+    exportPage.children.push(intro, field, missing, back, save);
     const g = graph(exportPage);
     const arrive = g.event('event.start', {}, 'Put it all together');
     g.run(arrive, setVar(report, reportExpr('My study plan', PARTS.map((p, i) => [p.heading, written[i]] as [string, typeof goals]), '(Not written yet)')), setVar(exported, 'true'));
     g.run(click(g, back, 'Back'), goPrevious());
-    g.run(click(g, mail, 'Email'), ['action.url', { url: mailExpr('My study plan', 'report'), target: '_self' }]);
+    g.run(click(g, save, 'Download'), ['action.saveFile', { name: '"my-study-plan"', text: 'report', mime: 'text/plain' }]);
     checklist.push(
       item('Change the export: the Set variable node after "Put it all together" (Interactions tab) lists each part with its heading, so reword the headings there, and the title line at the top', field, exportPage),
-      item('Change the subject line of the email in the Open URL node on the export page', mail, exportPage),
+      item('Change the file name the learner gets in the Download a file node on the export page (it saves the whole text as a .txt)', save, exportPage),
     );
   }
 
@@ -174,7 +174,7 @@ function build(colourway: Colourway) {
   addNote(pages[0], { ...below(pages[0], 0, 440), text: '**User data** The four text variables and `exported` are ticked Save as user data. They are kept as they change and put back before the workbook opens, so there are no Save or Load nodes, and `returning` is live from `userData.restored`.', colour: 'sky' });
   addNote(pages[0], { ...below(pages[0], 456, 440), text: '**Page groups** The parts and the export are one group called Workbook, so Next and Back follow the page order. The progress rows go to a page by name with an expression, from the live `parts` list.', colour: 'sky' });
   addNote(hero, { ...below(hero, 0, 440), text: '[ ] **Make it yours** in the Variables tab. Write your own prompts. Adding a step means a new page in the group, a new text variable and a row in `parts` and `resumeAt`.', colour: 'gold' });
-  addNote(exportPage, { ...below(exportPage, 0, 440), text: '[ ] The email button opens a mail with the text in it. Download as a file needs the project to declare a sensor, so it is not used here.', colour: 'gold' });
+  addNote(exportPage, { ...below(exportPage, 0, 440), text: '**Download a file** saves the `report` text as a .txt after a tap. It needs no microphone or camera, so there is nothing to declare. [ ] Change the file name in its node.', colour: 'gold' });
 
   return { project, checklist };
 }
@@ -183,7 +183,7 @@ export const workbook: BrandedStarter = {
   key: 'writing/documentation-tool',
   set: 'writing',
   name: 'Guided writing workbook',
-  description: 'A guided workbook: a goals page and three steps, each with a prompt and a text box, a progress list on every page, and an export page that gathers everything the learner wrote into one page to copy or email. Saved as learner user data, so they can come back.',
+  description: 'A guided workbook: a goals page and three steps, each with a prompt and a text box, a progress list on every page, and an export page that gathers everything the learner wrote into one page to copy or download. Saved as learner user data, so they can come back.',
   tags: ['writing', 'workbook', 'user data', 'export'],
   build,
 };

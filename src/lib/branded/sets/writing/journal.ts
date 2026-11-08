@@ -5,7 +5,7 @@ import type { Colourway } from '../../looks';
 import { progressBar } from '../../parts';
 import { panel } from '../assessment/shared';
 import { groupPages } from '../story/common';
-import { addVar, bind, click, empty, goNext, goPrevious, graph, mailExpr, reportExpr, setVar, textBox, writingHero } from './shared';
+import { addVar, bind, click, empty, goNext, goPrevious, graph, reportExpr, setVar, textBox, writingHero } from './shared';
 
 const TITLE = 'Reflection journal';
 const CARD_W = 330;
@@ -152,20 +152,20 @@ function build(colourway: Colourway) {
     const total = text(ctx, 'Total words', '{totalWords} words in all. Press a part to go back and change it.', 16, 48 + 4 * 52 + 4, 268, { fontSize: 15, color: L.muted, lineHeight: 1.4 });
     const list = panel(ctx, 'Parts list', box.x, box.y, 300, 48 + 4 * 52 + 80, [heading, rows, total], { role: 'region', ariaLabel: 'The four parts of your reflection' });
     const all = textBox(ctx, 'Whole reflection', reflection, box.x + 324, box.y, box.width - 324, 320, '', 'Your whole reflection, ready to copy');
-    const hint = text(ctx, 'Copy hint', 'Click in the box, press Ctrl+A (Cmd+A on a Mac) to select it all and Ctrl+C to copy it, or email it to yourself. To change what you wrote, use the parts on the left.', box.x + 324, box.y + 332, box.width - 324, { fontSize: 15, color: L.muted, lineHeight: 1.4 });
+    const hint = text(ctx, 'Copy hint', 'Click in the box, press Ctrl+A (Cmd+A on a Mac) to select it all and Ctrl+C to copy it, or download it as a text file. To change what you wrote, use the parts on the left.', box.x + 324, box.y + 332, box.width - 324, { fontSize: 15, color: L.muted, lineHeight: 1.4 });
     const back = button(ctx, 'Back button', 'Back', box.x, 524, 130, false);
-    const mail = button(ctx, 'Email button', 'Email it to myself', 976 - 230, 524, 230);
-    whole.children.push(list, all, hint, back, mail);
+    const save = button(ctx, 'Download button', 'Download as a file', 976 - 230, 524, 230);
+    whole.children.push(list, all, hint, back, save);
 
     const g = graph(whole);
     const arrive = g.event('event.start', {}, 'Put it all together');
     g.run(arrive, setVar(reflection, reportExpr('My reflection', PROMPTS.map((p, i) => [p.short, vars[i]] as [string, typeof reflection]), '(Not written yet)')));
     g.then(g.event('event.pointer', { target: row.id, type: 'click' }, 'A part row'), 'action.artboard', { to: 'expression', expr: 'parts[event.index].page', transition: 'fade', duration: 250 });
     g.run(click(g, back, 'Back'), goPrevious());
-    g.run(click(g, mail, 'Email'), ['action.url', { url: mailExpr('My reflection', 'reflection'), target: '_self' }]);
+    g.run(click(g, save, 'Download'), ['action.saveFile', { name: '"my-reflection"', text: 'reflection', mime: 'text/plain' }]);
     checklist.push(
       item('Change the headings the whole reflection uses: the Set variable node after "Put it all together" (Interactions tab) lists each part with its heading', all, whole),
-      item('Change the subject line of the email in the Open URL node on this page', mail, whole),
+      item('Change the file name the learner gets in the Download a file node on this page (it saves the whole reflection as a .txt)', save, whole),
     );
   }
 
@@ -183,6 +183,7 @@ function build(colourway: Colourway) {
   addNote(pages[0], { ...below(pages[0], 0, 440), text: '**User data** The four text variables are ticked Save as user data: kept as they change and put back before the journal opens. There are no Save or Load nodes, and `returning` is live from `userData.restored`.', colour: 'sky' });
   addNote(pages[0], { ...below(pages[0], 456, 440), text: '**One pill, four parts.** The pills and the rows on the last page are one layer repeated over the live `parts` list, and one flow goes to `parts[event.index].page` by name.', colour: 'sky' });
   addNote(hero, { ...below(hero, 0, 440), text: '[ ] **Make it yours** in the Variables tab. Write your own prompts. The word count and the length bar both read `aim`, in the Variables tab.', colour: 'gold' });
+  addNote(whole, { ...below(whole, 0, 440), text: '**Download a file** saves the whole reflection as a .txt after a tap. It needs no microphone or camera. [ ] Change the file name in its node.', colour: 'gold' });
 
   return { project, checklist };
 }
