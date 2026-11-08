@@ -27,12 +27,14 @@ export interface Prefs {
   commentNotices: boolean;
   /** Draw the parts of layers that hang outside an artboard that clips faintly beside it, so they can be seen and picked. On by default; the player and exports still clip. */
   ghostOutside: boolean;
+  /** Draw the sticky notes authors leave on the canvas (never part of the player or an export). On by default; templates carry their own explanations as notes, so this is how they are put away. */
+  showNotes: boolean;
   /** Panel arrangements saved under a name (lib/workspaces.ts checks each one before using it). */
   workspaces?: unknown[];
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true };
+const DEFAULTS: Prefs = { wheel: 'zoom', tooltips: true, rulers: false, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 

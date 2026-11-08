@@ -97,6 +97,7 @@ let ops = null,
 	safety = null,
 	learner = null,
 	marker = null,
+	notesLib = null,
 	markLimiter = null,
 	records = null,
 	media = null,
@@ -469,7 +470,7 @@ fontsProxy.prewarm()
 
 //Each person's editor preferences (theme, wheel, default font...), kept per user rather than per browser. Keyed
 //by username, so it's an _id lookup and needs no index. No session (dev) means one shared "guest" set
-const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean'},
+const PREF_KEYS = {wheel: ['zoom', 'ctrl'], theme: ['dark', 'light', 'auto'], tooltips: 'boolean', rulers: 'boolean', accessibility: 'boolean', screenReader: 'boolean', defaultFont: 'string', commentNotices: 'boolean', ghostOutside: 'boolean', showNotes: 'boolean'},
 	cleanPrefs = (p) => {
 		let out = {}
 		for (let [k, rule] of Object.entries(PREF_KEYS)) {
@@ -1911,6 +1912,15 @@ router.put('/api/projects/:id/share', express.text({type: () => true, limit: '20
 	let html = req.body,
 		prepared = null
 
+	//Sticky notes are the authors' own: the editor leaves them out of the page, and whatever arrives is stripped again here
+	try {
+		html = notesLib.stripNotesFromPage(html)
+	}
+	catch (err) {
+		console.trace(`${appName}: could not read the project out of the shared page of ${id} to take its notes out`, err)
+		return res.status(400).json({error: 'The notes could not be taken out of that page, so it was not shared'})
+	}
+
 	try {
 		prepared = prepareMarkedShare(html, doc.marking?.salt)
 	}
@@ -3247,7 +3257,8 @@ router.get('/review/:token', async (req, res) => {
 	res.json({
 		id: doc._id,
 		name: doc.name,
-		project: room ? room.doc : await store.parse(doc),
+		//Reviewers are not editors: sticky notes stay with the people making the project
+		project: notesLib.stripNotes(room ? room.doc : await store.parse(doc)),
 		guests: !!doc.review.guests,
 		me: actor ? {...actor.by, manager: actor.manager} : null,
 		owner: doc.owner ? {username: doc.owner.username, name: doc.owner.name} : null,
@@ -4279,9 +4290,9 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod]) => {
 		ops = opsMod
 		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
@@ -4289,6 +4300,7 @@ client.connect()
 		safety = safetyMod
 		learner = learnerMod
 		marker = markerMod
+		notesLib = notesMod
 		markLimiter = markerMod.makeLimiter()
 		records = recordsMod
 		media = mediaMod

@@ -65,6 +65,7 @@ export const Icons = {
   close: P('M6 6l12 12M18 6L6 18'),
   check: P('M5 12.5l4.5 4.5L19 7'),
   comment: P('M4 5h16v11H9.5L5 20v-4H4zM8 9h8M8 12h5'),
+  note: P('M5 4h14v11l-5 5H5zM14 20v-5h5M8 9h8M8 12h4'),
   bell: P('M6 16v-5a6 6 0 0112 0v5l2 2H4zM10 21h4'),
   help: P('M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9.3a2.6 2.6 0 015 .9c0 1.7-2.5 2.3-2.5 3.8M12 17.2v.1'),
   external: P('M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5'),

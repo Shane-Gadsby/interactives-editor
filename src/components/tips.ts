@@ -3,6 +3,7 @@
  * Keep each to one short sentence that says what the setting does, not what it's called.
  */
 export const FIELD_TIPS: Record<string, string> = {
+  'Show notes on the canvas': 'Draw the sticky notes authors leave on the canvas. Players, Preview and exports never show them either way',
   X: 'Distance from the left edge of the parent (drag the label to scrub, type sums like 100/2)',
   Y: 'Distance from the top edge of the parent',
   W: 'Width',

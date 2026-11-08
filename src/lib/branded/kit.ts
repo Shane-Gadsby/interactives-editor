@@ -9,10 +9,11 @@
  * and a checklist. Layers made by `chrome(...)` (the logo, sweeps, bars, footer line) are the brand: they're locked in
  * branded projects (./lock.ts).
  */
-import { createArtboard, createNode, createProject, uid, type Artboard, type LogicEdge, type LogicNode, type LookKey, type Paint, type PathNode, type Project, type SceneNode, type TemplateChecklistItem, type TextNode, type ThemeDef } from 'interactives-player';
+import { apply, createArtboard, createNode, createProject, invert, makeNote, uid, type Artboard, type Note, type NoteColour, type LogicEdge, type LogicNode, type LookKey, type Paint, type PathNode, type Project, type SceneNode, type TemplateChecklistItem, type TextNode, type ThemeDef } from 'interactives-player';
 import logoOnWhite from './assets/unisq-logo-on-white.svg?raw';
 import { importSvg } from '../svg-import';
 import { starterThemes } from '../themes';
+import { locate, nodeToArtboard } from '../../store/doc';
 import { BRAND_FONT, COLOURWAYS, CONTENT_TOKENS, HIGH_CONTRAST, type BrandKey, type Colourway } from './looks';
 
 export type StarterSet = 'assessment' | 'explore' | 'drag' | 'story' | 'games' | 'writing' | 'practice' | 'media';
@@ -296,3 +297,22 @@ export const byName = (ab: Artboard, name: string): SceneNode | undefined => {
   };
   return look(ab.children);
 };
+
+/**
+ * A sticky note on a starter's artboard, for the person who uses the template ("replace this picture", "this is the question
+ * text"). Notes are author-only: players, exports and share links never carry them (the player's notes.ts). `x`, `y` are artboard
+ * pixels of the note's top left corner (it can sit outside the page); `anchor` is a layer (or its id) on this artboard for the
+ * note to follow, kept at that offset from the layer. Returns the note.
+ *
+ *   addNote(page, { x: 880, y: 120, text: '**Swap the picture**\n- keep it landscape', colour: 'sky', anchor: photo });
+ */
+export function addNote(artboard: Artboard, n: { x: number; y: number; text: string; colour?: NoteColour; w?: number; h?: number; anchor?: SceneNode | string }): Note {
+  const note = makeNote({ x: n.x, y: n.y, w: n.w, h: n.h, text: n.text, colour: n.colour, author: 'Template' });
+  const layerId = typeof n.anchor === 'string' ? n.anchor : n.anchor?.id;
+  if (layerId && locate(artboard, layerId)) {
+    const local = apply(invert(nodeToArtboard(artboard, layerId)), n.x, n.y);
+    note.anchor = { layerId, lx: Math.round(local.x * 10) / 10, ly: Math.round(local.y * 10) / 10 };
+  }
+  (artboard.notes ??= []).push(note);
+  return note;
+}

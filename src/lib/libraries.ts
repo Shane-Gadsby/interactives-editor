@@ -93,7 +93,7 @@ export function lockViolation(before: Project, after: Project, override = false)
     if (!b || b === a) continue;
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
     for (const k of keys) {
-      if (k === 'canvasX' || k === 'canvasY' || k === 'canvasHidden' || k === 'name' || k === 'guides' || k === 'group') continue;
+      if (k === 'canvasX' || k === 'canvasY' || k === 'canvasHidden' || k === 'name' || k === 'guides' || k === 'group' || k === 'notes') continue;
       if ((a as unknown as Record<string, unknown>)[k] !== (b as unknown as Record<string, unknown>)[k]) return a;
     }
   }
@@ -426,7 +426,7 @@ function asInLibrary(project: Project, libraryId: string, ab: Artboard): Artboar
   return out;
 }
 
-const LOCAL = ['canvasX', 'canvasY', 'canvasHidden', 'guides', 'publish', 'library', 'source', 'id', 'name'];
+const LOCAL = ['canvasX', 'canvasY', 'canvasHidden', 'guides', 'notes', 'publish', 'library', 'source', 'id', 'name'];
 const without = (o: object) => Object.fromEntries(Object.entries(o).filter(([k]) => !LOCAL.includes(k)));
 
 function flatNodes(ab: Artboard): Map<string, { n: SceneNode; path: string }> {

@@ -40,6 +40,9 @@ import { TextToolbar, type ToolbarCommands } from './TextToolbar';
 import { paintRuns, readRuns, selectionOffsets, setSelectionOffsets } from '../lib/rich-text-dom';
 import { store, useEditor, type Tool } from '../store/store';
 import { CommentLayer } from './CommentLayer';
+import { NotesLayer } from './NotesLayer';
+import { addNote, leaveNote, noteScale } from '../lib/notes';
+import { NOTE_DEFAULT_H, NOTE_DEFAULT_W } from 'interactives-player';
 import { anchorAt } from '../lib/comment-anchor';
 import { comments } from '../lib/comments';
 import { drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
@@ -391,6 +394,11 @@ export function Canvas() {
   };
   const pointerDown = (e: React.PointerEvent) => {
     if (e.button === 2) return;
+    // A press the notes didn't take puts a picked note away
+    if (store().get().selectedNote && e.button === 0) {
+      leaveNote();
+      store().set({ selectedNote: null });
+    }
     // The Comment tool places its pin on click (see placeComment), so there is no drag to start and no pointer to capture.
     // Panning (middle button, Space, the Hand tool) still goes through below
     if (store().get().tool === 'comment' && e.button === 0 && !spaceDown.current) return;
@@ -582,6 +590,15 @@ export function Canvas() {
       const start = near ? near.tip : p;
       drag.current = { kind: 'boneDraw', abId: cab.id, parentId: near ? near.id : focus, chain: !!near, a: start };
       setBoneDraft({ abId: cab.id, a: start, b: start });
+      return;
+    }
+
+    if (tool === 'note') {
+      // A note drawn on an artboard belongs to it (and moves with it); anywhere else on the canvas it belongs to the canvas
+      const nab = hitAb;
+      const at = nab ? local(nab, w) : w;
+      drag.current = { kind: 'create', tool, abId: nab?.id ?? null, start: at, parentId: null };
+      setBox({ abId: nab?.id ?? null, rect: { x: at.x, y: at.y, width: 0, height: 0 } });
       return;
     }
 
@@ -1024,6 +1041,14 @@ export function Canvas() {
         const tiny = Math.abs(b.width) < 4 && Math.abs(b.height) < 4;
         store().addArtboard({ canvasX: round(b.x), canvasY: round(b.y), width: tiny ? 800 : round(b.width), height: tiny ? 600 : round(b.height) });
         store().set({ tool: 'select' });
+        return;
+      }
+      if (d.tool === 'note') {
+        // A click makes a note of the usual size; a drag makes it the size that was drawn (as it looks on screen at this zoom)
+        const tiny = Math.abs(b.width) * zoom < 12 && Math.abs(b.height) * zoom < 12;
+        const sc = noteScale(zoom);
+        const id = addNote(d.abId, { x: b.x, y: b.y, w: tiny ? NOTE_DEFAULT_W : (b.width * zoom) / sc, h: tiny ? NOTE_DEFAULT_H : (b.height * zoom) / sc });
+        if (id) store().set({ tool: 'select', selectedNote: id, editingNote: id });
         return;
       }
       const cab = d.abId ? getArtboard(st.project, d.abId) : undefined;
@@ -2051,6 +2076,7 @@ export function Canvas() {
           );
         })()}
       <CommentLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} />
+      <NotesLayer project={project} zoom={zoom} panX={panX} panY={panY} hidden={s.previewPlaying} passive={s.tool === 'hand' || spaceHeld} />
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {showRulers && <Rulers ab={active} zoom={zoom} panX={panX} panY={panY} width={vp.current?.clientWidth ?? 2000} height={vp.current?.clientHeight ?? 1200} />}
       {s.editingTextId && active && <TextEditor ab={active} id={s.editingTextId} zoom={zoom} panX={panX} panY={panY} bounds={{ width: vp.current?.clientWidth ?? 2000, height: vp.current?.clientHeight ?? 1200 }} />}

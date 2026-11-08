@@ -65,6 +65,12 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
             onChange={(v) => setPrefs({ ghostOutside: v })}
           />
           <CheckField
+            label="Show notes on the canvas"
+            title="The sticky notes authors leave on the canvas, including the explanations a template comes with. Players, Preview and exports never show them, whatever this says"
+            value={p.showNotes}
+            onChange={(v) => setPrefs({ showNotes: v })}
+          />
+          <CheckField
             label="Accessibility features"
             title="Layer roles, tab stops that Enter and Space click, the focus ring and screen reader announcements while you Preview. Switch it off to see whether a problem comes from it"
             value={p.accessibility}

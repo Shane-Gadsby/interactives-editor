@@ -21,6 +21,8 @@ import { runsPatch } from '../../interactives-player/src/textruns';
 import { sanitizeLayerInPlace } from '../../interactives-player/src/sanitize';
 import { liveProblems } from '../../interactives-player/src/live';
 import { checkExpression } from '../../interactives-player/src/expr';
+import { cleanNotes, makeNote, NOTE_COLOURS } from '../../interactives-player/src/notes';
+import type { Note } from '../../interactives-player/src/format';
 import { diff } from '../shared/ops.mjs';
 import { TOPICS, topicBody } from '../src/help/topics';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -185,12 +187,14 @@ function overview(p: Project, opts: { artboardId?: string; depth?: number }): st
     if (opts.artboardId && ab.id !== opts.artboardId) continue;
     lines.push(`## Artboard ${ab.name} [${ab.id}] ${ab.width}x${ab.height}`);
     if (ab.timelines.length) lines.push(`Timelines: ${ab.timelines.map((t) => `${t.name} [${t.id}] ${t.duration}ms ${t.loop}${t.autoplay ? ' autoplay' : ''} (${t.tracks.length} tracks)`).join('; ')}`);
+    if (ab.notes?.length) lines.push(`Notes: ${ab.notes.length} (use list_notes)`);
     if (ab.blends?.length) lines.push(`Blends: ${ab.blends.map((b) => `${b.name} [${b.id}] ${b.mode} (${b.entries.length} timelines)`).join('; ')}`);
     if (ab.logic.nodes.length) lines.push(`Interactions: ${ab.logic.nodes.length} nodes, ${ab.logic.edges.length} connections (use get_interactions)`);
     const out: string[] = [];
     outline(ab.children, 0, opts.depth ?? (opts.artboardId ? 8 : 2), out, { n: opts.artboardId ? 600 : 80 });
     lines.push(...out, '');
   }
+  if (p.notes?.length) lines.push(`Notes on the canvas outside any artboard: ${p.notes.length} (use list_notes)`, '');
   if (p.variables.length) lines.push('## Variables', ...p.variables.map((v) => `- ${v.name} [${v.id}] ${v.type} = ${JSON.stringify(v.initial)}${v.shared ? ' shared' : ''}${v.formula ? ` formula=${JSON.stringify(v.formula)}` : ''}${v.live ? ' live' : ''}${v.userData ? ' userData' : ''}${v.options ? ` options=${v.options.join('|')}` : ''}`), '');
   if (p.dataSources.length) lines.push('## Data sources', ...p.dataSources.map((d) => `- ${d.name} [${d.id}] ${d.kind} from ${d.source === 'url' ? d.url : `asset ${d.assetId}`}`), '');
   if (p.scripts.length) lines.push('## Scripts', ...p.scripts.map((sc) => `- ${sc.name} [${sc.id}]${sc.runOnStart ? ' runs on start' : ''} (${sc.code.split('\n').length} lines)`), '');
@@ -252,6 +256,20 @@ function validate(p: Project): string[] {
   }
   problems.push(...liveProblems(p));
   return problems;
+}
+
+/** Every note of a project with where it lives (the artboard, or none for the canvas). */
+function listNotes(p: Project): { note: Note; ab: Artboard | null; list: Note[] }[] {
+  return [...(p.notes ?? []).map((note) => ({ note, ab: null as Artboard | null, list: p.notes! })), ...p.artboards.flatMap((ab) => (ab.notes ?? []).map((note) => ({ note, ab: ab as Artboard | null, list: ab.notes! })))];
+}
+const findNote = (p: Project, id: string) => listNotes(p).find((x) => x.note.id === id);
+
+function notesReport(p: Project, artboardId?: string): string {
+  const rows = listNotes(p).filter((x) => !artboardId || x.ab?.id === artboardId);
+  if (!rows.length) return 'No notes.';
+  return rows
+    .map(({ note: n, ab }) => `- [${n.id}] ${ab ? `on ${ab.name} [${ab.id}]` : 'on the canvas'} at ${r(n.x)},${r(n.y)} ${r(n.w)}x${r(n.h)} ${n.colour ?? 'gold'}${n.anchor ? ` follows layer ${n.anchor.layerId}` : ''}${n.author ? ` by ${n.author}` : ''}\n${n.text.split('\n').map((l) => `    ${l}`).join('\n')}`)
+    .join('\n');
 }
 
 // ---------------------------------------------------------------- editing
@@ -423,9 +441,60 @@ function applyChanges(p0: Project, changes: Change[]): { project: Project; creat
         if (typeof c.run_on_start === 'boolean') (sc as { runOnStart?: boolean }).runOnStart = c.run_on_start;
         break;
       }
+      case 'add_note': {
+        // artboard_id puts the note on that artboard (x, y in its pixels); without one it sits on the canvas. layer_id makes it follow that layer
+        const ab = c.artboard_id ? findAb(c.artboard_id) : null;
+        const layer = c.layer_id && ab ? locate(p, ref(c.layer_id)) : null;
+        if (c.layer_id && (!layer || layer.ab !== ab)) throw new Error(`${where}: no layer ${String(c.layer_id)} on that artboard`);
+        const at = { x: typeof c.x === 'number' ? c.x : layer ? layer.node.x + layer.node.width + 12 : 0, y: typeof c.y === 'number' ? c.y : layer ? layer.node.y : 0 };
+        const note = makeNote({ ...at, w: typeof c.w === 'number' ? c.w : undefined, h: typeof c.h === 'number' ? c.h : undefined, text: String(c.text ?? ''), colour: NOTE_COLOURS.includes(c.colour as never) ? (c.colour as Note['colour']) : undefined, author: typeof c.author === 'string' && c.author ? c.author : `${ctx().agent} (AI)`, created: new Date().toISOString() });
+        // A layer's own box starts at its corner, so a note placed beside it keeps that offset
+        if (layer) note.anchor = { layerId: layer.node.id, lx: Math.round((at.x - layer.node.x) * 10) / 10, ly: Math.round((at.y - layer.node.y) * 10) / 10 };
+        if (ab) (ab.notes ??= []).push(note);
+        else (p.notes ??= []).push(note);
+        if (key) created[key] = note.id;
+        break;
+      }
+      case 'set_note': {
+        const found = findNote(p, ref(c.id));
+        if (!found) throw new Error(`${where}: no note ${String(c.id)}`);
+        const n = found.note;
+        for (const k of ['x', 'y', 'w', 'h'] as const) if (typeof c[k] === 'number') n[k] = c[k] as number;
+        if (typeof c.text === 'string') n.text = c.text;
+        if (NOTE_COLOURS.includes(c.colour as never)) n.colour = c.colour as Note['colour'];
+        if (c.layer_id === null) delete n.anchor;
+        else if (typeof c.layer_id === 'string') {
+          const layer = locate(p, ref(c.layer_id));
+          if (!layer || layer.ab !== found.ab) throw new Error(`${where}: no layer ${c.layer_id} on that note's artboard`);
+          n.anchor = { layerId: layer.node.id, lx: Math.round((n.x - layer.node.x) * 10) / 10, ly: Math.round((n.y - layer.node.y) * 10) / 10 };
+        }
+        break;
+      }
+      case 'delete_note': {
+        const found = findNote(p, ref(c.id));
+        if (!found) throw new Error(`${where}: no note ${String(c.id)}`);
+        found.list.splice(found.list.indexOf(found.note), 1);
+        if (!found.list.length) {
+          if (found.ab) delete found.ab.notes;
+          else delete p.notes;
+        }
+        break;
+      }
       default:
         throw new Error(`${where}: unknown op "${c.op}"`);
     }
+  }
+  // An agent can write any value into a note: put wrong-typed ones right before they are shared
+  if (p.notes) {
+    const list = cleanNotes(p.notes);
+    if (list) p.notes = list;
+    else delete p.notes;
+  }
+  for (const ab of p.artboards) {
+    if (!ab.notes) continue;
+    const list = cleanNotes(ab.notes);
+    if (list) ab.notes = list;
+    else delete ab.notes;
   }
   return { project: p, created, touched };
 }
@@ -482,6 +551,14 @@ function reference(topic: string): string {
 
 const S = (props: Record<string, unknown>, required: string[] = []) => ({ type: 'object', properties: props, required });
 const str = (description: string) => ({ type: 'string', description });
+
+/** The notes tools are conveniences over the edit tool, so they take the same path: one batch, live to everyone. */
+const runEdit = (a: Record<string, unknown>, changes: Change[], explain: string): Promise<string> => {
+  const edit = TOOLS.find((t) => t.name === 'edit')!;
+  // (an undefined value would be sent as nothing at all by JSON, but applyChanges reads them as given, so leave them out)
+  const clean = changes.map((c) => Object.fromEntries(Object.entries(c).filter(([, v]) => v !== undefined)) as Change);
+  return edit.run({ project_id: a.project_id, changes: clean, explain });
+};
 
 const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a: Record<string, unknown>) => Promise<string> }[] = [
   {
@@ -558,7 +635,8 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       'add_variable {name, type: number|string|boolean|color|enum|list, initial (for a list: JSON text, an array of objects), options? (enum), shared?, formula? (an expression worked out at the start), live? (needs a formula: keep it up to date as what it reads changes; read only, nothing can set it), user_data? (save for the learner, loaded before the start), persist?, ref?}; set_variable {id or name, props (formula, live, userData, persist...)}; ' +
       'add_timeline {artboard_id, name, duration, loop: once|loop|pingpong, autoplay, tracks: [{node_id, prop, keys: [{t, value, ease}]}], ref?}; ' +
       'add_interactions {artboard_id, nodes: [{ref, kind, params, note?}], edges: [{from, to, from_port?}]} (from/to are refs or ids); remove_interactions {artboard_id, ids}; ' +
-      'add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}. ' +
+      'add_script {name, code, run_on_start, ref?}; set_script {id or name, code?, name?, run_on_start?}; ' +
+      'add_note {artboard_id? (omit for a note on the canvas), x?, y?, w?, h?, text, colour?: gold|orange|green|sky|purple|rose, layer_id? (follow that layer), ref?}; set_note {id, x?, y?, w?, h?, text?, colour?, layer_id? (null lets go)}; delete_note {id} (sticky notes for the people editing: never shown to players, see list_notes). ' +
       'Give "ref" to name something you create, then use "$ref" in later changes in the same batch. Read read_reference("layers"), ("interactions") and ("properties") first.',
     inputSchema: S({ project_id: str('Project id'), changes: { type: 'array', items: { type: 'object' } }, explain: str('One line saying what this does (shown in the editor log)') }, ['project_id', 'changes']),
     run: async (a) => {
@@ -575,6 +653,38 @@ const TOOLS: { name: string; description: string; inputSchema: unknown; run: (a:
       const problems = validate(project);
       return `Applied ${(a.changes as unknown[]).length} change(s) as ${ops.length} op(s).${Object.keys(created).length ? `\nCreated: ${JSON.stringify(created)}` : ''}${problems.length ? `\n\nProblems now in the project:\n- ${problems.slice(0, 30).join('\n- ')}` : ''}`;
     },
+  },
+  {
+    name: 'list_notes',
+    description: 'The sticky notes in a project (or one artboard): id, where, colour, the layer it follows, who wrote it, and its text. Notes are the authors\' own annotations ("swap this photo before release", what a template\'s parts are for); the player, exports and share links never carry them. Read them before changing a project you did not make.',
+    inputSchema: S({ project_id: str('Project id'), artboard_id: str('Optional: only the notes on this artboard (id or name)') }, ['project_id']),
+    run: async (a) => {
+      const p = await loadProject(String(a.project_id));
+      const ab = a.artboard_id ? p.artboards.find((x) => x.id === a.artboard_id || x.name === a.artboard_id) : undefined;
+      if (a.artboard_id && !ab) throw new Error(`No artboard ${String(a.artboard_id)}`);
+      return notesReport(p, ab?.id);
+    },
+  },
+  {
+    name: 'add_note',
+    description: 'Leave a sticky note for the people editing this project, on an artboard (x, y in the artboard\'s pixels; the note can sit outside it) or on the canvas (leave artboard_id out). Give layer_id to attach it to a layer so it follows that layer (it is placed beside the layer unless x and y say otherwise). Text takes light markdown: **bold**, *italic*, `code`, "- " bullets, "[ ]" and "[x]" tasks. Players never see notes.',
+    inputSchema: S(
+      { project_id: str('Project id'), artboard_id: str('Artboard id or name (omit for a note on the canvas)'), x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number', description: 'Width in note pixels (default 200)' }, h: { type: 'number', description: 'Height (default 120)' }, text: str('What the note says'), colour: str('gold, orange, green, sky, purple or rose'), layer_id: str('A layer on that artboard for the note to follow') },
+      ['project_id', 'text'],
+    ),
+    run: async (a) => runEdit(a, [{ op: 'add_note', artboard_id: a.artboard_id, x: a.x, y: a.y, w: a.w, h: a.h, text: a.text, colour: a.colour, layer_id: a.layer_id, ref: 'note' }], 'Add a note'),
+  },
+  {
+    name: 'edit_note',
+    description: 'Change a note: its text, colour, position or size, or which layer it follows (layer_id null lets go). Use list_notes for ids.',
+    inputSchema: S({ project_id: str('Project id'), id: str('Note id'), text: str('New text'), colour: str('gold, orange, green, sky, purple or rose'), x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' }, layer_id: { type: ['string', 'null'], description: 'Layer to follow, or null to let go' } }, ['project_id', 'id']),
+    run: async (a) => runEdit(a, [{ op: 'set_note', id: a.id, text: a.text, colour: a.colour, x: a.x, y: a.y, w: a.w, h: a.h, ...('layer_id' in a ? { layer_id: a.layer_id } : {}) }], 'Edit a note'),
+  },
+  {
+    name: 'remove_note',
+    description: 'Delete a sticky note.',
+    inputSchema: S({ project_id: str('Project id'), id: str('Note id') }, ['project_id', 'id']),
+    run: async (a) => runEdit(a, [{ op: 'delete_note', id: a.id }], 'Remove a note'),
   },
   {
     name: 'validate',

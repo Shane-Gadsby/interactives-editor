@@ -225,7 +225,7 @@ From left to right:
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
-**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## What the pointer shows
 The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
@@ -408,6 +408,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>T</kbd> | Text |
 | <kbd>B</kbd> | Button |
 | <kbd>C</kbd> | Comment (pin a review note where you click) |
+| <kbd>S</kbd> | Note (draw a sticky note for the people editing; players never see it, see [Notes](notes)) |
 
 ## Editing
 | Key | Does |
@@ -3322,7 +3323,7 @@ Open a project and choose **Share > Save as template**.
 - **Title** and **Description** are what the card shows. Say what the template is for.
 - **Everyone can use this template** (off: only you see it). People who use it get their own copy; yours is never changed.
 - **Checklist**: one line for each thing to change ("Replace the question text"). Select a layer first and press **Link** on an item to point it at that layer, or **Add for the selected layers** for one item per layer. Clicking an item later selects the layer. Reword the items for the person who will use it, not for you.
-- The picture on the card is the project's own thumbnail, and the whole project (artboards, pictures, fonts, variables, interactions) goes with it. Review comments and results do not.
+- The picture on the card is the project's own thumbnail, and the whole project (artboards, pictures, fonts, variables, interactions and [notes](notes), which are the right place to explain each part) goes with it. Review comments and results do not.
 - Saving again from the same project, choosing **The next version of ...**, makes **version 2**, **3** and so on. Saving with nothing changed only updates the title, description, checklist and visibility.
 
 ![The Save as template window: title, description, who can use it, and a checklist whose first item points at the selected layer.](help/templates-save.png)
@@ -3484,6 +3485,53 @@ If the project was saved from another tab, or by someone else without live editi
 Only staff who have used the StudyDesk Toolbox before can be found by name, and students are never listed. Someone who isn't found can still be invited by typing their exact username. Collaborators can edit, comment, export and share it; only the owner can delete the project, clear its results or change who's invited (a collaborator can take themselves off the list).
 
 To hand a project to someone else (you're leaving, or it belongs to another unit now), invite them first, then press **Make owner** beside their name. They become the owner and you stay on as a collaborator. The project keeps its id, so its share link, the **Link for StudyDesk** in every course page and a library published from it carry on working. A power user can do this for anyone's project, which is how a project is moved on when its owner has already left. To let someone look and comment without editing, use **Share for review** instead ([Review comments](comments)).`,
+  },
+
+  {
+    id: 'notes',
+    title: 'Notes',
+    group: 'Working together',
+    summary: 'Sticky notes for the people making a project: draw them on the canvas, attach them to a layer, and know that players, exports and share links never see them.',
+    keywords: 'note notes sticky annotation annotate hand-off handoff todo reminder explain template hint hide show colour markdown',
+    body: `A **note** is a small sticky note you leave on the canvas for whoever edits the project next, including you next week: "swap this photo before release", "this branch is for the hard version", "change the three red words". Templates use them to explain what each part is for.
+
+Notes are not comments. [Review comments](comments) are threaded conversations with reviewers, kept on the server beside the project. A note is part of the project document, so it comes along when the project is copied, saved as a template or remixed, and everyone editing at the same moment sees it appear. It is **never** a layer: it is not in the Layers list, the interactions graph, auto layout or bindings.
+
+## Players never see notes
+A note is never drawn when the project is played, in **Preview**, in the **Single HTML file**, a **share link**, a **Link for StudyDesk**, an embed, the review page, or a **PNG**, **SVG**, **Lottie** or **GIF** picture of an artboard. The text is also taken out of the project data those pages carry, and the server takes it out again when a page is shared, so it is not in anything that plays. The **project package (.ixp)** and the **project JSON** are for editing, so they keep notes.
+
+## Add a note
+Pick the **Note** tool (<kbd>S</kbd>, in the tools bar next to **Comment**) and click, or drag out the size you want. A note drawn on an artboard belongs to that artboard and moves with it (it can hang outside the artboard's edge). A note drawn on empty canvas belongs to the canvas itself. Type straight away; <kbd>Esc</kbd> or a click elsewhere finishes, and a note left empty goes away.
+
+- **Move** it by dragging it, **resize** it from its bottom right corner.
+- **Double-click** it, or press <kbd>Enter</kbd> with it focused, to change the text.
+- With a note picked, a small bar above it sets the **colour** (yellow, orange, green, blue, purple or pink), **attaches** it to the layer you have selected on the same artboard, and **deletes** it. <kbd>Delete</kbd> removes a picked note too.
+- Notes are small on purpose. They grow with the zoom but never get tiny or huge, and a picked note has a gold outline.
+
+Keyboard: <kbd>Tab</kbd> reaches every note on the canvas. With one focused, the arrow keys move it (<kbd>Shift</kbd> for 10), <kbd>Alt</kbd>+arrows resize it, <kbd>Enter</kbd> edits it, <kbd>Delete</kbd> removes it and <kbd>Esc</kbd> lets go. Every button on the bar has a label for a screen reader.
+
+## Attach a note to a layer
+Select a layer, pick a note on the same artboard and press **Attach to the selected layer**. The note now follows that layer when it moves, scales or rotates, and its header says which layer it is on. Dragging the note changes how far it sits from the layer. Delete the layer and the note stays where it was (its outline turns dashed). **Detach** lets go. Canvas notes cannot be attached.
+
+## What a note can say
+Plain text with a little markdown:
+
+| Write | Shows |
+|---|---|
+| \`**bold**\`, \`*italic*\`, \`code\` | **bold**, *italic*, \`code\` |
+| \`- an item\` | a bullet |
+| \`[ ] a task\` and \`[x] a done task\` | a tick box you can click on the canvas, which rewrites the text |
+
+Nothing in a note is ever treated as markup.
+
+## Show and hide notes
+The eye button beside the **Note** tool shows or hides every note on your canvas, and its badge counts them. It is your own preference (also under **Preferences > Show notes on the canvas**), so putting a template's explanations away changes nothing for anyone else. Notes are never drawn while you Preview.
+
+## Notes and templates
+A project made from a template starts with the template's notes, so the explanations arrive on the canvas next to the parts they are about. **Save as template** keeps your notes. **Update from template** leaves your notes alone. Hide them with the eye button once you have read them, or delete them.
+
+## Working together and undo
+Adding, typing in, moving, recolouring and deleting a note are ordinary edits: they undo with <kbd>Ctrl</kbd>+<kbd>Z</kbd>, save with the project, and appear live for the other people in the project (and for an AI agent, which can list, add, edit and remove notes).`,
   },
 
   {
