@@ -71,14 +71,15 @@ describe('the tool rail', { timeout: 30000 }, () => {
     expect(catalogue()[0].getAttribute('aria-pressed')).toBeNull();
   });
 
-  it('uses the catalogue icon, filled with currentColor', async () => {
+  it('uses the catalogue\'s iris icon, filled with currentColor', async () => {
     await mount();
     act(() => media().click());
     const svg = catalogue()[0].querySelector('svg')!;
     expect(svg.getAttribute('viewBox')).toBe('0 0 16 16');
     expect(svg.getAttribute('fill')).toBe('currentColor');
-    expect(svg.querySelector('circle')).toBeTruthy();
-    expect(svg.querySelector('polygon')).toBeTruthy();
+    //the iris is six petals, and nothing in it carries its own colour
+    expect(svg.querySelectorAll('path').length).toBe(6);
+    expect(svg.querySelector('[fill]:not(svg), [style]')).toBeNull();
     expect(typeof Icons.catalogue).toBe('function');
   });
 
