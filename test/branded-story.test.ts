@@ -136,8 +136,8 @@ describe('branded story starters', () => {
 
     it('has eight slides in the template order, each with its slide bar', () => {
       const p = project();
-      expect(p.artboards.map((a) => a.name)).toEqual(['Slide 1: Title', 'Slide 2: Acknowledgement of Country', 'Slide 3: Section', 'Slide 4: Content', 'Slide 5: Content', 'Slide 6: Question', 'Slide 7: Summary', 'Slide 8: End']);
-      p.artboards.forEach((a, i) => {
+      expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['Slide 1: Title', 'Slide 2: Acknowledgement of Country', 'Slide 3: Section', 'Slide 4: Content', 'Slide 5: Content', 'Slide 6: Question', 'Slide 7: Summary', 'Slide 8: End']);
+      p.artboards.filter((a) => !a.isMaster).forEach((a, i) => {
         expect((byName(a, 'Slide counter') as TextNode).text).toBe(`Slide ${i + 1} of 8`);
         expect(!!byName(a, 'Back')).toBe(i > 0);
       });

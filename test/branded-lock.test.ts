@@ -17,6 +17,8 @@ function sample(strict?: boolean) {
   return { ctx, project: ctx.project, hero, page, body };
 }
 const byName = (ab: Artboard, name: string) => ab.children.find((n) => n.name === name)!;
+//the chrome (logo, accent bar) is on a page's master, not the page
+const chromeOn = (project: Project, page: Artboard, name: string) => byName(project.artboards.find((a) => a.id === page.master)!, name);
 
 let s: EditorStore;
 function open(p: Project, activeIndex = 1) {
@@ -86,24 +88,26 @@ describe('the branded lock', () => {
   it('refuses to edit, move or delete a chrome layer, with a toast', () => {
     const { project, page } = sample();
     open(project);
-    const logoId = byName(page, 'UniSQ logo').id;
+    s.set({ activeArtboardId: page.master! });
+    const logoId = chromeOn(project, page, 'UniSQ logo').id;
     s.setProps([logoId], { x: 300 });
     expect((current(logoId) as { x: number }).x).not.toBe(300);
     expect(s.get().toast?.kind).toBe('error');
     expect(s.get().toast?.text).toMatch(/UniSQ brand/);
     s.set({ toast: null });
-    s.select([byName(page, 'Brand accent').id]);
+    s.set({ activeArtboardId: page.master! });
+    s.select([chromeOn(project, page, 'Brand accent').id]);
     s.deleteSelection();
     //(the toast is throttled, so it is the layer that says the delete was refused)
-    expect(current(byName(page, 'Brand accent').id)).toBeTruthy();
+    expect(current(chromeOn(project, page, 'Brand accent').id)).toBeTruthy();
   });
 
   it('refuses to detach a chrome layer by taking its tag off', () => {
     const { project, page } = sample();
     open(project);
-    const id = byName(page, 'Brand accent').id;
+    const id = chromeOn(project, page, 'Brand accent').id;
     s.update((d) => {
-      const n = d.artboards[1].children.find((x) => x.id === id) as unknown as { tags?: string[] };
+      const n = d.artboards.find((a) => a.id === page.master)!.children.find((x) => x.id === id) as unknown as { tags?: string[] };
       n.tags = [];
     });
     expect(isChrome(current(id)!)).toBe(true);
@@ -118,10 +122,11 @@ describe('the branded lock', () => {
     s.select([body.id]);
     s.deleteSelection();
     expect(current(body.id)).toBeUndefined();
-    expect(current(byName(page, 'UniSQ logo').id)).toBeTruthy();
+    expect(current(chromeOn(project, page, 'UniSQ logo').id)).toBeTruthy();
     expect(s.get().toast).toBeNull();
     s.deleteArtboard(page.id);
-    expect(s.get().project.artboards).toHaveLength(1);
+    //(its master stays, with the hero's)
+    expect(s.get().project.artboards.filter((a) => !a.isMaster)).toHaveLength(1);
   });
 
   it('takes theme tokens only for a colour on an existing layer: a hex is refused, a token is fine', () => {
@@ -180,8 +185,8 @@ describe('the branded lock', () => {
 
   it('snapToBrand and brandLookViolation work without a store', () => {
     const { project, page } = sample();
-    const logoNode = byName(page, 'UniSQ logo');
-    const moved = { ...project, artboards: project.artboards.map((a) => (a === page ? { ...a, children: a.children.map((n) => (n === logoNode ? { ...n, x: 5 } : n)) } : a)) } as Project;
+    const logoNode = chromeOn(project, page, 'UniSQ logo');
+    const moved = { ...project, artboards: project.artboards.map((a) => (a.id === page.master ? { ...a, children: a.children.map((n) => (n === logoNode ? { ...n, x: 5 } : n)) } : a)) } as Project;
     expect(brandLookViolation(project, moved)).toMatch(/UniSQ logo/);
     expect(brandLookViolation(project, project)).toBeNull();
     expect(snapToBrand(project, project)).toBe(project);
@@ -192,7 +197,9 @@ describe('the branded lock', () => {
     open(project);
     s.setProps([body.id], { color: '#ff00ff' });
     expect((current(body.id) as TextNode).color).toBe('#ff00ff');
-    const logoId = byName(project.artboards[1], 'UniSQ logo').id;
+    const page = project.artboards[1];
+    s.set({ activeArtboardId: page.master! });
+    const logoId = chromeOn(project, page, 'UniSQ logo').id;
     s.setProps([logoId], { x: 77 });
     expect((current(logoId) as { x: number }).x).toBe(77);
   });
@@ -200,13 +207,14 @@ describe('the branded lock', () => {
   it('is lifted by the power user override (F9), and back on when it is switched off', () => {
     const { project, page, body } = sample();
     open(project);
-    s.set({ brandOverride: true });
-    const logoId = byName(page, 'UniSQ logo').id;
+    s.set({ brandOverride: true, activeArtboardId: page.master! });
+    const logoId = chromeOn(project, page, 'UniSQ logo').id;
     s.setProps([logoId], { x: 88 });
     expect((current(logoId) as { x: number }).x).toBe(88);
+    s.set({ activeArtboardId: page.id });
     s.setProps([body.id], { color: '#00ff00', fontFamily: 'Georgia' });
     expect((current(body.id) as TextNode).color).toBe('#00ff00');
-    s.set({ brandOverride: false });
+    s.set({ brandOverride: false, activeArtboardId: page.master! });
     s.setProps([logoId], { x: 99 });
     expect((current(logoId) as { x: number }).x).toBe(88);
   });

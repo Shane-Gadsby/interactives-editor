@@ -74,7 +74,7 @@ describe('Lite lesson starter', () => {
 
   it('is listed in the media set and finishes every version on one completion page', () => {
     const p = make();
-    expect(p.artboards.map((a) => a.name)).toEqual(['Start', 'Choose a version', 'Video lesson', 'Audio only lesson', 'Text only lesson', 'Done']);
+    expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['Start', 'Choose a version', 'Video lesson', 'Audio only lesson', 'Text only lesson', 'Done']);
     expect(p.settings.reporting).toMatchObject({ completion: 'artboard', completionArtboard: board(p, 'Done').id });
     for (const name of ['Video lesson', 'Audio only lesson', 'Text only lesson']) {
       const finish = byName(board(p, name), 'Finish button')!;

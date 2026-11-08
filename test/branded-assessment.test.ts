@@ -146,7 +146,7 @@ describe('playing the assessment starters', () => {
     const variable = (name: string) => project.variables.find((v) => v.name === name)!;
 
     it('has five question pages with a footer progress line, a mix of question types, and Results set to report the score', () => {
-      expect(project.artboards).toHaveLength(7);
+      expect(project.artboards.filter((a) => !a.isMaster)).toHaveLength(7);
       for (let n = 1; n <= 5; n++) expect(byName(page(n), 'Footer text')).toMatchObject({ text: `Question ${n} of 5` });
       const kinds = project.artboards.flatMap((ab) => questionFrames(ab).map((f) => f.question!.kind));
       expect(kinds).toEqual(['single', 'multiple', 'truefalse', 'blank', 'ordering']);

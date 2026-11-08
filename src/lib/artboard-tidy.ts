@@ -5,7 +5,7 @@
  *
  * Order: the Artboards list order, with the start artboard first when it isn't already; a responsive variant (a portrait
  * copy of a page) goes right after its main artboard and stays beside it in the same cell; boards that exist only to be
- * used inside others (instances) or that came from a library go last. Artboards that are off the canvas are left alone.
+ * used inside others (instances, page masters) or that came from a library go last. Artboards that are off the canvas are left alone.
  */
 import { setMembers, walk, type Artboard, type Project } from 'interactives-player';
 
@@ -20,7 +20,7 @@ export interface TidyCell {
   boards: Artboard[];
 }
 
-/** The artboards that exist to be used inside others: placed as an instance somewhere, or copied in from a library. The start artboard and anything a "Go to artboard" leads to never count. */
+/** The artboards that exist to be used inside others: placed as an instance somewhere, copied in from a library, or kept as a page master (its layers are drawn on other pages). The start artboard and anything a "Go to artboard" leads to never count. */
 function componentIds(p: Project): Set<string> {
   const used = new Set<string>();
   const targeted = new Set<string>();
@@ -36,7 +36,7 @@ function componentIds(p: Project): Set<string> {
   const out = new Set<string>();
   for (const ab of p.artboards) {
     if (ab.id === p.settings.startArtboardId || targeted.has(ab.id)) continue;
-    if (used.has(ab.id) || ab.library) out.add(ab.id);
+    if (used.has(ab.id) || ab.library || ab.isMaster) out.add(ab.id);
   }
   return out;
 }

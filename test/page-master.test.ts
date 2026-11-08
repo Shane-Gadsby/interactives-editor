@@ -5,7 +5,7 @@ import { EditorStore, setCurrentStore } from '../src/store/store';
 import { brandedPage, brandedProject, contentBox, text } from '../src/lib/branded/kit';
 import { COLOURWAYS } from '../src/lib/branded/looks';
 import { brandLookViolation } from '../src/lib/branded/lock';
-import { extractMaster, markMaster, setMaster, withMasterCached } from '../src/lib/page-master';
+import { detachMaster, extractMaster, markMaster, setMaster, withMasterCached } from '../src/lib/page-master';
 import { analyzeUsage } from '../src/lib/dependencies';
 import { applyTemplateUpdate } from '../src/lib/templates';
 import { baselineOf, partsOf } from '../shared/template.mjs';
@@ -18,7 +18,10 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 const json = (v: unknown) => JSON.stringify(v).length;
 const CHROME = ['Brand accent', 'UniSQ logo'];
 
-/** A branded deck like the real starters: hero, twelve content pages with a body each, a section page and an end page. */
+/**
+ * A branded deck as the starters were before they had masters: hero, twelve content pages with a body each, a section page and an
+ * end page, the chrome copied onto every page (the kit now builds masters, so they are put back on the pages here, for extractMaster to find).
+ */
 function deck(pages = 12) {
   const ctx = brandedProject(COLOURWAYS[1], 'Spelling');
   brandedPage(ctx, 'Welcome', { kind: 'hero', subtitle: 'Sub' });
@@ -28,6 +31,8 @@ function deck(pages = 12) {
   }
   brandedPage(ctx, 'Part two', { kind: 'section' });
   brandedPage(ctx, 'Thank you', { kind: 'end' });
+  for (const a of [...ctx.project.artboards]) if (a.master) detachMaster(ctx.project, a.id);
+  ctx.project.artboards = ctx.project.artboards.filter((a) => !a.isMaster);
   return ctx.project;
 }
 

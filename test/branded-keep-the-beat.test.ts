@@ -159,7 +159,7 @@ describe('Keep the beat', () => {
     project = JSON.parse(JSON.stringify(projectFromBrandedStarter(beat, COLOURWAYS[0])));
     player = new Player(document.getElementById('stage')!, project, { loadData: false });
     await click('Start', 'Start button');
-    expect(project.artboards.map((a) => a.name)).toEqual(['Start', 'Pick a drill', 'Drill', 'Results']);
+    expect(project.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['Start', 'Pick a drill', 'Drill', 'Results']);
     const text = document.body.textContent ?? '';
     for (const p of PRESETS) expect(text).toContain(p.name);
     expect(text).toContain('Rhythm practice only');

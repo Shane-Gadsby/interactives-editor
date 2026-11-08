@@ -1076,7 +1076,7 @@ describe('games starters', () => {
 
     it('has the map, five stage pages and a reward, with the first stage ready and the rest locked', async () => {
       const { p, player, marker } = await start();
-      expect(p.artboards.map((a) => a.name)).toEqual(['The research journey', 'Map', ...STAGES.map((s, i) => `Stage ${i + 1}: ${s.name}`), 'Reward']);
+      expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['The research journey', 'Map', ...STAGES.map((s, i) => `Stage ${i + 1}: ${s.name}`), 'Reward']);
       expect(player.getVariable('done')).toBe(0);
       expect(label(marker(0))).toContain('ready');
       for (let i = 1; i < 5; i++) expect(label(marker(i))).toContain('locked');

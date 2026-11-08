@@ -136,7 +136,7 @@ describe('branded writing starters and the interactive book', () => {
 
     it('has a hero, one survey page with the three kinds of question, and a thank-you', () => {
       const p = project();
-      expect(p.artboards.map((a) => a.name)).toEqual(['Study experience survey', 'Survey', 'Thank you']);
+      expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(['Study experience survey', 'Survey', 'Thank you']);
       expect(survey(p, 'Rating scale')).toBeTruthy();
       expect(survey(p, 'Place choices')).toBeTruthy();
       expect(survey(p, 'Comment box').type).toBe('input');
@@ -318,7 +318,7 @@ describe('branded writing starters and the interactive book', () => {
 
     it('has a goals page, three steps, an export page and a progress list on each of them', () => {
       const p = project();
-      expect(p.artboards.map((a) => a.name)).toEqual([HERO, 'My goals', 'Step 1: Where I am', 'Step 2: One change', 'Step 3: My plan', 'Export']);
+      expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual([HERO, 'My goals', 'Step 1: Where I am', 'Step 2: One change', 'Step 3: My plan', 'Export']);
       for (const name of ['My goals', 'Step 1: Where I am', 'Step 2: One change', 'Step 3: My plan', 'Export']) {
         const list = layer(p, name, 'Progress list') as unknown as { children: SceneNode[] };
         expect(list.children.filter((c) => c.name.startsWith('Progress: '))).toHaveLength(5);
@@ -486,7 +486,7 @@ describe('branded writing starters and the interactive book', () => {
 
     it('has four prompt pages in the order of the reflection and a last page for the whole of it', () => {
       const p = project();
-      expect(p.artboards.map((a) => a.name)).toEqual([HERO, ...PARTS, 'My reflection']);
+      expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual([HERO, ...PARTS, 'My reflection']);
       for (const name of PARTS) {
         expect(layer(p, name, 'Text box').type).toBe('input');
         expect((layer(p, name, 'Think about') as TextNode).text.split('\n').filter((l) => l.startsWith('•'))).toHaveLength(3);
@@ -624,7 +624,7 @@ describe('branded writing starters and the interactive book', () => {
 
     it('has a cover, contents, chapters of three, three and two pages, and a summary', () => {
       const p = project();
-      expect(p.artboards.map((a) => a.name)).toEqual(PAGES);
+      expect(p.artboards.filter((a) => !a.isMaster).map((a) => a.name)).toEqual(PAGES);
       expect(p.artboards.filter((a) => questionOf(p, a.name))).toHaveLength(3);
       //a question ends each chapter, text and a picture come before it
       expect(['1.3 Check your understanding', '2.3 Check your understanding', '3.2 Check your understanding'].every((n) => !!questionOf(p, n))).toBe(true);

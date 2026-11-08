@@ -1,12 +1,8 @@
-/** Small pieces the drag set's starters share: variables, hero and result pages, and short interaction chains. */
-import { uid, type Artboard, type LogicNode, type Project, type SceneNode, type TextNode, type Variable } from 'interactives-player';
-import { brandedPage, button, chain, edge, gnode, text, type BrandedCtx } from '../../kit';
+/** Small pieces the drag set's starters share: hero and result pages and text in a box. Variables and the graph builders are in ../../graph-kit.ts (re-exported here). */
+import type { Artboard, SceneNode, TextNode } from 'interactives-player';
+import { brandedPage, button, text, type BrandedCtx } from '../../kit';
 
-export const addVar = (p: Project, name: string, type: Variable['type'], initial: Variable['initial']): Variable => {
-  const v = { id: uid('v'), name, type, initial } as Variable;
-  p.variables.push(v);
-  return v;
-};
+export { addVar, goButton, join, put, seq } from '../../graph-kit';
 
 /** Text in a fixed box, centred up and down (labels on cards, numbers on spots). */
 export const boxText = (ctx: BrandedCtx, name: string, value: string, x: number, y: number, w: number, h: number, extra: Partial<TextNode> = {}): TextNode =>
@@ -14,33 +10,6 @@ export const boxText = (ctx: BrandedCtx, name: string, value: string, x: number,
 
 /** An expression string literal for a token reference or any other text. */
 export const lit = (s: string): string => JSON.stringify(s);
-
-/**
- * A row of the interaction graph: nodes side by side at height `y`, each wired to the next. A spec is `[kind, params, note?]`.
- * Returns the nodes so a flow can be joined to another.
- */
-export function seq(ab: Artboard, y: number, ...specs: [string, Record<string, unknown>, string?][]): LogicNode[] {
-  const nodes = specs.map(([kind, params, note], i) => gnode(kind, i * 260, y, params, note));
-  ab.logic.nodes.push(...nodes);
-  ab.logic.edges.push(...chain(...nodes));
-  return nodes;
-}
-
-/** A free node at a spot of the graph (for branches). */
-export function put(ab: Artboard, kind: string, x: number, y: number, params: Record<string, unknown> = {}, note?: string): LogicNode {
-  const n = gnode(kind, x, y, params, note);
-  ab.logic.nodes.push(n);
-  return n;
-}
-
-export function join(ab: Artboard, from: LogicNode, to: LogicNode, port = 'out'): void {
-  ab.logic.edges.push(edge(from, to, port));
-}
-
-/** A button on a page that goes to another page when pressed. */
-export function goButton(ab: Artboard, btn: SceneNode, to: Artboard, y: number): void {
-  seq(ab, y, ['event.pointer', { target: btn.id, type: 'click' }, 'Navigation'], ['action.artboard', { artboard: to.id, transition: 'fade', duration: 300 }]);
-}
 
 /** The first page: gradient hero with the title, one line, and a Start button that goes to `to` (set later with `wireStart`). */
 export function heroPage(ctx: BrandedCtx, title: string, subtitle: string): { page: Artboard; start: SceneNode } {
