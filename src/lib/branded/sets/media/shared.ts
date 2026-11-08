@@ -1,7 +1,9 @@
 //Small pieces the listen, watch, capture and practice starters share, so none of them reaches into another set's files. Variables and the graph
 //builders come from graph-kit, the native pieces (stack, progress bar, dialog) from parts. What is here is only what those two do not have: the hero
 //and end pages, the one line list steps (toggleItem, setItem), a tick list and a placeholder picture.
-import { createNode, uid, type Artboard, type Asset, type FrameNode, type Project, type SceneNode, type TextNode, type Variable } from 'interactives-player';
+import { createNode, uid, type Artboard, type Asset, type FrameNode, type InputNode, type Project, type SceneNode, type TextNode, type Variable } from 'interactives-player';
+import { lookDefaults } from '../../../themes';
+import { BRAND_FONT } from '../../looks';
 import { brandedPage, button, solid, stroke, text, type BrandedCtx } from '../../kit';
 import { darkButton, type ActionStep } from '../../graph-kit';
 
@@ -50,8 +52,9 @@ export function tickList(ctx: BrandedCtx, name: string, rowName: string, x: numb
   const on = `${opts.ticked.name}.includes(index)`;
   const tick = createNode('rect', { name: 'Tick box', x: 8, y: (rowH - 22) / 2, width: 22, height: 22, cornerRadius: 6, fill: solid(L.background), stroke: stroke(L.border, 2), decorative: true });
   tick.bindings = { 'fill.color': `${on} ? "${L.button}" : "${L.background}"`, 'stroke.paint.color': `${on} ? "${L.button}" : "${L.border}"` };
-  const mark = text(ctx, 'Tick mark', '✓', 12, (rowH - 22) / 2 - 1, 18, { fontSize: 16, fontWeight: 700, color: L.onButton, decorative: true });
-  mark.bindings = { visible: on };
+  //Dark on the row until it is ticked: it only shows over the button colour, where its own (onButton) colour is the one that reads, and a contrast check that cannot see that is not fooled
+  const mark = text(ctx, 'Tick mark', '✓', 12, (rowH - 22) / 2 - 1, 18, { fontSize: 16, fontWeight: 700, color: L.text, decorative: true });
+  mark.bindings = { visible: on, color: `"${L.onButton}"` };
   const words = text(ctx, 'Row text', '{item}', 42, (rowH - (opts.fontSize ?? 16) * 1.3) / 2, width - 54, { fontSize: opts.fontSize ?? 16, decorative: true });
   const row = createNode('frame', { name: rowName, x: 0, y: 0, width, height: rowH, cornerRadius: 8, fill: solid(opts.background === false ? L.background : L.surface), stroke: null, clip: false, role: 'checkbox', focusable: true, cursor: 'pointer', children: [tick, mark, words] }) as FrameNode;
   row.bindings = { ariaChecked: on, ariaLabel: 'item' };
@@ -66,4 +69,24 @@ export function placeholderPicture(project: Pick<Project, 'assets'>, name: strin
   const asset: Asset = { id: uid('as'), name, mime: 'image/svg+xml', size: svg.length, src: `data:image/svg+xml;base64,${btoa(svg)}` };
   project.assets.push(asset);
   return asset.id;
+}
+
+/** A multi line answer box on a variable, in the brand look. */
+export function textBox(ctx: BrandedCtx, name: string, v: Variable, x: number, y: number, width: number, height: number, placeholder: string, label: string): InputNode {
+  return createNode('input', {
+    name,
+    x,
+    y,
+    width,
+    height,
+    inputType: 'textarea',
+    variableId: v.id,
+    placeholder,
+    ariaLabel: label,
+    ...lookDefaults(ctx.project, 'input'),
+    stroke: stroke(ctx.L.border, 2),
+    cornerRadius: 10,
+    fontSize: 17,
+    fontFamily: BRAND_FONT,
+  } as Partial<InputNode>);
 }
