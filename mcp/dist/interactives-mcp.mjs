@@ -87,19 +87,20 @@ const CATALOG = [
     kind: "event.pointer",
     label: "On pointer",
     category: "event",
-    description: "When a layer is clicked, pressed, hovered or dragged. Moves and drags give event.x / event.y (artboard coordinates) and event.stepX / event.stepY (movement since the last event); drags also give event.dx / event.dy (movement since the press).",
+    description: "When a layer is clicked, pressed, hovered or dragged. Moves and drags give event.x / event.y (artboard coordinates) and event.stepX / event.stepY (movement since the last event); drags also give event.dx / event.dy (movement since the press), event.index (the repeated copy the pointer is over now) and event.startIndex (the copy it was pressed on). With a layer picked, event.child is the name of its own layer that was hit and event.childIndex that layer's place in it from 0 (-1 and null when it landed on the layer itself): one flow can serve every item in a set of layers.",
     outputs: OUT,
     hasInput: false,
     params: [
       { key: "target", label: "Layer", type: "node" },
-      { key: "type", label: "Event", type: "select", options: POINTER_TYPES, default: "click" }
+      { key: "type", label: "Event", type: "select", options: POINTER_TYPES, default: "click" },
+      { key: "childrenOnly", label: "Only when a child is hit", type: "boolean", default: false, help: "Only run when the event landed inside one of the layer's own layers, not on the layer itself. Needs a layer picked" }
     ]
   },
   {
     kind: "event.key",
     label: "On key",
     category: "event",
-    description: 'When a keyboard key is pressed or released. Leave the key empty for any key. Modifiers that are ticked must be held. Pick a layer to react only while that layer (or one inside it) has keyboard focus. Keys typed into a text box are ignored unless "Also while typing" is ticked. A key that runs a flow does not also scroll the page, unless "Let the browser act too" is ticked. event.key, event.code and event.shift / ctrl / alt / meta say what was pressed.',
+    description: 'When a keyboard key is pressed or released. Leave the key empty for any key. Modifiers that are ticked must be held. Pick a layer to react only while that layer (or one inside it) has keyboard focus. Keys typed into a text box are ignored unless "Also while typing" is ticked. A key that runs a flow does not also scroll the page, unless "Let the browser act too" is ticked. event.key, event.code and event.shift / ctrl / alt / meta say what was pressed. event.index is the number of the item that has focus when it is a copy of a repeater or in a list with Keyboard navigation. With a layer picked, event.child and event.childIndex say which of its own layers holds the focus.',
     outputs: OUT,
     hasInput: false,
     params: [
@@ -112,6 +113,7 @@ const CATALOG = [
       { key: "typing", label: "Also while typing in a text box", type: "boolean", default: false, help: "Normally keys typed into a text box or text area are left alone, so typing never sets things off. Tick this (with the key Enter and the box picked below) to run the flow when Enter is pressed in the box, like submitting a form" },
       { key: "allowDefault", label: "Let the browser act too", type: "boolean", default: false, help: "Normally when this node runs for an arrow key, Space, Page Up/Down, Home, End, Enter, Backspace or a letter, and it names a key or a layer, the browser is told not to also use it (so the page does not scroll under a game). Tick this to let the key do its usual thing as well" },
       { key: "target", label: "Only while this layer has focus", type: "node", help: "Pick a layer to react to the key only while that layer, or a layer inside it, has keyboard focus (the layer becomes focusable). Leave empty to react wherever the focus is" },
+      { key: "childrenOnly", label: "Only when a child is hit", type: "boolean", default: false, help: "Only run when the event landed inside one of the layer's own layers, not on the layer itself. Needs a layer picked" },
       {
         key: "type",
         label: "Event",
@@ -128,11 +130,12 @@ const CATALOG = [
     kind: "event.focus",
     label: "On focus",
     category: "event",
-    description: "When a layer gains or loses keyboard focus (tabbing to it, clicking it, or the Focus layer node). The layer becomes focusable.",
+    description: "When a layer gains or loses keyboard focus (tabbing to it, clicking it, arrowing to it, or the Focus layer node). The layer becomes focusable. event.index is its number when it is a copy of a repeater or in a list with Keyboard navigation. With a layer picked, event.child and event.childIndex say which of its own layers took or lost the focus.",
     outputs: OUT,
     hasInput: false,
     params: [
       { key: "target", label: "Layer", type: "node" },
+      { key: "childrenOnly", label: "Only when a child is hit", type: "boolean", default: false, help: "Only run when the event landed inside one of the layer's own layers, not on the layer itself. Needs a layer picked" },
       {
         key: "type",
         label: "Event",
@@ -149,12 +152,14 @@ const CATALOG = [
     kind: "event.timer",
     label: "On timer",
     category: "event",
-    description: "After a delay, optionally repeating.",
+    description: 'After a delay, optionally repeating. The delay is an expression read again each time round, so it can follow a variable. "Only while" holds the timer back while its condition is false and starts the wait over when it turns true. event.count is how many times it has fired and event.elapsed how many milliseconds it has been running (time held back by "Only while" is not counted).',
     outputs: OUT,
     hasInput: false,
     params: [
-      { key: "ms", label: "Every (ms)", type: "number", default: 1e3 },
-      { key: "repeat", label: "Repeat", type: "boolean", default: true }
+      { key: "ms", label: "Every (ms)", type: "expr", default: "1000", help: "Milliseconds, at least 16. An expression such as 1000 or 1500 - level * 100" },
+      { key: "repeat", label: "Repeat", type: "boolean", default: true },
+      { key: "while", label: "Only while", type: "expr", default: "", placeholder: "e.g. running", help: "Optional. The timer fires only while this is true. Each time it turns true the wait starts over" },
+      { key: "steady", label: "Steady", type: "boolean", default: false, help: "Keep time from the start: each fire is planned from the one before it, so a late fire does not push every later one back. For a clock or a beat that must not drift" }
     ]
   },
   {
@@ -527,11 +532,28 @@ const CATALOG = [
     kind: "action.artboard",
     label: "Go to artboard",
     category: "action",
-    description: "Switch to another artboard.",
-    outputs: OUT,
+    description: "Switch to another artboard: one you pick, the next or previous page, the one the learner came from, or one an expression names. Next and previous follow the artboards in the project's order, inside the artboard's group when it is in one, leaving out the narrow and wide versions of a responsive set and a library component's own copy. pageNumber and pageCount say where the artboard is. Back follows the learner's own path, and Previous follows the project's order. Continues from No artboard when there is nowhere to go (the last page, nothing to go back to, a name that matches nothing). To move through the steps of one artboard use Go to step.",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "none", label: "No artboard" }
+    ],
     hasInput: true,
     params: [
-      { key: "artboard", label: "Artboard", type: "artboard" },
+      {
+        key: "to",
+        label: "Go to",
+        type: "select",
+        options: [
+          { value: "picked", label: "A chosen artboard" },
+          { value: "next", label: "Next artboard" },
+          { value: "previous", label: "Previous artboard" },
+          { value: "back", label: "Back (where the learner came from)" },
+          { value: "expression", label: "One named by an expression" }
+        ],
+        default: "picked"
+      },
+      { key: "artboard", label: "Artboard", type: "artboard", showIf: { key: "to", values: ["picked"] } },
+      { key: "expr", label: "Artboard name or id", type: "expr", default: "", placeholder: '"Results"', help: "The artboard's name or id. Nothing matching continues from No artboard", showIf: { key: "to", values: ["expression"] } },
       {
         key: "transition",
         label: "Transition",
@@ -645,6 +667,45 @@ const CATALOG = [
     params: [
       { key: "source", label: "Data source", type: "data" },
       { key: "url", label: "URL (optional)", type: "expr", default: "", help: 'Leave empty to reload from its own file/URL, e.g. "https://api.example.com/items?page=" + page' }
+    ]
+  },
+  {
+    kind: "action.clock",
+    label: "Countdown / clock",
+    category: "action",
+    description: "A countdown (seconds left) or a clock (seconds gone) that writes its variable about four times a second while it runs. Start begins it from the top, Pause holds it, Resume carries on, Reset puts the variable back and stops it. Time up continues when a countdown reaches 0 (or a clock reaches its limit). It holds still when the learner leaves the artboard, and a new Start or Resume takes it up again. One clock per variable.",
+    outputs: [
+      { id: "out", label: "" },
+      { id: "done", label: "Time up" }
+    ],
+    hasInput: true,
+    params: [
+      { key: "variable", label: "Variable", type: "variable", help: "A number variable the clock writes" },
+      {
+        key: "op",
+        label: "Do",
+        type: "select",
+        options: [
+          { value: "start", label: "Start" },
+          { value: "pause", label: "Pause" },
+          { value: "resume", label: "Resume" },
+          { value: "reset", label: "Reset" }
+        ],
+        default: "start"
+      },
+      {
+        key: "mode",
+        label: "Counts",
+        type: "select",
+        options: [
+          { value: "down", label: "Down (seconds left)" },
+          { value: "up", label: "Up (seconds gone)" }
+        ],
+        default: "down",
+        showIf: { key: "op", values: ["start", "reset"] }
+      },
+      { key: "seconds", label: "Seconds", type: "expr", default: "60", help: "Counting down: where it starts. Counting up: where it stops (0 never stops)", showIf: { key: "op", values: ["start", "reset"] } },
+      { key: "whole", label: "Whole seconds", type: "boolean", default: true, help: "Write 12 rather than 11.75. A countdown shows the second it is in (it reads 1 until it is done), a clock the seconds completed", showIf: { key: "op", values: ["start"] } }
     ]
   },
   {
@@ -1389,6 +1450,8 @@ const CATALOG = [
     params: []
   }
 ];
+const ONLY_IF = { key: "onlyIf", label: "Only if", type: "expr", default: "", placeholder: "e.g. running", help: "Optional. The flow runs only when this is true. event is in scope, with whatever this event gives" };
+for (const d of CATALOG) if (d.category === "event") d.params.push(ONLY_IF);
 Object.fromEntries(CATALOG.map((d) => [d.kind, d]));
 const SHADER_UNIFORM_TYPES = ["float", "vec2", "vec3", "vec4", "color", "image"];
 const SHADER_BUILTINS = ["u_time", "u_resolution", "u_mouse", "u_frame", "v_uv"];
@@ -1551,12 +1614,15 @@ const ANIMATABLE_PROPS = [
   { prop: "link.url", label: "Link URL", kind: "string" },
   { prop: "label", label: "Button label", kind: "string" },
   { prop: "assetId", label: "Image / video asset", kind: "string" },
-  { prop: "disabled", label: "Button disabled", kind: "boolean" },
+  { prop: "disabled", label: "Disabled (button or input)", kind: "boolean" },
+  { prop: "disabledOpacity", label: "Disabled opacity", kind: "number" },
   { prop: "ariaLabel", label: "Text alternative", kind: "string" },
   { prop: "sayAs", label: "Say it like", kind: "string" },
   { prop: "ariaDescription", label: "Accessible description", kind: "string" },
   { prop: "ariaChecked", label: "Checked (checkbox role)", kind: "boolean" },
   { prop: "ariaExpanded", label: "Expanded (button role)", kind: "boolean" },
+  { prop: "ariaPressed", label: "Pressed (button, toggle)", kind: "boolean" },
+  { prop: "ariaCurrent", label: "Current (true, or page, step, location)", kind: "string" },
   { prop: "src", label: "Embed/video URL", kind: "string" },
   { prop: "stroke.trimStart", label: "Trim start %", kind: "number" },
   { prop: "stroke.trimEnd", label: "Trim end %", kind: "number" },
@@ -3066,6 +3132,29 @@ function sanitizeNode(raw, seen) {
     else delete n.question;
   }
   if ("questionPart" in n && !isStr(n.questionPart)) delete n.questionPart;
+  if ("shortcut" in n && !isStr(n.shortcut)) delete n.shortcut;
+  if ("dialog" in n) {
+    const d = n.dialog;
+    if (raw.type === "frame" && isObj(d)) {
+      const out = {};
+      for (const k of ["modal", "closeOnEscape", "returnFocus", "closeOnOutsideClick"]) if (typeof d[k] === "boolean") out[k] = d[k];
+      for (const k of ["initialFocus", "openVariable"]) if (isStr(d[k])) out[k] = d[k];
+      const sc = paint(d.scrim);
+      if (sc) out.scrim = sc;
+      n.dialog = out;
+    } else delete n.dialog;
+  }
+  if ("keyNav" in n) {
+    const k = n.keyNav;
+    if ((raw.type === "frame" || raw.type === "group") && isObj(k) && (k.mode === "list" || k.mode === "grid" || k.mode === "radio")) {
+      const out = { mode: k.mode };
+      if (k.orientation === "vertical" || k.orientation === "horizontal" || k.orientation === "both") out.orientation = k.orientation;
+      if (isNum(k.columns) && k.columns >= 1) out.columns = Math.round(k.columns);
+      if (typeof k.wrap === "boolean") out.wrap = k.wrap;
+      if (isStr(k.indexVariable)) out.indexVariable = k.indexVariable;
+      n.keyNav = out;
+    } else delete n.keyNav;
+  }
   if ("solo" in n && !(isObj(n.solo) && (n.solo.active === null || isStr(n.solo.active)))) delete n.solo;
   if ("drawOrder" in n) n.drawOrder = arr(n.drawOrder, isStr);
   if ("link" in n && n.link !== null && !(isObj(n.link) && isStr(n.link.url))) delete n.link;
@@ -3098,7 +3187,8 @@ function sanitizeNode(raw, seen) {
   for (const k of ["blur", "fontWeight"]) if (k in n && !isNum(n[k]) && !isStr(n[k])) delete n[k];
   for (const k of ["blendMode", "cursor", "ariaLabel", "ariaDescription", "sayAs", "className"]) if (k in n && !isStr(n[k])) delete n[k];
   if ("role" in n && !["button", "checkbox", "radio", "radiogroup", "heading", "image", "region"].includes(n.role)) delete n.role;
-  for (const k of ["decorative", "focusable", "ariaChecked", "ariaExpanded"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  for (const k of ["decorative", "focusable", "ariaChecked", "ariaExpanded", "ariaPressed"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
+  if ("ariaCurrent" in n && typeof n.ariaCurrent !== "boolean" && !(isStr(n.ariaCurrent) && ["page", "step", "location", "date", "time"].includes(n.ariaCurrent))) delete n.ariaCurrent;
   for (const k of ["headingLevel", "tabOrder"]) if (k in n && !isNum(n[k])) delete n[k];
   const stroke = (v) => {
     const pt = isObj(v) ? paint(v.paint) : null;
@@ -3139,6 +3229,7 @@ function sanitizeNode(raw, seen) {
   if ("cursorImage" in n && n.cursorImage !== null && !isStr(n.cursorImage)) delete n.cursorImage;
   if ("cursorHotspot" in n && !(isObj(n.cursorHotspot) && isNum(n.cursorHotspot.x) && isNum(n.cursorHotspot.y))) delete n.cursorHotspot;
   if ("disabled" in n && typeof n.disabled !== "boolean") delete n.disabled;
+  if ("disabledOpacity" in n && !isNum(n.disabledOpacity)) delete n.disabledOpacity;
   if ("slice" in n && n.slice !== null && !(isObj(n.slice) && ["top", "right", "bottom", "left"].every((k) => isNum(n.slice[k])))) delete n.slice;
   if ("sliceTile" in n && n.sliceTile !== "stretch" && n.sliceTile !== "repeat") delete n.sliceTile;
   if (raw.type === "video") {
@@ -5549,7 +5640,9 @@ const PLAYER_SCOPE_HINTS = {
   context: { type: "object", hint: "The course and the learner (context.firstName...)" },
   data: { type: "object", hint: "Every data source by name" },
   enums: { type: "object", hint: "The options of each choice variable" },
-  artboard: { type: "object", hint: "The artboard's name, width and height" },
+  artboard: { type: "object", hint: "The artboard's name, width, height, and its index (from 0), count and group among the pages" },
+  pageNumber: { type: "number", hint: "Which page this artboard is, from 1 (0 for a component copy)" },
+  pageCount: { type: "number", hint: "How many pages there are (in its group, when it has one)" },
   layer: { type: "function", hint: 'Any layer by name or id: layer("Knob").width' },
   steps: { type: "list", hint: "One entry per step, for a step bar's dots" }
 };
@@ -6524,7 +6617,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 - Make a new one with the **Artboard** tool (<kbd>A</kbd>), the **+ Add artboard** button at the bottom of the **Layers** panel, or by right-clicking empty canvas and choosing **New artboard here**.
 - Click an artboard's name above it on the canvas, or its row in the **Layers** panel, to select it. Drag the name to move the artboard around the canvas, and drag its corners to resize it.
 - To select several artboards, hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click their names on the canvas or their rows in the **Layers** panel. <kbd>Ctrl</kbd>+click on one that is already chosen takes it out again. <kbd>Shift</kbd>+click on a name adds it, and <kbd>Shift</kbd>+click on a row selects every row between it and the one you had. Chosen artboards have a gold name and row, and the same blue outline as one. Drag any chosen artboard's name to move them all together. With several chosen, the Inspector shows what you can do to all of them: align their edges or centres, distribute them evenly (three or more), **Group artboards…**, **Ungroup**, **Tidy up**, duplicate and delete. <kbd>Del</kbd> deletes them after asking, and <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicates them. Each is one undo step.
-- **Artboard groups** keep a big project organised. Select some artboards and choose **Group artboards…** (in the right-click menu, in the Inspector, or on the Layers panel) and give the group a name. The Layers panel lists the group as a folder row with its artboards under it, and its arrow folds them away (the artboards stay on the canvas). On the canvas the group gets a dashed frame with its name on a chip above its top left corner. Click the chip, or the group's row, to select all its artboards, and drag the chip to move the group. Right-click either for **Select all in group**, **Rename group…** (double-clicking the row does too), **Ungroup** (the artboards stay where they are), **Tidy up**, **Duplicate** and **Delete**. An artboard is in one group at most, and a responsive set goes into a group as a whole. Duplicating every artboard of a group makes a new group of the copies.
+- **Artboard groups** keep a big project organised. Select some artboards and choose **Group artboards…** (in the right-click menu, in the Inspector, or on the Layers panel) and give the group a name. The Layers panel lists the group as a folder row with its artboards under it, and its arrow folds them away (the artboards stay on the canvas). On the canvas the group gets a dashed frame with its name on a chip above its top left corner. Click the chip, or the group's row, to select all its artboards, and drag the chip to move the group. Right-click either for **Select all in group**, **Rename group…** (double-clicking the row does too), **Ungroup** (the artboards stay where they are), **Tidy up**, **Duplicate** and **Delete**. An artboard is in one group at most, and a responsive set goes into a group as a whole. Duplicating every artboard of a group makes a new group of the copies. A group is also a chapter when the project plays: **Go to artboard → Next artboard** and **Previous artboard** stay inside the artboard's group, in the project's order, and \`pageNumber\` and \`pageCount\` count its pages (see [Interactions](interactions)).
 - With an artboard selected, the Inspector shows **Name**, **W** and **H** (and **Size presets…** such as Desktop, Tablet or Phone), **Background**, **Clip content to artboard** (the parts of layers outside it still show faintly on the canvas, see [Preferences](preferences)), **Make start artboard**, **Duplicate artboard** and **Delete artboard**. Then come its **Joysticks** and **Blends**, the **Project** settings and the **Fonts**.
 - **Tidy up artboards** (at the bottom of the **Layers** panel, and in the right-click menu on the canvas) lays all the artboards out in a neat grid, in the order of the Artboards list, with even gaps and room for each name. The start artboard goes first if it isn't already, a responsive variant stays beside its main artboard, and an artboard that only exists to be used inside others (a component) goes last. Artboards you have hidden from the canvas stay where they are. It is one undo step (<kbd>Ctrl</kbd>+<kbd>Z</kbd>), and the group stays where it was on the canvas. An artboard group is laid out as a block of its own, with room for its frame, so a group's artboards stay together wherever they are in the list. With several artboards selected, **Tidy up** (in their right-click menu and the Inspector) lays out just those, among themselves, where their top left corner is now. To change the order, drag the artboards in the **Layers** panel, then tidy up again.
 - **Fit artboard to selection** (right-click the selected layers on the canvas) resizes the artboard to just those layers. Nothing moves on the canvas: the artboard's corner goes to the selection's, and every layer and its X and Y keyframes shift to match. Layers outside the new edge are still there, just outside the artboard. It isn't offered while several artboards are selected. One undo step.
@@ -7173,7 +7266,7 @@ Skinning is linear blend skinning: strong twists can pinch, so use more bones or
     keywords: "button input text field checkbox slider range select dropdown link embed iframe html video aria accessibility",
     body: `Web elements are real HTML controls, so they work with keyboards, screen readers and forms.
 
-- **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react. Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)).
+- **Button** (<kbd>B</kbd>): a label (which can use \`{expressions}\`), fill, stroke and corner radius. Use **On pointer → Click** to react. Tick **Fit text to box** to have the label's size chosen to fit the button (see [Text](text)). **Disabled** (also bindable, for a Next button that waits for an answer) greys it out and takes it out of the Tab sequence, and a disabled button or input looks dimmed by itself: **Disabled look** sets how opaque it is (0.5 by default, 1 for no dimming). A layer whose Opacity is bound keeps doing its own dimming.
 - **Input**: text, number, email, password, multi-line, checkbox, slider (range) or dropdown (select). Bind it to a **variable** and it reads and writes that variable both ways. **On variable change** then reacts to what was typed. **No browser help** (text boxes) turns off the spellcheck underline, autocorrect, automatic capitals and autofill, for a spelling test. To do something when Enter is pressed in a text box, use an **On key** node set to \`Enter\` with **Also while typing in a text box** ticked (see [Interactions](interactions)).
 - **Link**: text that opens a URL. **Fit text to box** works here too.
 - **Embed**: an iframe from an \`https://\` URL, or your own HTML. The HTML runs in a sandboxed frame that can't reach the page it is on, so it can't read its cookies or call its code. In the editor an embed shows as a labelled box; open Preview to see it. Projects whose scripts don't run in the sandbox can switch on **Run embedded HTML in the page** in Project settings for HTML they wrote themselves.
@@ -7197,6 +7290,8 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - **Say it like**: what [read aloud](read-aloud) says for the layer instead of its text, for an abbreviation, a formula or a name a voice gets wrong. It is not shown and screen readers ignore it.
 - **Tab stop**: *Automatic* (a layer is reachable when it has an *On pointer → Click*, an *On focus*, or a button or checkbox role), *Always*, or *Never*. The line underneath says what you get.
 - A **Checkbox** role needs its state told: bind **Checked (checkbox role)** in Data bindings to the variable that holds it (see [Bindings](bindings)).
+- **Pressed state** and **Current**: see [Pressed and current](accessibility#pressed-and-current).
+- **Shortcut**: a key that clicks the layer, see [Shortcuts](accessibility#shortcuts).
 - Buttons, inputs and links show only the text alternative and description. They already have the right role and keyboard behaviour.
 
 ## What the keyboard does
@@ -7206,6 +7301,30 @@ Every layer has an **Accessibility** section (roles, text alternative, keyboard 
 - An Enter or Space that clicked a layer, or that was pressed on a button or link, does not also run an *On key* node for the same key, so a game's "press Space" and a button's click can't both fire from one press.
 - A key an *On key* node handled does not also scroll the page, so a crossword or word search can use the arrows and Space without the course page moving behind it. Pick the grid in the node's **Only while this layer has focus** and the arrows (and, with an any-key node, Space and typing) belong to the activity only while the grid has focus; everywhere else the page scrolls as normal. Tab is never taken, so keyboard users can always leave. See [Interactions](interactions).
 - Only *On pointer → Click* can be done from a keyboard. Hover, press, release and the older drag events can't, so give those layers a click alternative. Layers made [draggable](drag-and-drop) get a keyboard way (Space, arrows, Space) of their own.
+
+## Pressed and current
+A button that is on or off (a toggle, a segmented control, a filter chip) should say so. On a **Button** layer, or a layer with the *Button* role, set **Pressed state** to *Not pressed* or *Pressed* and a screen reader says "toggle button, pressed" (aria-pressed). Bind **Pressed (button, toggle)** in Data bindings to the variable that holds it, such as \`mode == "list"\`. *Not a toggle* says nothing.
+
+**Current** marks the one layer of a set that is where you are: the open tab, the current page in a list, the step you are on. *Yes* is aria-current true, and *Current page*, *Current step* and *Current location* say which kind. It works on any layer, buttons and links included. Bind **Current (true, or page, step, location)** in Data bindings, for example \`tab == 2\`, or an expression that gives \`"page"\` for the current one and false for the rest. Use it instead of describing the state in the text alternative ("Showing now").
+
+## Shortcuts
+A layer's **Shortcut** is a key, or a key with modifiers (\`r\`, \`1\`, \`Ctrl+Enter\`, \`Alt+N\`, \`Shift+/\`), that clicks the layer from anywhere on the page: it runs the layer's *On pointer → Click* flows, presses a button or follows a link, the way Enter on the layer does. It follows the same rules as an *On key* node: keys typed into a text box are left alone (unless the shortcut holds Ctrl, Alt or Meta, so Ctrl+Enter can submit from a text area), holding a key does not repeat it, and an extra Ctrl, Alt or Meta means a browser shortcut, so it is ignored. A hidden or disabled layer ignores its shortcut, and while a modal [dialog](accessibility#dialogs) is open the layers behind it do too. A layer that repeats uses its first copy. Screen readers are told the key (aria-keyshortcuts); show it in the label too, such as "Replay (R)". The field warns when two layers use the same keys, or when an *On key* node listens for them as well. Shortcuts count as the key way to a clickable shape for the [Accessibility checker](accessibility-checker).
+
+## Dialogs
+Select a **frame** and tick **This frame is a dialog** in its *Dialog* section. The player then announces it as a dialog (role dialog, with aria-modal when **Modal**, and the frame's **Text alternative** as its name, so give it one). The dialog is **open while the frame is visible**, so show it however you like: bind its Visible to a variable, use a *Show / hide* node, or pick an **Open variable** and the frame shows while that variable is on (true, not 0, not empty).
+
+When it opens, focus moves inside: to the **Initial focus** layer if you picked one, otherwise the first button, field or clickable layer in it, otherwise the dialog itself. While a **modal** dialog is open, Tab and Shift+Tab stay inside it, focus that slips behind it is brought back, and clicks on the rest of the artboard are ignored (tick **Close on click outside** to make them close it instead). **Escape** closes the dialog on top: it turns the Open variable off (false, 0 or empty) or, with no variable, hides the frame. When it closes, **Return focus** puts focus back on the layer that had it when the dialog opened. A dialog that is showing from the start does not take focus. A **Scrim** paints a colour over the rest of the artboard behind the dialog (it is drawn as a shadow, so it follows the frame and goes when the frame hides).
+
+A dialog works inside an iframe or a page that embeds the player: the trap, Escape and focus use the player's own document. Keep the dialog at the top level of the artboard, not inside a clipping frame, so the scrim and the "outside" are the whole artboard. The [checker](accessibility-checker) flags a dialog with no name or nothing inside it a keyboard can reach.
+
+## Keyboard navigation
+A list of options is one Tab stop, not one per option. Select a **repeater**, or a group or frame whose layers are the options, and tick **Arrow keys move between the items** in *Keyboard navigation*. One item is the Tab stop (the one last focused), and the arrow keys, Home and End move focus between the rest, so a keyboard user Tabs past the whole list.
+
+- **List**: Up and Down for a column (Left and Right for a repeater laid out as a row, or choose under **Arrows**). **Wrap round** goes from the last to the first.
+- **Grid**: all four arrows move by row and column, using the repeater's columns (and its *Columns first* order), or the **Columns** you set on a container. Home and End go to the ends of the row, Ctrl+Home and Ctrl+End to the ends of the grid.
+- **Radio buttons**: the radio-group pattern. All four arrows move and wrap, and **moving also selects**: the item it lands on is clicked, so the *On pointer → Click* flows that choose an option run. The group is a radio group and the items radio buttons for screen readers, with aria-checked following the focus, unless your items set their own **Checked** (bound to your selection variable), which then wins.
+
+**Focused item** writes the focused item's number (from 0) to a number variable, and setting that variable moves the Tab stop. The number also arrives as \`event.index\` in *On focus*, *On pointer* and *On key* events for the items (as it already does for a repeater's copies). Keys typed into a text box and the arrows of a [draggable](drag-and-drop) item are left alone, and **an *On key* node you wired for an arrow wins**: the navigation does nothing for a key that one of your nodes names, so nothing fires twice.
 
 ## Tab order
 With nothing selected, the **Tab order** section in the inspector lists every tab stop on the artboard in the order Tab visits them. Use the arrows to move a layer earlier or later, or click its name to select it. **Reset to layer order** goes back to the default. The order only applies within the player; stops you haven't placed follow the others in layer order.
@@ -7675,13 +7794,23 @@ A script can call **ix.speech.say(text, {lang, rate})** (it answers true when it
 
 ![The Interactions tab: the node palette, the graph and the settings of the selected node.](help/interactions-panel.png)
 
-**On pointer** reacts to a click, double click, press, release, hover start and end, the pointer **moving over** a layer, and **dragging** it: *Drag starts* (once the pointer has moved a few pixels with the button held), *Dragging* (on every move after that, even outside the layer) and *Drag ends*. Moves and drags give \`event.x\` and \`event.y\` (artboard coordinates) and \`event.stepX\`, \`event.stepY\` (movement since the last event); drags also give \`event.dx\` and \`event.dy\` (movement since the press), so *Set property* with \`x\` and an expression like \`start + event.dx\` moves a layer with the pointer.
+**On pointer** reacts to a click, double click, press, release, hover start and end, the pointer **moving over** a layer, and **dragging** it: *Drag starts* (once the pointer has moved a few pixels with the button held), *Dragging* (on every move after that, even outside the layer) and *Drag ends*. Moves and drags give \`event.x\` and \`event.y\` (artboard coordinates) and \`event.stepX\`, \`event.stepY\` (movement since the last event); drags also give \`event.dx\` and \`event.dy\` (movement since the press), so *Set property* with \`x\` and an expression like \`start + event.dx\` moves a layer with the pointer. Drags also give \`event.index\`, the [repeated](repeaters) copy the pointer is over right now (\`null\` over anything else), and \`event.startIndex\`, the copy it was pressed on, so a word-search grid or a board of cells can tell which cell the learner has reached without any maths on positions.
+
+**Which layer inside was hit.** With a layer picked, *On pointer*, *On key* and *On focus* also give \`event.child\`, the name of the layer's own child (the direct child, however deep the hit) that the event landed in, and \`event.childIndex\`, that child's place in the layer from 0 (they are \`null\` and \`-1\` when it landed on the layer itself). For a [repeater](repeaters) the children are its copies, so \`event.childIndex\` is the copy. Put one *On pointer* on the group that holds a row of hotspots, dots or cards and use \`event.child\` or \`event.childIndex\` in the flow, instead of one event and one chain of nodes for each. Adding an item is then duplicating a layer. Tick **Only when a child is hit** to leave out clicks that land on the group's own background.
 
 **On key** reacts to a key going down or up anywhere on the page (the page itself, not only the artboard). Leave **Key** empty for any key, or write a name such as \`ArrowLeft\`, \`Enter\`, \`a\` or \`Space\`. Tick **Shift held**, **Ctrl held**, **Alt held** or **Meta held** to ask for a chord; they must all be down. A key held down fires once, unless **Fire again while held** is ticked. \`event.key\`, \`event.code\` and \`event.shift\`, \`event.ctrl\`, \`event.alt\`, \`event.meta\` say what was pressed. Pick a layer in **Only while this layer has focus** to hear the key only while that layer, or a layer inside it, has keyboard focus (the layer becomes a tab stop, and you can use the [Focus layer node](interaction-nodes) to move the focus there); leave it empty to react wherever the focus is. Keys typed into a text box or text area are left alone, so typing never sets a flow off. To run something when the learner presses **Enter in a box** (an answer box that checks, a search that runs), set **Key** to \`Enter\`, pick the box (or the frame around it) in **Only while this layer has focus**, and tick **Also while typing in a text box**. A key that runs a flow is not also used by the browser: an arrow key, <kbd>Space</kbd>, Page Up and Down, Home, End, Enter, Backspace or a letter that an *On key* node handled does not also scroll the page, so a game or a grid can use them. Tab, Escape, the function keys and anything held with Ctrl, Alt or Meta are never taken, and an *On key* with no key and no layer picked (it hears everything) takes nothing. Tick **Let the browser act too** on a node that should leave the key to the page as well.
 
 **Before activity loads** and **On activity load** run once each time the activity is opened, unlike **On start**, which runs every time an artboard is shown. *Before activity loads* runs first, before anything is on screen, and the activity waits for everything it sets off to finish (up to 10 seconds) before it shows: the place for a **Load user data** or a **Set variable** that the first frame should already have. *On activity load* runs once the activity is showing, just before the first *On start*. Both fire on the artboard the activity opens on, so put them in that artboard's graph. **Start over** doesn't run them again.
 
-**On focus** reacts to a layer gaining or losing keyboard focus, which is what tabbing, clicking or the **Focus layer** action does. A layer with an *On focus* node becomes a tab stop; buttons, inputs and links already are, and so is any layer with a click or a button role (see [Accessibility](accessibility)). **Focus layer** gives a layer focus, or clears whatever has it (for example on <kbd>Escape</kbd>).
+**On focus** reacts to a layer gaining or losing keyboard focus, which is what tabbing, clicking or the **Focus layer** action does. A layer with an *On focus* node becomes a tab stop; buttons, inputs and links already are, and so is any layer with a click or a button role (see [Accessibility](accessibility)). **Focus layer** gives a layer focus, or clears whatever has it (for example on <kbd>Escape</kbd>). It draws any change that has not been drawn yet first, so a layer an earlier node has just shown can take the focus straight away without a **Wait** in front of it. A layer that is still hidden or disabled is tried again for a few frames, then left alone.
+
+**Only if.** Every event node has an **Only if** field. Leave it empty and the event always runs its flow. Write an expression and the flow runs only when it is true: \`running\` on a timer, \`event.value >= 0\` on a variable change, \`selected >= 0\` on a key. \`event\` is in scope, so it can look at what fired. The condition is on the node, with a short \`if …\` under its name, so the graph reads without a guard **If** after every event. A key whose condition is false is not taken from the browser either, so the page still scrolls.
+
+**On timer.** *Every (ms)* is an expression read again every time round, so a pace can follow a variable (\`1500 - level * 100\`). **Only while** is a condition: while it is false the timer does not fire and its time does not count, and when it turns true the wait starts over, so \`running\` makes a timer you can stop and start. Tick **Steady** for a clock or a beat: each fire is planned from the start, so a slow moment is made up for and the timer does not drift. \`event.count\` is how many times it has fired and \`event.elapsed\` how many milliseconds it has been running. The editor's canvas does not run timers; Preview does.
+
+**Countdown / clock** keeps time for you. Pick a number variable, then **Start** it counting **down** from a number of seconds, or **up** (to a limit, or without end when the limit is 0). It writes the variable about four times a second, as whole seconds by default, so a text layer showing \`{left}\` is a countdown. **Pause** holds it, **Resume** carries on, **Reset** puts the variable back and stops it. When a countdown reaches 0 (or a clock its limit) the **Time up** output continues. Leaving the artboard holds the clock still where it was; a new **Start** or **Resume** takes it up again. There is one clock for each variable.
+
+**Go to artboard** goes to the artboard you pick, or to **Next artboard** or **Previous artboard**, or **Back** to where the learner came from (their own path, however they got there), or to the artboard an **expression** names (a name or an id). Next and previous follow the artboards in the project's order, in the artboard's [group](artboards) when it is in one (an artboard in no group counts every page), leaving out the narrow and wide versions of a [responsive set](responsive) and a library component's own copy. Duplicating or reordering a page keeps the links right, with no neighbours to rewire. When there is nowhere to go (the last page, the first, nothing to go back to, a name that matches nothing) the flow continues from the **No artboard** output, so a Next button can do something else on the last page. In an expression, \`pageNumber\` is the page's place from 1 and \`pageCount\` how many pages there are, for a footer like \`Page {pageNumber} of {pageCount}\`; \`artboard.index\` (from 0), \`artboard.count\` and \`artboard.group\` say the same. **Go to step** is the other kind of Next: it moves through the steps of one artboard.
 
 Drag from an output port to the next node's input to connect them. Actions that take time (**Control timeline**, **Animate property**, **Play sound**) have a **Continue** setting: the next node runs when it finishes, part-way through (a percentage), or straight away. Let go on empty space instead and a menu offers only the nodes that fit (actions and logic when you drag from an output, anything with an output when you drag backwards from an input); the one you pick is added where you let go and connected for you, and one <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes the node and its connection back together (clicking a node only selects it, which is not an undo step). Press <kbd>Escape</kbd> or click away to cancel.
 
@@ -7717,7 +7846,7 @@ A **group** is a labelled frame around nodes that belong together ("Score", "Int
 Test in **Preview**: the event list shows each event as it fires. Every node is listed in [Interaction node reference](interaction-nodes). For a walk-through, see [Tutorial 2](tutorial-first-interaction).
 
 ## What's in scope
-Expression fields can use every variable and data source by name, \`event\` (details of what fired: \`event.key\`, \`event.x\`, \`event.index\` for a repeated copy, \`event.payload\` for a message) and \`Math\`.
+Expression fields can use every variable and data source by name, \`event\` (details of what fired: \`event.key\`, \`event.x\`, \`event.index\` for a repeated copy, \`event.child\` for the layer inside that was hit, \`event.count\` and \`event.elapsed\` on a timer, \`event.payload\` for a message), \`pageNumber\` and \`pageCount\`, and \`Math\`.
 
 ## Messages to and from the host page
 **Send message** (and \`ix.emit\`) posts \`{source: 'interactives', name, payload}\` to the page the interactive is in. The page can send messages back with \`player.send(name, payload)\` and **On message** reacts. See [Embedding and the player API](embedding).`
@@ -8638,7 +8767,9 @@ Inside the copies, \`item\` is the current item and \`index\` its position (from
 
 **Instances in a repeater** can take their [inputs](instances) from the item: select the instance, open *Bindings*, add *Input <name>* and write an expression such as \`item.title\` or \`item.score * 10\`. Every copy then shows its own item's values, and follows the list when it changes.
 
-Clicks on a copy fire **On pointer** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked.`
+Clicks on a copy fire **On pointer** for the template layer with \`event.index\`, so \`products[event.index]\` is the item that was clicked.
+
+For lists a keyboard user moves through, tick **Keyboard navigation** under the repeater: one copy is the Tab stop and the arrow keys move between the rest (see [Accessibility](accessibility#keyboard-navigation)).`
   },
   {
     id: "results",
@@ -10076,7 +10207,7 @@ ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.ma
   if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n");
   if (topic === "layers") {
     const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "bone"];
-    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, decorative (hide from assistive tech), focusable (tab stop override), tabOrder, className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it).\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
+    return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, ariaExpanded, ariaPressed (a toggle button: true/false), ariaCurrent (true, or page|step|location|date|time: the current tab, page or step), decorative (hide from assistive tech), focusable (tab stop override), tabOrder, shortcut (a key that clicks the layer, e.g. "r", "1", "Ctrl+Enter"), className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it). Buttons and inputs take disabled (bindable) and disabledOpacity (0-1, default 0.5, how dimmed they look while disabled). A frame can be a dialog: dialog {modal (default true), scrim (a solid paint over the artboard behind it), closeOnEscape (default true), closeOnOutsideClick, initialFocus (layer id), returnFocus (default true), openVariable (variable id: the frame shows while it is on, Escape turns it off)}. A frame or group can carry keyNav {mode: list|grid|radio, orientation: vertical|horizontal|both, columns (grid on a container; a grid repeater uses its own), wrap, indexVariable (variable id, number from 0)}: one item is the Tab stop and the arrows, Home and End move between a repeater\'s copies or a container\'s children; radio mode also selects (clicks) the item it lands on.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
 Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t22) => `- ${t22}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t22)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
