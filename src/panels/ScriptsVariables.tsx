@@ -116,6 +116,9 @@ ix.artboard // {name, width, height}
 ix.data.products     // data sources
 ix.context.firstName   // the course and learner (read only)
 await ix.loadData('products')
+await ix.course.stamp('passport', 'Gold star') // shared by every piece in the course
+await ix.course.count('passport', 'quizzes', 3)
+const c = await ix.course.read('passport') // {stamps, counts, course}
 ix.setCursor('grab')
 ix.log(...)`}</pre>
       </div>

@@ -75,6 +75,7 @@ let port = Number(process.env.PORT) || 3048,
 	activityData,
 	sharedRows,
 	sharedHidden,
+	courseRows,
 	userLookup,
 	ingest,
 	commentRows,
@@ -105,7 +106,9 @@ let ops = null,
 	media = null,
 	commentLib = null,
 	responses = null,
+	courseLib = null,
 	sharedLimits = {},
+	courseLimits = {},
 	store = null
 const rooms = new Map(),
 	LOG_KEEP = 2000,
@@ -3933,6 +3936,99 @@ router.post('/learn/:token/shared/:source/withdraw', express.json({limit: '4kb'}
 	res.json({available: true, ok: true, value: await sharedValue(at, who)})
 })
 
+//Course collections: named stamps and counters that every project in the same course can read and add to, for one learner. Not a
+//project's: the key is the person, their course and the collection name, so a passport that one piece adds to is there for the next
+//piece, whatever project it is. Identity and course come off the session (learnerOf), never the request, and a person only ever
+//reaches their own row. No session, or a session that is in no course, has nowhere to keep it ({available: false}) and the player
+//keeps it in the browser instead. The share token only has to be a link that is on, so a project can't collect while its link is off.
+//Adds are one atomic update, $addToSet for stamps and $max for counters, upserted on the unique index, so two tabs (or two pieces)
+//at once can neither duplicate a row nor take a counter backwards. Rows are kept until someone clears them: deleting a project doesn't
+//touch them, since they were never its own
+const courseAt = async (req, res) => {
+	let project = await sharedProject(req, res)
+
+	if (!project) {
+		return null
+	}
+
+	let person = learnerOf(req)
+
+	if (!person?.course) {
+		res.json({available: false})
+		return null
+	}
+
+	let collection = courseLib.cleanCollection(req.params.collection)
+
+	if (!collection) {
+		res.status(400).json({error: 'A collection needs a name'})
+		return null
+	}
+
+	return {project, person, collection, key: {username: person.username, course: person.course, collection}}
+}
+
+const busyCourse = {stamps: [], counts: {}, course: true, changed: 0, problem: 'busy'}
+
+router.get('/learn/:token/course/:collection', async (req, res) => {
+	let at = await courseAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	if (!courseLimits.read.hit(at.person.username)) {
+		return res.json({available: true, ok: true, value: busyCourse})
+	}
+
+	res.json({available: true, ok: true, value: courseLib.valueOf(await courseRows.findOne(at.key))})
+})
+
+router.post('/learn/:token/course/:collection', express.json({limit: '4kb'}), async (req, res) => {
+	let at = await courseAt(req, res)
+
+	if (!at) {
+		return
+	}
+
+	let {person, key} = at
+
+	if (!courseLimits.write.hit(person.username)) {
+		return res.json({available: true, ok: true, value: busyCourse})
+	}
+
+	//Never more than a handful in one go, whatever the body says
+	let stamps = Array.isArray(req.body?.stamps) ? req.body.stamps.slice(0, 50) : [],
+		counts = Object.fromEntries(Object.entries(req.body?.counts && typeof req.body.counts === 'object' && !Array.isArray(req.body.counts) ? req.body.counts : {}).slice(0, 50))
+
+	for (let tries = 0; ; tries++) {
+		let row = await courseRows.findOne(key),
+			plan = courseLib.planAdd(row, {stamps, counts})
+
+		//A person can only keep so many collections in a course
+		if (!row && courseLib.changed(plan) && await courseRows.countDocuments({username: person.username, course: person.course}) >= courseLib.LIMITS.collections) {
+			return res.json({available: true, ok: true, value: courseLib.valueOf(null, {changed: 0, problem: 'full'})})
+		}
+
+		if (!courseLib.changed(plan)) {
+			return res.json({available: true, ok: true, value: courseLib.valueOf(row, {changed: 0, problem: plan.problem})})
+		}
+
+		try {
+			await courseRows.updateOne(key, courseLib.updateFor(plan, new Date()), {upsert: true})
+
+			//Read it back, so the answer has whatever the other tab added meanwhile
+			return res.json({available: true, ok: true, value: courseLib.valueOf(await courseRows.findOne(key), {changed: courseLib.changed(plan), problem: plan.problem})})
+		}
+		catch (e) {
+			//Two first adds at once: the unique index let one insert, and this goes again as an update
+			if (e.code !== 11000 || tries > 2) {
+				throw e
+			}
+		}
+	}
+})
+
 //What the owner (or a power user) sees and does about a project's shared responses: every source the shared page declares, and for each
 //course the answers with their counts before the minimum applies. Hiding an answer keeps it but takes it out of what the class
 //sees (and can be undone); removing it takes it out of everyone's lists; clearing empties the course. None of it touches what
@@ -4294,6 +4390,16 @@ ${remix ? '<a id="remix" href="#" role="button" title="Copy this project into yo
 				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
 			}, failed)
 		}
+		else if (m.op === 'course-read' && typeof m.collection === 'string') {
+			call('GET', 'course/' + encodeURIComponent(m.collection)).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
+		else if (m.op === 'course-add' && typeof m.collection === 'string') {
+			call('POST', 'course/' + encodeURIComponent(m.collection), {stamps: m.stamps, counts: m.counts}).then(function (j) {
+				answer(m, {ok: true, available: !!j.available && !!j.value, data: j.value || null})
+			}, failed)
+		}
 		else if (m.op === 'mark') {
 			//A question marked on the server: the project sends the answer, the server marks it and says how it went
 			call('POST', 'check', {question: m.question, action: m.action, answer: m.answer}).then(function (j) {
@@ -4642,6 +4748,7 @@ client.connect()
 		activityData = analyticsDB.collection('interactives-activity-user-data')
 		sharedRows = db.collection('shared-responses')
 		sharedHidden = db.collection('shared-hidden')
+		courseRows = analyticsDB.collection('interactives-course-collections')
 		ingest = analyticsDB.collection('ingest')
 		userLookup = analyticsDB.collection('user-lookup')
 		fs.mkdirSync(storageDir, {recursive: true})
@@ -4651,9 +4758,9 @@ client.connect()
 
 		require('../suite-libs/version-reporting')(analyticsDB, appName, version)
 
-		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs')])
+		return Promise.all([import('./shared/ops.mjs'), import('./shared/library.mjs'), import('./shared/safety.mjs'), import('./shared/learner.mjs'), import('./shared/marking-kit.mjs'), import('./shared/records.mjs'), import('./shared/media-bridge.mjs'), import('./shared/comments.mjs'), import('./shared/template.mjs'), import('./shared/docstore.mjs'), import('./shared/notes.mjs'), import('./shared/responses.mjs'), import('./shared/course.mjs')])
 	})
-	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod]) => {
+	.then(([opsMod, libraryMod, safetyMod, learnerMod, markerMod, recordsMod, mediaMod, commentsMod, templateMod, docstoreMod, notesMod, responsesMod, courseMod]) => {
 		ops = opsMod
 		store = docstoreMod.docStore(docChunks)
 		library = libraryMod
@@ -4663,6 +4770,7 @@ client.connect()
 		marker = markerMod
 		notesLib = notesMod
 		responses = responsesMod
+		courseLib = courseMod
 		markLimiter = markerMod.makeLimiter()
 		records = recordsMod
 		media = mediaMod
@@ -4676,6 +4784,10 @@ client.connect()
 		//Shared responses: how often one person may add or take back (per project), and how often they may read
 		sharedLimits.write = new commentsMod.Limiter(30, 60 * 1000)
 		sharedLimits.read = new commentsMod.Limiter(180, 60 * 1000)
+
+		//Course collections: per person, whatever the project
+		courseLimits.write = new commentsMod.Limiter(60, 60 * 1000)
+		courseLimits.read = new commentsMod.Limiter(180, 60 * 1000)
 		cacheHeaders.watchEpoch()
 
 		//The bin, now and every 6 hours

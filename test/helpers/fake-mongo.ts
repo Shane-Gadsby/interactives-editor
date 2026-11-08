@@ -1,5 +1,5 @@
 //A tiny in-memory stand-in for the few mongodb collection methods the editor server uses (findOne, find with
-//sort/skip/limit/projection, insertOne, updateOne with $set/$setOnInsert/$unset and upsert, deleteOne,
+//sort/skip/limit/projection, insertOne, updateOne with $set/$setOnInsert/$unset/$addToSet/$max and upsert, deleteOne,
 //deleteMany). Filters understand equality, dotted paths, null matching a missing field, arrays containing a value,
 //$or, $and, $in, $ne and the $gt/$gte/$lt/$lte comparisons. That is all index.js asks of mongo, so the real route code runs against it untouched.
 
@@ -10,6 +10,13 @@ const clone = <T>(v: T): T => (v === undefined ? v : structuredClone(v));
 //Like mongo, a dotted path goes into arrays of documents (collaborators.username matches any element's username)
 const getPath = (doc: Doc, path: string): any =>
   path.split('.').reduce((o, k) => (o == null ? undefined : Array.isArray(o) && !/^\d+$/.test(k) ? o.flatMap((x) => (x == null ? [] : [x[k]])).filter((x) => x !== undefined) : o[k]), doc);
+
+const setPath = (doc: Doc, path: string, value: any) => {
+  const keys = path.split('.');
+  let o = doc;
+  for (const k of keys.slice(0, -1)) o = o[k] ??= {};
+  o[keys[keys.length - 1]] = clone(value);
+};
 
 const eq = (a: any, b: any): boolean => {
   if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
@@ -178,6 +185,16 @@ export class FakeCollection {
     for (const [k, v] of Object.entries((update.$set ?? {}) as Doc)) doc[k] = clone(v);
     if (inserted) for (const [k, v] of Object.entries((update.$setOnInsert ?? {}) as Doc)) doc[k] = clone(v);
     for (const k of Object.keys((update.$unset ?? {}) as Doc)) delete doc[k];
+    //$addToSet (with $each) keeps a list free of repeats, $max keeps the larger number, both on dotted paths like mongo
+    for (const [k, v] of Object.entries((update.$addToSet ?? {}) as Doc)) {
+      const list = (getPath(doc, k) as any[] | undefined) ?? [];
+      for (const item of v && typeof v === 'object' && '$each' in v ? v.$each : [v]) if (!list.some((x) => JSON.stringify(x) === JSON.stringify(item))) list.push(clone(item));
+      setPath(doc, k, list);
+    }
+    for (const [k, v] of Object.entries((update.$max ?? {}) as Doc)) {
+      const now = getPath(doc, k);
+      if (now === undefined || compare(v, now) > 0) setPath(doc, k, v);
+    }
     return { matchedCount: inserted ? 0 : 1, modifiedCount: 1, upsertedCount: inserted ? 1 : 0 };
   }
 
@@ -217,6 +234,7 @@ export class FakeDb {
   'comment-notices' = new FakeCollection();
   'interactives-user-data' = new FakeCollection();
   'interactives-activity-user-data' = new FakeCollection();
+  'interactives-course-collections' = new FakeCollection();
   'shared-responses' = new FakeCollection();
   'shared-hidden' = new FakeCollection();
   ingest = new FakeCollection();

@@ -284,6 +284,9 @@ const ACTION: Record<string, (p: P, c: Names) => string> = {
   'action.loadUserData': () => 'bring back the learner’s saved progress',
   'action.sharedAdd': (p, c) => `add an answer to ${c.data(p.source)}`,
   'action.sharedWithdraw': (p, c) => `take this learner’s answers back out of ${c.data(p.source)}`,
+  'action.courseAdd': (p) => `${String(p.what ?? 'stamp') === 'counter' ? `raise the counter ${val(p.name)} to ${val(p.value ?? '1')}` : `add the stamp ${val(p.name)}`} in the course collection ${quoted(String(p.collection ?? '') || 'you name')}`,
+  'action.courseLoad': (p) => `load the course collection ${quoted(String(p.collection ?? '') || 'you name')}`,
+  'action.courseCheck': (p) => `check whether the course collection ${quoted(String(p.collection ?? '') || 'you name')} has ${p.stamp ? `the stamp ${val(p.stamp)}` : p.counter ? `the counter ${val(p.counter)} at ${val(p.atLeast ?? '1')} or more` : 'anything in it'}`,
 };
 
 const LOGIC: Record<string, (p: P) => string> = {
