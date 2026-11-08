@@ -84,6 +84,7 @@ import { KIND_LABEL, linkManager, useLinks } from '../lib/links';
 import { ChildOrder } from '../components/ChildOrder';
 import { LayoutAnimateFields } from '../components/LayoutAnimateFields';
 import { GridAlignFields } from '../components/GridAlignFields';
+import { PivotFields } from '../components/PivotFields';
 import { LayoutItemSection } from './LayoutItemSection';
 import { ReportingSection } from './ReportingSection';
 import { OptimiseOutputFields } from './OptimiseOutput';
@@ -207,13 +208,13 @@ export function KeyButton({ node, prop, ids }: { node: SceneNode; prop: string; 
   );
 }
 
-export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string }) {
+export function Num({ node, ids, prop, label, step, min, max, suffix, fallback = 0, title, scale }: { node: SceneNode; ids: string[]; prop: string; label: ReactNode; step?: number; min?: number; max?: number; suffix?: string; fallback?: number; title?: string; scale?: number }) {
   const shown = useShown(node);
   const set = useSetter(ids);
   const v = Number(shown(prop) ?? fallback);
   return (
     <div className="keyed">
-      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
+      <NumberField label={label} title={title} value={v} step={step} min={min} max={max} suffix={suffix} scale={scale} onChange={(x) => set({ [prop]: x })} onCommit={() => store().commit()} />
       <KeyButton node={node} prop={prop} ids={ids} />
     </div>
   );
@@ -224,7 +225,7 @@ export function Num({ node, ids, prop, label, step, min, max, suffix, fallback =
  * ratio they had, for each selected layer. The chain is saved on the layer (`lockKey`), and the canvas's resize handles
  * keep the ratio of a layer with lockRatio on as well.
  */
-export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min }: { node: SceneNode; ids: string[]; a: string; b: string; labelA: string; labelB: string; lockKey: 'lockRatio' | 'lockScale'; step?: number; min?: number }) {
+export function LinkedPair({ node, ids, a, b, labelA, labelB, titleA, titleB, lockKey, step, min, scale, suffix }: { node: SceneNode; ids: string[]; a: string; b: string; labelA: string; labelB: string; titleA?: string; titleB?: string; lockKey: 'lockRatio' | 'lockScale'; step?: number; min?: number; scale?: number; suffix?: string }) {
   const shown = useShown(node);
   const locked = !!node[lockKey];
   const set = useSetter(ids);
@@ -243,11 +244,11 @@ export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min
     }
     store().setEach(changes, `insp-${a}${b}-${ids.join(',')}`);
   };
-  const what = lockKey === 'lockRatio' ? 'width and height' : 'horizontal and vertical scale';
+  const what = lockKey === 'lockRatio' ? 'width and height' : 'width and height scale';
   return (
     <Row className="linked-pair">
       <div className="keyed">
-        <NumberField label={labelA} value={Number(shown(a) ?? 0)} step={step} min={min} onChange={(x) => change(a, b, x)} onCommit={() => store().commit()} />
+        <NumberField label={labelA} title={titleA} value={Number(shown(a) ?? 0)} step={step} min={min} scale={scale} suffix={suffix} onChange={(x) => change(a, b, x)} onCommit={() => store().commit()} />
         <KeyButton node={node} prop={a} ids={ids} />
       </div>
       <button
@@ -261,7 +262,7 @@ export function LinkedPair({ node, ids, a, b, labelA, labelB, lockKey, step, min
         {locked ? <Icons.link width={13} /> : <Icons.unlink width={13} />}
       </button>
       <div className="keyed">
-        <NumberField label={labelB} value={Number(shown(b) ?? 0)} step={step} min={min} onChange={(x) => change(b, a, x)} onCommit={() => store().commit()} />
+        <NumberField label={labelB} title={titleB} value={Number(shown(b) ?? 0)} step={step} min={min} scale={scale} suffix={suffix} onChange={(x) => change(b, a, x)} onCommit={() => store().commit()} />
         <KeyButton node={node} prop={b} ids={ids} />
       </div>
     </Row>
@@ -804,31 +805,40 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         )}
         {isConn ? (
           <Row className="aligned-pair">
-            <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
+            <Num node={n} ids={ids} prop="opacity" label="Opacity" suffix="%" scale={100} step={5} min={0} max={100} fallback={1} />
           </Row>
         ) : sameType && n.type === 'bone' ? (
           <Row>
             <Num node={n} ids={ids} prop="width" label="Length" title="The bone's length (the layer's width)" min={0} />
-            <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
+            <Num node={n} ids={ids} prop="rotation" label="Rotation" suffix="°" />
           </Row>
         ) : (
           <>
             <LinkedPair node={n} ids={ids} a="width" b="height" labelA="W" labelB="H" lockKey="lockRatio" min={0} />
             <Row className="aligned-pair">
-              <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
+              <Num node={n} ids={ids} prop="rotation" label="Rotation" suffix="°" />
               <span className="link-toggle link-gap" aria-hidden="true" />
-              <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
+              <Num node={n} ids={ids} prop="opacity" label="Opacity" suffix="%" scale={100} step={5} min={0} max={100} fallback={1} />
             </Row>
           </>
         )}
-        {!isConn && <LinkedPair node={n} ids={ids} a="scaleX" b="scaleY" labelA="Sx" labelB="Sy" lockKey="lockScale" step={0.05} />}
-        {!(sameType && (n.type === 'bone' || n.type === 'connector')) && (
-          <Row className="aligned-pair">
-            <NumberField label="Ox" title="Transform origin X (0-1)" value={n.originX} step={0.05} min={0} max={1} onChange={(v) => set({ originX: v })} />
-            <span className="link-toggle link-gap" aria-hidden="true" />
-            <NumberField label="Oy" title="Transform origin Y (0-1)" value={n.originY} step={0.05} min={0} max={1} onChange={(v) => set({ originY: v })} />
-          </Row>
+        {!isConn && (
+          <LinkedPair
+            node={n}
+            ids={ids}
+            a="scaleX"
+            b="scaleY"
+            labelA="Scale W"
+            labelB="Scale H"
+            titleA="Scale across, as a percent of the layer's own width: 100% is as drawn, 200% twice as wide, -100% flips it (scaleX)"
+            titleB="Scale down, as a percent of the layer's own height: 100% is as drawn, 200% twice as tall, -100% flips it (scaleY)"
+            lockKey="lockScale"
+            step={5}
+            scale={100}
+            suffix="%"
+          />
         )}
+        {!(sameType && (n.type === 'bone' || n.type === 'connector')) && <PivotFields originX={n.originX} originY={n.originY} onChange={(p) => set(p)} onCommit={() => store().commit()} />}
         <Row>
           <CheckField label="Visible" value={n.visible} onChange={(v) => set({ visible: v })} />
           <CheckField label="Locked" value={!!n.locked} onChange={(v) => set({ locked: v })} />

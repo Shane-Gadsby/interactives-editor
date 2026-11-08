@@ -9657,3 +9657,20 @@ code {
   width: 20px;
   height: 20px;
 }
+
+/* ---------------------------------------------------------------- pivot (a 3x3 picker and two percents) */
+.prop-row.pivot-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.pivot-row .li-picker-field {
+  flex: none;
+}
+.pivot-nums {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}

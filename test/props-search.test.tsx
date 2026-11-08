@@ -271,7 +271,7 @@ describe('searching the properties panel', () => {
     act(() => {
       input.focus();
       const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      set.call(input, '0.5');
+      set.call(input, '50');
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       input.blur();

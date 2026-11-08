@@ -19,10 +19,10 @@ const NAMES: Record<string, string> = {
   Y: 'Y position',
   '↻': 'Rotation',
   'α': 'Opacity',
-  Sx: 'Scale x',
-  Sy: 'Scale y',
-  Ox: 'Origin x',
-  Oy: 'Origin y',
+  Sx: 'Scale W',
+  Sy: 'Scale H',
+  Ox: 'Pivot x',
+  Oy: 'Pivot y',
 };
 
 /**
@@ -31,7 +31,12 @@ const NAMES: Record<string, string> = {
  */
 export const PROP_SYNONYMS: Record<string, string[]> = {
   'α': ['transparency', 'transparent', 'alpha', 'fade', 'see through', 'translucent'],
-  Opacity: ['transparency', 'transparent', 'alpha', 'fade', 'see through'],
+  Opacity: ['transparency', 'transparent', 'alpha', 'α', 'fade', 'see through', 'translucent'],
+  'Scale W': ['scale', 'zoom', 'size', 'stretch', 'flip', 'sx', 'scale x', 'scale across', 'resize'],
+  'Scale H': ['scale', 'zoom', 'size', 'stretch', 'flip', 'sy', 'scale y', 'scale down', 'resize'],
+  Pivot: ['origin', 'anchor', 'transform origin', 'centre of rotation', 'center of rotation', 'ox', 'oy'],
+  'Pivot X': ['origin x', 'anchor', 'ox'],
+  'Pivot Y': ['origin y', 'anchor', 'oy'],
   Radius: ['round', 'rounded', 'corners', 'curve', 'border radius', 'roundness'],
   'Top-left': ['round', 'rounded', 'corner', 'corner radius', 'radius'],
   'Top-right': ['round', 'rounded', 'corner', 'corner radius', 'radius'],
@@ -92,7 +97,7 @@ export const PROP_SYNONYMS: Record<string, string[]> = {
   Text: ['copy', 'words', 'content', 'string', 'label'],
   Placeholder: ['hint', 'ghost text', 'empty text'],
   Variable: ['value', 'state', 'binding'],
-  Rotation: ['rotate', 'angle', 'turn', 'spin'],
+  Rotation: ['rotate', 'angle', 'turn', 'spin', 'degrees', '↻'],
   Scale: ['zoom', 'size', 'magnify'],
   Position: ['location', 'place', 'where', 'move'],
   Seed: ['random', 'shuffle'],

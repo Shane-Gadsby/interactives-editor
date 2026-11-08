@@ -6,9 +6,10 @@ const COL_NAMES = ['left', 'centre', 'right'];
 
 /**
  * A 3x3 picker for where something sits in a box: the columns are the horizontal edge (start, centre, end), the rows the
- * vertical one. Used for a grid's cell alignment and a stack's position.
+ * vertical one. Used for a grid's cell alignment and a stack's position, and for a layer's pivot. A null edge means
+ * "between the dots" (a custom pivot), so no dot is lit.
  */
-export function AlignPicker({ label, title, horizontal, vertical, onChange }: { label: string; title?: string; horizontal: Edge; vertical: Edge; onChange: (h: Edge, v: Edge) => void }) {
+export function AlignPicker({ label, title, horizontal, vertical, onChange }: { label: string; title?: string; horizontal: Edge | null; vertical: Edge | null; onChange: (h: Edge, v: Edge) => void }) {
   return (
     <div className="field li-picker-field" title={title}>
       <span className="field-label">{label}</span>

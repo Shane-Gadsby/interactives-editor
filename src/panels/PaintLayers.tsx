@@ -88,7 +88,7 @@ function FxFields({ n, ids, prefix, set }: { n: Painted; ids: string[]; prefix: 
   return (
     <>
       <Row>
-        <Num node={n} ids={ids} prop={`${prefix}.opacity`} label="α" title="Opacity of this paint alone (0 to 1)" step={0.05} min={0} max={1} fallback={1} />
+        <Num node={n} ids={ids} prop={`${prefix}.opacity`} label="Opacity" title="How solid this paint is on its own, as a percent (0 to 1 in the file)" suffix="%" scale={100} step={5} min={0} max={100} fallback={1} />
         <SelectField label="Blend" title="How this paint mixes with what is under it" value={(get('blend') as BlendMode | undefined) ?? 'normal'} options={PAINT_BLEND_OPTIONS} onChange={(v) => set({ [`${prefix}.blend`]: v === 'normal' ? undefined : v })} />
       </Row>
       <Row>
