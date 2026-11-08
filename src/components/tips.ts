@@ -151,7 +151,7 @@ export const FIELD_TIPS: Record<string, string> = {
   Timeline: 'Which timeline of this artboard',
   Event: 'Which kind of event to react to',
   Key: 'Which keyboard key, e.g. ArrowLeft, a or Enter. Empty means any key',
-  'Every (ms)': 'How often the timer fires, in milliseconds',
+  'Every (ms)': 'How long before the timer fires (and between fires), in milliseconds. An expression, so it can follow a variable',
   Repeat: 'Keep firing every time the delay passes, instead of once',
   Message: 'The name of the message, e.g. addToCart',
   Payload: 'Data sent with the message: an expression, such as an object',
