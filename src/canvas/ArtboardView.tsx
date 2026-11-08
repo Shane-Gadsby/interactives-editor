@@ -2,7 +2,7 @@ import { isChromeNode } from '../lib/branded/lock';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { recordDrawnGeometry } from '../store/doc';
 import { flushSync } from 'react-dom';
-import { Renderer, isMasterId, paintToCss, drawnDifferently, isContainer, measureCopies, measureTextBox, prepareNodes, type CopySizes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
+import { Renderer, layoutConnectors, isMasterId, paintToCss, drawnDifferently, isContainer, measureCopies, measureTextBox, prepareNodes, type CopySizes, textAutoSize, sampleArtboard, walk, textGrowShift, type Artboard, type ContainerNode, type Project, type SceneNode, type Timeline } from 'interactives-player';
 import { previewScope } from '../lib/data';
 import { editInstanceMount, instanceDepsKey } from './instances';
 import { withMasterCached } from '../lib/page-master';
@@ -246,7 +246,7 @@ export function ArtboardView({ artboard, project, timeline, time, active, assetV
       shown = nodes;
       // Where layers ended up after bindings, repeaters and layout, for the selection outline and hit testing (only for the
       // design view: a timeline's pose is not where the document has the layer)
-      if (!timeline) recordDrawnGeometry(artboard.id, artboard.children, nodes);
+      if (!timeline) recordDrawnGeometry(artboard.id, artboard.children, layoutConnectors(nodes).nodes);
       let plain = nodes === sampled;
       if (plain) walk(sampled, (n) => void (plain &&= !drawnDifferently(n)));
       lastDraw.current = { renderer: r, resolver, artboard, variables: project.variables, dataSources: project.dataSources, assetVersion, dataVersion, depsKey, nodes: sampled, plain };

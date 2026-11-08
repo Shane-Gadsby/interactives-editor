@@ -225,10 +225,10 @@ From left to right:
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
-**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)), and the **Media Catalogue** button, which opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, connector, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)), and the **Media Catalogue** button, which opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). **Help** is at the bottom. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## What the pointer shows
-The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
+The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, the Connector tool a crosshair (the layer it would join lights up with a dot on each side), and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
 
 When pressing will ask you something first, a note beside the pointer says so before you press: over a rectangle, ellipse, polygon or star the **Bend** tool says it will ask to turn it into a path, and dragging layers over another artboard says letting go will offer to move them there.
 
@@ -406,6 +406,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>L</kbd> | Line |
 | <kbd>P</kbd> | Pen |
 | <kbd>N</kbd> | Pencil (freehand) |
+| <kbd>K</kbd> | Connector (drag from one layer to another; see [Connectors](connectors)) |
 | <kbd>W</kbd> | Bend (drag an edge into a curve) |
 | <kbd>T</kbd> | Text |
 | <kbd>B</kbd> | Button |
@@ -2626,6 +2627,49 @@ A hidden item without a number of its own is left out when the axis is worked ou
 Charts draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard (as they look when fully grown, without the readout). They are **not** part of a Lottie export. There is no 3D, stacking or mixing of kinds. For anything else, a [Script layer](script-layers) can draw whatever you like.`,
   },
   {
+    id: 'connectors',
+    title: 'Connectors',
+    group: 'Interactivity',
+    summary: 'Lines and arrows that join two layers and follow them: straight, elbow or curved, with arrow heads, a label, and one per item of a list.',
+    keywords: 'connector connect line arrow join link edge flowchart mind map diagram elbow curved straight label follow snap side repeater links graph',
+    body: `A **Connector** is a line or arrow that joins two layers and follows them. Move, resize, turn or animate either layer, change the screen size, or let a repeater or auto layout move it, and the connector re-routes by itself: you never position it. It is how the mind map and flowchart starters draw their lines, and it is what to use for any diagram where boxes are joined.
+
+## Drawing one
+
+Pick the **Connector** tool (<kbd>K</kbd>, in the **Draw** group) and drag from one layer to another. The layer under the pointer lights up with a dot on each side: let go near a dot and the end attaches to that **side**; let go anywhere else on the layer and it is **auto**, the side that faces the other end. Let go on empty canvas and that end is a **loose point** that stays where it was dropped. Hold <kbd>Shift</kbd> to keep the tool. The new connector is selected, with a gold handle on each end: drag a handle onto another layer to re-attach it.
+
+You can also add one in the **Connector** section of the Inspector, which lists the layers on the artboard for each end.
+
+## The Connector section
+
+- **Route**: **Straight** goes edge to edge along the line between the two centres (round layers meet where the ellipse is, not where the box is), **Elbow** turns in right angles and goes round both layers instead of through them, with the fewest corners, and **Curved** leaves each side along its edge and bends smoothly.
+- **Start** and **End** (under *On layer*): the layer, its **Side** (auto, top, right, bottom, left) and **Slide**, which moves the end along that side so two lines can leave the same side apart.
+- **Ends**: a **Plain** end, an **Arrow** or a **Dot**, each end separately. **Cap size** is 0 to size them from the line's width. **Gap** stops the line short of each layer. **Corner radius** rounds an elbow's corners (and the label's background).
+- **Label**: words on a background chip at **Position** (0 is the start, 1 the end). Variables work in braces: \`{score}\`. The label's background is the layer's **Fill**, its text colour and font are in the section.
+- The line itself is the layer's **Stroke**: colour (a [theme token](themes) works), width, dash, round or butt ends. Animate **Trim end** from 0 to 100 to draw the line in.
+
+A connector has no position or size to set: its box is the route. A connector is **hidden** while either layer is hidden or gone (the Inspector says when a layer is gone).
+
+## Repeaters: one connector per link
+
+A layer inside a [repeater](repeaters) has one copy per item, and a copy's number is its place in the list (from 0). Connect two copies with a **Which copy** expression on each end. Put the connector in a repeater of its own over a list of links, and the expression sees that link as \`item\`:
+
+- the boxes: a group repeating \`nodes\`, with a box as its template (its first child);
+- the lines: a group repeating \`links\` (\`[{from: 0, to: 2}, ...]\`) with one connector as its template. Its **Start** is the box, **Which copy** \`item.from\`; its **End** the same box, **Which copy** \`item.to\`.
+
+Add a link to the list and a line appears; change a link and it moves. A link that names a copy that isn't there (an index past the end, or text) simply isn't drawn. When you drag the Connector tool onto a layer that is in a repeater, the end is made for you as copy 0.
+
+## Reading it
+
+A connector is **decorative**: screen readers skip it, and so does the keyboard. A diagram needs a text version, so give the page a plain alternative: a nested list for a mind map, a numbered list of steps for a flowchart. For one line that says something on its own, give the connector a **Text alternative** (Accessibility), such as "Yes leads to Book a room"; it is then read as a picture with that name. The label chip is part of the drawing and is not read separately.
+
+## Where it works
+
+Connectors draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard. They are left out of Lottie files (the export says so). A connector takes no clicks or hovers; put the events on the layers it joins. An artboard with connectors is redrawn whole on each edit in the editor, which is still fast at diagram sizes.
+
+See also [Repeaters](repeaters), [Charts](charts) and [Accessibility](accessibility).`,
+  },
+  {
     id: 'usage',
     title: 'Usage: what uses what',
     group: 'Reference',
@@ -2647,7 +2691,7 @@ A yellow **unused** flag marks items nothing refers to, and the number on each g
 - **Data sources**: the same expressions, plus *Load data* and *On data loaded* nodes, and being a font or data file.
 - **Scripts**: *Run script* nodes, or having *Run on start* ticked.
 - **Timelines**: *Control timeline*, *On timeline end* and *On timeline marker* nodes, joysticks, blends, autoplay, and scripts that name them.
-- **Layers** tab: layers that a constraint, an interaction node or a timeline track points at.
+- **Layers** tab: layers that a constraint, a connector, an interaction node or a timeline track points at.
 
 Uses found by reading script or *Run code* text are marked **?**. A name in code can match something that is not really a use, so check before deleting something that is used only by a **?**.
 

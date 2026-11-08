@@ -259,6 +259,18 @@ export function analyzeUsage(project: Project): UsageReport {
         for (const u of (n.type === 'shader' ? n.uniforms : n.type === 'image' ? n.shaderFilter?.uniforms : undefined) ?? []) if (u.type === 'image' && typeof u.value === 'string' && u.value) useId('asset', u.value, by, 'shader image');
         if (n.type === 'chart' && n.data.trim()) useExpr(n.data, by, 'chart data');
         if (n.type === 'chart') for (const t of [n.prefix, n.suffix]) if (t) for (const e of templateSlots(t)) useExpr(e, by, 'chart prefix or suffix');
+        if (n.type === 'connector') {
+          //Each end names a layer (the template of a repeated one), and a copy-picking end holds an expression; the label holds slots
+          for (const e of [n.from, n.to]) {
+            const l = e?.layer;
+            if (typeof l === 'string') useLayer(l, by, 'connector end');
+            else if (l && typeof l.repeat === 'string') {
+              useLayer(l.repeat, by, 'connector end');
+              if (l.index?.trim()) useExpr(l.index, by, 'connector copy');
+            }
+          }
+          if (n.label) for (const e of templateSlots(n.label)) useExpr(e, by, 'connector label');
+        }
         if (n.type === 'progress' && n.valueText) for (const e of templateSlots(n.valueText)) useExpr(e, by, 'spoken value template');
         //the binding itself counts as the use; an input's out and both-ways value has to name a variable that is there
         const tied = n.type === 'input' && (n.bindingModes?.value === 'out' || n.bindingModes?.value === 'both') ? n.bindings?.value?.trim() : '';

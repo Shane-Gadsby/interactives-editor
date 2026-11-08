@@ -77,6 +77,11 @@ const visiblePaint = (p: { visible?: boolean } | null | undefined) => !!p && p.v
 
 /** `slop`: extra reach around outlines (in layer units), so thin or unfilled shapes can still be picked. */
 export function hitsPaintedShape(n: SceneNode, x: number, y: number, slop = 0): boolean {
+  //A connector is picked on its line, not anywhere in the box round it (one that has not been drawn yet is a box of nothing)
+  if (n.type === 'connector') {
+    const pts = n.computed?.points;
+    return !!pts && pts.length > 1 && nearOutline([{ pts, closed: false }], x, y, Math.max(0, (n.stroke?.width ?? 0) / 2) + Math.max(slop, 4));
+  }
   if (n.type !== 'path' && n.type !== 'polygon' && n.type !== 'star') return true;
   const paths = n.type === 'path' ? n.paths : shapeToPaths(n);
   if (!paths?.length) return true;

@@ -77,6 +77,7 @@ const TYPE_ICON: Record<string, IconName> = {
   shader: 'shader',
   progress: 'progress',
   chart: 'chart',
+  connector: 'connector',
   instance: 'copy',
   bone: 'bone',
 };

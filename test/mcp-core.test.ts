@@ -462,6 +462,28 @@ describe('data layers by agents', () => {
   });
 });
 
+describe('connectors by agents', () => {
+  it('adds two layers and a connector between them, repairs wrong values, and shows it in the outline', () => {
+    const p = sample();
+    const ab = p.artboards[0].id;
+    const { project } = change(p, [
+      { op: 'add_layer', artboard_id: ab, type: 'rect', ref: 'a', props: { x: 0, y: 0, width: 100, height: 60 } },
+      { op: 'add_layer', artboard_id: ab, type: 'rect', ref: 'b', props: { x: 300, y: 100, width: 100, height: 60 } },
+    ]);
+    const [a, b] = project.artboards[0].children.slice(-2);
+    const next = change(project, [
+      { op: 'add_layer', artboard_id: ab, type: 'connector', ref: 'c', props: { from: { layer: a.id, side: 'right' }, to: { layer: b.id, side: 'sideways' }, route: 'zigzag', endCap: 'arrow', label: 'Yes', labelAt: 4 } },
+    ]).project;
+    const c = next.artboards[0].children.find((n) => n.type === 'connector') as { route: string; from: { layer: string; side?: string }; to: { layer: string; side?: string }; labelAt: number; endCap: string };
+    expect([c.route, c.from.layer, c.from.side, c.to.layer, c.to.side, c.labelAt, c.endCap]).toEqual(['curved', a.id, 'right', b.id, undefined, 1, 'arrow']);
+    const text = mcp.overview(next, {});
+    expect(text).toContain(`curved connector ${a.id}.right to ${b.id} labelled "Yes"`);
+    const again = change(next, [{ op: 'set_props', id: (next.artboards[0].children.find((n) => n.type === 'connector') as { id: string }).id, props: { route: 'elbow', 'to.side': 'left' } }]).project;
+    const e = again.artboards[0].children.find((n) => n.type === 'connector') as { route: string; to: { side: string } };
+    expect([e.route, e.to.side]).toEqual(['elbow', 'left']);
+  });
+});
+
 describe('reference', () => {
   it('lists every interaction node kind with its parameters', () => {
     const text = mcp.reference('interactions');
@@ -478,11 +500,12 @@ describe('reference', () => {
 
   it('describes every layer type with its defaults, and the script and shader layers', () => {
     const text = mcp.reference('layers');
-    for (const t of ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance', 'draw', 'shader', 'progress', 'chart', 'bone']) expect(text).toContain(`\n- ${t}: {`);
+    for (const t of ['rect', 'ellipse', 'polygon', 'star', 'path', 'text', 'image', 'group', 'frame', 'button', 'input', 'link', 'embed', 'video', 'instance', 'draw', 'shader', 'progress', 'chart', 'connector', 'bone']) expect(text).toContain(`\n- ${t}: {`);
     expect(text).toContain('Script layers');
     expect(text).toContain('Shader layers');
     expect(text).toContain('Progress bars (type "progress"');
     expect(text).toContain('Charts (type "chart"');
+    expect(text).toContain('Connectors (type "connector"');
   });
 
   it('lists the settings only a progress layer has', () => {

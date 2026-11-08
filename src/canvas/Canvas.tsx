@@ -25,6 +25,7 @@ import {
   nodeRuns,
   rotationFor,
   type Artboard,
+  type ConnectorNode,
   type Matrix,
   type NodeType,
   type PathNode,
@@ -45,7 +46,7 @@ import { addNote, leaveNote, noteScale } from '../lib/notes';
 import { NOTE_DEFAULT_H, NOTE_DEFAULT_W } from 'interactives-player';
 import { anchorAt } from '../lib/comment-anchor';
 import { comments } from '../lib/comments';
-import { drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
+import { drawnBox, drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorners, nodeToArtboard, parentToArtboard, selectionBounds, subscribeDrawnGeometry, topmost, type Rect } from '../store/doc';
 import { isBrandHeld } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
 import { groupFrame, groupMembers, pickedArtboardIds } from '../lib/artboard-groups';
@@ -80,6 +81,7 @@ import { confirmDialog } from '../components/dialogs';
 import { COMPONENT_DRAG, dropComponent } from '../lib/library-actions';
 import { rangeLabel } from '../lib/variants-edit';
 import { boneEndAt, boneFromDrag, boneGlyphs } from '../lib/rig';
+import { newConnector, pickEnd, pickedFromEnd, previewPath, sideMid, type Picked } from './connect';
 
 /** Shift, Ctrl or Cmd held on a click: add to the selection (or take out of it) instead of replacing it. Ctrl and Cmd still pick the deepest layer too. */
 const adds = (e: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => e.shiftKey || e.ctrlKey || e.metaKey;
@@ -102,6 +104,7 @@ type Drag =
   | { kind: 'bend'; id: string; si: number; i: number; t: number; start: Pt; node0: PathNode; parentM: Matrix }
   | { kind: 'pathPoint'; si: number; pi: number; start: Pt; node0: PathNode; parentM: Matrix }
   | { kind: 'pathHandle'; si: number; pi: number; which: 'in' | 'out'; node0: PathNode; parentM: Matrix; mirror: boolean }
+  | { kind: 'connect'; abId: string; fixed: Picked; id: string | null; which: 'from' | 'to'; route: ConnectorNode['route']; started: Pt }
   | { kind: 'boneDraw'; abId: string; parentId: string | null; chain: boolean; a: Pt }
   | { kind: 'boneRotate'; abId: string; id: string }
   | { kind: 'boneMove'; abId: string; id: string; start: Pt; x0: number; y0: number; inv: Matrix };
@@ -125,7 +128,7 @@ const CREATE_TYPES: Partial<Record<Tool, NodeType>> = {
 };
 
 /** Tools that start a new layer where you press, so the selection's resize and rotate handles stay out of the way. */
-const CREATION_TOOLS = new Set<Tool>(['artboard', 'line', 'pen', 'pencil', 'image', ...(Object.keys(CREATE_TYPES) as Tool[])]);
+const CREATION_TOOLS = new Set<Tool>(['artboard', 'line', 'connector', 'pen', 'pencil', 'image', ...(Object.keys(CREATE_TYPES) as Tool[])]);
 
 /** Where world (0, 0) sits in the scrollable pan space; pan is measured from here. */
 const PAN_ORIGIN = 4_000_000;
@@ -201,6 +204,14 @@ export function Canvas() {
   const setBoneDraft = (b: typeof boneDraft) => {
     boneDraftRef.current = b;
     setBoneDraftState(b);
+  };
+  //A connector being drawn or re-attached: the end that stays, and what the end under the pointer settled on. Also what the
+  //Connector tool is hovering over before a press, so the layer and its sides show
+  const [connDraft, setConnDraftState] = useState<{ abId: string; fixed: Picked | null; moving: Picked; route: ConnectorNode['route'] } | null>(null);
+  const connDraftRef = useRef(connDraft);
+  const setConnDraft = (c: typeof connDraft) => {
+    connDraftRef.current = c;
+    setConnDraftState(c);
   };
   //What snapped, to draw: lines by kind, and gaps for Spacing (artboard space, or canvas space when abId is null)
   const [guides, setGuides] = useState<{ abId: string | null; x: Target[]; y: Target[]; gaps: Gap[] } | null>(null);
@@ -596,6 +607,16 @@ export function Canvas() {
         } else drag.current = { kind: 'boneRotate', abId: ab.id, id: a };
         return;
       }
+      if (kind === 'conn' && ab) {
+        // One end of the selected connector: dragging it settles on whatever layer (or empty spot) it is dropped on
+        const loc = locate(ab, b);
+        if (!loc || loc.node.type !== 'connector' || loc.node.locked) return;
+        const which = a as 'from' | 'to';
+        const fixed = pickedFromEnd(ab, which === 'from' ? loc.node.to : loc.node.from);
+        drag.current = { kind: 'connect', abId: ab.id, fixed, id: b, which, route: loc.node.route, started: local(ab, w) };
+        setConnDraft({ abId: ab.id, fixed, moving: pickedFromEnd(ab, which === 'from' ? loc.node.from : loc.node.to), route: loc.node.route });
+        return;
+      }
       if (kind === 'penstart' && penRef.current) {
         finishPen(true);
         return;
@@ -641,6 +662,17 @@ export function Canvas() {
       const start = near ? near.tip : p;
       drag.current = { kind: 'boneDraw', abId: cab.id, parentId: near ? near.id : focus, chain: !!near, a: start };
       setBoneDraft({ abId: cab.id, a: start, b: start });
+      return;
+    }
+
+    if (tool === 'connector') {
+      const cab = hitAb ?? ab;
+      if (!cab) return;
+      if (cab.id !== st.activeArtboardId) store().set({ activeArtboardId: cab.id, selection: [], activeTimelineId: null });
+      const start = local(cab, w);
+      const fixed = pickEnd(cab, start, zoom, [], e.ctrlKey || e.metaKey);
+      drag.current = { kind: 'connect', abId: cab.id, fixed, id: null, which: 'to', route: 'curved', started: start };
+      setConnDraft({ abId: cab.id, fixed, moving: fixed, route: 'curved' });
       return;
     }
 
@@ -724,6 +756,13 @@ export function Canvas() {
       return;
     }
     if (toolHint) setToolHint(null);
+    // The Connector tool shows the layer it would join, with its sides, before anything is pressed
+    if (st.tool === 'connector' && !drag.current) {
+      const hab = abAt(w);
+      const picked = hab ? pickEnd(hab, local(hab, w), zoom, [], deep) : null;
+      setConnDraft(picked?.box && hab ? { abId: hab.id, fixed: null, moving: picked, route: 'curved' } : null);
+      return;
+    }
     if (st.tool !== 'select') return;
     const found = layerAt(w, deep);
     const hab = found?.ab ?? abAt(w);
@@ -1013,6 +1052,20 @@ export function Canvas() {
         store().setPathPoints(d.node0.id, paths, { from: d.node0.paths, coalesce: 'bend' });
         break;
       }
+      case 'connect': {
+        const cab = getArtboard(st.project, d.abId);
+        if (!cab) break;
+        const p = local(cab, w);
+        const skip = [d.id ?? '', d.fixed.layerId ?? ''].filter(Boolean);
+        let moving = pickEnd(cab, p, zoom, skip, e.ctrlKey || e.metaKey);
+        // A loose end follows the grid and the other layers' edges like anything else dropped on the artboard
+        if (!moving.box) {
+          const q = local(cab, snapWorld(cab, w, e));
+          moving = { ...moving, end: { layer: '', x: round(q.x), y: round(q.y) }, at: q };
+        } else setGuides(null);
+        setConnDraft({ abId: d.abId, fixed: d.fixed, moving, route: d.route });
+        break;
+      }
       case 'boneDraw': {
         const bab = getArtboard(st.project, d.abId);
         if (!bab) break;
@@ -1130,6 +1183,29 @@ export function Canvas() {
       const cab = d.abId ? getArtboard(st.project, d.abId) : undefined;
       if (!cab) return;
       createFromBox(cab, d.tool, b, d.parentId, e.shiftKey);
+      return;
+    }
+    if (d.kind === 'connect') {
+      const draft = connDraftRef.current;
+      setConnDraft(null);
+      const cab = getArtboard(st.project, d.abId);
+      if (!draft || !cab) return;
+      const to = draft.moving.end;
+      if (d.id) {
+        // Re-attached: only the end that was dragged changes (a click on the handle changes nothing)
+        const loc = locate(cab, d.id);
+        const was = loc?.node.type === 'connector' ? (d.which === 'from' ? loc.node.from : loc.node.to) : null;
+        if (!was || JSON.stringify(was) === JSON.stringify(to)) return;
+        store().setProps([d.id], d.which === 'from' ? { from: to } : { to }, 'connector-end');
+        store().commit();
+        return;
+      }
+      // A press that goes nowhere draws nothing
+      const moved = Math.hypot(draft.moving.at.x - d.fixed.at.x, draft.moving.at.y - d.fixed.at.y) * zoom;
+      if (moved < 6 || (draft.moving.layerId && draft.moving.layerId === d.fixed.layerId)) return;
+      const node = newConnector(d.fixed.end, to, lookDefaults(store().get().project, 'connector') as Partial<ConnectorNode>);
+      store().addNodes([node], { artboardId: cab.id });
+      if (!e.shiftKey) store().set({ tool: 'select' });
       return;
     }
     if (d.kind === 'boneDraw') {
@@ -1657,9 +1733,26 @@ export function Canvas() {
       };
       const center = at(0.5, 0.5);
       const locked = ids.some((id) => locate(active, id)!.node.locked);
+      //A connector has no box to resize or turn: it has two ends, and they are the handles
+      const conn = ids.length === 1 ? locate(active, ids[0])!.node : null;
+      const connector = conn?.type === 'connector' ? conn : null;
+      if (connector && !locked && s.tool === 'select') {
+        const drawn = nodeToArtboard(active, connector.id);
+        const g = drawnBox(active, connector).computed;
+        if (g) {
+          for (const which of ['from', 'to'] as const) {
+            const p = toS(active, apply(drawn, which === 'from' ? g.start.x : g.end.x, which === 'from' ? g.start.y : g.end.y));
+            overlay.push(
+              <circle key={`conn-${which}`} data-handle={`conn:${which}:${connector.id}`} className="conn-handle" cx={p.x} cy={p.y} r={6} style={{ cursor: 'grab' }}>
+                <title>{which === 'from' ? 'Start of the connector (drag onto a layer to attach it)' : 'End of the connector (drag onto a layer to attach it)'}</title>
+              </circle>,
+            );
+          }
+        }
+      }
       // The Bend tool works on the edges themselves, and a creation tool draws wherever you drag (the rotate zones outside a
       // selected layer's corners would otherwise swallow the start of a new shape), so no resize/rotate handles sit on top then
-      if (!locked && s.tool !== 'bend' && s.tool !== 'bone' && !CREATION_TOOLS.has(s.tool)) {
+      if (!locked && !connector && s.tool !== 'bend' && s.tool !== 'bone' && !CREATION_TOOLS.has(s.tool)) {
         for (const h of ['nw', 'ne', 'se', 'sw'] as Handle[]) {
           const [fx, fy] = HANDLE_POS[h];
           const c = at(fx, fy);
@@ -1676,7 +1769,7 @@ export function Canvas() {
       }
       // Gradients with points of their own: the points are handles, dragged in the layer's own px
       const sel1 = ids.length === 1 ? (locate(active, ids[0])!.node as unknown as { fill: Paint | null; stroke: Stroke | null; fills?: Paint[]; strokes?: Stroke[]; paintOrder?: never } & SceneNode) : null;
-      if (sel1 && !locked && size.w > 0 && size.h > 0 && s.tool !== 'bend' && s.tool !== 'bone' && !CREATION_TOOLS.has(s.tool)) {
+      if (sel1 && !locked && !connector && size.w > 0 && size.h > 0 && s.tool !== 'bend' && s.tool !== 'bone' && !CREATION_TOOLS.has(s.tool)) {
         const paints = [
           ...fillList(sel1).map((p, i) => ({ p, prefix: fillPath(i, sel1) })),
           ...strokeList(sel1).map((st, i) => ({ p: st.paint, prefix: `${strokePath(i, sel1)}.paint` })),
@@ -1709,11 +1802,12 @@ export function Canvas() {
         }
       }
       const bottom = Math.max(...quad.map((p) => p.y));
-      overlay.push(
-        <text key="size" className="size-label" x={center.x} y={bottom + 18}>
-          {Math.round(size.w)} × {Math.round(size.h)}
-        </text>,
-      );
+      if (!connector)
+        overlay.push(
+          <text key="size" className="size-label" x={center.x} y={bottom + 18}>
+            {Math.round(size.w)} × {Math.round(size.h)}
+          </text>,
+        );
     }
 
     // Path editing
@@ -1778,6 +1872,35 @@ export function Canvas() {
             {Math.round(box.rect.width)} × {Math.round(box.rect.height)}
           </text>,
         );
+    }
+  }
+
+  // A connector being drawn, or an end being dragged: the layer it would land on with its sides, and the line so far
+  if (connDraft) {
+    const cab = getArtboard(project, connDraft.abId) ?? null;
+    const P = (p: Pt) => oscreen(cab, p);
+    const m = connDraft.moving;
+    if (m.box) {
+      const b = m.box;
+      const corners = [P({ x: b.x, y: b.y }), P({ x: b.x + b.w, y: b.y }), P({ x: b.x + b.w, y: b.y + b.h }), P({ x: b.x, y: b.y + b.h })];
+      overlay.push(<polygon key="conn-target" className="conn-target" points={corners.map((c) => `${c.x},${c.y}`).join(' ')} />);
+      for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+        const c = P(sideMid(b, side));
+        overlay.push(<circle key={`conn-side-${side}`} className={`conn-side${m.end.side === side ? ' on' : ''}`} cx={c.x} cy={c.y} r={m.end.side === side ? 6 : 4} />);
+      }
+    }
+    if (connDraft.fixed?.box && drag.current?.kind === 'connect' && !drag.current.id) {
+      const b = connDraft.fixed.box;
+      const corners = [P({ x: b.x, y: b.y }), P({ x: b.x + b.w, y: b.y }), P({ x: b.x + b.w, y: b.y + b.h }), P({ x: b.x, y: b.y + b.h })];
+      overlay.push(<polygon key="conn-from" className="conn-target conn-from" points={corners.map((c) => `${c.x},${c.y}`).join(' ')} />);
+    }
+    if (connDraft.fixed && drag.current?.kind === 'connect') {
+      const which = drag.current.which;
+      const [a, b] = which === 'to' ? [connDraft.fixed, m] : [m, connDraft.fixed];
+      const raw = previewPath(a, b, connDraft.route);
+      // (the preview's coordinates are the artboard's: shift them onto the screen with the same transform the points use)
+      const o = P({ x: 0, y: 0 });
+      overlay.push(<path key="conn-draft" className="conn-draft" transform={`translate(${o.x} ${o.y}) scale(${zoom})`} d={raw} vectorEffect="non-scaling-stroke" />);
     }
   }
 

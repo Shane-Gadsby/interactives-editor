@@ -31,6 +31,8 @@ export const Icons = {
   shader: P('M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2zM19 3v4M17 5h4'),
   progress: P('M3 9h18v6H3zM3 9h9v6H3z'),
   chart: P('M4 4v16h16M8 16v-4M12 16V8M16 16v-6'),
+  // two boxes joined by an elbow that ends in an arrow
+  connector: P('M3 4h7v6H3zM14 14h7v6h-7zM10 7h2a3 3 0 013 3v4M13 12l2 2 2-2'),
   undo: P('M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3'),
   redo: P('M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3'),
   play: P('M7 4l13 8-13 8z'),

@@ -277,6 +277,7 @@ const TOOL_KEYS: Record<string, Tool> = {
   l: 'line',
   p: 'pen',
   n: 'pencil',
+  k: 'connector',
   w: 'bend',
   t: 'text',
   b: 'button',
@@ -905,6 +906,7 @@ function helpTopicForTool(tool: Tool): string {
   if (tool === 'shader') return 'shader-layers';
   if (tool === 'progress') return 'progress-bars';
   if (tool === 'chart') return 'charts';
+  if (tool === 'connector') return 'connectors';
   if (tool === 'bone') return 'bones';
   if (tool === 'comment') return 'comments';
   if (tool === 'note') return 'notes';
@@ -925,6 +927,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string; key?: string }[] = [
   { tool: 'polygon', icon: 'polygon', label: 'Polygon' },
   { tool: 'star', icon: 'star', label: 'Star' },
   { tool: 'line', icon: 'line', label: 'Line', key: 'L' },
+  { tool: 'connector', icon: 'connector', label: 'Connector (drag from one layer to another to join them with a line or arrow that follows them)', key: 'K' },
   { tool: 'pen', icon: 'pen', label: 'Pen', key: 'P' },
   { tool: 'pencil', icon: 'pencil', label: 'Pencil (freehand)', key: 'N' },
   { tool: 'bend', icon: 'bend', label: 'Bend (drag an edge into a curve; Alt bends one side)', key: 'W' },
@@ -1005,7 +1008,7 @@ function AddQuestion() {
 // always show; a folded group still shows its tool when that's the one in use
 const TOOL_GROUPS: { id: string; label: string; tools: Tool[]; open: boolean }[] = [
   { id: 'shapes', label: 'Shapes', tools: ['artboard', 'frame', 'rect', 'ellipse', 'polygon', 'star'], open: true },
-  { id: 'draw', label: 'Draw', tools: ['line', 'pen', 'pencil', 'bend'], open: true },
+  { id: 'draw', label: 'Draw', tools: ['line', 'connector', 'pen', 'pencil', 'bend'], open: true },
   { id: 'media', label: 'Media', tools: ['text', 'draw', 'shader', 'video'], open: false },
   { id: 'data', label: 'Data', tools: ['progress', 'chart'], open: false },
   { id: 'web', label: 'Web', tools: ['button', 'input', 'link', 'embed'], open: false },

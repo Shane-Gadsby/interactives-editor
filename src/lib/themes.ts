@@ -124,6 +124,8 @@ export function lookDefaults(project: Project, type: NodeType): Record<string, u
       return { fill: solid(l.surfaceMuted), barFill: solid(l.button) };
     case 'chart':
       return { colors: [l.button, l.link, l.success, l.warning, l.error, l.muted], color: l.text };
+    case 'connector':
+      return { fill: solid(l.background), stroke: { paint: solid(l.muted), width: 2, cap: 'round', join: 'round' }, color: l.text };
     default:
       return {};
   }

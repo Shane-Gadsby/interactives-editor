@@ -9,6 +9,7 @@ import {
   frameTime,
   sampleKeys,
   cloneWithNewIds,
+  remapConnectorIds,
   getPath,
   isContainer,
   setPath,
@@ -140,6 +141,7 @@ export type Tool =
   | 'pen'
   | 'pencil'
   | 'bend'
+  | 'connector'
   | 'text'
   | 'frame'
   | 'image'
@@ -1421,6 +1423,8 @@ export class EditorStore {
   private copyArtboard(src: Artboard): Artboard {
     const idMap = new Map<string, string>();
     const children = src.children.map((c) => cloneWithNewIds(JSON.parse(JSON.stringify(c)) as SceneNode, idMap));
+    // (a connector copied before the layers it joins found no copy of them yet: they all have one now)
+    for (const c of children) walk([c], (n) => remapConnectorIds(n, idMap));
     const copy: Artboard = {
       ...JSON.parse(JSON.stringify(src)),
       id: uid('ab'),

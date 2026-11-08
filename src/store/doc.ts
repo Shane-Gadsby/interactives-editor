@@ -8,6 +8,7 @@ import {
   multiply,
   nodeMatrix,
   type Artboard,
+  type ConnectorGeometry,
   type ContainerNode,
   type Matrix,
   type Project,
@@ -61,6 +62,8 @@ interface Drawn {
   y: number;
   width: number;
   height: number;
+  /** A connector's route as drawn (its box is just the route's). */
+  computed?: ConnectorGeometry;
 }
 const drawnGeometry = new Map<string, Map<string, Drawn>>();
 // Bumped when a record changes what the outline would show, so the canvas overlay (drawn before the artboard is) redraws
@@ -70,7 +73,7 @@ const sameDrawn = (a: Map<string, Drawn> | undefined, b: Map<string, Drawn>): bo
   if (!a || a.size !== b.size) return false;
   for (const [id, x] of b) {
     const y = a.get(id);
-    if (!y || y.node !== x.node || y.x !== x.x || y.y !== x.y || y.width !== x.width || y.height !== x.height) return false;
+    if (!y || y.node !== x.node || y.x !== x.x || y.y !== x.y || y.width !== x.width || y.height !== x.height || y.computed?.line !== x.computed?.line) return false;
   }
   return true;
 };
@@ -102,7 +105,7 @@ export function recordDrawnGeometry(artboardId: string, docNodes: SceneNode[], p
   const walk = (list: SceneNode[]) => {
     for (const p of list) {
       const d = doc.get(p.id);
-      if (d && d !== p && (d.x !== p.x || d.y !== p.y || d.width !== p.width || d.height !== p.height)) out.set(p.id, { node: d, x: p.x, y: p.y, width: p.width, height: p.height });
+      if (d && d !== p && (d.x !== p.x || d.y !== p.y || d.width !== p.width || d.height !== p.height)) out.set(p.id, { node: d, x: p.x, y: p.y, width: p.width, height: p.height, ...(p.type === 'connector' && p.computed ? { computed: p.computed } : {}) });
       if (isContainer(p)) walk(p.children);
     }
   };
@@ -116,7 +119,7 @@ export function recordDrawnGeometry(artboardId: string, docNodes: SceneNode[], p
 /** A layer with its box as drawn, when the canvas drew it differently from the document (else the layer itself). */
 export function drawnBox<T extends SceneNode>(artboard: Artboard, n: T): T {
   const rec = drawnGeometry.get(artboard.id)?.get(n.id);
-  return rec && rec.node === n ? { ...n, x: rec.x, y: rec.y, width: rec.width, height: rec.height } : n;
+  return rec && rec.node === n ? { ...n, x: rec.x, y: rec.y, width: rec.width, height: rec.height, ...(rec.computed ? { computed: rec.computed } : {}) } : n;
 }
 
 /** Matrix from a node's local space to artboard space. */

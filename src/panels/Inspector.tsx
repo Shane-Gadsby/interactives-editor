@@ -25,6 +25,7 @@ import {
   type ShaderNode,
   type ProgressNode,
   type ChartNode,
+  type ConnectorNode,
   DRAW_API,
   DRAW_TEMPLATES,
   type DrawTemplate,
@@ -106,6 +107,7 @@ import { detach as detachFromLibrary } from '../lib/library-actions';
 import { ShaderFilterFields, ShaderSection } from './ShaderInspector';
 import { FillSection, PaintOrderSection, StrokeSection } from './PaintLayers';
 import { ChartSection, ProgressSection } from './DataLayerInspectors';
+import { ConnectorSection } from './ConnectorInspector';
 import { addShaderFilter, removeShaderFilter } from '../lib/shader-uniform-edit';
 import { BindSelectionSection, BonesArtboardSection, BoneSection, SkinSection } from './RigSection';
 import { skinnable } from '../lib/rig';
@@ -785,18 +787,26 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
   const set = useSetter(ids);
   const single = nodes.length === 1;
   const sameType = nodes.every((x) => x.type === n.type);
+  //A connector's box is the route between the two layers it joins, so there is nothing to place, size, turn or lay out
+  const isConn = sameType && n.type === 'connector';
   return (
     <>
       <AlignBar count={nodes.length} shapes={nodes.filter((x) => !(x.type === 'group' || x.type === 'text' || x.type === 'link')).length} />
       {/* the layer's type heads its own section further down (Path, Text, ...), so this one is just "Layer" */}
       <Section help="fill-stroke" title={single ? 'Layer' : `${nodes.length} layers`}>
         {single && <TextField label="Name" value={n.name} onChange={(v) => set({ name: v }, `name-${n.id}`)} />}
-        <Row className="aligned-pair">
-          <Num node={n} ids={ids} prop="x" label="X" />
-          <span className="link-toggle link-gap" aria-hidden="true" />
-          <Num node={n} ids={ids} prop="y" label="Y" />
-        </Row>
-        {sameType && n.type === 'bone' ? (
+        {!isConn && (
+          <Row className="aligned-pair">
+            <Num node={n} ids={ids} prop="x" label="X" />
+            <span className="link-toggle link-gap" aria-hidden="true" />
+            <Num node={n} ids={ids} prop="y" label="Y" />
+          </Row>
+        )}
+        {isConn ? (
+          <Row className="aligned-pair">
+            <Num node={n} ids={ids} prop="opacity" label="α" step={0.05} min={0} max={1} />
+          </Row>
+        ) : sameType && n.type === 'bone' ? (
           <Row>
             <Num node={n} ids={ids} prop="width" label="Length" title="The bone's length (the layer's width)" min={0} />
             <Num node={n} ids={ids} prop="rotation" label="↻" suffix="°" />
@@ -811,8 +821,8 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
             </Row>
           </>
         )}
-        <LinkedPair node={n} ids={ids} a="scaleX" b="scaleY" labelA="Sx" labelB="Sy" lockKey="lockScale" step={0.05} />
-        {!(sameType && n.type === 'bone') && (
+        {!isConn && <LinkedPair node={n} ids={ids} a="scaleX" b="scaleY" labelA="Sx" labelB="Sy" lockKey="lockScale" step={0.05} />}
+        {!(sameType && (n.type === 'bone' || n.type === 'connector')) && (
           <Row className="aligned-pair">
             <NumberField label="Ox" title="Transform origin X (0-1)" value={n.originX} step={0.05} min={0} max={1} onChange={(v) => set({ originX: v })} />
             <span className="link-toggle link-gap" aria-hidden="true" />
@@ -823,8 +833,8 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
           <CheckField label="Visible" value={n.visible} onChange={(v) => set({ visible: v })} />
           <CheckField label="Locked" value={!!n.locked} onChange={(v) => set({ locked: v })} />
         </Row>
-        <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />
-        {n.mask && (
+        {!isConn && <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />}
+        {n.mask && !isConn && (
           <SelectField
             label="Mask mode"
             value={n.maskMode ?? 'alpha'}
@@ -841,7 +851,7 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       </Section>
       {single && n.type === 'frame' && n.question && <QuestionSection frame={n} ab={ab} project={project} />}
       {single && n.questionPart && <QuestionPartNote node={n} ab={ab} />}
-      <LayoutItemSection nodes={nodes} ab={ab} />
+      {!isConn && <LayoutItemSection nodes={nodes} ab={ab} />}
       {sameType && <TypeSection nodes={nodes} project={project} />}
       {!single && <BindSelectionSection nodes={nodes} abId={ab.id} />}
       {single && skinnable(n) && <SkinSection node={n} abId={ab.id} />}
@@ -856,9 +866,9 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
       {single && n.type === 'text' && <TextModifiersSection node={n} />}
       {sameType && 'fill' in n && <FillSection nodes={nodes} project={project} />}
       {sameType && 'stroke' in n && <StrokeSection nodes={nodes} project={project} />}
-      {sameType && single && 'stroke' in n && <PaintOrderSection nodes={nodes} />}
+      {sameType && single && 'stroke' in n && !isConn && <PaintOrderSection nodes={nodes} />}
       <EffectsSection nodes={nodes} />
-      {single && <ConstraintsSection node={n} />}
+      {single && !isConn && <ConstraintsSection node={n} />}
       <LinkCursorSection nodes={nodes} project={project} />
       {single && (n.type === 'group' || n.type === 'frame') && <SoloSection node={n} />}
       {single && (n.type === 'group' || n.type === 'frame') && n.children.length > 1 && <DrawOrderSection node={n} />}
@@ -1575,6 +1585,8 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
       return <ProgressSection nodes={nodes as ProgressNode[]} project={project} />;
     case 'chart':
       return <ChartSection nodes={nodes as ChartNode[]} project={project} ab={store().artboard()} />;
+    case 'connector':
+      return <ConnectorSection nodes={nodes as ConnectorNode[]} project={project} ab={store().artboard()} />;
     case 'shader':
       return nodes.length === 1 ? <ShaderSection node={n as ShaderNode} project={project} /> : <p className="hint">Select one shader layer to edit its code and uniforms.</p>;
     case 'group':

@@ -1982,6 +1982,45 @@ body.col-resizing * {
   stroke: var(--accent);
   stroke-width: 1;
 }
+/* Connector tool: the layer an end would land on, its sides (the chosen one is gold), the end handles of the selected connector, and the line so far */
+.conn-target {
+  fill: color-mix(in srgb, var(--primary-bg) 14%, transparent);
+  stroke: var(--primary-bg);
+  stroke-width: 2;
+  pointer-events: none;
+}
+.conn-target.conn-from {
+  fill: none;
+  stroke-dasharray: 4 3;
+  stroke-width: 1.5;
+}
+.conn-side {
+  fill: #fff;
+  stroke: var(--primary-bg);
+  stroke-width: 2;
+  pointer-events: none;
+}
+.conn-side.on {
+  fill: var(--primary-bg);
+  stroke: #1c1e26;
+  stroke-width: 1.5;
+}
+.conn-handle {
+  fill: var(--primary-bg);
+  stroke: #1c1e26;
+  stroke-width: 1.5;
+}
+.conn-handle:hover {
+  stroke-width: 2.5;
+}
+.conn-draft {
+  fill: none;
+  stroke: var(--primary-bg);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.7));
+}
 .guide {
   stroke: #ff4f8b;
   stroke-width: 1;
