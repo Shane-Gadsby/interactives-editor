@@ -167,12 +167,15 @@ describe('media starters', () => {
     };
     const tags = (player: Player) => player.getVariable('tags') as { t: number; cat: number; note: string }[];
 
-    it('says to choose a recording until one is chosen', async () => {
+    it('says so itself until a recording is chosen: the video layer\'s own empty text, no hand-made placeholder', async () => {
       const a = await open('');
-      expect(el(layer(a.p, WATCH, 'Video placeholder').id).style.display).not.toBe('none');
+      const v = layer(a.p, WATCH, 'Video') as VideoNode;
+      expect(v.emptyText).toMatch(/No recording/);
+      expect(el(v.id).querySelector('.ix-video-empty')?.textContent).toBe(v.emptyText);
+      expect(byName(board(a.p, WATCH), 'Video placeholder')).toBeUndefined();
       a.player.destroy();
       const b = await open();
-      expect(el(layer(b.p, WATCH, 'Video placeholder').id).style.display).toBe('none');
+      expect(el(layer(b.p, WATCH, 'Video').id).querySelector('.ix-video-empty')).toBeNull();
       b.player.destroy();
     });
 
@@ -233,33 +236,44 @@ describe('media starters', () => {
       player.destroy();
     });
 
-    it('the transcript opens over the page and pauses the video, and closes again', async () => {
-      const { p, player, state } = await open();
-      state.paused = false;
-      player.step(16);
-      const panel = layer(p, WATCH, 'Transcript panel').id;
-      expect(el(panel).style.display).toBe('none');
-      await click(layer(p, WATCH, 'Transcript').id);
-      player.step(16);
-      player.step(16);
-      expect(el(panel).style.display).not.toBe('none');
-      expect(state.paused).toBe(true);
-      expect(textOf(layer(p, WATCH, 'Transcript text').id)).toContain('hardest part');
-      await click(layer(p, WATCH, 'Close transcript').id);
-      player.step(16);
-      expect(el(panel).style.display).toBe('none');
+    it('the transcript is the viewer\'s own: every line is a caption on the video, and there is no hand-built panel or audio-only flag', async () => {
+      const { p, player } = await open();
+      const v = layer(p, WATCH, 'Video') as VideoNode;
+      expect(v.captions!.map((c) => c.text).join(' ')).toContain('hardest part');
+      expect(v.captions).toHaveLength(6);
+      expect(v.captions!.every((c) => c.speaker)).toBe(true);
+      for (const name of ['Transcript panel', 'Transcript', 'Close transcript', 'Still image']) expect(byName(board(p, WATCH), name), name).toBeUndefined();
+      expect(p.variables.some((x) => x.name === 'audioOnly' || x.name === 'showTranscript')).toBe(false);
       player.destroy();
     });
 
-    it('audio only: the still picture shows when the audioOnly variable is on', async () => {
-      const { p, player } = await open();
-      const still = layer(p, WATCH, 'Still image').id;
-      expect(el(still).style.display).toBe('none');
-      player.setVariable('audioOnly', true);
-      player.step(16);
-      player.step(16);
-      expect(el(still).style.display).not.toBe('none');
+    it('audio only is a sound in the Video layer with a poster picture, which shows under the controls', async () => {
+      const p = project();
+      p.assets.push({ id: 'as_poster', name: 'Poster', mime: 'image/svg+xml', size: 1, src: 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' });
+      const v = layer(p, WATCH, 'Video') as VideoNode;
+      v.src = 'https://example.com/talk.mp3';
+      v.posterAssetId = 'as_poster';
+      const player = play(p);
+      await settle(player, 100);
+      await click(layer(p, 'Observe and tag', 'Start').id);
+      await settle(player);
+      expect(el(v.id).querySelector('video')!.getAttribute('poster')).toContain('data:image/svg+xml');
       player.destroy();
+    });
+
+    it('one On key event hears the number keys, not one for each', () => {
+      const { project: built } = get('media/observe-and-tag').build(COLOURWAYS[0]);
+      const keys = board(built, WATCH).logic.nodes.filter((n) => n.kind === 'event.key');
+      expect(keys).toHaveLength(1);
+      expect((keys[0].params as { onlyIf?: string }).onlyIf).toContain('categories.length');
+    });
+
+    it('the comparison is live variables (nothing sets them), so the compare page only reads them', () => {
+      const { project: built } = get('media/observe-and-tag').build(COLOURWAYS[0]);
+      const live = built.variables.filter((v) => v.live).map((v) => v.name);
+      expect(live).toEqual(expect.arrayContaining(['expertHit', 'youHit', 'agreed', 'missed', 'extra', 'stripLength']));
+      const ids = new Set(built.variables.filter((v) => v.live).map((v) => v.id));
+      for (const ab of built.artboards) for (const n of ab.logic.nodes) if (n.kind === 'action.setVariable') expect(ids.has((n.params as { variable: string }).variable)).toBe(false);
     });
 
     /** Tag at these times and categories (the expert's are 12/1, 31/2, 47/3, 66/4 and 82/1, with a window of 3 seconds), then finish. */
