@@ -1854,6 +1854,14 @@ const ANIMATABLE_PROPS = [
   { prop: "modifiers.0.blur", label: "Text modifier blur", kind: "number" }
 ];
 function layerOwnProps(node) {
+  if (node?.type === "connector") {
+    return [
+      { prop: "labelAt", label: "Label position along the line (0 to 1)", kind: "number" },
+      { prop: "gap", label: "Gap at the ends", kind: "number" },
+      { prop: "from.offset", label: "Start slide along its side", kind: "number" },
+      { prop: "to.offset", label: "End slide along its side", kind: "number" }
+    ];
+  }
   if (node?.type !== "progress") return [];
   return [
     { prop: "value", label: "Progress value", kind: "number" },
@@ -1866,24 +1874,24 @@ function defaultModifier(patch = {}) {
   return { unit: "letter", start: 0, end: 100, offset: 0, shape: "square", strength: 100, x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, letterSpacing: 0, blur: 0, ...patch };
 }
 const isNum$3 = (v) => typeof v === "number" && Number.isFinite(v);
-const num$4 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
+const num$5 = (v, d) => isNum$3(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeModifier(raw) {
   const r2 = raw && typeof raw === "object" ? raw : {};
   const d = defaultModifier();
   const m = {
     unit: MODIFIER_UNITS.includes(r2.unit) ? r2.unit : d.unit,
-    start: num$4(r2.start, d.start),
-    end: num$4(r2.end, d.end),
-    offset: num$4(r2.offset, d.offset),
+    start: num$5(r2.start, d.start),
+    end: num$5(r2.end, d.end),
+    offset: num$5(r2.offset, d.offset),
     shape: MODIFIER_SHAPES.includes(r2.shape) ? r2.shape : d.shape,
-    strength: num$4(r2.strength, d.strength),
-    x: num$4(r2.x, d.x),
-    y: num$4(r2.y, d.y),
-    rotation: num$4(r2.rotation, d.rotation),
-    scale: num$4(r2.scale, d.scale),
-    opacity: num$4(r2.opacity, d.opacity),
-    letterSpacing: num$4(r2.letterSpacing, d.letterSpacing),
-    blur: num$4(r2.blur, d.blur)
+    strength: num$5(r2.strength, d.strength),
+    x: num$5(r2.x, d.x),
+    y: num$5(r2.y, d.y),
+    rotation: num$5(r2.rotation, d.rotation),
+    scale: num$5(r2.scale, d.scale),
+    opacity: num$5(r2.opacity, d.opacity),
+    letterSpacing: num$5(r2.letterSpacing, d.letterSpacing),
+    blur: num$5(r2.blur, d.blur)
   };
   if (isNum$3(r2.falloffStart)) m.falloffStart = r2.falloffStart;
   if (isNum$3(r2.falloffEnd)) m.falloffEnd = r2.falloffEnd;
@@ -3113,14 +3121,14 @@ function newQuestion(kind, prefix = "q1") {
 function opts(texts, right) {
   return texts.map((text2, i) => ({ id: `o${i + 1}`, text: text2, ...right.includes(i) ? { correct: true } : {} }));
 }
-const isObj$4 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isObj$5 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const str$1 = (v, d = "") => typeof v === "string" ? v : d;
-const num$3 = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
+const num$4 = (v, d, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
 function cleanVoice(raw) {
-  if (!isObj$4(raw)) return void 0;
+  if (!isObj$5(raw)) return void 0;
   const out = {};
   if (str$1(raw.voice)) out.voice = str$1(raw.voice).slice(0, 40);
-  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num$3(raw.speed, 1, 0.5, 1.5);
+  if (typeof raw.speed === "number" && Number.isFinite(raw.speed)) out.speed = num$4(raw.speed, 1, 0.5, 1.5);
   if (str$1(raw.say).trim()) out.say = str$1(raw.say).slice(0, 200);
   if (str$1(raw.sentence).trim()) out.sentence = str$1(raw.sentence).slice(0, 300);
   if (raw.twice === true) out.twice = true;
@@ -3132,7 +3140,7 @@ function cleanVoice(raw) {
   return Object.keys(out).length ? out : void 0;
 }
 function cleanGuard(raw) {
-  if (!isObj$4(raw)) return void 0;
+  if (!isObj$5(raw)) return void 0;
   const out = {};
   if (raw.mode === "block" || raw.mode === "warn" || raw.mode === "off") out.mode = raw.mode;
   if (raw.spellcheck === false) out.spellcheck = false;
@@ -3141,11 +3149,11 @@ function cleanGuard(raw) {
   return Object.keys(out).length ? out : void 0;
 }
 function normaliseQuestion(raw) {
-  if (!isObj$4(raw)) return null;
+  if (!isObj$5(raw)) return null;
   const kind = QUESTION_KINDS.some((k) => k.value === raw.kind) ? raw.kind : null;
   if (!kind) return null;
   const d = newQuestion(kind);
-  const list = (v, max) => Array.isArray(v) ? v.filter(isObj$4).slice(0, max) : [];
+  const list = (v, max) => Array.isArray(v) ? v.filter(isObj$5).slice(0, max) : [];
   const options = list(raw.options, MAX_OPTIONS).map((o, i) => ({
     id: str$1(o.id) || `o${i + 1}`,
     text: str$1(o.text),
@@ -3171,7 +3179,7 @@ function normaliseQuestion(raw) {
     group: str$1(c2.group),
     ...str$1(c2.feedback) ? { feedback: str$1(c2.feedback) } : {}
   }));
-  const bank = isObj$4(raw.bank) && str$1(raw.bank.items).trim() ? {
+  const bank = isObj$5(raw.bank) && str$1(raw.bank.items).trim() ? {
     items: str$1(raw.bank.items),
     order: raw.bank.order === "sequence" ? "sequence" : "random",
     ...raw.bank.end === "finish" ? { end: "finish" } : {},
@@ -3181,7 +3189,7 @@ function normaliseQuestion(raw) {
     kind,
     prefix: isIdentifier(str$1(raw.prefix)) ? str$1(raw.prefix) : d.prefix,
     prompt: str$1(raw.prompt),
-    points: num$3(raw.points, 1, 0, 1e3),
+    points: num$4(raw.points, 1, 0, 1e3),
     options,
     blanks,
     pairs,
@@ -3191,10 +3199,10 @@ function normaliseQuestion(raw) {
     ...kind === "blank" && raw.answerBy === "drag" ? { answerBy: "drag" } : {},
     shuffle: raw.shuffle === true,
     partial: raw.partial === true,
-    attempts: Math.round(num$3(raw.attempts, 0, 0, 100)),
-    attemptPenalty: num$3(raw.attemptPenalty, 0, 0, 1),
+    attempts: Math.round(num$4(raw.attempts, 0, 0, 100)),
+    attemptPenalty: num$4(raw.attemptPenalty, 0, 0, 1),
     hints: (Array.isArray(raw.hints) ? raw.hints : []).filter((h) => typeof h === "string").slice(0, MAX_HINTS),
-    hintPenalty: num$3(raw.hintPenalty, 0, 0, 1),
+    hintPenalty: num$4(raw.hintPenalty, 0, 0, 1),
     feedbackCorrect: str$1(raw.feedbackCorrect),
     feedbackPartial: str$1(raw.feedbackPartial),
     feedbackIncorrect: str$1(raw.feedbackIncorrect),
@@ -3209,7 +3217,7 @@ function normaliseQuestion(raw) {
     ...raw.listen === true ? { listen: true } : {},
     ...raw.report === "complete" || raw.report === "progress" ? { report: raw.report } : {},
     ...raw.serverMarked === true ? { serverMarked: true } : {},
-    ...isObj$4(raw.retake) ? { retake: { limit: Math.round(num$3(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
+    ...isObj$5(raw.retake) ? { retake: { limit: Math.round(num$4(raw.retake.limit, 0, -1, 100)), keep: raw.retake.keep === "latest" ? "latest" : "best" } } : {},
     ...cleanVoice(raw.voice) ? { voice: cleanVoice(raw.voice) } : {},
     ...cleanGuard(raw.guard) ? { guard: cleanGuard(raw.guard) } : {},
     ...raw.answersOnServer === true ? { answersOnServer: true } : {},
@@ -3217,14 +3225,14 @@ function normaliseQuestion(raw) {
     ...typeof raw.hintTotal === "number" && Number.isFinite(raw.hintTotal) && raw.hintTotal > 0 ? { hintTotal: Math.min(MAX_HINTS, Math.floor(raw.hintTotal)) } : {}
   };
 }
-const isObj$3 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isObj$4 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isNum$2 = (v) => typeof v === "number" && Number.isFinite(v);
 function cleanCues(v) {
   if (!Array.isArray(v)) return [];
   const seen = /* @__PURE__ */ new Set();
   const out = [];
   for (const raw of v) {
-    if (!isObj$3(raw) || typeof raw.text !== "string" || !isNum$2(raw.start)) continue;
+    if (!isObj$4(raw) || typeof raw.text !== "string" || !isNum$2(raw.start)) continue;
     const start = Math.max(0, raw.start);
     const end = isNum$2(raw.end) && raw.end > start ? raw.end : start + 1e3;
     let id = typeof raw.id === "string" && raw.id && !seen.has(raw.id) ? raw.id : uid("cu");
@@ -3234,14 +3242,14 @@ function cleanCues(v) {
   }
   return out;
 }
-const isObj$2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isObj$3 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isNum$1 = (v) => typeof v === "number" && Number.isFinite(v);
 function cleanVideoCues(v) {
   if (!Array.isArray(v)) return [];
   const seen = /* @__PURE__ */ new Set();
   const out = [];
   for (const raw of v) {
-    if (!isObj$2(raw) || !isNum$1(raw.time) || typeof raw.name !== "string") continue;
+    if (!isObj$3(raw) || !isNum$1(raw.time) || typeof raw.name !== "string") continue;
     let id = typeof raw.id === "string" && raw.id ? raw.id : uid("vc");
     while (seen.has(id)) id = uid("vc");
     seen.add(id);
@@ -3254,7 +3262,7 @@ function cleanVideoChapters(v) {
   const seen = /* @__PURE__ */ new Set();
   const out = [];
   for (const raw of v) {
-    if (!isObj$2(raw) || !isNum$1(raw.time) || typeof raw.title !== "string") continue;
+    if (!isObj$3(raw) || !isNum$1(raw.time) || typeof raw.title !== "string") continue;
     let id = typeof raw.id === "string" && raw.id ? raw.id : uid("vh");
     while (seen.has(id)) id = uid("vh");
     seen.add(id);
@@ -3287,23 +3295,23 @@ const NOTE_DEFAULT_H = 120;
 const NOTE_MIN_W = 80;
 const NOTE_MIN_H = 48;
 const NOTE_MAX_TEXT = 4e3;
-const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
-const num$2 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
+const isObj$2 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const num$3 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
 function cleanNote(raw) {
-  if (!isObj$1(raw) || typeof raw.id !== "string" || !raw.id) return null;
+  if (!isObj$2(raw) || typeof raw.id !== "string" || !raw.id) return null;
   const n = {
     id: raw.id,
-    x: num$2(raw.x, 0),
-    y: num$2(raw.y, 0),
-    w: Math.max(NOTE_MIN_W, num$2(raw.w, NOTE_DEFAULT_W)),
-    h: Math.max(NOTE_MIN_H, num$2(raw.h, NOTE_DEFAULT_H)),
+    x: num$3(raw.x, 0),
+    y: num$3(raw.y, 0),
+    w: Math.max(NOTE_MIN_W, num$3(raw.w, NOTE_DEFAULT_W)),
+    h: Math.max(NOTE_MIN_H, num$3(raw.h, NOTE_DEFAULT_H)),
     text: typeof raw.text === "string" ? raw.text.slice(0, NOTE_MAX_TEXT) : ""
   };
   if (NOTE_COLOURS.includes(raw.colour)) n.colour = raw.colour;
   if (typeof raw.author === "string" && raw.author) n.author = raw.author.slice(0, 120);
   if (typeof raw.created === "string") n.created = raw.created.slice(0, 40);
   const a = raw.anchor;
-  if (isObj$1(a) && typeof a.layerId === "string" && a.layerId) n.anchor = { layerId: a.layerId, lx: num$2(a.lx, 0), ly: num$2(a.ly, 0) };
+  if (isObj$2(a) && typeof a.layerId === "string" && a.layerId) n.anchor = { layerId: a.layerId, lx: num$3(a.lx, 0), ly: num$3(a.ly, 0) };
   return n;
 }
 function cleanNotes(raw) {
@@ -3326,19 +3334,19 @@ function makeNote(partial) {
   if (partial.anchor) n.anchor = partial.anchor;
   return cleanNote(n);
 }
-const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isStr = (v) => typeof v === "string";
 function percentSides(v) {
-  if (!isObj(v)) return void 0;
+  if (!isObj$1(v)) return void 0;
   const out = {};
   for (const k of ["top", "right", "bottom", "left"]) if (v[k] === "percent") out[k] = "percent";
   return Object.keys(out).length ? out : void 0;
 }
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const arr = (v, keep) => Array.isArray(v) ? v.filter(keep) : [];
-const objs = (v) => arr(v, isObj);
+const objs = (v) => arr(v, isObj$1);
 function fits$1(value, def) {
-  if (def === null) return value === null || isObj(value) || isStr(value) || isNum(value);
+  if (def === null) return value === null || isObj$1(value) || isStr(value) || isNum(value);
   if (Array.isArray(def)) return Array.isArray(value);
   switch (typeof def) {
     case "number":
@@ -3348,7 +3356,7 @@ function fits$1(value, def) {
     case "boolean":
       return typeof value === "boolean";
     case "object":
-      return value === null || isObj(value);
+      return value === null || isObj$1(value);
     default:
       return true;
   }
@@ -3386,7 +3394,7 @@ function dragSettings(raw, draggable) {
   return out;
 }
 function stringMap(v) {
-  if (!isObj(v)) return void 0;
+  if (!isObj$1(v)) return void 0;
   const out = {};
   for (const [k, x] of Object.entries(v)) if (isStr(x)) out[k] = x;
   return out;
@@ -3407,7 +3415,7 @@ function same$1(a, b) {
   return ka.every((k) => same$1(a[k], b[k]));
 }
 function sanitizeNode(raw, seen) {
-  if (!isObj(raw) || !isStr(raw.id) || !raw.id || !isStr(raw.type)) return null;
+  if (!isObj$1(raw) || !isStr(raw.id) || !raw.id || !isStr(raw.type)) return null;
   seen.add(raw.id);
   let def;
   try {
@@ -3441,17 +3449,41 @@ function sanitizeNode(raw, seen) {
     if (!isNum(n.hole)) n.hole = 0.6;
     else n.hole = Math.min(0.95, Math.max(0.1, n.hole));
   }
+  if (raw.type === "connector") {
+    delete n.computed;
+    const end = (v, fallback) => {
+      if (!isObj$1(v)) return { ...fallback };
+      const out = {};
+      const l = v.layer;
+      if (isStr(l)) out.layer = l;
+      else if (isObj$1(l) && isStr(l.repeat) && l.repeat && isStr(l.index)) out.layer = { repeat: l.repeat, index: l.index };
+      else out.layer = "";
+      if (["auto", "top", "right", "bottom", "left"].includes(v.side)) out.side = v.side;
+      if (isNum(v.offset)) out.offset = v.offset;
+      if (isNum(v.x)) out.x = v.x;
+      if (isNum(v.y)) out.y = v.y;
+      return out;
+    };
+    n.from = end(raw.from, { layer: "", x: 0, y: 0 });
+    n.to = end(raw.to, { layer: "", x: 160, y: 0 });
+    if (!["straight", "elbow", "curved"].includes(n.route)) n.route = "curved";
+    for (const k of ["startCap", "endCap"]) if (!["none", "arrow", "dot"].includes(n[k])) n[k] = k === "endCap" ? "arrow" : "none";
+    for (const k of ["capSize", "gap", "cornerRadius"]) if (!isNum(n[k]) || n[k] < 0) n[k] = k === "gap" ? 4 : k === "cornerRadius" ? 8 : 0;
+    n.labelAt = isNum(n.labelAt) ? Math.min(1, Math.max(0, n.labelAt)) : 0.5;
+    if (!isNum(n.fontSize) || n.fontSize < 4) n.fontSize = 13;
+    if ("fontWeight" in n && !isNum(n.fontWeight)) delete n.fontWeight;
+  }
   if (raw.type === "image" && "shaderFilter" in n) {
     const f2 = n.shaderFilter;
-    if (isObj(f2) && isStr(f2.code)) {
+    if (isObj$1(f2) && isStr(f2.code)) {
       n.shaderFilter = { ...f2, uniforms: usableUniforms(f2.uniforms), ...f2.pixelRatio !== void 0 ? { pixelRatio: isNum(f2.pixelRatio) && f2.pixelRatio > 0 ? Math.min(3, f2.pixelRatio) : "auto" } : {} };
     } else delete n.shaderFilter;
   }
   if ("bindings" in n) n.bindings = stringMap(n.bindings);
-  if ("converters" in n && !isObj(n.converters)) delete n.converters;
-  if (isObj(n.converters)) for (const [k, list] of Object.entries(n.converters)) n.converters[k] = objs(list).filter((c2) => isStr(c2.type));
+  if ("converters" in n && !isObj$1(n.converters)) delete n.converters;
+  if (isObj$1(n.converters)) for (const [k, list] of Object.entries(n.converters)) n.converters[k] = objs(list).filter((c2) => isStr(c2.type));
   if ("constraints" in n) n.constraints = objs(n.constraints).filter((c2) => isStr(c2.type));
-  if ("repeat" in n && !(isObj(n.repeat) && isStr(n.repeat.items))) delete n.repeat;
+  if ("repeat" in n && !(isObj$1(n.repeat) && isStr(n.repeat.items))) delete n.repeat;
   if ("question" in n) {
     const qn = normaliseQuestion(n.question);
     if (qn && raw.type === "frame") n.question = qn;
@@ -3461,7 +3493,7 @@ function sanitizeNode(raw, seen) {
   if ("shortcut" in n && !isStr(n.shortcut)) delete n.shortcut;
   if ("dialog" in n) {
     const d = n.dialog;
-    if (raw.type === "frame" && isObj(d)) {
+    if (raw.type === "frame" && isObj$1(d)) {
       const out = {};
       for (const k of ["modal", "closeOnEscape", "returnFocus", "closeOnOutsideClick"]) if (typeof d[k] === "boolean") out[k] = d[k];
       for (const k of ["initialFocus", "openVariable"]) if (isStr(d[k])) out[k] = d[k];
@@ -3472,7 +3504,7 @@ function sanitizeNode(raw, seen) {
   }
   if ("keyNav" in n) {
     const k = n.keyNav;
-    if ((raw.type === "frame" || raw.type === "group") && isObj(k) && (k.mode === "list" || k.mode === "grid" || k.mode === "radio")) {
+    if ((raw.type === "frame" || raw.type === "group") && isObj$1(k) && (k.mode === "list" || k.mode === "grid" || k.mode === "radio")) {
       const out = { mode: k.mode };
       if (k.orientation === "vertical" || k.orientation === "horizontal" || k.orientation === "both") out.orientation = k.orientation;
       if (isNum(k.columns) && k.columns >= 1) out.columns = Math.round(k.columns);
@@ -3482,26 +3514,26 @@ function sanitizeNode(raw, seen) {
       n.keyNav = out;
     } else delete n.keyNav;
   }
-  if ("solo" in n && !(isObj(n.solo) && (n.solo.active === null || isStr(n.solo.active)))) delete n.solo;
+  if ("solo" in n && !(isObj$1(n.solo) && (n.solo.active === null || isStr(n.solo.active)))) delete n.solo;
   if ("drawOrder" in n) n.drawOrder = arr(n.drawOrder, isStr);
-  if ("link" in n && n.link !== null && !(isObj(n.link) && isStr(n.link.url))) delete n.link;
-  if ("layoutItem" in n && n.layoutItem !== null && !isObj(n.layoutItem)) delete n.layoutItem;
-  if (isObj(n.layoutItem) && "marginUnits" in n.layoutItem) {
+  if ("link" in n && n.link !== null && !(isObj$1(n.link) && isStr(n.link.url))) delete n.link;
+  if ("layoutItem" in n && n.layoutItem !== null && !isObj$1(n.layoutItem)) delete n.layoutItem;
+  if (isObj$1(n.layoutItem) && "marginUnits" in n.layoutItem) {
     const u = percentSides(n.layoutItem.marginUnits);
-    if (u && isObj(n.layoutItem.margin)) n.layoutItem.marginUnits = u;
+    if (u && isObj$1(n.layoutItem.margin)) n.layoutItem.marginUnits = u;
     else delete n.layoutItem.marginUnits;
   }
   for (const k of ["draggable", "dropZone"]) {
     if (!(k in n)) continue;
     if (n[k] === null) continue;
-    if (!isObj(n[k])) delete n[k];
+    if (!isObj$1(n[k])) delete n[k];
     else n[k] = dragSettings(n[k], k === "draggable");
   }
-  if ("shadow" in n && n.shadow !== null && !(isObj(n.shadow) && ["x", "y", "blur", "spread"].every((k) => isNum(n.shadow[k])) && isStr(n.shadow.color))) delete n.shadow;
+  if ("shadow" in n && n.shadow !== null && !(isObj$1(n.shadow) && ["x", "y", "blur", "spread"].every((k) => isNum(n.shadow[k])) && isStr(n.shadow.color))) delete n.shadow;
   if ("maxWidth" in n && !isNum(n.maxWidth)) delete n.maxWidth;
   if ("paragraphSpacing" in n && !isNum(n.paragraphSpacing)) delete n.paragraphSpacing;
   if ("fitText" in n && n.fitText !== null) {
-    if (!isObj(n.fitText)) delete n.fitText;
+    if (!isObj$1(n.fitText)) delete n.fitText;
     else {
       const f2 = {};
       for (const k of ["min", "max"]) if (isNum(n.fitText[k]) && n.fitText[k] > 0) f2[k] = n.fitText[k];
@@ -3518,8 +3550,8 @@ function sanitizeNode(raw, seen) {
   if ("ariaCurrent" in n && typeof n.ariaCurrent !== "boolean" && !(isStr(n.ariaCurrent) && ["page", "step", "location", "date", "time"].includes(n.ariaCurrent))) delete n.ariaCurrent;
   for (const k of ["headingLevel", "tabOrder"]) if (k in n && !isNum(n[k])) delete n[k];
   const stroke = (v) => {
-    const pt = isObj(v) ? paint(v.paint) : null;
-    if (!isObj(v) || !pt) return null;
+    const pt = isObj$1(v) ? paint(v.paint) : null;
+    if (!isObj$1(v) || !pt) return null;
     const out = { ...fx(v), paint: pt, width: isNum(v.width) ? v.width : 1 };
     if (v.dash !== void 0) out.dash = arr(v.dash, isNum);
     for (const k of ["dashOffset", "trimStart", "trimEnd", "trimOffset"]) if (k in out && !isNum(out[k])) delete out[k];
@@ -3557,10 +3589,10 @@ function sanitizeNode(raw, seen) {
     for (const k of ["min", "max", "step"]) if (k in n && !isNum(n[k])) delete n[k];
   }
   if ("cursorImage" in n && n.cursorImage !== null && !isStr(n.cursorImage)) delete n.cursorImage;
-  if ("cursorHotspot" in n && !(isObj(n.cursorHotspot) && isNum(n.cursorHotspot.x) && isNum(n.cursorHotspot.y))) delete n.cursorHotspot;
+  if ("cursorHotspot" in n && !(isObj$1(n.cursorHotspot) && isNum(n.cursorHotspot.x) && isNum(n.cursorHotspot.y))) delete n.cursorHotspot;
   if ("disabled" in n && typeof n.disabled !== "boolean") delete n.disabled;
   if ("disabledOpacity" in n && !isNum(n.disabledOpacity)) delete n.disabledOpacity;
-  if ("slice" in n && n.slice !== null && !(isObj(n.slice) && ["top", "right", "bottom", "left"].every((k) => isNum(n.slice[k])))) delete n.slice;
+  if ("slice" in n && n.slice !== null && !(isObj$1(n.slice) && ["top", "right", "bottom", "left"].every((k) => isNum(n.slice[k])))) delete n.slice;
   if ("sliceTile" in n && n.sliceTile !== "stretch" && n.sliceTile !== "repeat") delete n.sliceTile;
   if (raw.type === "video") {
     if ("captions" in n) {
@@ -3591,8 +3623,8 @@ function sanitizeNode(raw, seen) {
     if ("frameRate" in n && !(isNum(n.frameRate) && n.frameRate > 0)) delete n.frameRate;
     for (const k of ["speedControl", "frameStepControl"]) if (k in n && typeof n[k] !== "boolean") delete n[k];
   }
-  if ("inputs" in n && !isObj(n.inputs)) delete n.inputs;
-  if (isObj(n.inputs)) n.inputs = Object.fromEntries(Object.entries(n.inputs).filter(([, v]) => isNum(v) || isStr(v) || typeof v === "boolean"));
+  if ("inputs" in n && !isObj$1(n.inputs)) delete n.inputs;
+  if (isObj$1(n.inputs)) n.inputs = Object.fromEntries(Object.entries(n.inputs).filter(([, v]) => isNum(v) || isStr(v) || typeof v === "boolean"));
   if (raw.type === "path") {
     n.paths = objs(n.paths).map((sp) => ({ ...sp, closed: !!sp.closed, points: objs(sp.points).filter((p) => isNum(p.x) && isNum(p.y)) })).filter((sp) => sp.points.length > 0);
   }
@@ -3608,15 +3640,15 @@ function sanitizeNode(raw, seen) {
   }
   if (raw.type === "group" || raw.type === "frame" || raw.type === "bone") {
     n.children = (Array.isArray(n.children) ? n.children : []).map((c2) => sanitizeNode(c2, seen)).filter(Boolean);
-    if (n.layout !== void 0 && n.layout !== null && !isObj(n.layout)) n.layout = null;
-    if (isObj(n.layout)) {
+    if (n.layout !== void 0 && n.layout !== null && !isObj$1(n.layout)) n.layout = null;
+    if (isObj$1(n.layout)) {
       const L = { ...LAYOUT_DEFAULTS, ...n.layout };
       for (const [k, d] of Object.entries(LAYOUT_DEFAULTS)) if (!fits$1(L[k], d)) L[k] = structuredClone(d);
-      const pad = isObj(L.padding) ? L.padding : {};
+      const pad = isObj$1(L.padding) ? L.padding : {};
       L.padding = Object.fromEntries(["top", "right", "bottom", "left"].map((k) => [k, isNum(pad[k]) ? pad[k] : 0]));
       if ("crossGap" in L && !isNum(L.crossGap)) delete L.crossGap;
       if ("units" in L) {
-        const u = isObj(L.units) ? L.units : {};
+        const u = isObj$1(L.units) ? L.units : {};
         const kept = {};
         if (u.gap === "percent") kept.gap = "percent";
         if (u.crossGap === "percent" && isNum(L.crossGap)) kept.crossGap = "percent";
@@ -3637,12 +3669,12 @@ function sanitizeNode(raw, seen) {
 }
 const influences = (v) => objs(v).filter((i) => isNum(i.b) && isNum(i.w)).slice(0, 4);
 function skin(v) {
-  if (!isObj(v) || !Array.isArray(v.bones) || !Array.isArray(v.weights)) return null;
+  if (!isObj$1(v) || !Array.isArray(v.bones) || !Array.isArray(v.weights)) return null;
   const bones = objs(v.bones).filter((b) => isStr(b.bone) && Array.isArray(b.bind) && b.bind.length === 6 && b.bind.every(isNum));
   if (!bones.length || bones.length !== v.bones.length) return null;
   const weights = v.weights.map(
     (sp) => (Array.isArray(sp) ? sp : []).map((pt) => {
-      const o = isObj(pt) ? pt : {};
+      const o = isObj$1(pt) ? pt : {};
       const out = { w: influences(o.w).filter((i) => i.b < bones.length) };
       for (const k of ["in", "out"]) if (Array.isArray(o[k])) out[k] = influences(o[k]).filter((i) => i.b < bones.length);
       return out;
@@ -3651,7 +3683,7 @@ function skin(v) {
   return { bones, weights };
 }
 function mesh(v) {
-  if (!isObj(v) || !Array.isArray(v.vertices) || !Array.isArray(v.triangles)) return null;
+  if (!isObj$1(v) || !Array.isArray(v.vertices) || !Array.isArray(v.triangles)) return null;
   const vertices = objs(v.vertices).filter((p) => isNum(p.x) && isNum(p.y) && isNum(p.u) && isNum(p.v));
   if (vertices.length !== v.vertices.length || vertices.length < 3) return null;
   const tri = v.triangles.filter((i) => Number.isInteger(i) && i >= 0 && i < vertices.length);
@@ -3664,7 +3696,7 @@ function sanitizeRun(r2) {
   for (const k of ["fontFamily", "color"]) if (k in out && !isStr(out[k])) delete out[k];
   for (const k of ["fontSize", "fontWeight", "letterSpacing"]) if (k in out && !isNum(out[k])) delete out[k];
   for (const k of ["italic", "underline", "strike"]) if (k in out && typeof out[k] !== "boolean") delete out[k];
-  if ("link" in out && out.link !== null && !(isObj(out.link) && isStr(out.link.url))) delete out.link;
+  if ("link" in out && out.link !== null && !(isObj$1(out.link) && isStr(out.link.url))) delete out.link;
   return out;
 }
 const isPaintBlend = (b) => PAINT_BLEND_MODES.includes(b);
@@ -3677,7 +3709,7 @@ function fx(v) {
   return o;
 }
 function paint(v) {
-  if (!isObj(v) || !isStr(v.type)) return null;
+  if (!isObj$1(v) || !isStr(v.type)) return null;
   switch (v.type) {
     case "solid":
       return fx(isStr(v.color) ? v : { ...v, color: "#000000" });
@@ -3690,7 +3722,7 @@ function paint(v) {
       for (const k of ["from", "to", "center"]) {
         if (!(k in out)) continue;
         const pt = out[k];
-        if (!isObj(pt) || !(isNum(pt.x) || isNum(pt.y))) delete out[k];
+        if (!isObj$1(pt) || !(isNum(pt.x) || isNum(pt.y))) delete out[k];
         else out[k] = { ...isNum(pt.x) ? { x: pt.x } : {}, ...isNum(pt.y) ? { y: pt.y } : {} };
       }
       if ("radius" in out && !(isNum(out.radius) && out.radius > 0)) delete out.radius;
@@ -3704,7 +3736,7 @@ function paint(v) {
 }
 const oneOf = (v, list) => list.includes(v) ? v : void 0;
 function gridLayout(v) {
-  if (!isObj(v)) return null;
+  if (!isObj$1(v)) return null;
   const tracks = (list) => objs(list).map((t2) => ({ type: oneOf(t2.type, ["auto", "px", "percent", "fr"]), value: t2.value })).filter((t2) => t2.type).map((t2) => isNum(t2.value) ? { type: t2.type, value: t2.value } : { type: t2.type });
   const g = { columns: tracks(v.columns), rows: tracks(v.rows) };
   for (const [k, list] of [["justifyItems", ["start", "center", "end"]], ["alignItems", ["start", "center", "end"]], ["justifyContent", ["start", "center", "space-between"]], ["alignContent", ["start", "center"]]]) {
@@ -4317,6 +4349,7 @@ const NAMES$1 = {
   shader: "Shader layer",
   progress: "Progress bar",
   chart: "Chart",
+  connector: "Connector",
   bone: "Bone"
 };
 function base(type) {
@@ -4479,6 +4512,25 @@ const FACTORIES = {
     suffix: "",
     width: 360,
     height: 240
+  }),
+  connector: () => ({
+    from: { layer: "", x: 0, y: 0 },
+    to: { layer: "", x: 160, y: 0 },
+    route: "curved",
+    fill: { type: "solid", color: LIGHT_LOOK.background },
+    stroke: { paint: { type: "solid", color: LIGHT_LOOK.muted }, width: 2, cap: "round", join: "round" },
+    startCap: "none",
+    endCap: "arrow",
+    capSize: 0,
+    gap: 4,
+    cornerRadius: 8,
+    label: "",
+    labelAt: 0.5,
+    color: LIGHT_LOOK.text,
+    fontFamily: DEFAULT_TEXT_STYLE.fontFamily,
+    fontSize: 13,
+    width: 0,
+    height: 0
   }),
   shader: () => ({
     code: DEFAULT_SHADER.code,
@@ -4704,6 +4756,650 @@ function hide(words, size, seed) {
   const pool = "EEEEEAAAAIIIOOOUUNNNRRRSSSTTTLLCCDDMMPPHHBGFWYKV";
   for (let i = 0; i < grid.length; i++) if (!grid[i]) grid[i] = pool[Math.floor(rand() * pool.length)];
   return Array.from({ length: size }, (_, r2) => grid.slice(r2 * size, (r2 + 1) * size).join(""));
+}
+const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const num$2 = (v, d) => typeof v === "number" && Number.isFinite(v) ? v : d;
+const MAX_ITEMS = 200;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const asList = (v) => Array.isArray(v) ? v.slice(0, MAX_ITEMS) : [];
+function mindMap(nodes, opts2 = {}) {
+  const list = asList(nodes);
+  const o = isObj(opts2) ? opts2 : {};
+  const W2 = Math.max(100, num$2(o.width, 928));
+  const H = Math.max(60, num$2(o.height, 400));
+  let nodeW = Math.max(40, num$2(o.nodeW, 130));
+  let nodeH = Math.max(20, num$2(o.nodeH, 44));
+  let rootW = Math.max(nodeW, num$2(o.rootW, nodeW * 1.25));
+  let rootH = Math.max(nodeH, num$2(o.rootH, nodeH * 1.2));
+  let gapX = Math.max(8, num$2(o.gapX, 28));
+  const gapY = Math.max(2, num$2(o.gapY, 10));
+  const folded = new Set((Array.isArray(o.collapsed) ? o.collapsed : []).map(String));
+  const n = list.length;
+  const ids = list.map((x, i) => isObj(x) ? String(x.id ?? i) : "");
+  const first = /* @__PURE__ */ new Map();
+  ids.forEach((id, i) => {
+    if (id && !first.has(id)) first.set(id, i);
+  });
+  const rawParent = list.map((x, i) => {
+    if (!isObj(x)) return -1;
+    const p = first.get(String(x.parent ?? ""));
+    return p === void 0 || p === i ? -1 : p;
+  });
+  const root = rawParent.findIndex((p, i) => p === -1 && isObj(list[i]));
+  const parent = rawParent.slice();
+  for (let i = 0; i < n; i++) {
+    if (i === root || !isObj(list[i])) continue;
+    if (parent[i] === -1) parent[i] = root;
+    else {
+      const seen = /* @__PURE__ */ new Set([i]);
+      for (let c2 = parent[i]; c2 !== -1 && c2 !== root; c2 = parent[c2]) {
+        if (seen.has(c2)) {
+          parent[i] = root;
+          break;
+        }
+        seen.add(c2);
+      }
+    }
+  }
+  const kids = list.map(() => []);
+  for (let i = 0; i < n; i++) if (i !== root && parent[i] >= 0) kids[parent[i]].push(i);
+  const out = list.map((x, i) => ({
+    ...isObj(x) ? x : {},
+    id: ids[i],
+    x: 0,
+    y: 0,
+    w: nodeW,
+    h: nodeH,
+    depth: 0,
+    side: "root",
+    branch: -1,
+    visible: false,
+    kids: kids[i].length,
+    folded: false,
+    parentIndex: i === root ? -1 : parent[i],
+    right: -1,
+    left: -1,
+    up: -1,
+    down: -1,
+    firstChild: -1
+  }));
+  if (root < 0) return out;
+  const shown = (i) => folded.has(ids[i]) ? [] : kids[i];
+  out[root].visible = true;
+  out[root].folded = folded.has(ids[root]) && kids[root].length > 0;
+  const leaves = list.map(() => 0);
+  const countLeaves = (i) => {
+    const k = shown(i);
+    leaves[i] = k.length ? k.reduce((s, c2) => s + countLeaves(c2), 0) : 1;
+    return leaves[i];
+  };
+  countLeaves(root);
+  let rightLeaves = 0;
+  let leftLeaves = 0;
+  const rightBranches = [];
+  const leftBranches = [];
+  shown(root).forEach((c2, b) => {
+    out[c2].branch = b;
+    if (rightLeaves <= leftLeaves) {
+      rightBranches.push(c2);
+      rightLeaves += leaves[c2];
+      out[c2].side = "right";
+    } else {
+      leftBranches.push(c2);
+      leftLeaves += leaves[c2];
+      out[c2].side = "left";
+    }
+  });
+  const mark = (i, depth) => {
+    out[i].depth = depth;
+    out[i].visible = true;
+    out[i].folded = folded.has(ids[i]) && kids[i].length > 0;
+    for (const c2 of shown(i)) {
+      out[c2].side = out[i].side === "root" ? out[c2].side : out[i].side;
+      out[c2].branch = out[i].branch === -1 ? out[c2].branch : out[i].branch;
+      mark(c2, depth + 1);
+    }
+  };
+  mark(root, 0);
+  const maxDepth = (side) => out.reduce((m, p) => p.visible && p.side === side ? Math.max(m, p.depth) : m, 0);
+  const dR = maxDepth("right");
+  const dL = maxDepth("left");
+  const need = (w, g) => rootW * (w / nodeW) + (dR + dL) * (w + g) + 0;
+  const maxLeaves = Math.max(rightLeaves, leftLeaves, 1);
+  let rowH = nodeH + gapY;
+  if (need(nodeW, gapX) > W2) {
+    const room = W2 - rootW - (dR + dL) * nodeW;
+    const gaps = dR + dL;
+    if (gaps && room / gaps >= 14) gapX = room / gaps;
+    else {
+      gapX = Math.min(gapX, 14);
+      const k = clamp(W2 / need(nodeW, gapX), 0.5, 1);
+      nodeW *= k;
+      rootW *= k;
+      gapX *= k;
+    }
+  }
+  if (maxLeaves * rowH - gapY > H) {
+    const avail = H / maxLeaves;
+    nodeH = Math.max(24, Math.min(nodeH, avail - 4));
+    rowH = Math.max(nodeH + 2, avail);
+    rootH = Math.min(rootH, Math.max(nodeH, H));
+  }
+  const totalW = rootW + (dR + dL) * (nodeW + gapX);
+  const cx = (W2 - totalW) / 2 + dL * (nodeW + gapX) + rootW / 2;
+  const cy = H / 2;
+  const slot = (i, top) => {
+    const k = shown(i);
+    if (!k.length) {
+      out[i].y = top + (leaves[i] * rowH - gapY) / 2 - nodeH / 2 + gapY / 2;
+      return;
+    }
+    let at = top;
+    for (const c2 of k) {
+      slot(c2, at);
+      at += leaves[c2] * rowH;
+    }
+    const a = out[k[0]];
+    const b = out[k[k.length - 1]];
+    out[i].y = (a.y + b.y) / 2;
+  };
+  for (const [branches, total] of [
+    [rightBranches, rightLeaves],
+    [leftBranches, leftLeaves]
+  ]) {
+    let at = cy - total * rowH / 2;
+    for (const c2 of branches) {
+      slot(c2, at);
+      at += leaves[c2] * rowH;
+    }
+  }
+  for (const p of out) {
+    if (!p.visible) continue;
+    p.w = nodeW;
+    p.h = nodeH;
+    if (p.depth === 0) continue;
+    const step = (p.depth - 1) * (nodeW + gapX);
+    p.x = p.side === "right" ? cx + rootW / 2 + gapX + step : cx - rootW / 2 - gapX - step - nodeW;
+  }
+  const r2 = out[root];
+  r2.w = rootW;
+  r2.h = rootH;
+  r2.x = cx - rootW / 2;
+  r2.y = cy - rootH / 2;
+  for (let i = 0; i < n; i++) {
+    if (out[i].visible || !isObj(list[i])) continue;
+    let c2 = parent[i];
+    while (c2 >= 0 && !out[c2].visible) c2 = parent[c2];
+    const home = out[c2 >= 0 ? c2 : root];
+    out[i].x = home.x;
+    out[i].y = home.y;
+    out[i].depth = (out[c2 >= 0 ? c2 : root].depth ?? 0) + 1;
+    out[i].side = home.side;
+    out[i].branch = home.branch;
+  }
+  for (const p of out) {
+    p.x = Math.round(p.x);
+    p.y = Math.round(p.y);
+    p.w = Math.round(p.w);
+    p.h = Math.round(p.h);
+  }
+  for (let i = 0; i < n; i++) {
+    const p = out[i];
+    if (!p.visible) continue;
+    const down = shown(i);
+    p.firstChild = down.length ? down[0] : -1;
+    const toChild = p.firstChild;
+    const toParent = p.depth === 0 ? -1 : parent[i];
+    if (p.side === "root") {
+      p.right = rightBranches.length ? rightBranches[0] : -1;
+      p.left = leftBranches.length ? leftBranches[0] : -1;
+    } else if (p.side === "right") {
+      p.right = toChild;
+      p.left = toParent;
+    } else {
+      p.left = toChild;
+      p.right = toParent;
+    }
+  }
+  const rows = /* @__PURE__ */ new Map();
+  for (let i = 0; i < n; i++) {
+    const p = out[i];
+    if (!p.visible || p.depth === 0) continue;
+    const key = `${p.side}:${p.depth}`;
+    (rows.get(key) ?? rows.set(key, []).get(key)).push(i);
+  }
+  for (const col of rows.values()) {
+    col.sort((a, b) => out[a].y - out[b].y || a - b);
+    col.forEach((i, k) => {
+      out[i].up = k > 0 ? col[k - 1] : -1;
+      out[i].down = k < col.length - 1 ? col[k + 1] : -1;
+    });
+  }
+  return out;
+}
+function mindMapNextId(nodes) {
+  let top = 0;
+  const used = /* @__PURE__ */ new Set();
+  for (const x of asList(nodes)) {
+    if (!isObj(x)) continue;
+    const id = String(x.id ?? "");
+    used.add(id);
+    const m = /^n(\d+)$/.exec(id);
+    if (m) top = Math.max(top, Number(m[1]));
+  }
+  let k = top + 1;
+  while (used.has(`n${k}`)) k++;
+  return `n${k}`;
+}
+function mindMapEdit(nodes, op, at, arg) {
+  const list = asList(nodes).filter(isObj).map((x) => ({ ...x }));
+  const raw = asList(nodes);
+  const pos = (k) => {
+    const i2 = Math.floor(Number(k));
+    if (!Number.isFinite(i2) || i2 < 0 || i2 >= raw.length || !isObj(raw[i2])) return -1;
+    return raw.slice(0, i2).filter(isObj).length;
+  };
+  const i = pos(at);
+  const idOf = (k) => String(list[k].id ?? "");
+  const parentOf = (k) => String(list[k].parent ?? "");
+  const rootIdx = list.findIndex((_, k) => !list.some((y) => String(y.id ?? "") === parentOf(k)) || parentOf(k) === idOf(k));
+  const siblings = (k) => list.map((_, j) => j).filter((j) => j !== k && parentOf(j) === parentOf(k));
+  const descendants = (k) => {
+    const out = /* @__PURE__ */ new Set([idOf(k)]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (let j = 0; j < list.length; j++) if (!out.has(idOf(j)) && out.has(parentOf(j))) out.add(idOf(j)), grew = true;
+    }
+    return out;
+  };
+  const move = (from, before) => {
+    const [x] = list.splice(from, 1);
+    const to = before === null ? list.length : before > from ? before - 1 : before;
+    list.splice(to, 0, x);
+    return list;
+  };
+  switch (op) {
+    case "add": {
+      const parentId = i >= 0 ? idOf(i) : rootIdx >= 0 ? idOf(rootIdx) : "";
+      const label = String(arg ?? "").trim() || "New idea";
+      list.push({ id: mindMapNextId(raw), parent: parentId, label });
+      return list;
+    }
+    case "rename": {
+      if (i < 0) return list;
+      list[i].label = String(arg ?? "");
+      return list;
+    }
+    case "delete": {
+      if (i < 0 || i === rootIdx) return list;
+      const gone = descendants(i);
+      return list.filter((x) => !gone.has(String(x.id ?? "")));
+    }
+    case "up":
+    case "down": {
+      if (i < 0 || i === rootIdx) return list;
+      const sibs = siblings(i);
+      const before = sibs.filter((j) => j < i);
+      const after = sibs.filter((j) => j > i);
+      if (op === "up") return before.length ? move(i, before[before.length - 1]) : list;
+      return after.length ? move(i, after[0] + 1) : list;
+    }
+    case "indent": {
+      if (i < 0 || i === rootIdx) return list;
+      const before = siblings(i).filter((j) => j < i);
+      if (!before.length) return list;
+      list[i].parent = idOf(before[before.length - 1]);
+      return list;
+    }
+    case "outdent": {
+      if (i < 0 || i === rootIdx) return list;
+      const p = list.findIndex((x) => String(x.id ?? "") === parentOf(i));
+      if (p < 0 || p === rootIdx) return list;
+      list[i].parent = parentOf(p);
+      return move(i, p + 1);
+    }
+    case "reparent": {
+      const to = pos(arg);
+      if (i < 0 || to < 0 || i === rootIdx || to === i || descendants(i).has(idOf(to))) return list;
+      if (parentOf(i) === idOf(to)) return list;
+      list[i].parent = idOf(to);
+      return move(i, null);
+    }
+    default:
+      return list;
+  }
+}
+function mindMapOutline(nodes, opts2 = {}) {
+  const list = asList(nodes).filter(isObj);
+  const o = isObj(opts2) ? opts2 : {};
+  const field = typeof o.field === "string" && o.field ? o.field : "label";
+  const more = typeof o.detail === "string" && o.detail ? o.detail : "";
+  const indent = typeof o.indent === "string" ? o.indent : "  ";
+  const ids = new Set(list.map((x) => String(x.id ?? "")));
+  const lines = [];
+  const seen = /* @__PURE__ */ new Set();
+  const walkTree = (k, depth) => {
+    if (seen.has(k)) return;
+    seen.add(k);
+    const extra = more && list[k][more] ? `: ${String(list[k][more])}` : "";
+    lines.push(`${indent.repeat(depth)}${depth ? "- " : ""}${String(list[k][field] ?? "")}${extra}`);
+    const id = String(list[k].id ?? "");
+    list.forEach((x, j) => {
+      if (j !== k && String(x.parent ?? "") === id) walkTree(j, depth + 1);
+    });
+  };
+  const rootAt = list.findIndex((x) => !ids.has(String(x.parent ?? "")));
+  if (rootAt >= 0) walkTree(rootAt, 0);
+  list.forEach((_, j) => walkTree(j, 1));
+  return lines.join("\n");
+}
+const escapeXml = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function mindMapSvg(placed, opts2 = {}) {
+  const list = asList(placed).filter(isObj);
+  const o = isObj(opts2) ? opts2 : {};
+  const W2 = Math.max(50, num$2(o.width, 928));
+  const H = Math.max(50, num$2(o.height, 400));
+  const title = typeof o.title === "string" && o.title ? o.title : "Mind map";
+  const parts = [];
+  const by = new Map(list.map((p, i) => [i, p]));
+  const shown = (p) => p.visible === true;
+  list.forEach((p, i) => {
+    const parent = typeof p.parentIndex === "number" ? by.get(p.parentIndex) : void 0;
+    if (!shown(p) || !parent || !shown(parent)) return;
+    const left = p.side === "left";
+    const ax = left ? num$2(parent.x, 0) : num$2(parent.x, 0) + num$2(parent.w, 0);
+    const ay = num$2(parent.y, 0) + num$2(parent.h, 0) / 2;
+    const bx = left ? num$2(p.x, 0) + num$2(p.w, 0) : num$2(p.x, 0);
+    const by_ = num$2(p.y, 0) + num$2(p.h, 0) / 2;
+    const k = Math.abs(bx - ax) / 2;
+    const c1 = ax + (left ? -k : k);
+    const c2 = bx + (left ? k : -k);
+    parts.push(`<path d="M${ax} ${ay}C${c1} ${ay} ${c2} ${by_} ${bx} ${by_}" fill="none" stroke="#6e6964" stroke-width="2"/>`);
+  });
+  for (const p of list) {
+    if (!shown(p)) continue;
+    const root = p.depth === 0;
+    const w = num$2(p.w, 100);
+    const h = num$2(p.h, 40);
+    const max = Math.max(3, Math.floor((w - 12) / 7.5));
+    const raw = String(p.label ?? "");
+    const label = raw.length > max ? `${raw.slice(0, max - 1)}...` : raw;
+    parts.push(
+      `<rect x="${num$2(p.x, 0)}" y="${num$2(p.y, 0)}" width="${w}" height="${h}" rx="12" fill="${root ? "#3c2d4d" : "#ffffff"}" stroke="${root ? "#3c2d4d" : "#6e6964"}" stroke-width="${root ? 0 : p.depth === 1 ? 2.5 : 1.5}"/><text x="${num$2(p.x, 0) + w / 2}" y="${num$2(p.y, 0) + h / 2}" text-anchor="middle" dominant-baseline="central" font-family="Open Sans, Arial, sans-serif" font-size="14" font-weight="600" fill="${root ? "#ffffff" : "#2d2d2d"}">${escapeXml(label)}</text>`
+    );
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W2} ${H}" width="${W2}" height="${H}" role="img"><title>${escapeXml(title)}</title><desc>${escapeXml(mindMapOutline(list.map((p) => ({ id: p.id, parent: list[Number(p.parentIndex)]?.id ?? "", label: p.label }))))}</desc>${parts.join("")}</svg>`;
+}
+const FLOW_SIZES = { start: [150, 48], end: [150, 48], process: [170, 56], decision: [190, 90], io: [170, 56] };
+const kindOf = (s) => {
+  const k = isObj(s) ? String(s.kind ?? "") : "";
+  return k === "start" || k === "end" || k === "decision" || k === "io" ? k : "process";
+};
+function flowLinks(steps2, links, opts2 = {}) {
+  const st = asList(steps2);
+  const horizontal = isObj(opts2) && opts2.direction === "right";
+  const ids = /* @__PURE__ */ new Map();
+  st.forEach((s, i) => {
+    if (isObj(s) && !ids.has(String(s.id ?? ""))) ids.set(String(s.id ?? ""), i);
+  });
+  const lk = asList(links).map((l) => isObj(l) ? l : {});
+  const edges = lk.map((l) => ({ a: ids.get(String(l.from ?? "")) ?? -1, b: ids.get(String(l.to ?? "")) ?? -1 }));
+  const { back } = flowLayers(st, edges);
+  const placed = flowChart(steps2, links, { direction: horizontal ? "right" : "down" });
+  const left = Math.min(...placed.map((p) => horizontal ? p.y : p.x));
+  const right = Math.max(...placed.map((p) => horizontal ? p.y + p.h : p.x + p.w));
+  const centre = (p) => horizontal ? p.y + p.h / 2 : p.x + p.w / 2;
+  const [lo, hi, along, into] = horizontal ? ["top", "bottom", "right", "left"] : ["left", "right", "bottom", "top"];
+  const sideOf = /* @__PURE__ */ new Map();
+  const outgoing = /* @__PURE__ */ new Map();
+  edges.forEach((e, k) => {
+    if (!back[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) (outgoing.get(e.a) ?? outgoing.set(e.a, []).get(e.a)).push(k);
+  });
+  for (const [a, ks] of outgoing) {
+    if (kindOf(st[a]) !== "decision" || ks.length < 2) continue;
+    const sorted = [...ks].sort((x, y) => centre(placed[edges[x].b]) - centre(placed[edges[y].b]) || x - y);
+    sorted.forEach((k, n) => sideOf.set(k, n === 0 ? lo : n === sorted.length - 1 ? hi : along));
+  }
+  return lk.map((l, k) => {
+    const { a, b } = edges[k];
+    const loops = back[k] && a >= 0 && b >= 0;
+    if (loops) {
+      const east = (centre(placed[a]) + centre(placed[b])) / 2 >= (left + right) / 2;
+      const side = horizontal ? east ? "bottom" : "top" : east ? "right" : "left";
+      return { ...l, a, b, back: true, outSide: side, inSide: side };
+    }
+    return { ...l, a, b, back: false, outSide: sideOf.get(k) ?? (a >= 0 && b >= 0 ? along : "auto"), inSide: a >= 0 && b >= 0 ? into : "auto" };
+  });
+}
+function flowOutline(steps2, links) {
+  const st = asList(steps2);
+  const lk = asList(links).filter(isObj);
+  const idx = /* @__PURE__ */ new Map();
+  st.forEach((s, i) => {
+    if (isObj(s) && !idx.has(String(s.id ?? ""))) idx.set(String(s.id ?? ""), i);
+  });
+  const words = { start: "Start", end: "End", decision: "Decision", io: "Input or output", process: "Step" };
+  const lines = [];
+  st.forEach((s, i) => {
+    if (!isObj(s)) return;
+    const k = kindOf(s);
+    lines.push(`${i + 1}. ${words[k]}: ${String(s.label ?? "")}`);
+    const outs = lk.filter((l) => String(l.from ?? "") === String(s.id ?? "") && idx.has(String(l.to ?? "")));
+    for (const l of outs) {
+      const to = idx.get(String(l.to ?? ""));
+      const label = String(l.label ?? "");
+      lines.push(`   ${label ? `${label}: ` : "Next: "}go ${to <= i ? "back " : ""}to step ${to + 1}`);
+    }
+    if (!outs.length && k === "end") lines.push("   The flowchart ends here.");
+  });
+  return lines.join("\n");
+}
+function flowLayers(steps2, edges) {
+  const n = steps2.length;
+  const outs = steps2.map(() => []);
+  edges.forEach((e, k) => {
+    if (e.a >= 0 && e.b >= 0 && e.a !== e.b) outs[e.a].push(k);
+  });
+  const state = new Array(n).fill(0);
+  const back = edges.map((e) => e.a === e.b && e.a >= 0);
+  const order = [];
+  const starts = [];
+  steps2.forEach((s, i) => {
+    if (kindOf(s) === "start") starts.push(i);
+  });
+  if (!starts.length && n) starts.push(0);
+  const visit = (i) => {
+    const stack2 = [[i, 0]];
+    state[i] = 1;
+    order.push(i);
+    while (stack2.length) {
+      const top = stack2[stack2.length - 1];
+      const [node, at] = top;
+      if (at >= outs[node].length) {
+        state[node] = 2;
+        stack2.pop();
+        continue;
+      }
+      top[1]++;
+      const k = outs[node][at];
+      const to = edges[k].b;
+      if (state[to] === 1) back[k] = true;
+      else if (state[to] === 0) {
+        state[to] = 1;
+        order.push(to);
+        stack2.push([to, 0]);
+      }
+    }
+  };
+  for (const s of starts) if (state[s] === 0) visit(s);
+  for (let i = 0; i < n; i++) if (state[i] === 0) visit(i);
+  const layer = new Array(n).fill(0);
+  const indeg = new Array(n).fill(0);
+  edges.forEach((e, k) => {
+    if (!back[k] && e.a >= 0 && e.b >= 0 && e.a !== e.b) indeg[e.b]++;
+  });
+  const queue = indeg.map((d, i) => d === 0 ? i : -1).filter((i) => i >= 0);
+  const left = indeg.slice();
+  for (let q = 0; q < queue.length; q++) {
+    const i = queue[q];
+    for (const k of outs[i]) {
+      if (back[k]) continue;
+      const to = edges[k].b;
+      layer[to] = Math.max(layer[to], layer[i] + 1);
+      if (--left[to] === 0) queue.push(to);
+    }
+  }
+  return { layer, back, order };
+}
+function spread(want, sep) {
+  const n = want.length;
+  const off = [0];
+  for (let i = 1; i < n; i++) off.push(off[i - 1] + sep[i - 1]);
+  const target = want.map((w, i) => w - off[i]);
+  const blocks = [];
+  for (const t2 of target) {
+    blocks.push({ sum: t2, n: 1 });
+    while (blocks.length > 1) {
+      const b = blocks[blocks.length - 1];
+      const a = blocks[blocks.length - 2];
+      if (a.sum / a.n <= b.sum / b.n) break;
+      blocks.splice(blocks.length - 2, 2, { sum: a.sum + b.sum, n: a.n + b.n });
+    }
+  }
+  const out = [];
+  for (const b of blocks) for (let k = 0; k < b.n; k++) out.push(b.sum / b.n);
+  return out.map((q, i) => q + off[i]);
+}
+function flowChart(steps2, links, opts2 = {}) {
+  const st = asList(steps2);
+  const o = isObj(opts2) ? opts2 : {};
+  const W2 = Math.max(100, num$2(o.width, 600));
+  const H = Math.max(100, num$2(o.height, 440));
+  const horizontal = o.direction === "right";
+  const sizes = { ...FLOW_SIZES };
+  for (const k2 of Object.keys(sizes)) {
+    const s = o.sizes?.[k2];
+    if (Array.isArray(s) && s.length === 2 && Number(s[0]) > 0 && Number(s[1]) > 0) sizes[k2] = [Number(s[0]), Number(s[1])];
+  }
+  const gapRow = Math.max(4, num$2(horizontal ? o.gapX : o.gapY, 34));
+  const gapIn = Math.max(4, num$2(horizontal ? o.gapY : o.gapX, 28));
+  const ids = /* @__PURE__ */ new Map();
+  st.forEach((s, i) => {
+    if (isObj(s) && !ids.has(String(s.id ?? ""))) ids.set(String(s.id ?? ""), i);
+  });
+  const edges = asList(links).map((l) => {
+    const x = isObj(l) ? l : {};
+    return { a: ids.get(String(x.from ?? "")) ?? -1, b: ids.get(String(x.to ?? "")) ?? -1 };
+  });
+  const n = st.length;
+  const { layer, back, order: found } = flowLayers(st, edges);
+  const kind = st.map(kindOf);
+  const across = (i) => horizontal ? sizes[kind[i]][1] : sizes[kind[i]][0];
+  const along = (i) => horizontal ? sizes[kind[i]][0] : sizes[kind[i]][1];
+  const rows = [];
+  const discovery = new Map(found.map((i, k2) => [i, k2]));
+  for (let i = 0; i < n; i++) (rows[layer[i]] ??= []).push(i);
+  for (const r2 of rows) r2?.sort((a, b) => (discovery.get(a) ?? 0) - (discovery.get(b) ?? 0));
+  const fwd = edges.map((e2, k2) => ({ ...e2, k: k2 })).filter((e2) => !back[e2.k] && e2.a >= 0 && e2.b >= 0 && e2.a !== e2.b);
+  const preds = (i) => fwd.filter((e2) => e2.b === i).map((e2) => e2.a);
+  const succs = (i) => fwd.filter((e2) => e2.a === i).map((e2) => e2.b);
+  const pos = new Array(n).fill(0);
+  const index = new Array(n).fill(0);
+  const reindex = () => rows.forEach((r2) => r2?.forEach((i, k2) => index[i] = k2));
+  reindex();
+  for (let pass = 0; pass < 4; pass++) {
+    const down = pass % 2 === 0;
+    const seq = down ? rows.map((_, k2) => k2).slice(1) : rows.map((_, k2) => k2).slice(0, -1).reverse();
+    for (const l of seq) {
+      const r2 = rows[l];
+      if (!r2) continue;
+      const bary = (i) => {
+        const nb = (down ? preds(i) : succs(i)).filter((j) => layer[j] === l + (down ? -1 : 1));
+        return nb.length ? nb.reduce((s, j) => s + index[j], 0) / nb.length : index[i];
+      };
+      const keyed = r2.map((i, k2) => ({ i, b: bary(i), k: k2 }));
+      keyed.sort((a, b) => a.b - b.b || a.k - b.k);
+      rows[l] = keyed.map((x) => x.i);
+      rows[l].forEach((i, k2) => index[i] = k2);
+    }
+  }
+  for (const r2 of rows) {
+    if (!r2) continue;
+    let at = 0;
+    r2.forEach((i) => {
+      pos[i] = at + across(i) / 2;
+      at += across(i) + gapIn;
+    });
+  }
+  const sepOf = (r2) => r2.slice(1).map((j, k2) => (across(r2[k2]) + across(j)) / 2 + gapIn);
+  for (let pass = 0; pass < 8; pass++) {
+    const down = pass % 2 === 0;
+    const seq = down ? rows.map((_, k2) => k2).slice(1) : rows.map((_, k2) => k2).slice(0, -1).reverse();
+    for (const l of seq) {
+      const r2 = rows[l];
+      if (!r2 || !r2.length) continue;
+      const want = r2.map((i) => {
+        const nb = (down ? preds(i) : succs(i)).filter((j) => layer[j] === l + (down ? -1 : 1));
+        return nb.length ? nb.reduce((s, j) => s + pos[j], 0) / nb.length : pos[i];
+      });
+      const placed = spread(want, sepOf(r2));
+      r2.forEach((i, k2) => pos[i] = placed[k2]);
+    }
+  }
+  const bands = rows.map((r2) => r2 ? Math.max(0, ...r2.map(along)) : 0);
+  const extent = (gRow2, gIn, k2) => {
+    const rowsLen = bands.reduce((s, b) => s + b * k2, 0) + Math.max(0, bands.length - 1) * gRow2;
+    const lo = Math.min(...pos.map((p, i) => p - across(i) / 2));
+    const hi = Math.max(...pos.map((p, i) => p + across(i) / 2));
+    return { depth: rowsLen, breadth: (hi - lo) * k2, lo };
+  };
+  const wantBreadth = horizontal ? H : W2;
+  const wantDepth = horizontal ? W2 : H;
+  let gRow = gapRow;
+  let k = 1;
+  let e = extent(gRow, gapIn, k);
+  if (e.depth > wantDepth) {
+    const rowsLen = bands.reduce((s, b) => s + b, 0);
+    const room = (wantDepth - rowsLen) / Math.max(1, bands.length - 1);
+    if (room >= 14) gRow = room;
+    else {
+      gRow = 14;
+      k = clamp((wantDepth - 14 * Math.max(0, bands.length - 1)) / Math.max(1, rowsLen), 0.55, 1);
+    }
+    e = extent(gRow, gapIn, k);
+  }
+  if (e.breadth > wantBreadth) k = Math.min(k, clamp(wantBreadth / (e.breadth / k), 0.55, 1));
+  e = extent(gRow, gapIn, k);
+  const out = st.map((s, i) => ({
+    ...isObj(s) ? s : {},
+    id: isObj(s) ? String(s.id ?? i) : "",
+    x: 0,
+    y: 0,
+    w: 0,
+    h: 0,
+    layer: layer[i],
+    order: index[i],
+    kind: kind[i]
+  }));
+  let top = (wantDepth - e.depth) / 2;
+  rows.forEach((r2, l) => {
+    if (r2) {
+      for (const i of r2) {
+        const a = across(i) * k;
+        const d = along(i) * k;
+        const bp = (pos[i] - e.lo) * k - a / 2 + (wantBreadth - e.breadth) / 2;
+        const dp = top + (bands[l] * k - d) / 2;
+        const p = out[i];
+        p.w = Math.round(horizontal ? d : a);
+        p.h = Math.round(horizontal ? a : d);
+        p.x = Math.round(horizontal ? dp : bp);
+        p.y = Math.round(horizontal ? bp : dp);
+      }
+    }
+    top += bands[l] * k + gRow;
+  });
+  return out;
 }
 const W = {
   " ": 0.26,
@@ -6343,9 +7039,9 @@ const FORMULA_HELPERS = {
     const [int, frac] = s.split(".");
     return int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (frac ? "." + frac : "");
   },
-  remap(v, inMin, inMax, outMin, outMax, clamp = false) {
+  remap(v, inMin, inMax, outMin, outMax, clamp2 = false) {
     const t2 = inMax === inMin ? 0 : (v - inMin) / (inMax - inMin);
-    const k = clamp ? Math.min(1, Math.max(0, t2)) : t2;
+    const k = clamp2 ? Math.min(1, Math.max(0, t2)) : t2;
     return outMin + (outMax - outMin) * k;
   },
   clamp: (v, min, max) => Math.min(max, Math.max(min, v)),
@@ -6369,6 +7065,14 @@ const FORMULA_HELPERS = {
   },
   crossword: (words, size = 10) => layoutCrossword(words, size),
   wordSearch: (words, size = 12, seed = 7) => makeWordSearch(words, size, seed),
+  mindMap: (nodes, opts2) => mindMap(nodes, opts2),
+  mindMapEdit: (nodes, op, at, arg) => mindMapEdit(nodes, op, at, arg),
+  mindMapNextId: (nodes) => mindMapNextId(nodes),
+  mindMapOutline: (nodes, opts2) => mindMapOutline(nodes, opts2),
+  mindMapSvg: (placed, opts2) => mindMapSvg(placed, opts2),
+  flowChart: (steps2, links, opts2) => flowChart(steps2, links, opts2),
+  flowLinks: (steps2, links, opts2) => flowLinks(steps2, links, opts2),
+  flowOutline: (steps2, links) => flowOutline(steps2, links),
   cloud: (words, width, height, options) => layoutCloud(words, width, height, options),
   //Variables hold text, numbers, true/false and lists, so the timeline is handed over a part at a time, each a list: `part` is "events" (the default), "eras", "ticks", "marker" (no row, or one) or "info" (one row: rangeText, unlabelled, earlier, later, problems)
   timelineLayout: (events, eras, from, to, options, part = "events") => {
@@ -7215,10 +7919,10 @@ From left to right:
 - **Preview**, then **Export** (a menu of files to download, see [Exporting](export)) and **Share** (a menu: **Share link**, **Invite to collaborate**, **Save as template** and **Share for review**, see [Sharing](export#sharing)). Once the project has [themes](themes), a theme box shows in the bar too.
 
 ## Tool bar (left edge, unless you move it)
-**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image and the Media Catalogue), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)). The **Media Catalogue** button sits in the **Media** group with image and video: it opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). It is an action rather than a tool, so it doesn't stay lit after you use it. There is no Help button on the tool bar: **Help** is in the top bar, and right-clicking the tool bar has **Help for the tools**. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
+**Select** and **Hand** at the top, then the tools in groups you can fold and open with one click on their name: **Shapes** (artboard, frame, rectangle, ellipse, polygon, star) and **Draw** (line, connector, pen, pencil, bend) start open; **Media** (text, script layer, shader layer, video, image and the Media Catalogue), **Data** ([progress bar](progress-bars), [chart](charts)), **Web** (button, input, link, embed, Add question) and **Rig** (bone, show/hide bones) start folded. The editor remembers which groups you keep open, and a folded group still shows the tool you're using. The **Comment** tool (<kbd>C</kbd>) sits below the groups: it pins a review note where you click, see [Review comments](comments). Next to it the **Note** tool (<kbd>S</kbd>) draws a sticky note for the people editing, which players never see (see [Notes](notes)), and an eye button shows or hides notes. Beside it are **Show grid** (<kbd>Shift</kbd>+<kbd>G</kbd>) and **Snap to grid** (<kbd>Ctrl</kbd>+<kbd>'</kbd>), both lit gold while on (right-click either for the grid size, see [The grid and snapping](grid)). The **Media Catalogue** button sits in the **Media** group with image and video: it opens the photo library in a window and puts the photo you choose on the artboard (see [The Media Catalogue](media-catalogue)). It is an action rather than a tool, so it doesn't stay lit after you use it. There is no Help button on the tool bar: **Help** is in the top bar, and right-clicking the tool bar has **Help for the tools**. Hover a tool to see its name and shortcut: **Select**, **Hand**, **Artboard**, **Frame**, **Rectangle**, **Ellipse**, **Polygon**, **Star**, **Line**, **Pen**, **Pencil (freehand)**, **Bend**, **Text**, **Script layer**, **Image**, then **Button**, **Input field**, **Link**, **Embed (HTML or iframe)** and **Video**. See [Shapes and paths](shapes), [Shape morphing and the Bend tool](shape-morphing), [Web elements](web-elements) and [Script layers](script-layers).
 
 ## What the pointer shows
-The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
+The pointer says what a press will do. Over a selected layer it is the **move** cross; over a resize handle it is the double arrow along the way that handle drags, turned with the layer if the layer is turned; just outside a corner it is the **rotate** arrows, turned to sit round that corner; over a gradient handle an open hand; over an artboard's name the move cross. In point-edit mode a point shows the move cross and the outline shows an arrow with a **+** (double-click adds a point there). The Pen is a nib (with a ring over the first point, where a click closes the shape), the Pencil a pencil, the Hand an open hand that closes while you pan, the Connector tool a crosshair (the layer it would join lights up with a dot on each side), and the Bone tool a crosshair (with a ring over a tip, which continues the chain). Edges between panels show the resize arrows, the timeline's empty lanes and ruler show a sideways arrow (a press scrubs), and a port in the interaction graph shows a crosshair.
 
 When pressing will ask you something first, a note beside the pointer says so before you press: over a rectangle, ellipse, polygon or star the **Bend** tool says it will ask to turn it into a path, and dragging layers over another artboard says letting go will offer to move them there.
 
@@ -7396,6 +8100,7 @@ The **Import design file** dialog has a **Link** / **Embed** switch for each fil
 | <kbd>L</kbd> | Line |
 | <kbd>P</kbd> | Pen |
 | <kbd>N</kbd> | Pencil (freehand) |
+| <kbd>K</kbd> | Connector (drag from one layer to another; see [Connectors](connectors)) |
 | <kbd>W</kbd> | Bend (drag an edge into a curve) |
 | <kbd>T</kbd> | Text |
 | <kbd>B</kbd> | Button |
@@ -9279,6 +9984,10 @@ These work in every expression:
 | \`html(text)\` | Text made safe to put in a web page (a downloaded report): \`<\`, \`>\`, \`&\` and quotes are replaced |
 | \`crossword(words, size)\` | A crossword laid out from a list of \`{answer, clue}\` rows (or plain words), inside a \`size\` by \`size\` grid. Each row comes back with \`row\`, \`col\` (its first letter, from 0 at the top left) and \`down\` added, in reading order. Words that are too long, or that cannot cross the others, are left out. The same words always make the same puzzle. Best used as a variable's [formula](variables) |
 | \`wordSearch(words, size, seed)\` | A \`size\` by \`size\` letter grid hiding the words (across, down, diagonal and backwards), one string per row. The same words and seed always make the same grid |
+| \`mindMap(nodes, options)\` | A mind map laid out on both sides of its middle idea. \`nodes\` is a list of \`{id, parent, ...}\` (the item with no parent is the middle; list order is branch order); \`options\` is \`{width, height, nodeW, nodeH, gapX, gapY, collapsed}\` (\`collapsed\` lists the ids of folded branches). Each item comes back with its own fields and \`x\`, \`y\`, \`w\`, \`h\`, \`depth\`, \`side\` (\`root\`, \`left\` or \`right\`), \`branch\`, \`visible\`, \`kids\`, \`folded\`, \`parentIndex\` (the copy a connector joins) and \`right\`, \`left\`, \`up\`, \`down\` (the copy each arrow key goes to, -1 for nowhere). Boxes shrink to fit \`width\` by \`height\`. Best used as a [live variable](variables) feeding a [repeater](repeaters) and [connectors](connectors) |
+| \`mindMapEdit(nodes, op, at, arg)\` | The tree after one change, as a new list: \`"add"\` (a child of item \`at\` labelled \`arg\`), \`"rename"\`, \`"delete"\` (with everything under it), \`"up"\`, \`"down"\`, \`"indent"\`, \`"outdent"\` and \`"reparent"\` (under item number \`arg\`). A change that makes no sense (deleting the middle, putting an idea under itself) gives the list back as it was. \`mindMapNextId(nodes)\` is the id an added item gets, \`mindMapOutline(nodes, {detail: "detail"})\` the map as an indented text outline and \`mindMapSvg(placed)\` a laid out map as an SVG picture for a download |
+| \`flowChart(steps, links, options)\` | A flowchart laid out in rows from its start. \`steps\` is \`{id, kind, label, ...}\` with \`kind\` one of \`start\`, \`end\`, \`process\`, \`decision\` or \`io\`; \`links\` is \`{from, to, label}\` by step id; \`options\` is \`{width, height, direction: "down" or "right", sizes, gapX, gapY}\`. Each step comes back with \`x\`, \`y\`, \`w\`, \`h\`, \`layer\`, \`order\` and \`kind\`. Links that loop back are left out of the rows; a decision's branches open out either side |
+| \`flowLinks(steps, links)\` | The same links with the step numbers they join (\`a\`, \`b\`, -1 when a step is missing), \`back\` (a link that loops back up) and the sides they should use (\`outSide\`, \`inSide\`), for the connectors that draw them. \`flowOutline(steps, links)\` is the chart as numbered text, branches included |
 | \`cloud(words, width, height, options)\` | A word cloud packed onto a stage \`width\` by \`height\`. \`words\` is plain text (each mention counts once) or rows \`{text, weight, ...}\`; the same word in other capitals is one word and the weights add. It comes back one row per word, the biggest first, each with \`size\` (the font size), \`x\`, \`y\`, \`w\`, \`h\` (its box on the stage, nothing overlapping), \`rank\`, \`tier\` (0 biggest, 2 smallest), \`shown\` (false when it cannot fit even small) and its own other fields. Options: \`minSize\`, \`maxSize\`, \`scale\` ("sqrt", "linear" or "log"), \`gap\`, \`grow\`, \`max\`, \`minCount\` and \`blocked\` (a list of words to leave out). The same words always make the same cloud |
 | \`timelineLayout(events, eras, from, to, options, part)\` | A dated timeline for the years \`from\` to \`to\`. Events are rows \`{date, end, title, ...}\` with dates written 1969, 1969-07 or 1969-07-20 (an \`end\` makes a range, counted to the end of its period); eras are \`{name, from, to}\`. \`part\` picks the list you get back: "events" (the default: each with \`pos\` and \`pos2\` along an axis \`options.length\` px long, \`lane\`, \`labelled\`, \`labelPos\`, \`labelW\`, \`labelH\`, \`dateText\`, \`spoken\`, \`inView\` and \`eraName\`), "eras", "ticks", "marker" (no row or one) or "info" (one row: \`rangeText\`, \`unlabelled\`, \`earlier\`, \`later\`, \`problems\`). Options: \`length\`, \`orientation\`, \`labelSize\`, \`lanes\`, \`sides\`, \`dateLine\`, \`maxLabel\`, \`columnWidth\`, \`maxLines\`, \`gap\`, \`tickSpace\` and \`marker\`. Labels never overlap and a leader line never crosses another label |
 | \`timeBounds(events, eras, marker)\` | \`[from, to, span, count]\`: the whole years that hold every event, era and marker, with room at each end |
@@ -9630,6 +10339,53 @@ A hidden item without a number of its own is left out when the axis is worked ou
 Charts draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard (as they look when fully grown, without the readout). They are **not** part of a Lottie export. There is no 3D, stacking or mixing of kinds. For anything else, a [Script layer](script-layers) can draw whatever you like.`
   },
   {
+    id: "connectors",
+    title: "Connectors",
+    group: "Interactivity",
+    summary: "Lines and arrows that join two layers and follow them: straight, elbow or curved, with arrow heads, a label, and one per item of a list.",
+    keywords: "connector connect line arrow join link edge flowchart mind map diagram elbow curved straight label follow snap side repeater links graph",
+    body: `A **Connector** is a line or arrow that joins two layers and follows them. Move, resize, turn or animate either layer, change the screen size, or let a repeater or auto layout move it, and the connector re-routes by itself: you never position it. It is how the mind map and flowchart starters draw their lines, and it is what to use for any diagram where boxes are joined.
+
+## Drawing one
+
+Pick the **Connector** tool (<kbd>K</kbd>, in the **Draw** group) and drag from one layer to another. The layer under the pointer lights up with a dot on each side: let go near a dot and the end attaches to that **side**; let go anywhere else on the layer and it is **auto**, the side that faces the other end. Let go on empty canvas and that end is a **loose point** that stays where it was dropped. Hold <kbd>Shift</kbd> to keep the tool. The new connector is selected, with a gold handle on each end: drag a handle onto another layer to re-attach it.
+
+You can also add one in the **Connector** section of the Inspector, which lists the layers on the artboard for each end.
+
+## The Connector section
+
+- **Route**: **Straight** goes edge to edge along the line between the two centres (round layers meet where the ellipse is, not where the box is), **Elbow** turns in right angles and goes round both layers instead of through them, with the fewest corners, and **Curved** leaves each side along its edge and bends smoothly.
+- **Start** and **End** (under *On layer*): the layer, its **Side** (auto, top, right, bottom, left) and **Slide**, which moves the end along that side so two lines can leave the same side apart.
+- **Ends**: a **Plain** end, an **Arrow** or a **Dot**, each end separately. **Cap size** is 0 to size them from the line's width. **Gap** stops the line short of each layer. **Corner radius** rounds an elbow's corners (and the label's background).
+- **Label**: words on a background chip at **Position** (0 is the start, 1 the end). Variables work in braces: \`{score}\`. The label's background is the layer's **Fill**, its text colour and font are in the section.
+- The line itself is the layer's **Stroke**: colour (a [theme token](themes) works), width, dash, round or butt ends. Animate **Trim end** from 0 to 100 to draw the line in.
+
+A connector has no position or size to set: its box is the route. A connector is **hidden** while either layer is hidden or gone (the Inspector says when a layer is gone).
+
+## Repeaters: one connector per link
+
+A layer inside a [repeater](repeaters) has one copy per item, and a copy's number is its place in the list (from 0). Connect two copies with a **Which copy** expression on each end. Put the connector in a repeater of its own over a list of links, and the expression sees that link as \`item\`:
+
+- the boxes: a group repeating \`nodes\`, with a box as its template (its first child);
+- the lines: a group repeating \`links\` (\`[{from: 0, to: 2}, ...]\`) with one connector as its template. Its **Start** is the box, **Which copy** \`item.from\`; its **End** the same box, **Which copy** \`item.to\`.
+
+Add a link to the list and a line appears; change a link and it moves. A link that names a copy that isn't there (an index past the end, or text) simply isn't drawn. When you drag the Connector tool onto a layer that is in a repeater, the end is made for you as copy 0.
+
+## Reading it
+
+A connector is **decorative**: screen readers skip it, and so does the keyboard. A diagram needs a text version, so give the page a plain alternative: a nested list for a mind map, a numbered list of steps for a flowchart. For one line that says something on its own, give the connector a **Text alternative** (Accessibility), such as "Yes leads to Book a room"; it is then read as a picture with that name. The label chip is part of the drawing and is not read separately.
+
+## Where it works
+
+Connectors draw in the editor, Preview, the single-file export, **.ixp** packages and the embeddable player, and in PNG and SVG pictures of an artboard. They are left out of Lottie files (the export says so). A connector takes no clicks or hovers; put the events on the layers it joins. An artboard with connectors is redrawn whole on each edit in the editor, which is still fast at diagram sizes.
+
+## Starters that use them
+
+The **Mind map** and **Flowchart** starters (Explore and reveal) draw all their lines with connectors, from lists: the boxes and the lines are each one repeater over a layout the [expression helpers](expressions) \`mindMap(...)\` and \`flowChart(...)\` work out, so adding an idea or a step to the list is all it takes. Each has a text version (an outline, a numbered list) for anyone who can't see the picture.
+
+See also [Repeaters](repeaters), [Charts](charts) and [Accessibility](accessibility).`
+  },
+  {
     id: "usage",
     title: "Usage: what uses what",
     group: "Reference",
@@ -9651,7 +10407,7 @@ A yellow **unused** flag marks items nothing refers to, and the number on each g
 - **Data sources**: the same expressions, plus *Load data* and *On data loaded* nodes, and being a font or data file.
 - **Scripts**: *Run script* nodes, or having *Run on start* ticked.
 - **Timelines**: *Control timeline*, *On timeline end* and *On timeline marker* nodes, joysticks, blends, autoplay, and scripts that name them.
-- **Layers** tab: layers that a constraint, an interaction node or a timeline track points at.
+- **Layers** tab: layers that a constraint, a connector, an interaction node or a timeline track points at.
 
 Uses found by reading script or *Run code* text are marked **?**. A name in code can match something that is not really a use, so check before deleting something that is used only by a **?**.
 
@@ -11135,6 +11891,7 @@ function outline(list, depth, maxDepth, out, limit) {
     if (n.type === "shader") extra.push(`shader layer, ${n.code.split("\n").length} lines, uniforms: ${(n.uniforms ?? []).map((u) => `${u.name}:${u.type}`).join(",") || "none"}`);
     if (n.type === "progress") extra.push(`progress ${n.value}/${n.max}, ${n.orientation}, ${n.semantics}`);
     if (n.type === "chart") extra.push(`${n.kind} chart of ${JSON.stringify(n.data.slice(0, 40))}`);
+    if (n.type === "connector") extra.push(`${n.route} connector ${connectorEnd(n.from)} to ${connectorEnd(n.to)}${n.label ? ` labelled ${JSON.stringify(n.label.slice(0, 30))}` : ""}`);
     if (n.type === "image" && n.shaderFilter) extra.push(`shader filter, ${n.shaderFilter.code.split("\n").length} lines`);
     if (!n.visible) extra.push("hidden");
     if (n.locked) extra.push("locked");
@@ -11148,6 +11905,11 @@ function outline(list, depth, maxDepth, out, limit) {
   }
 }
 const r = (v) => Math.round(v * 10) / 10;
+function connectorEnd(e) {
+  const side = e.side && e.side !== "auto" ? `.${e.side}` : "";
+  if (typeof e.layer === "string") return e.layer ? `${e.layer}${side}` : `(${r(e.x ?? 0)},${r(e.y ?? 0)})`;
+  return `${e.layer?.repeat}[${e.layer?.index}]${side}`;
+}
 function overview(p, opts2) {
   const lines = [`# ${p.name} (${p.id})`, `Start artboard: ${p.settings.startArtboardId}`, ""];
   for (const ab of p.artboards) {
@@ -11518,12 +12280,12 @@ Gives: ${d.gives.join(", ")}` : ""}${d.outputs.length > 1 || d.outputs[0]?.label
 Outputs: ${d.outputs.map((o) => o.id).join(", ")}` : ""}
 ${d.params.map((pd) => `- ${pd.key} (${pd.type}${pd.options ? `: ${pd.options.map((o) => o.value).join("|")}` : ""}${pd.default !== void 0 ? `, default ${JSON.stringify(pd.default)}` : ""})${pd.help ? `: ${pd.help}` : ""}`).join("\n")}`).join("\n\n");
   }
-  if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n") + "\nOn a progress layer only: " + layerOwnProps(createNode("progress")).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join("; ");
+  if (topic === "properties") return ANIMATABLE_PROPS.map((a) => `- ${a.prop} (${a.kind}): ${a.label}`).join("\n") + "\nOn a progress layer only: " + layerOwnProps(createNode("progress")).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join("; ") + "\nOn a connector layer only: " + layerOwnProps(createNode("connector")).map((a) => `${a.prop} (${a.kind}): ${a.label}`).join("; ");
   if (topic === "layers") {
-    const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "progress", "chart", "bone"];
+    const types = ["rect", "ellipse", "polygon", "star", "path", "text", "image", "group", "frame", "button", "input", "link", "embed", "video", "instance", "draw", "shader", "progress", "chart", "connector", "bone"];
     return 'Every layer has: id, type, name, x, y (top-left in the parent), width, height, rotation (deg), scaleX, scaleY, originX/originY (0-1), opacity, visible, locked, blendMode, cursor, link {url, target}, shadow, blur, ariaLabel (text alternative), ariaDescription, role (button|checkbox|heading|image|region), headingLevel, ariaChecked, ariaExpanded, ariaPressed (a toggle button: true/false), ariaCurrent (true, or page|step|location|date|time: the current tab, page or step), decorative (hide from assistive tech), focusable (tab stop override), tabOrder, shortcut (a key that clicks the layer, e.g. "r", "1", "Ctrl+Enter"), className, bindings {prop: expression}, converters {prop: [{type: format|round|invert|range|map|toNumber|toText|toBoolean|duration|expr, ...}]} (applied to the binding value in order), layoutItem, constraints, draggable {tags[], axis both|x|y, bounds none|parent|artboard|<layer id>, onMiss stay|return, hit center|pointer|overlap, grid, glideMs, step, tapToMove, holdToDrag, label, silent, zoneVariable} (let viewers drag the layer; also by keyboard and tap), dropZone {accepts[] (tags, empty = any), capacity (0 = no limit), whenFull reject|swap, snap none|center|topLeft, label, highlight, contentsVariable} (where draggable layers can be dropped; the zone goes behind the layers that go in it). Buttons and inputs take disabled (bindable) and disabledOpacity (0-1, default 0.5, how dimmed they look while disabled). A frame can be a dialog: dialog {modal (default true), scrim (a solid paint over the artboard behind it), closeOnEscape (default true), closeOnOutsideClick, initialFocus (layer id), returnFocus (default true), openVariable (variable id: the frame shows while it is on, Escape turns it off)}. A frame or group can carry keyNav {mode: list|grid|radio, orientation: vertical|horizontal|both, columns (grid on a container; a grid repeater uses its own), wrap, indexVariable (variable id, number from 0; setting it moves focus too when it is inside), countHidden (hidden copies keep their numbers and are stepped over)}: one item is the Tab stop and the arrows, Home and End move between a repeater\'s copies or a container\'s children; radio mode also selects (clicks) the item it lands on.\nText layers can hold rich text: runs: [{text, fontFamily?, fontSize?, fontWeight?, italic?, color?, underline?, strike?, letterSpacing?, link?: {url, target}}]; each run lists only how it differs from the layer\'s own text style. `text` always equals the runs joined (it is rewritten for you when you set runs); setting `text` alone replaces the runs with that plain text, so set `runs` to restyle part of a text.\nText layers can animate per letter/word/line with modifiers: [{unit: letter|word|line, start, end, offset (percent of the text; offset -100..100 slides the range), shape: square|ramp-up|ramp-down|triangle|round|smooth, ease?, randomize?, seed?, strength (0-100), x, y (px), rotation (deg), scale (factor), opacity (factor 0-1), color? (mix to), letterSpacing (px), blur (px)}]. Units inside the range get that fraction of each change. Animate them with timeline tracks on `modifiers.<index>.offset` (also start, end, strength, x, y, rotation, scale, opacity, color, letterSpacing, blur); a typewriter is a letter modifier with start 0, end 100, opacity 0 and an offset track from 0 to 100.\nScript layers (type "draw", shown as "Script layer"): a box painted by a script every frame, for generative art, particles, charts and custom visualisations. Fields: code (the script), fps (0 = every frame, else a cap), pixelRatio ("auto" or a number), runInEditor (paint on the editor canvas, one still frame). The code defines function draw(g, t, dt) and optionally function setup(g); g records drawing commands, it is not a canvas. The script runs in the sandbox (projects with settings.scriptSandbox, the default; without the sandbox bundle the layer shows nothing). Errors stop that layer only. Starter scripts to adapt (set as `code`): ' + DRAW_TEMPLATES.map((t22) => `"${t22.name}"`).join(", ") + ". The g API:\n" + DRAW_API.map(([sig, what]) => `  ${sig}: ${what}`).join("\n") + `
 Example: {"type":"draw","name":"Pulse","width":320,"height":200,"code":"function draw(g, t) {\\n  g.clear('#10131a');\\n  g.fill('#6f8cff');\\n  g.circle(g.width / 2, g.height / 2, 24 + Math.sin(t * 2) * 8);\\n}"}.
-Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nProgress bars (type "progress"): a track with a bar filling it. Fields: value, max (both take bindings; value is animatable, so a timeline track or Animate property can fill it), fill/stroke (the track, any paints), barFill (the bar\'s paint), cornerRadius, orientation (horizontal | vertical), reverse (grow from the right or the top), semantics (progressbar | meter | none: the role and aria-valuenow/min/max/valuetext it carries; bars made for a screen reader need ariaLabel), valueText (a text template: {value}, {max}, {percent} and variables). Colours may be theme token references.\nCharts (type "chart"): a column | bar | line | pie | donut chart drawn from data, an expression for a list: numbers, objects (label from labelKey, number from valueKey; blank guesses), [label, value] pairs, or one object. Fields: kind, data, labelKey, valueKey, colors (tokens or colours handed out in turn; varyColors for one each on bar, column and line), color (labels and axes), fontFamily, fontSize, min/max (fixed axis ends, null fits the data), gridlines, axisLabels, valueLabels, legend, hole (donut, 0.1-0.95), animate, table (a hidden data table for screen readers), decimals, prefix, suffix ({variable} slots work in both). An object item with hidden: true (or the field hiddenKey names) is a placeholder: a dashed empty mark with a ?, read out as hidden, kept out of the auto axis unless it also has a number. Clicks, presses, hovers and focus on a mark give event.index (the item\'s position) to On pointer and On focus nodes. Give it an ariaLabel.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t22) => `- ${t22}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t22)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
+Shader layers (type "shader", shown as "Shader layer"): a box painted by a GPU fragment shader (WebGL, GLSL). Fields: code, uniforms, fps (0 = every frame), pixelRatio ("auto" or a number, capped at 3), animateInEditor (run live on the editor canvas; default off, one still frame). The code defines void mainImage(out vec4 fragColor, in vec2 fragCoord): fragCoord is in canvas pixels with the origin bottom-left, fragColor is straight (not premultiplied) alpha. Built in: ` + SHADER_BUILTINS.join(", ") + " (u_time seconds; u_resolution vec2 canvas pixels; u_mouse vec3 = pointer 0-1 over the layer with y up and z = 1 while the button is down; u_frame; v_uv vec2 0-1 y up). `uniforms` is a list of {name, type: " + SHADER_UNIFORM_TYPES.join("|") + ", value, min?, max?}: the name is the GLSL identifier and is declared for the shader automatically, so the code just uses it (a color is a vec4; an image is a sampler2D plus name_size, a vec2; its value is an asset id). Values: float a number, vec2/3/4 an array, color a CSS colour, image an asset id. Animate them with timeline tracks on `uniforms.<index>.value` (a float, a colour, or an image asset id as a step), and `uniforms.<index>.value.<k>` (k = 0-3) for the parts of a vector; bindings use the same paths. A compile error stops that layer only: the editor shows the message with line numbers (in the code) and the layer shows a placeholder. All shader layers share one WebGL context, off-screen layers and hidden tabs are paused, and a layer that reads neither u_time nor u_mouse is only redrawn when something changes. Presets to start from (set code and uniforms to the same preset's): " + SHADER_PRESETS.map((p) => `"${p.id}" (${p.name}${p.kind === "filter" ? ", reads u_image" : ""})`).join(", ") + '. Example: {"type":"shader","name":"Glow","width":400,"height":240,"code":"void mainImage(out vec4 fragColor, in vec2 fragCoord) {\\n  vec2 uv = fragCoord / u_resolution;\\n  fragColor = vec4(uv, 0.5 + 0.5 * sin(u_time * speed), 1.0);\\n}","uniforms":[{"name":"speed","type":"float","value":1}]}.\nProgress bars (type "progress"): a track with a bar filling it. Fields: value, max (both take bindings; value is animatable, so a timeline track or Animate property can fill it), fill/stroke (the track, any paints), barFill (the bar\'s paint), cornerRadius, orientation (horizontal | vertical), reverse (grow from the right or the top), semantics (progressbar | meter | none: the role and aria-valuenow/min/max/valuetext it carries; bars made for a screen reader need ariaLabel), valueText (a text template: {value}, {max}, {percent} and variables). Colours may be theme token references.\nCharts (type "chart"): a column | bar | line | pie | donut chart drawn from data, an expression for a list: numbers, objects (label from labelKey, number from valueKey; blank guesses), [label, value] pairs, or one object. Fields: kind, data, labelKey, valueKey, colors (tokens or colours handed out in turn; varyColors for one each on bar, column and line), color (labels and axes), fontFamily, fontSize, min/max (fixed axis ends, null fits the data), gridlines, axisLabels, valueLabels, legend, hole (donut, 0.1-0.95), animate, table (a hidden data table for screen readers), decimals, prefix, suffix ({variable} slots work in both). An object item with hidden: true (or the field hiddenKey names) is a placeholder: a dashed empty mark with a ?, read out as hidden, kept out of the auto axis unless it also has a number. Clicks, presses, hovers and focus on a mark give event.index (the item\'s position) to On pointer and On focus nodes. Give it an ariaLabel.\nConnectors (type "connector"): a line or arrow joining two layers that follows them, so you never position it. Fields: from and to, each {layer: layerId | {repeat: templateLayerId, index: "expression"} | "" for a loose point, side?: auto|top|right|bottom|left, offset?: px along the side, x?/y? for a loose point (in the connector\'s parent)}; route: straight | elbow | curved; stroke (the line: {paint, width, dash?, ...}, paints may be tokens); startCap/endCap: none | arrow | dot; capSize (0 = from the stroke width); gap (px short of each layer); cornerRadius (elbow corners and the label chip); label (text, {variable} slots work), labelAt (0-1 along the line), color (label text), fill (label background), fontFamily, fontSize, fontWeight. x, y, width, height and rotation are ignored (the box is worked out from the route; leave them 0). It is hidden while either layer is hidden or missing. To connect repeated layers: the repeater\'s template (its first child) has an id, copy i is id~i; put the connector in a repeater of its own over a list of links and use from.layer {repeat: templateId, index: "item.from"}. Decorative (hidden from screen readers) unless ariaLabel is set, so give the page a text alternative (a nested list) for what it shows. Stroke trimEnd animates a draw-in.\nShader filter: an image layer can also carry shaderFilter: {preset?, code, uniforms, fps?, pixelRatio?, animateInEditor?}. Same code and uniforms as a shader layer, plus u_image (sampler2D, the layer\'s own picture with its fit applied) and u_image_size; its uniforms animate and bind as `shaderFilter.uniforms.<index>.value`. It only works on image layers (not with a 9-slice) and the plain picture shows until the shader has drawn and if it fails. There is no generic filter for other layer types.\nBones (type "bone"): a container whose origin is its base; its width is its length, it points along local +x, and a child bone sits at its parent\'s tip (x = parent width, y = 0). Pose with x, y, rotation, scaleX/Y, width (all animatable). A path is skinned by `skin: {bones: [{bone: boneId, bind: [a,b,c,d,e,f]}], weights: [[{w: [{b: boneIndex, w: weight}]}]]}` (weights[subPath][point], up to 4 influences summing to 1; bind = inverse(boneWorld) * layerWorld at bind time); an image by `mesh: {vertices: [{x,y,u,v}], triangles: [i,j,k...], skin}`. Constraints `ik` (on the end bone: target, bones = chain length, invertBend, strength) and `distance` (target, distance px, mode within|outside|exact) pose bones before skinning.\nPaths: paths: [{closed, points: [{x, y, in?: {x,y}, out?: {x,y}}]}] in the layer\'s own box. Paint: {type:"solid", color} | {type:"linear", angle, stops:[{offset, color}], from?: {x,y}, to?: {x,y}} | {type:"radial", stops, center?: {x,y}, radius?} | {type:"image", assetId, fit}. With from/to (or center/radius) a gradient sits exactly there, in px from the layer\'s top-left, instead of running corner to corner along the angle; they can be animated as `fill.from.x`, `fill.to.y`, `fill.center.x`, `fill.radius` (also `stroke.paint.…`, `fills.0.…`). Stroke: {paint, width, dash?, trimStart?, trimEnd?, trimOffset?, cap?, join?, align?: "center"|"inside"|"outside"}. Several fills and strokes: fill/stroke is the first (bottom) one and fills: Paint[] / strokes: Stroke[] hold the ones painted on top, bottom to top. All fills are under all strokes unless paintOrder says otherwise: paintOrder: ("fill"|"stroke")[], one entry per paint from the bottom up, e.g. ["stroke","fill"] draws the stroke under the fill (left out = plain order). Any paint or stroke may also have opacity (0-1), blend, visible (false hides it), feather (soft blur, px) and offsetX/offsetY, so a drop shadow is an extra fill that is dark, see-through, feathered and offset. Paths for set_props and tracks: "fills.0.color", "fills.0.opacity", "strokes.0.width", "strokes.0.paint.color".\n\nDefaults per type (what add_layer fills in):\n' + types.map((t22) => `- ${t22}: ${JSON.stringify(Object.fromEntries(Object.entries(createNode(t22)).filter(([k]) => !["id", "name", "x", "y", "rotation", "scaleX", "scaleY", "originX", "originY", "opacity", "visible"].includes(k))))}`).join("\n");
   }
   const t2 = TOPICS.find((x) => x.id === topic);
   if (t2) return `# ${t2.title}
