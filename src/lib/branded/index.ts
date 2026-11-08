@@ -17,11 +17,13 @@ import { applyTidy } from '../artboard-tidy';
 import { finishGraphs } from './graph-kit';
 import { settleLayout } from './layout-check';
 import { finishControls } from './finish';
+import { resolveForm } from './form-kit';
+import { FORMS } from './sets/forms';
 
 export { COLOURWAYS, HIGH_CONTRAST, colourwayById, type Colourway } from './looks';
 export { SET_NAMES, type BrandedStarter, type StarterSet } from './kit';
 
-export const BRANDED_STARTERS: BrandedStarter[] = [...assessment, ...explore, ...drag, ...story, ...games, ...writing, ...practice, ...media];
+export const BRANDED_STARTERS: BrandedStarter[] = [...assessment, ...explore, ...drag, ...story, ...games, ...writing, ...practice, ...media].map((s) => (FORMS[s.key] ? { ...s, form: FORMS[s.key] } : s));
 export const SETS: StarterSet[] = ['assessment', 'explore', 'drag', 'story', 'games', 'writing', 'practice', 'media'];
 
 export const brandedStarterByKey = (key: string): BrandedStarter | undefined => BRANDED_STARTERS.find((s) => s.key === key);
@@ -41,6 +43,8 @@ export function projectFromBrandedStarter(s: BrandedStarter, colourway: Colourwa
   //every page was made at the same canvas spot: lay them out in order, in a grid, before anyone sees them
   applyTidy(project, { x: 0, y: 0 });
   project.template = { builtin: `branded:${s.key}`, name: s.name, version: 1, checklist: checklist as TemplateChecklistItem[] };
+  //the plain form for the content, bound to what the build made, and the checklist items that point at its fields
+  if (s.form) project.contentForm = resolveForm(project, s.form, project.template.checklist).form;
   return project;
 }
 

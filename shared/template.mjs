@@ -39,6 +39,7 @@ export const cleanChecklist = (list, makeId) => {
 		if (detail) item.detail = detail
 		if (typeof raw.artboardId === 'string' && ID.test(raw.artboardId)) item.artboardId = raw.artboardId
 		if (typeof raw.nodeId === 'string' && ID.test(raw.nodeId)) item.nodeId = raw.nodeId
+		if (typeof raw.field === 'string' && ID.test(raw.field)) item.field = raw.field
 
 		out.push(item)
 	}

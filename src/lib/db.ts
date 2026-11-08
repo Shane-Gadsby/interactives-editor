@@ -609,7 +609,7 @@ export const unpublishLibrary = (projectId: string) => call<{ ok: boolean }>(`pr
 export interface SaveTemplateBody {
   name: string;
   description: string;
-  checklist: { id?: string; text: string; artboardId?: string; nodeId?: string }[];
+  checklist: { id?: string; text: string; artboardId?: string; nodeId?: string; field?: string }[];
   everyone: boolean;
   /** Save over one of yours as its next version. */
   templateId?: string;

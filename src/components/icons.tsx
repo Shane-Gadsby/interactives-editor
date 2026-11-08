@@ -116,6 +116,7 @@ export const Icons = {
   plug: P('M9 3v5M15 3v5M6 8h12v4a6 6 0 01-12 0zM12 18v3'),
   insights: P('M4 20V10M10 20V4M16 20v-8M22 20H2'),
   credits: P('M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h11M9 8h6'),
+  form: P('M5 4h14v16H5zM8.5 9h7M8.5 13h7M8.5 17h4'),
   usage: P('M6 6a2 2 0 100-4 2 2 0 000 4zM18 14a2 2 0 100-4 2 2 0 000 4zM6 22a2 2 0 100-4 2 2 0 000 4zM6 6v12M6 12h8a4 4 0 004-4'),
 };
 

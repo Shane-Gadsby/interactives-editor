@@ -14,6 +14,7 @@ import logoOnWhite from './assets/unisq-logo-on-white.svg?raw';
 import { importSvg } from '../svg-import';
 import { starterThemes } from '../themes';
 import { locate, nodeToArtboard } from '../../store/doc';
+import type { FormMaker } from './form-kit';
 import { BRAND_FONT, COLOURWAYS, CONTENT_TOKENS, HIGH_CONTRAST, type BrandKey, type Colourway } from './looks';
 
 export type StarterSet = 'assessment' | 'explore' | 'drag' | 'story' | 'games' | 'writing' | 'practice' | 'media';
@@ -51,6 +52,8 @@ export interface BrandedStarter {
   build(colourway: Colourway): { project: Project; checklist: TemplateChecklistItem[] };
   /** Extra states for the layout check to run each page in (see `LayoutState`). */
   layoutStates?: LayoutState[];
+  /** The plain form for the content an author fills in (Fill in panel), written in the set's `forms.ts`; see `./form-kit.ts`. */
+  form?: FormMaker;
 }
 
 export type ColourKey = LookKey | BrandKey;
