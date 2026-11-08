@@ -9866,3 +9866,47 @@ body.page-link-dragging,
 body.page-link-dragging * {
   cursor: grabbing !important;
 }
+
+/* Page navigation section: the styles are a radio group, the chosen one gold with dark text like every other chosen state */
+.nav-styles {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0;
+}
+.nav-style {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+.nav-style span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.nav-style:hover:not(.chosen) {
+  border-color: var(--primary-bg);
+}
+.nav-style.chosen {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
+}
+.nav-style.chosen span {
+  color: var(--primary-fg);
+}
+.nav-style:focus-visible {
+  outline: 2px solid var(--focus, var(--primary-bg));
+  outline-offset: 2px;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}

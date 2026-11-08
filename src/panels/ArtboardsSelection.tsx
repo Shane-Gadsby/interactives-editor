@@ -3,6 +3,7 @@ import { store } from '../store/store';
 import { Icons } from '../components/icons';
 import { IconButton, Row, Section } from '../components/ui';
 import { PropRow } from '../lib/prop-search';
+import { PageNavSection } from './PageNavSection';
 import { deleteArtboardsCommand, groupArtboardsCommand, selectionGroupInfo, tidyTheseCommand } from '../lib/artboard-commands';
 
 /** What the inspector shows when several artboards are selected: what can be done to all of them at once. */
@@ -15,6 +16,7 @@ export function ArtboardsSelection({ ids, project }: { ids: string[]; project: P
     return <IconButton key={title} icon={<I width={16} />} title={title} onClick={fn} disabled={disabled} />;
   };
   return (
+    <>
     <Section title={`${ids.length} artboards`} id="artboards-selection" help="artboards">
       <p className="hint" title={names.join(', ')}>
         {names.slice(0, 4).join(', ')}
@@ -48,5 +50,7 @@ export function ArtboardsSelection({ ids, project }: { ids: string[]; project: P
         <IconButton icon={<Icons.trash />} title="Delete these artboards (asks first)" onClick={() => void deleteArtboardsCommand(ids)} />
       </Row>
     </Section>
+      <PageNavSection ids={ids} project={project} />
+    </>
   );
 }

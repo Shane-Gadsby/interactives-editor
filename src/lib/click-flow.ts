@@ -18,9 +18,9 @@ export interface FlowWritten {
  * Add an event (`kind`, with `params`) and a chain of steps to the artboard (a plain object or an immer draft: it pushes onto
  * `logic.nodes` and `logic.edges`). New nodes go under the lowest one there is, event on the left and the steps to its right.
  */
-export function writeFlow(ab: Pick<Artboard, 'logic'>, event: { kind: string; params?: Record<string, unknown> }, steps: FlowStep[]): FlowWritten {
+export function writeFlow(ab: Pick<Artboard, 'logic'>, event: { kind: string; params?: Record<string, unknown>; note?: string }, steps: FlowStep[]): FlowWritten {
 	const y = ab.logic.nodes.reduce((m, n) => Math.max(m, n.y), -100) + 140;
-	const ev: LogicNode = { id: uid('lg'), kind: event.kind, x: 40, y, params: { ...defaultParams(event.kind), ...event.params } };
+	const ev: LogicNode = { id: uid('lg'), kind: event.kind, x: 40, y, params: { ...defaultParams(event.kind), ...event.params }, ...(event.note ? { note: event.note } : {}) };
 	const made = steps.map((s, i): LogicNode => ({ id: uid('lg'), kind: s.kind, x: 300 + i * 260, y, params: { ...defaultParams(s.kind), ...s.params } }));
 	ab.logic.nodes.push(ev, ...made);
 	let from = ev;
@@ -32,7 +32,7 @@ export function writeFlow(ab: Pick<Artboard, 'logic'>, event: { kind: string; pa
 }
 
 /** `writeFlow` for the commonest event: a layer is clicked (or hovered, with `type: 'pointerenter'`). */
-export const writeClickFlow = (ab: Pick<Artboard, 'logic'>, layerId: string, steps: FlowStep[], type = 'click'): FlowWritten => writeFlow(ab, { kind: 'event.pointer', params: { target: layerId, type } }, steps);
+export const writeClickFlow = (ab: Pick<Artboard, 'logic'>, layerId: string, steps: FlowStep[], type = 'click', note?: string): FlowWritten => writeFlow(ab, { kind: 'event.pointer', params: { target: layerId, type }, note }, steps);
 
 /** Hang one more step off a node (its first output), at the end of the row it is on. Returns the new node. */
 export function appendStep(ab: Pick<Artboard, 'logic'>, after: LogicNode, step: FlowStep): LogicNode {
