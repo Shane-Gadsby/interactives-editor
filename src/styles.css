@@ -1304,14 +1304,16 @@ hr.item-sep {
 }
 
 /* ---------------------------------------------------------------- workspace grid */
+/* The 'ztop' row is the top dock area, under the header and the banners and over the canvas and its rulers: 0 tall until a panel is docked there */
 .workspace {
   height: 100%;
   display: grid;
   grid-template-columns: 72px var(--left-w, 300px) 1fr var(--right-w, 320px);
-  grid-template-rows: 44px auto 1fr var(--bottom-h);
+  grid-template-rows: 44px auto var(--top-h, 0px) 1fr var(--bottom-h);
   grid-template-areas:
     'top top top top'
     'banner banner banner banner'
+    'ztop ztop ztop ztop'
     'tools left stage right'
     'bottom bottom bottom bottom';
 }
@@ -1321,6 +1323,7 @@ hr.item-sep {
   grid-template-areas:
     'top top top top'
     'banner banner banner banner'
+    'ztop ztop ztop ztop'
     'left stage right tools'
     'bottom bottom bottom bottom';
 }
@@ -1333,6 +1336,7 @@ hr.item-sep {
   grid-template-areas:
     'top top top'
     'banner banner banner'
+    'ztop ztop ztop'
     'left stage right'
     'bottom bottom bottom';
 }
@@ -1340,13 +1344,50 @@ hr.item-sep {
 /* The tool rail docked along the bottom: a horizontal strip between the canvas and the bottom panels */
 .workspace.tools-bottom {
   grid-template-columns: var(--left-w, 300px) 1fr var(--right-w, 320px);
-  grid-template-rows: 44px auto 1fr auto var(--bottom-h);
+  grid-template-rows: 44px auto var(--top-h, 0px) 1fr auto var(--bottom-h);
   grid-template-areas:
     'top top top'
     'banner banner banner'
+    'ztop ztop ztop'
     'left stage right'
     'tools tools tools'
     'bottom bottom bottom';
+}
+/* Along the top: a horizontal strip under the header, over the top dock area */
+.workspace.tools-top {
+  grid-template-columns: var(--left-w, 300px) 1fr var(--right-w, 320px);
+  grid-template-rows: 44px auto auto var(--top-h, 0px) 1fr var(--bottom-h);
+  grid-template-areas:
+    'top top top'
+    'banner banner banner'
+    'tools tools tools'
+    'ztop ztop ztop'
+    'left stage right'
+    'bottom bottom bottom';
+}
+.workspace.tools-top .toolbar.horizontal {
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
+}
+.top-dock {
+  grid-area: ztop;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.top-dock > .resize-handle {
+  top: auto;
+  bottom: 0;
+}
+.top-dock > .resize-handle:hover,
+.top-dock > .resize-handle:active,
+.top-dock > .resize-handle:focus-visible {
+  background: linear-gradient(0deg, var(--resizer) 3px, transparent 3px);
 }
 .toolbar.horizontal {
   flex-direction: row;

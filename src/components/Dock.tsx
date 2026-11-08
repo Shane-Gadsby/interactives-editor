@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { onPanelRequest, store, useEditor, type BottomTab } from '../store/store';
-import { dockFloat, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
+import { dockFloat, FOLDED_HEIGHT, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, TOP_HEIGHT, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
 import { Icons, type IconName } from './icons';
 import { openHelp } from '../help/Help';
 import { getTopic } from '../help/topics';
@@ -307,6 +307,7 @@ export function DockDragLayer() {
           {edge('left', { left: stage.left, top: stage.top, width: 64, height: stage.height }, `Dock ${who}left`)}
           {edge('right', { left: stage.right - 64, top: stage.top, width: 64, height: stage.height }, `Dock ${who}right`)}
           {edge('bottom', { left: stage.left + 64, top: stage.bottom - 48, width: Math.max(0, stage.width - 128), height: 48 }, `Dock ${who}at the bottom`)}
+          {edge('top', { left: stage.left + 64, top: stage.top, width: Math.max(0, stage.width - 128), height: 48 }, `Dock ${who}at the top`)}
         </>
       )}
       {t && 'newFloat' in t && <div className="dock-float-ghost" style={{ left: t.newFloat.x, top: t.newFloat.y }} />}
@@ -376,6 +377,7 @@ function tabMenu(p: PanelId, at: { zone: Zone } | { float: string }): MenuItem[]
     moveTo('left', 'Dock on the left'),
     moveTo('right', 'Dock on the right'),
     moveTo('bottom', 'Dock at the bottom'),
+    moveTo('top', 'Dock at the top'),
     { label: 'Float in its own window', disabled: !here, onClick: () => setDock((l) => movePanel(l, p, { newFloat: { x: Math.round(window.innerWidth / 2 - 190), y: 120 } })) },
     { separator: true },
     { label: 'Help for this panel', title: panelHelpTip(p), onClick: () => openPanelHelp(p) },
@@ -415,7 +417,12 @@ function DockTabs({ group, at, folded, extra }: { group: DockGroup; at: { zone: 
               startTabDrag(e, p, () => {
                 // The bottom area's open tab folds it away when clicked again, like before
                 if ('zone' in at && at.zone === 'bottom' && on) store().set({ bottomTab: null });
-                else activatePanel(p);
+                else if ('zone' in at && at.zone === 'top' && on) setDock((l) => ({ ...l, topFolded: true }));
+                else {
+                  activatePanel(p);
+                  //a folded top area opens on the click itself, not through the store
+                  if ('zone' in at && at.zone === 'top') setDock((l) => showPanel(l, p));
+                }
               })
             }
             onKeyDown={(e) => {
@@ -463,12 +470,17 @@ export function DockZone({ zone }: { zone: Zone }) {
   const { tabs, active } = visible(g, ok);
   const h = useEditor((st) => st.bottomHeight);
   if (!tabs.length) return null;
-  const folded = zone === 'bottom' && l.bottomFolded;
+  const folded = (zone === 'bottom' && l.bottomFolded) || (zone === 'top' && l.topFolded);
+  const top = zone === 'top';
+  const size = top ? l.topHeight : h;
+  const [min, max] = top ? [TOP_HEIGHT.min, Math.min(TOP_HEIGHT.max, window.innerHeight - 200)] : [140, window.innerHeight - 200];
+  const setSize = (v: number) => (top ? setDock((d) => ({ ...d, topHeight: Math.round(Math.max(min, Math.min(max, v))) })) : store().set({ bottomHeight: Math.max(min, Math.min(max, v)) }));
   const startResize = (e: React.PointerEvent) => {
     const y0 = e.clientY;
     const el = e.currentTarget as HTMLElement;
     el.setPointerCapture(e.pointerId);
-    const move = (ev: PointerEvent) => store().set({ bottomHeight: Math.max(140, Math.min(window.innerHeight - 200, h - (ev.clientY - y0))) });
+    //the top area grows downwards, the bottom one upwards
+    const move = (ev: PointerEvent) => setSize(size + (top ? 1 : -1) * (ev.clientY - y0));
     const up = () => {
       el.removeEventListener('pointermove', move);
       el.removeEventListener('pointerup', up);
@@ -476,37 +488,56 @@ export function DockZone({ zone }: { zone: Zone }) {
     el.addEventListener('pointermove', move);
     el.addEventListener('pointerup', up);
   };
-  const cls = zone === 'bottom' ? 'bottom-dock' : zone === 'left' ? 'left-panel dock-side' : 'dock-right dock-side';
+  const cls = zone === 'bottom' ? 'bottom-dock' : zone === 'top' ? 'top-dock' : zone === 'left' ? 'left-panel dock-side' : 'dock-right dock-side';
+  const name = top ? 'top' : zone === 'bottom' ? 'bottom' : zone === 'left' ? 'left' : 'right';
+  const handle = (
+    <div
+      className="resize-handle"
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label={`Resize the ${name} panels`}
+      aria-valuenow={size}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      tabIndex={0}
+      title={`Drag to resize the ${name} panels (double-click to reset)`}
+      onPointerDown={startResize}
+      onDoubleClick={() => setSize(top ? TOP_HEIGHT.def : 260)}
+      onKeyDown={(e) => {
+        const step = e.shiftKey ? 40 : 10;
+        //up makes the bottom area taller and the top one shorter
+        const grow = top ? 'ArrowDown' : 'ArrowUp';
+        const shrink = top ? 'ArrowUp' : 'ArrowDown';
+        if (e.key === grow) setSize(size + step);
+        else if (e.key === shrink) setSize(size - step);
+        else return;
+        e.preventDefault();
+      }}
+    />
+  );
   return (
-    <section className={`${cls} dock-zone`} aria-label={`${zone === 'bottom' ? 'Bottom' : zone === 'left' ? 'Left' : 'Right'} panels`}>
-      {zone === 'bottom' && !folded && (
-        <div
-          className="resize-handle"
-          role="separator"
-          aria-orientation="horizontal"
-          aria-label="Resize the bottom panels"
-          aria-valuenow={h}
-          tabIndex={0}
-          title="Drag to resize the bottom panels (double-click to reset)"
-          onPointerDown={startResize}
-          onDoubleClick={() => store().set({ bottomHeight: 260 })}
-          onKeyDown={(e) => {
-            const step = e.shiftKey ? 40 : 10;
-            if (e.key === 'ArrowUp') store().set({ bottomHeight: Math.min(window.innerHeight - 200, h + step) });
-            else if (e.key === 'ArrowDown') store().set({ bottomHeight: Math.max(140, h - step) });
-            else return;
-            e.preventDefault();
-          }}
-        />
-      )}
-      <DockTabs group={g} at={{ zone }} folded={folded} />
+    <section className={`${cls} dock-zone`} aria-label={`${name === 'top' ? 'Top' : name === 'bottom' ? 'Bottom' : name === 'left' ? 'Left' : 'Right'} panels`}>
+      {zone === 'bottom' && !folded && handle}
+      <DockTabs
+        group={g}
+        at={{ zone }}
+        folded={folded}
+        extra={
+          top && (
+            <button type="button" className="icon-btn" title={folded ? 'Unfold the top panels' : 'Fold the top panels down to their tabs'} aria-label={folded ? 'Unfold the top panels' : 'Fold the top panels'} aria-expanded={!folded} onClick={() => setDock((d) => ({ ...d, topFolded: !d.topFolded }))}>
+              <Icons.chevronDown width={13} style={{ transform: folded ? 'rotate(-90deg)' : undefined }} />
+            </button>
+          )
+        }
+      />
       {active && !folded && <PanelBody key={active} p={active} />}
+      {top && !folded && handle}
     </section>
   );
 }
 
 /** Grid track sizes for the workspace: an area nobody has docked anything in takes no room. */
-export function useZoneSizes(widths: { left: number; right: number }): { left: number; right: number; bottom: number; tools: ToolsPlace } {
+export function useZoneSizes(widths: { left: number; right: number }): { left: number; right: number; bottom: number; top: number; tools: ToolsPlace } {
   const l = useDock();
   const ok = useAvailable();
   const h = useEditor((st) => st.bottomHeight);
@@ -514,7 +545,8 @@ export function useZoneSizes(widths: { left: number; right: number }): { left: n
   return {
     left: has('left') ? widths.left : 0,
     right: has('right') ? widths.right : 0,
-    bottom: !has('bottom') ? 0 : l.bottomFolded ? 34 : h,
+    bottom: !has('bottom') ? 0 : l.bottomFolded ? FOLDED_HEIGHT : h,
+    top: !has('top') ? 0 : l.topFolded ? FOLDED_HEIGHT : Math.min(l.topHeight, Math.max(TOP_HEIGHT.min, window.innerHeight - 200)),
     tools: l.tools.place,
   };
 }
@@ -613,7 +645,7 @@ export function FloatingTools({ children }: { children: ReactNode }) {
     <div ref={ref} className="dock-float dock-tools-float front" style={{ left: box.x, top: box.y }} role="toolbar" aria-label="Tools (floating)">
       <div
         className="dock-tools-grip"
-        title="Drag to move the tools. Drop them on an edge of the canvas to dock them there (left, right or bottom), or right-click for the menu"
+        title="Drag to move the tools. Drop them on an edge of the canvas to dock them there (left, right, top or bottom), or right-click for the menu"
         onPointerDown={(e) => {
           const x0 = e.clientX;
           const y0 = e.clientY;
@@ -644,7 +676,7 @@ export function ToolsHead() {
     const oy = y0 - r.top;
     dragTools(e, (ev) => (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6 ? null : clampWin({ x: ev.clientX - ox, y: ev.clientY - oy, w: 74, h: 200 })));
   };
-  const horizontal = l.tools.place === 'bottom';
+  const horizontal = l.tools.place === 'bottom' || l.tools.place === 'top';
   return (
     <div className={`dock-tools-grip docked${horizontal ? ' horizontal' : ''}`} title="Drag to float the tools, or onto an edge of the canvas to dock them there. Right-click the tools for the menu" onPointerDown={down}>
       Tools
@@ -661,6 +693,7 @@ export function toolsMenu(): MenuItem[] {
     { label: 'Dock on the left', disabled: place === 'left', onClick: to('left') },
     { label: 'Dock on the right', disabled: place === 'right', onClick: to('right') },
     { label: 'Dock at the bottom', disabled: place === 'bottom', onClick: to('bottom') },
+    { label: 'Dock at the top', disabled: place === 'top', onClick: to('top') },
     { label: 'Floating', disabled: place === 'float', onClick: to('float') },
     { separator: true },
     { label: 'Reset panel layout', onClick: () => (resetDock(), store().set({ bottomTab: 'timeline' })) },

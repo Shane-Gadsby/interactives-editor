@@ -125,9 +125,9 @@ describe('docking the tool rail by dragging', () => {
 });
 
 describe('the rail\'s menu', () => {
-  it('offers left, right, bottom and floating, with where it is now disabled', () => {
+  it('offers left, right, bottom, top and floating, with where it is now disabled', () => {
     const labels = () => toolsMenu().filter((i) => 'label' in i).map((i) => ('label' in i ? [i.label, 'disabled' in i && i.disabled] : null));
-    expect(labels().slice(0, 4)).toEqual([['Dock on the left', true], ['Dock on the right', false], ['Dock at the bottom', false], ['Floating', false]]);
+    expect(labels().slice(0, 5)).toEqual([['Dock on the left', true], ['Dock on the right', false], ['Dock at the bottom', false], ['Dock at the top', false], ['Floating', false]]);
     const bottom = toolsMenu().find((i) => 'label' in i && i.label === 'Dock at the bottom')!;
     act(() => ('onClick' in bottom ? bottom.onClick() : undefined));
     expect(getDock().tools.place).toBe('bottom');

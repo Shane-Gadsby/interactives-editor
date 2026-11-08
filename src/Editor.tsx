@@ -606,7 +606,7 @@ function Workspace({ home }: { home: () => void }) {
     });
   }, []);
   return (
-    <div className={`workspace tools-${z.tools}`} style={{ ['--bottom-h' as string]: `${z.bottom}px`, ['--left-w' as string]: `${z.left}px`, ['--right-w' as string]: `${z.right}px` }}>
+    <div className={`workspace tools-${z.tools}`} style={{ ['--bottom-h' as string]: `${z.bottom}px`, ['--top-h' as string]: `${z.top}px`, ['--left-w' as string]: `${z.left}px`, ['--right-w' as string]: `${z.right}px` }}>
       <TopBar home={home} onPreview={() => (store().set({ previewPlaying: false }), setPreview(true))} />
       <div className="banner-area">
         {conflict && <ConflictBanner />}
@@ -614,6 +614,7 @@ function Workspace({ home }: { home: () => void }) {
         <LinkBanner />
         <LinkChanges />
       </div>
+      <DockZone zone="top" />
       {z.tools === 'float' ? (
         <FloatingTools>
           <Toolbar />
@@ -1053,7 +1054,8 @@ export function Toolbar() {
   const showBones = useEditor((st) => st.showBones);
   const [open, toggle] = useToolGroups();
   const snapPrefs = usePrefs();
-  const horizontal = useDock().tools.place === 'bottom';
+  const place = useDock().tools.place;
+  const horizontal = place === 'bottom' || place === 'top';
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [gridMenuAt, setGridMenuAt] = useState<{ x: number; y: number } | null>(null);
   const [snapMenuAt, setSnapMenuAt] = useState<{ x: number; y: number } | null>(null);
@@ -1145,7 +1147,7 @@ export function Toolbar() {
           expanded={!!snapMenuAt}
           onClick={(e) => {
             const r = e.currentTarget.getBoundingClientRect();
-            setSnapMenuAt(snapMenuAt ? null : horizontal ? { x: r.left, y: Math.max(8, r.top - 330) } : { x: r.right + 6, y: Math.max(8, r.top - 300) });
+            setSnapMenuAt(snapMenuAt ? null : place === 'top' ? { x: r.left, y: r.bottom + 6 } : horizontal ? { x: r.left, y: Math.max(8, r.top - 330) } : { x: r.right + 6, y: Math.max(8, r.top - 300) });
           }}
           onContextMenu={gridContext}
         />
