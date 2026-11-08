@@ -534,6 +534,7 @@ export function ResultsModal({ onClose }: { onClose: () => void }) {
                         <th title="Best score over every attempt">Best</th>
                         <th title="The most recent reported score">Latest</th>
                         <th>Attempts</th>
+                        {results.list.some((r) => r.guard) && <th title="Writing tools or spell checkers the spelling guard found in the learner's browser, or an exemption code they used">Spelling guard</th>}
                         <th>Last seen</th>
                       </tr>
                     </thead>
@@ -546,6 +547,7 @@ export function ResultsModal({ onClose }: { onClose: () => void }) {
                           <td>{pct(r.bestPercent)}</td>
                           <td>{pct(r.lastPercent)}</td>
                           <td>{r.attempts}</td>
+                          {results.list.some((x) => x.guard) && <td>{r.guard ? `${r.guard.label} (panel shown ${r.guard.shown} ${r.guard.shown === 1 ? 'time' : 'times'})` : '–'}</td>}
                           <td>{r.updated ? new Date(r.updated).toLocaleDateString() : '–'}</td>
                         </tr>
                       ))}

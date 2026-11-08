@@ -104,6 +104,24 @@ export function wordsIn(p: Project): { ab: Artboard; frame: FrameNode }[] {
   return out;
 }
 
+/** The words whose audio the voice makes: the ones set to the author's own audio are left out. */
+export const voiceWordsIn = (p: Project): { ab: Artboard; frame: FrameNode }[] => wordsIn(p).filter((w) => !w.frame.question?.voice?.own);
+
+/** The word's audio is the author's own file or recording, not the made voice. */
+export const usesOwnAudio = (q: Question | undefined | null): boolean => !!q?.voice?.own && !q.voice.device;
+
+/**
+ * The file's name gives the word away: Preview and an exported file keep an asset's name where a learner can read it (the share link renames
+ * audio to a plain one), and the word is only meant to be in the audio. Letters only, so `Colour_1.mp3` and `colour` meet. A word under three letters is not worth
+ * warning about (every file name has a, an or it in it).
+ */
+export function ownAudioNameProblem(q: Question, fileName: string): string | null {
+  const word = wordOf(q).toLowerCase().replace(/[^\p{L}]+/gu, '');
+  if (word.length < 3) return null;
+  const name = fileName.toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/[^\p{L}]+/gu, '');
+  return name.includes(word) ? `The file is called "${fileName}", which has the word in it. The share link renames audio to a plain name, but Preview and an exported file keep it, so rename the file (to a number, say) before you use it.` : null;
+}
+
 // ---------------------------------------------------------------------------
 // Writing it into the document (every one of these runs inside a store update)
 
@@ -163,11 +181,40 @@ export function applyAudio(d: Project, abId: string, frameId: string, asset: Ass
   const frame = frameOf(d, abId, frameId);
   const node = ab?.logic.nodes.find((n) => n.id === nodeId);
   if (!ab || !frame || !node) return false;
+  //A word on its own audio is not made again: the made file would take the node over
+  if (usesOwnAudio(frame.question)) return false;
   const old = frame.question!.voice?.asset;
   if (!d.assets.some((a) => a.id === asset.id)) d.assets.push(asset);
   if (node.kind === SOUND) node.params = { ...node.params, asset: asset.id };
   setVoice(d, abId, frameId, { node: nodeId, asset: asset.id });
   if (old && old !== asset.id && !stillUsed(d, old)) d.assets = d.assets.filter((a) => a.id !== old);
+  return true;
+}
+
+/**
+ * Choose where the word's audio comes from: the made voice, or the author's own file. The Play sound node is the same either way, so
+ * the page's wiring does not change; it just gets the other file. Neither file is ever deleted by this, and the voice settings stay.
+ */
+export function setAudioSource(d: Project, abId: string, frameId: string, own: boolean): boolean {
+  const ab = d.artboards.find((a) => a.id === abId);
+  const frame = frameOf(d, abId, frameId);
+  if (!ab || !frame) return false;
+  setVoice(d, abId, frameId, { own });
+  const q = frameOf(d, abId, frameId)!.question!;
+  const node = targetNode(ab, q);
+  if (node && node.kind === SOUND) node.params = { ...node.params, asset: (own ? q.voice?.ownAsset : q.voice?.asset) ?? '' };
+  return true;
+}
+
+/** The author's own audio for a word: put in the word's Play sound node, and remembered on the question apart from the made audio. */
+export function setOwnAudio(d: Project, abId: string, frameId: string, asset: Asset, nodeId: string): boolean {
+  const ab = d.artboards.find((a) => a.id === abId);
+  const frame = frameOf(d, abId, frameId);
+  const node = ab?.logic.nodes.find((n) => n.id === nodeId);
+  if (!ab || !frame || !node) return false;
+  if (!d.assets.some((a) => a.id === asset.id)) d.assets.push(asset);
+  if (node.kind === SOUND) node.params = { ...node.params, asset: asset.id };
+  setVoice(d, abId, frameId, { own: true, ownAsset: asset.id, node: nodeId });
   return true;
 }
 
@@ -194,7 +241,7 @@ export function setPractice(d: Project, abId: string, frameId: string, on: boole
     frame.question = q;
     if (node && node.kind === SPEAK) {
       node.kind = SOUND;
-      node.params = { ...defaultParams(SOUND), asset: q.voice?.asset ?? '', volume: 1 };
+      node.params = { ...defaultParams(SOUND), asset: (q.voice?.own ? q.voice.ownAsset : q.voice?.asset) ?? '', volume: 1 };
     }
   }
   return true;

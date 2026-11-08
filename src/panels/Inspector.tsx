@@ -1429,7 +1429,10 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
           )}
           {n.inputType === 'select' && <TextField label="Options" value={n.options ?? ''} multiline placeholder="One per line" onChange={(v) => set({ options: v })} />}
           {(n.inputType === 'text' || n.inputType === 'textarea' || n.inputType === 'email') && (
-            <CheckField label="No browser help" title="Turns off the spellcheck underline, autocorrect, automatic capitals and autofill in this box. For a spelling test, so the browser does not mark or fix the word" value={!!n.noAssist} onChange={(v) => set({ noAssist: v || undefined })} />
+            <>
+              <CheckField label="No browser help" title="Turns off the spellcheck underline, autocorrect, automatic capitals and autofill in this box. For a spelling test, so the browser does not mark or fix the word" value={!!n.noAssist} onChange={(v) => set({ noAssist: v || undefined })} />
+              <CheckField label="Block paste and drop" title="Refuses text pasted or dragged into this box, so an answer has to be typed. For a spelling test" value={!!n.noPaste} onChange={(v) => set({ noPaste: v || undefined })} />
+            </>
           )}
           {radius}
           <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />

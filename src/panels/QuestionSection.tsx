@@ -33,6 +33,7 @@ import { CheckField, IconButton, NumberField, Row, Section, SelectField, TextFie
 import { ExprField } from '../components/ExprField';
 import { syncPractice } from '../lib/voice';
 import { VoiceSection } from './VoiceSection';
+import { GuardSection } from './GuardSection';
 import { growAreas, makeIndependent, partOf, partsOf, setAreaShape, setQuestionSettings, shapeOfArea, sharedPrefix, type AreaShape } from '../lib/question-kit';
 
 const PART_LABELS: [string, string][] = [
@@ -285,7 +286,10 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
                 label="Spelling: letters must match exactly"
                 title="For a word to spell. No numbers, tolerance or guessing: every letter has to be there. A curly apostrophe typed on a phone counts as a plain one, and the browser's own spellcheck and autocorrect are switched off in the box"
                 value={!!b.spelling}
-                onChange={(v) => setBlank(i, { spelling: v || undefined, usSpelling: v ? b.usSpelling : undefined, tolerance: v ? undefined : b.tolerance })}
+                onChange={(v) =>
+                  //A new word to spell starts with the guard on: paste refused, and a writing tool found holds the learner
+                  apply({ blanks: q.blanks.map((x, j) => (j === i ? { ...x, spelling: v || undefined, usSpelling: v ? x.usSpelling : undefined, tolerance: v ? undefined : x.tolerance } : x)), ...(v && !q.guard && !q.blanks.some((x) => x.spelling) ? { guard: { mode: 'block' as const } } : {}) }, `blank-${i}`)
+                }
               />
               {b.spelling && (
                 <>
@@ -310,6 +314,7 @@ export function QuestionSection({ frame, ab, project }: { frame: FrameNode; ab: 
         </div>
       )}
       {q.kind === 'blank' && q.blanks.some((b) => b.spelling) && <VoiceSection frame={frame} ab={ab} project={project} />}
+      {q.kind === 'blank' && q.blanks.some((b) => b.spelling) && <GuardSection frame={frame} ab={ab} />}
 
       {q.kind === 'matching' && (
         <div className="q-list" role="group" aria-label="Pairs">
