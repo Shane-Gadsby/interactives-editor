@@ -136,10 +136,12 @@ export interface PropEntry {
   tip?: string;
   extra?: string[];
   section?: string;
+  /** Not a property row (a graph node, an artboard): none of the property names, synonyms or standard tips apply to its label. */
+  plain?: boolean;
 }
 
 /** The readable name for a label (W is Width). */
-export const displayName = (label: string): string => NAMES[label] ?? label;
+export const displayName = (label: string, plain?: boolean): string => (plain ? label : (NAMES[label] ?? label));
 
 interface Prepared {
   label: string;
@@ -151,12 +153,12 @@ const prepared = new WeakMap<PropEntry, Prepared>();
 function prepare(e: PropEntry): Prepared {
   let p = prepared.get(e);
   if (!p) {
-    const named = NAMES[e.label];
-    const syn = [...(normSyn.get(e.label.toLowerCase()) ?? []), ...(named ? (normSyn.get(named.toLowerCase()) ?? []) : []), ...(e.extra ?? []).map((x) => wordsOf(x).join(' '))];
+    const named = e.plain ? undefined : NAMES[e.label];
+    const syn = [...(e.plain ? [] : (normSyn.get(e.label.toLowerCase()) ?? [])), ...(named ? (normSyn.get(named.toLowerCase()) ?? []) : []), ...(e.extra ?? []).map((x) => wordsOf(x).join(' '))];
     p = {
       label: wordsOf(e.label).join(' '),
       names: [...(named ? [wordsOf(named).join(' ')] : []), ...syn].filter(Boolean),
-      tip: wordsOf(e.tip ?? FIELD_TIPS[e.label] ?? '').join(' '),
+      tip: wordsOf(e.tip ?? (e.plain ? '' : FIELD_TIPS[e.label]) ?? '').join(' '),
       section: wordsOf(e.section ?? '').join(' '),
     };
     prepared.set(e, p);
@@ -197,6 +199,21 @@ export function scoreEntry(query: string, entry: PropEntry): number {
   return Math.max(phrase, qw.length ? sum / qw.length : 0);
 }
 
+/**
+ * The items that match what was typed, best first, each read as a PropEntry. An item stays when it scores at least half of the
+ * best one. Nothing typed is every item, in the order given. Anything that searches by name (graph nodes, artboards, a menu of
+ * nodes) goes through this, so they all rank alike.
+ */
+export function rankEntries<T>(query: string, items: T[], entryOf: (item: T) => PropEntry): T[] {
+  if (!query.trim()) return items;
+  const scored = items.map((item, i) => ({ item, i, score: scoreEntry(query, entryOf(item)) })).filter((x) => x.score > 0);
+  const best = Math.max(0, ...scored.map((x) => x.score));
+  return scored
+    .filter((x) => x.score >= best * KEEP_SHARE)
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map((x) => x.item);
+}
+
 /** Closest single-word match to anything in the panel, for "did you mean" when nothing matches. */
 export function suggest(query: string, entries: PropEntry[]): string | null {
   const qw = wordsOf(query).filter((w) => w.length >= 3);
@@ -213,7 +230,7 @@ export function suggest(query: string, entries: PropEntry[]): string | null {
     }
     if (s > best) {
       best = s;
-      name = displayName(e.label);
+      name = displayName(e.label, e.plain);
     }
   }
   return best >= 18 ? name : null;
@@ -231,7 +248,8 @@ interface SectionReg {
 }
 
 /** A row stays when it scores at least this share of the best one, so an exact "opacity" doesn't also bring in every vague hit. */
-const KEEP = 0.5;
+export const KEEP_SHARE = 0.5;
+const KEEP = KEEP_SHARE;
 
 export class PropSearchStore {
   query = '';

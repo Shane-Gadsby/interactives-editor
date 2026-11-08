@@ -23,7 +23,6 @@ import { cloneFragment, copyLogic, fragmentOf, fragmentOrigin, logicToPaste, typ
 import {
   ANIMATABLE_PROPS,
   layerOwnProps,
-  CATALOG,
   CURSORS,
   CATALOG_BY_KIND,
   EASING_NAMES,
@@ -63,6 +62,9 @@ import { addAssetOption, addVariableOption, withQuickAdd } from '../lib/quick-ad
 import { usePrefs } from '../lib/prefs';
 import { compatibleKinds, newNodePort, type DragDirection } from '../lib/graph';
 import { artboardChoices } from '../lib/variants-edit';
+import { nodeMenuItems } from '../lib/node-menu';
+import { GraphPalette } from './GraphPalette';
+import { stepArtboard, stepKey } from './ArtboardPicker';
 
 type IxNodeData = { logic: LogicNode; summary: string };
 
@@ -208,6 +210,7 @@ export function LogicGraph() {
   const ab = getArtboard(s.project, s.abId);
   const rf = useRef<ReactFlowInstance<Node<IxNodeData>, Edge> | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   //A menu pick (or a drop) leaves focus on a button that's just been removed, so on the page itself, where Delete and the
   //other shortcuts mean the artboard's layers. Back into the graph, unless the person has gone to a field of their own
   const focusGraph = () =>
@@ -635,14 +638,7 @@ export function LogicGraph() {
     );
 
   /** Node palette as menu items: categories with their nodes, each calling `pick(kind)`. */
-  const paletteItems = (pick: (kind: string) => void, only?: (kind: string) => boolean): MenuItem[] =>
-    (['event', 'action', 'logic'] as const)
-      .map((cat) => ({
-        label: cat === 'event' ? 'Event' : cat === 'action' ? 'Action' : 'Logic',
-        color: CAT_COLOR[cat],
-        items: CATALOG.filter((d) => d.category === cat && (!only || only(d.kind))).map((d) => ({ label: d.label, title: d.summary, onClick: () => pick(d.kind) })),
-      }))
-      .filter((g) => g.items.length);
+  const paletteItems = nodeMenuItems;
 
   const paneMenu = (e: React.MouseEvent | MouseEvent) => {
     e.preventDefault();
@@ -766,32 +762,30 @@ export function LogicGraph() {
   if (!ab) return null;
   const selected = ab.logic.nodes.find((n) => n.id === s.sel);
 
+  //"/" or Ctrl+F anywhere in the panel (outside a field being typed in) goes to the node search, and Alt+Up / Alt+Down (or Ctrl+[ and Ctrl+])
+  //step to the previous or next artboard's graph. Caught on the way down because the graph keeps its keys to itself
+  const panelKeys = (e: React.KeyboardEvent) => {
+    const t = e.target as HTMLElement;
+    const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t.isContentEditable || !!t.closest('.cm-editor');
+    if ((e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f')) {
+      e.preventDefault();
+      e.stopPropagation();
+      searchRef.current?.focus();
+      searchRef.current?.select();
+      return;
+    }
+    const dir = stepKey(e);
+    if (dir && !t.closest('.cm-editor') && !t.closest('.search-pop')) {
+      e.preventDefault();
+      e.stopPropagation();
+      stepArtboard(dir);
+    }
+  };
+
   return (
+    <div className="logic-root" onKeyDownCapture={panelKeys}>
     <SplitColumns id="logic" columns={[{ width: 170, min: 120, max: 360 }, 'flex', { width: 260, min: 200, max: 560 }]} className="logic">
-      <div className="logic-palette">
-        {(['event', 'action', 'logic'] as const).map((cat) => (
-          <div key={cat} className="palette-group">
-            <div className="palette-title" style={{ color: CAT_COLOR[cat] }}>
-              {cat === 'event' ? 'Events' : cat === 'action' ? 'Actions' : 'Logic'}
-            </div>
-            {CATALOG.filter((d) => d.category === cat).map((d) => (
-              <button
-                key={d.kind}
-                className="palette-item"
-                title={d.summary}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.effectAllowed = 'copy';
-                  e.dataTransfer.setData('application/x-ix-logic', d.kind);
-                }}
-                onClick={() => add(d.kind)}
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>
+      <GraphPalette onAdd={(kind) => add(kind)} inputRef={searchRef} />
       <div
         ref={canvasRef}
         className="logic-canvas"
@@ -913,6 +907,7 @@ export function LogicGraph() {
         )}
       </div>
     </SplitColumns>
+    </div>
   );
 }
 
