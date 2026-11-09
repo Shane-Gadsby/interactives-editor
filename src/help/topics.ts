@@ -294,8 +294,8 @@ When the project has [responsive artboards](responsive), a **Page width** slider
     id: 'canvas',
     title: 'Moving around the canvas',
     group: 'Getting started',
-    summary: 'Zoom, pan, fit, and the wheel preference.',
-    keywords: 'zoom pan scroll wheel trackpad pinch fit hand space middle mouse ctrl',
+    summary: 'Zoom, pan, fit, the wheel preference, rulers and guides.',
+    keywords: 'zoom pan scroll wheel trackpad pinch fit hand space middle mouse ctrl rulers guides project every page lock clear',
     body: `| Do this | To |
 |---|---|
 | Scroll the mouse wheel | Zoom in and out around the pointer (default) |
@@ -306,6 +306,14 @@ When the project has [responsive artboards](responsive), a **Page width** slider
 | <kbd>Shift</kbd>+<kbd>1</kbd> or <kbd>Ctrl</kbd>+<kbd>0</kbd> | Fit everything |
 | <kbd>Shift</kbd>+<kbd>2</kbd> | Zoom to the selection |
 | <kbd>Ctrl</kbd>+<kbd>1</kbd> | 100% |
+
+## Rulers and guides
+Turn the rulers on with <kbd>Shift</kbd>+<kbd>R</kbd> (or **Show rulers** in Preferences). Drag out of the top ruler for a horizontal guide and out of the left ruler for a vertical one. The number beside the pointer is the guide's position in page pixels. Layers snap to guides when **Guides** is ticked in the Snap menu. Drag it to move it, drop it back on its ruler to remove it, and right-click it for more.
+
+- **Every page or this page only.** A guide for **every page** (a project guide, drawn dashed) is measured from each page's own top left corner, so it lines up on every page of the same size, and it shows on each page it falls inside. A guide for **this page only** (drawn solid) stays on the page it was made on. Guides don't disappear when you open another page: each page keeps showing its own, a little dimmer, until you open it.
+- **Choosing.** The small button in the corner of the rulers opens the **guides menu**: **New guides go on** *Every page* or *This page only* (it starts as every page and your choice is remembered in this browser). Hold <kbd>Alt</kbd> (<kbd>Option</kbd> on a Mac) while you drag a new guide out to get the other kind for just that one. Right-click a guide and choose **Show on every page** or **Keep on this page only** to change it later, or **Show this page's guides on every page** in the guides menu to change them all at once.
+- **Lock and clear.** **Lock guides** stops guides being moved, removed or added by accident (they still snap). **Clear this page's guides**, **Clear the every-page guides** and **Clear all guides** are in the same menu, and **Lock the guides** and **Clear all guides** are in the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>). Undo brings cleared guides back.
+- Guides are for you while you edit: they never show in Preview, downloads, share links or embeds.
 
 ## Big projects and artboard pictures
 Artboards you aren't working on are shown as a *still*: a picture of themselves. That keeps panning and zooming smooth in projects with many artboards. Click an artboard (or a layer in it) and it comes alive for editing. The still updates by itself shortly after anything in it changes, so you never need to refresh it. If an artboard looks slightly soft while you pan, that is the still; click it to see it sharp. Stills are kept in this browser between sessions, so a big project opens with its artboards already showing instead of filling in one by one. An artboard that was changed since (by you or someone else) is just drawn again. While a project with several artboards opens, the canvas waits for the artboards in view (a moment) and then fades them in together.
@@ -1090,7 +1098,7 @@ The **Snap** button on the tool bar (the magnet) opens a menu that stays open wh
 - **Grid**: land on the grid lines (this is Snap to grid: <kbd>Ctrl</kbd>+<kbd>'</kbd> ticks and unticks it). Off to begin with.
 - **Artboard**: the artboard's edges and centre. Moving an artboard on the canvas, it goes to the other artboards' edges and centres.
 - **Layers**: the edges and centres of other layers. By default it means the layers beside the one you drag (the same parent); tick **Layers: all, not just siblings** to reach every layer on the artboard.
-- **Guides**: guides made from the rulers.
+- **Guides**: guides made from the rulers (the ones for every page and the page's own). See [Rulers and guides](canvas#rulers-and-guides).
 - **Spacing**: equal gaps. Drag a layer beside two that have a gap between them and it snaps to the same gap (or centres between them), and the distances show as orange measures. Moving layers only.
 - **Pixels**: whole-pixel positions and sizes. Untick it to let a layer sit between pixels.
 - **Points**: the anchor points of paths and the joints of bones. The pen, and dragging a path point, snap to them: a ring shows the one it caught. Off to begin with.
