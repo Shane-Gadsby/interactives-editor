@@ -14,10 +14,10 @@ import type { A11yReport, Finding, Fix, Severity } from '../lib/a11y/types';
 import type { Project } from 'interactives-player';
 import { SectionBlurb } from '../components/SectionBlurb';
 
-const SEVERITY: { id: Severity; label: string; plural: string; tip: string }[] = [
-  { id: 'issue', label: 'Problem', plural: 'problems', tip: 'A check found a problem' },
-  { id: 'warning', label: 'Probable', plural: 'probable', tip: 'Probably a problem: a person decides' },
-  { id: 'review', label: 'Look', plural: 'to look at', tip: 'The checker could not tell (a photo behind text, a video, what a script does): a person has to look' },
+const SEVERITY: { id: Severity; label: string; plural: string; one: string; tip: string }[] = [
+  { id: 'issue', label: 'Problem', plural: 'problems', one: 'problem', tip: 'A check found a problem' },
+  { id: 'warning', label: 'Probable', plural: 'probable', one: 'probable', tip: 'Probably a problem: a person decides' },
+  { id: 'review', label: 'Look', plural: 'to look at', one: 'to look at', tip: 'The checker could not tell (a photo behind text, a video, what a script does): a person has to look' },
 ];
 
 /** Move to what a finding is about: select its layer, or open its artboard. */
@@ -114,7 +114,7 @@ export function AccessibilityPanel() {
       <div className="a11y-bar">
         {SEVERITY.map((s) => (
           <button key={s.id} type="button" className={`a11y-chip ${s.id}${show.has(s.id) ? ' on' : ''}`} aria-pressed={show.has(s.id)} title={`${s.tip}. Click to ${show.has(s.id) ? 'hide' : 'show'} these`} onClick={() => toggle(s.id)}>
-            <span className="a11y-count">{counts[s.id]}</span> {s.plural}
+            <span className="a11y-count">{counts[s.id]}</span> {counts[s.id] === 1 ? s.one : s.plural}
           </button>
         ))}
         <label className="usage-only" title="Show the findings you have marked reviewed too">

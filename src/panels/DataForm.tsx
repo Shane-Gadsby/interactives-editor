@@ -416,7 +416,7 @@ function ScalarField({ ctx, path, label, rawKey, value, hint, item }: { ctx: Ctx
       </button>
     );
   } else if (kind === 'number') {
-    control = <NumberBox id={id} focusKey={key} value={value as number} readOnly={ro} onSet={(n) => ctx.set(path, n)} />;
+    control = <NumberBox id={id} label={label} focusKey={key} value={value as number} readOnly={ro} onSet={(n) => ctx.set(path, n)} />;
   } else if (kind === 'empty') {
     const fill = hint === 'number' || hint === 'yesno' ? hint : 'text';
     control = (
@@ -432,7 +432,7 @@ function ScalarField({ ctx, path, label, rawKey, value, hint, item }: { ctx: Ctx
       </span>
     );
   } else {
-    control = <TextBox id={id} focusKey={key} value={String(value)} readOnly={ro} onSet={(t) => ctx.set(path, scalarFromText(t, 'text'))} />;
+    control = <TextBox id={id} label={label} focusKey={key} value={String(value)} readOnly={ro} onSet={(t) => ctx.set(path, scalarFromText(t, 'text'))} />;
   }
   return (
     <div className={`form-field${item ? ' has-actions' : ''}`}>
@@ -456,7 +456,7 @@ function ScalarField({ ctx, path, label, rawKey, value, hint, item }: { ctx: Ctx
 }
 
 /** A line, or a text box that grows with what is in it. Which one is decided when it is drawn and when it loses focus, never mid-typing. */
-function TextBox({ id, focusKey, value, readOnly, onSet }: { id: string; focusKey: string; value: string; readOnly: boolean; onSet: (t: string) => void }) {
+function TextBox({ id, label, focusKey, value, readOnly, onSet }: { id: string; label: string; focusKey: string; value: string; readOnly: boolean; onSet: (t: string) => void }) {
   const [multi, setMulti] = useState(isLong(value));
   const focused = useRef(false);
   const area = useRef<HTMLTextAreaElement>(null);
@@ -469,8 +469,10 @@ function TextBox({ id, focusKey, value, readOnly, onSet }: { id: string; focusKe
     el.style.height = 'auto';
     if (el.scrollHeight) el.style.height = `${el.scrollHeight + 2}px`;
   }, [value, multi]);
+  //the label beside it names it already; the aria-label is for readers and checkers that do not follow the for/id pair
   const common = {
     id,
+    'aria-label': label,
     value,
     readOnly,
     className: 'form-text',
@@ -488,7 +490,7 @@ function TextBox({ id, focusKey, value, readOnly, onSet }: { id: string; focusKe
 }
 
 /** A number box. What is typed is kept as typed until it reads as a number, and that is what is written; a half-typed "-" or "1e" waits. */
-function NumberBox({ id, focusKey, value, readOnly, onSet }: { id: string; focusKey: string; value: number; readOnly: boolean; onSet: (n: number) => void }) {
+function NumberBox({ id, label, focusKey, value, readOnly, onSet }: { id: string; label: string; focusKey: string; value: number; readOnly: boolean; onSet: (n: number) => void }) {
   const [text, setText] = useState(String(value));
   const [bad, setBad] = useState(false);
   useEffect(() => {
@@ -504,6 +506,7 @@ function NumberBox({ id, focusKey, value, readOnly, onSet }: { id: string; focus
     <>
       <input
         id={id}
+        aria-label={label}
         type="text"
         inputMode="decimal"
         className="form-text number"

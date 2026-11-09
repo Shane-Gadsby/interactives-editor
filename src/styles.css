@@ -3157,6 +3157,9 @@ button.twisty:hover {
   flex: none;
   border-left: 1px solid var(--line);
   padding: 4px 10px;
+  /* the column scrolls by itself when its settings are taller than the panel, the lanes stay put */
+  min-height: 0;
+  overflow-y: auto;
 }
 .key-editor .field {
   margin: 4px 0;

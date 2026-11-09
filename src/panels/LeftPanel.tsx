@@ -26,7 +26,7 @@ import { useComments } from '../lib/comments';
 import { countsOf } from '../../shared/comments.mjs';
 import { rangeLabel } from '../lib/variants-edit';
 import { artboardEntries, groupOf, pickedArtboardIds } from '../lib/artboard-groups';
-import { artboardMenuItems, renameGroupCommand, tidyTheseCommand } from '../lib/artboard-commands';
+import { artboardMenuItems, fitPageSelectionItems, renameGroupCommand, tidyTheseCommand } from '../lib/artboard-commands';
 import { brandHeldIds } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
 import { extendLayers, pickLayer } from '../lib/layer-range';
@@ -470,7 +470,8 @@ export function Layers() {
           if (brand) return;
           const st = store().get();
           if (!(st.activeArtboardId === ab.id && st.selection.includes(n.id))) store().select([n.id], { artboardId: ab.id });
-          setMenu({ x: e.clientX, y: e.clientY, items: [{ heading: n.name }, ...selectSameItems(ab, n)] });
+          const fit = fitPageSelectionItems();
+          setMenu({ x: e.clientX, y: e.clientY, items: [{ heading: n.name }, ...fit, ...(fit.length ? [{ separator: true } as MenuItem] : []), ...selectSameItems(ab, n)] });
         }}
         onDragStart={(e) => {
           setDragId(n.id);

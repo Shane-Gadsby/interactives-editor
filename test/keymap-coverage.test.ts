@@ -200,6 +200,8 @@ const MENUS: Record<string, Record<string, string>> = {
     'Zoom to page': 'zoom-page',
   },
   'lib/artboard-commands.ts': {
+    'Fit page to selection': 'fit-page-selection',
+    'Fit page to selection with space around…': 'fit-page-padding',
     Duplicate: 'page.duplicate',
     'Edit master': 'page.edit-master',
     'Group pages…': 'page.group',

@@ -53,7 +53,7 @@ import { drawnBox, drawnGeometryVersion, getArtboard, hitTest, locate, nodeCorne
 import { isBrandHeld } from '../lib/branded/lock';
 import { tidyArtboardsCommand } from '../lib/tidy-command';
 import { groupFrame, groupMembers, pickedArtboardIds } from '../lib/artboard-groups';
-import { artboardMenuItems, fitPageCommand } from '../lib/artboard-commands';
+import { artboardMenuItems, fitPageCommand, fitPageSelectionItems } from '../lib/artboard-commands';
 import { assetUrls } from '../lib/assets';
 import { dataCache } from '../lib/data';
 import { prefs, setPrefs, usePrefs } from '../lib/prefs';
@@ -2191,8 +2191,7 @@ export function Canvas() {
           ],
         },
         { label: 'Group', hint: keyHints('group'), onClick: () => s2.groupSelection() },
-        //Selections are on one artboard; with several artboards picked it isn't offered
-        ...(pickedArtboardIds(s2.get()).length > 1 ? [] : [{ label: 'Fit page to selection', hint: keyHints('fit-page-selection'), title: 'Resize the page to just these layers, keeping them where they are', onClick: () => void fitPageCommand() } as MenuItem, { label: 'Fit page to selection with space around…', title: 'The same, leaving room around the layers (you choose how much)', onClick: () => void fitPageCommand({ ask: true }) } as MenuItem]),
+        ...fitPageSelectionItems(),
         ...(one && (one.type === 'group' || one.type === 'frame') ? [{ label: 'Ungroup', hint: keyHints('ungroup'), onClick: () => s2.ungroupSelection() } as MenuItem] : []),
         ...(sel.length > 1
           ? [

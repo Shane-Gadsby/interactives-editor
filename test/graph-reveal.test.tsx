@@ -120,6 +120,23 @@ describe('revealAdded', () => {
     expect(revealedWithin(1000)).toBe(true);
   });
 
+  it('the toast is a plain short one: no Undo button (the graph is on show, Ctrl+Z is there), gone in 2.5 seconds', () => {
+    vi.useFakeTimers();
+    try {
+      const { s, ab, layer } = scene();
+      const { made } = addFlow(s, ab, layer.id);
+      revealAdded({ abId: ab.id, ids: made.nodeIds, focusId: made.eventId, say: 'Added When clicked: go to the next page' });
+      expect(s.get().toast?.text).toBe('Added When clicked: go to the next page');
+      expect(s.get().toast?.action).toBeUndefined();
+      vi.advanceTimersByTime(2400);
+      expect(s.get().toast).not.toBeNull();
+      vi.advanceTimersByTime(200);
+      expect(s.get().toast).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('switches the tab when another is showing in the bottom dock', () => {
     const { s, ab, layer } = scene();
     s.set({ bottomTab: 'variables' });

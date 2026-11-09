@@ -625,3 +625,29 @@ describe('read only and shared files', () => {
     expect(source(0).assetId).toBe(source(1).assetId);
   });
 });
+
+describe('accessible names', () => {
+  //an input is named by a label bound to it (the id the label points at) or by an aria-label
+  //both ways are checked: a name on the box itself, and a label bound to it
+  const named = (el: HTMLInputElement | HTMLTextAreaElement) => (el.getAttribute('aria-label') ?? '').trim() !== '' && Array.from(el.labels ?? []).some((l) => (l.textContent ?? '').trim() !== '');
+  const unnamed = () => Array.from(host.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('.form-text')).filter((i) => !named(i)).map((i) => `${i.tagName} ${i.id}`);
+
+  it('every text and number box in the form has a name, including list items and every card opened', async () => {
+    await mount(project(files()));
+    //open every card so nothing hides a box
+    for (let i = 0; i < 6; i++) {
+      for (const t of Array.from(host.querySelectorAll<HTMLElement>('.form-card-toggle[aria-expanded="false"]'))) await click(t);
+    }
+    expect(host.querySelectorAll('.form-text').length).toBeGreaterThan(8);
+    expect(unnamed()).toEqual([]);
+    const speaker = box('Speaker') as HTMLInputElement;
+    expect(speaker.getAttribute('aria-label')).toBe('Speaker');
+  });
+
+  it('a list of plain values and a file that is just text are named too', async () => {
+    await mount(project(files('{"tags":["a","b"],"nested":[["x","y"]],"n":3}')));
+    for (let i = 0; i < 4; i++) for (const t of Array.from(host.querySelectorAll<HTMLElement>('.form-card-toggle[aria-expanded="false"]'))) await click(t);
+    expect(host.querySelectorAll('.form-text').length).toBeGreaterThan(3);
+    expect(unnamed()).toEqual([]);
+  });
+});

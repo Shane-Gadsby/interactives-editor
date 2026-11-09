@@ -5,9 +5,9 @@
 //default: one the author sized on purpose is left alone. If they resize it while the graph is open, that height is remembered
 //and used the next time (this browser).
 import { store } from '../store/store';
-import { getDock } from './dock';
+import { BOTTOM_DEFAULT, getDock } from './dock';
 
-export const DEFAULT_BOTTOM = 260;
+export const DEFAULT_BOTTOM = BOTTOM_DEFAULT;
 export const ROOM_HEIGHT = 440;
 export const KEY = 'ix-interactions-room';
 

@@ -126,6 +126,16 @@ export function tidyTheseCommand(ids: string[]): void {
 
 let lastFitPadding = 0;
 
+/** The two Fit page to selection items for a layer's right-click menu (the canvas and the Layers list share them). */
+export function fitPageSelectionItems(): MenuItem[] {
+  //Selections are on one artboard; with several artboards picked it isn't offered
+  if (pickedArtboardIds(store().get()).length > 1) return [];
+  return [
+    { label: 'Fit page to selection', hint: keyHints('fit-page-selection'), title: 'Resize the page to just these layers, keeping them where they are', onClick: () => void fitPageCommand() },
+    { label: 'Fit page to selection with space around…', title: 'The same, leaving room around the layers (you choose how much)', onClick: () => void fitPageCommand({ ask: true }) },
+  ];
+}
+
 /**
  * Fit page to selection (the open page shrinks or grows to the picked layers, which stay where they were on the canvas), or to
  * every layer on it when `layers` is set. `ask` first asks how much space to leave around them. One undo step, with the message.

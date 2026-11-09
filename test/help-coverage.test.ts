@@ -17,6 +17,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Reorder the Properties panel and tool bar': [['properties-panel', 'Moving sections'], ['interface', 'Move … up']],
   'A key for everything': [['shortcuts', 'Only ones with a key']],
   'Fit page to selection': [['artboards', 'Fit page to selection']],
+  'Small fixes from the docs pass': [['layers-panel', 'Fit page to selection with space around'], ['timelines', 'scrolls by itself'], ['interface', 'follows the window']],
   'Swap text stays with its text key': [['timelines', 'Keep the dip with this text key']],
   'Fixed: messages with an Undo button stayed on screen': [['dialogs', 'Messages at the bottom']],
   'Always show the Alt-drag hint': [['preferences', 'Alt: drag a copy']],
@@ -117,7 +118,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
-const UPCOMING = new Set(['Help, in plain words']);
+const UPCOMING = new Set(['Help, in plain words', 'Small fixes from the docs pass']);
 
 const section = (): string[] => {
   const text = readFileSync(join(__dirname, '..', 'CHANGELOG.md'), 'utf8');
