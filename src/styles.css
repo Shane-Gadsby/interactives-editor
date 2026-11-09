@@ -1,6 +1,6 @@
 /* The editor's own colours, from the shared StudyDesk palette (/styles/palette.min.css, loaded in index.html) so it
-   looks like the rest of the toolbox: its greys, its blue for focus and selection, and its gold kept for a few touches
-   (primary buttons, the open tab, the line under the top bar). Each falls back to the same colour written out, for a
+   looks like the rest of the toolbox: its greys and its gold, which is also every focus ring, chosen state and selection
+   (the old blue is gone: --accent and --accent-2 no longer exist, test/no-old-blue.test.ts keeps them that way). Each falls back to the same colour written out, for a
    server without the palette. Dark mixes the palette's darkest greys, since it has no dark panel colours of its own */
 :root {
   --u-gold: var(--ilar-swatch-yellow, #ffb448);
@@ -31,15 +31,28 @@
   --line-2: color-mix(in srgb, var(--u-g6) 80%, var(--u-g7));
   --text: var(--u-g1);
   --muted: var(--u-g4);
-  /* The palette blue in both themes: it sits under white text in menus, chips and toggles all over */
-  --accent: var(--u-blue);
-  --accent-2: var(--u-blue);
+  /* Keyboard focus: the palette gold, with a thin dark edge either side of it so the ring keeps 3:1 on white panels, gold
+     rows and dark panels alike (the way the player draws its own). --focus-halo only suits the 1px offset, so a rule that
+     moves the ring in or out sets its own. --focus-inset is the same ring for the ones drawn inside a row */
+  --focus-ring: var(--u-gold);
+  --focus-edge: var(--u-g7);
+  --focus-outline: 2px solid var(--focus-ring);
+  --focus-halo: 0 0 0 1px var(--focus-edge), 0 0 0 4px var(--focus-edge);
+  --focus-inset: inset 0 0 0 3px var(--focus-edge);
+  /* A chosen thing that has no fill of its own (a key, a node, a clip): a gold ring with a dark line inside it */
+  --sel-ring: 0 0 0 1px var(--focus-edge), 0 0 0 3px var(--primary-bg);
+  --sel-ring-thin: 0 0 0 1px var(--focus-edge), 0 0 0 2px var(--primary-bg);
+  --sel-ring-inset: inset 0 0 0 1px var(--focus-edge), inset 0 0 0 2px var(--primary-bg);
+  /* Text links: gold on the dark panels (9:1), the palette's dark text with an underline on the light ones, since gold text on white fails */
+  --link: var(--u-gold);
+  /* Information colour, not accent: what an "action" node, a review dot or a receive tag is, and nothing that is chosen or focused */
+  --info: var(--u-sky);
   --danger: color-mix(in srgb, var(--u-red) 85%, #fff);
   --ok: color-mix(in srgb, var(--u-green) 70%, #fff);
   --warn: var(--u-gold);
   --canvas: color-mix(in srgb, var(--u-g7) 70%, #000);
   --event: var(--u-gold-dark);
-  --action: var(--u-sky);
+  --action: var(--info);
   --logic: color-mix(in srgb, var(--u-purple) 70%, #fff);
   --brand: var(--u-gold);
   --primary-bg: var(--u-gold);
@@ -110,14 +123,14 @@
   --line-2: var(--u-g3);
   --text: var(--u-gt);
   --muted: var(--u-g5);
-  --accent: var(--u-blue);
-  --accent-2: var(--u-blue);
+  --link: var(--u-gt);
+  --info: var(--u-blue);
   --danger: var(--u-red);
   --ok: var(--u-green);
   --warn: var(--u-gold-darker);
   --canvas: var(--u-g2);
   --event: var(--u-gold-darker);
-  --action: var(--u-blue);
+  --action: var(--info);
   --logic: var(--u-purple);
   --brand: var(--u-gold);
   --primary-bg: var(--u-gold);
@@ -149,14 +162,14 @@
   --line-2: var(--u-g3);
   --text: var(--u-gt);
   --muted: var(--u-g5);
-  --accent: var(--u-blue);
-  --accent-2: var(--u-blue);
+  --link: var(--u-gt);
+  --info: var(--u-blue);
   --danger: var(--u-red);
   --ok: var(--u-green);
   --warn: var(--u-gold-darker);
   --canvas: var(--u-g2);
   --event: var(--u-gold-darker);
-  --action: var(--u-blue);
+  --action: var(--info);
   --logic: var(--u-purple);
   --brand: var(--u-gold);
   --primary-bg: var(--u-gold);
@@ -220,8 +233,10 @@ input[type='range'] {
   padding: 2px 6px;
 }
 :where(select:not([multiple]):not([size]):focus, input:focus, textarea:focus) {
-  border-color: var(--accent);
-  outline: none;
+  border-color: var(--focus-ring);
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 code,
 .mono {
@@ -315,12 +330,14 @@ code,
 .link-btn {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
   padding: 4px 0;
 }
 .link-btn:hover:not(:disabled) {
-  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 .icon-btn {
   display: inline-flex;
@@ -354,8 +371,29 @@ code,
   color: #fff;
 }
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
+}
+/* A bare link (Home's, the admin pages') would be the browser's blue, visited purple. :where() keeps it at zero specificity so every class that styles its own link still wins */
+:where(a) {
+  color: var(--link);
+  text-underline-offset: 2px;
+}
+/* A code editor's focus is one ring round the whole box (CodeMirror draws its own thin dotted one, and the contenteditable inside would add a second) */
+div.cm-editor.cm-focused {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
+}
+.cm-editor .cm-content:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+/* The browser's own text selection is blue; here it is the gold, dark text on it, like every other chosen thing */
+::selection {
+  background: color-mix(in srgb, var(--u-gold) 70%, transparent);
+  color: var(--u-g7);
 }
 
 /* ---------------------------------------------------------------- fields */
@@ -405,8 +443,10 @@ code,
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: var(--accent);
-  outline: none;
+  border-color: var(--focus-ring);
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .text-field.multiline {
   align-items: flex-start;
@@ -507,8 +547,9 @@ progress {
 }
 .palette-swatch:hover,
 .palette-swatch:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .palette-swatch.on {
   box-shadow: 0 0 0 2px var(--panel-2), 0 0 0 4px var(--text);
@@ -805,7 +846,7 @@ progress {
   text-transform: none;
 }
 .section-title:hover {
-  color: var(--accent);
+  color: var(--text);
 }
 .section-title {
   display: inline-flex;
@@ -849,7 +890,7 @@ progress {
 }
 .search-picker:hover,
 .search-picker.open {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .search-picker-value {
   flex: 1;
@@ -949,7 +990,9 @@ progress {
 .search-pop-list li.action {
   border-top: 1px solid var(--line);
   margin-top: 4px;
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .search-pop-list li.action.on {
   color: var(--primary-fg);
@@ -1158,7 +1201,7 @@ hr.item-sep {
   cursor: pointer;
 }
 .tag-chip:hover {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .tag-chip.active {
   background: var(--primary-bg);
@@ -2120,16 +2163,24 @@ body.col-resizing * {
 .ab-group.picked .ab-group-title {
   fill: var(--primary-fg);
 }
+.sel-outline-edge {
+  fill: none;
+  stroke: var(--focus-edge);
+  stroke-width: 3.5;
+  pointer-events: none;
+}
 .sel-outline {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--primary-bg);
   stroke-width: 1.5;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 .hover-outline {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--primary-bg);
   stroke-width: 1;
-  opacity: 0.7;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 .focus-outline {
   fill: none;
@@ -2137,8 +2188,8 @@ body.col-resizing * {
   stroke-dasharray: 4 3;
 }
 .handle {
-  fill: #fff;
-  stroke: var(--accent);
+  fill: var(--primary-bg);
+  stroke: var(--focus-edge);
   stroke-width: 1.2;
 }
 .h-nw,
@@ -2163,24 +2214,26 @@ body.col-resizing * {
   cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cg%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%2012a7%207%200%200%201%2012-4.9M19%2012a7%207%200%200%201-12%204.9%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224%22/%3E%3Cpath%20d%3D%22M17.5%203.5v4h-4M6.5%2020.5v-4h4%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224%22/%3E%3Cpath%20d%3D%22M5%2012a7%207%200%200%201%2012-4.9M19%2012a7%207%200%200%201-12%204.9%22%20stroke%3D%22%23111%22%20stroke-width%3D%221.8%22/%3E%3Cpath%20d%3D%22M17.5%203.5v4h-4M6.5%2020.5v-4h4%22%20stroke%3D%22%23111%22%20stroke-width%3D%221.8%22/%3E%3C/g%3E%3C/svg%3E") 12 12, alias;
 }
 .size-label {
-  fill: #fff;
+  fill: var(--primary-fg);
   font-size: 10.5px;
   text-anchor: middle;
   paint-order: stroke;
-  stroke: var(--accent-2);
+  stroke: var(--primary-bg);
   stroke-width: 6px;
   stroke-linejoin: round;
 }
 .marquee {
-  fill: color-mix(in srgb, var(--accent) 8%, transparent);
-  stroke: var(--accent);
+  fill: color-mix(in srgb, var(--primary-bg) 12%, transparent);
+  stroke: var(--primary-bg);
   stroke-dasharray: 3 2;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 .create-box,
 .create-line {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--primary-bg);
   stroke-width: 1;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 /* Connector tool: the layer an end would land on, its sides (the chosen one is gold), the end handles of the selected connector, and the line so far */
 .conn-target {
@@ -2273,17 +2326,20 @@ body.col-resizing * {
   pointer-events: none;
 }
 .path-point {
-  fill: #fff;
-  stroke: var(--accent);
+  fill: var(--primary-bg);
+  stroke: var(--focus-edge);
   stroke-width: 1.2;
   cursor: move;
 }
 .path-point.selected,
 .path-point.first {
-  fill: var(--accent);
+  fill: var(--focus-edge);
+  stroke: var(--primary-bg);
 }
 .path-handle {
-  fill: var(--accent);
+  fill: var(--primary-bg);
+  stroke: var(--focus-edge);
+  stroke-width: 0.8;
   cursor: move;
 }
 .grad-handle {
@@ -2293,7 +2349,7 @@ body.col-resizing * {
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
 }
 .grad-handle:hover {
-  stroke: var(--accent, #0080a8);
+  stroke: var(--primary-bg);
 }
 .grad-line {
   stroke: #fff;
@@ -2303,19 +2359,22 @@ body.col-resizing * {
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
 }
 .path-handle-line {
-  stroke: var(--accent);
+  stroke: var(--primary-bg);
   stroke-width: 1;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 .pen-preview {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--primary-bg);
   stroke-width: 1.5;
+  filter: drop-shadow(0 0 0.6px var(--focus-edge)) drop-shadow(0 0 0.6px var(--focus-edge));
 }
 .text-editor {
   position: absolute;
   z-index: 5;
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--primary-bg);
+  box-shadow: 0 0 0 1px var(--focus-edge);
   resize: none;
   padding: 0;
   margin: 0;
@@ -2386,8 +2445,8 @@ div.text-editor {
 }
 /* some of the selection has it: a dashed ring instead of the solid fill */
 .tt-btn.mixed {
-  box-shadow: inset 0 0 0 1.5px var(--accent);
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--primary-bg);
+  background: color-mix(in srgb, var(--primary-bg) 22%, transparent);
 }
 .tt-btn:disabled,
 .tt-color:has(input:disabled) {
@@ -2416,8 +2475,9 @@ div.text-editor {
   background: var(--btn-hover-bg);
 }
 .tt-swatch:focus-within {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .tt-a {
   font-weight: 700;
@@ -2545,7 +2605,7 @@ div.text-editor {
 }
 /* A chosen layer, artboard or group row: the palette's gold with its dark text, like the other chosen states. Hover on a
    plain row is the panel grey, hover on a chosen one the darker gold, a multi-selection carries a dark bar down its left
-   edge (a lone selection has none), and keyboard focus is an inset ring (blue on a plain row, dark on gold) */
+   edge (a lone selection has none), and keyboard focus is an inset ring (gold with a dark line inside on a plain row, dark on gold) */
 .layer-row.selected,
 .artboard-row.selected {
   background: var(--primary-bg);
@@ -2560,12 +2620,17 @@ div.text-editor {
 }
 .layer-row:focus-visible,
 .artboard-row:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .layer-row.selected:focus-visible,
 .artboard-row.selected:focus-visible {
   outline-color: var(--primary-fg);
+  box-shadow: none;
+}
+.layer-row.selected.multi:focus-visible {
+  box-shadow: inset 3px 0 0 var(--primary-fg);
 }
 .artboard-row.selected .badge {
   color: var(--pill-fg);
@@ -2683,7 +2748,7 @@ button.twisty:hover {
   flex: 1;
   height: 20px;
   background: var(--bg);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--primary-bg);
   border-radius: 3px;
 }
 .badge {
@@ -3050,7 +3115,7 @@ button.twisty:hover {
   width: 14px;
   height: 18px;
   margin-left: -7px;
-  background: var(--accent, #4f9dff);
+  background: var(--u-gold-darker);
   clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
   cursor: ew-resize;
   opacity: 0.8;
@@ -3136,8 +3201,8 @@ button.twisty:hover {
   width: 18px;
   height: 18px;
   border-radius: 9px;
-  background: var(--accent, #4f9dff);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   font-size: 10.5px;
   font-weight: 700;
   line-height: 18px;
@@ -3171,8 +3236,8 @@ button.twisty:hover {
   background: rgba(231, 177, 76, 0.12);
 }
 .segment.selected {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--primary-bg) 30%, transparent);
+  box-shadow: var(--sel-ring-inset);
 }
 .ease-curve {
   position: absolute;
@@ -3193,7 +3258,7 @@ button.twisty:hover {
   background: var(--bg);
 }
 .ease-curve.big polyline {
-  stroke: var(--accent);
+  stroke: var(--key-on);
   stroke-width: 2;
 }
 .key {
@@ -3213,10 +3278,10 @@ button.twisty:hover {
 }
 .key.selected {
   background: #fff;
-  box-shadow: 0 0 0 2px var(--accent);
+  box-shadow: var(--sel-ring);
 }
 .key:focus-visible {
-  outline: 2px solid var(--primary-bg);
+  outline: var(--focus-outline);
   outline-offset: 2px;
 }
 /* A hold key (text, labels): a square, not a diamond, with a flat bar to the next key because nothing eases between them */
@@ -3528,7 +3593,7 @@ button.twisty:hover {
   position: relative;
 }
 .ix-graph-node.selected {
-  box-shadow: 0 0 0 2px var(--accent);
+  box-shadow: var(--sel-ring);
 }
 /* Preview running: a node that ran lights green, an event whose "Only if" said no goes grey, the wire it followed pulses. The two
    animation names alternate (flash-0, flash-1) so the same node firing again starts the flash over. The word in the head says it too. */
@@ -3622,7 +3687,8 @@ button.twisty:hover {
   background: color-mix(in srgb, var(--group) 8%, transparent);
 }
 .ix-group.selected {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
+  box-shadow: 0 0 0 1px var(--focus-edge);
 }
 .ix-group {
   cursor: grab;
@@ -4200,8 +4266,8 @@ button.twisty:hover {
   opacity: 1;
   padding: 2px 8px;
   border-radius: 4px;
-  background: var(--accent, #1a73e8);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .preview-said span.muted {
   opacity: 0.7;
@@ -4237,9 +4303,15 @@ body:has(.modal-backdrop) .toast:not(.error):not(.stale-toast) {
   color: var(--danger-text);
 }
 
-/* React Flow, dark */
+/* React Flow, dark. Its own defaults for a drag-box and the resize handles are a blue, so both are the gold here */
 .react-flow {
   --xy-background-color: var(--canvas);
+  --xy-selection-background-color: color-mix(in srgb, var(--primary-bg) 14%, transparent);
+  --xy-selection-border: 1px dashed var(--key-on);
+  --xy-resize-background-color: var(--primary-bg);
+}
+.react-flow__resize-control.handle {
+  border-color: var(--focus-edge);
 }
 
 /* ---------------------------------------------------------------- data */
@@ -4479,8 +4551,9 @@ textarea.data-cell {
   font-variant-numeric: tabular-nums;
 }
 .data-cell:focus-visible {
-  outline: 2px solid var(--primary-bg);
+  outline: var(--focus-outline);
   outline-offset: -2px;
+  box-shadow: var(--focus-inset);
   background: var(--panel-2);
 }
 .data-cell::placeholder {
@@ -4503,8 +4576,9 @@ textarea.data-cell {
   outline: none;
 }
 .tree-item:focus-visible > .tree-line {
-  outline: 2px solid var(--primary-bg);
+  outline: var(--focus-outline);
   outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .tree-item.on > .tree-line {
   background: var(--panel-2);
@@ -4632,8 +4706,9 @@ textarea.data-cell {
 .data-formview-outline .link-btn:focus-visible,
 .form-card-toggle:focus-visible,
 .form-switch:focus-visible {
-  outline: 2px solid var(--primary-bg);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 @container (max-width: 520px) {
   .data-formview-layout.has-outline {
@@ -4670,8 +4745,9 @@ textarea.data-cell {
   font-weight: 600;
 }
 .form-list-title:focus-visible {
-  outline: 2px solid var(--primary-bg);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .form-count {
   font-weight: 400;
@@ -4776,9 +4852,10 @@ textarea.data-cell {
   min-width: 0;
 }
 .form-text:focus {
-  border-color: var(--primary-bg);
-  outline: 2px solid var(--primary-bg);
-  outline-offset: -1px;
+  border-color: var(--focus-ring);
+  outline: var(--focus-outline);
+  outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .form-text {
   box-sizing: border-box;
@@ -5037,7 +5114,7 @@ textarea.form-text {
 }
 .help-link:hover {
   color: var(--text);
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .section-head .help-link {
   margin-right: auto;
@@ -5160,7 +5237,9 @@ textarea.form-text {
   color: var(--muted);
 }
 .help-article a {
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .help-article code,
 .help-results code {
@@ -5238,7 +5317,7 @@ kbd {
 .help-note {
   margin: 12px 0;
   padding: 8px 12px;
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--primary-bg);
   background: var(--panel-2);
   border-radius: 0 var(--radius) var(--radius) 0;
 }
@@ -5247,7 +5326,7 @@ kbd {
 }
 @keyframes help-flash {
   from {
-    background: color-mix(in srgb, var(--accent) 35%, transparent);
+    background: color-mix(in srgb, var(--primary-bg) 35%, transparent);
   }
 }
 .help-pager {
@@ -5405,8 +5484,9 @@ kbd {
   font-weight: 600;
 }
 .prefs-tab:focus-visible {
-  outline: 2px solid var(--focus, var(--accent));
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .prefs-panel {
   flex: 1;
@@ -5721,8 +5801,9 @@ kbd {
   font: inherit;
 }
 .ctx-search:focus {
-  outline: 2px solid var(--accent-2);
-  outline-offset: -1px;
+  outline: var(--focus-outline);
+  outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .ctx-empty {
   padding: 5px 8px;
@@ -6123,7 +6204,7 @@ kbd {
   cursor: pointer;
 }
 .new-thumb:hover {
-  color: var(--accent);
+  color: var(--text);
 }
 .link-btn.inline {
   display: inline;
@@ -6185,7 +6266,7 @@ a.btn {
 .debug-bar > span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--key-on);
 }
 .debug-filter {
   padding: 3px 6px;
@@ -6381,7 +6462,7 @@ code {
 }
 .ce-curve {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--key-on);
   stroke-width: 2;
 }
 .ce-arm {
@@ -6390,12 +6471,12 @@ code {
 }
 .ce-handle {
   fill: var(--panel);
-  stroke: var(--accent);
+  stroke: var(--key-on);
   stroke-width: 2;
   cursor: grab;
 }
 .ce-handle:hover {
-  fill: var(--accent);
+  fill: var(--key-on);
 }
 
 /* ---------------------------------------------------------------- draw order list */
@@ -6499,8 +6580,10 @@ code {
   font: inherit;
 }
 .dialog-field input:focus {
-  outline: none;
-  border-color: var(--accent);
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+  box-shadow: var(--focus-halo);
+  border-color: var(--focus-ring);
 }
 .dialog-field input[aria-invalid='true'] {
   border-color: var(--danger);
@@ -6527,8 +6610,9 @@ code {
   filter: brightness(1.1);
 }
 .dialog .btn:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 
 /* ---------------------------------------------------------------- linked files: chooser, banner, inspector */
@@ -6638,8 +6722,9 @@ code {
   cursor: not-allowed;
 }
 .seg-btn:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .link-info {
   display: flex;
@@ -6801,8 +6886,8 @@ code {
   padding-bottom: 6px;
 }
 .badge.lib-updates {
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   border: 0;
   cursor: pointer;
 }
@@ -6890,7 +6975,9 @@ code {
 .link-btn {
   background: none;
   border: 0;
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
   padding: 0;
   text-align: left;
@@ -6952,8 +7039,8 @@ code {
 
 /* Bones: glyphs on the canvas (never drawn in the player) */
 .bone-body {
-  fill: color-mix(in srgb, var(--accent) 28%, transparent);
-  stroke: var(--accent);
+  fill: color-mix(in srgb, var(--primary-bg) 28%, transparent);
+  stroke: var(--primary-bg);
   stroke-width: 1.2;
   stroke-linejoin: round;
   cursor: grab;
@@ -6969,7 +7056,7 @@ code {
 .bone-joint,
 .bone-tip {
   fill: #fff;
-  stroke: var(--accent);
+  stroke: var(--focus-edge);
   stroke-width: 1.2;
 }
 .bone-joint {
@@ -7061,7 +7148,7 @@ code {
 }
 @keyframes paint-moved {
   from {
-    background: color-mix(in srgb, var(--accent) 35%, transparent);
+    background: color-mix(in srgb, var(--primary-bg) 35%, transparent);
   }
   to {
     background: transparent;
@@ -7070,7 +7157,7 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .paint-order-row.moved {
     animation: none;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    background: color-mix(in srgb, var(--primary-bg) 18%, transparent);
   }
 }
 .sr-only {
@@ -7313,7 +7400,7 @@ code {
 }
 .chip:hover,
 .chip:focus-visible {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .q-part-note {
   display: flex;
@@ -7404,7 +7491,7 @@ code {
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: var(--accent);
+  background: var(--key-on);
 }
 .ins-bar-fill.ok {
   background: var(--ok);
@@ -7453,7 +7540,7 @@ code {
   flex: none;
   width: 15px;
   height: 15px;
-  color: var(--accent);
+  color: var(--key-on);
 }
 
 /* The "new version, reload" notice after a deploy (lib/stale-build.ts) */
@@ -7465,7 +7552,7 @@ code {
   align-items: center;
   gap: 10px;
   max-width: min(640px, calc(100vw - 32px));
-  border-color: var(--accent, var(--line-2));
+  border-color: var(--primary-bg);
   z-index: var(--z-toast);
 }
 /* ---------------------------------------------------------------- narration and captions on the timeline */
@@ -7503,7 +7590,7 @@ code {
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 .media-label.selected {
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  background: color-mix(in srgb, var(--primary-bg) 25%, transparent);
   color: var(--text, inherit);
 }
 .media-name {
@@ -7545,7 +7632,7 @@ code {
 }
 .audio-clip.selected {
   border-color: #fff;
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: var(--sel-ring-thin);
 }
 .audio-clip.muted {
   opacity: 0.5;
@@ -7593,7 +7680,7 @@ code {
 }
 .vkey.selected {
   background: #fff;
-  box-shadow: 0 0 0 2px var(--accent);
+  box-shadow: var(--sel-ring);
 }
 .trim-handle {
   position: absolute;
@@ -7659,7 +7746,7 @@ code {
 }
 .cue.selected {
   border-color: #fff;
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: var(--sel-ring-thin);
 }
 .cue-text {
   display: block;
@@ -7737,11 +7824,11 @@ code {
   cursor: pointer;
 }
 .var-pill.on rect {
-  fill: var(--accent);
-  stroke: var(--accent);
+  fill: var(--primary-bg);
+  stroke: var(--primary-bg);
 }
 .var-pill.on text {
-  fill: #fff;
+  fill: var(--primary-fg);
 }
 .variant-list {
   list-style: none;
@@ -7848,7 +7935,7 @@ code {
   height: 22px;
   width: 0;
   border: 0;
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--primary-bg);
   background: none;
   padding: 0;
   cursor: pointer;
@@ -7861,7 +7948,7 @@ code {
   left: 0;
   transform: translateX(-50%);
   font: 10px ui-monospace, monospace;
-  color: var(--accent);
+  color: var(--text);
   pointer-events: auto;
 }
 .pw-zone {
@@ -8136,8 +8223,8 @@ code {
   border-radius: 50% 50% 50% 3px;
   transform: translate(0, -100%);
   border: 2px solid #fff;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   font: 600 11px/1 system-ui, sans-serif;
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
@@ -8161,7 +8248,7 @@ code {
   box-shadow: 0 0 0 2px var(--warn), 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 .cm-pin.selected {
-  box-shadow: 0 0 0 3px var(--accent-2), 0 0 0 5px rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 3px var(--focus-edge), 0 0 0 5px var(--primary-bg);
   z-index: 2;
 }
 .cm-pin.detached {
@@ -8169,13 +8256,14 @@ code {
 }
 .cm-pin.draft {
   background: var(--panel);
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--text);
+  border-color: var(--primary-bg);
   cursor: default;
 }
 .cm-pin:focus-visible {
-  outline: 2px solid var(--accent-2);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .cm-card {
   position: absolute;
@@ -8236,8 +8324,8 @@ code {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--accent-2);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -8267,7 +8355,8 @@ code {
   line-height: 1.4;
 }
 .cm-mention {
-  color: var(--accent);
+  color: var(--link);
+  font-weight: 600;
 }
 .cm-composer {
   position: relative;
@@ -8288,8 +8377,9 @@ code {
   padding: 6px 8px;
 }
 .cm-composer textarea:focus {
-  outline: 2px solid var(--accent-2);
-  outline-offset: -1px;
+  outline: var(--focus-outline);
+  outline-offset: -2px;
+  box-shadow: var(--focus-inset);
 }
 .cm-name {
   display: flex;
@@ -8422,8 +8512,8 @@ code {
 }
 .cm-tab-badge {
   margin-left: 5px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .project-card .cm-count {
   display: inline-flex;
@@ -8432,8 +8522,8 @@ code {
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: 9px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   font-size: 10.5px;
   font-weight: 600;
   vertical-align: middle;
@@ -8599,7 +8689,9 @@ code {
   opacity: 0.6;
 }
 .notice-list .notice-all {
-  color: var(--accent);
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .review-hint {
   position: absolute;
@@ -8790,8 +8882,9 @@ code {
 }
 .tl-row-pick:focus-visible,
 .tl-row-edit:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .tl-row.active .tl-row-pick:focus-visible {
   outline-color: var(--primary-fg);
@@ -8873,8 +8966,9 @@ code {
   min-width: 0;
 }
 .media-fold:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .media-summary {
   color: var(--muted);
@@ -9254,7 +9348,9 @@ code {
   padding: 2px 4px 2px 8px;
   border: 1px solid var(--line-2);
   border-radius: 999px;
-  color: var(--accent);
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -9352,7 +9448,7 @@ code {
   cursor: default;
 }
 .checklist-text:not(:disabled) {
-  color: var(--accent);
+  color: var(--link);
 }
 .update-group {
   margin: 6px 0;
@@ -9521,7 +9617,7 @@ code {
 }
 .color-field .swatch.linked {
   border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--accent);
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--primary-bg);
   overflow: visible;
 }
 .color-field .swatch.linked svg {
@@ -9531,8 +9627,8 @@ code {
   padding: 2px;
   box-sizing: content-box;
   border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
 }
 .token-chip {
   display: flex;
@@ -9732,7 +9828,7 @@ code {
   text-overflow: ellipsis;
 }
 .font-picker.open .font-input {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .font-pop {
   position: fixed;
@@ -9867,8 +9963,9 @@ code {
 }
 .np-tab:focus-visible,
 .np-opt:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .np-tab-label {
   font-weight: 600;
@@ -10160,7 +10257,7 @@ code {
 .motion-progress .bar span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--key-on);
 }
 
 /* Attributions and references */
@@ -10330,8 +10427,9 @@ code {
   border-color: var(--text);
 }
 .colourway-swatch:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .colourway-swatch.on {
   box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--text);
@@ -10433,7 +10531,7 @@ code {
 .weight-bar span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--key-on);
 }
 .weight-size {
   flex: 0 0 auto;
@@ -10505,7 +10603,7 @@ code {
 
 /* The selection of the text being edited, drawn while the focus is in the toolbar (the browser stops drawing it then) */
 ::highlight(tt-sel) {
-  background-color: rgba(60, 130, 246, 0.35);
+  background-color: rgba(255, 180, 72, 0.5);
 }
 .themes-way-pick {
   max-width: 100%;
@@ -10716,8 +10814,9 @@ code {
 .note-box:focus-visible,
 .note-act:focus-visible,
 .note-swatch:focus-visible {
-  outline: 2px solid var(--u-g7);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 /* A turned-up corner, which is also where the note is resized from */
 .note-fold {
@@ -11167,8 +11266,9 @@ code {
   color: var(--primary-fg);
 }
 .page-link-handle:focus-visible {
-  outline: 2px solid var(--focus, var(--primary-bg));
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .page-link-stem {
   position: absolute;
@@ -11233,8 +11333,9 @@ body.page-link-dragging * {
   color: var(--primary-fg);
 }
 .nav-style:focus-visible {
-  outline: 2px solid var(--focus, var(--primary-bg));
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .row-actions {
   display: flex;
@@ -11500,8 +11601,9 @@ button.flow-text:hover {
   text-decoration: underline;
 }
 button.flow-text:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 
 /* the behaviour chooser */
@@ -11554,8 +11656,9 @@ button.flow-text:focus-visible {
   cursor: not-allowed;
 }
 .recipe-opt:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .recipe-name {
   font-weight: 600;
@@ -11690,8 +11793,9 @@ button.flow-text:focus-visible {
   border-color: var(--primary-bg);
 }
 .fr-goal:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .fr-goal span {
   color: var(--muted);
@@ -11999,11 +12103,12 @@ button.flow-text:focus-visible {
   cursor: pointer;
 }
 .gs-job:hover {
-  border-color: var(--accent);
+  border-color: var(--primary-bg);
 }
 .gs-job:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-outline);
   outline-offset: 2px;
+  box-shadow: var(--focus-halo);
 }
 .gs-tick {
   display: inline-grid;
@@ -12266,8 +12371,9 @@ button.flow-text:focus-visible {
   color: var(--primary-fg);
 }
 .share-choice:focus-within {
-  outline: 2px solid var(--text);
+  outline: var(--focus-outline);
   outline-offset: 1px;
+  box-shadow: var(--focus-halo);
 }
 .share-thing {
   display: flex;

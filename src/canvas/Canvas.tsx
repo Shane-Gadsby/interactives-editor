@@ -1738,6 +1738,7 @@ export function Canvas() {
       const a = toS(active, { x: 0, y: 0 });
       const bw = active.width * zoom;
       const bh = active.height * zoom;
+      overlay.push(<rect key="ab-sel-edge" className="sel-outline-edge" x={a.x} y={a.y} width={bw} height={bh} />);
       overlay.push(<rect key="ab-sel" className="sel-outline" x={a.x} y={a.y} width={bw} height={bh} />);
       // the other selected artboards get the same outline (and no handles: they are moved, grouped and tidied together)
       for (const id of pickedNow) {
@@ -1810,6 +1811,8 @@ export function Canvas() {
           overlay.push(<polygon key={`m-${id}`} className="hover-outline" points={pts.map((p) => `${p.x},${p.y}`).join(' ')} />);
         }
       }
+      //the dark line under the gold one, so the outline still shows on a gold or white layer
+      overlay.push(<polygon key="sel-edge" className="sel-outline-edge" points={quad.map((p) => `${p.x},${p.y}`).join(' ')} />);
       overlay.push(<polygon key="sel" className="sel-outline" points={quad.map((p) => `${p.x},${p.y}`).join(' ')} />);
       const at = (fx: number, fy: number): Pt => {
         const top = { x: quad[0].x + (quad[1].x - quad[0].x) * fx, y: quad[0].y + (quad[1].y - quad[0].y) * fx };

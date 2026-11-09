@@ -444,7 +444,7 @@ The small **(i)** icon in the title bar shows the version of Interactives you ar
 - With the keyboard: <kbd>Tab</kbd> goes into the list of pages, <kbd>↑</kbd> and <kbd>↓</kbd> (<kbd>←</kbd> and <kbd>→</kbd> in the narrow row) move between pages, <kbd>Home</kbd> and <kbd>End</kbd> go to the first and last, and <kbd>Tab</kbd> again goes to the settings. A screen reader hears a list of tabs, one panel, and each field with its name. The editor's own keys stand down while the window is open.
 
 ## General
-- **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette, the same colours as the rest of the Toolbox: its greys, its blue for selection and focus, and UniSQ gold on primary buttons, the open tab and the line under the top bar.
+- **Theme**: *Dark*, *Light*, or *Auto (follow the system)*. Both are made from the StudyDesk palette, the same colours as the rest of the Toolbox: its greys and UniSQ gold. Gold is every chosen thing (the open tab, a selected row, a ticked option, a selected layer on the canvas) and every keyboard focus ring, so wherever you are the ring is the same gold with a thin dark edge that keeps it visible on white panels, gold rows and dark ones. Links are underlined: dark text in the light theme, gold in the dark one.
   - In Light, the palette's grey for secondary text is a little under the usual contrast guideline (4.4:1 on panels and 4.1:1 on the background, against 4.5:1). It is left as the palette has it so the editor matches the Toolbox.
 - **Code editor colours**: *Follow the editor* (the default), *Light* or *Dark*. It sets the colours of every code box: the **Scripts** tab, the raw text of a data file, and the HTML and code fields in the Properties panel.
   - *Follow the editor* draws code light when the editor is light (or Auto on a light system) and dark when it is dark, and switches the moment the theme does.
@@ -775,7 +775,7 @@ Each page has its own size, background, layers, timelines and interactions. Vari
 ## Selecting several pages
 Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click page names on the canvas, or rows in the **Layers** panel. <kbd>Ctrl</kbd>+click on a chosen page takes it out again. <kbd>Shift</kbd>+click on a name adds it, and <kbd>Shift</kbd>+click on a row selects every row between it and the one you clicked before.
 
-Chosen pages have a gold name and row, and the same blue outline as a single page. Drag any chosen page's name to move them all together.
+Chosen pages have a gold name and row, and the same gold outline as a single page. Drag any chosen page's name to move them all together.
 
 With several chosen, the Inspector shows what you can do to all of them:
 - align their edges or centres, and distribute them evenly (three or more);
@@ -1711,13 +1711,13 @@ Every constraint has a **Strength** (0 to 100%) that mixes between the layer's o
     group: 'Motion',
     summary: 'Rig a character with bones, bend paths and images with them, and pose limbs with IK.',
     keywords: 'bone skeleton rig rigging skin skinning weights bind mesh deform ik inverse kinematics distance constraint character puppet example demo try tutorial arm',
-    body: `A **bone** is a layer that only exists to be posed. Draw a chain of bones, **bind** paths and images to them, and the shapes bend where the bones turn. Bones are drawn on the canvas as blue glyphs while you edit; the player never shows them.
+    body: `A **bone** is a layer that only exists to be posed. Draw a chain of bones, **bind** paths and images to them, and the shapes bend where the bones turn. Bones are drawn on the canvas as gold glyphs while you edit; the player never shows them.
 
 ## Try bones in two minutes
 Not sure where to start? Let the editor build a working rig, then take it apart.
 
 1. With nothing selected, open the **Bones** section in the Inspector (the right panel) and click **Build an example to try**. (A selected bone has the same button.)
-2. On the artboard you get a three-bone arm with a shape skinned to it, an **orange dot**, a **Wave** button and the instruction *Drag the orange dot*. The blue lines inside the arm are the bones; they show in the editor, never in the player. Click a bone in **Layers** (*Upper arm*, *Forearm*, *Hand*) to see it.
+2. On the artboard you get a three-bone arm with a shape skinned to it, an **orange dot**, a **Wave** button and the instruction *Drag the orange dot*. The gold lines inside the arm are the bones; they show in the editor, never in the player. Click a bone in **Layers** (*Upper arm*, *Forearm*, *Hand*) to see it.
 3. Click **Preview** (top right) and **drag the orange dot**. The arm bends to follow it: the dot is the target of an **IK** constraint on the *Hand* bone, three bones long. Drag it out of reach and the arm straightens toward it.
 4. Press **Wave**. A timeline called *Example: wave* swings the bones by hand for two seconds, with the IK **Strength** keyed down to 0 so the keyed poses win. As the strength comes back to 1 the arm returns to the dot.
 5. Close Preview, select the *Hand* bone and look at **Constraints**: *IK*, target *IK target (drag me)*, 3 bones. Try **Bend the other way**, or drop the bones to 2 to see the hand end swing free. Select *Arm* to see its **Skin**, and a point's weights in **Weights of**.
