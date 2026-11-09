@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it, vi } from 'vitest';
 import { createArtboard, createNode, createProject, readPackage, type Asset, type Project } from 'interactives-player';
-import { catalogueUrl, embedLinkedAssets, failureMessage, fetchLinkedBytes, imgAttributes, isLinkedAsset, parseCatalogueMessage, withFetched } from '../src/lib/media-catalogue';
+import { catalogueUrl, embedLinkedAssets, failureMessage, fetchLinkedBytes, imgAttributes, isLinkedAsset, parseCatalogueMessage, sisterOrigin, withFetched } from '../src/lib/media-catalogue';
 import { downloadPackage, standaloneHtml } from '../src/lib/export';
 import { exportPackage } from '../src/lib/db';
 
@@ -51,6 +51,23 @@ describe('reading the catalogue message', () => {
     for (const src of ['javascript:alert(1)', 'data:image/png;base64,AAAA', 'https://elsewhere.example/a.jpg', `http://lti.example.edu/a.jpg`, '//elsewhere.example/a.jpg', 'blob:https://lti.example.edu/1']) {
       expect(parseCatalogueMessage(insert(code(src)), ORIGIN, ORIGIN), src).toBeNull();
     }
+  });
+  it('takes the legacy gallery photo from the other university host, at the catalogue address', () => {
+    const legacy = `<img class="photography-catalogue-photo atto_image_button_text-bottom" src="https://lti.unisq.edu.au/photography-gallery/photos/19533MEC2901_1220_AS_002.jpg" role="presentation" data-cdt-id="x" loading="lazy" decoding="async">`;
+    const m = parseCatalogueMessage(insert(legacy), 'https://lti.usq.edu.au', 'https://lti.usq.edu.au');
+    expect(m).toEqual({ kind: 'insert', pick: { src: 'https://lti.usq.edu.au/photography-gallery/photos/19533MEC2901_1220_AS_002.jpg', name: '19533MEC2901_1220_AS_002', mime: 'image/jpeg', alt: '', catalogue: undefined } });
+    const back = parseCatalogueMessage(insert(code('https://lti.test.usq.edu.au/media-catalogue/photos/a.jpg')), 'https://lti.test.unisq.edu.au', 'https://lti.test.unisq.edu.au') as { pick: { src: string } };
+    expect(back.pick.src).toBe('https://lti.test.unisq.edu.au/media-catalogue/photos/a.jpg');
+    // only the matching sister: another usq host, http, or a lookalike is still refused
+    for (const src of ['https://www.unisq.edu.au/a.jpg', 'http://lti.unisq.edu.au/a.jpg', 'https://lti.unisq.edu.au.evil.example/a.jpg', 'https://lti.unisq.edu.evil/a.jpg']) {
+      expect(parseCatalogueMessage(insert(code(src)), 'https://lti.usq.edu.au', 'https://lti.usq.edu.au'), src).toBeNull();
+    }
+  });
+  it('knows the sister host only for usq and unisq', () => {
+    expect(sisterOrigin('https://lti.usq.edu.au')).toBe('https://lti.unisq.edu.au');
+    expect(sisterOrigin('https://lti.test.unisq.edu.au')).toBe('https://lti.test.usq.edu.au');
+    expect(sisterOrigin('http://127.0.0.1')).toBeNull();
+    expect(sisterOrigin('https://usq.example.com')).toBeNull();
   });
   it('takes a path on the same origin and makes it whole', () => {
     const m = parseCatalogueMessage(insert(code('/media-catalogue/photos/a.jpg')), ORIGIN, ORIGIN) as { pick: { src: string } };

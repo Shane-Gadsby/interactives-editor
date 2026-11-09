@@ -1571,6 +1571,8 @@ The grid is never in **Preview**, in exports, in share links or in pictures of t
     icon: 'catalogue',
     body: `The **Media Catalogue** button, in the tool bar's **Media** group (open the group if it is folded) with the same icon as the catalogue button in StudyDesk's editor, opens the suite's photo library in a window over the editor. Search or browse, open a photo, and press **Insert**: the window closes and the photo is on the open artboard as an image layer, centred and scaled to fit (up to 600 px). Close the window without inserting with its **×**, <kbd>Esc</kbd> or the catalogue's own close button. If you open it with a picture layer that came from the catalogue selected, it opens where that photo was found.
 
+Where the older **Photography catalogue** still answers at that address (StudyDesk's live site, until it moves to the Media Catalogue), the button opens that one instead, and it works the same way: open a photo and press its insert button. It doesn't remember where a photo was found, so it always opens at the start.
+
 ## How it is stored
 The picture is **linked, not copied**: the layer points at the photo's address in the catalogue. The Assets panel shows it like any picture. Saving, share links, review links, Preview and embeds keep the link, so they stay small and follow the catalogue. The same photo inserted twice is one asset.
 
