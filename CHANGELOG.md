@@ -2,6 +2,8 @@
 
 ## Unreleased: Symposium 3
 
+- **A key for everything**: every tool, panel, window and action in the editor now has a place in the keyboard shortcuts sheet and can be given a key (most start with "No key"; search for it and press Set key), with an "Only ones with a key" switch for a quick reminder. Hide/show and lock/unlock selected layers are on Ctrl+Shift+H and Ctrl+Shift+L, and zoom in/out, zoom to the page, three more exports and several page and graph commands can now be keyed too.
+- **Fit page to selection**: Ctrl+Alt+Shift+F (or right-click the layers, or the command palette) shrinks the open page to the selected layers and keeps them where they were on the canvas. **Fit page to selection with space around…** leaves the room you ask for, and **Fit page to its layers** (right-click the page) fits it to everything on it.
 - **Swap text stays with its text key**: the fade or blur that Swap text adds now moves when you move or retime the text key, and goes when you delete it. Tied keys are hollow diamonds; editing one by hand lets just that key go. Untick **Keep the dip with this text key** in the Keyframe panel for plain keys instead.
 - **Fixed: messages with an Undo button stayed on screen**: a message such as "Placed the component … in …" never went away once anything else changed, and sat over open dialogs. It now goes after nine seconds whatever happens, and while a dialog such as Preferences is open it sits underneath it (errors such as "Not saved" still show on top).
 - **Always show the Alt-drag hint**: a new Preference shows "Alt: drag a copy" on every drag instead of only the first three.
