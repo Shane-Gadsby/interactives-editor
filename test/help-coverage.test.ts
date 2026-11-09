@@ -122,7 +122,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
-const UPCOMING = new Set<string>(['Smaller saves and a faster first load']);
+const UPCOMING = new Set<string>([]);
 
 const section = (): string[] => {
   const text = readFileSync(join(__dirname, '..', 'CHANGELOG.md'), 'utf8');
