@@ -9,6 +9,7 @@ let port = Number(process.env.PORT) || 3048,
 	mongoConnect = require('../suite-libs/mongo-connect'),
 	client = mongoConnect(),
 	cacheHeaders = require('../suite-libs/cache-headers'),
+	precompressed = require('./precompressed'),
 	sessionCheck = require('../suite-libs/session-check'),
 	path = require('path'),
 	crypto = require('crypto'),
@@ -4750,8 +4751,11 @@ router.get(['/', '/index.html'], cacheHeaders.document, (req, res) => {
 })
 
 //Vite's output is content hashed, so those files can be cached hard. Everything else goes through the suite's rules
-router.use('/assets', express.static(`${__dirname}/dist/assets`, {immutable: true, maxAge: '1y'}))
-router.use(express.static(`${__dirname}/dist`, cacheHeaders.staticOptions))
+//(precompressed hands out the .br/.gz copies the build leaves beside each text file when the browser takes them,
+//with the same cache options, and passes everything else on to express.static)
+let assetOptions = {immutable: true, maxAge: '1y'}
+router.use('/assets', precompressed(`${__dirname}/dist/assets`, assetOptions), express.static(`${__dirname}/dist/assets`, assetOptions))
+router.use(precompressed(`${__dirname}/dist`, cacheHeaders.staticOptions), express.static(`${__dirname}/dist`, cacheHeaders.staticOptions))
 
 //The editor routes in the browser (#/project/<id>), so anything else really is a 404
 app.use(`/${appName}`, router)

@@ -245,7 +245,7 @@ From left to right:
 
 - **All projects** (the house): back to your [projects page](projects), with the project you left highlighted for a moment.
 - The **project name**. Click to rename.
-- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason). A save that failed because of the network or the server tries again by itself, and says **Saved again** when it gets there.
+- The save state: **Saved**, **Saving…**, **Unsaved** or **Save failed** (hover it for the reason). A save that failed because of the network or the server tries again by itself, and says **Saved again** when it gets there. A big project is sent squeezed (compressed), so saving it takes far less of a slow upload, and there is nothing to switch on.
 - **Live**: the project's live connection, **Live**, **Reconnecting** or **Deleted**. When other people are in the project too, their initials show beside it. See [Live editing and saving](live-editing).
 - **Revision history** (the clock): earlier saved versions of the project.
 - **Undo** and **Redo**.
