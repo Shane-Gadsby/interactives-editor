@@ -1621,7 +1621,7 @@ export class EditorStore {
 
   // ---------------------------------------------------------------- timelines
 
-  addTimeline(): string {
+  addTimeline(name = 'Timeline'): string {
     track('feature', 'timeline-add');
     const ab = this.artboard();
     if (!ab) return '';
@@ -1629,7 +1629,7 @@ export class EditorStore {
       id: uid('tl'),
       name: uniqueName(
         ab.timelines.map((t) => t.name),
-        'Timeline',
+        name,
       ),
       duration: 1000,
       loop: 'once',
@@ -1642,6 +1642,72 @@ export class EditorStore {
     });
     this.set({ activeTimelineId: tl.id, playhead: 0, bottomTab: 'timeline' });
     return tl.id;
+  }
+
+  /** Rename a timeline of the open artboard. Empty names and names another timeline has are refused (returns false). */
+  renameTimeline(id: string, name: string): boolean {
+    const ab = this.artboard();
+    const clean = name.trim();
+    if (!ab || !clean) return false;
+    if (ab.timelines.some((t) => t.id !== id && t.name === clean)) return false;
+    const tl = ab.timelines.find((t) => t.id === id);
+    if (!tl) return false;
+    if (tl.name === clean) return true;
+    track('feature', 'timeline-rename');
+    this.update((d) => {
+      const t = getArtboard(d as Project, ab.id)?.timelines.find((x) => x.id === id);
+      if (t) t.name = clean;
+    });
+    return true;
+  }
+
+  /** Move a timeline to a place in the open artboard's list (the order is what "after the timelines that play before it" means for held poses). */
+  moveTimeline(id: string, to: number): void {
+    const ab = this.artboard();
+    const from = ab?.timelines.findIndex((t) => t.id === id) ?? -1;
+    if (!ab || from < 0) return;
+    const at = Math.max(0, Math.min(ab.timelines.length - 1, to));
+    if (at === from) return;
+    track('feature', 'timeline-reorder');
+    this.update((d) => {
+      const list = getArtboard(d as Project, ab.id)!.timelines;
+      const [t] = list.splice(from, 1);
+      list.splice(at, 0, t);
+    });
+  }
+
+  /** A copy of a timeline right after it, with new ids, named "<name> copy", not set to autoplay (so the two don't both start). Returns the copy's id. */
+  duplicateTimeline(id: string): string {
+    const ab = this.artboard();
+    const src = ab?.timelines.find((t) => t.id === id);
+    if (!ab || !src) return '';
+    track('feature', 'timeline-duplicate');
+    const copy = JSON.parse(JSON.stringify(src)) as Timeline;
+    copy.id = uid('tl');
+    copy.name = uniqueName(
+      ab.timelines.map((t) => t.name),
+      `${src.name} copy`,
+    );
+    copy.autoplay = false;
+    for (const tr of copy.tracks) tr.id = uid('tr');
+    for (const m of copy.markers ?? []) m.id = uid('mk');
+    this.update((d) => {
+      const list = getArtboard(d as Project, ab.id)!.timelines;
+      list.splice(list.findIndex((t) => t.id === id) + 1, 0, copy);
+    });
+    this.set({ activeTimelineId: copy.id, playhead: 0, selectedKeys: [] });
+    return copy.id;
+  }
+
+  /** Delete a timeline of the open artboard. Things that played it by name or id are left to the Usage tab to flag. */
+  deleteTimeline(id: string): void {
+    const ab = this.artboard();
+    if (!ab?.timelines.some((t) => t.id === id)) return;
+    track('feature', 'timeline-delete');
+    this.update((d) => {
+      const a = getArtboard(d as Project, ab.id);
+      if (a) a.timelines = a.timelines.filter((t) => t.id !== id);
+    });
   }
 
   updateTimeline(fn: (tl: Draft<Timeline>) => void, coalesce?: string): void {

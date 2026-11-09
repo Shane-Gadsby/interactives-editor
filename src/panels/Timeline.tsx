@@ -16,7 +16,10 @@ import { ContextMenu, type MenuItem } from '../components/ContextMenu';
 import type { Project } from 'interactives-player';
 import { assetKind, assetUrls } from '../lib/assets';
 import { ensureCaptionTrack, ensureDescriptionTrack, findTrack, addCue } from '../lib/captions-edit';
-import { MediaEditor, MediaLabels, MediaLanes, TranscriptDialog, addSoundToTimeline, exportCaptions, importCaptionsInto, type MediaCtx, type MediaSel } from './TimelineMedia';
+import { MediaEditor, MediaLabels, MediaLanes, TranscriptDialog, addSoundToTimeline, exportCaptions, importCaptionsInto, type MediaCtx, type MediaGroupView, type MediaSel } from './TimelineMedia';
+import { TimelineList, openTimeline } from './TimelineList';
+import { setPrefs, usePrefs } from '../lib/prefs';
+import { HIDE_PREF, LANE_KINDS, LANE_NAME, groupOpen, laneShow } from '../lib/timeline-view';
 import { promptDialog } from '../components/dialogs';
 import { magnetNudge, staggerSelected } from '../lib/key-edit';
 
@@ -112,6 +115,10 @@ export function TimelinePanel() {
   // The sound or caption row being edited, and the caption track whose Paste a transcript dialog is open
   const [media, setMedia] = useState<MediaSel>(null);
   const [pasteTrack, setPasteTrack] = useState<string | null>(null);
+  // The Sound and captions group: opened or folded by hand on a timeline (otherwise by whether it has anything in it), and what the View menu hides
+  const pref = usePrefs();
+  const show = laneShow(pref);
+  const [groupChosen, setGroupChosen] = useState<Record<string, boolean>>({});
   // Sounds play with the preview, and sit parked at the playhead when it is scrubbed
   // Web Audio, like the player: the keyboard's play/pause key can't stop it
   const mixer = useMemo(() => createMixer({ resolve: assetUrls.resolve }), []);
@@ -173,7 +180,9 @@ export function TimelinePanel() {
   if (!tl) {
     // Design view: the canvas shows the layers as they are. Picking a timeline shows its frames.
     return (
-      <div className="panel-empty">
+      <div className="timeline-shell">
+        {pref.timelineList && <TimelineList />}
+        <div className="panel-empty">
         {ab.timelines.length ? (
           <>
             <p>Design view: the canvas shows the layers as they are. Choose a timeline to see and edit its animation.</p>
@@ -182,8 +191,13 @@ export function TimelinePanel() {
                 value=""
                 title="Show and edit a timeline on the canvas"
                 options={[{ value: '', label: 'Choose a timeline…' }, ...ab.timelines.map((t) => ({ value: t.id, label: t.name })), { value: '__new', label: '+ New timeline' }]}
-                onChange={(v) => (v === '__new' ? store().addTimeline() : v && store().set({ activeTimelineId: v, playhead: 0, selectedKeys: [] }))}
+                onChange={(v) => (v === '__new' ? store().addTimeline() : v && openTimeline(v))}
               />
+              {!pref.timelineList && (
+                <button className="btn" title="Show the list of this artboard's timelines beside the Timeline" onClick={() => setPrefs({ timelineList: true })}>
+                  Show the list
+                </button>
+              )}
             </div>
           </>
         ) : (
@@ -194,6 +208,7 @@ export function TimelinePanel() {
             </button>
           </>
         )}
+        </div>
       </div>
     );
   }
@@ -461,16 +476,30 @@ export function TimelinePanel() {
   for (let t = 0; t <= tl.duration + 0.1; t += step) ticks.push(t);
   const selNode = s.selection.length === 1 ? locate(ab, s.selection[0])?.node : null;
 
+  const mediaView: MediaGroupView = {
+    show,
+    open: groupOpen(tl, show, pref.timelineFoldEmpty, groupChosen[tl.id]),
+    onToggle: () => setGroupChosen((g) => ({ ...g, [tl.id]: !groupOpen(tl, show, pref.timelineFoldEmpty, g[tl.id]) })),
+  };
+
   return (
+    <div className="timeline-shell">
+    {pref.timelineList && <TimelineList />}
     <div className="timeline">
       <div className="timeline-bar">
         <SelectField
           value={tl.id}
           options={[{ value: '__design', label: 'Design view (no timeline)' }, ...ab.timelines.map((t) => ({ value: t.id, label: t.name })), { value: '__new', label: '+ New timeline' }]}
-          onChange={(v) =>
-            v === '__new' ? store().addTimeline() : store().set({ activeTimelineId: v === '__design' ? null : v, playhead: 0, selectedKeys: [], recording: v === '__design' ? false : store().get().recording })
-          }
+          onChange={(v) => (v === '__new' ? store().addTimeline() : openTimeline(v === '__design' ? null : v))}
         />
+        <button
+          className={`btn${pref.timelineList ? ' active' : ''}`}
+          aria-pressed={pref.timelineList}
+          title={pref.timelineList ? 'Hide the list of this artboard’s timelines' : 'Show the list of this artboard’s timelines beside the Timeline: length, what plays each, which layers it animates; rename, reorder, duplicate and delete there'}
+          onClick={() => setPrefs({ timelineList: !pref.timelineList })}
+        >
+          List ({ab.timelines.length})
+        </button>
         <IconButton icon={s.playing ? <Icons.pause /> : <Icons.play />} title={s.playing ? 'Pause preview' : 'Play preview'} onClick={() => store().set({ previewPlaying: !s.playing, playhead: !s.playing && s.playhead >= tl.duration ? 0 : s.playhead })} />
         <IconButton icon={<Icons.stop />} title="Back to start" onClick={() => store().set({ previewPlaying: false, playhead: 0 })} />
         <IconButton icon={<Icons.record />} className="record-btn" title="Record: property changes become keyframes" active={s.recording} onClick={() => store().set({ recording: !s.recording })} />
@@ -528,15 +557,19 @@ export function TimelinePanel() {
         >
           Steps
         </button>
+        <TimelineViewMenu>
+          {LANE_KINDS.map((k) => (
+            <CheckField key={k} label={`Show the ${LANE_NAME[k]} lane`} title={`${LANE_NAME[k]} rows under the ruler. Hiding it also hides its Add controls; turn it back on here`} value={show[k]} onChange={(v) => setPrefs({ [HIDE_PREF[k]]: !v })} />
+          ))}
+          <CheckField label="Fold Sound and captions when empty" title="A timeline with no sound, captions or descriptions shows them as one row. Open it with the arrow on that row" value={pref.timelineFoldEmpty} onChange={(v) => setPrefs({ timelineFoldEmpty: v })} />
+          <CheckField label="Show the list of timelines" title="The column beside the Timeline" value={pref.timelineList} onChange={(v) => setPrefs({ timelineList: v })} />
+        </TimelineViewMenu>
         <IconButton
           icon={<Icons.trash />}
           title="Delete timeline"
           onClick={async () => {
             if (!(await confirmDialog({ title: 'Delete timeline', message: `Delete timeline "${tl.name}"?`, confirmLabel: 'Delete timeline', danger: true }))) return;
-            store().update((d) => {
-              const a = d.artboards.find((x) => x.id === ab.id);
-              if (a) a.timelines = a.timelines.filter((t) => t.id !== tl.id);
-            });
+            store().deleteTimeline(tl.id);
           }}
         />
       </div>
@@ -556,6 +589,7 @@ export function TimelinePanel() {
           </div>
           <MediaLabels
             ctx={mediaCtx}
+            view={mediaView}
             assetsFor={soundAssets}
             onAddSound={async (id) => {
               const made = await addSoundToTimeline(id, s.playhead);
@@ -610,7 +644,7 @@ export function TimelinePanel() {
               ) : null,
             )}
           </div>
-          <MediaLanes ctx={mediaCtx} />
+          <MediaLanes ctx={mediaCtx} view={mediaView} />
           <TrackLanes byNode={byNode} duration={tl.duration} pxPerMs={pxPerMs} selectedKeys={s.selectedKeys} tween={tween} pointsOpen={pointsOpen} h={{ scrub, keyDown, keysDown, setTween }} />
           {selMarker && <div className="marker-line" style={{ left: X(Math.min(selMarker.time, tl.duration)) }} aria-hidden="true" />}
           <div className="playhead" style={{ left: X(Math.min(s.playhead, tl.duration)) }} />
@@ -726,6 +760,7 @@ export function TimelinePanel() {
       {pasteTrack && tl.captions?.some((c) => c.id === pasteTrack) && (
         <TranscriptDialog tl={tl} track={tl.captions.find((c) => c.id === pasteTrack)!} onClose={() => setPasteTrack(null)} onDone={(m) => store().toast(m)} />
       )}
+    </div>
     </div>
   );
 }
@@ -968,6 +1003,23 @@ function EaseCurve({ ease: e, width, height = 14, big }: { ease: Easing; width: 
 
 /** The gear in the Timeline bar: the timeline's settings (name, length, loop, speed, frame rate, autoplay) in a popover. */
 function TimelineSettings({ children }: { children: React.ReactNode }) {
+  return (
+    <BarPopover icon={<Icons.gear />} title="Timeline settings: name, length, loop, speed, frame rate, autoplay" heading="Timeline settings">
+      {children}
+    </BarPopover>
+  );
+}
+
+/** The View button in the Timeline bar: which lanes show, and whether empty ones fold. Remembered per person. */
+function TimelineViewMenu({ children }: { children: React.ReactNode }) {
+  return (
+    <BarPopover icon={<Icons.eye />} title="Timeline view: show or hide the Sound, Captions and Descriptions lanes, and the list of timelines" heading="Timeline view">
+      {children}
+    </BarPopover>
+  );
+}
+
+function BarPopover({ icon, title, heading, children }: { icon: React.ReactNode; title: string; heading: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const pop = useRef<HTMLDivElement>(null);
@@ -997,11 +1049,11 @@ function TimelineSettings({ children }: { children: React.ReactNode }) {
   }, [open]);
   return (
     <div className="tl-settings" ref={box}>
-      <IconButton icon={<Icons.gear />} title="Timeline settings: name, length, loop, speed, frame rate, autoplay" active={open} onClick={() => setOpen(!open)} />
+      <IconButton icon={icon} title={title} active={open} onClick={() => setOpen(!open)} />
       {open &&
         createPortal(
-          <div ref={pop} className="tl-settings-pop" role="dialog" aria-label="Timeline settings" style={{ left: at?.left ?? -9999, top: at?.top ?? -9999 }} onKeyDown={(e) => e.stopPropagation()}>
-            <strong>Timeline settings</strong>
+          <div ref={pop} className="tl-settings-pop" role="dialog" aria-label={heading} style={{ left: at?.left ?? -9999, top: at?.top ?? -9999 }} onKeyDown={(e) => e.stopPropagation()}>
+            <strong>{heading}</strong>
             {children}
           </div>,
           document.body,

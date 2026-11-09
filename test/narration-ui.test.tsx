@@ -52,6 +52,9 @@ function mount(ui: () => React.ReactElement, build: (p: Project) => void = () =>
 }
 const tl = () => s.get().project.artboards[0].timelines[0];
 const pick = (label: string, value: string) => {
+  // a timeline with no sound or captions starts with that group folded: open it, like a person would
+  const fold = host!.querySelector<HTMLElement>('.media-fold[aria-expanded="false"]');
+  if (fold) act(() => fold.click());
   const sel = host!.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`)!;
   act(() => {
     sel.value = value;
@@ -191,6 +194,7 @@ describe('the timeline\'s sound and caption rows', () => {
   it('puts a project sound on the timeline from the Sound menu, at the playhead', async () => {
     mount(() => <TimelinePanel />);
     playhead(2500);
+    click(host!.querySelector('.media-fold'));
     expect(Array.from(host!.querySelectorAll<HTMLOptionElement>('select[aria-label="Add a sound to the timeline"] option')).map((o) => o.textContent)).toEqual(['+ Add sound…', 'voice.mp3', 'Upload audio…']);
     pick('Add a sound to the timeline', 'as1');
     await act(async () => {
