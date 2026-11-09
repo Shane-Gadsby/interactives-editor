@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { matches } from '../lib/keymap';
 import { PropRow, PropSearchProvider, PropSearchStore } from '../lib/prop-search';
 import { PropSearchBox } from './PropSearchBox';
 import { LAYER_BLEND_OPTIONS } from '../lib/blend-modes';
@@ -157,7 +158,7 @@ export function Inspector() {
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     const t = e.target as HTMLElement;
     const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || t.isContentEditable;
-    if ((e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) || ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'f')) {
+    if (matches(e, 'inspector-search') && (!typing || e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       e.stopPropagation();
       box.current?.focus();

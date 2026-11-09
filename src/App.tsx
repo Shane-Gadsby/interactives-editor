@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ShortcutsHost } from './components/ShortcutsModal';
 import { Home } from './Home';
 import { UsagePage } from './UsagePage';
 import { AdminPage } from './AdminPage';
@@ -70,6 +71,7 @@ export function App() {
         <Home open={(id) => (location.hash = `#/p/${id}`)} />
       )}
       <HelpHost />
+      <ShortcutsHost />
       <DialogHost />
       <BehaviourHost />
     </>

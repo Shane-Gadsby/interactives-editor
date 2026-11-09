@@ -8,7 +8,8 @@ import { store } from '../store/store';
 import { prefs, setPrefs } from './prefs';
 import { SNAP_ITEMS, toggleSnap } from './snapping';
 import { TOOL_HELP } from '../help/context';
-import { TOOL_KEYS } from './tool-keys';
+import { keyHints, runCommand } from './keymap';
+import { openShortcuts } from './shortcuts-sheet';
 import { ANIM_PRESETS, animOptions } from './animate-presets';
 import { RECIPES } from './recipes';
 import { ALL_PANELS, setDock, showPanel, type PanelId } from './dock';
@@ -26,7 +27,7 @@ import { openPasteQuestions } from '../components/PasteQuestionsModal';
 import { deleteSelectionCommand } from './artboard-commands';
 import { tidyArtboardsCommand } from './tidy-command';
 import { openHelpSearch } from '../help/Help';
-import type { BottomTab } from '../store/store';
+import type { BottomTab, Tool } from '../store/store';
 
 export type CommandGroup = 'Add' | 'Selection' | 'Pages' | 'Layers' | 'Animate' | 'Behaviours' | 'View' | 'Tools' | 'Panels' | 'Workspaces' | 'Questions' | 'Project';
 
@@ -125,7 +126,6 @@ export function addLayerHere(type: NodeType): string | null {
   return node.id;
 }
 
-const key = (k: string) => window.dispatchEvent(new KeyboardEvent('keydown', { key: k, code: k === '!' ? 'Digit1' : k === '@' ? 'Digit2' : '', shiftKey: k === '!' || k === '@', bubbles: true, cancelable: true }));
 
 export function buildCommands(): Command[] {
   const s = store();
@@ -182,15 +182,15 @@ export function buildCommands(): Command[] {
 
   //---- Selection
   const selCmd = (id: string, title: string, run: () => void, extra: Partial<Command> = {}) => add({ id: `sel:${id}`, title, group: 'Selection', disabled: noSel, run, ...extra });
-  selCmd('all', 'Select all on this page', () => s.select(ab!.children.filter((l) => !l.locked).map((l) => l.id)), { hint: 'Ctrl+A', disabled: noPage });
-  selCmd('duplicate', 'Duplicate', () => s.duplicateSelection(), { hint: 'Ctrl+D', words: 'copy' });
-  selCmd('delete', 'Delete', () => deleteSelectionCommand(), { hint: 'Del', words: 'remove' });
-  selCmd('group', 'Group', () => s.groupSelection(), { hint: 'Ctrl+G', words: 'together' });
-  selCmd('ungroup', 'Ungroup', () => s.ungroupSelection(), { hint: 'Ctrl+Shift+G', disabled: one && (one.type === 'group' || one.type === 'frame') ? undefined : 'Select a group or frame first' });
-  selCmd('front', 'Bring to front', () => s.reorder(Infinity), { hint: 'Ctrl+]', words: 'order top' });
-  selCmd('forward', 'Bring forward', () => s.reorder(1), { hint: ']', words: 'order' });
-  selCmd('backward', 'Send backward', () => s.reorder(-1), { hint: '[', words: 'order' });
-  selCmd('back', 'Send to back', () => s.reorder(-Infinity), { hint: 'Ctrl+[', words: 'order bottom' });
+  selCmd('all', 'Select all on this page', () => s.select(ab!.children.filter((l) => !l.locked).map((l) => l.id)), { hint: keyHints('select-all'), disabled: noPage });
+  selCmd('duplicate', 'Duplicate', () => s.duplicateSelection(), { hint: keyHints('duplicate'), words: 'copy' });
+  selCmd('delete', 'Delete', () => void deleteSelectionCommand(), { hint: keyHints('delete'), words: 'remove' });
+  selCmd('group', 'Group', () => s.groupSelection(), { hint: keyHints('group'), words: 'together' });
+  selCmd('ungroup', 'Ungroup', () => s.ungroupSelection(), { hint: keyHints('ungroup'), disabled: one && (one.type === 'group' || one.type === 'frame') ? undefined : 'Select a group or frame first' });
+  selCmd('front', 'Bring to front', () => s.reorder(Infinity), { hint: keyHints('front'), words: 'order top' });
+  selCmd('forward', 'Bring forward', () => s.reorder(1), { hint: keyHints('forward'), words: 'order' });
+  selCmd('backward', 'Send backward', () => s.reorder(-1), { hint: keyHints('backward'), words: 'order' });
+  selCmd('back', 'Send to back', () => s.reorder(-Infinity), { hint: keyHints('back'), words: 'order bottom' });
   const hidden = sel.length > 0 && sel.every((l) => l.visible === false);
   selCmd('hide', hidden ? 'Show the selected layers' : 'Hide the selected layers', () => s.setProps(sel.map((l) => l.id), { visible: hidden }), { words: hidden ? 'visible unhide' : 'invisible' });
   selCmd('lock', 'Lock the selected layers', () => s.setProps(sel.map((l) => l.id), { locked: true }), { words: 'stop moving' });
@@ -213,11 +213,11 @@ export function buildCommands(): Command[] {
   }
 
   //---- View and toggles
-  add({ id: 'view:fit', title: 'Zoom to fit everything', group: 'View', hint: 'Shift+1', run: () => key('!') });
-  add({ id: 'view:selection', title: 'Zoom to the selection', group: 'View', hint: 'Shift+2', run: () => key('@') });
-  add({ id: 'view:100', title: 'Zoom to 100%', group: 'View', hint: 'Ctrl+1', words: 'actual size', run: () => window.dispatchEvent(new KeyboardEvent('keydown', { key: '1', ctrlKey: true, bubbles: true, cancelable: true })) });
-  add({ id: 'view:grid', title: 'Show the grid', group: 'View', hint: 'Shift+G', on: pr.showGrid, words: 'toggle lines', run: () => setPrefs({ showGrid: !prefs().showGrid }) });
-  add({ id: 'view:rulers', title: 'Show rulers', group: 'View', hint: 'Shift+R', on: pr.rulers, words: 'toggle guides', run: () => setPrefs({ rulers: !prefs().rulers }) });
+  add({ id: 'view:fit', title: 'Zoom to fit everything', group: 'View', hint: keyHints('zoom-fit'), run: () => void runCommand('zoom-fit') });
+  add({ id: 'view:selection', title: 'Zoom to the selection', group: 'View', hint: keyHints('zoom-selection'), run: () => void runCommand('zoom-selection') });
+  add({ id: 'view:100', title: 'Zoom to 100%', group: 'View', hint: keyHints('zoom-100'), words: 'actual size', run: () => void runCommand('zoom-100') });
+  add({ id: 'view:grid', title: 'Show the grid', group: 'View', hint: keyHints('toggle-grid'), on: pr.showGrid, words: 'toggle lines', run: () => setPrefs({ showGrid: !prefs().showGrid }) });
+  add({ id: 'view:rulers', title: 'Show rulers', group: 'View', hint: keyHints('toggle-rulers'), on: pr.rulers, words: 'toggle guides', run: () => setPrefs({ rulers: !prefs().rulers }) });
   {
     const gn = guideCount(p);
     const nothing = gn.project + gn.pages === 0;
@@ -226,12 +226,12 @@ export function buildCommands(): Command[] {
     add({ id: 'view:guides-clear', title: 'Clear all guides', group: 'View', words: 'ruler guides remove delete', disabled: noPage ?? (nothing ? 'There are no guides' : p.guidesLocked ? 'The guides are locked' : undefined), run: () => clearGuidesCommand('all', ab!.id) });
   }
   add({ id: 'view:notes', title: 'Show notes', group: 'View', on: pr.showNotes, words: 'sticky toggle', run: () => setPrefs({ showNotes: !prefs().showNotes }) });
-  add({ id: 'view:bones', title: 'Show bones', group: 'View', hint: 'Shift+J', on: st.showBones, words: 'rig toggle', run: () => s.set({ showBones: !store().get().showBones }) });
+  add({ id: 'view:bones', title: 'Show bones', group: 'View', hint: keyHints('toggle-bones'), on: st.showBones, words: 'rig toggle', run: () => s.set({ showBones: !store().get().showBones }) });
   add({ id: 'snap:on', title: 'Snapping', group: 'View', on: pr.snapOn, words: 'snap toggle magnet align', run: () => toggleSnap('on') });
-  for (const i of SNAP_ITEMS) add({ id: `snap:${i.kind}`, title: `Snap to ${i.label.toLowerCase()}`, group: 'View', hint: i.kind === 'grid' ? "Ctrl+'" : undefined, on: !!pr[i.pref], words: `snapping toggle ${i.tip}`, run: () => toggleSnap(i.kind) });
+  for (const i of SNAP_ITEMS) add({ id: `snap:${i.kind}`, title: `Snap to ${i.label.toLowerCase()}`, group: 'View', hint: i.kind === 'grid' ? keyHints('snap-grid') : undefined, on: !!pr[i.pref], words: `snapping toggle ${i.tip}`, run: () => toggleSnap(i.kind) });
 
   //---- Tools
-  for (const [k, tool] of Object.entries(TOOL_KEYS)) add({ id: `tool:${tool}`, title: `Tool: ${TOOL_HELP[tool].label.replace(/ tool$/i, '')}`, group: 'Tools', hint: k.toUpperCase(), words: 'draw pick', run: () => s.set({ tool, editingPathId: null }) });
+  for (const tool of Object.keys(TOOL_HELP) as Tool[]) add({ id: `tool:${tool}`, title: `Tool: ${TOOL_HELP[tool].label.replace(/ tool$/i, '')}`, group: 'Tools', hint: keyHints(`tool.${tool}`), words: 'draw pick', run: () => s.set({ tool, editingPathId: null }) });
 
   //---- Panels and workspaces
   for (const id of ALL_PANELS) {
@@ -258,9 +258,9 @@ export function buildCommands(): Command[] {
   add({ id: 'project:template', title: 'Save as a template', group: 'Project', words: 'starter copy', run: () => requestAppAction('template') });
   add({ id: 'project:history', title: 'Revision history', group: 'Project', words: 'versions restore earlier', run: () => requestAppAction('history') });
   add({ id: 'project:prefs', title: 'Preferences', group: 'Project', words: 'settings options', run: () => requestAppAction('prefs') });
-  add({ id: 'project:save', title: 'Save now', group: 'Project', hint: 'Ctrl+S', run: () => void (window as unknown as { __ixForceSave?: () => Promise<void> }).__ixForceSave?.() });
-  add({ id: 'project:undo', title: 'Undo', group: 'Project', hint: 'Ctrl+Z', disabled: s.canUndo() ? undefined : 'Nothing to undo', run: () => s.undo() });
-  add({ id: 'project:redo', title: 'Redo', group: 'Project', hint: 'Ctrl+Shift+Z', disabled: s.canRedo() ? undefined : 'Nothing to redo', run: () => s.redo() });
+  add({ id: 'project:save', title: 'Save now', group: 'Project', hint: keyHints('save'), run: () => void (window as unknown as { __ixForceSave?: () => Promise<void> }).__ixForceSave?.() });
+  add({ id: 'project:undo', title: 'Undo', group: 'Project', hint: keyHints('undo'), disabled: s.canUndo() ? undefined : 'Nothing to undo', run: () => s.undo() });
+  add({ id: 'project:redo', title: 'Redo', group: 'Project', hint: keyHints('redo'), disabled: s.canRedo() ? undefined : 'Nothing to redo', run: () => s.redo() });
   for (const [id, title, words] of [
     ['export-html', 'Export: single HTML file', 'download standalone'],
     ['export-package', 'Export: project package', 'download ixp backup'],
@@ -272,7 +272,8 @@ export function buildCommands(): Command[] {
   ] as const) {
     add({ id: `project:${id}`, title, group: 'Project', words, disabled: id === 'export-html' || id === 'export-package' || id === 'export-json' ? undefined : noPage, run: () => requestAppAction(id) });
   }
-  add({ id: 'project:help', title: 'Search the help', group: 'Project', hint: 'F1', words: 'docs how to', run: () => openHelpSearch() });
+  add({ id: 'project:keys', title: 'Keyboard shortcuts', group: 'Project', hint: keyHints('shortcuts'), words: 'keys sheet rebind customise keymap', run: () => openShortcuts(false) });
+  add({ id: 'project:help', title: 'Search the help', group: 'Project', hint: keyHints('help-search'), words: 'docs how to', run: () => openHelpSearch() });
 
   for (const fn of providers) {
     try {

@@ -9,6 +9,8 @@ import { Icons } from '../components/icons';
 import { HelpHistory, type HelpEntry } from './history';
 import { isPreviewOpen } from '../lib/overlays';
 import { closePalette, openPalette, paletteIsOpen } from '../lib/command-palette';
+import { matches } from '../lib/keymap';
+import { openShortcuts } from '../lib/shortcuts-sheet';
 
 // ---------------------------------------------------------------- opening help from anywhere
 
@@ -133,15 +135,18 @@ export function HelpHost() {
       //F1 is the help quick search. Ctrl/Cmd+K is the command palette (which lists help results too), except while editing text
       //where it's the link shortcut; where there is no palette (the home page) it falls back to the help search.
       //The Help button and ? open the page for what is highlighted
-      if (e.key === 'F1') {
+      if (matches(e, 'help-search')) {
         e.preventDefault();
         if (paletteIsOpen()) closePalette();
         openHelpSearch();
-      } else if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k' && !(e.target instanceof HTMLElement && e.target.closest('.text-editor, .text-toolbar'))) {
+      } else if (matches(e, 'palette') && !(e.target instanceof HTMLElement && e.target.closest('.text-editor, .text-toolbar'))) {
         e.preventDefault();
         if (isPreviewOpen()) openHelpSearch();
         else if (!openPalette()) openHelpSearch();
-      } else if (e.key === '?' && !isTyping(e) && !e.ctrlKey && !e.metaKey) {
+      } else if (matches(e, 'shortcuts') && !isTyping(e)) {
+        e.preventDefault();
+        openShortcuts();
+      } else if (matches(e, 'help-context') && !isTyping(e)) {
         e.preventDefault();
         if (state.drawer) closeHelp();
         else openContext();

@@ -2,6 +2,8 @@ import { useRef, type KeyboardEvent } from 'react';
 import { usePropSearchVersion, type PropSearchStore } from '../lib/prop-search';
 import { allSectionsFolded, setAllSections, useSectionFoldVersion } from '../lib/section-fold';
 import { Icons } from '../components/icons';
+import { keyHint, keyHints } from '../lib/keymap';
+import { usePrefs } from '../lib/prefs';
 
 const FOCUSABLE = 'input:not([type="hidden"]):not(:disabled), select:not(:disabled), textarea:not(:disabled), button:not(.key-btn):not(:disabled)';
 
@@ -24,6 +26,7 @@ function focusFirstMatch(panel: HTMLElement | null): boolean {
 /** The search box pinned at the top of the properties panel. */
 export function PropSearchBox({ store, query, setQuery, inputRef }: { store: PropSearchStore; query: string; setQuery: (q: string) => void; inputRef: React.RefObject<HTMLInputElement> }) {
   usePropSearchVersion();
+  usePrefs();
   const wrap = useRef<HTMLDivElement>(null);
   const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
     // the panel's own shortcuts and the editor's (V, H, Delete...) must not fire while typing a name
@@ -48,7 +51,7 @@ export function PropSearchBox({ store, query, setQuery, inputRef }: { store: Pro
           value={query}
           placeholder="Search properties"
           aria-label="Search properties"
-          title="Find a property by what it does or what it's called: opacity, round, alt, colour, z-order. Press / or Ctrl+F to come here, Esc to clear, the down arrow to go to the first match"
+          title={`Find a property by what it does or what it's called: opacity, round, alt, colour, z-order. Press ${keyHints('inspector-search') || 'the search key'} to come here, Esc to clear, the down arrow to go to the first match`}
           spellCheck={false}
           autoComplete="off"
           onChange={(e) => setQuery(e.target.value)}
@@ -59,9 +62,11 @@ export function PropSearchBox({ store, query, setQuery, inputRef }: { store: Pro
             ×
           </button>
         ) : (
-          <kbd className="prop-search-key" aria-hidden="true">
-            /
-          </kbd>
+          keyHint('inspector-search') && (
+            <kbd className="prop-search-key" aria-hidden="true">
+              {keyHint('inspector-search')}
+            </kbd>
+          )
         )}
         <button type="button" className="icon-btn prop-fold-all" title={folded ? 'Unfold all sections' : 'Fold all sections'} aria-label={folded ? 'Unfold all sections' : 'Fold all sections'} onClick={() => setAllSections(folded)}>
           {folded ? <Icons.chevronRight /> : <Icons.chevronDown />}

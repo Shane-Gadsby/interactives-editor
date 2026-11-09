@@ -98,6 +98,12 @@ export function Layers() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [drop, setDrop] = useState<DropSlot | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
+  //F2 (the keymap's Rename command) asks the list to rename the selected layer
+  useEffect(() => {
+    const f = (e: Event) => setRenaming((e as CustomEvent<string>).detail);
+    window.addEventListener('ix-rename-layer', f);
+    return () => window.removeEventListener('ix-rename-layer', f);
+  }, []);
   const [query, setQuery] = useState('');
   const [inText, setInText] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { keyHint } from '../lib/keymap';
 import type { Artboard } from 'interactives-player';
 import { store, useEditor } from '../store/store';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
@@ -133,7 +134,7 @@ const step = stepFor(zoom);
           {drag.at}
         </div>
       )}
-      <div className="canvas-ruler top" title="Drag down to make a horizontal guide (Shift+R hides rulers). Hold Alt for the other kind: every page or this page only" onPointerDown={(e) => start(e, 'y', null)}>
+      <div className="canvas-ruler top" title={`Drag down to make a horizontal guide${keyHint('toggle-rulers') ? ` (${keyHint('toggle-rulers')} hides rulers)` : ''}. Hold Alt for the other kind: every page or this page only`} onPointerDown={(e) => start(e, 'y', null)}>
         {ticks(width, ox).map((v) => (
           <span key={v} style={{ left: ox + v * zoom }}>
             {v}

@@ -76,12 +76,18 @@ export interface Prefs {
   timelineHideDescriptions?: boolean;
   /** What first-run remembers, as short keys to booleans: `job-<id>` for a ticked job, `dismissed`, `fresh`, `essentials`, `welcomed` (lib/onboarding.ts). */
   onboarding?: Record<string, boolean>;
+  /** Keys the person set themselves, by command id (lib/keymap.ts). Only what differs from the default, so a new default still reaches everyone. */
+  keymap?: Record<string, string[]>;
+  /** The set of keys the defaults start from (lib/keymap.ts PRESETS). */
+  keymapPreset?: 'default' | 'illustration';
+  /** Single-letter shortcuts on or off (WCAG 2.1.4 Character Key Shortcuts). On by default. */
+  singleKeys: boolean;
   /** Panel arrangements saved under a name (lib/workspaces.ts checks each one before using it). */
   workspaces?: unknown[];
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { technicalWording: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', codeTheme: 'follow', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
+const DEFAULTS: Prefs = { singleKeys: true, technicalWording: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', codeTheme: 'follow', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true, timelineList: true, timelineFoldEmpty: true };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 

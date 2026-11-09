@@ -1,5 +1,6 @@
 // The artboard commands the canvas, the Layers panel and the keyboard share: each asks what it needs to (a name, a yes), then
 // does one store operation. The store methods themselves never ask anything, so they stay easy to test.
+import { keyHints } from './keymap';
 import { store } from '../store/store';
 import { confirmDialog, promptDialog } from '../components/dialogs';
 import type { MenuItem } from '../components/ContextMenu';
@@ -17,12 +18,27 @@ export async function deleteArtboardsCommand(ids: string[]): Promise<void> {
   s.deleteArtboards(list);
 }
 
-/** The Delete key: the selected layers, or the selected artboards (asking first when there are several). */
-export function deleteSelectionCommand(): void {
+/**
+ * The Delete key: the selected layers (with an Undo message saying what went), or the selected artboards. From the keyboard a
+ * page or component is always asked about first, since it takes everything on it along and a stray key is easy.
+ */
+export async function deleteSelectionCommand(opts: { keyboard?: boolean } = {}): Promise<void> {
   const s = store();
   const st = s.get();
-  if (st.artboardSelected) void deleteArtboardsCommand(pickedArtboardIds(st));
-  else s.deleteSelection();
+  if (st.artboardSelected) {
+    const ids = pickedArtboardIds(st);
+    if (opts.keyboard && ids.length === 1) {
+      const ab = st.project.artboards.find((a) => a.id === ids[0]);
+      if (ab && !(await confirmDialog({ title: `Delete the page "${ab.name}"?`, message: 'It and everything on it go. Undo (Ctrl+Z) brings it back.', confirmLabel: 'Delete', danger: true }))) return;
+    }
+    await deleteArtboardsCommand(ids);
+    return;
+  }
+  const names = s.selectedNodes().map((n) => n.name);
+  if (!names.length) return;
+  const mark = s.historyMark();
+  s.deleteSelection();
+  s.toastUndo(names.length === 1 ? `Deleted ${names[0]}.` : `Deleted ${names.length} layers.`, mark);
 }
 
 /** Group the artboards, asking for a name first. */
@@ -95,7 +111,7 @@ export function artboardMenuItems(ids: string[], gid?: string): MenuItem[] {
   const place = !gid && boards.length === 1 ? placeInMenu(boards[0].id) : null;
   if (place) items.push(place);
   items.push({ label: 'Duplicate', onClick: () => s.duplicateArtboards(target) });
-  items.push({ label: gid ? 'Delete pages in group' : boards.length > 1 ? 'Delete pages' : 'Delete page', hint: gid ? undefined : 'Del', danger: true, onClick: () => void deleteArtboardsCommand(target) });
+  items.push({ label: gid ? 'Delete pages in group' : boards.length > 1 ? 'Delete pages' : 'Delete page', hint: gid ? undefined : keyHints('delete'), danger: true, onClick: () => void deleteArtboardsCommand(target) });
   return items;
 }
 

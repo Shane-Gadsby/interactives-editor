@@ -219,7 +219,7 @@ export function magnetNudge(starts: number[], dt: number, points: number[], with
 
 // ---------------------------------------------------------------- the editor's side
 
-function activeTimeline(): { tl: Timeline; ab: Artboard } | null {
+export function activeTimeline(): { tl: Timeline; ab: Artboard } | null {
   const st = store();
   const ab = st.artboard();
   const tl = ab?.timelines.find((t) => t.id === st.get().activeTimelineId);

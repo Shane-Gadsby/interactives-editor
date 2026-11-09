@@ -1,4 +1,5 @@
 import { useMemo, useState, type KeyboardEvent, type RefObject } from 'react';
+import { keyHints } from '../lib/keymap';
 import { nodeLabel, nodeTip, useTechnicalWording } from '../lib/plain-words';
 import { NODE_GROUPS, type Category, type NodeGroup } from 'interactives-player';
 import { ContextMenu, type MenuItem } from '../components/ContextMenu';
@@ -93,7 +94,7 @@ export function GraphPalette({ onAdd, inputRef }: { onAdd: (kind: string) => voi
               value={query}
               placeholder="Search nodes"
               aria-label="Search nodes"
-              title="Find a node by what it does or what it is called: wait, goto, click, sound, if. Press / or Ctrl+F to come here, Esc to clear, Enter to add the first match, the down arrow to pick one"
+              title={`Find a node by what it does or what it is called: wait, goto, click, sound, if. Press ${keyHints('graph-search')} to come here, Esc to clear, Enter to add the first match, the down arrow to pick one`}
               spellCheck={false}
               autoComplete="off"
               onChange={(e) => setQuery(e.target.value)}

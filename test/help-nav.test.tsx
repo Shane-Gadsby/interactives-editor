@@ -149,11 +149,15 @@ describe('the drawer', () => {
     expect(document.querySelector('.help-context')).toBeNull();
   });
 
-  it('? opens the context help; F1 opens the search, and so does Ctrl+K where there is no command palette', async () => {
+  it('Shift+F1 opens the context help, ? the shortcuts sheet; F1 opens the search, and so does Ctrl+K where there is no command palette', async () => {
     const { setContextHelp } = await import('../src/help/Help');
     setContextHelp(() => openHelp('charts', undefined, 'Chart layer'));
-    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true, cancelable: true })));
+    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F1', shiftKey: true, bubbles: true, cancelable: true })));
     expect(title()).toContain('Chart');
+    const { closeShortcuts, shortcutsOpen } = await import('../src/lib/shortcuts-sheet');
+    act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true, cancelable: true })));
+    expect(shortcutsOpen()).toBe(true);
+    closeShortcuts();
     expect(document.querySelector('.quick-help-backdrop')).toBeNull();
     act(() => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F1', bubbles: true, cancelable: true })));
     expect(document.querySelector('.quick-help-backdrop')).toBeTruthy();
