@@ -10,6 +10,7 @@ import { HelpLink } from '../help/Help';
 import { BUILT_IN, applyWorkspace, deleteWorkspace, renameWorkspace, saveWorkspace, savedWorkspaces, MAX_SAVED } from '../lib/workspaces';
 import { confirmDialog, promptDialog } from './dialogs';
 import { restartTips, stripShown } from '../lib/onboarding';
+import { CODE_THEMES, type CodeTheme } from '../lib/code-theme';
 
 /** Personal preferences, kept in this browser. */
 export function PrefsModal({ onClose, workspace = false }: { onClose: () => void; workspace?: boolean }) {
@@ -50,6 +51,13 @@ export function PrefsModal({ onClose, workspace = false }: { onClose: () => void
               { value: 'auto', label: 'Auto (follow the system)' },
             ]}
             onChange={(v) => setPrefs({ theme: v })}
+          />
+          <SelectField<CodeTheme>
+            label="Code editor colours"
+            title="Colours of the code boxes: Scripts, the raw text of a data file, and the HTML and code fields. Follow the editor goes light or dark with the Theme above; Light or Dark stays that way whatever the editor does"
+            value={p.codeTheme}
+            options={CODE_THEMES.map((c) => ({ value: c.value, label: c.label }))}
+            onChange={(v) => setPrefs({ codeTheme: v })}
           />
           <FontField
             label="Default font"

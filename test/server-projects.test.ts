@@ -99,6 +99,11 @@ describe('preferences', () => {
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { snapDistance: 25, snapOn: 'yes', snapPoints: 1 } } })).json.prefs).toEqual({});
   });
 
+  it('keeps the code editor colours choice (follow, light or dark) and drops anything else', async () => {
+    for (const codeTheme of ['follow', 'light', 'dark']) expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { codeTheme } } })).json.prefs).toEqual({ codeTheme });
+    expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { codeTheme: 'purple' } } })).json.prefs).toEqual({});
+  });
+
   it('keeps inspector folds as short keys to booleans, at most 300, and drops anything else', async () => {
     const folds = { Accessibility: false, count: true, ['x'.repeat(60)]: true };
     expect((await h.call('PUT', '/api/prefs', { user: ann, json: { prefs: { sectionFolds: folds } } })).json.prefs).toEqual({ sectionFolds: folds });

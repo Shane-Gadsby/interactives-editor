@@ -5,7 +5,7 @@ import { Decoration, keymap, type DecorationSet } from '@codemirror/view';
 import { indentWithTab } from '@codemirror/commands';
 import { javascript } from '@codemirror/lang-javascript';
 import { html } from '@codemirror/lang-html';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { useCodeThemeExtension } from '../lib/code-theme';
 
 const setErrorLines = StateEffect.define<number[]>();
 const errorLine = Decoration.line({ class: 'cm-error-line' });
@@ -36,6 +36,7 @@ export function CodeEditor({ value, onChange, language = 'javascript', height = 
   const view = useRef<EditorView | null>(null);
   const changeRef = useRef(onChange);
   changeRef.current = onChange;
+  const colours = useCodeThemeExtension(view);
 
   useEffect(() => {
     const v = new EditorView({
@@ -46,7 +47,7 @@ export function CodeEditor({ value, onChange, language = 'javascript', height = 
           basicSetup,
           keymap.of([indentWithTab]),
           language === 'html' ? html() : javascript(),
-          oneDark,
+          colours(),
           errorLines,
           EditorView.updateListener.of((u) => {
             if (u.docChanged) changeRef.current(u.state.doc.toString());

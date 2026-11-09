@@ -41,6 +41,8 @@ export interface Prefs {
   gridSubdivisions: number;
   /** Colour theme; 'auto' follows the system. */
   theme: 'dark' | 'light' | 'auto';
+  /** Colours of every code editor (Scripts, the Data tab's raw text, the Inspector's code boxes): 'follow' the editor's theme, or always 'light' or 'dark' (lib/code-theme.ts). */
+  codeTheme: 'follow' | 'light' | 'dark';
   /** Font family for new text layers and the font every new project includes. */
   defaultFont: string;
   /**
@@ -71,7 +73,7 @@ export interface Prefs {
 }
 
 export const DEFAULT_FONT = 'Open Sans';
-const DEFAULTS: Prefs = { technicalWording: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true };
+const DEFAULTS: Prefs = { technicalWording: false, askPictureDescription: true, wheel: 'zoom', tooltips: true, rulers: false, showGrid: false, snapOn: true, snapGrid: false, snapArtboard: true, snapLayers: true, snapLayersAll: false, snapGuides: true, snapSpacing: false, snapPixels: true, snapPoints: false, snapDistance: 6, gridSize: DEFAULT_GRID.size, gridSubdivisions: DEFAULT_GRID.subdivisions, theme: 'dark', codeTheme: 'follow', defaultFont: DEFAULT_FONT, accessibility: true, screenReader: false, commentNotices: true, ghostOutside: true, showNotes: true, gettingStarted: true };
 const LAST_USER = 'ix-prefs-user';
 const keyFor = (user: string) => `ix-prefs:${user}`;
 

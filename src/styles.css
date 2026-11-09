@@ -2742,6 +2742,22 @@ button.twisty:hover {
 .code-field {
   margin: 4px 0;
 }
+/* Code editor colours (Follow / Light / Dark) in the headers of the code boxes */
+.code-theme-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+.code-theme-label {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.code-theme-switch .seg-btn {
+  padding: 3px 10px;
+  font-size: 11px;
+}
 .code-editor {
   border: 1px solid var(--line);
   border-radius: 4px;
