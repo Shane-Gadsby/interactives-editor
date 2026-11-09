@@ -686,8 +686,8 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
       <MasterSection ab={ab} project={project} />
       <TabOrderSection ab={ab} />
       <StepsSection ab={ab} project={project} />
-      <JoysticksSection ab={ab} />
       <BlendsSection ab={ab} project={project} />
+      <JoysticksSection ab={ab} />
       <BonesArtboardSection ab={ab} />
       <WeightSection ab={ab} project={project} />
       <Section help="project-settings" title="Project">
@@ -807,10 +807,11 @@ function ArtboardInspector({ ab, project }: { ab: Artboard; project: Project }) 
 
 // ---------------------------------------------------------------- nodes
 
-function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboard; project: Project }) {
+export function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboard; project: Project }) {
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
   const set = useSetter(ids);
+  const shown = useShown(n);
   const single = nodes.length === 1;
   const sameType = nodes.every((x) => x.type === n.type);
   //A connector's box is the route between the two layers it joins, so there is nothing to place, size, turn or lay out
@@ -866,7 +867,10 @@ function NodeInspector({ nodes, ab, project }: { nodes: SceneNode[]; ab: Artboar
         )}
         {!(sameType && (n.type === 'bone' || n.type === 'connector')) && <PivotFields originX={n.originX} originY={n.originY} onChange={(p) => set(p)} onCommit={() => store().commit()} />}
         <Row>
-          <CheckField label="Visible" value={n.visible} onChange={(v) => set({ visible: v })} />
+          <div className="keyed">
+            <CheckField label="Visible" value={Boolean(shown('visible') ?? n.visible)} onChange={(v) => set({ visible: v })} />
+            <KeyButton node={n} ids={ids} prop="visible" />
+          </div>
           <CheckField label="Locked" value={!!n.locked} onChange={(v) => set({ locked: v })} />
         </Row>
         {!isConn && <CheckField label="Use as mask" value={!!n.mask} onChange={(v) => set({ mask: v ? true : undefined })} />}
@@ -1171,6 +1175,7 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
   const set = useSetter(ids);
+  const shown = useShown(n);
   const mixedFont = nodes.some((x) => x.fontFamily !== n.fontFamily);
   //Picking a Google font the project doesn't list yet adds it (with the weights these layers use), in the same undo step
   const pickFont = (o: FontPick) => {
@@ -1196,15 +1201,18 @@ function TextStyleFields({ nodes, project }: { nodes: (SceneNode & TextStyle)[];
         ) : (
           <Num node={n} ids={ids} prop="fontSize" label="Size" min={1} />
         )}
-        <SelectField
-          label="Weight"
-          value={String(n.fontWeight)}
-          options={['100', '200', '300', '400', '500', '600', '700', '800', '900']}
-          onChange={(v) => setWeight(Number(v))}
-        />
+        <div className="keyed">
+          <SelectField
+            label="Weight"
+            value={String(shown('fontWeight') ?? n.fontWeight)}
+            options={['100', '200', '300', '400', '500', '600', '700', '800', '900']}
+            onChange={(v) => setWeight(Number(v))}
+          />
+          <KeyButton node={n} ids={ids} prop="fontWeight" />
+        </div>
       </Row>
       <Row>
-        <NumberField label="Line" value={n.lineHeight} step={0.05} min={0.5} onChange={(v) => set({ lineHeight: v })} />
+        <Num node={n} ids={ids} prop="lineHeight" label="Line" step={0.05} min={0.5} fallback={n.lineHeight} />
         <Num node={n} ids={ids} prop="letterSpacing" label="Letter" step={0.1} />
       </Row>
       <Color node={n} ids={ids} prop="color" label="Colour" />
@@ -1317,6 +1325,7 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
   const n = nodes[0];
   const ids = nodes.map((x) => x.id);
   const set = useSetter(ids);
+  const shown = useShown(n);
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
   const videos = project.assets.filter((a) => assetKind(a.mime, a.name) === 'video');
   const sounds = project.assets.filter((a) => assetKind(a.mime, a.name) === 'audio');
@@ -1399,7 +1408,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'text':
       return (
         <Section help="text" title="Text">
-          {nodes.length === 1 && <ExprField label="Text" template mono={false} value={n.text} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
+          {nodes.length === 1 && (
+            <div className="keyed top">
+              <ExprField label="Text" template mono={false} value={String(shown('text') ?? n.text)} multiline onChange={(v) => set({ text: v }, `text-${n.id}`)} />
+              <KeyButton node={n} ids={ids} prop="text" />
+            </div>
+          )}
           <SelectField
             label="Sizing"
             title={textFitOf(n) ? 'Fixed while Fit text to box is on: the text is sized to the box, not the box to the text' : undefined}
@@ -1496,10 +1510,21 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'button':
       return (
         <Section help="web-elements" title="Button">
-          {nodes.length === 1 && <ExprField label="Label" template mono={false} value={n.label} onChange={(v) => set({ label: v }, `label-${n.id}`)} />}
+          {nodes.length === 1 && (
+            <div className="keyed top">
+              <ExprField label="Label" template mono={false} value={String(shown('label') ?? n.label)} onChange={(v) => set({ label: v }, `label-${n.id}`)} />
+              <KeyButton node={n} ids={ids} prop="label" />
+            </div>
+          )}
           {radius}
-          <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
-          <NumberField label="Disabled look" title="How opaque the button looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={n.disabledOpacity ?? 0.5} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
+          <div className="keyed">
+            <CheckField label="Disabled" value={!!shown('disabled')} onChange={(v) => set({ disabled: v })} />
+            <KeyButton node={n} ids={ids} prop="disabled" />
+          </div>
+          <div className="keyed">
+            <NumberField label="Disabled look" title="How opaque the button looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={Number(shown('disabledOpacity') ?? n.disabledOpacity ?? 0.5)} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
+            <KeyButton node={n} ids={ids} prop="disabledOpacity" />
+          </div>
           <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           <p className="hint">Add a click interaction to make it do something.</p>
@@ -1531,8 +1556,14 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             </>
           )}
           {radius}
-          <CheckField label="Disabled" value={!!n.disabled} onChange={(v) => set({ disabled: v })} />
-          <NumberField label="Disabled look" title="How opaque the input looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={n.disabledOpacity ?? 0.5} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
+          <div className="keyed">
+            <CheckField label="Disabled" value={!!shown('disabled')} onChange={(v) => set({ disabled: v })} />
+            <KeyButton node={n} ids={ids} prop="disabled" />
+          </div>
+          <div className="keyed">
+            <NumberField label="Disabled look" title="How opaque the input looks while it is disabled: 0.5 by default, 1 for no dimming. Not used when this layer's opacity is bound, which dims it its own way" value={Number(shown('disabledOpacity') ?? n.disabledOpacity ?? 0.5)} min={0} max={1} step={0.05} onChange={(v) => set({ disabledOpacity: Math.min(1, Math.max(0, v)) === 0.5 ? undefined : Math.min(1, Math.max(0, v)) }, `disabled-look-${n.id}`)} />
+            <KeyButton node={n} ids={ids} prop="disabledOpacity" />
+          </div>
           <TextStyleFields nodes={nodes as (SceneNode & TextStyle)[]} project={project} />
           {!project.variables.length && <p className="hint">Create a variable in the Variables tab to bind this input to.</p>}
         </Section>
@@ -1540,7 +1571,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
     case 'link':
       return (
         <Section help="links-cursors" title="Link">
-          {nodes.length === 1 && <TextField label="Text" value={n.text} onChange={(v) => set({ text: v }, `text-${n.id}`)} />}
+          {nodes.length === 1 && (
+            <div className="keyed">
+              <TextField label="Text" value={String(shown('text') ?? n.text)} onChange={(v) => set({ text: v }, `text-${n.id}`)} />
+              <KeyButton node={n} ids={ids} prop="text" />
+            </div>
+          )}
           <TextField label="URL" value={n.href} onChange={(v) => set({ href: v })} />
           <CheckField label="Open in new tab" value={n.newTab} onChange={(v) => set({ newTab: v })} />
           <FitTextFields nodes={nodes as (SceneNode & { fitText?: TextFit | null })[]} />
@@ -1560,7 +1596,10 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             onChange={(v) => set({ mode: v })}
           />
           {n.mode === 'iframe' ? (
-            <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />
+            <div className="keyed">
+              <TextField label="URL" value={String(shown('src') ?? n.src)} commitOnBlur onChange={(v) => set({ src: v })} />
+              <KeyButton node={n} ids={ids} prop="src" />
+            </div>
           ) : (
             nodes.length === 1 && (
               <PropRow k="HTML" words={['embed code', 'iframe', 'markup', 'source', 'code']}>
@@ -1584,7 +1623,12 @@ function TypeSection({ nodes, project }: { nodes: SceneNode[]; project: Project 
             options={[{ value: '', label: 'Use a URL' }, ...videos.map((a) => ({ value: a.id, label: a.name })), ...sounds.map((a) => ({ value: a.id, label: `${a.name} (sound only: shows the poster)` })), addAssetOption('video')]}
           />
           {n.assetId && <ReplaceAssetButton assetId={n.assetId} />}
-          {!n.assetId && <TextField label="URL" value={n.src} commitOnBlur onChange={(v) => set({ src: v })} />}
+          {!n.assetId && (
+            <div className="keyed">
+              <TextField label="URL" value={String(shown('src') ?? n.src)} commitOnBlur onChange={(v) => set({ src: v })} />
+              <KeyButton node={n} ids={ids} prop="src" />
+            </div>
+          )}
           <Row>
             <CheckField label="Autoplay" value={n.autoplay} onChange={(v) => set({ autoplay: v })} />
             <CheckField label="Loop" value={n.loop} onChange={(v) => set({ loop: v })} />
@@ -1838,33 +1882,41 @@ export function DepthSection({ nodes, project }: { nodes: SceneNode[]; project: 
 
 function LinkCursorSection({ nodes, project }: { nodes: SceneNode[]; project: Project }) {
   const n = nodes[0];
-  const set = useSetter(nodes.map((x) => x.id));
+  const ids = nodes.map((x) => x.id);
+  const set = useSetter(ids);
+  const shown = useShown(n);
   const images = project.assets.filter((a) => assetKind(a.mime, a.name) === 'image');
   const link = n.link;
   return (
     <>
     <Section help="links-cursors#link" title="Link" defaultOpen={!!link}>
-      <ExprField
-        label="Link"
-        template
-        mono={false}
-        value={link?.url ?? ''}
-        placeholder="https://… (makes the whole layer a link)"
-        commitOnBlur
-        onChange={(url) => set({ link: url.trim() ? { url: url.trim(), target: link?.target ?? '_blank' } : null })}
-      />
+      <div className="keyed">
+        <ExprField
+          label="Link"
+          template
+          mono={false}
+          value={String(shown('link.url') ?? link?.url ?? '')}
+          placeholder="https://… (makes the whole layer a link)"
+          commitOnBlur
+          onChange={(url) => set({ link: url.trim() ? { url: url.trim(), target: link?.target ?? '_blank' } : null })}
+        />
+        {link && <KeyButton node={n} ids={ids} prop="link.url" />}
+      </div>
       {link && (
         <SelectField<LinkTarget> label="Open in" value={link.target} options={LINK_TARGETS as { value: LinkTarget; label: string }[]} onChange={(t) => set({ link: { ...link, target: t } })} />
       )}
     </Section>
     <Section help="links-cursors#cursor" title="Cursor on hover" defaultOpen={!!(n.cursor || n.cursorImage)}>
-      <SelectField
-        label="Cursor"
-        title="The mouse cursor shown while the pointer is over this layer (and its children), like CSS :hover { cursor }. Automatic shows a pointer if the layer is a link or clickable"
-        value={n.cursor ?? ''}
-        options={[{ value: '', label: 'Automatic' }, ...CURSORS.map((c) => ({ value: c, label: CURSOR_LABELS[c] ?? c }))]}
-        onChange={(v) => set({ cursor: v || undefined })}
-      />
+      <div className="keyed">
+        <SelectField
+          label="Cursor"
+          title="The mouse cursor shown while the pointer is over this layer (and its children), like CSS :hover { cursor }. Automatic shows a pointer if the layer is a link or clickable"
+          value={String(shown('cursor') ?? n.cursor ?? '')}
+          options={[{ value: '', label: 'Automatic' }, ...CURSORS.map((c) => ({ value: c, label: CURSOR_LABELS[c] ?? c }))]}
+          onChange={(v) => set({ cursor: v || undefined })}
+        />
+        <KeyButton node={n} ids={ids} prop="cursor" />
+      </div>
       <SelectField
         label="Image"
         value={n.cursorImage ?? ''}
@@ -2577,6 +2629,23 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
             {oneD && <SelectField label="Input" title="The number variable that picks the position" value={b.variable ?? ''} options={vars(numberVars.length ? 'Choose variable…' : 'No number variables yet')} onChange={(v) => update((bs) => void (bs[i].variable = v || null))} />}
             {!oneD && <NumberField label="Full weight at" title="The variable value that means full weight: 1 for 0 to 1, 100 for percentages" value={b.range ?? 1} min={0.0001} onChange={(v) => update((bs) => void (bs[i].range = v), `blend-range-${b.id}`)} />}
             <CheckField label="Start with the artboard" value={!!b.autoplay} onChange={(v) => update((bs) => void (bs[i].autoplay = v || undefined))} />
+            <NumberField
+              label="Transition (ms)"
+              title="When the number (or a weight) jumps, ease the mix over this long instead of snapping, e.g. 250. The variable itself is not changed. 0 follows it at once"
+              value={b.transition ?? 0}
+              min={0}
+              step={50}
+              onChange={(v) => update((bs) => void (bs[i].transition = v > 0 ? v : undefined), `blend-trans-${b.id}`)}
+            />
+            {(b.transition ?? 0) > 0 && (
+              <SelectField<string>
+                label="Transition easing"
+                title="How the mix eases during the transition. Linear sweeps evenly"
+                value={typeof b.transitionEase === 'string' ? b.transitionEase : 'linear'}
+                options={EASING_NAMES.map((e) => ({ value: e, label: e }))}
+                onChange={(v) => update((bs) => void (bs[i].transitionEase = v === 'linear' ? undefined : (v as Easing)))}
+              />
+            )}
             {b.entries.map((e, k) => (
               <Row key={k}>
                 <SelectField label={k === 0 ? 'Timelines' : undefined} value={e.timeline ?? ''} options={tls} onChange={(v) => update((bs) => void (bs[i].entries[k].timeline = v || null))} />

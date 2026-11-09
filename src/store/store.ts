@@ -8,6 +8,7 @@ import {
   createArtboard,
   frameTime,
   sampleKeys,
+  holdsText,
   cloneWithNewIds,
   remapConnectorIds,
   getPath,
@@ -2010,7 +2011,7 @@ export function keyTime(tl: Pick<Timeline, 'duration' | 'fps' | 'snap'>, t: numb
 /** A layer property's value at time t of a timeline: its track's value there when the timeline animates it, otherwise the layer's own. */
 export function valueAt(tl: Timeline | undefined, node: SceneNode, prop: string, t: number): unknown {
   const track = tl?.tracks.find((x) => x.nodeId === node.id && x.prop === prop);
-  return track?.keys.length ? sampleKeys(track.keys, frameTime(tl!, t)) : getPath(node, prop);
+  return track?.keys.length ? sampleKeys(track.keys, frameTime(tl!, t), holdsText(prop, node)) : getPath(node, prop);
 }
 
 /** Set a keyframe value at time t (within 1ms an existing key is replaced). Keys made at the playhead pass keyTime(tl, playhead). */

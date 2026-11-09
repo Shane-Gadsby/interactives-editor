@@ -561,6 +561,13 @@ progress {
   flex: 1;
   min-width: 0;
 }
+/* a tall field (the text box): the key sits at its top, beside the first line */
+.keyed.top {
+  align-items: flex-start;
+}
+.keyed.top > .key-btn {
+  margin-top: 4px;
+}
 .key-btn {
   flex: none;
   border: none;
@@ -3080,6 +3087,34 @@ button.twisty:hover {
 .key.selected {
   background: #fff;
   box-shadow: 0 0 0 2px var(--accent);
+}
+.key:focus-visible {
+  outline: 2px solid var(--primary-bg);
+  outline-offset: 2px;
+}
+/* A hold key (text, labels): a square, not a diamond, with a flat bar to the next key because nothing eases between them */
+.key.hold {
+  transform: none;
+  border-radius: 2px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  top: 7px;
+}
+.segment.hold {
+  cursor: default;
+  pointer-events: none;
+}
+.segment.hold::before {
+  top: 6px;
+  height: 4px;
+  border-radius: 1px;
+  background: rgba(231, 177, 76, 0.55);
+}
+.swap-text {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
 }
 .key.summary {
   width: 8px;
