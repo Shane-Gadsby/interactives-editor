@@ -2,7 +2,7 @@
 //The static files: precompressed.js makes .br and .gz copies of dist's text files into a cache folder (in the background
 //after boot), reuses them while the file's size and mtime still match, and hands them out ahead of express.static when the
 //browser takes them. Plain files, cache headers and everything it can't answer stay as they were.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -128,6 +128,28 @@ describe('making the copies', () => {
     expect(a).toBe(b);
     expect(a.removed).toBe(2);
     expect(listCache(cache).filter((f) => f.includes('old-123'))).toEqual([]);
+  });
+
+  it('skips a file that goes between listing and reading (a build still writing) and makes the rest', async () => {
+    fs.writeFileSync(path.join(dir, 'assets', 'gone-1.js'), big);
+    fs.writeFileSync(path.join(dir, 'assets', 'stays-1.js'), big);
+    const real = fs.promises.readFile;
+    const spy = vi.spyOn(fs.promises, 'readFile').mockImplementation(((p: fs.PathLike, ...rest: unknown[]) => {
+      if (String(p).endsWith('gone-1.js')) return Promise.reject(Object.assign(new Error('gone'), { code: 'ENOENT' }));
+      return (real as (...a: unknown[]) => Promise<Buffer>)(p, ...rest);
+    }) as typeof fs.promises.readFile);
+    try {
+      await store.build();
+    } finally {
+      spy.mockRestore();
+    }
+    const files = listCache(cache);
+    expect(files).toContain('assets/stays-1.js.br');
+    expect(files.filter((f) => f.includes('gone-1'))).toEqual([]);
+    //leave the folder as the later tests expect it
+    fs.rmSync(path.join(dir, 'assets', 'gone-1.js'));
+    fs.rmSync(path.join(dir, 'assets', 'stays-1.js'));
+    await store.build();
   });
 });
 

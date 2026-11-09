@@ -129,8 +129,17 @@ module.exports = (distDir, cacheDir, options = {}) => {
 
 				ready.delete(plain)
 
-				let buf = await fs.promises.readFile(plain),
-					made = [],
+				//A file can go between listing and reading (a build still writing, or a deploy landing), so skip it
+				//and carry on with the rest instead of the whole run giving up
+				let buf
+				try {
+					buf = await fs.promises.readFile(plain)
+				}
+				catch (err) {
+					if (err.code === 'ENOENT') continue
+					throw err
+				}
+				let made = [],
 					target = path.join(cacheDir, rel(plain))
 
 				fs.mkdirSync(path.dirname(target), {recursive: true})
