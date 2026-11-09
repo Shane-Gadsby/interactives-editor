@@ -92,8 +92,8 @@ describe('the Snap dropdown', () => {
 
 describe('Preferences and the canvas menu', () => {
   it('Preferences has Snapping, a switch per target, the reach of Layers and the distance', () => {
-    act(() => root!.render(<PrefsModal onClose={() => undefined} />));
-    const block = document.querySelector('[aria-label="Canvas"]')!;
+    act(() => root!.render(<PrefsModal page="canvas" onClose={() => undefined} />));
+    const block = document.querySelector('[role="tabpanel"]')!;
     const labels = [...block.querySelectorAll('label')].map((l) => l.textContent);
     expect(labels).toEqual(expect.arrayContaining(['Snapping', 'Snap to grid', 'Snap to artboard', 'Snap to layers', 'Snap to guides', 'Snap to spacing', 'Snap to pixels', 'Snap to points', 'Layers: all, not just siblings']));
     const box = (name: string) => [...block.querySelectorAll('label')].find((l) => l.textContent === name)!.querySelector('input') as HTMLInputElement;

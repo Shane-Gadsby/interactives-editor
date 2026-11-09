@@ -10,7 +10,7 @@ import { handleEditorKey, installEditorKeys } from '../src/lib/editor-keys';
 import { installTimelineKeys } from '../src/lib/timeline-keys';
 import { jumpToProperty } from '../src/lib/prop-jump';
 import { closeShortcuts, openShortcuts, shortcutsOpen } from '../src/lib/shortcuts-sheet';
-import { ShortcutsHost } from '../src/components/ShortcutsModal';
+import { PrefsHost as ShortcutsHost } from '../src/components/PrefsModal';
 import { DialogHost } from '../src/components/dialogs';
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -213,18 +213,19 @@ describe('the shortcuts sheet', () => {
 
   it('lists every command with its keys, grouped, and holds the editor\'s own keys still while open', () => {
     mount();
-    expect(document.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Keyboard shortcuts');
+    expect(document.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Preferences');
+    expect(document.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe('Keyboard shortcuts');
     expect(rowFor('Duplicate').querySelector('kbd')?.textContent).toBe('Ctrl + D');
     expect(rowFor('Pen tool').querySelector('kbd')?.textContent).toBe('P');
     expect(keysSuspended()).toBe(true);
-    expect([...document.querySelectorAll('.keys-group h3')].map((h) => h.textContent)).toContain('Timeline');
+    expect([...document.querySelectorAll('.keys-group h4')].map((h) => h.textContent)).toContain('Timeline');
     act(() => closeShortcuts());
     expect(keysSuspended()).toBe(false);
   });
 
   it('searches by name', () => {
     mount();
-    const input = document.querySelector<HTMLInputElement>('input[type="search"]')!;
+    const input = document.querySelector<HTMLInputElement>('.keys-search input')!;
     act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'frame');
       input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -300,10 +301,10 @@ describe('the shortcuts sheet', () => {
 
   it('has the one-key switch', () => {
     mount();
-    const box = document.querySelector<HTMLInputElement>('.keys-controls input[type="checkbox"]')!;
-    expect(box.checked).toBe(true);
-    act(() => box.click());
+    const find = () => [...document.querySelectorAll<HTMLInputElement>('[data-pref="singleKeys"] input[type="checkbox"]')][0];
+    expect(find().checked).toBe(true);
+    act(() => find().click());
     expect(bindingsOf('tool.pen')).toEqual(['P']);
-    expect(document.querySelector<HTMLInputElement>('.keys-controls input[type="checkbox"]')!.checked).toBe(false);
+    expect(find().checked).toBe(false);
   });
 });

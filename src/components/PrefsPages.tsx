@@ -8,8 +8,10 @@ import { restartTips, stripShown } from '../lib/onboarding';
 import { CODE_THEMES, type CodeTheme } from '../lib/code-theme';
 import { HIDE_PREF, LANE_KINDS, LANE_NAME } from '../lib/timeline-view';
 import { PAGES, type PageId } from '../lib/prefs-window';
-import { KeymapList, KeymapSetBar } from './KeymapPrefs';
+import { KeymapList } from './KeymapPrefs';
+import { KeymapSetBar } from './KeymapSets';
 import { WorkspacePrefs } from './WorkspacePrefs';
+import { WorkspaceOrder } from './WorkspaceOrder';
 
 /**
  * Every setting in the Preferences window, in one list: which page and section it is on, what it is called, what it does, which
@@ -306,7 +308,16 @@ export const SETTINGS: SettingDef[] = [
     keys: [],
     render: () => <WorkspacePrefs />,
   },
-  //reorder-sections adds its own entry here, 'workspace-order' (Reset section and tool order), with keys: ['sectionOrder', 'toolOrder']
+  {
+    id: 'workspace-order',
+    page: 'workspace',
+    section: 'Order of sections and tools',
+    label: 'Reset section and tool order',
+    tip: 'Put the Properties panel sections and the tool bar groups and tools back in the order the editor gives them, after you have dragged them about',
+    words: 'reorder sections tools rail properties drag default',
+    keys: ['sectionOrder', 'toolOrder'],
+    render: () => <WorkspaceOrder />,
+  },
 ];
 
 export const pagesFor = (editor: boolean): PageInfo[] => PAGES.map((id) => PAGE_INFO[id]).filter((p) => editor || !p.editorOnly);
@@ -330,7 +341,7 @@ export function pageIsDefault(page: PageId, p: Prefs): boolean {
   return pageKeys(page).every((k) => {
     const have = p[k];
     const want = (PREF_DEFAULTS as unknown as Record<string, unknown>)[k];
-    if (k === 'keymap') return !Object.keys((have as object | undefined) ?? {}).length;
+    if (have && typeof have === 'object') return !Object.keys(have).length;
     if (k === 'keymapPreset') return (have ?? 'default') === 'default';
     if (k === 'keymapActive') return !have;
     if (k === 'singleKeys') return have !== false;

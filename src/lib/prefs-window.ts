@@ -11,11 +11,13 @@ interface State {
   page: PageId;
   /** A share code or link someone opened the editor with, waiting on the Keyboard shortcuts page for a look before it is added. */
   pendingImport: string | null;
+  /** What to type into the shortcuts search when the Keyboard shortcuts page opens (a search in Preferences that matched commands). */
+  keysSearch: string | null;
   /** The editor is on screen, so its Workspace page (panel layouts) means something. */
   editor: boolean;
 }
 
-let state: State = { open: false, page: 'general', pendingImport: null, editor: false };
+let state: State = { open: false, page: 'general', pendingImport: null, keysSearch: null, editor: false };
 const subs = new Set<() => void>();
 const set = (patch: Partial<State>) => {
   state = { ...state, ...patch };
@@ -54,3 +56,13 @@ export const takeImport = (): string | null => {
 export function setEditorShown(on: boolean): void {
   if (state.editor !== on) set({ editor: on });
 }
+
+/** Open the Keyboard shortcuts page with its search already filled in. */
+export function searchShortcuts(q: string): void {
+  set({ open: true, page: 'keys', keysSearch: q });
+}
+export const takeKeysSearch = (): string | null => {
+  const t = state.keysSearch;
+  if (t !== null) state = { ...state, keysSearch: null };
+  return t;
+};
