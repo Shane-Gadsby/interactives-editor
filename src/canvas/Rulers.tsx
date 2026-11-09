@@ -147,7 +147,7 @@ const step = stepFor(zoom);
           </span>
         ))}
       </div>
-      <button className="ruler-corner" aria-label="Guides menu" aria-haspopup="menu" title="Guides: choose whether new ones are for every page or this page only, lock them, or clear them" onClick={cornerMenu} />
+      <button className="ruler-corner" aria-label="Guides menu" aria-haspopup="menu" title="Guides: choose whether new ones are for every page or this page only, lock them, or clear them" onPointerDown={(e) => e.stopPropagation()} onClick={cornerMenu} />
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
     </div>
   );
