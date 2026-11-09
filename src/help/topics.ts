@@ -499,6 +499,7 @@ Double-click a text layer to edit it. Select some of the text, then:
 | Drag the **Tools** title over an edge of the canvas | Dock the tool bar there (left, right or a strip along the bottom or the top) |
 | <kbd>Alt</kbd>-click a path point | Switch it between curve and corner |
 | <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>-click a layer | Add it to the selection, or take it out (it picks the deepest layer inside groups, so you can gather layers from different groups) |
+| <kbd>Shift</kbd>-click a layer in the Layers list | Select every layer between the one you last clicked and this one |
 | Double-click a group | Select inside it |
 
 While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kbd> resizes from the centre. In number fields, drag the label to scrub (<kbd>Shift</kbd> ×10, <kbd>Alt</kbd> ×0.1), use arrow keys to step, or type sums like \`100/2\`.`,
@@ -539,7 +540,7 @@ While dragging: <kbd>Shift</kbd> keeps proportions or snaps angles, <kbd>Alt</kb
 ![The Layers panel. Sun is hidden, so its name is faded. Backdrop is locked.](help/layers-panel.png)
 
 ## Working with the list
-- Click a layer to select it. Hold <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) or <kbd>Shift</kbd> and click to select several.
+- Click a layer to select it. Click one layer, hold <kbd>Shift</kbd> and click another, and every layer between them in the list is selected too (a folded group counts as one row, and the range stays on one artboard). <kbd>Ctrl</kbd> (<kbd>Cmd</kbd> on a Mac) and click adds one layer or takes it out, and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+click adds a whole range to what you already have. With a layer focused in the list, <kbd>Shift</kbd>+<kbd>Up</kbd> and <kbd>Shift</kbd>+<kbd>Down</kbd> grow the selection a row at a time.
 - The same works on the artboard rows: <kbd>Ctrl</kbd>+click adds an artboard to the selection or takes it out, and <kbd>Shift</kbd>+click selects the rows from the one you had to this one. Chosen rows are gold. Right-click a chosen row for **Group pages…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete** on all of them; **Tidy up pages** at the bottom becomes **Tidy up N selected artboards**.
 - A named **artboard group** is a folder row above its artboards, which sit one step in under it. Click the arrow to fold it, click the row to select its artboards, double-click to rename it, and right-click it for **Select all in group**, **Rename group…**, **Ungroup**, **Tidy up**, **Duplicate** and **Delete**. Folding is just for this panel. The artboards stay on the canvas inside a dashed frame with the group's name. See [Artboards](artboards).
 - Click the arrow beside a group, a frame or an artboard to open or close it. The artboard marked **start** is the one the player shows first.
