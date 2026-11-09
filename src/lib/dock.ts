@@ -37,6 +37,20 @@ export const ZONES: Zone[] = ['left', 'right', 'bottom', 'top'];
 
 /** How tall the top area is to begin with, the least and the most (it is also kept per layout, so workspaces carry it). */
 export const TOP_HEIGHT = { def: 160, min: 80, max: 600 };
+/** The stored bottom height that means "never set": it follows the window (taller on a tall one) instead of staying 260. */
+export const BOTTOM_DEFAULT = 260;
+
+/**
+ * How tall the bottom area is drawn in a window `win` pixels high. The untouched default grows with the window (about a third of
+ * it, 260 to 440) so a tall screen is not left with a strip too short for the Keyframe panel; a height the person set is theirs,
+ * kept except that it never leaves the canvas less than 200px.
+ */
+export function bottomHeightFor(stored: number, win: number): number {
+  const room = Math.max(140, win - 200);
+  const want = stored === BOTTOM_DEFAULT ? Math.max(BOTTOM_DEFAULT, Math.min(440, Math.round(win * 0.32))) : stored;
+  return Math.min(want, room);
+}
+
 /** Height of a folded area: its tab strip. */
 export const FOLDED_HEIGHT = 34;
 

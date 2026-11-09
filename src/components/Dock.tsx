@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { onPanelRequest, store, useEditor, type BottomTab } from '../store/store';
-import { dockFloat, FOLDED_HEIGHT, showAll, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, TOP_HEIGHT, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
+import { BOTTOM_DEFAULT, bottomHeightFor, dockFloat, FOLDED_HEIGHT, showAll, getDock, isShown, movePanel, placeTools, resetDock, setDock, showPanel, subscribeDock, toolsDropFor, TOP_HEIGHT, useDock, ZONES, type DockGroup, type DropTarget, type FloatWin, type PanelId, type ToolsDrop, type ToolsPlace, type Zone } from '../lib/dock';
 import { Icons, type IconName } from './icons';
 import { openHelp, setContextHelp } from '../help/Help';
 import { getTopic } from '../help/topics';
@@ -569,19 +569,34 @@ function MorePanels() {
 
 // ---------------------------------------------------------------- docked areas
 
+//260 stored means "never set" (it follows the window), so a height somebody drags to must not land on exactly that
+const nudgeOffDefault = (v: number): number => (Math.round(v) === BOTTOM_DEFAULT ? BOTTOM_DEFAULT + 1 : v);
+
+/** The window's height, so what is sized from it follows a resize. */
+function useWindowHeight(): number {
+  return useSyncExternalStore(
+    (cb) => {
+      window.addEventListener('resize', cb);
+      return () => window.removeEventListener('resize', cb);
+    },
+    () => window.innerHeight,
+  );
+}
+
 /** One of the docked areas around the canvas. Renders nothing when every panel has left it (its grid track is 0). */
 export function DockZone({ zone }: { zone: Zone }) {
   const l = useDock();
   const ok = useAvailable();
   const g = l.zones[zone];
   const { tabs, active } = visible(g, ok);
-  const h = useEditor((st) => st.bottomHeight);
+  const winH = useWindowHeight();
+  const h = bottomHeightFor(useEditor((st) => st.bottomHeight), winH);
   if (!tabs.length) return null;
   const folded = (zone === 'bottom' && l.bottomFolded) || (zone === 'top' && l.topFolded);
   const top = zone === 'top';
   const size = top ? l.topHeight : h;
   const [min, max] = top ? [TOP_HEIGHT.min, Math.min(TOP_HEIGHT.max, window.innerHeight - 200)] : [140, window.innerHeight - 200];
-  const setSize = (v: number) => (top ? setDock((d) => ({ ...d, topHeight: Math.round(Math.max(min, Math.min(max, v))) })) : store().set({ bottomHeight: Math.max(min, Math.min(max, v)) }));
+  const setSize = (v: number) => (top ? setDock((d) => ({ ...d, topHeight: Math.round(Math.max(min, Math.min(max, v))) })) : store().set({ bottomHeight: nudgeOffDefault(Math.max(min, Math.min(max, v))) }));
   const startResize = (e: React.PointerEvent) => {
     const y0 = e.clientY;
     const el = e.currentTarget as HTMLElement;
@@ -609,7 +624,7 @@ export function DockZone({ zone }: { zone: Zone }) {
       tabIndex={0}
       title={`Drag to resize the ${name} panels (double-click to reset)`}
       onPointerDown={startResize}
-      onDoubleClick={() => setSize(top ? TOP_HEIGHT.def : 260)}
+      onDoubleClick={() => (top ? setSize(TOP_HEIGHT.def) : store().set({ bottomHeight: BOTTOM_DEFAULT }))}
       onKeyDown={(e) => {
         const step = e.shiftKey ? 40 : 10;
         //up makes the bottom area taller and the top one shorter
@@ -651,7 +666,8 @@ export function DockZone({ zone }: { zone: Zone }) {
 export function useZoneSizes(widths: { left: number; right: number }): { left: number; right: number; bottom: number; top: number; tools: ToolsPlace } {
   const l = useDock();
   const ok = useAvailable();
-  const h = useEditor((st) => st.bottomHeight);
+  const winH = useWindowHeight();
+  const h = bottomHeightFor(useEditor((st) => st.bottomHeight), winH);
   const has = (z: Zone) => l.zones[z].tabs.some(ok);
   return {
     left: has('left') ? widths.left : 0,
