@@ -1003,11 +1003,6 @@ The small arrow beside every colour box (fills, strokes, gradient stops, text co
 
 Picking one sets an ordinary colour on the layer (the opacity is kept), so exports never depend on the palette. If the palette isn't available (a copy of the editor running outside the suite), the arrow isn't shown.
 
-#### Where the palette comes from
-The editor reads the toolbox's \`/styles/palette.css\` stylesheet when it opens, so changes to it appear after a reload. It also accepts the minified \`palette.min.css\`, which has the colours but not the names, because minifying removes comments.
-
-A colour is named after its property (\`--ilar-swatch-yellow-dark\` is *Yellow dark*). To give it a nicer name, write a comment of three stars each side, \`/***name: Gold***/\`, after the declaration on the same line, or on its own line just above it. The property name is still shown beside it.
-
 ## Several fills and strokes
 A shape can have as many fills and strokes as you like. The **+** in the **Fill** or **Stroke** header adds one on top of the others; the list shows the front-most first, like the layers panel. Each entry has:
 
@@ -4056,7 +4051,7 @@ The starter tokens are:
 - **color/success**, **color/error** and **color/warning** each come with a **-surface** tint, for the right, wrong and missed answers.
 
 ### Toolbox colours follow the shared palette
-Light is the toolbox exactly as the toolbox draws itself. Each token takes the colour from the shared StudyDesk palette that the toolbox uses for that job, read from \`/styles/palette.min.css\`. Cards are the palette's grey 1, text grey 7, outlines and quiet text grey 4, buttons the primary button colours, and the accent and focus ring the primary gold.
+Light is the toolbox exactly as the toolbox draws itself. Each token takes the colour from the shared StudyDesk palette that the toolbox uses for that job. Cards are the palette's grey 1, text grey 7, outlines and quiet text grey 4, buttons the primary button colours, and the accent and focus ring the primary gold.
 
 A token made this way remembers the palette colour it came from, shown by a small link mark beside its colour. The editor refreshes those colours from the live palette whenever it opens the project. The player does the same when the page it runs in can reach the palette, so a change to the palette reaches published pieces without re-editing them.
 
