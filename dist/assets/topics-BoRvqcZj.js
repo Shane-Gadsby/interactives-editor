@@ -1,4 +1,4 @@
-import{bA as r,bB as m,bC as w,bD as y,bg as b,a7 as f,b8 as k,ad as h,aX as v}from"./index-DOCPIHqP.js";const x=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
+import{bA as r,bB as m,bC as w,bD as y,bg as b,a7 as f,b8 as k,ad as h,aX as v}from"./index-BoGgRpbX.js";const x=[{id:"tutorial-first-animation",title:"Tutorial 1: Your first animation",group:"Getting started",summary:"Draw a box and make it slide across the artboard with two keyframes. About five minutes.",keywords:"tutorial first animation start beginner keyframe record timeline rectangle move slide learn how to",body:`In this tutorial you draw a box and make it slide from the left of the page to the right. You will meet the **Layers** panel, the **Properties** panel, the **Timeline** and keyframes. It takes about five minutes and you don't need anything installed.
 
 This is how it looks when it is done:
 
@@ -1113,7 +1113,7 @@ Clicking selects the layer afterwards, ready to edit.
 ![Hovering the locked backdrop shows an Unlock badge at its top right.](help/locked-layer-badge.png)
 
 ## Moving layers to another artboard
-Select layers and drag them on the canvas. If you let go over a **different artboard**, a dialog asks **Move to artboard**: *Move “Card” to the artboard “Menu”?* Press **Move** to do it or **Cancel** to put them back.
+Select layers and drag them on the canvas. If you let go over a **different page**, a dialog asks **Move to page**: *Move “Card” to the page “Menu”?* It adds that the layer's keys in this page's timelines are removed and interactions here that use it will need fixing. Press **Move** to do it or **Cancel** to put them back.
 
 ![The Move to page dialog.](help/move-to-artboard.png)
 

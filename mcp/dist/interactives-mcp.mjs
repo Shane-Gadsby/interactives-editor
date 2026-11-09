@@ -11124,7 +11124,7 @@ Clicking selects the layer afterwards, ready to edit.
 ![Hovering the locked backdrop shows an Unlock badge at its top right.](help/locked-layer-badge.png)
 
 ## Moving layers to another artboard
-Select layers and drag them on the canvas. If you let go over a **different artboard**, a dialog asks **Move to artboard**: *Move “Card” to the artboard “Menu”?* Press **Move** to do it or **Cancel** to put them back.
+Select layers and drag them on the canvas. If you let go over a **different page**, a dialog asks **Move to page**: *Move “Card” to the page “Menu”?* It adds that the layer's keys in this page's timelines are removed and interactions here that use it will need fixing. Press **Move** to do it or **Cancel** to put them back.
 
 ![The Move to page dialog.](help/move-to-artboard.png)
 
