@@ -746,6 +746,13 @@ progress {
 :is(.inspector, .param-form, .key-editor) .field-trail:empty {
   display: block;
 }
+/* what a text box with a rule (the grid's columns and rows) did not understand, quietly under it, starting under the box */
+.inspector .field-problem {
+  color: var(--warn-text);
+  font-size: 11px;
+  line-height: 1.3;
+  padding-left: calc(var(--label-w) + var(--field-gap));
+}
 /* the controls share a height, border and padding wherever they are */
 :is(.inspector, .param-form, .key-editor) .field:not(.check-field) :is(input:not([type='checkbox'], [type='color'], .alpha), select) {
   height: var(--field-h);
@@ -900,25 +907,28 @@ progress {
   justify-self: end;
 }
 
-/* ---- a blend's timeline line: its timeline in the first controls, its value or weight in the second, the remove button at the end */
+/* ---- a blend's timeline line: its own four tracks (name | timeline | value or weight | remove), so the dropdown gets all that
+   is left rather than the share of a pair. A weight-per-timeline blend (.direct) has its weight, a dropdown and a box, on a
+   second line under the timeline, since three boxes would not fit across */
 :is(.inspector, .param-form, .key-editor) .row.blend-entry {
   display: grid;
-  grid-template-columns: var(--cols);
+  grid-template-columns: var(--label-w) minmax(0, 1fr) 56px var(--field-h);
   column-gap: var(--field-gap);
+  row-gap: var(--field-gap);
   align-items: center;
   margin: 0;
 }
 :is(.inspector, .param-form, .key-editor) .row.blend-entry > .field {
   display: grid;
   grid-template-columns: subgrid;
-  grid-column: 6 / 8;
+  grid-column: 3;
   margin: 0;
 }
 :is(.inspector, .param-form, .key-editor) .row.blend-entry > .field:first-child {
-  grid-column: 1 / 6;
+  grid-column: 1 / 3;
 }
 :is(.inspector, .param-form, .key-editor) .row.blend-entry > .field.unlabelled:first-child {
-  grid-column: 2 / 6;
+  grid-column: 2;
 }
 :is(.inspector, .param-form, .key-editor) .row.blend-entry > .field > :not(.field-label, .field-trail) {
   grid-column: 2 / -1;
@@ -930,9 +940,41 @@ progress {
   display: none;
 }
 :is(.inspector, .param-form, .key-editor) .row.blend-entry > .icon-btn {
-  grid-column: 8 / -1;
+  grid-column: 4;
   grid-row: 1;
   justify-self: end;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry.direct > .field:first-child {
+  grid-column: 1 / 4;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry.direct > .field.unlabelled:first-child {
+  grid-column: 2 / 4;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry.direct > .field:nth-child(2) {
+  grid-column: 2;
+  grid-row: 2;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry.direct > .field:nth-child(2):nth-last-child(2) {
+  grid-column: 2 / 4;
+}
+:is(.inspector, .param-form, .key-editor) .row.blend-entry.direct > .field:nth-child(3) {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+/* two tick boxes on a line sit side by side from the box edge, each as wide as its words, and the second drops to its own line
+   if the two do not fit (a second box in half a row wrapped "Hug height" onto two lines). A keyed one (a diamond after it) keeps the grid */
+:is(.inspector, .param-form, .key-editor) .row:has(> .check-field:first-child):has(> .check-field:nth-child(2)):not(:has(> :nth-child(3))) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--group-gap);
+  padding-left: calc(var(--label-w) + var(--field-gap));
+}
+:is(.inspector, .param-form, .key-editor) .row:has(> .check-field:first-child):has(> .check-field:nth-child(2)):not(:has(> :nth-child(3))) > .check-field {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding-left: 0;
 }
 
 /* ---- a row of buttons: equal cells from the left edge, wrapping to the next line when they would be squeezed */

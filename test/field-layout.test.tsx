@@ -263,7 +263,7 @@ describe('the stylesheet', () => {
     expect(q).toMatch(/\{\s*grid-column:\s*1 \/ 5;/);
     expect(q).toMatch(/\{\s*grid-column:\s*6 \/ 10;/);
     expect(q).toMatch(/link-gap\)\s*\{[^}]*grid-column:\s*5;/);
-    // checkboxes: under the first control, and under the second
+    // checkboxes: under the first control, and under the second (two plain ones go side by side instead, see the flex line below)
     expect(q).toMatch(/\.check-field\)\s*\{\s*grid-column:\s*2 \/ 7;/);
     expect(q).toMatch(/\{\s*grid-column:\s*7 \/ -1;/);
     // only fields that fit half a row pair up
@@ -284,9 +284,26 @@ describe('the stylesheet', () => {
     expect(block).toMatch(/\.inspector \.section\s*\{\s*padding:\s*4px 12px 12px/);
   });
 
-  it('has a line for a blend entry (timeline, value, remove button) that keeps the button on the line', () => {
-    expect(block).toMatch(/\.row\.blend-entry > \.icon-btn\s*\{[^}]*grid-column:\s*8 \/ -1;[^}]*grid-row:\s*1;/);
-    expect(readFileSync(`${__dirname}/../src/panels/Inspector.tsx`, 'utf8')).toContain('className="blend-entry"');
+  it('has a line for a blend entry (timeline, value, remove button) of its own four tracks, with the dropdown taking what is left', () => {
+    expect(block).toMatch(/\.row\.blend-entry\s*\{[^}]*grid-template-columns:\s*var\(--label-w\) minmax\(0, 1fr\) 56px var\(--field-h\)/);
+    expect(block).toMatch(/\.row\.blend-entry > \.icon-btn\s*\{[^}]*grid-column:\s*4;[^}]*grid-row:\s*1;/);
+    // the first box (the timeline) runs across the name and the room that is left, not the share of a pair
+    expect(block).toMatch(/\.row\.blend-entry > \.field:first-child\s*\{\s*grid-column:\s*1 \/ 3;/);
+    // a weight per timeline has its weight, a dropdown and a box, on a second line
+    expect(block).toMatch(/\.row\.blend-entry\.direct > \.field:nth-child\(2\)\s*\{\s*grid-column:\s*2;\s*grid-row:\s*2;/);
+    expect(readFileSync(`${__dirname}/../src/panels/Inspector.tsx`, 'utf8')).toContain("'blend-entry direct'");
+  });
+
+  it('puts two plain tick boxes side by side from the box edge, each as wide as its words, and drops the second to its own line when they do not fit', () => {
+    const rule = /\.row:has\(> \.check-field:first-child\):has\(> \.check-field:nth-child\(2\)\):not\(:has\(> :nth-child\(3\)\)\)\s*\{([^}]*)\}/.exec(block)?.[1] ?? '';
+    expect(rule).toMatch(/display:\s*flex/);
+    expect(rule).toMatch(/flex-wrap:\s*wrap/);
+    expect(rule).toMatch(/padding-left:\s*calc\(var\(--label-w\) \+ var\(--field-gap\)\)/);
+    expect(block).toMatch(/\.check-field\)? *\{[^}]*flex:\s*0 1 auto/);
+  });
+
+  it('says what a text box with a rule did not understand, quietly, starting under the box', () => {
+    expect(block).toMatch(/\.inspector \.field-problem\s*\{[^}]*padding-left:\s*calc\(var\(--label-w\) \+ var\(--field-gap\)\)/);
   });
 
   it('keeps a block that is not a field (the picture quality slider) from wearing the field class', () => {

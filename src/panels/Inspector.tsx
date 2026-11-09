@@ -62,7 +62,7 @@ import {
 import { keyTime, store, useEditor, valueAt } from '../store/store';
 import { getArtboard, isIdentifier, locate } from '../store/doc';
 import { ColourwayRow } from './ColourwayRow';
-import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, UnitField } from '../components/ui';
+import { CheckField, ColorField, IconButton, NumberField, Row, Section, SelectField, TextField, TrackField, UnitField } from '../components/ui';
 import { ExprField } from '../components/ExprField';
 import { openBehaviours } from '../components/BehaviourDialog';
 import { revealAdded } from '../lib/graph-reveal';
@@ -77,7 +77,6 @@ import { assetKind } from '../lib/assets';
 import { acceptFor, pickFiles, replaceAssetFile } from '../lib/insert';
 import { updateFromFile } from '../lib/importers';
 import { pointTracks } from '../lib/path-edit';
-import { formatTracks, parseTracks } from '../lib/grid-tracks';
 import { addAssetOption, createVariable, withQuickAdd } from '../lib/quick-add';
 import { SearchPicker, type PickerOption } from '../components/SearchPicker';
 import { CodeEditor } from '../components/CodeEditor';
@@ -2130,8 +2129,8 @@ export function AutoLayoutSection({ frame }: { frame: FrameNode }) {
             <GridAlignFields grid={L.grid} onChange={(grid) => update({ grid })} />
           ) : L.grid ? (
             <>
-              <TextField label="Columns" title="Sizes of the columns: px, %, fr (a share of what is left) or auto. Like 100px 25% 1fr auto" value={formatTracks(L.grid.columns)} onChange={(v) => update({ grid: { ...L.grid!, columns: parseTracks(v) } })} />
-              <TextField label="Rows" title="Sizes of the rows, written the same way. Rows past the ones listed are auto" value={formatTracks(L.grid.rows)} onChange={(v) => update({ grid: { ...L.grid!, rows: parseTracks(v) } })} />
+              <TrackField label="Columns" title="Sizes of the columns: px, %, fr (a share of what is left) or auto. Like 100px 25% 1fr auto" tracks={L.grid.columns} onChange={(columns) => update({ grid: { ...L.grid!, columns } })} />
+              <TrackField label="Rows" title="Sizes of the rows, written the same way. Rows past the ones listed are auto" tracks={L.grid.rows} onChange={(rows) => update({ grid: { ...L.grid!, rows } })} />
               <Row>
                 {gapField('Column gap')}
                 {lineGapField('Row gap')}
@@ -2666,7 +2665,7 @@ function BlendsSection({ ab, project }: { ab: Artboard; project: Project }) {
               />
             )}
             {b.entries.map((e, k) => (
-              <Row key={k} className="blend-entry">
+              <Row key={k} className={oneD ? 'blend-entry' : 'blend-entry direct'}>
                 <SelectField label={k === 0 ? 'Timelines' : undefined} value={e.timeline ?? ''} options={tls} onChange={(v) => update((bs) => void (bs[i].entries[k].timeline = v || null))} />
                 {oneD ? (
                   <NumberField title="Where this timeline sits along the input" value={e.value ?? k} step={0.1} onChange={(v) => update((bs) => void (bs[i].entries[k].value = v), `blend-val-${b.id}-${k}`)} />

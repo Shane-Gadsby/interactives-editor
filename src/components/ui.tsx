@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { formatColor, isTokenRef, parseColor, speedOf, TRANSITION_SPEEDS, type Project } from 'interactives-player';
+import { formatColor, isTokenRef, parseColor, speedOf, TRANSITION_SPEEDS, type GridTrack, type Project } from 'interactives-player';
 import { HelpLink } from '../help/Help';
 import { paletteTip, usePalette } from '../lib/palette';
 import { Icons } from './icons';
@@ -10,6 +10,7 @@ import { useRowSearch, useSectionSearch, RowScope, SectionScope } from '../lib/p
 import { ContextMenu, type MenuItem } from './ContextMenu';
 import { moveSection, sectionDragStart, sectionKeyMove, sectionPlace, useSectionOrder } from '../lib/section-order';
 import { resetOrder } from '../lib/reorder';
+import { formatTracks, parseTracks, trackProblems } from '../lib/grid-tracks';
 import { isSectionOpen, onlySectionOpen, registerSection, resetSectionFolds, sectionKey, setAllSections, setSectionOpen, useSectionFoldVersion } from '../lib/section-fold';
 
 /** An explicit title, or the standard explanation for a field label. */
@@ -305,6 +306,83 @@ export function TextField({
   );
 }
 
+/**
+ * The sizes of a grid's columns or rows, written as text (`100px 25% 1fr auto`). What you type stays exactly as typed until you
+ * leave the box or press Enter, since tidying it on every key turned "1" into "1px" under your cursor. Then it is read and
+ * written back tidily. If a word is not a size nothing is saved: the box keeps what you typed and says which word it did
+ * not understand. Escape puts back what was saved.
+ */
+export function TrackField({ label, title, tracks, onChange }: { label?: ReactNode; title?: string; tracks: GridTrack[]; onChange: (t: GridTrack[]) => void }) {
+  const ps = useRowSearch(label, tipFor(label, title));
+  const saved = formatTracks(tracks);
+  const [text, setText] = useState(saved);
+  const [editing, setEditing] = useState(false);
+  const focused = useRef(false);
+  const revert = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setText(saved);
+  }, [saved]);
+  // a word still being typed is not a mistake yet
+  const bad = trackProblems(text, editing);
+  const finish = () => {
+    focused.current = false;
+    setEditing(false);
+    if (revert.current) {
+      revert.current = false;
+      setText(saved);
+      return;
+    }
+    if (trackProblems(text).length) return;
+    const next = parseTracks(text);
+    const tidy = formatTracks(next);
+    setText(tidy);
+    if (tidy !== saved) onChange(next);
+  };
+  return (
+    <>
+      <label className={fieldClass('text-field track-field', label, ps.hide)} data-prop={ps.prop} title={tipFor(label, title)}>
+        {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
+        <input
+          value={text}
+          spellCheck={false}
+          aria-invalid={bad.length > 0 || undefined}
+          onFocus={() => {
+            focused.current = true;
+            setEditing(true);
+          }}
+          onBlur={finish}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+            if (e.key === 'Escape') {
+              revert.current = true;
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+        />
+        <FieldTrail />
+      </label>
+      {bad.length > 0 && (
+        <div className="field-problem" role="status">
+          {bad.length === 1 ? `"${bad[0]}" is not a size.` : `${bad.map((w) => `"${w}"`).join(', ')} are not sizes.`} Use px, %, fr or auto.{!editing && text !== saved && ' Not saved yet.'}
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * A dropdown cuts a long choice off with "…" when its box is narrow, so the box's own tooltip says the whole thing (and then the
+ * field's explanation, if it has one). A short choice always fits, so it gets no tooltip of its own. It is `data-tip` and not
+ * `title` so a screen reader is not handed a stale copy of the choice as the box's description (it reads the choice itself).
+ */
+const LONG_CHOICE = 10;
+export function fullName(choice: string | undefined, tip: string | undefined): string | undefined {
+  if (!choice || choice.length < LONG_CHOICE) return undefined;
+  return tip ? `${choice} (${tip})` : choice;
+}
+
 export function SelectField<T extends string>({
   label,
   value,
@@ -325,7 +403,7 @@ export function SelectField<T extends string>({
   return (
     <label className={fieldClass('select-field', label, ps.hide)} data-prop={ps.prop} title={tipFor(label, title)}>
       {label !== undefined && <span className="field-label">{unbroken(label)}</span>}
-      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
+      <select value={value} disabled={disabled} data-tip={fullName(opts.find((o) => o.value === value)?.label, tipFor(label, title))} onChange={(e) => onChange(e.target.value as T)} onKeyDown={(e) => e.stopPropagation()}>
         {opts.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
