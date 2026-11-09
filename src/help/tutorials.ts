@@ -254,10 +254,6 @@ There are three ways:
 
 For Photoshop, Illustrator, PDF, AutoCAD, VectorCraft, PhotoCraft and PowerPoint files, the editor copies the file into the project and remembers which file it came from. There is nothing to choose. The imported pages say **From Poster.psd** in their **Source file** section, and that is how you bring in a newer version later (step 7).
 
-Earlier versions of the editor asked whether to **Link** or **Embed** each file in a dialog like this one. Linking is switched off for now, so the dialog doesn't appear.
-
-![The Import design file dialog from earlier versions: one row per file with a Link / Embed choice, and Embed all, Link all and Import buttons.](help/link-or-embed-dialog.png)
-
 ## 4. Read the report
 
 When the import finishes, a box lists anything that couldn't be carried over exactly, for example a blend mode with no equivalent. Read it once, then press the **×**. Nothing is hidden: it is the whole list.
