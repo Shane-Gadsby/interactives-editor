@@ -123,6 +123,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Gold instead of blue': [['preferences', 'the same gold with a thin dark edge']],
   'Faster on big projects': [['interface', 'Big projects']],
   'Opens faster': [['interface', 'Opening the editor']],
+  'Share for review needs a sign in': [['comments', 'There is no guest option'], ['comments', 'Sign in with StudyDesk']],
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone

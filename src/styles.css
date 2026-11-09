@@ -8676,18 +8676,6 @@ code {
   outline-offset: -2px;
   box-shadow: var(--focus-inset);
 }
-.cm-name {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.cm-name input {
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--line-2);
-  border-radius: 6px;
-  padding: 5px 8px;
-}
 .cm-actions {
   display: flex;
   align-items: center;

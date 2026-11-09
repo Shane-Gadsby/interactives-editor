@@ -76,8 +76,8 @@ describe('notes on the server', () => {
 
   it('are not in the project a review link hands to reviewers', async () => {
     await h.call('PUT', '/api/projects/prnote0005', { user: ann, json: { project: project('prnote0005'), rev: 0 } });
-    const link = await h.call('PUT', '/api/projects/prnote0005/review', { user: ann, json: { guests: true } });
-    const seen = await h.call('GET', `/review/${link.json.review.token}`, { user: null });
+    const link = await h.call('PUT', '/api/projects/prnote0005/review', { user: ann, json: {} });
+    const seen = await h.call('GET', `/review/${link.json.review.token}`, { user: ann });
     expect(seen.status).toBe(200);
     expect(JSON.stringify(seen.json)).not.toContain(SECRET);
     expect(seen.json.project.artboards[0].name).toBe('Main');

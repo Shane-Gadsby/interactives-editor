@@ -383,7 +383,8 @@ export function ShareModal({ onClose }: { onClose: () => void }) {
 
 /**
  * The "Can comment" link: a second link, apart from the share link, that opens the project for looking at and commenting on
- * (still artboards with pins, or play it). It always shows the project as it is now, and can allow guests who give a name.
+ * (still artboards with pins, or play it). It always shows the project as it is now. Opening it takes signing in, so every comment
+ * carries a real name.
  */
 export function ReviewLinkSection({ projectId }: { projectId: string }) {
   const [link, setLink] = useState<ReviewLink | null | undefined>(undefined);
@@ -411,8 +412,8 @@ export function ReviewLinkSection({ projectId }: { projectId: string }) {
       {link === undefined && !error && <p className="small muted">Checking…</p>}
       {link === null && (
         <>
-          <p className="small muted">Reviewers leave notes on a layer or a spot. You see them under Comments. They never go in an export.</p>
-          <button className="btn" disabled={busy} onClick={() => void run(async () => setLink(await putReview(projectId, false)))} title="Create a link that lets signed in StudyDesk users view the project and comment">
+          <p className="small muted">Reviewers sign in with StudyDesk, then leave notes on a layer or a spot. You see them under Comments. Never exported.</p>
+          <button className="btn" disabled={busy} onClick={() => void run(async () => setLink(await putReview(projectId)))} title="Create a link that lets people signed in with StudyDesk view the project and comment">
             Create review link
           </button>
         </>
@@ -436,10 +437,7 @@ export function ReviewLinkSection({ projectId }: { projectId: string }) {
               Open
             </a>
           </div>
-          <label className="check-row" title="Without this, reviewers have to be signed in to StudyDesk and their comments carry their own name. With it, anyone who has the link can comment after giving a display name (limited to a few comments every few minutes)">
-            <input type="checkbox" checked={link.guests} disabled={busy} onChange={(e) => void run(async () => setLink(await putReview(projectId, e.target.checked)))} />
-            Let people comment without signing in (they give a display name)
-          </label>
+          <p className="small muted">Reviewers sign in with StudyDesk to open this, and their comments carry their own name.</p>
           <div className="row">
             <button
               className="btn danger"
@@ -463,7 +461,7 @@ export function ReviewLinkSection({ projectId }: { projectId: string }) {
 }
 
 /**
- * "Share for review" as a dialog of its own: the Can comment link (create, copy, allow guests, turn off). The Share menu
+ * "Share for review" as a dialog of its own: the Can comment link (create, copy, turn off). The Share menu
  * calls openShareForReview() and the open editor shows this; the same section also sits inside the Share link dialog.
  */
 export function ShareForReviewModal({ onClose }: { onClose: () => void }) {

@@ -202,24 +202,14 @@ describe('writes', () => {
 describe('the review page', () => {
   const start = (c: CommentsClient, me: any) => c.startReview('tok', { threads: [thread('cm1', 1)], people: [], me });
 
-  it('uses the review routes and its own stream, and sends a guest name only when there is no session', async () => {
+  it('uses the review routes and its own stream, and never sends a name of its own', async () => {
     const c = new CommentsClient();
-    start(c, null);
+    start(c, { username: 'bob', name: 'Bob' });
     expect(FakeES.all[0].url).toContain('review/tok/live');
-    c.setGuestName('Dr Nair');
     answer = () => ({ thread: thread('cm1', 1) });
     await c.reply('cm1', 'Hi');
-    expect(calls.at(-1)).toMatchObject({ url: 'review/tok/comments/cm1/replies', body: { text: 'Hi', guestName: 'Dr Nair' } });
-    start(c, { username: 'bob', name: 'Bob' });
-    await c.reply('cm1', 'Hi');
+    expect(calls.at(-1)).toMatchObject({ url: 'review/tok/comments/cm1/replies', body: { text: 'Hi' } });
     expect(calls.at(-1)!.body.guestName).toBeUndefined();
-  });
-
-  it('remembers a guest name in this browser', () => {
-    const c = new CommentsClient();
-    c.setGuestName('Zed Zed');
-    expect(new CommentsClient().get().guestName).toBe('Zed Zed');
-    localStorage.removeItem('ix-review-name');
   });
 });
 

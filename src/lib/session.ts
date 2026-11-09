@@ -20,7 +20,7 @@ let pending: Promise<SessionUser | null> | null = null;
  * and not framed. There's no LTI launch to hand that a session, so it signs in through StaffDesk first
  * (directSignIn in si-manager's utilities.js), which leaves the session where fetchActivity looks for one.
  */
-function isDirectLoad(): boolean {
+export function isDirectLoad(): boolean {
   try {
     return window.top === window && !new URLSearchParams(location.search).get('sessionID') && !sessionId();
   } catch {
@@ -30,12 +30,26 @@ function isDirectLoad(): boolean {
 
 let signing: Promise<unknown> | null = null;
 
-/** The direct sign in, started once: settled straight away when the page isn't a direct load (or can't sign in). */
+/** A review link (#/review/<token>): anyone signed in may open it, so it signs in as a reviewer and not as an editor user. */
+export function isReviewRoute(): boolean {
+  return /^#\/review\//.test(location.hash);
+}
+
+/**
+ * The direct sign in, started once: settled straight away when the page isn't a direct load (or can't sign in).
+ * A review link is its own tool in si-manager ('interactives-review', any staff member), so a reviewer needn't be in the
+ * Interactives beta group. Someone who already holds the editor's sign in is let straight through on that, no second box.
+ */
 function signInDirectly(): Promise<unknown> {
-  signing ??= (() => {
+  signing ??= (async () => {
     const directSignIn = (window as unknown as { directSignIn?: DirectSignIn }).directSignIn;
-    if (typeof directSignIn !== 'function' || !isDirectLoad()) return Promise.resolve(null);
-    return directSignIn('interactives', { title: 'Interactives' }).catch(() => null);
+    if (typeof directSignIn !== 'function' || !isDirectLoad()) return null;
+    try {
+      if (!isReviewRoute()) return await directSignIn('interactives', { title: 'Interactives' });
+      return (await directSignIn('interactives', { title: 'Interactives', prompt: false })) ?? (await directSignIn('interactives-review', { title: 'Interactives review' }));
+    } catch {
+      return null;
+    }
   })();
   return signing;
 }
