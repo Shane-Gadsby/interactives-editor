@@ -82,8 +82,7 @@ export function mentionsIn(text: string, people: Person[]): string[] {
 }
 
 /**
- * A text box that sends on Ctrl/Cmd+Enter or its button. Typing @ offers the people who can be named (not on the
- * review page for a guest, who can't). A guest on the review page is asked for a display name first.
+ * A text box that sends on Ctrl/Cmd+Enter or its button. Typing @ offers the people who can be named.
  */
 export function Composer({
   placeholder,
@@ -108,20 +107,17 @@ export function Composer({
   const [error, setError] = useState<string | null>(null);
   const [pick, setPick] = useState<{ query: string; at: number } | null>(null);
   const area = useRef<HTMLTextAreaElement>(null);
-  const guest = c.mode?.kind === 'review' && !c.me?.username;
-  const needName = guest && c.guestName.trim().length < 2;
-  const canMention = !guest;
   useEffect(() => {
     if (autoFocus) area.current?.focus();
   }, [autoFocus]);
 
   const send = async () => {
     const t = text.trim();
-    if (!t || busy || needName) return;
+    if (!t || busy) return;
     setBusy(true);
     setError(null);
     try {
-      await onSubmit(t, canMention ? mentionsIn(t, c.people) : []);
+      await onSubmit(t, mentionsIn(t, c.people));
       setText('');
       setPick(null);
     } catch (err) {
@@ -133,7 +129,7 @@ export function Composer({
 
   const onChange = (v: string, caret: number) => {
     setText(v);
-    const m = canMention ? /(?:^|\s)@([\w.@-]*)$/.exec(v.slice(0, caret)) : null;
+    const m = /(?:^|\s)@([\w.@-]*)$/.exec(v.slice(0, caret));
     setPick(m ? { query: m[1].toLowerCase(), at: caret - m[1].length - 1 } : null);
   };
   const choices = pick ? c.people.filter((p) => p.username.toLowerCase().includes(pick.query) || p.name.toLowerCase().includes(pick.query)).slice(0, 6) : [];
@@ -152,18 +148,12 @@ export function Composer({
 
   return (
     <div className="cm-composer">
-      {guest && (
-        <label className="cm-name">
-          <span className="muted small">Your name, shown beside your comments</span>
-          <input type="text" value={c.guestName} maxLength={LIMITS.name} placeholder="Display name" onChange={(e) => comments.setGuestName(e.target.value)} onKeyDown={(e) => e.stopPropagation()} />
-        </label>
-      )}
       <textarea
         ref={area}
         value={text}
         rows={3}
         maxLength={LIMITS.text}
-        placeholder={canMention ? `${placeholder} (@ to mention someone)` : placeholder}
+        placeholder={`${placeholder} (@ to mention someone)`}
         aria-label={placeholder}
         disabled={busy}
         onChange={(e) => onChange(e.target.value, e.target.selectionStart)}
@@ -199,7 +189,7 @@ export function Composer({
             Cancel
           </button>
         )}
-        <button type="button" className="btn primary" onClick={() => void send()} disabled={busy || !text.trim() || needName} title={needName ? 'Give your name first' : `${submitLabel} (Ctrl+Enter)`}>
+        <button type="button" className="btn primary" onClick={() => void send()} disabled={busy || !text.trim()} title={`${submitLabel} (Ctrl+Enter)`}>
           {submitLabel}
         </button>
       </div>

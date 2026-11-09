@@ -1,5 +1,5 @@
 // @vitest-environment node
-//Review comments against the real index.js and the fake mongo: the editor's routes, the review link and its guests,
+//Review comments against the real index.js and the fake mongo: the editor's routes, the review link and its sign in,
 //rate limits, who may resolve/assign/edit/delete, notices, the live stream and the counts on the projects list.
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startServer, type Harness, type Stream, type User } from './helpers/server-harness';
@@ -39,7 +39,7 @@ beforeEach(async () => {
 
 const anchor = { artboardId: 'ab1', layerId: 'n1', lx: 5, ly: 6, x: 105, y: 206 };
 const add = (text = 'Check this', user: User | null = ann, extra: Record<string, unknown> = {}) => h.call('POST', `/api/projects/${id}/comments`, { user, json: { anchor, text, context: { artboard: 'Main', layer: 'Title' }, ...extra } });
-const reviewOn = async (guests = false) => (await h.call('PUT', `/api/projects/${id}/review`, { user: ann, json: { guests } })).json.review.token as string;
+const reviewOn = async () => (await h.call('PUT', `/api/projects/${id}/review`, { user: ann, json: {} })).json.review.token as string;
 const rv = (token: string, method: string, path: string, user: User | null, json?: unknown) => h.call(method, `/review/${token}${path}`, { user, json });
 
 describe('the editor routes', () => {
@@ -145,10 +145,11 @@ describe('the review link', () => {
     expect((await rv('nopenopenopenopenope', 'GET', '', ann)).status).toBe(404);
     const token = await reviewOn();
     expect(token).toMatch(/^[\w-]{20,}$/);
-    expect(await reviewOn(true)).toBe(token);
+    expect(await reviewOn()).toBe(token);
     const r = await rv(token, 'GET', '', ann);
     expect(r.status).toBe(200);
-    expect(r.json).toMatchObject({ id, name: `Project ${id}`, guests: true, me: { username: 'ann' } });
+    expect(r.json).toMatchObject({ id, name: `Project ${id}`, me: { username: 'ann' } });
+    expect(r.json.guests).toBeUndefined();
     expect(r.json.project.artboards[0].id).toBe('ab1');
     await h.call('DELETE', `/api/projects/${id}/review`, { user: ann });
     expect((await rv(token, 'GET', '', ann)).status).toBe(404);
@@ -159,16 +160,48 @@ describe('the review link', () => {
     expect((await h.call('PUT', `/api/projects/${id}/review`, { user: bob, json: {} })).status).toBe(403);
   });
 
-  it('asks for a sign in when the link does not allow guests', async () => {
-    const token = await reviewOn(false);
-    const r = await rv(token, 'GET', '', null);
-    expect(r.status).toBe(401);
-    expect(r.json.signin).toBe(true);
+  it('wants a signed in session on every route, whether or not the box enforces sessions', async () => {
+    const token = await reviewOn();
+    for (const enforce of ['', '1']) {
+      process.env.SUITE_SESSION_ENFORCE = enforce;
+      for (const [method, path] of [['GET', ''], ['GET', '/assets/asset0001'], ['GET', '/live'], ['POST', '/comments'], ['PATCH', '/comments/cm1'], ['DELETE', '/comments/cm1']]) {
+        const r = await rv(token, method, path, null, method === 'POST' ? { anchor, text: 'Hi', guestName: 'Zed' } : undefined);
+        expect([method, path, r.status, r.json.signin]).toEqual([method, path, 401, true]);
+      }
+    }
+    expect(h.db.comments.docs).toHaveLength(0);
     expect((await rv(token, 'GET', '', bob)).status).toBe(200);
   });
 
+  it('no longer takes guests: the option is ignored, an old link that had it still asks for a sign in, and a typed name is no identity', async () => {
+    const put = await h.call('PUT', `/api/projects/${id}/review`, { user: ann, json: { guests: true } });
+    expect(put.json.review.guests).toBeUndefined();
+    const token = put.json.review.token as string;
+    //a link made before the change still carries guests: true
+    const row = h.db.projects.docs.find((d) => d._id === id) as { review: Record<string, unknown> };
+    row.review.guests = true;
+    expect((await h.call('GET', `/api/projects/${id}/review`, { user: ann })).json.review.guests).toBeUndefined();
+    expect((await rv(token, 'GET', '', null)).status).toBe(401);
+    expect((await rv(token, 'POST', '/comments', null, { anchor, text: 'Hi', guestName: 'Dr Who' })).status).toBe(401);
+    const c = await rv(token, 'POST', '/comments', bob, { anchor, text: 'Hi', guestName: 'Dr Who', by: { username: 'ann' } });
+    expect(c.json.thread.comments[0].by).toEqual({ username: 'bob', userID: 1, name: 'Bob B' });
+    //the next time the owner saves the link the flag is gone for good
+    await h.call('PUT', `/api/projects/${id}/review`, { user: ann, json: {} });
+    expect((h.db.projects.docs.find((d) => d._id === id) as { review: Record<string, unknown> }).review.guests).toBeUndefined();
+  });
+
+  it('takes the direct sign in of the review tool, or the editor one, and nothing issued for another tool', async () => {
+    const token = await reviewOn();
+    const via = (tool: string) => h.call('GET', `/review/${token}`, { user: bob, headers: { 'x-test-tool': tool } });
+    expect((await via('interactives-review')).status).toBe(200);
+    expect((await via('interactives')).status).toBe(200);
+    const other = await via('media-catalogue');
+    expect(other.status).toBe(401);
+    expect(other.json.signin).toBe(true);
+  });
+
   it('lets a signed in reviewer comment under their own name, resolve, but not assign', async () => {
-    const token = await reviewOn(false);
+    const token = await reviewOn();
     const c = await rv(token, 'POST', '/comments', bob, { anchor, text: 'Typo in the title', guestName: 'Mallory' });
     expect(c.json.thread.comments[0].by).toEqual({ username: 'bob', userID: 1, name: 'Bob B' });
     const tid = c.json.thread.id;
@@ -178,7 +211,7 @@ describe('the review link', () => {
   });
 
   it('only lets a reviewer edit or delete their own, while the owner can do any', async () => {
-    const token = await reviewOn(false);
+    const token = await reviewOn();
     const t = (await rv(token, 'POST', '/comments', bob, { anchor, text: 'Mine' })).json.thread;
     const mid = t.comments[0].id;
     expect((await rv(token, 'PATCH', `/comments/${t.id}/messages/${mid}`, cat, { text: 'Hijack' })).status).toBe(403);
@@ -188,7 +221,7 @@ describe('the review link', () => {
   });
 
   it('serves a project asset by the link and nothing it does not have', async () => {
-    const token = await reviewOn(false);
+    const token = await reviewOn();
     await h.call('PUT', `/api/projects/${id}/assets/asset0001`, { user: ann, body: Buffer.from([0x89, 0x50, 0x4e, 0x47]), type: 'image/png' });
     const r = await rv(token, 'GET', '/assets/asset0001', bob);
     expect(r.status).toBe(200);
@@ -198,55 +231,32 @@ describe('the review link', () => {
   });
 });
 
-describe('guests', () => {
-  it('need a display name, and are labelled as guests', async () => {
-    const token = await reviewOn(true);
-    expect((await rv(token, 'POST', '/comments', null, { anchor, text: 'Hi' })).status).toBe(400);
-    expect((await rv(token, 'POST', '/comments', null, { anchor, text: 'Hi', guestName: 'x' })).status).toBe(400);
-    const c = await rv(token, 'POST', '/comments', null, { anchor, text: 'Hi', guestName: '  Dr  Who  <b>' });
-    expect(c.status).toBe(200);
-    expect(c.json.thread.comments[0].by).toEqual({ name: 'Dr Who b', guest: true });
-  });
-
-  it('cannot resolve, assign or mention, and the owner cannot be impersonated by a username in the body', async () => {
-    const token = await reviewOn(true);
-    const t = (await rv(token, 'POST', '/comments', null, { anchor, text: 'Hi', guestName: 'Zed', mentions: ['ann'], by: { username: 'ann' }, assignee: { username: 'ann', name: 'Ann' } })).json.thread;
-    expect(t.comments[0].mentions).toEqual([]);
-    expect(t.comments[0].by).toEqual({ name: 'Zed', guest: true });
-    expect(t.assignee).toBeNull();
-    expect((await rv(token, 'PATCH', `/comments/${t.id}`, null, { status: 'resolved', guestName: 'Zed' })).status).toBe(403);
-    expect((await rv(token, 'DELETE', `/comments/${t.id}`, null)).status).toBeGreaterThanOrEqual(400);
-    expect(h.db.comments.docs).toHaveLength(1);
-    expect(h.db['comment-notices'].docs).toHaveLength(0);
-  });
-
-  it('are rate limited per address, and the limit is not theirs to dodge with another name', async () => {
-    const token = await reviewOn(true);
+describe('reviewers', () => {
+  it('are held to a ceiling per person, and one reviewer hitting it does not stop another', async () => {
+    const token = await reviewOn();
+    //its own person, the window is shared by the whole file and would otherwise cost the other tests their turn
+    const chatty: User = { username: 'chatty', fullName: 'Chatty C' };
     let last = 200;
-    for (let i = 0; i < 12; i++) last = (await h.call('POST', `/review/${token}/comments`, { headers: { 'x-forwarded-for': '9.9.9.9' }, json: { anchor, text: `Note ${i}`, guestName: `Guest ${i}` } })).status;
+    for (let i = 0; i < 62; i++) last = (await rv(token, 'POST', '/comments', chatty, { anchor, text: `Note ${i}` })).status;
     expect(last).toBe(429);
-    expect(h.db.comments.docs.length).toBe(10);
-    //somebody signed in is not held to the guests' ceiling
-    expect((await rv(token, 'POST', '/comments', bob, { anchor, text: 'Still fine' })).status).toBe(200);
-  });
-
-  it('are counted per link too, so a spread of addresses stops at the link ceiling', async () => {
-    const token = await reviewOn(true);
-    let ok = 0;
-    for (let i = 0; i < 70; i++) {
-      const r = await h.call('POST', `/review/${token}/comments`, { headers: { 'x-forwarded-for': `10.0.${Math.floor(i / 250)}.${i}` }, json: { anchor, text: `n${i}`, guestName: 'Many' } });
-      if (r.status === 200) ok++;
-    }
-    expect(ok).toBe(60);
+    expect((await rv(token, 'POST', '/comments', cat, { anchor, text: 'Still fine' })).status).toBe(200);
   });
 
   it('are shut out when the link is turned off while they watch', async () => {
-    const token = await reviewOn(true);
-    const s = await h.stream(`/review/${token}/live`);
+    const token = await reviewOn();
+    const s = await h.stream(`/review/${token}/live`, { user: bob });
     streams.push(s);
     await s.waitFor((e) => e.event === 'hello');
     await h.call('DELETE', `/api/projects/${id}/review`, { user: ann });
-    expect((await rv(token, 'POST', '/comments', null, { anchor, text: 'Late', guestName: 'Zed' })).status).toBe(404);
+    expect((await rv(token, 'POST', '/comments', bob, { anchor, text: 'Late' })).status).toBe(404);
+  });
+
+  it('see an earlier guest comment with its label, and cannot answer it as the guest', async () => {
+    const token = await reviewOn();
+    h.db.comments.docs.push({ _id: 'cmguest01', project: id, thread: 'cmguest01', root: true, n: 1, by: { name: 'Zed', guest: true }, text: 'From before', mentions: [], anchor, context: {}, status: 'open', created: new Date(), updated: new Date() });
+    const r = await rv(token, 'GET', '', bob);
+    expect(r.json.threads[0].comments[0].by).toEqual({ name: 'Zed', guest: true });
+    expect(r.json.people.some((p: { name: string }) => p.name === 'Zed')).toBe(false);
   });
 });
 
@@ -282,7 +292,7 @@ describe('notices', () => {
 
   it('tells everyone in a thread about a reply, and the new assignee when it is handed on', async () => {
     const t = (await add()).json.thread;
-    const token = await reviewOn(false);
+    const token = await reviewOn();
     await rv(token, 'POST', `/comments/${t.id}/replies`, bob, { text: 'Hello' });
     expect(h.db['comment-notices'].docs.map((d) => [d.user, d.kind])).toEqual([['ann', 'reply']]);
     await h.call('PATCH', `/api/projects/${id}/comments/${t.id}`, { user: ann, json: { assignee: { username: 'bob', name: 'Bob B' } } });
@@ -304,7 +314,7 @@ describe('notices', () => {
 
 describe('live updates', () => {
   it('reaches the editor and the review page when anyone comments, resolves or deletes', async () => {
-    const token = await reviewOn(false);
+    const token = await reviewOn();
     const editor = await h.stream(`/api/projects/${id}/comments/live`, { user: ann });
     const reviewer = await h.stream(`/review/${token}/live`, { user: bob });
     streams.push(editor, reviewer);

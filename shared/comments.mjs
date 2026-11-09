@@ -1,6 +1,6 @@
 //The pure part of review comments (lti-interactives.comments), shared by the server, the editor and the tests: what a
 //browser is allowed to say in a comment, how flat rows become threads, the filters the Comments panel uses, who a
-//write should notify, and the sliding window the server rate limits guests with. No mongo, no express, no node
+//write should notify, and the sliding window the server rate limits comments with. No mongo, no express, no node
 //imports, so the browser loads this same file.
 //
 //One row per message. A thread's first row is its root (_id === thread) and carries the anchor, status and
