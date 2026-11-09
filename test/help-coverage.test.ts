@@ -11,6 +11,7 @@ import { getTopic, topicBody } from '../src/help/topics';
  * A heading that appears twice is listed once and every place it is covered is a row of its own.
  */
 const COVERED: Record<string, [topic: string, phrase: string][]> = {
+  'Guides, reworked': [['canvas', 'one endless dashed line'], ['canvas', 'Attach new guides to the page'], ['canvas', 'Rounding while you drag'], ['shortcuts', 'Keys you hold while dragging']],
   'Credits on every starter': [['attributions', 'A Credits button of your own'], ['branded-starters', 'button in a corner']],
   'Smaller saves and a faster first load': [['interface', 'sent squeezed']],
   'Shorter Inspector wording': [['properties-panel', 'More about']],
@@ -34,9 +35,6 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
   'Layers: Shift-click a range': [['layers-panel', 'Shift-click a range']],
   'Alt-drag copies more': [['layers-panel', 'Copying with Alt']],
   'Components, from where you want them': [['instances', 'Insert component here']],
-  'Guides are endless lines': [['canvas', 'one endless dashed line']],
-  'Guides: short when attached, rounding while you drag': [['canvas', 'Rounding while you drag'], ['shortcuts', 'Keys you hold while dragging']],
-  'Guides: universal by default': [['canvas', 'Attach new guides to the page']],
   'Timeline: the list of timelines': [['timelines', 'Nothing plays it']],
   'Timeline: Sound and captions fold': [['timelines', 'Sound and captions']],
   'Data files open in a Form': [['data-sources', 'Form']],
@@ -128,7 +126,7 @@ const COVERED: Record<string, [topic: string, phrase: string][]> = {
 };
 
 //Rows written before their CHANGELOG line exists, so the stale-row check below leaves them alone
-const UPCOMING = new Set<string>(['Guides: short when attached, rounding while you drag']);
+const UPCOMING = new Set<string>([]);
 
 const section = (): string[] => {
   const text = readFileSync(join(__dirname, '..', 'CHANGELOG.md'), 'utf8');
